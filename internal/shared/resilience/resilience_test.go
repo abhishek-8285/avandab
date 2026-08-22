@@ -128,3 +128,71 @@ func TestDoVoid(t *testing.T) {
 		t.Fatal("expected op to be called")
 	}
 }
+
+func TestDefaultConfig_ZeroHandling(t *testing.T) {
+	ctx := context.Background()
+	// Pass zero Config to verify defaults (MaxAttempts 3, delays) are applied.
+	_, err := Do(ctx, Config{}, func(ctx context.Context) (int, error) {
+		return 0, errors.New("unique constraint failed") // non-retryable
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestQuickConfig_Retries(t *testing.T) {
+	ctx := context.Background()
+	attempts := 0
+	_, err := Do(ctx, QuickConfig(), func(ctx context.Context) (int, error) {
+		attempts++
+		if attempts < 2 {
+			return 0, errors.New("timeout")
+		}
+		return 1, nil
+	})
+	if err != nil {
+		t.Fatalf("QuickConfig retry failed: %v", err)
+	}
+	if attempts != 2 {
+		t.Fatalf("expected 2 attempts, got %d", attempts)
+	}
+}
+
+func TestDo_MaxDelayCap(t *testing.T) {
+	ctx := context.Background()
+	attempts := 0
+	cfg := Config{MaxAttempts: 4, InitialDelay: 10 * time.Millisecond, MaxDelay: 15 * time.Millisecond, Multiplier: 10}
+	_, err := Do(ctx, cfg, func(ctx context.Context) (int, error) {
+		attempts++
+		return 0, errors.New("busy")
+	})
+	if err == nil {
+		t.Fatal("expected error after max attempts")
+	}
+	if attempts != 4 {
+		t.Fatalf("expected 4 attempts with MaxDelay cap, got %d", attempts)
+	}
+}
+
+func TestSafeVoid_RecoversPanic(t *testing.T) {
+	ctx := context.Background()
+	err := SafeVoid(ctx, func(ctx context.Context) error {
+		panic("void boom")
+	})
+	if err == nil {
+		t.Fatal("expected panic error")
+	}
+}
+
+func TestIsRetryable_NetTimeout(t *testing.T) {
+	err := &netTimeoutError{msg: "i/o timeout"}
+	if !IsRetryable(err) {
+		t.Fatal("expected net timeout to be retryable")
+	}
+}
+
+type netTimeoutError struct{ msg string }
+
+func (e *netTimeoutError) Error() string   { return e.msg }
+func (e *netTimeoutError) Timeout() bool   { return true }
+func (e *netTimeoutError) Temporary() bool { return true }
