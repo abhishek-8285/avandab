@@ -28,6 +28,7 @@ import (
 	alertpipeline "transport-app/internal/alerts/pipeline"
 	alertsqlite "transport-app/internal/alerts/repository/sqlite"
 	"transport-app/internal/apiversion"
+	"transport-app/internal/shared/resilience"
 
 	dbmigr "transport-app/db"
 	"transport-app/internal/auth"
@@ -1165,6 +1166,8 @@ func main() {
 	// SQLite WAL checkpoint hygiene: the WAL grew unbounded (>500MB observed)
 	// without periodic truncation. Hourly TRUNCATE checkpoints cap it. Only
 	// meaningful for the sqlite driver; skipped for network engines.
+	// Uses resilience wrapper: TRUNCATE needs exclusive lock — low-load
+	// collisions ("table is locked (6)") are retried, then PASSIVE fallback.
 	if cfg.Database.Driver == "" || cfg.Database.Driver == "sqlite" {
 		go func() {
 			ticker := time.NewTicker(time.Hour)
@@ -1174,8 +1177,33 @@ func main() {
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
-					if _, err := database.ExecContext(ctx, "PRAGMA wal_checkpoint(TRUNCATE);"); err != nil {
-						logger.Warn("WAL checkpoint failed", "error", err)
+					// Pattern for future services: wrap any fallible op with resilience.DoVoid
+					// — it handles retry + panic recovery + context cancellation.
+					err := resilience.DoVoid(ctx, resilience.Config{
+						MaxAttempts:  3,
+						InitialDelay: 100 * time.Millisecond,
+						MaxDelay:     300 * time.Millisecond,
+						Logger:       logger,
+					}, func(ctx context.Context) error {
+						_, err := database.ExecContext(ctx, "PRAGMA wal_checkpoint(TRUNCATE);")
+						return err
+					})
+					if err != nil {
+						// TRUNCATE failed after retries — PASSIVE never blocks writers.
+						if pErr := resilience.DoVoid(ctx, resilience.Config{
+							MaxAttempts:  1,
+							InitialDelay: 50 * time.Millisecond,
+							Logger:       logger,
+						}, func(ctx context.Context) error {
+							_, e := database.ExecContext(ctx, "PRAGMA wal_checkpoint(PASSIVE);")
+							return e
+						}); pErr != nil {
+							logger.Debug("WAL checkpoint PASSIVE skipped", "error", pErr, "truncate_err", err)
+						} else if resilience.IsRetryable(err) {
+							logger.Debug("WAL checkpoint TRUNCATE busy, PASSIVE ok", "error", err)
+						} else {
+							logger.Warn("WAL checkpoint failed", "error", err)
+						}
 					}
 				}
 			}
