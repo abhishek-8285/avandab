@@ -65,9 +65,26 @@ func TestTrackingPage_TemplateRenders(t *testing.T) {
 	body := buf.String()
 	assert.Contains(t, body, `id="live-map"`)
 	assert.Contains(t, body, "/api/v1/telemetry/live")
-	assert.Contains(t, body, "mt1.google.com")
 	assert.Contains(t, body, "tile.openstreetmap.org")
 	assert.Contains(t, body, "maintenance_due")
+
+	// Tile policy regression guards (Spec 04 §2): OSM-only, attribution
+	// mandatory, no Google tile scraping in any code path.
+	assert.NotContains(t, body, "mt1.google.com", "Google tile scraping must not return")
+	assert.Contains(t, body, "openstreetmap.org/copyright", "OSM attribution is required by ODbL")
+
+	// Live-feed correctness regressions:
+	// - polling must pause while SSE healthy (no duplicate traffic)
+	assert.Contains(t, body, "stopPolling()")
+	// - coordinates of 0 are valid (null-safe, not truthiness)
+	assert.Contains(t, body, "hasPos(")
+	assert.NotContains(t, body, "!v.lat || !v.lng")
+	// - telemetry bursts coalesce into one repaint
+	assert.Contains(t, body, "scheduleRerender()")
+
+	// No fabricated data / off-system icon fonts on this page.
+	assert.NotContains(t, body, "Smart Allocation")
+	assert.NotContains(t, body, "material-symbols-outlined")
 }
 
 // TestTrackingLayout_MapAssetsConditional verifies the layout loads Leaflet
@@ -105,4 +122,31 @@ func TestTrackingLayout_MapAssetsConditional(t *testing.T) {
 	assert.Contains(t, run(map[string]interface{}{"MapAssets": true}), "/static/css/leaflet/leaflet.css")
 	assert.NotContains(t, run(nil), "leaflet.js")
 	assert.NotContains(t, run(nil), "leaflet.css")
+}
+
+// TestTrackingPage_AuthenticatedRoundTrip exercises the full handler path
+// (not just template lookup) and re-checks the tile-policy guards on the
+// rendered response body.
+func TestTrackingPage_AuthenticatedRoundTrip(t *testing.T) {
+	app := newTelemetryTestApp(t, denyAuthSvc{})
+	tr := &TrackingHandlers{App: app}
+
+	r := chi.NewRouter()
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			next.ServeHTTP(w, withSession(req, "ops-1", "ops"))
+		})
+	})
+	r.Route("/tracking", tr.Routes)
+
+	req := httptest.NewRequest(http.MethodGet, "/tracking", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	body := w.Body.String()
+	assert.Contains(t, body, `id="live-map"`)
+	assert.Contains(t, body, "/api/v1/telemetry/live")
+	assert.NotContains(t, body, "mt1.google.com")
+	assert.Contains(t, body, "openstreetmap.org/copyright")
 }

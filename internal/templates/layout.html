@@ -47,9 +47,6 @@
             background-color: var(--color-background);
             color: var(--color-on-surface);
         }
-        .leaflet-control-attribution {
-            display: none !important;
-        }
         .font-display { font-family: 'Satoshi', 'Plus Jakarta Sans', sans-serif; }
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
@@ -262,7 +259,7 @@
                 {{if can .User "pnl" "read"}}
                 {{if and .Features (index .Features "pnl")}}
                 <a href="/pnl/dashboard" class="nav-item {{if eq .Title "Profit & Loss"}}active{{end}}">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg>
                     <span>{{t "nav.pnl"}}</span>
                 </a>
                 {{else}}
@@ -539,7 +536,7 @@
                 </div>
             </header>
 
-            <main id="main-content" class="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 md:p-8 max-w-full">
+            <main id="main-content" class="flex-1 overflow-y-auto overflow-x-hidden max-w-full {{if eq .Title "Live Tracking"}}p-0{{else}}p-3 sm:p-6 md:p-8{{end}}">
                 {{.Content}}
             </main>
 
@@ -789,7 +786,7 @@
                     }
                     if(svgStr){
                         var tmp=document.createElement('div'); tmp.innerHTML=svgStr;
-                        var svg=tmp.firstChild; if(svg){ svg.className=el.className; el.parentNode.replaceChild(svg, el); }
+                        var svg=tmp.firstChild; if(svg){ svg.className=el.className; if(el.id){ svg.id=el.id; } el.parentNode.replaceChild(svg, el); }
                     }
                 });
             }
