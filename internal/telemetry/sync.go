@@ -66,6 +66,7 @@ func RegisterTelemetryRoutes(r chi.Router, ing *Ingestor, db *sql.DB, staleMin t
 	r.Post("/api/v1/telemetry/snapshots", HandleTelemetrySnapshots(ing))
 	r.Get("/api/v1/telemetry/live", LiveHandler(db, staleMin, etaSvc...))
 	r.Get("/api/v1/telemetry/geofences", GeofencesHandler(db))
+	r.Get("/api/v1/telemetry/history", HistoryHandler(db))
 }
 
 // ensureSyntheticDevice completes Decision D3: driver phones have no IMEI, so

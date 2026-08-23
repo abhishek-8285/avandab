@@ -31,8 +31,14 @@ import { BackgroundGPS } from './src/services/backgroundLocation';
 import { Analytics } from './src/services/analytics';
 import { MQTT } from './src/services/mqtt';
 import { SyncEngine, startNetworkWatcher, stopNetworkWatcher } from './src/services/syncEngine';
+import { TripPoller } from './src/services/tripPoller';
 import { OfflineQueue } from './src/services/offlineQueue';
+import ConsentManager from './src/services/consentManager';
+import { SyncStatusBar } from './src/components/SyncStatusBar';
+import { ComplianceBanner } from './src/components/ComplianceBanner';
+import { VoiceExpenseButton } from './src/components/VoiceExpenseButton';
 import { useAuthStore } from './src/stores/authStore';
+import { useSyncStore } from './src/stores/syncStore';
 import { Trip } from './src/types/api';
 import { mapTripStatus, RawTrip } from './src/utils/tripMapper';
 import { CameraView } from 'expo-camera';
@@ -201,6 +207,7 @@ export default function App() {
   useEffect(() => {
     loadSession();
     OfflineQueue.init().catch(() => {});
+    ConsentManager.init().catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -221,7 +228,14 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <StatusBar style="light" />
         <NavigationContainer>
-          {isAuthenticated ? <DriverNavigator /> : <AuthNavigator />}
+          {isAuthenticated ? (
+            <>
+              <SyncStatusBar />
+              <DriverNavigator />
+            </>
+          ) : (
+            <AuthNavigator />
+          )}
         </NavigationContainer>
       </QueryClientProvider>
     </SafeAreaProvider>
@@ -268,6 +282,8 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
       if (activeId) {
         MQTT.connect(activeId);
         SyncEngine.startAutoSync(activeId, 15000);
+        SyncEngine.flushOfflineQueues().catch(() => {});
+        TripPoller.start(activeId);
       }
     });
     // In-app dispatch alerts (trip assignment/status pushed over MQTT)
@@ -275,8 +291,13 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
       Alert.alert('DISPATCH UPDATE', `Trip ${u.trip_id} · ${u.status || 'update'}`);
       queryClient.invalidateQueries({ queryKey: ['trips', driverIdentifier, token] });
     });
+    // Auto-accepted trips (poller loop) refresh the list without user action
+    const unsubscribeTripAccepted = TripPoller.onTripAccepted(() => {
+      queryClient.invalidateQueries({ queryKey: ['trips', driverIdentifier, token] });
+    });
     return () => {
       unsubscribeDispatch();
+      unsubscribeTripAccepted();
       SyncEngine.stopAutoSync();
     };
   }, [user?.id, user?.driverId]);
@@ -403,10 +424,13 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
 
   const handleSignOut = () => {
     // Full teardown: no live listeners may survive a logout.
+    TripPoller.stop();
     MQTT.disconnect();
     Telemetry.stopLiveLocationTracking();
     SyncEngine.stopAutoSync();
     stopNetworkWatcher();
+    useSyncStore.getState().markSynced();
+    useSyncStore.getState().setPendingCount(0);
     logout();
   };
 
@@ -438,6 +462,10 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
   // Trip context for map labels + expense logging: prefer an in-transit trip.
   const activeTrip =
     trips?.find((t) => t.status === 'IN_TRANSIT') ?? trips?.find((t) => t.status === 'PENDING') ?? null;
+  // Backend trips expose vehiclePlate only today; surface vehicleId once added.
+  const activeVehicleId = activeTrip
+    ? ((activeTrip as unknown as { vehicleId?: string }).vehicleId ?? null)
+    : null;
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -476,6 +504,11 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
         >
           <Text style={styles.bannerBtnText}>SETUP</Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Vehicle compliance banner (renders only when a vehicle id is resolvable) */}
+      <View style={styles.complianceContainer}>
+        <ComplianceBanner vehicleId={activeVehicleId} />
       </View>
 
       {/* Tabs */}
@@ -574,6 +607,8 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
                 {activeTrip ? `LOG EXPENSE · ${activeTrip.tripNumber}` : 'LOG EXPENSE (NO ACTIVE TRIP)'}
               </Text>
             </TouchableOpacity>
+
+            <VoiceExpenseButton tripId={activeTrip?.id} disabled={!activeTrip} />
 
             {/* Telemetry Status Grid */}
             <View style={styles.telemetrySection}>
@@ -802,6 +837,10 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     letterSpacing: 0.5,
     fontFamily: Font.mono,
+  },
+  complianceContainer: {
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.sm,
   },
   tabContainer: {
     flexDirection: 'row',

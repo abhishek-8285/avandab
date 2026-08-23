@@ -106,6 +106,7 @@ const sqliteMockState = {
   trips: [] as any[],
   offline_gps_logs: [] as any[],
   offline_expenses: [] as any[],
+  consent_log: [] as any[],
 };
 
 export const getSQLiteMockState = () => sqliteMockState;
@@ -116,6 +117,7 @@ export const resetSQLiteMockState = () => {
   sqliteMockState.trips = [];
   sqliteMockState.offline_gps_logs = [];
   sqliteMockState.offline_expenses = [];
+  sqliteMockState.consent_log = [];
 };
 
 // Mock expo-sqlite (native module)
@@ -123,6 +125,13 @@ jest.mock('expo-sqlite', () => ({
   openDatabaseAsync: jest.fn().mockResolvedValue({
     execAsync: jest.fn().mockResolvedValue(undefined),
     getFirstAsync: jest.fn().mockImplementation(async (query: string, params: any[] = []) => {
+      if (query.includes('FROM consent_log')) {
+        // Newest record for the purpose (ORDER BY id DESC LIMIT 1)
+        const rows = sqliteMockState.consent_log
+          .filter((c) => c.purpose === params[0])
+          .sort((a, b) => b.id - a.id);
+        return rows[0] ?? null;
+      }
       if (query.includes('queued_pods WHERE trip_id =')) {
         return sqliteMockState.queued_pods.find((p) => p.trip_id === params[0]) || null;
       }
@@ -148,6 +157,13 @@ jest.mock('expo-sqlite', () => ({
       }
       if (query.includes('offline_expenses')) {
         return [...sqliteMockState.offline_expenses];
+      }
+      if (query.includes('consent_log')) {
+        // Newest-first: timestamp DESC, id DESC tiebreak
+        return [...sqliteMockState.consent_log].sort((a, b) => {
+          if (a.timestamp !== b.timestamp) return a.timestamp < b.timestamp ? 1 : -1;
+          return b.id - a.id;
+        });
       }
       return [];
     }),
@@ -255,6 +271,21 @@ jest.mock('expo-sqlite', () => ({
         sqliteMockState.offline_gps_logs.forEach((l) => {
           if (ids.includes(l.id)) l.synced = 1;
         });
+      } else if (query.includes('INSERT INTO consent_log')) {
+        sqliteMockState.consent_log.push({
+          id: sqliteMockState.consent_log.length + 1,
+          purpose: params[0],
+          user_response: params[1],
+          timestamp: new Date().toISOString(),
+        });
+      } else if (query.includes('DELETE FROM consent_log')) {
+        // Mirrors DELETE ... WHERE timestamp < datetime('now','-N years')
+        const yearsMatch = query.match(/'-(\d+)\s+years'/);
+        const years = yearsMatch ? parseInt(yearsMatch[1], 10) : 3;
+        const cutoffMs = Date.now() - years * 365.25 * 24 * 60 * 60 * 1000;
+        sqliteMockState.consent_log = sqliteMockState.consent_log.filter(
+          (c) => new Date(c.timestamp).getTime() >= cutoffMs
+        );
       }
       return { lastInsertRowId: 1, changes: 1 };
     }),
@@ -286,3 +317,12 @@ jest.mock('mqtt', () => ({
     end: jest.fn(),
   }),
 }));
+
+// ── Append-only extensions below ──
+
+// Virtual mock for optional expo-notifications so guarded require succeeds in tests
+jest.mock('expo-notifications', () => ({
+  scheduleNotificationAsync: jest.fn(),
+  requestPermissionsAsync: jest.fn().mockResolvedValue(true),
+  getPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
+}), { virtual: true });

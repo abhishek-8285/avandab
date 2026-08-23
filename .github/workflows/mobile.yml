@@ -1,5 +1,7 @@
 name: Mobile CI
 
+# Merge gate: typecheck + lint + test-unit must pass (configure branch
+# protection on these three job names; the rest are quality signals).
 on:
   push:
     branches: [main, master, develop]
@@ -12,8 +14,8 @@ on:
       - '.github/workflows/mobile.yml'
 
 jobs:
-  mobile:
-    name: Typecheck, Lint & Test
+  typecheck:
+    name: Typecheck (merge gate)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -33,17 +35,184 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
+  lint:
+    name: Lint (merge gate)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
       - name: Lint
         run: npm run lint
 
-      - name: Test
+  test-unit:
+    name: Unit Tests (merge gate)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests
         run: npm test
 
-      - name: Build (export)
-        run: npm run build
+  build-android:
+    name: Build Export (Android)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Expo export (android)
+        run: npx expo export --platform android
         env:
           EXPO_PUBLIC_API_SCHEME: https
           EXPO_PUBLIC_BACKEND_HOST: api.avandab.com
           EXPO_PUBLIC_API_PORT: '443'
           EXPO_PUBLIC_MQTT_SCHEME: wss
           EXPO_PUBLIC_MQTT_BROKER_PORT: '8883'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-export-android
+          path: mobile/dist
+          retention-days: 7
+
+  build-ios:
+    name: Build Export (iOS)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Expo export (ios)
+        run: npx expo export --platform ios
+        env:
+          EXPO_PUBLIC_API_SCHEME: https
+          EXPO_PUBLIC_BACKEND_HOST: api.avandab.com
+          EXPO_PUBLIC_API_PORT: '443'
+          EXPO_PUBLIC_MQTT_SCHEME: wss
+          EXPO_PUBLIC_MQTT_BROKER_PORT: '8883'
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-export-ios
+          path: mobile/dist
+          retention-days: 7
+
+  test-integration:
+    name: Integration Tests (coverage thresholds)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Coverage with thresholds (80 global)
+        run: npm run coverage
+
+  mutation-test:
+    name: Mutation Tests (Stryker)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    continue-on-error: false
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Mutation testing
+        run: npm run mutation
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Non-blocking signal; flip continue-on-error to false once audit is clean.
+      - name: npm audit (high+)
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      # Optional Snyk — skipped unless SNYK_TOKEN secret is configured.
+      - name: Snyk test
+        if: env.SNYK_TOKEN != ''
+        run: npx snyk test --severity-threshold=high
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}

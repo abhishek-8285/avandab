@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -66,6 +67,57 @@ type LiveStore struct {
 
 	// etaService calculates hybrid ETA for active trips (Spec 04 §5, 3D).
 	etaService *eta.EtaService
+
+	// etaCache memoizes ETA results per trip for etaCacheTTL. EtaService.
+	// Calculate runs 4-5 queries per call; without the cache a 200-vehicle
+	// fleet with trips on the map re-runs ~1000 queries per poll per client.
+	etaMu    sync.Mutex
+	etaCache map[string]etaCacheEntry
+}
+
+// etaCacheEntry memoizes one trip's ETA result. ok=false caches negative
+// lookups too (inactive/stale trips would otherwise re-query every poll).
+type etaCacheEntry struct {
+	res     eta.EtaResult
+	ok      bool
+	expires time.Time
+}
+
+// etaCacheTTL bounds staleness while keeping DB load flat. ETAs move slowly
+// relative to marker positions, so 30s is imperceptible on the map.
+const etaCacheTTL = 30 * time.Second
+
+// cachedEta returns the ETA for tripID, serving hits from the TTL cache and
+// storing both positive and negative results.
+func (s *LiveStore) cachedEta(ctx context.Context, tripID string) (eta.EtaResult, bool) {
+	now := time.Now()
+	s.etaMu.Lock()
+	if s.etaCache == nil {
+		s.etaCache = make(map[string]etaCacheEntry)
+	}
+	if e, found := s.etaCache[tripID]; found {
+		if now.Before(e.expires) {
+			s.etaMu.Unlock()
+			return e.res, e.ok
+		}
+		delete(s.etaCache, tripID)
+	}
+	s.etaMu.Unlock()
+
+	res, err := s.etaService.Calculate(ctx, tripID)
+	entry := etaCacheEntry{res: res, ok: err == nil, expires: now.Add(etaCacheTTL)}
+
+	s.etaMu.Lock()
+	s.etaCache[tripID] = entry
+	if len(s.etaCache) > 1024 {
+		for k, v := range s.etaCache {
+			if now.After(v.expires) {
+				delete(s.etaCache, k)
+			}
+		}
+	}
+	s.etaMu.Unlock()
+	return res, err == nil
 }
 
 // WithEtaService attaches an EtaService to compute live ETAs.
@@ -172,7 +224,7 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 	for i := range out {
 		out[i].Status = markerState(out[i], due, s.staleMin, now)
 		if out[i].TripID != "" && s.etaService != nil {
-			if etaRes, err := s.etaService.Calculate(ctx, out[i].TripID); err == nil {
+			if etaRes, ok := s.cachedEta(ctx, out[i].TripID); ok {
 				out[i].EtaMin = &etaRes.EtaMin
 				out[i].EtaMax = &etaRes.EtaMax
 				out[i].EtaMethod = etaRes.Method
@@ -244,6 +296,9 @@ func columnExists(db *sql.DB, table, column string) bool {
 // LiveHandler serves GET /api/v1/telemetry/live — JSON array of live markers
 // (Spec 04 §7). Optional ?trip_id= filter. Mounted inside RequireAPIAuth
 // (tenant is read from the request context set by that middleware).
+// Extended: ?q= / ?search= filters by vehicle_number / vehicle_id / trip_id
+// substring (case-insensitive). This keeps the /tracking search snappy at
+// 200+ vehicles when callers prefer server-side filtering over client-side.
 func LiveHandler(db *sql.DB, staleMin time.Duration, etaSvc ...*eta.EtaService) http.HandlerFunc {
 	store := NewLiveStore(db, staleMin)
 	if len(etaSvc) > 0 && etaSvc[0] != nil {
@@ -263,8 +318,38 @@ func LiveHandler(db *sql.DB, staleMin time.Duration, etaSvc ...*eta.EtaService) 
 		if vehicles == nil {
 			vehicles = []LiveVehicle{}
 		}
+		// Server-side search (for large fleets / programmatic callers).
+		if q := r.URL.Query().Get("q"); q != "" {
+			vehicles = filterLiveVehicles(vehicles, q)
+		} else if s := r.URL.Query().Get("search"); s != "" {
+			vehicles = filterLiveVehicles(vehicles, s)
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
 		_ = json.NewEncoder(w).Encode(vehicles)
 	}
+}
+
+func filterLiveVehicles(in []LiveVehicle, q string) []LiveVehicle {
+	if q == "" {
+		return in
+	}
+	ql := strings.ToLower(strings.TrimSpace(q))
+	if ql == "" {
+		return in
+	}
+	out := make([]LiveVehicle, 0, len(in))
+	for _, v := range in {
+		if containsFold(v.VehicleNumber, ql) || containsFold(v.VehicleID, ql) || containsFold(v.TripID, ql) {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+func containsFold(s, ql string) bool {
+	if s == "" || ql == "" {
+		return false
+	}
+	return strings.Contains(strings.ToLower(s), ql)
 }

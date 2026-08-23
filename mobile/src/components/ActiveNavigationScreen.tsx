@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, Alert } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LiveDriverTrackingMap } from './LiveDriverTrackingMap';
+import { EWayBillCard } from './EWayBillCard';
 import { Telemetry } from '../services/telemetry';
 import { Colors, Font, Radius, Spacing } from '../constants/theme';
 import { getApiBaseURL } from '../constants/network';
@@ -131,6 +132,7 @@ export function ActiveNavigationScreen({
 
       {/* Bottom delivery card */}
       <View style={styles.bottomCardContainer}>
+        {tripId ? <EWayBillCard tripId={tripId} /> : null}
         <View style={styles.bottomCard}>
           <View style={styles.cardHeader}>
             <View style={styles.stopInfo}>
@@ -320,6 +322,7 @@ const styles = StyleSheet.create({
     left: Spacing.md,
     right: Spacing.md,
     zIndex: 40,
+    gap: Spacing.sm,
   },
   bottomCard: {
     backgroundColor: Colors.surface,

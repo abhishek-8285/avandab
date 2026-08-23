@@ -2,21 +2,25 @@
   "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-js/master/packages/core/schema/stryker-schema.json",
   "mutate": [
     "src/services/offlineQueue.ts",
-    "src/stores/authStore.ts"
+    "src/stores/authStore.ts",
+    "src/services/compliance.ts",
+    "src/services/eta.ts",
+    "src/utils/retry.ts"
   ],
   "testRunner": "command",
   "commandRunner": {
     "command": "npm test -- --silent --forceExit --testTimeout=10000"
   },
   "coverageAnalysis": "off",
+  "incremental": false,
   "disableTypeChecks": true,
   "reporters": ["progress-append-only", "html", "json"],
   "thresholds": {
     "high": 80,
     "low": 60,
-    "break": 50
+    "break": 70
   },
-  "concurrency": 2,
+  "concurrency": 4,
   "timeoutMS": 30000,
   "timeoutFactor": 2,
   "ignorePatterns": [

@@ -10,14 +10,19 @@ export interface TripDispatchUpdate {
 
 type DispatchListener = (update: TripDispatchUpdate) => void;
 
+// Custom exponential reconnect backoff bounds
+const RECONNECT_BASE_MS = 1000;
+const RECONNECT_MAX_MS = 30000;
+
 class MQTTTelemetryService {
   private client: mqtt.MqttClient | null = null;
   private isConnected = false;
   private dispatchListeners: Set<DispatchListener> = new Set();
+  private reconnectAttempt = 0;
 
   /**
    * Subscribe to in-app dispatch notifications (trip assignments/status
-   * changes pushed over `avandab/trips/drivers/{id}/updates`). Returns an
+   * changes pushed over the driver updates topics). Returns an
    * unsubscribe function.
    */
   onDispatch(listener: DispatchListener): () => void {
@@ -35,15 +40,20 @@ class MQTTTelemetryService {
     });
   }
 
-  connect(driverId: string): void {
+  connect(driverId: string, clean = false): void {
     try {
       const brokerUrl = getMQTTBrokerURL();
       const token = useAuthStore.getState().token;
+      this.reconnectAttempt = 0;
 
       const options: mqtt.IClientOptions = {
-        clientId: `driver_${driverId}_${Math.random().toString(16).substring(2, 8)}`,
+        // Persistent session: deterministic clientId (no random suffix — a
+        // random one breaks broker queueing for offline drivers) + clean:false
+        // so missed dispatches survive disconnects/restarts.
+        clientId: `driver_${driverId}`,
+        clean,
         keepalive: 60,
-        reconnectPeriod: 5000,
+        reconnectPeriod: RECONNECT_BASE_MS,
         username: driverId,
       };
       if (token) {
@@ -55,15 +65,37 @@ class MQTTTelemetryService {
 
       this.client.on('connect', () => {
         this.isConnected = true;
+        // Reset custom backoff after a successful connect
+        this.reconnectAttempt = 0;
+        if (this.client) {
+          this.client.options.reconnectPeriod = RECONNECT_BASE_MS;
+        }
         console.log('[MQTT MOBILE SUCCESS] Connected to MQTT Telemetry Broker');
 
-        // Subscribe to driver dispatch assignment updates
-        const updateTopic = `avandab/trips/drivers/${driverId}/updates`;
-        this.client?.subscribe(updateTopic, (err) => {
-          if (!err) {
-            console.log(`[MQTT SUBSCRIBED] Listening on topic: ${updateTopic}`);
-          }
+        // Subscribe to both driver update topics (legacy + spec)
+        const topics = [
+          `avandab/trips/drivers/${driverId}/updates`,
+          `avandab/drivers/${driverId}/updates`,
+        ];
+        topics.forEach((topic) => {
+          this.client?.subscribe(topic, (err) => {
+            if (!err) {
+              console.log(`[MQTT SUBSCRIBED] Listening on topic: ${topic}`);
+            }
+          });
         });
+      });
+
+      this.client.on('close', () => {
+        this.isConnected = false;
+        // Custom exponential backoff: 1s doubling up to 30s
+        this.reconnectAttempt += 1;
+        if (this.client) {
+          this.client.options.reconnectPeriod = Math.min(
+            RECONNECT_BASE_MS * Math.pow(2, this.reconnectAttempt),
+            RECONNECT_MAX_MS,
+          );
+        }
       });
 
       this.client.on('message', (topic, message) => {

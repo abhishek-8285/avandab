@@ -3,6 +3,7 @@ import { getApiBaseURL } from '../constants/network';
 import { DB } from './storage';
 import { OfflineQueue } from './offlineQueue';
 import { useAuthStore } from '../stores/authStore';
+import { applyNetInfoState, useSyncStore } from '../stores/syncStore';
 
 let wasConnected = true;
 let unsubscribeNetInfo: (() => void) | null = null;
@@ -12,6 +13,13 @@ export function startNetworkWatcher(): void {
 
   unsubscribeNetInfo = NetInfo.addEventListener((state) => {
     const isConnected = state.isConnected ?? false;
+
+    try {
+      // Offline flips the bar to offline_saved; online leaves status untouched
+      applyNetInfoState(isConnected);
+    } catch {
+      // status updates must never break the watcher
+    }
 
     if (isConnected && !wasConnected) {
       // Just reconnected — flush offline queues in batch (pods/expenses/gps)
@@ -73,16 +81,50 @@ class SyncEngineService {
    * Each item is retried independently — one failure does not block the rest.
    */
   async flushOfflineQueues(): Promise<{ podsFlushed: number; expensesFlushed: number; gpsFlushed: number }> {
+    let result = { podsFlushed: 0, expensesFlushed: 0, gpsFlushed: 0 };
     try {
-      const result = await OfflineQueue.flush();
-      return {
-        podsFlushed: result.podsFlushed,
-        expensesFlushed: (result as any).expensesFlushed ?? 0,
-        gpsFlushed: result.gpsFlushed,
-      };
+      const prevStatus = useSyncStore.getState().status;
+      try {
+        useSyncStore.getState().setStatus('syncing');
+      } catch {
+        // status bar is best-effort
+      }
+      result = await OfflineQueue.flush();
+      const flushedTotal = result.podsFlushed + result.expensesFlushed + result.gpsFlushed;
+      if (flushedTotal > 0) {
+        try {
+          useSyncStore.getState().markSynced();
+        } catch {
+          // status bar is best-effort
+        }
+      } else {
+        // Nothing flushed — don't leave the bar stuck on 'syncing'
+        try {
+          useSyncStore.getState().setStatus(prevStatus);
+        } catch {
+          // status bar is best-effort
+        }
+      }
     } catch {
-      return { podsFlushed: 0, expensesFlushed: 0, gpsFlushed: 0 };
+      try {
+        useSyncStore.getState().setStatus('error');
+      } catch {
+        // status bar is best-effort
+      }
     }
+
+    // Refresh pending badge count after every flush attempt (all paths benefit)
+    try {
+      const [pods, expenses, gps] = await Promise.all([
+        OfflineQueue.pendingPODs(),
+        OfflineQueue.pendingExpenses(),
+        OfflineQueue.pendingGPS(),
+      ]);
+      useSyncStore.getState().setPendingCount(pods.length + expenses.length + gps.length);
+    } catch {
+      // pending count is best-effort
+    }
+    return result;
   }
 
   async syncPendingLogs(driverId: string): Promise<{ syncedCount: number; error: string | null }> {
