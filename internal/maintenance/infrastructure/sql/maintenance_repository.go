@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"transport-app/internal/maintenance/domain"
+	"transport-app/internal/shared"
 )
 
 // MaintenanceRepository handles raw SQL persistence for schedules, records, and DTC events (Spec 04 §6, §3).
@@ -298,10 +299,10 @@ func (r *MaintenanceRepository) InsertRecord(ctx context.Context, rec domain.Rec
 	defer func() { _ = tx.Rollback() }()
 
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO maintenance_records (id, vehicle_id, schedule_id, service_type, performed_at, odometer_km, cost, vendor, notes, recorded_by)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO maintenance_records (id, vehicle_id, schedule_id, service_type, performed_at, odometer_km, cost, vendor, notes, recorded_by, tenant_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		rec.ID, rec.VehicleID, rec.ScheduleID, rec.ServiceType, rec.PerformedAt.UTC().Format("2006-01-02 15:04:05"),
-		rec.OdometerKM, rec.Cost, rec.Vendor, rec.Notes, rec.RecordedBy,
+		rec.OdometerKM, rec.Cost, rec.Vendor, rec.Notes, rec.RecordedBy, tenantFromCtx(ctx),
 	)
 	if err != nil {
 		return err
@@ -527,4 +528,13 @@ func (r *MaintenanceRepository) ListDtcEvents(ctx context.Context, vehicleID str
 		list = append(list, e)
 	}
 	return list, rows.Err()
+}
+
+// tenantFromCtx derives the acting tenant from the request context,
+// defaulting to the bootstrap tenant for worker-initiated writes.
+func tenantFromCtx(ctx context.Context) string {
+	if id := shared.TenantIDFromContext(ctx); id != "" {
+		return string(id)
+	}
+	return string(shared.DefaultTenant)
 }

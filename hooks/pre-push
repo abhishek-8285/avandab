@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Versioned pre-push hook — full security gate (no LINT_BASE ratchet).
+# Blocks push when the whole-repo security suite fails.
+set -e
+echo "=== pre-push: full security gate ==="
+unset LINT_BASE
+./scripts/security-check.sh
+echo "=== pre-push: gate passed ==="

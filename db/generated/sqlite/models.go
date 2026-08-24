@@ -337,6 +337,7 @@ type DriverExpense struct {
 	IdempotencyKey sql.NullString  `json:"idempotency_key"`
 	Latitude       sql.NullFloat64 `json:"latitude"`
 	Longitude      sql.NullFloat64 `json:"longitude"`
+	TenantID       string          `json:"tenant_id"`
 }
 
 type DriverIssue struct {
@@ -808,6 +809,7 @@ type MaintenanceRecord struct {
 	Notes       sql.NullString  `json:"notes"`
 	RecordedBy  sql.NullString  `json:"recorded_by"`
 	CreatedAt   time.Time       `json:"created_at"`
+	TenantID    string          `json:"tenant_id"`
 }
 
 type MaintenanceSchedule struct {

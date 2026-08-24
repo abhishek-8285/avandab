@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Versioned pre-commit hook — same gate the repo always ran.
+# Activated via: git config core.hooksPath hooks
+exec ./scripts/pre-commit-check.sh

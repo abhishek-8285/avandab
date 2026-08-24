@@ -408,9 +408,9 @@ func (s *KharchaService) CreateExpenseWithOpts(ctx context.Context, o CreateExpe
 
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO driver_expenses
-		 (id, trip_id, driver_id, expense_type, category, amount, description, receipt_url, fuel_litres, status, created_at, idempotency_key, latitude, longitude)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
-		expID, tID, dID, o.Category, o.Category, o.Amount, desc, recURL, litres, time.Now(), idemKey, o.Latitude, o.Longitude)
+		 (id, trip_id, driver_id, expense_type, category, amount, description, receipt_url, fuel_litres, status, created_at, idempotency_key, latitude, longitude, tenant_id)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)`,
+		expID, tID, dID, o.Category, o.Category, o.Amount, desc, recURL, litres, time.Now(), idemKey, o.Latitude, o.Longitude, tenantIDFor(ctx))
 	if err != nil {
 		// Handle race: unique index violation → return existing
 		if idemKey != nil {

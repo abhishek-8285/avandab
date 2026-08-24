@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 
 	"transport-app/internal/domain"
+	"transport-app/internal/shared"
 )
 
 // generateID creates a new UUID string for entity primary keys.
@@ -76,4 +77,14 @@ func ValidateRequired(fields map[string]string) error {
 // RoleFromID converts a role ID to a domain.Role.
 func RoleFromID(store Store, ctx context.Context, roleID int64) (domain.Role, error) {
 	return store.GetRoleByID(ctx, roleID)
+}
+
+// tenantIDFor derives the acting tenant from the request context, falling
+// back to the bootstrap default for system-initiated writes. Never hardcode
+// a tenant literal at call sites (AGENTS.md Prohibition #4).
+func tenantIDFor(ctx context.Context) string {
+	if id := shared.TenantIDFromContext(ctx); id != "" {
+		return string(id)
+	}
+	return string(shared.DefaultTenant)
 }
