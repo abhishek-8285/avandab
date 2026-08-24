@@ -101,6 +101,9 @@ type App struct {
 	// Alerts repository and operational alerts handler (Spec 05 §3).
 	AlertsRepo repository.AlertRepository
 	Alerts     *AlertHandlers
+	// PNLService backs the console money strip (Spec 22 §2.2); nil when the
+	// service layer is unavailable.
+	PNLService *service.PNLService
 	// Compliance handler (Spec 05 §5).
 	Compliance *ComplianceHandlers
 	// E-Way Bill handler (Spec 07 §2).
@@ -195,6 +198,7 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	// PNL daily snapshot (Spec 16 §2).
 	if svc != nil && svc.PNL != nil {
 		app.PNL = NewPNLHandlers(app, svc.PNL, authSrv)
+		app.PNLService = svc.PNL
 	}
 	// Operational alerts (Spec 16 §4).
 	if svc != nil && svc.OpsAlerts != nil {

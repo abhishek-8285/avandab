@@ -76,6 +76,8 @@ var Catalog = []Feature{
 		Description: "Bucketed variants with sticky assignment and conversion tracking."},
 
 	// Command Center (Spec 22)
+	{Key: "command_center", Name: "Owner Command Center", Category: "Command Center", Tier: TierAddon,
+		Description: "One-screen console: money strip, fleet context, ranked alerts.", EnvFlag: "COMMAND_CENTER_ENABLED"},
 	{Key: "alert_inbox", Name: "Ranked Alert Inbox", Category: "Command Center", Tier: TierAddon,
 		Description: "Severity-ranked alert inbox with ack/snooze on the console.", EnvFlag: "ALERT_INBOX_ENABLED"},
 

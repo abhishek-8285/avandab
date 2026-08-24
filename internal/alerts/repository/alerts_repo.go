@@ -32,6 +32,9 @@ type AlertRepository interface {
 	// has passed. Ack/Snooze return false when the guard matched no row
 	// (already handled — Spec 22 edge case 10).
 	ListInbox(ctx context.Context, tenantID, status string, limit int) ([]domain.Alert, error)
+	// InboxCounts returns (visible-open, rank-1-critical) counts using the
+	// same visibility rule as ListInbox status=open (expired snoozes count).
+	InboxCounts(ctx context.Context, tenantID string) (open int, critical int, err error)
 	InboxAck(ctx context.Context, alertID, userID string) (bool, error)
 	InboxSnooze(ctx context.Context, alertID, userID string, until time.Time) (bool, error)
 	InboxSnoozeAll(ctx context.Context, ids []string, userID string, until time.Time) (int64, error)

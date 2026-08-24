@@ -64,6 +64,10 @@ func openPNLTestDB(t *testing.T) *sql.DB {
 	);
 	CREATE TABLE IF NOT EXISTS vehicles (
 		id TEXT PRIMARY KEY, tenant_id TEXT, status TEXT
+	);
+	CREATE TABLE IF NOT EXISTS payments (
+		id TEXT PRIMARY KEY, tenant_id TEXT, invoice_id TEXT,
+		amount REAL, method TEXT, created_at TEXT
 	);`
 
 	if _, err := db.Exec(schema); err != nil {
@@ -264,5 +268,67 @@ func TestGetActiveTenantIDs_MultiTenant(t *testing.T) {
 	}
 	if len(ids) != 2 {
 		t.Errorf("expected 2 distinct tenants, got %d: %v", len(ids), ids)
+	}
+}
+
+func TestPNLService_GetMoneyStrip_MatchesSnapshot(t *testing.T) {
+	db := openPNLTestDB(t)
+	svc := service.NewPNLService(db)
+	ctx := context.Background()
+	when := time.Date(2025, 3, 10, 12, 0, 0, 0, time.UTC)
+	date := "2025-03-10"
+
+	// Same fixture shape as TestPNLService_GenerateDailySnapshot_WithData.
+	db.Exec(`INSERT INTO invoices VALUES ('inv1','1',1000.0,'paid',?)`, date+" 10:00:00")
+	db.Exec(`INSERT INTO driver_expenses VALUES ('de1','1',200.0,'fuel',?)`, date+" 08:00:00")
+	db.Exec(`INSERT INTO trips VALUES ('t1','1',?,'b1')`, date+" 06:00:00")
+	db.Exec(`INSERT INTO driver_settlements VALUES ('ds1','t1',300.0,30.0,?)`, date+" 18:00:00")
+	db.Exec(`INSERT INTO maintenance_records VALUES ('mr1','1',50.0,?)`, date+" 09:00:00")
+	db.Exec(`INSERT INTO fastag_transactions VALUES ('ft1','1',40.0,?)`, date+" 07:00:00")
+
+	snap, err := svc.GenerateDailySnapshot(ctx, "1", when)
+	if err != nil {
+		t.Fatalf("snapshot: %v", err)
+	}
+	strip, err := svc.GetMoneyStrip(ctx, "1", when)
+	if err != nil {
+		t.Fatalf("money strip: %v", err)
+	}
+
+	if strip.Date != snap.SnapshotDate {
+		t.Errorf("date = %q, want %q", strip.Date, snap.SnapshotDate)
+	}
+	// Exit gate (Spec 22 §10 Step 2): strip must equal report totals.
+	if strip.Revenue != snap.Revenue {
+		t.Errorf("revenue = %f, want %f (report total)", strip.Revenue, snap.Revenue)
+	}
+	if strip.Spent != snap.Expenses {
+		t.Errorf("spent = %f, want %f (report total)", strip.Spent, snap.Expenses)
+	}
+}
+
+func TestPNLService_GetMoneyStrip_Receivables(t *testing.T) {
+	db := openPNLTestDB(t)
+	svc := service.NewPNLService(db)
+	ctx := context.Background()
+	when := time.Date(2025, 3, 10, 12, 0, 0, 0, time.UTC)
+
+	// inv_a: 1000 total, 400 paid → 600 outstanding.
+	db.Exec(`INSERT INTO invoices VALUES ('inv_a','1',1000.0,'partially_paid','2025-03-01')`)
+	db.Exec(`INSERT INTO payments VALUES ('pay_a','1','inv_a',400.0,'upi','2025-03-02')`)
+	// inv_b: 500 total, nothing paid → 500 outstanding.
+	db.Exec(`INSERT INTO invoices VALUES ('inv_b','1',500.0,'pending','2025-03-03')`)
+	// inv_c: overpaid 350 against 300 → floors at 0, never negative.
+	db.Exec(`INSERT INTO invoices VALUES ('inv_c','1',300.0,'paid','2025-03-04')`)
+	db.Exec(`INSERT INTO payments VALUES ('pay_c','1','inv_c',350.0,'cash','2025-03-05')`)
+	// Other tenant's invoice must not leak in.
+	db.Exec(`INSERT INTO invoices VALUES ('inv_x','2',9999.0,'pending','2025-03-05')`)
+
+	strip, err := svc.GetMoneyStrip(ctx, "1", when)
+	if err != nil {
+		t.Fatalf("money strip: %v", err)
+	}
+	if strip.Receivables != 1100.0 {
+		t.Errorf("receivables = %f, want 1100.0 (600+500+0, tenant '1' only)", strip.Receivables)
 	}
 }

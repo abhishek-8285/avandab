@@ -1,0 +1,39 @@
+{{define "money_strip.html"}}
+{{/* Console money strip (Spec 22 §2.2/§4.1). Expects .MoneyStrip *service.MoneyStrip (may be nil). */}}
+<section id="money-strip" class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm">
+    <div class="grid grid-cols-2 md:grid-cols-4 divide-x divide-border-subtle">
+        <div class="px-4 py-3">
+            <p class="text-xs text-text-muted">Today Revenue</p>
+            {{if .MoneyStrip}}
+            <p class="text-lg font-semibold text-on-surface font-display tabular-nums">₹{{printf "%.2f" .MoneyStrip.Revenue}}</p>
+            {{else}}
+            <p class="text-lg font-semibold text-on-surface font-display" title="P&amp;L service unavailable">—</p>
+            {{end}}
+        </div>
+        <div class="px-4 py-3">
+            <p class="text-xs text-text-muted">Today Spent</p>
+            {{if .MoneyStrip}}
+            <p class="text-lg font-semibold text-on-surface font-display tabular-nums">₹{{printf "%.2f" .MoneyStrip.Spent}}</p>
+            {{else}}
+            <p class="text-lg font-semibold text-on-surface font-display">—</p>
+            {{end}}
+        </div>
+        <div class="px-4 py-3">
+            <p class="text-xs text-text-muted">Receivables</p>
+            {{if .MoneyStrip}}
+            <p class="text-lg font-semibold text-on-surface font-display tabular-nums">₹{{printf "%.2f" .MoneyStrip.Receivables}}</p>
+            {{else}}
+            <p class="text-lg font-semibold text-on-surface font-display">—</p>
+            {{end}}
+        </div>
+        <div class="px-4 py-3">
+            <p class="text-xs text-text-muted">Date</p>
+            {{if .MoneyStrip}}
+            <p class="text-lg font-semibold text-on-surface font-display">{{.MoneyStrip.Date}}</p>
+            {{else}}
+            <p class="text-lg font-semibold text-on-surface font-display">—</p>
+            {{end}}
+        </div>
+    </div>
+</section>
+{{end}}

@@ -535,6 +535,23 @@ func (r *sqlAlertRepository) ListInbox(ctx context.Context, tenantID, status str
 	return collectAlerts(rows)
 }
 
+// InboxCounts implements repository.AlertRepository.
+func (r *sqlAlertRepository) InboxCounts(ctx context.Context, tenantID string) (int, int, error) {
+	now := time.Now().UTC()
+	var open, critical int
+	err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*),
+		       COALESCE(SUM(CASE WHEN severity_rank = 1 THEN 1 ELSE 0 END), 0)
+		FROM alerts
+		WHERE tenant_id = ?
+		  AND (ack_status = 'open' OR (ack_status = 'snoozed' AND snoozed_until <= ?))`,
+		tenantID, now).Scan(&open, &critical)
+	if err != nil {
+		return 0, 0, err
+	}
+	return open, critical, nil
+}
+
 // InboxAck acknowledges from the inbox. Returns false when the row was not
 // in ack_status='open' (Spec 22 edge case 10: second admin's ack is a
 // harmless no-op).

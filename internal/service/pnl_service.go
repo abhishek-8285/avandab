@@ -48,11 +48,14 @@ type PNLSnapshot struct {
 // GenerateDailySnapshot computes P&L for a given date and upserts the result.
 // Idempotent: repeated calls for the same (tenantID, date) UPDATE in place.
 // Called by the nightly cron goroutine or via POST /api/v1/pnl/generate.
-func (s *PNLService) GenerateDailySnapshot(ctx context.Context, tenantID string, date time.Time) (*PNLSnapshot, error) {
-	dateStr := date.Format("2006-01-02")
-
+// dailyTotals computes one day's revenue and expense components for a
+// tenant using the canonical P&L query set. Shared by GenerateDailySnapshot
+// (persists) and GetMoneyStrip (read-only) so the console money strip can
+// never drift from report totals (Spec 22 §7 S2 exit gate).
+func (s *PNLService) dailyTotals(ctx context.Context, tenantID, dateStr string) (
+	revenue, fuelCosts, driverPayouts, maintenance, tollCosts float64,
+) {
 	// Revenue: sum of paid invoices dated on this day.
-	var revenue float64
 	_ = s.db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(total), 0) FROM invoices
 		 WHERE tenant_id = ? AND payment_status = 'paid' AND DATE(created_at) = ?`,
@@ -62,7 +65,6 @@ func (s *PNLService) GenerateDailySnapshot(ctx context.Context, tenantID string,
 	// Claims already absorbed into a settlement (settlement_lines refs the
 	// expense id as deduction/advances) are excluded — their cost is inside
 	// driverPayouts (net_payout) below; counting both would double-book.
-	var fuelCosts float64
 	_ = s.db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(de.amount), 0) FROM driver_expenses de
 		 WHERE de.tenant_id = ? AND de.category = 'fuel' AND DATE(de.created_at) = ?
@@ -73,7 +75,6 @@ func (s *PNLService) GenerateDailySnapshot(ctx context.Context, tenantID string,
 		tenantID, dateStr).Scan(&fuelCosts)
 
 	// Driver payouts: net_payout from driver_settlements.
-	var driverPayouts float64
 	_ = s.db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(ds.net_payout), 0)
 		 FROM driver_settlements ds
@@ -82,18 +83,24 @@ func (s *PNLService) GenerateDailySnapshot(ctx context.Context, tenantID string,
 		tenantID, dateStr).Scan(&driverPayouts)
 
 	// Maintenance costs.
-	var maintenance float64
 	_ = s.db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(cost), 0) FROM maintenance_records
 		 WHERE tenant_id = ? AND DATE(performed_at) = ?`,
 		tenantID, dateStr).Scan(&maintenance)
 
 	// Toll costs from FASTag transactions.
-	var tollCosts float64
 	_ = s.db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(amount), 0) FROM fastag_transactions
 		 WHERE tenant_id = ? AND DATE(txn_timestamp) = ?`,
 		tenantID, dateStr).Scan(&tollCosts)
+
+	return revenue, fuelCosts, driverPayouts, maintenance, tollCosts
+}
+
+func (s *PNLService) GenerateDailySnapshot(ctx context.Context, tenantID string, date time.Time) (*PNLSnapshot, error) {
+	dateStr := date.Format("2006-01-02")
+
+	revenue, fuelCosts, driverPayouts, maintenance, tollCosts := s.dailyTotals(ctx, tenantID, dateStr)
 
 	// TDS deducted from settlements.
 	var tdsDeducted float64
@@ -167,6 +174,49 @@ func (s *PNLService) GenerateDailySnapshot(ctx context.Context, tenantID string,
 	}
 
 	return snap, nil
+}
+
+// MoneyStrip is the always-visible console header (Spec 22 §2.2): today's
+// money position plus tenant-wide receivables. Alert counts are composed
+// by the handler from the alerts repository, not here.
+type MoneyStrip struct {
+	Date        string  `json:"date"`
+	Revenue     float64 `json:"revenue"`
+	Spent       float64 `json:"spent"`
+	Receivables float64 `json:"receivables"`
+}
+
+// GetMoneyStrip returns the read-only daily money strip for a tenant.
+// Uses the same query set as GenerateDailySnapshot (via dailyTotals) so
+// strip numbers always equal P&L report totals; no rows are written.
+func (s *PNLService) GetMoneyStrip(ctx context.Context, tenantID string, now time.Time) (*MoneyStrip, error) {
+	if s.db == nil {
+		return nil, fmt.Errorf("database unavailable")
+	}
+	if tenantID == "" {
+		tenantID = string(shared.DefaultTenant)
+	}
+	dateStr := now.Format("2006-01-02")
+	revenue, fuelCosts, driverPayouts, maintenance, tollCosts := s.dailyTotals(ctx, tenantID, dateStr)
+
+	// Receivables: outstanding balance per invoice = total - paid sum,
+	// floored at 0 (mirrors InvoiceService.GetBalance per-invoice logic).
+	var receivables float64
+	_ = s.db.QueryRowContext(ctx,
+		`SELECT COALESCE(SUM(MAX(i.total - COALESCE(p.paid, 0), 0)), 0)
+		 FROM invoices i
+		 LEFT JOIN (
+		   SELECT invoice_id, SUM(amount) AS paid FROM payments GROUP BY invoice_id
+		 ) p ON p.invoice_id = i.id
+		 WHERE i.tenant_id = ?`,
+		tenantID).Scan(&receivables)
+
+	return &MoneyStrip{
+		Date:        dateStr,
+		Revenue:     revenue,
+		Spent:       fuelCosts + driverPayouts + maintenance + tollCosts,
+		Receivables: receivables,
+	}, nil
 }
 
 // GetLatest returns the most recent P&L snapshot for a tenant, or nil if none.

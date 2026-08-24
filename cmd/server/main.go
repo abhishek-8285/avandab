@@ -272,6 +272,12 @@ func main() {
 		logger.Warn("scorecard:update permission seed failed; resolve route stays admin-403", "error", err)
 	}
 
+	// dashboard:read gates the console money-strip API (Spec 22 §2.2).
+	// Step 2 ships without a migration, so seed at startup (idempotent).
+	if err := seedDashboardReadPermission(ctx, database, authSvc); err != nil {
+		logger.Warn("dashboard:read permission seed failed; money-strip stays admin-403", "error", err)
+	}
+
 	// Create the initial admin account from env vars (optional; skipped when
 	// an admin already exists or the vars are unset).
 	bootstrapAdmin(ctx, services, authSvc, cfg, logger)
@@ -697,6 +703,10 @@ func main() {
 	// Bridge: TripCompleted → eta_history segments (must be before Wave B backhaul)
 	etaService.SubscribeTripEvents(eventBus, logger)
 
+	// Owner Command Center handlers (Spec 22) — shared by the protected API
+	// group (money strip) and web routes (console page).
+	consoleHandlers := handlers.NewConsoleHandlers(app, app.AlertsRepo, services.PNL)
+
 	// Protected: Telemetry, and all /api/v1/* routes require a valid session or Bearer token
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RequireAPIAuth(authStore, apiSecret, middleware.DefaultTenantResolver))
@@ -761,6 +771,12 @@ func main() {
 			r.With(middleware.RequirePermission(authSvc, "alerts", "write")).Post("/api/alerts/{id}/snooze", alertInbox.Snooze)
 			r.With(middleware.RequirePermission(authSvc, "alerts", "write")).Post("/api/alerts/snooze-all", alertInbox.SnoozeAll)
 		})
+		// Spec 22 S2 — money strip API (flag: COMMAND_CENTER_ENABLED).
+		// Spec 22 S2 — console money strip (flag: COMMAND_CENTER_ENABLED).
+		// dashboard:read is self-heal seeded at startup (no migration in S2).
+		r.With(featureGate("command_center"),
+			middleware.RequirePermission(authSvc, "dashboard", "read")).
+			Get("/api/dashboard/money-strip", consoleHandlers.MoneyStrip)
 	})
 
 	// Deprecated v2 alias routes (rewrite to v1) plus /api/v2/health.
@@ -1120,10 +1136,9 @@ func main() {
 			// Operational alerts (Spec 05 §3)
 			r.With(middleware.ResourcePermission(authSvc, "alerts", "read")).Route("/alerts", app.Alerts.Routes)
 
-			// Owner Command Center placeholder (Spec 22 Step 1) — ranked
-			// inbox only; full three-column console lands in Steps 2-3.
-			consoleHandlers := handlers.NewConsoleHandlers(app, app.AlertsRepo)
-			r.With(featureGate("alert_inbox"), middleware.ResourcePermission(authSvc, "alerts", "read")).Get("/console", consoleHandlers.Page)
+			// Owner Command Center (Spec 22 Steps 1-2) — ranked inbox +
+			// money strip; fleet/map/context panel lands in Step 3.
+			r.With(featureGate("command_center"), middleware.ResourcePermission(authSvc, "alerts", "read")).Get("/console", consoleHandlers.Page)
 
 			// Compliance management and exemptions (Spec 05 §5, §11)
 			if app.Compliance != nil {
@@ -1601,6 +1616,24 @@ func seedScorecardUpdatePermission(ctx context.Context, db *sql.DB, authSvc auth
 		`INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
 		 SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
 		 WHERE r.name = 'admin' AND p.name = 'scorecard:update'`); err != nil {
+		return err
+	}
+	return authSvc.Reload()
+}
+
+// seedDashboardReadPermission ensures the dashboard:read permission exists
+// (Spec 22 §2.2 money-strip gate). Step 2 adds no migration, so this runs
+// idempotently at startup; admins are granted by default.
+func seedDashboardReadPermission(ctx context.Context, db *sql.DB, authSvc auth.AuthorizationService) error {
+	if _, err := db.ExecContext(ctx,
+		`INSERT OR IGNORE INTO permissions (name, description)
+		 VALUES ('dashboard:read', 'View console money strip and dashboard metrics')`); err != nil {
+		return err
+	}
+	if _, err := db.ExecContext(ctx,
+		`INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+		 SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+		 WHERE r.name = 'admin' AND p.name = 'dashboard:read'`); err != nil {
 		return err
 	}
 	return authSvc.Reload()
