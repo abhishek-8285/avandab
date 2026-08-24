@@ -760,7 +760,7 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if err != nil {
 					return "No alerts found: " + err.Error(), nil
 				}
-				defer rows.Close()
+				defer func() { _ = rows.Close() }()
 
 				type alertRow struct {
 					ID         string `json:"id"`

@@ -329,7 +329,7 @@ func (s *Store) ListActions(status ActionStatus, limit int) ([]Action, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []Action
 	for rows.Next() {
@@ -390,7 +390,7 @@ func (s *Store) ToolStats(agentName string) ([]ToolStat, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []ToolStat
 	for rows.Next() {

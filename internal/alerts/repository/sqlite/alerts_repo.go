@@ -198,7 +198,7 @@ func (r *sqlAlertRepository) ListRulesBySource(ctx context.Context, source strin
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var rules []domain.Rule
 	for rows.Next() {
@@ -374,7 +374,7 @@ func (r *sqlAlertRepository) ListAlerts(ctx context.Context, status string, limi
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	return collectAlerts(rows)
 }
@@ -445,7 +445,7 @@ func (r *sqlAlertRepository) ListPendingEscalations(ctx context.Context, now tim
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	return collectAlerts(rows)
 }
@@ -473,7 +473,7 @@ func (r *sqlAlertRepository) ListUnflushedStormAlerts(ctx context.Context, windo
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	return collectAlerts(rows)
 }
