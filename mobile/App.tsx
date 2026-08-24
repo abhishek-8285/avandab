@@ -36,6 +36,7 @@ import { OfflineQueue } from './src/services/offlineQueue';
 import ConsentManager from './src/services/consentManager';
 import { SyncStatusBar } from './src/components/SyncStatusBar';
 import { ComplianceBanner } from './src/components/ComplianceBanner';
+import { PaisaScreen } from './src/components/PaisaScreen';
 import { VoiceExpenseButton } from './src/components/VoiceExpenseButton';
 import { useAuthStore } from './src/stores/authStore';
 import { useSyncStore } from './src/stores/syncStore';
@@ -251,7 +252,7 @@ interface MainScreenProps {
 }
 
 function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, onOpenIssues }: MainScreenProps) {
-  const [activeTab, setActiveTab] = useState<'trips' | 'dispatch'>('trips');
+  const [activeTab, setActiveTab] = useState<'trips' | 'dispatch' | 'paisa'>('trips');
   const [tripFilter, setTripFilter] = useState<'active' | 'history'>('active');
   const [locationState, setLocationState] = useState<{
     granted: boolean;
@@ -525,6 +526,12 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
         >
           <Text style={[styles.tabText, activeTab === 'dispatch' && styles.activeTabText]}>DISPATCH</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'paisa' && styles.activeTab]}
+          onPress={() => setActiveTab('paisa')}
+        >
+          <Text style={[styles.tabText, activeTab === 'paisa' && styles.activeTabText]}>PAISA</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Trip filter chips (trips tab only) */}
@@ -545,6 +552,12 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
       )}
 
       {/* Content */}
+      {activeTab === 'paisa' && (
+        <View style={{ flex: 1, paddingHorizontal: 12 }}>
+          <PaisaScreen tripId={undefined} />
+        </View>
+      )}
+      {activeTab !== 'paisa' && (
       <ScrollView style={styles.content} contentContainerStyle={styles.contentPadding}>
         {activeTab === 'trips' ? (
           isLoading ? (
@@ -724,6 +737,7 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
           </View>
         )}
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

@@ -795,6 +795,21 @@ func main() {
 		// Spec 22 S6 — universal search API (result-scoped by permission,
 		// tenant-scoped from context).
 		r.Get("/api/search", app.SearchAPI)
+		// Spec 22 S7 — driver Paisa tab (flag: DRIVER_MONEY_ENABLED).
+		driverBalanceSvc := service.NewDriverBalanceService(database, appCache)
+		driverMoney := handlers.NewDriverMoneyHandlers(app, database, driverBalanceSvc)
+		r.With(featureGate("driver_money")).Group(func(r chi.Router) {
+			r.With(middleware.RequirePermission(authSvc, "driver", "read-self")).
+				Get("/api/driver/balance", driverMoney.Balance)
+			r.With(middleware.RequirePermission(authSvc, "driver", "read-self")).
+				Get("/api/driver/settlements", driverMoney.Settlements)
+			r.With(middleware.RequirePermission(authSvc, "driver", "read-self")).
+				Get("/api/driver/advances", driverMoney.ListAdvances)
+			r.With(middleware.RequirePermission(authSvc, "driver", "write-self")).
+				Post("/api/driver/advances", driverMoney.RequestAdvance)
+			r.With(middleware.RequirePermission(authSvc, "kharcha", "approve")).
+				Post("/api/driver/advances/{id}/decision", driverMoney.DecideAdvance)
+		})
 	})
 
 	// Deprecated v2 alias routes (rewrite to v1) plus /api/v2/health.

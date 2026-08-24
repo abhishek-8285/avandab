@@ -235,6 +235,15 @@ func (s *DriverSettlementService) GenerateSettlement(ctx context.Context, tripID
 		}
 	}
 
+	// Spec 22 §5.5 — claim the included advance requests so they cannot be
+	// double-counted by another trip's settlement.
+	if _, err := tx.ExecContext(ctx, `
+		UPDATE driver_advance_requests SET settlement_id = ?
+		WHERE trip_id = ? AND driver_id = ? AND status = 'approved' AND settlement_id IS NULL
+	`, settlementID, tripID, driverID.String); err != nil {
+		return nil, fmt.Errorf("attach advance requests: %w", err)
+	}
+
 	if err := tx.Commit(); err != nil {
 		return nil, fmt.Errorf("commit settlement: %w", err)
 	}
@@ -340,6 +349,30 @@ func (s *DriverSettlementService) getApprovedAdvances(ctx context.Context, db *s
 				Amount:   -amt,
 				RefID:    id,
 			})
+		}
+	}
+
+	// Spec 22 S7/§5.5 — Paisa-tab advance requests ride the same advances
+	// bucket: approved (not yet attached) requests for this trip+driver are
+	// deducted here; pending ones never are (edge case 8).
+	advReqRows, aerr := db.QueryContext(ctx, `
+		SELECT id, amount FROM driver_advance_requests
+		WHERE trip_id = ? AND driver_id = ? AND status = 'approved' AND settlement_id IS NULL
+	`, tripID, driverID)
+	if aerr == nil {
+		defer func() { _ = advReqRows.Close() }()
+		for advReqRows.Next() {
+			var id string
+			var amt float64
+			if err := advReqRows.Scan(&id, &amt); err == nil {
+				total += amt
+				lines = append(lines, SettlementLine{
+					LineType: "advances",
+					Label:    fmt.Sprintf("Advance request #%s", id),
+					Amount:   -amt,
+					RefID:    id,
+				})
+			}
 		}
 	}
 	return total, lines, nil
@@ -642,6 +675,13 @@ func (s *DriverSettlementService) MarkPaid(ctx context.Context, settlementID, pa
 	if err != nil {
 		return nil, err
 	}
+
+	// Spec 22 §5.5 — attached advance requests become 'paid' with their
+	// settlement so the §5.2 running balance stays consistent.
+	_, _ = db.ExecContext(ctx, `
+		UPDATE driver_advance_requests SET status = 'paid'
+		WHERE settlement_id = ? AND status = 'approved'
+	`, settlementID)
 
 	if s.events != nil {
 		s.events.Publish(ctx, events.Event{

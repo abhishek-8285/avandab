@@ -291,6 +291,20 @@ type Driver struct {
 	Tier                  sql.NullString  `json:"tier"`
 }
 
+type DriverAdvanceRequest struct {
+	ID           string         `json:"id"`
+	TenantID     string         `json:"tenant_id"`
+	DriverID     string         `json:"driver_id"`
+	TripID       sql.NullString `json:"trip_id"`
+	Amount       float64        `json:"amount"`
+	Reason       string         `json:"reason"`
+	Status       string         `json:"status"`
+	RequestedAt  time.Time      `json:"requested_at"`
+	DecidedBy    sql.NullString `json:"decided_by"`
+	DecidedAt    sql.NullTime   `json:"decided_at"`
+	SettlementID sql.NullString `json:"settlement_id"`
+}
+
 type DriverBehaviourEvent struct {
 	ID         string         `json:"id"`
 	DriverID   string         `json:"driver_id"`
