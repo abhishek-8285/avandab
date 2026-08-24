@@ -136,6 +136,10 @@ type EWayBillConfig struct {
 	ExtensionKM          float64
 	ExtensionLeadSeconds int
 	MinInvoiceValue      float64
+	// ExtendEnabled gates real provider extend calls from the console
+	// one-tap action (Spec 22 §6). When false (default) the console
+	// endpoint shifts expiry locally — no external call is made.
+	ExtendEnabled bool
 }
 
 // AlertConfig holds configuration for operational alerts (Spec 05 §14).
@@ -396,6 +400,7 @@ func Load() *Config {
 		ExtensionKM:          getEnvFloat("EWAYBILL_EXTENSION_KM", 5.0),
 		ExtensionLeadSeconds: getEnvInt("EWAYBILL_EXTENSION_LEAD_SECONDS", 14400),
 		MinInvoiceValue:      getEnvFloat("EWAYBILL_MIN_INVOICE_VALUE", 50000.0),
+		ExtendEnabled:        getEnvBool("EWB_EXTEND_ENABLED", false),
 	}
 
 	// Spec 07 — GST E-Invoicing / GSTN configuration.

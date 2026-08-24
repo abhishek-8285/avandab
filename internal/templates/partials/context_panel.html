@@ -34,7 +34,15 @@ FASTag/docs — populated by console.js from /api/fleet/{id}/context. */}}
             </div>
         </div>
         <div class="px-4 py-3">
-            <p class="text-xs text-text-muted">Kharcha pending</p>
+            <div class="flex items-center justify-between">
+                <p class="text-xs text-text-muted">Kharcha pending</p>
+                <span id="ctx-trip-actions" class="hidden gap-1">
+                    <button id="ctx-settle" type="button"
+                            class="inline-flex items-center rounded-md border border-border-subtle px-2 py-1 text-[10px] font-medium hover:bg-surface-container transition-colors cursor-pointer">Settle trip</button>
+                    <button id="ctx-share" type="button"
+                            class="inline-flex items-center rounded-md border border-border-subtle px-2 py-1 text-[10px] font-medium hover:bg-surface-container transition-colors cursor-pointer">Share</button>
+                </span>
+            </div>
             <ul id="ctx-kharcha" class="mt-1 space-y-1 text-on-surface"><li>—</li></ul>
         </div>
         <div class="px-4 py-3 flex items-center justify-between gap-2">
@@ -51,5 +59,6 @@ FASTag/docs — populated by console.js from /api/fleet/{id}/context. */}}
             <ul id="ctx-docs" class="mt-1 space-y-1 text-on-surface"><li>—</li></ul>
         </div>
     </div>
+    <div id="ctx-feedback" class="hidden rounded-md px-3 py-2 text-xs bg-primary-container text-on-primary-container"></div>
 </aside>
 {{end}}

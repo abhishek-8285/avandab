@@ -4,7 +4,7 @@
 (function () {
   "use strict";
 
-  var state = { vehicles: [], selected: null, markers: {}, map: null, es: null, pollTimer: null };
+  var state = { vehicles: [], selected: null, context: null, markers: {}, map: null, es: null, pollTimer: null };
 
   function el(id) { return document.getElementById(id); }
 
@@ -103,6 +103,7 @@
   }
 
   function renderContext(ctxData) {
+    state.context = ctxData;
     setText("ctx-title", ctxData.vehicle ? ctxData.vehicle.number : "Vehicle context");
     setText("ctx-status", ctxData.vehicle ? ctxData.vehicle.status : "");
 
@@ -136,9 +137,22 @@
     var kh = el("ctx-kharcha");
     kh.innerHTML = (ctxData.kharcha_pending || []).length
       ? ctxData.kharcha_pending.map(function (k) {
-          return "<li>₹" + fmt(k.amount) + " · " + k.category + "</li>";
+          return '<li class="flex items-center justify-between gap-2">' +
+            '<span>₹' + fmt(k.amount) + " · " + k.category + "</span>" +
+            '<span class="flex gap-1 shrink-0">' +
+              '<button type="button" data-kharcha-id="' + k.id + '" data-action="approve" ' +
+                'class="kharcha-act rounded-md bg-primary text-on-primary px-2 py-0.5 text-[10px] font-medium cursor-pointer hover:opacity-90">✓</button>' +
+              '<button type="button" data-kharcha-id="' + k.id + '" data-action="reject" ' +
+                'class="kharcha-act rounded-md border border-border-subtle px-2 py-0.5 text-[10px] font-medium cursor-pointer hover:bg-surface-container">✕</button>' +
+            "</span></li>";
         }).join("")
       : "<li>None</li>";
+
+    var tripActions = el("ctx-trip-actions");
+    if (tripActions) {
+      if (ctxData.trip) { tripActions.classList.remove("hidden"); }
+      else { tripActions.classList.add("hidden"); }
+    }
 
     var ewb = el("ctx-eway");
     var extendBtn = el("ctx-eway-extend");
@@ -218,6 +232,113 @@
     renderStrip();
     if (state.selected === vid && lat !== undefined) loadContext(vid);
   }
+
+  function feedback(msg, isError) {
+    var box = el("ctx-feedback");
+    if (!box) return;
+    box.textContent = msg;
+    box.classList.remove("hidden");
+    if (isError) {
+      box.classList.remove("bg-primary-container", "text-on-primary-container");
+      box.classList.add("bg-error-container", "text-on-error-container");
+    } else {
+      box.classList.add("bg-primary-container", "text-on-primary-container");
+      box.classList.remove("bg-error-container", "text-on-error-container");
+    }
+    clearTimeout(box._t);
+    box._t = setTimeout(function () { box.classList.add("hidden"); }, 4000);
+  }
+
+  /* S4 inline actions — reuse existing endpoints; no page navigation. */
+  function postJSON(url, body) {
+    return fetch(url, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {}),
+    }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (data) {
+        return { ok: r.ok, status: r.status, data: data };
+      });
+    });
+  }
+
+  document.addEventListener("click", function (ev) {
+    var btn = ev.target.closest ? ev.target.closest("button") : null;
+    if (!btn || !el("fleet-cards")) return;
+
+    if (btn.classList.contains("kharcha-act")) {
+      ev.preventDefault();
+      var id = btn.dataset.kharchaId;
+      var action = btn.dataset.action;
+      var url = action === "approve"
+        ? "/kharcha/" + encodeURIComponent(id) + "/approve"
+        : "/kharcha/" + encodeURIComponent(id) + "/reject";
+      btn.disabled = true;
+      fetch(url, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: action === "reject" ? "reason=console_reject" : "",
+      }).then(function (r) {
+        if (r.ok) {
+          feedback("Kharcha " + action + "d");
+          loadContext(state.selected);
+        } else {
+          feedback("Kharcha " + action + " failed (" + r.status + ")", true);
+          btn.disabled = false;
+        }
+      });
+      return;
+    }
+
+    switch (btn.id) {
+      case "ctx-eway-extend":
+        ev.preventDefault();
+        if (!state.context || !state.context.eway_bill) return;
+        btn.disabled = true;
+        postJSON("/api/ewaybill/" + encodeURIComponent(state.context.eway_bill.id) + "/extend",
+          { valid_upto_hours: 4 })
+          .then(function (res) {
+            if (res.ok && res.data.ok) {
+              feedback("EWB extended until " + new Date(res.data.new_expiry).toLocaleString());
+              loadContext(state.selected);
+            } else {
+              feedback("Extend failed (" + res.status + ")", true);
+            }
+            btn.disabled = false;
+          });
+        break;
+
+      case "ctx-settle":
+        ev.preventDefault();
+        if (!state.context || !state.context.trip) return;
+        btn.disabled = true;
+        postJSON("/settlements/generate", { trip_id: state.context.trip.id })
+          .then(function (res) {
+            if (res.ok) { feedback("Settlement generated"); }
+            else { feedback("Settle failed (" + res.status + ")", true); }
+            btn.disabled = false;
+          });
+        break;
+
+      case "ctx-share":
+        ev.preventDefault();
+        if (!state.context || !state.context.trip) return;
+        btn.disabled = true;
+        postJSON("/trips/" + encodeURIComponent(state.context.trip.id) + "/share", {})
+          .then(function (res) {
+            if (res.ok) {
+              var link = res.data && (res.data.url || res.data.link || res.data.token);
+              feedback(link ? "Share link: " + link : "Share link created");
+            } else {
+              feedback("Share failed (" + res.status + ")", true);
+            }
+            btn.disabled = false;
+          });
+        break;
+    }
+  });
 
   function init() {
     if (!el("fleet-cards")) return; // not on console page

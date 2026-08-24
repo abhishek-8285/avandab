@@ -3,6 +3,8 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -14,13 +16,16 @@ import (
 	"transport-app/internal/cache"
 	"transport-app/internal/eta"
 	"transport-app/internal/httpx"
+	intEWB "transport-app/internal/integration/ewaybill"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
+
+	"github.com/google/uuid"
 )
 
 // ConsoleHandlers serves the owner Command Center (Spec 22 §4.1):
 // ranked alert inbox (S1), money strip (S2), fleet strip + context
-// panel (S3).
+// panel (S3) and inline panel actions (S4).
 type ConsoleHandlers struct {
 	app        *App
 	repo       repository.AlertRepository
@@ -28,6 +33,8 @@ type ConsoleHandlers struct {
 	db         *sql.DB
 	eta        *eta.EtaService
 	fleetCache cache.Cache
+	ewbClient  intEWB.Client
+	ewbExtend  bool // EWB_EXTEND_ENABLED: call the real provider adapter
 }
 
 func NewConsoleHandlers(app *App, repo repository.AlertRepository, pnl *service.PNLService, db *sql.DB, etaSvc *eta.EtaService, fleetCache cache.Cache) *ConsoleHandlers {
@@ -35,6 +42,14 @@ func NewConsoleHandlers(app *App, repo repository.AlertRepository, pnl *service.
 		fleetCache = cache.Noop{}
 	}
 	return &ConsoleHandlers{app: app, repo: repo, pnl: pnl, db: db, eta: etaSvc, fleetCache: fleetCache}
+}
+
+// WithEwayBillAdapter attaches the integration client used by the inline
+// extend action; only called when EWB_EXTEND_ENABLED is true.
+func (h *ConsoleHandlers) WithEwayBillAdapter(client intEWB.Client, extendEnabled bool) *ConsoleHandlers {
+	h.ewbClient = client
+	h.ewbExtend = extendEnabled
+	return h
 }
 
 // Page handles GET /console.
@@ -394,4 +409,98 @@ func (h *ConsoleHandlers) VehicleContext(w http.ResponseWriter, r *http.Request)
 
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(blob)
+}
+
+// ── S4: Inline panel actions (Spec 22 §2.3, §10 Step 4) ─────────────────
+
+type extendBody struct {
+	ValidUptoHours int `json:"valid_upto_hours"`
+}
+
+// ExtendEwayBill handles POST /api/ewaybill/{id}/extend
+// {"valid_upto_hours":4} → {"ok":true,"new_expiry":"..."}.
+// Default behavior is the repo-wide mock contract: shift expiry locally.
+// With EWB_EXTEND_ENABLED=true the provider adapter is consulted first and
+// its returned validity wins. Every call writes an eway_bill_events row and
+// an audit_logs entry (Spec 22 Step 4 exit gate).
+func (h *ConsoleHandlers) ExtendEwayBill(w http.ResponseWriter, r *http.Request) {
+	if h.db == nil {
+		httpx.Error(w, r, apperr.New(apperr.CodeInternal))
+		return
+	}
+	var body extendBody
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&body); err != nil || body.ValidUptoHours <= 0 || body.ValidUptoHours > 24 {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "valid_upto_hours must be between 1 and 24"})
+		return
+	}
+
+	ctx := r.Context()
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	ewbID := chi.URLParam(r, "id")
+
+	var tripID sql.NullString
+	var validUntil time.Time
+	err := h.db.QueryRowContext(ctx, `
+		SELECT e.trip_id, e.valid_until
+		FROM eway_bills e JOIN trips t ON e.trip_id = t.id
+		WHERE e.id = ? AND t.tenant_id = ?`, ewbID, tenantID).
+		Scan(&tripID, &validUntil)
+	if err == sql.ErrNoRows {
+		httpx.Error(w, r, apperr.New(apperr.CodeNotFound))
+		return
+	}
+	if err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+
+	newExpiry := validUntil.Add(time.Duration(body.ValidUptoHours) * time.Hour)
+	if h.ewbExtend && h.ewbClient != nil {
+		var ewbNumber string
+		if nErr := h.db.QueryRowContext(ctx,
+			`SELECT ewb_number FROM eway_bills WHERE id = ?`, ewbID).Scan(&ewbNumber); nErr == nil {
+			if resp, extErr := h.ewbClient.Extend(ctx, ewbNumber, intEWB.ExtendRequest{
+				EwbNumber: ewbNumber,
+				Reason:    "console_inline_extend",
+			}); extErr == nil && !resp.ValidUpto.IsZero() {
+				newExpiry = resp.ValidUpto
+			}
+		}
+	}
+
+	if _, uErr := h.db.ExecContext(ctx,
+		`UPDATE eway_bills SET valid_until = ? WHERE id = ?`,
+		newExpiry, ewbID); uErr != nil {
+		httpx.Error(w, r, uErr)
+		return
+	}
+	if _, eErr := h.db.ExecContext(ctx, `
+		INSERT INTO eway_bill_events (id, ewb_number, trip_id, event_type, payload, created_by)
+		SELECT ?, ewb_number, trip_id, 'EXTENDED', ?, ? FROM eway_bills WHERE id = ?`,
+		uuid.NewString(), fmt.Sprintf(`{"hours":%d}`, body.ValidUptoHours), contextUserID(r), ewbID); eErr != nil {
+		slog.Warn("eway_bill_events insert failed", "ewb", ewbID, "error", eErr)
+	}
+
+	writeAuditLog(r, h.db, "ewaybill.extend", "eway_bills", ewbID, map[string]any{
+		"new_expiry":       newExpiry.UTC().Format(time.RFC3339),
+		"valid_upto_hours": body.ValidUptoHours,
+	})
+
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"ok":         true,
+		"new_expiry": newExpiry.UTC().Format(time.RFC3339),
+	})
+}
+
+// writeAuditLog records one audit trail row for a console action; failures
+// are logged but never fail the action itself.
+func writeAuditLog(r *http.Request, db *sql.DB, action, table, recordID string, newValues any) {
+	blob, err := json.Marshal(newValues)
+	if err != nil {
+		return
+	}
+	_, _ = db.ExecContext(r.Context(), `
+		INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
+		uuid.NewString(), contextUserID(r), action, table, recordID, string(blob))
 }

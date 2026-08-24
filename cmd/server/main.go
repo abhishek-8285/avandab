@@ -278,6 +278,12 @@ func main() {
 		logger.Warn("dashboard:read permission seed failed; money-strip stays admin-403", "error", err)
 	}
 
+	// ewaybill:write gates the console EWB extend API (Spec 22 §2.3);
+	// no migration seeds it, so self-heal at startup (idempotent).
+	if err := seedEwaybillWritePermission(ctx, database, authSvc); err != nil {
+		logger.Warn("ewaybill:write permission seed failed; extend stays 403", "error", err)
+	}
+
 	// Create the initial admin account from env vars (optional; skipped when
 	// an admin already exists or the vars are unset).
 	bootstrapAdmin(ctx, services, authSvc, cfg, logger)
@@ -705,7 +711,8 @@ func main() {
 
 	// Owner Command Center handlers (Spec 22) — shared by the protected API
 	// group (money strip) and web routes (console page).
-	consoleHandlers := handlers.NewConsoleHandlers(app, app.AlertsRepo, services.PNL, database, etaService, appCache)
+	consoleHandlers := handlers.NewConsoleHandlers(app, app.AlertsRepo, services.PNL, database, etaService, appCache).
+		WithEwayBillAdapter(ewbClient, cfg.EWayBill.ExtendEnabled)
 
 	// Protected: Telemetry, and all /api/v1/* routes require a valid session or Bearer token
 	r.Group(func(r chi.Router) {
@@ -782,6 +789,9 @@ func main() {
 			r.With(middleware.RequirePermission(authSvc, "vehicles", "read")).Get("/api/fleet", consoleHandlers.Fleet)
 			r.With(middleware.RequirePermission(authSvc, "vehicles", "read")).Get("/api/fleet/{vehicleId}/context", consoleHandlers.VehicleContext)
 		})
+		// Spec 22 S4 — one-tap EWB extend from the console context panel.
+		r.With(middleware.RequirePermission(authSvc, "ewaybill", "write")).
+			Post("/api/ewaybill/{id}/extend", consoleHandlers.ExtendEwayBill)
 	})
 
 	// Deprecated v2 alias routes (rewrite to v1) plus /api/v2/health.
@@ -1639,6 +1649,24 @@ func seedDashboardReadPermission(ctx context.Context, db *sql.DB, authSvc auth.A
 		`INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
 		 SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
 		 WHERE r.name = 'admin' AND p.name = 'dashboard:read'`); err != nil {
+		return err
+	}
+	return authSvc.Reload()
+}
+
+// seedEwaybillWritePermission ensures the ewaybill:write permission exists
+// (Spec 22 §2.3 console extend gate). Idempotent startup self-heal; admins
+// are granted by default.
+func seedEwaybillWritePermission(ctx context.Context, db *sql.DB, authSvc auth.AuthorizationService) error {
+	if _, err := db.ExecContext(ctx,
+		`INSERT OR IGNORE INTO permissions (name, description)
+		 VALUES ('ewaybill:write', 'Extend and manage e-way bills from the console')`); err != nil {
+		return err
+	}
+	if _, err := db.ExecContext(ctx,
+		`INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+		 SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+		 WHERE r.name = 'admin' AND p.name = 'ewaybill:write'`); err != nil {
 		return err
 	}
 	return authSvc.Reload()
