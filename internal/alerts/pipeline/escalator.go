@@ -89,10 +89,11 @@ func (e *Escalator) Tick(ctx context.Context) error {
 			currentStep := schedule[a.EscalationStep]
 
 			msg := channels.Message{
-				AlertID:  a.ID,
-				Title:    fmt.Sprintf("[Escalation Step %d] %s", a.EscalationStep+1, a.Title),
-				Body:     fmt.Sprintf("Alert unresolved for role %s: %s", currentStep.TargetRole, a.Message),
-				Severity: a.Severity,
+				AlertID:      a.ID,
+				SeverityRank: a.SeverityRank,
+				Title:        fmt.Sprintf("[Escalation Step %d] %s", a.EscalationStep+1, a.Title),
+				Body:         fmt.Sprintf("Alert unresolved for role %s: %s", currentStep.TargetRole, a.Message),
+				Severity:     a.Severity,
 				Meta: map[string]any{
 					"escalation_step": a.EscalationStep + 1,
 					"target_role":     currentStep.TargetRole,

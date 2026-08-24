@@ -149,6 +149,10 @@ type EWayBillConfig struct {
 type AlertConfig struct {
 	TelegramBotToken string
 	TelegramChatID   string
+	WhatsAppProvider string // mock | gupshup | meta (Spec 22 §6)
+	WhatsAppAPIKey   string // gupshup
+	WhatsAppToken    string // meta cloud API
+	WhatsAppPhoneID  string // meta cloud API phone number id
 }
 
 // ExperimentConfig configures the server-side A/B experiment framework.
@@ -397,6 +401,10 @@ func Load() *Config {
 	cfg.Alerts = AlertConfig{
 		TelegramBotToken: getEnv("ALERT_TELEGRAM_BOT_TOKEN", os.Getenv("FOUNDER_TELEGRAM_BOT_TOKEN")),
 		TelegramChatID:   getEnv("ALERT_TELEGRAM_CHAT_ID", os.Getenv("FOUNDER_TELEGRAM_CHAT_ID")),
+		WhatsAppProvider: getEnv("WHATSAPP_PROVIDER", "mock"),
+		WhatsAppAPIKey:   getEnv("WHATSAPP_GUPSHUP_API_KEY", ""),
+		WhatsAppToken:    getEnv("WHATSAPP_META_TOKEN", ""),
+		WhatsAppPhoneID:  getEnv("WHATSAPP_META_PHONE_ID", ""),
 	}
 
 	// Spec 05 §7, Spec 07 — E-Way Bill lifecycle worker configuration.

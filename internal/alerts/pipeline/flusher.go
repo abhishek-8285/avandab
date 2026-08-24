@@ -90,11 +90,12 @@ func (f *Flusher) Flush(ctx context.Context) error {
 		stormBody := fmt.Sprintf("%s occurred %d times since %s", a.Title, a.Occurrences, a.FirstSeenAt.Format(time.RFC3339))
 
 		msg := channels.Message{
-			AlertID:  a.ID,
-			Title:    stormTitle,
-			Body:     stormBody,
-			Severity: a.Severity,
-			Meta:     meta,
+			AlertID:      a.ID,
+			SeverityRank: a.SeverityRank,
+			Title:        stormTitle,
+			Body:         stormBody,
+			Severity:     a.Severity,
+			Meta:         meta,
 		}
 
 		// Send to channels

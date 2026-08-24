@@ -221,12 +221,24 @@ func main() {
 		smsChannel = alertchannels.NewSMSBridge(notifSvc)
 	}
 
+	// Spec 22 S10 — real WhatsApp channel: rank 1–3 only (§10 gate),
+	// every attempt persisted to notification_log (00096). Mock sender
+	// logs honestly when no BSP is configured.
+	var whatsappCreds = map[string]string{
+		"api_key":         cfg.Alerts.WhatsAppAPIKey,
+		"token":           cfg.Alerts.WhatsAppToken,
+		"phone_number_id": cfg.Alerts.WhatsAppPhoneID,
+	}
+	whatsappChannel := alertchannels.NewLoggingProvider(
+		alertchannels.NewWhatsAppProvider(cfg.Alerts.WhatsAppProvider, whatsappCreds, logger),
+		database, logger)
+
 	alertProviderMap := map[string]alertchannels.Provider{
 		"in_app":   inAppProvider,
 		"telegram": telegramProvider,
 		"email":    emailChannel,
 		"sms":      smsChannel,
-		"whatsapp": stubProviders["whatsapp"],
+		"whatsapp": whatsappChannel,
 	}
 
 	// Alerts Pipeline (Spec 05 §1, §3, §4)

@@ -857,6 +857,16 @@ type Notification struct {
 	ReadAt    sql.NullTime   `json:"read_at"`
 }
 
+type NotificationLog struct {
+	ID        string         `json:"id"`
+	Channel   string         `json:"channel"`
+	AlertID   sql.NullString `json:"alert_id"`
+	Target    sql.NullString `json:"target"`
+	Status    string         `json:"status"`
+	Error     sql.NullString `json:"error"`
+	CreatedAt time.Time      `json:"created_at"`
+}
+
 type NotificationsPreference struct {
 	ID          string    `json:"id"`
 	UserID      string    `json:"user_id"`
