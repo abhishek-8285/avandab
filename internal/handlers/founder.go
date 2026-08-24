@@ -3,7 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
+	"transport-app/internal/apperr"
+	"transport-app/internal/httpx"
 
 	"github.com/go-chi/chi/v5"
 
@@ -20,6 +23,7 @@ type FounderHandlers struct {
 	*App
 	Signals *service.FounderSignalsService
 	Audit   *service.FounderAuditService
+	KPIs    *service.KPIService
 	authSrv auth.AuthorizationService
 }
 
@@ -40,6 +44,28 @@ func (h *FounderHandlers) RegisterRoutes(r chi.Router) {
 		Get("/api/v1/founder/audit", h.ListAudit)
 	r.With(middleware.RequirePermission(h.authSrv, "founder", "read")).
 		Get("/api/v1/founder/dashboard", h.Dashboard)
+	// Spec 22 §10-S12 — pilot KPI readout (?days=14 default).
+	r.With(middleware.RequirePermission(h.authSrv, "founder", "read")).
+		Get("/api/v1/founder/kpis", h.PilotKPIs)
+}
+
+// PilotKPIs handles GET /api/v1/founder/kpis — the Spec 22 §12 pilot
+// scorecard computed from existing tables.
+func (h *FounderHandlers) PilotKPIs(w http.ResponseWriter, r *http.Request) {
+	if h.KPIs == nil {
+		httpx.Error(w, r, apperr.New(apperr.CodeNotImplemented))
+		return
+	}
+	days, _ := strconv.Atoi(r.URL.Query().Get("days"))
+	if days <= 0 {
+		days = 14
+	}
+	kpis, err := h.KPIs.PilotKPIs(r.Context(), string(shared.TenantIDFromContext(r.Context())), days)
+	if err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, kpis)
 }
 
 func (h *FounderHandlers) tenantID(r *http.Request) string {

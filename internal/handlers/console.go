@@ -61,6 +61,10 @@ func (h *ConsoleHandlers) Page(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user, _ := r.Context().Value(auth.ContextUser).(*auth.SessionData)
+	// Spec 22 §10-S12 — console-open usage event (best-effort analytics).
+	if h.app != nil && h.app.Founder != nil && h.app.Founder.KPIs != nil && user != nil {
+		h.app.Founder.KPIs.RecordConsoleUsage(r.Context(), tenantID, user.UserID, "console_open")
+	}
 	inbox := make([]map[string]any, 0, len(alerts))
 	for _, a := range alerts {
 		item := map[string]any{

@@ -211,6 +211,8 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	// Founder signals + audit (Spec 16 §6, §7).
 	if svc != nil && svc.FounderSignals != nil && svc.FounderAudit != nil {
 		app.Founder = NewFounderHandlers(app, svc.FounderSignals, svc.FounderAudit, authSrv)
+		// Spec 22 §10-S12 — pilot KPI scorecard source.
+		app.Founder.KPIs = service.NewKPIService(app.DB)
 	}
 
 	return app
