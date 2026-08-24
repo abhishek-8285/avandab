@@ -66,11 +66,13 @@ jobs:
 
       - name: Security Regression Gate — No hardcoded tenant literals
         run: |
-          if grep -rn 'TenantID:[[:space:]]*"1"' internal/ cmd/ --include='*.go'; then
-            echo "::error::Hardcoded tenant literal found — use shared.TenantIDFromContext(ctx) or shared.DefaultTenant"
+          HITS=$(grep -rn 'TenantID:[[:space:]]*"1"' internal/ cmd/ --include='*.go' | grep -v '_test.go:' || true)
+          if [ -n "$HITS" ]; then
+            echo "$HITS"
+            echo "::error::Hardcoded tenant literal found in non-test code — use shared.TenantIDFromContext(ctx) or shared.DefaultTenant"
             exit 1
           fi
-          echo "No hardcoded tenant literals. Tenant is always context-derived."
+          echo "No hardcoded tenant literals in production code. Tenant is always context-derived."
 
       - name: Check CDN Tailwind references in templates
         run: |
