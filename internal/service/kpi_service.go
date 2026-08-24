@@ -20,15 +20,16 @@ func NewKPIService(db *sql.DB) *KPIService { return &KPIService{db: db} }
 
 // PilotKPIs is the §10-S12 wire shape.
 type PilotKPIs struct {
-	WindowDays            int      `json:"window_days"`
-	SettlementCycleMin    *float64 `json:"settlement_cycle_minutes"` // avg created→paid, target <10
-	KharchaAppSubmitted   *float64 `json:"kharcha_app_submitted_pct"`
-	DisputedSettlements   *float64 `json:"disputed_settlements_pct"`
-	DriverWAU             *float64 `json:"driver_wau_pct"`
-	EwbExpiryCaught       *float64 `json:"ewb_expiry_caught_pct"`
-	ConsoleOpens          int      `json:"console_opens"`
-	PanelActions          int      `json:"panel_actions"`
-	SamplesBelowThreshold bool     `json:"-"`
+	WindowDays            int           `json:"window_days"`
+	SettlementCycleMin    *float64      `json:"settlement_cycle_minutes"` // avg created→paid, target <10
+	KharchaAppSubmitted   *float64      `json:"kharcha_app_submitted_pct"`
+	DisputedSettlements   *float64      `json:"disputed_settlements_pct"`
+	DriverWAU             *float64      `json:"driver_wau_pct"`
+	EwbExpiryCaught       *float64      `json:"ewb_expiry_caught_pct"`
+	ConsoleOpens          int           `json:"console_opens"`
+	PanelActions          int           `json:"panel_actions"`
+	Storage               *StorageStats `json:"storage,omitempty"`
+	SamplesBelowThreshold bool          `json:"-"`
 }
 
 // PilotKPIs computes the five pilot metrics for one tenant over a window.
@@ -151,6 +152,10 @@ func (s *KPIService) PilotKPIs(ctx context.Context, tenantID string, days int) (
 		WHERE experiment = 'command_center' AND event = 'panel_action'
 		  AND created_at >= `+cutoff+` AND tenant_id = ?`, tenantID).Scan(&out.PanelActions)
 
+	if storage, serr := s.StorageStats(ctx); serr == nil {
+		out.Storage = storage
+	}
+
 	out.SamplesBelowThreshold = kpisOnTarget(out)
 	return out, nil
 }
@@ -192,4 +197,59 @@ func (s *KPIService) RecordConsoleUsage(ctx context.Context, tenantID, userID, e
 		VALUES ('cce-' || lower(hex(randomblob(8))), ?, ?, 'command_center', 'console', ?, '{}',
 		        strftime('%Y-%m-%dT%H:%M:%fZ','now'))`,
 		tenantID, userID, event)
+}
+
+// StorageTable is one watched table's row count (Spec 23 §10 R0).
+type StorageTable struct {
+	Table string `json:"table"`
+	Rows  int64  `json:"rows"`
+}
+
+// StorageStats is the R0 measurement payload: the unbounded-growth
+// tables Spec 23 watches, plus total database size from pragmas.
+type StorageStats struct {
+	TotalDBBytes int64          `json:"total_db_bytes"`
+	FreelistKB   int64          `json:"freelist_kb"`
+	Tables       []StorageTable `json:"tables"`
+}
+
+var watchedTables = []string{
+	"telemetry_positions",
+	"telemetry_snapshots",
+	"driver_expenses",
+	"alerts",
+	"notification_log",
+	"experiment_events",
+	"eway_bills",
+}
+
+// StorageStats measures the tables scale-tiering (Spec 23) gates on.
+// Row counts are exact; DB size comes from page_count × page_size.
+func (s *KPIService) StorageStats(ctx context.Context) (*StorageStats, error) {
+	if s.db == nil {
+		return nil, fmt.Errorf("database unavailable")
+	}
+	out := &StorageStats{Tables: []StorageTable{}}
+
+	var pageCount, pageSize int64
+	if err := s.db.QueryRowContext(ctx, `PRAGMA page_count`).Scan(&pageCount); err == nil {
+		var ps int64
+		_ = s.db.QueryRowContext(ctx, `PRAGMA page_size`).Scan(&ps)
+		out.TotalDBBytes = pageCount * ps
+	}
+	var freelist int64
+	_ = s.db.QueryRowContext(ctx, `PRAGMA freelist_count`).Scan(&freelist)
+	out.FreelistKB = freelist * pageSize / 1024
+
+	for _, table := range watchedTables {
+		var n int64
+		q := fmt.Sprintf(`SELECT COUNT(*) FROM %s`, table)
+		err := s.db.QueryRowContext(ctx, q).Scan(&n)
+		if err != nil {
+			continue // table not migrated yet — skip honestly
+		}
+		out.Tables = append(out.Tables, StorageTable{Table: table, Rows: n})
+	}
+	out.FreelistKB *= 4 // approx KB at default 4KiB pages when page_size read failed
+	return out, nil
 }

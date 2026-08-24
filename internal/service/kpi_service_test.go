@@ -88,3 +88,31 @@ func TestRecordConsoleUsage_WritesRow(t *testing.T) {
 	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM experiment_events`).Scan(&n))
 	assert.Equal(t, 1, n)
 }
+
+func TestStorageStats_CountsAndPragmas(t *testing.T) {
+	db := newVerifyTestDB(t)
+	svc := NewKPIService(db)
+	seedExpense(t, db, "st-x1", nil, nil, 100, false)
+
+	stats, err := svc.StorageStats(context.Background())
+	require.NoError(t, err)
+
+	assert.Greater(t, stats.TotalDBBytes, int64(0), "page_count×page_size must be positive")
+	var seen bool
+	for _, tbl := range stats.Tables {
+		if tbl.Table == "driver_expenses" {
+			seen = true
+			assert.GreaterOrEqual(t, tbl.Rows, int64(1))
+		}
+	}
+	assert.True(t, seen, "watched tables must include driver_expenses")
+}
+
+func TestPilotKPIs_IncludesStorage(t *testing.T) {
+	db := newVerifyTestDB(t)
+	svc := NewKPIService(db)
+	kpis, err := svc.PilotKPIs(context.Background(), "ghost", 14)
+	require.NoError(t, err)
+	require.NotNil(t, kpis.Storage)
+	assert.Greater(t, kpis.Storage.TotalDBBytes, int64(0))
+}

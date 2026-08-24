@@ -47,6 +47,23 @@ func (h *FounderHandlers) RegisterRoutes(r chi.Router) {
 	// Spec 22 §10-S12 — pilot KPI readout (?days=14 default).
 	r.With(middleware.RequirePermission(h.authSrv, "founder", "read")).
 		Get("/api/v1/founder/kpis", h.PilotKPIs)
+	// Spec 23 §10-R0 — storage measurement for the scale triggers.
+	r.With(middleware.RequirePermission(h.authSrv, "founder", "read")).
+		Get("/api/v1/founder/storage", h.Storage)
+}
+
+// Storage handles GET /api/v1/founder/storage (Spec 23 R0).
+func (h *FounderHandlers) Storage(w http.ResponseWriter, r *http.Request) {
+	if h.KPIs == nil {
+		httpx.Error(w, r, apperr.New(apperr.CodeNotImplemented))
+		return
+	}
+	stats, err := h.KPIs.StorageStats(r.Context())
+	if err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, stats)
 }
 
 // PilotKPIs handles GET /api/v1/founder/kpis — the Spec 22 §12 pilot
