@@ -52,7 +52,12 @@ Single source of truth for `db/migrations/` version numbers. Repo head is
 | 00070 | CX: customer tracking timeline (no DB — uses 00044 share) | 20 |
 | 00071 | Fuel cards + accounting sync extension (Spec 20) | 20 |
 | 00072 | ESG snapshots (Spec 20) | 20 |
-| 00073 | Churn: compliance shipper portal (customer_users, dispatch_overrides, trip_feedback, POD columns) | 21 |
+
+> NOTE (2026-08-24): rows 00068–00072 are RESERVED-UNBUILT — specs 19/20
+> own these numbers but no `.sql` files ship yet. Verified absent from
+> `db/migrations/` on 2026-08-24 (spec 22 §11.5). Do NOT treat the gaps
+> as free slots and do NOT renumber; they activate with their owning
+> specs.| 00073 | Churn: compliance shipper portal (customer_users, dispatch_overrides, trip_feedback, POD columns) | 21 |
 | 00074 | Churn: driver offline sync log | 21 |
 | 00075 | Churn: vernacular i18n keys | 21 |
 | 00076 | Churn: expense idempotency (idempotency_key unique partial index) | 21.1 |

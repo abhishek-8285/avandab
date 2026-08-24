@@ -509,10 +509,11 @@ Write `23-scale-tiering.md` (Postgres/Timescale plan) — out of scope here.
    cost. Mock until decided; radar works without it.
 4. **drivers.id / trips.id key format** — confirm before any FK thought
    (default: no FK, §3 note).
-5. **Index anomaly** — ownership index reserves 00068–00072 + 00085 with
-   NO migration files on disk; specs 18/19/20 files also absent from
-   docs/tech-specs/. Confirm intentional (reserved/unbuilt) vs index rot;
-   fix index prose if rot. Do NOT reuse numbers.
+5. **Index anomaly** — RESOLVED 2026-08-24: 00068–00072 confirmed
+   reserved-unbuilt (specs 19/20 own them; no files ship yet). Index now
+   carries an explicit reserved-unbuilt NOTE so the gaps are not read as
+   free slots. Specs 18–21 files: 18/21 exist, 19/20 were never written —
+   their migration numbers stay owned regardless.
 6. **`bin/rag` auth broken** — teach attempt returns `401 api token
    invalid` (binary exists, token stale). Fix token before relying on RAG
    teaching; spec content is in-repo regardless.
