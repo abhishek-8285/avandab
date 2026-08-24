@@ -1,0 +1,84 @@
+{{define "alert_inbox.html"}}
+{{/* Ranked alert inbox (Spec 22 S1). Expects .InboxAlerts []map[string]any. */}}
+<section id="alert-inbox" class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm overflow-hidden">
+    <div class="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
+        <h2 class="text-sm font-semibold text-on-surface flex items-center gap-2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-error"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 20h16a2 2 0 0 0 1.73-2Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            Alert Inbox
+        </h2>
+        <span class="text-xs text-text-muted">severity-ranked</span>
+    </div>
+
+    {{if not .InboxAlerts}}
+    <div class="px-4 py-10 text-center text-sm text-text-muted">
+        No open alerts — fleet is quiet.
+    </div>
+    {{else}}
+    <ul class="divide-y divide-border-subtle">
+        {{range .InboxAlerts}}
+        <li class="flex items-center gap-3 px-4 py-3 text-sm hover:bg-surface-container transition-colors"
+            data-alert-id="{{.ID}}">
+            <span class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold
+                {{if eq .SeverityRank 1}}bg-error-container text-on-error-container
+                {{else if eq .SeverityRank 2}}bg-warning-container text-on-warning-container
+                {{else if eq .SeverityRank 3}}bg-primary-container text-on-primary-container
+                {{else if eq .SeverityRank 4}}bg-surface-container-high text-on-surface
+                {{else}}bg-surface-container text-text-muted{{end}}">{{.SeverityRank}}</span>
+
+            <div class="min-w-0 flex-1">
+                <p class="truncate font-medium text-on-surface">{{.Title}}</p>
+                <p class="text-xs text-text-muted mt-0.5">
+                    {{.CreatedAt}}
+                    {{if gt .Occurrences 1}} · fired {{.Occurrences}}×{{end}}
+                    {{if .VehicleID}} · {{.VehicleID}}{{end}}
+                    {{if gt .MoneyAtRisk 0.0}} · ₹{{printf "%.0f" .MoneyAtRisk}} at risk{{end}}
+                </p>
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+                <button type="button"
+                        class="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2.5 py-1.5 text-xs font-medium hover:bg-surface-container transition-colors cursor-pointer"
+                        onclick="snoozeAlert(this, '{{.ID}}')">Snooze 2h</button>
+                <button type="button"
+                        class="inline-flex items-center gap-1 rounded-md bg-primary text-on-primary px-2.5 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
+                        onclick="ackAlert(this, '{{.ID}}')">Ack</button>
+            </div>
+        </li>
+        {{end}}
+    </ul>
+    {{end}}
+</section>
+
+<script>
+async function inboxPost(path, body) {
+    const resp = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify(body || {}),
+    });
+    if (!resp.ok) {
+        console.error("inbox action failed", resp.status);
+        return null;
+    }
+    return resp.json();
+}
+
+function removeAlertRow(btn) {
+    const row = btn.closest("[data-alert-id]");
+    if (row) { row.remove(); }
+}
+
+async function ackAlert(btn, id) {
+    btn.disabled = true;
+    const out = await inboxPost("/api/alerts/" + encodeURIComponent(id) + "/ack", {});
+    if (out && out.ok) { removeAlertRow(btn); } else { btn.disabled = false; }
+}
+
+async function snoozeAlert(btn, id) {
+    btn.disabled = true;
+    const out = await inboxPost("/api/alerts/" + encodeURIComponent(id) + "/snooze", { minutes: 120 });
+    if (out && out.ok) { removeAlertRow(btn); } else { btn.disabled = false; }
+}
+</script>
+{{end}}

@@ -26,4 +26,14 @@ type AlertRepository interface {
 	Ack(ctx context.Context, alertID string, userID string) error
 	Resolve(ctx context.Context, alertID string, userID string) error
 	MarkAllRead(ctx context.Context, userID string) error
+
+	// Inbox operations (Spec 22 S1). status is one of open|snoozed|acked|
+	// resolved|all; snoozed rows count as visible-open once snoozed_until
+	// has passed. Ack/Snooze return false when the guard matched no row
+	// (already handled — Spec 22 edge case 10).
+	ListInbox(ctx context.Context, tenantID, status string, limit int) ([]domain.Alert, error)
+	InboxAck(ctx context.Context, alertID, userID string) (bool, error)
+	InboxSnooze(ctx context.Context, alertID, userID string, until time.Time) (bool, error)
+	InboxSnoozeAll(ctx context.Context, ids []string, userID string, until time.Time) (int64, error)
+	ReopenExpiredSnoozes(ctx context.Context, now time.Time) (int64, error)
 }

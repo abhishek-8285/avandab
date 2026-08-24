@@ -13,6 +13,7 @@ import (
 	"transport-app/internal/alerts/domain"
 	"transport-app/internal/alerts/repository"
 	"transport-app/internal/events"
+	"transport-app/internal/shared"
 )
 
 // Clock provides time for deterministic testing.
@@ -57,18 +58,21 @@ func (e *Engine) SetChannels(channelMap map[string]channels.Provider) {
 
 // IngestEvent represents a normalized event passed to the pipeline.
 type IngestEvent struct {
-	Source     string                 `json:"source"`
-	AlertType  string                 `json:"alert_type"`
-	Severity   string                 `json:"severity"`
-	Title      string                 `json:"title"`
-	Message    string                 `json:"message"`
-	EntityType string                 `json:"entity_type"`
-	EntityID   string                 `json:"entity_id"`
-	UserID     string                 `json:"user_id,omitempty"`
-	Latitude   *float64               `json:"latitude,omitempty"`
-	Longitude  *float64               `json:"longitude,omitempty"`
-	Value      *float64               `json:"value,omitempty"`
-	Metadata   map[string]interface{} `json:"metadata,omitempty"`
+	Source       string                 `json:"source"`
+	AlertType    string                 `json:"alert_type"`
+	Severity     string                 `json:"severity"`
+	Title        string                 `json:"title"`
+	Message      string                 `json:"message"`
+	EntityType   string                 `json:"entity_type"`
+	EntityID     string                 `json:"entity_id"`
+	UserID       string                 `json:"user_id,omitempty"`
+	TenantID     string                 `json:"tenant_id,omitempty"`
+	SeverityRank *int                   `json:"severity_rank,omitempty"`
+	MoneyAtRisk  *float64               `json:"money_at_risk,omitempty"`
+	Latitude     *float64               `json:"latitude,omitempty"`
+	Longitude    *float64               `json:"longitude,omitempty"`
+	Value        *float64               `json:"value,omitempty"`
+	Metadata     map[string]interface{} `json:"metadata,omitempty"`
 }
 
 // ProcessEvent processes an incoming event from the event bus.
@@ -205,6 +209,10 @@ func (e *Engine) Ingest(ctx context.Context, ev IngestEvent) error {
 		Severity:         severity,
 		Status:           domain.StatusOpen,
 		DedupKey:         dedupKey,
+		TenantID:         e.resolveTenantID(ctx, ev),
+		AckStatus:        domain.AckStatusOpen,
+		SeverityRank:     resolveSeverityRank(ev, severity),
+		MoneyAtRisk:      resolveMoneyAtRisk(ev),
 		EntityType:       entityTypePtr,
 		EntityID:         entityIDPtr,
 		UserID:           userIDPtr,
@@ -454,4 +462,51 @@ func legacyAlertType(m map[string]interface{}) string {
 	default:
 		return et
 	}
+}
+
+// resolveTenantID derives tenant for an alert: context first (bus is
+// synchronous, so publisher ctx propagates), then explicit payload key,
+// then the bootstrap default. Never hardcoded per-tenant in callers.
+func (e *Engine) resolveTenantID(ctx context.Context, ev IngestEvent) string {
+	if id := shared.TenantIDFromContext(ctx); id != "" {
+		return string(id)
+	}
+	if ev.TenantID != "" {
+		return ev.TenantID
+	}
+	if ev.Metadata != nil {
+		if t, ok := ev.Metadata["tenant_id"].(string); ok && t != "" {
+			return t
+		}
+	}
+	return string(shared.DefaultTenant)
+}
+
+// resolveSeverityRank picks the inbox rank: explicit payload rank wins,
+// else severity-derived default (Spec 22 §5.1).
+func resolveSeverityRank(ev IngestEvent, severity string) int {
+	if ev.SeverityRank != nil && *ev.SeverityRank >= domain.RankCritical && *ev.SeverityRank <= domain.RankInfo {
+		return *ev.SeverityRank
+	}
+	if ev.Metadata != nil {
+		if r, ok := ev.Metadata["severity_rank"].(float64); ok && r >= domain.RankCritical && r <= domain.RankInfo {
+			return int(r)
+		}
+	}
+	return domain.SeverityToRank(severity)
+}
+
+// resolveMoneyAtRisk reads the optional money-at-risk estimate from the
+// event (field or metadata). Formula-based computation per alert class
+// lands with its emitter step (Spec 22 §5.1 constants table).
+func resolveMoneyAtRisk(ev IngestEvent) float64 {
+	if ev.MoneyAtRisk != nil {
+		return *ev.MoneyAtRisk
+	}
+	if ev.Metadata != nil {
+		if m, ok := ev.Metadata["money_at_risk"].(float64); ok && m > 0 {
+			return m
+		}
+	}
+	return 0
 }

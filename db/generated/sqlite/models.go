@@ -70,6 +70,11 @@ type Alert struct {
 	ResolvedAt       sql.NullTime    `json:"resolved_at"`
 	CreatedAt        time.Time       `json:"created_at"`
 	UpdatedAt        time.Time       `json:"updated_at"`
+	TenantID         string          `json:"tenant_id"`
+	AckStatus        string          `json:"ack_status"`
+	SeverityRank     int64           `json:"severity_rank"`
+	MoneyAtRisk      float64         `json:"money_at_risk"`
+	SnoozedUntil     sql.NullTime    `json:"snoozed_until"`
 }
 
 type AlertRule struct {

@@ -102,6 +102,11 @@ type Alert struct {
 	Severity         string     `json:"severity"`
 	Status           string     `json:"status"`
 	DedupKey         string     `json:"dedup_key"`
+	TenantID         string     `json:"tenant_id"`
+	AckStatus        string     `json:"ack_status"`
+	SeverityRank     int        `json:"severity_rank"`
+	MoneyAtRisk      float64    `json:"money_at_risk"`
+	SnoozedUntil     *time.Time `json:"snoozed_until,omitempty"`
 	EntityType       *string    `json:"entity_type,omitempty"`
 	EntityID         *string    `json:"entity_id,omitempty"`
 	UserID           *string    `json:"user_id,omitempty"`
@@ -121,6 +126,41 @@ type Alert struct {
 	ResolvedAt       *time.Time `json:"resolved_at,omitempty"`
 	CreatedAt        time.Time  `json:"created_at"`
 	UpdatedAt        time.Time  `json:"updated_at"`
+}
+
+// Inbox ack lifecycle values (Spec 22 §3, column alerts.ack_status).
+const (
+	AckStatusOpen     = "open"
+	AckStatusSnoozed  = "snoozed"
+	AckStatusAcked    = "acked"
+	AckStatusResolved = "resolved"
+)
+
+// Severity ranks 1-5 for the ranked inbox (Spec 22 §5.1). Lower rank sorts
+// first. Emit-time default mapping from legacy severity strings; producers
+// may pass an explicit rank via the event payload ("severity_rank").
+// Fine-grained money/waste classification (rank 3) arrives with the
+// kharcha/fuel emitters (Spec 22 S8/S9).
+const (
+	RankCritical = 1
+	RankUrgent   = 2
+	RankMoney    = 3
+	RankWaste    = 4
+	RankInfo     = 5
+)
+
+// SeverityToRank maps legacy pipeline severities to inbox ranks.
+func SeverityToRank(severity string) int {
+	switch severity {
+	case SeverityBlocker:
+		return RankCritical
+	case SeverityCritical:
+		return RankUrgent
+	case SeverityWarning:
+		return RankWaste
+	default:
+		return RankInfo
+	}
 }
 
 // NotificationPreference defines per-user channel opt-ins.

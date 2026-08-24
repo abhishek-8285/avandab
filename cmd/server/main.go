@@ -753,6 +753,14 @@ func main() {
 		if ragHandler != nil {
 			r.With(featureGate("rag")).Group(ragHandler.RegisterRoutes)
 		}
+		// Spec 22 S1 — ranked alert inbox API (flag: ALERT_INBOX_ENABLED).
+		alertInbox := handlers.NewAlertInboxHandlers(app.AlertsRepo)
+		r.With(featureGate("alert_inbox")).Group(func(r chi.Router) {
+			r.With(middleware.RequirePermission(authSvc, "alerts", "read")).Get("/api/alerts/inbox", alertInbox.List)
+			r.With(middleware.RequirePermission(authSvc, "alerts", "write")).Post("/api/alerts/{id}/ack", alertInbox.Ack)
+			r.With(middleware.RequirePermission(authSvc, "alerts", "write")).Post("/api/alerts/{id}/snooze", alertInbox.Snooze)
+			r.With(middleware.RequirePermission(authSvc, "alerts", "write")).Post("/api/alerts/snooze-all", alertInbox.SnoozeAll)
+		})
 	})
 
 	// Deprecated v2 alias routes (rewrite to v1) plus /api/v2/health.
@@ -1112,6 +1120,11 @@ func main() {
 			// Operational alerts (Spec 05 §3)
 			r.With(middleware.ResourcePermission(authSvc, "alerts", "read")).Route("/alerts", app.Alerts.Routes)
 
+			// Owner Command Center placeholder (Spec 22 Step 1) — ranked
+			// inbox only; full three-column console lands in Steps 2-3.
+			consoleHandlers := handlers.NewConsoleHandlers(app, app.AlertsRepo)
+			r.With(featureGate("alert_inbox"), middleware.ResourcePermission(authSvc, "alerts", "read")).Get("/console", consoleHandlers.Page)
+
 			// Compliance management and exemptions (Spec 05 §5, §11)
 			if app.Compliance != nil {
 				r.With(middleware.ResourcePermission(authSvc, "compliance", "read")).Route("/compliance", app.Compliance.Routes)
@@ -1427,6 +1440,31 @@ func main() {
 	// Operational alerts escalation and storm batch flusher (Spec 05 §4)
 	runLeadered("alerts_escalator", alertEscalator.Run)
 	runLeadered("alerts_flusher", alertFlusher.Run)
+
+	// Spec 22 S1 — reopen snoozed inbox alerts whose snooze expired.
+	if app.AlertsRepo != nil {
+		inboxRepo := app.AlertsRepo
+		runLeadered("alerts_snooze_sweep", func(c context.Context) {
+			ticker := time.NewTicker(time.Minute)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-c.Done():
+					return
+				case <-ticker.C:
+					if !featureTick("alert_inbox") {
+						continue
+					}
+					n, err := inboxRepo.ReopenExpiredSnoozes(c, time.Now().UTC())
+					if err != nil {
+						logger.Error("snooze sweep failed", "error", err)
+					} else if n > 0 {
+						logger.Info("snooze sweep reopened alerts", "count", n)
+					}
+				}
+			}
+		})
+	}
 
 	// E-Way Bill expiry monitor (Spec 07 §2.8)
 	ewbMonitor := ewaybill.NewMonitor(ewbService, ewbCfg)

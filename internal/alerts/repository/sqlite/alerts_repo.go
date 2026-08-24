@@ -4,10 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"strings"
 	"time"
 
 	"transport-app/internal/alerts/domain"
 	"transport-app/internal/alerts/repository"
+	"transport-app/internal/shared"
 )
 
 type sqlAlertRepository struct {
@@ -19,38 +21,38 @@ func NewAlertRepository(db *sql.DB) repository.AlertRepository {
 	return &sqlAlertRepository{db: db}
 }
 
-func (r *sqlAlertRepository) FindOpenByDedupKey(ctx context.Context, dedupKey string) (*domain.Alert, error) {
-	row := r.db.QueryRowContext(ctx, `
-		SELECT id, rule_id, source, alert_type, severity, status, dedup_key,
-		       entity_type, entity_id, user_id, title, message, occurrences,
-		       first_seen_at, last_seen_at, next_escalation_at, escalation_step,
-		       latitude, longitude, metadata, acked_by, acked_at, resolved_by, resolved_at,
-		       created_at, updated_at
-		FROM alerts
-		WHERE dedup_key = ? AND status IN ('open', 'acknowledged', 'escalated')
-		ORDER BY last_seen_at DESC
-		LIMIT 1`, dedupKey)
+// alertColumns is the canonical SELECT list for alert rows; order matches
+// scanAlert exactly.
+const alertColumns = `
+	id, rule_id, source, alert_type, severity, status, dedup_key,
+	tenant_id, ack_status, severity_rank, money_at_risk, snoozed_until,
+	entity_type, entity_id, user_id, title, message, occurrences,
+	first_seen_at, last_seen_at, next_escalation_at, escalation_step,
+	latitude, longitude, metadata, acked_by, acked_at, resolved_by, resolved_at,
+	created_at, updated_at`
 
+// scanAlert scans one alert row (alertColumns order) into domain.Alert.
+func scanAlert(scan func(dest ...any) error) (domain.Alert, error) {
 	var a domain.Alert
 	var ruleID, entityType, entityID, userID, metadata sql.NullString
 	var ackedBy, resolvedBy sql.NullString
-	var nextEscalationAt, ackedAt, resolvedAt sql.NullTime
+	var nextEscalationAt, ackedAt, resolvedAt, snoozedUntil sql.NullTime
 	var lat, lng sql.NullFloat64
+	var moneyAtRisk float64
 
-	err := row.Scan(
+	err := scan(
 		&a.ID, &ruleID, &a.Source, &a.AlertType, &a.Severity, &a.Status, &a.DedupKey,
+		&a.TenantID, &a.AckStatus, &a.SeverityRank, &moneyAtRisk, &snoozedUntil,
 		&entityType, &entityID, &userID, &a.Title, &a.Message, &a.Occurrences,
 		&a.FirstSeenAt, &a.LastSeenAt, &nextEscalationAt, &a.EscalationStep,
 		&lat, &lng, &metadata, &ackedBy, &ackedAt, &resolvedBy, &resolvedAt,
 		&a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, err
+		return a, err
 	}
 
+	a.MoneyAtRisk = moneyAtRisk
 	if ruleID.Valid {
 		a.RuleID = &ruleID.String
 	}
@@ -81,13 +83,33 @@ func (r *sqlAlertRepository) FindOpenByDedupKey(ctx context.Context, dedupKey st
 	if resolvedAt.Valid {
 		a.ResolvedAt = &resolvedAt.Time
 	}
+	if snoozedUntil.Valid {
+		a.SnoozedUntil = &snoozedUntil.Time
+	}
 	if lat.Valid {
 		a.Latitude = &lat.Float64
 	}
 	if lng.Valid {
 		a.Longitude = &lng.Float64
 	}
+	return a, nil
+}
 
+func (r *sqlAlertRepository) FindOpenByDedupKey(ctx context.Context, dedupKey string) (*domain.Alert, error) {
+	row := r.db.QueryRowContext(ctx, `
+		SELECT `+alertColumns+`
+		FROM alerts
+		WHERE dedup_key = ? AND status IN ('open', 'acknowledged', 'escalated')
+		ORDER BY last_seen_at DESC
+		LIMIT 1`, dedupKey)
+
+	a, err := scanAlert(row.Scan)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
 	return &a, nil
 }
 
@@ -111,22 +133,43 @@ func (r *sqlAlertRepository) CreateAlert(ctx context.Context, a *domain.Alert) e
 	if a.Status == "" {
 		a.Status = domain.StatusOpen
 	}
+	if a.AckStatus == "" {
+		// Derive inbox lifecycle from legacy status so direct inserts
+		// satisfy the 00092 CHECK constraint.
+		switch a.Status {
+		case domain.StatusAcknowledged:
+			a.AckStatus = domain.AckStatusAcked
+		case domain.StatusResolved, domain.StatusClosed:
+			a.AckStatus = domain.AckStatusResolved
+		default:
+			a.AckStatus = domain.AckStatusOpen
+		}
+	}
+	if a.TenantID == "" {
+		a.TenantID = string(shared.DefaultTenant)
+	}
+	if a.SeverityRank == 0 {
+		a.SeverityRank = domain.SeverityToRank(a.Severity)
+	}
 
 	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO alerts (
 			id, rule_id, source, alert_type, severity, status, dedup_key,
+			tenant_id, ack_status, severity_rank, money_at_risk, snoozed_until,
 			entity_type, entity_id, user_id, title, message, occurrences,
 			first_seen_at, last_seen_at, next_escalation_at, escalation_step,
 			latitude, longitude, metadata, acked_by, acked_at, resolved_by, resolved_at,
 			created_at, updated_at
 		) VALUES (
 			?, ?, ?, ?, ?, ?, ?,
+			?, ?, ?, ?, ?,
 			?, ?, ?, ?, ?, ?,
 			?, ?, ?, ?,
 			?, ?, ?, ?, ?, ?, ?,
 			?, ?
 		)`,
 		a.ID, a.RuleID, a.Source, a.AlertType, a.Severity, a.Status, a.DedupKey,
+		a.TenantID, a.AckStatus, a.SeverityRank, a.MoneyAtRisk, a.SnoozedUntil,
 		a.EntityType, a.EntityID, a.UserID, a.Title, a.Message, a.Occurrences,
 		a.FirstSeenAt, a.LastSeenAt, a.NextEscalationAt, a.EscalationStep,
 		a.Latitude, a.Longitude, a.Metadata, a.AckedBy, a.AckedAt, a.ResolvedBy, a.ResolvedAt,
@@ -314,11 +357,7 @@ func (r *sqlAlertRepository) GetOverrides(ctx context.Context, ruleID string, en
 
 func (r *sqlAlertRepository) ListAlerts(ctx context.Context, status string, limit, offset int) ([]domain.Alert, error) {
 	query := `
-		SELECT id, rule_id, source, alert_type, severity, status, dedup_key,
-		       entity_type, entity_id, user_id, title, message, occurrences,
-		       first_seen_at, last_seen_at, next_escalation_at, escalation_step,
-		       latitude, longitude, metadata, acked_by, acked_at, resolved_by, resolved_at,
-		       created_at, updated_at
+		SELECT ` + alertColumns + `
 		FROM alerts `
 	var args []interface{}
 	if status != "" {
@@ -337,63 +376,7 @@ func (r *sqlAlertRepository) ListAlerts(ctx context.Context, status string, limi
 	}
 	defer rows.Close()
 
-	var alerts []domain.Alert
-	for rows.Next() {
-		var a domain.Alert
-		var ruleID, entityType, entityID, userID, metadata sql.NullString
-		var ackedBy, resolvedBy sql.NullString
-		var nextEscalationAt, ackedAt, resolvedAt sql.NullTime
-		var lat, lng sql.NullFloat64
-
-		err := rows.Scan(
-			&a.ID, &ruleID, &a.Source, &a.AlertType, &a.Severity, &a.Status, &a.DedupKey,
-			&entityType, &entityID, &userID, &a.Title, &a.Message, &a.Occurrences,
-			&a.FirstSeenAt, &a.LastSeenAt, &nextEscalationAt, &a.EscalationStep,
-			&lat, &lng, &metadata, &ackedBy, &ackedAt, &resolvedBy, &resolvedAt,
-			&a.CreatedAt, &a.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		if ruleID.Valid {
-			a.RuleID = &ruleID.String
-		}
-		if entityType.Valid {
-			a.EntityType = &entityType.String
-		}
-		if entityID.Valid {
-			a.EntityID = &entityID.String
-		}
-		if userID.Valid {
-			a.UserID = &userID.String
-		}
-		if metadata.Valid {
-			a.Metadata = metadata.String
-		}
-		if ackedBy.Valid {
-			a.AckedBy = &ackedBy.String
-		}
-		if resolvedBy.Valid {
-			a.ResolvedBy = &resolvedBy.String
-		}
-		if nextEscalationAt.Valid {
-			a.NextEscalationAt = &nextEscalationAt.Time
-		}
-		if ackedAt.Valid {
-			a.AckedAt = &ackedAt.Time
-		}
-		if resolvedAt.Valid {
-			a.ResolvedAt = &resolvedAt.Time
-		}
-		if lat.Valid {
-			a.Latitude = &lat.Float64
-		}
-		if lng.Valid {
-			a.Longitude = &lng.Float64
-		}
-		alerts = append(alerts, a)
-	}
-	return alerts, rows.Err()
+	return collectAlerts(rows)
 }
 
 func (r *sqlAlertRepository) UnreadCount(ctx context.Context, userID string) (int, error) {
@@ -453,11 +436,7 @@ func (r *sqlAlertRepository) MarkAllRead(ctx context.Context, userID string) err
 
 func (r *sqlAlertRepository) ListPendingEscalations(ctx context.Context, now time.Time) ([]domain.Alert, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, rule_id, source, alert_type, severity, status, dedup_key,
-		       entity_type, entity_id, user_id, title, message, occurrences,
-		       first_seen_at, last_seen_at, next_escalation_at, escalation_step,
-		       latitude, longitude, metadata, acked_by, acked_at, resolved_by, resolved_at,
-		       created_at, updated_at
+		SELECT `+alertColumns+`
 		FROM alerts
 		WHERE status IN ('open', 'escalated')
 		  AND next_escalation_at IS NOT NULL
@@ -468,63 +447,7 @@ func (r *sqlAlertRepository) ListPendingEscalations(ctx context.Context, now tim
 	}
 	defer rows.Close()
 
-	var alerts []domain.Alert
-	for rows.Next() {
-		var a domain.Alert
-		var ruleID, entityType, entityID, userID, metadata sql.NullString
-		var ackedBy, resolvedBy sql.NullString
-		var nextEscalationAt, ackedAt, resolvedAt sql.NullTime
-		var lat, lng sql.NullFloat64
-
-		err := rows.Scan(
-			&a.ID, &ruleID, &a.Source, &a.AlertType, &a.Severity, &a.Status, &a.DedupKey,
-			&entityType, &entityID, &userID, &a.Title, &a.Message, &a.Occurrences,
-			&a.FirstSeenAt, &a.LastSeenAt, &nextEscalationAt, &a.EscalationStep,
-			&lat, &lng, &metadata, &ackedBy, &ackedAt, &resolvedBy, &resolvedAt,
-			&a.CreatedAt, &a.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		if ruleID.Valid {
-			a.RuleID = &ruleID.String
-		}
-		if entityType.Valid {
-			a.EntityType = &entityType.String
-		}
-		if entityID.Valid {
-			a.EntityID = &entityID.String
-		}
-		if userID.Valid {
-			a.UserID = &userID.String
-		}
-		if metadata.Valid {
-			a.Metadata = metadata.String
-		}
-		if ackedBy.Valid {
-			a.AckedBy = &ackedBy.String
-		}
-		if resolvedBy.Valid {
-			a.ResolvedBy = &resolvedBy.String
-		}
-		if nextEscalationAt.Valid {
-			a.NextEscalationAt = &nextEscalationAt.Time
-		}
-		if ackedAt.Valid {
-			a.AckedAt = &ackedAt.Time
-		}
-		if resolvedAt.Valid {
-			a.ResolvedAt = &resolvedAt.Time
-		}
-		if lat.Valid {
-			a.Latitude = &lat.Float64
-		}
-		if lng.Valid {
-			a.Longitude = &lng.Float64
-		}
-		alerts = append(alerts, a)
-	}
-	return alerts, rows.Err()
+	return collectAlerts(rows)
 }
 
 func (r *sqlAlertRepository) UpdateEscalation(ctx context.Context, alertID string, nextStep int, nextAt *time.Time, status string) error {
@@ -540,11 +463,7 @@ func (r *sqlAlertRepository) UpdateEscalation(ctx context.Context, alertID strin
 
 func (r *sqlAlertRepository) ListUnflushedStormAlerts(ctx context.Context, windowCutoff time.Time) ([]domain.Alert, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id, rule_id, source, alert_type, severity, status, dedup_key,
-		       entity_type, entity_id, user_id, title, message, occurrences,
-		       first_seen_at, last_seen_at, next_escalation_at, escalation_step,
-		       latitude, longitude, metadata, acked_by, acked_at, resolved_by, resolved_at,
-		       created_at, updated_at
+		SELECT `+alertColumns+`
 		FROM alerts
 		WHERE status IN ('open', 'escalated')
 		  AND occurrences > 1
@@ -556,63 +475,7 @@ func (r *sqlAlertRepository) ListUnflushedStormAlerts(ctx context.Context, windo
 	}
 	defer rows.Close()
 
-	var alerts []domain.Alert
-	for rows.Next() {
-		var a domain.Alert
-		var ruleID, entityType, entityID, userID, metadata sql.NullString
-		var ackedBy, resolvedBy sql.NullString
-		var nextEscalationAt, ackedAt, resolvedAt sql.NullTime
-		var lat, lng sql.NullFloat64
-
-		err := rows.Scan(
-			&a.ID, &ruleID, &a.Source, &a.AlertType, &a.Severity, &a.Status, &a.DedupKey,
-			&entityType, &entityID, &userID, &a.Title, &a.Message, &a.Occurrences,
-			&a.FirstSeenAt, &a.LastSeenAt, &nextEscalationAt, &a.EscalationStep,
-			&lat, &lng, &metadata, &ackedBy, &ackedAt, &resolvedBy, &resolvedAt,
-			&a.CreatedAt, &a.UpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		if ruleID.Valid {
-			a.RuleID = &ruleID.String
-		}
-		if entityType.Valid {
-			a.EntityType = &entityType.String
-		}
-		if entityID.Valid {
-			a.EntityID = &entityID.String
-		}
-		if userID.Valid {
-			a.UserID = &userID.String
-		}
-		if metadata.Valid {
-			a.Metadata = metadata.String
-		}
-		if ackedBy.Valid {
-			a.AckedBy = &ackedBy.String
-		}
-		if resolvedBy.Valid {
-			a.ResolvedBy = &resolvedBy.String
-		}
-		if nextEscalationAt.Valid {
-			a.NextEscalationAt = &nextEscalationAt.Time
-		}
-		if ackedAt.Valid {
-			a.AckedAt = &ackedAt.Time
-		}
-		if resolvedAt.Valid {
-			a.ResolvedAt = &resolvedAt.Time
-		}
-		if lat.Valid {
-			a.Latitude = &lat.Float64
-		}
-		if lng.Valid {
-			a.Longitude = &lng.Float64
-		}
-		alerts = append(alerts, a)
-	}
-	return alerts, rows.Err()
+	return collectAlerts(rows)
 }
 
 func (r *sqlAlertRepository) UpdateMetadata(ctx context.Context, alertID string, metadata string) error {
@@ -622,4 +485,130 @@ func (r *sqlAlertRepository) UpdateMetadata(ctx context.Context, alertID string,
 		    updated_at = CURRENT_TIMESTAMP
 		WHERE id = ?`, metadata, alertID)
 	return err
+}
+
+// collectAlerts drains a query result using scanAlert.
+func collectAlerts(rows *sql.Rows) ([]domain.Alert, error) {
+	defer func() { _ = rows.Close() }()
+	var alerts []domain.Alert
+	for rows.Next() {
+		a, err := scanAlert(rows.Scan)
+		if err != nil {
+			return nil, err
+		}
+		alerts = append(alerts, a)
+	}
+	return alerts, rows.Err()
+}
+
+// ListInbox returns ranked alerts for one tenant (Spec 22 §2.1).
+// status: open|snoozed|acked|resolved|all. Snoozed rows past their
+// snoozed_until count as open (visible again). Ordered severity_rank ASC,
+// created_at DESC per Spec 22 §5.1.
+func (r *sqlAlertRepository) ListInbox(ctx context.Context, tenantID, status string, limit int) ([]domain.Alert, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	now := time.Now().UTC()
+	query := `
+		SELECT ` + alertColumns + `
+		FROM alerts
+		WHERE tenant_id = ?`
+	var args []any
+	args = append(args, tenantID)
+	switch status {
+	case "open":
+		query += ` AND (ack_status = 'open' OR (ack_status = 'snoozed' AND snoozed_until <= ?))`
+		args = append(args, now)
+	case "snoozed", "acked", "resolved":
+		query += ` AND ack_status = ?`
+		args = append(args, status)
+	default:
+		// "all" or unknown — no ack_status filter.
+	}
+	query += ` ORDER BY severity_rank ASC, created_at DESC LIMIT ?`
+	args = append(args, limit)
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	return collectAlerts(rows)
+}
+
+// InboxAck acknowledges from the inbox. Returns false when the row was not
+// in ack_status='open' (Spec 22 edge case 10: second admin's ack is a
+// harmless no-op).
+func (r *sqlAlertRepository) InboxAck(ctx context.Context, alertID, userID string) (bool, error) {
+	now := time.Now().UTC()
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE alerts
+		SET ack_status = 'acked',
+		    status = 'acknowledged',
+		    next_escalation_at = NULL,
+		    acked_by = ?,
+		    acked_at = ?,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE id = ? AND ack_status = 'open'`, userID, now, alertID)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
+}
+
+// InboxSnooze hides an open alert until until. Only open rows can be
+// snoozed; re-fires while snoozed increment the same row via dedup without
+// lifting the snooze (Spec 22 edge case 7).
+func (r *sqlAlertRepository) InboxSnooze(ctx context.Context, alertID, userID string, until time.Time) (bool, error) {
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE alerts
+		SET ack_status = 'snoozed',
+		    snoozed_until = ?,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE id = ? AND ack_status = 'open'`, until, alertID)
+	if err != nil {
+		return false, err
+	}
+	n, err := res.RowsAffected()
+	return n > 0, err
+}
+
+// InboxSnoozeAll batch-snoozes open alerts by id; returns how many rows it
+// actually moved (already-handled ids are skipped silently).
+func (r *sqlAlertRepository) InboxSnoozeAll(ctx context.Context, ids []string, userID string, until time.Time) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	placeholders := strings.Repeat("?,", len(ids))
+	placeholders = placeholders[:len(placeholders)-1]
+	args := make([]any, 0, len(ids)+2)
+	args = append(args, until)
+	for _, id := range ids {
+		args = append(args, id)
+	}
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE alerts
+		SET ack_status = 'snoozed',
+		    snoozed_until = ?,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE ack_status = 'open' AND id IN (`+placeholders+`)`, args...)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+// ReopenExpiredSnoozes flips expired snoozes back to open so they surface
+// in the inbox again (single sweep worker, Spec 22 §5.1).
+func (r *sqlAlertRepository) ReopenExpiredSnoozes(ctx context.Context, now time.Time) (int64, error) {
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE alerts
+		SET ack_status = 'open',
+		    snoozed_until = NULL,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE ack_status = 'snoozed' AND snoozed_until IS NOT NULL AND snoozed_until <= ?`, now)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
 }

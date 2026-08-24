@@ -666,6 +666,7 @@ func TestAllTemplatesRender(t *testing.T) {
 		"scorecard_leaderboard.html", "scorecard_table.html", "settlement_list.html",
 		"settlement_view.html", "trip_list.html", "trip_list_table.html", "trip_view.html",
 		"user_list.html", "user_list_table.html", "vehicle_list.html", "vehicle_list_table.html",
+		"console.html", "alert_inbox.html",
 	} {
 		covered[n] = true
 	}
