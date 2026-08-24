@@ -1,0 +1,42 @@
+{{define "bookings_board.html"}}
+{{/* Bookings kanban (Spec 22 §4.2). Drag = existing status endpoints;
+server remains the only mutation authority — no new endpoint. */}}
+<div class="space-y-4">
+    <div class="flex items-center justify-between flex-wrap gap-2">
+        <div>
+            <h1 class="text-xl font-semibold text-on-surface font-display">Bookings Board</h1>
+            <p class="text-sm text-text-muted mt-1">Drag a card forward to confirm or complete it. Backwards moves are rejected.</p>
+        </div>
+        <a href="/bookings/new" class="inline-flex items-center rounded-md bg-primary text-on-primary px-3 py-2 text-sm font-medium hover:opacity-90 transition-opacity">New booking</a>
+    </div>
+
+    <div id="board" class="grid grid-cols-2 lg:grid-cols-4 gap-3 overflow-x-auto"
+         data-columns='[{{range $i, $c := .Extra.Columns}}{{if $i}},{{end}}"{{$c.Status}}"{{end}}]'>
+        {{range .Extra.Columns}}
+        <section class="board-column bg-surface-container-low border border-border-subtle rounded-lg p-2 min-h-[300px]"
+                 data-status="{{.Status}}">
+            <h2 class="text-xs font-semibold uppercase tracking-wide text-text-muted px-1 pb-2">
+                {{.Status}} <span class="font-normal normal-case">({{len .Cards}})</span>
+            </h2>
+            <div class="board-cards flex flex-col gap-2" data-status="{{.Status}}">
+                {{range .Cards}}
+                <article class="board-card bg-surface-container-lowest border border-border-subtle rounded-md p-2.5 text-sm shadow-sm cursor-grab active:cursor-grabbing"
+                         draggable="true" data-id="{{.ID}}" data-status="{{$.Status}}">
+                    <p class="font-medium text-on-surface">{{if .Number}}{{.Number}}{{else}}{{.ID}}{{end}}</p>
+                    {{if .Customer}}<p class="text-xs text-text-muted mt-0.5">{{.Customer}}</p>{{end}}
+                    <p class="text-xs text-on-surface mt-1">₹{{printf "%.0f" .Freight}}{{if .Deadline}} · due {{.Deadline}}{{end}}</p>
+                    {{if or .Vehicle .Driver}}
+                    <p class="text-[10px] text-text-muted mt-0.5">{{.Vehicle}}{{if and .Vehicle .Driver}} · {{end}}{{.Driver}}</p>
+                    {{end}}
+                </article>
+                {{end}}
+            </div>
+        </section>
+        {{end}}
+    </div>
+
+    <p id="board-feedback" class="hidden text-sm"></p>
+</div>
+
+<script src="/static/js/bookings_board.js?v={{if .Version}}{{.Version}}{{else}}20260824{{end}}" defer></script>
+{{end}}

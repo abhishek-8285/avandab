@@ -23,6 +23,11 @@ func AttachToBus(bus events.EventBus, h *Hub) {
 		"PositionEvent",
 		"TripStartedEvent",
 		"TripCompletedEvent",
+		// Spec 22 S5 — bookings kanban live sync (≤2s cross-user).
+		"booking.created",
+		"booking.confirmed",
+		"booking.cancelled",
+		"booking.completed",
 	}
 
 	for _, eventType := range forwardTypes {

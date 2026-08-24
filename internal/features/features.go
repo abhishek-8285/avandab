@@ -78,6 +78,8 @@ var Catalog = []Feature{
 	// Command Center (Spec 22)
 	{Key: "command_center", Name: "Owner Command Center", Category: "Command Center", Tier: TierAddon,
 		Description: "One-screen console: money strip, fleet context, ranked alerts.", EnvFlag: "COMMAND_CENTER_ENABLED"},
+	{Key: "bookings_board", Name: "Bookings Kanban Board", Category: "Command Center", Tier: TierAddon,
+		Description: "Drag-and-drop booking status board with live sync.", EnvFlag: "BOOKINGS_BOARD_ENABLED"},
 	{Key: "alert_inbox", Name: "Ranked Alert Inbox", Category: "Command Center", Tier: TierAddon,
 		Description: "Severity-ranked alert inbox with ack/snooze on the console.", EnvFlag: "ALERT_INBOX_ENABLED"},
 

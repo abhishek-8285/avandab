@@ -1151,6 +1151,11 @@ func main() {
 			// Operational alerts (Spec 05 §3)
 			r.With(middleware.ResourcePermission(authSvc, "alerts", "read")).Route("/alerts", app.Alerts.Routes)
 
+			// Spec 22 S5 — bookings kanban (flag: BOOKINGS_BOARD_ENABLED).
+			r.With(featureGate("bookings_board"),
+				middleware.ResourcePermission(authSvc, "bookings", "read")).
+				Get("/bookings/board", app.Bookings.Board)
+
 			// Owner Command Center (Spec 22 Steps 1-2) — ranked inbox +
 			// money strip; fleet/map/context panel lands in Step 3.
 			r.With(featureGate("command_center"), middleware.ResourcePermission(authSvc, "alerts", "read")).Get("/console", consoleHandlers.Page)
