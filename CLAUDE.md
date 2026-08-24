@@ -93,3 +93,22 @@ change separately. Never echo back unchanged code the user already has.
 Code blocks, file paths, commands, error messages: always written in full.
 Security warnings and destructive action confirmations: use full clarity.
 <!-- /cce-block -->
+
+## Security Gate (MANDATORY on every change)
+
+Every code change — from Claude Code or any other AI agent — must pass the
+security test before the work is called done:
+
+```bash
+LINT_BASE=$(git rev-parse HEAD) ./scripts/security-check.sh
+```
+
+- Runs: golangci-lint (gosec), govulncheck, npm audit, hard-coded-tenant
+  scan, secret-pattern scan. Ratchets to changed code via `LINT_BASE`.
+- Enforced by `hooks/pre-commit` and `hooks/pre-push`
+  (`git config core.hooksPath hooks`). Never use `--no-verify`.
+- `SECURITY_GATE_STRICT=0` = warn-only, local iteration ONLY — never when
+  claiming a task complete.
+- See "Security Gate" section in AGENTS.md and the Master Directive
+  ("Prove It" Protocol step 6) for the full policy. Every task response
+  ends with the Agent Verification Report including a Security Check line.

@@ -70,10 +70,10 @@ staticcheck:
 	"$$bin" ./...
 
 check-security:
-	@bin=$$(command -v gosec || echo "$$(go env GOPATH)/bin/gosec"); \
-	if [ -x "$$bin" ]; then "$$bin" -quiet -no-fail ./...; else echo "gosec skipped (not installed)"; fi
-	@bin=$$(command -v govulncheck || echo "$$(go env GOPATH)/bin/govulncheck"); \
-	if [ -x "$$bin" ]; then "$$bin" ./...; else echo "govulncheck skipped (not installed)"; fi
+	./scripts/security-check.sh
+
+check-security-strict:
+	SECURITY_GATE_STRICT=1 ./scripts/security-check.sh
 
 ## Run development server
 dev:

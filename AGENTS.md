@@ -143,6 +143,29 @@ On a blocker: halt and report — never fake a workaround.
 4. Migration safety: new migrations must apply AND roll back (`goose up`/`down`)
 5. Spec alignment: quote the exact spec section your code fulfills
    (e.g., "Spec 09 §5.1")
+6. Security gate: `LINT_BASE=$(git rev-parse HEAD) ./scripts/security-check.sh`
+   — exit 0. No task is done until this passes.
+
+### Security Gate (mandatory on EVERY change — any agent, any tool)
+Every code change — ZCode, Claude Code, any other AI agent, humans — MUST
+pass the security gate before the work is called done:
+
+```bash
+LINT_BASE=$(git rev-parse HEAD) ./scripts/security-check.sh
+```
+
+- What it runs: golangci-lint (gosec enabled), govulncheck (Go deps),
+  npm audit (mobile), hard-coded-tenant scan, secret-pattern scan.
+  `LINT_BASE` ratchets to changed code so legacy lint debt doesn't block.
+- Enforcement is layered so no agent can silently skip it:
+  `hooks/pre-commit` (via `git config core.hooksPath hooks`) runs the full
+  pre-commit suite; `hooks/pre-push` runs the whole-repo gate. Never commit
+  with `--no-verify`.
+- `SECURITY_GATE_STRICT=0` (warn-only) is for local iteration only — never
+  in CI, never when claiming a task complete.
+- New code must introduce ZERO new gosec/errcheck/noctx findings. Fixes to
+  existing debt are welcome in dedicated commits.
+- The Agent Verification Report MUST include the **Security Check** line.
 
 ### Handling Blockers (the "Halt" rule)
 Stop coding and output a `BLOCKER REPORT` when:
@@ -173,6 +196,7 @@ Every task response MUST end with:
 - **Migrations Added:** [filenames or "None"]
 - **Build Status:** [Pass/Fail + output]
 - **Test Status:** [Pass/Fail + output]
+- **Security Check:** [Pass/Fail — `./scripts/security-check.sh` summary: gosec/govulncheck/tenant/secret scans]
 - **Known Limitations / TODOs:** [brutally honest]
 - **Next Recommended Step:** [what the human/agent does next]
 ```
