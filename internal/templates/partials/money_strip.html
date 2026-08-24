@@ -4,19 +4,19 @@
     <div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm px-4 py-3">
         <p class="text-xs text-text-muted">Revenue today</p>
         {{if .MoneyStrip}}
-        <p class="text-lg font-semibold text-on-surface font-display">₹{{printf "%.0f" .MoneyStrip.Revenue}}</p>
+        <p class="text-lg font-semibold text-on-surface font-display" data-strip="revenue">₹{{printf "%.0f" .MoneyStrip.Revenue}}</p>
         {{else}}<p class="text-lg font-semibold text-text-muted">—</p>{{end}}
     </div>
     <div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm px-4 py-3">
         <p class="text-xs text-text-muted">Spent today</p>
         {{if .MoneyStrip}}
-        <p class="text-lg font-semibold text-on-surface font-display">₹{{printf "%.0f" .MoneyStrip.Spent}}</p>
+        <p class="text-lg font-semibold text-on-surface font-display" data-strip="spent">₹{{printf "%.0f" .MoneyStrip.Spent}}</p>
         {{else}}<p class="text-lg font-semibold text-text-muted">—</p>{{end}}
     </div>
     <div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm px-4 py-3">
         <p class="text-xs text-text-muted">Receivables</p>
         {{if .MoneyStrip}}
-        <p class="text-lg font-semibold text-on-surface font-display">₹{{printf "%.0f" .MoneyStrip.Receivables}}</p>
+        <p class="text-lg font-semibold text-on-surface font-display" data-strip="receivables">₹{{printf "%.0f" .MoneyStrip.Receivables}}</p>
         {{else}}<p class="text-lg font-semibold text-text-muted">—</p>{{end}}
     </div>
     <div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm px-4 py-3 flex flex-col justify-between">
