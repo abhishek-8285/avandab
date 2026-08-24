@@ -142,7 +142,39 @@ export function ExpenseScreen({ tripId = '1', onComplete, onBack }: ExpenseScree
       }
 
       const json = await res.json();
-      Alert.alert('Expense Submitted', `Expense ${json.id || ''} recorded successfully!`, [
+      // Spec 22 S8 — OCR confirm step: server reads the receipt; when the
+      // extracted amount differs from the typed one, the driver confirms.
+      let ocrNote = '';
+      if (json?.id && receiptUri) {
+        try {
+          const ocrRes = await fetch(`${getApiBaseURL()}/api/expenses/${json.id}/ocr`, {
+            method: 'POST',
+            headers: {
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          });
+          if (ocrRes.ok) {
+            const ocr = await ocrRes.json();
+            const ocrAmt = Number(ocr?.ocr_amount);
+            if (ocrAmt > 0 && Math.abs(ocrAmt - amt) > 0.01 * Math.max(amt, 1)) {
+              const useOcr = await new Promise<boolean>((resolve) => {
+                Alert.alert(
+                  'Receipt amount looks different',
+                  `Receipt shows ₹${ocrAmt.toFixed(0)} but you entered ₹${amt.toFixed(0)}. Keep which?`,
+                  [
+                    { text: 'Keep mine', style: 'cancel', onPress: () => resolve(false) },
+                    { text: 'Use receipt', onPress: () => resolve(true) },
+                  ],
+                );
+              });
+              ocrNote = useOcr ? ' (receipt amount noted for review)' : '';
+            } else {
+              ocrNote = ' (matches receipt ✓)';
+            }
+          }
+        } catch {}
+      }
+      Alert.alert('Expense Submitted', `Expense ${json.id || ''} recorded${ocrNote}!`, [
         { text: 'OK', onPress: onComplete },
       ]);
     } catch {

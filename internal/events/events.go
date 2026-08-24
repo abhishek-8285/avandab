@@ -30,6 +30,11 @@ const (
 	InvoiceGenerated      = "invoice.generated"
 	RazorpayPaymentFailed = "razorpay.payment_failed"
 
+	// Kharcha (Spec 22 §5.3): emitted post-insert by CreateExpenseWithOpts;
+	// the async verifier subscribes and computes verification_state without
+	// ever blocking the driver's sync path.
+	ExpenseCreated = "kharcha.expense_created"
+
 	GPSDeviationAlert = "telemetry.gps_deviation_alert"
 	FuelTheftAlert    = "telemetry.fuel_theft_alert"
 

@@ -90,7 +90,7 @@ func OpenStore(path string) (*Store, error) {
 		return nil, err
 	}
 	if err := migrate(db); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, err
 	}
 	return &Store{db: db}, nil
@@ -271,7 +271,7 @@ func (s *Store) TopEpisodes(agentName string, minReward float64, limit int) ([]E
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []Episode
 	for rows.Next() {

@@ -83,6 +83,9 @@ type Config struct {
 	RazorpayKeyID        string
 	RazorpayKeySecret    string
 	RazorpayWebhook      string
+	OCRProvider          string // mock | http (Spec 22 §6)
+	OCRHTTPURL           string
+	OCRHTTPKey           string
 	BootstrapAdmin       BootstrapAdminConfig
 	RAG                  RAGConfig
 	Agent                AgentConfig
@@ -309,6 +312,9 @@ func Load() *Config {
 		RazorpayKeyID:        getEnv("RAZORPAY_KEY_ID", ""),
 		RazorpayKeySecret:    getEnv("RAZORPAY_KEY_SECRET", ""),
 		RazorpayWebhook:      os.Getenv("RAZORPAY_WEBHOOK_SECRET"),
+		OCRProvider:          getEnv("OCR_PROVIDER", "mock"),
+		OCRHTTPURL:           getEnv("OCR_HTTP_URL", ""),
+		OCRHTTPKey:           getEnv("OCR_HTTP_KEY", ""),
 		BootstrapAdmin: BootstrapAdminConfig{
 			Email:    os.Getenv("BOOTSTRAP_ADMIN_EMAIL"),
 			Name:     getEnv("BOOTSTRAP_ADMIN_NAME", "Admin"),

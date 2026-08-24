@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"transport-app/internal/events"
 	"transport-app/internal/repository"
 	"transport-app/internal/shared"
 )
@@ -424,6 +425,15 @@ func (s *KharchaService) CreateExpenseWithOpts(ctx context.Context, o CreateExpe
 
 	s.logAudit(ctx, nil, "create_kharcha", "driver_expenses", expID, nil, nil)
 	s.log.Info("kharcha created", "expense_id", expID, "driver_id", o.DriverID, "amount", o.Amount)
+
+	// Async verification hook (Spec 22 §5.3): never blocks the driver's
+	// sync path; the verifier subscribes and writes verification_state.
+	if s.events != nil {
+		s.events.Publish(ctx, events.Event{
+			Type:    events.ExpenseCreated,
+			Payload: map[string]any{"expense_id": expID},
+		})
+	}
 	return expID, nil
 }
 

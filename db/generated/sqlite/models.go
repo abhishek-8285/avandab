@@ -331,27 +331,31 @@ type DriverDocument struct {
 }
 
 type DriverExpense struct {
-	ID             string          `json:"id"`
-	TripID         sql.NullString  `json:"trip_id"`
-	DriverID       sql.NullString  `json:"driver_id"`
-	ExpenseType    string          `json:"expense_type"`
-	Amount         float64         `json:"amount"`
-	Description    sql.NullString  `json:"description"`
-	ReceiptUrl     sql.NullString  `json:"receipt_url"`
-	Approved       sql.NullInt64   `json:"approved"`
-	CreatedAt      sql.NullTime    `json:"created_at"`
-	Status         string          `json:"status"`
-	Category       string          `json:"category"`
-	RequestedBy    sql.NullString  `json:"requested_by"`
-	ApprovedBy     sql.NullString  `json:"approved_by"`
-	RejectedReason sql.NullString  `json:"rejected_reason"`
-	ApprovedAt     sql.NullTime    `json:"approved_at"`
-	AuditStatus    string          `json:"audit_status"`
-	FuelLitres     sql.NullFloat64 `json:"fuel_litres"`
-	IdempotencyKey sql.NullString  `json:"idempotency_key"`
-	Latitude       sql.NullFloat64 `json:"latitude"`
-	Longitude      sql.NullFloat64 `json:"longitude"`
-	TenantID       string          `json:"tenant_id"`
+	ID                string          `json:"id"`
+	TripID            sql.NullString  `json:"trip_id"`
+	DriverID          sql.NullString  `json:"driver_id"`
+	ExpenseType       string          `json:"expense_type"`
+	Amount            float64         `json:"amount"`
+	Description       sql.NullString  `json:"description"`
+	ReceiptUrl        sql.NullString  `json:"receipt_url"`
+	Approved          sql.NullInt64   `json:"approved"`
+	CreatedAt         sql.NullTime    `json:"created_at"`
+	Status            string          `json:"status"`
+	Category          string          `json:"category"`
+	RequestedBy       sql.NullString  `json:"requested_by"`
+	ApprovedBy        sql.NullString  `json:"approved_by"`
+	RejectedReason    sql.NullString  `json:"rejected_reason"`
+	ApprovedAt        sql.NullTime    `json:"approved_at"`
+	AuditStatus       string          `json:"audit_status"`
+	FuelLitres        sql.NullFloat64 `json:"fuel_litres"`
+	IdempotencyKey    sql.NullString  `json:"idempotency_key"`
+	Latitude          sql.NullFloat64 `json:"latitude"`
+	Longitude         sql.NullFloat64 `json:"longitude"`
+	VerificationState string          `json:"verification_state"`
+	FlagReason        string          `json:"flag_reason"`
+	OcrAmount         sql.NullFloat64 `json:"ocr_amount"`
+	OcrConfidence     sql.NullFloat64 `json:"ocr_confidence"`
+	TenantID          string          `json:"tenant_id"`
 }
 
 type DriverIssue struct {

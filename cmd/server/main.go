@@ -46,6 +46,7 @@ import (
 	intAcc "transport-app/internal/integration/accounting"
 	intEWB "transport-app/internal/integration/ewaybill"
 	intFastag "transport-app/internal/integration/fastag"
+	intOCR "transport-app/internal/integration/ocr"
 	"transport-app/internal/logging"
 	"transport-app/internal/maintenance"
 	"transport-app/internal/middleware"
@@ -810,6 +811,20 @@ func main() {
 			r.With(middleware.RequirePermission(authSvc, "kharcha", "approve")).
 				Post("/api/driver/advances/{id}/decision", driverMoney.DecideAdvance)
 		})
+		// Spec 22 S8 — kharcha verification: async verifier off the bus +
+		// on-demand OCR + flagged queue API.
+		kharchaVerifier := service.NewKharchaVerifyService(database, logger,
+			intOCR.NewClient(intOCR.Config{
+				Provider: cfg.OCRProvider,
+				HTTPURL:  cfg.OCRHTTPURL,
+				HTTPKey:  cfg.OCRHTTPKey,
+			}, logger))
+		kharchaVerifier.SubscribeExpenseCreated(eventBus)
+		kharchaVerifyHandlers := handlers.NewKharchaVerifyHandlers(app, kharchaVerifier)
+		r.With(middleware.RequirePermission(authSvc, "trips", "update")).
+			Post("/api/expenses/{id}/ocr", kharchaVerifyHandlers.OCRExtract)
+		r.With(middleware.RequirePermission(authSvc, "kharcha", "approve")).
+			Get("/api/expenses/flagged", kharchaVerifyHandlers.FlaggedQueue)
 	})
 
 	// Deprecated v2 alias routes (rewrite to v1) plus /api/v2/health.
