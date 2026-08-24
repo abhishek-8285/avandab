@@ -1,0 +1,55 @@
+{{define "context_panel.html"}}
+{{/* Vehicle context panel (Spec 22 §4.1): trip/driver/PnL/kharcha/EWB/
+FASTag/docs — populated by console.js from /api/fleet/{id}/context. */}}
+<aside id="context-panel" class="flex flex-col gap-3 min-w-0">
+    <div class="flex items-center justify-between px-1">
+        <h2 id="ctx-title" class="text-sm font-semibold text-on-surface">Vehicle context</h2>
+        <span id="ctx-status" class="text-xs text-text-muted"></span>
+    </div>
+
+    <div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm divide-y divide-border-subtle text-sm">
+        <div class="px-4 py-3">
+            <p class="text-xs text-text-muted">Position</p>
+            <p id="ctx-position" class="text-on-surface mt-0.5">—</p>
+        </div>
+        <div class="px-4 py-3">
+            <p class="text-xs text-text-muted">Trip</p>
+            <p id="ctx-trip" class="text-on-surface mt-0.5">—</p>
+        </div>
+        <div class="px-4 py-3 flex items-center justify-between gap-2">
+            <div class="min-w-0">
+                <p class="text-xs text-text-muted">Driver</p>
+                <p id="ctx-driver" class="text-on-surface mt-0.5 truncate">—</p>
+            </div>
+            <a id="ctx-call" href="#" class="hidden shrink-0 inline-flex items-center gap-1 rounded-md bg-primary text-on-primary px-2.5 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity">Call</a>
+        </div>
+        <div class="px-4 py-3 grid grid-cols-2 gap-3">
+            <div>
+                <p class="text-xs text-text-muted">PnL / km today</p>
+                <p id="ctx-pnl" class="text-on-surface mt-0.5">—</p>
+            </div>
+            <div>
+                <p class="text-xs text-text-muted">FASTag balance</p>
+                <p id="ctx-fastag" class="text-on-surface mt-0.5">—</p>
+            </div>
+        </div>
+        <div class="px-4 py-3">
+            <p class="text-xs text-text-muted">Kharcha pending</p>
+            <ul id="ctx-kharcha" class="mt-1 space-y-1 text-on-surface"><li>—</li></ul>
+        </div>
+        <div class="px-4 py-3 flex items-center justify-between gap-2">
+            <div class="min-w-0">
+                <p class="text-xs text-text-muted">E-way bill</p>
+                <p id="ctx-eway" class="text-on-surface mt-0.5 truncate">—</p>
+            </div>
+            <button id="ctx-eway-extend" type="button"
+                    class="hidden shrink-0 inline-flex items-center rounded-md border border-border-subtle px-2.5 py-1.5 text-xs font-medium hover:bg-surface-container transition-colors cursor-pointer"
+                    title="Extend validity by 4 hours">Extend 4h</button>
+        </div>
+        <div class="px-4 py-3">
+            <p class="text-xs text-text-muted">Docs expiring (30d)</p>
+            <ul id="ctx-docs" class="mt-1 space-y-1 text-on-surface"><li>—</li></ul>
+        </div>
+    </div>
+</aside>
+{{end}}

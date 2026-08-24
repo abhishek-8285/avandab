@@ -705,7 +705,7 @@ func main() {
 
 	// Owner Command Center handlers (Spec 22) — shared by the protected API
 	// group (money strip) and web routes (console page).
-	consoleHandlers := handlers.NewConsoleHandlers(app, app.AlertsRepo, services.PNL)
+	consoleHandlers := handlers.NewConsoleHandlers(app, app.AlertsRepo, services.PNL, database, etaService, appCache)
 
 	// Protected: Telemetry, and all /api/v1/* routes require a valid session or Bearer token
 	r.Group(func(r chi.Router) {
@@ -777,6 +777,11 @@ func main() {
 		r.With(featureGate("command_center"),
 			middleware.RequirePermission(authSvc, "dashboard", "read")).
 			Get("/api/dashboard/money-strip", consoleHandlers.MoneyStrip)
+		// Spec 22 S3 — fleet strip + per-vehicle context panel.
+		r.With(featureGate("command_center")).Group(func(r chi.Router) {
+			r.With(middleware.RequirePermission(authSvc, "vehicles", "read")).Get("/api/fleet", consoleHandlers.Fleet)
+			r.With(middleware.RequirePermission(authSvc, "vehicles", "read")).Get("/api/fleet/{vehicleId}/context", consoleHandlers.VehicleContext)
+		})
 	})
 
 	// Deprecated v2 alias routes (rewrite to v1) plus /api/v2/health.

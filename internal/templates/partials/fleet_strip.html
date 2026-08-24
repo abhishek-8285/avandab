@@ -1,0 +1,12 @@
+{{define "fleet_strip.html"}}
+{{/* Fleet strip (Spec 22 §4.1): color-coded vehicle cards, JS-refreshed. */}}
+<section id="fleet-strip" class="flex flex-col gap-2 min-w-0" data-selected="">
+    <div class="flex items-center justify-between px-1">
+        <h2 class="text-sm font-semibold text-on-surface">Fleet</h2>
+        <span id="fleet-count" class="text-xs text-text-muted"></span>
+    </div>
+    <div id="fleet-cards" class="flex flex-col gap-2 overflow-y-auto max-h-[70vh] pr-1">
+        <p class="text-xs text-text-muted px-1">Loading fleet…</p>
+    </div>
+</section>
+{{end}}

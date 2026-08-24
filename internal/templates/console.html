@@ -3,12 +3,24 @@
     <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
         <div>
             <h1 class="text-xl font-semibold text-on-surface font-display">Command Center</h1>
-            <p class="text-sm text-text-muted mt-1">Money, fleet and compliance in one view. Full console rolls out in phases.</p>
+            <p class="text-sm text-text-muted mt-1">Money, fleet and compliance in one view.</p>
         </div>
     </div>
 
     {{template "money_strip.html" .Extra}}
 
+    <div class="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_320px] gap-4">
+        {{template "fleet_strip.html" .Extra}}
+
+        <div id="console-map-wrap" class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm overflow-hidden min-h-[420px]">
+            <div id="console-map" class="w-full h-full min-h-[420px]"></div>
+        </div>
+
+        {{template "context_panel.html" .Extra}}
+    </div>
+
     {{template "alert_inbox.html" .Extra}}
 </div>
+
+<script src="/static/js/console.js?v={{if .Version}}{{.Version}}{{else}}20260824{{end}}" defer></script>
 {{end}}
