@@ -1,7 +1,15 @@
 {{define "context_panel.html"}}
 {{/* Vehicle context panel (Spec 22 §4.1): trip/driver/PnL/kharcha/EWB/
 FASTag/docs — populated by console.js from /api/fleet/{id}/context. */}}
-<aside id="context-panel" class="flex flex-col gap-3 min-w-0">
+<aside id="context-panel"
+       class="flex flex-col gap-3 min-w-0
+              max-lg:fixed max-lg:inset-x-0 max-lg:bottom-0 max-lg:z-40
+              max-lg:max-h-[72vh] max-lg:overflow-y-auto max-lg:p-4
+              max-lg:bg-surface-container-lowest max-lg:border-t max-lg:border-border-subtle
+              max-lg:rounded-t-2xl max-lg:shadow-2xl max-lg:translate-y-full
+              max-lg:transition-transform max-lg:duration-200">
+    <button id="ctx-sheet-close" type="button" aria-label="Close details"
+            class="hidden max-lg:block sticky top-0 mx-auto w-10 h-1.5 rounded-full bg-border-subtle cursor-pointer"></button>
     <div class="flex items-center justify-between px-1">
         <h2 id="ctx-title" class="text-sm font-semibold text-on-surface">Vehicle context</h2>
         <span id="ctx-status" class="text-xs text-text-muted"></span>
