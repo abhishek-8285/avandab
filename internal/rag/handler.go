@@ -330,7 +330,20 @@ func (h *Handler) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tmpPath := filepath.Join(h.service.uploadDir, "rag_upload_"+header.Filename)
+	// Sanitize the client-supplied filename: strip any directory
+	// components so the write target always stays inside uploadDir.
+	base := filepath.Base(strings.ReplaceAll(header.Filename, "\\", "/"))
+	if base == "" || base == "." || base == string(os.PathSeparator) {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(APIError{Error: "invalid file name"})
+		return
+	}
+	tmpPath := filepath.Join(h.service.uploadDir, "rag_upload_"+base)
+	if !strings.HasPrefix(tmpPath, filepath.Clean(h.service.uploadDir)+string(os.PathSeparator)) {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(APIError{Error: "invalid file name"})
+		return
+	}
 	tmpFile, err := os.Create(tmpPath)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
