@@ -10,13 +10,12 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
 	"transport-app/internal/domain"
-	"transport-app/internal/domain/invoice"
-	"transport-app/internal/domain/types"
 	"transport-app/internal/integration"
 	gstn "transport-app/internal/integration/gstn"
 	invoiceapp "transport-app/internal/invoice/application"
@@ -170,38 +169,35 @@ func (h *InvoiceHandlers) DownloadPDF(w http.ResponseWriter, r *http.Request) {
 		TenantID: shared.TenantIDFromContext(r.Context()),
 	})
 	if err != nil {
-		fmt.Printf("[DownloadPDF Error] Invoice query failed for ID %s: %v\n", idParam, err)
+		slog.Error("DownloadPDF: invoice query failed", "invoice_id", idParam, "error", err)
 		http.Error(w, "Invoice not found", http.StatusNotFound)
 		return
 	}
 
-	balance, errBal := h.Services.Invoices.GetBalance(r.Context(), domain.InvoiceID(idParam))
-	if errBal != nil {
-		slog.Error("Failed to calculate balance for PDF", "invoice_id", idParam, "error", errBal)
-		balance = 0
+	balance := 0.0
+	if h.Services != nil && h.Services.Invoices != nil {
+		var errBal error
+		balance, errBal = h.Services.Invoices.GetBalance(r.Context(), domain.InvoiceID(idParam))
+		if errBal != nil {
+			slog.Error("Failed to calculate balance for PDF", "invoice_id", idParam, "error", errBal)
+			balance = 0
+		}
 	}
 	paidAmount := invDTO.Total - balance
 	if paidAmount < 0 {
 		paidAmount = 0
 	}
 
-	invEntity := invoice.Invoice{
-		ID:            types.InvoiceID(invDTO.ID),
-		InvoiceNumber: invDTO.InvoiceNumber,
-		BookingID:     types.BookingID(invDTO.BookingID),
-		CustomerID:    types.CustomerID(invDTO.CustomerID),
-		Subtotal:      invDTO.Subtotal,
-		Tax:           invDTO.Tax,
-		Discount:      invDTO.Discount,
-		Total:         invDTO.Total,
-		PaidAmount:    paidAmount,
-		Status:        invoice.InvoiceStatus(invDTO.PaymentStatus),
-		CreatedAt:     invDTO.CreatedAt,
+	data, err := h.buildInvoicePDFData(r.Context(), &invDTO, paidAmount, balance)
+	if err != nil {
+		slog.Error("Failed to compose PDF data", "invoice_id", idParam, "error", err)
+		http.Error(w, "Failed to generate PDF", http.StatusInternalServerError)
+		return
 	}
 
-	pdfBytes, err := pdfgen.GenerateInvoicePDF(invEntity, "Apex Transport Ltd")
+	pdfBytes, err := pdfgen.GenerateInvoicePDF(*data)
 	if err != nil {
-		fmt.Printf("[DownloadPDF Error] PDF generation failed: %v\n", err)
+		slog.Error("PDF generation failed", "invoice_id", idParam, "error", err)
 		http.Error(w, "Failed to generate PDF", http.StatusInternalServerError)
 		return
 	}
@@ -212,6 +208,237 @@ func (h *InvoiceHandlers) DownloadPDF(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(pdfBytes)))
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(pdfBytes)
+}
+
+// buildInvoicePDFData composes the complete render input for the invoice
+// PDF from tenant settings, customer record, line items and payments.
+// Missing optional data degrades gracefully (blank labels), never faked.
+func (h *InvoiceHandlers) buildInvoicePDFData(ctx context.Context,
+	invDTO *invoiceapp.InvoiceResponseDTO, paidAmount, balance float64,
+) (*pdfgen.InvoicePDFData, error) {
+	prof := h.loadCompanyProfile(ctx)
+	custName, custGSTIN, custAddr := h.loadCustomerBillTo(ctx, invDTO.CustomerID)
+	items := h.loadLineItems(ctx, invDTO.ID)
+
+	custState := ""
+	if len(custGSTIN) >= 2 {
+		custState = custGSTIN[:2]
+	}
+	intra := custState == "" || custState == prof.StateCode
+
+	var sumTaxable, sumCGST, sumSGST, sumIGST float64
+	gstData := false
+	lines := make([]pdfgen.PDFLineItem, 0, len(items))
+	for _, it := range items {
+		sumTaxable += it.TaxableValue
+		sumCGST += it.CGSTAmount
+		sumSGST += it.SGSTAmount
+		sumIGST += it.IGSTAmount
+		if it.HSNSACCode != "" || it.CGSTRate > 0 || it.SGSTRate > 0 || it.IGSTRate > 0 {
+			gstData = true
+		}
+		qty := strconv.FormatFloat(it.Quantity, 'f', -1, 64) + " " + it.Unit
+		lines = append(lines, pdfgen.PDFLineItem{
+			Description:  it.Description,
+			HSNSAC:       it.HSNSACCode,
+			Quantity:     qty,
+			Rate:         it.Rate,
+			TaxableValue: it.TaxableValue,
+			CGST:         it.CGSTAmount,
+			SGST:         it.SGSTAmount,
+			IGST:         it.IGSTAmount,
+			Total:        it.Total,
+		})
+	}
+
+	cgst, sgst, igst := sumCGST, sumSGST, sumIGST
+	taxableTotal := sumTaxable
+	if !gstData {
+		// No itemized tax data — fall back to header-level columns.
+		cgst, sgst, igst = invDTO.CGST, invDTO.SGST, invDTO.IGST
+		if cgst == 0 && sgst == 0 && igst == 0 {
+			if intra {
+				cgst, sgst = invDTO.Tax/2, invDTO.Tax/2
+			} else {
+				igst = invDTO.Tax
+			}
+		}
+		taxableTotal = invDTO.Subtotal
+	}
+
+	placeOfSupply := custState
+	if placeOfSupply == "" {
+		placeOfSupply = prof.StateCode
+	}
+
+	var payRows []pdfgen.PDFPaymentRow
+	if h.Services != nil && h.Services.Invoices != nil {
+		payments, err := h.Services.Invoices.GetPaymentsForInvoice(ctx, domain.InvoiceID(invDTO.ID))
+		if err != nil {
+			slog.Warn("payments lookup failed for invoice PDF", "invoice_id", invDTO.ID, "error", err)
+		}
+		for _, p := range payments {
+			ref := ""
+			if p.Reference != nil {
+				ref = *p.Reference
+			}
+			payRows = append(payRows, pdfgen.PDFPaymentRow{
+				Date:   p.PaymentDate.Format("02 Jan 2006"),
+				Method: string(p.Method),
+				Ref:    ref,
+				Amount: p.Amount,
+			})
+		}
+	}
+
+	dueDate, ewbNumber := h.loadInvoiceExtras(ctx, invDTO.ID)
+
+	roundOff := 0.0
+	if gstData {
+		expected := invDTO.Subtotal - invDTO.Discount + cgst + sgst + igst
+		roundOff = invDTO.Total - expected
+		if roundOff > -0.005 && roundOff < 0.005 {
+			roundOff = 0
+		}
+	}
+
+	return &pdfgen.InvoicePDFData{
+		Company: pdfgen.PDFParty{
+			Name:      prof.Name,
+			Address:   prof.Address,
+			GSTIN:     prof.GSTNumber,
+			StateCode: prof.StateCode,
+			Phone:     prof.Phone,
+			Email:     prof.Email,
+		},
+		Customer: pdfgen.PDFParty{
+			Name:      custName,
+			Address:   custAddr,
+			GSTIN:     custGSTIN,
+			StateCode: custState,
+		},
+		InvoiceNumber: invDTO.InvoiceNumber,
+		PaymentStatus: invDTO.PaymentStatus,
+		InvoiceDate:   invDTO.CreatedAt.Format("02 Jan 2006"),
+		DueDate:       dueDate,
+		PlaceOfSupply: placeOfSupply,
+		Subtotal:      invDTO.Subtotal,
+		Tax:           invDTO.Tax,
+		Discount:      invDTO.Discount,
+		Total:         invDTO.Total,
+		Paid:          paidAmount,
+		Balance:       balance,
+		CGST:          cgst,
+		SGST:          sgst,
+		IGST:          igst,
+		GSTBreakdown:  gstData,
+		IntraState:    intra,
+		Items:         lines,
+		TaxableTotal:  taxableTotal,
+		RoundOff:      roundOff,
+		Payments:      payRows,
+		IRN:           invDTO.IRN,
+		IRNAckNo:      invDTO.IRNAckNo,
+		IRNAckDate:    invDTO.IRNAckDate,
+		SignedQR:      pdfgen.QRImageBytes(invDTO.SignedQR),
+		EWBNumber:     ewbNumber,
+	}, nil
+}
+
+// loadInvoiceExtras reads due_date + ewb_number straight from the
+// invoices table (not surfaced on the read-model DTO).
+func (h *InvoiceHandlers) loadInvoiceExtras(ctx context.Context, invoiceID string) (dueDate, ewb string) {
+	var d sql.NullString
+	var e sql.NullString
+	if err := h.DB.QueryRowContext(ctx,
+		`SELECT COALESCE(due_date, ''), COALESCE(ewb_number, '')
+		 FROM invoices WHERE id = ?`, invoiceID).Scan(&d, &e); err != nil {
+		slog.Warn("invoice extras lookup failed", "invoice_id", invoiceID, "error", err)
+		return "", ""
+	}
+	if t, err := time.Parse("2006-01-02 15:04:05.999999999-07:00", d.String); err == nil && d.String != "" {
+		return t.Format("02 Jan 2006"), e.String
+	}
+	if d.String != "" {
+		return d.String[:10], e.String // ISO date prefix fallback
+	}
+	return "", e.String
+}
+
+// companyProfile mirrors the tenant's company_settings row.
+type companyProfile struct {
+	Name      string
+	Address   string
+	GSTNumber string
+	StateCode string
+	Phone     string
+	Email     string
+}
+
+// loadCompanyProfile reads company_settings for the seller block.
+// StateCode falls back to "27" (Maharashtra) matching the GST editor;
+// Name is empty when unset — the renderer prints a placeholder rather
+// than any hardcoded company name.
+func (h *InvoiceHandlers) loadCompanyProfile(ctx context.Context) companyProfile {
+	p := companyProfile{StateCode: "27"}
+	row := h.DB.QueryRowContext(ctx, `
+		SELECT COALESCE(company_name, ''), COALESCE(address, ''),
+		       COALESCE(gst_number, ''), COALESCE(state_code, '27'),
+		       COALESCE(phone, ''), COALESCE(email, '')
+		FROM company_settings WHERE id = 1`)
+	if err := row.Scan(&p.Name, &p.Address, &p.GSTNumber, &p.StateCode,
+		&p.Phone, &p.Email); err != nil {
+		slog.Warn("company_settings unavailable for invoice PDF", "error", err)
+	}
+	if p.StateCode == "" {
+		p.StateCode = "27"
+	}
+	return p
+}
+
+// loadCustomerBillTo reads the buyer identity for the Bill To block.
+func (h *InvoiceHandlers) loadCustomerBillTo(ctx context.Context, customerID string) (name, gstin, address string) {
+	err := h.DB.QueryRowContext(ctx, `
+		SELECT name, COALESCE(gst, ''), COALESCE(address, '')
+		FROM customers WHERE id = ?`, customerID).
+		Scan(&name, &gstin, &address)
+	if err != nil {
+		slog.Warn("customer lookup failed for invoice PDF", "customer_id", customerID, "error", err)
+	}
+	return name, gstin, address
+}
+
+// loadLineItems reads the itemized rows with per-line GST data.
+func (h *InvoiceHandlers) loadLineItems(ctx context.Context, invoiceID string) []LineItemRecord {
+	rows, err := h.DB.QueryContext(ctx, `
+		SELECT id, invoice_id, COALESCE(hsn_sac_code, ''), description, COALESCE(unit, 'NOS'),
+		       quantity, COALESCE(rate, unit_price), COALESCE(taxable_value, amount),
+		       COALESCE(cgst_rate, 0), COALESCE(sgst_rate, 0), COALESCE(igst_rate, 0),
+		       COALESCE(cgst_amount, 0), COALESCE(sgst_amount, 0), COALESCE(igst_amount, 0),
+		       COALESCE(total, amount)
+		FROM invoice_line_items
+		WHERE invoice_id = ?
+		ORDER BY created_at ASC
+	`, invoiceID)
+	if err != nil {
+		slog.Warn("line items query failed for invoice PDF", "invoice_id", invoiceID, "error", err)
+		return nil
+	}
+	defer func() { _ = rows.Close() }()
+	var items []LineItemRecord
+	for rows.Next() {
+		var it LineItemRecord
+		if err := rows.Scan(
+			&it.ID, &it.InvoiceID, &it.HSNSACCode, &it.Description, &it.Unit,
+			&it.Quantity, &it.Rate, &it.TaxableValue,
+			&it.CGSTRate, &it.SGSTRate, &it.IGSTRate,
+			&it.CGSTAmount, &it.SGSTAmount, &it.IGSTAmount,
+			&it.Total,
+		); err == nil {
+			items = append(items, it)
+		}
+	}
+	return items
 }
 
 func sanitizeHeaderFilename(name string) string {
@@ -279,54 +506,17 @@ func (h *InvoiceHandlers) LineItemsEditor(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Fetch customer & company state
-	var custName, custGST, custState string
-	var compState sql.NullString
-	if err := h.DB.QueryRowContext(r.Context(), `
-		SELECT c.name, COALESCE(c.gst, ''), cs.state_code
-		FROM customers c
-		LEFT JOIN company_settings cs ON 1=1
-		WHERE c.id = ?
-	`, invDTO.CustomerID).Scan(&custName, &custGST, &compState); err != nil {
-		slog.Warn("invoice editor: customer/company state lookup failed, GST split preview may be wrong", "invoice_id", idParam, "error", err)
-	}
-
-	supplierState := "27"
-	if compState.Valid && compState.String != "" {
-		supplierState = compState.String
-	}
+	// Customer + company tax identity (shared loaders with the PDF path).
+	custName, custGST, _ := h.loadCustomerBillTo(r.Context(), invDTO.CustomerID)
+	prof := h.loadCompanyProfile(r.Context())
+	supplierState := prof.StateCode
+	custState := ""
 	if len(custGST) >= 2 {
 		custState = custGST[:2]
 	}
-	isIntra := (custState == "" || custState == supplierState)
+	isIntra := custState == "" || custState == supplierState
 
-	// Fetch line items
-	rows, err := h.DB.QueryContext(r.Context(), `
-		SELECT id, invoice_id, COALESCE(hsn_sac_code, ''), description, COALESCE(unit, 'NOS'),
-		       quantity, COALESCE(rate, unit_price), COALESCE(taxable_value, amount),
-		       COALESCE(cgst_rate, 0), COALESCE(sgst_rate, 0), COALESCE(igst_rate, 0),
-		       COALESCE(cgst_amount, 0), COALESCE(sgst_amount, 0), COALESCE(igst_amount, 0),
-		       COALESCE(total, amount)
-		FROM invoice_line_items
-		WHERE invoice_id = ?
-		ORDER BY created_at ASC
-	`, idParam)
-	var items []LineItemRecord
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var it LineItemRecord
-			if err := rows.Scan(
-				&it.ID, &it.InvoiceID, &it.HSNSACCode, &it.Description, &it.Unit,
-				&it.Quantity, &it.Rate, &it.TaxableValue,
-				&it.CGSTRate, &it.SGSTRate, &it.IGSTRate,
-				&it.CGSTAmount, &it.SGSTAmount, &it.IGSTAmount,
-				&it.Total,
-			); err == nil {
-				items = append(items, it)
-			}
-		}
-	}
+	items := h.loadLineItems(r.Context(), idParam)
 
 	// Fetch HSN master for datalist
 	var hsnList []HSNSACRecord
@@ -698,7 +888,7 @@ func (h *InvoiceHandlers) GenerateIRN(w http.ResponseWriter, r *http.Request) {
 	`, invoiceID)
 	var lineViews []gstn.LineItemView
 	if err == nil {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var lv gstn.LineItemView
 			if err := rows.Scan(
@@ -806,7 +996,7 @@ func (h *InvoiceHandlers) SearchHSNSAC(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to query HSN master", http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var results []HSNSACRecord
 	for rows.Next() {
