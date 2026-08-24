@@ -807,12 +807,25 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if in.TripID == "" {
 					return "", fmt.Errorf("trip_id is required")
 				}
-				db := env.Services.DB()
-				if db == nil {
-					return "database not available", nil
+				svc := env.Services.EWayBill
+				if svc == nil {
+					return "eway bill service not available", nil
 				}
-				worker := ewaybill.NewWorker(db, nil, nil, nil, ewaybill.Config{})
-				return worker.ExtendForTrip(ctx, in.TripID)
+				rec, err := svc.GetByTrip(ctx, in.TripID)
+				if err != nil {
+					return fmt.Sprintf("no eway bill found for trip %s", in.TripID), nil
+				}
+				if rec.Status != "active" {
+					return fmt.Sprintf("eway bill %s is not active (status: %s)", rec.EwbNumber, rec.Status), nil
+				}
+				updated, err := svc.Extend(ctx, rec.EwbNumber, ewaybill.ExtendRequest{
+					EwbNumber: rec.EwbNumber,
+					Reason:    "extended via ops assistant",
+				})
+				if err != nil {
+					return fmt.Sprintf("extend failed for ewb %s: %v", rec.EwbNumber, err), nil
+				}
+				return fmt.Sprintf("extended ewb %s until %s", updated.EwbNumber, updated.ValidUntil.Format(time.RFC3339)), nil
 			},
 		},
 	}

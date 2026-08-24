@@ -116,6 +116,14 @@ func (s *BookingService) ListBookings(ctx context.Context, query, status string,
 	return bookings, total, nil
 }
 
+// ListBookingsByCustomer returns the most recent bookings for a customer.
+func (s *BookingService) ListBookingsByCustomer(ctx context.Context, customerID domain.CustomerID, limit int) ([]repository.BookingWithJoins, error) {
+	if limit <= 0 {
+		limit = 5
+	}
+	return s.store.ListBookingsByCustomer(ctx, customerID, limit)
+}
+
 // UpdateBooking updates an existing booking.
 func (s *BookingService) UpdateBooking(ctx context.Context, id domain.BookingID, req CreateBookingRequest, notes string) (domain.Booking, error) {
 	b, err := s.store.GetBookingByID(ctx, id)

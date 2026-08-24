@@ -192,6 +192,27 @@ func (r *SQLRepository) DeleteInvoice(ctx context.Context, id domain.InvoiceID) 
 	})
 }
 
+func (r *SQLRepository) ListInvoicesByCustomer(ctx context.Context, customerID domain.CustomerID, limit int) ([]repository.InvoiceWithJoins, error) {
+	rows, err := r.Q(ctx).ListInvoicesByCustomer(ctx, db.ListInvoicesByCustomerParams{
+		TenantID:   string(shared.TenantIDFromContext(ctx)),
+		CustomerID: string(customerID),
+		Limit:      int64(limit),
+	})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]repository.InvoiceWithJoins, len(rows))
+	for i, row := range rows {
+		result[i] = invoiceRowToWithJoins(
+			row.ID, row.InvoiceNumber, row.BookingID, row.CustomerID,
+			row.TripID, row.Subtotal, row.Tax, row.Discount, row.Total,
+			row.PaymentStatus, row.CreatedAt, row.UpdatedAt,
+			row.CustomerName, row.CustomerCompany, row.BookingNumber, row.TripNumber,
+		)
+	}
+	return result, nil
+}
+
 func (r *SQLRepository) SearchInvoices(ctx context.Context, query string, status string, limit, offset int) ([]repository.InvoiceWithJoins, error) {
 	rows, err := r.Q(ctx).SearchInvoices(ctx, db.SearchInvoicesParams{
 		TenantID:      string(shared.TenantIDFromContext(ctx)),

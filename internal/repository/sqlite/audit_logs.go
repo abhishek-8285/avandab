@@ -71,6 +71,29 @@ func (r *SQLRepository) ListAuditLogs(ctx context.Context, limit, offset int) ([
 	return result, nil
 }
 
+func (r *SQLRepository) GetAuditLogsByRecord(ctx context.Context, tableName, recordID string, limit int) ([]repository.AuditLogWithUser, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	rows, err := r.Q(ctx).GetAuditLogsByRecord(ctx, db.GetAuditLogsByRecordParams{
+		TableName: tableName,
+		RecordID:  sql.NullString{String: recordID, Valid: true},
+		Limit:     int64(limit),
+	})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]repository.AuditLogWithUser, len(rows))
+	for i, row := range rows {
+		result[i] = auditLogRowToWithUser(
+			row.ID, row.UserID, row.Action, row.TableName,
+			row.RecordID, row.OldValues, row.NewValues,
+			row.IpAddress, row.CreatedAt, row.UserName,
+		)
+	}
+	return result, nil
+}
+
 func (r *SQLRepository) CountAuditLogs(ctx context.Context) (int64, error) {
 	return r.Q(ctx).CountAuditLogs(ctx)
 }

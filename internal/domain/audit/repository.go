@@ -11,6 +11,7 @@ import (
 type AuditLogRepository interface {
 	CreateAuditLog(ctx context.Context, log AuditLog) (AuditLog, error)
 	ListAuditLogs(ctx context.Context, limit, offset int) ([]AuditLogWithUser, error)
+	GetAuditLogsByRecord(ctx context.Context, tableName, recordID string, limit int) ([]AuditLogWithUser, error)
 	CountAuditLogs(ctx context.Context) (int64, error)
 	CountAuditLogsSince(ctx context.Context, since time.Time) (int64, error)
 }

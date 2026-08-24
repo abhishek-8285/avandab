@@ -92,7 +92,7 @@ func TestSettlementUI_PagesAndEWayBillCard(t *testing.T) {
 	settleHandler := NewSettlementHandlers(app, services.Settlements, authSvc)
 	app.Settlements = settleHandler
 
-	ewbClient := intEWB.NewClient(intEWB.Config{Enabled: true})
+	ewbClient := intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true})
 	ewbSvc := ewaybill.NewEWayBillService(db, bus, ewbClient, logger, ewaybill.Config{Enabled: true})
 	ewbHandler := NewEWayBillHandlers(app, ewbSvc, authSvc)
 	app.EWayBill = ewbHandler

@@ -29,6 +29,10 @@ type LiveVehicle struct {
 	EtaMin        *time.Time `json:"eta_min,omitempty"` // wired in Spec 04 3D
 	EtaMax        *time.Time `json:"eta_max,omitempty"` // wired in Spec 04 3D
 	EtaMethod     string     `json:"eta_method,omitempty"`
+	RemainingKM   *float64   `json:"remaining_km,omitempty"` // distance left to destination (hybrid ETA)
+	RouteKM       *float64   `json:"route_km,omitempty"`     // planned route distance, enables trip-progress %
+	DriverName    string     `json:"driver_name,omitempty"`
+	DriverPhone   string     `json:"driver_phone,omitempty"`
 	Ts            time.Time  `json:"ts"`
 }
 
@@ -155,7 +159,10 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 	q := `
 		SELECT s.trip_id, s.vehicle_id, s.latitude, s.longitude, s.speed,
 		       s.fuel_level, s.odometer, ` + headingSel + `, s.timestamp,
-		       COALESCE(v.vehicle_number, v.registration_number, '') as vehicle_num
+		       COALESCE(v.vehicle_number, v.registration_number, '') as vehicle_num,
+		       COALESCE(NULLIF(TRIM(COALESCE(d.first_name, '') || ' ' || COALESCE(d.last_name, '')), ''), '') as driver_name,
+		       COALESCE(d.phone, '') as driver_phone,
+		       rt.distance as route_km
 		FROM telemetry_snapshots s
 		JOIN (
 		    SELECT vehicle_id, MAX(timestamp) AS ts
@@ -165,6 +172,9 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 		    GROUP BY vehicle_id
 		) latest ON latest.vehicle_id = s.vehicle_id AND latest.ts = s.timestamp
 		JOIN vehicles v ON v.id = s.vehicle_id AND v.tenant_id = ?
+		LEFT JOIN trips t ON t.id = s.trip_id
+		LEFT JOIN drivers d ON d.id = t.driver_id
+		LEFT JOIN routes rt ON rt.id = t.route_id
 		WHERE s.latitude IS NOT NULL AND s.longitude IS NOT NULL
 		ORDER BY s.vehicle_id`
 	rows, err := s.db.QueryContext(ctx, q, tripID, tripID, tenantID)
@@ -176,11 +186,11 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 	var out []LiveVehicle
 	for rows.Next() {
 		var lv LiveVehicle
-		var tripID, vehicleID, vehNum sql.NullString
+		var tripID, vehicleID, vehNum, driverName, driverPhone sql.NullString
 		var lat, lng, speed sql.NullFloat64
-		var fuel, odo, heading sql.NullFloat64
+		var fuel, odo, heading, routeKM sql.NullFloat64
 		var ts time.Time
-		if err := rows.Scan(&tripID, &vehicleID, &lat, &lng, &speed, &fuel, &odo, &heading, &ts, &vehNum); err != nil {
+		if err := rows.Scan(&tripID, &vehicleID, &lat, &lng, &speed, &fuel, &odo, &heading, &ts, &vehNum, &driverName, &driverPhone, &routeKM); err != nil {
 			return nil, err
 		}
 		if !vehicleID.Valid {
@@ -189,6 +199,16 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 		lv.VehicleID = vehicleID.String
 		if vehNum.Valid && vehNum.String != "" {
 			lv.VehicleNumber = vehNum.String
+		}
+		if driverName.Valid {
+			lv.DriverName = driverName.String
+		}
+		if driverPhone.Valid {
+			lv.DriverPhone = driverPhone.String
+		}
+		if routeKM.Valid && routeKM.Float64 > 0 {
+			km := routeKM.Float64
+			lv.RouteKM = &km
 		}
 		if tripID.Valid {
 			lv.TripID = tripID.String
@@ -228,6 +248,8 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 				out[i].EtaMin = &etaRes.EtaMin
 				out[i].EtaMax = &etaRes.EtaMax
 				out[i].EtaMethod = etaRes.Method
+				rem := etaRes.RemainingKM
+				out[i].RemainingKM = &rem
 			}
 		}
 	}

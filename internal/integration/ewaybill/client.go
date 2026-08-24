@@ -80,6 +80,9 @@ func (c *stubClient) Generate(ctx context.Context, req GenerateRequest) (EWayBil
 	if !c.cfg.Enabled {
 		return EWayBill{}, fmt.Errorf("ewaybill integration disabled")
 	}
+	if !c.cfg.UseMock {
+		return EWayBill{}, fmt.Errorf("ewaybill: NIC credentials not configured; set INTEGRATION_EWAYBILL_API_KEY or INTEGRATION_EWAYBILL_USE_MOCK=true for demo mode")
+	}
 	now := time.Now()
 	return EWayBill{
 		EwbNumber:   "EWB" + uuid.New().String()[:12],
@@ -96,6 +99,9 @@ func (c *stubClient) Get(ctx context.Context, ewbNumber string) (EWayBill, error
 	if !c.cfg.Enabled {
 		return EWayBill{}, fmt.Errorf("ewaybill integration disabled")
 	}
+	if !c.cfg.UseMock {
+		return EWayBill{}, fmt.Errorf("ewaybill: NIC credentials not configured; set INTEGRATION_EWAYBILL_API_KEY or INTEGRATION_EWAYBILL_USE_MOCK=true for demo mode")
+	}
 	return EWayBill{
 		EwbNumber:   ewbNumber,
 		Status:      "ACTIVE",
@@ -111,6 +117,9 @@ func (c *stubClient) Cancel(ctx context.Context, ewbNumber, reason string) (Canc
 	if !c.cfg.Enabled {
 		return Cancellation{}, fmt.Errorf("ewaybill integration disabled")
 	}
+	if !c.cfg.UseMock {
+		return Cancellation{}, fmt.Errorf("ewaybill: NIC credentials not configured; set INTEGRATION_EWAYBILL_API_KEY or INTEGRATION_EWAYBILL_USE_MOCK=true for demo mode")
+	}
 	return Cancellation{
 		EwbNumber:   ewbNumber,
 		CancelledAt: time.Now(),
@@ -123,6 +132,9 @@ func (c *stubClient) GeneratePartA(ctx context.Context, req GenerateRequest) (EW
 	slog.Default().Info("[ewaybill] GeneratePartA called", "endpoint", c.cfg.Endpoint, "enabled", c.cfg.Enabled, "document", req.DocumentNumber)
 	if !c.cfg.Enabled {
 		return EWayBill{}, fmt.Errorf("ewaybill integration disabled")
+	}
+	if !c.cfg.UseMock {
+		return EWayBill{}, fmt.Errorf("ewaybill: NIC credentials not configured; set INTEGRATION_EWAYBILL_API_KEY or INTEGRATION_EWAYBILL_USE_MOCK=true for demo mode")
 	}
 	now := time.Now()
 	uid := uuid.New().String()
@@ -144,6 +156,9 @@ func (c *stubClient) AttachPartB(ctx context.Context, ewbNumber, vehicleNumber, 
 	if !c.cfg.Enabled {
 		return EWayBill{}, fmt.Errorf("ewaybill integration disabled")
 	}
+	if !c.cfg.UseMock {
+		return EWayBill{}, fmt.Errorf("ewaybill: NIC credentials not configured; set INTEGRATION_EWAYBILL_API_KEY or INTEGRATION_EWAYBILL_USE_MOCK=true for demo mode")
+	}
 	now := time.Now()
 	return EWayBill{
 		EwbNumber:   ewbNumber,
@@ -159,6 +174,9 @@ func (c *stubClient) Extend(ctx context.Context, ewbNumber string, req ExtendReq
 	slog.Default().Info("[ewaybill] Extend called", "endpoint", c.cfg.Endpoint, "enabled", c.cfg.Enabled, "ewb_number", ewbNumber, "reason", req.Reason)
 	if !c.cfg.Enabled {
 		return EWayBill{}, fmt.Errorf("ewaybill integration disabled")
+	}
+	if !c.cfg.UseMock {
+		return EWayBill{}, fmt.Errorf("ewaybill: NIC credentials not configured; set INTEGRATION_EWAYBILL_API_KEY or INTEGRATION_EWAYBILL_USE_MOCK=true for demo mode")
 	}
 	now := time.Now()
 	return EWayBill{
@@ -179,6 +197,9 @@ func (c *stubClient) GetByTrip(ctx context.Context, tripID string) (EWayBill, er
 	slog.Default().Info("[ewaybill] GetByTrip called", "endpoint", c.cfg.Endpoint, "enabled", c.cfg.Enabled, "trip_id", tripID)
 	if !c.cfg.Enabled {
 		return EWayBill{}, fmt.Errorf("ewaybill integration disabled")
+	}
+	if !c.cfg.UseMock {
+		return EWayBill{}, fmt.Errorf("ewaybill: NIC credentials not configured; set INTEGRATION_EWAYBILL_API_KEY or INTEGRATION_EWAYBILL_USE_MOCK=true for demo mode")
 	}
 	now := time.Now()
 	return EWayBill{

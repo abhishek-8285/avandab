@@ -60,6 +60,7 @@ import (
 	"transport-app/internal/rag"
 	"transport-app/internal/realtime"
 	"transport-app/internal/repository/sqlite"
+	"transport-app/internal/safety"
 	"transport-app/internal/service"
 	"transport-app/internal/telemetry"
 
@@ -200,11 +201,30 @@ func main() {
 	telegramProvider := alertchannels.NewTelegramProvider(cfg, logger)
 	stubProviders := alertchannels.NewStubProviders(logger)
 
+	emailSender := notifications.NewSMTPEmailSender(notifications.SMTPConfig{
+		Host:     cfg.Notify.SMTPHost,
+		Port:     cfg.Notify.SMTPPort,
+		User:     cfg.Notify.SMTPUser,
+		Password: cfg.Notify.SMTPPassword,
+		From:     cfg.Notify.SMTPFrom,
+	})
+	smsSender := notifications.NewWebhookSMSSender(cfg.Notify.SMSWebhookURL, cfg.Notify.SMSWebhookToken)
+	notifSvc := notifications.NewServiceWithChannels(emailSender, smsSender)
+
+	var emailChannel alertchannels.Provider = stubProviders["email"]
+	if emailSender.Configured() {
+		emailChannel = alertchannels.NewEmailBridge(notifSvc)
+	}
+	var smsChannel alertchannels.Provider = stubProviders["sms"]
+	if smsSender.Configured() {
+		smsChannel = alertchannels.NewSMSBridge(notifSvc)
+	}
+
 	alertProviderMap := map[string]alertchannels.Provider{
 		"in_app":   inAppProvider,
 		"telegram": telegramProvider,
-		"email":    stubProviders["email"],
-		"sms":      stubProviders["sms"],
+		"email":    emailChannel,
+		"sms":      smsChannel,
 		"whatsapp": stubProviders["whatsapp"],
 	}
 
@@ -269,6 +289,13 @@ func main() {
 		return app.Features.Enabled(context.Background(), string(shared.DefaultTenant), key)
 	}
 	app.Cache = appCache
+	app.Notify = notifSvc
+
+	// Standardized route locations (gap #46): best-effort forward geocoding
+	// of route endpoints whenever a Nominatim-compatible service is set.
+	if cfg.LiveMap.NominatimURL != "" {
+		services.Routes.WithGeocoder(service.NewNominatimGeocoder(cfg.LiveMap.NominatimURL))
+	}
 
 	// E-Way Bill and FASTag services (Spec 07)
 	integCfg := integration.LoadConfig()
@@ -282,6 +309,7 @@ func main() {
 	ewbClient := intEWB.NewClient(integCfg.EWayBill)
 	ewbService := ewaybill.NewEWayBillService(database, eventBus, ewbClient, logger, ewbCfg)
 	ewbService.SubscribeTripEvents(eventBus)
+	services.EWayBill = ewbService
 
 	fastagClient := intFastag.NewClient(integCfg.FASTag, database)
 	fastagConfig := fastag.LoadConfig(database)
@@ -299,7 +327,6 @@ func main() {
 	app.FilesAPI = handlers.NewFilesAPIHandlers(app, services.Files, authSvc)
 
 	// ── Ops: error reporting, login audit, dashboard ─────────────────────
-	notifSvc := notifications.NewService()
 	reporter := opserrors.NewReporter(notifSvc, opserrors.NewSQLiteStore(database), cfg.AppEnv, Version)
 	loginAuditSvc := audit.NewLoginAuditService(notifSvc, audit.SecurityPolicy{
 		NotifyOnNewDevice: true,
@@ -590,6 +617,15 @@ func main() {
 		fuelEngine = fuel.NewEngine(database, sqlUoW, fuel.NewConfigReader(database), logger)
 	}
 
+	// ── Safety Event Engine (Spec 03 §4.1 producers, roadmap M2) ─────
+	// Consumes telemetry_snapshots like the fuel engine; emits the five
+	// missing scorecard feeds (speeding/harsh_braking/harsh_accel/idling/
+	// night_driving) into driver_behaviour_events + SAFETY alerts.
+	var safetyEngine *safety.Engine
+	if cfg.Telemetry.Enabled {
+		safetyEngine = safety.NewEngine(database, sqlUoW, fuel.NewConfigReader(database), logger)
+	}
+
 	// ── RAG (codebase search) ────────────────────────────────────────────
 	// Created before the protected group below so its routes mount behind RequireAPIAuth.
 	var ragHandler *rag.Handler
@@ -666,6 +702,7 @@ func main() {
 		r.Use(middleware.RequireAPIAuth(authStore, apiSecret, middleware.DefaultTenantResolver))
 		r.With(featureGate("telemetry")).Group(func(r chi.Router) {
 			telemetry.RegisterTelemetryRoutes(r, ingestor, database, time.Duration(cfg.LiveMap.TelemetryStaleMin)*time.Minute, etaService)
+			telemetry.RegisterGeocodeRoute(r, cfg.LiveMap.NominatimURL)
 		})
 		r.Get("/api/v1/telemetry/stream", realtime.StreamHandler(sseHub, cfg.LiveMap.SSEEnabled))
 		r.With(featureGate("pnl")).Group(func(r chi.Router) {
@@ -1268,6 +1305,22 @@ func main() {
 		})
 	}
 
+	if safetyEngine != nil {
+		if services.Scorecard != nil {
+			safetyEngine.WithBehaviourHook(func(ctx context.Context, driverID string) {
+				if _, err := services.Scorecard.RecomputeDriverScore(ctx, driverID); err != nil {
+					logger.Error("scorecard incremental recompute (safety) failed", "driver_id", driverID, "error", err)
+				}
+			})
+		}
+		runLeadered("safety_engine", func(ctx context.Context) {
+			if !featureTick("scorecard") {
+				return
+			}
+			safetyEngine.Run(ctx)
+		})
+	}
+
 	// Nightly scorecard sweep (Spec 03 §4.3): recompute every driver with
 	// behaviour events in the window so decayed scores stay fresh even when
 	// no new engine events arrive.
@@ -1374,24 +1427,6 @@ func main() {
 	// Operational alerts escalation and storm batch flusher (Spec 05 §4)
 	runLeadered("alerts_escalator", alertEscalator.Run)
 	runLeadered("alerts_flusher", alertFlusher.Run)
-
-	// E-Way Bill lifecycle worker (Spec 05 §7, Spec 07)
-	var ewbWorker *ewaybill.Worker
-	if cfg.EWayBill.WorkerEnabled {
-		ewbWorker = ewaybill.NewWorker(database, eventBus, nil, logger, ewaybill.Config{
-			Enabled:              cfg.EWayBill.WorkerEnabled,
-			Interval:             cfg.EWayBill.WorkerInterval,
-			ExtensionKM:          cfg.EWayBill.ExtensionKM,
-			ExtensionLeadSeconds: cfg.EWayBill.ExtensionLeadSeconds,
-			MinInvoiceValue:      cfg.EWayBill.MinInvoiceValue,
-		})
-		runLeadered("ewaybill_worker", func(ctx context.Context) {
-			if !featureTick("ewaybill") {
-				return
-			}
-			ewbWorker.Run(ctx)
-		})
-	}
 
 	// E-Way Bill expiry monitor (Spec 07 §2.8)
 	ewbMonitor := ewaybill.NewMonitor(ewbService, ewbCfg)

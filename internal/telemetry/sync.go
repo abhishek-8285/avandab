@@ -69,6 +69,13 @@ func RegisterTelemetryRoutes(r chi.Router, ing *Ingestor, db *sql.DB, staleMin t
 	r.Get("/api/v1/telemetry/history", HistoryHandler(db))
 }
 
+// RegisterGeocodeRoute mounts the reverse-geocode proxy next to the live
+// feed (Spec 04 §7). Separate so callers without NOMINATIM_URL configured
+// can skip it entirely — the handler then reports 503 anyway.
+func RegisterGeocodeRoute(r chi.Router, nominatimURL string) {
+	r.Get("/api/v1/telemetry/reverse_geocode", ReverseGeocodeHandler(nominatimURL))
+}
+
 // ensureSyntheticDevice completes Decision D3: driver phones have no IMEI, so
 // the driver_id itself becomes the device identity. The ingest pipeline
 // quarantines unknown IMEIs, so a sync from an unregistered driver would be

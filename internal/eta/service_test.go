@@ -246,3 +246,34 @@ func TestEtaService_ScheduledFallback_And_InactivePhases(t *testing.T) {
 	assert.Equal(t, "scheduled", res.Method)
 	assert.Equal(t, 30*time.Minute, res.EtaMax.Sub(res.EtaMin))
 }
+
+func TestLoadTrip_HaversineFallbackWhenDistanceMissing(t *testing.T) {
+	db := newEtaTestDB(t)
+	seedTripAndRoute(t, db, "trp-geo", "veh-geo", "in_transit", 0, 0)
+	_, err := db.Exec(`INSERT INTO route_locations
+		(route_id, source_lat, source_lng, dest_lat, dest_lng)
+		VALUES ('r-trp-geo', 12.9716, 77.5946, 18.5204, 73.8567)`)
+	require.NoError(t, err)
+
+	svc := NewEtaService(db, 15, 30, 5)
+	td, err := svc.loadTrip(context.Background(), "trp-geo")
+	require.NoError(t, err)
+
+	expect := haversineKm(12.9716, 77.5946, 18.5204, 73.8567) * roadFactor
+	assert.InDelta(t, expect, td.RouteDistance, 0.001)
+	assert.Greater(t, td.RouteDistance, float64(800), "BLR→Pune road estimate should exceed 800 km")
+}
+
+func TestLoadTrip_ManualDistanceWinsOverFallback(t *testing.T) {
+	db := newEtaTestDB(t)
+	seedTripAndRoute(t, db, "trp-manual", "veh-manual", "in_transit", 500, 9)
+	_, err := db.Exec(`INSERT INTO route_locations
+		(route_id, source_lat, source_lng, dest_lat, dest_lng)
+		VALUES ('r-trp-manual', 12.9716, 77.5946, 18.5204, 73.8567)`)
+	require.NoError(t, err)
+
+	svc := NewEtaService(db, 15, 30, 5)
+	td, err := svc.loadTrip(context.Background(), "trp-manual")
+	require.NoError(t, err)
+	assert.Equal(t, float64(500), td.RouteDistance)
+}

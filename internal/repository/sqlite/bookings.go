@@ -243,6 +243,43 @@ func (r *SQLRepository) SearchBookings(ctx context.Context, query string, status
 	return result, nil
 }
 
+func (r *SQLRepository) ListBookingsByCustomer(ctx context.Context, customerID domain.CustomerID, limit int) ([]repository.BookingWithJoins, error) {
+	rows, err := r.Q(ctx).ListBookingsByCustomer(ctx, db.ListBookingsByCustomerParams{
+		TenantID:   string(shared.TenantIDFromContext(ctx)),
+		CustomerID: string(customerID),
+		Limit:      int64(limit),
+	})
+	if err != nil {
+		return nil, err
+	}
+	result := make([]repository.BookingWithJoins, len(rows))
+	for i, row := range rows {
+		b := db.Booking{
+			ID:            row.ID,
+			BookingNumber: row.BookingNumber,
+			CustomerID:    row.CustomerID,
+			PickupDate:    row.PickupDate,
+			RouteID:       row.RouteID,
+			VehicleType:   row.VehicleType,
+			Passengers:    row.Passengers,
+			CargoWeight:   row.CargoWeight,
+			Price:         row.Price,
+			Notes:         row.Notes,
+			Status:        row.Status,
+			CreatedAt:     row.CreatedAt,
+			UpdatedAt:     row.UpdatedAt,
+		}
+		result[i] = repository.BookingWithJoins{
+			Booking:          toDomainBooking(b),
+			CustomerName:     row.CustomerName,
+			CustomerCompany:  fromNullString(row.CustomerCompany),
+			RouteSource:      row.RouteSource,
+			RouteDestination: row.RouteDestination,
+		}
+	}
+	return result, nil
+}
+
 func (r *SQLRepository) CountBookings(ctx context.Context, query string, status string) (int64, error) {
 	count, err := r.Q(ctx).CountBookings(ctx, db.CountBookingsParams{
 		TenantID: string(shared.TenantIDFromContext(ctx)),

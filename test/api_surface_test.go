@@ -95,13 +95,13 @@ func TestIntegrationEndpoints(t *testing.T) {
 	r.Use(authInjectMiddleware)
 
 	cfg := integration.Config{
-		EWayBill: ewaybill.Config{Enabled: true},
-		FASTag:   fastag.Config{Enabled: true},
+		EWayBill: ewaybill.Config{Enabled: true, UseMock: true},
+		FASTag:   fastag.Config{Enabled: true, UseMock: true},
 	}
 	h := integration.NewHandler(cfg, &stubAuthSvc{})
 	h.Register(r)
 
-	t.Run("ewaybill generate returns fake bill", func(t *testing.T) {
+	t.Run("ewaybill generate returns stub bill in mock mode", func(t *testing.T) {
 		body := map[string]interface{}{
 			"document_number": "DOC/2026/0001",
 			"from_gstin":      "27AABCU9603R1ZX",
@@ -120,7 +120,7 @@ func TestIntegrationEndpoints(t *testing.T) {
 		assert.NotEmpty(t, res["ewb_number"])
 	})
 
-	t.Run("fastag balance returns fake balance", func(t *testing.T) {
+	t.Run("fastag balance returns stub balance in explicit mock mode", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/integrations/fastag/balance?vehicle_number=MH12AB1234&tag_id=TAG123", nil)
 		rr := httptest.NewRecorder()
 		r.ServeHTTP(rr, req)

@@ -50,6 +50,7 @@ const (
 	RoleAccountant RoleName = "accountant"
 	RoleViewer     RoleName = "viewer"
 	RoleDriver     RoleName = "driver"
+	RoleCustomer   RoleName = "customer"
 )
 
 // DefaultRoleID returns the role ID for a given role name.

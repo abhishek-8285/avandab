@@ -22,7 +22,7 @@ func (h *DashboardHandlers) Index(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
 
 	company, _ := h.Services.Settings.GetSettings(r.Context())
-	if company.CompanyName == "" {
+	if company.CompanyName == "" && session != nil && session.Role == "admin" {
 		http.Redirect(w, r, "/company/onboard", http.StatusSeeOther)
 		return
 	}

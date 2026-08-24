@@ -240,7 +240,7 @@ func TestPhase6_3_EWB_AutoGenerate_And_Lifecycle(t *testing.T) {
 		ExtensionLeadSeconds: 28800,
 		MinInvoiceValue:      50000.0,
 	}
-	ewbClient := intEWB.NewClient(intEWB.Config{Enabled: true})
+	ewbClient := intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true})
 	svc := ewaybill.NewEWayBillService(db, bus, ewbClient, nil, cfg)
 	svc.SubscribeTripEvents(bus)
 
@@ -293,7 +293,7 @@ func TestPhase6_4_EWB_AutoGenerate_Skip_Below_50k(t *testing.T) {
 		Enabled:         true,
 		MinInvoiceValue: 50000.0,
 	}
-	ewbClient := intEWB.NewClient(intEWB.Config{Enabled: true})
+	ewbClient := intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true})
 	svc := ewaybill.NewEWayBillService(db, bus, ewbClient, nil, cfg)
 	svc.SubscribeTripEvents(bus)
 
@@ -333,7 +333,7 @@ func TestPhase6_5_EWB_Extension_Denied_Without_Geofence_Evidence(t *testing.T) {
 		ExtensionLeadSeconds: 28800,
 		MinInvoiceValue:      50000.0,
 	}
-	svc := ewaybill.NewEWayBillService(db, bus, intEWB.NewClient(intEWB.Config{Enabled: true}), nil, cfg)
+	svc := ewaybill.NewEWayBillService(db, bus, intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true}), nil, cfg)
 
 	rec, err := svc.GeneratePartA(ctx, ewaybill.GeneratePartARequest{
 		TripID:     "trip-ext-test",
@@ -477,7 +477,7 @@ func TestPhase6_9_CrossFeature_EWB_Invoice_Trip(t *testing.T) {
 
 	bus := events.NewInMemoryBus()
 	cfg := ewaybill.Config{Enabled: true, MinInvoiceValue: 50000.0}
-	svc := ewaybill.NewEWayBillService(db, bus, intEWB.NewClient(intEWB.Config{Enabled: true}), nil, cfg)
+	svc := ewaybill.NewEWayBillService(db, bus, intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true}), nil, cfg)
 
 	rec, err := svc.GeneratePartA(ctx, ewaybill.GeneratePartARequest{
 		TripID:     "trip-cross",
@@ -505,7 +505,7 @@ func TestPhase6_10_RBAC_Enforcement(t *testing.T) {
 	// App with Deny auth
 	appDeny := &handlers.App{DB: db, AuthSrv: &mockPhase6Auth{allowed: false}}
 	bus := events.NewInMemoryBus()
-	ewbSvc := ewaybill.NewEWayBillService(db, bus, intEWB.NewClient(intEWB.Config{Enabled: true}), nil, ewaybill.Config{Enabled: true})
+	ewbSvc := ewaybill.NewEWayBillService(db, bus, intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true}), nil, ewaybill.Config{Enabled: true})
 	ewbHandler := handlers.NewEWayBillHandlers(appDeny, ewbSvc, &mockPhase6Auth{allowed: false})
 
 	r := chi.NewRouter()

@@ -94,10 +94,17 @@ func (s *Service) Calculate(ctx context.Context, tripID string) (LivePnL, error)
 		SELECT COALESCE(SUM(amount), 0) FROM driver_expenses
 		WHERE trip_id = ? AND (expense_type = 'toll' OR category = 'toll')
 		  AND (COALESCE(status, '') IN ('approved', 'settled') OR approved = 1)`, tripID).Scan(&p.TollCost)
+	// Approved non-toll expenses. When telemetry produced a real fuel-cost
+	// estimate, approved FUEL claims are excluded — they describe the same
+	// spend as FuelCost and would otherwise be counted twice in margin.
+	kharchaFuelFilter := ""
+	if p.FuelCostStatus == "estimated" {
+		kharchaFuelFilter = " AND COALESCE(expense_type, '') <> 'fuel' AND COALESCE(category, '') <> 'fuel'"
+	}
 	_ = s.db.QueryRowContext(ctx, `
 		SELECT COALESCE(SUM(amount), 0) FROM driver_expenses
 		WHERE trip_id = ? AND (COALESCE(status, '') IN ('approved', 'settled') OR approved = 1)
-		  AND expense_type <> 'toll' AND COALESCE(category, '') <> 'toll'`, tripID).Scan(&p.KharchaApproved)
+		  AND expense_type <> 'toll' AND COALESCE(category, '') <> 'toll'`+kharchaFuelFilter, tripID).Scan(&p.KharchaApproved)
 
 	p.MarginAvailable = p.FuelCostStatus == "estimated"
 	if p.MarginAvailable {

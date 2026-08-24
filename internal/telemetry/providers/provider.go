@@ -23,6 +23,7 @@ type RawFrame struct {
 	Odometer      *float64        `json:"odometer,omitempty"`
 	DriverID      string          `json:"driver_id,omitempty"`
 	TripID        string          `json:"trip_id,omitempty"`
+	SOS           bool            `json:"sos,omitempty"`
 	Provider      string          `json:"provider"`
 	ProviderMsgID string          `json:"provider_msg_id,omitempty"`
 	RawPayload    json.RawMessage `json:"raw_payload,omitempty"`

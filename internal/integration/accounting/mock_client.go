@@ -13,6 +13,10 @@ type mockClient struct {
 }
 
 func (c *mockClient) ExportInvoice(ctx context.Context, invoice ExportedInvoice) (ExportResult, error) {
+	if !c.cfg.UseMock {
+		return ExportResult{}, ErrNotImplemented
+	}
+
 	slog.Default().Info("[accounting:mock] ExportInvoice called", "endpoint", c.cfg.Endpoint, "enabled", c.cfg.Enabled, "invoice", invoice.InvoiceNumber)
 	extID := "EXT-" + invoice.InvoiceNumber
 	return ExportResult{
@@ -24,6 +28,10 @@ func (c *mockClient) ExportInvoice(ctx context.Context, invoice ExportedInvoice)
 }
 
 func (c *mockClient) SyncContacts(ctx context.Context, contacts []Contact) (SyncResult, error) {
+	if !c.cfg.UseMock {
+		return SyncResult{}, ErrNotImplemented
+	}
+
 	slog.Default().Info("[accounting:mock] SyncContacts called", "endpoint", c.cfg.Endpoint, "enabled", c.cfg.Enabled, "count", len(contacts))
 	return SyncResult{
 		Synced:  len(contacts),
@@ -34,6 +42,10 @@ func (c *mockClient) SyncContacts(ctx context.Context, contacts []Contact) (Sync
 }
 
 func (c *mockClient) PushJournalEntry(ctx context.Context, entry JournalEntry) (JournalEntryResult, error) {
+	if !c.cfg.UseMock {
+		return JournalEntryResult{}, ErrNotImplemented
+	}
+
 	slog.Default().Info("[accounting:mock] PushJournalEntry called", "endpoint", c.cfg.Endpoint, "enabled", c.cfg.Enabled, "reference", entry.Reference)
 	return JournalEntryResult{
 		EntryID: "JE-MOCK-" + uuid.New().String()[:8],

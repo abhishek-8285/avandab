@@ -70,3 +70,14 @@ FROM bookings
 WHERE tenant_id = ? AND date(pickup_date) >= date('now', '-29 days')
 GROUP BY date(pickup_date)
 ORDER BY day ASC;
+
+-- name: ListBookingsByCustomer :many
+SELECT b.id, b.booking_number, b.customer_id, b.pickup_date, b.route_id, b.vehicle_type,
+    b.passengers, b.cargo_weight, b.price, b.notes, b.status, b.tenant_id, b.created_at, b.updated_at,
+    c.name AS customer_name, c.company AS customer_company, r.source AS route_source, r.destination AS route_destination
+FROM bookings b
+JOIN customers c ON b.customer_id = c.id
+JOIN routes r ON b.route_id = r.id
+WHERE b.tenant_id = ? AND b.customer_id = ?
+ORDER BY b.created_at DESC
+LIMIT ?;

@@ -29,6 +29,14 @@ func (s *AuditLogService) ListAuditLogs(ctx context.Context, limit, offset int) 
 	return logs, total, nil
 }
 
+// ListAuditLogsByRecord retrieves the most recent audit entries for a single record.
+func (s *AuditLogService) ListAuditLogsByRecord(ctx context.Context, tableName, recordID string, limit int) ([]repository.AuditLogWithUser, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	return s.store.GetAuditLogsByRecord(ctx, tableName, recordID, limit)
+}
+
 // CountUnread counts audit entries created after the given time.
 func (s *AuditLogService) CountUnread(ctx context.Context, since time.Time) (int64, error) {
 	return s.store.CountAuditLogsSince(ctx, since)

@@ -82,6 +82,7 @@ func txOrDB(ctx context.Context, fallback *sql.DB) interface {
 func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (IngestResult, error) {
 	var result IngestResult
 	var positionEvent *PositionEvent
+	var sosEvent *SOSEvent
 
 	err := ing.uow.Execute(ctx, func(txCtx ports.TxContext) error {
 		// Step 1: Device lookup
@@ -170,7 +171,8 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 			return fmt.Errorf("snapshot insert: %w", err)
 		}
 
-		// Step 11: Outbox write (same tx)
+		// Step 11: Outbox write (same tx). SOS rides the same transaction so
+		// the emergency event can never be lost while the position commits.
 		positionEvent = &PositionEvent{
 			EventID:     positionID,
 			TenantID:    device.TenantID,
@@ -195,7 +197,22 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 		if aggregateID == "" {
 			aggregateID = frame.IMEI // IMEI when unassigned (Decision D6)
 		}
-		if err := ing.outbox.SaveEvents(txCtx, aggregateID, "Vehicle", []any{positionEvent}); err != nil {
+		eventsToSave := []any{positionEvent}
+		if frame.SOS {
+			sosEvent = &SOSEvent{
+				EventID:    ing.idGen.GenerateUUID(),
+				TenantID:   device.TenantID,
+				DeviceIMEI: frame.IMEI,
+				VehicleID:  vehicleID,
+				DriverID:   frame.DriverID,
+				Latitude:   frame.Latitude,
+				Longitude:  frame.Longitude,
+				OccurredAt: receivedAt,
+				DeviceTime: frame.DeviceTime,
+			}
+			eventsToSave = append(eventsToSave, sosEvent)
+		}
+		if err := ing.outbox.SaveEvents(txCtx, aggregateID, "Vehicle", eventsToSave); err != nil {
 			return fmt.Errorf("outbox write: %w", err)
 		}
 
@@ -230,6 +247,12 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 			Type:    BusEventTelemetrySnapshot,
 			Payload: snapshotPayload,
 		})
+		if sosEvent != nil {
+			ing.bus.Publish(ctx, events.Event{
+				Type:    EventTypeSOS,
+				Payload: sosEvent,
+			})
+		}
 	}
 
 	return result, nil

@@ -218,3 +218,56 @@ func TestTelemetryAlertsRebuild_00059_CanonicalTypes(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, len(canonicalTypes), count)
 }
+
+// TestEngine_LegacyFuelEventMapping pins the founder-shape → canonical
+// mapping: fuel-engine events carry category/event_type/priority/summary
+// keys (no alert_type/severity/message) and must still classify into the
+// canonical catalog with correct source, instead of empty-typed alerts.
+func TestEngine_LegacyFuelEventMapping(t *testing.T) {
+	db := newAlertsTestDB(t)
+	repo := sqliterepo.NewAlertRepository(db)
+	engine := NewEngine(repo, nil, nil)
+
+	clk := &mockClock{current: time.Date(2026, 8, 20, 8, 0, 0, 0, time.UTC)}
+	engine.SetClock(clk)
+	ctx := context.Background()
+
+	cases := []struct {
+		eventType     string
+		wantAlertType string
+	}{
+		{"refill_detected", domain.AlertTypeRefill},
+		{"drain_theft_suspected", domain.AlertTypeTheftSuspicion},
+		{"abnormal_drain", domain.AlertTypeAbnormalDrain},
+		{"siphon_confirmed", domain.AlertTypeSiphonConfirmed},
+	}
+
+	for _, tc := range cases {
+		ev := events.Event{
+			Type: "AlertEvent",
+			Payload: map[string]interface{}{
+				"category":         "fuel",
+				"priority":         "high",
+				"title":            "Fuel event",
+				"summary":          "Legacy shape from fuel engine",
+				"vehicle_id":       "veh-legacy-1",
+				"event_type":       tc.eventType,
+				"trip_id":          "",
+				"driver_id":        "drv-1",
+				"estimated_litres": 12.5,
+			},
+		}
+		require.NoError(t, engine.ProcessEvent(ctx, ev))
+
+		dedup := fmt.Sprintf("%s:%s:%s", domain.SourceFuel, tc.wantAlertType, "veh-legacy-1")
+		alert, err := repo.FindOpenByDedupKey(ctx, dedup)
+		require.NoError(t, err, "event_type %s", tc.eventType)
+		require.NotNil(t, alert, "event_type %s must create canonical alert", tc.eventType)
+		assert.Equal(t, tc.wantAlertType, alert.AlertType)
+		assert.Equal(t, domain.SourceFuel, alert.Source)
+		assert.Equal(t, "high", alert.Severity, "priority must map to severity")
+		assert.Contains(t, alert.Message, "Legacy shape", "summary must map to message")
+
+		_ = repo.Resolve(ctx, alert.ID, "test")
+	}
+}

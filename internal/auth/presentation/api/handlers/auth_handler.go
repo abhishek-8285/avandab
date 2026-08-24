@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -52,29 +51,17 @@ func (h *APIAuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Privileged roles (admin, dispatcher, accountant, fleet/cargo owner) can
-	// never be self-requested on a public endpoint. Public registration is
-	// restricted to the least-privilege viewer role; privileged accounts are
-	// created only by an authenticated admin.
-	var roleID int64
-	var roleName string
-	switch strings.ToLower(req.Role) {
-	case "":
-		roleID = domain.DefaultRoleID(domain.RoleViewer)
-		roleName = string(domain.RoleViewer)
-	case "viewer":
-		roleID = domain.DefaultRoleID(domain.RoleViewer)
-		roleName = string(domain.RoleViewer)
-	default:
-		apiError(w, http.StatusForbidden, "self-registration is limited to viewer accounts; privileged roles are assigned by an admin")
-		return
-	}
-
-	// Register user in database
-	user, err := h.userSvc.CreateUserWithPassword(r.Context(), req.Email, req.Name, req.Phone, req.Password, roleID, domain.UserStatusActive)
+	// First-run claim: the first account on the deployment becomes admin;
+	// every later registration is least-privilege viewer regardless of any
+	// requested role. Privileged role assignment otherwise stays admin-only.
+	user, isAdmin, err := h.userSvc.RegisterSelfServiceAccount(r.Context(), req.Email, req.Name, req.Phone, req.Password)
 	if err != nil {
 		apiError(w, http.StatusBadRequest, err.Error())
 		return
+	}
+	roleName := string(domain.RoleViewer)
+	if isAdmin {
+		roleName = string(domain.RoleAdmin)
 	}
 
 	expiresAt := time.Now().Add(24 * time.Hour)

@@ -38,7 +38,7 @@ func NewHandler(cfg Config, authSrv auth.AuthorizationService, db ...*sql.DB) *H
 	return &Handler{
 		ewaybill:   ewaybill.NewClient(cfg.EWayBill),
 		gstn:       gstn.NewClient(cfg.GSTN),
-		fastag:     fastag.NewClient(cfg.FASTag),
+		fastag:     fastag.NewClient(cfg.FASTag, dbConn),
 		accounting: accounting.NewClient(cfg.Accounting),
 		authSrv:    authSrv,
 		db:         dbConn,

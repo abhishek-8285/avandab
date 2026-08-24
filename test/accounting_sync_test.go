@@ -72,7 +72,7 @@ func TestAccounting_AdapterFactory_And_Providers(t *testing.T) {
 	ctx := context.Background()
 
 	// Mock Client
-	mockCli := accounting.NewClient(accounting.Config{Provider: "mock", Enabled: false})
+	mockCli := accounting.NewClient(accounting.Config{Provider: "mock", Enabled: false, UseMock: true})
 	invRes, err := mockCli.ExportInvoice(ctx, accounting.ExportedInvoice{InvoiceNumber: "INV-101"})
 	require.NoError(t, err)
 	assert.Equal(t, "SUCCESS", invRes.Status)
@@ -100,18 +100,33 @@ func TestAccounting_AdapterFactory_And_Providers(t *testing.T) {
 		assert.ErrorIs(t, err, accounting.ErrDisabled, "Disabled %s adapter must return ErrDisabled", provider)
 	}
 
-	// Enabled Real Providers -> Success
-	tallyCli := accounting.NewClient(accounting.Config{Provider: "tally", Enabled: true})
+	// Enabled Real Providers without UseMock -> honest ErrNotImplemented
+	// (the adapters have no live HTTP integration; they must never fake success)
+	for _, provider := range []string{"tally", "zoho", "quickbooks"} {
+		cli := accounting.NewClient(accounting.Config{Provider: provider, Enabled: true})
+		_, err := cli.ExportInvoice(ctx, accounting.ExportedInvoice{InvoiceNumber: "INV-301"})
+		assert.ErrorIs(t, err, accounting.ErrNotImplemented, "%s adapter without real integration must fail honestly", provider)
+
+		_, err = cli.SyncContacts(ctx, []accounting.Contact{{Name: "Test Contact"}})
+		assert.ErrorIs(t, err, accounting.ErrNotImplemented)
+
+		_, err = cli.PushJournalEntry(ctx, accounting.JournalEntry{Reference: "REF-X"})
+		assert.ErrorIs(t, err, accounting.ErrNotImplemented)
+	}
+
+	// Enabled Real Providers in explicit demo mode (UseMock) -> marked mock results
+	tallyCli := accounting.NewClient(accounting.Config{Provider: "tally", Enabled: true, UseMock: true})
 	tallyInv, err := tallyCli.ExportInvoice(ctx, accounting.ExportedInvoice{InvoiceNumber: "INV-301"})
 	require.NoError(t, err)
 	assert.Contains(t, tallyInv.ExternalID, "TALLY-INV-INV-301")
+	assert.Contains(t, tallyInv.Message, "(mock)")
 
-	zohoCli := accounting.NewClient(accounting.Config{Provider: "zoho", Enabled: true})
+	zohoCli := accounting.NewClient(accounting.Config{Provider: "zoho", Enabled: true, UseMock: true})
 	zohoJE, err := zohoCli.PushJournalEntry(ctx, accounting.JournalEntry{Reference: "REF-ZOHO"})
 	require.NoError(t, err)
 	assert.Contains(t, zohoJE.EntryID, "ZOHO-JE-")
 
-	qbCli := accounting.NewClient(accounting.Config{Provider: "quickbooks", Enabled: true})
+	qbCli := accounting.NewClient(accounting.Config{Provider: "quickbooks", Enabled: true, UseMock: true})
 	qbContacts, err := qbCli.SyncContacts(ctx, []accounting.Contact{{Name: "QB Contact"}})
 	require.NoError(t, err)
 	assert.Equal(t, 1, qbContacts.Synced)
@@ -124,7 +139,7 @@ func TestAccounting_OutboxConsumer_Idempotency_And_GLRules(t *testing.T) {
 	ctx := context.Background()
 
 	bus := events.NewInMemoryBus()
-	cfg := accounting.Config{Provider: "mock", Enabled: true}
+	cfg := accounting.Config{Provider: "mock", Enabled: true, UseMock: true}
 	client := accounting.NewClient(cfg)
 	consumer := accounting.NewConsumer(db, client, cfg)
 	consumer.SubscribeEvents(bus)
@@ -202,7 +217,7 @@ func TestAccounting_TriggerSync_And_Reconciliation(t *testing.T) {
 	defer db.Close()
 	ctx := context.Background()
 
-	cfg := accounting.Config{Provider: "mock", Enabled: true}
+	cfg := accounting.Config{Provider: "mock", Enabled: true, UseMock: true}
 	client := accounting.NewClient(cfg)
 	consumer := accounting.NewConsumer(db, client, cfg)
 
@@ -252,7 +267,7 @@ func TestAccounting_API_Endpoints_And_RBAC(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	cfg := accounting.Config{Provider: "mock", Enabled: true}
+	cfg := accounting.Config{Provider: "mock", Enabled: true, UseMock: true}
 	client := accounting.NewClient(cfg)
 	consumer := accounting.NewConsumer(db, client, cfg)
 

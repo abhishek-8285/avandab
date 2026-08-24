@@ -1,13 +1,19 @@
 package handlers
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 
 	"transport-app/internal/domain"
+	"transport-app/internal/logging"
 	"transport-app/internal/middleware"
+	"transport-app/internal/repository"
 )
 
 // CustomerHandlers handles customer management.
@@ -23,6 +29,71 @@ func (h *CustomerHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "customers", "update")).Get("/{id}/edit", h.Edit)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "customers", "update")).Post("/{id}/edit", h.Update)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "customers", "delete")).Post("/{id}/delete", h.Delete)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "customers", "update")).Post("/{id}/portal-users", h.GrantPortalAccess)
+}
+
+// GrantPortalAccess links (or creates) a user account to this customer so
+// they can sign in to the shipper portal. Migration 00073 defines the
+// customer_users link table and the 'customer' role, but until now nothing
+// wrote either outside that migration — the portal was unreachable without
+// manual SQL.
+func (h *CustomerHandlers) GrantPortalAccess(w http.ResponseWriter, r *http.Request) {
+	customerID := chi.URLParam(r, "id")
+	if customerID == "" {
+		http.Error(w, "missing customer id", http.StatusBadRequest)
+		return
+	}
+	email := strings.ToLower(strings.TrimSpace(r.PostFormValue("email")))
+	name := strings.TrimSpace(r.PostFormValue("name"))
+	phone := strings.TrimSpace(r.PostFormValue("phone"))
+	password := r.PostFormValue("password")
+	if email == "" || password == "" || phone == "" {
+		http.Error(w, "email, phone and password are required", http.StatusBadRequest)
+		return
+	}
+	if name == "" {
+		name = email
+	}
+
+	ctx := r.Context()
+	user, err := h.Services.Users.GetUserByEmail(ctx, email)
+	if err != nil {
+		// Repo returns sql.ErrNoRows for unknown emails; provision a new
+		// portal user with the seeded 'customer' role.
+		roleID := h.customerRoleID(ctx)
+		if roleID == 0 {
+			http.Error(w, "customer role not seeded; run migrations", http.StatusInternalServerError)
+			return
+		}
+		user, err = h.Services.Users.CreateUserWithPassword(ctx, email, name, phone, password, roleID, domain.UserStatusActive)
+		if err != nil {
+			http.Error(w, "failed to create portal user: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	_ = h.AuthSrv.AddRoleForUser(user.ID.String(), string(domain.RoleCustomer))
+
+	if h.DB != nil {
+		_, _ = h.DB.ExecContext(ctx,
+			`INSERT OR IGNORE INTO customer_users (id, customer_id, user_id) VALUES (?, ?, ?)`,
+			uuid.NewString(), customerID, user.ID.String())
+	}
+
+	http.Redirect(w, r, "/customers/"+customerID, http.StatusSeeOther)
+}
+
+func (h *CustomerHandlers) customerRoleID(ctx context.Context) int64 {
+	roles, err := h.Services.Users.ListRoles(ctx)
+	if err != nil {
+		return 0
+	}
+	for _, role := range roles {
+		if role.Name == domain.RoleCustomer {
+			return role.ID
+		}
+	}
+	return 0
 }
 
 func (h *CustomerHandlers) List(w http.ResponseWriter, r *http.Request) {
@@ -96,8 +167,32 @@ func (h *CustomerHandlers) View(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Customer not found", http.StatusNotFound)
 		return
 	}
+
+	var (
+		recentBookings []repository.BookingWithJoins
+		recentInvoices []repository.InvoiceWithJoins
+	)
+	if bookings, err := h.Services.Bookings.ListBookingsByCustomer(r.Context(), id, 5); err == nil {
+		recentBookings = bookings
+	} else {
+		slog.ErrorContext(r.Context(), "customer view: booking lookup failed",
+			slog.String("customer_id", string(id)),
+			slog.String("error", logging.Redact(err.Error())))
+	}
+	if invoices, err := h.Services.Invoices.ListInvoicesByCustomer(r.Context(), id, 5); err == nil {
+		recentInvoices = invoices
+	} else {
+		slog.ErrorContext(r.Context(), "customer view: invoice lookup failed",
+			slog.String("customer_id", string(id)),
+			slog.String("error", logging.Redact(err.Error())))
+	}
+
 	session, _ := h.getUserFromContext(r)
-	h.renderPage(w, r, "customer_view.html", PageData{Title: "View Customer", User: session, Extra: map[string]interface{}{"Customer": customer}})
+	h.renderPage(w, r, "customer_view.html", PageData{Title: "View Customer", User: session, Extra: map[string]interface{}{
+		"Customer":       customer,
+		"RecentBookings": recentBookings,
+		"RecentInvoices": recentInvoices,
+	}})
 }
 
 func (h *CustomerHandlers) Edit(w http.ResponseWriter, r *http.Request) {

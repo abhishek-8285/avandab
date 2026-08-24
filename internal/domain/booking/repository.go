@@ -15,6 +15,7 @@ type BookingRepository interface {
 	UpdateBookingStatus(ctx context.Context, id types.BookingID, status BookingStatus) (Booking, error)
 	DeleteBooking(ctx context.Context, id types.BookingID) error
 	SearchBookings(ctx context.Context, query string, status string, limit, offset int) ([]BookingWithJoins, error)
+	ListBookingsByCustomer(ctx context.Context, customerID types.CustomerID, limit int) ([]BookingWithJoins, error)
 	CountBookings(ctx context.Context, query string, status string) (int64, error)
 	CountBookingsByDay(ctx context.Context) ([]BookingsByDay, error)
 }

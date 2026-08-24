@@ -97,6 +97,19 @@ type Config struct {
 	Cache                CacheConfig
 	Storage              StorageConfig
 	WorkerLeaderLock     bool
+	Notify               NotifyConfig
+}
+
+// NotifyConfig holds outbound delivery channel settings. Empty values keep a
+// channel unconfigured — sends then fail honestly instead of faking success.
+type NotifyConfig struct {
+	SMTPHost        string
+	SMTPPort        string
+	SMTPUser        string
+	SMTPPassword    string
+	SMTPFrom        string
+	SMSWebhookURL   string
+	SMSWebhookToken string
 }
 
 // GSTNConfig holds configuration for GSTN / GSP / E-Invoicing (Spec 07).
@@ -427,6 +440,16 @@ func Load() *Config {
 		LocalDir: getEnv("LOCAL_STORAGE_DIR", cfg.UploadDir),
 	}
 	cfg.WorkerLeaderLock = getEnvBool("WORKER_LEADER_LOCK", true)
+
+	cfg.Notify = NotifyConfig{
+		SMTPHost:        os.Getenv("SMTP_HOST"),
+		SMTPPort:        os.Getenv("SMTP_PORT"),
+		SMTPUser:        os.Getenv("SMTP_USER"),
+		SMTPPassword:    os.Getenv("SMTP_PASSWORD"),
+		SMTPFrom:        os.Getenv("SMTP_FROM"),
+		SMSWebhookURL:   os.Getenv("SMS_WEBHOOK_URL"),
+		SMSWebhookToken: os.Getenv("SMS_WEBHOOK_TOKEN"),
+	}
 
 	if err := cfg.Validate(); err != nil {
 		slog.Error("invalid configuration", "error", err)

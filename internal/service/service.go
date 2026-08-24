@@ -10,6 +10,7 @@ import (
 	bookingevents "transport-app/internal/domain/booking"
 	tripevents "transport-app/internal/domain/trip"
 	"transport-app/internal/events"
+	"transport-app/internal/ewaybill"
 	"transport-app/internal/founder"
 	"transport-app/internal/founder/alerts"
 	fuel "transport-app/internal/fuel"
@@ -65,6 +66,7 @@ type Services struct {
 	Experiments    *ExperimentsService
 	FounderSignals *FounderSignalsService
 	FounderAudit   *FounderAuditService
+	EWayBill       *ewaybill.EWayBillService
 
 	store Store
 	cfg   *config.Config

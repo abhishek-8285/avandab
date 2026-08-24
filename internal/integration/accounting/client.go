@@ -16,7 +16,12 @@ type Config struct {
 	APIKey   string
 	Enabled  bool
 	Provider string
+	UseMock  bool
 }
+
+// ErrNotImplemented is returned by provider adapters that have no real
+// integration behind them yet. It must never be masked as success.
+var ErrNotImplemented = errors.New("accounting provider adapter not implemented")
 
 // LineItem represents a single invoice line item.
 type LineItem struct {

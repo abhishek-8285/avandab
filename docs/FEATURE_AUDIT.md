@@ -34,6 +34,7 @@ skip within one tick.
 | Public trip share links | `share_links` | Core | WORKING | — |
 | Customer portal | `customer_portal` | Core | WORKING | — |
 | Maintenance scheduling | — (trips) | Core | WORKING | — |
+| Standardized route locations | — (routes) | Core | WORKING (best-effort) | Geocoded endpoint coords in `route_locations` (00091) via Nominatim on route create/update when `NOMINATIM_URL` set; failure keeps free-text. ETA falls back to haversine×1.25 when manual distance absent |
 | Live tracking UI (FlyFleet) | `telemetry` | Add-on | WORKING | Driver name on detail panel (M2); hardcoded Smart-Allocation mock to wire or remove (M2) |
 
 ## Commerce & Finance
@@ -41,10 +42,10 @@ skip within one tick.
 | Feature | Flag | Tier | Status | What completes it |
 |---|---|---|---|---|
 | GST invoicing (CGST/SGST/IGST, HSN/SAC) | — (invoices) | Core | WORKING | — |
-| GST e-invoice IRN | `gst_einvoice` | Add-on | MOCKED | GSP credentials (GSTN username/app-key flow); mock fabricates ACK/QR today |
-| e-Way bills (lifecycle + monitor) | `ewaybill` | Core | WORKING (NIC mocked) | Auto-generate bug fixed (00090-era fix); NIC credentials for real EWB numbers |
+| GST e-invoice IRN | `gst_einvoice` | Add-on | MOCKED | GSP credentials (GSTN username/app-key flow); fabricates ACK/QR only when `INTEGRATION_GSTN_USE_MOCK=true` (default) — otherwise fails honestly |
+| e-Way bills (lifecycle + monitor) | `ewaybill` | Core | WORKING (NIC mocked) | Auto-generate bug fixed (00090-era fix). Stub client fabricates EWB numbers only when `INTEGRATION_EWAYBILL_USE_MOCK=true` (default); with USE_MOCK=false and no API key it errors instead of inventing bills. Legacy worker.go deleted 2026-08-24; agent extend_ewaybill tool now uses the canonical service path |
 | FASTag reconciliation | `fastag` | Add-on | MOCKED | NETC aggregator credentials; DB/reconcile logic real |
-| Accounting sync (Tally/Zoho/QB) | `accounting_sync` | Add-on | MOCKED | Real adapter endpoints; consumer pipeline + idempotency real |
+| Accounting sync (Tally/Zoho/QB) | `accounting_sync` | Add-on | MOCKED | Real adapter endpoints; consumer pipeline + idempotency real. Provider shells have no live HTTP integration: they return ErrNotImplemented unless `INTEGRATION_ACCOUNTING_USE_MOCK=true` (default), and demo results are marked "(mock)" |
 | Razorpay payments | `razorpay` | Core | WORKING | Production keys |
 | Driver settlements + TDS 194C | `settlements` | Core | WORKING | — |
 
@@ -53,7 +54,7 @@ skip within one tick.
 | Feature | Flag | Tier | Status | What completes it |
 |---|---|---|---|---|
 | Trip P&L engine | `pnl` | Add-on | WORKING | Founder digest data sources (Spec 16 §5.8 populateDigest) |
-| Driver safety scorecard | `scorecard` | Add-on | PARTIAL | 5 of 7 event feeds never produced (speeding/harsh/accel/idling/night) — **roadmap M2**, biggest safety gap |
+| Driver safety scorecard | `scorecard` | Add-on | PARTIAL | 5 of 7 event feeds never produced (speeding/harsh/accel/idling/night) — **roadmap M2**, biggest safety gap. Worse: event-less drivers render as 100/tier-A (`COALESCE(score,100)`), so gaps hide instead of showing zero |
 | A/B experiments | `experiments` | Core | WORKING | — |
 
 ## Intelligence
@@ -72,6 +73,33 @@ skip within one tick.
 | Compliance 5-doc gate | — | Core | WORKING | — |
 | Feature flags (this system) | — | Core | WORKING | — |
 | PWA | `pwa` | Core | WORKING | — |
+
+## Known defects (verified 2026-08-23, code-path audit)
+
+1. ~~**Onboarding redirect loop**~~ FIXED 2026-08-24 — dashboard only funnels
+   admins to `/company/onboard`; non-admins see the dashboard normally.
+2. ~~**Customer portal unreachable without manual SQL**~~ FIXED 2026-08-24 —
+   `POST /customers/{id}/portal-users` (customers:update) provisions or links
+   a `customer`-role user; UI card on customer view page.
+3. ~~**Notification channels are stubs**~~ RESOLVED 2026-08-24 for email+SMS —
+   SMTP relay (STARTTLS/AUTH, port 465 implicit TLS) via `SMTP_*` env;
+   provider-agnostic SMS webhook (`SMS_WEBHOOK_URL`, optional
+   `SMS_WEBHOOK_TOKEN`) posting `{to,message}` JSON. Unconfigured channels
+   fail honestly (ErrEmailNotConfigured / ErrSMSNotConfigured). Wired:
+   password-reset email, POD OTP "Send by SMS" action on trip view,
+   alert pipeline email/sms channels (stub fallback when unset). Push and
+   WhatsApp remain unimplemented; no SMS vendor adapter validated against a
+   live gateway yet.
+4. ~~**Dishonest test**~~ RESOLVED 2026-08-24 — worker_test.go deleted with
+   zombie worker.go; phase4d suite now exercises the canonical EWayBillService.
+
+## Onboarding model (2026-08-24)
+
+First-run claim: the first self-registered account on a deployment becomes its
+admin (`RegisterSelfServiceAccount`, atomic check+insert in one tx); later
+registrations stay viewer. First admin lands directly on
+`/company/onboard`. Matches the single-company-per-deployment architecture;
+`BOOTSTRAP_ADMIN_*` env remains as an alternative headless bootstrap.
 
 ## Roadmap (features we should have; not yet built)
 1. **M2 — Safety producers** (unlocks Samsara-style safety): emit

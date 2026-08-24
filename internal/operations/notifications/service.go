@@ -25,6 +25,8 @@ type Notification struct {
 type Service struct {
 	mu         sync.Mutex
 	inAppStore map[string][]Notification
+	email      EmailSender
+	sms        SMSSender
 }
 
 const maxInAppPerKey = 100
@@ -35,10 +37,35 @@ func NewService() *Service {
 	}
 }
 
+// NewServiceWithChannels wires real delivery adapters. Pass nil for a channel
+// to keep it unconfigured — its Send then fails honestly instead of faking
+// success.
+func NewServiceWithChannels(email EmailSender, sms SMSSender) *Service {
+	return &Service{
+		inAppStore: make(map[string][]Notification),
+		email:      email,
+		sms:        sms,
+	}
+}
+
+// EmailConfigured reports whether real SMTP delivery is wired.
+func (s *Service) EmailConfigured() bool {
+	e, ok := s.email.(interface{ Configured() bool })
+	return ok && e.Configured()
+}
+
+// SMSConfigured reports whether real SMS delivery is wired.
+func (s *Service) SMSConfigured() bool {
+	x, ok := s.sms.(interface{ Configured() bool })
+	return ok && x.Configured()
+}
+
 func (s *Service) SendEmail(ctx context.Context, msg ports.NotificationMessage) error {
-	// Logger / Email Adapter stub - log metadata only, avoid leaking email bodies
-	log.Printf("[NOTIFICATION:EMAIL] To: %s | Subject: %s", msg.Recipient, msg.Subject)
-	return nil
+	if s.email == nil {
+		log.Printf("[NOTIFICATION:EMAIL:UNCONFIGURED] To: %s | Subject: %s", msg.Recipient, msg.Subject)
+		return ErrEmailNotConfigured
+	}
+	return s.email.Send(ctx, msg.Recipient, msg.Subject, msg.Body)
 }
 
 func (s *Service) SendInApp(ctx context.Context, msg ports.NotificationMessage) error {
@@ -71,7 +98,10 @@ func (s *Service) SendInApp(ctx context.Context, msg ports.NotificationMessage) 
 }
 
 func (s *Service) SendSMS(ctx context.Context, msg ports.NotificationMessage) error {
-	return fmt.Errorf("SMS notification channel not configured yet")
+	if s.sms == nil {
+		return ErrSMSNotConfigured
+	}
+	return s.sms.Send(ctx, msg.Recipient, msg.Body)
 }
 
 func (s *Service) SendPush(ctx context.Context, msg ports.NotificationMessage) error {

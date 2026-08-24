@@ -122,7 +122,7 @@ func (h *InvoiceHandlers) View(w http.ResponseWriter, r *http.Request) {
 	balance, errBal := h.Services.Invoices.GetBalance(r.Context(), domain.InvoiceID(idParam))
 	if errBal != nil {
 		slog.Error("Failed to calculate balance for invoice", "invoice_id", idParam, "error", errBal)
-		balance = 0
+		balance = float64(0)
 	}
 
 	session, _ := h.getUserFromContext(r)

@@ -100,17 +100,21 @@ func (s *EtaService) loadTrip(ctx context.Context, tripID string) (*tripData, er
 	var vID sql.NullString
 	var sAtS, dTimeS, aTimeS sql.NullString
 	var sAtT, dTimeT, aTimeT sql.NullTime
+	var srcLat, srcLng, dstLat, dstLng sql.NullFloat64
 
 	err := s.db.QueryRowContext(ctx, `
-		SELECT t.id, t.status, t.vehicle_id, r.distance, r.estimated_hours,
+		SELECT t.id, t.status, t.vehicle_id, COALESCE(r.distance, 0), r.estimated_hours,
 		       t.started_at, t.departure_time, t.arrival_time,
-		       t.started_at, t.departure_time, t.arrival_time
+		       t.started_at, t.departure_time, t.arrival_time,
+		       rl.source_lat, rl.source_lng, rl.dest_lat, rl.dest_lng
 		FROM trips t
 		LEFT JOIN routes r ON t.route_id = r.id
+		LEFT JOIN route_locations rl ON rl.route_id = r.id
 		WHERE t.id = ?`, tripID).Scan(
 		&t.TripID, &t.Status, &vID, &rDist, &rHours,
 		&sAtT, &dTimeT, &aTimeT,
 		&sAtS, &dTimeS, &aTimeS,
+		&srcLat, &srcLng, &dstLat, &dstLng,
 	)
 	if err != nil {
 		return nil, err
@@ -124,6 +128,9 @@ func (s *EtaService) loadTrip(ctx context.Context, tripID string) (*tripData, er
 	}
 	if rHours.Valid {
 		t.EstimatedHours = rHours.Float64
+	}
+	if t.RouteDistance <= 0 && srcLat.Valid && srcLng.Valid && dstLat.Valid && dstLng.Valid {
+		t.RouteDistance = haversineKm(srcLat.Float64, srcLng.Float64, dstLat.Float64, dstLng.Float64) * roadFactor
 	}
 
 	t.StartedAt = parseDBTime(sAtS, sAtT)
@@ -397,4 +404,17 @@ func (s *EtaService) Calculate(ctx context.Context, tripID string) (EtaResult, e
 		RemainingKM: remainingKM,
 		AvgSpeed:    avgSpeed,
 	}, nil
+}
+
+// roadFactor converts great-circle distance to an estimated road distance.
+const roadFactor = 1.25
+
+func haversineKm(lat1, lng1, lat2, lng2 float64) float64 {
+	const r = 6371.0
+	dLat := (lat2 - lat1) * math.Pi / 180
+	dLng := (lng2 - lng1) * math.Pi / 180
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+		math.Cos(lat1*math.Pi/180)*math.Cos(lat2*math.Pi/180)*
+			math.Sin(dLng/2)*math.Sin(dLng/2)
+	return 2 * r * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 }

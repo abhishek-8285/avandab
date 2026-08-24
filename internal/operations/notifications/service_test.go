@@ -2,6 +2,7 @@ package notifications
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"transport-app/internal/shared/ports"
@@ -20,8 +21,8 @@ func TestNotificationService_SendEmailAndInApp(t *testing.T) {
 	}
 
 	err := svc.SendEmail(ctx, emailMsg)
-	if err != nil {
-		t.Fatalf("expected nil error sending email, got: %v", err)
+	if !errors.Is(err, ErrEmailNotConfigured) {
+		t.Fatalf("unconfigured channel must fail honestly with ErrEmailNotConfigured, got: %v", err)
 	}
 
 	inAppMsg := ports.NotificationMessage{

@@ -53,6 +53,7 @@ func LoadConfig() Config {
 			APIKey:   os.Getenv("INTEGRATION_ACCOUNTING_API_KEY"),
 			Enabled:  parseBool(os.Getenv("INTEGRATION_ACCOUNTING_ENABLED")),
 			Provider: getEnvDefault("INTEGRATION_ACCOUNTING_PROVIDER", getEnvDefault("ACCOUNTING_ADAPTER", "mock")),
+			UseMock:  parseBoolDefault(os.Getenv("INTEGRATION_ACCOUNTING_USE_MOCK"), true),
 		},
 	}
 }

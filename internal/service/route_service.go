@@ -12,6 +12,16 @@ import (
 // RouteService handles route management.
 type RouteService struct {
 	baseService
+	geocoder Geocoder
+}
+
+// WithGeocoder attaches a best-effort forward geocoder used to standardize
+// route endpoints on create/update. Nil (default) keeps free-text-only.
+func (s *RouteService) WithGeocoder(g Geocoder) *RouteService {
+	if g != nil {
+		s.geocoder = g
+	}
+	return s
 }
 
 func tenantIDFromContext(ctx context.Context) string {
@@ -86,6 +96,8 @@ func (s *RouteService) CreateRouteFull(ctx context.Context, req domain.CreateRou
 	if err != nil {
 		return domain.Route{}, err
 	}
+
+	s.geocodeEndpoints(ctx, string(created.ID), req.Source, req.Destination)
 
 	s.log.Info("route created", "route_id", created.ID)
 	return created, nil
@@ -173,6 +185,8 @@ func (s *RouteService) UpdateRouteFull(ctx context.Context, id domain.RouteID, r
 	if err != nil {
 		return domain.Route{}, err
 	}
+
+	s.geocodeEndpoints(ctx, string(id), req.Source, req.Destination)
 
 	s.log.Info("route updated", "route_id", id)
 	return updated, nil

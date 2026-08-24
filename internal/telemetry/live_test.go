@@ -106,6 +106,44 @@ func TestLiveStore_MaintenanceDueOverrides(t *testing.T) {
 	assert.Equal(t, MarkerStateMaintenanceDue, vehicles[0].Status)
 }
 
+// insertTestDriver inserts a minimal driver row and returns its id.
+func insertTestDriver(t *testing.T, db *sql.DB, id, first, last, phone string) {
+	t.Helper()
+	_, err := db.Exec(`INSERT INTO drivers (id, driver_id, first_name, last_name, phone, license_number, license_expiry)
+		VALUES (?, ?, ?, ?, ?, 'DL-TEST', date('now','+1 year'))`, id, "D-"+id, first, last, phone)
+	require.NoError(t, err)
+}
+
+func TestLiveStore_DriverInfoJoined(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestRoute(t, db, "r1")
+	insertTestDriver(t, db, "d1", "Ramesh", "Kumar", "+91-98200-00000")
+	_, err := db.Exec(`INSERT INTO trips (id, trip_number, route_id, departure_time, status, driver_id)
+		VALUES ('t1', 'TRIP-t1', 'r1', datetime('now'), 'in_transit', 'd1')`)
+	require.NoError(t, err)
+
+	insertTestVehicleReg(t, db, "v1", "REG-1")
+	insertTestVehicleReg(t, db, "v2", "REG-2") // unassigned trip ⇒ no driver
+
+	now := time.Now().UTC()
+	insertLiveSnapshot(t, db, "s1", "t1", "v1", now.Add(-1*time.Minute), 30.0)
+	insertLiveSnapshot(t, db, "s2", "", "v2", now.Add(-1*time.Minute), 0.0)
+
+	store := NewLiveStore(db, 15*time.Minute)
+	vehicles, err := store.Live(context.Background(), "1", "", now)
+	require.NoError(t, err)
+	require.Len(t, vehicles, 2)
+
+	byID := map[string]LiveVehicle{}
+	for _, v := range vehicles {
+		byID[v.VehicleID] = v
+	}
+	assert.Equal(t, "Ramesh Kumar", byID["v1"].DriverName)
+	assert.Equal(t, "+91-98200-00000", byID["v1"].DriverPhone)
+	assert.Empty(t, byID["v2"].DriverName)
+	assert.Empty(t, byID["v2"].DriverPhone)
+}
+
 func TestLiveStore_TripFilter(t *testing.T) {
 	db := newTestIngestorDB(t)
 	insertTestRoute(t, db, "r1")
@@ -124,6 +162,36 @@ func TestLiveStore_TripFilter(t *testing.T) {
 	require.Len(t, vehicles, 1)
 	assert.Equal(t, "v1", vehicles[0].VehicleID)
 	assert.Equal(t, "t1", vehicles[0].TripID)
+}
+
+func TestLiveStore_RouteKMJoined(t *testing.T) {
+	db := newTestIngestorDB(t)
+	_, err := db.Exec(`INSERT INTO routes (id, source, destination, distance, estimated_hours, standard_fare)
+		VALUES ('r1', 'src', 'dst', 420.5, 8, 1000)`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO trips (id, trip_number, route_id, departure_time, status)
+		VALUES ('t1', 'TRIP-t1', 'r1', datetime('now'), 'in_transit')`)
+	require.NoError(t, err)
+	insertTestVehicleReg(t, db, "v1", "REG-1")
+
+	now := time.Now().UTC()
+	insertLiveSnapshot(t, db, "s1", "t1", "v1", now.Add(-1*time.Minute), 30.0)
+	// Unassigned vehicle: no trip ⇒ no route distance.
+	insertTestVehicleReg(t, db, "v2", "REG-2")
+	insertLiveSnapshot(t, db, "s2", "", "v2", now.Add(-1*time.Minute), 0.0)
+
+	store := NewLiveStore(db, 15*time.Minute)
+	vehicles, err := store.Live(context.Background(), "1", "", now)
+	require.NoError(t, err)
+	require.Len(t, vehicles, 2)
+
+	byID := map[string]LiveVehicle{}
+	for _, v := range vehicles {
+		byID[v.VehicleID] = v
+	}
+	require.NotNil(t, byID["v1"].RouteKM)
+	assert.InDelta(t, 420.5, *byID["v1"].RouteKM, 0.001)
+	assert.Nil(t, byID["v2"].RouteKM)
 }
 
 func TestLiveStore_TenantScoping(t *testing.T) {

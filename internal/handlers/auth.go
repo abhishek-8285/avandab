@@ -9,6 +9,7 @@ import (
 	"transport-app/internal/domain"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
+	"transport-app/internal/shared/ports"
 )
 
 // AuthHandlers handles authentication-related HTTP requests.
@@ -166,27 +167,31 @@ func (h *AuthHandlers) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Self-onboarded users start with the least-privilege viewer role.
-	// Privileged roles (admin, dispatcher, accountant) are assigned only
-	// by an admin through the authenticated user management interface.
-	roleID := domain.DefaultRoleID(domain.RoleViewer)
-	user, err := h.Services.Users.CreateUserWithPassword(r.Context(), email, name, phone, password, roleID, domain.UserStatusActive)
+	// First-run claim: the first self-registered account becomes the
+	// deployment's admin; later registrations stay least-privilege viewer.
+	user, isAdmin, err := h.Services.Users.RegisterSelfServiceAccount(r.Context(), email, name, phone, password)
 	if err != nil {
 		h.renderRegisterError(w, r, err.Error(), email, name, phone)
 		return
 	}
 
-	// Update Casbin policy so user gets viewer permissions immediately
-	_ = h.AuthSrv.AddRoleForUser(user.ID.String(), string(domain.RoleViewer))
+	roleName := string(domain.RoleViewer)
+	if isAdmin {
+		roleName = string(domain.RoleAdmin)
+	}
+	_ = h.AuthSrv.AddRoleForUser(user.ID.String(), roleName)
 
 	// Automatically log in the user upon onboarding with server-side session
 	if sessResult, err := h.Services.Auth.CreateSessionForUser(r.Context(), user.ID); err == nil && sessResult != nil {
-		h.AuthStore.CreateSessionWithToken(w, user.ID.String(), string(domain.RoleViewer), user.Name, sessResult.SessionToken)
+		h.AuthStore.CreateSessionWithToken(w, user.ID.String(), roleName, user.Name, sessResult.SessionToken)
 	} else {
-		h.AuthStore.CreateSession(w, user.ID.String(), string(domain.RoleViewer), user.Name)
+		h.AuthStore.CreateSession(w, user.ID.String(), roleName, user.Name)
 	}
 
 	targetURL := "/dashboard"
+	if isAdmin {
+		targetURL = "/company/onboard"
+	}
 
 	if isDatastarRequest(r) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -435,9 +440,19 @@ func (h *AuthHandlers) SubmitForgotPassword(w http.ResponseWriter, r *http.Reque
 		if err == nil {
 			link := fmt.Sprintf("%s://%s/reset-password?token=%s", requestScheme(r), r.Host, token)
 			slog.Info("password reset link generated", "email", email)
-			// Development convenience: show the link on-page since no mailer
-			// is wired up. Production should email this instead.
-			if h.Config.IsDevelopment() {
+			if h.App != nil && h.App.Notify != nil && h.App.Notify.EmailConfigured() {
+				body := "A password reset was requested for your account.\n\n" +
+					"Reset your password using this single-use link (valid for a short window):\n" + link + "\n\n" +
+					"If you did not request this, ignore this email."
+				if serr := h.App.Notify.SendEmail(r.Context(), ports.NotificationMessage{
+					Recipient: email,
+					Subject:   "Reset your password",
+					Body:      body,
+				}); serr != nil {
+					slog.Error("password reset email delivery failed", "email", email, "error", serr)
+				}
+			} else if h.Config.IsDevelopment() {
+				// No mailer configured: dev convenience shows the link on-page.
 				pd.Extra["ResetLink"] = link
 			}
 		}

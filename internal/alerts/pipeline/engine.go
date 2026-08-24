@@ -330,6 +330,8 @@ func (e *Engine) normalizeEvent(ev events.Event) (IngestEvent, error) {
 
 		if src, ok := m["source"].(string); ok && src != "" {
 			ingest.Source = src
+		} else if cat, ok := m["category"].(string); ok && cat == "fuel" {
+			ingest.Source = domain.SourceFuel
 		} else {
 			ingest.Source = domain.SourceTelemetry
 		}
@@ -339,8 +341,14 @@ func (e *Engine) normalizeEvent(ev events.Event) (IngestEvent, error) {
 		} else if at, ok := m["type"].(string); ok {
 			ingest.AlertType = at
 		}
+		if ingest.AlertType == "" {
+			ingest.AlertType = legacyAlertType(m)
+		}
 
 		if sev, ok := m["severity"].(string); ok {
+			ingest.Severity = sev
+		} else if sev, ok := m["priority"].(string); ok {
+			// Legacy founder-shape producers carry severity as "priority".
 			ingest.Severity = sev
 		}
 		if title, ok := m["title"].(string); ok {
@@ -349,6 +357,8 @@ func (e *Engine) normalizeEvent(ev events.Event) (IngestEvent, error) {
 		if msg, ok := m["details"].(string); ok {
 			ingest.Message = msg
 		} else if msg, ok := m["message"].(string); ok {
+			ingest.Message = msg
+		} else if msg, ok := m["summary"].(string); ok {
 			ingest.Message = msg
 		}
 
@@ -415,5 +425,33 @@ func (e *Engine) normalizeEvent(ev events.Event) (IngestEvent, error) {
 
 	default:
 		return ingest, fmt.Errorf("unsupported event type: %s", ev.Type)
+	}
+}
+
+// legacyAlertType derives a canonical alert type from founder-shape
+// payloads (category + metadata.event_type) that predate the canonical
+// alert_type key. Keeps fuel-engine events classifiable instead of
+// landing as empty-typed alerts with colliding dedup keys.
+func legacyAlertType(m map[string]interface{}) string {
+	et, _ := m["event_type"].(string)
+	if et == "" {
+		if cat, ok := m["category"].(string); ok {
+			return cat
+		}
+		return ""
+	}
+	switch et {
+	case "refill_detected":
+		return domain.AlertTypeRefill
+	case "drain_theft_suspected":
+		return domain.AlertTypeTheftSuspicion
+	case "abnormal_drain":
+		return domain.AlertTypeAbnormalDrain
+	case "siphon_confirmed":
+		return domain.AlertTypeSiphonConfirmed
+	case "odometer_rollback":
+		return domain.AlertTypeOdometerRollback
+	default:
+		return et
 	}
 }

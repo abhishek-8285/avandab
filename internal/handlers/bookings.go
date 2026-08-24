@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -11,9 +13,11 @@ import (
 	"transport-app/internal/apperr"
 	bookingapp "transport-app/internal/booking/application"
 	bookingagg "transport-app/internal/booking/domain/aggregate"
+	"transport-app/internal/domain"
 	"transport-app/internal/httpx"
 	"transport-app/internal/logging"
 	"transport-app/internal/middleware"
+	"transport-app/internal/repository"
 	"transport-app/internal/shared"
 	clock "transport-app/internal/shared/clock"
 	id "transport-app/internal/shared/id"
@@ -180,10 +184,38 @@ func (h *BookingHandlers) View(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var (
+		relatedTrip    *domain.Trip
+		relatedInvoice *repository.InvoiceWithJoins
+		history        []repository.AuditLogWithUser
+	)
+	if t, err := h.Services.Trips.GetTripByBooking(r.Context(), domain.BookingID(id)); err == nil {
+		relatedTrip = t
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		slog.ErrorContext(r.Context(), "booking view: trip lookup failed",
+			slog.String("booking_id", id),
+			slog.String("error", logging.Redact(err.Error())))
+	}
+	if inv, err := h.Services.Invoices.GetInvoiceByBooking(r.Context(), domain.BookingID(id)); err == nil {
+		relatedInvoice = &inv
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		slog.ErrorContext(r.Context(), "booking view: invoice lookup failed",
+			slog.String("booking_id", id),
+			slog.String("error", logging.Redact(err.Error())))
+	}
+
+	if entries, err := h.Services.Audit.ListAuditLogsByRecord(r.Context(), "bookings", id, 10); err == nil {
+		history = entries
+	} else {
+		slog.ErrorContext(r.Context(), "booking view: history lookup failed",
+			slog.String("booking_id", id),
+			slog.String("error", logging.Redact(err.Error())))
+	}
+
 	h.renderPage(w, r, "booking_view.html", PageData{
 		Title: "View Booking",
 		User:  session,
-		Extra: map[string]interface{}{"Booking": booking},
+		Extra: map[string]interface{}{"Booking": booking, "RelatedTrip": relatedTrip, "RelatedInvoice": relatedInvoice, "History": history},
 	})
 }
 

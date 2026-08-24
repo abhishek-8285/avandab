@@ -51,7 +51,7 @@ func TestEWayBill_Lifecycle_And_Gating(t *testing.T) {
 		ExtensionLeadSeconds: 14400,
 		MinInvoiceValue:      50000.0,
 	}
-	client := intEWB.NewClient(intEWB.Config{Enabled: true})
+	client := intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true})
 	svc := ewaybill.NewEWayBillService(db, bus, client, nil, cfg)
 
 	// 1. Generate Part-A manually
@@ -169,7 +169,7 @@ func TestEWayBill_AutoGenerate_Subscriber(t *testing.T) {
 		Enabled:         true,
 		MinInvoiceValue: 50000.0,
 	}
-	client := intEWB.NewClient(intEWB.Config{Enabled: true})
+	client := intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true})
 	svc := ewaybill.NewEWayBillService(db, bus, client, nil, cfg)
 	svc.SubscribeTripEvents(bus)
 
@@ -323,7 +323,7 @@ func TestEWayBill_And_FASTag_HTTP_Handlers(t *testing.T) {
 	require.NoError(t, err)
 
 	bus := events.NewInMemoryBus()
-	ewbClient := intEWB.NewClient(intEWB.Config{Enabled: true})
+	ewbClient := intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true})
 	ewbSvc := ewaybill.NewEWayBillService(db, bus, ewbClient, nil, ewaybill.Config{Enabled: true})
 	fastagClient := intFastag.NewClient(intFastag.Config{Enabled: true, UseMock: true}, db)
 	fastagSvc := fastag.NewFASTagService(db, fastagClient, fastag.Config{AutoKharcha: true})

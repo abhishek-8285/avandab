@@ -122,6 +122,9 @@ func (m *MockEInvoiceClient) GenerateIRN(ctx context.Context, inv InvoiceView) (
 	if !m.cfg.Enabled {
 		return nil, fmt.Errorf("gstn integration disabled")
 	}
+	if !m.cfg.UseMock {
+		return nil, fmt.Errorf("gstn: e-invoice GSP credentials not configured; set INTEGRATION_GSTN_API_KEY or INTEGRATION_GSTN_USE_MOCK=true for demo mode")
+	}
 	irn := ComputeIRN(inv)
 	ackNo := fmt.Sprintf("ACK%012d", time.Now().UnixNano()%1000000000000)
 	ackDate := time.Now().Format("2006-01-02 15:04:05")
@@ -140,6 +143,9 @@ func (m *MockEInvoiceClient) GenerateIRN(ctx context.Context, inv InvoiceView) (
 func (m *MockEInvoiceClient) PushEInvoice(ctx context.Context, invoiceID, irn string) (*PushResponse, error) {
 	if !m.cfg.Enabled {
 		return nil, fmt.Errorf("gstn integration disabled")
+	}
+	if !m.cfg.UseMock {
+		return nil, fmt.Errorf("gstn: e-invoice GSP credentials not configured; set INTEGRATION_GSTN_API_KEY or INTEGRATION_GSTN_USE_MOCK=true for demo mode")
 	}
 	if irn == "" {
 		return nil, fmt.Errorf("irn is required to push e-invoice")

@@ -49,6 +49,10 @@ func openPNLTestDB(t *testing.T) *sql.DB {
 	CREATE TABLE IF NOT EXISTS driver_settlements (
 		id TEXT PRIMARY KEY, trip_id TEXT, net_payout REAL, tds_amount REAL, created_at TEXT
 	);
+	CREATE TABLE IF NOT EXISTS settlement_lines (
+		id TEXT PRIMARY KEY, settlement_id TEXT, trip_id TEXT,
+		line_type TEXT, label TEXT, amount REAL, ref_id TEXT, created_at TEXT
+	);
 	CREATE TABLE IF NOT EXISTS trips (
 		id TEXT PRIMARY KEY, tenant_id TEXT, departure_time TEXT, booking_id TEXT
 	);

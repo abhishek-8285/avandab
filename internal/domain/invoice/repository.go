@@ -17,6 +17,7 @@ type InvoiceRepository interface {
 	UpdateInvoicePaymentStatus(ctx context.Context, id types.InvoiceID, status PaymentStatus) (Invoice, error)
 	DeleteInvoice(ctx context.Context, id types.InvoiceID) error
 	SearchInvoices(ctx context.Context, query string, status string, limit, offset int) ([]InvoiceWithJoins, error)
+	ListInvoicesByCustomer(ctx context.Context, customerID types.CustomerID, limit int) ([]InvoiceWithJoins, error)
 	CountInvoices(ctx context.Context, query string, status string) (int64, error)
 	GetPendingInvoices(ctx context.Context) ([]InvoiceWithJoins, error)
 }

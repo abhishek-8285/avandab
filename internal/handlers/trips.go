@@ -2,12 +2,15 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -20,6 +23,7 @@ import (
 	geofencerepo "transport-app/internal/geofence/infrastructure/persistence/sql"
 	invoiceApp "transport-app/internal/invoice/application"
 	invoiceaggregate "transport-app/internal/invoice/domain/aggregate"
+	invoicesql "transport-app/internal/invoice/infrastructure/persistence/sql"
 	"transport-app/internal/middleware"
 	"transport-app/internal/pnl"
 	"transport-app/internal/service"
@@ -93,6 +97,63 @@ func (h *TripHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "cancel")).Post("/{id}/cancel", h.CancelTrip)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "shares", "create")).Post("/{id}/share", h.App.Share.CreateShare)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "read")).Get("/{id}/compliance", h.TripComplianceFragment)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/send-pod-otp", h.SendPODOTPSMS)
+}
+
+// SendPODOTPSMS texts the trip's active delivery OTP to the consignee phone
+// captured on POD. Requires the SMS webhook channel to be configured; the
+// operator-relay fallback (reading the code aloud) stays available otherwise.
+func (h *TripHandlers) SendPODOTPSMS(w http.ResponseWriter, r *http.Request) {
+	tripID := chi.URLParam(r, "id")
+	if h.App == nil || h.App.Notify == nil || !h.App.Notify.SMSConfigured() {
+		h.flashAndRedirect(w, r, tripID, "SMS delivery is not configured; set SMS_WEBHOOK_URL.", false)
+		return
+	}
+	otp, err := h.Services.Trips.EnsurePODOTP(r.Context(), tripID)
+	if err != nil || otp == "" {
+		h.flashAndRedirect(w, r, tripID, "No delivery OTP is active for this trip.", false)
+		return
+	}
+	var phone string
+	if h.App.DB != nil {
+		var p sql.NullString
+		if err := h.App.DB.QueryRowContext(r.Context(),
+			`SELECT COALESCE(pod_consignee_phone,'') FROM trips WHERE id = ?`, tripID).Scan(&p); err == nil {
+			phone = p.String
+		}
+	}
+	if strings.TrimSpace(phone) == "" {
+		h.flashAndRedirect(w, r, tripID, "No consignee phone on record — capture it during POD entry first.", false)
+		return
+	}
+	msg := fmt.Sprintf("Delivery OTP for your shipment (trip %s): %s. Share this code with the driver only at delivery.", tripRefForSMS(r.Context(), h.Services.Trips, tripID), otp)
+	if err := h.App.Notify.SendSMS(r.Context(), ports.NotificationMessage{
+		Recipient: phone,
+		Body:      msg,
+		Type:      ports.NotificationTypeSMS,
+	}); err != nil {
+		slog.Error("POD OTP SMS delivery failed", "trip_id", tripID, "error", err)
+		h.flashAndRedirect(w, r, tripID, "SMS delivery failed — relay the code manually.", false)
+		return
+	}
+	h.flashAndRedirect(w, r, tripID, "OTP sent by SMS to "+phone+".", true)
+}
+
+func tripRefForSMS(ctx context.Context, trips *service.TripService, tripID string) string {
+	trip, err := trips.GetTrip(ctx, domain.TripID(tripID))
+	if err != nil {
+		return tripID
+	}
+	return trip.TripNumber
+}
+
+func (h *TripHandlers) flashAndRedirect(w http.ResponseWriter, r *http.Request, tripID, msg string, success bool) {
+	name := "flash_error"
+	if success {
+		name = "flash_success"
+	}
+	http.SetCookie(w, &http.Cookie{Name: name, Value: url.QueryEscape(msg), Path: "/", HttpOnly: true, MaxAge: 10})
+	http.Redirect(w, r, "/trips/"+tripID, http.StatusSeeOther)
 }
 
 func (h *TripHandlers) List(w http.ResponseWriter, r *http.Request) {
@@ -227,6 +288,46 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 	// Delivery OTP: shown to the operator, relayed to the consignee by phone
 	// until SMS delivery is configured (48h validity, regenerates on expiry).
 	podOTP, _ := h.Services.Trips.EnsurePODOTP(r.Context(), id)
+	flashMsg, flashOK := "", false
+	if c, err := r.Cookie("flash_success"); err == nil && c.Value != "" {
+		flashMsg, _ = url.QueryUnescape(c.Value)
+		flashOK = true
+		http.SetCookie(w, &http.Cookie{Name: "flash_success", Value: "", Path: "/", MaxAge: -1})
+	} else if c, err := r.Cookie("flash_error"); err == nil && c.Value != "" {
+		flashMsg, _ = url.QueryUnescape(c.Value)
+		http.SetCookie(w, &http.Cookie{Name: "flash_error", Value: "", Path: "/", MaxAge: -1})
+	}
+
+	// Related context for the detail page: booking (customer + fare),
+	// kharcha ledger and the invoice generated from this trip.
+	var bookingInfo interface{}
+	if trip.BookingID != nil && *trip.BookingID != "" {
+		if b, err := h.Services.Bookings.GetBooking(r.Context(), domain.BookingID(*trip.BookingID)); err == nil {
+			bookingInfo = b
+		}
+	}
+
+	kharchaRows, _ := h.Services.Kharcha.ListLedger(r.Context(), id)
+	var kharchaTotal float64
+	for _, e := range kharchaRows {
+		if e.Status != "rejected" {
+			kharchaTotal += e.Amount
+		}
+	}
+
+	var tripInvoice interface{}
+	if h.DB != nil {
+		if agg, err := invoicesql.NewInvoiceRepository(h.DB).FindByTripID(r.Context(), id, shared.TenantIDFromContext(r.Context())); err == nil && agg != nil {
+			tripInvoice = agg
+		}
+	}
+
+	duration := ""
+	if trip.ArrivalTime != nil {
+		if d := trip.ArrivalTime.Sub(trip.DepartureTime); d > 0 {
+			duration = fmt.Sprintf("%.1f h", d.Hours())
+		}
+	}
 
 	h.renderPage(w, r, "trip_view.html", PageData{
 		Title: "View Trip",
@@ -238,6 +339,14 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 			"PnL":               tripPnL,
 			"EWayBill":          ewbRecord,
 			"PODOTP":            podOTP,
+			"SMSEnabled":        h.App != nil && h.App.Notify != nil && h.App.Notify.SMSConfigured(),
+			"FlashMsg":          flashMsg,
+			"FlashOK":           flashOK,
+			"Booking":           bookingInfo,
+			"Kharcha":           kharchaRows,
+			"KharchaTotal":      kharchaTotal,
+			"Invoice":           tripInvoice,
+			"Duration":          duration,
 		},
 	})
 }

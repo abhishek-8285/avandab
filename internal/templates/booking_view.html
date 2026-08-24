@@ -1,60 +1,135 @@
 <a href="/bookings" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Bookings</a>
 
-<div class="max-w-5xl mx-auto">
-    <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
-        <div>
-            <h1 class="text-xl font-semibold text-on-surface font-display">{{.Booking.BookingNumber}}</h1>
-            <p class="text-sm text-text-muted">Booking details and lifecycle</p>
-        </div>
-        <span class="status-badge {{statusBadge .Booking.Status}}">{{.Booking.Status}}</span>
-    </div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Header: lane title, status, key stats -->
+        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
+            <div class="flex justify-between items-start gap-4 flex-wrap">
+                <div>
+                    <h1 class="text-xl font-semibold text-on-surface font-display inline-flex items-center gap-2 flex-wrap">
+                        {{.Booking.RouteSource}}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-secondary shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        {{.Booking.RouteDestination}}
+                    </h1>
+                    <p class="text-sm text-text-muted mt-1"><span class="font-mono">{{.Booking.BookingNumber}}</span> · Created {{datetime .Booking.CreatedAt}}</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    {{if or (eq .Booking.Status "pending") (eq .Booking.Status "confirmed")}}
+                    {{template "btn.html" (dict "Label" "Edit" "Href" (printf "/bookings/%s/edit" .Booking.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit")}}
+                    {{end}}
+                    <span class="status-badge {{statusBadge .Booking.Status}}">{{.Booking.Status}}</span>
+                </div>
+            </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
-            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                <div>
-                    <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Customer</dt>
-                    <dd class="text-sm font-medium text-on-surface mt-0.5">{{.Booking.CustomerName}}</dd>
+            <dl class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5 pt-5 border-t border-border-subtle">
+                <div class="rounded-lg bg-surface-container-low p-3">
+                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Pickup</dt>
+                    <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{datetime .Booking.PickupDate}}</dd>
                 </div>
-                <div>
-                    <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Route</dt>
-                    <dd class="text-sm font-medium text-on-surface mt-0.5">{{.Booking.RouteSource}} → {{.Booking.RouteDestination}}</dd>
+                <div class="rounded-lg bg-surface-container-low p-3">
+                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Quoted Fare</dt>
+                    <dd class="text-sm font-bold text-primary tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .Booking.Price}}</dd>
                 </div>
-                <div>
-                    <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Pickup Date</dt>
-                    <dd class="text-sm font-medium text-on-surface mt-0.5">{{datetime .Booking.PickupDate}}</dd>
+                <div class="rounded-lg bg-surface-container-low p-3">
+                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Load</dt>
+                    <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{if .Booking.CargoWeight}}{{.Booking.CargoWeight}} kg · {{end}}{{.Booking.Passengers}} pax</dd>
                 </div>
-                <div>
-                    <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Vehicle Type</dt>
-                    <dd class="text-sm font-medium text-on-surface mt-0.5">{{.Booking.VehicleType}}</dd>
-                </div>
-                <div>
-                    <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Passengers</dt>
-                    <dd class="text-sm font-medium text-on-surface mt-0.5" data-numeric>{{.Booking.Passengers}}</dd>
-                </div>
-                <div>
-                    <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Cargo Weight</dt>
-                    <dd class="text-sm font-medium text-on-surface tabular-nums mt-0.5" data-numeric>{{if .Booking.CargoWeight}}{{.Booking.CargoWeight}}{{end}}</dd>
-                </div>
-                <div>
-                    <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Price</dt>
-                    <dd class="text-sm font-medium text-on-surface tabular-nums mt-0.5" data-numeric>{{printf "%.2f" .Booking.Price}}</dd>
-                </div>
-                <div>
-                    <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Created</dt>
-                    <dd class="text-sm font-medium text-on-surface mt-0.5">{{datetime .Booking.CreatedAt}}</dd>
+                <div class="rounded-lg bg-surface-container-low p-3">
+                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Vehicle Type</dt>
+                    <dd class="text-sm font-semibold text-on-surface capitalize mt-1">{{.Booking.VehicleType}}</dd>
                 </div>
             </dl>
-
-            {{if .Booking.Notes}}
-            <div class="mt-6 pt-4 border-t border-border-subtle">
-                <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Notes</dt>
-                <dd class="text-sm font-medium text-on-surface mt-1">{{nullString .Booking.Notes}}</dd>
-            </div>
-            {{end}}
         </div>
 
-        <aside class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6 h-fit">
+        <!-- Details: linked entities -->
+        <section class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                <div class="border-b border-border-subtle pb-2">
+                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Customer</dt>
+                    <dd class="text-sm font-medium text-on-surface mt-1">
+                        {{if .Booking.CustomerID}}
+                        <a href="/customers/{{.Booking.CustomerID}}" class="hover:text-primary transition-colors text-decoration-none">{{.Booking.CustomerName}}</a>
+                        {{with .Booking.CustomerCompany}}{{if .}}<span class="text-text-muted"> · {{.}}</span>{{end}}{{end}}
+                        {{else}}<span class="text-text-muted">—</span>{{end}}
+                    </dd>
+                </div>
+                <div class="border-b border-border-subtle pb-2">
+                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Route</dt>
+                    <dd class="text-sm font-medium text-on-surface mt-1">
+                        {{if .Booking.RouteID}}<a href="/routes/{{.Booking.RouteID}}" class="hover:text-primary transition-colors text-decoration-none">{{end}}
+                        {{.Booking.RouteSource}} → {{.Booking.RouteDestination}}{{if .Booking.RouteID}}</a>{{end}}
+                    </dd>
+                </div>
+                <div class="border-b border-border-subtle pb-2">
+                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Passengers</dt>
+                    <dd class="text-sm font-medium text-on-surface mt-1 tabular-nums" data-numeric>{{.Booking.Passengers}}</dd>
+                </div>
+                <div class="border-b border-border-subtle pb-2">
+                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Cargo Weight</dt>
+                    <dd class="text-sm font-medium text-on-surface mt-1 tabular-nums" data-numeric>{{if .Booking.CargoWeight}}{{.Booking.CargoWeight}} kg{{else}}—{{end}}</dd>
+                </div>
+                {{if .Booking.Notes}}
+                <div class="sm:col-span-2">
+                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Notes</dt>
+                    <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed">{{.Booking.Notes}}</dd>
+                </div>
+                {{end}}
+            </dl>
+        </section>
+
+        <!-- Lifecycle timeline -->
+        <section class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
+            <h3 class="flex items-center gap-2 text-base font-semibold text-on-surface font-display mb-5">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Booking Lifecycle
+            </h3>
+            {{if eq .Booking.Status "cancelled"}}
+            <div class="p-3 rounded-md bg-status-alert/10 border border-status-alert/30 text-xs text-status-alert mb-5"><strong>Booking cancelled.</strong> Lifecycle steps below are historical.</div>
+            {{end}}
+            <ol class="relative ml-2 border-l-2 border-border-subtle space-y-6">
+                <li class="pl-6 relative">
+                    <span class="absolute -left-[9px] top-1 w-3.5 h-3.5 rounded-full border-2 bg-status-success border-status-success"></span>
+                    <p class="text-sm font-semibold text-on-surface">Booked</p>
+                    <p class="text-xs text-text-muted tabular-nums">{{datetime .Booking.CreatedAt}}</p>
+                </li>
+                <li class="pl-6 relative">
+                    <span class="absolute -left-[9px] top-1 w-3.5 h-3.5 rounded-full border-2 {{if or (eq .Booking.Status "confirmed") (eq .Booking.Status "completed")}}bg-status-success border-status-success{{else if eq .Booking.Status "cancelled"}}bg-status-alert border-status-alert{{else}}bg-surface-container-lowest border-border-subtle{{end}}"></span>
+                    <p class="text-sm font-semibold {{if eq .Booking.Status "cancelled"}}text-status-alert{{else}}text-on-surface{{end}}">{{if eq .Booking.Status "pending"}}Awaiting confirmation{{else if eq .Booking.Status "cancelled"}}Cancelled before confirmation{{else}}Confirmed{{end}}</p>
+                    <p class="text-xs text-text-muted tabular-nums">{{if or (eq .Booking.Status "confirmed") (eq .Booking.Status "completed")}}{{datetime .Booking.UpdatedAt}}{{else if eq .Booking.Status "pending"}}Waiting for approval{{else}}—{{end}}</p>
+                </li>
+                <li class="pl-6 relative">
+                    <span class="absolute -left-[9px] top-1 w-3.5 h-3.5 rounded-full border-2 {{if eq .Booking.Status "completed"}}bg-status-success border-status-success{{else if eq .Booking.Status "cancelled"}}bg-status-alert border-status-alert{{else}}bg-surface-container-lowest border-border-subtle{{end}}"></span>
+                    <p class="text-sm font-semibold {{if eq .Booking.Status "completed"}}text-on-surface{{else}}text-text-muted{{end}}">{{if eq .Booking.Status "cancelled"}}Terminated{{else}}Completed{{end}}</p>
+                    <p class="text-xs text-text-muted tabular-nums">{{if eq .Booking.Status "completed"}}Trip delivered and invoiced — invoice is generated on trip completion{{else if eq .Booking.Status "confirmed"}}Confirm a trip to proceed{{else if eq .Booking.Status "pending"}}Complete after confirmation{{else}}—{{end}}</p>
+                </li>
+            </ol>
+        </section>
+
+        <!-- History: audit trail -->
+        {{if .History}}
+        <section class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
+            <h3 class="flex items-center gap-2 text-base font-semibold text-on-surface font-display mb-5">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+                History
+            </h3>
+            <div class="divide-y divide-border-subtle">
+                {{range .History}}
+                <div class="flex items-center justify-between gap-3 py-2.5">
+                    <div class="min-w-0 flex items-center gap-2.5">
+                        <span class="px-2 py-0.5 rounded-full text-xs font-medium capitalize shrink-0 {{if or (eq .Action "confirm") (eq .Action "complete")}}bg-status-success/10 text-status-success border border-status-success/20{{else if eq .Action "cancel"}}bg-status-alert/10 text-status-alert border border-status-alert/20{{else if eq .Action "delete"}}bg-status-alert/10 text-status-alert border border-status-alert/20{{else}}bg-surface-container-low border border-border-subtle text-secondary{{end}}">{{.Action}}</span>
+                        <p class="text-xs text-text-muted truncate">by {{if .UserName}}{{.UserName}}{{else}}system{{end}}</p>
+                    </div>
+                    <span class="text-xs text-text-muted tabular-nums shrink-0">{{datetime .CreatedAt}}</span>
+                </div>
+                {{end}}
+            </div>
+        </section>
+        {{end}}
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="space-y-6">
+        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6 h-fit">
             <h2 class="flex items-center gap-2 text-sm font-semibold text-on-surface font-display mb-4">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                 Actions
@@ -77,7 +152,61 @@
                 </form>
                 {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Href" (printf "/trips/new?booking=%v" .Booking.ID) "Label" "Create Trip" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 w-full")}}
                 {{end}}
+                {{if eq .Booking.Status "completed"}}
+                <p class="text-xs text-text-muted flex items-center gap-1.5">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-status-success"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                    Fulfilled — find its invoice under Invoices.
+                </p>
+                {{end}}
             </div>
-        </aside>
-    </div>
+        </div>
+
+        {{if or .RelatedTrip .RelatedInvoice}}
+        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6 h-fit">
+            <h2 class="flex items-center gap-2 text-sm font-semibold text-on-surface font-display mb-4">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Related Records
+            </h2>
+            <div class="space-y-3">
+                {{with .RelatedTrip}}
+                <a href="/trips/{{.ID}}" class="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface-container-low p-3 hover:bg-surface-container transition-colors text-decoration-none group">
+                    <span class="min-w-0">
+                        <span class="block text-[11px] font-semibold text-secondary uppercase tracking-wider">Trip</span>
+                        <span class="block text-sm font-semibold text-on-surface font-mono mt-0.5 truncate">{{.TripNumber}}</span>
+                        <span class="status-badge {{statusBadge .Status}} mt-1.5 inline-flex">{{.Status}}</span>
+                    </span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-primary transition-colors"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </a>
+                {{end}}
+                {{with .RelatedInvoice}}
+                <a href="/invoices/{{.ID}}" class="flex items-center justify-between gap-3 rounded-lg border border-border-subtle bg-surface-container-low p-3 hover:bg-surface-container transition-colors text-decoration-none group">
+                    <span class="min-w-0">
+                        <span class="block text-[11px] font-semibold text-secondary uppercase tracking-wider">Invoice</span>
+                        <span class="block text-sm font-semibold text-on-surface font-mono mt-0.5 truncate">{{.InvoiceNumber}}</span>
+                        <span class="text-xs text-text-muted tabular-nums mt-1 inline-block" data-numeric>₹{{printf "%.2f" .Total}} · {{.PaymentStatus}}</span>
+                    </span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-primary transition-colors"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </a>
+                {{end}}
+            </div>
+        </div>
+        {{end}}
+
+        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6 h-fit">
+            <h2 class="flex items-center gap-2 text-sm font-semibold text-on-surface font-display mb-4">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                Customer
+            </h2>
+            {{if .Booking.CustomerID}}
+            <p class="text-sm font-semibold text-on-surface">{{.Booking.CustomerName}}</p>
+            {{with .Booking.CustomerCompany}}{{if .}}<p class="text-xs text-text-muted mt-0.5">{{.}}</p>{{end}}{{end}}
+            <a href="/customers/{{.Booking.CustomerID}}" class="mt-3 inline-flex items-center gap-1 text-sm text-primary hover:underline text-decoration-none">
+                View account
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </a>
+            {{else}}
+            <p class="text-sm text-text-muted">No customer linked.</p>
+            {{end}}
+        </div>
+    </aside>
 </div>

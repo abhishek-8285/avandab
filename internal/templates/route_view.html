@@ -1,39 +1,58 @@
 <a href="/routes" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Routes</a>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-    <!-- Main: route details -->
-    <div class="lg:col-span-2 bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
-        <div class="flex items-start justify-between gap-4 flex-wrap">
-            <div>
-                <h2 class="text-xl font-semibold text-on-surface font-display">{{.Route.Source}}</h2>
-                <p class="text-sm text-secondary mt-0.5 inline-flex items-center gap-1.5">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                    {{.Route.Destination}}
-                </p>
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Header: lane title, fare KPIs -->
+        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
+            <div class="flex items-start justify-between gap-4 flex-wrap">
+                <div>
+                    <h1 class="text-xl font-semibold text-on-surface font-display inline-flex items-center gap-2 flex-wrap">
+                        {{.Route.Source}}
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-secondary shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        {{.Route.Destination}}
+                    </h1>
+                    <p class="text-sm text-text-muted mt-1">Route lane</p>
+                </div>
+                <div class="flex gap-2">
+                    {{template "btn.html" (dict "Label" "Edit" "Href" (printf "/routes/%s/edit" .Route.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit")}}
+                </div>
             </div>
-            <div class="flex gap-2">
-                {{template "btn.html" (dict "Label" "Edit" "Href" (printf "/routes/%s/edit" .Route.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit")}}
-            </div>
+
+            <dl class="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-5 pt-5 border-t border-border-subtle">
+                <div class="rounded-lg bg-surface-container-low p-3">
+                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Distance</dt>
+                    <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{.Route.Distance}} km</dd>
+                </div>
+                <div class="rounded-lg bg-surface-container-low p-3">
+                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Est. Duration</dt>
+                    <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{.Route.EstimatedHours}} h</dd>
+                </div>
+                <div class="rounded-lg bg-surface-container-low p-3">
+                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Standard Fare</dt>
+                    <dd class="text-sm font-bold text-primary tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .Route.StandardFare}}</dd>
+                </div>
+            </dl>
         </div>
 
-        <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 pt-6 border-t border-border-subtle">
-            <div>
-                <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Distance</dt>
-                <dd class="text-sm font-medium text-on-surface font-mono mt-1" data-numeric>{{.Route.Distance}} km</dd>
-            </div>
-            <div>
-                <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Estimated Hours</dt>
-                <dd class="text-sm font-medium text-on-surface font-mono mt-1" data-numeric>{{.Route.EstimatedHours}}</dd>
-            </div>
-            <div>
-                <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Standard Fare</dt>
-                <dd class="text-sm font-semibold text-primary font-mono mt-1" data-numeric>₹{{printf "%.2f" .Route.StandardFare}}</dd>
-            </div>
-            <div class="sm:col-span-2">
-                <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Remarks</dt>
-                <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed">{{nullString .Route.Remarks}}</dd>
-            </div>
-        </dl>
+        <!-- Details -->
+        <section class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                <div>
+                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Origin</dt>
+                    <dd class="text-sm font-medium text-on-surface mt-1">{{.Route.Source}}</dd>
+                </div>
+                <div>
+                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Destination</dt>
+                    <dd class="text-sm font-medium text-on-surface mt-1">{{.Route.Destination}}</dd>
+                </div>
+                {{with nullString .Route.Remarks}}
+                <div class="sm:col-span-2">
+                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Remarks</dt>
+                    <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed">{{.}}</dd>
+                </div>
+                {{end}}
+            </dl>
+        </section>
     </div>
 
     <!-- Sidebar: tariff summary -->

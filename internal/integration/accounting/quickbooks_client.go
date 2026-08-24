@@ -17,6 +17,9 @@ func (c *quickbooksClient) ExportInvoice(ctx context.Context, invoice ExportedIn
 	if !c.cfg.Enabled {
 		return ExportResult{}, ErrDisabled
 	}
+	if !c.cfg.UseMock {
+		return ExportResult{}, ErrNotImplemented
+	}
 	return ExportResult{
 		SyncID:     uuid.New().String(),
 		Status:     "SUCCESS",
@@ -30,6 +33,9 @@ func (c *quickbooksClient) SyncContacts(ctx context.Context, contacts []Contact)
 	if !c.cfg.Enabled {
 		return SyncResult{}, ErrDisabled
 	}
+	if !c.cfg.UseMock {
+		return SyncResult{}, ErrNotImplemented
+	}
 	return SyncResult{
 		Synced:  len(contacts),
 		Failed:  0,
@@ -42,6 +48,9 @@ func (c *quickbooksClient) PushJournalEntry(ctx context.Context, entry JournalEn
 	slog.Default().Info("[accounting:quickbooks] PushJournalEntry called", "endpoint", c.cfg.Endpoint, "enabled", c.cfg.Enabled, "reference", entry.Reference)
 	if !c.cfg.Enabled {
 		return JournalEntryResult{}, ErrDisabled
+	}
+	if !c.cfg.UseMock {
+		return JournalEntryResult{}, ErrNotImplemented
 	}
 	return JournalEntryResult{
 		EntryID: "QB-JE-" + uuid.New().String()[:8],

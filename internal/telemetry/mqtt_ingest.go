@@ -62,6 +62,9 @@ func (h *MQTTIngestHandler) HandleMessage(ctx context.Context, topic string, pay
 		Accuracy:      p.Accuracy,
 		FuelLevel:     p.FuelLevel,
 		Odometer:      p.Odometer,
+		DriverID:      p.DriverID,
+		TripID:        p.TripID,
+		SOS:           p.SOS,
 		Provider:      "own",
 		ProviderMsgID: fmt.Sprintf("mqtt:%d", p.Seq),
 		RawPayload:    payload,
@@ -88,9 +91,11 @@ func (h *MQTTIngestHandler) HandleMessage(ctx context.Context, topic string, pay
 		h.logger.Debug("MQTT frame deduped", "imei", imei, "provider_msg_id", frame.ProviderMsgID)
 	}
 
-	// Step 6: SOS detection.
+	// Step 6: SOS detection — emission happens inside the ingest pipeline
+	// (same outbox transaction as the position).
 	if p.SOS {
-		h.onSOS(ctx, frame, imei)
+		h.logger.Warn("MQTT SOS received", "imei", imei,
+			"lat", frame.Latitude, "lng", frame.Longitude)
 	}
 }
 
@@ -109,6 +114,8 @@ type mqttPayload struct {
 	Accuracy    *float64 `json:"accuracy,omitempty"`
 	FuelLevel   *float64 `json:"fuel_level,omitempty"`
 	Odometer    *float64 `json:"odometer,omitempty"`
+	DriverID    string   `json:"driver_id,omitempty"`
+	TripID      string   `json:"trip_id,omitempty"`
 	SOS         bool     `json:"sos"`
 }
 
@@ -121,15 +128,6 @@ func extractIMEIFromTopic(topic string) string {
 		return parts[3]
 	}
 	return ""
-}
-
-// onSOS handles the panic-button / crash flag. For now this logs and publishes
-// a marker to the bus; full SOSEvent outbox emission is deferred to Sub-task 1E.
-func (h *MQTTIngestHandler) onSOS(ctx context.Context, frame providers.RawFrame, imei string) {
-	h.logger.Warn("MQTT SOS received", "imei", imei,
-		"lat", frame.Latitude, "lng", frame.Longitude)
-	// TODO (1E): emit SOSEvent through outbox in the same transaction as
-	// the PositionEvent. For now, the frame has already been ingested.
 }
 
 // parseDeviceTime parses a device-time string (RFC3339 preferred).

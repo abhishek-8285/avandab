@@ -58,11 +58,18 @@ func (s *PNLService) GenerateDailySnapshot(ctx context.Context, tenantID string,
 		 WHERE tenant_id = ? AND payment_status = 'paid' AND DATE(created_at) = ?`,
 		tenantID, dateStr).Scan(&revenue)
 
-	// Fuel costs: fuel-category driver expenses.
+	// Fuel costs: standalone fuel-category driver expenses only.
+	// Claims already absorbed into a settlement (settlement_lines refs the
+	// expense id as deduction/advances) are excluded — their cost is inside
+	// driverPayouts (net_payout) below; counting both would double-book.
 	var fuelCosts float64
 	_ = s.db.QueryRowContext(ctx,
-		`SELECT COALESCE(SUM(amount), 0) FROM driver_expenses
-		 WHERE tenant_id = ? AND category = 'fuel' AND DATE(created_at) = ?`,
+		`SELECT COALESCE(SUM(de.amount), 0) FROM driver_expenses de
+		 WHERE de.tenant_id = ? AND de.category = 'fuel' AND DATE(de.created_at) = ?
+		   AND NOT EXISTS (
+		     SELECT 1 FROM settlement_lines sl
+		     WHERE sl.ref_id = de.id AND sl.line_type IN ('deduction', 'advances')
+		   )`,
 		tenantID, dateStr).Scan(&fuelCosts)
 
 	// Driver payouts: net_payout from driver_settlements.

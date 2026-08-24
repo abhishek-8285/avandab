@@ -17,6 +17,7 @@ import (
 	"transport-app/internal/domain"
 	"transport-app/internal/events"
 	"transport-app/internal/ewaybill"
+	intEWB "transport-app/internal/integration/ewaybill"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 	tripapp "transport-app/internal/trip/application"
@@ -122,21 +123,9 @@ func TestSubTask4D_MasterIntegrationSuite(t *testing.T) {
 	assert.Equal(t, "ops", r3)
 
 	// -------------------------------------------------------------
-	// 4. E-Way Bill Worker: Schema tolerance & Lifecycle
+	// 4. E-Way Bill Service: Generate Part-A & lookup (canonical path)
 	// -------------------------------------------------------------
-	ewbWorker := ewaybill.NewWorker(dbConn, eventBus, nil, nil, ewaybill.Config{
-		Interval:    100 * time.Millisecond,
-		ExtensionKM: 5.0,
-	})
-
-	// Schema tolerance: 00047 column part_b_updated_at is not present by default in 00046
-	assert.False(t, ewbWorker.SchemaReady(ctx))
-	ewbWorker.Tick(ctx) // Safe, skips gracefully
-
-	// Add 00047 column to simulate Spec 07 migration
-	_, err = dbConn.Exec(`ALTER TABLE eway_bills ADD COLUMN part_b_updated_at DATETIME;`)
-	require.NoError(t, err)
-	assert.True(t, ewbWorker.SchemaReady(ctx))
+	ewbSvc := ewaybill.NewEWayBillService(dbConn, eventBus, intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true}), nil, ewaybill.Config{Enabled: true})
 
 	// Seed Route, Vehicle, Trip
 	routeID := "rt-ewb-1"
@@ -147,14 +136,29 @@ func TestSubTask4D_MasterIntegrationSuite(t *testing.T) {
 	_, err = dbConn.Exec(`INSERT INTO trips (id, trip_number, route_id, departure_time, status, tenant_id) VALUES (?, 'TRP-EWB-01', ?, datetime('now'), 'started', 'tenant-1')`, tripID, routeID)
 	require.NoError(t, err)
 
-	// Step 1: Worker generates EWB for started trip
-	ewbWorker.Tick(ctx)
-
-	var ewbID, ewbNum, ewbStatus string
-	err = dbConn.QueryRow(`SELECT id, ewb_number, status FROM eway_bills WHERE trip_id = ?`, tripID).Scan(&ewbID, &ewbNum, &ewbStatus)
+	// Step 1: Service generates EWB Part-A for the started trip
+	rec, err := ewbSvc.GeneratePartA(ctx, ewaybill.GeneratePartARequest{
+		TripID:        tripID,
+		DocType:       "INV",
+		DocNo:         "INV-EWB-01",
+		DocDate:       now.Format("2006-01-02"),
+		FromGSTIN:     "27AAAAA0000A1Z5",
+		ToGSTIN:       "24BBBBB0000B1Z5",
+		FromPlace:     "Mumbai",
+		FromStateCode: "27",
+		ToPlace:       "Goa",
+		ToStateCode:   "30",
+		GoodsValue:    180000,
+		Distance:      600,
+		GenMode:       "MANUAL",
+	})
 	require.NoError(t, err)
-	assert.NotEmpty(t, ewbNum)
-	assert.Equal(t, "active", ewbStatus)
+	assert.NotEmpty(t, rec.EwbNumber)
+	assert.Equal(t, "active", rec.Status)
+
+	fetched, err := ewbSvc.GetByTrip(ctx, tripID)
+	require.NoError(t, err)
+	assert.Equal(t, rec.EwbNumber, fetched.EwbNumber)
 
 	// -------------------------------------------------------------
 	// 5. TripAssignedEvent: Published from Path A & Path B

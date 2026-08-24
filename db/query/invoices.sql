@@ -96,3 +96,15 @@ LEFT JOIN bookings b ON i.booking_id = b.id
 LEFT JOIN trips t ON i.trip_id = t.id
 WHERE i.payment_status IN ('pending', 'partially_paid') AND i.tenant_id = ?
 ORDER BY i.created_at ASC;
+
+-- name: ListInvoicesByCustomer :many
+SELECT i.id, i.invoice_number, i.booking_id, i.customer_id, i.trip_id,
+    i.subtotal, i.tax, i.discount, i.total, i.payment_status, i.tenant_id, i.created_at, i.updated_at,
+    c.name AS customer_name, c.company AS customer_company, b.booking_number, t.trip_number
+FROM invoices i
+JOIN customers c ON i.customer_id = c.id
+LEFT JOIN bookings b ON i.booking_id = b.id
+LEFT JOIN trips t ON i.trip_id = t.id
+WHERE i.tenant_id = ? AND i.customer_id = ?
+ORDER BY i.created_at DESC
+LIMIT ?;

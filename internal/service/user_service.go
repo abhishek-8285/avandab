@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/base64"
 	"fmt"
 
@@ -15,6 +16,56 @@ import (
 // UserService handles user management.
 type UserService struct {
 	baseService
+}
+
+// RegisterSelfServiceAccount provisions an account created through public
+// self-registration using the first-run claim model: the first account on a
+// deployment becomes its admin, every later registration is least-privilege
+// viewer. The admin check and the insert run in one transaction, so two
+// simultaneous registrations can never both win the claim. Returns the user
+// and whether this registration claimed the admin role.
+func (s *UserService) RegisterSelfServiceAccount(ctx context.Context, email, name, phone, password string) (domain.User, bool, error) {
+	getter, ok := s.store.(repository.DBGetter)
+	if !ok || getter == nil || s.txManager == nil {
+		return domain.User{}, false, fmt.Errorf("self-registration unavailable: storage does not support transactions")
+	}
+	rawDB := getter.DB()
+
+	var created domain.User
+	claimed := false
+	err := s.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
+		claimed = false
+		var row *sql.Row
+		if tx := repository.TxFromContext(txCtx); tx != nil {
+			row = tx.QueryRowContext(txCtx, `SELECT COUNT(*) FROM users WHERE role_id = 1`)
+		} else {
+			row = rawDB.QueryRowContext(txCtx, `SELECT COUNT(*) FROM users WHERE role_id = 1`)
+		}
+		var admins int
+		if err := row.Scan(&admins); err != nil {
+			return err
+		}
+
+		roleID := domain.DefaultRoleID(domain.RoleViewer)
+		if admins == 0 {
+			roleID = domain.DefaultRoleID(domain.RoleAdmin)
+			claimed = true
+		}
+
+		u, err := s.CreateUserWithPassword(txCtx, email, name, phone, password, roleID, domain.UserStatusActive)
+		if err != nil {
+			return err
+		}
+		created = u
+		return nil
+	})
+	if err != nil {
+		return domain.User{}, false, err
+	}
+	if claimed && s.log != nil {
+		s.log.Info("first-run claim: self-registered account became admin", "user_id", created.ID, "email", created.Email)
+	}
+	return created, claimed, nil
 }
 
 // generateTemporaryPassword returns a cryptographically random 16-character

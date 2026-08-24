@@ -70,6 +70,10 @@ Single source of truth for `db/migrations/` version numbers. Repo head is
 | 00088 | driver_expenses rebuild — category CHECK gains rto/tyre/bhatta (mobile/server parity fix) | India milestone M1 |
 | 00089 | feature_flags table + features:update permission (per-org feature registry) | Plugin/feature-flag milestone |
 | 00090 | trips pod_otp + pod_otp_expires_at (e-POD OTP verification) | E2E completion milestone |
+| 00091 | `route_locations` side-table — geocoded endpoint coordinates for routes (gap #46 standardized locations) | Location standardization milestone |
+| 00092 | alert inbox hardening (ack_status / severity_rank / money_at_risk / snoozed_until + inbox index) | 22 |
+| 00093 | `driver_advance_requests` (driver Paisa tab advance flow) | 22 |
+| 00094 | `driver_expenses` verification (verification_state / flag_reason / ocr_amount / ocr_confidence) | 22 |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

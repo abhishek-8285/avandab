@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bytes"
-	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -25,6 +24,7 @@ import (
 	"transport-app/internal/experiments"
 	"transport-app/internal/features"
 	"transport-app/internal/i18n"
+	"transport-app/internal/operations/notifications"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 	"transport-app/internal/telemetry"
@@ -48,6 +48,10 @@ type App struct {
 
 	// ResetTokens issues and verifies single-use password-reset tokens.
 	ResetTokens *auth.ResetTokenStore
+
+	// Notify delivers outbound email/SMS (nil-safe: handlers check
+	// EmailConfigured/SMSConfigured before offering delivery UX).
+	Notify *notifications.Service
 
 	// Cache is the config-selected cache backend (none | memory | redis).
 	// Hot reads should go through it instead of hitting the DB directly.
@@ -572,11 +576,6 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 		if recent, err := a.AlertsRepo.Recent(r.Context(), userID, 5); err == nil {
 			notifications = recent
 		}
-	} else if a.Services != nil && a.Services.Audit != nil {
-		if notifs, total, err := a.Services.Audit.ListAuditLogs(context.Background(), 5, 0); err == nil {
-			notifications = notifs
-			unreadCount = int(total)
-		}
 	}
 	if unreadCount > 99 {
 		unreadCount = 99
@@ -1057,6 +1056,7 @@ func (a *App) renderErrorInfo(w http.ResponseWriter, r *http.Request, info Error
 		FlashSuccess  string
 		Version       string
 		PWAEnabled    bool
+		Features      map[string]bool
 		Extra         map[string]interface{}
 	}{
 		Title:      info.Title,
@@ -1064,6 +1064,7 @@ func (a *App) renderErrorInfo(w http.ResponseWriter, r *http.Request, info Error
 		User:       info.User,
 		Version:    AppVersion,
 		PWAEnabled: pwaEnabled,
+		Features:   nil,
 		Extra:      map[string]interface{}{},
 	}); err != nil {
 		slog.Error("error layout execution failed", "statusCode", info.StatusCode, "title", info.Title, "error", err)

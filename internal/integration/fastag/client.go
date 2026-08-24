@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"transport-app/internal/shared"
 )
 
 // Config holds connection settings for the FASTag aggregator API.
@@ -120,10 +122,11 @@ func (c *clientImpl) GetBalance(ctx context.Context, vehicleNumber, tagID string
 		if !errors.Is(err, sql.ErrNoRows) {
 			return Balance{}, err
 		}
-		// If no row in DB, fall back to mock balance if UseMock is set or return error
-		if !c.cfg.UseMock && vehicleNumber != "" {
-			return Balance{}, fmt.Errorf("fastag: no tag for vehicle %s: %w", vehicleNumber, err)
-		}
+	}
+	// No DB row. Never fabricate a balance outside explicit demo mode:
+	// invented balances have real operational consequences.
+	if !c.cfg.UseMock {
+		return Balance{}, fmt.Errorf("fastag: no tag record for vehicle %q / tag %q", vehicleNumber, tagID)
 	}
 
 	return Balance{
@@ -149,13 +152,13 @@ func (c *clientImpl) DeductToll(ctx context.Context, req DeductTollRequest) (Tol
 		if source == "" {
 			source = "MANUAL"
 		}
-		tenantID := "1"
+		tenantID := shared.TenantIDFromContext(ctx)
 		_, err := c.db.ExecContext(ctx, `
 			INSERT INTO fastag_transactions (
 				id, tenant_id, tag_id, vehicle_number, trip_id, plaza_id, plaza_name,
 				amount, txn_timestamp, status, source, reconciled
 			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'SUCCESS', ?, 0)
-		`, txnID, tenantID, req.TagID, req.VehicleNumber, req.TripID, req.PlazaID, req.PlazaName, req.Amount, now, source)
+		`, txnID, string(tenantID), req.TagID, req.VehicleNumber, req.TripID, req.PlazaID, req.PlazaName, req.Amount, now, source)
 		if err != nil {
 			slog.Default().Warn("fastag: could not persist deduction txn", "error", err)
 		} else {
@@ -218,6 +221,13 @@ func (c *clientImpl) ListTransactions(ctx context.Context, vehicleNumber string,
 		}
 	}
 
+	// Empty DB is a valid state — return no transactions rather than
+	// inventing plazas and amounts that downstream reconciliation would
+	// treat as real toll spend.
+	if !c.cfg.UseMock {
+		return []TollTransaction{}, nil
+	}
+
 	now := time.Now()
 	txs := make([]TollTransaction, limit)
 	for i := 0; i < limit; i++ {
@@ -237,10 +247,12 @@ func (c *clientImpl) ListTransactions(ctx context.Context, vehicleNumber string,
 
 func (c *clientImpl) Reconcile(ctx context.Context, vehicleNumber string, from, to string) (ReconcileResult, error) {
 	slog.Default().Info("[fastag] Reconcile called on client", "vehicle", vehicleNumber, "from", from, "to", to)
-	return ReconcileResult{
-		Pulled:         5,
-		Matched:        5,
-		Unmatched:      0,
-		KharchaCreated: 5,
-	}, nil
+	// Honest stub: the local reconciliation engine (internal/fastag)
+	// performs real matching against the transactions table; this
+	// client-level method only proxies a provider API. Never report fake
+	// pull/match counts.
+	if !c.cfg.UseMock {
+		return ReconcileResult{}, fmt.Errorf("fastag: client-level reconcile requires a provider integration; use the reconciliation service")
+	}
+	return ReconcileResult{}, nil
 }

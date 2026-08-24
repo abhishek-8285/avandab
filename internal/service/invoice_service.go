@@ -93,6 +93,19 @@ func (s *InvoiceService) GetInvoiceByNumber(ctx context.Context, number string) 
 	return s.store.GetInvoiceByNumber(ctx, number)
 }
 
+// GetInvoiceByBooking retrieves the invoice generated for a booking.
+func (s *InvoiceService) GetInvoiceByBooking(ctx context.Context, bookingID domain.BookingID) (repository.InvoiceWithJoins, error) {
+	return s.store.GetInvoiceByBookingID(ctx, bookingID)
+}
+
+// ListInvoicesByCustomer returns the most recent invoices for a customer.
+func (s *InvoiceService) ListInvoicesByCustomer(ctx context.Context, customerID domain.CustomerID, limit int) ([]repository.InvoiceWithJoins, error) {
+	if limit <= 0 {
+		limit = 5
+	}
+	return s.store.ListInvoicesByCustomer(ctx, customerID, limit)
+}
+
 // ListInvoices retrieves invoices with search and pagination.
 func (s *InvoiceService) ListInvoices(ctx context.Context, query, status string, limit, offset int) ([]repository.InvoiceWithJoins, int64, error) {
 	invoices, err := s.store.SearchInvoices(ctx, query, status, limit, offset)

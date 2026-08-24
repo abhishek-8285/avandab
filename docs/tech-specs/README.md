@@ -38,6 +38,7 @@ UI → business logic → config → tests → future/GPS**.
 | 15 | `15-testing-ci.md` | Testing strategy + CI hardening | (tests) | no gates |
 | 16 | `16-pnl-ops-experiments-founder.md` | PNL, ops, experiments, founder | 00058 | partial/broken |
 | 17 | `17-gps-telematics-provider-strategy.md` | **GPS provider strategy** | (cross-cutting) | primary doc |
+| 22 | `22-command-center-ux.md` | **Command Center one-screen UX**: ranked alert inbox, money strip, fleet context panel, bookings kanban, driver Paisa tab, kharcha OCR verification, compliance radar, WhatsApp channel | 00092, 00093, 00094 | 0% built |
 | — | `features-explainer.md` | Plain-English feature overview | — | reference |
 | — | `_TEMPLATE.md` | Spec structure (sections 0–12) | — | template |
 
@@ -58,6 +59,9 @@ UI → business logic → config → tests → future/GPS**.
   migration-exists assertion when you ship a new number.
 - **Dual-write fast-path** (Spec 01) is REQUIRED before Spec 04 SSE;
   `company_config` @00042 (Spec 02) must precede specs that seed it (03/07/08/16).
+- **Command Center UX** (Spec 22) layers on Phase 0–2 outputs (unified event
+  bus, alert pipeline, settlements, telemetry SSE). Start only after Phase 0
+  gates pass; ship stepwise (S1→S13) behind feature flags, one flag per step.
 
 ## Execution order (critical path — dependency-driven, not numerical)
 

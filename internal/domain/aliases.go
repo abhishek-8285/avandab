@@ -95,6 +95,7 @@ const (
 	RoleAccountant      = user.RoleAccountant
 	RoleViewer          = user.RoleViewer
 	RoleDriver          = user.RoleDriver
+	RoleCustomer        = user.RoleCustomer
 	UserStatusActive    = user.UserStatusActive
 	UserStatusInactive  = user.UserStatusInactive
 	UserStatusSuspended = user.UserStatusSuspended

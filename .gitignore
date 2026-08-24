@@ -71,3 +71,7 @@ mobile/reports/mutation/
 mobile/.stryker-tmp/
 stryker.log
 .env
+
+# Runtime export artifacts (invoices, fleet CSV dumps)
+INV-*.pdf
+fleet-*.csv

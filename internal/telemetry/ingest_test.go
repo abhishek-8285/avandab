@@ -440,3 +440,101 @@ func TestIngestor_LatestPositionOnlyNewer(t *testing.T) {
 
 func strPtr(s string) *string     { return &s }
 func floatPtr(v float64) *float64 { return &v }
+
+func TestIngestor_SOSEmittedInSameTransaction(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicle(t, db, "v-1")
+	insertTestDevice(t, db, "IMEI-SOS", DeviceStatusActive, strPtr("v-1"))
+
+	bus := events.NewInMemoryBus()
+	ing := newTestIngestor(t, db, bus)
+
+	var sosOnBus sync.Map
+	bus.Subscribe(EventTypeSOS, func(ctx context.Context, e events.Event) error {
+		sosOnBus.Store("event", e)
+		return nil
+	})
+
+	now := time.Now().UTC()
+	result, err := ing.IngestRawFrame(context.Background(), providers.RawFrame{
+		IMEI:          "IMEI-SOS",
+		Latitude:      12.9716,
+		Longitude:     77.5946,
+		Speed:         42,
+		DriverID:      "d-1",
+		TripID:        "",
+		SOS:           true,
+		ProviderMsgID: "mqtt:sos-1",
+		DeviceTime:    now,
+	})
+	require.NoError(t, err)
+	require.True(t, result.Accepted)
+	require.False(t, result.Deduped)
+
+	var eventType string
+	var payload string
+	err = db.QueryRow(`SELECT event_type, payload FROM outbox_events WHERE aggregate_id = 'v-1' AND event_type = 'SOSEvent'`).
+		Scan(&eventType, &payload)
+	require.NoError(t, err, "SOSEvent must be persisted in the outbox")
+	assert.Contains(t, payload, `"vehicle_id":"v-1"`)
+	assert.Contains(t, payload, `"device_imei":"IMEI-SOS"`)
+
+	var rawPayload string
+	err = db.QueryRow(`SELECT payload FROM telemetry_raw_events WHERE imei = 'IMEI-SOS'`).
+		Scan(&rawPayload)
+	require.NoError(t, err)
+	assert.Contains(t, rawPayload, `"sos":true`, "stored raw frame must carry the SOS flag")
+
+	if _, ok := sosOnBus.Load("event"); !ok {
+		t.Fatal("SOSEvent must be fast-path published to the in-memory bus post-commit")
+	}
+}
+
+func TestIngestor_SOSReplayDeduped(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicle(t, db, "v-1")
+	insertTestDevice(t, db, "IMEI-SOS2", DeviceStatusActive, strPtr("v-1"))
+	ing := newTestIngestor(t, db, nil)
+
+	frame := providers.RawFrame{
+		IMEI:          "IMEI-SOS2",
+		Latitude:      1,
+		Longitude:     2,
+		SOS:           true,
+		ProviderMsgID: "mqtt:sos-dup",
+		DeviceTime:    time.Now().UTC(),
+	}
+	res1, err := ing.IngestRawFrame(context.Background(), frame)
+	require.NoError(t, err)
+	require.True(t, res1.Accepted)
+
+	res2, err := ing.IngestRawFrame(context.Background(), frame)
+	require.NoError(t, err)
+	require.True(t, res2.Deduped)
+
+	var n int
+	err = db.QueryRow(`SELECT COUNT(*) FROM outbox_events WHERE event_type = 'SOSEvent'`).Scan(&n)
+	require.NoError(t, err)
+	assert.Equal(t, 1, n, "replayed SOS frame must not emit a second SOSEvent")
+}
+
+func TestIngestor_NoSOSFlagNoSOSEvent(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicle(t, db, "v-1")
+	insertTestDevice(t, db, "IMEI-OK", DeviceStatusActive, strPtr("v-1"))
+	ing := newTestIngestor(t, db, nil)
+
+	res, err := ing.IngestRawFrame(context.Background(), providers.RawFrame{
+		IMEI:       "IMEI-OK",
+		Latitude:   3,
+		Longitude:  4,
+		DeviceTime: time.Now().UTC(),
+	})
+	require.NoError(t, err)
+	require.True(t, res.Accepted)
+
+	var n int
+	err = db.QueryRow(`SELECT COUNT(*) FROM outbox_events WHERE event_type = 'SOSEvent'`).Scan(&n)
+	require.NoError(t, err)
+	assert.Zero(t, n)
+}

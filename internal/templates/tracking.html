@@ -2,6 +2,9 @@
 <!-- Live fleet map — restyled on app design tokens (Spec 04 §1.3, §7) -->
 <div class="relative h-full min-h-[560px] w-full flex bg-surface-container-low overflow-hidden rounded-xl border border-border-subtle antialiased select-none">
 
+    <!-- Mobile drawer scrim -->
+    <div id="drawer-backdrop" class="hidden absolute inset-0 z-[750] bg-black/40 lg:hidden" aria-hidden="true"></div>
+
     <!-- ── Fleet registry drawer ── -->
     <aside id="fleet-drawer" class="relative z-20 h-full w-[300px] shrink-0 flex flex-col bg-surface-container-lowest border-r border-border-subtle">
         <div class="p-3 border-b border-border-subtle space-y-3">
@@ -27,7 +30,7 @@
                 <button type="button" data-sort="fresh" class="fleet-sort-btn py-1.5 rounded-md text-[10px] font-medium uppercase tracking-wide transition-colors cursor-pointer">Fresh</button>
             </div>
 
-            <div id="fleet-summary" class="text-[10px] font-mono text-text-muted truncate">Syncing fleet&hellip;</div>
+            <div id="fleet-summary" aria-live="polite" class="text-[10px] font-mono text-text-muted truncate">Syncing fleet&hellip;</div>
         </div>
 
         <div id="fleet-list" class="flex-1 overflow-y-auto overflow-x-hidden relative" role="listbox" aria-label="Vehicles"><div id="fleet-spacer" class="relative w-full"></div></div>
@@ -43,10 +46,10 @@
             <span class="text-[9px] font-mono text-text-muted/70 uppercase tracking-wide">j/k nav · Enter pick</span>
         </div>
         <div class="p-3 pt-1.5 grid grid-cols-2 gap-x-3 gap-y-1.5 border-t border-border-subtle">
-            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#22c55e"></span><span class="text-[10px] text-secondary">Moving</span></div>
-            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#137fec"></span><span class="text-[10px] text-secondary">Idle</span></div>
-            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#6b7280"></span><span class="text-[10px] text-secondary">No Signal</span></div>
-            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#f59e0b"></span><span class="text-[10px] text-secondary">Maint.</span></div>
+            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#22c55e;box-shadow:0 0 0 3px #22c55e26"></span><span class="text-[10px] text-secondary">Moving</span></div>
+            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#137fec;box-shadow:0 0 0 3px #137fec26"></span><span class="text-[10px] text-secondary">Idle</span></div>
+            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#6b7280;box-shadow:0 0 0 3px #6b728026"></span><span class="text-[10px] text-secondary">No Signal</span></div>
+            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#f59e0b;box-shadow:0 0 0 3px #f59e0b26"></span><span class="text-[10px] text-secondary">Maint.</span></div>
         </div>
     </aside>
 
@@ -186,6 +189,7 @@
                         Vehicle Telemetry
                     </nav>
                     <h2 class="text-lg font-bold text-on-surface tracking-tight truncate m-0 font-mono" id="intel-vehicle-id">—</h2>
+                    <div class="mt-1.5"><span id="intel-status-pill" class="status-pill" style="color:#6b7280;background:#6b72801f;border:1px solid #6b728040">—</span></div>
                 </div>
                 <button type="button" id="close-intel-btn"
                     class="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container-high transition-colors active:scale-95 cursor-pointer">
@@ -213,10 +217,22 @@
                     </div>
                 </div>
 
+                <div id="intel-driver-card" class="flex items-center gap-2.5 p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
+                    <span class="driver-avatar" id="intel-driver-avatar" style="background:#137fec">?</span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-[9px] font-medium uppercase tracking-wide text-text-muted">Driver</span>
+                        <span class="block text-xs font-semibold text-on-surface truncate mt-0.5" id="intel-driver">—</span>
+                    </span>
+                </div>
+
                 <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle space-y-1.5 text-[11px]">
                     <div class="flex items-center justify-between text-secondary">
                         <span>Assigned Trip:</span>
                         <span class="font-mono font-semibold text-primary" id="intel-trip">Unassigned</span>
+                    </div>
+                    <div class="flex items-center justify-between text-secondary">
+                        <span>Remaining:</span>
+                        <span class="font-mono text-on-surface" id="intel-remaining">—</span>
                     </div>
                     <div class="flex items-center justify-between text-secondary">
                         <span>ETA Horizon:</span>
@@ -229,6 +245,20 @@
                     <div class="flex items-center justify-between text-secondary">
                         <span>Last GPS Signal:</span>
                         <span class="font-mono text-on-surface" id="intel-timestamp">—</span>
+                    </div>
+                    <div class="pt-1 border-t border-border-subtle">
+                        <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted mb-0.5">Nearest Address</div>
+                        <div class="font-mono text-on-surface text-[10px] leading-snug break-words min-h-[14px]" id="intel-address">—</div>
+                    </div>
+                </div>
+
+                <div id="intel-progress-wrap" class="hidden">
+                    <div class="flex items-center justify-between text-[9px] font-semibold uppercase tracking-wide text-text-muted mb-1.5">
+                        <span>Trip Progress</span>
+                        <span class="font-mono text-primary" id="intel-progress-pct">—</span>
+                    </div>
+                    <div class="h-1.5 rounded-full bg-surface-container-high overflow-hidden">
+                        <div id="intel-progress-bar" class="h-full rounded-full bg-primary transition-all duration-500 ease-out" style="width:0%"></div>
                     </div>
                 </div>
 
@@ -288,7 +318,34 @@
 #fleet-list::-webkit-scrollbar { width: 6px; }
 #fleet-list::-webkit-scrollbar-track { background: transparent; }
 #fleet-list::-webkit-scrollbar-thumb { background: var(--border-subtle, #94a3b8); border-radius: 9999px; }
-.fleet-row { outline: none; }
+#fleet-list { scroll-behavior: smooth; }
+.fleet-row { outline: none; transition: background-color 0.12s ease; }
+.fleet-row:focus-visible { box-shadow: inset 0 0 0 2px rgba(37, 99, 235, 0.55); }
+.status-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 9999px;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+.driver-avatar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 9999px;
+    flex-shrink: 0;
+    font-size: 11px;
+    font-weight: 800;
+    color: #ffffff;
+    user-select: none;
+}
 @keyframes fleet-row-flash {
     0% { background-color: rgba(245, 158, 11, 0.35); }
     100% { background-color: transparent; }
@@ -296,10 +353,37 @@
 .fleet-row-flash { animation: fleet-row-flash 2s ease-out 1; }
 .fleet-row-cursor { box-shadow: inset 0 0 0 1px rgba(19, 127, 236, 0.55); }
 @keyframes panel-pop {
-    from { transform: translateY(-50%) scale(0.97); opacity: 0; }
-    to { transform: translateY(-50%) scale(1); opacity: 1; }
+    from { transform: scale(0.97); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
 }
 .panel-pop { animation: panel-pop 0.16s ease-out; }
+
+/* ── Mobile adaptations (below lg) ──
+   Fleet drawer becomes an off-canvas slide-over; the vehicle panel docks
+   to the bottom as a sheet. ID selectors override the Tailwind utilities. */
+@media (max-width: 1023px) {
+    #fleet-drawer {
+        position: absolute;
+        inset: 0 auto 0 0;
+        z-index: 800;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+        transform: translateX(-100%);
+        transition: transform 0.22s ease;
+    }
+    #fleet-drawer.drawer-mobile-open { transform: translateX(0); }
+
+    #intel-detail-panel {
+        top: auto;
+        right: 12px;
+        bottom: 12px;
+        left: 12px;
+        width: auto;
+        max-width: none;
+        transform: none;
+        max-height: 60%;
+        overflow-y: auto;
+    }
+}
 </style>
 
 <script>
@@ -553,6 +637,11 @@
         var intelEta = document.getElementById('intel-eta');
         var intelCoords = document.getElementById('intel-coords');
         var intelTimestamp = document.getElementById('intel-timestamp');
+        var intelDriver = document.getElementById('intel-driver');
+        var intelDriverAvatar = document.getElementById('intel-driver-avatar');
+        var intelStatusPill = document.getElementById('intel-status-pill');
+        var intelRemaining = document.getElementById('intel-remaining');
+        var intelAddress = document.getElementById('intel-address');
         var closeIntelBtn = document.getElementById('close-intel-btn');
         var intelFocusBtn = document.getElementById('intel-focus-btn');
 
@@ -562,6 +651,7 @@
         var searchHintEl = document.getElementById('search-hint');
 
         var fleetDrawerEl = document.getElementById('fleet-drawer');
+        var drawerBackdropEl = document.getElementById('drawer-backdrop');
         var fleetListEl = document.getElementById('fleet-list');
         var fleetSpacerEl = document.getElementById('fleet-spacer');
         var fleetSummaryEl = document.getElementById('fleet-summary');
@@ -640,9 +730,59 @@
                         intelTrip.textContent = 'Unassigned';
                     }
                 }
-                if (intelEta) intelEta.textContent = (v.eta_min && v.eta_max) ? fmtTime(v.eta_min) + ' – ' + fmtTime(v.eta_max) : 'Active Transit';
+                if (intelEta) {
+                    if (v.eta_min && v.eta_max) {
+                        var mTag = { hybrid: 'HYB', telemetry: 'GPS', scheduled: 'SCH', telemetry_time_prop: 'TPROP' }[v.eta_method] || '';
+                        intelEta.innerHTML = esc(fmtTime(v.eta_min) + ' – ' + fmtTime(v.eta_max)) +
+                            (mTag ? ' <span class="status-pill" style="color:#137fec;background:#137fec14" title="ETA source: ' + esc(v.eta_method) + '">' + mTag + '</span>' : '');
+                    } else {
+                        intelEta.textContent = 'Active Transit';
+                    }
+                }
                 if (intelCoords) intelCoords.textContent = hasPos(v) ? Number(v.lat).toFixed(4) + ', ' + Number(v.lng).toFixed(4) : '—';
                 if (intelTimestamp) intelTimestamp.textContent = fmtTime(v.ts || v.timestamp);
+                if (intelDriver) {
+                    if (v.driver_name) {
+                        if (intelDriverAvatar) intelDriverAvatar.textContent = v.driver_name.trim().charAt(0).toUpperCase() || '?';
+                        if (v.driver_phone) {
+                            intelDriver.innerHTML = '<a href="tel:' + esc(v.driver_phone) + '" class="hover:underline text-primary" title="Call driver">' + esc(v.driver_name) + '</a>';
+                        } else {
+                            intelDriver.textContent = v.driver_name;
+                        }
+                    } else {
+                        if (intelDriverAvatar) intelDriverAvatar.textContent = '?';
+                        intelDriver.textContent = 'Unassigned';
+                    }
+                }
+                if (intelStatusPill) {
+                    var pc = iconColors[v.status] || '#6b7280';
+                    intelStatusPill.textContent = statusLabels[v.status] || v.status || '—';
+                    intelStatusPill.style.color = pc;
+                    intelStatusPill.style.background = pc + '1f';
+                    intelStatusPill.style.borderColor = pc + '55';
+                }
+                if (intelRemaining) {
+                    intelRemaining.textContent = (v.remaining_km != null && v.remaining_km >= 0 && v.trip_id)
+                        ? Number(v.remaining_km).toFixed(1) + ' km' : '—';
+                }
+                scheduleAddressLookup(v);
+
+                var progWrap = document.getElementById('intel-progress-wrap');
+                if (progWrap) {
+                    var prog = null;
+                    if (v.trip_id && v.remaining_km != null && v.route_km && v.route_km > 0 && v.remaining_km >= 0 && v.remaining_km <= v.route_km) {
+                        prog = Math.max(0, Math.min(100, (1 - (v.remaining_km / v.route_km)) * 100));
+                    }
+                    if (prog == null) {
+                        progWrap.classList.add('hidden');
+                    } else {
+                        progWrap.classList.remove('hidden');
+                        var barEl = document.getElementById('intel-progress-bar');
+                        var pctEl = document.getElementById('intel-progress-pct');
+                        if (barEl) barEl.style.width = prog.toFixed(1) + '%';
+                        if (pctEl) pctEl.textContent = Math.round(prog) + '% · ' + Number(v.remaining_km).toFixed(0) + ' km left';
+                    }
+                }
             }
 
             if (intelFocusBtn) {
@@ -658,7 +798,41 @@
             }
 
             highlightSelectedRow();
+            // On mobile the drawer covers the map — stow it after a pick.
+            if (isMobileDrawer()) { setDrawerVisible(false); }
             writeHash();
+        }
+
+        // ── Reverse-geocoded address for the selected vehicle ──
+        // Debounced + abortable; identical ~11 m buckets are served once.
+        var addrAbort = null;
+        var addrTimer = null;
+        var addrKey = '';
+        function scheduleAddressLookup(v) {
+            if (!intelAddress) return;
+            if (!hasPos(v)) { intelAddress.textContent = '—'; return; }
+            var lat = Number(v.lat), lng = Number(v.lng);
+            var bucket = lat.toFixed(4) + ',' + lng.toFixed(4);
+            if (bucket === addrKey && intelAddress.textContent && intelAddress.textContent !== '…') return;
+            if (addrTimer) { clearTimeout(addrTimer); }
+            addrTimer = setTimeout(function () {
+                addrTimer = null;
+                if (addrAbort) { addrAbort.abort(); }
+                addrAbort = new AbortController();
+                intelAddress.textContent = 'Locating…';
+                fetch('/api/v1/telemetry/reverse_geocode?lat=' + lat + '&lng=' + lng,
+                    { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', signal: addrAbort.signal })
+                    .then(function (resp) { if (!resp.ok) { throw new Error('HTTP ' + resp.status); } return resp.json(); })
+                    .then(function (data) {
+                        if (state.selectedId !== (v.vehicle_id)) { return; }
+                        addrKey = bucket;
+                        intelAddress.textContent = (data && data.display_name) ? data.display_name : '—';
+                    })
+                    .catch(function () {
+                        if (state.selectedId !== (v.vehicle_id)) { return; }
+                        intelAddress.textContent = '—';
+                    });
+            }, 400);
         }
 
         function updateMetrics(list) {
@@ -693,6 +867,17 @@
             return Math.floor((((h % 360) + 360) % 360) / 15);
         }
 
+        // Compact HTML tooltip for markers — status-tinted, driver-aware.
+        function tooltipHTML(v) {
+            var c = iconColors[v.status] || '#6b7280';
+            var html = '<div style="min-width:110px;font-weight:800;text-transform:uppercase;letter-spacing:.03em">' + esc(vehicleLabel(v)) + '</div>' +
+                '<div style="color:' + c + ';font-weight:700">' + esc(statusLabels[v.status] || v.status || '') + ' · ' + (v.speed || 0).toFixed(0) + ' km/h</div>';
+            if (v.driver_name) {
+                html += '<div style="opacity:.75">' + esc(v.driver_name) + '</div>';
+            }
+            return html;
+        }
+
         function updateVehicle(v) {
             if (!v || !v.vehicle_id || !hasPos(v)) { return; }
             if (!v.status) {
@@ -718,10 +903,15 @@
                 if (prev.lat !== v.lat || prev.lng !== v.lng) {
                     existing.setLatLng([v.lat, v.lng]);
                 }
+                // Tooltip refresh only when its content would visibly change.
+                if (prev.status !== v.status || prev.driver_name !== v.driver_name ||
+                    Math.round(prev.speed || 0) !== Math.round(v.speed || 0)) {
+                    existing.setTooltipContent(tooltipHTML(v));
+                }
             } else {
                 var m = L.marker([v.lat, v.lng], { icon: markerIcon(v.status, v.heading) });
                 m._liveData = v;
-                m.bindTooltip(vehicleLabel(v), { direction: 'top', offset: [0, -12] });
+                m.bindTooltip(tooltipHTML(v), { direction: 'top', offset: [0, -12] });
                 m.on('click', function () {
                     selectVehicle(this._liveData);
                 });
@@ -868,7 +1058,7 @@
             };
         }
 
-        function rowHTML(v) {
+        function rowHTML(v, slot) {
             var color = iconColors[v.status] || '#6b7280';
             var sel = state.selectedId === v.vehicle_id;
             var cursor = state.cursor >= 0 && fleetRows[state.cursor] === v;
@@ -877,24 +1067,25 @@
             var when = agoLabel(v.ts || v.timestamp);
             var speeding = (v.speed || 0) > SPEED_LIMIT_KMH;
             var flashing = flashUntil[v.vehicle_id] && flashUntil[v.vehicle_id] > Date.now();
-            var classes = 'fleet-row absolute left-0 right-0 text-left px-4 py-2.5 flex items-center gap-3 border-b border-border-subtle border-l-2 cursor-pointer' +
+            var classes = 'fleet-row absolute left-0 right-0 text-left pl-4 pr-3.5 py-2.5 flex items-center gap-3 border-b border-border-subtle cursor-pointer' +
                 (sel ? ' bg-primary/10' : ' hover:bg-surface-container-high') +
                 (flashing ? ' fleet-row-flash' : '') +
                 (cursor && !sel ? ' fleet-row-cursor' : '');
             return '<button type="button" role="option" aria-selected="' + (sel ? 'true' : 'false') + '" data-vid="' + esc(v.vehicle_id) + '"' +
                 ' class="' + classes + '"' +
-                ' style="border-left-color:' + (sel ? '#137fec' : 'transparent') + ';top:0;height:' + fleetRowH + 'px">' +
+                ' style="top:' + ((slot || 0) * fleetRowH) + 'px;height:' + fleetRowH + 'px">' +
+                '<span class="absolute left-0 top-0 bottom-0 w-[3px]" style="background:' + color + ';opacity:' + (sel ? '1' : '0.5') + '" aria-hidden="true"></span>' +
                 '<span class="relative flex items-center justify-center shrink-0">' +
-                  '<span class="h-2 w-2 rounded-full" style="background:' + color + '"></span>' +
+                  '<span class="h-2 w-2 rounded-full" style="background:' + color + ';box-shadow:0 0 0 3px ' + color + '26"></span>' +
                   (v.status === 'running' ? '<span class="absolute h-3.5 w-3.5 rounded-full animate-ping opacity-25" style="background:' + color + '"></span>' : '') +
                 '</span>' +
                 '<span class="flex-1 min-w-0">' +
-                  '<span class="block text-xs font-bold text-on-surface truncate uppercase">' + num + '</span>' +
-                  '<span class="block text-[10px] font-mono text-text-muted truncate">' + sub + ' · ' + esc(when) + '</span>' +
+                  '<span class="block text-xs font-bold text-on-surface truncate uppercase tracking-wide">' + num + '</span>' +
+                  '<span class="block text-[10px] font-mono text-text-muted truncate mt-0.5">' + sub + ' · <span class="opacity-70">' + esc(when) + '</span></span>' +
                 '</span>' +
-                '<span class="text-right shrink-0">' +
-                  '<span class="block text-[11px] font-mono font-bold" style="color:' + (speeding ? '#ef4444' : color) + '">' + (speeding ? '⚡' : '') + (v.speed || 0).toFixed(0) + '</span>' +
-                  '<span class="block text-[9px] font-medium uppercase tracking-wide opacity-80" style="color:' + color + '">' + esc(statusLabels[v.status] || v.status || '?') + '</span>' +
+                '<span class="flex flex-col items-end gap-1 shrink-0">' +
+                  '<span class="inline-flex items-center px-1.5 py-0.5 rounded-md font-mono text-[11px] font-bold leading-none transition-transform" style="color:' + (speeding ? '#ef4444' : color) + ';background:' + (speeding ? '#ef44441a' : color + '14') + '">' + (speeding ? '⚡' : '') + (v.speed || 0).toFixed(0) + '</span>' +
+                  '<span class="status-pill" style="color:' + color + ';background:' + color + '14">' + esc(statusLabels[v.status] || v.status || '?') + '</span>' +
                 '</span>' +
               '</button>';
         }
@@ -962,12 +1153,12 @@
 
         // Invisible single-row template used only to measure row height.
         function rowHTMLProbe() {
-            return '<button type="button" tabindex="-1" class="fleet-row w-full text-left px-4 py-2.5 flex items-center gap-3 border-b border-border-subtle">' +
+            return '<button type="button" tabindex="-1" class="fleet-row w-full text-left pl-4 pr-3.5 py-2.5 flex items-center gap-3 border-b border-border-subtle">' +
                 '<span class="relative flex items-center justify-center shrink-0"><span class="h-2 w-2 rounded-full" style="background:#334155"></span></span>' +
-                '<span class="flex-1 min-w-0"><span class="block text-xs font-bold text-on-surface uppercase">XX-00-XX-0000</span>' +
-                '<span class="block text-[10px] font-mono">trip-probe · 99m ago</span></span>' +
-                '<span class="text-right shrink-0"><span class="block text-[11px] font-mono font-bold">000</span>' +
-                '<span class="block text-[9px] font-medium uppercase tracking-wide">Moving</span></span></button>';
+                '<span class="flex-1 min-w-0"><span class="block text-xs font-bold text-on-surface uppercase tracking-wide">XX-00-XX-0000</span>' +
+                '<span class="block text-[10px] font-mono mt-0.5">trip-probe · 99m ago</span></span>' +
+                '<span class="flex flex-col items-end gap-1 shrink-0"><span class="inline-flex items-center px-1.5 py-0.5 rounded-md font-mono text-[11px] font-bold leading-none">000</span>' +
+                '<span class="status-pill" style="color:#334155;background:#33415514">Moving</span></span></button>';
         }
 
         function paintWindow() {
@@ -981,7 +1172,7 @@
 
             var html = '';
             for (var i = start; i < end; i++) {
-                html += rowHTML(fleetRows[i]);
+                html += rowHTML(fleetRows[i], i - start);
             }
             var win = fleetSpacerEl.firstElementChild;
             if (!win || win.id !== 'fleet-window') {
@@ -1079,9 +1270,21 @@
         });
         paintSortBtns();
 
-        // Drawer collapse / expand
+        // Drawer collapse / expand. On <lg the drawer is an off-canvas
+        // slide-over (see media query in <style>); on ≥lg it toggles inline.
+        var drawerMq = window.matchMedia('(max-width: 1023px)');
+        function isMobileDrawer() { return drawerMq.matches; }
         function setDrawerVisible(visible) {
-            if (fleetDrawerEl) fleetDrawerEl.classList.toggle('hidden', !visible);
+            if (isMobileDrawer()) {
+                if (fleetDrawerEl) {
+                    fleetDrawerEl.classList.remove('hidden');
+                    fleetDrawerEl.classList.toggle('drawer-mobile-open', visible);
+                }
+                if (drawerBackdropEl) drawerBackdropEl.classList.toggle('hidden', !visible);
+            } else {
+                if (fleetDrawerEl) fleetDrawerEl.classList.toggle('hidden', !visible);
+                if (drawerBackdropEl) drawerBackdropEl.classList.add('hidden');
+            }
             if (drawerExpandRail) {
                 drawerExpandRail.classList.toggle('hidden', visible);
                 drawerExpandRail.classList.toggle('flex', !visible);
@@ -1089,8 +1292,18 @@
             setTimeout(forceMapResize, 60);
             setTimeout(forceMapResize, 350);
         }
+        function applyDrawerBreakpoint() {
+            if (!fleetDrawerEl) return;
+            // Reset both modes, then land on the default for this viewport:
+            // slide-over closed on mobile, inline open on desktop.
+            fleetDrawerEl.classList.add('hidden');
+            fleetDrawerEl.classList.remove('drawer-mobile-open');
+            setDrawerVisible(!isMobileDrawer());
+        }
         if (drawerCollapseBtn) drawerCollapseBtn.addEventListener('click', function () { setDrawerVisible(false); });
         if (drawerExpandRail) drawerExpandRail.addEventListener('click', function () { setDrawerVisible(true); });
+        if (drawerBackdropEl) drawerBackdropEl.addEventListener('click', function () { setDrawerVisible(false); });
+        if (drawerMq.addEventListener) drawerMq.addEventListener('change', applyDrawerBreakpoint);
 
         // Fit All Fleet CTA — respects current filters
         function fitAllFleet() {
@@ -1354,19 +1567,21 @@
         }
 
         var trailLoading = false;
-        function loadTrail() {
-            if (!state.selectedId || !state.selectedId.length) return;
-            if (trailVehicleId === state.selectedId && trailLayer.getLayers().length > 0) { clearTrail(); writeHash(); return; }
-            if (trailLoading) return;
+        // fetchTrail pulls + paints breadcrumbs for one vehicle. Skips
+        // painting if the user switched selection mid-flight.
+        function fetchTrail(vehicleId, opts) {
+            if (!vehicleId || !vehicleId.length || trailLoading) return;
+            var fit = !!(opts && opts.fit);
             trailLoading = true;
-            fetch('/api/v1/telemetry/history?vehicle_id=' + encodeURIComponent(state.selectedId) + '&minutes=90', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+            fetch('/api/v1/telemetry/history?vehicle_id=' + encodeURIComponent(vehicleId) + '&minutes=90', { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
                 .then(function (resp) {
                     if (!resp.ok) { throw new Error('HTTP ' + resp.status); }
                     return resp.json();
                 })
                 .then(function (points) {
+                    if (vehicleId !== state.selectedId) { return; }
                     trailLayer.clearLayers();
-                    trailVehicleId = state.selectedId;
+                    trailVehicleId = vehicleId;
                     if (!points || points.length === 0) {
                         if (intelTrailBtn) intelTrailBtn.title = 'No breadcrumb data in the last 90 minutes';
                         return;
@@ -1378,7 +1593,9 @@
                     L.circleMarker(latlngs[latlngs.length - 1], { radius: 5, color: '#f59e0b', fillColor: '#f59e0b', fillOpacity: 0.9, weight: 2 })
                         .bindTooltip(points.length + ' breadcrumbs', { direction: 'top' }).addTo(trailLayer);
                     if (!map.hasLayer(trailLayer)) { trailLayer.addTo(map); }
-                    map.fitBounds(L.polyline(latlngs).getBounds(), { padding: [50, 50], maxZoom: 16 });
+                    // Only manual toggles reframe the camera — auto-refreshes
+                    // must not fight follow-mode panning.
+                    if (fit) { map.fitBounds(L.polyline(latlngs).getBounds(), { padding: [50, 50], maxZoom: 16 }); }
                     if (intelTrailBtn) {
                         intelTrailBtn.className = TRAIL_BTN_BASE + 'bg-cyan-500/15 hover:bg-cyan-500/25 border-cyan-500/40 text-cyan-600';
                         intelTrailBtn.title = points.length + ' breadcrumbs (last 90 min)';
@@ -1390,13 +1607,27 @@
                 })
                 .finally(function () { trailLoading = false; });
         }
+        function loadTrail() {
+            if (!state.selectedId || !state.selectedId.length) return;
+            // Toggle off when the shown trail belongs to this vehicle.
+            if (trailVehicleId === state.selectedId && trailLayer.getLayers().length > 0) { clearTrail(); writeHash(); return; }
+            fetchTrail(state.selectedId, { fit: true });
+        }
         if (intelTrailBtn) intelTrailBtn.addEventListener('click', loadTrail);
+
+        // Follow mode keeps breadcrumbs honest: re-pull the trail while the
+        // camera stays locked on a vehicle with a visible trail.
+        setInterval(function () {
+            if (state.follow && state.selectedId && trailVehicleId === state.selectedId) {
+                fetchTrail(state.selectedId);
+            }
+        }, 45000);
 
         // ── CSV export of the current filtered view ──
         function exportCSV() {
             var rows = fleetRows.slice();
             if (rows.length === 0) { return; }
-            var header = ['vehicle_number', 'vehicle_id', 'trip_id', 'status', 'speed_kmh', 'fuel_pct', 'odometer_km', 'last_update'];
+            var header = ['vehicle_number', 'vehicle_id', 'trip_id', 'driver', 'status', 'speed_kmh', 'fuel_pct', 'odometer_km', 'remaining_km', 'last_update'];
             function cell(v) {
                 var s = (v == null ? '' : String(v));
                 return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
@@ -1407,10 +1638,12 @@
                     cell(v.vehicle_number || v.vehicle_id),
                     cell(v.vehicle_id),
                     cell(v.trip_id || ''),
+                    cell(v.driver_name || ''),
                     cell(statusLabels[v.status] || v.status || ''),
                     cell((v.speed || 0).toFixed(1)),
                     cell(v.fuel_level != null ? Number(v.fuel_level).toFixed(0) : ''),
                     cell(v.odometer != null ? Number(v.odometer).toFixed(1) : ''),
+                    cell(v.remaining_km != null ? Number(v.remaining_km).toFixed(1) : ''),
                     cell(v.ts || v.timestamp || '')
                 ].join(','));
             });
@@ -1526,6 +1759,7 @@
         }
         window.addEventListener('resize', function () { map.invalidateSize(); });
 
+        applyDrawerBreakpoint();
         parseHash();
         loadGeofences();
         refresh();

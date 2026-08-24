@@ -73,6 +73,9 @@ func (c *stubClient) ValidateGSTIN(ctx context.Context, gstin string) (GSTINDeta
 	if !c.cfg.Enabled {
 		return GSTINDetails{}, fmt.Errorf("gstn integration disabled")
 	}
+	if !c.cfg.UseMock {
+		return GSTINDetails{}, fmt.Errorf("gstn: GSP credentials not configured; set INTEGRATION_GSTN_API_KEY or INTEGRATION_GSTN_USE_MOCK=true for demo mode")
+	}
 	return GSTINDetails{
 		GSTIN:              gstin,
 		LegalName:          "Stub Legal Entity Pvt Ltd",
@@ -89,6 +92,9 @@ func (c *stubClient) FetchGSTR1Summary(ctx context.Context, gstin, period string
 	slog.Default().Info("[gstn] FetchGSTR1Summary called", "endpoint", c.cfg.Endpoint, "enabled", c.cfg.Enabled, "gstin", gstin, "period", period)
 	if !c.cfg.Enabled {
 		return GSTR1Summary{}, fmt.Errorf("gstn integration disabled")
+	}
+	if !c.cfg.UseMock {
+		return GSTR1Summary{}, fmt.Errorf("gstn: GSP credentials not configured; set INTEGRATION_GSTN_API_KEY or INTEGRATION_GSTN_USE_MOCK=true for demo mode")
 	}
 	return GSTR1Summary{
 		GSTIN:             gstin,
@@ -107,6 +113,9 @@ func (c *stubClient) FetchGSTR3BSummary(ctx context.Context, gstin, period strin
 	slog.Default().Info("[gstn] FetchGSTR3BSummary called", "endpoint", c.cfg.Endpoint, "enabled", c.cfg.Enabled, "gstin", gstin, "period", period)
 	if !c.cfg.Enabled {
 		return GSTR3BSummary{}, fmt.Errorf("gstn integration disabled")
+	}
+	if !c.cfg.UseMock {
+		return GSTR3BSummary{}, fmt.Errorf("gstn: GSP credentials not configured; set INTEGRATION_GSTN_API_KEY or INTEGRATION_GSTN_USE_MOCK=true for demo mode")
 	}
 	return GSTR3BSummary{
 		GSTIN:        gstin,
