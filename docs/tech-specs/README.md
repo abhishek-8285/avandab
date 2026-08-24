@@ -38,7 +38,8 @@ UI → business logic → config → tests → future/GPS**.
 | 15 | `15-testing-ci.md` | Testing strategy + CI hardening | (tests) | no gates |
 | 16 | `16-pnl-ops-experiments-founder.md` | PNL, ops, experiments, founder | 00058 | partial/broken |
 | 17 | `17-gps-telematics-provider-strategy.md` | **GPS provider strategy** | (cross-cutting) | primary doc |
-| 22 | `22-command-center-ux.md` | **Command Center one-screen UX**: ranked alert inbox, money strip, fleet context panel, bookings kanban, driver Paisa tab, kharcha OCR verification, compliance radar, WhatsApp channel | 00092, 00093, 00094 | 0% built |
+| 22 | `22-command-center-ux.md` | **Command Center one-screen UX**: ranked alert inbox, money strip, fleet context panel, bookings kanban, driver Paisa tab, kharcha OCR verification, compliance radar, WhatsApp channel | 00092–00096 | S0–S12 built; S13 flag-flip pending pilot |
+| 23 | `23-scale-tiering.md` | **Scale tiering handoff**: telemetry retention, read replica, ingest sharding, Postgres cutover — trigger-gated, draft until R0 measurements | none reserved (00100+ on activation) | not started |
 | — | `features-explainer.md` | Plain-English feature overview | — | reference |
 | — | `_TEMPLATE.md` | Spec structure (sections 0–12) | — | template |
 
