@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +19,19 @@ import (
 	_ "modernc.org/sqlite"
 
 	"transport-app/internal/auth"
+	"transport-app/internal/shared"
 )
+
+// withUserAndTenant sets both the session user and the tenant context.
+func withUserAndTenant(userID, tenant string, authSrv auth.AuthorizationService) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := context.WithValue(r.Context(), auth.ContextUser, &auth.SessionData{UserID: userID})
+			ctx = shared.ContextWithTenantID(ctx, shared.TenantID(tenant))
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+}
 
 func newSearchTestApp(t *testing.T) *App {
 	t.Helper()
@@ -133,4 +147,57 @@ func TestSearchPage_PermissionGated(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "No matches found")
 	assert.NotContains(t, w.Body.String(), "MH01AB1234")
 	_ = auth.SessionData{}
+}
+
+// TestSearchAPI_TenantScopedAndPermFiltered — Spec 22 §7 S6: "mh12"-style
+// queries return tenant-scoped hits across entity types and sections are
+// dropped when the caller lacks the read permission.
+func TestSearchAPI_TenantScopedAndPermFiltered(t *testing.T) {
+	app := newSearchTestApp(t)
+
+	// tenant-a vehicle MH12AB9999; tenant-b vehicle MH12ZZ7777.
+	_, err := app.DB.Exec(`INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, capacity, status, insurance_expiry, fitness_expiry, permit_expiry, tenant_id)
+	    VALUES ('v-a','MH12AB9999','Truck A','truck',1,'available','2030-01-01','2030-01-01','2030-01-01','tenant-a')`)
+	require.NoError(t, err)
+	_, err = app.DB.Exec(`INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, capacity, status, insurance_expiry, fitness_expiry, permit_expiry, tenant_id)
+	    VALUES ('v-b','MH12ZZ7777','Truck B','truck',1,'available','2030-01-01','2030-01-01','2030-01-01','tenant-b')`)
+	require.NoError(t, err)
+
+	denyVehicles := &denyResourceAuthSvc{resource: "vehicles", allowAllAuthSvc: allowAllAuthSvc{}}
+	apiAppDenied := &App{DB: app.DB, AuthSrv: denyVehicles}
+
+	r := chi.NewRouter()
+	r.With(withUserAndTenant("u1", "tenant-a", nil)).Get("/api/search", app.SearchAPI)
+	r.With(withUserAndTenant("u1", "tenant-a", nil)).Get("/nv/api/search", apiAppDenied.SearchAPI)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/search?q=MH12", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var resp struct {
+		Vehicles []struct {
+			ID string `json:"id"`
+		} `json:"vehicles"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Len(t, resp.Vehicles, 1, "only tenant-a's vehicle may appear")
+	assert.Equal(t, "v-a", resp.Vehicles[0].ID)
+
+	// Permission filter: vehicles section vanishes for a caller without
+	// vehicles:read.
+	w2 := httptest.NewRecorder()
+	req2 := httptest.NewRequest(http.MethodGet, "/nv/api/search?q=MH12", nil)
+	r.ServeHTTP(w2, req2)
+	require.Equal(t, http.StatusOK, w2.Code)
+	assert.NotContains(t, w2.Body.String(), `"v-a"`)
+}
+
+type denyResourceAuthSvc struct {
+	allowAllAuthSvc
+	resource string
+}
+
+func (d *denyResourceAuthSvc) Can(userID string, resource, action string) bool {
+	return resource != d.resource
 }

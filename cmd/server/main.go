@@ -792,6 +792,9 @@ func main() {
 		// Spec 22 S4 — one-tap EWB extend from the console context panel.
 		r.With(middleware.RequirePermission(authSvc, "ewaybill", "write")).
 			Post("/api/ewaybill/{id}/extend", consoleHandlers.ExtendEwayBill)
+		// Spec 22 S6 — universal search API (result-scoped by permission,
+		// tenant-scoped from context).
+		r.Get("/api/search", app.SearchAPI)
 	})
 
 	// Deprecated v2 alias routes (rewrite to v1) plus /api/v2/health.

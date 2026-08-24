@@ -340,7 +340,83 @@
     }
   });
 
+  /* S6 — universal search palette (⌘K / Ctrl+K), perm-filtered API. */
+  function initPalette() {
+    var overlay = el("search-palette");
+    var input = el("palette-input");
+    var results = el("palette-results");
+    if (!overlay || !input || !results) return;
+
+    var debounce = null;
+
+    function open() {
+      overlay.classList.remove("hidden");
+      setTimeout(function () { input.focus(); }, 0);
+    }
+    function close() {
+      overlay.classList.add("hidden");
+      input.value = "";
+      results.innerHTML = "Type to search across the fleet.";
+    }
+
+    var trigger = el("palette-trigger");
+    if (trigger) trigger.addEventListener("click", open);
+    var backdrop = el("palette-backdrop");
+    if (backdrop) backdrop.addEventListener("click", close);
+
+    document.addEventListener("keydown", function (ev) {
+      if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === "k") {
+        ev.preventDefault();
+        overlay.classList.contains("hidden") ? open() : close();
+      }
+      if (ev.key === "Escape" && !overlay.classList.contains("hidden")) {
+        close();
+      }
+    });
+
+    function row(group, r) {
+      var a = document.createElement("a");
+      a.href = r.href;
+      a.className = "block px-3 py-2 rounded-md hover:bg-surface-container transition-colors";
+      a.innerHTML =
+        '<span class="text-[10px] uppercase tracking-wide text-text-muted mr-2">' + group + "</span>" +
+        '<span class="font-medium text-on-surface">' + r.title + "</span>" +
+        (r.sub ? ' <span class="text-xs text-text-muted">' + r.sub + "</span>" : "");
+      return a;
+    }
+
+    function render(data) {
+      results.innerHTML = "";
+      var groups = [
+        ["Vehicles", data.vehicles], ["Drivers", data.drivers],
+        ["Bookings", data.bookings], ["Invoices", data.invoices],
+        ["E-Way Bills", data.eway_bills],
+      ];
+      var any = false;
+      groups.forEach(function (g) {
+        (g[1] || []).forEach(function (row_) {
+          any = true;
+          results.appendChild(row(g[0], row_));
+        });
+      });
+      if (!any) results.innerHTML = '<p class="px-3 py-2">No matches found.</p>';
+    }
+
+    input.addEventListener("input", function () {
+      clearTimeout(debounce);
+      var q = input.value.trim();
+      if (!q) { results.innerHTML = "Type to search across the fleet."; return; }
+      debounce = setTimeout(function () {
+        fetch("/api/search?q=" + encodeURIComponent(q), { credentials: "same-origin" })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (data) { if (data) render(data); })
+          .catch(function () { results.innerHTML = '<p class="px-3 py-2 text-error">Search failed.</p>'; });
+      }, 200);
+    });
+  }
+
   function init() {
+    initPalette();
     if (!el("fleet-cards")) return; // not on console page
     initMap();
     loadFleet();
