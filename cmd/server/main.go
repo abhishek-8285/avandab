@@ -292,6 +292,12 @@ func main() {
 	// Initialize handlers app
 	resetTokens := auth.NewResetTokenStore(0)
 	app := handlers.NewApp(services, cfg, authStore, database, authSvc, resetTokens)
+	// Spec 22 S9 — compliance radar (docs 30/7/1d + EWB 12/4h) fed by the
+	// existing pipeline; sweep is leader-elected hourly below.
+	complianceRadar := service.NewComplianceRadarService(database, alertEngine, logger)
+	if app.Compliance != nil {
+		app.Compliance.AttachRadar(complianceRadar)
+	}
 	// Per-org feature gates (registry lives on App; shared by routes + workers).
 	featureGate := func(key string) func(http.Handler) http.Handler {
 		return features.Gate(app.Features, key)
@@ -1385,6 +1391,26 @@ func main() {
 			fuelEngine.Run(ctx)
 		})
 	}
+
+	// Compliance radar sweep (Spec 22 §5.4): first pass immediately, then
+	// hourly (cheap queries; pipeline dedup absorbs repeats).
+	runLeadered(service.SweepName(), func(ctx context.Context) {
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
+		if err := complianceRadar.Sweep(ctx); err != nil {
+			logger.Warn("compliance radar initial sweep failed", "error", err)
+		}
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				if err := complianceRadar.Sweep(ctx); err != nil {
+					logger.Warn("compliance radar sweep failed", "error", err)
+				}
+			}
+		}
+	})
 
 	if safetyEngine != nil {
 		if services.Scorecard != nil {

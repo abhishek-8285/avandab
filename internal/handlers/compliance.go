@@ -10,15 +10,19 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"transport-app/internal/apperr"
 	"transport-app/internal/domain"
+	"transport-app/internal/httpx"
 	"transport-app/internal/middleware"
 	"transport-app/internal/service"
+	"transport-app/internal/shared"
 )
 
 // ComplianceHandlers manages compliance checks, status inspection, document exemptions, and compliance dashboard (Spec 05 §5, Spec 08 §2.3).
 type ComplianceHandlers struct {
 	*App
 	compliance *service.ComplianceService
+	radar      *service.ComplianceRadarService
 }
 
 // NewComplianceHandlers creates a new ComplianceHandlers instance.
@@ -43,6 +47,29 @@ func (h *ComplianceHandlers) Mount(r chi.Router) {
 	r.With(middleware.RequirePermission(h.AuthSrv, "compliance", "read")).Get("/compliance/dashboard", h.DashboardPage)
 	r.With(middleware.RequirePermission(h.AuthSrv, "compliance", "read")).Get("/api/compliance/dashboard", h.DashboardJSON)
 	r.With(middleware.RequirePermission(h.AuthSrv, "compliance", "read")).Get("/api/v1/compliance/dashboard", h.DashboardJSON)
+	// Spec 22 §2.8 — compliance radar (attached post-construction; nil
+	// service degrades to 503 so the rest of compliance keeps working).
+	r.With(middleware.RequirePermission(h.AuthSrv, "compliance", "read")).Get("/api/compliance/radar", h.Radar)
+}
+
+// AttachRadar wires the radar service (built in main.go where the alert
+// pipeline engine lives).
+func (h *ComplianceHandlers) AttachRadar(radar *service.ComplianceRadarService) {
+	h.radar = radar
+}
+
+// Radar handles GET /api/compliance/radar (Spec 22 §2.8).
+func (h *ComplianceHandlers) Radar(w http.ResponseWriter, r *http.Request) {
+	if h.radar == nil {
+		httpx.Error(w, r, apperr.New(apperr.CodeNotImplemented))
+		return
+	}
+	out, err := h.radar.Radar(r.Context(), string(shared.TenantIDFromContext(r.Context())))
+	if err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, out)
 }
 
 // BlockedEntity represents a blocked driver or vehicle.
