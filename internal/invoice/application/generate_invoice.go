@@ -6,6 +6,7 @@ import (
 	"errors"
 	"math"
 	"strings"
+	"sync"
 
 	bookingdomain "transport-app/internal/booking/domain"
 	bookingaggregate "transport-app/internal/booking/domain/aggregate"
@@ -20,6 +21,57 @@ const moneyEpsilon = 0.01
 
 type PricingResolver interface {
 	GetCompanySettings(ctx context.Context) (companydomain.CompanySettings, error)
+}
+
+// Per-tenant config keys mirrored from the canonical inventory (Spec 24
+// §Business logic overlay). Declared locally because importing
+// internal/service here would create an import cycle.
+const (
+	configKeyGSTEnabled = "billing.gst_enabled"
+	configKeyGSTRate    = "billing.gst_rate"
+)
+
+// TenantOverlay resolves per-tenant configuration overrides with a global-
+// default fallback chain (Spec 24 §Business logic overlay). Implemented by
+// *service.TenantConfigReader; an optional dependency so existing
+// constructors keep compiling unchanged.
+type TenantOverlay interface {
+	GetBool(ctx context.Context, tenantID, key string, def bool) bool
+	GetFloat(ctx context.Context, tenantID, key string, def float64) float64
+}
+
+// Process-wide overlay default. SetDefaultTenantOverlay is wired ONCE from
+// service.NewServices rather than threading the reader through
+// NewGenerateInvoiceUseCase's 45+ call sites (handlers, facade, main,
+// geofence detention, dozens of tests); instances may still override via
+// SetTenantOverlay. Nil default = legacy company_settings-only behavior.
+var (
+	defaultOverlayMu sync.RWMutex
+	defaultOverlay   TenantOverlay
+)
+
+// SetDefaultTenantOverlay registers the process-wide tenant config overlay.
+func SetDefaultTenantOverlay(o TenantOverlay) {
+	defaultOverlayMu.Lock()
+	defer defaultOverlayMu.Unlock()
+	defaultOverlay = o
+}
+
+func currentDefaultOverlay() TenantOverlay {
+	defaultOverlayMu.RLock()
+	defer defaultOverlayMu.RUnlock()
+	return defaultOverlay
+}
+
+// SetTenantOverlay attaches a per-instance overlay (tests, alternate wiring).
+func (uc *GenerateInvoiceUseCase) SetTenantOverlay(o TenantOverlay) { uc.overlay = o }
+
+// effectiveOverlay prefers the instance overlay over the process default.
+func (uc *GenerateInvoiceUseCase) effectiveOverlay() TenantOverlay {
+	if uc.overlay != nil {
+		return uc.overlay
+	}
+	return currentDefaultOverlay()
 }
 
 type derivedPricing struct {
@@ -60,6 +112,10 @@ type GenerateInvoiceUseCase struct {
 	uow   ports.UnitOfWork
 	idGen ports.IDGenerator
 	clock ports.Clock
+
+	// overlay optionally overrides billing.* per tenant; nil falls back to
+	// the process-wide default registered by SetDefaultTenantOverlay.
+	overlay TenantOverlay
 }
 
 // NewGenerateInvoiceUseCase constructs a new GenerateInvoiceUseCase.
@@ -123,7 +179,7 @@ func (uc *GenerateInvoiceUseCase) GenerateInTx(txCtx ports.TxContext, cmd Genera
 	}
 
 	subtotal, tax, discount, total := cmd.Subtotal, cmd.Tax, cmd.Discount, cmd.Total
-	if pricing, ok := resolveBookingPricing(txCtx, cmd.TenantID, cmd.BookingID); ok {
+	if pricing, ok := resolveBookingPricing(txCtx, cmd.TenantID, cmd.BookingID, uc.effectiveOverlay()); ok {
 		subtotal, tax, discount, total = pricing.subtotal, pricing.tax, pricing.discount, pricing.total
 	} else if err := validateInvoiceAmounts(subtotal, tax, discount, total); err != nil {
 		return "", false, err
@@ -210,8 +266,10 @@ func attachLineItems(inv *aggregate.InvoiceAggregate, cmd GenerateInvoiceCommand
 }
 
 // resolveBookingPricing derives invoice money from the booking price and
-// company tax settings, overriding any client-supplied amounts.
-func resolveBookingPricing(txCtx ports.TxContext, tenantID shared.TenantID, bookingID string) (derivedPricing, bool) {
+// company tax settings, overriding any client-supplied amounts. The optional
+// overlay lets a tenant's billing.* rows win over the company_settings
+// globals (Spec 24 §Business logic overlay).
+func resolveBookingPricing(txCtx ports.TxContext, tenantID shared.TenantID, bookingID string, overlay TenantOverlay) (derivedPricing, bool) {
 	bookingRepo, ok := txCtx.Repositories().Bookings().(bookingdomain.BookingRepository)
 	if !ok {
 		return derivedPricing{}, false
@@ -227,12 +285,20 @@ func resolveBookingPricing(txCtx ports.TxContext, tenantID shared.TenantID, book
 		subtotalMinor = 0
 	}
 
-	var taxMinor int64
+	gstEnabled, gstRate := false, 0.0
 	if settingsRepo, ok := txCtx.Repositories().AuditLogs().(PricingResolver); ok {
-		settings, err := settingsRepo.GetCompanySettings(txCtx)
-		if err == nil && settings.GSTEnabled {
-			taxMinor = int64(math.Round(float64(subtotalMinor) * settings.GSTRate / 100.0))
+		if settings, err := settingsRepo.GetCompanySettings(txCtx); err == nil {
+			gstEnabled, gstRate = settings.GSTEnabled, settings.GSTRate
 		}
+	}
+	if overlay != nil {
+		gstEnabled = overlay.GetBool(txCtx, string(tenantID), configKeyGSTEnabled, gstEnabled)
+		gstRate = overlay.GetFloat(txCtx, string(tenantID), configKeyGSTRate, gstRate)
+	}
+
+	var taxMinor int64
+	if gstEnabled {
+		taxMinor = int64(math.Round(float64(subtotalMinor) * gstRate / 100.0))
 	}
 
 	subtotal := float64(subtotalMinor) / 100.0

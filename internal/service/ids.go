@@ -28,22 +28,26 @@ func generateDriverID(prefix string) string {
 	return generateDisplayID(prefix)
 }
 
-// generateBookingNumber creates a booking number from company settings.
+// generateBookingNumber creates a booking number from company settings,
+// overlaid by the tenant's branding.booking_prefix row when present
+// (Spec 24 §Business logic overlay): tenant override → company_settings
+// global → hardcoded "BK" last resort.
 func (s *baseService) generateBookingNumber(ctx context.Context) string {
-	settings, err := s.store.GetCompanySettings(ctx)
-	if err != nil {
-		return fmt.Sprintf("%s-%s", "BK", uuid.NewString()[:8])
+	prefix := "BK"
+	if settings, err := s.store.GetCompanySettings(ctx); err == nil && strings.TrimSpace(settings.BookingPrefix) != "" {
+		prefix = settings.BookingPrefix
 	}
-	return generateDisplayID(settings.BookingPrefix)
+	return generateDisplayID(s.tenantPrefix(ctx, ConfigKeyBookingPrefix, prefix))
 }
 
-// generateTripNumber creates a trip number from company settings.
+// generateTripNumber creates a trip number from company settings, overlaid by
+// the tenant's branding.trip_prefix row (same chain as booking numbers).
 func (s *baseService) generateTripNumber(ctx context.Context) string {
-	settings, err := s.store.GetCompanySettings(ctx)
-	if err != nil {
-		return fmt.Sprintf("%s-%s", "TR", uuid.NewString()[:8])
+	prefix := "TR"
+	if settings, err := s.store.GetCompanySettings(ctx); err == nil && strings.TrimSpace(settings.TripPrefix) != "" {
+		prefix = settings.TripPrefix
 	}
-	return generateDisplayID(settings.TripPrefix)
+	return generateDisplayID(s.tenantPrefix(ctx, ConfigKeyTripPrefix, prefix))
 }
 
 // generateInvoiceNumber creates a GST-compliant sequential invoice number:
@@ -60,6 +64,10 @@ func (s *baseService) generateInvoiceNumber(ctx context.Context) string {
 	} else if trimmed := strings.TrimSpace(settings.InvoicePrefix); trimmed != "" {
 		prefix = trimmed
 	}
+	// Tenant branding override wins before sequence allocation; the
+	// invoice_sequences allocator itself is already tenant-keyed and stays
+	// untouched (Spec 24 §Business logic overlay).
+	prefix = s.tenantPrefix(ctx, ConfigKeyInvoicePrefix, prefix)
 
 	number, err := s.store.NextInvoiceNumber(ctx, tenantIDFor(ctx), prefix)
 	if err != nil {
