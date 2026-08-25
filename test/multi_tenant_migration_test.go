@@ -79,6 +79,72 @@ func TestMultiTenantMigration00102RoundTrip(t *testing.T) {
 		"tenants queryable with bootstrap row after re-up")
 }
 
+// TestMultiTenantMigration00102RoundTripWithData — Spec 24 §DB contract, the
+// with-data variant: business rows seeded at tenant '1' must survive a full
+// down(00102) → up cycle untouched (tenant registry is metadata; user data is
+// never rewritten by 00102 in either direction).
+func TestMultiTenantMigration00102RoundTripWithData(t *testing.T) {
+	db := NewTestDB(t)
+
+	// Seed route → customer → booking at tenant '1', plus a scoped user.
+	_, err := db.Exec(`INSERT INTO routes (id, source, destination, distance, estimated_hours, standard_fare)
+		VALUES ('r-data', 'A', 'B', 100, 2, 500)`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO customers (id, name, phone) VALUES ('c-data', 'Acme Ltd', '9999999999')`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO users (id, email, password_hash, name, tenant_id)
+		VALUES ('u-data', 'data@example.com', 'x', 'Data', '1')`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO bookings (id, booking_number, customer_id, pickup_date, route_id,
+		vehicle_type, price, status, tenant_id)
+		VALUES ('b-data', 'BK-DATA-1', 'c-data', datetime('now'), 'r-data', 'bus', 1500, 'confirmed', '1')`)
+	require.NoError(t, err)
+
+	downThenUp := func() {
+		t.Helper()
+		_ = goose.SetDialect("sqlite")
+		require.NoError(t, goose.DownTo(db, "../db/migrations", 101))
+		if usersHasTenantColumn(t, db) {
+			t.Log("users.tenant_id survived Down on this driver; dropping inert column before re-up")
+			_, err = db.Exec(`ALTER TABLE users DROP COLUMN tenant_id`)
+			require.NoError(t, err, "drop inert users.tenant_id before re-up")
+		}
+		require.NoError(t, goose.Up(db, "../db/migrations"))
+	}
+
+	downThenUp()
+
+	// User row survived the downgrade/re-up with default tenant restored.
+	var tid string
+	require.NoError(t, db.QueryRow(`SELECT tenant_id FROM users WHERE id = 'u-data'`).Scan(&tid),
+		"user row must survive roundtrip")
+	assert.Equal(t, "1", tid, "user tenant restored to bootstrap after re-up")
+
+	// Booking fully intact: same values as seeded.
+	var bn, cid, rid, status string
+	var price float64
+	require.NoError(t, db.QueryRow(`SELECT booking_number, customer_id, route_id, status, price
+		FROM bookings WHERE id = 'b-data'`).Scan(&bn, &cid, &rid, &status, &price),
+		"booking must survive roundtrip")
+	assert.Equal(t, "BK-DATA-1", bn)
+	assert.Equal(t, "c-data", cid)
+	assert.Equal(t, "r-data", rid)
+	assert.Equal(t, "confirmed", status)
+	assert.InDelta(t, 1500.0, price, 0.001)
+
+	// Bootstrap tenant row back and active.
+	var statusT string
+	require.NoError(t, db.QueryRow(`SELECT status FROM tenants WHERE id = '1'`).Scan(&statusT))
+	assert.Equal(t, "active", statusT)
+
+	// Second cycle proves idempotence of the roundtrip with data present.
+	downThenUp()
+	require.NoError(t, db.QueryRow(`SELECT tenant_id FROM users WHERE id = 'u-data'`).Scan(&tid))
+	assert.Equal(t, "1", tid)
+	require.NoError(t, db.QueryRow(`SELECT count(*) FROM bookings WHERE id = 'b-data'`).Scan(new(int)),
+		"booking queryable after second roundtrip")
+}
+
 // usersHasTenantColumn reports whether users still carries a tenant_id column
 // (PRAGMA table_info probe).
 func usersHasTenantColumn(t *testing.T, db *sql.DB) bool {

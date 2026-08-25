@@ -15,7 +15,7 @@
             <tr class="hover:bg-surface-container-low/50 transition-colors group">
                 <td class="px-3 py-2 text-sm font-semibold text-on-surface whitespace-nowrap">{{.Name}}</td>
                 <td class="px-3 py-2 text-sm font-mono text-xs text-secondary">{{.Email}}</td>
-                <td class="px-3 py-2 text-sm font-medium">{{if .Role}}{{.Role.Name}}{{else}}{{.RoleName}}{{end}}</td>
+                <td class="px-3 py-2 text-sm font-medium">{{.RoleName}}</td>
                 <td class="px-3 py-2">
                     <span class="status-badge inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                 </td>
