@@ -109,6 +109,7 @@ func toCreateUserRowWithRole(u db.CreateUserRow, role domain.Role) domain.User {
 	return domain.User{
 		ID:              domain.UserID(u.ID),
 		Email:           u.Email,
+		TenantID:        u.TenantID,
 		PasswordHash:    u.PasswordHash,
 		Name:            u.Name,
 		Phone:           fromNullString(u.Phone),
@@ -126,6 +127,7 @@ func toGetUserByIDRowWithRole(u db.GetUserByIDRow, role domain.Role) domain.User
 	return domain.User{
 		ID:              domain.UserID(u.ID),
 		Email:           u.Email,
+		TenantID:        u.TenantID,
 		PasswordHash:    u.PasswordHash,
 		Name:            u.Name,
 		Phone:           fromNullString(u.Phone),
@@ -143,6 +145,7 @@ func toGetUserByEmailRowWithRole(u db.GetUserByEmailRow, role domain.Role) domai
 	return domain.User{
 		ID:              domain.UserID(u.ID),
 		Email:           u.Email,
+		TenantID:        u.TenantID,
 		PasswordHash:    u.PasswordHash,
 		Name:            u.Name,
 		Phone:           fromNullString(u.Phone),
@@ -160,6 +163,7 @@ func toUpdateUserRowWithRole(u db.UpdateUserRow, role domain.Role) domain.User {
 	return domain.User{
 		ID:              domain.UserID(u.ID),
 		Email:           u.Email,
+		TenantID:        u.TenantID,
 		PasswordHash:    u.PasswordHash,
 		Name:            u.Name,
 		Phone:           fromNullString(u.Phone),
@@ -177,6 +181,7 @@ func toUpdateUserThemePreferenceRowWithRole(u db.UpdateUserThemePreferenceRow, r
 	return domain.User{
 		ID:              domain.UserID(u.ID),
 		Email:           u.Email,
+		TenantID:        u.TenantID,
 		PasswordHash:    u.PasswordHash,
 		Name:            u.Name,
 		Phone:           fromNullString(u.Phone),
@@ -194,6 +199,7 @@ func toUpdateUserPasswordRowWithRole(u db.UpdateUserPasswordRow, role domain.Rol
 	return domain.User{
 		ID:              domain.UserID(u.ID),
 		Email:           u.Email,
+		TenantID:        u.TenantID,
 		PasswordHash:    u.PasswordHash,
 		Name:            u.Name,
 		Phone:           fromNullString(u.Phone),
@@ -211,6 +217,7 @@ func toUpdateUserLastLoginRowWithRole(u db.UpdateUserLastLoginRow, role domain.R
 	return domain.User{
 		ID:              domain.UserID(u.ID),
 		Email:           u.Email,
+		TenantID:        u.TenantID,
 		PasswordHash:    u.PasswordHash,
 		Name:            u.Name,
 		Phone:           fromNullString(u.Phone),

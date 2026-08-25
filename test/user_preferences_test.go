@@ -26,7 +26,7 @@ func TestUserThemePreferences(t *testing.T) {
 	ctx := context.Background()
 
 	// 1. Create a test user
-	u, err := svcs.Users.CreateUserWithPassword(ctx, "theme_test@example.com", "Theme Tester", "9876543210", "StrongPassword123!", 1, domain.UserStatusActive)
+	u, err := svcs.Users.CreateUserWithPassword(ctx, "theme_test@example.com", "Theme Tester", "9876543210", "StrongPassword123!", 1, domain.UserStatusActive, string(shared.DefaultTenant))
 	require.NoError(t, err)
 	assert.Equal(t, "system", u.ThemePreference)
 

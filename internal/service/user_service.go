@@ -7,10 +7,12 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	db "transport-app/db/generated/sqlite"
 	"transport-app/internal/auth"
 	"transport-app/internal/domain"
 	userdomain "transport-app/internal/domain/user"
 	"transport-app/internal/repository"
+	"transport-app/internal/shared"
 )
 
 // UserService handles user management.
@@ -52,7 +54,7 @@ func (s *UserService) RegisterSelfServiceAccount(ctx context.Context, email, nam
 			claimed = true
 		}
 
-		u, err := s.CreateUserWithPassword(txCtx, email, name, phone, password, roleID, domain.UserStatusActive)
+		u, err := s.CreateUserWithPassword(txCtx, email, name, phone, password, roleID, domain.UserStatusActive, string(shared.DefaultTenant))
 		if err != nil {
 			return err
 		}
@@ -79,7 +81,7 @@ func generateTemporaryPassword() (string, error) {
 }
 
 // CreateUser creates a new user with a randomly generated temporary password.
-func (s *UserService) CreateUser(ctx context.Context, email, name, phone string, roleID int64, status domain.UserStatus) (domain.User, error) {
+func (s *UserService) CreateUser(ctx context.Context, email, name, phone string, roleID int64, status domain.UserStatus, tenantID string) (domain.User, error) {
 	if email == "" {
 		return domain.User{}, domain.ErrUserEmailRequired
 	}
@@ -111,6 +113,7 @@ func (s *UserService) CreateUser(ctx context.Context, email, name, phone string,
 		PasswordHash: hashed,
 		Name:         sanitizeName(name),
 		Phone:        &phone,
+		TenantID:     tenantID,
 		Role:         domain.Role{ID: roleID},
 		Status:       status,
 	}
@@ -125,7 +128,7 @@ func (s *UserService) CreateUser(ctx context.Context, email, name, phone string,
 }
 
 // CreateUserWithPassword creates a user with a specific password.
-func (s *UserService) CreateUserWithPassword(ctx context.Context, email, name, phone, password string, roleID int64, status domain.UserStatus) (domain.User, error) {
+func (s *UserService) CreateUserWithPassword(ctx context.Context, email, name, phone, password string, roleID int64, status domain.UserStatus, tenantID string) (domain.User, error) {
 	if email == "" {
 		return domain.User{}, domain.ErrUserEmailRequired
 	}
@@ -154,6 +157,7 @@ func (s *UserService) CreateUserWithPassword(ctx context.Context, email, name, p
 		Email:        email,
 		PasswordHash: hashed,
 		Name:         sanitizeName(name),
+		TenantID:     tenantID,
 		Role:         domain.Role{ID: roleID},
 		Status:       status,
 	}
@@ -181,13 +185,18 @@ func (s *UserService) GetUserByEmail(ctx context.Context, email string) (domain.
 	return s.store.GetUserByEmail(ctx, email)
 }
 
-// ListUsers retrieves users with search and pagination.
+// ListUsers retrieves users with search and pagination, scoped to the tenant
+// in context (falling back to the bootstrap tenant when unset).
 func (s *UserService) ListUsers(ctx context.Context, query, status string, limit, offset int) ([]repository.UserWithRole, int64, error) {
-	users, err := s.store.SearchUsers(ctx, query, status, limit, offset)
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		tenantID = string(shared.DefaultTenant)
+	}
+	users, err := s.store.SearchUsers(ctx, query, status, limit, offset, tenantID)
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err := s.store.CountUsers(ctx, query, status)
+	total, err := s.store.CountUsers(ctx, query, status, tenantID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -198,8 +207,8 @@ func (s *UserService) ListUsers(ctx context.Context, query, status string, limit
 // created_at window filtering. Asserted optionally so existing repository
 // implementations/mocks keep compiling unchanged.
 type dateRangeUserRepo interface {
-	SearchUsersDateRange(ctx context.Context, query, status, from, to string, limit, offset int) ([]repository.UserWithRole, error)
-	CountUsersDateRange(ctx context.Context, query, status, from, to string) (int64, error)
+	SearchUsersDateRange(ctx context.Context, query, status, from, to string, limit, offset int, tenantID string) ([]repository.UserWithRole, error)
+	CountUsersDateRange(ctx context.Context, query, status, from, to string, tenantID string) (int64, error)
 }
 
 // ListUsersDateRange retrieves users with search, status and created_at
@@ -210,11 +219,15 @@ func (s *UserService) ListUsersDateRange(ctx context.Context, query, status, fro
 	if !ok || (from == "" && to == "") {
 		return s.ListUsers(ctx, query, status, limit, offset)
 	}
-	users, err := dateRepo.SearchUsersDateRange(ctx, query, status, from, to, limit, offset)
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		tenantID = string(shared.DefaultTenant)
+	}
+	users, err := dateRepo.SearchUsersDateRange(ctx, query, status, from, to, limit, offset, tenantID)
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err := dateRepo.CountUsersDateRange(ctx, query, status, from, to)
+	total, err := dateRepo.CountUsersDateRange(ctx, query, status, from, to, tenantID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -313,4 +326,53 @@ func (s *UserService) UpdateThemePreference(ctx context.Context, id domain.UserI
 	}
 	s.log.Info("theme preference updated", "user_id", id, "theme", theme)
 	return updated, nil
+}
+
+// tenantQueries returns sqlc queries bound to the request's transaction when
+// one is active (via the store's Q accessor), falling back to a fresh set of
+// queries over the raw DB.
+func (s *UserService) tenantQueries(ctx context.Context) (*db.Queries, error) {
+	if q, ok := s.store.(interface {
+		Q(context.Context) *db.Queries
+	}); ok {
+		return q.Q(ctx), nil
+	}
+	getter, ok := s.store.(repository.DBGetter)
+	if !ok {
+		return nil, fmt.Errorf("storage does not support tenant operations")
+	}
+	return db.New(getter.DB()), nil
+}
+
+// CreateTenant provisions an active tenant organization.
+func (s *UserService) CreateTenant(ctx context.Context, id, name, slug string) error {
+	q, err := s.tenantQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if _, err := q.InsertTenant(ctx, db.InsertTenantParams{ID: id, Name: name, Slug: toNullString(slug)}); err != nil {
+		return err
+	}
+	s.log.Info("tenant created", "tenant_id", id, "name", name)
+	return nil
+}
+
+// SetTenantStatus flips a tenant between 'active' and 'suspended'.
+func (s *UserService) SetTenantStatus(ctx context.Context, tenantID, status string) error {
+	if status != "active" && status != "suspended" {
+		return fmt.Errorf("invalid tenant status: must be 'active' or 'suspended'")
+	}
+	q, err := s.tenantQueries(ctx)
+	if err != nil {
+		return err
+	}
+	if err := q.SetTenantStatus(ctx, db.SetTenantStatusParams{Status: status, ID: tenantID}); err != nil {
+		return err
+	}
+	s.log.Info("tenant status changed", "tenant_id", tenantID, "status", status)
+	return nil
+}
+
+func toNullString(v string) sql.NullString {
+	return sql.NullString{String: v, Valid: v != ""}
 }

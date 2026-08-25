@@ -14,22 +14,25 @@ import (
 const countUsers = `-- name: CountUsers :one
 SELECT COUNT(*) AS count
 FROM users
-WHERE (name LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%')
+WHERE tenant_id = ?
+  AND (name LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%')
   AND (? = '' OR status = ?)
 `
 
 type CountUsersParams struct {
-	Column1 sql.NullString `json:"column_1"`
-	Column2 sql.NullString `json:"column_2"`
-	Column3 interface{}    `json:"column_3"`
-	Status  string         `json:"status"`
+	TenantID string         `json:"tenant_id"`
+	Column2  sql.NullString `json:"column_2"`
+	Column3  sql.NullString `json:"column_3"`
+	Column4  interface{}    `json:"column_4"`
+	Status   string         `json:"status"`
 }
 
 func (q *Queries) CountUsers(ctx context.Context, arg CountUsersParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, countUsers,
-		arg.Column1,
+		arg.TenantID,
 		arg.Column2,
 		arg.Column3,
+		arg.Column4,
 		arg.Status,
 	)
 	var count int64
@@ -38,9 +41,9 @@ func (q *Queries) CountUsers(ctx context.Context, arg CountUsersParams) (int64, 
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (id, email, password_hash, name, phone, role_id, status, theme_preference)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, email, password_hash, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
+INSERT INTO users (id, email, password_hash, name, phone, role_id, status, tenant_id, theme_preference)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -51,6 +54,7 @@ type CreateUserParams struct {
 	Phone           sql.NullString `json:"phone"`
 	RoleID          int64          `json:"role_id"`
 	Status          string         `json:"status"`
+	TenantID        string         `json:"tenant_id"`
 	ThemePreference string         `json:"theme_preference"`
 }
 
@@ -58,6 +62,7 @@ type CreateUserRow struct {
 	ID              string         `json:"id"`
 	Email           string         `json:"email"`
 	PasswordHash    string         `json:"password_hash"`
+	TenantID        string         `json:"tenant_id"`
 	Name            string         `json:"name"`
 	Phone           sql.NullString `json:"phone"`
 	RoleID          int64          `json:"role_id"`
@@ -77,6 +82,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		arg.Phone,
 		arg.RoleID,
 		arg.Status,
+		arg.TenantID,
 		arg.ThemePreference,
 	)
 	var i CreateUserRow
@@ -84,6 +90,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		&i.ID,
 		&i.Email,
 		&i.PasswordHash,
+		&i.TenantID,
 		&i.Name,
 		&i.Phone,
 		&i.RoleID,
@@ -143,7 +150,7 @@ func (q *Queries) GetRoleByName(ctx context.Context, name string) (Role, error) 
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
+SELECT id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
 FROM users WHERE email = ?
 `
 
@@ -151,6 +158,7 @@ type GetUserByEmailRow struct {
 	ID              string         `json:"id"`
 	Email           string         `json:"email"`
 	PasswordHash    string         `json:"password_hash"`
+	TenantID        string         `json:"tenant_id"`
 	Name            string         `json:"name"`
 	Phone           sql.NullString `json:"phone"`
 	RoleID          int64          `json:"role_id"`
@@ -168,6 +176,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.ID,
 		&i.Email,
 		&i.PasswordHash,
+		&i.TenantID,
 		&i.Name,
 		&i.Phone,
 		&i.RoleID,
@@ -181,7 +190,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, password_hash, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
+SELECT id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
 FROM users WHERE id = ?
 `
 
@@ -189,6 +198,7 @@ type GetUserByIDRow struct {
 	ID              string         `json:"id"`
 	Email           string         `json:"email"`
 	PasswordHash    string         `json:"password_hash"`
+	TenantID        string         `json:"tenant_id"`
 	Name            string         `json:"name"`
 	Phone           sql.NullString `json:"phone"`
 	RoleID          int64          `json:"role_id"`
@@ -207,6 +217,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (GetUserByIDRow, e
 		&i.ID,
 		&i.Email,
 		&i.PasswordHash,
+		&i.TenantID,
 		&i.Name,
 		&i.Phone,
 		&i.RoleID,
@@ -254,29 +265,31 @@ func (q *Queries) ListRoles(ctx context.Context) ([]Role, error) {
 }
 
 const searchUsers = `-- name: SearchUsers :many
-SELECT u.id, u.email, u.password_hash, u.name, u.phone, u.role_id, u.status, u.last_login_at, u.theme_preference, u.created_at, u.updated_at,
+SELECT u.id, u.email, u.tenant_id, u.name, u.phone, u.role_id, u.status, u.last_login_at, u.theme_preference, u.created_at, u.updated_at,
        r.name AS role_name
 FROM users u
 JOIN roles r ON u.role_id = r.id
-WHERE (u.name LIKE '%' || ? || '%' OR u.email LIKE '%' || ? || '%')
+WHERE u.tenant_id = ?
+  AND (u.name LIKE '%' || ? || '%' OR u.email LIKE '%' || ? || '%')
   AND (? = '' OR u.status = ?)
 ORDER BY u.created_at DESC
 LIMIT ? OFFSET ?
 `
 
 type SearchUsersParams struct {
-	Column1 sql.NullString `json:"column_1"`
-	Column2 sql.NullString `json:"column_2"`
-	Column3 interface{}    `json:"column_3"`
-	Status  string         `json:"status"`
-	Limit   int64          `json:"limit"`
-	Offset  int64          `json:"offset"`
+	TenantID string         `json:"tenant_id"`
+	Column2  sql.NullString `json:"column_2"`
+	Column3  sql.NullString `json:"column_3"`
+	Column4  interface{}    `json:"column_4"`
+	Status   string         `json:"status"`
+	Limit    int64          `json:"limit"`
+	Offset   int64          `json:"offset"`
 }
 
 type SearchUsersRow struct {
 	ID              string         `json:"id"`
 	Email           string         `json:"email"`
-	PasswordHash    string         `json:"password_hash"`
+	TenantID        string         `json:"tenant_id"`
 	Name            string         `json:"name"`
 	Phone           sql.NullString `json:"phone"`
 	RoleID          int64          `json:"role_id"`
@@ -290,9 +303,10 @@ type SearchUsersRow struct {
 
 func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]SearchUsersRow, error) {
 	rows, err := q.db.QueryContext(ctx, searchUsers,
-		arg.Column1,
+		arg.TenantID,
 		arg.Column2,
 		arg.Column3,
+		arg.Column4,
 		arg.Status,
 		arg.Limit,
 		arg.Offset,
@@ -307,7 +321,7 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Sea
 		if err := rows.Scan(
 			&i.ID,
 			&i.Email,
-			&i.PasswordHash,
+			&i.TenantID,
 			&i.Name,
 			&i.Phone,
 			&i.RoleID,
@@ -335,7 +349,7 @@ const updateUser = `-- name: UpdateUser :one
 UPDATE users
 SET email = ?, name = ?, phone = ?, role_id = ?, status = ?, updated_at = datetime('now')
 WHERE id = ?
-RETURNING id, email, password_hash, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
+RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
 `
 
 type UpdateUserParams struct {
@@ -351,6 +365,7 @@ type UpdateUserRow struct {
 	ID              string         `json:"id"`
 	Email           string         `json:"email"`
 	PasswordHash    string         `json:"password_hash"`
+	TenantID        string         `json:"tenant_id"`
 	Name            string         `json:"name"`
 	Phone           sql.NullString `json:"phone"`
 	RoleID          int64          `json:"role_id"`
@@ -375,6 +390,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 		&i.ID,
 		&i.Email,
 		&i.PasswordHash,
+		&i.TenantID,
 		&i.Name,
 		&i.Phone,
 		&i.RoleID,
@@ -391,13 +407,14 @@ const updateUserLastLogin = `-- name: UpdateUserLastLogin :one
 UPDATE users
 SET last_login_at = datetime('now')
 WHERE id = ?
-RETURNING id, email, password_hash, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
+RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
 `
 
 type UpdateUserLastLoginRow struct {
 	ID              string         `json:"id"`
 	Email           string         `json:"email"`
 	PasswordHash    string         `json:"password_hash"`
+	TenantID        string         `json:"tenant_id"`
 	Name            string         `json:"name"`
 	Phone           sql.NullString `json:"phone"`
 	RoleID          int64          `json:"role_id"`
@@ -415,6 +432,7 @@ func (q *Queries) UpdateUserLastLogin(ctx context.Context, id string) (UpdateUse
 		&i.ID,
 		&i.Email,
 		&i.PasswordHash,
+		&i.TenantID,
 		&i.Name,
 		&i.Phone,
 		&i.RoleID,
@@ -431,7 +449,7 @@ const updateUserPassword = `-- name: UpdateUserPassword :one
 UPDATE users
 SET password_hash = ?, updated_at = datetime('now')
 WHERE id = ?
-RETURNING id, email, password_hash, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
+RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
 `
 
 type UpdateUserPasswordParams struct {
@@ -443,6 +461,7 @@ type UpdateUserPasswordRow struct {
 	ID              string         `json:"id"`
 	Email           string         `json:"email"`
 	PasswordHash    string         `json:"password_hash"`
+	TenantID        string         `json:"tenant_id"`
 	Name            string         `json:"name"`
 	Phone           sql.NullString `json:"phone"`
 	RoleID          int64          `json:"role_id"`
@@ -460,6 +479,7 @@ func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPassword
 		&i.ID,
 		&i.Email,
 		&i.PasswordHash,
+		&i.TenantID,
 		&i.Name,
 		&i.Phone,
 		&i.RoleID,
@@ -476,7 +496,7 @@ const updateUserThemePreference = `-- name: UpdateUserThemePreference :one
 UPDATE users
 SET theme_preference = ?, updated_at = datetime('now')
 WHERE id = ?
-RETURNING id, email, password_hash, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
+RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
 `
 
 type UpdateUserThemePreferenceParams struct {
@@ -488,6 +508,7 @@ type UpdateUserThemePreferenceRow struct {
 	ID              string         `json:"id"`
 	Email           string         `json:"email"`
 	PasswordHash    string         `json:"password_hash"`
+	TenantID        string         `json:"tenant_id"`
 	Name            string         `json:"name"`
 	Phone           sql.NullString `json:"phone"`
 	RoleID          int64          `json:"role_id"`
@@ -505,6 +526,7 @@ func (q *Queries) UpdateUserThemePreference(ctx context.Context, arg UpdateUserT
 		&i.ID,
 		&i.Email,
 		&i.PasswordHash,
+		&i.TenantID,
 		&i.Name,
 		&i.Phone,
 		&i.RoleID,

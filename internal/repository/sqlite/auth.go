@@ -55,6 +55,7 @@ func (r *SQLRepository) CreateUser(ctx context.Context, user domain.User) (domai
 		Phone:           nullString(user.Phone),
 		RoleID:          user.Role.ID,
 		Status:          string(user.Status),
+		TenantID:        user.TenantID,
 		ThemePreference: theme,
 	})
 	if err != nil {
@@ -136,14 +137,15 @@ func (r *SQLRepository) DeleteUser(ctx context.Context, userID domain.UserID) er
 	return r.Q(ctx).DeleteUser(ctx, string(userID))
 }
 
-func (r *SQLRepository) SearchUsers(ctx context.Context, query string, status string, limit, offset int) ([]repository.UserWithRole, error) {
+func (r *SQLRepository) SearchUsers(ctx context.Context, query string, status string, limit, offset int, tenantID string) ([]repository.UserWithRole, error) {
 	rows, err := r.Q(ctx).SearchUsers(ctx, db.SearchUsersParams{
-		Column1: sql.NullString{String: query, Valid: true},
-		Column2: sql.NullString{String: query, Valid: true},
-		Column3: status,
-		Status:  status,
-		Limit:   int64(limit),
-		Offset:  int64(offset),
+		TenantID: tenantID,
+		Column2:  sql.NullString{String: query, Valid: true},
+		Column3:  sql.NullString{String: query, Valid: true},
+		Column4:  status,
+		Status:   status,
+		Limit:    int64(limit),
+		Offset:   int64(offset),
 	})
 	if err != nil {
 		return nil, err
@@ -152,28 +154,28 @@ func (r *SQLRepository) SearchUsers(ctx context.Context, query string, status st
 	result := make([]repository.UserWithRole, len(rows))
 	for i, row := range rows {
 		result[i] = repository.UserWithRole{
-			ID:           domain.UserID(row.ID),
-			Email:        row.Email,
-			PasswordHash: row.PasswordHash,
-			Name:         row.Name,
-			Phone:        fromNullString(row.Phone),
-			RoleID:       row.RoleID,
-			RoleName:     row.RoleName,
-			Status:       row.Status,
-			LastLoginAt:  fromNullTime(row.LastLoginAt),
-			CreatedAt:    row.CreatedAt,
-			UpdatedAt:    row.UpdatedAt,
+			ID:          domain.UserID(row.ID),
+			Email:       row.Email,
+			Name:        row.Name,
+			Phone:       fromNullString(row.Phone),
+			RoleID:      row.RoleID,
+			RoleName:    row.RoleName,
+			Status:      row.Status,
+			LastLoginAt: fromNullTime(row.LastLoginAt),
+			CreatedAt:   row.CreatedAt,
+			UpdatedAt:   row.UpdatedAt,
 		}
 	}
 	return result, nil
 }
 
-func (r *SQLRepository) CountUsers(ctx context.Context, query string, status string) (int64, error) {
+func (r *SQLRepository) CountUsers(ctx context.Context, query string, status string, tenantID string) (int64, error) {
 	count, err := r.Q(ctx).CountUsers(ctx, db.CountUsersParams{
-		Column1: sql.NullString{String: query, Valid: true},
-		Column2: sql.NullString{String: query, Valid: true},
-		Column3: status,
-		Status:  status,
+		TenantID: tenantID,
+		Column2:  sql.NullString{String: query, Valid: true},
+		Column3:  sql.NullString{String: query, Valid: true},
+		Column4:  status,
+		Status:   status,
 	})
 	if err != nil {
 		return 0, err

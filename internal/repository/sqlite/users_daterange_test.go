@@ -35,8 +35,8 @@ func setupUsersTestDB(t *testing.T) *sql.DB {
 func TestUserRepository_SearchUsersDateRange(t *testing.T) {
 	dbConn := setupUsersTestDB(t)
 	repo, ok := interface{}(NewRepository(dbConn)).(interface {
-		SearchUsersDateRange(ctx context.Context, query string, status string, from string, to string, limit int, offset int) ([]repository.UserWithRole, error)
-		CountUsersDateRange(ctx context.Context, query string, status string, from string, to string) (int64, error)
+		SearchUsersDateRange(ctx context.Context, query string, status string, from string, to string, limit int, offset int, tenantID string) ([]repository.UserWithRole, error)
+		CountUsersDateRange(ctx context.Context, query string, status string, from string, to string, tenantID string) (int64, error)
 	})
 	require.True(t, ok, "user repo must implement date-range search")
 
@@ -55,19 +55,19 @@ func TestUserRepository_SearchUsersDateRange(t *testing.T) {
 	mk("aug20@x.com", "Aug Twenty", "suspended", 20)
 
 	// Full-month window
-	rows, err := repo.SearchUsersDateRange(ctx, "", "", "2026-08-01", "2026-08-31", 10, 0)
+	rows, err := repo.SearchUsersDateRange(ctx, "", "", "2026-08-01", "2026-08-31", 10, 0, "1")
 	require.NoError(t, err)
 	assert.Len(t, rows, 3)
-	total, err := repo.CountUsersDateRange(ctx, "", "", "2026-08-01", "2026-08-31")
+	total, err := repo.CountUsersDateRange(ctx, "", "", "2026-08-01", "2026-08-31", "1")
 	require.NoError(t, err)
 	assert.EqualValues(t, 3, total)
 
 	// Single-day window (from == to)
-	rows, err = repo.SearchUsersDateRange(ctx, "", "", "2026-08-10", "2026-08-10", 10, 0)
+	rows, err = repo.SearchUsersDateRange(ctx, "", "", "2026-08-10", "2026-08-10", 10, 0, "1")
 	require.NoError(t, err)
 	require.Len(t, rows, 1)
 	assert.Equal(t, "aug10@x.com", rows[0].Email)
-	total, err = repo.CountUsersDateRange(ctx, "", "", "2026-08-10", "2026-08-10")
+	total, err = repo.CountUsersDateRange(ctx, "", "", "2026-08-10", "2026-08-10", "1")
 	require.NoError(t, err)
 	assert.EqualValues(t, 1, total)
 
@@ -80,7 +80,7 @@ func TestUserRepository_SearchUsersDateRange(t *testing.T) {
 	assert.EqualValues(t, 1, total)
 
 	// Status + search + date combined
-	rows, err = repo.SearchUsersDateRange(ctx, "twenty", "suspended", "2026-08-01", "2026-08-31", 10, 0)
+	rows, err = repo.SearchUsersDateRange(ctx, "twenty", "suspended", "2026-08-01", "2026-08-31", 10, 0, "1")
 	require.NoError(t, err)
 	require.Len(t, rows, 1)
 	assert.Equal(t, "aug20@x.com", rows[0].Email)
@@ -88,14 +88,14 @@ func TestUserRepository_SearchUsersDateRange(t *testing.T) {
 
 func bounds(
 	r interface {
-		SearchUsersDateRange(ctx context.Context, query string, status string, from string, to string, limit int, offset int) ([]repository.UserWithRole, error)
-		CountUsersDateRange(ctx context.Context, query string, status string, from string, to string) (int64, error)
+		SearchUsersDateRange(ctx context.Context, query string, status string, from string, to string, limit int, offset int, tenantID string) ([]repository.UserWithRole, error)
+		CountUsersDateRange(ctx context.Context, query string, status string, from string, to string, tenantID string) (int64, error)
 	}, ctx context.Context, from, to string,
 ) ([]repository.UserWithRole, int64, error) {
-	rows, err := r.SearchUsersDateRange(ctx, "", "", from, to, 10, 0)
+	rows, err := r.SearchUsersDateRange(ctx, "", "", from, to, 10, 0, "1")
 	if err != nil {
 		return nil, 0, err
 	}
-	total, err := r.CountUsersDateRange(ctx, "", "", from, to)
+	total, err := r.CountUsersDateRange(ctx, "", "", from, to, "1")
 	return rows, total, err
 }

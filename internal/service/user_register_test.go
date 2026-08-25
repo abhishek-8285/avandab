@@ -13,6 +13,7 @@ import (
 	userdomain "transport-app/internal/domain/user"
 	"transport-app/internal/events"
 	sqliterepo "transport-app/internal/repository/sqlite"
+	"transport-app/internal/shared"
 )
 
 func TestRegisterSelfServiceAccount_FirstRunClaim(t *testing.T) {
@@ -49,7 +50,7 @@ func TestRegisterSelfServiceAccount_ExistingAdminBlocksClaim(t *testing.T) {
 	svc := NewServices(repo, nil, slog.New(slog.NewTextHandler(io.Discard, nil)), events.NewInMemoryBus())
 	ctx := context.Background()
 
-	seeded, err := svc.Users.CreateUserWithPassword(ctx, "boot@admin.com", "Boot", "9900112299", "strong-pass-0", userdomain.DefaultRoleID(userdomain.RoleAdmin), domain.UserStatusActive)
+	seeded, err := svc.Users.CreateUserWithPassword(ctx, "boot@admin.com", "Boot", "9900112299", "strong-pass-0", userdomain.DefaultRoleID(userdomain.RoleAdmin), domain.UserStatusActive, string(shared.DefaultTenant))
 	require.NoError(t, err)
 	_ = seeded
 

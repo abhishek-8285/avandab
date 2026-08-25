@@ -10,7 +10,8 @@ import (
 type User struct {
 	ID              types.UserID
 	Email           string
-	PasswordHash    string
+	PasswordHash    string `json:"-"`
+	TenantID        string `json:"-"`
 	Name            string
 	Phone           *string
 	Timezone        string

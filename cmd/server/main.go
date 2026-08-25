@@ -1621,7 +1621,7 @@ func bootstrapAdmin(ctx context.Context, services *service.Services, authSvc aut
 		}
 	}
 
-	user, err := services.Users.CreateUserWithPassword(ctx, ba.Email, ba.Name, "", ba.Password, 1, domain.UserStatusActive)
+	user, err := services.Users.CreateUserWithPassword(ctx, ba.Email, ba.Name, "", ba.Password, 1, domain.UserStatusActive, string(shared.DefaultTenant))
 	if err != nil {
 		logger.Error("bootstrap admin failed", "error", err)
 		return

@@ -10,6 +10,7 @@ import (
 
 	"transport-app/internal/domain"
 	"transport-app/internal/middleware"
+	"transport-app/internal/shared"
 )
 
 // UserHandlers handles user management (admin only).
@@ -79,6 +80,10 @@ func (h *UserHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	roleID, _ := strconv.ParseInt(r.PostFormValue("role_id"), 10, 64)
 
 	pwd := r.PostFormValue("password")
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	if tenantID == "" {
+		tenantID = string(shared.DefaultTenant)
+	}
 	var created domain.User
 	var err error
 
@@ -91,6 +96,7 @@ func (h *UserHandlers) Create(w http.ResponseWriter, r *http.Request) {
 			pwd,
 			roleID,
 			domain.UserStatus(r.PostFormValue("status")),
+			tenantID,
 		)
 	} else {
 		created, err = h.Services.Users.CreateUser(
@@ -100,6 +106,7 @@ func (h *UserHandlers) Create(w http.ResponseWriter, r *http.Request) {
 			r.PostFormValue("phone"),
 			roleID,
 			domain.UserStatus(r.PostFormValue("status")),
+			tenantID,
 		)
 	}
 

@@ -11,6 +11,7 @@ import (
 
 	"transport-app/internal/domain"
 	"transport-app/internal/service"
+	"transport-app/internal/shared"
 )
 
 // randomPassword returns a cryptographically random 16-byte hex string.
@@ -29,7 +30,7 @@ func createTestAdmin(t *testing.T, svc *service.Services) (domain.User, string) 
 	ctx := context.Background()
 	password := randomPassword(t)
 
-	created, err := svc.Users.CreateUserWithPassword(ctx, "admin@transport.local", "Admin User", "555-0100", password, 1, domain.UserStatusActive)
+	created, err := svc.Users.CreateUserWithPassword(ctx, "admin@transport.local", "Admin User", "555-0100", password, 1, domain.UserStatusActive, string(shared.DefaultTenant))
 	require.NoError(t, err)
 	return created, password
 }

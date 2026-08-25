@@ -20,6 +20,7 @@ import (
 	"transport-app/internal/middleware"
 	"transport-app/internal/repository"
 	"transport-app/internal/service"
+	"transport-app/internal/shared"
 )
 
 // CustomerHandlers handles customer management.
@@ -71,7 +72,11 @@ func (h *CustomerHandlers) GrantPortalAccess(w http.ResponseWriter, r *http.Requ
 			http.Error(w, "customer role not seeded; run migrations", http.StatusInternalServerError)
 			return
 		}
-		user, err = h.Services.Users.CreateUserWithPassword(ctx, email, name, phone, password, roleID, domain.UserStatusActive)
+		tenantID := string(shared.TenantIDFromContext(ctx))
+		if tenantID == "" {
+			tenantID = string(shared.DefaultTenant)
+		}
+		user, err = h.Services.Users.CreateUserWithPassword(ctx, email, name, phone, password, roleID, domain.UserStatusActive, tenantID)
 		if err != nil {
 			http.Error(w, "failed to create portal user: "+err.Error(), http.StatusInternalServerError)
 			return

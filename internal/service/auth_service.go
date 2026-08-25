@@ -2,16 +2,44 @@ package service
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"transport-app/internal/auth"
 	"transport-app/internal/domain"
 	userdomain "transport-app/internal/domain/user"
+	"transport-app/internal/repository"
 )
 
 // AuthService handles user authentication and session management.
 type AuthService struct {
 	baseService
+}
+
+// tenantActive rejects authentication for users whose tenant organization is
+// not 'active'. A user with no tenant row is treated as legacy/default and
+// allowed through.
+func (s *AuthService) tenantActive(ctx context.Context, userID string) error {
+	getter, ok := s.store.(repository.DBGetter)
+	if !ok || getter == nil {
+		return nil
+	}
+	row := getter.DB().QueryRowContext(ctx, `
+		SELECT t.status
+		FROM tenants t
+		JOIN users u ON u.tenant_id = t.id
+		WHERE u.id = ?`, userID)
+	var status string
+	if err := row.Scan(&status); err != nil {
+		if err == sql.ErrNoRows {
+			return nil
+		}
+		return err
+	}
+	if status != "active" {
+		return auth.ErrTenantSuspended
+	}
+	return nil
 }
 
 // LoginRequest contains the credentials for login.
@@ -42,6 +70,10 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginResult
 
 	if user.Status != domain.UserStatusActive {
 		return nil, domain.ErrUnauthorized
+	}
+
+	if err := s.tenantActive(ctx, string(user.ID)); err != nil {
+		return nil, err
 	}
 
 	// Update last login
@@ -84,6 +116,10 @@ func (s *AuthService) CreateSessionForUser(ctx context.Context, userID domain.Us
 	}
 	if user.Status != domain.UserStatusActive {
 		return nil, domain.ErrUnauthorized
+	}
+
+	if err := s.tenantActive(ctx, string(user.ID)); err != nil {
+		return nil, err
 	}
 
 	token, err := auth.GenerateSecureToken()
