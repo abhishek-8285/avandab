@@ -601,6 +601,23 @@ func main() {
 	}
 	authAPIHandler := authAPIHandlers.NewAPIAuthHandler(services.Auth, services.Users, apiSecret)
 
+	// ── Tenant resolution (Spec 24) ─────────────────────────────────────
+	// Gate off (default): every request resolves to the bootstrap tenant.
+	// Gate on (MULTI_TENANT_ENABLED=true): per-user lookup of users.tenant_id
+	// joined to tenants.status; suspended orgs are rejected at the edge.
+	tenantResolver := middleware.TenantResolver(middleware.DefaultTenantResolver)
+	if cfg.MultiTenant.Enabled {
+		logger.Info("multi-tenant mode enabled: per-user tenant resolution active")
+		tenantResolver = middleware.TenantForUserResolver(func(ctx context.Context, userID string) (string, string, error) {
+			var tenantID, status string
+			row := database.QueryRowContext(ctx, `SELECT u.tenant_id, COALESCE(t.status,'active') FROM users u LEFT JOIN tenants t ON t.id = u.tenant_id WHERE u.id = ?`, userID)
+			if err := row.Scan(&tenantID, &status); err != nil {
+				return "", "", err
+			}
+			return tenantID, status, nil
+		}, appCache)
+	}
+
 	// ── Telemetry Ingestion Pipeline (Phase 1) ─────────────────────────
 	telemetryCfg := cfg.Telemetry
 	ingestCfg := telemetry.IngestConfig{
@@ -735,7 +752,7 @@ func main() {
 
 	// Protected: Telemetry, and all /api/v1/* routes require a valid session or Bearer token
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.RequireAPIAuth(authStore, apiSecret, middleware.DefaultTenantResolver))
+		r.Use(middleware.RequireAPIAuth(authStore, apiSecret, tenantResolver))
 		r.With(featureGate("telemetry")).Group(func(r chi.Router) {
 			telemetry.RegisterTelemetryRoutes(r, ingestor, database, time.Duration(cfg.LiveMap.TelemetryStaleMin)*time.Minute, etaService)
 			telemetry.RegisterGeocodeRoute(r, cfg.LiveMap.NominatimURL)
@@ -848,7 +865,7 @@ func main() {
 	// Deprecated v2 alias routes (rewrite to v1) plus /api/v2/health.
 	// Aliased routes require the same API auth as v1; the public health check
 	// is mounted separately so probes stay unauthenticated.
-	apiversion.MountV2(r, middleware.RequireAPIAuth(authStore, apiSecret, middleware.DefaultTenantResolver), http.HandlerFunc(healthChecker.HealthHandler), bookingAPIHandler, tripAPIHandler, invoiceAPIHandler, paymentAPIHandler)
+	apiversion.MountV2(r, middleware.RequireAPIAuth(authStore, apiSecret, tenantResolver), http.HandlerFunc(healthChecker.HealthHandler), bookingAPIHandler, tripAPIHandler, invoiceAPIHandler, paymentAPIHandler)
 
 	// ── AI Agent: multi-agent orchestrator + RL learning + approvals ────
 	if cfg.Agent.Enabled {
@@ -903,7 +920,7 @@ func main() {
 
 		// API routes (bearer/session) — approval queue + chat
 		r.Group(func(r chi.Router) {
-			r.Use(middleware.RequireAPIAuth(authStore, apiSecret, middleware.DefaultTenantResolver))
+			r.Use(middleware.RequireAPIAuth(authStore, apiSecret, tenantResolver))
 			r.Use(agentRequestTimeout(5 * time.Minute))
 			agentAPI.RegisterAPIRoute(r)
 			if approvalSvc != nil {
@@ -927,7 +944,7 @@ func main() {
 
 	// Uploaded files (logos, documents) - require authentication
 	uploadsServer := http.FileServer(http.Dir(cfg.UploadDir))
-	r.With(middleware.RequireAuth(authStore, middleware.DefaultTenantResolver)).Handle("/uploads/*", http.StripPrefix("/uploads/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	r.With(middleware.RequireAuth(authStore, tenantResolver)).Handle("/uploads/*", http.StripPrefix("/uploads/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "private, no-cache")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		uploadsServer.ServeHTTP(w, r)
@@ -1095,7 +1112,7 @@ func main() {
 
 		// Protected routes
 		r.Group(func(r chi.Router) {
-			r.Use(middleware.RequireAuth(authStore, middleware.DefaultTenantResolver))
+			r.Use(middleware.RequireAuth(authStore, tenantResolver))
 
 			// Trip share links (Spec 04 §4)
 			r.With(middleware.ResourcePermission(authSvc, "shares", "create")).Post("/trips/{id}/share", app.Share.CreateShare)
