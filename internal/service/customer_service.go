@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"transport-app/internal/domain"
+	"transport-app/internal/shared/gstin"
 )
 
 // ErrDuplicateCustomerEmail is returned when a customer update would use an
@@ -22,6 +23,11 @@ type CustomerService struct {
 func (s *CustomerService) CreateCustomer(ctx context.Context, name, company, phone, email, gst, address, notes string) (domain.Customer, error) {
 	if name == "" || phone == "" {
 		return domain.Customer{}, fmt.Errorf("name and phone are required")
+	}
+
+	gst = gstin.Normalize(gst)
+	if gst != "" && !gstin.Valid(gst) {
+		return domain.Customer{}, fmt.Errorf("invalid GSTIN %q: expected 15 chars like 27ABCDE1234F1Z5", gst)
 	}
 
 	// Check phone uniqueness
@@ -72,6 +78,11 @@ func (s *CustomerService) UpdateCustomer(ctx context.Context, id domain.Customer
 	customer, err := s.store.GetCustomerByID(ctx, id)
 	if err != nil {
 		return domain.Customer{}, domain.ErrCustomerNotFound
+	}
+
+	gst = gstin.Normalize(gst)
+	if gst != "" && !gstin.Valid(gst) {
+		return domain.Customer{}, fmt.Errorf("invalid GSTIN %q: expected 15 chars like 27ABCDE1234F1Z5", gst)
 	}
 
 	// Check phone uniqueness for other customers

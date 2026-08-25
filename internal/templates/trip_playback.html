@@ -1,0 +1,567 @@
+{{define "trip_playback.html"}}
+<div class="space-y-4">
+    <a href="/trips/{{.Trip.ID}}" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Back to Trip {{.Trip.TripNumber}}</a>
+
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+            <h1 class="text-lg font-bold tracking-tight text-on-surface font-display flex items-center gap-2 flex-wrap">
+                Trip Playback
+                <span class="font-mono text-sm font-normal text-text-muted">{{.Trip.TripNumber}}</span>
+                <span class="status-badge {{statusBadge .Trip.Status}}">{{.Trip.Status}}</span>
+            </h1>
+            <p class="text-xs text-text-muted mt-1">
+                {{.Trip.RouteSource}} → {{.Trip.RouteDestination}} · Dep {{datetime .Trip.DepartureTime}}{{if .Trip.ArrivalTime}} → Arr {{datetime .Trip.ArrivalTime}}{{end}}
+                {{if .Trip.VehicleRegistrationNumber}} · <span class="font-mono">{{.Trip.VehicleRegistrationNumber}}</span>{{end}}
+                {{if .Trip.DriverDisplayID}} · {{.Trip.DriverDisplayID}}{{end}}
+            </p>
+        </div>
+        <div class="flex items-center gap-2">
+            <label class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-container-low border border-border-subtle text-[10px] font-medium uppercase tracking-wide cursor-pointer select-none">
+                <input type="checkbox" id="pb-geofence-toggle" checked class="rounded border-border-subtle text-primary focus:ring-primary h-3 w-3 cursor-pointer">
+                <span class="text-primary">Geofences</span>
+            </label>
+            <a href="/trips/{{.Trip.ID}}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-low border border-border-subtle text-xs font-medium text-secondary hover:text-on-surface hover:border-primary/50 transition-colors text-decoration-none">Trip Details</a>
+            <button type="button" id="pb-fit-btn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-semibold hover:bg-primary/90 transition-colors cursor-pointer border-0">Fit Route</button>
+        </div>
+    </div>
+
+    <div id="playback-shell" class="relative h-[68vh] min-h-[520px] w-full flex flex-col bg-surface-container-low overflow-hidden rounded-2xl border border-border-subtle shadow-sm">
+        <div id="playback-map" class="flex-1 min-h-0 w-full relative"></div>
+
+        <div id="pb-status" class="absolute inset-0 z-[500] flex items-center justify-center bg-surface-container-lowest/85 backdrop-blur pointer-events-none">
+            <div class="text-center space-y-2">
+                <div class="w-8 h-8 mx-auto rounded-full border-2 border-primary/30 border-t-primary animate-spin"></div>
+                <div class="text-xs font-medium text-secondary">Loading trip trail…</div>
+                <div class="text-[10px] font-mono text-text-muted" id="pb-status-detail"></div>
+            </div>
+        </div>
+
+        <div class="absolute top-3 left-3 right-3 z-10 pointer-events-none flex flex-wrap gap-2">
+            <div class="bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-lg px-3 py-2 shadow-lg pointer-events-auto flex flex-wrap gap-4 text-[11px]">
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Points</span> <span class="font-mono font-bold text-on-surface" id="pb-stat-points">—</span></span>
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Distance</span> <span class="font-mono font-bold text-on-surface" id="pb-stat-distance">—</span></span>
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Duration</span> <span class="font-mono font-bold text-on-surface" id="pb-stat-duration">—</span></span>
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Avg</span> <span class="font-mono font-bold text-on-surface" id="pb-stat-avg">—</span></span>
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Max</span> <span class="font-mono font-bold text-on-surface" id="pb-stat-max">—</span></span>
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Stops</span> <span class="font-mono font-bold text-on-surface" id="pb-stat-stops">—</span></span>
+                <span id="pb-stat-truncated" class="hidden text-amber-600 font-semibold">+ more</span>
+            </div>
+            <div class="ml-auto bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-lg px-2 py-1.5 shadow-lg pointer-events-auto flex items-center gap-1">
+                <button type="button" id="pb-export-csv" class="px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wide bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:border-primary/40 transition-colors cursor-pointer">CSV</button>
+                <button type="button" id="pb-export-gpx" class="px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wide bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:border-primary/40 transition-colors cursor-pointer">GPX</button>
+            </div>
+        </div>
+
+        <div class="absolute bottom-0 left-0 right-0 z-10 bg-surface-container-lowest/95 backdrop-blur border-t border-border-subtle p-3 space-y-3">
+            <div class="flex items-center gap-2">
+                <button type="button" id="pb-play" class="h-9 w-9 flex items-center justify-center rounded-full bg-primary text-on-primary hover:bg-primary/90 transition-colors cursor-pointer border-0 shrink-0" title="Play/Pause (Space)">
+                    <svg id="pb-icon-play" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 ml-0.5"><path d="M8 5v14l11-7z"/></svg>
+                    <svg id="pb-icon-pause" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 hidden"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+                </button>
+                <button type="button" id="pb-rewind" class="h-8 w-8 flex items-center justify-center rounded-lg bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface transition-colors cursor-pointer" title="Restart">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
+                </button>
+                <div class="flex-1 min-w-0 space-y-1">
+                    <input type="range" id="pb-scrub" min="0" max="100" value="0" class="w-full accent-primary cursor-pointer" />
+                    <div class="flex items-center justify-between text-[10px] font-mono text-text-muted">
+                        <span id="pb-time-start">—</span>
+                        <span id="pb-time-current" class="font-semibold text-on-surface">—</span>
+                        <span id="pb-time-end">—</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                    <label class="text-[10px] font-semibold uppercase tracking-wide text-text-muted">Speed</label>
+                    <select id="pb-speed" class="bg-surface-container-low border border-border-subtle rounded-md px-1.5 py-1 text-xs font-medium text-on-surface focus:outline-none focus:border-primary cursor-pointer">
+                        <option value="1">1×</option>
+                        <option value="2">2×</option>
+                        <option value="4">4×</option>
+                        <option value="8">8×</option>
+                        <option value="16">16×</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex items-center justify-between text-[11px] gap-2 flex-wrap">
+                <div class="flex items-center gap-2 text-secondary">
+                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#06b6d4"></span>Route</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#f59e0b"></span>Stop &gt;5m</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#22c55e"></span>Start</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#ef4444"></span>End</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#8b5cf6"></span>Geofence</span>
+                </div>
+                <div class="font-mono text-text-muted" id="pb-hint">Space play/pause · ←→ step · F fit</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detention list for this trip -->
+    <div id="pb-detentions" class="hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <div class="px-4 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+            <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Detention Windows (pickup/drop)</h3>
+        </div>
+        <div class="p-4">
+            <div id="pb-detentions-list" class="space-y-1 text-xs font-mono"></div>
+        </div>
+    </div>
+</div>
+
+<script id="playback-data" type="application/json">
+{
+    "mapConfig": {{json .MapConfig}},
+    "tripId": {{json .PlaybackConfig.TripID}},
+    "vehicleId": {{json .PlaybackConfig.VehicleID}},
+    "historyAPI": {{json .PlaybackConfig.HistoryAPI}},
+    "playbackAPI": {{json .PlaybackConfig.PlaybackAPI}}
+}
+</script>
+
+<style>
+#playback-map { width:100%; height:100%; }
+#playback-map .leaflet-container { height:100% !important; width:100% !important; background:transparent !important; }
+.dark #playback-map .leaflet-tile-pane { filter: brightness(0.85) invert(100%) contrast(1.15) hue-rotate(195deg) saturate(0.4); }
+#pb-scrub { height:6px; }
+</style>
+
+<script>
+(function(){
+    'use strict';
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+    function fmtTs(iso){
+        if(!iso) return '—';
+        var d=new Date(iso);
+        if(Number.isNaN(d.getTime())) return iso;
+        return d.toLocaleString([], {year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    }
+    function fmtDur(sec){
+        if(sec==null) return '—';
+        var h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60);
+        return (h? h+'h ':'')+m+'m';
+    }
+    function haversine(a,b){
+        var R=6371.0088, toRad=function(d){return d*Math.PI/180;};
+        var dLat=toRad(b.lat-a.lat), dLng=toRad(b.lng-a.lng);
+        var sa=Math.sin(dLat/2), so=Math.sin(dLng/2);
+        var h=sa*sa+Math.cos(toRad(a.lat))*Math.cos(toRad(b.lat))*so*so;
+        return 2*R*Math.asin(Math.sqrt(h));
+    }
+    function isStoppedClient(p){
+        if(p.ignition===false) return true;
+        if(p.ignition===0) return true;
+        return (p.speed||0) < 3;
+    }
+    function recomputeStops(pts){
+        var out=[], i=0;
+        while(i<pts.length){
+            if(!isStoppedClient(pts[i])){ i++; continue; }
+            var start=i, end=i;
+            while(end<pts.length && isStoppedClient(pts[end])) end++;
+            if(end-start<2){ i=end; continue; }
+            var dur=(new Date(pts[end-1].ts)-new Date(pts[start].ts))/1000;
+            if(dur<300){ i=end; continue; }
+            var maxDrift=0;
+            for(var k=start;k<end;k++){
+                var d=haversine(pts[start], pts[k]);
+                if(d>maxDrift) maxDrift=d;
+            }
+            if(maxDrift>0.20){ i=end; continue; }
+            var mid=pts[Math.floor((start+end-1)/2)];
+            out.push({start_time:pts[start].ts, end_time:pts[end-1].ts, duration_seconds:Math.round(dur), lat:mid.lat, lng:mid.lng, point_index:start});
+            i=end;
+        }
+        return out;
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+        if(typeof L==='undefined'){ console.error('Leaflet missing'); return; }
+        var dataEl=document.getElementById('playback-data');
+        var cfg={}, tripId='', vehicleId='', historyAPI='/api/v1/telemetry/history', playbackAPI='';
+        try{ var d=JSON.parse(dataEl.textContent||'{}'); cfg=d.mapConfig||{}; tripId=d.tripId||''; vehicleId=d.vehicleId||''; historyAPI=d.historyAPI||historyAPI; playbackAPI=d.playbackAPI||('/api/v1/trips/'+encodeURIComponent(tripId)+'/playback'); }catch(e){}
+
+        var map=L.map('playback-map', {zoomControl:false}).setView([22.9734,78.6569],5);
+        L.control.zoom({position:'topright'}).addTo(map);
+        var osmUrl=cfg.OSMUrl||'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        L.tileLayer(osmUrl,{maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'}).addTo(map);
+        setTimeout(function(){ map.invalidateSize(); },150);
+        if(window.ResizeObserver){ var ro=new ResizeObserver(function(){map.invalidateSize();}); ro.observe(map.getContainer()); }
+        window.addEventListener('resize', function(){ map.invalidateSize(); });
+
+        var statusEl=document.getElementById('pb-status');
+        var statusDetail=document.getElementById('pb-status-detail');
+        var fitBtn=document.getElementById('pb-fit-btn');
+        var playBtn=document.getElementById('pb-play');
+        var rewindBtn=document.getElementById('pb-rewind');
+        var scrub=document.getElementById('pb-scrub');
+        var speedSel=document.getElementById('pb-speed');
+        var iconPlay=document.getElementById('pb-icon-play');
+        var iconPause=document.getElementById('pb-icon-pause');
+        var tStart=document.getElementById('pb-time-start');
+        var tEnd=document.getElementById('pb-time-end');
+        var tCur=document.getElementById('pb-time-current');
+
+        var statPoints=document.getElementById('pb-stat-points');
+        var statDist=document.getElementById('pb-stat-distance');
+        var statDur=document.getElementById('pb-stat-duration');
+        var statAvg=document.getElementById('pb-stat-avg');
+        var statMax=document.getElementById('pb-stat-max');
+        var statStops=document.getElementById('pb-stat-stops');
+        var statTrunc=document.getElementById('pb-stat-truncated');
+        var detWrap=document.getElementById('pb-detentions');
+        var detList=document.getElementById('pb-detentions-list');
+
+        var points=[];
+        var summary=null, stops=[], geofenceEvents=[], detentions=[];
+        var idx=0, playing=false, timer=null, baseInterval=400;
+        var polyline=null, stopsLayer=L.layerGroup().addTo(map), geofenceLayer=L.layerGroup().addTo(map), detentionLayer=L.layerGroup().addTo(map), marker=null;
+
+        var geofenceOverlay=null;
+        var geofenceToggle=document.getElementById('pb-geofence-toggle');
+
+        function hideStatus(){ if(statusEl) statusEl.classList.add('hidden'); }
+        function showStatus(msg, detail){
+            if(!statusEl) return;
+            statusEl.classList.remove('hidden');
+            var msgEl=statusEl.querySelector('.text-xs.font-medium');
+            if(msgEl) msgEl.textContent=msg;
+            if(statusDetail) statusDetail.textContent=detail||'';
+        }
+
+        function renderStats(){
+            if(!points.length){ statPoints.textContent='0'; statDist.textContent='—'; statDur.textContent='—'; statAvg.textContent='—'; statMax.textContent='—'; statStops.textContent='—'; return; }
+            if(summary){
+                statPoints.textContent=String(summary.returned_points||summary.total_points||points.length);
+                statDist.textContent=(summary.distance_km!=null? summary.distance_km.toFixed(1)+' km':'—');
+                statDur.textContent=fmtDur(summary.duration_seconds);
+                statAvg.textContent=(summary.avg_speed_kmh!=null? summary.avg_speed_kmh.toFixed(1)+' km/h':'—');
+                statMax.textContent=(summary.max_speed_kmh!=null? summary.max_speed_kmh.toFixed(0)+' km/h':'—');
+            } else {
+                statPoints.textContent=String(points.length);
+            }
+            statStops.textContent=String((stops&&stops.length)||0);
+            if(tStart) tStart.textContent=fmtTs(points[0].ts);
+            if(tEnd) tEnd.textContent=fmtTs(points[points.length-1].ts);
+            if(statTrunc){
+                var expanded = playbackCache.truncatedPages>1;
+                statTrunc.classList.toggle('hidden', !expanded);
+                if(expanded) statTrunc.textContent='paged ×'+playbackCache.truncatedPages;
+            }
+        }
+
+        function markerIcon(heading){
+            var rot=(heading!=null && !Number.isNaN(heading))? heading: 0;
+            return L.divIcon({
+                className:'',
+                html:'<div style="position:relative;width:28px;height:28px;display:flex;align-items:center;justify-content:center">'+
+                     '<div style="width:26px;height:26px;background:#0b1219;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,0.6);border:2px solid #137fec;display:flex;align-items:center;justify-content:center">'+
+                     '<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:#38bdf8;transform:rotate('+rot+'deg);transition:transform 0.2s ease"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>'+
+                     '</div></div>',
+                iconSize:[28,28], iconAnchor:[14,14]
+            });
+        }
+
+        function renderPolyline(){
+            if(!points.length) return;
+            var latlngs=points.map(function(p){return [p.lat,p.lng];});
+            if(polyline) map.removeLayer(polyline);
+            polyline=L.polyline(latlngs, {color:'#06b6d4', weight:4, opacity:0.95}).addTo(map);
+            stopsLayer.clearLayers();
+            (stops||[]).forEach(function(s){
+                L.circleMarker([s.lat,s.lng],{radius:7,color:'#f59e0b',fillColor:'#f59e0b',fillOpacity:0.9,weight:2})
+                 .bindTooltip('Stop '+Math.round(s.duration_seconds/60)+'m · '+fmtTs(s.start_time), {direction:'top'}).addTo(stopsLayer);
+            });
+            L.circleMarker(latlngs[0],{radius:6,color:'#22c55e',fillColor:'#22c55e',fillOpacity:1,weight:2}).bindTooltip('Start', {direction:'top'}).addTo(stopsLayer);
+            L.circleMarker(latlngs[latlngs.length-1],{radius:6,color:'#ef4444',fillColor:'#ef4444',fillOpacity:1,weight:2}).bindTooltip('End', {direction:'top'}).addTo(stopsLayer);
+            geofenceLayer.clearLayers();
+            (geofenceEvents||[]).forEach(function(ev){
+                if(ev.lat==null||ev.lng==null) return;
+                var color = ev.event_type==='entering'?'#8b5cf6': ev.event_type==='leaving'?'#ec4899': ev.event_type==='breach'?'#ef4444': '#a78bfa';
+                L.circleMarker([ev.lat,ev.lng],{radius:5,color:color,fillColor:color,fillOpacity:0.95,weight:2})
+                 .bindTooltip((ev.zone_kind||'zone')+' · '+ev.event_type+'<br>'+fmtTs(ev.created_at), {direction:'top'}).addTo(geofenceLayer);
+            });
+            if(detentions && detentions.length){
+                detentionLayer.clearLayers();
+                detentions.forEach(function(d){
+                    // detention windows are not map points but list them; could draw dwell segments if we had lat/lng
+                });
+            }
+            if(geofenceOverlay){
+                if(geofenceToggle && geofenceToggle.checked){
+                    if(!map.hasLayer(geofenceOverlay)) geofenceOverlay.addTo(map);
+                }
+            }
+            map.fitBounds(polyline.getBounds(), {padding:[30,30], maxZoom:16});
+            if(!marker){
+                marker=L.marker(latlngs[0], {icon:markerIcon(points[0].heading)}).addTo(map);
+            } else {
+                marker.setLatLng(latlngs[0]);
+                marker.setIcon(markerIcon(points[0].heading));
+            }
+            scrub.max=String(Math.max(0, points.length-1));
+            scrub.value='0';
+            idx=0;
+            syncScrub();
+        }
+
+        function renderDetentions(){
+            if(!detentions || !detentions.length){ detWrap.classList.add('hidden'); return; }
+            detWrap.classList.remove('hidden');
+            var html='';
+            detentions.forEach(function(d){
+                var statusColor = d.status==='open'?'#f59e0b': d.status==='closed'?'#137fec': '#22c55e';
+                html+='<div class="flex items-center justify-between gap-2 py-1 border-b border-border-subtle last:border-0">'
+                    +'<span><span class="font-semibold text-on-surface">'+esc(d.zone_kind)+'</span>'
+                    +' <span class="text-text-muted">'+esc(d.zone_name||'')+'</span>'
+                    +' · '+fmtTs(d.entered_at)+(d.exited_at?' → '+fmtTs(d.exited_at):' (open)')
+                    +'</span>'
+                    +'<span class="flex items-center gap-2"><span class="font-mono">'+d.dwell_seconds+'s</span>'
+                    +'<span class="px-1.5 py-0.5 rounded text-[10px] font-bold" style="background:'+statusColor+'14;color:'+statusColor+'">'+esc(d.status)+'</span>'
+                    +'</span></div>';
+            });
+            detList.innerHTML=html;
+        }
+
+        function syncScrub(){
+            if(!points.length) return;
+            scrub.value=String(idx);
+            var p=points[idx];
+            if(tCur) tCur.textContent=fmtTs(p.ts)+' · '+(p.speed||0).toFixed(0)+' km/h · '+(p.heading!=null? Math.round(p.heading)+'°':'—');
+            if(marker && p){ marker.setLatLng([p.lat,p.lng]); if(p.heading!=null) marker.setIcon(markerIcon(p.heading)); }
+        }
+
+        function setPlaying(on){
+            playing=!!on;
+            if(iconPlay) iconPlay.classList.toggle('hidden', playing);
+            if(iconPause) iconPause.classList.toggle('hidden', !playing);
+            if(playing){
+                if(timer) clearInterval(timer);
+                var speed=parseFloat(speedSel.value)||1;
+                var interval=Math.max(60, Math.round(baseInterval/speed));
+                timer=setInterval(function(){
+                    if(idx < points.length-1){ idx++; syncScrub(); }
+                    else { setPlaying(false); }
+                }, interval);
+            } else {
+                if(timer){ clearInterval(timer); timer=null; }
+            }
+        }
+
+        scrub.addEventListener('input', function(){
+            idx=Math.min(points.length-1, Math.max(0, parseInt(this.value,10)||0));
+            syncScrub();
+        });
+        playBtn.addEventListener('click', function(){ setPlaying(!playing); });
+        rewindBtn.addEventListener('click', function(){ idx=0; syncScrub(); setPlaying(false); });
+        speedSel.addEventListener('change', function(){ if(playing){ setPlaying(false); setPlaying(true); }});
+        if(fitBtn) fitBtn.addEventListener('click', function(){
+            if(polyline) map.fitBounds(polyline.getBounds(), {padding:[30,30], maxZoom:16});
+        });
+        if(geofenceToggle){
+            geofenceToggle.addEventListener('change', function(){
+                if(this.checked){
+                    if(geofenceOverlay && !map.hasLayer(geofenceOverlay)) geofenceOverlay.addTo(map);
+                    if(!map.hasLayer(geofenceLayer)) geofenceLayer.addTo(map);
+                } else {
+                    if(geofenceOverlay && map.hasLayer(geofenceOverlay)) map.removeLayer(geofenceOverlay);
+                    if(map.hasLayer(geofenceLayer)) map.removeLayer(geofenceLayer);
+                }
+            });
+        }
+        document.addEventListener('keydown', function(e){
+            if(e.target && (e.target.tagName==='INPUT' || e.target.tagName==='TEXTAREA' || e.target.tagName==='SELECT')) return;
+            if(e.key===' '){ e.preventDefault(); setPlaying(!playing); }
+            else if(e.key==='ArrowRight'){ e.preventDefault(); idx=Math.min(points.length-1, idx+1); syncScrub(); }
+            else if(e.key==='ArrowLeft'){ e.preventDefault(); idx=Math.max(0, idx-1); syncScrub(); }
+            else if(e.key==='f' || e.key==='F'){ if(polyline) map.fitBounds(polyline.getBounds(), {padding:[30,30], maxZoom:16}); }
+        });
+
+        function exportCSV(){
+            if(!points.length) return;
+            var header=['latitude','longitude','speed_kmh','heading','odometer_km','timestamp'];
+            var lines=[header.join(',')];
+            points.forEach(function(p){
+                lines.push([p.lat, p.lng, (p.speed||0).toFixed(1), p.heading!=null? p.heading.toFixed(1):'', p.odometer!=null? p.odometer.toFixed(2):'', p.ts].join(','));
+            });
+            var blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8;'});
+            var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+            a.download='trip-'+(tripId||'playback')+'.csv'; document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href); a.remove();},200);
+        }
+        function exportGPX(){
+            if(!points.length) return;
+            var gpx='<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="Avandab"><trk><name>Trip '+esc(tripId)+'</name><trkseg>';
+            points.forEach(function(p){ gpx+='<trkpt lat="'+p.lat+'" lon="'+p.lng+'"><time>'+new Date(p.ts).toISOString()+'</time><speed>'+(p.speed||0)+'</speed></trkpt>'; });
+            gpx+='</trkseg></trk></gpx>';
+            var blob=new Blob([gpx],{type:'application/gpx+xml'});
+            var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+            a.download='trip-'+(tripId||'playback')+'.gpx'; document.body.appendChild(a); a.click(); setTimeout(function(){URL.revokeObjectURL(a.href); a.remove();},200);
+        }
+        document.getElementById('pb-export-csv').addEventListener('click', exportCSV);
+        document.getElementById('pb-export-gpx').addEventListener('click', exportGPX);
+
+        var playbackCache={truncatedPages:1};
+        // Fetch helpers with keyset pagination (after+after_id handles same-second duplicates)
+        async function fetchPlaybackAll(){
+            var allPoints=[], allStops=[], allGeofences=[], allDetentions=[];
+            var nextFrom=null, nextID=null, firstSummary=null;
+            var pages=0, truncated=false;
+            do{
+                var url=playbackAPI;
+                var qs=[];
+                if(nextFrom) qs.push('after='+encodeURIComponent(nextFrom));
+                if(nextID) qs.push('after_id='+encodeURIComponent(nextID));
+                qs.push('limit=2000');
+                if(qs.length) url+=(url.indexOf('?')===-1?'?':'&')+qs.join('&');
+                var resp=await fetch(url, {headers:{'Accept':'application/json'}, credentials:'same-origin'});
+                if(!resp.ok) throw new Error('HTTP '+resp.status);
+                var data=await resp.json();
+                if(Array.isArray(data)){
+                    allPoints = allPoints.concat(data);
+                    break;
+                }
+                var pts=data.points||[];
+                allPoints = allPoints.concat(pts);
+                if(!firstSummary && data.summary) firstSummary=data.summary;
+                if(pages===0){
+                    allStops = data.stops||[];
+                    allGeofences = data.geofence_events||[];
+                    allDetentions = data.detentions||[];
+                    loadGeofenceZones();
+                }
+                truncated=!!data.truncated;
+                nextFrom = data.next_from || resp.headers.get('X-Next-From');
+                nextID = data.next_id || resp.headers.get('X-Next-ID');
+                pages++;
+                if(pages>=5) break;
+            } while(truncated && nextFrom);
+            playbackCache.truncatedPages=pages;
+            return {points:allPoints, summary:firstSummary, stops:allStops, geofenceEvents:allGeofences, detentions:allDetentions, truncated:truncated};
+        }
+
+        async function loadGeofenceZones(){
+            try{
+                var r=await fetch('/api/v1/telemetry/geofences', {headers:{'Accept':'application/json'}, credentials:'same-origin'});
+                if(!r.ok) return;
+                var zones=await r.json();
+                if(!zones||!zones.length) return;
+                geofenceOverlay=L.layerGroup();
+                var colors={pickup:'#22c55e', drop:'#06b6d4', depot:'#137fec', restricted:'#f59e0b', no_entry:'#ef4444'};
+                zones.forEach(function(z){
+                    var color=colors[z.kind]||'#137fec';
+                    if(z.shape==='circle' && z.center_lat!=null && z.center_lng!=null && z.radius_m>0){
+                        L.circle([z.center_lat,z.center_lng],{color:color, weight:2, fillColor:color, fillOpacity:0.12, radius:z.radius_m})
+                         .bindTooltip(z.name+' ('+(z.kind||'').toUpperCase()+')',{sticky:true}).addTo(geofenceOverlay);
+                    } else if(z.shape==='polygon' && z.polygon && z.polygon.length>=3){
+                        var pts=z.polygon.map(function(p){ return Array.isArray(p)? [p[0],p[1]]:[p.lat,p.lng]; });
+                        L.polygon(pts,{color:color, weight:2, fillColor:color, fillOpacity:0.12}).bindTooltip(z.name+' ('+(z.kind||'').toUpperCase()+')',{sticky:true}).addTo(geofenceOverlay);
+                    }
+                });
+                if(geofenceToggle && geofenceToggle.checked){
+                    geofenceOverlay.addTo(map);
+                }
+            }catch(e){ console.debug('geofence overlay failed',e); }
+        }
+
+        async function load(){
+            showStatus('Loading trip trail…', tripId);
+            try{
+                var result=await fetchPlaybackAll();
+                points=result.points||[];
+                summary=result.summary||null;
+                stops=result.stops||[];
+                geofenceEvents=result.geofenceEvents||[];
+                detentions=result.detentions||[];
+                points.sort(function(a,b){ return new Date(a.ts)-new Date(b.ts); });
+                if(playbackCache.truncatedPages>1 && points.length>1){
+                    var distOdo=null;
+                    if(points[0].odometer!=null && points[points.length-1].odometer!=null){
+                        var d=+points[points.length-1].odometer - +points[0].odometer;
+                        if(d>0 && d<10000){
+                            var hav=0; for(var ii=1;ii<points.length;ii++) hav+=haversine(points[ii-1], points[ii]);
+                            if(hav===0 || (d>=hav*0.3 && d<=hav*3.0)) distOdo=d;
+                        }
+                    }
+                    var dist=0, maxSp=0;
+                    if(distOdo!=null) dist=distOdo;
+                    else for(var i=1;i<points.length;i++) dist+=haversine(points[i-1], points[i]);
+                    for(var j=0;j<points.length;j++) if((points[j].speed||0)>maxSp) maxSp=points[j].speed;
+                    var t0=new Date(points[0].ts), t1=new Date(points[points.length-1].ts);
+                    var dur=Math.max(0, Math.floor((t1-t0)/1000));
+                    var avg=dur>0? dist/(dur/3600):0;
+                    summary={
+                        distance_km: Math.round(dist*10)/10,
+                        duration_seconds: dur,
+                        avg_speed_kmh: Math.round(avg*10)/10,
+                        max_speed_kmh: Math.round(maxSp*10)/10,
+                        returned_points: points.length,
+                        total_points: points.length
+                    };
+                    stops=recomputeStops(points);
+                }
+                if(!points.length){
+                    // fallback to historyAPI vehicle trail last 7d
+                    if(vehicleId){
+                        var r=await fetch(historyAPI+'?vehicle_id='+encodeURIComponent(vehicleId)+'&minutes='+(7*24*60)+'&limit=2000', {headers:{'Accept':'application/json'}, credentials:'same-origin'});
+                        if(r.ok){
+                            var arr=await r.json();
+                            points=Array.isArray(arr)? arr: (arr.points||[]);
+                            points.sort(function(a,b){ return new Date(a.ts)-new Date(b.ts); });
+                        }
+                    }
+                }
+                if(!points.length){
+                    showStatus('No GPS data for this trip yet', 'Vehicle '+ (vehicleId||'—')+' has no points for trip '+tripId);
+                    renderStats();
+                    return;
+                }
+                hideStatus();
+                // If server summary missing (fallback path), compute client-side minimal
+                if(!summary){
+                    summary={distance_km:0, duration_seconds:0, avg_speed_kmh:0, max_speed_kmh:0, returned_points:points.length, total_points:points.length};
+                    // client haversine is not needed; leave 0 and let renderStats handle
+                }
+                renderStats();
+                renderPolyline();
+                renderDetentions();
+            } catch(err){
+                console.warn('playback load failed', err);
+                showStatus('Failed to load trail', String(err));
+                // try history fallback
+                try{
+                    var r2=await fetch(historyAPI+'?trip_id='+encodeURIComponent(tripId)+'&limit=2000', {headers:{'Accept':'application/json'}, credentials:'same-origin'});
+                    if(r2.ok){
+                        var arr2=await r2.json();
+                        points=Array.isArray(arr2)? arr2: (arr2.points||[]);
+                        hideStatus();
+                        renderStats();
+                        renderPolyline();
+                        return;
+                    }
+                }catch(e2){}
+            }
+        }
+        function renderStats(){
+            if(!points.length){ statPoints.textContent='0'; statDist.textContent='—'; statDur.textContent='—'; statAvg.textContent='—'; statMax.textContent='—'; statStops.textContent='—'; return; }
+            if(summary && summary.distance_km!=null){
+                statPoints.textContent=String(summary.returned_points||summary.total_points||points.length);
+                statDist.textContent=summary.distance_km.toFixed(1)+' km';
+                statDur.textContent=fmtDur(summary.duration_seconds);
+                statAvg.textContent=summary.avg_speed_kmh!=null? summary.avg_speed_kmh.toFixed(1)+' km/h':'—';
+                statMax.textContent=summary.max_speed_kmh!=null? summary.max_speed_kmh.toFixed(0)+' km/h':'—';
+            } else {
+                statPoints.textContent=String(points.length);
+                statDist.textContent='—';
+                statDur.textContent='—';
+                statAvg.textContent='—';
+                statMax.textContent='—';
+            }
+            statStops.textContent=String((stops&&stops.length)||0);
+            if(tStart) tStart.textContent=fmtTs(points[0].ts);
+            if(tEnd) tEnd.textContent=fmtTs(points[points.length-1].ts);
+            if(statTrunc){
+                var expanded = playbackCache.truncatedPages>1;
+                statTrunc.classList.toggle('hidden', !expanded);
+                if(expanded) statTrunc.textContent='paged ×'+playbackCache.truncatedPages;
+            }
+        }
+        load();
+    });
+})();
+</script>
+{{end}}

@@ -194,6 +194,33 @@ func (s *UserService) ListUsers(ctx context.Context, query, status string, limit
 	return users, total, nil
 }
 
+// dateRangeUserRepo is implemented by user repositories that support
+// created_at window filtering. Asserted optionally so existing repository
+// implementations/mocks keep compiling unchanged.
+type dateRangeUserRepo interface {
+	SearchUsersDateRange(ctx context.Context, query, status, from, to string, limit, offset int) ([]repository.UserWithRole, error)
+	CountUsersDateRange(ctx context.Context, query, status, from, to string) (int64, error)
+}
+
+// ListUsersDateRange retrieves users with search, status and created_at
+// window filtering. Falls back to ListUsers semantics when the store does
+// not support the window.
+func (s *UserService) ListUsersDateRange(ctx context.Context, query, status, from, to string, limit, offset int) ([]repository.UserWithRole, int64, error) {
+	dateRepo, ok := s.store.(dateRangeUserRepo)
+	if !ok || (from == "" && to == "") {
+		return s.ListUsers(ctx, query, status, limit, offset)
+	}
+	users, err := dateRepo.SearchUsersDateRange(ctx, query, status, from, to, limit, offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	total, err := dateRepo.CountUsersDateRange(ctx, query, status, from, to)
+	if err != nil {
+		return nil, 0, err
+	}
+	return users, total, nil
+}
+
 // UpdateUser updates an existing user.
 func (s *UserService) UpdateUser(ctx context.Context, id domain.UserID, email, name, phone string, roleID int64, status domain.UserStatus) (domain.User, error) {
 	user, err := s.store.GetUserByID(ctx, id)

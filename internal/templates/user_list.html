@@ -1,27 +1,54 @@
 {{template "page_header.html" (dict "Title" "User Management" "Subtitle" "Manage staff system access and roles" "ActionHref" "/users/new" "ActionIcon" "add" "ActionLabel" "New User")}}
 
-<div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm flex flex-col h-full overflow-hidden">
-    <!-- Sticky Filter Bar (Stitch Design) -->
-    <form method="GET" action="/users" class="px-4 py-2 border-b border-border-subtle flex flex-wrap items-center gap-2 bg-surface-container-lowest sticky top-0 z-10">
-        <span class="text-xs font-medium text-secondary mr-2">Filters:</span>
-        <a href="/users" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter ""}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}} font-body-sm">All Accounts</a>
-        <a href="/users?status=active" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "active"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}} font-body-sm">Active</a>
-        <a href="/users?status=inactive" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "inactive"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}} font-body-sm">Inactive</a>
-        <a href="/users?status=suspended" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "suspended"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}} font-body-sm">Suspended</a>
-
-        <div class="ml-auto flex items-center gap-2 flex-wrap">
-            <div class="relative min-w-[200px] flex-1 sm:flex-none">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                <input type="text" name="q" value="{{.Query}}" placeholder="Search user or email..."
-                    class="bg-surface-container-low border border-border-subtle rounded-md py-2 pl-9 pr-4 text-sm text-on-surface w-full focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+<div class="space-y-4">
+    <!-- Compact stat row (totals only — per-status counts need a handler TODO) -->
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+            <div class="w-9 h-9 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
             </div>
-            {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Label" "Search" "Type" "submit")}}
-            {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Label" "New User" "Href" "/users/new" "Icon" "add" "Class" "shadow-sm")}}
+            <div class="min-w-0">
+                <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{if .Pagination}}{{.Pagination.Total}}{{else}}0{{end}}</div>
+                <div class="text-xs text-secondary font-medium mt-1">Total Accounts</div>
+            </div>
         </div>
-    </form>
+        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+            <div class="w-9 h-9 rounded-lg bg-violet-500/10 border border-violet-500/15 grid place-items-center text-violet-600 shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{len .Users}}</div>
+                <div class="text-xs text-secondary font-medium mt-1">On This Page</div>
+            </div>
+        </div>
+        <div class="col-span-2 lg:col-span-1 flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+            <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600 shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-sm font-bold text-on-surface truncate">{{if .Query}}“{{.Query}}”{{else if .StatusFilter}}{{.StatusFilter}}{{else}}All Accounts{{end}}</div>
+                <div class="text-xs text-secondary font-medium mt-1">Current Filter</div>
+            </div>
+        </div>
+    </div>
 
-    <!-- Data Table Fragment (Datastar refresh target) -->
-    <div id="list-table">
-        {{template "user_list_table.html" .}}
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden flex flex-col">
+        {{template "filter_bar.html" (dict
+            "Action" "/users"
+            "Query" .Query
+            "StatusFilter" .StatusFilter
+            "Chips" (chips "All Accounts" "" "Active" "active" "Inactive" "inactive" "Suspended" "suspended")
+            "ShowDates" true
+            "DateFrom" .DateFrom
+            "DateTo" .DateTo
+            "ShowSearch" true
+            "SearchPlaceholder" "Search user or email..."
+            "Primary" (dict "Variant" "primary" "Size" "sm" "Href" "/users/new" "Icon" "add" "Label" "New User" "Class" "rounded-full shadow-sm")
+        )}}
+
+        <!-- Data Table Fragment (Datastar refresh target) -->
+        <div id="list-table">
+            {{template "user_list_table.html" .}}
+        </div>
     </div>
 </div>

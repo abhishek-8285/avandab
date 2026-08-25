@@ -1,58 +1,70 @@
-<div class="max-w-2xl mx-auto">
-    <h1 class="text-xl font-semibold mb-6 text-on-surface font-display">{{if .UserDetail}}Edit User{{else}}New User{{end}}</h1>
+<div class="max-w-3xl mx-auto">
+    <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display mb-5">{{if .UserDetail}}Edit User{{else}}New User{{end}}</h1>
 
     {{if .FlashError}}{{template "alert.html" (dict "Tone" "error" "Message" .FlashError)}}{{end}}
 
     {{ $u := .UserDetail }}
 
-    <form method="POST" action="/users{{if $u}}/{{$u.ID}}/edit{{else}}/new{{end}}" class="space-y-4">
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Email *</label>
-            <input type="email" name="email" value="{{if $u}}{{$u.Email}}{{end}}" required
-                class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-        </div>
+    <form method="POST" action="/users{{if $u}}/{{$u.ID}}/edit{{else}}/new{{end}}">
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden p-5 space-y-5">
+            <div>
+                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Account</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-secondary mb-1.5">Email *</label>
+                        <input type="email" name="email" value="{{if $u}}{{$u.Email}}{{end}}" required
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    </div>
 
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Name *</label>
-            <input type="text" name="name" value="{{if $u}}{{$u.Name}}{{end}}" required
-                class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-        </div>
+                    <div>
+                        <label class="block text-xs font-bold text-secondary mb-1.5">Name *</label>
+                        <input type="text" name="name" value="{{if $u}}{{$u.Name}}{{end}}" required
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    </div>
 
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Phone</label>
-            <input type="tel" name="phone" value="{{if $u}}{{nullString $u.Phone}}{{end}}"
-                class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-        </div>
+                    <div>
+                        <label class="block text-xs font-bold text-secondary mb-1.5">Phone</label>
+                        <input type="tel" name="phone" value="{{if $u}}{{nullString $u.Phone}}{{end}}"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    </div>
 
-        {{if not $u}}
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Initial Password (Leave blank for default: <code class="bg-surface-container px-1 rounded text-xs normal-case">email-changeme</code>)</label>
-            <input type="password" name="password" placeholder="Set temporary password"
-                class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-        </div>
-        {{end}}
+                    {{if not $u}}
+                    <div>
+                        <label class="block text-xs font-bold text-secondary mb-1.5">Initial Password (Leave blank for default: <code class="bg-surface-container px-1 rounded text-xs normal-case">email-changeme</code>)</label>
+                        <input type="password" name="password" placeholder="Set temporary password"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    </div>
+                    {{end}}
+                </div>
+            </div>
 
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Role *</label>
-            <select name="role_id" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                {{range .Roles}}
-                <option value="{{.ID}}" {{if and $u (eq .ID $u.Role.ID)}}selected{{end}}>{{.Name}}</option>
-                {{end}}
-            </select>
-        </div>
+            <div>
+                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Access Control</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-secondary mb-1.5">Role *</label>
+                        <select name="role_id" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            {{range .Roles}}
+                            <option value="{{.ID}}" {{if and $u (eq .ID $u.Role.ID)}}selected{{end}}>{{.Name}}</option>
+                            {{end}}
+                        </select>
+                    </div>
 
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Status</label>
-            <select name="status" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                <option value="active" {{if and $u (eq $u.Status "active")}}selected{{end}}>Active</option>
-                <option value="inactive" {{if and $u (eq $u.Status "inactive")}}selected{{end}}>Inactive</option>
-                <option value="suspended" {{if and $u (eq $u.Status "suspended")}}selected{{end}}>Suspended</option>
-            </select>
-        </div>
+                    <div>
+                        <label class="block text-xs font-bold text-secondary mb-1.5">Status</label>
+                        <select name="status" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <option value="active" {{if and $u (eq $u.Status "active")}}selected{{end}}>Active</option>
+                            <option value="inactive" {{if and $u (eq $u.Status "inactive")}}selected{{end}}>Inactive</option>
+                            <option value="suspended" {{if and $u (eq $u.Status "suspended")}}selected{{end}}>Suspended</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
 
-        <div class="flex justify-end space-x-3 pt-4 flex-wrap gap-3">
-            {{template "btn.html" (dict "Variant" "secondary" "Label" "Cancel" "Href" "/users" "Class" "min-h-[44px]")}}
-            {{template "btn.html" (dict "Variant" "primary" "Label" "Save User" "Type" "submit" "Class" "min-h-[44px]")}}
+            <div class="sticky bottom-0 -mx-5 px-5 py-3 bg-surface-container-lowest border-t border-border-subtle flex justify-end gap-2 flex-wrap">
+                {{template "btn.html" (dict "Variant" "secondary" "Label" "Cancel" "Href" "/users" "Class" "min-h-[44px]")}}
+                {{template "btn.html" (dict "Variant" "primary" "Label" "Save User" "Type" "submit" "Class" "min-h-[44px] shadow-sm")}}
+            </div>
         </div>
     </form>
 </div>

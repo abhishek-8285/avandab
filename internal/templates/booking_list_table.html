@@ -2,30 +2,32 @@
     <table class="min-w-full divide-y divide-border-subtle">
         <thead class="bg-surface-container-low">
             <tr>
-                <th class="th-cell hidden sm:table-cell">Booking #</th>
-                <th class="th-cell">Customer</th>
-                <th class="th-cell">Route</th>
-                <th class="th-cell">Pickup</th>
-                <th class="th-cell-right">Price</th>
-                <th class="th-cell">Status</th>
-                <th class="th-cell-right">Actions</th>
+                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted hidden sm:table-cell">Booking #</th>
+                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Customer</th>
+                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Route</th>
+                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Pickup</th>
+                <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Price</th>
+                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
+                <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-border-subtle">
             {{if .Bookings}}
             {{range .Bookings}}
-            <tr>
-                <td class="td-cell-strong hidden sm:table-cell" data-numeric>{{.BookingNumber}}</td>
-                <td class="td-cell">{{.CustomerName}}</td>
-                <td class="td-cell">{{.RouteSource}} → {{.RouteDestination}}</td>
-                <td class="td-cell">{{datetime .PickupDate}}</td>
-                <td class="td-cell-num" data-numeric>₹{{printf "%.2f" .Price}}</td>
-                <td class="td-cell">
+            <tr class="hover:bg-surface-container-low/50 transition-colors group">
+                <td class="px-3 py-2 whitespace-nowrap text-sm font-bold text-primary tabular-nums hidden sm:table-cell" data-numeric>{{.BookingNumber}}</td>
+                <td class="px-3 py-2 text-sm font-medium text-on-surface">{{.CustomerName}}</td>
+                <td class="px-3 py-2 text-sm"><span class="font-medium text-on-surface">{{.RouteSource}}</span> <span class="text-text-muted">→</span> <span class="font-medium text-on-surface">{{.RouteDestination}}</span></td>
+                <td class="px-3 py-2 whitespace-nowrap text-sm tabular-nums"><span class="time-display" data-utc-time="{{.PickupDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PickupDate}}</span></td>
+                <td class="px-3 py-2 text-right text-sm font-semibold tabular-nums text-on-surface" data-numeric>₹{{printf "%.2f" .Price}}</td>
+                <td class="px-3 py-2">
                     <span class="status-badge {{statusBadge .Status}}">{{.Status}}</span>
                 </td>
-                <td class="td-cell-actions">
-                    <a href="/bookings/{{.ID}}" class="action-view">View</a>
-                    <a href="/bookings/{{.ID}}/edit" class="action-edit">Edit</a>
+                <td class="px-3 py-2 text-right">
+                    <div class="flex items-center justify-end gap-1.5">
+                        <a href="/bookings/{{.ID}}" class="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/10 border border-primary/15 text-[11px] font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors">View</a>
+                        <a href="/bookings/{{.ID}}/edit" class="inline-flex items-center px-2.5 py-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-bold text-secondary hover:bg-surface-container-high hover:text-on-surface transition-colors">Edit</a>
+                    </div>
                 </td>
             </tr>
             {{end}}

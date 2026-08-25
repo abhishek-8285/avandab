@@ -1,65 +1,79 @@
-<div class="max-w-xl mx-auto">
-    <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
+<div class="max-w-3xl mx-auto">
+    <div class="flex items-start justify-between gap-4 mb-5 flex-wrap">
         <div>
-            <h1 class="text-xl font-semibold text-on-surface font-display">New Maintenance Schedule</h1>
-            <p class="text-sm text-text-muted mt-0.5">Define odometer or time interval triggers for vehicle servicing.</p>
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">New Maintenance Schedule</h1>
+            <p class="text-sm text-secondary mt-1">Define odometer or time interval triggers for vehicle servicing.</p>
         </div>
     </div>
 
-    <form method="POST" action="/maintenance/schedules" class="bg-surface-container-lowest p-6 rounded-lg border border-border-subtle shadow-sm space-y-4">
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Vehicle ID <span class="text-status-alert">*</span></label>
-            <input type="text" name="vehicle_id" value="{{.VehicleID}}" required placeholder="e.g. veh-123"
-                   class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-        </div>
-
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Service Type <span class="text-status-alert">*</span></label>
-            <select name="service_type" required class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                {{range .ServiceTypes}}
-                <option value="{{.}}">{{.}}</option>
-                {{end}}
-            </select>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <form method="POST" action="/maintenance/schedules" class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Interval (km)</label>
-                <input type="number" step="any" name="interval_km" placeholder="e.g. 10000"
-                       class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                <span class="text-xs text-text-muted mt-1 block">Trigger every N km</span>
-            </div>
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Interval (Days)</label>
-                <input type="number" name="interval_days" placeholder="e.g. 90"
-                       class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                <span class="text-xs text-text-muted mt-1 block">Trigger every N days</span>
+                <h3 class="text-sm font-bold text-on-surface">Schedule Details</h3>
+                <p class="text-xs text-text-muted mt-0.5">Vehicle and service to trigger</p>
             </div>
         </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border-subtle pt-4">
+        <div class="p-6 space-y-4">
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Specific Due (km)</label>
-                <input type="number" step="any" name="due_km" placeholder="e.g. 50000"
-                       class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                <span class="text-xs text-text-muted mt-1 block">Fixed odometer milestone</span>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Vehicle ID <span class="text-status-alert">*</span></label>
+                <input type="text" name="vehicle_id" value="{{.VehicleID}}" required placeholder="e.g. veh-123"
+                       class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
+
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Specific Due Date</label>
-                <input type="date" name="due_at"
-                       class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                <span class="text-xs text-text-muted mt-1 block">Fixed calendar milestone</span>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Service Type <span class="text-status-alert">*</span></label>
+                <select name="service_type" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    {{range .ServiceTypes}}
+                    <option value="{{.}}">{{.}}</option>
+                    {{end}}
+                </select>
+            </div>
+
+            <div class="pt-2">
+                <h4 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Recurring Intervals</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Interval (km)</label>
+                        <input type="number" step="any" name="interval_km" placeholder="e.g. 10000"
+                               class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <span class="text-xs text-text-muted mt-1 block">Trigger every N km</span>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Interval (Days)</label>
+                        <input type="number" name="interval_days" placeholder="e.g. 90"
+                               class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <span class="text-xs text-text-muted mt-1 block">Trigger every N days</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-2">
+                <h4 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Fixed Milestones</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Specific Due (km)</label>
+                        <input type="number" step="any" name="due_km" placeholder="e.g. 50000"
+                               class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <span class="text-xs text-text-muted mt-1 block">Fixed odometer milestone</span>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Specific Due Date</label>
+                        <input type="date" name="due_at"
+                               class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <span class="text-xs text-text-muted mt-1 block">Fixed calendar milestone</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 pt-1">
+                <input type="checkbox" name="active" value="1" checked id="sched_active" class="rounded text-primary focus:ring-primary cursor-pointer">
+                <label for="sched_active" class="text-sm font-medium text-on-surface cursor-pointer select-none">Schedule is Active</label>
             </div>
         </div>
 
-        <div class="flex items-center gap-2 pt-2">
-            <input type="checkbox" name="active" value="1" checked id="sched_active" class="rounded text-primary focus:ring-primary cursor-pointer">
-            <label for="sched_active" class="text-sm font-medium text-on-surface cursor-pointer select-none">Schedule is Active</label>
-        </div>
-
-        <div class="flex justify-end gap-3 pt-4 border-t border-border-subtle flex-wrap">
-            <a href="/maintenance" class="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface-container-low text-on-surface px-4 py-2 text-sm font-medium hover:bg-surface-container transition-all">Cancel</a>
-            <button type="submit" class="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-all cursor-pointer">Save Schedule</button>
+        <div class="px-6 py-3 border-t border-border-subtle bg-surface-container-low/40 flex justify-end gap-2">
+            <a href="/maintenance" class="inline-flex items-center px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">Cancel</a>
+            <button type="submit" class="inline-flex items-center px-5 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer">Save Schedule</button>
         </div>
     </form>
 </div>

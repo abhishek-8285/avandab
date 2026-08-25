@@ -1,38 +1,40 @@
 <div class="overflow-x-auto">
     <table class="min-w-full divide-y divide-border-subtle">
-        <thead class="bg-surface-container-low font-label-caps text-[11px] text-secondary uppercase tracking-wider">
+        <thead class="bg-surface-container-low">
             <tr>
-                <th class="th-cell">Invoice #</th>
-                <th class="th-cell">Customer</th>
-                <th class="th-cell">Trip #</th>
-                <th class="th-cell-right">Subtotal (₹)</th>
-                <th class="th-cell-right">Tax (₹)</th>
-                <th class="th-cell-right">Total (₹)</th>
-                <th class="th-cell">Status</th>
-                <th class="th-cell-right">Actions</th>
+                <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Invoice #</th>
+                <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Customer</th>
+                <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Trip #</th>
+                <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Subtotal (₹)</th>
+                <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Tax (₹)</th>
+                <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Total (₹)</th>
+                <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
+                <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
+        <tbody class="divide-y divide-border-subtle">
             {{if .Invoices}}
             {{range .Invoices}}
-            <tr class="hover:bg-surface-container-low transition-colors group">
-                <td class="td-cell-strong font-mono" data-numeric>{{.InvoiceNumber}}</td>
-                <td class="td-cell">{{.CustomerName}}</td>
-                <td class="td-cell font-mono text-xs">{{if .TripNumber}}{{.TripNumber}}{{else}}-{{end}}</td>
-                <td class="td-cell-num" data-numeric>₹{{printf "%.2f" .Subtotal}}</td>
-                <td class="td-cell-num" data-numeric>₹{{printf "%.2f" .Tax}}</td>
-                <td class="td-cell-strong tabular-nums text-right" data-numeric>₹{{printf "%.2f" .Total}}</td>
-                <td class="td-cell">
+            <tr class="hover:bg-surface-container-low/50 transition-colors group">
+                <td class="px-3 py-2 whitespace-nowrap">
+                    <a href="/invoices/{{.ID}}" class="text-sm text-primary font-bold tabular-nums hover:underline">{{.InvoiceNumber}}</a>
+                </td>
+                <td class="px-3 py-2 text-sm font-medium text-on-surface">{{.CustomerName}}</td>
+                <td class="px-3 py-2 text-sm font-mono text-xs text-secondary">{{if .TripNumber}}{{.TripNumber}}{{else}}<span class="text-text-muted">—</span>{{end}}</td>
+                <td class="px-3 py-2 text-sm text-right tabular-nums text-on-surface" data-numeric>₹{{printf "%.2f" .Subtotal}}</td>
+                <td class="px-3 py-2 text-sm text-right tabular-nums text-on-surface" data-numeric>₹{{printf "%.2f" .Tax}}</td>
+                <td class="px-3 py-2 text-sm text-right tabular-nums font-black text-primary" data-numeric>₹{{printf "%.2f" .Total}}</td>
+                <td class="px-3 py-2">
                     <span class="status-badge {{statusBadge .PaymentStatus}}">{{.PaymentStatus}}</span>
                 </td>
-                <td class="td-cell-actions">
-                    <a href="/invoices/{{.ID}}" class="action-view">View Invoice</a>
+                <td class="px-3 py-2 text-right whitespace-nowrap">
+                    <a href="/invoices/{{.ID}}" class="action-view text-xs font-semibold opacity-80 group-hover:opacity-100 transition-opacity">View Invoice</a>
                 </td>
             </tr>
             {{end}}
             {{else}}
             <tr>
-                <td colspan="8" class="py-12 text-center text-secondary">
+                <td colspan="8" class="px-4 py-12 text-center text-secondary">
                     {{template "empty_state.html" (dict "Icon" "description" "Title" "No invoices found" "Message" "No invoices match the current filters.")}}
                 </td>
             </tr>
@@ -41,6 +43,6 @@
     </table>
 </div>
 
-<div class="p-4 border-t border-border-subtle bg-surface-container-lowest">
+<div class="border-t border-border-subtle bg-surface-container-lowest px-2 py-1">
     {{template "pagination.html" .}}
 </div>

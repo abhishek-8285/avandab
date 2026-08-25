@@ -38,57 +38,64 @@
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-border-subtle">
-                <thead>
+                <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="th-cell">HSN/SAC</th>
-                        <th class="th-cell">Description</th>
-                        <th class="th-cell-right">Qty</th>
-                        <th class="th-cell-right">Rate (₹)</th>
-                        <th class="th-cell-right">Taxable (₹)</th>
+                        <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">HSN/SAC</th>
+                        <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Description</th>
+                        <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Qty</th>
+                        <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Rate (₹)</th>
+                        <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Taxable (₹)</th>
                         {{if .IsIntraState}}
-                        <th class="th-cell-right">CGST</th>
-                        <th class="th-cell-right">SGST</th>
+                        <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">CGST</th>
+                        <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">SGST</th>
                         {{else}}
-                        <th class="th-cell-right">IGST</th>
+                        <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">IGST</th>
                         {{end}}
-                        <th class="th-cell-right">Total (₹)</th>
-                        <th class="th-cell text-center">Action</th>
+                        <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Total (₹)</th>
+                        <th class="px-3 py-2.5 text-center text-[11px] font-bold tracking-wider uppercase text-text-muted">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
                     {{if .LineItems}}
                         {{range .LineItems}}
                         <tr class="hover:bg-surface-container-low/50 transition-colors">
-                            <td class="px-4 py-2.5 text-sm font-mono text-xs font-semibold text-primary">{{.HSNSACCode}}</td>
-                            <td class="px-4 py-2.5 text-sm text-on-surface">{{.Description}}</td>
-                            <td class="px-4 py-2.5 text-sm text-right text-on-surface tabular-nums" data-numeric>{{printf "%.2f" .Quantity}} {{.Unit}}</td>
-                            <td class="px-4 py-2.5 text-sm text-right text-on-surface tabular-nums" data-numeric>₹{{printf "%.2f" .Rate}}</td>
-                            <td class="px-4 py-2.5 text-sm text-right text-on-surface tabular-nums" data-numeric>₹{{printf "%.2f" .TaxableValue}}</td>
+                            <td class="px-3 py-2 text-sm font-mono text-xs font-bold text-primary">{{.HSNSACCode}}</td>
+                            <td class="px-3 py-2 text-sm text-on-surface">{{.Description}}</td>
+                            <td class="px-3 py-2 text-sm text-right text-on-surface tabular-nums whitespace-nowrap" data-numeric>{{printf "%.2f" .Quantity}} {{.Unit}}</td>
+                            <td class="px-3 py-2 text-sm text-right text-on-surface tabular-nums whitespace-nowrap" data-numeric>₹{{printf "%.2f" .Rate}}</td>
+                            <td class="px-3 py-2 text-sm text-right text-on-surface tabular-nums whitespace-nowrap" data-numeric>₹{{printf "%.2f" .TaxableValue}}</td>
                             {{if $.IsIntraState}}
-                            <td class="px-4 py-2.5 text-sm text-right text-on-surface tabular-nums whitespace-nowrap" data-numeric>
+                            <td class="px-3 py-2 text-sm text-right text-on-surface tabular-nums whitespace-nowrap" data-numeric>
                                 ₹{{printf "%.2f" .CGSTAmount}} <span class="text-text-muted">({{printf "%.1f" .CGSTRate}}%)</span>
                             </td>
-                            <td class="px-4 py-2.5 text-sm text-right text-on-surface tabular-nums whitespace-nowrap" data-numeric>
+                            <td class="px-3 py-2 text-sm text-right text-on-surface tabular-nums whitespace-nowrap" data-numeric>
                                 ₹{{printf "%.2f" .SGSTAmount}} <span class="text-text-muted">({{printf "%.1f" .SGSTRate}}%)</span>
                             </td>
                             {{else}}
-                            <td class="px-4 py-2.5 text-sm text-right text-on-surface tabular-nums whitespace-nowrap" data-numeric>
+                            <td class="px-3 py-2 text-sm text-right text-on-surface tabular-nums whitespace-nowrap" data-numeric>
                                 ₹{{printf "%.2f" .IGSTAmount}} <span class="text-text-muted">({{printf "%.1f" .IGSTRate}}%)</span>
                             </td>
                             {{end}}
-                            <td class="px-4 py-2.5 text-sm text-right font-semibold text-on-surface tabular-nums" data-numeric>₹{{printf "%.2f" .Total}}</td>
-                            <td class="px-4 py-2.5 text-center">
+                            <td class="px-3 py-2 text-sm text-right font-black text-primary tabular-nums whitespace-nowrap" data-numeric>₹{{printf "%.2f" .Total}}</td>
+                            <td class="px-3 py-2 text-center">
+                                {{if $.Locked}}
+                                <span class="inline-flex items-center justify-center gap-1 text-xs font-medium text-text-muted whitespace-nowrap" title="Line items are immutable once e-invoiced or paid">
+                                    {{iconWithClass "lock" "w-3.5 h-3.5"}}
+                                    Locked ({{$.LockReason}})
+                                </span>
+                                {{else}}
                                 <form method="POST" action="/invoices/{{$.Invoice.ID}}/line-items/{{.ID}}/delete" data-confirm="Are you sure? This cannot be undone." onsubmit="return confirm('Remove line item?');">
-                                    <button type="submit" class="text-status-alert hover:text-status-alert/80 p-1 text-xs font-semibold cursor-pointer">
+                                    <button type="submit" class="inline-flex px-2 py-1 rounded-full border border-status-alert/30 bg-status-alert/10 text-status-alert hover:bg-status-alert/20 transition-colors text-xs font-semibold cursor-pointer">
                                         Delete
                                     </button>
                                 </form>
+                                {{end}}
                             </td>
                         </tr>
                         {{end}}
                     {{else}}
                         <tr>
-                            <td colspan="9" class="px-4 py-8 text-center text-text-muted text-sm">
+                            <td colspan="9" class="px-3 py-12 text-center text-text-muted text-sm">
                                 No line items added yet. Add items below to calculate GST taxes.
                             </td>
                         </tr>
@@ -101,7 +108,11 @@
     <!-- Add Line Item Form -->
     <div class="bg-surface-container-lowest p-6 rounded-lg border border-border-subtle shadow-sm">
         <h3 class="text-base font-semibold text-on-surface mb-4">Add Line Item</h3>
+        {{if .Locked}}
+        {{template "alert.html" dict "Message" (printf "This invoice is locked (%s). Line items can no longer be added or changed." .LockReason)}}
+        {{end}}
         <form method="POST" action="/invoices/{{.Invoice.ID}}/line-items" class="space-y-4">
+            {{if .Locked}}<fieldset disabled>{{end}}
             <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
                 <div class="md:col-span-2 relative">
                     <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">HSN / SAC Code</label>
@@ -144,6 +155,7 @@
                     </button>
                 </div>
             </div>
+            {{if .Locked}}</fieldset>{{end}}
         </form>
     </div>
 

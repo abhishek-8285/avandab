@@ -75,3 +75,7 @@ stryker.log
 # Runtime export artifacts (invoices, fleet CSV dumps)
 INV-*.pdf
 fleet-*.csv
+
+# Strix runs
+strix_runs/
+

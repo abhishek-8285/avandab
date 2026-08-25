@@ -1,19 +1,22 @@
 <div class="flex flex-col h-[calc(100vh-8rem)] min-h-[480px]">
-    <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm flex flex-col flex-1 min-h-0">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
         <!-- Header -->
-        <div class="px-4 py-3 border-b border-border-subtle flex items-center justify-between gap-2">
-            <div class="min-w-0">
-                <h3 class="text-base font-display font-semibold text-on-surface">AI Operations Assistant</h3>
-                <p class="text-xs text-text-muted">Ask anything about bookings, trips, drivers, vehicles, invoices, payments or kharcha</p>
+        <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-2 bg-gradient-to-r from-primary/[0.04] to-transparent">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/15 grid place-items-center text-sm font-black text-primary shrink-0">A</div>
+                <div class="min-w-0">
+                    <h3 class="text-sm font-bold text-on-surface font-display truncate">AI Operations Assistant</h3>
+                    <p class="text-xs text-text-muted truncate">Ask anything about bookings, trips, drivers, vehicles, invoices, payments or kharcha</p>
+                </div>
             </div>
-            <div class="text-xs px-2 py-1 bg-status-success/10 text-status-success rounded-full">Online</div>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold tracking-wide uppercase text-emerald-700 dark:text-emerald-300 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>Online</span>
         </div>
 
         <!-- Messages -->
         <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4">
             <div class="flex items-start gap-2">
                 <div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center text-sm font-bold shrink-0">A</div>
-                <div class="bg-surface-container-low rounded-lg px-4 py-2 text-sm text-on-surface max-w-[80%]">
+                <div class="bg-surface-container-low rounded-2xl rounded-tl-md px-4 py-2 text-sm text-on-surface max-w-[80%]">
                     Hi {{if .User}}{{.User.Name}}{{else}}there{{end}}! I'm your operations assistant. I can help you with:
                     <ul class="list-disc ml-5 mt-1 space-y-0.5">
                         <li>Quotes and route fares</li>
@@ -29,19 +32,19 @@
 
         <!-- Suggestions -->
         <div id="suggestions" class="px-4 pb-2 flex flex-wrap gap-2">
-            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1">Fare Mumbai to Pune</button>
-            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1">Today's trips</button>
-            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1">Available drivers</button>
-            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1">Pending kharcha</button>
-            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1">Unpaid invoices</button>
+            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1 font-semibold transition-colors cursor-pointer">Fare Mumbai to Pune</button>
+            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1 font-semibold transition-colors cursor-pointer">Today's trips</button>
+            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1 font-semibold transition-colors cursor-pointer">Available drivers</button>
+            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1 font-semibold transition-colors cursor-pointer">Pending kharcha</button>
+            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1 font-semibold transition-colors cursor-pointer">Unpaid invoices</button>
         </div>
 
         <!-- Input -->
-        <div class="border-t border-border-subtle px-4 py-3">
+        <div class="border-t border-border-subtle px-4 py-3 bg-surface-container-lowest">
             <form id="chat-form" class="flex flex-col sm:flex-row gap-2">
                 <input id="chat-input" type="text" autocomplete="off" placeholder="Ask me anything..."
-                    class="flex-1 w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2.5 text-sm font-medium hover:bg-primary/90 transition-all shrink-0">
+                    class="flex-1 w-full bg-surface-container-low border border-border-subtle rounded-full px-4 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-full bg-primary text-on-primary px-5 py-2.5 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all shrink-0 cursor-pointer border-0">
                     Send
                 </button>
             </form>

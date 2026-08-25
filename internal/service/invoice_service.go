@@ -131,6 +131,16 @@ func (s *InvoiceService) UpdateInvoice(ctx context.Context, id domain.InvoiceID,
 		return domain.Invoice{}, domain.ErrInvoiceNotFound
 	}
 
+	// GST immutability: once e-invoiced, core financial fields are locked;
+	// corrections go through credit/debit notes. Payment status may still
+	// advance (payments legitimately settle the invoice).
+	if s.invoiceIRN(ctx, id) != "" {
+		if invoice.Subtotal != subtotal || invoice.Tax != tax ||
+			invoice.Discount != discount || invoice.Total != total {
+			return domain.Invoice{}, domain.ErrInvoiceEInvoiced
+		}
+	}
+
 	invoice.BookingID = bookingID
 	invoice.CustomerID = customerID
 	invoice.TripID = tripID
@@ -145,6 +155,11 @@ func (s *InvoiceService) UpdateInvoice(ctx context.Context, id domain.InvoiceID,
 
 // DeleteInvoice deletes an invoice.
 func (s *InvoiceService) DeleteInvoice(ctx context.Context, id domain.InvoiceID) error {
+	// GST immutability guard: e-invoiced or paid invoices must not be
+	// hard-deleted (payments cascade with the invoice row).
+	if err := s.ensureInvoiceNotLocked(ctx, id); err != nil {
+		return err
+	}
 	if err := s.store.DeleteInvoice(ctx, id); err != nil {
 		return err
 	}

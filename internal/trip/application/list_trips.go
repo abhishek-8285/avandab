@@ -20,6 +20,20 @@ type ListTripsQuery struct {
 	Status     string
 	DriverID   string
 	AuthUserID string
+	DateFrom   string // YYYY-MM-DD inclusive, empty = unbounded
+	DateTo     string // YYYY-MM-DD inclusive, empty = unbounded
+}
+
+// dateRangeTripRepo is implemented by trip repositories that support
+// departure-date window filtering. Asserted optionally so existing
+// repository implementations/mocks keep compiling unchanged.
+type dateRangeTripRepo interface {
+	SearchReadModelsDateRange(ctx context.Context, tenantID shared.TenantID, query string, status string, from string, to string, limit int, offset int) ([]domain.TripReadModel, int64, error)
+	SearchReadModelsByDriverDateRange(ctx context.Context, tenantID shared.TenantID, driverIDs []string, query string, status string, from string, to string, limit int, offset int) ([]domain.TripReadModel, int64, error)
+}
+
+func hasDateRange(from, to string) bool {
+	return from != "" || to != ""
 }
 
 // ListTripsResponse paginated results.
@@ -60,7 +74,11 @@ func (uc *ListTripsUseCase) Execute(ctx context.Context, q ListTripsQuery) (List
 		var total int64
 		var err error
 
-		if q.DriverID == "me" && q.AuthUserID != "" {
+		dateRepo, dateOK := repo.(dateRangeTripRepo)
+		useDates := hasDateRange(q.DateFrom, q.DateTo) && dateOK
+
+		switch {
+		case q.DriverID == "me" && q.AuthUserID != "":
 			driverIDs := []string{q.AuthUserID}
 			if driverRepo, ok := txCtx.Repositories().Drivers().(driverdomain.DriverRepository); ok {
 				if rm, dErr := driverRepo.GetReadModel(txCtx, driveragg.DriverID(q.AuthUserID), q.TenantID); dErr == nil {
@@ -72,11 +90,23 @@ func (uc *ListTripsUseCase) Execute(ctx context.Context, q ListTripsQuery) (List
 					}
 				}
 			}
-			rows, total, err = repo.SearchReadModelsByDriver(txCtx, q.TenantID, driverIDs, q.Search, q.Status, q.Limit, offset)
-		} else if q.DriverID != "" && q.DriverID != "me" {
-			rows, total, err = repo.SearchReadModelsByDriver(txCtx, q.TenantID, []string{q.DriverID}, q.Search, q.Status, q.Limit, offset)
-		} else {
-			rows, total, err = repo.SearchReadModels(txCtx, q.TenantID, q.Search, q.Status, q.Limit, offset)
+			if useDates {
+				rows, total, err = dateRepo.SearchReadModelsByDriverDateRange(txCtx, q.TenantID, driverIDs, q.Search, q.Status, q.DateFrom, q.DateTo, q.Limit, offset)
+			} else {
+				rows, total, err = repo.SearchReadModelsByDriver(txCtx, q.TenantID, driverIDs, q.Search, q.Status, q.Limit, offset)
+			}
+		case q.DriverID != "" && q.DriverID != "me":
+			if useDates {
+				rows, total, err = dateRepo.SearchReadModelsByDriverDateRange(txCtx, q.TenantID, []string{q.DriverID}, q.Search, q.Status, q.DateFrom, q.DateTo, q.Limit, offset)
+			} else {
+				rows, total, err = repo.SearchReadModelsByDriver(txCtx, q.TenantID, []string{q.DriverID}, q.Search, q.Status, q.Limit, offset)
+			}
+		default:
+			if useDates {
+				rows, total, err = dateRepo.SearchReadModelsDateRange(txCtx, q.TenantID, q.Search, q.Status, q.DateFrom, q.DateTo, q.Limit, offset)
+			} else {
+				rows, total, err = repo.SearchReadModels(txCtx, q.TenantID, q.Search, q.Status, q.Limit, offset)
+			}
 		}
 
 		if err != nil {

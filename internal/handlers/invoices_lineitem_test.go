@@ -3,6 +3,8 @@ package handlers
 import (
 	"database/sql"
 	"fmt"
+	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -17,6 +19,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	_ "modernc.org/sqlite"
+	"transport-app/internal/config"
+	"transport-app/internal/events"
+	repoSQLite "transport-app/internal/repository/sqlite"
+	"transport-app/internal/service"
 	"transport-app/internal/shared"
 )
 
@@ -43,6 +49,12 @@ func newInvoiceLineTestDB(t *testing.T) *sql.DB {
 func TestInvoiceHandlers_LineItemGSTFailClosed(t *testing.T) {
 	db := newInvoiceLineTestDB(t)
 	app := newMaintHandlerApp(t, db, maintAllowAuthSvc{})
+	app.Services = service.NewServices(
+		repoSQLite.NewRepository(db),
+		&config.Config{AppEnv: "testing", CookieSecret: "test-cookie-secret-32-chars-long!"},
+		slog.New(slog.NewTextHandler(io.Discard, nil)),
+		events.NewInMemoryBus(),
+	)
 	app.Invoices = &InvoiceHandlers{App: app}
 
 	_, err := db.Exec(`INSERT INTO customers (id, name, phone, gst) VALUES ('cust-gst', 'GST Buyer', '+91-9000000000', '27ABCDE1234F1Z5')`)
@@ -92,4 +104,77 @@ func TestInvoiceHandlers_LineItemGSTFailClosed(t *testing.T) {
 	err = db.QueryRow(`SELECT total FROM invoices WHERE id = 'inv-gst'`).Scan(&invTotal)
 	require.NoError(t, err)
 	assert.InDelta(t, 2100.0, invTotal, 0.001, "header totals recalculated in same tx")
+}
+
+// TestInvoiceHandlers_LineItemsEditorLockState verifies the editor renders
+// read-only for locked invoices (IRN set or payment status != pending) and
+// keeps the delete form only for editable ones.
+func TestInvoiceHandlers_LineItemsEditorLockState(t *testing.T) {
+	cases := []struct {
+		name         string
+		setup        func(t *testing.T, db *sql.DB, invID string)
+		wantHint     string // empty → expect unlocked rendering
+		wantDisabled bool
+	}{
+		{
+			name: "pending_invoice_shows_delete_form",
+			setup: func(t *testing.T, db *sql.DB, invID string) {
+				insertGuardHandlerInvoice(t, db, invID)
+			},
+		},
+		{
+			name: "einvoiced_invoice_renders_lock_hint",
+			setup: func(t *testing.T, db *sql.DB, invID string) {
+				insertGuardHandlerInvoice(t, db, invID)
+				_, err := db.Exec(`UPDATE invoices SET irn = ? WHERE id = ?`, "irn-"+invID, invID)
+				require.NoError(t, err)
+			},
+			wantHint:     "Locked (e-invoiced)",
+			wantDisabled: true,
+		},
+		{
+			name: "paid_invoice_renders_lock_hint",
+			setup: func(t *testing.T, db *sql.DB, invID string) {
+				insertGuardHandlerInvoice(t, db, invID)
+				_, err := db.Exec(`UPDATE invoices SET payment_status = 'paid' WHERE id = ?`, invID)
+				require.NoError(t, err)
+			},
+			wantHint:     "Locked (paid)",
+			wantDisabled: true,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			db := newInvoiceGuardHandlerDB(t)
+			app := newInvoiceGuardHandlerApp(t, db)
+
+			invID := "inv-" + tc.name
+			tc.setup(t, db, invID)
+
+			r := chi.NewRouter()
+			tenantMW := func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+					ctx := shared.ContextWithTenantID(req.Context(), shared.DefaultTenant)
+					next.ServeHTTP(w, req.WithContext(ctx))
+				})
+			}
+			r.With(tenantMW).Get("/invoices/{id}/line-items", app.Invoices.LineItemsEditor)
+
+			req := withSession(httptest.NewRequest(http.MethodGet, "/invoices/"+invID+"/line-items", nil), "user-1", "admin")
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, req)
+
+			require.Equal(t, http.StatusOK, w.Code)
+			body := w.Body.String()
+			if tc.wantHint == "" {
+				assert.Contains(t, body, `data-confirm="Are you sure? This cannot be undone."`, "editable invoice must render the delete form")
+				assert.NotContains(t, body, "<fieldset disabled>")
+				assert.NotContains(t, body, "Locked (")
+				return
+			}
+			assert.Contains(t, body, tc.wantHint)
+			assert.Contains(t, body, "<fieldset disabled>", "add-item form must be disabled when locked")
+			assert.NotContains(t, body, `data-confirm="Are you sure? This cannot be undone."`, "locked invoice must not render any delete form")
+		})
+	}
 }

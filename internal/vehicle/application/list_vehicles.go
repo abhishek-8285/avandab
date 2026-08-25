@@ -15,6 +15,19 @@ type ListVehiclesQuery struct {
 	Limit    int
 	Search   string
 	Status   string
+	DateFrom string // YYYY-MM-DD inclusive, empty = unbounded (created_at)
+	DateTo   string // YYYY-MM-DD inclusive, empty = unbounded (created_at)
+}
+
+// dateRangeVehicleRepo is implemented by vehicle repositories that support
+// created_at window filtering. Asserted optionally so existing repository
+// implementations/mocks keep compiling unchanged.
+type dateRangeVehicleRepo interface {
+	SearchReadModelsDateRange(ctx context.Context, tenantID shared.TenantID, query string, status string, from string, to string, limit int, offset int) ([]domain.VehicleReadModel, int64, error)
+}
+
+func hasDateRange(from, to string) bool {
+	return from != "" || to != ""
 }
 
 type ListVehiclesResponse struct {
@@ -47,7 +60,18 @@ func (uc *ListVehiclesUseCase) Execute(ctx context.Context, q ListVehiclesQuery)
 			return errors.New("failed to retrieve vehicle repository")
 		}
 
-		rows, total, err := repo.SearchReadModels(txCtx, q.TenantID, q.Search, q.Status, q.Limit, offset)
+		var rows []domain.VehicleReadModel
+		var total int64
+		var err error
+
+		dateRepo, dateOK := repo.(dateRangeVehicleRepo)
+		useDates := hasDateRange(q.DateFrom, q.DateTo) && dateOK
+
+		if useDates {
+			rows, total, err = dateRepo.SearchReadModelsDateRange(txCtx, q.TenantID, q.Search, q.Status, q.DateFrom, q.DateTo, q.Limit, offset)
+		} else {
+			rows, total, err = repo.SearchReadModels(txCtx, q.TenantID, q.Search, q.Status, q.Limit, offset)
+		}
 		if err != nil {
 			return err
 		}

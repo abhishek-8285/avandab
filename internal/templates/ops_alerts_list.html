@@ -1,87 +1,92 @@
 {{define "ops_alerts_list.html"}}
-<div class="p-4 sm:p-6 max-w-7xl mx-auto text-on-surface">
-    <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
-        <div>
-            <h1 class="text-xl font-semibold text-on-surface font-display">Operational Alerts</h1>
-            <p class="text-sm text-text-muted">Business process alerts requiring attention</p>
+<div class="p-4 sm:p-6 max-w-[1600px] mx-auto text-on-surface space-y-5">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 flex-wrap">
+        <div class="min-w-0">
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Operational Alerts</h1>
+            <p class="text-sm text-secondary mt-1">Business process alerts requiring attention</p>
         </div>
+        <span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle self-start">{{len .Alerts}} in view</span>
     </div>
 
-    <div class="flex flex-wrap gap-2 mb-6">
-        <select id="status-filter" class="bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" onchange="filterAlerts()">
-            <option value="">All Statuses</option>
-            <option value="open">Open</option>
-            <option value="acknowledged">Acknowledged</option>
-            <option value="resolved">Resolved</option>
-            <option value="dismissed">Dismissed</option>
-        </select>
-        <select id="type-filter" class="bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" onchange="filterAlerts()">
-            <option value="">All Types</option>
-            <option value="vehicle_breakdown">Vehicle Breakdown</option>
-            <option value="driver_absence">Driver Absence</option>
-            <option value="payment_delay">Payment Delay</option>
-            <option value="compliance_breach">Compliance Breach</option>
-            <option value="fuel_theft_confirmed">Fuel Theft</option>
-            <option value="settlement_dispute">Settlement Dispute</option>
-            <option value="system_error">System Error</option>
-        </select>
-    </div>
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <!-- Filter bar -->
+        {{template "filter_bar.html" (dict
+            "Action" "/ops-alerts"
+            "Label" "Status:"
+            "StatusFilter" .StatusFilter
+            "Chips" (chips "All Statuses" "" "Open" "open" "Acknowledged" "acknowledged" "Resolved" "resolved" "Dismissed" "dismissed")
+            "ShowDates" false
+            "ShowSearch" false
+        )}}
 
-    <div id="alerts-container" class="overflow-x-auto">
-        <table class="w-full bg-surface-container-lowest text-on-surface rounded-lg shadow-sm border border-border-subtle overflow-hidden">
-            <thead>
-                <tr class="border-b border-border-subtle bg-surface-container-low text-secondary text-xs uppercase font-semibold">
-                    <th class="th-cell">Severity</th>
-                    <th class="th-cell">Type</th>
-                    <th class="th-cell">Title</th>
-                    <th class="th-cell">Status</th>
-                    <th class="th-cell">Created</th>
-                    <th class="th-cell-right">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
-                {{range .Alerts}}
-                <tr class="hover:bg-surface-container-low transition-colors">
-                    <td class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap">
-                        <span class="px-2 py-0.5 rounded-full text-xs font-bold border
-                            {{if eq .Severity "critical"}}bg-status-alert/10 text-status-alert border-status-alert/30
-                            {{else if eq .Severity "high"}}bg-status-warning/10 text-status-warning border-status-warning/30
-                            {{else if eq .Severity "medium"}}bg-status-info/10 text-status-info border-status-info/30
-                            {{else}}bg-surface-container-high text-secondary{{end}}">
-                            {{.Severity}}
-                        </span>
-                    </td>
-                    <td class="px-4 py-2.5 text-sm text-on-surface text-xs font-mono text-secondary">{{.AlertType}}</td>
-                    <td class="px-4 py-2.5 text-sm text-on-surface font-medium">{{.Title}}</td>
-                    <td class="px-4 py-2.5 text-sm text-on-surface">
-                        <span class="px-2 py-0.5 rounded-full text-xs font-medium border
-                            {{if eq .Status "open"}}bg-status-alert/10 text-status-alert border-status-alert/30
-                            {{else if eq .Status "acknowledged"}}bg-status-info/10 text-status-info border-status-info/30
-                            {{else if eq .Status "resolved"}}bg-status-success/10 text-status-success border-status-success/30
-                            {{else}}bg-surface-container-high text-secondary{{end}}">
-                            {{.Status}}
-                        </span>
-                    </td>
-                    <td class="px-4 py-2.5 text-sm text-on-surface text-xs text-text-muted">{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
-                    <td class="px-4 py-2.5 text-sm text-on-surface">
-                        <div class="flex items-center justify-end gap-1 flex-wrap">
-                        {{if eq .Status "open"}}
-                            {{if can $.User "ops_alerts" "update"}}
-                            <button onclick="acknowledgeAlert('{{.ID}}')" class="inline-flex items-center gap-1 rounded-md bg-primary text-on-primary px-3 py-1.5 text-xs font-medium hover:bg-primary/90 transition-all cursor-pointer">Ack</button>
-                            <button onclick="resolveAlert('{{.ID}}')" class="inline-flex items-center gap-1 rounded-md bg-status-success text-on-primary px-3 py-1.5 text-xs font-medium hover:opacity-90 transition-all cursor-pointer">Resolve</button>
-                            <button onclick="dismissAlert('{{.ID}}')" class="inline-flex items-center gap-1 rounded-md bg-surface-container-low text-on-surface border border-border-subtle px-3 py-1.5 text-xs font-medium hover:bg-surface-container transition-all cursor-pointer">Dismiss</button>
+        <div id="alerts-container" class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-border-subtle">
+                <thead class="bg-surface-container-low">
+                    <tr>
+                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Severity</th>
+                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Type</th>
+                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Title</th>
+                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
+                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Created</th>
+                        <th class="px-3 py-2 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
+                    {{if .Alerts}}
+                    {{range .Alerts}}
+                    <tr class="hover:bg-surface-container-low/60 transition-colors">
+                        <td class="px-3 py-2 whitespace-nowrap">
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold
+                                {{if eq .Severity "critical"}}bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/15
+                                {{else if eq .Severity "high"}}bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/15
+                                {{else if eq .Severity "medium"}}bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15
+                                {{else}}bg-surface-container text-text-muted border border-border-subtle{{end}}">
+                                {{.Severity}}
+                            </span>
+                        </td>
+                        <td class="px-3 py-2 text-xs font-mono text-secondary whitespace-nowrap">{{.AlertType}}</td>
+                        <td class="px-3 py-2 font-semibold max-w-sm truncate" title="{{.Title}}">{{.Title}}</td>
+                        <td class="px-3 py-2 whitespace-nowrap">
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold
+                                {{if eq .Status "open"}}bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/15
+                                {{else if eq .Status "acknowledged"}}bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15
+                                {{else if eq .Status "resolved"}}bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/15
+                                {{else}}bg-surface-container text-text-muted border border-border-subtle{{end}}">
+                                {{.Status}}
+                            </span>
+                        </td>
+                        <td class="px-3 py-2 text-xs text-text-muted tabular-nums whitespace-nowrap">{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
+                        <td class="px-3 py-2 text-right whitespace-nowrap">
+                            <div class="flex items-center justify-end gap-1.5 flex-wrap">
+                            {{if eq .Status "open"}}
+                                {{if can $.User "ops_alerts" "update"}}
+                                <button onclick="acknowledgeAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/15 px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer">Ack</button>
+                                <button onclick="resolveAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/15 px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer">Resolve</button>
+                                <button onclick="dismissAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-surface-container-lowest border border-border-subtle text-on-surface px-2.5 py-1 text-[11px] font-bold hover:bg-surface-container-low transition-all cursor-pointer">Dismiss</button>
+                                {{end}}
+                            {{else if eq .Status "acknowledged"}}
+                                {{if can $.User "ops_alerts" "update"}}
+                                <button onclick="resolveAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/15 px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer">Resolve</button>
+                                {{end}}
                             {{end}}
-                        {{else if eq .Status "acknowledged"}}
-                            {{if can $.User "ops_alerts" "update"}}
-                            <button onclick="resolveAlert('{{.ID}}')" class="inline-flex items-center gap-1 rounded-md bg-status-success text-on-primary px-3 py-1.5 text-xs font-medium hover:opacity-90 transition-all cursor-pointer">Resolve</button>
-                            {{end}}
-                        {{end}}
+                            </div>
+                        </td>
+                    </tr>
+                    {{end}}
+                    {{else}}
+                    <tr><td colspan="6" class="px-4 py-12 text-center">
+                        <div class="flex flex-col items-center gap-2">
+                            <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+                            </div>
+                            <p class="text-sm font-medium text-on-surface mt-1">No alerts</p>
+                            <p class="text-xs text-text-muted">Fleet operations are quiet.</p>
                         </div>
-                    </td>
-                </tr>
-                {{end}}
-            </tbody>
-        </table>
+                    </td></tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 

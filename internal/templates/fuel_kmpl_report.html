@@ -1,32 +1,39 @@
 {{define "fuel_kmpl_report.html"}}
-<div class="space-y-6">
-    <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
-        <div>
-            <h1 class="text-xl font-semibold text-on-surface font-display">Fuel Efficiency Report</h1>
-            <p class="text-sm text-text-muted mt-1">Per-vehicle kmpl (refill events vs telemetry odometer)</p>
+<div class="space-y-5 max-w-[1600px] mx-auto">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="min-w-0">
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Fuel Efficiency Report</h1>
+            <p class="text-sm text-secondary mt-1">Per-vehicle kmpl (refill events vs telemetry odometer)</p>
         </div>
-        <form method="get" class="flex items-end gap-2 flex-wrap">
+        <form method="get" class="flex items-end gap-2 flex-wrap shrink-0">
             <div>
-                <label for="kmpl-from" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">From</label>
+                <label for="kmpl-from" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">From</label>
                 <input type="date" id="kmpl-from" name="from" value="{{.From}}"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                    class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
             <div>
-                <label for="kmpl-to" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">To</label>
+                <label for="kmpl-to" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">To</label>
                 <input type="date" id="kmpl-to" name="to" value="{{.To}}"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                    class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
-            <button type="submit" class="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-all">
+            <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all">
                 Filter
             </button>
         </form>
     </div>
 
     {{if .KmplRows}}
-    <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm overflow-hidden">
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
+        <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between flex-wrap gap-3">
+            <h3 class="text-sm font-bold text-on-surface">Per-Vehicle Efficiency</h3>
+            <span class="inline-flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .KmplRows}} vehicles</span>
+                <span class="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/15 text-[10px] font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300 tabular-nums">{{.From}} → {{.To}}</span>
+            </span>
+        </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-border-subtle">
-                <thead>
+                <thead class="bg-surface-container-low">
                     <tr>
                         <th class="th-cell">Vehicle</th>
                         <th class="th-cell-right">Odometer &Delta; (km)</th>
@@ -37,28 +44,28 @@
                         <th class="th-cell-right">Trips</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-border-subtle bg-surface-container-lowest">
+                <tbody class="divide-y divide-border-subtle">
                     {{range .KmplRows}}
-                    <tr class="hover:bg-surface-container-low transition-colors">
-                        <td class="px-4 py-2.5 text-sm font-semibold text-on-surface">{{.RegistrationNo}}</td>
-                        <td class="px-4 py-2.5 text-sm text-right tabular-nums text-on-surface" data-numeric>{{printf "%.1f" .OdometerDeltaKm}}</td>
-                        <td class="px-4 py-2.5 text-sm text-right tabular-nums text-on-surface" data-numeric>{{printf "%.1f" .RefillLitres}}</td>
-                        <td class="px-4 py-2.5 text-sm text-right tabular-nums font-semibold text-on-surface" data-numeric>
+                    <tr class="hover:bg-surface-container-low/50 transition-colors">
+                        <td class="px-3 py-2 text-sm font-bold text-primary tabular-nums">{{.RegistrationNo}}</td>
+                        <td class="px-3 py-2 text-sm text-right font-semibold text-on-surface tabular-nums" data-numeric>{{printf "%.1f" .OdometerDeltaKm}}</td>
+                        <td class="px-3 py-2 text-sm text-right font-semibold text-on-surface tabular-nums" data-numeric>{{printf "%.1f" .RefillLitres}}</td>
+                        <td class="px-3 py-2 text-sm text-right font-black text-on-surface tabular-nums" data-numeric>
                             {{if gt .ComputedKmpl 0.0}}{{printf "%.2f" .ComputedKmpl}}{{else}}&mdash;{{end}}
                         </td>
-                        <td class="px-4 py-2.5 text-sm text-right tabular-nums text-secondary" data-numeric>{{printf "%.2f" .ConfiguredKmpl}}</td>
-                        <td class="px-4 py-2.5 text-sm text-right" data-numeric>
+                        <td class="px-3 py-2 text-sm text-right font-medium text-secondary tabular-nums" data-numeric>{{printf "%.2f" .ConfiguredKmpl}}</td>
+                        <td class="px-3 py-2 text-sm text-right" data-numeric>
                             {{if gt .ComputedKmpl 0.0}}
                               {{if gt .VariancePct 20.0}}
-                                <span class="badge badge-sm bg-status-alert/10 text-status-alert">{{printf "%+.1f%%" .VariancePct}}</span>
+                                <span class="inline-flex px-2 py-0.5 rounded-full border text-[11px] font-bold tabular-nums bg-status-alert/10 border-status-alert/20 text-status-alert">{{printf "%+.1f%%" .VariancePct}}</span>
                               {{else if lt .VariancePct -20.0}}
-                                <span class="badge badge-sm bg-status-warning/10 text-status-warning">{{printf "%+.1f%%" .VariancePct}}</span>
+                                <span class="inline-flex px-2 py-0.5 rounded-full border text-[11px] font-bold tabular-nums bg-status-warning/10 border-status-warning/20 text-status-warning">{{printf "%+.1f%%" .VariancePct}}</span>
                               {{else}}
-                                <span class="badge badge-sm bg-status-success/10 text-status-success">{{printf "%+.1f%%" .VariancePct}}</span>
+                                <span class="inline-flex px-2 py-0.5 rounded-full border text-[11px] font-bold tabular-nums bg-status-success/10 border-status-success/20 text-status-success">{{printf "%+.1f%%" .VariancePct}}</span>
                               {{end}}
                             {{else}}&mdash;{{end}}
                         </td>
-                        <td class="px-4 py-2.5 text-sm text-right tabular-nums text-on-surface" data-numeric>{{.TripCount}}</td>
+                        <td class="px-3 py-2 text-sm text-right font-semibold text-on-surface tabular-nums" data-numeric>{{.TripCount}}</td>
                     </tr>
                     {{end}}
                 </tbody>
@@ -66,9 +73,12 @@
         </div>
     </div>
     {{else}}
-    <div class="flex flex-col items-center justify-center py-16 text-center text-text-muted">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0 mb-2"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
-        No refill events in the selected window.
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
+        <div class="py-14 text-center px-4">
+            <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div>
+            <p class="text-sm font-medium text-on-surface mt-3">No refill events in the selected window</p>
+            <p class="text-xs text-text-muted mt-0.5">Adjust the date range or wait for telemetry refills</p>
+        </div>
     </div>
     {{end}}
 </div>

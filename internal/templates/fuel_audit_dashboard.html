@@ -1,79 +1,131 @@
 {{define "fuel_audit_dashboard.html"}}
-<div class="space-y-6">
+<div class="space-y-5 max-w-[1600px] mx-auto">
 
     <!-- Page Header -->
-    <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
-        <div>
-            <h1 class="text-xl font-semibold text-on-surface font-display">Fuel Claim Audit</h1>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="min-w-0">
+            <div class="flex items-center gap-3 flex-wrap">
+                <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Fuel Claim Audit</h1>
+                {{if .AuditStats.EnforceMode}}
+                <span class="px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase bg-status-alert/10 text-status-alert border border-status-alert/30 cursor-default" title="fuel.audit_enforce=true — needs_review claims are un-approvable">
+                    ENFORCE MODE
+                </span>
+                {{else}}
+                <span class="px-2.5 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase bg-surface-container-low text-secondary border border-border-subtle cursor-default" title="fuel.audit_enforce=false — flagged claims remain approvable (annotate only)">
+                    ANNOTATE MODE
+                </span>
+                {{end}}
+            </div>
             <p class="text-sm text-secondary mt-1">Reconcile fuel claims against telemetry evidence · checks A/B/C</p>
         </div>
-        <div class="flex items-center gap-2 flex-wrap">
-            {{if .AuditStats.EnforceMode}}
-            <span class="px-3 py-1.5 rounded-full text-xs font-bold bg-status-alert/10 text-status-alert border border-status-alert/30" title="fuel.audit_enforce=true — needs_review claims are un-approvable">
-                ENFORCE MODE
-            </span>
-            {{else}}
-            <span class="px-3 py-1.5 rounded-full text-xs font-bold bg-surface-container-low text-secondary border border-border-subtle" title="fuel.audit_enforce=false — flagged claims remain approvable (annotate only)">
-                ANNOTATE MODE
-            </span>
-            {{end}}
-            <button
-                hx-post="/fuel/audit/run"
-                hx-target="#audit-run-result"
-                hx-swap="innerHTML"
-                class="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-all">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                RUN AUDIT
-            </button>
-        </div>
+        <button
+            hx-post="/fuel/audit/run"
+            hx-target="#audit-run-result"
+            hx-swap="innerHTML"
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all shrink-0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Run Audit
+        </button>
     </div>
     <div id="audit-run-result"></div>
 
-    <!-- Stats Row -->
-    <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-5 gap-3 sm:gap-4 mb-6">
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-3 sm:p-4 text-center">
-            <div class="text-stat text-status-warning tabular-nums text-xl sm:text-2xl font-bold" data-numeric>{{.AuditStats.PendingCount}}</div>
-            <div class="text-xs sm:text-sm text-secondary">Pending</div>
-            <div class="text-xs text-text-muted mt-0.5">awaiting audit</div>
+    <!-- KPI HERO -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <!-- Pending -->
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-blue-500/20 transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-400 opacity-80"></div>
+            <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-stat text-primary tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.AuditStats.PendingCount}}</div>
+                <div class="text-sm font-medium text-secondary mt-1">Pending</div>
+                <div class="mt-3 text-xs text-text-muted">awaiting audit run</div>
+            </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-3 sm:p-4 text-center">
-            <div class="text-stat text-status-alert tabular-nums text-xl sm:text-2xl font-bold" data-numeric>{{.AuditStats.NeedsReviewCount}}</div>
-            <div class="text-xs sm:text-sm text-secondary">Needs Review</div>
-            <div class="text-xs text-text-muted mt-0.5">flagged by checks</div>
+
+        <!-- Needs review -->
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-amber-500/20 transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-80"></div>
+            <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                </div>
+                <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/15">Flagged</span>
+            </div>
+            <div class="mt-4">
+                <div class="text-stat text-status-warning tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.AuditStats.NeedsReviewCount}}</div>
+                <div class="text-sm font-medium text-secondary mt-1">Needs Review</div>
+                <div class="mt-3 flex items-center gap-2 text-xs text-text-muted"><span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> flagged by checks A/B/C</div>
+            </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-3 sm:p-4 text-center">
-            <div class="text-stat text-status-success tabular-nums text-xl sm:text-2xl font-bold" data-numeric>{{.AuditStats.PassedCount}}</div>
-            <div class="text-xs sm:text-sm text-secondary">Passed</div>
-            <div class="text-xs text-text-muted mt-0.5">within tolerance</div>
+
+        <!-- Passed -->
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-emerald-500/20 transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-80"></div>
+            <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                </div>
+                <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/15">Within tolerance</span>
+            </div>
+            <div class="mt-4">
+                <div class="text-stat text-status-success tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.AuditStats.PassedCount}}</div>
+                <div class="text-sm font-medium text-secondary mt-1">Passed</div>
+                <div class="mt-3 text-xs text-text-muted">claimed vs expected in range</div>
+            </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-3 sm:p-4 text-center">
-            <div class="text-stat text-status-alert tabular-nums text-xl sm:text-2xl font-bold" data-numeric>{{.AuditStats.FailedCount}}</div>
-            <div class="text-xs sm:text-sm text-secondary">Failed</div>
-            <div class="text-xs text-text-muted mt-0.5">admin verdict</div>
+
+        <!-- Failed -->
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-rose-500/20 transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-500 to-red-500 opacity-80"></div>
+            <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/15 grid place-items-center text-rose-600 group-hover:bg-rose-500 group-hover:text-white transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+                </div>
+                <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-rose-500/10 text-rose-700 border border-rose-500/15">Admin verdict</span>
+            </div>
+            <div class="mt-4">
+                <div class="text-stat text-status-alert tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.AuditStats.FailedCount}}</div>
+                <div class="text-sm font-medium text-secondary mt-1">Failed</div>
+                <div class="mt-3 text-xs text-text-muted">rejected after manual review</div>
+            </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-3 sm:p-4 text-center">
-            <div class="text-stat text-primary tabular-nums text-xl sm:text-2xl font-bold" data-numeric>{{printf "%.1f" .AuditStats.AvgVariancePct}}%</div>
-            <div class="text-xs sm:text-sm text-secondary">Avg Variance</div>
-            <div class="text-xs text-text-muted mt-0.5">claimed vs expected</div>
+
+        <!-- Avg variance -->
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-violet-500/20 transition-all duration-200 sm:col-span-2 lg:col-span-1">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-violet-500 to-cyan-400 opacity-90"></div>
+            <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 border border-primary/10 grid place-items-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="text-stat text-primary tabular-nums text-3xl font-black tracking-tight" data-numeric>{{printf "%.1f" .AuditStats.AvgVariancePct}}%</div>
+                <div class="text-sm font-medium text-secondary mt-1">Avg Variance</div>
+                <div class="mt-3 text-xs text-text-muted">claimed vs expected litres</div>
+            </div>
         </div>
     </div>
 
     <!-- Audit Queue -->
-    <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm">
-        <div class="px-4 py-3 border-b flex items-center justify-between">
-            <div>
-                <h3 class="text-sm font-semibold text-on-surface">Audit Queue</h3>
-                <p class="text-xs text-text-muted mt-0.5">Fuel claims matched against telemetry evidence</p>
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
+        <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between flex-wrap gap-3">
+            <div class="flex items-center gap-3">
+                <h3 class="text-sm font-bold text-on-surface">Audit Queue</h3>
+                <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .AuditClaims}} claims</span>
             </div>
-            <span class="text-[10px] font-bold text-text-muted flex items-center gap-1.5 cursor-default"
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold tracking-wide uppercase text-emerald-700 dark:text-emerald-300 cursor-default"
                   hx-get="/fuel/audit/queue"
                   hx-trigger="every 30s"
                   hx-target="#fuel-audit-queue"
                   hx-swap="innerHTML">
-                <span class="w-2 h-2 rounded-full bg-status-success animate-pulse"></span>
-                LIVE · auto-refreshes
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live
             </span>
         </div>
+        <p class="px-5 pt-2 pb-1 text-xs text-text-muted -mb-1">Fuel claims matched against telemetry evidence · <span class="text-status-warning font-semibold">amber</span> = needs review, <span class="text-status-alert font-semibold">rose</span> = failed</p>
         <div id="fuel-audit-queue">
             {{template "fuel_audit_queue.html" .}}
         </div>

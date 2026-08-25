@@ -136,6 +136,14 @@ func TestAllTemplatesRenderCleanly(t *testing.T) {
 			"Pagination":   dummyPagination,
 			"Query":        "",
 			"StatusFilter": "",
+			"DateFrom":     "2026-08-01",
+			"DateTo":       "2026-08-31",
+			"KPIs": []KPI{
+				{Label: "Total Trips", Value: "8", Sub: "2 created this month"},
+				{Label: "Draft", Value: "4", Accent: "text-status-warning"},
+				{Label: "Active", Value: "1", Accent: "text-status-info"},
+				{Label: "Completed", Value: "2", Accent: "text-status-success"},
+			},
 		}},
 		{"trip_list_table.html", map[string]interface{}{
 			"Trips":      []tripapp.TripResponseDTO{sampleTripDTO},
@@ -146,6 +154,8 @@ func TestAllTemplatesRenderCleanly(t *testing.T) {
 			"Pagination":   dummyPagination,
 			"Query":        "",
 			"StatusFilter": "",
+			"DateFrom":     "2026-08-01",
+			"DateTo":       "2026-08-31",
 		}},
 		{"booking_list_table.html", map[string]interface{}{
 			"Bookings":   []application.BookingResponseDTO{sampleBookingDTO},
@@ -284,6 +294,7 @@ func TestAllTemplatesRenderCleanly(t *testing.T) {
 					"AvailableDriversCount":  3,
 					"PendingPaymentsCount":   2,
 					"MonthlyRevenue":         15000.0,
+					"DeltaYesterday":         0,
 					"UpcomingTrips":          []tripapp.TripResponseDTO{sampleTripDTO},
 					"RecentBookings":         []application.BookingResponseDTO{sampleBookingDTO},
 					"RecentPayments":         []paymentapp.PaymentResponseDTO{samplePaymentDTO},

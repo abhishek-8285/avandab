@@ -599,6 +599,19 @@ func (s *DriverSettlementService) GetSettlement(ctx context.Context, id string) 
 
 // ListSettlements retrieves settlements with optional status and driver filtering.
 func (s *DriverSettlementService) ListSettlements(ctx context.Context, status, driverID string, limit, offset int) ([]DriverSettlementRecord, error) {
+	return s.listSettlementsFiltered(ctx, status, driverID, "", "", limit, offset)
+}
+
+// ListSettlementsDateRange retrieves settlements with optional status,
+// driver filtering and a created_at window (YYYY-MM-DD bounds, inclusive).
+// The window uses date(substr(created_at,1,10)) because SQLite stores
+// timestamps as text in mixed formats (RFC3339 from Go, 'YYYY-MM-DD HH:MM:SS'
+// from CURRENT_TIMESTAMP) — only the prefix is stable.
+func (s *DriverSettlementService) ListSettlementsDateRange(ctx context.Context, status, driverID, from, to string, limit, offset int) ([]DriverSettlementRecord, error) {
+	return s.listSettlementsFiltered(ctx, status, driverID, from, to, limit, offset)
+}
+
+func (s *DriverSettlementService) listSettlementsFiltered(ctx context.Context, status, driverID, from, to string, limit, offset int) ([]DriverSettlementRecord, error) {
 	getter, ok := s.store.(repository.DBGetter)
 	if !ok || getter.DB() == nil {
 		return nil, fmt.Errorf("database access required")
@@ -618,6 +631,12 @@ func (s *DriverSettlementService) ListSettlements(ctx context.Context, status, d
 	if driverID != "" {
 		conditions = append(conditions, "driver_id = ?")
 		args = append(args, driverID)
+	}
+	if from != "" || to != "" {
+		conditions = append(conditions, "(? = '' OR date(substr(created_at,1,10)) >= date(?))")
+		args = append(args, from, from)
+		conditions = append(conditions, "(? = '' OR date(substr(created_at,1,10)) <= date(?))")
+		args = append(args, to, to)
 	}
 
 	where := ""

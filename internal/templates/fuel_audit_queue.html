@@ -2,7 +2,7 @@
 {{if .AuditClaims}}
 <div class="overflow-x-auto">
 <table class="w-full text-sm">
-    <thead>
+    <thead class="bg-surface-container-low">
         <tr>
             <th class="th-cell">Driver</th>
             <th class="th-cell">Trip</th>
@@ -17,22 +17,22 @@
     </thead>
     <tbody class="divide-y divide-border-subtle">
         {{range .AuditClaims}}
-        <tr class="hover:bg-surface-container-low transition-colors">
-            <td class="px-4 py-2.5 text-sm font-medium text-on-surface">
+        <tr class="hover:bg-surface-container-low/50 transition-colors">
+            <td class="px-3 py-2 text-sm font-semibold text-on-surface">
                 {{.DriverName}}
                 {{if .ReviewNote}}<span class="block text-xs text-text-muted truncate max-w-40" title="{{.ReviewNote}}">note: {{.ReviewNote}}</span>{{end}}
             </td>
-            <td class="px-4 py-2.5 text-sm text-text-muted font-mono">{{.TripNumber}}</td>
-            <td class="px-4 py-2.5 text-sm text-text-muted">{{.VehicleReg}}</td>
-            <td class="px-4 py-2.5 text-sm text-right font-semibold text-on-surface tabular-nums" data-numeric>
+            <td class="px-3 py-2 text-xs font-bold text-primary tabular-nums">{{.TripNumber}}</td>
+            <td class="px-3 py-2 text-xs font-medium text-secondary uppercase tabular-nums">{{.VehicleReg}}</td>
+            <td class="px-3 py-2 text-sm text-right font-bold text-on-surface tabular-nums" data-numeric>
                 {{if .FuelLitres}}{{printf "%.1f" .FuelLitres}} L{{else}}—{{end}}
             </td>
-            <td class="px-4 py-2.5 text-sm text-right text-secondary tabular-nums" data-numeric>
+            <td class="px-3 py-2 text-sm text-right font-semibold text-secondary tabular-nums" data-numeric>
                 {{if gt .ExpectedBest 0.0}}{{printf "%.1f" .ExpectedBest}} L{{else}}—{{end}}
             </td>
-            <td class="px-4 py-2.5 text-sm" data-numeric>
+            <td class="px-3 py-2 text-sm" data-numeric>
                 {{if gt .ExpectedBest 0.0}}
-                <span class="px-2 py-1 rounded-full text-xs font-semibold {{auditBadge .Result}}"
+                <span class="inline-flex px-2 py-0.5 rounded-full border text-[11px] font-bold tabular-nums {{auditBadge .Result}}"
                       title="Claimed {{printf "%.1f" .FuelLitres}}L, Expected {{printf "%.1f" .ExpectedBest}}L ±{{printf "%.1f" .VariancePct}}%">
                     {{if .VarianceLitres}}{{if gt .VarianceLitres 0.0}}+{{end}}{{printf "%.1f" .VarianceLitres}}{{else}}0.0{{end}} L
                 </span>
@@ -40,13 +40,13 @@
                 <span class="text-xs text-text-muted">no evidence</span>
                 {{end}}
             </td>
-            <td class="px-4 py-2.5 text-sm">
-                <span class="px-2 py-1 rounded-full text-xs font-medium {{auditBadge .Result}}">{{.Result}}</span>
+            <td class="px-3 py-2 text-sm">
+                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full {{auditBadge .Result}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Result}}</span>
             </td>
-            <td class="px-4 py-2.5 text-sm text-text-muted" data-numeric>{{datetime .CreatedAt}}</td>
-            <td class="px-4 py-2.5 text-sm text-right">
+            <td class="px-3 py-2 text-xs text-text-muted tabular-nums" data-numeric>{{datetime .CreatedAt}}</td>
+            <td class="px-3 py-2 text-sm text-right">
                 <a href="/fuel/audit/{{.ExpenseID}}"
-                   class="inline-flex items-center gap-1 px-3 py-1.5 bg-surface-container-low hover:bg-primary/10 text-secondary hover:text-primary text-xs font-semibold rounded-lg transition border border-border-subtle">
+                   class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-colors">
                     REVIEW
                 </a>
             </td>
@@ -56,11 +56,11 @@
 </table>
 </div>
 {{else}}
-<div class="flex flex-col items-center justify-center py-16 text-center">
-    <div class="w-16 h-16 rounded-full bg-status-success/10 flex items-center justify-center mb-4">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+<div class="flex flex-col items-center justify-center py-14 text-center">
+    <div class="w-12 h-12 rounded-full bg-surface-container grid place-items-center text-text-muted mb-3">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 shrink-0"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
     </div>
-    <p class="text-text-muted font-medium text-sm">No fuel claims yet.</p>
+    <p class="text-sm font-medium text-on-surface">No fuel claims yet</p>
     <p class="text-text-muted text-xs mt-1">Fuel claims submitted via Kharcha will appear here for telemetry reconciliation.</p>
 </div>
 {{end}}

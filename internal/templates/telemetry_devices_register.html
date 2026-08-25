@@ -1,25 +1,28 @@
-<div class="max-w-3xl mx-auto bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm">
-    <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between">
-        <h3 class="text-lg font-semibold text-on-surface font-display">Register Devices</h3>
-        <a href="/telemetry/devices" class="text-sm text-secondary hover:text-primary font-medium transition-colors">Back to devices</a>
+<div class="max-w-3xl mx-auto bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+    <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between gap-3">
+        <div>
+            <h3 class="text-sm font-bold text-on-surface font-display">Register Devices</h3>
+            <p class="text-xs text-text-muted">Bulk provisioning · atomic batch</p>
+        </div>
+        <a href="/telemetry/devices" class="inline-flex items-center rounded-full bg-surface-container-lowest border border-border-subtle px-3 py-1.5 text-xs font-semibold text-on-surface hover:bg-surface-container-low transition-colors">Back to devices</a>
     </div>
 
-    <div class="p-6 sm:p-8">
-        <p class="text-sm text-text-muted mb-6 leading-relaxed">
-            Paste a JSON array or CSV (one device per line: <code class="font-mono text-xs bg-surface-container-low border border-border-subtle px-1 rounded">imei,serial_number,device_type,vehicle_id</code>).
+    <div class="p-6 sm:p-8 space-y-5">
+        <div class="rounded-xl bg-blue-500/10 border border-blue-500/15 p-3.5 text-xs text-secondary leading-relaxed">
+            Paste a JSON array or CSV (one device per line: <code class="font-mono bg-surface-container-low border border-border-subtle px-1 rounded text-on-surface">imei,serial_number,device_type,vehicle_id</code>).
             The whole batch is registered atomically — if any IMEI already exists or is duplicated, the entire batch is rejected.
-        </p>
+        </div>
 
         <form method="POST" action="/telemetry/devices/bulk" class="space-y-4">
             <div>
-                <label for="bulk" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Devices (JSON or CSV)</label>
+                <label for="bulk" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Devices (JSON or CSV)</label>
                 <textarea id="bulk" name="bulk" rows="12"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 font-mono text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted"
+                    class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 font-mono text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-text-muted"
                     placeholder='[{"imei":"867530050123456","serial_number":"SN-001","device_type":"hardware","vehicle_id":"veh-1"}]' required></textarea>
             </div>
-            <div class="flex items-center gap-3 pt-2">
+            <div class="pt-3 border-t border-border-subtle flex items-center gap-3">
                 {{template "btn.html" (dict "Label" "Register Devices" "Type" "submit" "Icon" "add")}}
-                <a href="/telemetry/devices" class="text-sm text-secondary hover:text-primary font-medium transition-colors">Cancel</a>
+                <a href="/telemetry/devices" class="inline-flex items-center rounded-full bg-surface-container-lowest border border-border-subtle px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">Cancel</a>
             </div>
         </form>
     </div>

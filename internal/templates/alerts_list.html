@@ -1,13 +1,14 @@
-<div class="space-y-6">
+<div class="space-y-5 max-w-[1600px] mx-auto">
     <!-- Header -->
-    <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
-        <div>
-            <h1 class="text-xl font-semibold text-on-surface font-display">Operational Alerts</h1>
-            <p class="text-sm text-text-muted mt-1">Real-time exception alerts, deduplicated event streams, and automated escalations.</p>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="min-w-0">
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Operational Alerts</h1>
+            <p class="text-sm text-secondary mt-1">Real-time exception alerts, deduplicated event streams, and automated escalations.</p>
         </div>
-        <div class="flex items-center gap-3 flex-wrap">
+        <div class="flex items-center gap-2 flex-wrap shrink-0">
+            <span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Alerts}} in view</span>
             <form method="POST" action="/alerts/mark-all-read">
-                <button type="submit" class="inline-flex items-center gap-2 rounded-md bg-surface-container-low text-on-surface border border-border-subtle px-4 py-2 text-sm font-medium hover:bg-surface-container transition-all cursor-pointer">
+                <button type="submit" class="inline-flex items-center gap-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors cursor-pointer px-4 py-2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 7 17 2 12"/><path d="M22 6 12 17 7 12"/></svg>
                     Mark All Acknowledged
                 </button>
@@ -15,119 +16,107 @@
         </div>
     </div>
 
-    <!-- Status Tabs Filter -->
-    <div class="flex border-b border-border-subtle gap-2 text-sm font-medium">
-        <a href="/alerts?status=open" class="px-4 py-2.5 border-b-2 transition-colors {{if eq .CurrentStatus "open"}}border-primary text-primary font-semibold{{else}}border-transparent text-secondary hover:text-on-surface{{end}} flex items-center gap-2">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
-            Open
-        </a>
-        <a href="/alerts?status=acknowledged" class="px-4 py-2.5 border-b-2 transition-colors {{if eq .CurrentStatus "acknowledged"}}border-primary text-primary font-semibold{{else}}border-transparent text-secondary hover:text-on-surface{{end}} flex items-center gap-2">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-            Acknowledged
-        </a>
-        <a href="/alerts?status=resolved" class="px-4 py-2.5 border-b-2 transition-colors {{if eq .CurrentStatus "resolved"}}border-primary text-primary font-semibold{{else}}border-transparent text-secondary hover:text-on-surface{{end}} flex items-center gap-2">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-            Resolved
-        </a>
-        <a href="/alerts?status=all" class="px-4 py-2.5 border-b-2 transition-colors {{if eq .CurrentStatus ""}}border-primary text-primary font-semibold{{else}}border-transparent text-secondary hover:text-on-surface{{end}} flex items-center gap-2">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
-            All Alerts
-        </a>
-    </div>
-
     <!-- Alerts Table -->
-    <div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm overflow-hidden">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        {{template "filter_bar.html" (dict
+            "Action" "/alerts"
+            "Label" "Status:"
+            "StatusFilter" .CurrentStatus
+            "Chips" (chips "Open" "open" "Acknowledged" "acknowledged" "Resolved" "resolved" "All Alerts" "all")
+            "ShowDates" false
+            "ShowSearch" false
+        )}}
         <div class="overflow-x-auto">
-            <table class="w-full text-left text-sm text-on-surface">
-                <thead class="text-xs uppercase font-semibold text-text-muted border-b border-border-subtle bg-surface-container-low">
+            <table class="min-w-full divide-y divide-border-subtle">
+                <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="th-cell">Severity</th>
-                        <th class="th-cell">Alert Details</th>
-                        <th class="th-cell">Source &amp; Type</th>
-                        <th class="th-cell">Entity</th>
-                        <th class="th-cell-right">Occurrences</th>
-                        <th class="th-cell">Last Seen</th>
-                        <th class="th-cell">Status</th>
-                        <th class="th-cell-right">Actions</th>
+                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Severity</th>
+                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Alert Details</th>
+                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Source &amp; Type</th>
+                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Entity</th>
+                        <th class="px-3 py-2 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Occurrences</th>
+                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Last Seen</th>
+                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
+                        <th class="px-3 py-2 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
                     {{if .Alerts}}
                         {{range .Alerts}}
-                        <tr class="hover:bg-surface-container-lowest/80 transition-colors" id="alert-row-{{.ID}}">
-                            <td class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap">
+                        <tr class="hover:bg-surface-container-low/60 transition-colors" id="alert-row-{{.ID}}">
+                            <td class="px-3 py-2 whitespace-nowrap">
                                 {{if eq .Severity "blocker"}}
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full bg-status-alert text-on-primary">
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-status-alert text-on-primary">
                                         <span class="w-1.5 h-1.5 rounded-full bg-on-primary animate-pulse"></span>
                                         BLOCKER
                                     </span>
                                 {{else if eq .Severity "critical"}}
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full bg-status-alert/10 text-status-alert border border-status-alert/30">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-status-alert animate-pulse"></span>
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/15">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
                                         CRITICAL
                                     </span>
                                 {{else if eq .Severity "warning"}}
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-status-warning/10 text-status-warning border border-status-warning/30">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-status-warning"></span>
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/15">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                         WARNING
                                     </span>
                                 {{else}}
-                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-full bg-status-info/10 text-status-info border border-status-info/30">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-status-info"></span>
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15">
+                                        <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                                         INFO
                                     </span>
                                 {{end}}
                             </td>
-                            <td class="px-4 py-2.5 text-sm text-on-surface">
-                                <div class="font-semibold text-on-surface">{{.Title}}</div>
-                                <div class="text-xs text-text-muted mt-0.5 max-w-md">{{.Message}}</div>
+                            <td class="px-3 py-2 max-w-md">
+                                <div class="font-semibold text-sm text-on-surface truncate">{{.Title}}</div>
+                                <div class="text-xs text-text-muted mt-0.5 line-clamp-2">{{.Message}}</div>
                             </td>
-                            <td class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap">
+                            <td class="px-3 py-2 whitespace-nowrap">
                                 <span class="font-medium text-xs text-on-surface">{{.Source}}</span>
                                 <div class="text-xs text-text-muted font-mono mt-0.5">{{.AlertType}}</div>
                             </td>
-                            <td class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap text-xs">
+                            <td class="px-3 py-2 whitespace-nowrap text-xs">
                                 {{if .EntityID}}
                                     <span class="font-medium text-on-surface capitalize">{{if .EntityType}}{{.EntityType}}{{else}}Entity{{end}}:</span>
-                                    <span class="font-mono text-primary font-semibold">{{.EntityID}}</span>
+                                    <span class="font-mono font-semibold text-primary">{{.EntityID}}</span>
                                 {{else}}
                                     <span class="text-text-muted">Global</span>
                                 {{end}}
                             </td>
-                            <td class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap text-right" data-numeric>
+                            <td class="px-3 py-2 text-right whitespace-nowrap tabular-nums" data-numeric>
                                 {{if gt .Occurrences 1}}
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-status-warning/10 text-status-warning border border-status-warning/30">
-                                        {{.Occurrences}} events
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold tabular-nums bg-surface-container text-on-surface border border-border-subtle">
+                                        ×{{.Occurrences}}
                                     </span>
                                 {{else}}
-                                    <span class="text-text-muted">1 event</span>
+                                    <span class="text-xs text-text-muted tabular-nums">×1</span>
                                 {{end}}
                             </td>
-                            <td class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap text-xs text-text-muted">
-                                {{datetime .LastSeenAt}}
+                            <td class="px-3 py-2 whitespace-nowrap text-xs text-text-muted tabular-nums">
+                                <span class="time-display" data-utc-time="{{.LastSeenAt.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .LastSeenAt}}</span>
                             </td>
-                            <td class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap text-xs">
-                                <span id="alert-status-{{.ID}}" class="px-2.5 py-1 rounded-full text-xs font-semibold
-                                    {{if eq .Status "open"}}bg-status-alert/10 text-status-alert border border-status-alert/30
-                                    {{else if eq .Status "acknowledged"}}bg-status-info/10 text-status-info border border-status-info/30
-                                    {{else if eq .Status "resolved"}}bg-status-success/10 text-status-success border border-status-success/30
-                                    {{else if eq .Status "escalated"}}bg-status-warning/10 text-status-warning border border-status-warning/30
-                                    {{else}}bg-surface-container text-text-muted{{end}}">
+                            <td class="px-3 py-2 whitespace-nowrap">
+                                <span id="alert-status-{{.ID}}" class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold
+                                    {{if eq .Status "open"}}bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/15
+                                    {{else if eq .Status "acknowledged"}}bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15
+                                    {{else if eq .Status "resolved"}}bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/15
+                                    {{else if eq .Status "escalated"}}bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/15
+                                    {{else}}bg-surface-container text-text-muted border border-border-subtle{{end}}">
                                     {{.Status}}
                                 </span>
                             </td>
-                            <td class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap text-right text-xs">
-                                <div class="flex items-center justify-end gap-2">
+                            <td class="px-3 py-2 whitespace-nowrap text-right">
+                                <div class="flex items-center justify-end gap-1.5">
                                     {{if eq .Status "open"}}
                                         <form method="POST" action="/alerts/{{.ID}}/ack">
-                                            <button type="submit" class="px-2.5 py-1 rounded-md bg-status-info/10 hover:bg-status-info/20 text-status-info font-medium transition-all cursor-pointer border border-status-info/30">
+                                            <button type="submit" class="inline-flex px-2.5 py-1 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[11px] font-bold transition-all cursor-pointer border border-blue-500/15">
                                                 Ack
                                             </button>
                                         </form>
                                     {{end}}
                                     {{if or (eq .Status "open") (eq .Status "acknowledged") (eq .Status "escalated")}}
                                         <form method="POST" action="/alerts/{{.ID}}/resolve">
-                                            <button type="submit" class="px-2.5 py-1 rounded-md bg-status-success/10 hover:bg-status-success/20 text-status-success font-medium transition-all cursor-pointer border border-status-success/30">
+                                            <button type="submit" class="inline-flex px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold transition-all cursor-pointer border border-emerald-500/15">
                                                 Resolve
                                             </button>
                                         </form>
@@ -138,12 +127,13 @@
                         {{end}}
                     {{else}}
                         <tr>
-                            <td colspan="8" class="px-4 py-12 text-center text-text-muted text-sm">
-                                <div class="flex flex-col items-center justify-center gap-2">
-                                    <div class="w-12 h-12 rounded-full bg-surface-container-low border border-border-subtle flex items-center justify-center">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                            <td colspan="8" class="px-4 py-12 text-center">
+                                <div class="flex flex-col items-center gap-2">
+                                    <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                                     </div>
-                                    <span class="font-medium">No alerts found for this filter.</span>
+                                    <p class="text-sm font-medium text-on-surface mt-1">No alerts found</p>
+                                    <p class="text-xs text-text-muted">Nothing matches this filter.</p>
                                 </div>
                             </td>
                         </tr>

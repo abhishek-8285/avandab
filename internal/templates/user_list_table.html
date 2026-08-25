@@ -1,25 +1,25 @@
 <div class="overflow-x-auto">
     <table class="min-w-full divide-y divide-border-subtle">
-        <thead class="bg-surface-container-low font-label-caps text-[11px] text-secondary uppercase tracking-wider">
+        <thead class="bg-surface-container-low">
             <tr>
-                <th class="th-cell">Full Name</th>
-                <th class="th-cell">Email Address</th>
-                <th class="th-cell">Role</th>
-                <th class="th-cell">Status</th>
-                <th class="th-cell-right">Actions</th>
+                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Full Name</th>
+                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Email Address</th>
+                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Role</th>
+                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
+                <th class="px-3 py-2 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
             {{if .Users}}
             {{range .Users}}
-            <tr class="hover:bg-surface-container-low transition-colors group">
-                <td class="td-cell-strong">{{.Name}}</td>
-                <td class="td-cell font-mono text-xs">{{.Email}}</td>
-                <td class="td-cell font-medium">{{if .Role}}{{.Role.Name}}{{else}}{{.RoleName}}{{end}}</td>
-                <td class="td-cell">
-                    <span class="status-badge {{statusBadge .Status}}">{{.Status}}</span>
+            <tr class="hover:bg-surface-container-low/50 transition-colors group">
+                <td class="px-3 py-2 text-sm font-semibold text-on-surface whitespace-nowrap">{{.Name}}</td>
+                <td class="px-3 py-2 text-sm font-mono text-xs text-secondary">{{.Email}}</td>
+                <td class="px-3 py-2 text-sm font-medium">{{if .Role}}{{.Role.Name}}{{else}}{{.RoleName}}{{end}}</td>
+                <td class="px-3 py-2">
+                    <span class="status-badge inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                 </td>
-                <td class="td-cell-actions">
+                <td class="px-3 py-2 text-right whitespace-nowrap">
                     <a href="/users/{{.ID}}/edit" class="action-edit mr-2">Edit</a>
                     <form method="POST" action="/users/{{.ID}}/delete" data-confirm="Are you sure? This cannot be undone." class="inline" onsubmit="return confirm('Are you sure you want to delete this user?');">
                         <button type="submit" class="action-delete">Delete</button>

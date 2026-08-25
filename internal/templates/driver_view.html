@@ -1,149 +1,187 @@
 <a href="/drivers" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Drivers</a>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-    <div class="lg:col-span-2 space-y-6">
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
-            <div class="flex justify-between items-start mb-4 gap-4 flex-wrap">
-                <div>
-                    <h1 class="text-xl font-semibold text-on-surface font-display">{{.Driver.FirstName}} {{.Driver.LastName}}</h1>
-                    <p class="text-sm text-text-muted mt-1"><span class="font-mono">DRV-{{.Driver.DriverID}}</span>{{if .Driver.ExperienceYears}} · {{.Driver.ExperienceYears}} yrs experience{{end}}</p>
+<div class="space-y-5 max-w-[1600px] mx-auto">
+
+<div class="relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm">
+    <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-violet-500 to-cyan-400 opacity-90"></div>
+    <div class="p-5 pt-6">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+            <div class="min-w-0">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Driver Profile</p>
+                <div class="flex items-center gap-3 flex-wrap mt-0.5">
+                    <h1 class="text-2xl font-bold tracking-tight text-on-surface font-display">{{.Driver.FirstName}} {{.Driver.LastName}}</h1>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full {{statusBadge .Driver.Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Driver.Status}}</span>
                 </div>
-                <div class="flex items-center gap-2">
-                    {{template "btn.html" (dict "Label" "Edit" "Href" (printf "/drivers/%s/edit" .Driver.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit")}}
-                    <form method="POST" action="/drivers/{{.Driver.ID}}/delete" data-confirm="Are you sure? This cannot be undone." class="inline">
-                        {{template "btn.html" (dict "Label" "Delete" "Type" "submit" "Variant" "danger" "Size" "sm" "Icon" "delete")}}
-                    </form>
+                <div class="flex items-center gap-2 mt-2 flex-wrap text-xs">
+                    <span class="inline-flex px-2 py-1 rounded-full bg-surface-container border border-border-subtle font-semibold text-secondary tabular-nums">DRV-{{.Driver.DriverID}}</span>
+                    <span class="inline-flex px-2 py-1 rounded-full bg-surface-container border border-border-subtle font-medium text-secondary tabular-nums">{{.Driver.Phone}}</span>
+                    {{if .Driver.ExperienceYears}}<span class="inline-flex px-2 py-1 rounded-full bg-surface-container border border-border-subtle font-medium text-secondary tabular-nums">{{.Driver.ExperienceYears}} yrs experience</span>{{end}}
                 </div>
             </div>
-
-            <dl class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5 pt-5 border-t border-border-subtle">
-                <div class="rounded-lg bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Status</dt>
-                    <dd class="mt-1"><span class="status-badge {{statusBadge .Driver.Status}}">{{.Driver.Status}}</span></dd>
-                </div>
-                <div class="rounded-lg bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Phone</dt>
-                    <dd class="text-sm font-semibold text-on-surface font-mono mt-1" data-numeric>{{.Driver.Phone}}</dd>
-                </div>
-                <div class="rounded-lg bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">License Expiry</dt>
-                    <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{date_only .Driver.LicenseExpiry}}</dd>
-                </div>
-                <div class="rounded-lg bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Experience</dt>
-                    <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{.Driver.ExperienceYears}} years</dd>
-                </div>
-            </dl>
+            <div class="flex items-center gap-2 shrink-0">
+                {{template "btn.html" (dict "Label" "Edit" "Href" (printf "/drivers/%s/edit" .Driver.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit")}}
+                <form method="POST" action="/drivers/{{.Driver.ID}}/delete" data-confirm="Are you sure? This cannot be undone." class="inline">
+                    {{template "btn.html" (dict "Label" "Delete" "Type" "submit" "Variant" "danger" "Size" "sm" "Icon" "delete")}}
+                </form>
+            </div>
         </div>
 
-        <!-- Details -->
-        <section class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
-            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+        <dl class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5 pt-5 border-t border-border-subtle">
+            <div class="rounded-xl bg-surface-container-low p-3">
+                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Status</dt>
+                <dd class="mt-1"><span class="status-badge {{statusBadge .Driver.Status}}">{{.Driver.Status}}</span></dd>
+            </div>
+            <div class="rounded-xl bg-surface-container-low p-3">
+                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Phone</dt>
+                <dd class="text-sm font-semibold text-on-surface font-mono mt-1 tabular-nums" data-numeric>{{.Driver.Phone}}</dd>
+            </div>
+            <div class="rounded-xl bg-surface-container-low p-3">
+                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">License Expiry</dt>
+                <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{date_only .Driver.LicenseExpiry}}</dd>
+            </div>
+            <div class="rounded-xl bg-surface-container-low p-3">
+                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Experience</dt>
+                <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{.Driver.ExperienceYears}} years</dd>
+            </div>
+        </dl>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+    <div class="lg:col-span-2 space-y-4">
+        <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle">
+                <h3 class="text-sm font-bold text-on-surface">Details</h3>
+            </div>
+            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 p-5">
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Email</dt>
-                    <dd class="text-sm font-medium text-on-surface mt-1 break-all">{{nullString .Driver.Email}}</dd>
+                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Email</dt>
+                    <dd class="text-sm font-semibold text-on-surface mt-1 break-all">{{nullString .Driver.Email}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">License Number</dt>
-                    <dd class="text-sm font-mono font-medium text-on-surface mt-1">{{.Driver.LicenseNumber}}</dd>
+                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">License Number</dt>
+                    <dd class="font-mono text-sm font-semibold text-on-surface mt-1">{{.Driver.LicenseNumber}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Emergency Contact</dt>
-                    <dd class="text-sm font-medium text-on-surface mt-1">{{nullString .Driver.EmergencyContactName}} / {{nullString .Driver.EmergencyContactPhone}}</dd>
+                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Emergency Contact</dt>
+                    <dd class="text-sm font-semibold text-on-surface mt-1 tabular-nums">{{nullString .Driver.EmergencyContactName}} / {{nullString .Driver.EmergencyContactPhone}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Address</dt>
-                    <dd class="text-sm font-medium text-on-surface mt-1">{{nullString .Driver.Address}}</dd>
+                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Address</dt>
+                    <dd class="text-sm font-semibold text-on-surface mt-1">{{nullString .Driver.Address}}</dd>
                 </div>
                 {{with nullString .Driver.Notes}}
                 <div class="sm:col-span-2">
-                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Notes</dt>
+                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Notes</dt>
                     <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed">{{.}}</dd>
                 </div>
                 {{end}}
             </dl>
         </section>
-    </div>
 
-    <div>
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6 mb-6">
-            <h3 class="text-base font-semibold text-on-surface font-display mb-3">Safety Scorecard</h3>
-            {{if .Tier.Valid}}
-            <div class="flex items-center gap-4">
-                <div class="text-4xl font-black tabular-nums {{if eq .Tier.String "A"}}text-status-success{{else if eq .Tier.String "C"}}text-status-alert{{else}}text-status-warning{{end}}" data-numeric>{{if .Score.Valid}}{{printf "%.0f" .Score.Float64}}{{else}}–{{end}}</div>
-                <div>
-                    <span class="px-2 py-1 text-xs font-bold rounded-full border {{if eq .Tier.String "A"}}bg-status-success/10 text-status-success border-status-success/20{{else if eq .Tier.String "C"}}bg-status-alert/10 text-status-alert border-status-alert/20{{else}}bg-status-warning/10 text-status-warning border-status-warning/20{{end}}">TIER {{.Tier.String}}</span>
-                    <p class="text-xs text-text-muted mt-1.5"><a href="/scorecard" class="text-primary hover:underline">View leaderboard →</a></p>
-                </div>
+        <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+                <h3 class="text-sm font-bold text-on-surface">Recent Trips</h3>
+                {{if .RecentTrips}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .RecentTrips}}</span>{{end}}
             </div>
-            {{else}}
-            <p class="text-sm text-text-muted">No score yet — computed nightly from behaviour events.</p>
-            {{end}}
-        </div>
-
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6 mb-6">
-            <h3 class="text-base font-semibold text-on-surface font-display mb-3">Uploaded Documents</h3>
-            {{if .Files}}
-            <ul class="space-y-2">
-                {{range .Files}}
-                <li class="text-sm">
-                    <a href="/files/{{.ID}}" target="_blank" class="inline-flex items-center gap-1.5 text-primary hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded font-medium break-all">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
-                        {{.OriginalName}}
+            <div class="p-2">
+                {{if .RecentTrips}}
+                <div class="divide-y divide-border-subtle">
+                    {{range .RecentTrips}}
+                    <a href="/trips/{{.ID}}" class="group flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-surface-container-low/60 transition-colors text-decoration-none rounded-lg -mx-1">
+                        <span class="text-sm font-bold text-primary tabular-nums group-hover:underline">{{.TripNumber}}</span>
+                        <span class="flex items-center gap-3">
+                            <span class="text-xs text-text-muted tabular-nums">{{if .CreatedAt.Valid}}{{.CreatedAt.Time.Format "02-01-2006"}}{{end}}</span>
+                            <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
+                        </span>
                     </a>
-                    <span class="text-xs text-text-muted ml-1">({{fileExt .Filename}})</span>
-                </li>
-                {{end}}
-            </ul>
-            {{else}}
-            <p class="text-sm text-text-muted">No documents uploaded.</p>
-            {{end}}
-        </div>
-    </div>
-
-    <div class="lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
-            <h3 class="text-base font-semibold text-on-surface font-display mb-3">Recent Trips</h3>
-            {{if .RecentTrips}}
-            <div class="divide-y divide-border-subtle">
-                {{range .RecentTrips}}
-                <a href="/trips/{{.ID}}" class="flex items-center justify-between gap-3 py-2.5 hover:bg-surface-container-low/60 transition-colors text-decoration-none rounded px-2 -mx-2">
-                    <span class="text-sm font-semibold text-on-surface">{{.TripNumber}}</span>
-                    <span class="flex items-center gap-3">
-                        <span class="text-xs text-text-muted">{{if .CreatedAt.Valid}}{{.CreatedAt.Time.Format "02-01-2006"}}{{end}}</span>
-                        <span class="status-badge {{statusBadge .Status}}">{{.Status}}</span>
-                    </span>
-                </a>
+                    {{end}}
+                </div>
+                {{else}}
+                <p class="text-sm text-text-muted px-3 py-4">No trips assigned to this driver yet.</p>
                 {{end}}
             </div>
-            {{else}}
-            <p class="text-sm text-text-muted">No trips assigned to this driver yet.</p>
-            {{end}}
+        </section>
+    </div>
+
+    <div class="space-y-4">
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 bg-gradient-to-r from-emerald-500/[0.06] to-transparent">
+                <h3 class="text-sm font-bold text-on-surface">Safety Scorecard</h3>
+            </div>
+            <div class="p-5">
+                {{if .Tier.Valid}}
+                <div class="flex items-center gap-4">
+                    <div class="text-4xl font-black tracking-tight tabular-nums {{if eq .Tier.String "A"}}text-status-success{{else if eq .Tier.String "C"}}text-status-alert{{else}}text-status-warning{{end}}" data-numeric>{{if .Score.Valid}}{{printf "%.0f" .Score.Float64}}{{else}}–{{end}}</div>
+                    <div>
+                        <span class="inline-flex px-2.5 py-1 text-xs font-bold rounded-full border {{if eq .Tier.String "A"}}bg-status-success/10 text-status-success border-status-success/20{{else if eq .Tier.String "C"}}bg-status-alert/10 text-status-alert border-status-alert/20{{else}}bg-status-warning/10 text-status-warning border-status-warning/20{{end}}">TIER {{.Tier.String}}</span>
+                        <p class="text-xs text-text-muted mt-1.5"><a href="/scorecard" class="text-primary hover:underline">View leaderboard →</a></p>
+                    </div>
+                </div>
+                {{else}}
+                <p class="text-sm text-text-muted">No score yet — computed nightly from behaviour events.</p>
+                {{end}}
+            </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
-            <h3 class="text-base font-semibold text-on-surface font-display mb-3">Recent Behaviour Events</h3>
+
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+                <h3 class="text-sm font-bold text-on-surface">Uploaded Documents</h3>
+                {{if .Files}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Files}}</span>{{end}}
+            </div>
+            <div class="p-5">
+                {{if .Files}}
+                <ul class="space-y-2">
+                    {{range .Files}}
+                    <li class="text-sm flex items-center gap-1.5 flex-wrap">
+                        <a href="/files/{{.ID}}" target="_blank" class="inline-flex items-center gap-1.5 text-primary hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded font-semibold break-all">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                            {{.OriginalName}}
+                        </a>
+                        <span class="text-xs text-text-muted">({{fileExt .Filename}})</span>
+                    </li>
+                    {{end}}
+                </ul>
+                {{else}}
+                <p class="text-sm text-text-muted">No documents uploaded.</p>
+                {{end}}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2 bg-gradient-to-r from-blue-500/[0.06] to-transparent">
+        <span class="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg></span>
+        <h3 class="text-sm font-bold text-on-surface">Recent Behaviour Events</h3>
+    </div>
+        <div class="p-2">
             {{if .BehaviourEvents}}
             <div class="divide-y divide-border-subtle">
                 {{range .BehaviourEvents}}
-                <div class="flex items-center justify-between gap-3 py-2.5">
+                <div class="flex items-center justify-between gap-3 px-3 py-2.5">
                     <div class="min-w-0">
                         <p class="text-sm font-semibold text-on-surface capitalize">{{replace .EventType "_" " " -1}}</p>
                         {{if .Description.Valid}}<p class="text-xs text-text-muted truncate">{{.Description.String}}</p>{{end}}
                     </div>
                     <span class="flex items-center gap-2 shrink-0">
-                        <span class="text-xs text-text-muted">{{if .CreatedAt.Valid}}{{.CreatedAt.Time.Format "02-01-2006"}}{{end}}</span>
+                        <span class="text-xs text-text-muted tabular-nums">{{if .CreatedAt.Valid}}{{.CreatedAt.Time.Format "02-01-2006"}}{{end}}</span>
                         {{if .Resolved}}
-                        <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-status-success/10 text-status-success border border-status-success/20">resolved</span>
+                        <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold bg-status-success/10 text-status-success border border-status-success/20">resolved</span>
                         {{else}}
-                        <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-status-warning/10 text-status-warning border border-status-warning/20">open</span>
+                        <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold bg-status-warning/10 text-status-warning border border-status-warning/20">open</span>
                         {{end}}
                     </span>
                 </div>
                 {{end}}
             </div>
             {{else}}
-            <p class="text-sm text-text-muted">Clean record — no behaviour events.</p>
+            <div class="px-4 py-8 text-center">
+                <div class="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
+                <p class="text-sm font-medium text-on-surface mt-3">Clean record</p><p class="text-xs text-text-muted">No behaviour events.</p>
+            </div>
             {{end}}
         </div>
-    </div>
+</div>
+
 </div>

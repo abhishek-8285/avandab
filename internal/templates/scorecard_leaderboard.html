@@ -1,13 +1,13 @@
 {{define "scorecard_leaderboard.html"}}
-<div class="space-y-6">
+<div class="space-y-5 max-w-[1600px] mx-auto">
 
     <!-- Page Header -->
-    <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
-        <div>
-            <h1 class="text-xl font-semibold text-on-surface font-display tracking-tight">Driver Scorecard</h1>
-            <p class="text-sm text-text-muted mt-1">30-day rolling behaviour score · tiers A/B/C · settlement bonus hook</p>
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="min-w-0">
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Driver Scorecard</h1>
+            <p class="text-sm text-secondary mt-1">30-day rolling behaviour score · tiers A/B/C · settlement bonus hook</p>
         </div>
-        <span class="text-[10px] font-bold text-text-muted flex items-center gap-1.5 cursor-default"
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-lowest border border-border-subtle text-[10px] font-bold tracking-wide uppercase text-text-muted cursor-default shrink-0"
               hx-get="/scorecard/table"
               hx-trigger="every 60s"
               hx-target="#scorecard-table"
@@ -18,43 +18,73 @@
     </div>
 
     <!-- Stats Row -->
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 mb-6">
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-3 sm:p-4 text-center">
-            <div class="text-stat text-on-surface tabular-nums text-xl sm:text-2xl font-bold" data-numeric>{{.Stats.TotalDrivers}}</div>
-            <div class="text-xs sm:text-sm text-secondary">Total Drivers</div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-violet-500 opacity-80"></div>
+            <div class="w-9 h-9 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+            </div>
+            <div class="mt-3">
+                <div class="text-stat text-on-surface tabular-nums text-xl sm:text-2xl font-bold leading-none" data-numeric>{{.Stats.TotalDrivers}}</div>
+                <div class="text-xs font-medium text-secondary mt-1">Total Drivers</div>
+            </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-3 sm:p-4 text-center">
-            <div class="text-stat text-status-success tabular-nums text-xl sm:text-2xl font-bold" data-numeric>{{.Stats.TierA}}</div>
-            <div class="text-xs sm:text-sm text-secondary">Tier A</div>
-            <div class="text-xs text-text-muted mt-0.5">score ≥ 85</div>
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-80"></div>
+            <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+            </div>
+            <div class="mt-3">
+                <div class="text-stat text-status-success tabular-nums text-xl sm:text-2xl font-bold leading-none" data-numeric>{{.Stats.TierA}}</div>
+                <div class="text-xs font-medium text-secondary mt-1">Tier A</div>
+                <div class="text-[11px] text-text-muted mt-0.5">score ≥ 85</div>
+            </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-3 sm:p-4 text-center">
-            <div class="text-stat text-status-info tabular-nums text-xl sm:text-2xl font-bold" data-numeric>{{.Stats.TierB}}</div>
-            <div class="text-xs sm:text-sm text-secondary">Tier B</div>
-            <div class="text-xs text-text-muted mt-0.5">score ≥ 70</div>
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-400 opacity-80"></div>
+            <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+            </div>
+            <div class="mt-3">
+                <div class="text-stat text-status-info tabular-nums text-xl sm:text-2xl font-bold leading-none" data-numeric>{{.Stats.TierB}}</div>
+                <div class="text-xs font-medium text-secondary mt-1">Tier B</div>
+                <div class="text-[11px] text-text-muted mt-0.5">score ≥ 70</div>
+            </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-3 sm:p-4 text-center">
-            <div class="text-stat text-status-alert tabular-nums text-xl sm:text-2xl font-bold" data-numeric>{{.Stats.TierC}}</div>
-            <div class="text-xs sm:text-sm text-secondary">Tier C</div>
-            <div class="text-xs text-text-muted mt-0.5">below threshold</div>
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-500 to-red-500 opacity-80"></div>
+            <div class="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/15 grid place-items-center text-rose-600">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/><path d="M9 9l6 6"/></svg>
+            </div>
+            <div class="mt-3">
+                <div class="text-stat text-status-alert tabular-nums text-xl sm:text-2xl font-bold leading-none" data-numeric>{{.Stats.TierC}}</div>
+                <div class="text-xs font-medium text-secondary mt-1">Tier C</div>
+                <div class="text-[11px] text-text-muted mt-0.5">below threshold</div>
+            </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-3 sm:p-4 text-center col-span-2 sm:col-span-1">
-            <div class="text-stat text-primary tabular-nums text-xl sm:text-2xl font-bold" data-numeric>{{printf "%.1f" .Stats.AvgScore}}</div>
-            <div class="text-xs sm:text-sm text-secondary">Avg Score</div>
+        <div class="group relative overflow-hidden bg-gradient-to-br from-primary to-violet-600 rounded-2xl shadow-md p-4 text-white hover:shadow-lg hover:scale-[1.01] transition-all col-span-2 sm:col-span-1">
+            <div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 4-6"/></svg>
+            </div>
+            <div class="mt-3">
+                <div class="text-stat tabular-nums text-xl sm:text-2xl font-black leading-none" data-numeric>{{printf "%.1f" .Stats.AvgScore}}</div>
+                <div class="text-xs font-medium text-white/80 mt-1">Avg Score · fleet</div>
+            </div>
         </div>
     </div>
 
     <!-- Ranked Leaderboard -->
-    <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm">
-        <div class="px-4 py-3 border-b flex items-center justify-between">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h3 class="text-sm font-semibold text-on-surface">Leaderboard</h3>
-                <p class="text-xs text-text-muted mt-0.5">Ranked by current score · sparkline shows score history</p>
+                <h3 class="text-sm font-bold text-on-surface">Leaderboard</h3>
+                <p class="text-xs text-text-muted">Ranked by current score · sparkline shows score history</p>
             </div>
+            <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{.Stats.TotalDrivers}} ranked</span>
         </div>
-        <div class="overflow-x-auto -mx-2 px-2">
-            <table class="w-full text-sm">
-                <thead>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-border-subtle">
+                <thead class="bg-surface-container-low">
                     <tr>
                         <th class="th-cell w-12">#</th>
                         <th class="th-cell">Driver</th>

@@ -1,30 +1,20 @@
 {{template "page_header.html" (dict "Title" "Vehicles" "Subtitle" "Manage fleet units, registration, and status" "ActionHref" "/vehicles/new" "ActionIcon" "add" "ActionLabel" "New Vehicle")}}
 {{template "kpi_grid.html" .}}
 
-<div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm flex flex-col h-full overflow-hidden">
-    <!-- Sticky Filter Bar -->
-    <form method="GET" action="/vehicles" class="px-4 py-2 border-b border-border-subtle flex flex-wrap items-center gap-2 bg-surface-container-lowest sticky top-0 z-10">
-        <span class="text-xs font-medium text-secondary mr-2">{{t "common.filters"}}</span>
-        <a href="/vehicles" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter ""}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">All Units</a>
-        <a href="/vehicles?status=available" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "available"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Active</a>
-        <a href="/vehicles?status=running" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "running"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Running</a>
-        <a href="/vehicles?status=maintenance" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "maintenance"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Maintenance</a>
-        <a href="/vehicles?status=inactive" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "inactive"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Out of Service</a>
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+    {{template "filter_bar.html" (dict
+        "Action" "/vehicles"
+        "Query" .Query
+        "StatusFilter" .StatusFilter
+        "Chips" (chips "All Units" "" "Active" "available" "Running" "running" "Maintenance" "maintenance" "Out of Service" "inactive")
+        "ShowDates" true
+        "DateFrom" .DateFrom
+        "DateTo" .DateTo
+        "ShowSearch" true
+        "SearchPlaceholder" (t "common.search")
+        "Primary" (dict "Label" "New Vehicle" "Href" "/vehicles/new" "Size" "sm" "Icon" "add")
+    )}}
 
-        <div class="ml-auto flex items-center gap-3">
-                        <div class="relative min-w-[200px] flex-1 sm:flex-none">
-                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                </span>
-                <input type="text" name="q" value="{{.Query}}" placeholder='{{t "common.search"}}'
-                    class="bg-surface-container-low border border-border-subtle rounded-md py-2 pl-9 pr-4 text-sm text-on-surface w-full focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-            </div>
-
-            {{template "btn.html" (dict "Label" "New Vehicle" "Href" "/vehicles/new" "Size" "sm" "Icon" "add")}}
-        </div>
-    </form>
-
-    <!-- Table Fragment (Datastar refresh target) -->
     <div id="list-table">
         {{template "vehicle_list_table.html" .}}
     </div>

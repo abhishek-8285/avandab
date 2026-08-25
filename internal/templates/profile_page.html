@@ -1,84 +1,89 @@
 {{ $u := .UserDetail }}
-<div class="max-w-4xl mx-auto space-y-6">
-    <!-- Page Header -->
-    <header class="flex items-start justify-between gap-4 mb-6 flex-wrap pb-4 border-b border-border-subtle">
-        <div>
-            <h1 class="text-xl font-semibold text-on-surface font-display">My Profile</h1>
-            <p class="text-sm text-text-muted mt-1">Manage your personal information and account settings.</p>
+<div class="max-w-5xl mx-auto space-y-5">
+    <header class="flex items-start justify-between gap-4 flex-wrap">
+        <div class="min-w-0">
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">My Profile</h1>
+            <p class="text-sm text-secondary mt-1">Manage your personal information and account settings.</p>
         </div>
-        {{template "btn.html" (dict "Variant" "primary" "Label" "Change Password" "Href" "/change-password" "Icon" "key" "Class" "shrink-0 self-start sm:self-auto")}}
+        {{template "btn.html" (dict "Variant" "primary" "Label" "Change Password" "Href" "/change-password" "Icon" "key" "Class" "shrink-0 rounded-full shadow-sm")}}
     </header>
 
     {{if .FlashSuccess}}{{template "alert.html" (dict "Tone" "success" "Message" .FlashSuccess)}}{{end}}
     {{if .FlashError}}{{template "alert.html" (dict "Tone" "error" "Message" .FlashError)}}{{end}}
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <!-- Left Column: Profile Form -->
-        <div class="lg:col-span-2 space-y-6">
-            <section class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
-                <h2 class="text-base font-semibold text-on-surface font-display mb-6 border-b border-border-subtle pb-2">Personal Information</h2>
-
-                <!-- Avatar + Name display -->
-                <div class="flex items-center gap-5 mb-8 p-4 bg-surface-container-low rounded-lg">
-                    <!-- Initials Avatar -->
-                    <div class="w-16 h-16 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center shrink-0 select-none">
-                        <span class="font-bold text-2xl text-primary">
-                            {{if $u}}{{slice $u.Name 0 1}}{{else}}U{{end}}
-                        </span>
-                    </div>
-                    <div>
-                        <div class="font-display text-lg font-bold text-on-surface">{{if $u}}{{$u.Name}}{{else}}—{{end}}</div>
-                        <div class="font-body-sm text-body-sm text-on-surface-variant capitalize mt-0.5">
-                            {{if and $u $u.Role}}{{$u.Role.Name}}{{else}}Member{{end}}
-                        </div>
-                        <div class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">
-                            {{if $u}}{{$u.Email}}{{end}}
-                        </div>
-                    </div>
+        <div class="lg:col-span-2 min-w-0">
+            <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+                <div class="px-5 py-3 border-b border-border-subtle">
+                    <h2 class="text-sm font-bold text-on-surface">Personal Information</h2>
+                    <p class="text-xs text-text-muted">Update your identity and contact details</p>
                 </div>
 
-                <!-- Edit Form -->
-                <form method="POST" action="/profile" class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                    <div class="flex flex-col gap-1">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Full Name <span class="text-status-alert">*</span></label>
-                        <input name="name" id="profile-name"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                            type="text"
-                            value="{{if $u}}{{$u.Name}}{{end}}"
-                            placeholder="Enter your full name"
-                            required/>
+                <form method="POST" action="/profile" class="p-5 space-y-5">
+                    <div class="flex items-center gap-4 p-4 bg-surface-container-low/60 rounded-xl border border-border-subtle">
+                        <div class="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/15 grid place-items-center shrink-0 select-none">
+                            <span class="font-black text-xl text-primary tabular-nums profile-initial">{{if $u}}{{slice $u.Name 0 1}}{{else}}U{{end}}</span>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="font-display text-base font-bold text-on-surface truncate">{{if $u}}{{$u.Name}}{{else}}—{{end}}</div>
+                            <div class="text-xs text-secondary capitalize mt-0.5">{{if and $u $u.Role}}{{$u.Role.Name}}{{else}}Member{{end}}</div>
+                            <div class="text-xs text-text-muted mt-0.5 truncate">{{if $u}}{{$u.Email}}{{end}}</div>
+                        </div>
                     </div>
-                    <div class="flex flex-col gap-1">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Role</label>
-                        <input
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface cursor-not-allowed capitalize"
-                            disabled type="text"
-                            value="{{if and $u $u.Role}}{{$u.Role.Name}}{{else}}—{{end}}"/>
-                        <span class="text-[11px] text-text-muted mt-0.5">Role is managed by an administrator.</span>
+
+                    <div>
+                        <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Editable Details</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
+                            <div class="flex flex-col gap-1">
+                                <label class="block text-xs font-bold text-secondary mb-1">Full Name <span class="text-status-alert">*</span></label>
+                                <input name="name" id="profile-name"
+                                    class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                                    type="text"
+                                    value="{{if $u}}{{$u.Name}}{{end}}"
+                                    placeholder="Enter your full name"
+                                    required/>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="block text-xs font-bold text-secondary mb-1">Phone Number</label>
+                                <input name="phone" id="profile-phone"
+                                    class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                                    type="tel"
+                                    value="{{if $u}}{{nullString $u.Phone}}{{end}}"
+                                    placeholder="e.g. +91 98765 43210"/>
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex flex-col gap-1">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Email Address</label>
-                        <input
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface cursor-not-allowed"
-                            disabled type="email"
-                            value="{{if $u}}{{$u.Email}}{{end}}"/>
-                        <span class="text-[11px] text-text-muted mt-0.5">Email cannot be changed. Contact admin if needed.</span>
+
+                    <div>
+                        <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Managed by Admin</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
+                            <div class="flex flex-col gap-1">
+                                <label class="block text-xs font-bold text-secondary mb-1">Role</label>
+                                <input
+                                    class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface cursor-not-allowed capitalize opacity-70"
+                                    disabled type="text"
+                                    value="{{if and $u $u.Role}}{{$u.Role.Name}}{{else}}—{{end}}"/>
+                                <span class="text-[11px] text-text-muted mt-0.5">Role is managed by an administrator.</span>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                                <label class="block text-xs font-bold text-secondary mb-1">Email Address</label>
+                                <input
+                                    class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface cursor-not-allowed opacity-70"
+                                    disabled type="email"
+                                    value="{{if $u}}{{$u.Email}}{{end}}"/>
+                                <span class="text-[11px] text-text-muted mt-0.5">Email cannot be changed. Contact admin if needed.</span>
+                            </div>
+                        </div>
                     </div>
+
                     <div class="flex flex-col gap-1">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Phone Number</label>
-                        <input name="phone" id="profile-phone"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                            type="tel"
-                            value="{{if $u}}{{nullString $u.Phone}}{{end}}"
-                            placeholder="e.g. +91 98765 43210"/>
-                    </div>
-                    <div class="flex flex-col gap-1 md:col-span-2">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5 flex items-center justify-between">
+                        <label class="block text-xs font-bold text-secondary mb-1 flex items-center justify-between">
                             <span>User Timezone</span>
-                            <span class="text-xs normal-case text-primary font-medium cursor-pointer hover:underline" id="btn-detect-tz">⚡ Auto-detect</span>
+                            <span class="text-xs normal-case text-primary font-semibold cursor-pointer hover:underline" id="btn-detect-tz">⚡ Auto-detect</span>
                         </label>
                         <select name="timezone" id="profile-timezone"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             <option value="UTC">UTC (Coordinated Universal Time)</option>
                             <option value="Asia/Kolkata">Asia/Kolkata (IST - UTC+05:30)</option>
                             <option value="America/New_York">America/New_York (EDT/EST - UTC-05:00)</option>
@@ -93,69 +98,74 @@
                             <option value="Asia/Tokyo">Asia/Tokyo (JST - UTC+09:00)</option>
                             <option value="Australia/Sydney">Australia/Sydney (AEST - UTC+10:00)</option>
                         </select>
-                        <span class="text-[11px] text-on-surface-variant mt-0.5">Select your local operational timezone to align schedules, trip departure times, and logs.</span>
+                        <span class="text-[11px] text-text-muted mt-0.5">Select your local operational timezone to align schedules, trip departure times, and logs.</span>
                     </div>
-                    <div class="md:col-span-2 pt-2 flex items-center gap-3 flex-wrap">
-                        {{template "btn.html" (dict "Variant" "primary" "Label" "Save Changes" "Type" "submit" "Icon" "save" "Class" "cursor-pointer")}}
-                        <a href="/profile" class="text-text-muted hover:text-on-surface text-sm transition-colors text-decoration-none">Cancel</a>
+
+                    <div class="sticky bottom-0 -mx-5 px-5 py-3 bg-surface-container-lowest border-t border-border-subtle flex items-center gap-3 flex-wrap">
+                        {{template "btn.html" (dict "Variant" "primary" "Label" "Save Changes" "Type" "submit" "Icon" "save" "Class" "cursor-pointer shadow-sm")}}
+                        <a href="/profile" class="text-text-muted hover:text-on-surface text-sm font-semibold transition-colors text-decoration-none">Cancel</a>
                     </div>
                 </form>
             </section>
         </div>
 
         <!-- Right Column: Account Info -->
-        <div class="space-y-6">
-            <!-- Timezone Live Clock -->
-            <section class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
-                <h2 class="text-base font-semibold text-on-surface font-display mb-3 border-b border-border-subtle pb-2 flex items-center gap-2">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Local Time Alignment
-                </h2>
-                <div class="p-4 bg-surface-container-low rounded-lg text-center">
-                    <div class="text-2xl font-bold font-mono text-primary tracking-wider" id="tz-clock">--:--:--</div>
+        <div class="space-y-4 min-w-0">
+            <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+                <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <h2 class="text-sm font-bold text-on-surface">Local Time Alignment</h2>
+                </div>
+                <div class="p-5 text-center">
+                    <div class="text-2xl font-black font-mono text-primary tracking-wider tabular-nums" id="tz-clock">--:--:--</div>
                     <div class="text-xs text-text-muted font-medium mt-1" id="tz-date">--</div>
-                    <div class="inline-block mt-2 px-2.5 py-0.5 bg-primary/10 text-primary text-[11px] font-semibold rounded-full" id="tz-badge">UTC</div>
+                    <div class="inline-block mt-3 px-2.5 py-1 bg-primary/10 text-primary text-[11px] font-bold rounded-full border border-primary/15" id="tz-badge">UTC</div>
                 </div>
             </section>
 
-            <!-- Account Details -->
-            <section class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
-                <h2 class="text-base font-semibold text-on-surface font-display mb-4 border-b border-border-subtle pb-2">Account Details</h2>
-                <div class="space-y-4">
+            <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+                <div class="px-5 py-3 border-b border-border-subtle">
+                    <h2 class="text-sm font-bold text-on-surface">Account Details</h2>
+                </div>
+                <dl class="p-5 space-y-3">
                     <div>
-                        <div class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Account ID</div>
-                        <p class="font-mono text-xs text-text-muted bg-surface-container-low px-2 py-1.5 rounded break-all select-all">{{if $u}}{{$u.ID}}{{else}}—{{end}}</p>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Account ID</dt>
+                        <dd class="mt-1"><p class="font-mono text-xs text-text-muted bg-surface-container-low px-2 py-1.5 rounded break-all select-all">{{if $u}}{{$u.ID}}{{else}}—{{end}}</p></dd>
                     </div>
-                    <div class="border-t border-border-subtle pt-4">
-                        <div class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Account Status</div>
-                        {{if $u}}
-                            {{if eq (printf "%s" $u.Status) "active"}}
-                                {{template "badge.html" (dict "Tone" "success" "Label" "Active")}}
-                            {{else if eq (printf "%s" $u.Status) "inactive"}}
-                                {{template "badge.html" (dict "Tone" "neutral" "Label" "Inactive")}}
-                            {{else if eq (printf "%s" $u.Status) "suspended"}}
-                                {{template "badge.html" (dict "Tone" "alert" "Label" "Suspended")}}
-                            {{else}}
-                                {{template "badge.html" (dict "Tone" "neutral" "Label" $u.Status)}}
-                            {{end}}
-                        {{else}}—{{end}}
+                    <div class="border-t border-border-subtle pt-3">
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Account Status</dt>
+                        <dd class="mt-1">
+                            {{if $u}}
+                                {{if eq (printf "%s" $u.Status) "active"}}
+                                    {{template "badge.html" (dict "Tone" "success" "Label" "Active")}}
+                                {{else if eq (printf "%s" $u.Status) "inactive"}}
+                                    {{template "badge.html" (dict "Tone" "neutral" "Label" "Inactive")}}
+                                {{else if eq (printf "%s" $u.Status) "suspended"}}
+                                    {{template "badge.html" (dict "Tone" "alert" "Label" "Suspended")}}
+                                {{else}}
+                                    {{template "badge.html" (dict "Tone" "neutral" "Label" $u.Status)}}
+                                {{end}}
+                            {{else}}—{{end}}
+                        </dd>
                     </div>
-                    <div class="border-t border-border-subtle pt-4">
-                        <div class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Member Since</div>
-                        <p class="text-sm text-on-surface">{{if $u}}{{datetime $u.CreatedAt}}{{else}}—{{end}}</p>
+                    <div class="border-t border-border-subtle pt-3">
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Member Since</dt>
+                        <dd class="mt-1 text-sm font-semibold text-on-surface tabular-nums">{{if $u}}{{datetime $u.CreatedAt}}{{else}}—{{end}}</dd>
                     </div>
-                    <div class="border-t border-border-subtle pt-4">
-                        <div class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Last Login</div>
-                        <p class="text-sm text-on-surface">
-                            {{if and $u $u.LastLoginAt}}{{datetime $u.LastLoginAt}}{{else}}<span class="text-text-muted">Not recorded</span>{{end}}
-                        </p>
+                    <div class="border-t border-border-subtle pt-3">
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Last Login</dt>
+                        <dd class="mt-1 text-sm font-semibold text-on-surface tabular-nums">
+                            {{if and $u $u.LastLoginAt}}{{datetime $u.LastLoginAt}}{{else}}<span class="text-text-muted font-medium">Not recorded</span>{{end}}
+                        </dd>
                     </div>
-                </div>
+                </dl>
             </section>
 
-            <!-- Security -->
-            <section class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
-                <h2 class="text-base font-semibold text-on-surface font-display mb-4 border-b border-border-subtle pb-2">Security</h2>
-                <div class="space-y-3">
+            <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+                <div class="px-5 py-3 border-b border-border-subtle">
+                    <h2 class="text-sm font-bold text-on-surface">Security</h2>
+                </div>
+                <div class="p-5 space-y-3">
                     <p class="text-sm text-text-muted">Keep your account secure by using a strong, unique password.</p>
                     {{template "btn.html" (dict "Variant" "secondary" "Label" "Change Password" "Href" "/change-password" "Icon" "key" "Class" "w-full")}}
                 </div>

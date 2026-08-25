@@ -1,88 +1,94 @@
-<div class="space-y-8">
+<div class="space-y-5 max-w-[1600px] mx-auto">
     <!-- Header -->
-    <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
-        <div>
-            <h1 class="text-xl font-semibold text-on-surface font-display tracking-tight">Reports &amp; Analytics Hub</h1>
-            <p class="text-sm text-text-muted mt-1">Real-time operational metrics, fleet efficiency, and revenue reports</p>
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="min-w-0">
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Reports &amp; Analytics Hub</h1>
+            <p class="text-sm text-secondary mt-1">Real-time operational metrics, fleet efficiency, and revenue reports</p>
         </div>
-        <div class="flex items-center gap-2 flex-wrap">
-            <button onclick="window.print()" class="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface-container-low px-4 py-2 text-sm font-medium text-on-surface hover:bg-surface-container transition-all">
+        <div class="flex items-center gap-2 flex-wrap shrink-0">
+            <button onclick="window.print()" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 hover:shadow-sm transition-all">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>Export / Print
             </button>
         </div>
     </div>
 
     <!-- Quick Navigation Cards Grid -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <!-- Revenue Report -->
-        <a href="/reports/revenue" class="group bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-5 hover:shadow-md hover:border-primary transition-all duration-200 block">
-            <div class="flex items-center justify-between mb-3">
-                <div class="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
+        <a href="/reports/revenue" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-primary/20 transition-all duration-200 block">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-violet-500 opacity-80"></div>
+            <div class="flex items-start justify-between mb-4">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 border border-primary/15 grid place-items-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
                 </div>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-primary group-hover:translate-x-0.5 transition-all"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </div>
-            <h3 class="text-subsection font-semibold text-on-surface group-hover:text-primary">Revenue Analytics</h3>
+            <h3 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Revenue Analytics</h3>
             <p class="text-xs text-text-muted mt-1">Monthly breakdowns, payment trends, and income aggregates</p>
         </a>
 
         <!-- Trip Report -->
-        <a href="/reports/trips" class="group bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-5 hover:shadow-md hover:border-primary transition-all duration-200 block">
-            <div class="flex items-center justify-between mb-3">
-                <div class="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
+        <a href="/reports/trips" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-blue-500/20 transition-all duration-200 block">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-400 opacity-80"></div>
+            <div class="flex items-start justify-between mb-4">
+                <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600 group-hover:bg-blue-500 group-hover:text-white transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-2.8a.5.5 0 0 0-.45-.3H3a.5.5 0 0 0-.45.3L1.14 12.2a1.5 1.5 0 0 0 0 1.6L2.6 16.6A.5.5 0 0 0 3.05 17H18"/></svg>
                 </div>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </div>
-            <h3 class="text-subsection font-semibold text-on-surface group-hover:text-primary">Trip Performance</h3>
+            <h3 class="text-sm font-bold text-on-surface group-hover:text-blue-600 transition-colors">Trip Performance</h3>
             <p class="text-xs text-text-muted mt-1">Trip execution logs, departure times, and completion rates</p>
         </a>
 
         <!-- Driver Report -->
-        <a href="/reports/drivers" class="group bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-5 hover:shadow-md hover:border-primary transition-all duration-200 block">
-            <div class="flex items-center justify-between mb-3">
-                <div class="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="M9 12h6"/></svg>
+        <a href="/reports/drivers" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-violet-500/20 transition-all duration-200 block">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-violet-500 to-purple-500 opacity-80"></div>
+            <div class="flex items-start justify-between mb-4">
+                <div class="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/15 grid place-items-center text-violet-600 group-hover:bg-violet-500 group-hover:text-white transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
                 </div>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-violet-600 group-hover:translate-x-0.5 transition-all"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </div>
-            <h3 class="text-subsection font-semibold text-on-surface group-hover:text-primary">Driver Roster</h3>
+            <h3 class="text-sm font-bold text-on-surface group-hover:text-violet-600 transition-colors">Driver Roster</h3>
             <p class="text-xs text-text-muted mt-1">Driver availability, licensing, and active status tracking</p>
         </a>
 
         <!-- Vehicle Report -->
-        <a href="/reports/vehicles" class="group bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-5 hover:shadow-md hover:border-primary transition-all duration-200 block">
-            <div class="flex items-center justify-between mb-3">
-                <div class="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
+        <a href="/reports/vehicles" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-emerald-500/20 transition-all duration-200 block">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-80"></div>
+            <div class="flex items-start justify-between mb-4">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
                 </div>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </div>
-            <h3 class="text-subsection font-semibold text-on-surface group-hover:text-primary">Vehicle Fleet Utilization</h3>
+            <h3 class="text-sm font-bold text-on-surface group-hover:text-emerald-600 transition-colors">Vehicle Fleet Utilization</h3>
             <p class="text-xs text-text-muted mt-1">Fleet status, capacity allocation, and maintenance records</p>
         </a>
 
         <!-- Customer Report -->
-        <a href="/reports/customers" class="group bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-5 hover:shadow-md hover:border-primary transition-all duration-200 block">
-            <div class="flex items-center justify-between mb-3">
-                <div class="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
+        <a href="/reports/customers" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-amber-500/20 transition-all duration-200 block">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-80"></div>
+            <div class="flex items-start justify-between mb-4">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 </div>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </div>
-            <h3 class="text-subsection font-semibold text-on-surface group-hover:text-primary">Customer Directory</h3>
+            <h3 class="text-sm font-bold text-on-surface group-hover:text-amber-600 transition-colors">Customer Directory</h3>
             <p class="text-xs text-text-muted mt-1">Account details, company contact profiles, and history</p>
         </a>
 
         <!-- Pending Payments -->
-        <a href="/reports/pending-payments" class="group bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-5 hover:shadow-md hover:border-primary transition-all duration-200 block">
-            <div class="flex items-center justify-between mb-3">
-                <div class="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center group-hover:bg-primary group-hover:text-on-primary transition-colors">
+        <a href="/reports/pending-payments" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-rose-500/20 transition-all duration-200 block">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-500 to-red-500 opacity-80"></div>
+            <div class="flex items-start justify-between mb-4">
+                <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/15 grid place-items-center text-rose-600 group-hover:bg-rose-500 group-hover:text-white transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-6.172a2 2 0 0 0-.586-1.414L12 10l-4.414 4.414A2 2 0 0 0 7 15.828V22"/><path d="M7 2v6.172a2 2 0 0 0 .586 1.414L12 14l4.414-4.414A2 2 0 0 0 17 8.172V2"/></svg>
                 </div>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-rose-600 group-hover:translate-x-0.5 transition-all"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </div>
-            <h3 class="text-subsection font-semibold text-on-surface group-hover:text-primary">Outstanding Balances</h3>
+            <h3 class="text-sm font-bold text-on-surface group-hover:text-rose-600 transition-colors">Outstanding Balances</h3>
             <p class="text-xs text-text-muted mt-1">Unpaid invoice audit, pending balances, and overdue accounts</p>
         </a>
     </div>

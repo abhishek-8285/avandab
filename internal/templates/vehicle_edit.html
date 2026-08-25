@@ -1,8 +1,8 @@
-<div class="max-w-3xl mx-auto">
-    <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
+<div class="max-w-3xl mx-auto space-y-5">
+    <div class="flex items-start justify-between gap-4 flex-wrap">
         <div>
-            <h1 class="text-xl font-semibold text-on-surface font-display">{{if .Vehicle}}Edit Vehicle{{else}}New Vehicle{{end}}</h1>
-            <p class="text-sm text-text-muted mt-0.5">Unit registration, capacity, compliance dates, and status.</p>
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{if .Vehicle}}Edit Vehicle{{else}}New Vehicle{{end}}</h1>
+            <p class="text-sm text-secondary mt-1">Unit registration, capacity, compliance dates, and status.</p>
         </div>
     </div>
 
@@ -12,74 +12,95 @@
 
     {{ $vehicle := .Vehicle }}
 
-    <form method="POST" action="/vehicles{{if $vehicle}}/{{$vehicle.ID}}/edit{{else}}/new{{end}}" class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6 space-y-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {{template "field.html" (dict "Label" "Registration Number" "Name" "registration_number" "Value" (and $vehicle $vehicle.RegistrationNumber) "Required" "true" "Pattern" `[A-Z]{2}\s?[0-9]{1,2}\s?[A-Z]{0,3}\s?[0-9]{4}` "Title" "Indian registration: MH01AB1234" "Placeholder" "MH01AB1234" "Hint" "Format: state code + RTO number + series, e.g. MH01AB1234")}}
-            {{template "field.html" (dict "Label" "Vehicle Number" "Name" "vehicle_number" "Value" (and $vehicle $vehicle.VehicleNumber) "Required" "true")}}
-            {{template "field.html" (dict "Label" "Capacity (seats/kg)" "Name" "capacity" "Type" "number" "Value" (and $vehicle $vehicle.Capacity))}}
-            {{template "field.html" (dict "Label" "Current Mileage (km)" "Name" "current_mileage" "Type" "number" "Value" (and $vehicle $vehicle.CurrentMileage))}}
+    <form method="POST" action="/vehicles{{if $vehicle}}/{{$vehicle.ID}}/edit{{else}}/new{{end}}" class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <div class="p-6 space-y-6">
+            <section>
+                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Identity</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {{template "field.html" (dict "Label" "Registration Number" "Name" "registration_number" "Value" (and $vehicle $vehicle.RegistrationNumber) "Required" "true" "Pattern" `[A-Z]{2}\s?[0-9]{1,2}\s?[A-Z]{0,3}\s?[0-9]{4}` "Title" "Indian registration: MH01AB1234" "Placeholder" "MH01AB1234" "Hint" "Format: state code + RTO number + series, e.g. MH01AB1234")}}
+                    {{template "field.html" (dict "Label" "Vehicle Number" "Name" "vehicle_number" "Value" (and $vehicle $vehicle.VehicleNumber) "Required" "true")}}
+                </div>
+            </section>
 
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Vehicle Type</label>
-                <select name="vehicle_type" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                    <option value="truck" {{if and $vehicle (eq $vehicle.VehicleType "truck")}}selected{{end}}>Truck</option>
-                    <option value="mini_truck" {{if and $vehicle (eq $vehicle.VehicleType "mini_truck")}}selected{{end}}>Mini Truck</option>
-                    <option value="bus" {{if and $vehicle (eq $vehicle.VehicleType "bus")}}selected{{end}}>Bus</option>
-                    <option value="van" {{if and $vehicle (eq $vehicle.VehicleType "van")}}selected{{end}}>Van</option>
-                    <option value="pickup" {{if and $vehicle (eq $vehicle.VehicleType "pickup")}}selected{{end}}>Pickup</option>
-                    <option value="tempo" {{if and $vehicle (eq $vehicle.VehicleType "tempo")}}selected{{end}}>Tempo</option>
-                </select>
+            <section>
+                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Specifications</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {{template "field.html" (dict "Label" "Capacity (seats/kg)" "Name" "capacity" "Type" "number" "Value" (and $vehicle $vehicle.Capacity))}}
+                    {{template "field.html" (dict "Label" "Current Mileage (km)" "Name" "current_mileage" "Type" "number" "Value" (and $vehicle $vehicle.CurrentMileage))}}
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Vehicle Type</label>
+                        <select name="vehicle_type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <option value="truck" {{if and $vehicle (eq $vehicle.VehicleType "truck")}}selected{{end}}>Truck</option>
+                            <option value="mini_truck" {{if and $vehicle (eq $vehicle.VehicleType "mini_truck")}}selected{{end}}>Mini Truck</option>
+                            <option value="bus" {{if and $vehicle (eq $vehicle.VehicleType "bus")}}selected{{end}}>Bus</option>
+                            <option value="van" {{if and $vehicle (eq $vehicle.VehicleType "van")}}selected{{end}}>Van</option>
+                            <option value="pickup" {{if and $vehicle (eq $vehicle.VehicleType "pickup")}}selected{{end}}>Pickup</option>
+                            <option value="tempo" {{if and $vehicle (eq $vehicle.VehicleType "tempo")}}selected{{end}}>Tempo</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Fuel Type</label>
+                        <select name="fuel_type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <option value="diesel" {{if and $vehicle (eq $vehicle.FuelType "diesel")}}selected{{end}}>Diesel</option>
+                            <option value="petrol" {{if and $vehicle (eq $vehicle.FuelType "petrol")}}selected{{end}}>Petrol</option>
+                            <option value="gas" {{if and $vehicle (eq $vehicle.FuelType "gas")}}selected{{end}}>Gas</option>
+                            <option value="electric" {{if and $vehicle (eq $vehicle.FuelType "electric")}}selected{{end}}>Electric</option>
+                            <option value="cng" {{if and $vehicle (eq $vehicle.FuelType "cng")}}selected{{end}}>CNG</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Compliance</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {{template "field.html" (dict "Label" "Insurance Expiry" "Name" "insurance_expiry" "Type" "date" "Value" (and $vehicle (date_only $vehicle.InsuranceExpiry)) "Required" "true")}}
+                    {{template "field.html" (dict "Label" "Fitness Expiry" "Name" "fitness_expiry" "Type" "date" "Value" (and $vehicle (date_only $vehicle.FitnessExpiry)) "Required" "true")}}
+                    {{template "field.html" (dict "Label" "Permit Expiry" "Name" "permit_expiry" "Type" "date" "Value" (and $vehicle (date_only $vehicle.PermitExpiry)) "Required" "true")}}
+                </div>
+            </section>
+
+            <section>
+                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Status</h2>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-none sm:max-w-md">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Status</label>
+                        <select name="status" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <option value="available" {{if and $vehicle (eq $vehicle.Status "available")}}selected{{end}}>Available</option>
+                            <option value="running" {{if and $vehicle (eq $vehicle.Status "running")}}selected{{end}}>Running</option>
+                            <option value="maintenance" {{if and $vehicle (eq $vehicle.Status "maintenance")}}selected{{end}}>Maintenance</option>
+                            <option value="inactive" {{if and $vehicle (eq $vehicle.Status "inactive")}}selected{{end}}>Inactive</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            {{if and $vehicle .IsMaintenanceDue}}
+            <div class="p-4 bg-status-warning/10 border border-status-warning/30 rounded-xl space-y-2">
+                <h4 class="text-sm font-semibold text-on-surface font-display flex items-center gap-1.5">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-status-warning"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                    Preventive Maintenance Due Since {{.MaintenanceDue}}
+                </h4>
+                <p class="text-xs text-text-muted">
+                    This vehicle is overdue for scheduled maintenance. Dispatch is blocked unless an override is provided below.
+                </p>
+                <div class="pt-2">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">
+                        Dispatcher Override Reason
+                    </label>
+                    <input type="text" name="maintenance_override_reason"
+                        placeholder="Enter reason for maintenance override..."
+                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                </div>
             </div>
-
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Fuel Type</label>
-                <select name="fuel_type" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                    <option value="diesel" {{if and $vehicle (eq $vehicle.FuelType "diesel")}}selected{{end}}>Diesel</option>
-                    <option value="petrol" {{if and $vehicle (eq $vehicle.FuelType "petrol")}}selected{{end}}>Petrol</option>
-                    <option value="gas" {{if and $vehicle (eq $vehicle.FuelType "gas")}}selected{{end}}>Gas</option>
-                    <option value="electric" {{if and $vehicle (eq $vehicle.FuelType "electric")}}selected{{end}}>Electric</option>
-                    <option value="cng" {{if and $vehicle (eq $vehicle.FuelType "cng")}}selected{{end}}>CNG</option>
-                </select>
-            </div>
-
-            {{template "field.html" (dict "Label" "Insurance Expiry" "Name" "insurance_expiry" "Type" "date" "Value" (and $vehicle (date_only $vehicle.InsuranceExpiry)) "Required" "true")}}
-            {{template "field.html" (dict "Label" "Fitness Expiry" "Name" "fitness_expiry" "Type" "date" "Value" (and $vehicle (date_only $vehicle.FitnessExpiry)) "Required" "true")}}
-            {{template "field.html" (dict "Label" "Permit Expiry" "Name" "permit_expiry" "Type" "date" "Value" (and $vehicle (date_only $vehicle.PermitExpiry)) "Required" "true")}}
-
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Status</label>
-                <select name="status" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                    <option value="available" {{if and $vehicle (eq $vehicle.Status "available")}}selected{{end}}>Available</option>
-                    <option value="running" {{if and $vehicle (eq $vehicle.Status "running")}}selected{{end}}>Running</option>
-                    <option value="maintenance" {{if and $vehicle (eq $vehicle.Status "maintenance")}}selected{{end}}>Maintenance</option>
-                    <option value="inactive" {{if and $vehicle (eq $vehicle.Status "inactive")}}selected{{end}}>Inactive</option>
-                </select>
-            </div>
+            {{end}}
         </div>
 
-        {{if and $vehicle .IsMaintenanceDue}}
-        <div class="p-4 bg-status-warning/10 border border-status-warning/30 rounded-lg space-y-2">
-            <h4 class="text-sm font-semibold text-on-surface font-display flex items-center gap-1.5">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-status-warning"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-                Preventive Maintenance Due Since {{.MaintenanceDue}}
-            </h4>
-            <p class="text-xs text-text-muted">
-                This vehicle is overdue for scheduled maintenance. Dispatch is blocked unless an override is provided below.
-            </p>
-            <div class="pt-2">
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">
-                    Dispatcher Override Reason
-                </label>
-                <input type="text" name="maintenance_override_reason"
-                    placeholder="Enter reason for maintenance override..."
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-            </div>
-        </div>
-        {{end}}
-
-        <div class="flex justify-end gap-3 pt-4 border-t border-border-subtle flex-wrap">
-            {{template "btn.html" (dict "Label" "Cancel" "Href" "/vehicles" "Variant" "secondary")}}
-            {{template "btn.html" (dict "Label" "Save Vehicle" "Type" "submit")}}
+        <div class="sticky bottom-0 bg-surface-container-lowest border-t border-border-subtle px-6 py-3 flex justify-end gap-2 flex-wrap">
+            <a href="/vehicles" class="inline-flex items-center justify-center rounded-full bg-surface-container-lowest border border-border-subtle px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors text-decoration-none">Cancel</a>
+            <button type="submit" class="inline-flex items-center justify-center rounded-full bg-primary text-on-primary px-5 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer">Save Vehicle</button>
         </div>
     </form>
 </div>

@@ -1,19 +1,42 @@
 {{template "page_header.html" (dict "Title" "Customers" "Subtitle" "Manage enterprise client accounts, GSTIN, and contacts" "ActionHref" "/customers/new" "ActionIcon" "add" "ActionLabel" "New Customer")}}
 
-<div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm flex flex-col h-full overflow-hidden">
-    <!-- Sticky Search & Filter Bar -->
-    <form method="GET" action="/customers" class="px-4 py-3 border-b border-border-subtle flex flex-wrap items-center gap-2 bg-surface-container-lowest sticky top-0 z-10">
-        <div class="relative flex-1 min-w-60 max-w-md">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="text" name="q" value="{{.Query}}" placeholder="Filter by customer name, company, or GST..."
-                class="bg-surface-container-low border border-border-subtle rounded-md pl-9 pr-4 py-2.5 text-sm text-on-surface placeholder:text-text-muted w-full focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+{{if .Pagination}}
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+    <div class="group relative overflow-hidden bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white hover:shadow-lg transition-all">
+        <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-400 to-emerald-400 opacity-80"></div>
+        <div class="flex items-center gap-4">
+            <div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-black tabular-nums leading-none">{{.Pagination.Total}}</div>
+                <div class="text-xs font-medium text-white/80 mt-1">Total Customers</div>
+            </div>
         </div>
-        {{template "btn.html" (dict "Label" "Search" "Type" "submit" "Size" "sm")}}
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+        <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600 shrink-0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/><path d="M8 15h.01"/><path d="M12 15h.01"/><path d="M16 15h.01"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{if .Customers}}{{len .Customers}}{{else}}0{{end}}</div>
+            <div class="text-xs text-secondary font-medium mt-1">On This Page · {{.Pagination.Page}} of {{.Pagination.TotalPages}}</div>
+        </div>
+    </div>
+</div>
+{{end}}
 
-        <div class="ml-auto flex items-center gap-3">
-            {{template "btn.html" (dict "Label" "New Customer" "Href" "/customers/new" "Size" "sm" "Icon" "add")}}
-        </div>
-    </form>
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+    {{template "filter_bar.html" (dict
+        "Action" "/customers"
+        "Query" .Query
+        "StatusFilter" .StatusFilter
+        "Chips" (chips)
+        "ShowDates" false
+        "ShowSearch" true
+        "SearchPlaceholder" "Filter by customer name, company, or GST..."
+        "Primary" (dict "Label" "New Customer" "Href" "/customers/new" "Size" "sm" "Icon" "add")
+    )}}
 
     <!-- Data Table Fragment (Datastar refresh target) -->
     <div id="list-table">

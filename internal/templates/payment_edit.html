@@ -1,61 +1,66 @@
-<div class="max-w-xl mx-auto">
+<div class="max-w-3xl mx-auto">
     <h2 class="text-xl font-semibold mb-4 text-on-surface font-display">Record Payment</h2>
 
     {{if .FlashError}}
-    <div class="bg-status-alert/10 border border-status-alert/30 text-status-alert px-4 py-3 rounded mb-4">{{.FlashError}}</div>
+    <div class="bg-status-alert/10 border border-status-alert/30 text-status-alert px-4 py-3 rounded-xl mb-4">{{.FlashError}}</div>
     {{end}}
 
-    <form method="POST" action="/payments/new/{{.InvoiceID}}" class="space-y-4">
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Invoice</label>
-            <dd class="text-sm font-medium text-on-surface font-mono">{{.Invoice.InvoiceNumber}}</dd>
-            <p class="text-sm text-text-muted mt-0.5">Total: <span class="tabular-nums" data-numeric>{{printf "%.2f" .Invoice.Total}}</span> | Balance: <span class="tabular-nums" data-numeric>{{printf "%.2f" .Balance}}</span></p>
-        </div>
+    <form method="POST" action="/payments/new/{{.InvoiceID}}">
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 sm:p-6 space-y-5">
+            <!-- Invoice context -->
+            <div>
+                <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Invoice</h3>
+                <div class="rounded-xl bg-surface-container-low border border-border-subtle p-4">
+                    <dd class="text-sm font-bold text-on-surface font-mono">{{.Invoice.InvoiceNumber}}</dd>
+                    <p class="text-sm text-text-muted mt-1">Total: <span class="tabular-nums font-semibold text-on-surface" data-numeric>₹{{printf "%.2f" .Invoice.Total}}</span> · Balance: <span class="tabular-nums font-semibold text-on-surface" data-numeric>₹{{printf "%.2f" .Balance}}</span></p>
+                </div>
+            </div>
 
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Amount *</label>
-            <input type="number" step="0.01" min="0.01" name="amount" value="{{if gt .Balance 0.0}}{{printf "%.2f" .Balance}}{{end}}" required
-                class="block w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-        </div>
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Amount *</label>
+                <input type="number" step="0.01" min="0.01" name="amount" value="{{if gt .Balance 0.0}}{{printf "%.2f" .Balance}}{{end}}" required
+                    class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+            </div>
 
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Method</label>
-            <select name="method" class="block w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                <option value="cash">Cash</option>
-                <option value="upi">UPI</option>
-                <option value="bank_transfer">Bank Transfer</option>
-                <option value="cheque">Cheque</option>
-                <option value="razorpay">Razorpay (Online)</option>
-            </select>
-        </div>
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Method</label>
+                <select name="method" class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    <option value="cash">Cash</option>
+                    <option value="upi">UPI</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="cheque">Cheque</option>
+                    <option value="razorpay">Razorpay (Online)</option>
+                </select>
+            </div>
 
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Payment Date</label>
-            <input type="date" name="payment_date" value="{{date_only .Now}}"
-                class="block w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-        </div>
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Payment Date</label>
+                <input type="date" name="payment_date" value="{{date_only .Now}}"
+                    class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+            </div>
 
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Reference</label>
-            <input type="text" name="reference"
-                class="block w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-        </div>
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Reference</label>
+                <input type="text" name="reference"
+                    class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+            </div>
 
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Remarks</label>
-            <textarea name="remarks" rows="2"
-                class="block w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"></textarea>
-        </div>
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Remarks</label>
+                <textarea name="remarks" rows="2"
+                    class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"></textarea>
+            </div>
 
-        <div class="flex justify-end gap-3 pt-4 flex-wrap">
-            {{template "btn.html" (dict "Variant" "secondary" "Size" "md" "Href" (printf "/invoices/%v" .InvoiceID) "Label" "Cancel")}}
-            <button type="button" id="razorpay-btn" class="inline-flex items-center gap-2 rounded-md bg-status-success text-on-primary px-4 py-2 text-sm font-medium hover:bg-status-success/90 transition-all cursor-pointer">
-                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
-                </svg>
-                Pay Online via Razorpay
-            </button>
-            {{template "btn.html" (dict "Variant" "primary" "Size" "md" "Type" "submit" "Label" "Record Payment")}}
+            <div class="sticky bottom-0 -mx-5 sm:-mx-6 px-5 sm:px-6 py-3 bg-surface-container-lowest border-t border-border-subtle flex justify-end gap-2 flex-wrap">
+                {{template "btn.html" (dict "Variant" "secondary" "Size" "md" "Href" (printf "/invoices/%v" .InvoiceID) "Label" "Cancel")}}
+                <button type="button" id="razorpay-btn" class="inline-flex items-center gap-2 rounded-full bg-status-success text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-status-success/90 hover:-translate-y-px transition-all cursor-pointer">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
+                    </svg>
+                    Pay Online via Razorpay
+                </button>
+                {{template "btn.html" (dict "Variant" "primary" "Size" "md" "Type" "submit" "Label" "Record Payment")}}
+            </div>
         </div>
     </form>
 </div>

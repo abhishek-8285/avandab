@@ -142,3 +142,53 @@ func PointToPolygonDistance(p Point, ring []Point) float64 {
 func CircleContains(centerLat, centerLng, radiusM, lat, lng float64) bool {
 	return Haversine(centerLat, centerLng, lat, lng) <= radiusM
 }
+
+// PointInPolygonWinding is the winding-number alternative to PointInPolygon.
+// More robust for self-intersecting / degenerate rings; slower but handles
+// edge cases where ray-cast half-open rule miscounts. Returns same inside
+// definition (on-edge => true). Use for validation when ring.IsValid fails.
+//
+// NOTE on S2/PostGIS: true S2 cell covering (github.com/google/s2) or
+// PostGIS ST_Contains would give O(log n) spherical indexing and anti-meridian
+// handling, but requires cgo (s2) or Postgres extension (PostGIS). Current
+// deploy is pure-Go modernc.org/sqlite on distroless, so we keep indexed
+// ray-cast + this winding fallback. Switch to S2 when count >500 zones or
+// Postgres cutover (Spec 23 scale tiering) lands.
+func PointInPolygonWinding(lat, lng float64, ring []Point) bool {
+	if len(ring) < 3 {
+		return false
+	}
+	p := Point{Lat: lat, Lng: lng}
+	eps := 1e-9
+	n := len(ring)
+	if ring[0] == ring[n-1] {
+		n--
+	}
+	if n < 3 {
+		return false
+	}
+	for i := 0; i < n; i++ {
+		if onSegment(ring[i], ring[(i+1)%n], p, eps) {
+			return true
+		}
+	}
+	winding := 0
+	for i := 0; i < n; i++ {
+		a := ring[i]
+		b := ring[(i+1)%n]
+		if a.Lat <= p.Lat {
+			if b.Lat > p.Lat && isLeft(a, b, p) > 0 {
+				winding++
+			}
+		} else {
+			if b.Lat <= p.Lat && isLeft(a, b, p) < 0 {
+				winding--
+			}
+		}
+	}
+	return winding != 0
+}
+
+func isLeft(a, b, p Point) float64 {
+	return (b.Lng-a.Lng)*(p.Lat-a.Lat) - (p.Lng-a.Lng)*(b.Lat-a.Lat)
+}

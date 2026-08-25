@@ -163,6 +163,50 @@ test.describe('tracking page', () => {
     await expect(page.locator('.fleet-row', { hasText: 'MH01AB1111' })).toContainText('Moving');
     await expect(page.locator('.fleet-row', { hasText: 'MH01AB1111' })).toContainText('⚡');
 
+    // Panel status tabs mirror the map chips (same state, second chip set).
+    await expect(page.locator('#panel-count-all')).toHaveText('2');
+    await expect(page.locator('#panel-count-running')).toHaveText('1');
+    await expect(page.locator('#panel-count-stopped')).toHaveText('1');
+
+    // Manual refresh + last-update clock chrome exist in the top strip.
+    await expect(page.locator('#refresh-feed-btn')).toBeVisible();
+    await expect(page.locator('#live-clock')).not.toHaveText('SYNCING...');
+
+    // ── 4b. Docked detail sheet: open, overview stats, tabs, close ──
+    await page.route('**/api/v1/trips/*/summary', (route) =>
+      route.fulfill({
+        json: {
+          trip_id: 'TRIP-9001',
+          trip_number: 'TRIP-9001',
+          status: 'in_transit',
+          origin: 'Delhi',
+          destination: 'Gurgaon',
+          route_km: 45,
+        },
+      }),
+    );
+    await page.route('**/api/v1/telemetry/history**', (route) => route.fulfill({ json: [] }));
+
+    await page.locator('.fleet-row', { hasText: 'DL02CD2222' }).click();
+    await expect(page.locator('#intel-detail-panel')).toBeVisible();
+    await expect(page.locator('#intel-vehicle-id')).toHaveText('DL02CD2222');
+    await expect(page.locator('#intel-speed')).toContainText('0');
+    await expect(page.locator('#intel-fuel')).toContainText('41');
+
+    // Trip tab renders the server summary — route names from the API only.
+    await page.locator('[data-sheet-tab="trip"]').click();
+    await expect(page.locator('#trip-summary-body')).toBeVisible();
+    await expect(page.locator('#trip-sum-number')).toHaveText('TRIP-9001');
+    await expect(page.locator('#trip-route-timeline')).toContainText('Delhi');
+    await expect(page.locator('#trip-route-timeline')).toContainText('Gurgaon');
+
+    // History tab: empty payload → honest empty state, no fabrication.
+    await page.locator('[data-sheet-tab="history"]').click();
+    await expect(page.locator('#history-empty')).toBeVisible();
+
+    await page.locator('#close-intel-btn').click();
+    await expect(page.locator('#intel-detail-panel')).toBeHidden();
+
     // ── 5. SSE opens → polling pauses ──
     await expect(page.locator('#conn-label')).toHaveText('Live Stream', { timeout: 10_000 });
 

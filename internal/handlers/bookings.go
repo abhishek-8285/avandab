@@ -94,6 +94,8 @@ func (h *BookingHandlers) List(w http.ResponseWriter, r *http.Request) {
 		Limit:    pp.Limit,
 		Search:   pp.Query,
 		Status:   pp.Status,
+		DateFrom: pp.DateFrom,
+		DateTo:   pp.DateTo,
 	})
 	if err != nil {
 		httpx.Error(w, r, err)
@@ -101,6 +103,8 @@ func (h *BookingHandlers) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pd := newPaginationData(pp, res.Total, "/bookings")
+	pd.From = pp.DateFrom
+	pd.To = pp.DateTo
 
 	if isDatastarRequest(r) {
 		h.renderFragment(w, "booking_list_table.html", map[string]interface{}{
@@ -108,6 +112,8 @@ func (h *BookingHandlers) List(w http.ResponseWriter, r *http.Request) {
 			"Pagination":   pd,
 			"Query":        pp.Query,
 			"StatusFilter": pp.Status,
+			"DateFrom":     pp.DateFrom,
+			"DateTo":       pp.DateTo,
 		})
 		return
 	}
@@ -115,7 +121,7 @@ func (h *BookingHandlers) List(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "booking_list.html", PageData{
 		Title: "Bookings",
 		User:  session,
-		Extra: map[string]interface{}{"Bookings": res.Bookings, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "KPIs": h.bookingKPIs(r.Context())},
+		Extra: map[string]interface{}{"Bookings": res.Bookings, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.bookingKPIs(r.Context())},
 	})
 }
 

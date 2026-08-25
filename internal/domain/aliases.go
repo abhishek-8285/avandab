@@ -206,4 +206,6 @@ var (
 	ErrCancelledTripImmutable = trip.ErrCancelledTripImmutable
 	ErrCompletedTripImmutable = trip.ErrCompletedTripImmutable
 	ErrDuplicateInvoice       = invoice.ErrDuplicateInvoice
+	ErrInvoiceEInvoiced       = invoice.ErrInvoiceEInvoiced
+	ErrInvoiceHasPayments     = invoice.ErrInvoiceHasPayments
 )

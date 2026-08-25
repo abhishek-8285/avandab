@@ -1,16 +1,16 @@
 {{define "kharcha_row_rejected.html"}}
-<div class="px-4 py-2 flex items-center gap-4 bg-status-alert/10 border-l-4 border-status-alert/30 transition-all"
+<div class="px-4 sm:px-5 py-2.5 flex items-center gap-4 bg-status-alert/[0.07] border-l-4 border-status-alert/30 transition-all"
      id="expense-row-{{.ID}}">
-    <div class="w-10 h-10 rounded-full bg-status-alert/10 flex items-center justify-center shrink-0">
+    <div class="w-9 h-9 rounded-lg bg-status-alert/10 grid place-items-center shrink-0">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
     </div>
     <div class="flex-1 min-w-0">
-        <p class="text-sm font-semibold text-status-alert">Rejected — {{.DriverName}}</p>
-        <p class="text-xs text-status-alert mt-0.5 truncate">
+        <p class="text-sm font-bold text-status-alert">Rejected — {{.DriverName}}</p>
+        <p class="text-xs text-status-alert mt-0.5 truncate tabular-nums">
             ₹{{priceFormat .Amount}} · {{.Category}}
             {{if .RejectedReason}} · Reason: {{nullString .RejectedReason}}{{end}}
         </p>
     </div>
-    <span class="px-2 py-1 rounded-full bg-status-alert/10 text-status-alert text-xs font-medium">Rejected</span>
+    <span class="inline-flex px-2 py-1 rounded-full bg-status-alert/10 border border-status-alert/20 text-status-alert text-[11px] font-bold">Rejected</span>
 </div>
 {{end}}

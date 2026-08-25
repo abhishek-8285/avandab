@@ -1,27 +1,40 @@
-<div class="max-w-3xl mx-auto bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm">
-    <div class="p-6 sm:p-8">
+<div class="max-w-3xl mx-auto bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+    <div class="p-6 sm:p-8 space-y-5">
         {{if .Error}}
-        <div class="rounded-lg bg-status-alert/10 border-l-4 border-status-alert p-4 text-status-alert text-sm space-y-1">
-            <div class="font-semibold">Registration failed</div>
-            <div>{{.Error}}</div>
+        <div class="rounded-xl bg-rose-500/10 border border-rose-500/20 p-5 space-y-2">
+            <div class="flex items-center gap-2.5">
+                <span class="w-8 h-8 rounded-lg bg-rose-500/15 border border-rose-500/20 grid place-items-center text-rose-600 shrink-0">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                </span>
+                <div>
+                    <div class="text-sm font-bold text-status-alert">Registration failed</div>
+                    <div class="text-xs text-text-muted">Batch rejected — no devices were created</div>
+                </div>
+            </div>
+            <div class="text-sm text-on-surface">{{.Error}}</div>
             {{if .Results}}
-            <ul class="mt-2 list-disc pl-5 text-xs space-y-0.5">
-                {{range .Results}}{{if not .Success}}<li><span class="font-mono">{{.IMEI}}</span>: {{.Error}}</li>{{end}}{{end}}
+            <ul class="pt-2 mt-1 border-t border-rose-500/15 list-disc pl-5 text-xs text-secondary space-y-0.5 tabular-nums">
+                {{range .Results}}{{if not .Success}}<li><span class="font-mono font-semibold">{{.IMEI}}</span>: {{.Error}}</li>{{end}}{{end}}
             </ul>
             {{end}}
         </div>
         {{else}}
-        <div class="rounded-lg bg-status-success/10 border-l-4 border-status-success p-4 text-status-success text-sm space-y-1">
-            <div class="font-semibold">Registered {{.Success}} of {{.Total}} devices</div>
+        <div class="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-5 space-y-2">
+            <div class="flex items-center gap-2.5">
+                <span class="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+                </span>
+                <div class="text-sm font-bold text-status-success">Registered <span class="tabular-nums">{{.Success}}</span> of <span class="tabular-nums">{{.Total}}</span> devices</div>
+            </div>
             {{if .Results}}
-            <ul class="mt-2 list-disc pl-5 text-xs space-y-0.5">
-                {{range .Results}}<li><span class="font-mono">{{.IMEI}}</span> → {{.DeviceID}}</li>{{end}}
+            <ul class="pt-2 mt-1 border-t border-emerald-500/15 list-disc pl-5 text-xs text-secondary space-y-0.5 tabular-nums">
+                {{range .Results}}<li><span class="font-mono font-semibold">{{.IMEI}}</span> → {{.DeviceID}}</li>{{end}}
             </ul>
             {{end}}
         </div>
         {{end}}
-        <div class="mt-6 pt-4 border-t border-border-subtle">
-            <a href="/telemetry/devices" class="inline-flex items-center gap-1 text-sm text-primary hover:underline font-medium">
+        <div class="pt-4 border-t border-border-subtle flex items-center justify-between gap-3">
+            <a href="/telemetry/devices" class="inline-flex items-center gap-1.5 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
                 Back to devices
             </a>

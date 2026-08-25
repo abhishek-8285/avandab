@@ -35,6 +35,11 @@ type Store interface {
 	repository.CompanySettingsRepository
 	repository.FileRepository
 	repository.AuditLogRepository
+
+	// NextInvoiceNumber atomically allocates the next GST-compliant
+	// sequential invoice number ("INV/2026-27/0001") for the tenant's
+	// current financial year (invoice_sequences, migration 00048).
+	NextInvoiceNumber(ctx context.Context, tenantID string, prefix string) (string, error)
 }
 
 // Services holds all service instances and shared dependencies.
@@ -49,6 +54,7 @@ type Services struct {
 	Trips          *TripService
 	Invoices       *InvoiceService
 	Payments       *PaymentService
+	Notes          *CreditNoteService
 	Settings       *CompanySettingsService
 	Dashboard      *DashboardService
 	Files          *FileService
@@ -113,6 +119,7 @@ func NewServices(store Store, cfg *config.Config, log *slog.Logger, eventBus eve
 	s.Trips = &TripService{baseService: bs}
 	s.Invoices = &InvoiceService{baseService: bs}
 	s.Payments = &PaymentService{baseService: bs}
+	s.Notes = &CreditNoteService{baseService: bs}
 	s.Settings = &CompanySettingsService{baseService: bs}
 	s.Dashboard = &DashboardService{baseService: bs}
 	s.Files = &FileService{baseService: bs}

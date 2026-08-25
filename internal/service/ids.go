@@ -46,13 +46,27 @@ func (s *baseService) generateTripNumber(ctx context.Context) string {
 	return generateDisplayID(settings.TripPrefix)
 }
 
-// generateInvoiceNumber creates an invoice number from company settings.
+// generateInvoiceNumber creates a GST-compliant sequential invoice number:
+// {prefix}/{financial-year}/{seq:04d}, e.g. "INV/2026-27/0001" — exactly 16
+// characters with the default prefix, within the GST ≤16-char limit. Sequence
+// allocation is atomic per tenant per financial year. If company settings are
+// unavailable it still tries sequentially with the default prefix; only when
+// sequence allocation itself fails does it fall back to the legacy random
+// scheme, logging loudly because that number is NOT gap-free.
 func (s *baseService) generateInvoiceNumber(ctx context.Context) string {
-	settings, err := s.store.GetCompanySettings(ctx)
-	if err != nil {
-		return fmt.Sprintf("%s-%s", "INV", uuid.NewString()[:8])
+	prefix := "INV"
+	if settings, err := s.store.GetCompanySettings(ctx); err != nil {
+		s.log.Warn("invoice prefix unavailable, using default", "error", err)
+	} else if trimmed := strings.TrimSpace(settings.InvoicePrefix); trimmed != "" {
+		prefix = trimmed
 	}
-	return generateDisplayID(settings.InvoicePrefix)
+
+	number, err := s.store.NextInvoiceNumber(ctx, tenantIDFor(ctx), prefix)
+	if err != nil {
+		s.log.Error("invoice sequence allocation failed, falling back to random number (NOT gap-free)", "error", err)
+		return fmt.Sprintf("%s-%s", prefix, uuid.NewString()[:8])
+	}
+	return number
 }
 
 // sanitizeName capitalizes the first letter of a name.

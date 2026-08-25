@@ -1,106 +1,124 @@
-<div class="max-w-2xl mx-auto">
-    <h1 class="text-xl font-semibold mb-6 text-on-surface font-display">Company Settings</h1>
+<div class="max-w-3xl mx-auto">
+    <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display mb-5">Company Settings</h1>
 
     {{if .FlashError}}{{template "alert.html" (dict "Tone" "error" "Message" .FlashError)}}{{end}}
 
-    <form method="POST" action="/settings/update" enctype="multipart/form-data" class="space-y-4">
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Company Name</label>
-            <input type="text" name="company_name" value="{{if .Settings}}{{.Settings.CompanyName}}{{end}}"
-                class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-        </div>
-
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Logo</label>
-            {{if .Settings.LogoPath}}
-            <div class="mb-2">
-                <img src="/uploads/{{.Settings.LogoPath}}" alt="Company Logo" class="max-h-24 rounded-md border border-border-subtle">
-            </div>
-            {{end}}
-            <input type="file" name="logo" accept="image/*"
-                class="w-full text-sm text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all cursor-pointer">
-            <p class="text-xs text-text-muted mt-1">Leave empty to keep the current logo.</p>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <form method="POST" action="/settings/update" enctype="multipart/form-data">
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden p-5 space-y-5">
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Currency</label>
-                <input type="text" name="currency" value="{{if .Settings}}{{.Settings.Currency}}{{end}}"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-            </div>
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Timezone</label>
-                <input type="text" name="timezone" value="{{if .Settings}}{{.Settings.Timezone}}{{end}}"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-            </div>
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">GST Enabled</label>
-                <select name="gst_enabled" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                    <option value="1" {{if .Settings.GSTEnabled}}selected{{end}}>Yes</option>
-                    <option value="0" {{if not .Settings.GSTEnabled}}selected{{end}}>No</option>
-                </select>
-            </div>
-        </div>
+                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Identity</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-secondary mb-1.5">Company Name</label>
+                        <input type="text" name="company_name" value="{{if .Settings}}{{.Settings.CompanyName}}{{end}}"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    </div>
 
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">GST Rate (%)</label>
-            <input type="number" step="0.01" name="gst_rate" value="{{if .Settings}}{{.Settings.GSTRate}}{{end}}"
-                class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-        </div>
+                    <div>
+                        <label class="block text-xs font-bold text-secondary mb-1.5">Logo</label>
+                        {{if .Settings.LogoPath}}
+                        <div class="mb-2">
+                            <img src="/uploads/{{.Settings.LogoPath}}" alt="Company Logo" class="max-h-24 rounded-xl border border-border-subtle">
+                        </div>
+                        {{end}}
+                        <input type="file" name="logo" accept="image/*"
+                            class="w-full text-sm text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all cursor-pointer">
+                        <p class="text-xs text-text-muted mt-1">Leave empty to keep the current logo.</p>
+                    </div>
 
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">GST Registration Number</label>
-            <input type="text" name="gst_number" value="{{if .Settings}}{{nullString .Settings.GSTNumber}}{{end}}"
-                class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-        </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-secondary mb-1.5">Phone</label>
+                            <input type="text" name="phone" value="{{if .Settings}}{{nullString .Settings.Phone}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-secondary mb-1.5">Email</label>
+                            <input type="email" name="email" value="{{if .Settings}}{{nullString .Settings.Email}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        </div>
+                    </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Phone</label>
-                <input type="text" name="phone" value="{{if .Settings}}{{nullString .Settings.Phone}}{{end}}"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                    <div>
+                        <label class="block text-xs font-bold text-secondary mb-1.5">Address</label>
+                        <textarea name="address" rows="3"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">{{if .Settings}}{{nullString .Settings.Address}}{{end}}</textarea>
+                    </div>
+                </div>
             </div>
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Email</label>
-                <input type="email" name="email" value="{{if .Settings}}{{nullString .Settings.Email}}{{end}}"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-            </div>
-        </div>
 
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Address</label>
-            <textarea name="address" rows="3"
-                class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">{{if .Settings}}{{nullString .Settings.Address}}{{end}}</textarea>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Booking Prefix</label>
-                <input type="text" name="booking_prefix" value="{{if .Settings}}{{.Settings.BookingPrefix}}{{end}}"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-            </div>
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Trip Prefix</label>
-                <input type="text" name="trip_prefix" value="{{if .Settings}}{{.Settings.TripPrefix}}{{end}}"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-            </div>
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Invoice Prefix</label>
-                <input type="text" name="invoice_prefix" value="{{if .Settings}}{{.Settings.InvoicePrefix}}{{end}}"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-            </div>
-        </div>
+                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Localization &amp; Tax</h2>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-secondary mb-1.5">Currency</label>
+                            <input type="text" name="currency" value="{{if .Settings}}{{.Settings.Currency}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-secondary mb-1.5">Timezone</label>
+                            <input type="text" name="timezone" value="{{if .Settings}}{{.Settings.Timezone}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-secondary mb-1.5">GST Enabled</label>
+                            <select name="gst_enabled" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                <option value="1" {{if .Settings.GSTEnabled}}selected{{end}}>Yes</option>
+                                <option value="0" {{if not .Settings.GSTEnabled}}selected{{end}}>No</option>
+                            </select>
+                        </div>
+                    </div>
 
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Financial Year</label>
-            <input type="text" name="financial_year" value="{{if .Settings}}{{nullString .Settings.FinancialYear}}{{end}}"
-                placeholder="e.g. 2024-2025"
-                class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-        </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-secondary mb-1.5">GST Rate (%)</label>
+                            <input type="number" step="0.01" name="gst_rate" value="{{if .Settings}}{{.Settings.GSTRate}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-secondary mb-1.5">GST Registration Number</label>
+                            <input type="text" name="gst_number" value="{{if .Settings}}{{nullString .Settings.GSTNumber}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-mono text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        <div class="flex justify-end space-x-3 pt-4 flex-wrap gap-3">
-            {{template "btn.html" (dict "Variant" "secondary" "Label" "Cancel" "Href" "/dashboard" "Class" "min-h-[44px]")}}
-            {{template "btn.html" (dict "Variant" "primary" "Label" "Save Settings" "Type" "submit" "Class" "min-h-[44px]")}}
+            <div>
+                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Document Numbering</h2>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-secondary mb-1.5">Booking Prefix</label>
+                            <input type="text" name="booking_prefix" value="{{if .Settings}}{{.Settings.BookingPrefix}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-secondary mb-1.5">Trip Prefix</label>
+                            <input type="text" name="trip_prefix" value="{{if .Settings}}{{.Settings.TripPrefix}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-secondary mb-1.5">Invoice Prefix</label>
+                            <input type="text" name="invoice_prefix" value="{{if .Settings}}{{.Settings.InvoicePrefix}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-secondary mb-1.5">Financial Year</label>
+                        <input type="text" name="financial_year" value="{{if .Settings}}{{nullString .Settings.FinancialYear}}{{end}}"
+                            placeholder="e.g. 2024-2025"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    </div>
+                </div>
+            </div>
+
+            <div class="sticky bottom-0 -mx-5 px-5 py-3 bg-surface-container-lowest border-t border-border-subtle flex justify-end gap-2 flex-wrap">
+                {{template "btn.html" (dict "Variant" "secondary" "Label" "Cancel" "Href" "/dashboard" "Class" "min-h-[44px]")}}
+                {{template "btn.html" (dict "Variant" "primary" "Label" "Save Settings" "Type" "submit" "Class" "min-h-[44px] shadow-sm")}}
+            </div>
         </div>
     </form>
 </div>

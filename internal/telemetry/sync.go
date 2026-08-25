@@ -67,6 +67,9 @@ func RegisterTelemetryRoutes(r chi.Router, ing *Ingestor, db *sql.DB, staleMin t
 	r.Get("/api/v1/telemetry/live", LiveHandler(db, staleMin, etaSvc...))
 	r.Get("/api/v1/telemetry/geofences", GeofencesHandler(db))
 	r.Get("/api/v1/telemetry/history", HistoryHandler(db))
+	r.Get("/api/v1/telemetry/playback", PlaybackHandler(db))
+	r.Get("/api/v1/trips/{id}/playback", PlaybackHandler(db))
+	r.Get("/api/v1/trips/{id}/summary", TripSummaryHandler(db))
 }
 
 // RegisterGeocodeRoute mounts the reverse-geocode proxy next to the live

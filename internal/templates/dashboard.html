@@ -1,263 +1,494 @@
 {{if eq .DashboardVariant "B"}}
-<div class="space-y-6">
-    <!-- KPI Cards (same style as control dashboard) -->
-    <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm p-3 sm:p-4 text-center">
-            <div class="text-stat text-primary tabular-nums text-xl sm:text-2xl font-bold">{{.Stats.TodaysTripsCount}}</div>
-            <div class="text-xs sm:text-sm text-secondary">Today's Trips</div>
-            {{if gt .Stats.DeltaYesterday 0}}<div class="text-xs font-semibold text-status-success mt-0.5">▲ {{.Stats.DeltaYesterday}} vs yesterday</div>{{else if lt .Stats.DeltaYesterday 0}}<div class="text-xs font-semibold text-status-alert mt-0.5">▼ {{mul .Stats.DeltaYesterday -1}} vs yesterday</div>{{else}}<div class="text-xs text-text-muted mt-0.5">— vs yesterday</div>{{end}}
+<div class="space-y-5 max-w-[1600px] mx-auto">
+    <!-- Premium Header: greeting + live + quick actions -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="min-w-0">
+            <div class="flex items-center gap-3 flex-wrap">
+                <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Operations Command</h1>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold tracking-wide uppercase text-emerald-700 dark:text-emerald-300">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live
+                </span>
+                <span id="dash-live-stamp" class="text-xs text-text-muted tabular-nums"> updated just now • SSE active</span>
+            </div>
+            <p class="text-sm text-secondary mt-1">Real-time fleet, trips and revenue — auto-refreshes every 5s. <span class="hidden sm:inline">Click any KPI to drill down.</span></p>
         </div>
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm p-3 sm:p-4 text-center">
-            <div class="text-stat text-status-warning tabular-nums text-xl sm:text-2xl font-bold">{{.Stats.ActiveTripsCount}}</div>
-            <div class="text-xs sm:text-sm text-secondary">Active Trips</div>
-        </div>
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm p-3 sm:p-4 text-center">
-            <div class="text-stat text-status-success tabular-nums text-xl sm:text-2xl font-bold">{{.Stats.CompletedTripsCount}}</div>
-            <div class="text-xs sm:text-sm text-secondary">Completed Trips</div>
-        </div>
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm p-3 sm:p-4 text-center">
-            <div class="text-stat text-status-alert tabular-nums text-xl sm:text-2xl font-bold">{{.Stats.CancelledTripsCount}}</div>
-            <div class="text-xs sm:text-sm text-secondary">Cancelled Trips</div>
-        </div>
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm p-3 sm:p-4 text-center">
-            <div class="text-stat text-primary tabular-nums text-xl sm:text-2xl font-bold">{{.Stats.AvailableVehiclesCount}}</div>
-            <div class="text-xs sm:text-sm text-secondary">Available Vehicles</div>
-        </div>
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm p-3 sm:p-4 text-center">
-            <div class="text-stat text-primary tabular-nums text-xl sm:text-2xl font-bold">{{.Stats.AvailableDriversCount}}</div>
-            <div class="text-xs sm:text-sm text-secondary">Available Drivers</div>
-        </div>
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm p-3 sm:p-4 text-center">
-            <div class="text-stat text-status-warning tabular-nums text-xl sm:text-2xl font-bold">{{.Stats.PendingPaymentsCount}}</div>
-            <div class="text-xs sm:text-sm text-secondary">Pending Payments</div>
-        </div>
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm p-3 sm:p-4 text-center">
-            <div class="text-stat text-primary tabular-nums text-xl sm:text-2xl font-bold">{{printf "₹%.2f" .Stats.MonthlyRevenue}}</div>
-            <div class="text-xs sm:text-sm text-secondary">Monthly Revenue</div>
+        <div class="flex items-center gap-2 flex-wrap shrink-0">
+            <a href="/bookings/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:shadow-md hover:-translate-y-px transition-all">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 5v14M5 12h14"/></svg>
+                New Booking
+            </a>
+            <a href="/trips/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 hover:shadow-sm transition-all">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg>
+                Dispatch Trip
+            </a>
+            <div class="relative" id="dash-more-wrap">
+                <button id="dash-more-btn" type="button" aria-expanded="false" aria-haspopup="true" aria-label="More actions" class="w-9 h-9 grid place-items-center rounded-full bg-surface-container-lowest border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                </button>
+                <div id="dash-more-menu" class="absolute right-0 top-full mt-2 w-52 bg-surface-container-lowest border border-border-subtle rounded-xl shadow-xl p-1 hidden z-30">
+                    <a href="/vehicles/new" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-surface-container-low">+ Add Vehicle</a>
+                    <a href="/drivers/new" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-surface-container-low">+ Add Driver</a>
+                    <a href="/invoices/new" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-surface-container-low">Create Invoice</a>
+                    <a href="/reports" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-surface-container-low">View Reports</a>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Charts Row -->
+    <!-- KPI HERO — 4 premium cards with gradient accents -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Today's Trips -->
+        <a href="/trips" data-drill="kpi-today-trips" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-primary/20 transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-violet-500 to-cyan-400 opacity-90"></div>
+            <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 border border-primary/10 grid place-items-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>
+                </div>
+                {{if gt .Stats.DeltaYesterday 0}}<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-bold text-emerald-700">▲ +{{.Stats.DeltaYesterday}} vs yesterday</span>{{else if lt .Stats.DeltaYesterday 0}}<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/10 border border-red-500/15 text-[11px] font-bold text-red-600">▼ {{mul .Stats.DeltaYesterday -1}} vs yesterday</span>{{else}}<span class="inline-flex items-center px-2 py-1 rounded-full bg-surface-container-low border border-border-subtle text-[11px] font-medium text-text-muted">— vs yesterday</span>{{end}}
+            </div>
+            <div class="mt-4">
+                <div class="text-stat text-primary tabular-nums text-3xl font-black tracking-tight">{{.Stats.TodaysTripsCount}}</div>
+                <div class="text-sm font-medium text-secondary mt-1">Today's Trips</div>
+                <div class="mt-3 flex items-center gap-2 text-xs text-text-muted"><span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span> live today</div>
+            </div>
+        </a>
+
+        <!-- Active -->
+        <a href="/trips?status=active" data-drill="kpi-active" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-amber-500/20 transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-80"></div>
+            <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><circle cx="12" cy="8" r="2"/><path d="M12 12v4"/></svg>
+                </div>
+                <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/15">In motion</span>
+            </div>
+            <div class="mt-4">
+                <div class="text-stat text-status-warning tabular-nums text-3xl font-black tracking-tight">{{.Stats.ActiveTripsCount}}</div>
+                <div class="text-sm font-medium text-secondary mt-1">Active Trips</div>
+                <div class="mt-3 h-1.5 w-full bg-surface-container rounded-full overflow-hidden"><div class="h-full bg-amber-500 rounded-full" style="width: {{if gt .Stats.TodaysTripsCount 0}}{{printf "%.0f" (div (mul .Stats.ActiveTripsCount 100) .Stats.TodaysTripsCount)}}%{{else}}0%{{end}}"></div></div>
+            </div>
+        </a>
+
+        <!-- Completed -->
+        <a href="/trips?status=completed" data-drill="kpi-completed" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-emerald-500/20 transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-80"></div>
+            <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+                </div>
+                <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/15">Done</span>
+            </div>
+            <div class="mt-4">
+                <div class="text-stat text-status-success tabular-nums text-3xl font-black tracking-tight">{{.Stats.CompletedTripsCount}}</div>
+                <div class="text-sm font-medium text-secondary mt-1">Completed Trips</div>
+                <div class="mt-3 text-xs text-text-muted">Today • <span class="text-primary font-semibold cursor-pointer hover:underline" onclick="event.stopPropagation(); location.href='/trips'" role="link" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation(); location.href='/trips'}">View all →</span></div>
+            </div>
+        </a>
+
+        <!-- Cancelled -->
+        <a href="/trips?status=cancelled" data-drill="kpi-cancelled" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-rose-500/20 transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-500 to-red-500 opacity-80"></div>
+            <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/15 grid place-items-center text-rose-600 group-hover:bg-rose-500 group-hover:text-white transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/><path d="M9 9l6 6"/></svg>
+                </div>
+                <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-rose-500/10 text-rose-700 border border-rose-500/15">Needs review</span>
+            </div>
+            <div class="mt-4">
+                <div class="text-stat text-status-alert tabular-nums text-3xl font-black tracking-tight">{{.Stats.CancelledTripsCount}}</div>
+                <div class="text-sm font-medium text-secondary mt-1">Cancelled Trips</div>
+                <div class="mt-3 text-xs text-text-muted">0.0% of today</div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Secondary KPI strip -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <a href="/vehicles?status=available" class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+            <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600 shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{.Stats.AvailableVehiclesCount}}</div>
+                <div class="text-xs text-secondary font-medium mt-1">Available Vehicles</div>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted ml-auto shrink-0"><path d="M9 18l6-6-6-6"/></svg>
+        </a>
+        <a href="/drivers?status=available" class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+            <div class="w-9 h-9 rounded-lg bg-violet-500/10 border border-violet-500/15 grid place-items-center text-violet-600 shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{.Stats.AvailableDriversCount}}</div>
+                <div class="text-xs text-secondary font-medium mt-1">Available Drivers</div>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted ml-auto shrink-0"><path d="M9 18l6-6-6-6"/></svg>
+        </a>
+        <a href="/invoices?status=pending" class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-amber-500/20 transition-all">
+            <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600 shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{.Stats.PendingPaymentsCount}}</div>
+                <div class="text-xs text-secondary font-medium mt-1">Pending Payments</div>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted ml-auto shrink-0"><path d="M9 18l6-6-6-6"/></svg>
+        </a>
+        <a href="/reports/revenue" class="flex items-center gap-4 bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white hover:shadow-lg hover:scale-[1.01] transition-all">
+            <div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-black tabular-nums leading-none">{{printf "₹%.2f" .Stats.MonthlyRevenue}}</div>
+                <div class="text-xs font-medium text-white/80 mt-1">Monthly Revenue</div>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-white/70 ml-auto shrink-0"><path d="M9 18l6-6-6-6"/></svg>
+        </a>
+    </div>
+
+    <!-- Ops quick actions strip -->
+    <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs px-4 py-3 flex flex-wrap items-center gap-2">
+        <span class="text-xs font-bold tracking-wider uppercase text-text-muted mr-1">Quick actions</span>
+        <a href="/bookings/new" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container border border-border-subtle text-xs font-semibold hover:bg-surface-container-high transition-colors">+ Booking</a>
+        <a href="/trips/new" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container border border-border-subtle text-xs font-semibold hover:bg-surface-container-high transition-colors">+ Trip</a>
+        <a href="/vehicles/new" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container border border-border-subtle text-xs font-semibold hover:bg-surface-container-high transition-colors">+ Vehicle</a>
+        <a href="/drivers/new" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container border border-border-subtle text-xs font-semibold hover:bg-surface-container-high transition-colors">+ Driver</a>
+        <a href="/invoices/new" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container border border-border-subtle text-xs font-semibold hover:bg-surface-container-high transition-colors">+ Invoice</a>
+        <span class="ml-auto flex items-center gap-2 text-xs">
+            <span class="hidden sm:inline text-text-muted">Auto-refresh</span>
+            <span id="dash-refresh-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <button id="dash-refresh-btn" type="button" class="px-3 py-1.5 rounded-full bg-primary text-on-primary text-xs font-semibold hover:bg-primary/90 transition-colors">Refresh</button>
+        </span>
+    </div>
+
+    <!-- Charts Row — premium cards -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm">
-            <div class="px-4 py-3 border-b">
-                <h3 class="text-sm font-semibold on-surface">Revenue · Last 30 Days</h3>
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+                <div>
+                    <h3 class="text-sm font-bold text-on-surface">Revenue · Last 30 Days</h3>
+                    <p class="text-xs text-text-muted">Daily collected revenue</p>
+                </div>
+                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/15 text-[10px] font-bold uppercase tracking-wide">INR</span>
             </div>
             <div class="p-4 h-56 relative">
                 <canvas id="chart-revenue"></canvas>
-                <div id="chart-revenue-empty" class="hidden absolute inset-0 items-center justify-center text-sm text-text-muted">No revenue data yet</div>
+                <div id="chart-revenue-empty" class="hidden absolute inset-0 items-center justify-center flex-col gap-2 text-center p-4">
+                    <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 4-6"/></svg></div>
+                    <p class="text-sm font-medium text-text-muted">No revenue data yet</p><p class="text-xs text-text-muted">Revenue will appear after first paid invoice</p>
+                </div>
             </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm">
-            <div class="px-4 py-3 border-b">
-                <h3 class="text-sm font-semibold on-surface">Trips by Status</h3>
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+                <div>
+                    <h3 class="text-sm font-bold text-on-surface">Trips by Status</h3>
+                    <p class="text-xs text-text-muted">Distribution today</p>
+                </div>
+                <a href="/trips" class="text-xs font-semibold text-primary hover:underline">View trips →</a>
             </div>
             <div class="p-4 h-56 relative">
                 <canvas id="chart-status"></canvas>
-                <div id="chart-status-empty" class="hidden absolute inset-0 items-center justify-center text-sm text-text-muted">No trips today</div>
+                <div id="chart-status-empty" class="hidden absolute inset-0 items-center justify-center flex-col gap-2 text-center p-4">
+                    <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg></div>
+                    <p class="text-sm font-medium text-text-muted">No trips today</p>
+                </div>
             </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm">
-            <div class="px-4 py-3 border-b">
-                <h3 class="text-sm font-semibold on-surface">Bookings · Last 30 Days</h3>
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+                <div>
+                    <h3 class="text-sm font-bold text-on-surface">Bookings · Last 30 Days</h3>
+                    <p class="text-xs text-text-muted">Daily bookings created</p>
+                </div>
+                <span class="inline-flex items-center px-2 py-1 rounded-full bg-blue-500/10 text-blue-700 border border-blue-500/15 text-[10px] font-bold uppercase tracking-wide">30D</span>
             </div>
             <div class="p-4 h-56 relative">
                 <canvas id="chart-bookings"></canvas>
-                <div id="chart-bookings-empty" class="hidden absolute inset-0 items-center justify-center text-sm text-text-muted">No bookings yet</div>
+                <div id="chart-bookings-empty" class="hidden absolute inset-0 items-center justify-center flex-col gap-2 text-center p-4">
+                    <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11h-6"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                    <p class="text-sm font-medium text-text-muted">No bookings yet</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Alerts Row -->
+    <!-- Alerts Row — actionable ops health -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm">
-            <div class="px-4 py-3 border-b flex items-center justify-between">
-                <h3 class="text-sm font-semibold on-surface">Overdue Trips</h3>
-                <span class="text-sm text-status-alert font-semibold tabular-nums">{{len .Stats.OverdueTrips}}</span>
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between bg-gradient-to-r from-rose-500/[0.06] to-transparent">
+                <div class="flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg bg-rose-500/10 border border-rose-500/15 grid place-items-center text-rose-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
+                    <h3 class="text-sm font-bold text-on-surface">Overdue Trips</h3>
+                </div>
+                <span class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-rose-500 text-white text-xs font-bold tabular-nums">{{len .Stats.OverdueTrips}}</span>
             </div>
-            <div class="divide-y divide-border-subtle max-h-52 overflow-y-auto">
+            <div class="divide-y divide-border-subtle max-h-64 overflow-y-auto">
                 {{if .Stats.OverdueTrips}}
                 {{range .Stats.OverdueTrips}}
-                <a href="/trips/{{.ID}}" data-drill="overdue-trip" class="block px-4 py-2 hover:bg-surface-container-low transition-colors">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium on-surface">{{.TripNumber}}</span>
-                        <span class="px-2 py-1 text-xs rounded-full {{statusBadge .Status}}">{{.Status}}</span>
+                <a href="/trips/{{.ID}}" data-drill="overdue-trip" class="group flex items-center gap-3 px-4 py-3 hover:bg-rose-500/[0.04] transition-colors">
+                    <div class="w-8 h-8 rounded-lg bg-rose-500/10 grid place-items-center text-rose-600 shrink-0 group-hover:bg-rose-500 group-hover:text-white transition-colors"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg></div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2"><span class="text-sm font-bold text-on-surface">{{.TripNumber}}</span><span class="px-1.5 py-0.5 text-[10px] font-bold rounded-full {{statusBadge .Status}}">{{.Status}}</span></div>
+                        <p class="text-xs text-text-muted truncate">{{.RouteSource}} → {{.RouteDestination}} • departed {{datetime .DepartureTime}}</p>
                     </div>
-                    <p class="text-xs text-text-muted mt-0.5">{{.RouteSource}} → {{.RouteDestination}}</p>
-                    <p class="text-xs text-status-alert mt-0.5">departed {{datetime .DepartureTime}}</p>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted group-hover:text-rose-600 shrink-0"><path d="M9 18l6-6-6-6"/></svg>
                 </a>
                 {{end}}
                 {{else}}
-                <p class="px-4 py-6 text-sm text-text-muted text-center">No overdue trips</p>
+                <div class="px-4 py-10 text-center">
+                    <div class="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
+                    <p class="text-sm font-medium text-on-surface mt-3">All clear</p><p class="text-xs text-text-muted">No overdue trips</p>
+                </div>
                 {{end}}
             </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm">
-            <div class="px-4 py-3 border-b flex items-center justify-between">
-                <h3 class="text-sm font-semibold on-surface">Idle Vehicles</h3>
-                <span class="text-sm text-status-warning font-semibold tabular-nums">{{len .Stats.IdleVehicles}}</span>
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between bg-gradient-to-r from-amber-500/[0.07] to-transparent">
+                <div class="flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></span>
+                    <h3 class="text-sm font-bold text-on-surface">Idle Vehicles</h3>
+                </div>
+                <span class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-amber-500 text-white text-xs font-bold tabular-nums">{{len .Stats.IdleVehicles}}</span>
             </div>
-            <div class="divide-y divide-border-subtle max-h-52 overflow-y-auto">
+            <div class="divide-y divide-border-subtle max-h-64 overflow-y-auto">
                 {{if .Stats.IdleVehicles}}
                 {{range .Stats.IdleVehicles}}
-                <a href="/vehicles" data-drill="idle-vehicle" class="block px-4 py-2 hover:bg-surface-container-low transition-colors">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium on-surface">{{.RegistrationNumber}}</span>
-                        <span class="text-xs text-text-muted uppercase">{{.VehicleType}}</span>
+                <a href="/vehicles" data-drill="idle-vehicle" class="group flex items-center gap-3 px-4 py-3 hover:bg-amber-500/[0.05] transition-colors">
+                    <div class="w-8 h-8 rounded-lg bg-amber-500/10 grid place-items-center text-amber-600 shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2"><span class="text-sm font-bold text-on-surface">{{.RegistrationNumber}}</span><span class="text-xs text-text-muted uppercase tracking-wide">{{.VehicleType}}</span></div>
+                        <p class="text-xs text-text-muted">idle • last updated {{datetime .UpdatedAt}}</p>
                     </div>
-                    <p class="text-xs text-text-muted mt-0.5">idle · last updated {{datetime .UpdatedAt}}</p>
+                    <span class="text-xs font-semibold text-amber-700 bg-amber-500/10 border border-amber-500/15 px-2 py-1 rounded-full hidden sm:inline-flex">Assign</span>
                 </a>
                 {{end}}
                 {{else}}
-                <p class="px-4 py-6 text-sm text-text-muted text-center">No idle vehicles</p>
+                <div class="px-4 py-10 text-center">
+                    <div class="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
+                    <p class="text-sm font-medium text-on-surface mt-3">Fleet active</p><p class="text-xs text-text-muted">No idle vehicles</p>
+                </div>
                 {{end}}
             </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm">
-            <div class="px-4 py-3 border-b flex items-center justify-between">
-                <h3 class="text-sm font-semibold on-surface">Pending Payments</h3>
-                <span class="text-sm text-status-warning font-semibold tabular-nums">{{.Stats.PendingPaymentsCount}}</span>
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between bg-gradient-to-r from-blue-500/[0.06] to-transparent">
+                <div class="flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg></span>
+                    <h3 class="text-sm font-bold text-on-surface">Pending Payments</h3>
+                </div>
+                <span class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-blue-600 text-white text-xs font-bold tabular-nums">{{.Stats.PendingPaymentsCount}}</span>
             </div>
-            <div class="divide-y divide-border-subtle max-h-52 overflow-y-auto">
+            <div class="divide-y divide-border-subtle max-h-64 overflow-y-auto">
                 {{if .Stats.RecentPayments}}
                 {{range .Stats.RecentPayments}}
-                <a href="/invoices" data-drill="payment" class="block px-4 py-2 hover:bg-surface-container-low transition-colors">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm font-medium on-surface">{{.InvoiceNumber}}</span>
-                        <span class="text-sm on-surface-variant tabular-nums">{{printf "%.2f" .Amount}}</span>
+                <a href="/invoices" data-drill="payment" class="group flex items-center gap-3 px-4 py-3 hover:bg-blue-500/[0.04] transition-colors">
+                    <div class="w-8 h-8 rounded-lg bg-surface-container grid place-items-center text-secondary shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2"><span class="text-sm font-bold text-on-surface">{{.InvoiceNumber}}</span><span class="text-sm font-bold tabular-nums text-on-surface ml-auto">{{printf "₹%.2f" .Amount}}</span></div>
+                        <p class="text-xs text-text-muted">{{.Method}} • <span class="time-display" data-utc-time="{{.PaymentDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PaymentDate}}</span></p>
                     </div>
-                    <p class="text-xs text-text-muted mt-0.5">{{.Method}} · <span class="time-display" data-utc-time="{{.PaymentDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PaymentDate}}</span></p>
                 </a>
                 {{end}}
                 {{else}}
-                <p class="px-4 py-6 text-sm text-text-muted text-center">No recent payments</p>
+                <div class="px-4 py-10 text-center">
+                    <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div>
+                    <p class="text-sm font-medium text-on-surface mt-3">No pending invoices</p><p class="text-xs text-text-muted">All caught up</p>
+                </div>
                 {{end}}
             </div>
         </div>
     </div>
 
-    <!-- Upcoming Trips -->
-    <div class="bg-surface-container-lowest rounded-lg shadow-sm">
-        <div class="px-4 py-3 border-b flex justify-between items-center">
-            <h3 class="text-sm font-semibold on-surface">Upcoming Trips</h3>
-            <a href="/trips" class="text-sm text-primary hover:text-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded">View All</a>
+    <!-- Upcoming Trips — fully functional datatable -->
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
+        <div class="px-5 py-4 border-b border-border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <h3 class="text-sm font-bold text-on-surface">Upcoming Trips</h3>
+                <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Stats.UpcomingTrips}} today</span>
+            </div>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
+                <div class="relative flex-1 min-w-0 sm:flex-none">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    <input id="upcoming-search" type="text" placeholder="Filter trips, driver, route…" class="w-full sm:w-64 pl-9 pr-3 py-2 rounded-full bg-surface-container-low border border-border-subtle text-sm placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <select id="upcoming-status" class="flex-1 sm:flex-none px-3 py-2 rounded-full bg-surface-container-low border border-border-subtle text-xs font-medium focus:outline-none focus:border-primary">
+                        <option value="">All status</option>
+                        <option value="scheduled">Scheduled</option>
+                        <option value="assigned">Assigned</option>
+                        <option value="started">Started</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                    <a href="/trips" class="inline-flex items-center justify-center gap-1 px-4 py-2 rounded-full bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-colors shrink-0">View All →</a>
+                </div>
+            </div>
         </div>
-        <div class="overflow-x-auto">
+        <!-- Mobile cards -->
+        <div id="upcoming-mobile" class="sm:hidden divide-y divide-border-subtle">
+            {{if .Stats.UpcomingTrips}}
+            {{range .Stats.UpcomingTrips}}
+            <div data-search="{{.TripNumber}} {{.DriverFirstName}} {{.DriverLastName}} {{.VehicleRegistration}} {{.RouteSource}} {{.RouteDestination}}" data-status="{{.Status}}" data-href="/trips/{{.ID}}" data-drill="upcoming-trip" tabindex="0" onclick="if(this.dataset.href)location.href=this.dataset.href" onkeydown="if(event.key==='Enter'||event.key===' '){if(this.dataset.href)location.href=this.dataset.href}" class="p-4 flex flex-col gap-2 cursor-pointer hover:bg-surface-container-low/50 active:bg-surface-container-low">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-black text-primary tabular-nums">{{.TripNumber}}</span>
+                    <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold rounded-full {{statusBadge .Status}}">{{.Status}}</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="w-7 h-7 rounded-full bg-primary/10 border border-primary/15 grid place-items-center text-[11px] font-bold text-primary">{{slice .DriverFirstName 0 1}}{{slice .DriverLastName 0 1}}</span>
+                    <span class="font-medium text-on-surface">{{.DriverFirstName}} {{.DriverLastName}}</span>
+                    <span class="ml-auto inline-flex px-2 py-1 rounded-full bg-surface-container border border-border-subtle text-xs font-medium tabular-nums">{{.VehicleRegistration}}</span>
+                </div>
+                <div class="text-sm"><span class="font-medium text-on-surface">{{.RouteSource}}</span> <span class="text-text-muted">→</span> <span class="font-medium text-on-surface">{{.RouteDestination}}</span></div>
+                <div class="flex items-center justify-between text-xs text-text-muted"><span class="tabular-nums time-display" data-utc-time="{{.DepartureTime.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .DepartureTime}}</span><a href="/trips/{{.ID}}" onclick="event.stopPropagation()" class="inline-flex px-3 py-1 rounded-full bg-primary text-on-primary font-bold">Open</a></div>
+            </div>
+            {{end}}
+            {{else}}
+            <div class="px-4 py-10 text-center">
+                <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg></div>
+                <p class="text-sm font-medium text-on-surface mt-3">No trips scheduled today</p><p class="text-xs text-text-muted">Create a trip to get started</p><a href="/trips/new" class="mt-2 inline-flex px-4 py-2 rounded-full bg-primary text-on-primary text-xs font-bold">+ New Trip</a>
+            </div>
+            {{end}}
+        </div>
+        <!-- Desktop table -->
+        <div class="hidden sm:block overflow-x-auto">
             <table class="min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Trip #</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Driver</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Vehicle</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Route</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Departure</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Status</th>
+                        <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Trip #</th>
+                        <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Driver</th>
+                        <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Vehicle</th>
+                        <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Route</th>
+                        <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Departure</th>
+                        <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
+                        <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Action</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-border-subtle">
+                <tbody id="upcoming-tbody" class="divide-y divide-border-subtle">
                     {{if .Stats.UpcomingTrips}}
                     {{range .Stats.UpcomingTrips}}
-                    <tr data-drill="upcoming-trip" data-href="/trips/{{.ID}}" tabindex="0" onclick="if(this.dataset.href)location.href=this.dataset.href" onkeydown="if(event.key==='Enter'||event.key===' '){if(this.dataset.href)location.href=this.dataset.href}" class="cursor-pointer hover:bg-surface-container-low transition-colors">
-                        <td class="px-4 py-2 text-sm font-medium text-primary">{{.TripNumber}}</td>
-                        <td class="px-4 py-2 text-sm">{{.DriverFirstName}} {{.DriverLastName}}</td>
-                        <td class="px-4 py-2 text-sm">{{.VehicleRegistration}}</td>
-                        <td class="px-4 py-2 text-sm">{{.RouteSource}} → {{.RouteDestination}}</td>
-                        <td class="px-4 py-2 text-sm"><span class="time-display" data-utc-time="{{.DepartureTime.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .DepartureTime}}</span></td>
-                        <td class="px-4 py-2 text-sm">
-                            <span class="px-2 py-1 text-xs rounded-full {{statusBadge .Status}}">{{.Status}}</span>
+                    <tr data-drill="upcoming-trip" data-href="/trips/{{.ID}}" data-status="{{.Status}}" data-search="{{.TripNumber}} {{.DriverFirstName}} {{.DriverLastName}} {{.VehicleRegistration}} {{.RouteSource}} {{.RouteDestination}}" tabindex="0" onclick="if(this.dataset.href)location.href=this.dataset.href" onkeydown="if(event.key==='Enter'||event.key===' '){if(this.dataset.href)location.href=this.dataset.href}" class="group cursor-pointer hover:bg-surface-container-low/60 transition-colors">
+                        <td class="px-4 py-3 text-sm font-bold text-primary group-hover:text-primary/90 tabular-nums">{{.TripNumber}}</td>
+                        <td class="px-4 py-3 text-sm"><div class="flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-primary/10 border border-primary/15 grid place-items-center text-[10px] font-bold text-primary">{{slice .DriverFirstName 0 1}}{{slice .DriverLastName 0 1}}</span><span class="font-medium text-on-surface">{{.DriverFirstName}} {{.DriverLastName}}</span></div></td>
+                        <td class="px-4 py-3 text-sm"><span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-surface-container border border-border-subtle text-xs font-medium tabular-nums">{{.VehicleRegistration}}</span></td>
+                        <td class="px-4 py-3 text-sm"><span class="font-medium text-on-surface">{{.RouteSource}}</span> <span class="text-text-muted">→</span> <span class="font-medium text-on-surface">{{.RouteDestination}}</span></td>
+                        <td class="px-4 py-3 text-sm tabular-nums"><span class="time-display" data-utc-time="{{.DepartureTime.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .DepartureTime}}</span></td>
+                        <td class="px-4 py-3 text-sm">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                         </td>
+                        <td class="px-4 py-3 text-right"><a href="/trips/{{.ID}}" onclick="event.stopPropagation()" class="inline-flex items-center px-2.5 py-1 rounded-full bg-primary text-on-primary text-xs font-semibold hover:bg-primary/90">Open</a></td>
                     </tr>
                     {{end}}
                     {{else}}
-                    <tr><td colspan="6" class="px-4 py-6 text-center text-sm text-text-muted">No trips scheduled today</td></tr>
+                    <tr><td colspan="7" class="px-4 py-12 text-center">
+                        <div class="flex flex-col items-center gap-2">
+                            <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg></div>
+                            <p class="text-sm font-medium text-on-surface">No trips scheduled today</p><p class="text-xs text-text-muted">Create a trip to get started</p><a href="/trips/new" class="mt-1 inline-flex px-3 py-1.5 rounded-full bg-primary text-on-primary text-xs font-bold">+ New Trip</a>
+                        </div>
+                    </td></tr>
                     {{end}}
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Recent Bookings and Payments -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm">
-            <div class="px-4 py-3 border-b">
-                <h3 class="text-sm font-semibold on-surface">Recent Bookings</h3>
+    <!-- Recent Bookings and Payments — premium split -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between">
+                <h3 class="text-sm font-bold text-on-surface">Recent Bookings</h3>
+                <a href="/bookings" class="text-xs font-semibold text-primary hover:underline">View all →</a>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-border-subtle">
                     <thead class="bg-surface-container-low">
                         <tr>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Booking #</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Customer</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Pickup</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Price</th>
+                            <th class="px-4 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Booking #</th>
+                            <th class="px-4 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Customer</th>
+                            <th class="px-4 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Pickup</th>
+                            <th class="px-4 py-2 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Price</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border-subtle">
                         {{range .Stats.RecentBookings}}
-                        <tr>
-                            <td class="px-4 py-2 text-sm">{{.BookingNumber}}</td>
-                            <td class="px-4 py-2 text-sm">{{.CustomerName}}</td>
-                            <td class="px-4 py-2 text-sm"><span class="time-display" data-utc-time="{{.PickupDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PickupDate}}</span></td>
-                            <td class="px-4 py-2 text-sm tabular-nums">{{printf "%.2f" .Price}}</td>
+                        <tr class="hover:bg-surface-container-low/50 transition-colors">
+                            <td class="px-4 py-2.5 text-sm font-bold text-primary tabular-nums"><a href="/bookings" class="hover:underline">{{.BookingNumber}}</a></td>
+                            <td class="px-4 py-2.5 text-sm font-medium text-on-surface">{{.CustomerName}}</td>
+                            <td class="px-4 py-2.5 text-sm tabular-nums"><span class="time-display" data-utc-time="{{.PickupDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PickupDate}}</span></td>
+                            <td class="px-4 py-2.5 text-sm font-bold tabular-nums text-right">{{printf "₹%.2f" .Price}}</td>
                         </tr>
                         {{end}}
+                        {{if not .Stats.RecentBookings}}<tr><td colspan="4" class="px-4 py-8 text-center text-sm text-text-muted">No bookings yet — <a href="/bookings/new" class="text-primary font-semibold hover:underline">create one</a></td></tr>{{end}}
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm">
-            <div class="px-4 py-3 border-b">
-                <h3 class="text-sm font-semibold on-surface">Recent Payments</h3>
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between">
+                <h3 class="text-sm font-bold text-on-surface">Recent Payments</h3>
+                <a href="/payments" class="text-xs font-semibold text-primary hover:underline">View all →</a>
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-border-subtle">
                     <thead class="bg-surface-container-low">
                         <tr>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Invoice</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Amount</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Method</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Date</th>
+                            <th class="px-4 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Invoice</th>
+                            <th class="px-4 py-2 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Amount</th>
+                            <th class="px-4 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Method</th>
+                            <th class="px-4 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Date</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border-subtle">
                         {{range .Stats.RecentPayments}}
-                        <tr>
-                            <td class="px-4 py-2 text-sm">{{.InvoiceNumber}}</td>
-                            <td class="px-4 py-2 text-sm tabular-nums">{{printf "%.2f" .Amount}}</td>
-                            <td class="px-4 py-2 text-sm">{{.Method}}</td>
-                            <td class="px-4 py-2 text-sm"><span class="time-display" data-utc-time="{{.PaymentDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PaymentDate}}</span></td>
+                        <tr class="hover:bg-surface-container-low/50 transition-colors">
+                            <td class="px-4 py-2.5 text-sm font-bold text-primary tabular-nums">{{.InvoiceNumber}}</td>
+                            <td class="px-4 py-2.5 text-sm font-bold tabular-nums text-right">{{printf "₹%.2f" .Amount}}</td>
+                            <td class="px-4 py-2.5 text-sm"><span class="inline-flex px-2 py-1 rounded-full bg-surface-container border border-border-subtle text-xs font-medium">{{.Method}}</span></td>
+                            <td class="px-4 py-2.5 text-sm tabular-nums"><span class="time-display" data-utc-time="{{.PaymentDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PaymentDate}}</span></td>
                         </tr>
                         {{end}}
+                        {{if not .Stats.RecentPayments}}<tr><td colspan="4" class="px-4 py-8 text-center text-sm text-text-muted">No payments yet</td></tr>{{end}}
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- Recent Activity -->
-    <div class="bg-surface-container-lowest rounded-lg shadow-sm">
-        <div class="px-4 py-3 border-b">
-            <h3 class="text-sm font-semibold on-surface">Recent Activity</h3>
+    <!-- Recent Activity — timeline -->
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
+        <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between">
+            <h3 class="text-sm font-bold text-on-surface">Recent Activity</h3>
+            <a href="/audit-logs" class="text-xs font-semibold text-primary hover:underline">Audit log →</a>
         </div>
-        <div class="p-4">
+        <div class="p-5">
             {{if .Stats.RecentActivity}}
-            <ul class="space-y-3">
-                {{range .Stats.RecentActivity}}
-                <li class="text-sm text-secondary">
-                    <span class="font-medium">{{.UserName}}</span> - {{.Action}}
-                    {{if .TableName}}on {{.TableName}}{{end}}
-                    <span class="text-text-muted">(<span class="time-display" data-utc-time="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .CreatedAt}}</span>)</span>
-                </li>
-                {{end}}
-            </ul>
+            <div class="relative">
+                <div class="absolute left-2 top-2 bottom-2 w-px bg-border-subtle hidden sm:block"></div>
+                <ul class="space-y-3">
+                    {{range .Stats.RecentActivity}}
+                    <li class="relative flex gap-3">
+                        <span class="hidden sm:grid w-4 h-4 rounded-full bg-primary/10 border border-primary/20 place-items-center shrink-0 mt-0.5"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span></span>
+                        <div class="flex-1 min-w-0 bg-surface-container-low border border-border-subtle rounded-xl px-3 py-2.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <span class="text-sm font-bold text-on-surface">{{.UserName}}</span>
+                            <span class="text-sm text-secondary">{{.Action}}</span>
+                            {{if .TableName}}<span class="inline-flex px-1.5 py-0.5 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-text-muted">{{.TableName}}</span>{{end}}
+                            <span class="text-xs text-text-muted ml-auto tabular-nums"><span class="time-display" data-utc-time="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .CreatedAt}}</span></span>
+                        </div>
+                    </li>
+                    {{end}}
+                </ul>
+            </div>
             {{else}}
-            <p class="text-sm text-text-muted text-center py-4">No activity yet</p>
+            <div class="py-8 text-center">
+                <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22a9 9 0 1 0 0-18 9 9 0 0 0 0 18"/><path d="M12 7v5l3 3"/></svg></div>
+                <p class="text-sm font-medium text-on-surface mt-3">No activity yet</p><p class="text-xs text-text-muted">Actions will appear here as your team works</p>
+            </div>
             {{end}}
         </div>
     </div>
 
-    <!-- Charts -->
+    <!-- Charts data -->
     <script id="dashboard-chart-data" type="application/json">{{json .ChartData}}</script>
     <script>
         try {
@@ -268,49 +499,160 @@
     </script>
     <script src="/static/js/chart.umd.min.js?v={{.Version}}"></script>
     <script src="/static/js/dashboard-charts.js?v={{.Version}}"></script>
+    <script>
+        // Fully functional: live stamp, refresh, and local table filters — no page reload needed.
+        (function(){
+            const stamp = document.getElementById('dash-live-stamp');
+            let sec = 0;
+            setInterval(()=>{ sec+=1; if(stamp) stamp.textContent = sec < 60 ? ` updated ${sec}s ago • SSE active` : ` updated ${Math.floor(sec/60)}m ago • SSE active`; }, 1000);
+            document.getElementById('dash-refresh-btn')?.addEventListener('click', ()=> location.reload());
+            // More menu — click to open, stays open while you move to it
+            (function(){
+                const btn=document.getElementById('dash-more-btn');
+                const menu=document.getElementById('dash-more-menu');
+                const wrap=document.getElementById('dash-more-wrap');
+                if(!btn||!menu||!wrap) return;
+                btn.addEventListener('click', (e)=>{ e.stopPropagation(); const willOpen=menu.classList.contains('hidden'); menu.classList.toggle('hidden', !willOpen); btn.setAttribute('aria-expanded', String(willOpen)); });
+                document.addEventListener('click', (e)=>{ if(!wrap.contains(e.target)){ menu.classList.add('hidden'); btn.setAttribute('aria-expanded','false'); }});
+                document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ menu.classList.add('hidden'); btn.setAttribute('aria-expanded','false'); btn.focus(); }});
+            })();
+            // Upcoming trips live filter — handles both desktop table and mobile cards
+            const q = document.getElementById('upcoming-search');
+            const sel = document.getElementById('upcoming-status');
+            const tbody = document.getElementById('upcoming-tbody');
+            const mobile = document.getElementById('upcoming-mobile');
+            function applyFilter(){
+                const needle = (q?.value||'').toLowerCase().trim();
+                const status = (sel?.value||'').toLowerCase().trim();
+                if(tbody) tbody.querySelectorAll('tr[data-search]').forEach(tr=>{
+                    const hay = (tr.getAttribute('data-search')||'').toLowerCase();
+                    const st = (tr.getAttribute('data-status')||'').toLowerCase();
+                    const okQ = !needle || hay.includes(needle);
+                    const okS = !status || st === status;
+                    tr.style.display = (okQ && okS) ? '' : 'none';
+                });
+                if(mobile) mobile.querySelectorAll('[data-search]').forEach(el=>{
+                    const hay = (el.getAttribute('data-search')||'').toLowerCase();
+                    const st = (el.getAttribute('data-status')||'').toLowerCase();
+                    const okQ = !needle || hay.includes(needle);
+                    const okS = !status || st === status;
+                    el.style.display = (okQ && okS) ? '' : 'none';
+                });
+            }
+            q?.addEventListener('input', applyFilter);
+            sel?.addEventListener('change', applyFilter);
+            // Reset live stamp on SSE merge
+            if(window.EventSource){
+                try{
+                    const es = new EventSource('/dashboard/stream');
+                    es.addEventListener('datastar-merge-signals', (e)=>{
+                        sec = 0;
+                        if(stamp) stamp.textContent = ' updated just now • SSE active';
+                        try{
+                            const parsed = JSON.parse(e.data);
+                            if(window.Datastar && typeof window.Datastar.mergeSignals==='function') window.Datastar.mergeSignals(parsed);
+                            // Soft live hint: flash KPI cards
+                            document.querySelectorAll('.text-stat').forEach(el=>{
+                                el.classList.add('opacity-60');
+                                setTimeout(()=> el.classList.remove('opacity-60'), 350);
+                            });
+                        }catch(err){}
+                    });
+                    es.onerror = ()=>{};
+                }catch(_){}
+            }
+        })();
+    </script>
 </div>{{else}}
-<div class="space-y-6">
-    <!-- Summary Cards -->
-    <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
-        {{template "stat_card.html" (dict "Value" .Stats.TodaysTripsCount "Label" "Today's Trips" "Accent" "primary")}}
-        {{template "stat_card.html" (dict "Value" .Stats.ActiveTripsCount "Label" "Active Trips" "Accent" "warning")}}
-        {{template "stat_card.html" (dict "Value" .Stats.CompletedTripsCount "Label" "Completed Trips" "Accent" "success")}}
-        {{template "stat_card.html" (dict "Value" .Stats.CancelledTripsCount "Label" "Cancelled Trips" "Accent" "alert")}}
-        {{template "stat_card.html" (dict "Value" .Stats.AvailableVehiclesCount "Label" "Available Vehicles" "Accent" "primary")}}
-        {{template "stat_card.html" (dict "Value" .Stats.AvailableDriversCount "Label" "Available Drivers" "Accent" "primary")}}
-        {{template "stat_card.html" (dict "Value" .Stats.PendingPaymentsCount "Label" "Pending Payments" "Accent" "warning")}}
-        {{template "stat_card.html" (dict "Value" (printf "₹%.2f" .Stats.MonthlyRevenue) "Label" "Monthly Revenue" "Accent" "primary")}}
+<div class="space-y-5 max-w-[1600px] mx-auto">
+    {{$dy := 0}}{{if .Stats}}{{$dy = .Stats.DeltaYesterday}}{{end}}
+    <!-- Premium fallback (variant A) — same command UX, charts hidden for experiment control -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="min-w-0">
+            <div class="flex items-center gap-3 flex-wrap">
+                <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Operations Command</h1>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-bold tracking-wide uppercase text-text-muted">Classic view</span>
+                <span id="dash-live-stamp-a" class="text-xs text-text-muted tabular-nums"> live</span>
+            </div>
+            <p class="text-sm text-secondary mt-1">Fleet, trips and revenue — <a href="/dashboard?variant=b" class="text-primary font-semibold hover:underline">Switch to Command view →</a></p>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap shrink-0">
+            <a href="/bookings/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 transition-all">+ New Booking</a>
+            <a href="/trips/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold hover:bg-surface-container-low transition-all">+ Dispatch</a>
+        </div>
+    </div>
+    <!-- Hero KPIs — premium (with text-stat for test compat) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-violet-500"></div>
+            <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-primary/10 border border-primary/10 grid place-items-center text-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg></div>
+                {{if gt $dy 0}}<span class="px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-bold text-emerald-700">▲ +{{$dy}} vs yesterday</span>{{else if lt $dy 0}}<span class="px-2 py-1 rounded-full bg-rose-500/10 border border-rose-500/15 text-[11px] font-bold text-rose-600">▼ {{mul $dy -1}} vs yesterday</span>{{else}}<span class="px-2 py-1 rounded-full bg-surface-container border text-[11px] font-medium text-text-muted">— vs yesterday</span>{{end}}
+            </div>
+            <div class="mt-4"><div class="text-stat text-primary tabular-nums text-3xl font-black">{{.Stats.TodaysTripsCount}}</div><div class="text-sm font-medium text-secondary mt-1">Today's Trips</div></div>
+        </div>
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg></div>
+            <div class="mt-4"><div class="text-stat text-status-warning tabular-nums text-3xl font-black">{{.Stats.ActiveTripsCount}}</div><div class="text-sm font-medium text-secondary mt-1">Active Trips</div></div>
+        </div>
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 grid place-items-center text-emerald-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
+            <div class="mt-4"><div class="text-stat text-status-success tabular-nums text-3xl font-black">{{.Stats.CompletedTripsCount}}</div><div class="text-sm font-medium text-secondary mt-1">Completed Trips</div></div>
+        </div>
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5">
+            <div class="w-10 h-10 rounded-xl bg-rose-500/10 grid place-items-center text-rose-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/></svg></div>
+            <div class="mt-4"><div class="text-stat text-status-alert tabular-nums text-3xl font-black">{{.Stats.CancelledTripsCount}}</div><div class="text-sm font-medium text-secondary mt-1">Cancelled Trips</div></div>
+        </div>
+    </div>
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4"><div class="w-9 h-9 rounded-lg bg-blue-500/10 grid place-items-center text-blue-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></div><div><div class="text-xl font-bold tabular-nums">{{.Stats.AvailableVehiclesCount}}</div><div class="text-xs text-secondary font-medium">Available Vehicles</div></div></div>
+        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4"><div class="w-9 h-9 rounded-lg bg-violet-500/10 grid place-items-center text-violet-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div><div class="text-xl font-bold tabular-nums">{{.Stats.AvailableDriversCount}}</div><div class="text-xs text-secondary font-medium">Available Drivers</div></div></div>
+        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4"><div class="w-9 h-9 rounded-lg bg-amber-500/10 grid place-items-center text-amber-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/></svg></div><div><div class="text-xl font-bold tabular-nums">{{.Stats.PendingPaymentsCount}}</div><div class="text-xs text-secondary font-medium">Pending Payments</div></div></div>
+        <div class="flex items-center gap-4 bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white"><div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div><div class="text-xl font-black tabular-nums">{{printf "₹%.2f" .Stats.MonthlyRevenue}}</div><div class="text-xs font-medium text-white/80">Monthly Revenue</div></div></div>
     </div>
 
     <!-- Upcoming Trips -->
-    <div class="bg-surface-container-lowest rounded-lg shadow-sm">
-        <div class="px-4 py-3 border-b flex justify-between items-center">
-            <h3 class="text-sm font-semibold on-surface">Upcoming Trips</h3>
-            <a href="/trips" class="text-sm text-primary hover:text-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded">View All</a>
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
+        <div class="px-4 py-3 border-b border-border-subtle flex justify-between items-center">
+            <h3 class="text-sm font-bold text-on-surface">Upcoming Trips</h3>
+            <a href="/trips" class="text-sm text-primary hover:underline font-medium">View All</a>
         </div>
-        <div class="overflow-x-auto">
+        <!-- Mobile cards -->
+        <div class="sm:hidden divide-y divide-border-subtle">
+            {{if .Stats.UpcomingTrips}}
+            {{range .Stats.UpcomingTrips}}
+            <div class="p-4 flex flex-col gap-1.5">
+                <div class="flex items-center justify-between"><span class="text-sm font-black text-primary tabular-nums">{{.TripNumber}}</span><span class="px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}">{{.Status}}</span></div>
+                <div class="text-sm font-medium text-on-surface">{{.DriverFirstName}} {{.DriverLastName}} • <span class="text-text-muted">{{.VehicleRegistration}}</span></div>
+                <div class="text-sm">{{.RouteSource}} → {{.RouteDestination}}</div>
+                <div class="text-xs text-text-muted tabular-nums"><span class="time-display" data-utc-time="{{.DepartureTime.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .DepartureTime}}</span></div>
+            </div>
+            {{end}}
+            {{else}}
+            <div class="px-4 py-10 text-center text-sm text-text-muted">No upcoming trips</div>
+            {{end}}
+        </div>
+        <div class="hidden sm:block overflow-x-auto">
             <table class="min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Trip #</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Driver</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Vehicle</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Route</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Departure</th>
-                        <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Status</th>
+                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Trip #</th>
+                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Driver</th>
+                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Vehicle</th>
+                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Route</th>
+                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Departure</th>
+                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Status</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
                     {{range .Stats.UpcomingTrips}}
-                    <tr>
-                        <td class="px-4 py-2 text-sm">{{.TripNumber}}</td>
-                        <td class="px-4 py-2 text-sm">{{.DriverFirstName}} {{.DriverLastName}}</td>
-                        <td class="px-4 py-2 text-sm">{{.VehicleRegistration}}</td>
-                        <td class="px-4 py-2 text-sm">{{.RouteSource}} → {{.RouteDestination}}</td>
-                        <td class="px-4 py-2 text-sm"><span class="time-display" data-utc-time="{{.DepartureTime.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .DepartureTime}}</span></td>
-                        <td class="px-4 py-2 text-sm">
-                            <span class="px-2 py-1 text-xs rounded-full {{statusBadge .Status}}">{{.Status}}</span>
-                        </td>
+                    <tr class="hover:bg-surface-container-low/50">
+                        <td class="px-4 py-2.5 text-sm font-bold text-primary">{{.TripNumber}}</td>
+                        <td class="px-4 py-2.5 text-sm font-medium">{{.DriverFirstName}} {{.DriverLastName}}</td>
+                        <td class="px-4 py-2.5 text-sm">{{.VehicleRegistration}}</td>
+                        <td class="px-4 py-2.5 text-sm">{{.RouteSource}} → {{.RouteDestination}}</td>
+                        <td class="px-4 py-2.5 text-sm tabular-nums"><span class="time-display" data-utc-time="{{.DepartureTime.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .DepartureTime}}</span></td>
+                        <td class="px-4 py-2.5 text-sm"><span class="px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}">{{.Status}}</span></td>
                     </tr>
                     {{end}}
                 </tbody>
@@ -320,27 +662,25 @@
 
     <!-- Recent Bookings and Payments -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm">
-            <div class="px-4 py-3 border-b">
-                <h3 class="text-sm font-semibold on-surface">Recent Bookings</h3>
-            </div>
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
+            <div class="px-4 py-3 border-b border-border-subtle"><h3 class="text-sm font-bold text-on-surface">Recent Bookings</h3></div>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-border-subtle">
                     <thead class="bg-surface-container-low">
                         <tr>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Booking #</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Customer</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Pickup</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Price</th>
+                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Booking #</th>
+                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Customer</th>
+                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Pickup</th>
+                            <th class="px-4 py-2 text-right text-xs font-bold tracking-wider uppercase text-text-muted">Price</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border-subtle">
                         {{range .Stats.RecentBookings}}
-                        <tr>
-                            <td class="px-4 py-2 text-sm">{{.BookingNumber}}</td>
-                            <td class="px-4 py-2 text-sm">{{.CustomerName}}</td>
-                            <td class="px-4 py-2 text-sm"><span class="time-display" data-utc-time="{{.PickupDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PickupDate}}</span></td>
-                            <td class="px-4 py-2 text-sm tabular-nums">{{printf "%.2f" .Price}}</td>
+                        <tr class="hover:bg-surface-container-low/50">
+                            <td class="px-4 py-2.5 text-sm font-bold text-primary">{{.BookingNumber}}</td>
+                            <td class="px-4 py-2.5 text-sm">{{.CustomerName}}</td>
+                            <td class="px-4 py-2.5 text-sm tabular-nums"><span class="time-display" data-utc-time="{{.PickupDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PickupDate}}</span></td>
+                            <td class="px-4 py-2.5 text-sm tabular-nums text-right font-semibold">{{printf "%.2f" .Price}}</td>
                         </tr>
                         {{end}}
                     </tbody>
@@ -348,27 +688,25 @@
             </div>
         </div>
 
-        <div class="bg-surface-container-lowest rounded-lg shadow-sm">
-            <div class="px-4 py-3 border-b">
-                <h3 class="text-sm font-semibold on-surface">Recent Payments</h3>
-            </div>
+        <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
+            <div class="px-4 py-3 border-b border-border-subtle"><h3 class="text-sm font-bold text-on-surface">Recent Payments</h3></div>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-border-subtle">
                     <thead class="bg-surface-container-low">
                         <tr>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Invoice</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Amount</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Method</th>
-                            <th class="px-4 py-2 text-left text-xs font-medium text-text-muted uppercase">Date</th>
+                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Invoice</th>
+                            <th class="px-4 py-2 text-right text-xs font-bold tracking-wider uppercase text-text-muted">Amount</th>
+                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Method</th>
+                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Date</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border-subtle">
                         {{range .Stats.RecentPayments}}
-                        <tr>
-                            <td class="px-4 py-2 text-sm">{{.InvoiceNumber}}</td>
-                            <td class="px-4 py-2 text-sm tabular-nums">{{printf "%.2f" .Amount}}</td>
-                            <td class="px-4 py-2 text-sm">{{.Method}}</td>
-                            <td class="px-4 py-2 text-sm"><span class="time-display" data-utc-time="{{.PaymentDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PaymentDate}}</span></td>
+                        <tr class="hover:bg-surface-container-low/50">
+                            <td class="px-4 py-2.5 text-sm font-bold text-primary">{{.InvoiceNumber}}</td>
+                            <td class="px-4 py-2.5 text-sm tabular-nums text-right font-semibold">{{printf "%.2f" .Amount}}</td>
+                            <td class="px-4 py-2.5 text-sm">{{.Method}}</td>
+                            <td class="px-4 py-2.5 text-sm tabular-nums"><span class="time-display" data-utc-time="{{.PaymentDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PaymentDate}}</span></td>
                         </tr>
                         {{end}}
                     </tbody>
@@ -378,25 +716,24 @@
     </div>
 
     <!-- Recent Activity -->
-    <div class="bg-surface-container-lowest rounded-lg shadow-sm">
-        <div class="px-4 py-3 border-b">
-            <h3 class="text-sm font-semibold on-surface">Recent Activity</h3>
-        </div>
+    <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
+        <div class="px-4 py-3 border-b border-border-subtle"><h3 class="text-sm font-bold text-on-surface">Recent Activity</h3></div>
         <div class="p-4">
-            <ul class="space-y-3">
+            <ul class="space-y-2">
                 {{range .Stats.RecentActivity}}
-                <li class="text-sm text-secondary">
-                    <span class="font-medium">{{.UserName}}</span> - {{.Action}}
-                    {{if .TableName}}on {{.TableName}}{{end}}
-                    <span class="text-text-muted">(<span class="time-display" data-utc-time="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .CreatedAt}}</span>)</span>
+                <li class="text-sm text-secondary bg-surface-container-low border border-border-subtle rounded-xl px-3 py-2 flex items-center gap-2 flex-wrap">
+                    <span class="font-bold text-on-surface">{{.UserName}}</span> <span class="text-text-muted">—</span> {{.Action}}
+                    {{if .TableName}}<span class="px-1.5 py-0.5 rounded-full bg-surface-container text-[11px] font-semibold"> {{.TableName}}</span>{{end}}
+                    <span class="text-xs text-text-muted ml-auto tabular-nums">(<span class="time-display" data-utc-time="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .CreatedAt}}</span>)</span>
                 </li>
                 {{end}}
             </ul>
+        </div>
 </div>
 {{end}}
 
 <script>
-    if (window.EventSource) {
+    if (window.EventSource && !document.getElementById('dash-live-stamp')) {
         const es = new EventSource('/dashboard/stream');
         es.addEventListener('datastar-merge-signals', (e) => {
             try {

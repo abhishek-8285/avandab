@@ -121,7 +121,7 @@ func (h *CustomerHandlers) List(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "customer_list.html", PageData{
 		Title: "Customers",
 		User:  session,
-		Extra: map[string]interface{}{"Customers": list, "Pagination": pd, "Query": pp.Query},
+		Extra: map[string]interface{}{"Customers": list, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status},
 	})
 }
 
@@ -224,7 +224,16 @@ func (h *CustomerHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		r.PostFormValue("notes"),
 	)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		session, _ := h.getUserFromContext(r)
+		cust, getErr := h.Services.Customers.GetCustomer(r.Context(), id)
+		if getErr != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		h.renderForm(w, r, "customer_edit.html", PageData{
+			Title: "Edit Customer", User: session, FlashError: err.Error(),
+			Extra: map[string]interface{}{"Customer": cust},
+		})
 		return
 	}
 	http.Redirect(w, r, "/customers/"+id.String(), http.StatusSeeOther)

@@ -2,16 +2,24 @@
     "use strict";
 
     var CFG = window.__DASHBOARD_CHARTS__ || {};
+    // Premium ops palette — align with src/input.css --color-primary #2563eb
     var PALETTE = {
-        teal: "#14b8b8",
-        blue: "#3b82f6",
-        orange: "#f97316",
-        green: "#10b981",
-        red: "#ef4444",
-        purple: "#8b5cf6",
+        primary: "#2563eb",
+        primarySoft: "rgba(37, 99, 235, 0.10)",
+        primaryMid: "rgba(37, 99, 235, 0.75)",
+        teal: "#0ea5a5",
+        tealSoft: "rgba(14,165,165,0.10)",
+        blue: "#2563eb",
         indigo: "#6366f1",
-        yellow: "#eab308",
-        slate: "#94a3b8"
+        violet: "#8b5cf6",
+        purple: "#7c3aed",
+        orange: "#f97316",
+        amber: "#f59e0b",
+        green: "#059669",
+        emerald: "#10b981",
+        red: "#e11d48",
+        slate: "#64748b",
+        slateGrid: "rgba(148, 163, 184, 0.14)"
     };
 
     function inr(v) {
@@ -29,9 +37,13 @@
         if (!data) {
             canvas.style.display = "none";
             var empty = document.getElementById(emptyId);
-            if (empty) empty.style.display = "flex";
+            if (empty) { empty.classList.remove("hidden"); empty.style.display = "flex"; }
             return;
         }
+        // ensure empty hidden when we have data
+        var empty2 = document.getElementById(emptyId);
+        if (empty2) { empty2.style.display = "none"; empty2.classList.add("hidden"); }
+        canvas.style.display = "";
         new Chart(canvas, data);
     }
 
@@ -45,31 +57,49 @@
                     datasets: [{
                         label: "Revenue",
                         data: CFG.revenueByDay.map(function (d) { return d.Total; }),
-                        borderColor: PALETTE.teal,
-                        backgroundColor: "rgba(20, 184, 184, 0.12)",
+                        borderColor: PALETTE.primary,
+                        backgroundColor: function(ctx){
+                            const c = ctx.chart.ctx;
+                            const g = c.createLinearGradient(0,0,0,180);
+                            g.addColorStop(0, "rgba(37,99,235,0.18)");
+                            g.addColorStop(1, "rgba(37,99,235,0.00)");
+                            return g;
+                        },
                         fill: true,
-                        tension: 0.35,
-                        borderWidth: 2,
-                        pointRadius: 2,
-                        pointHoverRadius: 5
+                        tension: 0.38,
+                        borderWidth: 2.5,
+                        pointRadius: 0,
+                        pointHoverRadius: 5,
+                        pointHitRadius: 10,
+                        pointBackgroundColor: PALETTE.primary,
+                        pointBorderColor: "#ffffff",
+                        pointBorderWidth: 2
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    interaction: { intersect: false, mode: 'index' },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
+                            backgroundColor: "#0f172a",
+                            titleFont: { size: 11, weight: "600" },
+                            bodyFont: { size: 12 },
+                            padding: 10,
+                            cornerRadius: 10,
+                            displayColors: false,
                             callbacks: {
                                 label: function (ctx) { return " " + inr(ctx.parsed.y); }
                             }
                         }
                     },
                     scales: {
-                        x: { ticks: { maxTicksLimit: 8, font: { size: 10 } }, grid: { display: false } },
+                        x: { ticks: { maxTicksLimit: 8, font: { size: 10, weight: 500 }, color: "#64748b" }, grid: { display: false }, border: { display: false } },
                         y: {
-                            ticks: { font: { size: 10 }, callback: function (v) { return inr(v); } },
-                            grid: { color: "rgba(148, 163, 184, 0.15)" }
+                            ticks: { font: { size: 10 }, color: "#64748b", callback: function (v) { return inr(v); } },
+                            grid: { color: PALETTE.slateGrid },
+                            border: { display: false }
                         }
                     }
                 }
@@ -83,14 +113,14 @@
             var entries = Object.keys(counts).filter(function (k) { return counts[k] > 0; });
             if (entries.length === 0) return null;
             var colors = {
-                scheduled: PALETTE.purple,
-                assigned: PALETTE.indigo,
-                started: PALETTE.orange,
-                reached_pickup: PALETTE.blue,
-                in_transit: PALETTE.teal,
-                completed: PALETTE.green,
-                cancelled: PALETTE.red,
-                draft: PALETTE.slate
+                scheduled: "#8b5cf6",
+                assigned: "#6366f1",
+                started: "#f97316",
+                reached_pickup: "#2563eb",
+                in_transit: "#0ea5a5",
+                completed: "#059669",
+                cancelled: "#e11d48",
+                draft: "#94a3b8"
             };
             return {
                 type: "doughnut",
@@ -100,17 +130,25 @@
                         data: entries.map(function (k) { return counts[k]; }),
                         backgroundColor: entries.map(function (k) { return colors[k] || PALETTE.slate; }),
                         borderWidth: 2,
-                        borderColor: "#ffffff"
+                        borderColor: "#ffffff",
+                        hoverOffset: 6
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    cutout: "62%",
+                    cutout: "64%",
                     plugins: {
                         legend: {
                             position: "bottom",
-                            labels: { boxWidth: 10, boxHeight: 10, font: { size: 10 } }
+                            labels: { boxWidth: 10, boxHeight: 10, font: { size: 11, weight: 500 }, color: "#475569", padding: 14, usePointStyle: true, pointStyle: "circle" }
+                        },
+                        tooltip: {
+                            backgroundColor: "#0f172a",
+                            cornerRadius: 10,
+                            padding: 10,
+                            titleFont: { size: 11 },
+                            bodyFont: { size: 12 }
                         }
                     }
                 }
@@ -128,9 +166,12 @@
                     datasets: [{
                         label: "Bookings",
                         data: CFG.bookingsByDay.map(function (d) { return d.Count; }),
-                        backgroundColor: "rgba(59, 130, 246, 0.75)",
-                        hoverBackgroundColor: PALETTE.blue,
-                        borderRadius: 4
+                        backgroundColor: PALETTE.primaryMid,
+                        hoverBackgroundColor: PALETTE.primary,
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        barPercentage: 0.72,
+                        categoryPercentage: 0.78
                     }]
                 },
                 options: {
@@ -139,14 +180,18 @@
                     plugins: {
                         legend: { display: false },
                         tooltip: {
+                            backgroundColor: "#0f172a",
+                            cornerRadius: 10,
+                            padding: 10,
+                            displayColors: false,
                             callbacks: {
                                 label: function (ctx) { return " " + ctx.parsed.y + " bookings"; }
                             }
                         }
                     },
                     scales: {
-                        x: { ticks: { maxTicksLimit: 8, font: { size: 10 } }, grid: { display: false } },
-                        y: { beginAtZero: true, ticks: { font: { size: 10 }, precision: 0 }, grid: { color: "rgba(148, 163, 184, 0.15)" } }
+                        x: { ticks: { maxTicksLimit: 8, font: { size: 10, weight: 500 }, color: "#64748b" }, grid: { display: false }, border: { display: false } },
+                        y: { beginAtZero: true, ticks: { font: { size: 10 }, color: "#64748b", precision: 0 }, grid: { color: PALETTE.slateGrid }, border: { display: false } }
                     }
                 }
             };

@@ -341,12 +341,12 @@ func (r *invoiceRepository) GetReadModel(ctx context.Context, id aggregate.Invoi
 	}
 
 	var cgst, sgst, igst float64
-	var irn, irnAckNo, irnAckDate, signedQR sql.NullString
+	var irn, irnAckNo, irnAckDate, signedQR, irnCancelledAt sql.NullString
 	_ = r.exec(ctx).QueryRowContext(ctx, `
-		SELECT COALESCE(cgst,0), COALESCE(sgst,0), COALESCE(igst,0), irn, irn_ack_no, irn_ack_date, signed_qr
+		SELECT COALESCE(cgst,0), COALESCE(sgst,0), COALESCE(igst,0), irn, irn_ack_no, irn_ack_date, signed_qr, irn_cancelled_at
 		FROM invoices
 		WHERE id = ? AND tenant_id = ?
-	`, string(id), string(tenantID)).Scan(&cgst, &sgst, &igst, &irn, &irnAckNo, &irnAckDate, &signedQR)
+	`, string(id), string(tenantID)).Scan(&cgst, &sgst, &igst, &irn, &irnAckNo, &irnAckDate, &signedQR, &irnCancelledAt)
 
 	return domain.InvoiceReadModel{
 		ID:              row.ID,
@@ -369,6 +369,7 @@ func (r *invoiceRepository) GetReadModel(ctx context.Context, id aggregate.Invoi
 		IRN:             irn.String,
 		IRNAckNo:        irnAckNo.String,
 		IRNAckDate:      irnAckDate.String,
+		IRNCancelledAt:  irnCancelledAt.String,
 		SignedQR:        signedQR.String,
 		CreatedAt:       row.CreatedAt,
 		UpdatedAt:       row.UpdatedAt,

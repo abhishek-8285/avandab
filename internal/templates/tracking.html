@@ -7,49 +7,88 @@
 
     <!-- ── Fleet registry drawer ── -->
     <aside id="fleet-drawer" class="relative z-20 h-full w-[300px] shrink-0 flex flex-col bg-surface-container-lowest border-r border-border-subtle">
-        <div class="p-3 border-b border-border-subtle space-y-3">
+        <div class="p-3 border-b border-border-subtle space-y-2.5">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-primary shrink-0"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/><path d="M9 20h12"/></svg>
-                    <span class="text-[10px] font-semibold uppercase tracking-wider text-on-surface">Fleet Registry</span>
+                    <span class="text-[10px] font-semibold uppercase tracking-wider text-on-surface">Fleet</span>
+                    <span class="text-[10px] font-mono text-text-muted">(<span id="fleet-total-badge">0</span>)</span>
                 </div>
-                <div class="flex items-center gap-2">
-                    <span class="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-mono text-[10px]" id="fleet-total-badge">0</span>
-                    <button type="button" id="drawer-collapse-btn" title="Hide panel"
-                        class="h-7 w-7 flex items-center justify-center rounded-lg bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="m15 18-6-6 6-6"/></svg>
-                    </button>
-                </div>
+                <button type="button" id="drawer-collapse-btn" title="Hide panel"
+                    class="h-7 w-7 flex items-center justify-center rounded-lg bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="m15 18-6-6 6-6"/></svg>
+                </button>
             </div>
 
+            <div class="relative group">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted opacity-60 group-focus-within:opacity-100 group-focus-within:text-primary transition-all pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input type="text" id="vehicle-search" aria-label="Search Vehicles"
+                    placeholder="Search vehicle…"
+                    autocomplete="off"
+                    class="w-full pl-8 pr-8 py-2 bg-surface-container-low border border-border-subtle rounded-lg text-xs font-medium text-on-surface placeholder:text-text-muted/50 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all" />
+                <button type="button" id="clear-search-btn"
+                    class="hidden absolute right-1.5 top-1/2 -translate-y-1/2 text-secondary hover:text-on-surface transition-colors h-6 w-6 items-center justify-center rounded-md bg-surface-container-high border border-border-subtle cursor-pointer">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 mx-auto"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+            <div id="search-hint" class="hidden text-[10px] font-mono text-text-muted px-0.5"></div>
+
             <!-- Sort segmented control -->
-            <div id="fleet-sort" class="grid grid-cols-4 gap-1 bg-surface-container-low rounded-lg p-1 border border-border-subtle" role="tablist" aria-label="Sort fleet list">
-                <button type="button" data-sort="status" class="fleet-sort-btn py-1.5 rounded-md text-[10px] font-medium uppercase tracking-wide transition-colors cursor-pointer">Status</button>
-                <button type="button" data-sort="name" class="fleet-sort-btn py-1.5 rounded-md text-[10px] font-medium uppercase tracking-wide transition-colors cursor-pointer">A-Z</button>
-                <button type="button" data-sort="speed" class="fleet-sort-btn py-1.5 rounded-md text-[10px] font-medium uppercase tracking-wide transition-colors cursor-pointer">Speed</button>
-                <button type="button" data-sort="fresh" class="fleet-sort-btn py-1.5 rounded-md text-[10px] font-medium uppercase tracking-wide transition-colors cursor-pointer">Fresh</button>
+            <div class="flex items-center gap-2">
+                <span class="text-[9px] font-semibold uppercase tracking-wider text-text-muted shrink-0">Sort</span>
+                <div id="fleet-sort" class="grid grid-cols-4 flex-1 gap-1 bg-surface-container-low rounded-lg p-1 border border-border-subtle" role="tablist" aria-label="Sort fleet list">
+                    <button type="button" data-sort="status" class="fleet-sort-btn py-1 rounded-md text-[10px] font-medium uppercase tracking-wide transition-colors cursor-pointer">Status</button>
+                    <button type="button" data-sort="name" class="fleet-sort-btn py-1 rounded-md text-[10px] font-medium uppercase tracking-wide transition-colors cursor-pointer">A-Z</button>
+                    <button type="button" data-sort="speed" class="fleet-sort-btn py-1 rounded-md text-[10px] font-medium uppercase tracking-wide transition-colors cursor-pointer">Speed</button>
+                    <button type="button" data-sort="fresh" class="fleet-sort-btn py-1 rounded-md text-[10px] font-medium uppercase tracking-wide transition-colors cursor-pointer">Fresh</button>
+                </div>
             </div>
 
             <div id="fleet-summary" aria-live="polite" class="text-[10px] font-mono text-text-muted truncate">Syncing fleet&hellip;</div>
+        </div>
+
+        <!-- Status filter tabs (bound to the same state as the map strip) -->
+        <div class="px-2 py-2 border-b border-border-subtle grid grid-cols-4 gap-1" role="tablist" aria-label="Filter fleet by status">
+            <button type="button" data-status="all"
+                class="flyfleet-filter-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg text-[9px] font-semibold uppercase tracking-wide transition-colors border cursor-pointer">
+                <span class="font-mono text-[11px]" id="panel-count-all">0</span>
+                <span>All</span>
+            </button>
+            <button type="button" data-status="running"
+                class="flyfleet-filter-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg text-[9px] font-semibold uppercase tracking-wide transition-colors border cursor-pointer">
+                <span class="font-mono text-[11px]" style="color:#22c55e" id="panel-count-running">0</span>
+                <span>Moving</span>
+            </button>
+            <button type="button" data-status="stopped"
+                class="flyfleet-filter-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg text-[9px] font-semibold uppercase tracking-wide transition-colors border cursor-pointer">
+                <span class="font-mono text-[11px]" style="color:#137fec" id="panel-count-stopped">0</span>
+                <span>Idle</span>
+            </button>
+            <button type="button" data-status="alert" title="No signal or maintenance due"
+                class="flyfleet-filter-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg text-[9px] font-semibold uppercase tracking-wide transition-colors border cursor-pointer">
+                <span class="font-mono text-[11px]" style="color:#ef4444" id="panel-count-alert">0</span>
+                <span>No Signal</span>
+            </button>
         </div>
 
         <div id="fleet-list" class="flex-1 overflow-y-auto overflow-x-hidden relative" role="listbox" aria-label="Vehicles"><div id="fleet-spacer" class="relative w-full"></div></div>
 
         <div id="fleet-more-note" class="hidden px-3 py-2 text-[10px] font-mono text-text-muted border-t border-border-subtle"></div>
 
-        <div class="px-3 pt-2 pb-1 border-t border-border-subtle flex items-center justify-between">
+        <div class="p-3 space-y-2 border-t border-border-subtle">
+            {{if can .User "vehicles" "create"}}
+            <a href="/vehicles/new"
+                class="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary hover:bg-primary hover:text-on-primary text-[10px] font-semibold uppercase tracking-wide transition-colors text-decoration-none">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+                Add / Register Vehicle
+            </a>
+            {{end}}
             <button type="button" id="fleet-export-btn" title="Download filtered fleet as CSV"
-                class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-container-low border border-border-subtle text-[10px] font-medium uppercase tracking-wide text-secondary hover:text-on-surface hover:border-primary/50 transition-colors cursor-pointer">
+                class="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-surface-container-low border border-border-subtle text-[10px] font-medium uppercase tracking-wide text-secondary hover:text-on-surface hover:border-primary/50 transition-colors cursor-pointer">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                 Export CSV
             </button>
-            <span class="text-[9px] font-mono text-text-muted/70 uppercase tracking-wide">j/k nav · Enter pick</span>
-        </div>
-        <div class="p-3 pt-1.5 grid grid-cols-2 gap-x-3 gap-y-1.5 border-t border-border-subtle">
-            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#22c55e;box-shadow:0 0 0 3px #22c55e26"></span><span class="text-[10px] text-secondary">Moving</span></div>
-            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#137fec;box-shadow:0 0 0 3px #137fec26"></span><span class="text-[10px] text-secondary">Idle</span></div>
-            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#6b7280;box-shadow:0 0 0 3px #6b728026"></span><span class="text-[10px] text-secondary">No Signal</span></div>
-            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#f59e0b;box-shadow:0 0 0 3px #f59e0b26"></span><span class="text-[10px] text-secondary">Maint.</span></div>
+            <div class="text-[9px] font-mono text-text-muted/70 uppercase tracking-wide text-center">j/k nav · Enter pick · / search</div>
         </div>
     </aside>
 
@@ -72,40 +111,12 @@
             </div>
         </div>
 
-        <!-- ── Top overlay ── -->
+        <!-- ── Top overlay: status strip ── -->
         <div class="absolute top-3 left-3 right-3 z-10 flex flex-col lg:flex-row gap-3 items-start justify-between pointer-events-none">
 
-            <!-- Search -->
-            <div class="w-full max-w-md pointer-events-auto">
-                <div class="bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-xl p-3 shadow-lg transition-all">
-                    <div class="flex items-center justify-between gap-3 mb-2">
-                        <div class="flex items-center gap-2">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-primary shrink-0"><circle cx="12" cy="12" r="3"/><path d="M12 2v4"/><path d="m19.4 15a1.65 1.65 0 0 0 .33 1.82l.27.27a2 2 0 0 1-2.83 2.83l-.27-.27a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.27.27a2 2 0 0 1-2.83-2.83l.27-.27a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.27-.27a2 2 0 0 1 2.83-2.83l.27.27a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h0a1.65 1.65 0 0 0 1.82-.33l.27-.27a2 2 0 0 1 2.83 2.83l-.27.27a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                            <span class="text-[10px] font-semibold uppercase tracking-wider text-secondary">Live Fleet</span>
-                        </div>
-                        <span class="text-[10px] font-mono text-text-muted" id="live-clock">SYNCING...</span>
-                    </div>
-
-                    <div class="relative group">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted opacity-60 group-focus-within:opacity-100 group-focus-within:text-primary transition-all pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                        <input type="text" id="vehicle-search" aria-label="Search Vehicles"
-                            placeholder="Search vehicle / ID / trip…"
-                            autocomplete="off"
-                            class="w-full pl-9 pr-9 py-2.5 bg-surface-container-low border border-border-subtle rounded-lg text-xs font-medium text-on-surface placeholder:text-text-muted/50 focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all" />
-                        <button type="button" id="clear-search-btn"
-                            class="hidden absolute right-2 top-1/2 -translate-y-1/2 text-secondary hover:text-on-surface transition-colors h-7 w-7 items-center justify-center rounded-md bg-surface-container-high border border-border-subtle cursor-pointer">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 mx-auto"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                        </button>
-                        <div id="search-results" class="hidden absolute left-0 right-0 top-full mt-2 bg-surface-container-lowest border border-border-subtle rounded-lg shadow-xl max-h-[340px] overflow-hidden flex-col z-50"></div>
-                    </div>
-                    <div id="search-hint" class="hidden mt-2 text-[10px] font-mono text-text-muted px-0.5"></div>
-                    <div class="mt-1.5 text-[9px] font-mono text-text-muted/60 px-0.5">press / to search &middot; &uarr;&darr; + Enter to pick</div>
-                </div>
-            </div>
-
-            <!-- Filters + zones -->
-            <div class="w-full lg:max-w-xl pointer-events-auto self-end flex flex-wrap items-center justify-end gap-2">
-                <div class="bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-xl p-1.5 shadow-lg flex flex-wrap items-center gap-1">
+            <!-- Filters + zones (single control panel) -->
+            <div class="w-full lg:max-w-xl pointer-events-auto flex flex-wrap items-center gap-2">
+                <div class="bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-xl p-1.5 shadow-xl ring-1 ring-black/5 dark:ring-white/10 flex flex-wrap items-center gap-1">
 
                     <button type="button" data-status="all"
                         class="flyfleet-filter-btn group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wide transition-colors border cursor-pointer">
@@ -130,142 +141,269 @@
                         <span class="font-mono text-[9px] opacity-70" id="count-stopped">0</span>
                     </button>
 
-                    <button type="button" data-status="alert"
+                    <button type="button" data-status="alert" title="No signal or maintenance due"
                         class="flyfleet-filter-btn group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wide transition-colors border cursor-pointer">
-                        <span class="w-2 h-2 rounded-full" style="background:#f59e0b"></span>
-                        <span>Alert / Stale</span>
+                        <span class="w-2 h-2 rounded-full" style="background:#ef4444"></span>
+                        <span>No Signal</span>
                         <span class="font-mono text-[9px] opacity-70" id="count-alert">0</span>
                     </button>
-                </div>
 
-                <!-- Zones toggle (tile provider is server-configured) -->
-                <div class="bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-xl p-1 shadow-lg flex items-center">
-                    <label class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-medium uppercase tracking-wide cursor-pointer select-none transition-colors">
+                    <!-- Zones toggle (tile provider is server-configured) -->
+                    <label class="flex items-center gap-1.5 pl-2.5 ml-1 border-l border-border-subtle px-2 py-1.5 rounded-lg text-[10px] font-medium uppercase tracking-wide cursor-pointer select-none transition-colors">
                         <input type="checkbox" id="geofence-toggle" checked class="rounded border-border-subtle text-primary focus:ring-primary h-3 w-3 cursor-pointer">
                         <span class="text-primary">Zones</span>
                     </label>
                 </div>
+
+                <!-- Last-update clock + manual refresh -->
+                <div class="bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-xl px-2 py-1.5 shadow-xl ring-1 ring-black/5 dark:ring-white/10 flex items-center gap-2">
+                    <span class="text-[10px] font-medium text-text-muted whitespace-nowrap">Last update</span>
+                    <span class="text-[11px] font-mono font-semibold text-on-surface whitespace-nowrap" id="live-clock">SYNCING...</span>
+                    <button type="button" id="refresh-feed-btn" title="Refresh telemetry now"
+                        class="h-7 w-7 flex items-center justify-center rounded-lg bg-surface-container-low border border-border-subtle text-secondary hover:text-primary hover:border-primary/50 transition-colors cursor-pointer">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- ── Connection indicator ── -->
-        <div class="absolute bottom-3 left-3 z-10 pointer-events-auto">
-            <div class="bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-lg px-3 py-2 shadow-lg flex items-center gap-2.5">
-                <span class="relative flex items-center justify-center">
-                    <span class="absolute w-2.5 h-2.5 rounded-full animate-ping opacity-40" id="conn-ping" style="background:#22c55e"></span>
-                    <span class="w-2.5 h-2.5 rounded-full block animate-pulse" id="conn-beacon" style="background:#22c55e"></span>
-                </span>
-                <span class="text-[10px] font-semibold uppercase tracking-wide text-on-surface leading-none" id="conn-label">Live Stream</span>
-                <label class="cursor-pointer flex items-center gap-1 pl-2 border-l border-border-subtle text-[10px] font-medium text-secondary hover:text-on-surface transition-colors">
+        <!-- ── Status bar: stream health · density · fit (single bottom chrome) ── -->
+        <div class="absolute bottom-3 left-3 z-10 pointer-events-auto max-w-[calc(100%-1.5rem)]">
+            <div class="bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-xl shadow-xl ring-1 ring-black/5 dark:ring-white/10 flex flex-wrap items-center gap-y-1 p-1.5">
+                <div class="flex items-center gap-2.5 pl-1.5 pr-2.5">
+                    <span class="relative flex items-center justify-center">
+                        <span class="absolute w-2.5 h-2.5 rounded-full animate-ping opacity-40" id="conn-ping" style="background:#22c55e"></span>
+                        <span class="w-2.5 h-2.5 rounded-full block animate-pulse" id="conn-beacon" style="background:#22c55e"></span>
+                    </span>
+                    <span class="text-[10px] font-semibold uppercase tracking-wide text-on-surface leading-none whitespace-nowrap" id="conn-label">Live Stream</span>
+                </div>
+                <label class="cursor-pointer flex items-center gap-1 pl-2.5 pr-2 border-l border-border-subtle text-[10px] font-medium text-secondary hover:text-on-surface transition-colors">
                     <input type="checkbox" id="sse-toggle" checked class="rounded text-primary focus:ring-primary h-3 w-3 cursor-pointer">
                     <span>SSE</span>
                 </label>
-            </div>
-        </div>
-
-        <!-- ── Fit + density (raised above the Leaflet attribution strip) ── -->
-        <div class="absolute bottom-8 right-3 z-10 pointer-events-auto flex items-center gap-2">
-            <button type="button" id="fit-bounds-btn"
-                class="bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-lg px-3 py-2 shadow-lg text-[10px] font-semibold uppercase tracking-wide text-primary hover:bg-primary hover:text-on-primary hover:border-primary transition-colors cursor-pointer flex items-center gap-1.5">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="3"/><path d="M12 2v4"/><path d="m19.07 4.93-2.83 2.83"/><path d="M22 12h-4"/><path d="m19.07 19.07-2.83-2.83"/><path d="M12 22v-4"/><path d="m4.93 19.07 2.83-2.83"/><path d="M2 12h4"/><path d="m4.93 4.93 2.83 2.83"/></svg>
-                <span>Fit Fleet</span>
-            </button>
-
-            <div class="bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-lg px-4 py-2 shadow-lg flex items-center gap-2.5">
-                <span class="h-2 w-2 rounded-full bg-primary animate-pulse"></span>
-                <span class="text-[11px] font-medium text-on-surface">
-                    <span class="text-primary font-mono text-xs" id="density-active">0</span> / <span class="opacity-60 font-mono" id="density-total">0</span> active units
-                </span>
-            </div>
-        </div>
-
-        <!-- ── Vehicle detail panel ── -->
-        <div id="intel-detail-panel" class="hidden absolute right-3 top-1/2 -translate-y-1/2 z-20 pointer-events-auto w-full max-w-xs bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-xl p-4 shadow-xl space-y-3 text-xs text-on-surface panel-pop">
-
-            <div class="border-b border-border-subtle pb-3 flex justify-between items-start gap-2">
-                <div class="min-w-0">
-                    <nav class="text-[9px] font-semibold uppercase tracking-wider text-primary mb-1 flex items-center gap-1.5">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><polygon points="16 3 21 3 21 8"/><line x1="4" x2="21" y1="20" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" x2="21" y1="15" y2="21"/><line x1="4" x2="9" y1="4" y2="9"/></svg>
-                        Vehicle Telemetry
-                    </nav>
-                    <h2 class="text-lg font-bold text-on-surface tracking-tight truncate m-0 font-mono" id="intel-vehicle-id">—</h2>
-                    <div class="mt-1.5"><span id="intel-status-pill" class="status-pill" style="color:#6b7280;background:#6b72801f;border:1px solid #6b728040">—</span></div>
-                </div>
-                <button type="button" id="close-intel-btn"
-                    class="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container-high transition-colors active:scale-95 cursor-pointer">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                </button>
-            </div>
-
-            <div id="intel-content-live" class="space-y-3">
-                <div class="grid grid-cols-2 gap-2 font-mono">
-                    <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
-                        <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted">Live Speed</div>
-                        <div class="text-sm font-bold mt-0.5" id="intel-speed">— km/h</div>
-                    </div>
-                    <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
-                        <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted">Fuel Level</div>
-                        <div class="text-sm font-bold mt-0.5" id="intel-fuel">—</div>
-                    </div>
-                    <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
-                        <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted">Odometer</div>
-                        <div class="text-xs font-medium mt-0.5" id="intel-odo">—</div>
-                    </div>
-                    <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
-                        <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted">Heading</div>
-                        <div class="text-xs font-medium mt-0.5" id="intel-heading">—</div>
-                    </div>
-                </div>
-
-                <div id="intel-driver-card" class="flex items-center gap-2.5 p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
-                    <span class="driver-avatar" id="intel-driver-avatar" style="background:#137fec">?</span>
-                    <span class="min-w-0 flex-1">
-                        <span class="block text-[9px] font-medium uppercase tracking-wide text-text-muted">Driver</span>
-                        <span class="block text-xs font-semibold text-on-surface truncate mt-0.5" id="intel-driver">—</span>
+                <div class="flex items-center pl-2.5 pr-2 border-l border-border-subtle">
+                    <span class="text-[11px] font-medium text-on-surface whitespace-nowrap">
+                        <span class="text-primary font-mono text-xs" id="density-active">0</span> / <span class="opacity-60 font-mono" id="density-total">0</span> <span>vehicles</span>
                     </span>
                 </div>
+                <div class="flex items-center pl-2.5 pr-2 border-l border-border-subtle">
+                    <span class="text-[10px] font-mono text-text-muted whitespace-nowrap">Last telemetry: <span class="text-on-surface" id="last-telemetry-ago">—</span></span>
+                </div>
+                <button type="button" id="fit-bounds-btn" title="Zoom map to fit the current fleet view"
+                    class="ml-1 bg-surface-container-low border border-border-subtle rounded-lg px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-primary hover:bg-primary hover:text-on-primary hover:border-primary transition-colors cursor-pointer flex items-center gap-1.5">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><circle cx="12" cy="12" r="3"/><path d="M12 2v4"/><path d="m19.07 4.93-2.83 2.83"/><path d="M22 12h-4"/><path d="m19.07 19.07-2.83-2.83"/><path d="M12 22v-4"/><path d="m4.93 19.07 2.83-2.83"/><path d="M2 12h4"/><path d="m4.93 4.93 2.83 2.83"/></svg>
+                    <span>Fit</span>
+                </button>
+            </div>
+        </div>
 
-                <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle space-y-1.5 text-[11px]">
-                    <div class="flex items-center justify-between text-secondary">
-                        <span>Assigned Trip:</span>
-                        <span class="font-mono font-semibold text-primary" id="intel-trip">Unassigned</span>
+        <!-- ── Vehicle detail sheet (docked right) ── -->
+        <div id="intel-detail-panel" class="hidden absolute right-0 top-0 bottom-0 z-20 pointer-events-auto w-[320px] max-w-full flex-col bg-surface-container-lowest/95 backdrop-blur border-l border-border-subtle shadow-2xl text-xs text-on-surface panel-pop">
+
+            <!-- Header: plate + status + address + tabs -->
+            <div class="shrink-0 p-3 border-b border-border-subtle">
+                <div class="flex justify-between items-start gap-2">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                            <h2 class="text-base font-bold text-on-surface tracking-tight truncate m-0 font-mono" id="intel-vehicle-id">—</h2>
+                            <span id="intel-status-pill" class="status-pill" style="color:#6b7280;background:#6b72801f;border:1px solid #6b728040">—</span>
+                        </div>
+                        <div class="mt-0.5 font-mono text-[10px] text-text-muted leading-snug break-words min-h-[13px]" id="intel-address">—</div>
                     </div>
-                    <div class="flex items-center justify-between text-secondary">
-                        <span>Remaining:</span>
-                        <span class="font-mono text-on-surface" id="intel-remaining">—</span>
+                    <button type="button" id="close-intel-btn"
+                        class="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container-high transition-colors active:scale-95 cursor-pointer">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                </div>
+
+                <div class="mt-2.5 grid grid-cols-3 gap-1 bg-surface-container-low rounded-lg p-1 border border-border-subtle" role="tablist" aria-label="Vehicle detail tabs">
+                    <button type="button" data-sheet-tab="overview" role="tab" aria-selected="true"
+                        class="sheet-tab py-1.5 rounded-md text-[10px] font-semibold uppercase tracking-wide transition-colors cursor-pointer">Overview</button>
+                    <button type="button" data-sheet-tab="trip" role="tab" aria-selected="false"
+                        class="sheet-tab py-1.5 rounded-md text-[10px] font-semibold uppercase tracking-wide transition-colors cursor-pointer">Trip</button>
+                    <button type="button" data-sheet-tab="history" role="tab" aria-selected="false"
+                        class="sheet-tab py-1.5 rounded-md text-[10px] font-semibold uppercase tracking-wide transition-colors cursor-pointer">History</button>
+                </div>
+            </div>
+
+            <!-- Body: tab panels -->
+            <div class="flex-1 min-h-0 overflow-y-auto p-3">
+
+                <!-- ── Overview tab ── -->
+                <div id="sheet-tab-overview" class="space-y-3" role="tabpanel">
+                    <div class="grid grid-cols-2 gap-2 font-mono">
+                        <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
+                            <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted">Speed</div>
+                            <div class="text-sm font-bold mt-0.5" id="intel-speed">— km/h</div>
+                        </div>
+                        <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
+                            <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted">Fuel</div>
+                            <div class="text-sm font-bold mt-0.5" id="intel-fuel">—</div>
+                        </div>
+                        <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
+                            <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted">Odometer</div>
+                            <div class="text-xs font-medium mt-0.5" id="intel-odo">—</div>
+                        </div>
+                        <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
+                            <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted">Heading</div>
+                            <div class="text-xs font-medium mt-0.5" id="intel-heading">—</div>
+                        </div>
                     </div>
-                    <div class="flex items-center justify-between text-secondary">
-                        <span>ETA Horizon:</span>
-                        <span class="font-mono text-on-surface" id="intel-eta">—</span>
+
+                    <div>
+                        <div class="text-[9px] font-semibold uppercase tracking-wider text-text-muted mb-1.5">Current Trip</div>
+                        <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle space-y-1.5 text-[11px]">
+                            <div class="flex items-center justify-between text-secondary">
+                                <span>Trip ID:</span>
+                                <span class="font-mono font-semibold text-primary" id="intel-trip">Unassigned</span>
+                            </div>
+                            <div class="flex items-center justify-between text-secondary">
+                                <span>Remaining:</span>
+                                <span class="font-mono text-on-surface" id="intel-remaining">—</span>
+                            </div>
+                            <div class="flex items-center justify-between text-secondary">
+                                <span>ETA Horizon:</span>
+                                <span class="font-mono text-on-surface" id="intel-eta">—</span>
+                            </div>
+                            <div class="flex items-center justify-between text-secondary">
+                                <span>Coordinates:</span>
+                                <span class="font-mono text-on-surface text-[10px]" id="intel-coords">—</span>
+                            </div>
+                            <div class="flex items-center justify-between text-secondary">
+                                <span>Last GPS Update:</span>
+                                <span class="font-mono text-on-surface" id="intel-timestamp">—</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="flex items-center justify-between text-secondary">
-                        <span>Coordinates:</span>
-                        <span class="font-mono text-on-surface text-[10px]" id="intel-coords">—</span>
+
+                    <div id="intel-progress-wrap" class="hidden">
+                        <div class="flex items-center justify-between text-[9px] font-semibold uppercase tracking-wide text-text-muted mb-1.5">
+                            <span>Trip Progress</span>
+                            <span class="font-mono text-primary" id="intel-progress-pct">—</span>
+                        </div>
+                        <div class="h-1.5 rounded-full bg-surface-container-high overflow-hidden">
+                            <div id="intel-progress-bar" class="h-full rounded-full bg-primary transition-all duration-500 ease-out" style="width:0%"></div>
+                        </div>
                     </div>
-                    <div class="flex items-center justify-between text-secondary">
-                        <span>Last GPS Signal:</span>
-                        <span class="font-mono text-on-surface" id="intel-timestamp">—</span>
-                    </div>
-                    <div class="pt-1 border-t border-border-subtle">
-                        <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted mb-0.5">Nearest Address</div>
-                        <div class="font-mono text-on-surface text-[10px] leading-snug break-words min-h-[14px]" id="intel-address">—</div>
+
+                    <div>
+                        <div class="text-[9px] font-semibold uppercase tracking-wider text-text-muted mb-1.5">Driver</div>
+                        <div id="intel-driver-card" class="flex items-center gap-2.5 p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
+                            <span class="driver-avatar" id="intel-driver-avatar" style="background:#137fec">?</span>
+                            <span class="min-w-0 flex-1">
+                                <span class="block text-xs font-semibold text-on-surface truncate" id="intel-driver">—</span>
+                            </span>
+                            <span class="flex items-center gap-1 shrink-0">
+                                <a id="intel-driver-call" href="#" title="Call driver" aria-label="Call driver"
+                                    class="hidden h-7 w-7 items-center justify-center rounded-lg bg-surface-container-low border border-border-subtle text-primary hover:bg-primary hover:text-on-primary hover:border-primary transition-colors">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                                </a>
+                                <a id="intel-driver-sms" href="#" title="Message driver" aria-label="Message driver"
+                                    class="hidden h-7 w-7 items-center justify-center rounded-lg bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container-high transition-colors">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                                </a>
+                            </span>
+                        </div>
                     </div>
                 </div>
 
-                <div id="intel-progress-wrap" class="hidden">
-                    <div class="flex items-center justify-between text-[9px] font-semibold uppercase tracking-wide text-text-muted mb-1.5">
-                        <span>Trip Progress</span>
-                        <span class="font-mono text-primary" id="intel-progress-pct">—</span>
+                <!-- ── Trip tab (server summary: route, schedule, cargo) ── -->
+                <div id="sheet-tab-trip" class="hidden space-y-3" role="tabpanel">
+                    <div id="trip-summary-loading" class="hidden text-[10px] font-mono text-text-muted px-0.5">Loading trip…</div>
+                    <div id="trip-summary-empty" class="hidden p-4 text-center">
+                        <div class="text-[10px] font-semibold uppercase tracking-wide text-secondary">No active trip</div>
+                        <div class="text-[10px] font-mono text-text-muted/60 mt-1">This vehicle is not assigned to a trip</div>
                     </div>
-                    <div class="h-1.5 rounded-full bg-surface-container-high overflow-hidden">
-                        <div id="intel-progress-bar" class="h-full rounded-full bg-primary transition-all duration-500 ease-out" style="width:0%"></div>
+                    <div id="trip-summary-body" class="hidden space-y-3">
+                        <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle space-y-1.5 text-[11px]">
+                            <div class="flex items-center justify-between text-secondary">
+                                <span>Trip ID:</span>
+                                <span class="font-mono font-semibold text-primary" id="trip-sum-number">—</span>
+                            </div>
+                            <div class="flex items-center justify-between text-secondary">
+                                <span>Status:</span>
+                                <span class="font-mono text-on-surface" id="trip-sum-status">—</span>
+                            </div>
+                            <div class="flex items-center justify-between text-secondary">
+                                <span>Vehicle:</span>
+                                <span class="font-mono text-on-surface" id="trip-sum-vehicle">—</span>
+                            </div>
+                            <div class="flex items-center justify-between text-secondary">
+                                <span>Cargo:</span>
+                                <span class="font-mono text-on-surface" id="trip-sum-cargo">—</span>
+                            </div>
+                            <div class="flex items-center justify-between text-secondary">
+                                <span>Distance:</span>
+                                <span class="font-mono text-on-surface" id="trip-sum-distance">—</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="text-[9px] font-semibold uppercase tracking-wider text-text-muted mb-1.5">Route</div>
+                            <div id="trip-route-timeline" class="trip-timeline"></div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <a id="trip-sum-open-link" href="#" title="Open trip page"
+                                class="flex items-center justify-center gap-1.5 py-2 rounded-lg bg-surface-container-low hover:bg-surface-container-high border border-border-subtle text-secondary hover:text-on-surface font-semibold text-[10px] uppercase tracking-wide transition-colors text-decoration-none">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+                                Open Trip
+                            </a>
+                            <a id="trip-sum-playback-link" href="#" title="Animated route replay"
+                                class="flex items-center justify-center gap-1.5 py-2 rounded-lg bg-surface-container-low hover:bg-surface-container-high border border-border-subtle text-secondary hover:text-on-surface font-semibold text-[10px] uppercase tracking-wide transition-colors text-decoration-none">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                Playback
+                            </a>
+                        </div>
                     </div>
                 </div>
 
+                <!-- ── History tab (breadcrumbs, last 90 min) ── -->
+                <div id="sheet-tab-history" class="hidden space-y-3" role="tabpanel">
+                    <div id="history-loading" class="hidden text-[10px] font-mono text-text-muted px-0.5">Loading breadcrumbs…</div>
+                    <div id="history-empty" class="hidden p-4 text-center">
+                        <div class="text-[10px] font-semibold uppercase tracking-wide text-secondary">No breadcrumb data</div>
+                        <div class="text-[10px] font-mono text-text-muted/60 mt-1">Nothing recorded in the last 90 minutes</div>
+                    </div>
+                    <div id="history-body" class="hidden space-y-3">
+                        <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle space-y-1.5 text-[11px]">
+                            <div class="flex items-center justify-between text-secondary">
+                                <span>Breadcrumbs:</span>
+                                <span class="font-mono text-on-surface" id="history-count">—</span>
+                            </div>
+                            <div class="flex items-center justify-between text-secondary">
+                                <span>First seen:</span>
+                                <span class="font-mono text-on-surface" id="history-first">—</span>
+                            </div>
+                            <div class="flex items-center justify-between text-secondary">
+                                <span>Latest:</span>
+                                <span class="font-mono text-on-surface" id="history-last">—</span>
+                            </div>
+                            <div class="flex items-center justify-between text-secondary">
+                                <span>Trail distance:</span>
+                                <span class="font-mono text-on-surface" id="history-distance">—</span>
+                            </div>
+                        </div>
+                        <button type="button" id="history-show-trail-btn"
+                            class="w-full py-2 rounded-lg bg-surface-container-low hover:bg-surface-container-high border border-border-subtle text-secondary hover:text-on-surface font-semibold text-[10px] uppercase tracking-wide transition-colors cursor-pointer flex items-center justify-center gap-1.5">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/></svg>
+                            Show Trail on Map
+                        </button>
+                        <a id="history-playback-link" href="#" title="Animated route replay"
+                            class="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-surface-container-low hover:bg-surface-container-high border border-border-subtle text-secondary hover:text-on-surface font-semibold text-[10px] uppercase tracking-wide transition-colors text-decoration-none">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            Open Playback
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer actions -->
+            <div class="shrink-0 p-3 space-y-2 border-t border-border-subtle">
                 <button type="button" id="intel-focus-btn"
                     class="w-full py-2.5 rounded-lg bg-primary hover:bg-primary/90 active:scale-[0.98] text-on-primary font-semibold text-xs uppercase tracking-wide shadow transition-all cursor-pointer border-0 flex items-center justify-center gap-1.5">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="3"/><path d="M12 2v4"/><path d="M12 18v4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/><path d="M2 12h4"/><path d="M18 12h4"/></svg>
-                    Center on map
+                    Center on Map
                 </button>
 
                 <div class="grid grid-cols-2 gap-2">
@@ -358,9 +496,45 @@
 }
 .panel-pop { animation: panel-pop 0.16s ease-out; }
 
+/* ── Docked detail sheet: flex column when visible (ID beats utility order) ── */
+#intel-detail-panel:not(.hidden) { display: flex; flex-direction: column; }
+/* Sheet open: shift map attribution out from under the docked sheet (desktop). */
+@media (min-width: 1024px) {
+    #live-map.sheet-open .leaflet-control-attribution { margin-right: 328px; }
+}
+
+/* ── Trip route timeline (Trip tab) ── */
+.trip-timeline { position: relative; padding-left: 20px; }
+.trip-timeline::before {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    background: var(--border-subtle, #cbd5e1);
+    border-radius: 2px;
+}
+.trip-timeline-node { position: relative; padding: 2px 0 12px; }
+.trip-timeline-node:last-child { padding-bottom: 2px; }
+.trip-timeline-dot {
+    position: absolute;
+    left: -20px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 9999px;
+    background: #ffffff;
+    border: 3px solid #94a3b8;
+    box-sizing: border-box;
+}
+.trip-timeline-dot.done { border-color: #22c55e; }
+.trip-timeline-dot.current { border-color: #137fec; box-shadow: 0 0 0 3px #137fec26; }
+.dark .trip-timeline-dot { background: #0b1220; }
+
 /* ── Mobile adaptations (below lg) ──
-   Fleet drawer becomes an off-canvas slide-over; the vehicle panel docks
-   to the bottom as a sheet. ID selectors override the Tailwind utilities. */
+   Fleet drawer becomes an off-canvas slide-over; the vehicle sheet docks
+   to the bottom. ID selectors override the Tailwind utilities. */
 @media (max-width: 1023px) {
     #fleet-drawer {
         position: absolute;
@@ -374,14 +548,16 @@
 
     #intel-detail-panel {
         top: auto;
-        right: 12px;
-        bottom: 12px;
-        left: 12px;
-        width: auto;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        width: 100%;
         max-width: none;
-        transform: none;
-        max-height: 60%;
-        overflow-y: auto;
+        max-height: 62%;
+        border-left: none;
+        border-top: 1px solid var(--border-subtle, #cbd5e1);
+        border-radius: 16px 16px 0 0;
+        transform-origin: bottom center;
     }
 }
 </style>
@@ -414,6 +590,12 @@
         var s = v ? (v.vehicle_number || v.vehicle_id) : '';
         if (s && s.length > 12) { return s.slice(0, 12); }
         return s || '?';
+    }
+
+    // UUIDs are machine refs — shorten for human scanning; full value on hover.
+    function shortRef(id) {
+        var s = String(id || '');
+        return s.length > 14 ? s.slice(0, 8) + '…' : s;
     }
 
     // Null-safe position check: 0 is a valid coordinate.
@@ -676,6 +858,8 @@
         if (closeIntelBtn) {
             closeIntelBtn.addEventListener('click', function () {
                 if (intelPanel) intelPanel.classList.add('hidden');
+                map.getContainer().classList.remove('sheet-open');
+                historyFor = null;
                 state.selectedId = null;
                 highlightSelectedRow();
             });
@@ -713,8 +897,14 @@
             state.cursor = -1;
             if (switched) { clearTrail(); }
 
+            // New selection: reset lazy tabs + land on Overview.
+            historyFor = null;
+            if (switched) { switchSheetTab('overview'); }
+            loadTripSummary(v);
+
             if (intelPanel) {
                 intelPanel.classList.remove('hidden');
+                map.getContainer().classList.add('sheet-open');
                 if (intelVehicleId) intelVehicleId.textContent = v.vehicle_number || v.vehicle_id;
                 if (intelSpeed) {
                     intelSpeed.textContent = (v.speed || 0).toFixed(0) + ' km/h';
@@ -754,6 +944,7 @@
                         intelDriver.textContent = 'Unassigned';
                     }
                 }
+                paintDriverContacts(v);
                 if (intelStatusPill) {
                     var pc = iconColors[v.status] || '#6b7280';
                     intelStatusPill.textContent = statusLabels[v.status] || v.status || '—';
@@ -835,6 +1026,249 @@
             }, 400);
         }
 
+        // ── Detail sheet tabs (Overview | Trip | History) ──
+        var SHEET_TABS = ['overview', 'trip', 'history'];
+        var SHEET_TAB_BASE = 'sheet-tab py-1.5 rounded-md text-[10px] font-semibold uppercase tracking-wide transition-colors cursor-pointer ';
+        function switchSheetTab(name) {
+            if (SHEET_TABS.indexOf(name) === -1) { name = 'overview'; }
+            document.querySelectorAll('.sheet-tab').forEach(function (b) {
+                var active = b.getAttribute('data-sheet-tab') === name;
+                b.setAttribute('aria-selected', active ? 'true' : 'false');
+                b.className = SHEET_TAB_BASE +
+                    (active ? 'bg-primary text-on-primary shadow-sm' : 'text-secondary hover:text-on-surface hover:bg-surface-container-high');
+            });
+            SHEET_TABS.forEach(function (t) {
+                var panel = document.getElementById('sheet-tab-' + t);
+                if (panel) panel.classList.toggle('hidden', t !== name);
+            });
+            if (name === 'trip') {
+                var vt = findVehicle(state.selectedId);
+                if (vt) { loadTripSummary(vt); }
+            }
+            if (name === 'history') { loadHistoryTab(false); }
+        }
+        document.querySelectorAll('.sheet-tab').forEach(function (b) {
+            b.addEventListener('click', function () { switchSheetTab(this.getAttribute('data-sheet-tab')); });
+        });
+
+        function paintDriverContacts(v) {
+            var callBtn = document.getElementById('intel-driver-call');
+            var smsBtn = document.getElementById('intel-driver-sms');
+            [ [callBtn, 'tel:', v && v.driver_phone], [smsBtn, 'sms:', v && v.driver_phone] ].forEach(function (pair) {
+                var btn = pair[0];
+                if (!btn) { return; }
+                if (pair[2]) {
+                    btn.href = pair[1] + pair[2];
+                    btn.classList.remove('hidden');
+                    btn.classList.add('flex');
+                } else {
+                    btn.classList.add('hidden');
+                    btn.classList.remove('flex');
+                }
+            });
+        }
+
+        // ── Trip tab: server summary (route, schedule, cargo, timeline) ──
+        var tripAbort = null;
+        function loadTripSummary(v) {
+            var loadingEl = document.getElementById('trip-summary-loading');
+            var emptyEl = document.getElementById('trip-summary-empty');
+            var bodyEl = document.getElementById('trip-summary-body');
+            if (!bodyEl) { return; }
+            if (tripAbort) { tripAbort.abort(); tripAbort = null; }
+            if (!v || !v.trip_id) {
+                if (loadingEl) loadingEl.classList.add('hidden');
+                bodyEl.classList.add('hidden');
+                if (emptyEl) emptyEl.classList.remove('hidden');
+                return;
+            }
+            bodyEl.classList.add('hidden');
+            if (emptyEl) emptyEl.classList.add('hidden');
+            if (loadingEl) loadingEl.classList.remove('hidden');
+            tripAbort = new AbortController();
+            var selectedId = v.vehicle_id;
+            fetch('/api/v1/trips/' + encodeURIComponent(v.trip_id) + '/summary',
+                { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', signal: tripAbort.signal })
+                .then(function (resp) {
+                    if (!resp.ok) { throw new Error('HTTP ' + resp.status); }
+                    return resp.json();
+                })
+                .then(function (s) {
+                    if (state.selectedId !== selectedId) { return; }
+                    if (loadingEl) loadingEl.classList.add('hidden');
+                    renderTripTab(s, v);
+                })
+                .catch(function (err) {
+                    if (err && err.name === 'AbortError') { return; }
+                    if (state.selectedId !== selectedId) { return; }
+                    if (loadingEl) loadingEl.classList.add('hidden');
+                    bodyEl.classList.add('hidden');
+                    if (emptyEl) emptyEl.classList.remove('hidden');
+                });
+        }
+
+        function renderTripTab(s, v) {
+            var bodyEl = document.getElementById('trip-summary-body');
+            if (!bodyEl) { return; }
+            var set = function (id, txt) { var el = document.getElementById(id); if (el) { el.textContent = txt; } };
+            set('trip-sum-number', s.trip_number || s.trip_id || '—');
+            set('trip-sum-status', statusLabels[s.status] || s.status || '—');
+            set('trip-sum-vehicle', s.vehicle_number || (v ? v.vehicle_number : '') || '—');
+            set('trip-sum-cargo', s.cargo_weight_kg != null ? Number(s.cargo_weight_kg).toFixed(0) + ' kg' : '—');
+            var dist = '—';
+            if (s.route_km != null) {
+                dist = Number(s.route_km).toFixed(0) + ' km';
+                if (v && v.remaining_km != null && v.remaining_km >= 0) {
+                    dist += ' · ' + Number(v.remaining_km).toFixed(0) + ' km left';
+                }
+            }
+            set('trip-sum-distance', dist);
+
+            var openLink = document.getElementById('trip-sum-open-link');
+            var pbLink = document.getElementById('trip-sum-playback-link');
+            if (openLink) { openLink.href = '/trips/' + encodeURIComponent(s.trip_id); }
+            if (pbLink) { pbLink.href = '/trips/' + encodeURIComponent(s.trip_id) + '/playback'; }
+
+            renderRouteTimeline(s, v);
+            bodyEl.classList.remove('hidden');
+        }
+
+        // Route timeline: only real timestamps (execution timeline, schedule,
+        // live ETA). No invented waypoints — unknowns render as pending.
+        function renderRouteTimeline(s, v) {
+            var wrap = document.getElementById('trip-route-timeline');
+            if (!wrap) { return; }
+            var done = s.status === 'delivered' || s.status === 'completed';
+
+            var startTime = s.in_transit_at || s.delivered_at || s.completed_at || s.started_at || s.reached_pickup_at || s.departure_time;
+            var startTag = (s.in_transit_at || s.delivered_at || s.completed_at || s.started_at) ? 'Departed'
+                : (s.reached_pickup_at ? 'At pickup' : 'Scheduled');
+            var startState = startTime ? (done ? 'done' : 'current') : 'pending';
+
+            var midTag = ({ draft: 'Draft', scheduled: 'Scheduled', assigned: 'Assigned', started: 'Started',
+                reached_pickup: 'At pickup', in_transit: 'In Transit', delivered: 'Delivered',
+                completed: 'Completed', cancelled: 'Cancelled' })[s.status] || s.status || '—';
+            var midState = done ? 'done' : (s.status === 'in_transit' ? 'current' : 'pending');
+
+            var endTime = null;
+            var endTag = 'Expected';
+            if (done) {
+                endTime = s.completed_at || s.delivered_at;
+                endTag = 'Delivered';
+            } else if (v && v.eta_min && v.eta_max) {
+                endTime = v.eta_min;
+                endTag = 'ETA';
+            } else if (s.arrival_time) {
+                endTime = s.arrival_time;
+            }
+            var endState = done ? 'done' : 'pending';
+
+            var nodes = [
+                { label: s.origin || 'Origin', time: startTime, state: startState, tag: startTag },
+                { label: midTag, time: null, state: midState, tag: '' },
+                { label: s.destination || 'Destination', time: endTime, state: endState, tag: endTag }
+            ];
+            var stateColor = { done: '#22c55e', current: '#137fec', pending: '#6b7280' };
+            var html = '';
+            nodes.forEach(function (n) {
+                html += '<div class="trip-timeline-node">' +
+                    '<span class="trip-timeline-dot ' + n.state + '" aria-hidden="true"></span>' +
+                    '<div class="flex items-baseline justify-between gap-2">' +
+                      '<span class="text-xs font-semibold text-on-surface truncate">' + esc(n.label) + '</span>' +
+                      (n.tag ? '<span class="text-[9px] font-semibold uppercase tracking-wide shrink-0" style="color:' + stateColor[n.state] + '">' + esc(n.tag) + '</span>' : '') +
+                    '</div>' +
+                    (n.time ? '<div class="text-[10px] font-mono text-text-muted mt-0.5">' + esc(fmtTime(n.time)) + '</div>' : '') +
+                  '</div>';
+            });
+            wrap.innerHTML = html;
+        }
+
+        // ── History tab: breadcrumb stats (last 90 min) ──
+        var historyFor = null;
+        var historyAbort = null;
+        function haversineKm(a, b) {
+            var R = 6371.0088;
+            var toRad = function (d) { return d * Math.PI / 180; };
+            var dLat = toRad(b.lat - a.lat);
+            var dLng = toRad(b.lng - a.lng);
+            var sa = Math.sin(dLat / 2);
+            var so = Math.sin(dLng / 2);
+            var h = sa * sa + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * so * so;
+            return 2 * R * Math.asin(Math.sqrt(h));
+        }
+        function loadHistoryTab(force) {
+            var vid = state.selectedId;
+            var bodyEl = document.getElementById('history-body');
+            if (!bodyEl || !vid) { return; }
+            if (!force && historyFor === vid) { return; }
+            if (historyAbort) { historyAbort.abort(); }
+            var loadingEl = document.getElementById('history-loading');
+            var emptyEl = document.getElementById('history-empty');
+            bodyEl.classList.add('hidden');
+            if (emptyEl) { emptyEl.classList.add('hidden'); }
+            if (loadingEl) { loadingEl.classList.remove('hidden'); }
+            historyFor = vid;
+            historyAbort = new AbortController();
+            fetch('/api/v1/telemetry/history?vehicle_id=' + encodeURIComponent(vid) + '&minutes=90&limit=500',
+                { headers: { 'Accept': 'application/json' }, credentials: 'same-origin', signal: historyAbort.signal })
+                .then(function (resp) {
+                    if (!resp.ok) { throw new Error('HTTP ' + resp.status); }
+                    return resp.json();
+                })
+                .then(function (points) {
+                    if (state.selectedId !== vid) { return; }
+                    if (loadingEl) { loadingEl.classList.add('hidden'); }
+                    if (!points || points.length === 0) {
+                        bodyEl.classList.add('hidden');
+                        if (emptyEl) { emptyEl.classList.remove('hidden'); }
+                        return;
+                    }
+                    var set = function (id, txt) { var el = document.getElementById(id); if (el) { el.textContent = txt; } };
+                    set('history-count', String(points.length));
+                    set('history-first', fmtTime(points[0].ts));
+                    set('history-last', fmtTime(points[points.length - 1].ts));
+                    var distKm = 0;
+                    for (var i = 1; i < points.length; i++) { distKm += haversineKm(points[i - 1], points[i]); }
+                    set('history-distance', distKm >= 0.05 ? distKm.toFixed(1) + ' km' : '< 50 m');
+                    var pb = document.getElementById('history-playback-link');
+                    var v = findVehicle(vid);
+                    if (pb) { pb.href = (v && v.trip_id) ? '/trips/' + encodeURIComponent(v.trip_id) + '/playback' : '#'; }
+                    bodyEl.classList.remove('hidden');
+                })
+                .catch(function (err) {
+                    if (err && err.name === 'AbortError') { return; }
+                    if (state.selectedId !== vid) { return; }
+                    if (loadingEl) { loadingEl.classList.add('hidden'); }
+                    if (emptyEl) { emptyEl.classList.remove('hidden'); }
+                });
+        }
+        var historyTrailBtn = document.getElementById('history-show-trail-btn');
+        if (historyTrailBtn) {
+            historyTrailBtn.addEventListener('click', function () {
+                clearTrail();
+                fetchTrail(state.selectedId, { fit: true });
+                switchSheetTab('overview');
+            });
+        }
+
+        // ── Manual refresh + last-telemetry ticker ──
+        var refreshBtn = document.getElementById('refresh-feed-btn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function () {
+                refresh();
+                var svg = refreshBtn.querySelector('svg');
+                if (svg) {
+                    svg.style.transition = 'transform 0.5s ease';
+                    svg.style.transform = 'rotate(360deg)';
+                    setTimeout(function () { svg.style.transform = ''; svg.style.transition = ''; }, 500);
+                }
+            });
+        }
+        setInterval(function () {
+            var el = document.getElementById('last-telemetry-ago');
+            if (el) { el.textContent = agoLabel(new Date(lastDataTs).toISOString()); }
+        }, 5000);
+
         function updateMetrics(list) {
             var running = 0, stopped = 0, alerts = 0;
             list.forEach(function (v) {
@@ -852,6 +1286,13 @@
             if (elCountRunning) elCountRunning.textContent = running;
             if (elCountStopped) elCountStopped.textContent = stopped;
             if (elCountAlert) elCountAlert.textContent = alerts;
+
+            // Panel tab counts (second chip set, same state)
+            var panelCounts = { all: list.length, running: running, stopped: stopped, alert: alerts };
+            Object.keys(panelCounts).forEach(function (k) {
+                var el = document.getElementById('panel-count-' + k);
+                if (el) el.textContent = panelCounts[k];
+            });
 
             var elDensityActive = document.getElementById('density-active');
             var elDensityTotal = document.getElementById('density-total');
@@ -1063,11 +1504,11 @@
             var sel = state.selectedId === v.vehicle_id;
             var cursor = state.cursor >= 0 && fleetRows[state.cursor] === v;
             var num = esc(v.vehicle_number || v.vehicle_id);
-            var sub = v.trip_id ? esc(v.trip_id) : esc(v.vehicle_id);
+            var who = v.driver_name ? esc(v.driver_name) : (v.trip_id ? esc(v.trip_id) : 'Unassigned');
             var when = agoLabel(v.ts || v.timestamp);
             var speeding = (v.speed || 0) > SPEED_LIMIT_KMH;
             var flashing = flashUntil[v.vehicle_id] && flashUntil[v.vehicle_id] > Date.now();
-            var classes = 'fleet-row absolute left-0 right-0 text-left pl-4 pr-3.5 py-2.5 flex items-center gap-3 border-b border-border-subtle cursor-pointer' +
+            var classes = 'fleet-row absolute left-0 right-0 text-left px-4 py-2 flex flex-col justify-center gap-1 border-b border-border-subtle cursor-pointer' +
                 (sel ? ' bg-primary/10' : ' hover:bg-surface-container-high') +
                 (flashing ? ' fleet-row-flash' : '') +
                 (cursor && !sel ? ' fleet-row-cursor' : '');
@@ -1075,17 +1516,17 @@
                 ' class="' + classes + '"' +
                 ' style="top:' + ((slot || 0) * fleetRowH) + 'px;height:' + fleetRowH + 'px">' +
                 '<span class="absolute left-0 top-0 bottom-0 w-[3px]" style="background:' + color + ';opacity:' + (sel ? '1' : '0.5') + '" aria-hidden="true"></span>' +
-                '<span class="relative flex items-center justify-center shrink-0">' +
-                  '<span class="h-2 w-2 rounded-full" style="background:' + color + ';box-shadow:0 0 0 3px ' + color + '26"></span>' +
-                  (v.status === 'running' ? '<span class="absolute h-3.5 w-3.5 rounded-full animate-ping opacity-25" style="background:' + color + '"></span>' : '') +
+                '<span class="flex items-center gap-2 min-w-0">' +
+                  '<span class="relative flex items-center justify-center shrink-0">' +
+                    '<span class="h-2 w-2 rounded-full" style="background:' + color + ';box-shadow:0 0 0 3px ' + color + '26"></span>' +
+                    (v.status === 'running' ? '<span class="absolute h-3.5 w-3.5 rounded-full animate-ping opacity-25" style="background:' + color + '"></span>' : '') +
+                  '</span>' +
+                  '<span class="flex-1 min-w-0 text-xs font-bold text-on-surface truncate uppercase tracking-wide">' + num + '</span>' +
+                  '<span class="inline-flex items-center px-1.5 py-0.5 rounded-md font-mono text-[11px] font-bold leading-none shrink-0 transition-transform" style="color:' + (speeding ? '#ef4444' : color) + ';background:' + (speeding ? '#ef44441a' : color + '14') + '">' + (speeding ? '⚡' : '') + (v.speed || 0).toFixed(0) + '</span>' +
                 '</span>' +
-                '<span class="flex-1 min-w-0">' +
-                  '<span class="block text-xs font-bold text-on-surface truncate uppercase tracking-wide">' + num + '</span>' +
-                  '<span class="block text-[10px] font-mono text-text-muted truncate mt-0.5">' + sub + ' · <span class="opacity-70">' + esc(when) + '</span></span>' +
-                '</span>' +
-                '<span class="flex flex-col items-end gap-1 shrink-0">' +
-                  '<span class="inline-flex items-center px-1.5 py-0.5 rounded-md font-mono text-[11px] font-bold leading-none transition-transform" style="color:' + (speeding ? '#ef4444' : color) + ';background:' + (speeding ? '#ef44441a' : color + '14') + '">' + (speeding ? '⚡' : '') + (v.speed || 0).toFixed(0) + '</span>' +
-                  '<span class="status-pill" style="color:' + color + ';background:' + color + '14">' + esc(statusLabels[v.status] || v.status || '?') + '</span>' +
+                '<span class="flex items-center gap-1.5 min-w-0 pl-4">' +
+                  '<span class="flex-1 min-w-0 text-[10px] text-text-muted truncate">' + who + ' · <span class="opacity-70">' + esc(when) + '</span></span>' +
+                  '<span class="status-pill shrink-0" style="color:' + color + ';background:' + color + '14">' + esc(statusLabels[v.status] || v.status || '?') + '</span>' +
                 '</span>' +
               '</button>';
         }
@@ -1153,12 +1594,12 @@
 
         // Invisible single-row template used only to measure row height.
         function rowHTMLProbe() {
-            return '<button type="button" tabindex="-1" class="fleet-row w-full text-left pl-4 pr-3.5 py-2.5 flex items-center gap-3 border-b border-border-subtle">' +
-                '<span class="relative flex items-center justify-center shrink-0"><span class="h-2 w-2 rounded-full" style="background:#334155"></span></span>' +
-                '<span class="flex-1 min-w-0"><span class="block text-xs font-bold text-on-surface uppercase tracking-wide">XX-00-XX-0000</span>' +
-                '<span class="block text-[10px] font-mono mt-0.5">trip-probe · 99m ago</span></span>' +
-                '<span class="flex flex-col items-end gap-1 shrink-0"><span class="inline-flex items-center px-1.5 py-0.5 rounded-md font-mono text-[11px] font-bold leading-none">000</span>' +
-                '<span class="status-pill" style="color:#334155;background:#33415514">Moving</span></span></button>';
+            return '<button type="button" tabindex="-1" class="fleet-row w-full text-left px-4 py-2 flex flex-col justify-center gap-1 border-b border-border-subtle">' +
+                '<span class="flex items-center gap-2 min-w-0"><span class="relative flex items-center justify-center shrink-0"><span class="h-2 w-2 rounded-full" style="background:#334155"></span></span>' +
+                '<span class="flex-1 min-w-0 text-xs font-bold text-on-surface uppercase tracking-wide">XX-00-XX-0000</span>' +
+                '<span class="inline-flex items-center px-1.5 py-0.5 rounded-md font-mono text-[11px] font-bold leading-none shrink-0">000</span></span>' +
+                '<span class="flex items-center gap-1.5 min-w-0 pl-4"><span class="flex-1 min-w-0 text-[10px] text-text-muted truncate">Driver Name · 99m ago</span>' +
+                '<span class="status-pill shrink-0" style="color:#334155;background:#33415514">Moving</span></span></button>';
         }
 
         function paintWindow() {
@@ -1214,7 +1655,7 @@
                 var selectedClass = (idx === selectedResultIndex) ? ' bg-primary/10 border-primary/30' : ' bg-transparent border-transparent';
                 html += '<button type="button" data-vid="' + esc(v.vehicle_id) + '" class="search-result-row w-full text-left px-3 py-2.5 flex items-center gap-3 hover:bg-surface-container-low transition-colors border-l-2' + selectedClass + '" style="border-left-color:' + (idx === selectedResultIndex ? dot : 'transparent') + '">'
                       + '<span class="h-2 w-2 rounded-full shrink-0" style="background:' + dot + '"></span>'
-                      + '<div class="flex-1 min-w-0"><div class="text-xs font-bold text-on-surface truncate">' + esc(v.vehicle_number || v.vehicle_id) + '</div><div class="text-[10px] font-mono text-text-muted truncate">' + esc(v.vehicle_id) + (v.trip_id ? ' · ' + esc(v.trip_id) : '') + '</div></div>'
+                      + '<div class="flex-1 min-w-0"><div class="text-xs font-bold text-on-surface truncate">' + esc(v.vehicle_number || v.vehicle_id) + '</div><div class="text-[10px] font-mono text-text-muted truncate" title="' + esc(v.vehicle_id) + '">' + esc(shortRef(v.vehicle_id)) + (v.trip_id ? ' · ' + esc(v.trip_id) : '') + '</div></div>'
                       + '<div class="text-right shrink-0"><div class="text-[10px] font-mono font-medium" style="color:' + dot + '">' + esc(statusLabels[v.status] || v.status || '?') + '</div><div class="text-[10px] font-mono text-text-muted">' + (v.speed || 0).toFixed(0) + ' km/h</div></div>'
                       + '</button>';
             });

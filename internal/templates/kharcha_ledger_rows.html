@@ -2,7 +2,7 @@
 {{if .LedgerEntries}}
 <div class="overflow-x-auto">
 <table class="min-w-full divide-y divide-border-subtle text-sm">
-    <thead>
+    <thead class="bg-surface-container-low">
         <tr>
             <th class="th-cell">Driver</th>
             <th class="th-cell">Category</th>
@@ -15,51 +15,50 @@
     </thead>
     <tbody class="divide-y divide-border-subtle">
         {{range .LedgerEntries}}
-        <tr class="hover:bg-surface-container-low transition-colors">
-            <td class="px-4 py-2.5 text-sm font-medium text-on-surface">{{.DriverName}}</td>
-            <td class="px-4 py-2.5">
-                <span class="px-2 py-1 rounded-full text-xs font-medium
-                    {{if eq .Category "advance"}}bg-status-info/10 text-status-info
-                    {{else if eq .Category "fuel"}}bg-status-warning/10 text-status-warning
-                    {{else if eq .Category "toll"}}bg-primary/10 text-primary
-                    {{else if eq .Category "food"}}bg-status-success/10 text-status-success
-                    {{else if eq .Category "repair"}}bg-status-alert/10 text-status-alert
-                    {{else}}bg-surface-container-low text-secondary{{end}}">
+        <tr class="hover:bg-surface-container-low/50 transition-colors">
+            <td class="px-3 py-2 text-sm font-semibold text-on-surface">{{.DriverName}}</td>
+            <td class="px-3 py-2">
+                <span class="inline-flex px-2 py-0.5 rounded-full border text-[11px] font-bold
+                    {{if eq .Category "advance"}}bg-blue-500/10 border-blue-500/15 text-blue-700 dark:text-blue-300
+                    {{else if eq .Category "fuel"}}bg-amber-500/10 border-amber-500/15 text-amber-700 dark:text-amber-300
+                    {{else if eq .Category "toll"}}bg-primary/10 border-primary/15 text-primary
+                    {{else if eq .Category "food"}}bg-emerald-500/10 border-emerald-500/15 text-emerald-700 dark:text-emerald-300
+                    {{else if eq .Category "repair"}}bg-rose-500/10 border-rose-500/15 text-rose-700 dark:text-rose-300
+                    {{else}}bg-surface-container border-border-subtle text-secondary{{end}}">
                     {{.Category}}
                 </span>
             </td>
-            <td class="px-4 py-2.5 text-sm text-text-muted font-mono text-xs">{{.TripNumber}}</td>
-            <td class="px-4 py-2.5 text-sm text-text-muted max-w-xs truncate">{{.Description}}</td>
-            <td class="px-4 py-2.5 text-sm text-right font-medium text-on-surface tabular-nums" data-numeric>₹{{priceFormat .Amount}}</td>
-            <td class="px-4 py-2.5">
-                <span class="px-2 py-1 rounded-full text-xs font-medium {{statusBadge .Status}}">
-                    {{.Status}}
-                </span>
+            <td class="px-3 py-2 text-xs font-semibold text-primary tabular-nums">{{.TripNumber}}</td>
+            <td class="px-3 py-2 text-sm text-text-muted max-w-xs truncate">{{.Description}}</td>
+            <td class="px-3 py-2 text-sm text-right font-bold text-on-surface tabular-nums" data-numeric>₹{{priceFormat .Amount}}</td>
+            <td class="px-3 py-2">
+                <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
             </td>
-            <td class="px-4 py-2.5 text-sm text-text-muted text-xs">{{datetime .CreatedAt}}</td>
+            <td class="px-3 py-2 text-xs text-text-muted tabular-nums">{{datetime .CreatedAt}}</td>
         </tr>
         {{end}}
     </tbody>
 </table>
 </div>
 {{else}}
-    <div class="py-12 text-center">
-        <p class="text-text-muted text-sm">No expense records found.</p>
+<div class="py-12 text-center">
+    <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/></svg></div>
+    <p class="text-sm font-medium text-on-surface mt-3">No expense records found</p>
+    <p class="text-xs text-text-muted">Approved expenses land here in real time</p>
 </div>
 {{end}}
 {{end}}
 
 {{define "kharcha_row_approved.html"}}
-<div class="px-4 py-2 flex items-center gap-4 bg-status-success/10 border-l-4 border-status-success/30 transition-all"
+<div class="px-4 sm:px-5 py-2.5 flex items-center gap-4 bg-status-success/[0.07] border-l-4 border-status-success/30 transition-all"
      id="expense-row-{{.ID}}">
-    <div class="w-10 h-10 rounded-full bg-status-success/10 flex items-center justify-center shrink-0">
+    <div class="w-9 h-9 rounded-lg bg-status-success/10 grid place-items-center shrink-0">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
     </div>
     <div class="flex-1 min-w-0">
-        <p class="text-sm font-semibold text-status-success">Approved — {{.DriverName}}</p>
-        <p class="text-xs text-status-success mt-0.5">₹{{priceFormat .Amount}} · {{.Category}} · {{datetime .CreatedAt}}</p>
+        <p class="text-sm font-bold text-status-success">Approved — {{.DriverName}}</p>
+        <p class="text-xs text-status-success mt-0.5 tabular-nums">₹{{priceFormat .Amount}} · {{.Category}} · {{datetime .CreatedAt}}</p>
     </div>
-    <span class="px-2 py-1 rounded-full bg-status-success/10 text-status-success text-xs font-medium">Approved</span>
+    <span class="inline-flex px-2 py-1 rounded-full bg-status-success/10 border border-status-success/20 text-status-success text-[11px] font-bold">Approved</span>
 </div>
 {{end}}
-

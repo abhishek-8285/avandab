@@ -163,7 +163,7 @@ func (s *DeviceStore) ListByTenant(ctx context.Context, tenantID string, limit, 
 	if err != nil {
 		return nil, fmt.Errorf("list devices: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	return scanDevices(rows)
 }
 
@@ -172,6 +172,58 @@ func (s *DeviceStore) CountByTenant(ctx context.Context, tenantID string) (int64
 	var n int64
 	err := s.db.QueryRowContext(ctx,
 		`SELECT count(*) FROM telemetry_devices WHERE tenant_id = ?`, tenantID).Scan(&n)
+	return n, err
+}
+
+// deviceDateClause filters on created_at using date(substr(...)) because
+// SQLite stores timestamps as text in mixed formats (RFC3339 from Go,
+// 'YYYY-MM-DD HH:MM:SS' from CURRENT_TIMESTAMP) — only the prefix is stable.
+const deviceDateClause = `
+		 AND (? = '' OR date(substr(created_at,1,10)) >= date(?))
+		 AND (? = '' OR date(substr(created_at,1,10)) <= date(?))`
+
+// ListByTenantFiltered returns devices for a tenant filtered by free-text
+// query (imei/serial/vehicle), status and a created_at window, with
+// pagination. Used by the devices list page filter bar.
+func (s *DeviceStore) ListByTenantFiltered(ctx context.Context, tenantID string, query, status, from, to string, limit, offset int) ([]Device, error) {
+	qPattern := "%" + query + "%"
+	rows, err := s.db.QueryContext(ctx,
+		`SELECT id, tenant_id, imei, serial_number, firmware_version,
+		        sim_number, iccid, warranty_until, device_type, status,
+		        vehicle_id, customer_id, activated_at, last_seen_at,
+		        device_secret_hash, created_at, updated_at
+		 FROM telemetry_devices
+		 WHERE tenant_id = ?
+		   AND (? = '' OR imei LIKE ? OR serial_number LIKE ? OR vehicle_id LIKE ?)
+		   AND (? = '' OR status = ?)`+deviceDateClause+`
+		 ORDER BY last_seen_at IS NULL, last_seen_at DESC, imei
+		 LIMIT ? OFFSET ?`,
+		tenantID,
+		query, qPattern, qPattern, qPattern,
+		status, status,
+		from, from, to, to,
+		limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("list devices filtered: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	return scanDevices(rows)
+}
+
+// CountByTenantFiltered counts devices matching the same filters as
+// ListByTenantFiltered.
+func (s *DeviceStore) CountByTenantFiltered(ctx context.Context, tenantID string, query, status, from, to string) (int64, error) {
+	qPattern := "%" + query + "%"
+	var n int64
+	err := s.db.QueryRowContext(ctx,
+		`SELECT count(*) FROM telemetry_devices
+		 WHERE tenant_id = ?
+		   AND (? = '' OR imei LIKE ? OR serial_number LIKE ? OR vehicle_id LIKE ?)
+		   AND (? = '' OR status = ?)`+deviceDateClause,
+		tenantID,
+		query, qPattern, qPattern, qPattern,
+		status, status,
+		from, from, to, to).Scan(&n)
 	return n, err
 }
 

@@ -62,6 +62,8 @@ func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
 		Limit:    pp.Limit,
 		Search:   pp.Query,
 		Status:   pp.Status,
+		DateFrom: pp.DateFrom,
+		DateTo:   pp.DateTo,
 	})
 	if err != nil {
 		http.Error(w, "Failed to list vehicles", http.StatusInternalServerError)
@@ -69,6 +71,8 @@ func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pd := newPaginationData(pp, res.Total, "/vehicles")
+	pd.From = pp.DateFrom
+	pd.To = pp.DateTo
 
 	if isDatastarRequest(r) {
 		h.renderFragment(w, "vehicle_list_table.html", map[string]interface{}{
@@ -76,6 +80,9 @@ func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
 			"Pagination":   pd,
 			"Query":        pp.Query,
 			"StatusFilter": pp.Status,
+			"DateFrom":     pp.DateFrom,
+			"DateTo":       pp.DateTo,
+			"KPIs":         h.vehicleKPIs(r.Context()),
 		})
 		return
 	}
@@ -83,7 +90,7 @@ func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "vehicle_list.html", PageData{
 		Title: "Vehicles",
 		User:  session,
-		Extra: map[string]interface{}{"Vehicles": res.Vehicles, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "KPIs": h.vehicleKPIs(r.Context())},
+		Extra: map[string]interface{}{"Vehicles": res.Vehicles, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.vehicleKPIs(r.Context())},
 	})
 }
 

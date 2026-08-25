@@ -1,171 +1,203 @@
 <a href="/vehicles" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Vehicles</a>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-    <div class="lg:col-span-2 space-y-6">
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
-            <div class="flex justify-between items-start mb-4 gap-4 flex-wrap">
-                <div>
-                    <h1 class="text-xl font-semibold text-on-surface font-display">{{.Vehicle.VehicleNumber}}</h1>
-                    <p class="text-sm text-text-muted mt-1"><span class="font-mono">{{.Vehicle.RegistrationNumber}}</span> · {{.Vehicle.VehicleType}}</p>
+<div class="space-y-5 max-w-[1600px] mx-auto">
+
+<div class="relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm">
+    <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-violet-500 to-cyan-400 opacity-90"></div>
+    <div class="p-5 pt-6">
+        <div class="flex items-start justify-between gap-4 flex-wrap">
+            <div class="min-w-0">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Fleet Unit</p>
+                <div class="flex items-center gap-3 flex-wrap mt-0.5">
+                    <h1 class="text-2xl font-bold tracking-tight text-on-surface font-display tabular-nums">{{.Vehicle.RegistrationNumber}}</h1>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full {{statusBadge .Vehicle.Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Vehicle.Status}}</span>
                 </div>
-                <div class="flex items-center gap-2">
-                    {{template "btn.html" (dict "Label" "Edit" "Href" (printf "/vehicles/%s/edit" .Vehicle.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit")}}
-                    <form method="POST" action="/vehicles/{{.Vehicle.ID}}/delete" data-confirm="Are you sure? This cannot be undone." class="inline">
-                        {{template "btn.html" (dict "Label" "Delete" "Type" "submit" "Variant" "danger" "Size" "sm" "Icon" "delete")}}
-                    </form>
+                <div class="flex items-center gap-2 mt-2 flex-wrap text-xs">
+                    <span class="inline-flex px-2 py-1 rounded-full bg-surface-container border border-border-subtle font-semibold text-secondary tabular-nums">{{.Vehicle.VehicleNumber}}</span>
+                    <span class="inline-flex px-2 py-1 rounded-full bg-surface-container border border-border-subtle font-medium text-secondary capitalize">{{.Vehicle.VehicleType}}</span>
+                    <span class="inline-flex px-2 py-1 rounded-full bg-surface-container border border-border-subtle font-medium text-secondary uppercase tracking-wide">{{.Vehicle.FuelType}}</span>
                 </div>
             </div>
-
-            <dl class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5 pt-5 border-t border-border-subtle">
-                <div class="rounded-lg bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Status</dt>
-                    <dd class="mt-1"><span class="status-badge {{statusBadge .Vehicle.Status}}">{{.Vehicle.Status}}</span></dd>
-                </div>
-                <div class="rounded-lg bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Fuel</dt>
-                    <dd class="text-sm font-semibold text-on-surface capitalize mt-1">{{.Vehicle.FuelType}}</dd>
-                </div>
-                <div class="rounded-lg bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Capacity</dt>
-                    <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{print .Vehicle.Capacity}}</dd>
-                </div>
-                <div class="rounded-lg bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Odometer</dt>
-                    <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{print .Vehicle.CurrentMileage}} km</dd>
-                </div>
-            </dl>
+            <div class="flex items-center gap-2 shrink-0">
+                {{template "btn.html" (dict "Label" "Edit" "Href" (printf "/vehicles/%s/edit" .Vehicle.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit")}}
+                <form method="POST" action="/vehicles/{{.Vehicle.ID}}/delete" data-confirm="Are you sure? This cannot be undone." class="inline">
+                    {{template "btn.html" (dict "Label" "Delete" "Type" "submit" "Variant" "danger" "Size" "sm" "Icon" "delete")}}
+                </form>
+            </div>
         </div>
 
-        <section class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
-            <h3 class="text-base font-semibold text-on-surface font-display mb-4">Compliance</h3>
-            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                <div class="sm:col-span-2">
-                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Documents</dt>
-                    <dd class="mt-2">
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                            {{range .DocCards}}
-                            <div class="rounded-lg border border-border-subtle bg-surface-container-low p-3">
-                                <p class="text-[11px] font-semibold uppercase tracking-wider text-secondary">{{.Name}}</p>
-                                {{if .HasDate}}
-                                <p class="text-sm font-semibold text-on-surface mt-1 tabular-nums">{{.Expiry}}</p>
-                                {{if lt .Days 0}}
-                                <span class="inline-flex mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-status-alert/10 text-status-alert border border-status-alert/20">EXPIRED</span>
-                                {{else if lt .Days 30}}
-                                <span class="inline-flex mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-status-warning/10 text-status-warning border border-status-warning/20">{{.Days}} days left</span>
-                                {{else}}
-                                <span class="inline-flex mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-status-success/10 text-status-success border border-status-success/20">{{.Days}} days left</span>
-                                {{end}}
-                                {{else}}
-                                <p class="text-sm text-text-muted mt-1">Not on record</p>
+        <dl class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5 pt-5 border-t border-border-subtle">
+            <div class="rounded-xl bg-surface-container-low p-3">
+                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Status</dt>
+                <dd class="mt-1"><span class="status-badge {{statusBadge .Vehicle.Status}}">{{.Vehicle.Status}}</span></dd>
+            </div>
+            <div class="rounded-xl bg-surface-container-low p-3">
+                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Fuel</dt>
+                <dd class="text-sm font-semibold text-on-surface capitalize mt-1">{{.Vehicle.FuelType}}</dd>
+            </div>
+            <div class="rounded-xl bg-surface-container-low p-3">
+                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Capacity</dt>
+                <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{print .Vehicle.Capacity}}</dd>
+            </div>
+            <div class="rounded-xl bg-surface-container-low p-3">
+                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Odometer</dt>
+                <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{print .Vehicle.CurrentMileage}} km</dd>
+            </div>
+        </dl>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+    <div class="lg:col-span-2 space-y-4">
+        <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+                <div>
+                    <h3 class="text-sm font-bold text-on-surface">Compliance</h3>
+                    <p class="text-xs text-text-muted">Document expiry and maintenance standing</p>
+                </div>
+            </div>
+            <div class="p-5">
+                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                    <div class="sm:col-span-2">
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Documents</dt>
+                        <dd class="mt-2">
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {{range .DocCards}}
+                                <div class="rounded-xl border border-border-subtle bg-surface-container-low p-3">
+                                    <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">{{.Name}}</p>
+                                    {{if .HasDate}}
+                                    <p class="text-sm font-bold text-on-surface mt-1 tabular-nums" data-numeric>{{.Expiry}}</p>
+                                    {{if lt .Days 0}}
+                                    <span class="inline-flex mt-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-status-alert/10 text-status-alert border border-status-alert/20">EXPIRED</span>
+                                    {{else if lt .Days 30}}
+                                    <span class="inline-flex mt-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-status-warning/10 text-status-warning border border-status-warning/20 tabular-nums">{{.Days}} days left</span>
+                                    {{else}}
+                                    <span class="inline-flex mt-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-status-success/10 text-status-success border border-status-success/20 tabular-nums">{{.Days}} days left</span>
+                                    {{end}}
+                                    {{else}}
+                                    <p class="text-sm text-text-muted mt-1">Not on record</p>
+                                    {{end}}
+                                </div>
                                 {{end}}
                             </div>
+                        </dd>
+                    </div>
+                    <div class="pt-3 border-t border-border-subtle sm:col-span-2">
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Maintenance</dt>
+                        <dd class="mt-1.5">
+                            {{if .IsMaintenanceDue}}
+                            <span class="inline-flex px-2 py-1 text-xs font-bold rounded-full bg-status-warning/10 text-status-warning border border-status-warning/20">Due Since: {{.MaintenanceDue}}</span>
+                            {{else}}
+                            <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full bg-status-success/10 text-status-success border border-status-success/20">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                                Up to date
+                            </span>
                             {{end}}
-                        </div>
-                    </dd>
-                </div>
-                <div class="pt-2 border-t border-border-subtle sm:col-span-2">
-                    <dt class="text-[11px] font-semibold text-secondary uppercase tracking-wider">Maintenance</dt>
-                    <dd class="text-sm font-medium text-on-surface mt-1">
-                        {{if .IsMaintenanceDue}}
-                        <span class="px-2 py-1 text-xs rounded-full bg-status-warning/10 text-status-warning font-bold">Due Since: {{.MaintenanceDue}}</span>
-                        {{else}}
-                        <span class="inline-flex items-center gap-1 text-sm text-status-success font-medium">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-                            Up to date
+                        </dd>
+                    </div>
+                </dl>
+            </div>
+        </section>
+
+        <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+                <h3 class="text-sm font-bold text-on-surface">Recent Trips</h3>
+                {{if .RecentTrips}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .RecentTrips}}</span>{{end}}
+            </div>
+            <div class="p-2">
+                {{if .RecentTrips}}
+                <div class="divide-y divide-border-subtle">
+                    {{range .RecentTrips}}
+                    <a href="/trips/{{.ID}}" class="group flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-surface-container-low/60 transition-colors text-decoration-none rounded-lg -mx-1">
+                        <span class="text-sm font-bold text-primary tabular-nums group-hover:underline">{{.TripNumber}}</span>
+                        <span class="flex items-center gap-3">
+                            <span class="text-xs text-text-muted tabular-nums">{{if .CreatedAt.Valid}}{{.CreatedAt.Time.Format "02-01-2006"}}{{end}}</span>
+                            <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                         </span>
-                        {{end}}
-                    </dd>
+                    </a>
+                    {{end}}
                 </div>
-            </dl>
+                {{else}}
+                <p class="text-sm text-text-muted px-3 py-4">No trips assigned to this vehicle yet.</p>
+                {{end}}
+            </div>
         </section>
     </div>
 
-    <div>
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
-            <h3 class="text-base font-semibold text-on-surface font-display mb-3 flex items-center gap-1.5">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-                Maintenance Status
-            </h3>
+    <div class="space-y-4">
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2 bg-gradient-to-r from-amber-500/[0.07] to-transparent">
+                <span class="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
+                <h3 class="text-sm font-bold text-on-surface">Maintenance Status</h3>
+            </div>
+            <div class="p-5">
+                {{if .IsMaintenanceDue}}
+                <div class="space-y-3">
+                    {{if .IsMaintenanceOverridden}}
+                    <div class="p-3 rounded-xl bg-status-info/10 border border-status-info/30 text-xs text-status-info">
+                        <strong>Dispatch Override Active:</strong> Overridden by {{.MaintenanceOverrideBy}} (Reason: {{.MaintenanceOverrideReason}})
+                    </div>
+                    {{else}}
+                    <div class="p-3 rounded-xl bg-status-alert/10 border border-status-alert/30 text-xs text-status-alert">
+                        <strong>Dispatch Blocked:</strong> This vehicle cannot be assigned to trips until maintenance is performed or an override is granted.
+                    </div>
+                    {{end}}
 
-            {{if .IsMaintenanceDue}}
-            <div class="space-y-3">
-                {{if .IsMaintenanceOverridden}}
-                <div class="p-3 rounded-md bg-status-info/10 border border-status-info/30 text-xs text-status-info">
-                    <strong>Dispatch Override Active:</strong> Overridden by {{.MaintenanceOverrideBy}} (Reason: {{.MaintenanceOverrideReason}})
+                    {{if can .User "maintenance" "create"}}
+                    <a href="/maintenance/records/new?vehicle_id={{.Vehicle.ID}}" class="inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all text-decoration-none">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><path d="M10 9H8"/></svg>
+                        Record Completed Work
+                    </a>
+                    {{end}}
+
+                    {{if not .IsMaintenanceOverridden}}
+                    {{if can .User "maintenance" "update"}}
+                    <form method="POST" action="/maintenance/vehicles/{{.Vehicle.ID}}/override" class="flex flex-col sm:flex-row gap-2 sm:items-center pt-2 border-t border-border-subtle">
+                        <input type="text" name="reason" placeholder="Reason for dispatch override..." required
+                            class="flex-1 w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <button type="submit" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 transition-all cursor-pointer">
+                            Grant Override
+                        </button>
+                    </form>
+                    {{end}}
+                    {{end}}
                 </div>
                 {{else}}
-                <div class="p-3 rounded-md bg-status-alert/10 border border-status-alert/30 text-xs text-status-alert">
-                    <strong>Dispatch Blocked:</strong> This vehicle cannot be assigned to trips until maintenance is performed or an override is granted.
-                </div>
-                {{end}}
-
-                {{if can .User "maintenance" "create"}}
-                <a href="/maintenance/records/new?vehicle_id={{.Vehicle.ID}}" class="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-all">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><path d="M10 9H8"/></svg>
-                    Record Completed Work
-                </a>
-                {{end}}
-
-                {{if not .IsMaintenanceOverridden}}
-                {{if can .User "maintenance" "update"}}
-                <form method="POST" action="/maintenance/vehicles/{{.Vehicle.ID}}/override" class="flex flex-col sm:flex-row gap-2 sm:items-center pt-2 border-t border-border-subtle">
-                    <input type="text" name="reason" placeholder="Reason for dispatch override..." required
-                        class="flex-1 w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                    <button type="submit" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-all cursor-pointer">
-                        Grant Override
-                    </button>
-                </form>
-                {{end}}
+                <p class="text-sm text-secondary flex items-center gap-1.5">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-status-success"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                    Preventive maintenance is up to date.
+                </p>
                 {{end}}
             </div>
-            {{else}}
-            <p class="text-sm text-secondary flex items-center gap-1.5">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-status-success"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-                Preventive maintenance is up to date.
-            </p>
-            {{end}}
         </div>
-    </div>
 
-    <div class="lg:col-span-3 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
-            <h3 class="text-base font-semibold text-on-surface font-display mb-3">Recent Trips</h3>
-            {{if .RecentTrips}}
-            <div class="divide-y divide-border-subtle">
-                {{range .RecentTrips}}
-                <a href="/trips/{{.ID}}" class="flex items-center justify-between gap-3 py-2.5 hover:bg-surface-container-low/60 transition-colors text-decoration-none rounded px-2 -mx-2">
-                    <span class="text-sm font-semibold text-on-surface">{{.TripNumber}}</span>
-                    <span class="flex items-center gap-3">
-                        <span class="text-xs text-text-muted">{{if .CreatedAt.Valid}}{{.CreatedAt.Time.Format "02-01-2006"}}{{end}}</span>
-                        <span class="status-badge {{statusBadge .Status}}">{{.Status}}</span>
-                    </span>
-                </a>
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2 bg-gradient-to-r from-blue-500/[0.06] to-transparent">
+                <span class="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+                <h3 class="text-sm font-bold text-on-surface">Last Telemetry</h3>
+            </div>
+            <div class="p-5">
+                {{if .LastPosition.Has}}
+                <dl class="grid grid-cols-2 gap-4">
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Speed</dt>
+                        <dd class="text-sm font-semibold text-on-surface mt-1 tabular-nums" data-numeric>{{printf "%.0f" .LastPosition.Speed}} km/h</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Position</dt>
+                        <dd class="font-mono text-xs text-on-surface mt-1">{{printf "%.4f" .LastPosition.Lat}}, {{printf "%.4f" .LastPosition.Lng}}</dd>
+                    </div>
+                    <div class="col-span-2">
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Device Time</dt>
+                        <dd class="font-mono text-xs text-on-surface mt-1">{{.LastPosition.At}}</dd>
+                    </div>
+                </dl>
+                {{else}}
+                <p class="text-sm text-text-muted">No telemetry received yet. <a href="/tracking" class="text-primary hover:underline">Live tracking →</a></p>
                 {{end}}
             </div>
-            {{else}}
-            <p class="text-sm text-text-muted">No trips assigned to this vehicle yet.</p>
-            {{end}}
-        </div>
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-6">
-            <h3 class="text-base font-semibold text-on-surface font-display mb-3">Last Telemetry</h3>
-            {{if .LastPosition.Has}}
-            <dl class="grid grid-cols-2 gap-4">
-                <div>
-                    <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Speed</dt>
-                    <dd class="text-sm font-medium text-on-surface mt-1 tabular-nums" data-numeric>{{printf "%.0f" .LastPosition.Speed}} km/h</dd>
-                </div>
-                <div>
-                    <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Position</dt>
-                    <dd class="text-sm font-mono text-xs text-on-surface mt-1">{{printf "%.4f" .LastPosition.Lat}}, {{printf "%.4f" .LastPosition.Lng}}</dd>
-                </div>
-                <div class="col-span-2">
-                    <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Device Time</dt>
-                    <dd class="text-sm font-medium text-on-surface mt-1 font-mono text-xs">{{.LastPosition.At}}</dd>
-                </div>
-            </dl>
-            {{else}}
-            <p class="text-sm text-text-muted">No telemetry received yet. <a href="/tracking" class="text-primary hover:underline">Live tracking →</a></p>
-            {{end}}
         </div>
     </div>
+</div>
+
 </div>

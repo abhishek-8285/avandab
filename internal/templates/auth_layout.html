@@ -54,7 +54,7 @@
     </div>
 
     {{if .FlashError}}
-    <div class="fixed bottom-4 right-4 safe-bottom safe-right max-w-md w-full bg-status-alert/10 border-l-4 border-status-alert text-status-alert p-4 rounded shadow-lg flex items-start justify-between z-50">
+    <div class="fixed bottom-4 right-4 safe-bottom safe-right max-w-md w-full bg-status-alert/10 border-l-4 border-status-alert text-status-alert p-4 rounded-xl shadow-xl flex items-start justify-between z-50">
         <span class="flex-1 text-sm font-medium">{{.FlashError}}</span>
         <button type="button" class="flash-dismiss ml-2 text-status-alert hover:text-status-alert focus:outline-none flex items-center justify-center min-h-[32px] min-w-[32px]" aria-label="Dismiss error" onclick="this.parentElement.remove()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -63,7 +63,7 @@
     {{end}}
 
     {{if .FlashSuccess}}
-    <div class="fixed bottom-4 right-4 safe-bottom safe-right max-w-md w-full bg-status-success/10 border-l-4 border-status-success text-status-success p-4 rounded shadow-lg flex items-start justify-between z-50">
+    <div class="fixed bottom-4 right-4 safe-bottom safe-right max-w-md w-full bg-status-success/10 border-l-4 border-status-success text-status-success p-4 rounded-xl shadow-xl flex items-start justify-between z-50">
         <span class="flex-1 text-sm font-medium">{{.FlashSuccess}}</span>
         <button type="button" class="flash-dismiss ml-2 text-status-success hover:text-status-success focus:outline-none flex items-center justify-center min-h-[32px] min-w-[32px]" aria-label="Dismiss message" onclick="this.parentElement.remove()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>

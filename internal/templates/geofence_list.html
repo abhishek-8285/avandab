@@ -1,19 +1,15 @@
-<div class="space-y-6 max-w-7xl mx-auto">
+<div class="space-y-5 max-w-[1600px] mx-auto">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-container-lowest border border-border-subtle rounded-2xl p-6 shadow-sm">
-        <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="min-w-0">
+            <div class="flex items-center gap-3 flex-wrap">
+                <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Geofences &amp; Spatial Boundaries</h1>
+                <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Zones}} zones</span>
             </div>
-            <div>
-                <h1 class="text-xl font-bold text-on-surface font-display tracking-tight flex items-center gap-2 m-0">
-                    Geofences & Spatial Boundaries
-                </h1>
-                <p class="text-xs text-text-muted mt-1 mb-0">Virtual perimeters watched by the dwell engine for automated trip progression, detention demurrage, and breach security.</p>
-            </div>
+            <p class="text-sm text-secondary mt-1">Virtual perimeters watched by the dwell engine for automated trip progression, detention demurrage, and breach security.</p>
         </div>
         {{if can .User "geofences" "create"}}
-        <a href="/geofences/new" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-md shadow-blue-600/20 transition-all self-start sm:self-auto cursor-pointer text-decoration-none">
+        <a href="/geofences/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all self-start sm:self-auto shrink-0">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             <span>Create Geofence</span>
         </a>
@@ -21,135 +17,129 @@
     </div>
 
     {{if .FlashSuccess}}
-    <div class="bg-status-success/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-xl px-4 py-3 text-sm flex items-center gap-2">
+    <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-xl px-4 py-3 text-sm flex items-center gap-2">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         <span>{{.FlashSuccess}}</span>
     </div>
     {{end}}
     {{if .FlashError}}
-    <div class="bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 rounded-xl px-4 py-3 text-sm flex items-center gap-2">
+    <div class="bg-rose-500/10 border border-rose-500/20 text-status-alert rounded-xl px-4 py-3 text-sm flex items-center gap-2">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 shrink-0"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
         <span>{{.FlashError}}</span>
     </div>
     {{end}}
 
-    <!-- KPI Summary Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="geofence-kpis">
-        <div class="bg-surface-container-lowest border border-border-subtle rounded-2xl p-4 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted m-0">Total Zones</p>
-                <p class="text-2xl font-black text-on-surface mt-1 mb-0 font-display" id="stat-total">{{len .Zones}}</p>
-            </div>
-            <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-            </div>
-        </div>
-        <div class="bg-surface-container-lowest border border-border-subtle rounded-2xl p-4 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted m-0">Active Boundaries</p>
-                <p class="text-2xl font-black text-status-success mt-1 mb-0 font-display" id="stat-active">-</p>
-            </div>
-            <div class="w-10 h-10 rounded-xl bg-status-success/10 text-status-success flex items-center justify-center">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <!-- KPI Summary Cards (active/trip/restricted counts computed client-side from rows) -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4" id="geofence-kpis">
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-violet-500 opacity-80"></div>
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                </div>
+                <div class="min-w-0">
+                    <div class="text-xl font-bold tabular-nums text-on-surface leading-none" id="stat-total">{{len .Zones}}</div>
+                    <div class="text-xs text-secondary font-medium mt-1">Total Zones</div>
+                </div>
             </div>
         </div>
-        <div class="bg-surface-container-lowest border border-border-subtle rounded-2xl p-4 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted m-0">Pickup & Drop Hubs</p>
-                <p class="text-2xl font-black text-status-info mt-1 mb-0 font-display" id="stat-trip">-</p>
-            </div>
-            <div class="w-10 h-10 rounded-xl bg-status-info/10 text-status-info flex items-center justify-center">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
-            </div>
-        </div>
-        <div class="bg-surface-container-lowest border border-border-subtle rounded-2xl p-4 shadow-sm flex items-center justify-between">
-            <div>
-                <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted m-0">Restricted & No-Entry</p>
-                <p class="text-2xl font-black text-status-alert mt-1 mb-0 font-display" id="stat-restricted">-</p>
-            </div>
-            <div class="w-10 h-10 rounded-xl bg-status-alert/10 text-status-alert flex items-center justify-center">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-emerald-500/20 transition-all">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-80"></div>
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 shrink-0">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div class="min-w-0">
+                    <div class="text-xl font-bold tabular-nums text-status-success leading-none" id="stat-active">-</div>
+                    <div class="text-xs text-secondary font-medium mt-1">Active Boundaries</div>
+                </div>
             </div>
         </div>
-    </div>
-
-    <!-- Filter & Search Toolbar -->
-    <div class="bg-surface-container-lowest border border-border-subtle rounded-2xl p-4 shadow-sm flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-        <!-- Search Input -->
-        <div class="relative flex-1">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="text" id="geofence-search"
-                placeholder="Filter by name, route, or kind..."
-                class="w-full bg-surface-container-low border border-border-subtle rounded-xl pl-10 pr-4 py-2 text-sm text-on-surface placeholder-text-muted focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-blue-500/20 transition-all">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-400 opacity-80"></div>
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600 shrink-0">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                </div>
+                <div class="min-w-0">
+                    <div class="text-xl font-bold tabular-nums text-status-info leading-none" id="stat-trip">-</div>
+                    <div class="text-xs text-secondary font-medium mt-1">Pickup &amp; Drop Hubs</div>
+                </div>
+            </div>
         </div>
-
-        <!-- Kind Filter Pills -->
-        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 text-xs font-semibold" id="kind-filter-pills">
-            <button type="button" data-filter="all" class="filter-pill px-3 py-1.5 rounded-lg bg-blue-600 text-white shadow-sm transition-all cursor-pointer">
-                All (<span id="count-all">{{len .Zones}}</span>)
-            </button>
-            <button type="button" data-filter="pickup,drop" class="filter-pill px-3 py-1.5 rounded-lg bg-surface-container text-secondary hover:text-on-surface hover:bg-surface-container-high transition-all cursor-pointer">
-                Pickup/Drop
-            </button>
-            <button type="button" data-filter="depot" class="filter-pill px-3 py-1.5 rounded-lg bg-surface-container text-secondary hover:text-on-surface hover:bg-surface-container-high transition-all cursor-pointer">
-                Depots
-            </button>
-            <button type="button" data-filter="restricted,no_entry" class="filter-pill px-3 py-1.5 rounded-lg bg-surface-container text-secondary hover:text-on-surface hover:bg-surface-container-high transition-all cursor-pointer">
-                Restricted / Alert
-            </button>
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-amber-500/20 transition-all">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-80"></div>
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600 shrink-0">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <div class="min-w-0">
+                    <div class="text-xl font-bold tabular-nums text-status-alert leading-none" id="stat-restricted">-</div>
+                    <div class="text-xs text-secondary font-medium mt-1">Restricted &amp; No-Entry</div>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Geofences Table -->
-    <div class="bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm overflow-hidden">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <!-- Filter & Search Toolbar -->
+        {{template "filter_bar.html" (dict
+            "Action" "/geofences"
+            "Label" "Kind:"
+            "StatusFilter" .StatusFilter
+            "Chips" (chips "All" "" "Pickup/Drop" "pickup,drop" "Depots" "depot" "Restricted / Alert" "restricted,no_entry")
+            "ShowDates" false
+            "ShowSearch" false
+        )}}
+
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-border-subtle" id="geofences-table">
-                <thead class="bg-surface-container-low text-[11px] font-bold uppercase tracking-wider text-text-muted">
+                <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="py-3.5 px-5 text-left">Zone Name & Trigger</th>
-                        <th class="py-3.5 px-5 text-left">Kind</th>
-                        <th class="py-3.5 px-5 text-left">Shape & Dimensions</th>
-                        <th class="py-3.5 px-5 text-left">Route Scope</th>
-                        <th class="py-3.5 px-5 text-center">Priority</th>
-                        <th class="py-3.5 px-5 text-center">Status</th>
-                        <th class="py-3.5 px-5 text-right">Actions</th>
+                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Zone Name &amp; Trigger</th>
+                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Kind</th>
+                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Shape &amp; Dimensions</th>
+                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Route Scope</th>
+                        <th class="px-3 py-2 text-center text-[11px] font-bold tracking-wider uppercase text-text-muted">Priority</th>
+                        <th class="px-3 py-2 text-center text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
+                        <th class="px-3 py-2 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="geofence-rows" class="divide-y divide-border-subtle text-sm">
                     {{range .Zones}}
-                    <tr class="geofence-item-row hover:bg-surface-container-low/70 transition-colors group"
+                    <tr class="geofence-item-row hover:bg-surface-container-low/60 transition-colors group"
                         data-kind="{{.Kind}}"
                         data-shape="{{.Shape}}"
                         data-active="{{if .IsActive}}true{{else}}false{{end}}"
                         data-name="{{.Name}}"
                         data-route="{{.RouteName}}">
-                        <!-- Name & Trigger Hint -->
-                        <td class="py-3.5 px-5">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 
-                                    {{if or (eq .Kind "pickup") (eq .Kind "drop")}}bg-status-success/10 text-status-success border border-emerald-500/20
-                                    {{else if eq .Kind "depot"}}bg-blue-500/10 text-blue-500 border border-blue-500/20
-                                    {{else if eq .Kind "restricted"}}bg-amber-500/10 text-amber-500 border border-amber-500/20
-                                    {{else}}bg-status-alert/10 text-status-alert border border-rose-500/20{{end}}">
+                        <td class="px-3 py-2">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0
+                                    {{if or (eq .Kind "pickup") (eq .Kind "drop")}}bg-emerald-500/10 text-emerald-600 border border-emerald-500/20
+                                    {{else if eq .Kind "depot"}}bg-blue-500/10 text-blue-600 border border-blue-500/20
+                                    {{else if eq .Kind "restricted"}}bg-amber-500/10 text-amber-600 border border-amber-500/20
+                                    {{else}}bg-rose-500/10 text-rose-600 border border-rose-500/20{{end}}">
                                     {{if eq .Shape "circle"}}
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="9"/></svg>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><circle cx="12" cy="12" r="9"/></svg>
                                     {{else}}
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polygon points="12 2 22 8.5 18 21 6 21 2 8.5 12 2"/></svg>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><polygon points="12 2 22 8.5 18 21 6 21 2 8.5 12 2"/></svg>
                                     {{end}}
                                 </div>
-                                <div>
-                                    <div class="font-bold text-on-surface flex items-center gap-2">
-                                        <span>{{.Name}}</span>
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-sm font-bold text-on-surface truncate">{{.Name}}</span>
                                         {{if eq .Kind "restricted"}}
-                                        <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">ALERT</span>
+                                        <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">ALERT</span>
                                         {{else if eq .Kind "no_entry"}}
-                                        <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-status-alert/10 text-status-alert border border-rose-500/20">NO ENTRY</span>
+                                        <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20">NO ENTRY</span>
                                         {{end}}
                                     </div>
-                                    <div class="text-[11px] text-text-muted">
+                                    <div class="text-[11px] text-text-muted truncate">
                                         {{if eq .Kind "pickup"}}Auto-triggers reach pickup
                                         {{else if eq .Kind "drop"}}Auto-triggers delivery transit
-                                        {{else if eq .Kind "depot"}}Dwell & demurrage tracking
+                                        {{else if eq .Kind "depot"}}Dwell &amp; demurrage tracking
                                         {{else if eq .Kind "restricted"}}Warning on entry
                                         {{else if eq .Kind "no_entry"}}Security breach alarm
                                         {{else}}Virtual zone boundary{{end}}
@@ -158,56 +148,53 @@
                             </div>
                         </td>
 
-                        <!-- Kind Badge -->
-                        <td class="py-3.5 px-5">
+                        <td class="px-3 py-2 whitespace-nowrap">
                             {{if eq .Kind "pickup"}}
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-status-success/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/15">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                 Pickup
                             </span>
                             {{else if eq .Kind "drop"}}
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-status-info/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border border-cyan-500/15">
                                 <span class="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
                                 Drop
                             </span>
                             {{else if eq .Kind "depot"}}
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15">
                                 <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                                 Depot / Hub
                             </span>
                             {{else if eq .Kind "restricted"}}
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/15">
                                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                 Restricted
                             </span>
                             {{else}}
-                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-status-alert/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/15">
                                 <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                                 No Entry
                             </span>
                             {{end}}
                         </td>
 
-                        <!-- Shape & Dimensions -->
-                        <td class="py-3.5 px-5">
+                        <td class="px-3 py-2 whitespace-nowrap">
                             <div class="flex items-center gap-2">
                                 <span class="capitalize text-xs font-medium text-on-surface">{{.Shape}}</span>
                                 {{if eq .Shape "circle"}}
-                                <span class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-surface-container text-secondary border border-border-subtle">
+                                <span class="text-xs font-mono font-semibold tabular-nums px-2 py-0.5 rounded-md bg-surface-container text-secondary border border-border-subtle">
                                     {{if ge .RadiusM 1000.0}}{{printf "%.1f km" (div .RadiusM 1000.0)}}{{else}}{{printf "%.0f m" .RadiusM}}{{end}}
                                 </span>
                                 {{else}}
-                                <span class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-surface-container text-secondary border border-border-subtle">
+                                <span class="text-xs font-mono font-semibold tabular-nums px-2 py-0.5 rounded-md bg-surface-container text-secondary border border-border-subtle">
                                     {{len .Polygon}} vertices
                                 </span>
                                 {{end}}
                             </div>
                         </td>
 
-                        <!-- Route Scope -->
-                        <td class="py-3.5 px-5">
+                        <td class="px-3 py-2 whitespace-nowrap">
                             {{if .RouteName}}
-                            <span class="inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded bg-surface-container text-secondary border border-border-subtle">
+                            <span class="inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded-md bg-surface-container text-secondary border border-border-subtle">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3 text-text-muted"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
                                 {{.RouteName}}
                             </span>
@@ -216,39 +203,36 @@
                             {{end}}
                         </td>
 
-                        <!-- Priority -->
-                        <td class="py-3.5 px-5 text-center">
-                            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-surface-container text-on-surface border border-border-subtle" data-numeric>
+                        <td class="px-3 py-2 text-center whitespace-nowrap">
+                            <span class="text-xs font-mono font-bold tabular-nums px-2 py-0.5 rounded-md bg-surface-container text-on-surface border border-border-subtle" data-numeric>
                                 P{{.Priority}}
                             </span>
                         </td>
 
-                        <!-- Status -->
-                        <td class="py-3.5 px-5 text-center">
+                        <td class="px-3 py-2 text-center whitespace-nowrap">
                             {{if .IsActive}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-status-success/10 text-status-success">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/15">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                 Active
                             </span>
                             {{else}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-surface-container text-text-muted">
-                                <span class="w-1.5 h-1.5 rounded-full bg-text-muted"></span>
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-surface-container text-text-muted border border-border-subtle">
+                                <span class="w-1.5 h-1.5 rounded-full bg-text-text-muted"></span>
                                 Disabled
                             </span>
                             {{end}}
                         </td>
 
-                        <!-- Actions -->
-                        <td class="py-3.5 px-5 text-right whitespace-nowrap">
-                            <div class="flex items-center justify-end gap-1.5">
+                        <td class="px-3 py-2 text-right whitespace-nowrap">
+                            <div class="flex items-center justify-end gap-1">
                                 {{if can $.User "geofences" "update"}}
-                                <a href="/geofences/{{.ID}}/edit" class="p-1.5 rounded-lg text-secondary hover:text-blue-500 hover:bg-surface-container transition-colors" title="Edit Geofence">
+                                <a href="/geofences/{{.ID}}/edit" class="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-surface-container transition-colors" title="Edit Geofence">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                                 </a>
                                 {{end}}
                                 {{if can $.User "geofences" "delete"}}
                                 <form method="POST" action="/geofences/{{.ID}}/delete" data-confirm="Are you sure? This cannot be undone." class="inline-flex" onsubmit="return confirm('Delete geofence {{.Name}}?')">
-                                    <button type="submit" class="p-1.5 rounded-lg text-secondary hover:text-red-500 hover:bg-surface-container transition-colors cursor-pointer border-0 bg-transparent" title="Delete Geofence">
+                                    <button type="submit" class="p-1.5 rounded-lg text-secondary hover:text-status-alert hover:bg-surface-container transition-colors cursor-pointer border-0 bg-transparent" title="Delete Geofence">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                                     </button>
                                 </form>
@@ -258,18 +242,20 @@
                     </tr>
                     {{else}}
                     <tr id="empty-state-row">
-                        <td colspan="7" class="py-16 text-center">
-                            <div class="w-16 h-16 rounded-3xl bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center mx-auto mb-4">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-8 h-8"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                        <td colspan="7" class="px-4 py-12 text-center">
+                            <div class="flex flex-col items-center gap-2">
+                                <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                                </div>
+                                <p class="text-sm font-medium text-on-surface mt-1">No geofences configured</p>
+                                <p class="text-xs text-text-muted max-w-sm">Create virtual spatial boundaries to automate trip status changes and detect driver dwell time.</p>
+                                {{if can $.User "geofences" "create"}}
+                                <a href="/geofences/new" class="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-colors">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                                    Create First Geofence
+                                </a>
+                                {{end}}
                             </div>
-                            <h3 class="text-base font-bold text-on-surface mb-1">No Geofences Configured</h3>
-                            <p class="text-xs text-text-muted max-w-sm mx-auto mb-5">Create virtual spatial boundaries to automate trip status changes and detect driver dwell time.</p>
-                            {{if can $.User "geofences" "create"}}
-                            <a href="/geofences/new" class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-md transition-all text-decoration-none">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                                Create First Geofence
-                            </a>
-                            {{end}}
                         </td>
                     </tr>
                     {{end}}
@@ -305,21 +291,14 @@
     }
 
     function initFilters() {
-        var searchInput = document.getElementById('geofence-search');
-        var filterPills = document.querySelectorAll('.filter-pill');
-        var currentFilter = 'all';
+        var rows = document.querySelectorAll('.geofence-item-row');
+        // Active kind filter comes from the URL via ?status= (filter_bar chips);
+        // filtering itself stays client-side over the already-loaded rows.
+        var currentFilter = '{{if .StatusFilter}}{{.StatusFilter}}{{else}}all{{end}}';
 
         function applyFilter() {
-            var query = (searchInput ? searchInput.value : '').toLowerCase().trim();
-            var rows = document.querySelectorAll('.geofence-item-row');
-            var visibleCount = 0;
-
             rows.forEach(function(row) {
-                var name = (row.dataset.name || '').toLowerCase();
-                var route = (row.dataset.route || '').toLowerCase();
                 var kind = (row.dataset.kind || '').toLowerCase();
-
-                var matchesSearch = !query || name.includes(query) || route.includes(query) || kind.includes(query);
                 var matchesKind = true;
 
                 if (currentFilter !== 'all') {
@@ -327,29 +306,15 @@
                     matchesKind = allowed.includes(kind);
                 }
 
-                if (matchesSearch && matchesKind) {
+                if (matchesKind) {
                     row.style.display = '';
-                    visibleCount++;
                 } else {
                     row.style.display = 'none';
                 }
             });
         }
 
-        if (searchInput) {
-            searchInput.addEventListener('input', applyFilter);
-        }
-
-        filterPills.forEach(function(pill) {
-            pill.addEventListener('click', function() {
-                filterPills.forEach(function(p) {
-                    p.className = 'filter-pill px-3 py-1.5 rounded-lg bg-surface-container text-secondary hover:text-on-surface hover:bg-surface-container-high transition-all cursor-pointer';
-                });
-                this.className = 'filter-pill px-3 py-1.5 rounded-lg bg-blue-600 text-white shadow-sm transition-all cursor-pointer';
-                currentFilter = this.dataset.filter || 'all';
-                applyFilter();
-            });
-        });
+        applyFilter();
 
         computeMetrics();
     }
@@ -361,4 +326,3 @@
     }
 })();
 </script>
-

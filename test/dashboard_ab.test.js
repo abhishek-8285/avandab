@@ -4,17 +4,39 @@ const { test, expect } = require('@playwright/test');
 // so fresh users are assigned Variant B by default; ?variant=a forces A.
 
 async function registerFreshUser(page) {
-  await page.goto('/register');
-  const stamp = Date.now();
-  await page.fill('input[name="name"]', 'PW Test');
-  await page.fill('input[name="email"]', `pw${Date.now()}${Math.floor(Math.random() * 100000)}@test.com`);
-  await page.fill('input[name="phone"]', '9876500000');
-  await page.fill('input[name="password"]', 'TestPass123!');
-  await page.fill('input[name="confirm_password"]', 'TestPass123!');
-  await Promise.all([
-    page.waitForURL('**/dashboard', { waitUntil: 'domcontentloaded' }),
-    page.click('button[type="submit"]'),
-  ]);
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.goto('/register');
+    const uid = `${Date.now()}${Math.floor(Math.random() * 100000)}`;
+    await page.fill('input[name="name"]', 'PW Test');
+    await page.fill('input[name="email"]', `pw${uid}@test.com`);
+    await page.fill('input[name="phone"]', '9876500000');
+    await page.fill('input[name="password"]', 'TestPass123!');
+    await page.fill('input[name="confirm_password"]', 'TestPass123!');
+    await page.click('button[type="submit"]');
+    // Wait for navigation; handle DB deadlock retry and onboarding flow.
+    try {
+      await page.waitForURL(/\/dashboard|\/company\/onboard/, { waitUntil: 'domcontentloaded', timeout: 10000 });
+    } catch (e) {
+      const body = await page.content().catch(() => '');
+      if (body.includes('database table is locked') || body.includes('database is locked') || body.includes('deadlocked')) {
+        await page.waitForTimeout(800 * (attempt + 1));
+        continue;
+      }
+      throw e;
+    }
+    if (page.url().includes('/company/onboard')) {
+      await page.fill('input[name="company_name"]', 'PW Fleet ' + Date.now());
+      await page.fill('input[name="email"]', `ops${Date.now()}@test.com`);
+      await page.fill('input[name="phone"]', '9876500000');
+      await Promise.all([
+        page.waitForURL('**/dashboard', { waitUntil: 'domcontentloaded' }),
+        page.click('button[type="submit"]'),
+      ]);
+    }
+    await page.waitForURL('**/dashboard', { waitUntil: 'domcontentloaded' });
+    return;
+  }
+  throw new Error('registerFreshUser failed after retries');
 }
 
 test.describe('Dashboard A/B variants', () => {

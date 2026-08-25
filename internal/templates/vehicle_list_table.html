@@ -1,41 +1,37 @@
 <div class="overflow-x-auto">
     <table class="min-w-full divide-y divide-border-subtle">
-        <thead class="bg-surface-container-low font-label-caps text-[11px] text-secondary uppercase tracking-wider">
+        <thead class="bg-surface-container-low">
             <tr>
-                <th class="th-cell w-36">Unit ID</th>
-                <th class="th-cell">Vehicle Type</th>
-                <th class="th-cell">Capacity & Fuel</th>
-                <th class="th-cell">Status</th>
-                <th class="th-cell-right">Actions</th>
+                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted w-36">Unit ID</th>
+                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Vehicle Type</th>
+                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Capacity &amp; Fuel</th>
+                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
+                <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
             {{if .Vehicles}}
             {{range .Vehicles}}
-            <tr class="hover:bg-surface-container-low transition-colors group">
-                <td class="td-cell-strong font-mono" data-numeric>{{.RegistrationNumber}}</td>
-                <td class="td-cell">
-                    <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded border border-border-subtle bg-surface-container-lowest flex items-center justify-center text-secondary">
+            <tr class="hover:bg-surface-container-low/50 transition-colors group" data-href="/vehicles/{{.ID}}" onclick="if(this.dataset.href)location.href=this.dataset.href">
+                <td class="px-3 py-2 font-mono font-bold text-primary tabular-nums whitespace-nowrap">{{.RegistrationNumber}}</td>
+                <td class="px-3 py-2">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-7 h-7 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
                         </div>
-                        <span class="font-medium text-on-surface">{{.VehicleType}} ({{.VehicleNumber}})</span>
+                        <span class="font-semibold text-on-surface">{{.VehicleType}} <span class="text-text-muted font-normal">({{.VehicleNumber}})</span></span>
                     </div>
                 </td>
-                <td class="td-cell text-secondary">
-                    <span class="font-medium text-on-surface">{{.Capacity}}</span> • <span class="text-xs uppercase">{{.FuelType}}</span>
+                <td class="px-3 py-2 text-secondary"><span class="font-semibold text-on-surface tabular-nums">{{.Capacity}}</span> • <span class="text-xs uppercase tracking-wide">{{.FuelType}}</span></td>
+                <td class="px-3 py-2">
+                    <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                 </td>
-                <td class="td-cell">
-                    <span class="status-badge {{statusBadge .Status}}">{{.Status}}</span>
-                </td>
-                <td class="td-cell-actions">
-                    <div class="flex items-center justify-end gap-3">
-                        <a href="/vehicles/{{.ID}}" class="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                <td class="px-3 py-2 text-right">
+                    <div class="flex items-center justify-end gap-2" onclick="event.stopPropagation()">
+                        <a href="/vehicles/{{.ID}}" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-low border border-border-subtle text-xs font-semibold text-on-surface hover:bg-surface-container hover:border-primary/20 transition-all">
                             View
                         </a>
-                        <a href="/vehicles/{{.ID}}/edit" class="inline-flex items-center gap-1 text-sm font-medium text-secondary hover:text-primary transition-colors">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M21.174 6.812a1 1 0 0 1 0 1.376L12.546 16.9a2 2 0 0 1-1.414.586H8v-3.132a2 2 0 0 1 .586-1.414l8.712-8.628a1 1 0 0 1 1.376 0z"/><path d="m18 5 .5-.5a2.122 2.122 0 1 1 3 3L21 11"/></svg>
+                        <a href="/vehicles/{{.ID}}/edit" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/15 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors">
                             Edit
                         </a>
                     </div>
@@ -53,6 +49,6 @@
     </table>
 </div>
 
-<div class="p-4 border-t border-border-subtle bg-surface-container-lowest">
+<div class="px-4 py-3 border-t border-border-subtle bg-surface-container-lowest">
     {{template "pagination.html" .}}
 </div>

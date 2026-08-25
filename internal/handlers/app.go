@@ -286,6 +286,7 @@ func parseTemplatesLang(authSrv auth.AuthorizationService, lang string) (*templa
 		"mul":         func(a, b int) int { return a * b },
 		"div":         func(a, b int) int { return a / b },
 		"statusBadge": statusBadgeClass,
+		"inDate":      inDate,
 		"auditBadge":  auditResultBadge,
 		"tierBadge":   tierBadgeClass,
 		"priceFormat": func(f float64) string { return fmt.Sprintf("%.2f", f) },
@@ -319,6 +320,26 @@ func parseTemplatesLang(authSrv auth.AuthorizationService, lang string) (*templa
 				return ""
 			}
 			return t.Format("2006-01-02 15:04")
+		},
+		"chips": func(pairs ...interface{}) []map[string]interface{} {
+			out := make([]map[string]interface{}, 0, len(pairs)/2)
+			for i := 0; i+1 < len(pairs); i += 2 {
+				out = append(out, map[string]interface{}{"Label": pairs[i], "Value": pairs[i+1]})
+			}
+			return out
+		},
+		"default": func(def interface{}, v interface{}) interface{} {
+			switch x := v.(type) {
+			case nil:
+				return def
+			case string:
+				if x == "" {
+					return def
+				}
+				return x
+			default:
+				return v
+			}
 		},
 		"dict": func(values ...interface{}) (map[string]interface{}, error) {
 			if len(values)%2 != 0 {
@@ -427,15 +448,51 @@ type PaginationData struct {
 	HasPrev    bool
 	HasNext    bool
 	BasePath   string
+	From       string
+	To         string
 }
 
 // PaginationParams holds pagination and search parameters.
 type PaginationParams struct {
-	Query  string
-	Status string
-	Limit  int
-	Page   int
-	Offset int
+	Query    string
+	Status   string
+	Limit    int
+	Page     int
+	Offset   int
+	DateFrom string
+	DateTo   string
+}
+
+// dateLayout is the accepted format for from/to list filters (YYYY-MM-DD).
+const dateLayout = "2006-01-02"
+
+// dateLayoutIN is the Indian display format accepted alongside ISO (DD-MM-YYYY).
+const dateLayoutIN = "02-01-2006"
+
+func parseDateParam(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	if _, err := time.Parse(dateLayout, raw); err == nil {
+		return raw
+	}
+	if t, err := time.Parse(dateLayoutIN, raw); err == nil {
+		return t.Format(dateLayout)
+	}
+	return ""
+}
+
+// inDate renders an ISO date (YYYY-MM-DD) in Indian format (DD-MM-YYYY)
+// for display in filter inputs. Unparseable input passes through unchanged.
+func inDate(v interface{}) string {
+	s, ok := v.(string)
+	if !ok || s == "" {
+		return ""
+	}
+	if t, err := time.Parse(dateLayout, s); err == nil {
+		return t.Format(dateLayoutIN)
+	}
+	return s
 }
 
 func parsePaginationParams(r *http.Request) PaginationParams {
@@ -458,7 +515,12 @@ func parsePaginationParams(r *http.Request) PaginationParams {
 		page = 1
 	}
 	offset := (page - 1) * limit
-	return PaginationParams{Query: query, Status: status, Limit: limit, Page: page, Offset: offset}
+	from := parseDateParam(r.URL.Query().Get("from"))
+	to := parseDateParam(r.URL.Query().Get("to"))
+	if from != "" && to != "" && from > to {
+		from, to = to, from
+	}
+	return PaginationParams{Query: query, Status: status, Limit: limit, Page: page, Offset: offset, DateFrom: from, DateTo: to}
 }
 
 func newPaginationData(pp PaginationParams, total int64, basePath string) PaginationData {

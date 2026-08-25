@@ -1,24 +1,30 @@
 {{define "alert_inbox.html"}}
 {{/* Ranked alert inbox (Spec 22 S1). Expects .InboxAlerts []map[string]any. */}}
-<section id="alert-inbox" class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm overflow-hidden">
-    <div class="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
-        <h2 class="text-sm font-semibold text-on-surface flex items-center gap-2">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-error"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 20h16a2 2 0 0 0 1.73-2Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-            Alert Inbox
-        </h2>
-        <span class="text-xs text-text-muted">severity-ranked</span>
+<section id="alert-inbox" class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 bg-gradient-to-r from-rose-500/[0.06] to-transparent">
+        <div class="flex items-center gap-2 min-w-0">
+            <span class="w-7 h-7 rounded-lg bg-rose-500/10 border border-rose-500/15 grid place-items-center text-rose-600 shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 20h16a2 2 0 0 0 1.73-2Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+            </span>
+            <h2 class="text-sm font-bold text-on-surface m-0">Alert Inbox</h2>
+        </div>
+        <span class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .InboxAlerts}}</span>
     </div>
 
     {{if not .InboxAlerts}}
-    <div class="px-4 py-10 text-center text-sm text-text-muted">
-        No open alerts — fleet is quiet.
+    <div class="px-5 py-10 text-center">
+        <div class="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 mx-auto">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+        </div>
+        <p class="text-sm font-medium text-on-surface mt-3">No open alerts</p>
+        <p class="text-xs text-text-muted">Fleet is quiet.</p>
     </div>
     {{else}}
-    <ul class="divide-y divide-border-subtle">
+    <ul class="divide-y divide-border-subtle max-h-80 overflow-y-auto">
         {{range .InboxAlerts}}
-        <li class="flex items-center gap-3 px-4 py-3 text-sm hover:bg-surface-container transition-colors"
+        <li class="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-surface-container-low/60 transition-colors"
             data-alert-id="{{.ID}}">
-            <span class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold
+            <span class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold tabular-nums
                 {{if eq .SeverityRank 1}}bg-error-container text-on-error-container
                 {{else if eq .SeverityRank 2}}bg-warning-container text-on-warning-container
                 {{else if eq .SeverityRank 3}}bg-primary-container text-on-primary-container
@@ -26,8 +32,8 @@
                 {{else}}bg-surface-container text-text-muted{{end}}">{{.SeverityRank}}</span>
 
             <div class="min-w-0 flex-1">
-                <p class="truncate font-medium text-on-surface">{{.Title}}</p>
-                <p class="text-xs text-text-muted mt-0.5">
+                <p class="truncate font-semibold text-on-surface m-0">{{.Title}}</p>
+                <p class="text-xs text-text-muted tabular-nums mt-0.5 mb-0">
                     {{.CreatedAt}}
                     {{if gt .Occurrences 1}} · fired {{.Occurrences}}×{{end}}
                     {{if .VehicleID}} · {{.VehicleID}}{{end}}
@@ -35,12 +41,12 @@
                 </p>
             </div>
 
-            <div class="flex items-center gap-2 shrink-0">
+            <div class="flex items-center gap-1.5 shrink-0">
                 <button type="button"
-                        class="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2.5 py-1.5 text-xs font-medium hover:bg-surface-container transition-colors cursor-pointer"
+                        class="inline-flex items-center rounded-full border border-border-subtle px-2.5 py-1 text-[11px] font-bold text-on-surface hover:bg-surface-container-low transition-colors cursor-pointer"
                         onclick="snoozeAlert(this, '{{.ID}}')">Snooze 2h</button>
                 <button type="button"
-                        class="inline-flex items-center gap-1 rounded-md bg-primary text-on-primary px-2.5 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity cursor-pointer"
+                        class="inline-flex items-center rounded-full bg-primary text-on-primary px-2.5 py-1 text-[11px] font-bold hover:bg-primary/90 transition-all cursor-pointer"
                         onclick="ackAlert(this, '{{.ID}}')">Ack</button>
             </div>
         </li>

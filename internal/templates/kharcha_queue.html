@@ -1,7 +1,7 @@
 {{define "kharcha_queue.html"}}
 {{if .PendingExpenses}}
     {{range .PendingExpenses}}
-    <div class="px-4 py-2 flex items-center gap-4 hover:bg-surface-container-low transition-colors group"
+    <div class="px-4 sm:px-5 py-2.5 flex items-center gap-4 hover:bg-surface-container-low/50 transition-colors group"
          id="expense-row-{{.ID}}">
 
         <!-- Receipt or placeholder -->
@@ -9,10 +9,10 @@
         <a href="{{nullString .ReceiptURL}}" target="_blank" rel="noopener">
             <img src="{{nullString .ReceiptURL}}"
                   alt="Expense receipt"
-                  class="w-12 h-12 rounded-lg object-cover border border-border-subtle shrink-0 hover:opacity-90 transition" />
+                  class="w-10 h-10 rounded-lg object-cover border border-border-subtle shrink-0 hover:opacity-90 transition" />
         </a>
         {{else}}
-        <div class="w-12 h-12 rounded-lg bg-surface-container flex items-center justify-center text-text-muted shrink-0">
+        <div class="w-10 h-10 rounded-lg bg-surface-container grid place-items-center text-text-muted shrink-0">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/></svg>
         </div>
         {{end}}
@@ -20,61 +20,62 @@
         <!-- Meta -->
         <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-sm font-semibold text-on-surface">{{.DriverName}}</span>
-                <span class="px-2 py-1 rounded-full text-xs font-medium
-                    {{if eq .Category "advance"}}bg-status-info/10 text-status-info
-                    {{else if eq .Category "fuel"}}bg-status-warning/10 text-status-warning
-                    {{else if eq .Category "toll"}}bg-primary/10 text-primary
-                    {{else if eq .Category "food"}}bg-status-success/10 text-status-success
-                    {{else if eq .Category "repair"}}bg-status-alert/10 text-status-alert
-                    {{else}}bg-surface-container-low text-secondary{{end}}">
+                <span class="text-sm font-bold text-on-surface">{{.DriverName}}</span>
+                <span class="inline-flex px-2 py-0.5 rounded-full border text-[11px] font-bold
+                    {{if eq .Category "advance"}}bg-blue-500/10 border-blue-500/15 text-blue-700 dark:text-blue-300
+                    {{else if eq .Category "fuel"}}bg-amber-500/10 border-amber-500/15 text-amber-700 dark:text-amber-300
+                    {{else if eq .Category "toll"}}bg-primary/10 border-primary/15 text-primary
+                    {{else if eq .Category "food"}}bg-emerald-500/10 border-emerald-500/15 text-emerald-700 dark:text-emerald-300
+                    {{else if eq .Category "repair"}}bg-rose-500/10 border-rose-500/15 text-rose-700 dark:text-rose-300
+                    {{else}}bg-surface-container border-border-subtle text-secondary{{end}}">
                     {{.Category}}
                 </span>
+                <span class="text-sm font-bold tabular-nums text-on-surface sm:hidden">₹{{priceFormat .Amount}}</span>
             </div>
             <p class="text-xs text-text-muted mt-0.5 truncate">{{.Description}}</p>
-            <p class="text-xs text-text-muted mt-0.5">
-                {{if .TripNumber}}Trip: {{.TripNumber}} · {{end}}{{datetime .CreatedAt}}
+            <p class="text-xs text-text-muted mt-0.5 tabular-nums">
+                {{if .TripNumber}}<span class="font-semibold text-secondary">{{.TripNumber}}</span> · {{end}}{{datetime .CreatedAt}}
             </p>
             {{if eq .AuditStatus "needs_review"}}
             <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-status-warning/10 text-status-warning text-[10px] font-bold border border-status-warning/30 cursor-help"
                   title="Claimed {{printf "%.1f" .FuelLitres}}L, Expected {{printf "%.1f" .ExpectedLitres}}L ±{{printf "%.1f" .VariancePct}}% — review at /fuel/audit">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3 shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
                 AUDIT: NEEDS REVIEW
             </span>
             {{else if eq .AuditStatus "passed"}}
             <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-status-success/10 text-status-success text-[10px] font-bold border border-status-success/30 cursor-help"
                   title="Claimed {{printf "%.1f" .FuelLitres}}L, Expected {{printf "%.1f" .ExpectedLitres}}L ±{{printf "%.1f" .VariancePct}}%">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                 AUDIT PASSED
             </span>
             {{else if eq .AuditStatus "failed"}}
             <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-status-alert/10 text-status-alert text-[10px] font-bold border border-status-alert/30 cursor-help"
                   title="Claimed {{printf "%.1f" .FuelLitres}}L, Expected {{printf "%.1f" .ExpectedLitres}}L ±{{printf "%.1f" .VariancePct}}%">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3 shrink-0"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
                 AUDIT FAILED
             </span>
             {{end}}
         </div>
 
         <!-- Amount -->
-        <div class="text-right shrink-0 mr-2">
-            <p class="text-base font-semibold text-on-surface tabular-nums">₹{{priceFormat .Amount}}</p>
+        <div class="text-right shrink-0 mr-2 hidden sm:block">
+            <p class="text-base font-bold text-on-surface tabular-nums">₹{{priceFormat .Amount}}</p>
         </div>
 
         <!-- Actions (reveal on hover) -->
-        <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+        <div class="flex items-center gap-2 opacity-0 sm:opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity shrink-0">
             <button
                 hx-post="/kharcha/{{.ID}}/approve"
                 hx-target="#expense-row-{{.ID}}"
                 hx-swap="outerHTML"
                 hx-indicator="#spin-{{.ID}}"
-                class="flex items-center gap-1.5 px-4 py-2 bg-status-success hover:bg-status-success/90 text-on-primary text-xs font-semibold rounded-lg transition shadow-sm shadow-primary/20">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M20 6 9 17l-5-5"/></svg>
+                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-status-success hover:bg-status-success/90 text-on-primary text-xs font-bold shadow-sm transition-all">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M20 6 9 17l-5-5"/></svg>
                 APPROVE
             </button>
             <button
                 onclick="openRejectModal('{{.ID}}', '{{.DriverName}}', '{{.Amount}}')"
-                class="px-4 py-2 bg-surface-container-lowest border border-border-subtle hover:bg-status-alert/10 hover:border-status-alert/30 text-secondary hover:text-status-alert text-xs font-semibold rounded-lg transition">
+                class="inline-flex items-center px-3.5 py-1.5 rounded-full bg-surface-container-lowest border border-border-subtle hover:bg-status-alert/10 hover:border-status-alert/30 text-secondary hover:text-status-alert text-xs font-bold transition-colors">
                 REJECT
             </button>
             <div id="spin-{{.ID}}" class="htmx-indicator ml-1">
@@ -87,11 +88,11 @@
     </div>
     {{end}}
 {{else}}
-<div class="flex flex-col items-center justify-center py-16 text-center">
-    <div class="w-16 h-16 rounded-full bg-status-success/10 flex items-center justify-center mb-4">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+<div class="flex flex-col items-center justify-center py-14 text-center">
+    <div class="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/15 grid place-items-center mb-3">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
     </div>
-    <p class="text-text-muted font-medium text-sm">All clear! No pending approvals.</p>
+    <p class="text-sm font-medium text-on-surface">All clear — no pending approvals</p>
     <p class="text-text-muted text-xs mt-1">New requests will appear here automatically.</p>
 </div>
 {{end}}

@@ -75,7 +75,10 @@ func (h *GeofenceHandlers) List(w http.ResponseWriter, r *http.Request) {
 		Title:      "Geofences",
 		User:       session,
 		FlashError: flash.error, FlashSuccess: flash.success,
-		Extra: map[string]interface{}{"Zones": zones},
+		Extra: map[string]interface{}{
+			"Zones":        zones,
+			"StatusFilter": r.URL.Query().Get("status"),
+		},
 	})
 }
 

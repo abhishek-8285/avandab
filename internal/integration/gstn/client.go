@@ -61,6 +61,7 @@ type Client interface {
 	FetchGSTR3BSummary(ctx context.Context, gstin, period string) (GSTR3BSummary, error)
 	GenerateIRN(ctx context.Context, inv InvoiceView) (*IRNResponse, error)
 	PushEInvoice(ctx context.Context, invoiceID, irn string) (*PushResponse, error)
+	CancelIRN(ctx context.Context, req CancelIRNRequest) (*CancelIRNResponse, error)
 }
 
 type stubClient struct {
@@ -134,4 +135,9 @@ func (c *stubClient) GenerateIRN(ctx context.Context, inv InvoiceView) (*IRNResp
 
 func (c *stubClient) PushEInvoice(ctx context.Context, invoiceID, irn string) (*PushResponse, error) {
 	return c.einvoice.PushEInvoice(ctx, invoiceID, irn)
+}
+
+func (c *stubClient) CancelIRN(ctx context.Context, req CancelIRNRequest) (*CancelIRNResponse, error) {
+	slog.Default().Info("[gstn] CancelIRN called", "endpoint", c.cfg.Endpoint, "enabled", c.cfg.Enabled, "irn", req.IRN, "cancel_reason", req.CancelReason)
+	return c.einvoice.CancelIRN(ctx, req)
 }

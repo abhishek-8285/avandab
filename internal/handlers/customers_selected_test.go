@@ -326,7 +326,8 @@ func TestSelectedCustomers_CRUD(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusBadRequest, w.Code)
+		// Re-renders edit form with error flash (200, not redirect)
+		assert.Equal(t, http.StatusOK, w.Code)
 		assert.Contains(t, w.Body.String(), "already exists")
 	})
 

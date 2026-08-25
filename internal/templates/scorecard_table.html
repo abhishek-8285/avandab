@@ -1,30 +1,40 @@
 {{define "scorecard_table.html"}}
 {{range $i, $r := .Leaderboard}}
 <tr class="border-b border-border-subtle hover:bg-surface-container-low/50 transition-colors">
-    <td class="px-4 py-2.5 text-sm text-text-muted tabular-nums" data-numeric>{{add $i 1}}</td>
-    <td class="px-4 py-2.5">
-        <a href="/scorecard/drivers/{{$r.DriverID}}" class="font-semibold text-on-surface hover:text-primary hover:underline">
+    <td class="px-3 py-2" data-numeric>
+        {{if lt $i 1}}
+        <span class="grid place-items-center w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white text-xs font-black tabular-nums shadow-sm">{{add $i 1}}</span>
+        {{else if lt $i 2}}
+        <span class="grid place-items-center w-7 h-7 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 text-white text-xs font-black tabular-nums shadow-sm">{{add $i 1}}</span>
+        {{else if lt $i 3}}
+        <span class="grid place-items-center w-7 h-7 rounded-full bg-gradient-to-br from-orange-400 to-rose-500 text-white text-xs font-black tabular-nums shadow-sm">{{add $i 1}}</span>
+        {{else}}
+        <span class="text-text-muted tabular-nums text-sm font-semibold px-2.5">{{add $i 1}}</span>
+        {{end}}
+    </td>
+    <td class="px-3 py-2">
+        <a href="/scorecard/drivers/{{$r.DriverID}}" class="font-bold text-on-surface hover:text-primary hover:underline">
             {{$r.DriverName}}
         </a>
-        <div class="text-xs text-text-muted">{{$r.DriverCode}}</div>
+        <div class="text-xs text-text-muted tabular-nums">{{$r.DriverCode}}</div>
     </td>
-    <td class="px-4 py-2.5 text-sm text-right font-bold tabular-nums {{if ge $r.Score 85.0}}text-status-success{{else if ge $r.Score 70.0}}text-status-info{{else}}text-status-alert{{end}}" data-numeric>
+    <td class="px-3 py-2 text-sm text-right font-black tabular-nums {{if ge $r.Score 85.0}}text-status-success{{else if ge $r.Score 70.0}}text-status-info{{else}}text-status-alert{{end}}" data-numeric>
         {{printf "%.0f" $r.Score}}
     </td>
-    <td class="px-4 py-2.5 text-sm text-center">
-        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold {{tierBadge $r.Tier}}">{{$r.Tier}}</span>
+    <td class="px-3 py-2 text-sm text-center">
+        <span class="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold {{tierBadge $r.Tier}}">{{$r.Tier}}</span>
     </td>
-    <td class="px-4 py-2.5 text-sm text-right tabular-nums text-secondary" data-numeric>{{$r.EventCount}}</td>
-    <td class="px-4 py-2.5 text-sm text-secondary">{{if $r.Sparkline}}{{safeHTML $r.Sparkline}}{{else}}<span class="text-text-muted text-xs">—</span>{{end}}</td>
-    <td class="px-4 py-2.5 text-sm text-center">
+    <td class="px-3 py-2 text-sm text-right tabular-nums text-secondary" data-numeric>{{$r.EventCount}}</td>
+    <td class="px-3 py-2 text-sm text-secondary">{{if $r.Sparkline}}{{safeHTML $r.Sparkline}}{{else}}<span class="text-text-muted text-xs">—</span>{{end}}</td>
+    <td class="px-3 py-2 text-sm text-center">
         {{if $r.InsufficientData}}
-        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-status-warning/10 text-status-warning" title="Fewer than 3 events in the window — score not yet meaningful">
+        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-status-warning/15 bg-status-warning/10 text-[10px] font-bold text-status-warning" title="Fewer than 3 events in the window — score not yet meaningful">
             <span class="w-1.5 h-1.5 rounded-full bg-status-warning"></span>
             INSUFFICIENT DATA
         </span>
         {{else}}
-        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-status-success/10 text-status-success">
-            <span class="w-1.5 h-1.5 rounded-full bg-status-success"></span>
+        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-emerald-500/15 bg-emerald-500/10 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
             ACTIVE
         </span>
         {{end}}
@@ -32,7 +42,12 @@
 </tr>
 {{else}}
 <tr>
-    <td colspan="7" class="px-4 py-10 text-center text-text-muted text-sm">No drivers yet — assign drivers to trips to populate the scorecard.</td>
+    <td colspan="7" class="px-4 py-12 text-center">
+        <div class="flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg></div>
+            <p class="text-sm font-medium text-on-surface">No drivers ranked yet</p><p class="text-xs text-text-muted">Assign drivers to trips to populate the scorecard</p>
+        </div>
+    </td>
 </tr>
 {{end}}
 {{end}}

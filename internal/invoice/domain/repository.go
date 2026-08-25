@@ -30,9 +30,12 @@ type InvoiceReadModel struct {
 	IRN             string
 	IRNAckNo        string
 	IRNAckDate      string
-	SignedQR        string
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	// IRNCancelledAt is the raw timestamp from invoices.irn_cancelled_at
+	// (migration 00099); empty string when the IRN was never cancelled.
+	IRNCancelledAt string
+	SignedQR       string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 // InvoiceRepository defines the persistence contract for invoices.

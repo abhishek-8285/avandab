@@ -80,13 +80,27 @@ func (h *TelemetryDeviceHandlers) List(w http.ResponseWriter, r *http.Request) {
 	tenant := h.tenantID(ctx)
 
 	store := telemetry.NewDeviceStore(h.DB)
-	devices, err := store.ListByTenant(ctx, tenant, pp.Limit, pp.Offset)
+	var devices []telemetry.Device
+	var total int64
+	var err error
+	if pp.Query != "" || pp.Status != "" || pp.DateFrom != "" || pp.DateTo != "" {
+		devices, err = store.ListByTenantFiltered(ctx, tenant, pp.Query, pp.Status, pp.DateFrom, pp.DateTo, pp.Limit, pp.Offset)
+		if err == nil {
+			total, err = store.CountByTenantFiltered(ctx, tenant, pp.Query, pp.Status, pp.DateFrom, pp.DateTo)
+		}
+	} else {
+		devices, err = store.ListByTenant(ctx, tenant, pp.Limit, pp.Offset)
+		if err == nil {
+			total, err = store.CountByTenant(ctx, tenant)
+		}
+	}
 	if err != nil {
 		http.Error(w, "Failed to list devices", http.StatusInternalServerError)
 		return
 	}
-	total, _ := store.CountByTenant(ctx, tenant)
 	pd := newPaginationData(pp, total, "/telemetry/devices")
+	pd.From = pp.DateFrom
+	pd.To = pp.DateTo
 	session, _ := h.getUserFromContext(r)
 
 	flash := readFlashCookies(r, w)
@@ -95,6 +109,7 @@ func (h *TelemetryDeviceHandlers) List(w http.ResponseWriter, r *http.Request) {
 		h.renderFragment(w, "telemetry_device_row.html", map[string]interface{}{
 			"Devices": devices, "Pagination": pd, "Query": pp.Query,
 			"User": session, "StatusFilter": pp.Status,
+			"DateFrom": pp.DateFrom, "DateTo": pp.DateTo,
 		})
 		return
 	}
@@ -108,6 +123,8 @@ func (h *TelemetryDeviceHandlers) List(w http.ResponseWriter, r *http.Request) {
 			"Pagination":   pd,
 			"Query":        pp.Query,
 			"StatusFilter": pp.Status,
+			"DateFrom":     pp.DateFrom,
+			"DateTo":       pp.DateTo,
 		},
 	})
 }

@@ -1,65 +1,76 @@
-<div class="max-w-xl mx-auto py-2">
-    <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm overflow-hidden">
-        <div class="px-6 py-4 border-b border-border-subtle flex justify-between items-center bg-surface-container-low">
-            <h2 class="text-base font-semibold text-on-surface font-display flex items-center gap-2">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+<div class="max-w-3xl mx-auto py-2">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <div class="relative px-6 py-4 border-b border-border-subtle">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-violet-500 to-cyan-400 opacity-90"></div>
+            <h2 class="text-base sm:text-lg font-black tracking-tight text-on-surface font-display flex items-center gap-2">
+                <span class="w-8 h-8 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
                 {{if .Customer}}Edit Customer{{else}}New Customer{{end}}
             </h2>
-            <a href="/customers" class="text-xs text-secondary hover:text-on-surface transition-colors">Back to list</a>
+            <p class="text-xs text-text-muted mt-1">Account identity, GSTIN and billing contact</p>
+            <a href="/customers" class="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-semibold text-secondary hover:text-on-surface transition-colors">Back to list</a>
         </div>
 
         {{if .FlashError}}
         {{template "alert.html" (dict "Tone" "error" "Message" .FlashError)}}
         {{end}}
 
-        <form method="POST" action="/customers{{if .Customer}}/{{.Customer.ID}}/edit{{else}}/new{{end}}" class="p-6 space-y-4">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Full Name *</label>
-                    <input type="text" name="name" value="{{if .Customer}}{{.Customer.Name}}{{end}}" required
-                        class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                        placeholder="e.g. Acme Corp / Rajesh Kumar">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Company / Organization</label>
-                    <input type="text" name="company" value="{{if .Customer}}{{nullString .Customer.Company}}{{end}}"
-                        class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                        placeholder="Company name">
-                </div>
+        <form method="POST" action="/customers{{if .Customer}}/{{.Customer.ID}}/edit{{else}}/new{{end}}">
+            <div class="p-6 space-y-5">
+                <section>
+                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Identity</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Full Name *</label>
+                            <input type="text" name="name" value="{{if .Customer}}{{.Customer.Name}}{{end}}" required
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                                placeholder="e.g. Acme Corp / Rajesh Kumar">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Company / Organization</label>
+                            <input type="text" name="company" value="{{if .Customer}}{{nullString .Customer.Company}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                                placeholder="Company name">
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Contact</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Phone Number *</label>
+                            <input type="tel" name="phone" value="{{if .Customer}}{{.Customer.Phone}}{{end}}" required
+                                pattern="(\+?91[\s-]?|0)?[6-9][0-9]{4}[\s-]?[0-9]{5}" title="Indian mobile: 9876543210 or +91 98765 43210"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-mono tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                                placeholder="+91 98765 43210">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Email Address</label>
+                            <input type="email" name="email" value="{{if .Customer}}{{nullString .Customer.Email}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                                placeholder="billing@company.com">
+                        </div>
+                    </div>
+
+                    <div class="mt-4">
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">GST Number</label>
+                        <input type="text" name="gst" value="{{if .Customer}}{{nullString .Customer.GST}}{{end}}" maxlength="15"
+                            pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]" title="15-char GSTIN, e.g. 27ABCDE1234F1Z5 — 2-digit state, PAN, entity number, Z, check digit"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-mono uppercase tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            placeholder="27ABCDE1234F1Z5">
+                        <p class="text-[11px] text-text-muted mt-1">Optional for B2C. 15-char GSTIN — validated server-side before save.</p>
+                    </div>
+                </section>
+
+                <section>
+                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Billing Address</h3>
+                    <textarea name="address" rows="2"
+                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                        placeholder="Full street address...">{{if .Customer}}{{nullString .Customer.Address}}{{end}}</textarea>
+                </section>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Phone Number *</label>
-                    <input type="tel" name="phone" value="{{if .Customer}}{{.Customer.Phone}}{{end}}" required
-                        pattern="(\+?91[\s-]?|0)?[6-9][0-9]{4}[\s-]?[0-9]{5}" title="Indian mobile: 9876543210 or +91 98765 43210"
-                        class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface font-mono placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                        placeholder="+91 98765 43210">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Email Address</label>
-                    <input type="email" name="email" value="{{if .Customer}}{{nullString .Customer.Email}}{{end}}"
-                        class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                        placeholder="billing@company.com">
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">GST Number</label>
-                <input type="text" name="gst" value="{{if .Customer}}{{nullString .Customer.GST}}{{end}}"
-                    pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]" title="GSTIN format: 27ABCDE1234F1Z5"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface font-mono uppercase placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                    placeholder="27ABCDE1234F1Z5">
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Billing / Delivery Address</label>
-                <textarea name="address" rows="2"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                    placeholder="Full street address...">{{if .Customer}}{{nullString .Customer.Address}}{{end}}</textarea>
-            </div>
-
-            <div class="flex items-center justify-end gap-3 pt-3 border-t border-border-subtle">
+            <div class="sticky bottom-0 bg-surface-container-lowest border-t border-border-subtle px-6 py-3 flex justify-end gap-2 flex-wrap">
                 {{template "btn.html" (dict "Label" "Cancel" "Href" "/customers" "Variant" "secondary" "Size" "sm")}}
                 {{template "btn.html" (dict "Label" "Save Customer" "Type" "submit" "Size" "sm")}}
             </div>

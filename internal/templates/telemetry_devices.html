@@ -1,32 +1,33 @@
-<div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm flex flex-col h-full overflow-hidden">
-    <!-- Filter / Action Bar -->
-    <form method="GET" action="/telemetry/devices" class="px-4 py-2 border-b border-border-subtle flex flex-wrap items-center gap-2 bg-surface-container-lowest sticky top-0 z-10">
-        <span class="text-xs font-medium text-secondary mr-2">Filters:</span>
-        <a href="/telemetry/devices" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter ""}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">All Devices</a>
-        <a href="/telemetry/devices?status=inventory" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "inventory"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Inventory</a>
-        <a href="/telemetry/devices?status=assigned" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "assigned"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Assigned</a>
-        <a href="/telemetry/devices?status=active" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "active"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Active</a>
-        <a href="/telemetry/devices?status=retired" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "retired"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Retired</a>
-        <a href="/telemetry/devices?status=quarantined" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "quarantined"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Quarantined</a>
-
-        <div class="ml-auto flex items-center gap-3">
-            {{if can .User "telemetry" "update"}}
-            {{template "btn.html" (dict "Label" "Register Devices" "Href" "/telemetry/devices/bulk" "Size" "sm" "Icon" "add")}}
-            {{end}}
-        </div>
-    </form>
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm flex flex-col h-full overflow-hidden">
+    {{template "filter_bar.html" (dict
+        "Action" "/telemetry/devices"
+        "Query" .Query
+        "StatusFilter" .StatusFilter
+        "Chips" (chips "All Devices" "" "Inventory" "inventory" "Assigned" "assigned" "Active" "active" "Retired" "retired" "Quarantined" "quarantined")
+        "ShowDates" true
+        "DateFrom" .DateFrom
+        "DateTo" .DateTo
+        "ShowSearch" true
+        "SearchPlaceholder" "Search IMEI, serial, vehicle..."
+    )}}
+    <div class="px-4 pb-2 border-b border-border-subtle flex items-center gap-3 bg-surface-container-lowest">
+        <span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{.Pagination.Total}} total</span>
+        {{if can .User "telemetry" "update"}}
+        {{template "btn.html" (dict "Label" "Register Devices" "Href" "/telemetry/devices/bulk" "Size" "sm" "Icon" "add")}}
+        {{end}}
+    </div>
 
     <!-- Device Table -->
     <div class="flex-1 overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-            <thead class="sticky top-0 z-10">
+        <table class="min-w-full divide-y divide-border-subtle">
+            <thead class="bg-surface-container-low">
                 <tr>
-                    <th class="th-cell">IMEI</th>
-                    <th class="th-cell">Status</th>
-                    <th class="th-cell">Vehicle</th>
-                    <th class="th-cell">Type</th>
-                    <th class="th-cell">Last Seen</th>
-                    <th class="th-cell-right">Actions</th>
+                    <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">IMEI</th>
+                    <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
+                    <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Vehicle</th>
+                    <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Type</th>
+                    <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Last Seen</th>
+                    <th class="px-3 py-2 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
                 </tr>
             </thead>
             <tbody id="telemetry-device-rows" class="divide-y divide-border-subtle text-sm text-on-surface">
@@ -35,7 +36,7 @@
         </table>
     </div>
 
-    <div class="p-4 border-t border-border-subtle bg-surface-container-lowest">
+    <div class="px-4 py-2 border-t border-border-subtle bg-surface-container-lowest">
         {{template "pagination.html" .}}
     </div>
 </div>

@@ -1,79 +1,98 @@
 <div class="max-w-3xl mx-auto">
-    <h2 class="text-xl font-semibold text-on-surface font-display mb-6">{{if .Trip}}Edit Trip{{else}}New Trip{{end}}</h2>
+    <div class="mb-4">
+        <h2 class="text-xl font-bold tracking-tight text-on-surface font-display">{{if .Trip}}Edit Trip{{else}}New Trip{{end}}</h2>
+        <p class="text-sm text-secondary mt-1">{{if .Trip}}Update dispatch details for this trip.{{else}}Create a trip from a route and optional booking.{{end}}</p>
+    </div>
 
     {{if .FlashError}}
-    <div class="bg-status-alert/10 border border-status-alert/30 text-status-alert px-4 py-3 rounded mb-4">{{.FlashError}}</div>
+    <div class="bg-status-alert/10 border border-status-alert/30 text-status-alert px-4 py-3 rounded-xl mb-4 text-sm font-medium">{{.FlashError}}</div>
     {{end}}
 
     {{ $t := .Trip }}
 
-    <form method="POST" action="/trips{{if $t}}/{{$t.ID}}/edit{{else}}/new{{end}}" class="space-y-4">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Route *</label>
-                <select name="route_id" required class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                    <option value="">Select Route</option>
-                    {{range .Routes}}
-                    <option value="{{.ID}}" {{if and $t (eq .ID $t.RouteID)}}selected{{end}}>{{.Source}} → {{.Destination}}</option>
-                    {{end}}
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Booking</label>
-                {{if $.SelectedBookingID}}
-                <input type="hidden" name="booking_id" value="{{$.SelectedBookingID}}" />
-                <div class="px-3 py-2.5 bg-surface-container border border-border-subtle rounded-md text-sm text-on-surface">
-                    Booking: {{$.SelectedBookingID}}
+    <form method="POST" action="/trips{{if $t}}/{{$t.ID}}/edit{{else}}/new{{end}}" class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <div class="p-5 space-y-5">
+            <!-- Route & Booking -->
+            <section>
+                <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Route &amp; Booking</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Route *</label>
+                        <select name="route_id" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <option value="">Select Route</option>
+                            {{range .Routes}}
+                            <option value="{{.ID}}" {{if and $t (eq .ID $t.RouteID)}}selected{{end}}>{{.Source}} → {{.Destination}}</option>
+                            {{end}}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Booking</label>
+                        {{if $.SelectedBookingID}}
+                        <input type="hidden" name="booking_id" value="{{$.SelectedBookingID}}" />
+                        <div class="px-3 py-2.5 bg-surface-container border border-border-subtle rounded-lg text-sm text-on-surface">
+                            Booking: {{$.SelectedBookingID}}
+                        </div>
+                        {{else}}
+                        <select name="booking_id" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <option value="">No Booking</option>
+                        </select>
+                        {{end}}
+                    </div>
                 </div>
-                {{else}}
-                <select name="booking_id" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                    <option value="">No Booking</option>
-                </select>
-                {{end}}
-            </div>
+            </section>
+
+            <!-- Assignment -->
+            <section>
+                <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Assignment</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Driver</label>
+                        <select name="driver_id" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <option value="">Select Driver</option>
+                            {{range .Drivers}}
+                            <option value="{{.ID}}" {{if eq (printf "%s" .ID) $.SelectedDriverID}}selected{{end}}>{{.FirstName}} {{.LastName}} ({{.DriverID}})</option>
+                            {{end}}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Vehicle</label>
+                        <select name="vehicle_id" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <option value="">Select Vehicle</option>
+                            {{range .Vehicles}}
+                            <option value="{{.ID}}" {{if eq (printf "%s" .ID) $.SelectedVehicleID}}selected{{end}}>{{.VehicleNumber}} ({{.RegistrationNumber}})</option>
+                            {{end}}
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Schedule -->
+            <section>
+                <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Schedule</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Departure Time *</label>
+                        <input type="datetime-local" name="departure_time" value="{{if $t}}{{datetime $t.DepartureTime}}{{end}}" required
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Arrival Time</label>
+                        <input type="datetime-local" name="arrival_time" value="{{if $t}}{{if $t.ArrivalTime}}{{datetime $t.ArrivalTime}}{{end}}{{end}}"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    </div>
+                </div>
+            </section>
+
+            <!-- Notes -->
+            <section>
+                <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Notes</h3>
+                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Remarks</label>
+                <textarea name="remarks" rows="2"
+                    class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">{{if $t}}{{$t.Remarks}}{{end}}</textarea>
+            </section>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Driver</label>
-                <select name="driver_id" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                    <option value="">Select Driver</option>
-                    {{range .Drivers}}
-                    <option value="{{.ID}}" {{if eq (printf "%s" .ID) $.SelectedDriverID}}selected{{end}}>{{.FirstName}} {{.LastName}} ({{.DriverID}})</option>
-                    {{end}}
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Vehicle</label>
-                <select name="vehicle_id" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                    <option value="">Select Vehicle</option>
-                    {{range .Vehicles}}
-                    <option value="{{.ID}}" {{if eq (printf "%s" .ID) $.SelectedVehicleID}}selected{{end}}>{{.VehicleNumber}} ({{.RegistrationNumber}})</option>
-                    {{end}}
-                </select>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Departure Time *</label>
-                <input type="datetime-local" name="departure_time" value="{{if $t}}{{datetime $t.DepartureTime}}{{end}}" required
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-            </div>
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Arrival Time</label>
-                <input type="datetime-local" name="arrival_time" value="{{if $t}}{{if $t.ArrivalTime}}{{datetime $t.ArrivalTime}}{{end}}{{end}}"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-            </div>
-        </div>
-
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Remarks</label>
-            <textarea name="remarks" rows="2"
-                class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">{{if $t}}{{$t.Remarks}}{{end}}</textarea>
-        </div>
-
-        <div class="flex justify-end gap-3 pt-4 flex-wrap">
+        <div class="sticky bottom-0 bg-surface-container-lowest border-t border-border-subtle px-5 py-3 flex justify-end gap-2 flex-wrap">
             {{template "btn.html" (dict "Variant" "secondary" "Size" "md" "Href" "/trips" "Label" "Cancel" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-border-subtle focus:ring-offset-2")}}
             {{template "btn.html" (dict "Variant" "primary" "Size" "md" "Type" "submit" "Label" "Save Trip" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2")}}
         </div>

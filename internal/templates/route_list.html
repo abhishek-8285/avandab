@@ -1,21 +1,39 @@
 {{template "page_header.html" (dict "Title" "Routes" "Subtitle" "Manage transport origin-destination pairs and standard tariffs" "ActionHref" "/routes/new" "ActionIcon" "add" "ActionLabel" "New Route")}}
 
-<div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm flex flex-col h-full overflow-hidden">
-    <!-- Sticky Search & Filter Bar -->
-    <form method="GET" action="/routes" class="px-4 py-3 border-b border-border-subtle flex flex-wrap items-center gap-2 bg-surface-container-lowest sticky top-0 z-10">
-        <div class="relative flex-1 min-w-60 max-w-md">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="text" name="q" value="{{.Query}}" placeholder="Filter by source or destination city..."
-                class="bg-surface-container-low border border-border-subtle rounded-md pl-9 pr-4 py-2.5 text-sm text-on-surface placeholder:text-text-muted w-full focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+{{if .Pagination}}
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:border-primary/20 transition-all">
+        <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600 shrink-0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg>
         </div>
-        {{template "btn.html" (dict "Label" "Search" "Type" "submit" "Size" "sm")}}
-
-        <div class="ml-auto flex items-center gap-3">
-            {{template "btn.html" (dict "Label" "New Route" "Href" "/routes/new" "Size" "sm" "Icon" "add")}}
+        <div class="min-w-0">
+            <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{.Pagination.Total}}</div>
+            <div class="text-xs text-secondary font-medium mt-1">Total Routes</div>
         </div>
-    </form>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:border-primary/20 transition-all">
+        <div class="w-9 h-9 rounded-lg bg-violet-500/10 border border-violet-500/15 grid place-items-center text-violet-600 shrink-0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 4-6"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{if .Routes}}{{len .Routes}}{{else}}0{{end}}</div>
+            <div class="text-xs text-secondary font-medium mt-1">On This Page</div>
+        </div>
+    </div>
+</div>
+{{end}}
 
-    <!-- Data Table Fragment (Datastar refresh target) -->
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+    {{template "filter_bar.html" (dict
+        "Action" "/routes"
+        "Label" "Search:"
+        "Query" .Query
+        "ShowDates" false
+        "ShowSearch" true
+        "SearchPlaceholder" "Filter by source or destination city..."
+        "Primary" (dict "Label" "New Route" "Href" "/routes/new" "Size" "sm" "Icon" "add")
+    )}}
+
     <div id="list-table">
         {{template "route_list_table.html" .}}
     </div>

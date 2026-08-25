@@ -87,6 +87,30 @@ func (a *App) bookingKPIs(ctx context.Context) []KPI {
 	}
 }
 
+func (a *App) tripKPIs(ctx context.Context) []KPI {
+	byStatus := a.countByStatus(ctx, "trips", "status")
+	total := 0
+	for _, n := range byStatus {
+		total += n
+	}
+	var monthCount int
+	if a.DB != nil {
+		_ = a.DB.QueryRowContext(ctx,
+			`SELECT COUNT(*) FROM trips
+			 WHERE created_at >= date('now','localtime','start of month')`).
+			Scan(&monthCount)
+	}
+	sub := i64(monthCount) + " created this month"
+	active := byStatus["assigned"] + byStatus["started"] + byStatus["in_transit"]
+	completed := byStatus["completed"] + byStatus["delivered"]
+	return []KPI{
+		{Label: "Total Trips", Key: "kpi.trips.total", Value: i64(total), Sub: sub},
+		{Label: "Draft", Key: "kpi.trips.draft", Value: i64(byStatus["draft"]), Accent: "text-status-warning"},
+		{Label: "Active", Key: "kpi.trips.active", Value: i64(active), Accent: "text-status-info"},
+		{Label: "Completed", Key: "kpi.trips.completed", Value: i64(completed), Accent: "text-status-success"},
+	}
+}
+
 func (a *App) vehicleKPIs(ctx context.Context) []KPI {
 	byStatus := a.countByStatus(ctx, "vehicles", "status")
 	total := 0

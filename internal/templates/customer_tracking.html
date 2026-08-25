@@ -41,9 +41,9 @@
         </dl>
 
         <div class="mt-6 flex gap-3 flex-wrap">
-            <a href="/customer/bookings" class="inline-flex items-center rounded-md bg-surface-container-low border border-border-subtle px-4 py-2 text-sm font-medium text-on-surface hover:bg-surface-container transition-colors">Back to Shipments</a>
-            <a href="/customer/tracking/{{.TripID}}" data-poll-url="/customer/tracking/{{.TripID}}" id="refresh-tracking" class="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-all">Refresh</a>
-            <a href="#feedback" class="ml-auto inline-flex items-center gap-2 rounded-md bg-surface-container-low border border-border-subtle px-4 py-2 text-sm font-medium text-secondary hover:text-on-surface hover:bg-surface-container transition-colors">Give Feedback</a>
+            <a href="/customer/bookings" class="inline-flex items-center rounded-full bg-surface-container-lowest border border-border-subtle px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">Back to Shipments</a>
+            <a href="/customer/tracking/{{.TripID}}" data-poll-url="/customer/tracking/{{.TripID}}" id="refresh-tracking" class="inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all">Refresh</a>
+            <a href="#feedback" class="ml-auto inline-flex items-center gap-2 rounded-full bg-surface-container-lowest border border-border-subtle px-4 py-2 text-sm font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors">Give Feedback</a>
         </div>
 
         <div class="mt-6 bg-surface-container-low rounded-lg p-4 border border-border-subtle">
@@ -57,7 +57,7 @@
         </div>
     </div>
 
-    <div class="bg-surface-container-lowest border border-border-subtle rounded-lg p-6 shadow-sm" id="feedback">
+    <div class="bg-surface-container-lowest border border-border-subtle rounded-2xl p-6 shadow-sm" id="feedback">
         <h3 class="text-base font-semibold text-on-surface font-display mb-2">Trip Feedback</h3>
         <p class="text-sm text-text-muted mb-4">Rate your experience for trip {{.TripNumber}}.</p>
         {{template "trip_feedback.html" .}}

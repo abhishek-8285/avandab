@@ -1,6 +1,6 @@
 <div class="flex flex-col items-center justify-center py-16 text-center">
-  {{if .Icon}}<span class="text-text-muted mb-3 flex items-center justify-center text-4xl">{{iconWithClass .Icon "w-9 h-9"}}</span>{{end}}
-  <div class="text-on-surface font-semibold">{{.Title}}</div>
-  {{if .Message}}<div class="text-text-muted text-sm mt-1 max-w-sm">{{.Message}}</div>{{end}}
-  {{if .ActionHref}}<a href="{{.ActionHref}}" class="mt-4 inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-all text-decoration-none">{{if .ActionIcon}}{{icon .ActionIcon}}{{end}}{{.ActionLabel}}</a>{{end}}
+  {{if .Icon}}<span class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted mx-auto">{{iconWithClass .Icon "w-6 h-6"}}</span>{{end}}
+  <div class="text-sm font-medium text-on-surface mt-3">{{.Title}}</div>
+  {{if .Message}}<div class="text-xs text-text-muted mt-1 max-w-sm">{{.Message}}</div>{{end}}
+  {{if .ActionHref}}<a href="{{.ActionHref}}" class="mt-4 inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-bold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all active:scale-[0.98] text-decoration-none">{{if .ActionIcon}}{{icon .ActionIcon}}{{end}}{{.ActionLabel}}</a>{{end}}
 </div>

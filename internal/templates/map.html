@@ -1,19 +1,19 @@
 <div class="space-y-4">
-    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b pb-4">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm px-5 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-on-surface tracking-tight">Live Fleet Map</h1>
-            <p class="text-sm text-secondary mt-1">Real-time GPS telemetry, active positions, and vehicle tracking</p>
+            <h1 class="text-base font-bold text-on-surface tracking-tight m-0">Live Fleet Map</h1>
+            <p class="text-xs text-secondary mt-0.5 mb-0">Real-time GPS telemetry, active positions, and vehicle tracking</p>
         </div>
         <div class="flex flex-wrap items-center gap-3 text-xs font-medium">
             <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full inline-block bg-status-success"></span>Running</span>
             <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full inline-block bg-primary"></span>Stopped</span>
             <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full inline-block bg-text-muted"></span>No Signal</span>
             <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full inline-block bg-status-warning"></span>Maintenance Due</span>
-            <span class="px-2.5 py-1 rounded-full bg-surface-container text-secondary font-mono" id="map-vehicle-count">0 vehicles</span>
+            <span class="px-2 py-0.5 rounded-full bg-surface-container border border-border-subtle text-secondary font-mono text-xs font-bold tabular-nums" id="map-vehicle-count">0 vehicles</span>
         </div>
     </div>
 
-    <div id="map" class="h-[75vh] w-full rounded-xl border border-border-subtle overflow-hidden shadow-sm bg-surface-container-low"></div>
+    <div id="map" class="h-[75vh] w-full rounded-2xl border border-border-subtle overflow-hidden shadow-sm bg-surface-container-low"></div>
 </div>
 
 <script src="/static/js/map.js"></script>

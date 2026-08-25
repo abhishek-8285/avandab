@@ -127,7 +127,7 @@ func TestBookingService_CreateAndConfirm(t *testing.T) {
 	svc := NewTestServices(t, db)
 	ctx := context.Background()
 
-	customer, err := svc.Customers.CreateCustomer(ctx, "Test Customer", "Acme Corp", "555-0100", "test@acme.com", "GST123", "123 Main St", "")
+	customer, err := svc.Customers.CreateCustomer(ctx, "Test Customer", "Acme Corp", "555-0100", "test@acme.com", "27AABCU9603R1ZX", "123 Main St", "")
 	require.NoError(t, err)
 
 	route, err := svc.Routes.CreateRoute(ctx, "Mumbai", "Delhi", 1400, 24, 15000, "")

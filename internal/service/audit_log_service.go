@@ -29,6 +29,24 @@ func (s *AuditLogService) ListAuditLogs(ctx context.Context, limit, offset int) 
 	return logs, total, nil
 }
 
+// dateRangeAuditRepo is implemented by audit repositories that support
+// free-text and created_at window filtering. Asserted optionally so existing
+// repository implementations/mocks keep compiling unchanged.
+type dateRangeAuditRepo interface {
+	ListAuditLogsDateRange(ctx context.Context, query string, from string, to string, limit int, offset int) ([]repository.AuditLogWithUser, int64, error)
+}
+
+// ListAuditLogsFiltered retrieves audit logs filtered by a free-text query
+// (action/table/record/user) and an optional created_at window. Falls back to
+// unfiltered listing when the store does not support filtering.
+func (s *AuditLogService) ListAuditLogsFiltered(ctx context.Context, query, from, to string, limit, offset int) ([]repository.AuditLogWithUser, int64, error) {
+	dateRepo, ok := s.store.(dateRangeAuditRepo)
+	if !ok || (query == "" && from == "" && to == "") {
+		return s.ListAuditLogs(ctx, limit, offset)
+	}
+	return dateRepo.ListAuditLogsDateRange(ctx, query, from, to, limit, offset)
+}
+
 // ListAuditLogsByRecord retrieves the most recent audit entries for a single record.
 func (s *AuditLogService) ListAuditLogsByRecord(ctx context.Context, tableName, recordID string, limit int) ([]repository.AuditLogWithUser, error) {
 	if limit <= 0 {

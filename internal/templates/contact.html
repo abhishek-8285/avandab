@@ -29,7 +29,7 @@
             </p>
         </div>
     </div>
-    <a href="/contact-us?ticket={{.SubmittedNum}}{{if .SubmittedEmail}}&amp;email={{.SubmittedEmail}}{{end}}" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-status-success text-on-primary font-medium text-sm rounded-md hover:bg-status-success/90 transition-all shrink-0">
+    <a href="/contact-us?ticket={{.SubmittedNum}}{{if .SubmittedEmail}}&amp;email={{.SubmittedEmail}}{{end}}" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-status-success text-on-primary font-semibold text-sm shadow-sm hover:bg-status-success/90 hover:-translate-y-px transition-all shrink-0">
         View Ticket Status
     </a>
 </div>
@@ -38,7 +38,7 @@
 <!-- Two Column Layout -->
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
 <!-- Left Column: Form (7 cols) -->
-<div class="lg:col-span-7 bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm p-6 md:p-8">
+<div class="lg:col-span-7 bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm p-6 md:p-8">
 <div class="flex items-center gap-2 mb-6 border-b border-border-subtle pb-4 text-primary">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
 <h2 class="text-lg font-semibold text-on-surface font-display m-0">Submit an Operational Inquiry</h2>
@@ -48,26 +48,26 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 <div>
 <label for="contact-name" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Your Full Name *</label>
-<input id="contact-name" name="name" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted" required="" type="text" placeholder="Alex Morgan">
+<input id="contact-name" name="name" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-text-muted" required="" type="text" placeholder="Alex Morgan">
 </div>
 <div>
 <label for="contact-email" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Email Address *</label>
-<input id="contact-email" name="email" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted" required="" type="email" placeholder="alex@company.com">
+<input id="contact-email" name="email" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-text-muted" required="" type="email" placeholder="alex@company.com">
 </div>
 </div>
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 <div>
 <label for="contact-phone" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Phone Number</label>
-<input id="contact-phone" name="phone" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted" type="tel" placeholder="+91 8285336507">
+<input id="contact-phone" name="phone" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-text-muted" type="tel" placeholder="+91 8285336507">
 </div>
 <div>
 <label for="contact-company" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Company / Organization</label>
-<input id="contact-company" name="company_name" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted" type="text" placeholder="Fleet Logistics LLC">
+<input id="contact-company" name="company_name" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-text-muted" type="text" placeholder="Fleet Logistics LLC">
 </div>
 </div>
 <div>
 <label for="contact-category" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Inquiry Category *</label>
-<select id="contact-category" name="category" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" required="">
+<select id="contact-category" name="category" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" required="">
 <option value="">Select a category</option>
 <option value="support">General Support</option>
 <option value="fleet">Fleet Carrier Onboarding</option>
@@ -78,14 +78,14 @@
 </div>
 <div>
 <label for="contact-subject" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Subject *</label>
-<input id="contact-subject" name="subject" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted" required="" type="text" placeholder="Brief subject of inquiry">
+<input id="contact-subject" name="subject" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-text-muted" required="" type="text" placeholder="Brief subject of inquiry">
 </div>
 <div>
 <label for="contact-message" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Detailed Message *</label>
-<textarea id="contact-message" name="message" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted" required="" rows="4" placeholder="Describe your request in detail..."></textarea>
+<textarea id="contact-message" name="message" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-text-muted" required="" rows="4" placeholder="Describe your request in detail..."></textarea>
 </div>
 <div class="pt-4">
-<button class="inline-flex justify-center items-center gap-2 w-full md:w-auto rounded-md bg-primary text-on-primary px-4 py-2.5 text-sm font-medium hover:bg-primary/90 transition-all cursor-pointer" type="submit">
+<button class="inline-flex justify-center items-center gap-2 w-full md:w-auto rounded-full bg-primary text-on-primary px-5 py-2.5 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer border-0" type="submit">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
                             Submit Inquiry &amp; Generate Ticket
                         </button>
@@ -95,7 +95,7 @@
 <!-- Right Column: Info & Status (5 cols) -->
 <div class="lg:col-span-5 space-y-6">
 <!-- Ticket Status -->
-<div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm p-6">
+<div class="bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm p-6">
 <div class="flex items-center gap-2 mb-4 text-primary">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
 <h3 class="text-lg font-semibold text-on-surface font-display m-0">Check Contact Ticket Status</h3>
@@ -103,30 +103,30 @@
 <p class="text-sm text-on-surface-variant leading-relaxed mb-4">Track real-time progress of your submitted support ticket.</p>
 <form method="GET" action="/contact-us" class="flex flex-col sm:flex-row gap-2">
 <label for="search-ticket" class="sr-only">Ticket ID</label>
-<input id="search-ticket" name="ticket" value="{{.SearchQuery}}" class="flex-grow w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted" placeholder="Ticket ID (e.g. TKT-123)" type="text">
+<input id="search-ticket" name="ticket" value="{{.SearchQuery}}" class="flex-grow w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-text-muted" placeholder="Ticket ID (e.g. TKT-123)" type="text">
 <label for="search-email" class="sr-only">Submission Email</label>
-<input id="search-email" name="email" value="{{.SearchEmail}}" class="flex-grow w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-text-muted" placeholder="Email used at submission" type="email">
-<button type="submit" class="inline-flex items-center justify-center gap-1 rounded-md border border-border-subtle bg-surface-container-lowest text-secondary px-4 py-2.5 text-sm font-medium hover:bg-surface-container-low transition-all cursor-pointer shrink-0">
+<input id="search-email" name="email" value="{{.SearchEmail}}" class="flex-grow w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-text-muted" placeholder="Email used at submission" type="email">
+<button type="submit" class="inline-flex items-center justify-center gap-1 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary px-4 py-2.5 text-sm font-semibold hover:bg-surface-container-low hover:text-on-surface transition-all cursor-pointer shrink-0">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> Check
                         </button>
 </form>
 
 {{if .Ticket}}
-<div class="mt-4 bg-surface-container-low border border-border-subtle rounded-md p-4 space-y-3">
+<div class="mt-4 bg-surface-container-low border border-border-subtle rounded-xl p-4 space-y-3">
     <div class="flex items-center justify-between border-b border-border-subtle pb-2">
         <div>
             <span class="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Ticket Number</span>
-            <div class="font-mono font-bold text-sm text-primary">{{.Ticket.TicketNumber}}</div>
+            <div class="font-mono font-bold text-sm text-primary tabular-nums">{{.Ticket.TicketNumber}}</div>
         </div>
         <div>
             {{if eq .Ticket.Status "pending"}}
-            <span class="px-2 py-0.5 text-xs bg-status-warning/10 text-status-warning font-semibold rounded-full">Pending Review</span>
+            <span class="px-2 py-0.5 text-xs bg-status-warning/10 border border-status-warning/20 text-status-warning font-bold rounded-full">Pending Review</span>
             {{else if eq .Ticket.Status "in_progress"}}
-            <span class="px-2 py-0.5 text-xs bg-status-info/10 text-status-info font-semibold rounded-full">In Progress</span>
+            <span class="px-2 py-0.5 text-xs bg-status-info/10 border border-status-info/20 text-status-info font-bold rounded-full">In Progress</span>
             {{else if eq .Ticket.Status "resolved"}}
-            <span class="px-2 py-0.5 text-xs bg-status-success/10 text-status-success font-semibold rounded-full">Resolved</span>
+            <span class="px-2 py-0.5 text-xs bg-status-success/10 border border-status-success/20 text-status-success font-bold rounded-full">Resolved</span>
             {{else}}
-            <span class="px-2 py-0.5 text-xs bg-surface-container text-on-surface-variant font-semibold rounded-full">Closed</span>
+            <span class="px-2 py-0.5 text-xs bg-surface-container border border-border-subtle text-on-surface-variant font-bold rounded-full">Closed</span>
             {{end}}
         </div>
     </div>
@@ -138,7 +138,7 @@
 {{end}}
 </div>
 <!-- Direct Channels -->
-<div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm p-6">
+<div class="bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm p-6">
 <div class="flex items-center gap-2 mb-6 border-b border-border-subtle pb-2 text-primary">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 16c0 3-2 3-2 3-2 0-2-3-2-3s2-1.5 2-3.5c0-1 .23-2 .66-2.85"/></svg>
 <h3 class="text-lg font-semibold text-on-surface font-display m-0">Direct Operating Channels</h3>
@@ -165,7 +165,7 @@
 </div>
 </div>
 <!-- Quick Links -->
-<div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm p-6">
+<div class="bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm p-6">
 <h3 class="text-lg font-semibold text-on-surface font-display mb-4">Quick Support</h3>
 <ul class="space-y-3 text-sm text-on-surface-variant">
   <li class=""><a class="text-primary hover:underline flex items-center gap-1" href="/features/dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg> Help Center</a></li>

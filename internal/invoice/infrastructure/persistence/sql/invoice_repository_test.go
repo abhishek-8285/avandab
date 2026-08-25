@@ -54,6 +54,7 @@ CREATE TABLE invoices (
 	irn_ack_date TEXT,
 	signed_qr TEXT,
 	ewb_number TEXT,
+	irn_cancelled_at TIMESTAMP,
 	FOREIGN KEY (booking_id) REFERENCES bookings(id),
 	FOREIGN KEY (customer_id) REFERENCES customers(id),
 	FOREIGN KEY (trip_id) REFERENCES trips(id)

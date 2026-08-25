@@ -11,62 +11,62 @@ FASTag/docs — populated by console.js from /api/fleet/{id}/context. */}}
     <button id="ctx-sheet-close" type="button" aria-label="Close details"
             class="hidden max-lg:block sticky top-0 mx-auto w-10 h-1.5 rounded-full bg-border-subtle cursor-pointer"></button>
     <div class="flex items-center justify-between px-1">
-        <h2 id="ctx-title" class="text-sm font-semibold text-on-surface">Vehicle context</h2>
-        <span id="ctx-status" class="text-xs text-text-muted"></span>
+        <h2 id="ctx-title" class="text-sm font-bold text-on-surface">Vehicle context</h2>
+        <span id="ctx-status" class="text-xs font-medium text-text-muted"></span>
     </div>
 
-    <div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm divide-y divide-border-subtle text-sm">
+    <div class="bg-surface-container-lowest border border-border-subtle rounded-xl shadow-xs divide-y divide-border-subtle text-sm overflow-hidden">
         <div class="px-4 py-3">
-            <p class="text-xs text-text-muted">Position</p>
-            <p id="ctx-position" class="text-on-surface mt-0.5">—</p>
+            <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Position</p>
+            <p id="ctx-position" class="text-sm font-semibold text-on-surface mt-0.5">—</p>
         </div>
         <div class="px-4 py-3">
-            <p class="text-xs text-text-muted">Trip</p>
-            <p id="ctx-trip" class="text-on-surface mt-0.5">—</p>
+            <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Trip</p>
+            <p id="ctx-trip" class="text-sm font-semibold text-primary mt-0.5 tabular-nums">—</p>
         </div>
         <div class="px-4 py-3 flex items-center justify-between gap-2">
             <div class="min-w-0">
-                <p class="text-xs text-text-muted">Driver</p>
-                <p id="ctx-driver" class="text-on-surface mt-0.5 truncate">—</p>
+                <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Driver</p>
+                <p id="ctx-driver" class="text-sm font-semibold text-on-surface mt-0.5 truncate">—</p>
             </div>
-            <a id="ctx-call" href="#" class="hidden shrink-0 inline-flex items-center gap-1 rounded-md bg-primary text-on-primary px-2.5 py-1.5 text-xs font-medium hover:opacity-90 transition-opacity">Call</a>
+            <a id="ctx-call" href="#" class="hidden shrink-0 inline-flex items-center gap-1 rounded-full bg-primary text-on-primary px-3 py-1.5 text-xs font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all">Call</a>
         </div>
         <div class="px-4 py-3 grid grid-cols-2 gap-3">
             <div>
-                <p class="text-xs text-text-muted">PnL / km today</p>
-                <p id="ctx-pnl" class="text-on-surface mt-0.5">—</p>
+                <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">PnL / km today</p>
+                <p id="ctx-pnl" class="text-sm font-bold tabular-nums text-on-surface mt-0.5">—</p>
             </div>
             <div>
-                <p class="text-xs text-text-muted">FASTag balance</p>
-                <p id="ctx-fastag" class="text-on-surface mt-0.5">—</p>
+                <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">FASTag balance</p>
+                <p id="ctx-fastag" class="text-sm font-bold tabular-nums text-on-surface mt-0.5">—</p>
             </div>
         </div>
         <div class="px-4 py-3">
-            <div class="flex items-center justify-between">
-                <p class="text-xs text-text-muted">Kharcha pending</p>
+            <div class="flex items-center justify-between gap-2">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Kharcha pending</p>
                 <span id="ctx-trip-actions" class="hidden gap-1">
                     <button id="ctx-settle" type="button"
-                            class="inline-flex items-center rounded-md border border-border-subtle px-2 py-1 text-[10px] font-medium hover:bg-surface-container transition-colors cursor-pointer">Settle trip</button>
+                            class="inline-flex items-center rounded-full bg-surface-container-lowest border border-border-subtle px-2.5 py-1 text-[11px] font-bold hover:bg-surface-container-low hover:border-primary/20 transition-colors cursor-pointer">Settle trip</button>
                     <button id="ctx-share" type="button"
-                            class="inline-flex items-center rounded-md border border-border-subtle px-2 py-1 text-[10px] font-medium hover:bg-surface-container transition-colors cursor-pointer">Share</button>
+                            class="inline-flex items-center rounded-full bg-surface-container-lowest border border-border-subtle px-2.5 py-1 text-[11px] font-bold hover:bg-surface-container-low hover:border-primary/20 transition-colors cursor-pointer">Share</button>
                 </span>
             </div>
-            <ul id="ctx-kharcha" class="mt-1 space-y-1 text-on-surface"><li>—</li></ul>
+            <ul id="ctx-kharcha" class="mt-1 space-y-1 text-on-surface tabular-nums"><li>—</li></ul>
         </div>
         <div class="px-4 py-3 flex items-center justify-between gap-2">
             <div class="min-w-0">
-                <p class="text-xs text-text-muted">E-way bill</p>
-                <p id="ctx-eway" class="text-on-surface mt-0.5 truncate">—</p>
+                <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">E-way bill</p>
+                <p id="ctx-eway" class="text-sm font-semibold text-on-surface mt-0.5 truncate tabular-nums">—</p>
             </div>
             <button id="ctx-eway-extend" type="button"
-                    class="hidden shrink-0 inline-flex items-center rounded-md border border-border-subtle px-2.5 py-1.5 text-xs font-medium hover:bg-surface-container transition-colors cursor-pointer"
+                    class="hidden shrink-0 inline-flex items-center rounded-full bg-surface-container-lowest border border-border-subtle px-3 py-1.5 text-xs font-semibold hover:bg-surface-container-low hover:border-primary/20 transition-colors cursor-pointer"
                     title="Extend validity by 4 hours">Extend 4h</button>
         </div>
         <div class="px-4 py-3">
-            <p class="text-xs text-text-muted">Docs expiring (30d)</p>
+            <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Docs expiring (30d)</p>
             <ul id="ctx-docs" class="mt-1 space-y-1 text-on-surface"><li>—</li></ul>
         </div>
     </div>
-    <div id="ctx-feedback" class="hidden rounded-md px-3 py-2 text-xs bg-primary-container text-on-primary-container"></div>
+    <div id="ctx-feedback" class="hidden rounded-xl px-3 py-2 text-xs font-medium bg-primary-container text-on-primary-container"></div>
 </aside>
 {{end}}

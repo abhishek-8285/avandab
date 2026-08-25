@@ -1,28 +1,19 @@
 {{template "page_header.html" (dict "Title" "Bookings" "Subtitle" "Manage transport bookings, schedules, and pricing" "ActionHref" "/bookings/new" "ActionIcon" "add" "ActionLabel" "New Booking")}}
 {{template "kpi_grid.html" .}}
 
-<div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm flex flex-col overflow-hidden">
-    <!-- Sticky Filter Bar (Stitch Design) -->
-    <form method="GET" action="/bookings" class="px-4 py-2 border-b border-border-subtle flex flex-wrap items-center gap-2 bg-surface-container-lowest sticky top-0 z-10">
-        <span class="text-xs font-medium text-secondary mr-2">{{t "common.filters"}}</span>
-        <a href="/bookings" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter ""}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">All Bookings</a>
-        <a href="/bookings?status=pending" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "pending"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Pending</a>
-        <a href="/bookings?status=confirmed" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "confirmed"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Confirmed</a>
-        <a href="/bookings?status=completed" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "completed"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Completed</a>
-        <a href="/bookings?status=cancelled" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "cancelled"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Cancelled</a>
-
-        <div class="ml-auto flex items-center gap-3">
-                        <div class="relative min-w-[200px] flex-1 sm:flex-none">
-                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                </span>
-                <input type="text" name="q" value="{{.Query}}" placeholder='{{t "common.search"}}'
-                    class="bg-surface-container-low border border-border-subtle rounded-md py-2 pl-9 pr-4 text-sm text-on-surface w-full focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-            </div>
-
-            {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Href" "/bookings/new" "Icon" "add" "Label" "New Booking")}}
-        </div>
-    </form>
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+    {{template "filter_bar.html" (dict
+        "Action" "/bookings"
+        "Query" .Query
+        "StatusFilter" .StatusFilter
+        "Chips" (chips "All Bookings" "" "Pending" "pending" "Confirmed" "confirmed" "Completed" "completed" "Cancelled" "cancelled")
+        "ShowDates" true
+        "DateFrom" .DateFrom
+        "DateTo" .DateTo
+        "ShowSearch" true
+        "SearchPlaceholder" "Search bookings, customers…"
+        "Primary" (dict "Variant" "primary" "Size" "sm" "Href" "/bookings/new" "Icon" "add" "Label" "New Booking")
+    )}}
 
     <!-- Data Table Fragment (Datastar refresh target) -->
     <div id="list-table">

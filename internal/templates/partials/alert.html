@@ -1,3 +1,3 @@
 {{$t := .Tone}}{{if not $t}}{{$t = "info"}}{{end}}
-{{$cls := "bg-status-info/10 border-status-info/30 text-status-info"}}{{if eq $t "error"}}{{$cls = "bg-status-alert/10 border-status-alert/30 text-status-alert"}}{{else if eq $t "success"}}{{$cls = "bg-status-success/10 border-status-success/30 text-status-success"}}{{end}}
-<div class="border-l-4 rounded p-4 {{$cls}} mb-4 text-sm">{{.Message}}</div>
+{{$cls := "bg-status-info/10 border-status-info/15 text-status-info"}}{{if eq $t "error"}}{{$cls = "bg-status-alert/10 border-status-alert/15 text-status-alert"}}{{else if eq $t "success"}}{{$cls = "bg-status-success/10 border-status-success/15 text-status-success"}}{{end}}
+<div class="rounded-xl border px-4 py-3 {{$cls}} mb-4 text-sm font-medium">{{.Message}}</div>

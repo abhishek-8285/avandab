@@ -40,15 +40,17 @@ func (h *AlertHandlers) Routes(r chi.Router) {
 
 // List renders the operational alerts management page.
 func (h *AlertHandlers) List(w http.ResponseWriter, r *http.Request) {
-	status := r.URL.Query().Get("status")
-	if status == "" {
-		status = domain.StatusOpen
+	statusParam := r.URL.Query().Get("status")
+	if statusParam == "" {
+		statusParam = domain.StatusOpen
 	}
-	if status == "all" {
-		status = ""
+	// "all" is a display-level chip value; the repository treats "" as no filter.
+	filterStatus := statusParam
+	if filterStatus == "all" {
+		filterStatus = ""
 	}
 
-	alertsList, err := h.repo.ListAlerts(r.Context(), status, 100, 0)
+	alertsList, err := h.repo.ListAlerts(r.Context(), filterStatus, 100, 0)
 	user, _ := h.App.getUserFromContext(r)
 	if err != nil {
 		h.App.renderError(w, http.StatusInternalServerError, "Failed to load alerts", err.Error(), user)
@@ -60,7 +62,7 @@ func (h *AlertHandlers) List(w http.ResponseWriter, r *http.Request) {
 		User:  user,
 		Extra: map[string]interface{}{
 			"Alerts":        alertsList,
-			"CurrentStatus": status,
+			"CurrentStatus": statusParam,
 		},
 	})
 }

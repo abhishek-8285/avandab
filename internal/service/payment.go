@@ -90,6 +90,21 @@ func (s *PaymentService) RecordPayment(ctx context.Context, invoiceID domain.Inv
 			OccurredAt: time.Now(),
 		},
 	})
+
+	// Internal money ledger (migration 00097): a received payment is a
+	// credit. The ledger is audit infrastructure — a failure here must
+	// never fail the payment itself (same contract as logAudit above).
+	if err := NewMoneyLedgerService(s.store, s.log).AppendEntry(ctx, LedgerEntry{
+		TxnType:     "payment_recorded",
+		RefTable:    "payments",
+		RefID:       string(created.ID),
+		Direction:   "credit",
+		AmountMinor: ToMinor(amount),
+		Memo:        fmt.Sprintf("payment against invoice %s", invoiceID),
+	}); err != nil {
+		s.log.Warn("money ledger append failed; payment stands",
+			"payment_id", created.ID, "error", err)
+	}
 	return created, nil
 }
 

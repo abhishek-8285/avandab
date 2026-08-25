@@ -1,37 +1,36 @@
 {{range .Zones}}
-<tr class="geofence-item-row hover:bg-surface-container-low/70 transition-colors group"
+<tr class="geofence-item-row hover:bg-surface-container-low/60 transition-colors group"
     data-kind="{{.Kind}}"
     data-shape="{{.Shape}}"
     data-active="{{if .IsActive}}true{{else}}false{{end}}"
     data-name="{{.Name}}"
     data-route="{{.RouteName}}">
-    <!-- Name & Trigger Hint -->
-    <td class="py-3.5 px-5">
-        <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 
-                {{if or (eq .Kind "pickup") (eq .Kind "drop")}}bg-emerald-500/10 text-emerald-500 border border-emerald-500/20
-                {{else if eq .Kind "depot"}}bg-blue-500/10 text-blue-500 border border-blue-500/20
-                {{else if eq .Kind "restricted"}}bg-amber-500/10 text-amber-500 border border-amber-500/20
-                {{else}}bg-rose-500/10 text-rose-500 border border-rose-500/20{{end}}">
+    <td class="px-3 py-2">
+        <div class="flex items-center gap-2.5">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0
+                {{if or (eq .Kind "pickup") (eq .Kind "drop")}}bg-emerald-500/10 text-emerald-600 border border-emerald-500/20
+                {{else if eq .Kind "depot"}}bg-blue-500/10 text-blue-600 border border-blue-500/20
+                {{else if eq .Kind "restricted"}}bg-amber-500/10 text-amber-600 border border-amber-500/20
+                {{else}}bg-rose-500/10 text-rose-600 border border-rose-500/20{{end}}">
                 {{if eq .Shape "circle"}}
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="9"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><circle cx="12" cy="12" r="9"/></svg>
                 {{else}}
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polygon points="12 2 22 8.5 18 21 6 21 2 8.5 12 2"/></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><polygon points="12 2 22 8.5 18 21 6 21 2 8.5 12 2"/></svg>
                 {{end}}
             </div>
-            <div>
-                <div class="font-bold text-on-surface flex items-center gap-2">
-                    <span>{{.Name}}</span>
+            <div class="min-w-0">
+                <div class="flex items-center gap-1.5">
+                    <span class="text-sm font-bold text-on-surface truncate">{{.Name}}</span>
                     {{if eq .Kind "restricted"}}
-                    <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">ALERT</span>
+                    <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">ALERT</span>
                     {{else if eq .Kind "no_entry"}}
-                    <span class="text-[10px] px-1.5 py-0.2 rounded font-mono font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20">NO ENTRY</span>
+                    <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20">NO ENTRY</span>
                     {{end}}
                 </div>
-                <div class="text-[11px] text-text-muted">
+                <div class="text-[11px] text-text-muted truncate">
                     {{if eq .Kind "pickup"}}Auto-triggers reach pickup
                     {{else if eq .Kind "drop"}}Auto-triggers delivery transit
-                    {{else if eq .Kind "depot"}}Dwell & demurrage tracking
+                    {{else if eq .Kind "depot"}}Dwell &amp; demurrage tracking
                     {{else if eq .Kind "restricted"}}Warning on entry
                     {{else if eq .Kind "no_entry"}}Security breach alarm
                     {{else}}Virtual zone boundary{{end}}
@@ -40,56 +39,53 @@
         </div>
     </td>
 
-    <!-- Kind Badge -->
-    <td class="py-3.5 px-5">
+    <td class="px-3 py-2 whitespace-nowrap">
         {{if eq .Kind "pickup"}}
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/15">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
             Pickup
         </span>
         {{else if eq .Kind "drop"}}
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20">
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border border-cyan-500/15">
             <span class="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
             Drop
         </span>
         {{else if eq .Kind "depot"}}
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15">
             <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
             Depot / Hub
         </span>
         {{else if eq .Kind "restricted"}}
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/15">
             <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
             Restricted
         </span>
         {{else}}
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/15">
             <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
             No Entry
         </span>
         {{end}}
     </td>
 
-    <!-- Shape & Dimensions -->
-    <td class="py-3.5 px-5">
+    <td class="px-3 py-2 whitespace-nowrap">
         <div class="flex items-center gap-2">
             <span class="capitalize text-xs font-medium text-on-surface">{{.Shape}}</span>
             {{if eq .Shape "circle"}}
-            <span class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-surface-container text-secondary border border-border-subtle">
+            <span class="text-xs font-mono font-semibold tabular-nums px-2 py-0.5 rounded-md bg-surface-container text-secondary border border-border-subtle">
                 {{if ge .RadiusM 1000.0}}{{printf "%.1f km" (div .RadiusM 1000.0)}}{{else}}{{printf "%.0f m" .RadiusM}}{{end}}
             </span>
             {{else}}
-            <span class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-surface-container text-secondary border border-border-subtle">
+            <span class="text-xs font-mono font-semibold tabular-nums px-2 py-0.5 rounded-md bg-surface-container text-secondary border border-border-subtle">
                 {{len .Polygon}} vertices
             </span>
             {{end}}
         </div>
     </td>
 
-    <!-- Route Scope -->
-    <td class="py-3.5 px-5">
+    <td class="px-3 py-2 whitespace-nowrap">
         {{if .RouteName}}
-        <span class="inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded bg-surface-container text-secondary border border-border-subtle">
+        <span class="inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded-md bg-surface-container text-secondary border border-border-subtle">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3 text-text-muted"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
             {{.RouteName}}
         </span>
@@ -98,39 +94,36 @@
         {{end}}
     </td>
 
-    <!-- Priority -->
-    <td class="py-3.5 px-5 text-center">
-        <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-surface-container text-on-surface border border-border-subtle" data-numeric>
+    <td class="px-3 py-2 text-center whitespace-nowrap">
+        <span class="text-xs font-mono font-bold tabular-nums px-2 py-0.5 rounded-md bg-surface-container text-on-surface border border-border-subtle" data-numeric>
             P{{.Priority}}
         </span>
     </td>
 
-    <!-- Status -->
-    <td class="py-3.5 px-5 text-center">
+    <td class="px-3 py-2 text-center whitespace-nowrap">
         {{if .IsActive}}
-        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-500">
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/15">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             Active
         </span>
         {{else}}
-        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-surface-container text-text-muted">
-            <span class="w-1.5 h-1.5 rounded-full bg-text-muted"></span>
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-surface-container text-text-muted border border-border-subtle">
+            <span class="w-1.5 h-1.5 rounded-full bg-text-text-muted"></span>
             Disabled
         </span>
         {{end}}
     </td>
 
-    <!-- Actions -->
-    <td class="py-3.5 px-5 text-right whitespace-nowrap">
-        <div class="flex items-center justify-end gap-1.5">
+    <td class="px-3 py-2 text-right whitespace-nowrap">
+        <div class="flex items-center justify-end gap-1">
             {{if can $.User "geofences" "update"}}
-            <a href="/geofences/{{.ID}}/edit" class="p-1.5 rounded-lg text-secondary hover:text-blue-500 hover:bg-surface-container transition-colors" title="Edit Geofence">
+            <a href="/geofences/{{.ID}}/edit" class="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-surface-container transition-colors" title="Edit Geofence">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </a>
             {{end}}
             {{if can $.User "geofences" "delete"}}
             <form method="POST" action="/geofences/{{.ID}}/delete" data-confirm="Are you sure? This cannot be undone." class="inline-flex" onsubmit="return confirm('Delete geofence {{.Name}}?')">
-                <button type="submit" class="p-1.5 rounded-lg text-secondary hover:text-red-500 hover:bg-surface-container transition-colors cursor-pointer border-0 bg-transparent" title="Delete Geofence">
+                <button type="submit" class="p-1.5 rounded-lg text-secondary hover:text-status-alert hover:bg-surface-container transition-colors cursor-pointer border-0 bg-transparent" title="Delete Geofence">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 </button>
             </form>

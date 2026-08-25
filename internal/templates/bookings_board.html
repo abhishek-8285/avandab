@@ -1,34 +1,54 @@
 {{define "bookings_board.html"}}
 {{/* Bookings kanban (Spec 22 §4.2). Drag = existing status endpoints;
 server remains the only mutation authority — no new endpoint. */}}
-<div class="space-y-4">
-    <div class="flex items-center justify-between flex-wrap gap-2">
-        <div>
-            <h1 class="text-xl font-semibold text-on-surface font-display">Bookings Board</h1>
-            <p class="text-sm text-text-muted mt-1">Drag a card forward to confirm or complete it. Backwards moves are rejected.</p>
+<div class="space-y-5 max-w-[1600px] mx-auto">
+    <div class="flex items-center justify-between flex-wrap gap-3">
+        <div class="min-w-0">
+            <div class="flex items-center gap-3 flex-wrap">
+                <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Bookings Board</h1>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold tracking-wide uppercase text-emerald-700 dark:text-emerald-300">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live
+                </span>
+            </div>
+            <p class="text-sm text-secondary mt-1">Drag a card forward to confirm or complete it. Backwards moves are rejected.</p>
         </div>
-        <a href="/bookings/new" class="inline-flex items-center rounded-md bg-primary text-on-primary px-3 py-2 text-sm font-medium hover:opacity-90 transition-opacity">New booking</a>
+        <a href="/bookings/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all">+ New booking</a>
     </div>
 
-    <div id="board" class="grid grid-cols-2 lg:grid-cols-4 gap-3 overflow-x-auto"
+    <div id="board" class="grid grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto"
          data-columns='[{{range $i, $c := .Extra.Columns}}{{if $i}},{{end}}"{{$c.Status}}"{{end}}]'>
         {{range .Extra.Columns}}
-        <section class="board-column bg-surface-container-low border border-border-subtle rounded-lg p-2 min-h-[300px]"
+        <section class="board-column bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[320px]"
                  data-status="{{.Status}}">
-            <h2 class="text-xs font-semibold uppercase tracking-wide text-text-muted px-1 pb-2">
-                {{.Status}} <span class="font-normal normal-case">({{len .Cards}})</span>
-            </h2>
-            <div class="board-cards flex flex-col gap-2" data-status="{{.Status}}">
+            <div class="px-4 py-3 border-b border-border-subtle flex items-center justify-between gap-2 {{if eq .Status "pending"}}bg-gradient-to-r from-amber-500/[0.07] to-transparent{{else if eq .Status "confirmed"}}bg-gradient-to-r from-blue-500/[0.06] to-transparent{{else if eq .Status "completed"}}bg-gradient-to-r from-emerald-500/[0.06] to-transparent{{else}}bg-gradient-to-r from-rose-500/[0.06] to-transparent{{end}}">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="w-2 h-2 rounded-full shrink-0 {{if eq .Status "pending"}}bg-amber-500{{else if eq .Status "confirmed"}}bg-blue-500{{else if eq .Status "completed"}}bg-emerald-500{{else}}bg-rose-500{{end}}"></span>
+                    <h2 class="text-[11px] font-bold uppercase tracking-wider truncate {{if eq .Status "pending"}}text-amber-700 dark:text-amber-300{{else if eq .Status "confirmed"}}text-blue-700 dark:text-blue-300{{else if eq .Status "completed"}}text-emerald-700 dark:text-emerald-300{{else}}text-rose-700 dark:text-rose-300{{end}}">{{.Status}}</h2>
+                </div>
+                <span class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full text-white text-xs font-bold tabular-nums {{if eq .Status "pending"}}bg-amber-500{{else if eq .Status "confirmed"}}bg-blue-600{{else if eq .Status "completed"}}bg-emerald-500{{else}}bg-rose-500{{end}}">{{len .Cards}}</span>
+            </div>
+            <div class="board-cards flex flex-col gap-2 p-3 flex-1" data-status="{{.Status}}">
                 {{range .Cards}}
-                <article class="board-card bg-surface-container-lowest border border-border-subtle rounded-md p-2.5 text-sm shadow-sm cursor-grab active:cursor-grabbing"
+                <article class="board-card bg-surface-container-lowest border border-border-subtle rounded-xl p-3 text-sm shadow-xs cursor-grab active:cursor-grabbing hover:shadow-md hover:border-primary/20 transition-all"
                          draggable="true" data-id="{{.ID}}" data-status="{{$.Status}}">
-                    <p class="font-medium text-on-surface">{{if .Number}}{{.Number}}{{else}}{{.ID}}{{end}}</p>
-                    {{if .Customer}}<p class="text-xs text-text-muted mt-0.5">{{.Customer}}</p>{{end}}
-                    <p class="text-xs text-on-surface mt-1">₹{{printf "%.0f" .Freight}}{{if .Deadline}} · due {{.Deadline}}{{end}}</p>
+                    <div class="flex items-center justify-between gap-2">
+                        <p class="font-bold text-primary tabular-nums">{{if .Number}}{{.Number}}{{else}}{{.ID}}{{end}}</p>
+                        {{if .Deadline}}<span class="inline-flex px-1.5 py-0.5 rounded-full bg-surface-container border border-border-subtle text-[10px] font-semibold tabular-nums text-text-muted shrink-0">due {{.Deadline}}</span>{{end}}
+                    </div>
+                    {{if .Customer}}<p class="text-xs font-medium text-on-surface mt-1 truncate">{{.Customer}}</p>{{end}}
+                    <p class="text-sm font-black text-on-surface tabular-nums mt-1.5">₹{{printf "%.0f" .Freight}}</p>
                     {{if or .Vehicle .Driver}}
-                    <p class="text-[10px] text-text-muted mt-0.5">{{.Vehicle}}{{if and .Vehicle .Driver}} · {{end}}{{.Driver}}</p>
+                    <p class="text-[10px] text-text-muted mt-1">{{.Vehicle}}{{if and .Vehicle .Driver}} · {{end}}{{.Driver}}</p>
                     {{end}}
                 </article>
+                {{end}}
+                {{if not .Cards}}
+                <div class="flex-1 grid place-items-center py-8 text-center">
+                    <div>
+                        <div class="w-9 h-9 mx-auto rounded-xl bg-surface-container grid place-items-center text-text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M5 12h14"/></svg></div>
+                        <p class="text-[11px] text-text-muted mt-2">Drop cards here</p>
+                    </div>
+                </div>
                 {{end}}
             </div>
         </section>

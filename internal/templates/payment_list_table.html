@@ -1,32 +1,38 @@
 <div class="overflow-x-auto">
     <table class="min-w-full divide-y divide-border-subtle">
-        <thead class="bg-surface-container-low font-label-caps text-[11px] text-secondary uppercase tracking-wider">
+        <thead class="bg-surface-container-low">
             <tr>
-                <th class="th-cell">Invoice #</th>
-                <th class="th-cell">Payment Date</th>
-                <th class="th-cell-right">Amount (₹)</th>
-                <th class="th-cell">Method</th>
-                <th class="th-cell">Reference ID</th>
-                <th class="th-cell-right">Actions</th>
+                <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Invoice #</th>
+                <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Payment Date</th>
+                <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Amount (₹)</th>
+                <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Method</th>
+                <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Reference ID</th>
+                <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
             </tr>
         </thead>
-        <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
+        <tbody class="divide-y divide-border-subtle">
             {{if .Payments}}
             {{range .Payments}}
-            <tr class="hover:bg-surface-container-low transition-colors group">
-                <td class="td-cell-strong font-mono" data-numeric>{{.InvoiceNumber}}</td>
-                <td class="td-cell">{{datetime .PaymentDate}}</td>
-                <td class="td-cell-num font-medium" data-numeric>₹{{printf "%.2f" .Amount}}</td>
-                <td class="td-cell uppercase font-mono text-xs">{{.Method}}</td>
-                <td class="td-cell font-mono text-xs text-text-muted">{{nullString .Reference}}</td>
-                <td class="td-cell-actions">
-                    <a href="/payments/{{.ID}}" class="action-view">View Receipt</a>
+            <tr class="hover:bg-surface-container-low/50 transition-colors group">
+                <td class="px-3 py-2 whitespace-nowrap">
+                    <span class="text-sm text-primary font-bold tabular-nums">{{.InvoiceNumber}}</span>
+                </td>
+                <td class="px-3 py-2 text-sm tabular-nums text-on-surface">
+                    <span class="time-display" data-utc-time="{{.PaymentDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PaymentDate}}</span>
+                </td>
+                <td class="px-3 py-2 text-sm text-right tabular-nums font-bold text-status-success" data-numeric>₹{{printf "%.2f" .Amount}}</td>
+                <td class="px-3 py-2">
+                    <span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold uppercase tracking-wide text-secondary">{{.Method}}</span>
+                </td>
+                <td class="px-3 py-2 text-sm font-mono text-xs text-text-muted">{{nullString .Reference}}</td>
+                <td class="px-3 py-2 text-right whitespace-nowrap">
+                    <a href="/payments/{{.ID}}" class="action-view text-xs font-semibold opacity-80 group-hover:opacity-100 transition-opacity">View Receipt</a>
                 </td>
             </tr>
             {{end}}
             {{else}}
             <tr>
-                <td colspan="6" class="py-12 text-center text-secondary">
+                <td colspan="6" class="px-4 py-12 text-center text-secondary">
                     {{template "empty_state.html" (dict "Icon" "payments" "Title" "No payments found" "Message" "No payments match the current filters.")}}
                 </td>
             </tr>
@@ -35,6 +41,6 @@
     </table>
 </div>
 
-<div class="p-4 border-t border-border-subtle bg-surface-container-lowest">
+<div class="border-t border-border-subtle bg-surface-container-lowest px-2 py-1">
     {{template "pagination.html" .}}
 </div>

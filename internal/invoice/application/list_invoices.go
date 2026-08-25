@@ -15,6 +15,19 @@ type ListInvoicesQuery struct {
 	Limit    int
 	Search   string
 	Status   string
+	DateFrom string // YYYY-MM-DD inclusive, empty = unbounded
+	DateTo   string // YYYY-MM-DD inclusive, empty = unbounded
+}
+
+// dateRangeInvoiceRepo is implemented by invoice repositories that support
+// invoice-date window filtering. Asserted optionally so existing repository
+// implementations/mocks keep compiling unchanged.
+type dateRangeInvoiceRepo interface {
+	SearchReadModelsDateRange(ctx context.Context, tenantID shared.TenantID, query string, status string, from string, to string, limit int, offset int) ([]domain.InvoiceReadModel, int64, error)
+}
+
+func hasDateRange(from, to string) bool {
+	return from != "" || to != ""
 }
 
 type ListInvoicesResponse struct {
@@ -47,7 +60,16 @@ func (uc *ListInvoicesUseCase) Execute(ctx context.Context, q ListInvoicesQuery)
 			return errors.New("failed to retrieve invoice repository")
 		}
 
-		rows, total, err := repo.SearchReadModels(txCtx, q.TenantID, q.Search, q.Status, q.Limit, offset)
+		var rows []domain.InvoiceReadModel
+		var total int64
+		var err error
+
+		dateRepo, dateOK := repo.(dateRangeInvoiceRepo)
+		if hasDateRange(q.DateFrom, q.DateTo) && dateOK {
+			rows, total, err = dateRepo.SearchReadModelsDateRange(txCtx, q.TenantID, q.Search, q.Status, q.DateFrom, q.DateTo, q.Limit, offset)
+		} else {
+			rows, total, err = repo.SearchReadModels(txCtx, q.TenantID, q.Search, q.Status, q.Limit, offset)
+		}
 		if err != nil {
 			return err
 		}

@@ -52,11 +52,18 @@ func (h *PaymentHandlers) List(w http.ResponseWriter, r *http.Request) {
 	pp := parsePaginationParams(r)
 
 	method := r.URL.Query().Get("method")
+	if method == "" {
+		// filter_bar.html chips emit ?status=; map it to the payment method
+		// filter so chip links keep filtering.
+		method = pp.Status
+	}
 	res, err := h.listUC.Execute(r.Context(), paymentapp.ListPaymentsQuery{
 		TenantID: shared.TenantIDFromContext(r.Context()),
 		Page:     pp.Page,
 		Limit:    pp.Limit,
 		Method:   method,
+		DateFrom: pp.DateFrom,
+		DateTo:   pp.DateTo,
 	})
 	if err != nil {
 		http.Error(w, "Failed to list payments", http.StatusInternalServerError)
@@ -64,12 +71,18 @@ func (h *PaymentHandlers) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pd := newPaginationData(pp, res.Total, "/payments")
+	pd.From = pp.DateFrom
+	pd.To = pp.DateTo
 
 	if isDatastarRequest(r) {
 		h.renderFragment(w, "payment_list_table.html", map[string]interface{}{
-			"Payments":   res.Payments,
-			"Pagination": pd,
-			"Method":     method,
+			"Payments":     res.Payments,
+			"Pagination":   pd,
+			"Method":       method,
+			"Query":        pp.Query,
+			"StatusFilter": method,
+			"DateFrom":     pp.DateFrom,
+			"DateTo":       pp.DateTo,
 		})
 		return
 	}
@@ -77,7 +90,7 @@ func (h *PaymentHandlers) List(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "payment_list.html", PageData{
 		Title: "Payments",
 		User:  session,
-		Extra: map[string]interface{}{"Payments": res.Payments, "Pagination": pd, "Method": method, "KPIs": h.paymentKPIs(r.Context())},
+		Extra: map[string]interface{}{"Payments": res.Payments, "Pagination": pd, "Method": method, "Query": pp.Query, "StatusFilter": method, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.paymentKPIs(r.Context())},
 	})
 }
 

@@ -16,6 +16,15 @@ type ListBookingsQuery struct {
 	Limit    int
 	Search   string
 	Status   string
+	DateFrom string // YYYY-MM-DD inclusive on pickup_date, empty = unbounded
+	DateTo   string // YYYY-MM-DD inclusive on pickup_date, empty = unbounded
+}
+
+// dateRangeBookingRepo is implemented by booking repositories supporting
+// pickup-date window filtering. Asserted optionally so existing repository
+// implementations/mocks keep compiling unchanged.
+type dateRangeBookingRepo interface {
+	SearchReadModelsDateRange(ctx context.Context, tenantID shared.TenantID, query string, status string, from string, to string, limit int, offset int) ([]domain.BookingReadModel, int64, error)
 }
 
 // ListBookingsResponse represents the paginated result.
@@ -52,7 +61,14 @@ func (uc *ListBookingsUseCase) Execute(ctx context.Context, q ListBookingsQuery)
 			return errors.New("failed to retrieve booking repository")
 		}
 
-		readModels, total, err := repo.SearchReadModels(txCtx, q.TenantID, q.Search, q.Status, q.Limit, offset)
+		readModels, total, err := func() ([]domain.BookingReadModel, int64, error) {
+			if q.DateFrom != "" || q.DateTo != "" {
+				if dateRepo, ok := repo.(dateRangeBookingRepo); ok {
+					return dateRepo.SearchReadModelsDateRange(txCtx, q.TenantID, q.Search, q.Status, q.DateFrom, q.DateTo, q.Limit, offset)
+				}
+			}
+			return repo.SearchReadModels(txCtx, q.TenantID, q.Search, q.Status, q.Limit, offset)
+		}()
 		if err != nil {
 			return err
 		}

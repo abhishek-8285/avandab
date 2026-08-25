@@ -1,65 +1,78 @@
 {{define "experiments_list.html"}}
-<div class="p-6 max-w-7xl mx-auto text-on-surface">
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-primary">A/B Experiments</h1>
-        <p class="text-sm text-secondary">Feature flags and experiment management</p>
-    </div>
-
-    {{if can .User "experiments" "write"}}
-    <div class="mb-6">
+<div class="p-4 sm:p-6 max-w-[1600px] mx-auto text-on-surface">
+    <div class="mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-wrap">
+        <div class="min-w-0">
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">A/B Experiments</h1>
+            <p class="text-sm text-secondary mt-0.5">Feature flags and experiment management</p>
+        </div>
+        {{if can .User "experiments" "write"}}
         <button onclick="document.getElementById('create-modal').classList.remove('hidden')"
-                class="px-4 py-2 bg-primary text-on-primary font-medium text-sm rounded hover:bg-primary/90 cursor-pointer border-0">+ New Experiment</button>
+                class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer border-0 shrink-0">+ New Experiment</button>
+        {{end}}
     </div>
-    {{end}}
 
-    <div class="overflow-x-auto">
-        <table class="w-full bg-surface-container-lowest text-on-surface rounded-lg shadow-sm border border-border-subtle overflow-hidden">
-            <thead>
-                <tr class="border-b border-border-subtle bg-surface-container-low text-secondary text-xs uppercase font-semibold">
-                    <th class="px-3 py-2.5 text-left">Name</th>
-                    <th class="px-3 py-2.5 text-left">Status</th>
-                    <th class="px-3 py-2.5 text-left">Traffic Split</th>
-                    <th class="px-3 py-2.5 text-left">Metric</th>
-                    <th class="px-3 py-2.5 text-left">Created</th>
-                    <th class="px-3 py-2.5 text-left">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="divide-y divide-border-subtle text-sm">
-                {{range .Experiments}}
-                <tr class="hover:bg-surface-container-low transition-colors">
-                    <td class="px-3 py-2 font-medium">{{.Name}}</td>
-                    <td class="px-3 py-2">
-                        <span class="px-2 py-0.5 rounded text-xs font-medium
-                            {{if eq .Status "running"}}bg-emerald-500/15 text-emerald-500
-                            {{else if eq .Status "paused"}}bg-amber-500/15 text-amber-500
-                            {{else if eq .Status "completed"}}bg-primary/15 text-primary
-                            {{else if eq .Status "archived"}}bg-surface-container-high text-secondary
-                            {{else}}bg-surface-container-high text-secondary{{end}}">
-                            {{.Status}}
-                        </span>
-                    </td>
-                    <td class="px-3 py-2 text-xs font-mono text-secondary">{{printf "%.0f" .TrafficSplit}}% → B</td>
-                    <td class="px-3 py-2 text-xs text-secondary">{{.MetricName}}</td>
-                    <td class="px-3 py-2 text-xs text-text-muted">{{.CreatedAt.Format "2006-01-02"}}</td>
-                    <td class="px-3 py-2">
-                        {{if can $.User "experiments" "write"}}
-                            {{if eq .Status "draft"}}
-                            <button onclick="experimentAction('{{.ID}}', 'start')" class="px-2 py-1 bg-emerald-600 text-white text-xs font-medium rounded hover:bg-emerald-700 cursor-pointer border-0">Start</button>
-                            {{else if eq .Status "running"}}
-                            <button onclick="experimentAction('{{.ID}}', 'pause')" class="px-2 py-1 bg-amber-600 text-white text-xs font-medium rounded hover:bg-amber-700 cursor-pointer border-0">Pause</button>
-                            <button onclick="experimentAction('{{.ID}}', 'complete')" class="px-2 py-1 bg-primary text-on-primary text-xs font-medium rounded hover:bg-primary/90 ml-1 cursor-pointer border-0">Complete</button>
-                            {{else if eq .Status "paused"}}
-                            <button onclick="experimentAction('{{.ID}}', 'resume')" class="px-2 py-1 bg-emerald-600 text-white text-xs font-medium rounded hover:bg-emerald-700 cursor-pointer border-0">Resume</button>
-                            <button onclick="experimentAction('{{.ID}}', 'complete')" class="px-2 py-1 bg-primary text-on-primary text-xs font-medium rounded hover:bg-primary/90 ml-1 cursor-pointer border-0">Complete</button>
-                            {{else if eq .Status "completed"}}
-                            <button onclick="experimentAction('{{.ID}}', 'archive')" class="px-2 py-1 bg-surface-container-high text-secondary text-xs font-medium rounded hover:bg-surface-container cursor-pointer border-0">Archive</button>
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        {{template "filter_bar.html" (dict
+            "Action" "/experiments"
+            "Label" "Status:"
+            "StatusFilter" .StatusFilter
+            "Chips" (chips "All" "" "Draft" "draft" "Running" "running" "Paused" "paused" "Completed" "completed" "Archived" "archived")
+            "ShowDates" false
+            "ShowSearch" false
+        )}}
+        <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+            <h2 class="text-sm font-bold text-on-surface">Experiments</h2>
+            <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Experiments}}</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-border-subtle">
+                <thead class="bg-surface-container-low">
+                    <tr>
+                        <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Name</th>
+                        <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
+                        <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Traffic Split</th>
+                        <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Metric</th>
+                        <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Created</th>
+                        <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border-subtle text-sm">
+                    {{range .Experiments}}
+                    <tr class="hover:bg-surface-container-low/50 transition-colors">
+                        <td class="px-3 py-2 font-semibold text-on-surface">{{.Name}}</td>
+                        <td class="px-3 py-2">
+                            <span class="inline-flex px-2 py-1 rounded-full border text-[11px] font-bold
+                                {{if eq .Status "running"}}bg-emerald-500/10 border-emerald-500/15 text-emerald-700
+                                {{else if eq .Status "paused"}}bg-amber-500/10 border-amber-500/15 text-amber-700
+                                {{else if eq .Status "completed"}}bg-primary/10 border-primary/20 text-primary
+                                {{else if eq .Status "archived"}}bg-surface-container-high text-secondary border-border-subtle
+                                {{else}}bg-surface-container-high text-secondary border-border-subtle{{end}}">
+                                {{.Status}}
+                            </span>
+                        </td>
+                        <td class="px-3 py-2 text-right text-xs font-mono tabular-nums font-bold text-secondary">{{printf "%.0f" .TrafficSplit}}% → B</td>
+                        <td class="px-3 py-2 text-xs text-secondary">{{.MetricName}}</td>
+                        <td class="px-3 py-2 text-xs tabular-nums text-text-muted">{{.CreatedAt.Format "2006-01-02"}}</td>
+                        <td class="px-3 py-2 text-right whitespace-nowrap">
+                            {{if can $.User "experiments" "write"}}
+                                {{if eq .Status "draft"}}
+                                <button onclick="experimentAction('{{.ID}}', 'start')" class="inline-flex px-3 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold shadow-sm hover:bg-emerald-700 hover:-translate-y-px transition-all cursor-pointer border-0">Start</button>
+                                {{else if eq .Status "running"}}
+                                <button onclick="experimentAction('{{.ID}}', 'pause')" class="inline-flex px-3 py-1 rounded-full bg-amber-600 text-white text-xs font-bold shadow-sm hover:bg-amber-700 hover:-translate-y-px transition-all cursor-pointer border-0">Pause</button>
+                                <button onclick="experimentAction('{{.ID}}', 'complete')" class="inline-flex ml-1 px-3 py-1 rounded-full bg-primary text-on-primary text-xs font-bold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer border-0">Complete</button>
+                                {{else if eq .Status "paused"}}
+                                <button onclick="experimentAction('{{.ID}}', 'resume')" class="inline-flex px-3 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold shadow-sm hover:bg-emerald-700 hover:-translate-y-px transition-all cursor-pointer border-0">Resume</button>
+                                <button onclick="experimentAction('{{.ID}}', 'complete')" class="inline-flex ml-1 px-3 py-1 rounded-full bg-primary text-on-primary text-xs font-bold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer border-0">Complete</button>
+                                {{else if eq .Status "completed"}}
+                                <button onclick="experimentAction('{{.ID}}', 'archive')" class="inline-flex px-3 py-1 rounded-full bg-surface-container-high text-secondary text-xs font-bold hover:bg-surface-container cursor-pointer border-0 transition-colors">Archive</button>
+                                {{end}}
                             {{end}}
-                        {{end}}
-                    </td>
-                </tr>
-                {{end}}
-            </tbody>
-        </table>
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 

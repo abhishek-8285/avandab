@@ -1,45 +1,45 @@
-<div class="space-y-6 max-w-7xl mx-auto">
+<div class="space-y-5 max-w-[1600px] mx-auto">
     <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-surface-container-lowest border border-border-subtle rounded-2xl p-6 shadow-sm">
-        <div class="flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-6 h-6"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
-            </div>
-            <div>
-                <h1 class="text-xl font-bold text-on-surface font-display tracking-tight flex items-center gap-2 m-0">
-                    {{if .Zone}}Edit Geofence: <span class="text-blue-500 font-mono">{{.Zone.Name}}</span>{{else}}Create Geofence Boundary{{end}}
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-3 min-w-0">
+            <span class="w-10 h-10 rounded-xl bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+            </span>
+            <div class="min-w-0">
+                <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display truncate m-0">
+                    {{if .Zone}}Edit Geofence: <span class="text-primary font-mono">{{.Zone.Name}}</span>{{else}}Create Geofence Boundary{{end}}
                 </h1>
-                <p class="text-xs text-text-muted mt-1 mb-0">Configure virtual boundaries for automated fleet entry/exit events, dwell demurrage, and restricted area alerts.</p>
+                <p class="text-sm text-secondary mt-0.5 mb-0">Configure virtual boundaries for automated fleet entry/exit events, dwell demurrage, and restricted area alerts.</p>
             </div>
         </div>
-        <a href="/geofences" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold text-secondary hover:text-on-surface bg-surface-container hover:bg-surface-container-high border border-border-subtle transition-all self-start sm:self-auto text-decoration-none">
+        <a href="/geofences" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors self-start sm:self-auto shrink-0">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="m15 18-6-6 6-6"/></svg>
             Back to Geofences
         </a>
     </div>
 
     {{if .FlashError}}
-    <div class="bg-red-500/10 border border-red-500/30 text-red-500 rounded-xl px-4 py-3 text-sm flex items-center gap-2">
+    <div class="bg-rose-500/10 border border-rose-500/20 text-status-alert rounded-xl px-4 py-3 text-sm flex items-center gap-2">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 shrink-0"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
         <span>{{.FlashError}}</span>
     </div>
     {{end}}
 
-    <form method="POST" action="{{if .Zone}}/geofences/{{.Zone.ID}}/edit{{else}}/geofences/new{{end}}" class="space-y-6" data-geofence-drawer>
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            
+    <form method="POST" action="{{if .Zone}}/geofences/{{.Zone.ID}}/edit{{else}}/geofences/new{{end}}" class="space-y-5" data-geofence-drawer>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+
             <!-- Left Panel: Zone Configuration Form -->
-            <div class="lg:col-span-5 space-y-5 bg-surface-container-lowest border border-border-subtle rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-                <div class="space-y-4">
-                    <div class="border-b border-border-subtle pb-3">
-                        <h2 class="text-xs font-bold uppercase tracking-wider text-secondary m-0">Zone Configuration</h2>
+            <div class="lg:col-span-5 bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm p-6 flex flex-col justify-between">
+                <div class="space-y-5">
+                    <div>
+                        <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-2 m-0">Zone Configuration</h2>
                     </div>
 
                     <!-- Name -->
                     <div>
-                        <label for="name" class="block text-xs font-bold text-on-surface mb-1.5">Zone Name <span class="text-red-500">*</span></label>
+                        <label for="name" class="block text-xs font-bold text-on-surface mb-1.5">Zone Name <span class="text-status-alert">*</span></label>
                         <input id="name" name="name" required value="{{if .Zone}}{{.Zone.Name}}{{end}}"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-on-surface placeholder-text-muted focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                             placeholder="e.g. Mumbai JNPT Terminal Hub">
                     </div>
 
@@ -47,18 +47,18 @@
                     <div>
                         <label for="kind" class="block text-xs font-bold text-on-surface mb-1.5">Zone Category / Operational Trigger</label>
                         <select id="kind" name="kind" required
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all cursor-pointer">
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer">
                             <option value="pickup" {{if and .Zone (eq .Zone.Kind "pickup")}}selected{{end}}>Pickup — Auto-transitions trip to reached_pickup</option>
                             <option value="drop" {{if and .Zone (eq .Zone.Kind "drop")}}selected{{end}}>Drop — Auto-transitions trip to in_transit / delivered</option>
-                            <option value="depot" {{if and .Zone (eq .Zone.Kind "depot")}}selected{{else if not .Zone}}selected{{end}}>Depot / Terminal — Dwell demurrage & detention tracking</option>
+                            <option value="depot" {{if and .Zone (eq .Zone.Kind "depot")}}selected{{else if not .Zone}}selected{{end}}>Depot / Terminal — Dwell demurrage &amp; detention tracking</option>
                             <option value="restricted" {{if and .Zone (eq .Zone.Kind "restricted")}}selected{{end}}>Restricted Zone — Emits warning alert on entry</option>
                             <option value="no_entry" {{if and .Zone (eq .Zone.Kind "no_entry")}}selected{{end}}>No-Entry Zone — Triggers critical security breach</option>
                         </select>
                     </div>
 
                     <!-- Kind Description Banner -->
-                    <div id="kind-info-banner" class="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-600 dark:text-blue-400 flex items-start gap-2.5">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 shrink-0 mt-0.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <div id="kind-info-banner" class="p-3 rounded-xl bg-blue-500/10 border border-blue-500/15 text-xs text-secondary flex items-start gap-2.5">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 shrink-0 mt-0.5 text-blue-600"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                         <span id="kind-info-text">Dwell engine will log detention windows and compute billable demurrage hours beyond company free allowance.</span>
                     </div>
 
@@ -66,7 +66,7 @@
                     <div>
                         <label for="route_name" class="block text-xs font-bold text-on-surface mb-1.5">Route Scope (Optional)</label>
                         <input id="route_name" name="route_name" value="{{if .Zone}}{{.Zone.RouteName}}{{end}}"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-on-surface placeholder-text-muted focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-mono"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-mono"
                             placeholder="e.g. BLR-MUM-01">
                         <p class="text-[11px] text-text-muted mt-1 mb-0">Leave blank to apply globally to all fleet movements.</p>
                     </div>
@@ -76,7 +76,7 @@
                         <div>
                             <label for="priority" class="block text-xs font-bold text-on-surface mb-1.5">Priority Level</label>
                             <input id="priority" name="priority" type="number" min="0" value="{{if .Zone}}{{.Zone.Priority}}{{else}}0{{end}}"
-                                class="w-full bg-surface-container-low border border-border-subtle rounded-xl px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all font-mono">
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-mono tabular-nums">
                         </div>
                         <div class="flex items-center">
                             <p class="text-[11px] text-text-muted leading-tight m-0">Higher priority wins when vehicles overlap multiple boundaries.</p>
@@ -89,12 +89,12 @@
                         <input type="hidden" name="shape" id="shape-input" value="{{if .Zone}}{{.Zone.Shape}}{{else}}circle{{end}}">
                         <div class="grid grid-cols-2 gap-2 bg-surface-container-low p-1.5 rounded-xl border border-border-subtle">
                             <button type="button" data-draw-mode="circle"
-                                class="draw-mode-btn flex items-center justify-center gap-2 border border-border-subtle rounded-lg px-3 py-2 text-sm font-semibold transition-all cursor-pointer">
+                                class="draw-mode-btn flex-1 flex items-center justify-center gap-2 border border-indigo-500/40 bg-indigo-500/15 text-indigo-500 font-bold rounded-lg px-3 py-2 text-sm shadow-sm transition-all cursor-pointer">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="9"/></svg>
                                 <span>Circle</span>
                             </button>
                             <button type="button" data-draw-mode="polygon"
-                                class="draw-mode-btn flex items-center justify-center gap-2 border border-border-subtle rounded-lg px-3 py-2 text-sm font-semibold transition-all cursor-pointer">
+                                class="draw-mode-btn flex-1 flex items-center justify-center gap-2 border border-border-subtle bg-surface-container-low text-secondary hover:text-on-surface hover:border-border-default rounded-lg px-3 py-2 text-sm transition-all cursor-pointer">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polygon points="12 2 22 8.5 18 21 6 21 2 8.5 12 2"/></svg>
                                 <span>Polygon</span>
                             </button>
@@ -105,49 +105,49 @@
                     <div id="radius-control" class="{{if .Zone}}{{if eq .Zone.Shape "polygon"}}hidden{{end}}{{end}} space-y-2.5 pt-1">
                         <div class="flex items-center justify-between">
                             <label for="radius-slider" class="text-xs font-bold text-on-surface">Circle Radius</label>
-                            <span id="radius-value" class="text-xs font-mono font-bold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-500 border border-blue-500/20" data-numeric>
+                            <span id="radius-value" class="text-xs font-mono font-bold tabular-nums px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15" data-numeric>
                                 {{if .Zone}}{{.Zone.RadiusM}}{{else}}500{{end}} m
                             </span>
                         </div>
                         <input id="radius-slider" type="range" min="50" max="5000" step="25"
                             value="{{if .Zone}}{{.Zone.RadiusM}}{{else}}500{{end}}"
-                            class="w-full h-2 bg-surface-container-high rounded-lg appearance-none cursor-pointer accent-blue-600">
+                            class="w-full h-2 bg-surface-container-high rounded-full appearance-none cursor-pointer accent-primary">
                         <div class="flex flex-wrap gap-1.5 pt-1" id="radius-presets">
-                            <button type="button" data-preset="100" class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-secondary cursor-pointer">100m</button>
-                            <button type="button" data-preset="250" class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-secondary cursor-pointer">250m</button>
-                            <button type="button" data-preset="500" class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-secondary cursor-pointer">500m</button>
-                            <button type="button" data-preset="1000" class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-secondary cursor-pointer">1km</button>
-                            <button type="button" data-preset="2500" class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-secondary cursor-pointer">2.5km</button>
-                            <button type="button" data-preset="5000" class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high text-secondary cursor-pointer">5km</button>
+                            <button type="button" data-preset="100" class="text-[11px] font-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">100m</button>
+                            <button type="button" data-preset="250" class="text-[11px] font-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">250m</button>
+                            <button type="button" data-preset="500" class="text-[11px] font-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">500m</button>
+                            <button type="button" data-preset="1000" class="text-[11px] font-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">1km</button>
+                            <button type="button" data-preset="2500" class="text-[11px] font-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">2.5km</button>
+                            <button type="button" data-preset="5000" class="text-[11px] font-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">5km</button>
                         </div>
                     </div>
 
                     <!-- Live Boundary Metrics Card -->
-                    <div class="p-3.5 rounded-xl bg-surface-container-low border border-border-subtle space-y-1.5 text-xs">
+                    <div class="rounded-xl bg-surface-container-low border border-border-subtle px-3.5 py-3 space-y-1.5 text-xs">
                         <div class="flex items-center justify-between text-text-muted">
                             <span>Center / Origin:</span>
-                            <span id="metric-center" class="font-mono font-bold text-on-surface">-</span>
+                            <span id="metric-center" class="font-mono font-bold tabular-nums text-on-surface">-</span>
                         </div>
                         <div class="flex items-center justify-between text-text-muted">
                             <span>Estimated Area:</span>
-                            <span id="metric-area" class="font-mono font-bold text-on-surface">-</span>
+                            <span id="metric-area" class="font-mono font-bold tabular-nums text-on-surface">-</span>
                         </div>
                     </div>
                 </div>
 
                 <!-- Form Action Buttons -->
-                <div class="pt-6 border-t border-border-subtle flex items-center gap-3">
-                    <button type="submit" class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 active:bg-blue-700 shadow-md shadow-blue-600/20 transition-all cursor-pointer border-0">
+                <div class="pt-5 mt-5 border-t border-border-subtle flex items-center gap-2">
+                    <button type="submit" class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer border-0">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                         <span>Save Geofence</span>
                     </button>
-                    <a href="/geofences" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-secondary hover:text-on-surface bg-surface-container hover:bg-surface-container-high border border-border-subtle transition-all text-decoration-none">Cancel</a>
+                    <a href="/geofences" class="px-4 py-2.5 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">Cancel</a>
                 </div>
             </div>
 
             <!-- Right Panel: Interactive Leaflet Map Editor -->
             <div class="lg:col-span-7 bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[580px]">
-                
+
                 <!-- Map Top Bar: Geocoding Location Search -->
                 <div class="p-3.5 border-b border-border-subtle bg-surface-container-low flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                     <div class="relative flex-1">
@@ -155,41 +155,41 @@
                         <label for="geocoder-input" class="sr-only">Search Location</label>
                         <input type="text" id="geocoder-input"
                             placeholder="Jump to city, port or address (e.g. Bhiwandi, Delhi Airport, JNPT)..."
-                            class="w-full bg-surface-container-lowest border border-border-subtle rounded-xl pl-9 pr-20 py-2 text-xs text-on-surface placeholder-text-muted focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all">
+                            class="w-full bg-surface-container-lowest border border-border-subtle rounded-lg pl-9 pr-20 py-2 text-xs text-on-surface placeholder-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                         <button type="button" id="geocoder-btn"
-                            class="absolute right-1.5 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] shadow-sm transition-all cursor-pointer border-0">
+                            class="absolute right-1.5 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-full bg-primary text-on-primary font-bold text-[11px] shadow-sm hover:bg-primary/90 transition-all cursor-pointer border-0">
                             Search
                         </button>
                     </div>
 
                     <!-- Quick City Jump Chips -->
-                    <div class="flex items-center gap-1 overflow-x-auto text-[11px] font-mono text-secondary shrink-0">
-                        <span class="text-[10px] uppercase font-bold text-text-muted mr-1">Jump:</span>
-                        <button type="button" class="quick-jump px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high cursor-pointer" data-lat="28.6139" data-lng="77.2090">Delhi</button>
-                        <button type="button" class="quick-jump px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high cursor-pointer" data-lat="19.0760" data-lng="72.8777">Mumbai</button>
-                        <button type="button" class="quick-jump px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high cursor-pointer" data-lat="12.9716" data-lng="77.5946">BLR</button>
-                        <button type="button" class="quick-jump px-2 py-0.5 rounded bg-surface-container hover:bg-surface-container-high cursor-pointer" data-lat="13.0827" data-lng="80.2707">Chennai</button>
+                    <div class="flex items-center gap-1 overflow-x-auto shrink-0">
+                        <span class="text-[10px] uppercase font-bold tracking-wider text-text-muted mr-1">Jump:</span>
+                        <button type="button" class="quick-jump px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-[11px] font-mono text-secondary hover:bg-surface-container-low cursor-pointer transition-colors" data-lat="28.6139" data-lng="77.2090">Delhi</button>
+                        <button type="button" class="quick-jump px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-[11px] font-mono text-secondary hover:bg-surface-container-low cursor-pointer transition-colors" data-lat="19.0760" data-lng="72.8777">Mumbai</button>
+                        <button type="button" class="quick-jump px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-[11px] font-mono text-secondary hover:bg-surface-container-low cursor-pointer transition-colors" data-lat="12.9716" data-lng="77.5946">BLR</button>
+                        <button type="button" class="quick-jump px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-[11px] font-mono text-secondary hover:bg-surface-container-low cursor-pointer transition-colors" data-lat="13.0827" data-lng="80.2707">Chennai</button>
                     </div>
                 </div>
 
                 <!-- Map Sub-header Controls -->
                 <div class="px-4 py-2.5 border-b border-border-subtle bg-surface-container-lowest flex items-center justify-between gap-3 text-xs">
                     <div class="flex items-center gap-2">
-                        <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
                         <span class="font-bold text-on-surface uppercase tracking-wider text-[11px]">Map Canvas</span>
-                        <span id="map-mode-badge" class="px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                        <span id="map-mode-badge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15">
                             Circle Mode
                         </span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button type="button" id="undo-vertex" class="hidden text-xs px-2.5 py-1 rounded-lg bg-surface-container border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container-high transition-all cursor-pointer">
+                        <button type="button" id="undo-vertex" class="hidden text-xs px-2.5 py-1 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:text-on-surface hover:bg-surface-container-low transition-all cursor-pointer">
                             Undo Point
                         </button>
-                        <button type="button" id="clear-map" class="text-xs px-2.5 py-1 rounded-lg bg-surface-container border border-border-subtle text-secondary hover:text-rose-500 hover:bg-surface-container-high transition-all cursor-pointer">
+                        <button type="button" id="clear-map" class="text-xs px-2.5 py-1 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:text-status-alert hover:bg-surface-container-low transition-all cursor-pointer">
                             Clear Shape
                         </button>
                         <button type="button" id="close-polygon"
-                            class="hidden text-xs px-3 py-1 rounded-lg bg-blue-600 text-white font-semibold shadow hover:bg-blue-500 transition-all cursor-pointer border-0">
+                            class="hidden text-xs px-3 py-1 rounded-full bg-primary text-on-primary font-bold shadow-sm hover:bg-primary/90 transition-all cursor-pointer border-0">
                             Close Polygon
                         </button>
                     </div>
@@ -210,10 +210,10 @@
                 <!-- Map Footer Instructions -->
                 <div class="px-5 py-3 border-t border-border-subtle bg-surface-container-low text-xs text-text-muted flex items-center justify-between">
                     <div id="map-instructions" class="flex items-center gap-2">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-blue-500 shrink-0"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-primary shrink-0"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                         <span><strong>Circle Mode:</strong> Click map to place center. Drag center handle or use slider to adjust radius.</span>
                     </div>
-                    <div id="vertex-counter" class="hidden font-mono text-[11px] font-semibold text-secondary">
+                    <div id="vertex-counter" class="hidden font-mono text-[11px] font-semibold tabular-nums text-secondary">
                         0 vertices
                     </div>
                 </div>
@@ -248,4 +248,3 @@
 </style>
 
 <script src="/static/js/geofence_draw.js"></script>
-

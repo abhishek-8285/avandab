@@ -19,6 +19,7 @@ import (
 
 	bookingdomain "transport-app/internal/booking/domain"
 	bookingaggregate "transport-app/internal/booking/domain/aggregate"
+	"transport-app/internal/config"
 	"transport-app/internal/domain"
 	geofencerepo "transport-app/internal/geofence/infrastructure/persistence/sql"
 	invoiceApp "transport-app/internal/invoice/application"
@@ -83,6 +84,7 @@ func (h *TripHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "create")).Get("/new", h.New)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "create")).Post("/new", h.Create)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "read")).Get("/{id}", h.View)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "read")).Get("/{id}/playback", h.Playback)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Get("/{id}/edit", h.Edit)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/edit", h.Update)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "delete")).Post("/{id}/delete", h.Delete)
@@ -98,6 +100,60 @@ func (h *TripHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "shares", "create")).Post("/{id}/share", h.App.Share.CreateShare)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "read")).Get("/{id}/compliance", h.TripComplianceFragment)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/send-pod-otp", h.SendPODOTPSMS)
+}
+
+// Playback renders the trip playback page (GET /trips/{id}/playback) —
+// Samsara-style animated replay of where the vehicle went.
+func (h *TripHandlers) Playback(w http.ResponseWriter, r *http.Request) {
+	h.init()
+	session, _ := h.getUserFromContext(r)
+	tripID := chi.URLParam(r, "id")
+	if tripID == "" {
+		tripID = r.URL.Query().Get("id")
+	}
+	trip, err := h.getUC.Execute(r.Context(), tripapp.GetTripQuery{
+		TripID:   tripagg.TripID(tripID),
+		TenantID: shared.TenantIDFromContext(r.Context()),
+	})
+	if err != nil {
+		h.renderError(w, http.StatusNotFound, "Trip Not Found", "No trip found with ID "+tripID+".", session)
+		return
+	}
+	cfg := h.Config
+	if cfg == nil {
+		cfg = &config.Config{LiveMap: config.LiveMapConfig{
+			MapTileProvider: "auto",
+			MapGoogleStyle:  "m",
+			MapGL:           "IN",
+			MapOSMURL:       "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+			MapPollSec:      10,
+		}}
+	}
+	vehicleID := ""
+	if trip.VehicleID != nil {
+		vehicleID = *trip.VehicleID
+	}
+	h.renderPage(w, r, "trip_playback.html", PageData{
+		Title: "Trip Playback",
+		User:  session,
+		Extra: map[string]interface{}{
+			"MapAssets": true,
+			"MapConfig": map[string]interface{}{
+				"Provider":    cfg.LiveMap.MapTileProvider,
+				"GoogleStyle": cfg.LiveMap.MapGoogleStyle,
+				"GL":          cfg.LiveMap.MapGL,
+				"OSMUrl":      cfg.LiveMap.MapOSMURL,
+				"PollSec":     cfg.LiveMap.MapPollSec,
+			},
+			"Trip": trip,
+			"PlaybackConfig": map[string]interface{}{
+				"TripID":      tripID,
+				"VehicleID":   vehicleID,
+				"HistoryAPI":  "/api/v1/telemetry/history",
+				"PlaybackAPI": "/api/v1/trips/" + tripID + "/playback",
+			},
+		},
+	})
 }
 
 // SendPODOTPSMS texts the trip's active delivery OTP to the consignee phone
@@ -167,6 +223,8 @@ func (h *TripHandlers) List(w http.ResponseWriter, r *http.Request) {
 		Limit:    pp.Limit,
 		Search:   pp.Query,
 		Status:   pp.Status,
+		DateFrom: pp.DateFrom,
+		DateTo:   pp.DateTo,
 	})
 	if err != nil {
 		fmt.Printf("[Trips Error] Failed to list trips: %v\n", err)
@@ -175,6 +233,8 @@ func (h *TripHandlers) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pd := newPaginationData(pp, res.Total, "/trips")
+	pd.From = pp.DateFrom
+	pd.To = pp.DateTo
 
 	if isDatastarRequest(r) {
 		h.renderFragment(w, "trip_list.html", map[string]interface{}{
@@ -182,6 +242,9 @@ func (h *TripHandlers) List(w http.ResponseWriter, r *http.Request) {
 			"Pagination":   pd,
 			"Query":        pp.Query,
 			"StatusFilter": pp.Status,
+			"DateFrom":     pp.DateFrom,
+			"DateTo":       pp.DateTo,
+			"KPIs":         h.tripKPIs(r.Context()),
 		})
 		return
 	}
@@ -189,7 +252,7 @@ func (h *TripHandlers) List(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "trip_list.html", PageData{
 		Title: "Trips",
 		User:  session,
-		Extra: map[string]interface{}{"Trips": res.Trips, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status},
+		Extra: map[string]interface{}{"Trips": res.Trips, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.tripKPIs(r.Context())},
 	})
 }
 

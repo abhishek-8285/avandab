@@ -1,78 +1,97 @@
-<div class="max-w-2xl mx-auto">
-    <h2 class="text-xl font-semibold text-on-surface font-display mb-6">{{if .Booking}}Edit Booking{{else}}New Booking{{end}}</h2>
-
-    {{if .FlashError}}
-    <div class="bg-status-alert/10 border border-status-alert/30 text-status-alert px-4 py-3 rounded mb-4">{{.FlashError}}</div>
-    {{end}}
-
-    {{ $b := .Booking }}
-
-    <form method="POST" action="/bookings{{if $b}}/{{$b.ID}}/edit{{else}}/new{{end}}" class="space-y-4">
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Customer *</label>
-            <select name="customer_id" required class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                <option value="">Select Customer</option>
-                {{range .Customers}}
-                <option value="{{.ID}}" {{if and $b (eq .ID $b.CustomerID)}}selected{{end}}>{{.Name}}</option>
-                {{end}}
-            </select>
+<div class="max-w-3xl mx-auto">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <div class="relative px-6 py-4 border-b border-border-subtle">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-violet-500 to-cyan-400 opacity-90"></div>
+            <h2 class="text-base sm:text-lg font-black tracking-tight text-on-surface font-display">{{if .Booking}}Edit Booking{{else}}New Booking{{end}}</h2>
+            <p class="text-xs text-text-muted mt-0.5">Customer, route, schedule and pricing for this shipment</p>
         </div>
 
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Route *</label>
-            <select name="route_id" required class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                <option value="">Select Route</option>
-                {{range .Routes}}
-                <option value="{{.ID}}" {{if and $b (eq .ID $b.RouteID)}}selected{{end}}>{{.Source}} → {{.Destination}}</option>
-                {{end}}
-            </select>
-        </div>
+        {{if .FlashError}}
+        <div class="mx-6 mt-4 bg-status-alert/10 border border-status-alert/30 text-status-alert px-4 py-3 rounded-lg text-sm">{{.FlashError}}</div>
+        {{end}}
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Pickup Date *</label>
-                <input type="date" name="pickup_date" value="{{if $b}}{{date_only $b.PickupDate}}{{end}}" required
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+        {{ $b := .Booking }}
+
+        <form method="POST" action="/bookings{{if $b}}/{{$b.ID}}/edit{{else}}/new{{end}}">
+            <div class="p-6 space-y-5">
+                <section>
+                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Shipment</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Customer *</label>
+                            <select name="customer_id" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                <option value="">Select Customer</option>
+                                {{range .Customers}}
+                                <option value="{{.ID}}" {{if and $b (eq .ID $b.CustomerID)}}selected{{end}}>{{.Name}}</option>
+                                {{end}}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Route *</label>
+                            <select name="route_id" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                <option value="">Select Route</option>
+                                {{range .Routes}}
+                                <option value="{{.ID}}" {{if and $b (eq .ID $b.RouteID)}}selected{{end}}>{{.Source}} → {{.Destination}}</option>
+                                {{end}}
+                            </select>
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Schedule &amp; Vehicle</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Pickup Date *</label>
+                            <input type="date" name="pickup_date" value="{{if $b}}{{date_only $b.PickupDate}}{{end}}" required
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Vehicle Type</label>
+                            <select name="vehicle_type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                <option value="truck" {{if eq $b.VehicleType "truck"}}selected{{end}}>Truck</option>
+                                <option value="mini_truck" {{if eq $b.VehicleType "mini_truck"}}selected{{end}}>Mini Truck</option>
+                                <option value="van" {{if eq $b.VehicleType "van"}}selected{{end}}>Van</option>
+                                <option value="pickup" {{if eq $b.VehicleType "pickup"}}selected{{end}}>Pickup</option>
+                                <option value="tempo" {{if eq $b.VehicleType "tempo"}}selected{{end}}>Tempo</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Passengers</label>
+                            <input type="number" name="passengers" value="{{if $b}}{{$b.Passengers}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Cargo &amp; Pricing</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Cargo Weight (kg)</label>
+                            <input type="number" step="0.1" name="cargo_weight" value="{{if $b}}{{if $b.CargoWeight}}{{$b.CargoWeight}}{{end}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Price</label>
+                            <input type="number" step="0.01" name="price" value="{{if $b}}{{$b.Price}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-semibold text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        </div>
+                    </div>
+                </section>
+
+                <section>
+                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Notes</h3>
+                    <textarea name="notes" rows="2"
+                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">{{if $b}}{{$b.Notes}}{{end}}</textarea>
+                </section>
             </div>
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Vehicle Type</label>
-                <select name="vehicle_type" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                    <option value="truck" {{if eq $b.VehicleType "truck"}}selected{{end}}>Truck</option>
-                    <option value="mini_truck" {{if eq $b.VehicleType "mini_truck"}}selected{{end}}>Mini Truck</option>
-                    <option value="van" {{if eq $b.VehicleType "van"}}selected{{end}}>Van</option>
-                    <option value="pickup" {{if eq $b.VehicleType "pickup"}}selected{{end}}>Pickup</option>
-                    <option value="tempo" {{if eq $b.VehicleType "tempo"}}selected{{end}}>Tempo</option>
-                </select>
-            </div>
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Passengers</label>
-                <input type="number" name="passengers" value="{{if $b}}{{$b.Passengers}}{{end}}"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-            </div>
-        </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Cargo Weight (kg)</label>
-                <input type="number" step="0.1" name="cargo_weight" value="{{if $b}}{{if $b.CargoWeight}}{{$b.CargoWeight}}{{end}}{{end}}"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+            <div class="sticky bottom-0 bg-surface-container-lowest border-t border-border-subtle px-6 py-3 flex justify-end gap-2 flex-wrap">
+                {{template "btn.html" (dict "Variant" "secondary" "Size" "md" "Href" "/bookings" "Label" "Cancel" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-border-subtle focus:ring-offset-2")}}
+                {{template "btn.html" (dict "Variant" "primary" "Size" "md" "Type" "submit" "Label" "Save Booking" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2")}}
             </div>
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Price</label>
-                <input type="number" step="0.01" name="price" value="{{if $b}}{{$b.Price}}{{end}}"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all tabular-nums">
-            </div>
-        </div>
-
-        <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Notes</label>
-            <textarea name="notes" rows="2"
-                class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">{{if $b}}{{$b.Notes}}{{end}}</textarea>
-        </div>
-
-        <div class="flex justify-end gap-3 pt-4 flex-wrap">
-            {{template "btn.html" (dict "Variant" "secondary" "Size" "md" "Href" "/bookings" "Label" "Cancel" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-border-subtle focus:ring-offset-2")}}
-            {{template "btn.html" (dict "Variant" "primary" "Size" "md" "Type" "submit" "Label" "Save Booking" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2")}}
-        </div>
-    </form>
+        </form>
+    </div>
 </div>

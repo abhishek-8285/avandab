@@ -2,6 +2,7 @@ package telemetry
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -79,6 +80,60 @@ func TestHistoryHandler_Trail(t *testing.T) {
 		require.NoError(t, json.NewDecoder(w.Body).Decode(&points))
 		assert.Empty(t, points)
 	})
+}
+
+// TestHistoryHandler_Playback verifies trip-scoped playback and from/to filtering.
+func TestHistoryHandler_Playback(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicleReg(t, db, "v1", "REG-1")
+	insertTestTrip(t, db, "t1")
+	now := time.Now().UTC()
+	insertLiveSnapshotWithTrip(t, db, "p1", "t1", "v1", now.Add(-60*time.Minute), 20.0, 19.0, 72.8)
+	insertLiveSnapshotWithTrip(t, db, "p2", "t1", "v1", now.Add(-30*time.Minute), 40.0, 19.1, 72.9)
+	insertLiveSnapshotWithTrip(t, db, "p3", "t1", "v1", now.Add(-10*time.Minute), 60.0, 19.2, 73.0)
+	// Different trip, same vehicle, should be excluded when filtering by trip_id
+	insertLiveSnapshotWithTrip(t, db, "p4", "t2", "v1", now.Add(-20*time.Minute), 10.0, 19.5, 73.5)
+	handler := HistoryHandler(db)
+
+	t.Run("trip playback returns only that trip", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/history?trip_id=t1&limit=100", nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+		require.Equal(t, http.StatusOK, w.Code)
+		var points []HistoryPoint
+		require.NoError(t, json.NewDecoder(w.Body).Decode(&points))
+		require.Len(t, points, 3)
+		for _, p := range points {
+			assert.Equal(t, "t1", p.TripID)
+		}
+	})
+
+	t.Run("from-to filters correctly", func(t *testing.T) {
+		from := now.Add(-40 * time.Minute).Format(time.RFC3339)
+		to := now.Add(-15 * time.Minute).Format(time.RFC3339)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/history?trip_id=t1&from="+from+"&to="+to, nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+		require.Equal(t, http.StatusOK, w.Code)
+		var points []HistoryPoint
+		require.NoError(t, json.NewDecoder(w.Body).Decode(&points))
+		require.Len(t, points, 1)
+		assert.InDelta(t, 40.0, points[0].Speed, 0.001)
+	})
+
+	t.Run("requires trip_id or vehicle_id", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/history", nil)
+		w := httptest.NewRecorder()
+		handler(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+}
+
+func insertLiveSnapshotWithTrip(t *testing.T, db *sql.DB, id, tripID, vehicleID string, ts time.Time, speed float64, lat, lng float64) {
+	t.Helper()
+	_, err := db.Exec(`INSERT INTO telemetry_snapshots (id, trip_id, vehicle_id, timestamp, latitude, longitude, speed, fuel_level, odometer) VALUES (?, ?, ?, ?, ?, ?, ?, 10, 1000)`,
+		id, tripID, vehicleID, ts.Format("2006-01-02 15:04:05"), lat, lng, speed)
+	require.NoError(t, err)
 }
 
 // TestLiveStore_ETA_Cached proves the TTL cache serves repeat lookups without

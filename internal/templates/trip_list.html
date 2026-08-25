@@ -1,22 +1,26 @@
 {{template "page_header.html" (dict "Title" "Trips" "Subtitle" "Track transport assignments, departure schedules, and dispatch status" "ActionHref" "/trips/new" "ActionIcon" "add" "ActionLabel" "New Trip")}}
 
-<div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm flex flex-col overflow-hidden">
-    <!-- Sticky Filter Bar (Stitch Screen 3 Exact Layout) -->
-    <form method="GET" action="/trips" class="px-4 py-2 border-b border-border-subtle flex flex-wrap items-center gap-2 bg-surface-container-lowest sticky top-0 z-10">
-        <span class="text-xs font-medium text-secondary mr-2">Filters:</span>
-        <a href="/trips" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter ""}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">All Trips</a>
-        <a href="/trips?status=scheduled" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "scheduled"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Scheduled</a>
-        <a href="/trips?status=assigned" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "assigned"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Assigned</a>
-        <a href="/trips?status=started" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "started"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Started</a>
-        <a href="/trips?status=completed" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "completed"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Completed</a>
+<div class="space-y-5 max-w-[1600px] mx-auto">
+    {{template "kpi_grid.html" .}}
 
-        <div class="ml-auto flex items-center gap-3">
-            {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Href" "/trips/new" "Icon" "add" "Label" "New Trip")}}
+    <!-- Main list card -->
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden flex flex-col">
+        {{template "filter_bar.html" (dict
+            "Action" "/trips"
+            "Query" .Query
+            "StatusFilter" .StatusFilter
+            "Chips" (chips "All Trips" "" "Draft" "draft" "Scheduled" "scheduled" "Assigned" "assigned" "Started" "started" "Completed" "completed" "Delivered" "delivered" "Cancelled" "cancelled")
+            "ShowDates" true
+            "DateFrom" .DateFrom
+            "DateTo" .DateTo
+            "ShowSearch" true
+            "SearchPlaceholder" "Search trips, drivers, routes…"
+            "Primary" (dict "Variant" "primary" "Size" "sm" "Href" "/trips/new" "Icon" "add" "Label" "New Trip")
+        )}}
+
+        <!-- Table Fragment (Datastar refresh target) -->
+        <div id="list-table">
+            {{template "trip_list_table.html" .}}
         </div>
-    </form>
-
-    <!-- Table Fragment (Datastar refresh target) -->
-    <div id="list-table">
-        {{template "trip_list_table.html" .}}
     </div>
 </div>

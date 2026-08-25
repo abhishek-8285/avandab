@@ -2,37 +2,44 @@
 <div class="p-4 sm:p-6 max-w-5xl mx-auto text-on-surface">
     {{template "page_header.html" (dict "Title" "Features" "Subtitle" "Enable or disable product features for your organisation. Changes apply immediately — routes within this request, background jobs within one worker tick.")}}
 
+    <div class="space-y-4">
     {{range $cat := .Order}}
-    <section class="mb-8">
-        <h2 class="text-sm font-semibold uppercase tracking-wider text-text-muted mb-3 font-display">{{$cat}}</h2>
-        <div class="rounded-lg border border-border-subtle shadow-sm bg-surface-container-lowest divide-y divide-border-subtle overflow-hidden">
-            {{range $f := index $.Categories $cat}}
-            <div class="flex items-center gap-4 px-4 py-3.5 flex-wrap">
-                <div class="flex-1 min-w-[16rem]">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="text-sm font-semibold text-on-surface">{{$f.Name}}</span>
-                        {{if eq $f.Tier "addon"}}
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">Add-on</span>
-                        {{else}}
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-status-success/10 text-status-success border border-status-success/20">Core</span>
-                        {{end}}
-                    </div>
-                    <p class="text-xs text-text-muted mt-0.5">{{$f.Description}}</p>
-                </div>
-                <button type="button" data-feature="{{$f.Key}}"
-                        onclick="toggleFeature(this)"
-                        class="relative inline-flex h-6 w-11 items-center shrink-0 rounded-full transition-colors cursor-pointer border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 {{if $f.Enabled}}bg-primary{{else}}bg-surface-container-high{{end}}"
-                        aria-pressed="{{if $f.Enabled}}true{{else}}false{{end}}"
-                        aria-label="Toggle {{$f.Name}}">
-                    <span class="inline-block h-4 w-4 transform rounded-full bg-surface-container-lowest shadow transition-transform {{if $f.Enabled}}translate-x-6{{else}}translate-x-1{{end}}"></span>
-                </button>
+    <section>
+        <div class="rounded-2xl border border-border-subtle shadow-sm bg-surface-container-lowest overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+                <h2 class="text-sm font-bold text-on-surface">{{$cat}}</h2>
+                <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len (index $.Categories $cat)}}</span>
             </div>
-            {{end}}
+            <div class="divide-y divide-border-subtle">
+                {{range $f := index $.Categories $cat}}
+                <div class="flex items-center gap-4 px-4 sm:px-5 py-3 flex-wrap hover:bg-surface-container-low/40 transition-colors">
+                    <div class="flex-1 min-w-[16rem]">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-sm font-semibold text-on-surface">{{$f.Name}}</span>
+                            {{if eq $f.Tier "addon"}}
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20">Add-on</span>
+                            {{else}}
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-700 border border-emerald-500/15">Core</span>
+                            {{end}}
+                        </div>
+                        <p class="text-xs text-text-muted mt-0.5">{{$f.Description}}</p>
+                    </div>
+                    <button type="button" data-feature="{{$f.Key}}"
+                            onclick="toggleFeature(this)"
+                            class="relative inline-flex h-6 w-11 items-center shrink-0 rounded-full transition-colors cursor-pointer border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 {{if $f.Enabled}}bg-primary{{else}}bg-surface-container-high{{end}}"
+                            aria-pressed="{{if $f.Enabled}}true{{else}}false{{end}}"
+                            aria-label="Toggle {{$f.Name}}">
+                        <span class="inline-block h-4 w-4 transform rounded-full bg-surface-container-lowest shadow transition-transform {{if $f.Enabled}}translate-x-6{{else}}translate-x-1{{end}}"></span>
+                    </button>
+                </div>
+                {{end}}
+            </div>
         </div>
     </section>
     {{end}}
+    </div>
 
-    <p class="text-xs text-text-muted">Add-ons are premium features — enable them here once subscribed. Core features are part of every plan and can be switched off to simplify the workspace.</p>
+    <p class="mt-4 text-xs text-text-muted">Add-ons are premium features — enable them here once subscribed. Core features are part of every plan and can be switched off to simplify the workspace.</p>
 </div>
 
 <script>

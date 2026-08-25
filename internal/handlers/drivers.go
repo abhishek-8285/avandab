@@ -66,6 +66,8 @@ func (h *DriverHandlers) List(w http.ResponseWriter, r *http.Request) {
 		Limit:    pp.Limit,
 		Search:   pp.Query,
 		Status:   pp.Status,
+		DateFrom: pp.DateFrom,
+		DateTo:   pp.DateTo,
 	})
 	if err != nil {
 		http.Error(w, "Failed to list drivers", http.StatusInternalServerError)
@@ -73,6 +75,8 @@ func (h *DriverHandlers) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pd := newPaginationData(pp, res.Total, "/drivers")
+	pd.From = pp.DateFrom
+	pd.To = pp.DateTo
 
 	if isDatastarRequest(r) {
 		h.renderFragment(w, "driver_list_table.html", map[string]interface{}{
@@ -80,6 +84,9 @@ func (h *DriverHandlers) List(w http.ResponseWriter, r *http.Request) {
 			"Pagination":   pd,
 			"Query":        pp.Query,
 			"StatusFilter": pp.Status,
+			"DateFrom":     pp.DateFrom,
+			"DateTo":       pp.DateTo,
+			"KPIs":         h.driverKPIs(r.Context()),
 		})
 		return
 	}
@@ -87,7 +94,7 @@ func (h *DriverHandlers) List(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "driver_list.html", PageData{
 		Title: "Drivers",
 		User:  session,
-		Extra: map[string]interface{}{"Drivers": res.Drivers, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "KPIs": h.driverKPIs(r.Context())},
+		Extra: map[string]interface{}{"Drivers": res.Drivers, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.driverKPIs(r.Context())},
 	})
 }
 

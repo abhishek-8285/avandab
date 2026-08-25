@@ -1,6 +1,6 @@
 <div class="overflow-x-auto">
     <table class="min-w-full divide-y divide-border-subtle text-sm text-on-surface">
-        <thead>
+        <thead class="bg-surface-container-low">
             <tr>
                 <th class="th-cell">Timestamp</th>
                 <th class="th-cell">Vehicle / Tag</th>
@@ -12,29 +12,35 @@
         </thead>
         <tbody class="divide-y divide-border-subtle">
             {{range .}}
-            <tr class="hover:bg-surface-container-low transition-colors">
-                <td class="px-4 py-2.5 text-sm text-text-muted text-xs whitespace-nowrap">{{.TxnTimeStr}}</td>
-                <td class="px-4 py-2.5 text-sm font-mono font-medium text-on-surface">{{.VehicleNumber}} <span class="text-xs text-text-muted">({{.TagID}})</span></td>
-                <td class="px-4 py-2.5 text-sm text-on-surface">{{.PlazaName}} <span class="text-xs text-text-muted">({{.PlazaID}})</span></td>
-                <td class="px-4 py-2.5 text-sm font-medium text-primary tabular-nums text-right" data-numeric>₹{{printf "%.2f" .Amount}}</td>
-                <td class="px-4 py-2.5 text-sm text-xs">
+            <tr class="hover:bg-surface-container-low/50 transition-colors">
+                <td class="px-3 py-2 text-xs text-text-muted tabular-nums whitespace-nowrap">{{.TxnTimeStr}}</td>
+                <td class="px-3 py-2 text-sm font-bold text-on-surface tabular-nums">{{.VehicleNumber}} <span class="text-xs font-normal text-text-muted font-mono">({{.TagID}})</span></td>
+                <td class="px-3 py-2 text-sm text-on-surface">{{.PlazaName}} <span class="text-xs text-text-muted">({{.PlazaID}})</span></td>
+                <td class="px-3 py-2 text-sm font-bold text-primary tabular-nums text-right" data-numeric>₹{{printf "%.2f" .Amount}}</td>
+                <td class="px-3 py-2 text-sm">
                     {{if .TripID}}
-                        <a href="/trips/{{.TripID}}" class="text-primary hover:underline font-mono">{{.TripID}}</a>
+                        <a href="/trips/{{.TripID}}" class="text-primary hover:underline font-bold tabular-nums">{{.TripID}}</a>
                     {{else}}
-                        <span class="text-text-muted">Unassigned</span>
+                        <span class="text-xs text-text-muted">Unassigned</span>
                     {{end}}
                 </td>
-                <td class="px-4 py-2.5">
+                <td class="px-3 py-2">
                     {{if .Reconciled}}
-                        <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-status-success/20 text-status-success">Reconciled</span>
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-500/10 border border-emerald-500/15 text-emerald-700 dark:text-emerald-300"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>Reconciled</span>
                     {{else}}
-                        <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-status-warning/20 text-status-warning">Pending</span>
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-500/10 border border-amber-500/15 text-amber-700 dark:text-amber-300"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-pulse"></span>Pending</span>
                     {{end}}
                 </td>
             </tr>
             {{else}}
             <tr>
-                <td colspan="6" class="px-4 py-6 text-center text-text-muted text-sm">No FASTag transactions found.</td>
+                <td colspan="6" class="px-4 py-12 text-center">
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg></div>
+                        <p class="text-sm font-medium text-on-surface">No FASTag transactions found</p>
+                        <p class="text-xs text-text-muted">Toll deductions appear here as the provider reports them</p>
+                    </div>
+                </td>
             </tr>
             {{end}}
         </tbody>

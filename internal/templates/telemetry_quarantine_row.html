@@ -1,7 +1,7 @@
 {{range .Entries}}
-<tr class="hover:bg-surface-container-low transition-colors group">
-    <td class="px-4 py-2.5 text-sm font-mono font-medium text-primary whitespace-nowrap">{{.IMEI}}</td>
-    <td class="px-4 py-2.5 text-sm text-on-surface">
+<tr class="hover:bg-surface-container-low/60 transition-colors group">
+    <td class="px-3 py-2 text-sm font-mono font-bold text-primary tabular-nums whitespace-nowrap">{{.IMEI}}</td>
+    <td class="px-3 py-2 text-sm text-on-surface whitespace-nowrap">
         {{if eq .Reason "retired_device"}}
         {{template "status_dot.html" (dict "Tone" "alert" "Label" "Retired device")}}
         {{else if eq .Reason "quarantined_device"}}
@@ -10,35 +10,36 @@
         {{template "status_dot.html" (dict "Tone" "warning" "Label" "Unknown device")}}
         {{end}}
     </td>
-    <td class="px-4 py-2.5 text-sm text-secondary font-mono text-xs">{{.Source}}</td>
-    <td class="px-4 py-2.5 text-sm text-secondary font-mono text-xs max-w-xs truncate" title="{{.RawPayload}}">{{.RawPayload}}</td>
-    <td class="px-4 py-2.5 text-sm text-secondary font-mono text-xs whitespace-nowrap">{{datetime .CreatedAt}}</td>
-    <td class="px-4 py-2.5 text-right">
+    <td class="px-3 py-2 text-xs font-mono text-secondary">{{.Source}}</td>
+    <td class="px-3 py-2 text-xs font-mono text-secondary max-w-xs truncate" title="{{.RawPayload}}">{{.RawPayload}}</td>
+    <td class="px-3 py-2 text-xs text-secondary tabular-nums whitespace-nowrap">{{datetime .CreatedAt}}</td>
+    <td class="px-3 py-2 text-right">
         {{if can $.User "telemetry" "update"}}
         <form method="POST" action="/telemetry/quarantine/{{.ID}}/resolve" class="inline-flex flex-wrap items-center justify-end gap-2" hx-target="#quarantine-rows" hx-swap="outerHTML">
-            <label class="inline-flex items-center gap-1 text-xs text-secondary">
+            <label class="inline-flex items-center gap-1 text-xs text-secondary cursor-pointer">
                 <input type="radio" name="action" value="register_new" class="accent-primary" checked> Register new
             </label>
-            <label class="inline-flex items-center gap-1 text-xs text-secondary">
+            <label class="inline-flex items-center gap-1 text-xs text-secondary cursor-pointer">
                 <input type="radio" name="action" value="assign_existing" class="accent-primary"> Assign existing
             </label>
-            <label class="inline-flex items-center gap-1 text-xs text-secondary">
+            <label class="inline-flex items-center gap-1 text-xs text-secondary cursor-pointer">
                 <input type="radio" name="action" value="reject" class="accent-primary"> Reject
             </label>
-            <input type="text" name="vehicle_id" placeholder="vehicle id" class="w-28 bg-surface-container-low border border-border-subtle rounded-md px-2 py-1 text-xs font-mono text-on-surface">
-            <button type="submit" class="inline-flex items-center gap-1 rounded-md bg-primary text-on-primary px-2.5 py-1.5 text-xs font-medium hover:bg-primary/90 transition-all">Resolve</button>
+            <input type="text" name="vehicle_id" placeholder="vehicle id" class="w-28 bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1 text-xs font-mono text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+            <button type="submit" class="inline-flex items-center rounded-full bg-primary text-on-primary px-2.5 py-1 text-[11px] font-bold hover:bg-primary/90 transition-all">Resolve</button>
         </form>
         {{end}}
     </td>
 </tr>
 {{else}}
 <tr>
-    <td colspan="6" class="px-4 py-16 text-center text-secondary">
-        <div class="flex flex-col items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-surface-container-low border border-border-subtle flex items-center justify-center text-status-success">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+    <td colspan="6" class="px-4 py-12 text-center">
+        <div class="flex flex-col items-center gap-2">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 mx-auto">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-6 h-6"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
             </div>
-            <p class="font-medium text-sm">Quarantine queue is empty.</p>
+            <p class="text-sm font-medium text-on-surface mt-1">Queue is clear</p>
+            <p class="text-xs text-text-muted">No frames awaiting resolution.</p>
         </div>
     </td>
 </tr>

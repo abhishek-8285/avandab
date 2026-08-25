@@ -355,7 +355,7 @@ func Load() *Config {
 	}
 
 	cfg.Experiment = ExperimentConfig{
-		Rollout:      getEnvInt("EXPERIMENT_ROLLOUT", 0),
+		Rollout:      getEnvInt("EXPERIMENT_ROLLOUT", 100),
 		ForceVariant: getEnv("EXPERIMENT_FORCE_VARIANT", ""),
 	}
 

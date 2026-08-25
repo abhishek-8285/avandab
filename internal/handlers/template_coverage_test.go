@@ -313,6 +313,17 @@ func TestAllTemplatesRender(t *testing.T) {
 			"MapConfig":    mapConfig,
 			"LiveEndpoint": "/api/v1/telemetry/live",
 		}},
+		{"trip_playback", "trip_playback.html", map[string]interface{}{
+			"Trip": tripapp.TripResponseDTO{
+				ID: "trip-1", TripNumber: "TRP-001", RouteSource: "Mumbai",
+				RouteDestination: "Pune", DepartureTime: now, Status: "in_transit",
+				VehicleRegistrationNumber: "MH12AB1234", DriverDisplayID: "DRV-1",
+			},
+			"MapConfig": mapConfig,
+			"PlaybackConfig": map[string]interface{}{
+				"TripID": "trip-1", "VehicleID": "veh-1", "HistoryAPI": "/api/v1/telemetry/history",
+			},
+		}},
 
 		// ---- Settings and profile ----
 		{"settings", "settings.html", map[string]interface{}{
@@ -534,6 +545,18 @@ func TestAllTemplatesRender(t *testing.T) {
 		{"partial_footer", "footer.html", map[string]interface{}{}},
 		{"partial_irn_qr", "irn_qr.html", map[string]interface{}{"Invoice": invoiceapp.InvoiceResponseDTO{IRN: "irn", IRNAckNo: "ack", IRNAckDate: "2026-08-20", SignedQR: "data:image/png;base64,x"}}},
 		{"partial_page_header", "page_header.html", map[string]interface{}{"Title": "Page", "Subtitle": "sub", "ActionHref": "/", "ActionIcon": "add"}},
+		{"partial_note_form", "note_form.html", map[string]interface{}{"Action": "/invoices/inv-1/credit-note", "Label": "Issue Credit Note", "Icon": "cancel"}},
+		{"partial_filter_bar", "filter_bar.html", map[string]interface{}{
+			"Action": "/trips", "Query": "x", "StatusFilter": "draft", "Label": "Filters:",
+			"Chips": []map[string]interface{}{
+				{"Label": "All", "Value": ""},
+				{"Label": "Draft", "Value": "draft"},
+			},
+			"ShowDates": true, "DateFrom": "2026-08-01", "DateTo": "2026-08-31",
+			"ShowSearch": true, "SearchPlaceholder": "Search…",
+			"Primary": map[string]interface{}{"Variant": "primary", "Size": "sm", "Href": "/trips/new", "Icon": "add", "Label": "New Trip"},
+			"Hidden":  []map[string]interface{}{{"Name": "driver", "Value": "drv-1"}},
+		}},
 		{"partial_pagination", "pagination.html", map[string]interface{}{"Pagination": PaginationData{Page: 1, PerPage: 20, Total: 5, TotalPages: 1, HasPrev: false, HasNext: false, BasePath: "/items"}}},
 		{"partial_public_header", "public_header.html", map[string]interface{}{}},
 		{"partial_stat_card", "stat_card.html", map[string]interface{}{"Label": "Trips", "Value": "12", "Accent": "success", "Icon": "route"}},

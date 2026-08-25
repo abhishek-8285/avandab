@@ -1,11 +1,13 @@
 package gstn
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -62,10 +64,29 @@ type PushResponse struct {
 	Pushed    bool   `json:"pushed"`
 }
 
+// CancelIRNRequest is a request to cancel a generated IRN. Under GST rules an
+// IRN may only be cancelled within 24 hours of generation.
+// CancelReason codes: 1=Duplicate, 2=Order cancelled, 3=Data entry error, 4=Other.
+type CancelIRNRequest struct {
+	IRN          string `json:"irn"`
+	CancelReason int    `json:"cancel_reason"`
+	CancelRemark string `json:"cancel_remark"`
+}
+
+// CancelIRNResponse is the result of an IRN cancellation request.
+type CancelIRNResponse struct {
+	IRN        string `json:"irn"`
+	Cancelled  bool   `json:"cancelled"`
+	CancelNo   string `json:"cancel_no"`
+	CancelDate string `json:"cancel_date"`
+	Remark     string `json:"remark"`
+}
+
 // EInvoiceClient defines operations for GST E-Invoicing / IRN generation.
 type EInvoiceClient interface {
 	GenerateIRN(ctx context.Context, inv InvoiceView) (*IRNResponse, error)
 	PushEInvoice(ctx context.Context, invoiceID, irn string) (*PushResponse, error)
+	CancelIRN(ctx context.Context, req CancelIRNRequest) (*CancelIRNResponse, error)
 }
 
 // ComputeIRN calculates a deterministic 64-char hex SHA-256 hash
@@ -162,6 +183,63 @@ func (m *MockEInvoiceClient) PushEInvoice(ctx context.Context, invoiceID, irn st
 		SignedQR:  signedQR,
 		Pushed:    true,
 	}, nil
+}
+
+func (m *MockEInvoiceClient) CancelIRN(ctx context.Context, req CancelIRNRequest) (*CancelIRNResponse, error) {
+	if !m.cfg.Enabled {
+		return nil, fmt.Errorf("gstn integration disabled")
+	}
+	if !m.cfg.UseMock {
+		return nil, fmt.Errorf("gstn: e-invoice GSP credentials not configured; set INTEGRATION_GSTN_API_KEY or INTEGRATION_GSTN_USE_MOCK=true for demo mode")
+	}
+	if req.IRN == "" {
+		return nil, fmt.Errorf("irn is required to cancel e-invoice")
+	}
+	if req.CancelReason < 1 || req.CancelReason > 4 {
+		return nil, fmt.Errorf("cancel_reason must be 1=Duplicate, 2=Order cancelled, 3=Data entry error, 4=Other")
+	}
+	cancelNo := fmt.Sprintf("CNL%012d", time.Now().UnixNano()%1000000000000)
+	cancelDate := time.Now().Format("2006-01-02 15:04:05")
+
+	return &CancelIRNResponse{
+		IRN:        req.IRN,
+		Cancelled:  true,
+		CancelNo:   cancelNo,
+		CancelDate: cancelDate,
+		Remark:     req.CancelRemark,
+	}, nil
+}
+
+// TODO(nic-spec): confirm live NIC/GSP cancel payload and response field names
+// (NIC e-invoice spec v1.10 uses CnlRsn/CnlRmr/CancelDate) before enabling real
+// HTTP mode; the wire mapping below is provisional.
+func (c *realHttpClient) CancelIRN(ctx context.Context, req CancelIRNRequest) (*CancelIRNResponse, error) {
+	if !c.cfg.Enabled {
+		return nil, fmt.Errorf("gstn integration disabled")
+	}
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, c.cfg.Endpoint+"/einvoice/cancel", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("X-API-Key", c.cfg.APIKey)
+	resp, err := c.httpClient.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("gstn_unavailable: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("gstn_unavailable: status %d", resp.StatusCode)
+	}
+	var out CancelIRNResponse
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, fmt.Errorf("gstn_unavailable: %w", err)
+	}
+	return &out, nil
 }
 
 func min(a, b int) int {

@@ -365,7 +365,7 @@
                     <form method="GET" action="/search" class="relative hidden sm:block">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                         <label for="global-search-input" class="sr-only">Search bookings, trips, vehicles, drivers, customers</label>
-                        <input id="global-search-input" type="text" name="q" value="{{.Query}}" class="bg-surface-container-low border border-border-subtle rounded-md py-2 pl-9 pr-4 text-sm text-on-surface placeholder-text-text-muted w-64 md:w-80 focus:outline-none focus:bg-surface-container-lowest focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" placeholder="{{t "topbar.search"}}" />
+                        <input id="global-search-input" type="text" name="q" value="{{.Query}}" class="bg-surface-container-low border border-border-subtle rounded-lg py-2 pl-9 pr-4 text-sm text-on-surface placeholder-text-text-muted w-64 md:w-80 focus:outline-none focus:bg-surface-container-lowest focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" placeholder="{{t "topbar.search"}}" />
                     </form>
 
                     <!-- 3-Way Theme Switcher (Day / Night / System) -->
@@ -412,7 +412,7 @@
                             {{if .HasUnread}}<span id="notif-badge" class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-status-alert ring-2 ring-surface-container-lowest"></span>{{end}}
                         </button>
 
-                        <div id="notif-menu" class="absolute right-0 top-full mt-2 w-80 max-w-[90vw] bg-surface-container-lowest border border-border-subtle rounded-lg shadow-lg z-50 overflow-hidden hidden p-2 text-on-surface">
+                        <div id="notif-menu" class="absolute right-0 top-full mt-2 w-80 max-w-[90vw] bg-surface-container-lowest border border-border-subtle rounded-xl shadow-xl z-50 overflow-hidden hidden p-2 text-on-surface">
                             <div class="flex justify-between items-center pb-2 mb-1 border-b border-border-subtle px-1">
                                 <div class="text-sm font-semibold text-on-surface flex items-center gap-1.5">
                                     <span>Notifications</span>
@@ -540,7 +540,7 @@
     </div>
 
         {{if .FlashError}}
-        <div class="fixed bottom-4 right-4 safe-bottom safe-right max-w-md w-full bg-status-alert/10 border-l-4 border-status-alert text-status-alert p-4 rounded shadow-lg flex items-start justify-between">
+        <div class="fixed bottom-4 right-4 safe-bottom safe-right max-w-md w-full bg-status-alert/10 border-l-4 border-status-alert text-status-alert p-4 rounded-xl shadow-xl flex items-start justify-between">
             <span class="flex-1">{{.FlashError}}</span>
             <button type="button" class="flash-dismiss ml-2 text-status-alert hover:text-status-alert active:text-status-alert focus:outline-none focus:ring-2 focus:ring-status-alert rounded min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label="Dismiss error">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -548,7 +548,7 @@
         </div>
         {{end}}
         {{if .FlashSuccess}}
-        <div class="fixed bottom-4 right-4 safe-bottom safe-right max-w-md w-full bg-status-success/10 border-l-4 border-status-success text-status-success p-4 rounded shadow-lg flex items-start justify-between">
+        <div class="fixed bottom-4 right-4 safe-bottom safe-right max-w-md w-full bg-status-success/10 border-l-4 border-status-success text-status-success p-4 rounded-xl shadow-xl flex items-start justify-between">
             <span class="flex-1">{{.FlashSuccess}}</span>
             <button type="button" class="flash-dismiss ml-2 text-status-success hover:text-status-success active:text-status-success focus:outline-none focus:ring-2 focus:ring-status-success rounded min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label="Dismiss message">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>

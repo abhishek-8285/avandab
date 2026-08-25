@@ -22,8 +22,11 @@ import (
 	invoiceagg "transport-app/internal/invoice/domain/aggregate"
 	"transport-app/internal/middleware"
 	pdfgen "transport-app/internal/pdf"
+	"transport-app/internal/repository/sqlite"
+	"transport-app/internal/service"
 	"transport-app/internal/shared"
 	clock "transport-app/internal/shared/clock"
+	"transport-app/internal/shared/gstin"
 	id "transport-app/internal/shared/id"
 	uow "transport-app/internal/shared/uow"
 )
@@ -37,6 +40,10 @@ type InvoiceHandlers struct {
 }
 
 func (h *InvoiceHandlers) init() {
+	if h.Services == nil {
+		h.Services = service.NewServices(
+			sqlite.NewRepository(h.DB), h.Config, slog.Default(), nil)
+	}
 	if h.getUC == nil {
 		uowImpl := uow.NewSQLUnitOfWork(h.DB)
 		clockImpl := clock.NewRealClock()
@@ -62,6 +69,14 @@ func (h *InvoiceHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "invoices", "update")).Post("/{id}/line-items/{lineId}/delete", h.DeleteLineItem)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "invoices", "update")).Post("/{id}/generate-irn", h.GenerateIRN)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "invoices", "read")).Get("/{id}/irn", h.GetIRNFragment)
+
+	// GST credit/debit notes (migration 00098): post-issuance corrections.
+	// Issued invoices are immutable — reductions via credit note, increases
+	// via debit note. Same permission tier as invoice mutations.
+	notes := &CreditNoteHandlers{App: h.App}
+	r.With(middleware.ResourcePermission(h.AuthSrv, "invoices", "update")).Post("/{id}/credit-note", notes.CreateCreditNote)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "invoices", "update")).Post("/{id}/debit-note", notes.CreateDebitNote)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "invoices", "read")).Get("/{id}/notes", notes.ListForInvoice)
 }
 
 func (h *InvoiceHandlers) List(w http.ResponseWriter, r *http.Request) {
@@ -75,6 +90,8 @@ func (h *InvoiceHandlers) List(w http.ResponseWriter, r *http.Request) {
 		Limit:    pp.Limit,
 		Search:   pp.Query,
 		Status:   pp.Status,
+		DateFrom: pp.DateFrom,
+		DateTo:   pp.DateTo,
 	})
 	if err != nil {
 		http.Error(w, "Failed to list invoices", http.StatusInternalServerError)
@@ -82,6 +99,8 @@ func (h *InvoiceHandlers) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pd := newPaginationData(pp, res.Total, "/invoices")
+	pd.From = pp.DateFrom
+	pd.To = pp.DateTo
 
 	if isDatastarRequest(r) {
 		h.renderFragment(w, "invoice_list_table.html", map[string]interface{}{
@@ -89,6 +108,8 @@ func (h *InvoiceHandlers) List(w http.ResponseWriter, r *http.Request) {
 			"Pagination":   pd,
 			"Query":        pp.Query,
 			"StatusFilter": pp.Status,
+			"DateFrom":     pp.DateFrom,
+			"DateTo":       pp.DateTo,
 		})
 		return
 	}
@@ -96,7 +117,7 @@ func (h *InvoiceHandlers) List(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "invoice_list.html", PageData{
 		Title: "Invoices",
 		User:  session,
-		Extra: map[string]interface{}{"Invoices": res.Invoices, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "KPIs": h.invoiceKPIs(r.Context())},
+		Extra: map[string]interface{}{"Invoices": res.Invoices, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.invoiceKPIs(r.Context())},
 	})
 }
 
@@ -108,20 +129,9 @@ func (h *InvoiceHandlers) View(w http.ResponseWriter, r *http.Request) {
 		TenantID: shared.TenantIDFromContext(r.Context()),
 	})
 	if err != nil {
+		slog.Error("DBG view execute", "id", idParam, "err", err)
 		http.Error(w, "Invoice not found", http.StatusNotFound)
 		return
-	}
-
-	// Retrieve payments using the legacy services for now until the payment module vertical slice is ready
-	payments, errPay := h.Services.Invoices.GetPaymentsForInvoice(r.Context(), domain.InvoiceID(idParam))
-	if errPay != nil {
-		slog.Error("Failed to load payments for invoice", "invoice_id", idParam, "error", errPay)
-		payments = nil
-	}
-	balance, errBal := h.Services.Invoices.GetBalance(r.Context(), domain.InvoiceID(idParam))
-	if errBal != nil {
-		slog.Error("Failed to calculate balance for invoice", "invoice_id", idParam, "error", errBal)
-		balance = float64(0)
 	}
 
 	session, _ := h.getUserFromContext(r)
@@ -129,18 +139,26 @@ func (h *InvoiceHandlers) View(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "invoice_view.html", PageData{
 		Title: "View Invoice",
 		User:  session,
-		Extra: map[string]interface{}{
-			"Invoice":  invoice,
-			"Payments": payments,
-			"Balance":  balance,
-		},
+		Extra: h.invoiceViewExtra(r, idParam, invoice),
 	})
 }
 
 func (h *InvoiceHandlers) ViewByNumber(w http.ResponseWriter, r *http.Request) {
 	h.init()
 	// Fallback to legacy get since query by number is a read operation on db
-	invoice, err := h.Services.Invoices.GetInvoiceByNumber(r.Context(), chi.URLParam(r, "number"))
+	invoiceLegacy, err := h.Services.Invoices.GetInvoiceByNumber(r.Context(), chi.URLParam(r, "number"))
+	if err != nil {
+		http.Error(w, "Invoice not found", http.StatusNotFound)
+		return
+	}
+	// The legacy InvoiceWithJoins read model carries no IRN/e-invoice fields,
+	// so re-fetch the full DTO by the resolved ID — invoice_view.html (and its
+	// irn_qr partial) need them.
+	idParam := string(invoiceLegacy.ID)
+	invoice, err := h.getUC.Execute(r.Context(), invoiceapp.GetInvoiceQuery{
+		ID:       invoiceagg.InvoiceID(idParam),
+		TenantID: shared.TenantIDFromContext(r.Context()),
+	})
 	if err != nil {
 		http.Error(w, "Invoice not found", http.StatusNotFound)
 		return
@@ -149,12 +167,67 @@ func (h *InvoiceHandlers) ViewByNumber(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "invoice_view.html", PageData{
 		Title: "View Invoice",
 		User:  session,
-		Extra: map[string]interface{}{"Invoice": invoice},
+		Extra: h.invoiceViewExtra(r, idParam, invoice),
 	})
+}
+
+// invoiceViewExtra assembles the invoice view template payload shared by
+// View and ViewByNumber: payments, balance, issued credit/debit notes and
+// the computed Locked flag. An invoice is locked once it has an IRN or any
+// recorded payment (immutability guards reject delete/edit with 409), so the
+// UI hides destructive affordances and surfaces notes as the only correction
+// path.
+func (h *InvoiceHandlers) invoiceViewExtra(r *http.Request, invoiceID string, invoice invoiceapp.InvoiceResponseDTO) map[string]interface{} {
+	payments, errPay := h.Services.Invoices.GetPaymentsForInvoice(r.Context(), domain.InvoiceID(invoiceID))
+	if errPay != nil {
+		slog.Error("Failed to load payments for invoice", "invoice_id", invoiceID, "error", errPay)
+		payments = nil
+	}
+	balance, errBal := h.Services.Invoices.GetBalance(r.Context(), domain.InvoiceID(invoiceID))
+	if errBal != nil {
+		slog.Error("Failed to calculate balance for invoice", "invoice_id", invoiceID, "error", errBal)
+		balance = float64(0)
+	}
+	locked := invoice.IRN != "" || len(payments) > 0
+
+	var notes []*service.CreditNoteRecord
+	if h.Services.Notes != nil {
+		var errNotes error
+		notes, errNotes = h.Services.Notes.GetNotesForInvoice(r.Context(), invoiceID)
+		if errNotes != nil {
+			slog.Error("Failed to load credit/debit notes for invoice", "invoice_id", invoiceID, "error", errNotes)
+			notes = nil
+		}
+	}
+
+	return map[string]interface{}{
+		"Invoice":  invoice,
+		"Payments": payments,
+		"Balance":  balance,
+		"Locked":   locked,
+		"Notes":    notes,
+	}
+}
+
+// invoiceGuardError writes the HTTP response for a service-layer invoice
+// immutability guard failure and reports whether it handled the error.
+func invoiceGuardError(w http.ResponseWriter, err error) bool {
+	switch {
+	case errors.Is(err, domain.ErrInvoiceNotFound):
+		http.Error(w, "Invoice not found", http.StatusNotFound)
+	case errors.Is(err, domain.ErrInvoiceEInvoiced), errors.Is(err, domain.ErrInvoiceHasPayments):
+		http.Error(w, err.Error(), http.StatusConflict)
+	default:
+		return false
+	}
+	return true
 }
 
 func (h *InvoiceHandlers) Delete(w http.ResponseWriter, r *http.Request) {
 	if err := h.Services.Invoices.DeleteInvoice(r.Context(), domain.InvoiceID(chi.URLParam(r, "id"))); err != nil {
+		if invoiceGuardError(w, err) {
+			return
+		}
 		http.Error(w, "Failed to delete invoice", http.StatusInternalServerError)
 		return
 	}
@@ -269,6 +342,16 @@ func (h *InvoiceHandlers) buildInvoicePDFData(ctx context.Context,
 	placeOfSupply := custState
 	if placeOfSupply == "" {
 		placeOfSupply = prof.StateCode
+	}
+	if prof.GSTNumber != "" && !validGSTINFormat(prof.GSTNumber) {
+		slog.Warn("supplier GSTIN failed format check; not rendering in PDF",
+			"gstin", prof.GSTNumber, "tenant", shared.TenantIDFromContext(ctx))
+		prof.GSTNumber = ""
+	}
+	if custGSTIN != "" && !validGSTINFormat(custGSTIN) {
+		slog.Warn("customer GSTIN failed format check; not rendering in PDF",
+			"gstin", custGSTIN, "tenant", shared.TenantIDFromContext(ctx))
+		custGSTIN = ""
 	}
 
 	var payRows []pdfgen.PDFPaymentRow
@@ -560,6 +643,12 @@ func (h *InvoiceHandlers) LineItemsEditor(w http.ResponseWriter, r *http.Request
 		Total:        sumTotal,
 	}
 
+	locked := invDTO.IRN != "" || invDTO.PaymentStatus != "pending"
+	lockReason := invDTO.PaymentStatus
+	if invDTO.IRN != "" {
+		lockReason = "e-invoiced"
+	}
+
 	h.renderPage(w, r, "invoice_line_items.html", PageData{
 		Title: fmt.Sprintf("Line Items - %s", invDTO.InvoiceNumber),
 		User:  session,
@@ -570,6 +659,8 @@ func (h *InvoiceHandlers) LineItemsEditor(w http.ResponseWriter, r *http.Request
 			"LineItems":    items,
 			"HSNCodes":     hsnList,
 			"TaxSplit":     taxSplit,
+			"Locked":       locked,
+			"LockReason":   lockReason,
 		},
 	})
 }
@@ -578,6 +669,14 @@ func (h *InvoiceHandlers) AddLineItem(w http.ResponseWriter, r *http.Request) {
 	h.init()
 	invoiceID := chi.URLParam(r, "id")
 	tenantID := shared.TenantIDFromContext(r.Context())
+
+	if err := h.Services.Invoices.EnsureLineItemsEditable(r.Context(), domain.InvoiceID(invoiceID)); err != nil {
+		if invoiceGuardError(w, err) {
+			return
+		}
+		http.Error(w, "Failed to verify invoice is editable", http.StatusInternalServerError)
+		return
+	}
 
 	hsnCode := strings.TrimSpace(r.FormValue("hsn_sac_code"))
 	description := strings.TrimSpace(r.FormValue("description"))
@@ -656,6 +755,14 @@ func (h *InvoiceHandlers) EditLineItem(w http.ResponseWriter, r *http.Request) {
 	lineID := chi.URLParam(r, "lineId")
 	tenantID := shared.TenantIDFromContext(r.Context())
 
+	if err := h.Services.Invoices.EnsureLineItemsEditable(r.Context(), domain.InvoiceID(invoiceID)); err != nil {
+		if invoiceGuardError(w, err) {
+			return
+		}
+		http.Error(w, "Failed to verify invoice is editable", http.StatusInternalServerError)
+		return
+	}
+
 	hsnCode := strings.TrimSpace(r.FormValue("hsn_sac_code"))
 	description := strings.TrimSpace(r.FormValue("description"))
 	unit := strings.TrimSpace(r.FormValue("unit"))
@@ -723,6 +830,15 @@ func (h *InvoiceHandlers) DeleteLineItem(w http.ResponseWriter, r *http.Request)
 	invoiceID := chi.URLParam(r, "id")
 	lineID := chi.URLParam(r, "lineId")
 	tenantID := shared.TenantIDFromContext(r.Context())
+
+	// GST immutability: line items of an e-invoiced or paid invoice are locked.
+	if err := h.Services.Invoices.EnsureLineItemsEditable(r.Context(), domain.InvoiceID(invoiceID)); err != nil {
+		if invoiceGuardError(w, err) {
+			return
+		}
+		http.Error(w, "Failed to verify invoice is editable", http.StatusInternalServerError)
+		return
+	}
 
 	tx, err := h.DB.BeginTx(r.Context(), nil)
 	if err != nil {
@@ -1008,4 +1124,9 @@ func (h *InvoiceHandlers) SearchHSNSAC(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{"results": results})
+}
+
+// validGSTINFormat delegates to the shared GSTIN structural validator.
+func validGSTINFormat(g string) bool {
+	return gstin.Valid(g)
 }

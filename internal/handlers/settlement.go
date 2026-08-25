@@ -59,10 +59,16 @@ func (h *SettlementHandlers) Mount(r chi.Router) {
 // ListPage renders the driver settlements dashboard list page (Spec 12 §4.5).
 func (h *SettlementHandlers) ListPage(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
-	status := r.URL.Query().Get("status")
+	pp := parsePaginationParams(r)
 	driverID := r.URL.Query().Get("driver_id")
 
-	results, err := h.settleSvc.ListSettlements(r.Context(), status, driverID, 1000, 0)
+	var results []service.DriverSettlementRecord
+	var err error
+	if pp.DateFrom != "" || pp.DateTo != "" {
+		results, err = h.settleSvc.ListSettlementsDateRange(r.Context(), pp.Status, driverID, pp.DateFrom, pp.DateTo, 1000, 0)
+	} else {
+		results, err = h.settleSvc.ListSettlements(r.Context(), pp.Status, driverID, 1000, 0)
+	}
 	if err != nil {
 		results = []service.DriverSettlementRecord{}
 	}
@@ -85,16 +91,23 @@ func (h *SettlementHandlers) ListPage(w http.ResponseWriter, r *http.Request) {
 		avgPayout = totalAmount / float64(len(results))
 	}
 
+	pd := newPaginationData(pp, int64(len(results)), "/settlements")
+	pd.From = pp.DateFrom
+	pd.To = pp.DateTo
+
 	h.renderPage(w, r, "settlement_list.html", PageData{
 		Title: "Driver Settlements",
 		User:  session,
 		Extra: map[string]interface{}{
 			"Settlements":  results,
+			"Pagination":   pd,
 			"TotalPending": totalPending,
 			"TotalPaid":    totalPaid,
 			"AvgPayout":    avgPayout,
 			"TotalCount":   len(results),
-			"StatusFilter": status,
+			"StatusFilter": pp.Status,
+			"DateFrom":     pp.DateFrom,
+			"DateTo":       pp.DateTo,
 		},
 	})
 }

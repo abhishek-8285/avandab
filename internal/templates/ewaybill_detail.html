@@ -1,121 +1,138 @@
-<div class="max-w-5xl mx-auto space-y-6">
-    <!-- Header -->
-    <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
-        <div>
-            <div class="flex items-center gap-2">
-                <a href="/ewaybill" class="text-text-muted hover:text-on-surface transition-colors" aria-label="Back to e-way bills">
-                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                    </svg>
-                </a>
-                <h1 class="text-xl font-semibold text-on-surface font-display">E-Way Bill: {{.EWayBill.EwbNumber}}</h1>
+<div class="space-y-5 max-w-7xl mx-auto">
+    <!-- Hero Identity Band -->
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="flex items-start gap-3 min-w-0">
+            <a href="/ewaybill" class="w-9 h-9 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container transition-colors shrink-0" aria-label="Back to e-way bills">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+            </a>
+            <div class="min-w-0">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">E-Way Bill · GST e-Permit</p>
+                <div class="flex items-center gap-2.5 flex-wrap mt-0.5">
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-on-surface font-mono tabular-nums truncate">{{.EWayBill.EwbNumber}}</h1>
+                    {{if eq .EWayBill.Status "active"}}
+                    <span class="inline-flex px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Active</span>
+                    {{else if eq .EWayBill.Status "cancelled"}}
+                    <span class="inline-flex px-2 py-1 rounded-full bg-rose-500/10 border border-rose-500/15 text-[11px] font-bold uppercase tracking-wide text-rose-700 dark:text-rose-300">Cancelled</span>
+                    {{else if eq .EWayBill.Status "expired"}}
+                    <span class="inline-flex px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/15 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300">Expired</span>
+                    {{end}}
+                </div>
+                <p class="text-sm text-secondary mt-1">
+                    Trip: <a href="/trips/{{.EWayBill.TripID}}" class="font-mono text-primary hover:underline font-semibold">{{.EWayBill.TripID}}</a> |
+                    Generated: <span class="tabular-nums">{{.EWayBill.CreatedAt.Format "02 Jan 2006 15:04"}}</span> | Mode: <span class="font-semibold">{{.EWayBill.GenMode}}</span>
+                </p>
             </div>
-            <p class="text-sm text-text-muted mt-1">
-                Trip: <a href="/trips/{{.EWayBill.TripID}}" class="font-mono text-primary hover:underline font-medium">{{.EWayBill.TripID}}</a> | 
-                Generated: {{.EWayBill.CreatedAt.Format "02 Jan 2006 15:04"}} | Mode: <span class="font-semibold">{{.EWayBill.GenMode}}</span>
-            </p>
         </div>
-        <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex items-center gap-2 flex-wrap shrink-0 lg:justify-end">
             {{if eq .EWayBill.Status "active"}}
                 {{if not .EWayBill.VehicleNumber}}
                 <button onclick="document.getElementById('part-b-modal').classList.remove('hidden')"
-                        class="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-all cursor-pointer">
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer">
                     Attach Part-B
                 </button>
                 {{else}}
                 <button onclick="document.getElementById('extend-modal').classList.remove('hidden')"
-                        class="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface-container-low text-on-surface px-4 py-2 text-sm font-medium hover:bg-surface-container transition-all cursor-pointer">
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 transition-all cursor-pointer">
                     Extend Validity
                 </button>
                 {{end}}
                 <button onclick="document.getElementById('cancel-modal').classList.remove('hidden')"
-                        class="inline-flex items-center gap-2 rounded-md bg-status-alert text-on-primary px-4 py-2 text-sm font-medium hover:opacity-90 transition-all cursor-pointer">
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-status-alert text-on-primary text-sm font-semibold shadow-sm hover:opacity-90 transition-all cursor-pointer">
                     Cancel EWB
                 </button>
             {{else if eq .EWayBill.Status "cancelled"}}
-                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-status-alert/20 text-status-alert">
+                <span class="inline-flex px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/15 text-xs font-bold text-rose-700 dark:text-rose-300">
                     Cancelled ({{.EWayBill.CancelReason}})
                 </span>
             {{else if eq .EWayBill.Status "expired"}}
-                <span class="px-3 py-1 rounded-full text-xs font-semibold bg-surface-container-low text-text-muted border border-border-subtle">
+                <span class="inline-flex px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/15 text-xs font-bold text-amber-700 dark:text-amber-300">
                     Expired
                 </span>
             {{end}}
         </div>
     </div>
 
-    <!-- Status & Details Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Details Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <!-- Part-A Card -->
-        <div class="bg-surface-container-lowest p-6 rounded-lg border border-border-subtle shadow-sm space-y-4">
-            <h2 class="text-base font-semibold text-on-surface flex items-center justify-between">
-                <span>Part-A Consignment Details</span>
-                <span class="text-xs font-mono text-text-muted font-normal">Valid Until: {{.EWayBill.ValidUntil.Format "02 Jan 15:04"}}</span>
-            </h2>
-            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                <div>
-                    <dt class="field-label text-text-muted">From Place</dt>
-                    <dd class="font-medium text-on-surface">{{.EWayBill.FromPlace}} ({{.EWayBill.FromStateCode}})</dd>
-                </div>
-                <div>
-                    <dt class="field-label text-text-muted">To Place</dt>
-                    <dd class="font-medium text-on-surface">{{.EWayBill.ToPlace}} ({{.EWayBill.ToStateCode}})</dd>
-                </div>
-                <div>
-                    <dt class="field-label text-text-muted">Distance</dt>
-                    <dd class="font-mono font-medium text-on-surface tabular-nums" data-numeric>{{.EWayBill.Distance}} km</dd>
-                </div>
-                <div>
-                    <dt class="field-label text-text-muted">Goods Value</dt>
-                    <dd class="font-mono font-bold text-on-surface tabular-nums" data-numeric>₹{{printf "%.2f" .EWayBill.GoodsValue}}</dd>
-                </div>
-                <div>
-                    <dt class="field-label text-text-muted">Doc Type / Number</dt>
-                    <dd class="font-medium text-on-surface">{{.EWayBill.DocType}} - {{.EWayBill.DocNo}}</dd>
-                </div>
-                <div>
-                    <dt class="field-label text-text-muted">Doc Date</dt>
-                    <dd class="font-medium text-on-surface">{{.EWayBill.DocDate}}</dd>
-                </div>
-            </dl>
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden lg:col-span-2">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+                <h3 class="text-sm font-bold text-on-surface">Part-A Consignment Details</h3>
+                <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">Valid Until: {{.EWayBill.ValidUntil.Format "02 Jan 15:04"}}</span>
+            </div>
+            <div class="p-5">
+                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">From Place</dt>
+                        <dd class="font-semibold text-on-surface mt-0.5">{{.EWayBill.FromPlace}} ({{.EWayBill.FromStateCode}})</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">To Place</dt>
+                        <dd class="font-semibold text-on-surface mt-0.5">{{.EWayBill.ToPlace}} ({{.EWayBill.ToStateCode}})</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Distance</dt>
+                        <dd class="font-mono font-semibold text-on-surface tabular-nums mt-0.5" data-numeric>{{.EWayBill.Distance}} km</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Goods Value</dt>
+                        <dd class="font-mono font-bold text-on-surface tabular-nums mt-0.5" data-numeric>₹{{printf "%.2f" .EWayBill.GoodsValue}}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Doc Type / Number</dt>
+                        <dd class="font-semibold text-on-surface tabular-nums mt-0.5">{{.EWayBill.DocType}} - {{.EWayBill.DocNo}}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Doc Date</dt>
+                        <dd class="font-semibold text-on-surface tabular-nums mt-0.5">{{.EWayBill.DocDate}}</dd>
+                    </div>
+                </dl>
+            </div>
         </div>
 
         <!-- Part-B & Extension Card -->
-        <div class="bg-surface-container-lowest p-6 rounded-lg border border-border-subtle shadow-sm space-y-4">
-            <h2 class="text-base font-semibold text-on-surface">Part-B Transport & Extensions</h2>
-            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                <div>
-                    <dt class="field-label text-text-muted">Vehicle Number</dt>
-                    <dd class="font-mono font-bold text-primary">
-                        {{if .EWayBill.VehicleNumber}}{{.EWayBill.VehicleNumber}}{{else}}<span class="text-status-warning font-sans">Not Attached</span>{{end}}
-                    </dd>
-                </div>
-                <div>
-                    <dt class="field-label text-text-muted">Transporter ID</dt>
-                    <dd class="font-medium text-on-surface">
-                        {{if .EWayBill.TransporterID}}{{.EWayBill.TransporterID}}{{else}}-{{end}}
-                    </dd>
-                </div>
-                <div>
-                    <dt class="field-label text-text-muted">Extensions Used</dt>
-                    <dd class="font-mono font-bold text-on-surface tabular-nums" data-numeric>{{.EWayBill.ExtensionCount}} / 1 permitted</dd>
-                </div>
-                <div>
-                    <dt class="field-label text-text-muted">Status</dt>
-                    <dd class="font-medium text-on-surface capitalize">{{.EWayBill.Status}}</dd>
-                </div>
-            </dl>
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+                <h3 class="text-sm font-bold text-on-surface">Part-B Transport &amp; Extensions</h3>
+            </div>
+            <div class="p-5">
+                <dl class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-x-6 gap-y-4 text-sm">
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Vehicle Number</dt>
+                        <dd class="font-mono font-bold text-primary tabular-nums mt-0.5">
+                            {{if .EWayBill.VehicleNumber}}{{.EWayBill.VehicleNumber}}{{else}}<span class="text-status-warning font-sans">Not Attached</span>{{end}}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Transporter ID</dt>
+                        <dd class="font-semibold text-on-surface tabular-nums mt-0.5">
+                            {{if .EWayBill.TransporterID}}{{.EWayBill.TransporterID}}{{else}}-{{end}}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Extensions Used</dt>
+                        <dd class="font-mono font-bold text-on-surface tabular-nums mt-0.5" data-numeric>{{.EWayBill.ExtensionCount}} / 1 permitted</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Status</dt>
+                        <dd class="font-semibold text-on-surface capitalize mt-0.5">{{.EWayBill.Status}}</dd>
+                    </div>
+                </dl>
+            </div>
         </div>
     </div>
 
-    <!-- Event History Timeline -->
-    <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm overflow-hidden">
-        <div class="p-4 border-b border-border-subtle bg-surface-container-low/50">
-            <h2 class="text-base font-semibold text-on-surface">Lifecycle Audit Events</h2>
+    <!-- Lifecycle Audit Events -->
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+            <h3 class="text-sm font-bold text-on-surface">Lifecycle Audit Events</h3>
+            <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Events}}</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-border-subtle text-sm">
-                <thead class="bg-surface-container-low text-text-muted text-xs uppercase font-semibold">
+            <table class="min-w-full divide-y divide-border-subtle text-sm tabular-nums">
+                <thead class="bg-surface-container-low text-text-muted text-[11px] uppercase font-bold tracking-wider">
                     <tr>
                         <th class="th-cell">Timestamp</th>
                         <th class="th-cell">Event Type</th>
@@ -126,30 +143,35 @@
                 <tbody class="divide-y divide-border-subtle">
                     {{if .Events}}
                         {{range .Events}}
-                        <tr class="hover:bg-surface-container-low/50 transition">
+                        <tr class="hover:bg-surface-container-low/50 transition-colors">
                             <td class="px-4 py-2.5 font-mono text-xs text-text-muted whitespace-nowrap">{{.CreatedAt.Format "02 Jan 15:04:05"}}</td>
-                            <td class="px-4 py-2.5 font-semibold text-xs">
+                            <td class="px-4 py-2.5">
                                 {{if eq .EventType "PART_A_GENERATED"}}
-                                <span class="px-2 py-0.5 rounded bg-status-warning/20 text-status-warning">PART_A_GENERATED</span>
+                                <span class="inline-flex px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/15 text-[11px] font-bold text-amber-700 dark:text-amber-300">PART_A_GENERATED</span>
                                 {{else if eq .EventType "PART_B_ADDED"}}
-                                <span class="px-2 py-0.5 rounded bg-status-success/20 text-status-success">PART_B_ADDED</span>
+                                <span class="inline-flex px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">PART_B_ADDED</span>
                                 {{else if eq .EventType "EXTENDED"}}
-                                <span class="px-2 py-0.5 rounded bg-status-info/20 text-status-info">EXTENDED</span>
+                                <span class="inline-flex px-2 py-1 rounded-full bg-blue-500/10 border border-blue-500/15 text-[11px] font-bold text-blue-700 dark:text-blue-300">EXTENDED</span>
                                 {{else if eq .EventType "EXTENSION_DENIED"}}
-                                <span class="px-2 py-0.5 rounded bg-status-alert/20 text-status-alert">EXTENSION_DENIED</span>
+                                <span class="inline-flex px-2 py-1 rounded-full bg-rose-500/10 border border-rose-500/15 text-[11px] font-bold text-rose-700 dark:text-rose-300">EXTENSION_DENIED</span>
                                 {{else if eq .EventType "CANCELLED"}}
-                                <span class="px-2 py-0.5 rounded bg-status-alert/20 text-status-alert">CANCELLED</span>
+                                <span class="inline-flex px-2 py-1 rounded-full bg-rose-500/10 border border-rose-500/15 text-[11px] font-bold text-rose-700 dark:text-rose-300">CANCELLED</span>
                                 {{else}}
-                                <span class="px-2 py-0.5 rounded bg-surface-container-low text-text-muted border border-border-subtle">{{.EventType}}</span>
+                                <span class="inline-flex px-2 py-1 rounded-full bg-surface-container text-text-muted border border-border-subtle text-[11px] font-bold">{{.EventType}}</span>
                                 {{end}}
                             </td>
                             <td class="px-4 py-2.5 font-mono text-xs text-on-surface break-all">{{.Payload}}</td>
-                            <td class="px-4 py-2.5 text-sm text-xs text-text-muted">{{.CreatedBy}}</td>
+                            <td class="px-4 py-2.5 text-xs text-text-muted">{{.CreatedBy}}</td>
                         </tr>
                         {{end}}
                     {{else}}
                         <tr>
-                            <td colspan="4" class="px-4 py-6 text-center text-text-muted text-sm">No events recorded.</td>
+                            <td colspan="4" class="px-4 py-12 text-center">
+                                <div class="flex flex-col items-center gap-2">
+                                    <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+                                    <p class="text-sm font-medium text-on-surface">No events recorded.</p>
+                                </div>
+                            </td>
                         </tr>
                     {{end}}
                 </tbody>
@@ -159,74 +181,89 @@
 
     <!-- Modals for Part-B, Extend, Cancel -->
     <div id="part-b-modal" class="hidden fixed inset-0 z-50 bg-on-surface/50 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-surface-container-lowest rounded-lg max-w-md w-full p-6 shadow-xl border border-border-subtle space-y-4">
-            <h3 class="text-base font-bold text-on-surface">Attach Part-B Vehicle</h3>
+        <div class="bg-surface-container-lowest rounded-2xl max-w-md w-full p-6 shadow-xl border border-border-subtle space-y-4">
+            <div class="flex justify-between items-center pb-3 border-b border-border-subtle">
+                <h3 class="text-sm font-bold text-on-surface">Attach Part-B Vehicle</h3>
+                <button onclick="document.getElementById('part-b-modal').classList.add('hidden')" class="w-8 h-8 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-text-muted hover:text-on-surface hover:bg-surface-container transition-colors" aria-label="Close modal">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
             <form method="POST" action="/ewaybill/{{.EWayBill.EwbNumber}}/part-b" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Vehicle Registration Number</label>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-secondary mb-1.5">Vehicle Registration Number</label>
                     <input type="text" name="vehicle_number" required placeholder="e.g. MH12AB1234"
-                           class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                           class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" />
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Transporter ID [Optional]</label>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-secondary mb-1.5">Transporter ID [Optional]</label>
                     <input type="text" name="transporter_id" placeholder="e.g. TR-12345"
-                           class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                           class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" />
                 </div>
                 <div class="flex justify-end gap-2 pt-2 border-t border-border-subtle flex-wrap">
                     <button type="button" onclick="document.getElementById('part-b-modal').classList.add('hidden')"
-                            class="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface-container-low text-on-surface px-4 py-2 text-sm font-medium hover:bg-surface-container transition-all">
+                            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">
                         Cancel
                     </button>
-                    <button type="submit" class="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-all cursor-pointer">Attach Part-B</button>
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer">Attach Part-B</button>
                 </div>
             </form>
         </div>
     </div>
 
     <div id="extend-modal" class="hidden fixed inset-0 z-50 bg-on-surface/50 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-surface-container-lowest rounded-lg max-w-md w-full p-6 shadow-xl border border-border-subtle space-y-4">
-            <h3 class="text-base font-bold text-on-surface">Extend E-Way Bill Validity</h3>
-            <p class="text-xs text-text-muted">Extension requires GPS geofence proximity evidence within destination range.</p>
+        <div class="bg-surface-container-lowest rounded-2xl max-w-md w-full p-6 shadow-xl border border-border-subtle space-y-4">
+            <div class="flex justify-between items-center pb-3 border-b border-border-subtle">
+                <h3 class="text-sm font-bold text-on-surface">Extend E-Way Bill Validity</h3>
+                <button onclick="document.getElementById('extend-modal').classList.add('hidden')" class="w-8 h-8 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-text-muted hover:text-on-surface hover:bg-surface-container transition-colors" aria-label="Close modal">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
+            <p class="text-xs text-text-muted -mt-2">Extension requires GPS geofence proximity evidence within destination range.</p>
             <form method="POST" action="/ewaybill/{{.EWayBill.EwbNumber}}/extend" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Reason for Extension</label>
-                    <select name="reason" required class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-secondary mb-1.5">Reason for Extension</label>
+                    <select name="reason" required class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                         <option value="traffic_delay">Traffic congestion / Road blockage</option>
                         <option value="vehicle_breakdown">Vehicle breakdown / Transshipment</option>
                         <option value="unloading_queue">Consignee unloading queue</option>
                         <option value="natural_calamity">Natural calamity / Weather</option>
                     </select>
                 </div>
-                <div class="flex justify-end gap-2 pt-2 border-t border-border-subtle flex-wrap">
+                <div class="flex justify-end gap-2 pt-4 border-t border-border-subtle flex-wrap">
                     <button type="button" onclick="document.getElementById('extend-modal').classList.add('hidden')"
-                            class="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface-container-low text-on-surface px-4 py-2 text-sm font-medium hover:bg-surface-container transition-all">
+                            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">
                         Cancel
                     </button>
-                    <button type="submit" class="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-all cursor-pointer">Request Extension</button>
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer">Request Extension</button>
                 </div>
             </form>
         </div>
     </div>
 
     <div id="cancel-modal" class="hidden fixed inset-0 z-50 bg-on-surface/50 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-surface-container-lowest rounded-lg max-w-md w-full p-6 shadow-xl border border-border-subtle space-y-4">
-            <h3 class="text-base font-bold text-status-alert">Cancel E-Way Bill</h3>
+        <div class="bg-surface-container-lowest rounded-2xl max-w-md w-full p-6 shadow-xl border border-border-subtle space-y-4">
+            <div class="flex justify-between items-center pb-3 border-b border-border-subtle">
+                <h3 class="text-sm font-bold text-status-alert">Cancel E-Way Bill</h3>
+                <button onclick="document.getElementById('cancel-modal').classList.add('hidden')" class="w-8 h-8 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-text-muted hover:text-on-surface hover:bg-surface-container transition-colors" aria-label="Close modal">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
+                </button>
+            </div>
             <form method="POST" action="/ewaybill/{{.EWayBill.EwbNumber}}/cancel" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Cancellation Reason</label>
-                    <select name="reason" required class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-secondary mb-1.5">Cancellation Reason</label>
+                    <select name="reason" required class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                         <option value="order_cancelled">Order Cancelled by Customer</option>
                         <option value="data_entry_mistake">Data Entry Mistake</option>
                         <option value="duplicate">Duplicate Generation</option>
                         <option value="other">Other</option>
                     </select>
                 </div>
-                <div class="flex justify-end gap-2 pt-2 border-t border-border-subtle flex-wrap">
+                <div class="flex justify-end gap-2 pt-4 border-t border-border-subtle flex-wrap">
                     <button type="button" onclick="document.getElementById('cancel-modal').classList.add('hidden')"
-                            class="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface-container-low text-on-surface px-4 py-2 text-sm font-medium hover:bg-surface-container transition-all">
+                            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">
                         Dismiss
                     </button>
-                    <button type="submit" class="inline-flex items-center gap-2 rounded-md bg-status-alert text-on-primary px-4 py-2 text-sm font-medium hover:opacity-90 transition-all cursor-pointer">Confirm Cancellation</button>
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-status-alert text-on-primary text-sm font-semibold shadow-sm hover:opacity-90 transition-all cursor-pointer">Confirm Cancellation</button>
                 </div>
             </form>
         </div>

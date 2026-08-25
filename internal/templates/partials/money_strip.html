@@ -1,27 +1,39 @@
 {{define "money_strip.html"}}
 {{/* Console money strip (Spec 22 §2.2). Expects .MoneyStrip *service.MoneyStrip. */}}
 <section id="money-strip" class="grid grid-cols-2 md:grid-cols-4 gap-3">
-    <div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm px-4 py-3">
-        <p class="text-xs text-text-muted">Revenue today</p>
-        {{if .MoneyStrip}}
-        <p class="text-lg font-semibold text-on-surface font-display" data-strip="revenue">₹{{printf "%.0f" .MoneyStrip.Revenue}}</p>
-        {{else}}<p class="text-lg font-semibold text-text-muted">—</p>{{end}}
+    <div class="flex items-center gap-3 bg-surface-container-lowest border border-border-subtle rounded-xl shadow-xs px-4 py-3 hover:shadow-sm transition-all">
+        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+        <div class="min-w-0">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Revenue today</p>
+            {{if .MoneyStrip}}
+            <p class="text-lg font-bold tabular-nums text-on-surface leading-tight" data-strip="revenue">₹{{printf "%.0f" .MoneyStrip.Revenue}}</p>
+            {{else}}<p class="text-lg font-bold tabular-nums text-text-muted leading-tight">—</p>{{end}}
+        </div>
     </div>
-    <div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm px-4 py-3">
-        <p class="text-xs text-text-muted">Spent today</p>
-        {{if .MoneyStrip}}
-        <p class="text-lg font-semibold text-on-surface font-display" data-strip="spent">₹{{printf "%.0f" .MoneyStrip.Spent}}</p>
-        {{else}}<p class="text-lg font-semibold text-text-muted">—</p>{{end}}
+    <div class="flex items-center gap-3 bg-surface-container-lowest border border-border-subtle rounded-xl shadow-xs px-4 py-3 hover:shadow-sm transition-all">
+        <div class="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/15 grid place-items-center text-rose-600 shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4c0-1.5-1.5-3-3-3Z"/></svg></div>
+        <div class="min-w-0">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Spent today</p>
+            {{if .MoneyStrip}}
+            <p class="text-lg font-bold tabular-nums text-on-surface leading-tight" data-strip="spent">₹{{printf "%.0f" .MoneyStrip.Spent}}</p>
+            {{else}}<p class="text-lg font-bold tabular-nums text-text-muted leading-tight">—</p>{{end}}
+        </div>
     </div>
-    <div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm px-4 py-3">
-        <p class="text-xs text-text-muted">Receivables</p>
-        {{if .MoneyStrip}}
-        <p class="text-lg font-semibold text-on-surface font-display" data-strip="receivables">₹{{printf "%.0f" .MoneyStrip.Receivables}}</p>
-        {{else}}<p class="text-lg font-semibold text-text-muted">—</p>{{end}}
+    <div class="flex items-center gap-3 bg-surface-container-lowest border border-border-subtle rounded-xl shadow-xs px-4 py-3 hover:shadow-sm transition-all">
+        <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600 shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg></div>
+        <div class="min-w-0">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Receivables</p>
+            {{if .MoneyStrip}}
+            <p class="text-lg font-bold tabular-nums text-on-surface leading-tight" data-strip="receivables">₹{{printf "%.0f" .MoneyStrip.Receivables}}</p>
+            {{else}}<p class="text-lg font-bold tabular-nums text-text-muted leading-tight">—</p>{{end}}
+        </div>
     </div>
-    <div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm px-4 py-3 flex flex-col justify-between">
-        <p class="text-xs text-text-muted">Open alerts</p>
-        <a href="/alerts" class="text-sm text-primary hover:underline">View inbox →</a>
+    <div class="flex items-center gap-3 bg-surface-container-lowest border border-border-subtle rounded-xl shadow-xs px-4 py-3 hover:shadow-sm transition-all">
+        <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600 shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
+        <div class="min-w-0">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Open alerts</p>
+            <a href="/alerts" class="text-sm font-semibold text-primary hover:underline">View inbox →</a>
+        </div>
     </div>
 </section>
 {{end}}

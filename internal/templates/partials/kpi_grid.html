@@ -1,10 +1,13 @@
 {{if .KPIs}}
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
     {{range .KPIs}}
-    <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-4">
-        <p class="text-xs font-semibold uppercase tracking-wider text-text-muted">{{if .Key}}{{t .Key}}{{else}}{{.Label}}{{end}}</p>
-        <p class="text-2xl font-bold text-on-surface mt-1 tabular-nums {{.Accent}}">{{.Value}}</p>
-        {{if .Sub}}<p class="text-xs text-text-muted mt-0.5">{{.Sub}}</p>{{end}}
+    {{$grad := "from-primary via-violet-500 to-cyan-400"}}
+    {{if eq .Accent "text-status-success"}}{{$grad = "from-emerald-500 to-teal-500"}}{{else if eq .Accent "text-status-warning"}}{{$grad = "from-amber-500 to-orange-500"}}{{else if eq .Accent "text-status-alert"}}{{$grad = "from-rose-500 to-red-500"}}{{else if eq .Accent "text-status-info"}}{{$grad = "from-blue-500 to-cyan-500"}}{{end}}
+    <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition-all duration-200">
+        <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r {{$grad}} opacity-80"></div>
+        <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">{{if .Key}}{{t .Key}}{{else}}{{.Label}}{{end}}</p>
+        <p class="text-3xl font-black tracking-tight text-on-surface mt-2 tabular-nums {{.Accent}}">{{.Value}}</p>
+        {{if .Sub}}<p class="text-xs text-secondary mt-1">{{.Sub}}</p>{{end}}
     </div>
     {{end}}
 </div>

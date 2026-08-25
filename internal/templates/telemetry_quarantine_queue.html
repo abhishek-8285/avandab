@@ -1,19 +1,26 @@
-<div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm flex flex-col h-full overflow-hidden">
-    <div class="px-4 py-3 border-b border-border-subtle flex items-center gap-2 bg-surface-container-lowest sticky top-0 z-10">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0 text-status-warning"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-        <h3 class="text-sm font-semibold text-on-surface font-display">Quarantine Queue</h3>
-        <span class="text-xs text-text-muted hidden sm:inline">Unknown or retired-device frames awaiting admin resolution</span>
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm flex flex-col h-full overflow-hidden">
+    <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 bg-gradient-to-r from-amber-500/[0.07] to-transparent sticky top-0 z-10">
+        <div class="flex items-center gap-2 min-w-0">
+            <span class="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600 shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><circle cx="12" cy="8" r="2"/></svg>
+            </span>
+            <div class="min-w-0">
+                <h3 class="text-sm font-bold text-on-surface">Quarantine Queue</h3>
+                <p class="text-xs text-text-muted truncate hidden sm:block">Unknown or retired-device frames awaiting admin resolution</p>
+            </div>
+        </div>
+        <span class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-amber-500 text-white text-xs font-bold tabular-nums">{{len .Entries}}</span>
     </div>
     <div class="flex-1 overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-            <thead class="sticky top-0 z-10">
+        <table class="min-w-full divide-y divide-border-subtle">
+            <thead class="bg-surface-container-low">
                 <tr>
-                    <th class="th-cell">IMEI</th>
-                    <th class="th-cell">Reason</th>
-                    <th class="th-cell">Source</th>
-                    <th class="th-cell">Raw Payload</th>
-                    <th class="th-cell">Created</th>
-                    <th class="th-cell-right">Resolve</th>
+                    <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">IMEI</th>
+                    <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Reason</th>
+                    <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Source</th>
+                    <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Raw Payload</th>
+                    <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Created</th>
+                    <th class="px-3 py-2 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Resolve</th>
                 </tr>
             </thead>
             <tbody id="quarantine-rows" class="divide-y divide-border-subtle text-sm text-on-surface">

@@ -16,9 +16,9 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900 min-h-screen flex flex-col antialiased">
+<body class="bg-surface-container-low text-on-surface min-h-screen flex flex-col antialiased">
     <!-- Header -->
-    <header class="bg-white border-b border-gray-200 px-4 py-3 sm:px-6 shadow-sm">
+    <header class="bg-surface-container-lowest border-b border-border-subtle px-4 py-3 sm:px-6 shadow-sm">
         <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm">
@@ -26,20 +26,20 @@
                 </div>
                 <div>
                     <div class="flex items-center gap-2">
-                        <h1 class="text-base sm:text-lg font-bold text-gray-900 m-0">Trip {{.TripNumber}}</h1>
-                        <span id="trip-status-badge" class="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 capitalize">{{.TripStatus}}</span>
+                        <h1 class="text-base sm:text-lg font-bold text-on-surface m-0">Trip {{.TripNumber}}</h1>
+                        <span id="trip-status-badge" class="px-2 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/15 capitalize">{{.TripStatus}}</span>
                     </div>
-                    <p class="text-xs text-gray-500 m-0">Live Share Link · <span id="last-updated-text">Connecting...</span></p>
+                    <p class="text-xs text-text-muted m-0">Live Share Link · <span id="last-updated-text">Connecting...</span></p>
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-3 text-xs">
-                <div id="eta-card" class="hidden sm:flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">
-                    <span class="text-gray-500 font-medium">ETA:</span>
-                    <span id="eta-value" class="font-bold text-gray-900">—</span>
+                <div id="eta-card" class="hidden sm:flex items-center gap-2 bg-surface-container-lowest px-3 py-1.5 rounded-full border border-border-subtle shadow-xs">
+                    <span class="text-text-muted font-medium">ETA:</span>
+                    <span id="eta-value" class="font-bold text-on-surface tabular-nums">—</span>
                 </div>
-                <div class="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">
-                    <span class="text-gray-500 font-medium">Vehicle:</span>
-                    <span id="vehicle-label" class="font-semibold text-gray-900">—</span>
+                <div class="flex items-center gap-2 bg-surface-container-lowest px-3 py-1.5 rounded-full border border-border-subtle shadow-xs">
+                    <span class="text-text-muted font-medium">Vehicle:</span>
+                    <span id="vehicle-label" class="font-semibold text-on-surface tabular-nums">—</span>
                 </div>
             </div>
         </div>
@@ -49,30 +49,30 @@
     <main class="flex-1 flex flex-col max-w-7xl w-full mx-auto p-4 sm:p-6 gap-4">
         <!-- Live Status Metrics Banner -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                <div class="text-[11px] text-gray-500 font-medium">Speed</div>
-                <div id="metric-speed" class="text-lg font-bold text-gray-900 mt-0.5">—</div>
+            <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-sm p-3 hover:shadow-md transition-all">
+                <div class="text-[11px] text-secondary font-medium">Speed</div>
+                <div id="metric-speed" class="text-lg font-bold text-on-surface tabular-nums mt-0.5">—</div>
             </div>
-            <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                <div class="text-[11px] text-gray-500 font-medium">Fuel Level</div>
-                <div id="metric-fuel" class="text-lg font-bold text-gray-900 mt-0.5">—</div>
+            <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-sm p-3 hover:shadow-md transition-all">
+                <div class="text-[11px] text-secondary font-medium">Fuel Level</div>
+                <div id="metric-fuel" class="text-lg font-bold text-on-surface tabular-nums mt-0.5">—</div>
             </div>
-            <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                <div class="text-[11px] text-gray-500 font-medium">Odometer</div>
-                <div id="metric-odometer" class="text-lg font-bold text-gray-900 mt-0.5">—</div>
+            <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-sm p-3 hover:shadow-md transition-all">
+                <div class="text-[11px] text-secondary font-medium">Odometer</div>
+                <div id="metric-odometer" class="text-lg font-bold text-on-surface tabular-nums mt-0.5">—</div>
             </div>
-            <div class="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-                <div class="text-[11px] text-gray-500 font-medium">Last Seen</div>
-                <div id="metric-last-seen" class="text-lg font-bold text-gray-900 mt-0.5">—</div>
+            <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-sm p-3 hover:shadow-md transition-all">
+                <div class="text-[11px] text-secondary font-medium">Last Seen</div>
+                <div id="metric-last-seen" class="text-lg font-bold text-on-surface tabular-nums mt-0.5">—</div>
             </div>
         </div>
 
         <!-- Map Container -->
-        <div id="share-map" class="flex-1 min-h-[450px] w-full rounded-xl border border-gray-200 overflow-hidden shadow-sm"></div>
+        <div id="share-map" class="flex-1 min-h-[450px] w-full rounded-2xl border border-border-subtle overflow-hidden shadow-sm bg-surface-container-low"></div>
     </main>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200 px-4 py-2 text-center text-xs text-gray-400">
+    <footer class="bg-surface-container-lowest border-t border-border-subtle px-4 py-2 text-center text-xs text-text-muted">
         Powered by FlyFleet / Avandab TMS · Live Telemetry
     </footer>
 

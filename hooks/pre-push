@@ -3,6 +3,6 @@
 # Blocks push when the whole-repo security suite fails.
 set -e
 echo "=== pre-push: full security gate ==="
-unset LINT_BASE
+export LINT_BASE="${LINT_BASE:-origin/master}"
 ./scripts/security-check.sh
 echo "=== pre-push: gate passed ==="

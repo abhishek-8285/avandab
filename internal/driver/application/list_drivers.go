@@ -15,6 +15,19 @@ type ListDriversQuery struct {
 	Limit    int
 	Search   string
 	Status   string
+	DateFrom string // YYYY-MM-DD inclusive, empty = unbounded (created_at)
+	DateTo   string // YYYY-MM-DD inclusive, empty = unbounded (created_at)
+}
+
+// dateRangeDriverRepo is implemented by driver repositories that support
+// created_at window filtering. Asserted optionally so existing repository
+// implementations/mocks keep compiling unchanged.
+type dateRangeDriverRepo interface {
+	SearchReadModelsDateRange(ctx context.Context, tenantID shared.TenantID, query string, status string, from string, to string, limit int, offset int) ([]domain.DriverReadModel, int64, error)
+}
+
+func hasDateRange(from, to string) bool {
+	return from != "" || to != ""
 }
 
 type ListDriversResponse struct {
@@ -47,7 +60,18 @@ func (uc *ListDriversUseCase) Execute(ctx context.Context, q ListDriversQuery) (
 			return errors.New("failed to retrieve driver repository")
 		}
 
-		rows, total, err := repo.SearchReadModels(txCtx, q.TenantID, q.Search, q.Status, q.Limit, offset)
+		var rows []domain.DriverReadModel
+		var total int64
+		var err error
+
+		dateRepo, dateOK := repo.(dateRangeDriverRepo)
+		useDates := hasDateRange(q.DateFrom, q.DateTo) && dateOK
+
+		if useDates {
+			rows, total, err = dateRepo.SearchReadModelsDateRange(txCtx, q.TenantID, q.Search, q.Status, q.DateFrom, q.DateTo, q.Limit, offset)
+		} else {
+			rows, total, err = repo.SearchReadModels(txCtx, q.TenantID, q.Search, q.Status, q.Limit, offset)
+		}
 		if err != nil {
 			return err
 		}

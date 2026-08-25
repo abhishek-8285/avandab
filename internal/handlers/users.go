@@ -35,13 +35,15 @@ func (h *UserHandlers) List(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
 	pp := parsePaginationParams(r)
 
-	list, total, err := h.Services.Users.ListUsers(r.Context(), pp.Query, pp.Status, pp.Limit, pp.Offset)
+	list, total, err := h.Services.Users.ListUsersDateRange(r.Context(), pp.Query, pp.Status, pp.DateFrom, pp.DateTo, pp.Limit, pp.Offset)
 	if err != nil {
 		http.Error(w, "Failed to list users", http.StatusInternalServerError)
 		return
 	}
 
 	pd := newPaginationData(pp, total, "/users")
+	pd.From = pp.DateFrom
+	pd.To = pp.DateTo
 
 	if isDatastarRequest(r) {
 		h.renderFragment(w, "user_list_table.html", map[string]interface{}{
@@ -49,6 +51,8 @@ func (h *UserHandlers) List(w http.ResponseWriter, r *http.Request) {
 			"Pagination":   pd,
 			"Query":        pp.Query,
 			"StatusFilter": pp.Status,
+			"DateFrom":     pp.DateFrom,
+			"DateTo":       pp.DateTo,
 		})
 		return
 	}
@@ -56,7 +60,7 @@ func (h *UserHandlers) List(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "user_list.html", PageData{
 		Title: "Users",
 		User:  session,
-		Extra: map[string]interface{}{"Users": list, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status},
+		Extra: map[string]interface{}{"Users": list, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo},
 	})
 }
 

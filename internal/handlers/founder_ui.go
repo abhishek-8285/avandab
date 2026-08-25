@@ -39,13 +39,16 @@ func (h *FounderHandlers) OpsAlertsPage(w http.ResponseWriter, r *http.Request) 
 	tenantID := h.tenantID(r)
 	session, _ := h.getUserFromContext(r)
 
-	alerts, _, _ := h.App.Services.OpsAlerts.ListAlerts(r.Context(), tenantID, service.OpsAlertFilters{Limit: 50})
+	// ?status= drives the filter_bar status chips ("" = all).
+	status := r.URL.Query().Get("status")
+	alerts, _, _ := h.App.Services.OpsAlerts.ListAlerts(r.Context(), tenantID, service.OpsAlertFilters{Status: status, Limit: 50})
 
 	h.renderPage(w, r, "ops_alerts_list.html", PageData{
 		Title: "Ops Alerts",
 		User:  session,
 		Extra: map[string]interface{}{
-			"Alerts": alerts,
+			"Alerts":       alerts,
+			"StatusFilter": status,
 		},
 	})
 }
@@ -84,13 +87,16 @@ func (h *FounderHandlers) ExperimentsPage(w http.ResponseWriter, r *http.Request
 	tenantID := h.tenantID(r)
 	session, _ := h.getUserFromContext(r)
 
-	experiments, _ := h.App.Services.Experiments.ListExperiments(r.Context(), tenantID, "")
+	// ?status= drives the filter_bar status chips ("" = all).
+	status := r.URL.Query().Get("status")
+	experiments, _ := h.App.Services.Experiments.ListExperiments(r.Context(), tenantID, status)
 
 	h.renderPage(w, r, "experiments_list.html", PageData{
 		Title: "A/B Experiments",
 		User:  session,
 		Extra: map[string]interface{}{
-			"Experiments": experiments,
+			"Experiments":  experiments,
+			"StatusFilter": status,
 		},
 	})
 }

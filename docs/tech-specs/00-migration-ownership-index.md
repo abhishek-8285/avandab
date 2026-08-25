@@ -69,8 +69,15 @@ Single source of truth for `db/migrations/` version numbers. Repo head is
 | 00082 | driver_expenses geo capture (latitude/longitude) | Spec 13 mobile kharcha flow |
 | 00083 | error_reports + incidents DDL (carried over from 00058 gap) — renumbered from duplicate 00081 | Spec 16 §3 |
 | 00084 | error_reports correlation: request_id + metadata (JSON breadcrumbs) columns | Spec 16 §5.5 |
-| 00085+ | future specs (AIS-140/VLT, ERP) | reserved |
-| 00086 | `driver_issues` table — mobile Report-Issues screen (FleetBase parity) | Spec 13 |
+| 00096 | notification_log — alert delivery audit trail | Alerting follow-up |
+| 00097 | money_ledger — append-only txn ledger (payment_recorded hook live) | Invoice/txn system wave 1 |
+| 00098 | credit_debit_notes + note_sequences — GST post-issuance corrections | Invoice/txn system wave 2 |
+| 00099 | invoices.irn_cancelled_at — IRN 24h cancel window | Spec 07 continuation |
+| 00100+ | future specs | reserved |
+
+> NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
+> concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the
+> "next free slot" rule. Nothing shipped on the old numbers.| 00086 | `driver_issues` table — mobile Report-Issues screen (FleetBase parity) | Spec 13 |
 | 00087 | `trips.pod_scan_value` — barcode/QR POD proof column | Spec 13 |
 | 00088 | driver_expenses rebuild — category CHECK gains rto/tyre/bhatta (mobile/server parity fix) | India milestone M1 |
 | 00089 | feature_flags table + features:update permission (per-org feature registry) | Plugin/feature-flag milestone |

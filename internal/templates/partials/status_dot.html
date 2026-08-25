@@ -1,3 +1,3 @@
 {{$t := .Tone}}{{if not $t}}{{$t = "neutral"}}{{end}}
 {{$dot := "bg-text-text-muted"}}{{if eq $t "success"}}{{$dot = "bg-status-success"}}{{else if eq $t "warning"}}{{$dot = "bg-status-warning"}}{{else if eq $t "alert"}}{{$dot = "bg-status-alert"}}{{else if eq $t "info"}}{{$dot = "bg-status-info"}}{{else}}{{$dot = "bg-text-text-muted"}}{{end}}
-<span class="inline-flex items-center gap-2"><span class="w-2 h-2 rounded-full {{$dot}}"></span><span class="text-secondary font-medium capitalize">{{.Label}}</span></span>
+<span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full {{$dot}}"></span><span class="text-xs font-semibold text-secondary capitalize">{{.Label}}</span></span>

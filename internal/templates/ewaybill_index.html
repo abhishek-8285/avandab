@@ -1,13 +1,13 @@
-<div class="max-w-7xl mx-auto space-y-6">
-    <!-- Header -->
-    <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
-        <div>
-            <h1 class="text-xl font-semibold text-on-surface font-display">E-Way Bills</h1>
-            <p class="text-sm text-text-muted mt-0.5">Fleet-wide GST statutory transport permits &amp; lifecycle compliance</p>
+<div class="space-y-5 max-w-[1600px] mx-auto">
+    <!-- Premium Header -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="min-w-0">
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">E-Way Bills</h1>
+            <p class="text-sm text-secondary mt-1">Fleet-wide GST statutory transport permits &amp; lifecycle compliance</p>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap shrink-0">
             <button onclick="document.getElementById('new-ewb-modal').classList.remove('hidden')"
-                    class="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-all cursor-pointer">
+                    class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:shadow-md hover:-translate-y-px transition-all cursor-pointer">
                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
@@ -16,47 +16,81 @@
         </div>
     </div>
 
-    <!-- Stats Bar -->
-    <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
-        <div class="bg-surface-container-lowest p-4 rounded-lg border border-border-subtle shadow-sm">
-            <div class="text-xs font-semibold uppercase text-text-muted">Total EWBs</div>
-            <div class="text-2xl font-bold text-on-surface mt-1 tabular-nums" data-numeric>{{.Stats.Total}}</div>
+    <!-- Stats Strip -->
+    <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
+        <div class="flex items-center gap-3 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+            <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600 shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-bold tabular-nums text-on-surface leading-none" data-numeric>{{.Stats.Total}}</div>
+                <div class="text-xs text-secondary font-medium mt-1">Total EWBs</div>
+            </div>
         </div>
-        <div class="bg-surface-container-lowest p-4 rounded-lg border border-border-subtle shadow-sm">
-            <div class="text-xs font-semibold uppercase text-status-success">Active</div>
-            <div class="text-2xl font-bold text-status-success mt-1 tabular-nums" data-numeric>{{.Stats.Active}}</div>
+        <div class="flex items-center gap-3 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+            <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-bold tabular-nums text-on-surface leading-none" data-numeric>{{.Stats.Active}}</div>
+                <div class="text-xs text-secondary font-medium mt-1">Active</div>
+            </div>
         </div>
-        <div class="bg-surface-container-lowest p-4 rounded-lg border border-border-subtle shadow-sm">
-            <div class="text-xs font-semibold uppercase text-status-warning">Part-A Only</div>
-            <div class="text-2xl font-bold text-status-warning mt-1 tabular-nums" data-numeric>{{.Stats.PartAOnly}}</div>
+        <div class="flex items-center gap-3 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+            <div class="w-9 h-9 rounded-lg bg-violet-500/10 border border-violet-500/15 grid place-items-center text-violet-600 shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 12v6"/><path d="M9 15h6"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-bold tabular-nums text-on-surface leading-none" data-numeric>{{.Stats.PartAOnly}}</div>
+                <div class="text-xs text-secondary font-medium mt-1">Part-A Only</div>
+            </div>
         </div>
-        <div class="bg-surface-container-lowest p-4 rounded-lg border border-border-subtle shadow-sm">
-            <div class="text-xs font-semibold uppercase text-status-info">Extended</div>
-            <div class="text-2xl font-bold text-status-info mt-1 tabular-nums" data-numeric>{{.Stats.Extended}}</div>
+        <div class="flex items-center gap-3 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+            <div class="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/15 grid place-items-center text-cyan-600 shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-bold tabular-nums text-on-surface leading-none" data-numeric>{{.Stats.Extended}}</div>
+                <div class="text-xs text-secondary font-medium mt-1">Extended</div>
+            </div>
         </div>
-        <div class="bg-surface-container-lowest p-4 rounded-lg border border-border-subtle shadow-sm">
-            <div class="text-xs font-semibold uppercase text-status-alert">Cancelled</div>
-            <div class="text-2xl font-bold text-status-alert mt-1 tabular-nums" data-numeric>{{.Stats.Cancelled}}</div>
+        <div class="flex items-center gap-3 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+            <div class="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/15 grid place-items-center text-rose-600 shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-bold tabular-nums text-on-surface leading-none" data-numeric>{{.Stats.Cancelled}}</div>
+                <div class="text-xs text-secondary font-medium mt-1">Cancelled</div>
+            </div>
         </div>
-        <div class="bg-surface-container-lowest p-4 rounded-lg border border-border-subtle shadow-sm">
-            <div class="text-xs font-semibold uppercase text-text-muted">Expired</div>
-            <div class="text-2xl font-bold text-text-muted mt-1 tabular-nums" data-numeric>{{.Stats.Expired}}</div>
+        <div class="flex items-center gap-3 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+            <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600 shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2"/><path d="M5 3 2 6"/><path d="m22 6-3-3"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-bold tabular-nums text-on-surface leading-none" data-numeric>{{.Stats.Expired}}</div>
+                <div class="text-xs text-secondary font-medium mt-1">Expired</div>
+            </div>
         </div>
     </div>
 
     <!-- EWB List Table -->
-    <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm overflow-hidden">
-        <div class="p-4 border-b border-border-subtle flex flex-col sm:flex-row justify-between items-center gap-4 bg-surface-container-low/50">
-            <h2 class="text-base font-semibold text-on-surface">Registered E-Way Bills</h2>
-            <div class="flex items-center gap-2 flex-wrap">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <div class="px-5 py-3 border-b border-border-subtle flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="flex items-center gap-3">
+                <h3 class="text-sm font-bold text-on-surface">Registered E-Way Bills</h3>
+                <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .EWayBills}}</span>
+            </div>
+            <div class="relative w-full sm:w-auto">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 <input type="text" placeholder="Filter by EWB or Trip..." id="filter-input"
                        onkeyup="filterTable()"
-                       class="bg-surface-container-low border border-border-subtle rounded-md px-3 py-2 text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all w-full sm:w-48" />
+                       class="w-full sm:w-56 pl-9 pr-3 py-2 rounded-full bg-surface-container-low border border-border-subtle text-xs text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" />
             </div>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-border-subtle text-sm" id="ewb-table">
-                <thead class="bg-surface-container-low text-text-muted text-xs uppercase font-semibold">
+            <table class="min-w-full divide-y divide-border-subtle text-sm tabular-nums" id="ewb-table">
+                <thead class="bg-surface-container-low text-text-muted text-[11px] uppercase font-bold tracking-wider">
                     <tr>
                         <th class="th-cell">EWB Number</th>
                         <th class="th-cell">Trip</th>
@@ -76,8 +110,12 @@
                         {{end}}
                     {{else}}
                         <tr>
-                            <td colspan="9" class="px-4 py-8 text-center text-text-muted text-sm">
-                                No E-Way Bills registered yet. Click "Generate Part-A" or confirm trips above ₹50,000 to auto-generate.
+                            <td colspan="9" class="px-4 py-12 text-center">
+                                <div class="flex flex-col items-center gap-2">
+                                    <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+                                    <p class="text-sm font-medium text-on-surface">No E-Way Bills registered yet.</p>
+                                    <p class="text-xs text-text-muted">Click "Generate Part-A" or confirm trips above ₹50,000 to auto-generate.</p>
+                                </div>
                             </td>
                         </tr>
                     {{end}}
@@ -88,17 +126,17 @@
 
     <!-- Generate Part-A Modal -->
     <div id="new-ewb-modal" class="hidden fixed inset-0 z-50 bg-on-surface/50 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-surface-container-lowest rounded-lg max-w-lg w-full p-6 shadow-xl border border-border-subtle space-y-4">
-            <div class="flex justify-between items-center pb-2 border-b border-border-subtle">
-                <h3 class="text-base font-bold text-on-surface">Generate E-Way Bill (Part-A)</h3>
-                <button onclick="document.getElementById('new-ewb-modal').classList.add('hidden')" class="text-text-muted hover:text-on-surface transition-colors" aria-label="Close modal">
-                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
+        <div class="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-xl border border-border-subtle space-y-4">
+            <div class="flex justify-between items-center pb-3 border-b border-border-subtle">
+                <h3 class="text-sm font-bold text-on-surface">Generate E-Way Bill (Part-A)</h3>
+                <button onclick="document.getElementById('new-ewb-modal').classList.add('hidden')" class="w-8 h-8 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-text-muted hover:text-on-surface hover:bg-surface-container transition-colors" aria-label="Close modal">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
                 </button>
             </div>
             <form method="POST" action="/ewaybill/new" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Select Active Trip</label>
-                    <select name="trip_id" required class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-secondary mb-1.5">Select Active Trip</label>
+                    <select name="trip_id" required class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                         <option value="">-- Choose a trip --</option>
                         {{range .Trips}}
                         <option value="{{.ID}}">{{.TripNumber}} (Route: {{.Source}} → {{.Destination}})</option>
@@ -106,20 +144,20 @@
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Goods Value (₹) [Optional override]</label>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-secondary mb-1.5">Goods Value (₹) [Optional override]</label>
                     <input type="number" step="0.01" name="goods_value" placeholder="Leave empty to use booking fare"
-                           class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                           class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" />
                 </div>
-                <div class="flex items-center gap-2 pt-2">
+                <div class="flex items-center gap-2 pt-1">
                     <input type="checkbox" name="force" id="force-check" value="true" class="rounded text-primary focus:ring-primary" />
                     <label for="force-check" class="text-xs text-text-muted">Force generate even if goods value ≤ ₹50,000</label>
                 </div>
                 <div class="flex justify-end gap-2 pt-4 border-t border-border-subtle flex-wrap">
                     <button type="button" onclick="document.getElementById('new-ewb-modal').classList.add('hidden')"
-                            class="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface-container-low text-on-surface px-4 py-2 text-sm font-medium hover:bg-surface-container transition-all">
+                            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">
                         Cancel
                     </button>
-                    <button type="submit" class="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-all cursor-pointer">
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer">
                         Generate Part-A
                     </button>
                 </div>

@@ -1,46 +1,99 @@
 {{define "founder_dashboard.html"}}
-<div class="p-6 max-w-7xl mx-auto text-on-surface">
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold text-primary">Founder Dashboard</h1>
-        <p class="text-sm text-secondary">Key business metrics and operational signals</p>
+<div class="p-4 sm:p-6 max-w-[1600px] mx-auto space-y-5 text-on-surface">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 flex-wrap">
+        <div class="min-w-0">
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Founder Dashboard</h1>
+            <p class="text-sm text-secondary mt-0.5">Key business metrics and operational signals</p>
+        </div>
+        <a href="/founder/audit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors shrink-0">Audit Trail →</a>
     </div>
 
-    <!-- Stats Row -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm p-4">
-            <p class="text-sm text-text-muted">Unacknowledged Signals</p>
-            <p class="text-2xl font-bold text-red-500">{{.UnacknowledgedSignals}}</p>
+    <!-- KPI HERO -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-500 to-red-500 opacity-80"></div>
+            <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/15 grid place-items-center text-rose-600 group-hover:bg-rose-500 group-hover:text-white transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+                </div>
+                {{if gt .UnacknowledgedSignals 0}}<span class="inline-flex px-2 py-1 rounded-full bg-rose-500/10 border border-rose-500/15 text-[11px] font-bold uppercase tracking-wider text-rose-700">Needs review</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-bold uppercase tracking-wider text-emerald-700">Clear</span>{{end}}
+            </div>
+            <div class="mt-4">
+                <div class="text-stat tabular-nums text-3xl font-black tracking-tight {{if gt .UnacknowledgedSignals 0}}text-status-alert{{else}}text-status-success{{end}}">{{.UnacknowledgedSignals}}</div>
+                <div class="text-sm font-medium text-secondary mt-1">Unacknowledged Signals</div>
+                <div class="mt-3 flex items-center gap-2 text-xs text-text-muted"><span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> awaiting your call</div>
+            </div>
         </div>
-        <div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm p-4">
-            <p class="text-sm text-text-muted">Active Experiments</p>
-            <p class="text-2xl font-bold text-primary">{{.ActiveExperiments}}</p>
-        </div>
-        <div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm p-4">
-            <p class="text-sm text-text-muted">Open Ops Alerts</p>
-            <p class="text-2xl font-bold text-amber-500">{{.OpenOpsAlerts}}</p>
-        </div>
-        <div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm p-4">
-            <p class="text-sm text-text-muted">Latest Net Profit</p>
-            <p class="text-2xl font-bold text-emerald-500">{{if .LatestPNL}}₹{{printf "%.2f" .LatestPNL.NetProfit}}{{else}}₹0.00{{end}}</p>
-        </div>
+
+        <a href="/experiments" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-violet-500/20 transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-violet-500 to-cyan-400 opacity-90"></div>
+            <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/15 grid place-items-center text-violet-600 group-hover:bg-violet-500 group-hover:text-white transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg>
+                </div>
+                <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-violet-500/10 text-violet-700 border border-violet-500/15">Running</span>
+            </div>
+            <div class="mt-4">
+                <div class="text-stat text-primary tabular-nums text-3xl font-black tracking-tight">{{.ActiveExperiments}}</div>
+                <div class="text-sm font-medium text-secondary mt-1">Active Experiments</div>
+                <div class="mt-3 text-xs text-text-muted">A/B tests in flight</div>
+            </div>
+        </a>
+
+        <a href="/ops-alerts" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-amber-500/20 transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-80"></div>
+            <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+                </div>
+                <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/15">Open</span>
+            </div>
+            <div class="mt-4">
+                <div class="text-stat text-status-warning tabular-nums text-3xl font-black tracking-tight">{{.OpenOpsAlerts}}</div>
+                <div class="text-sm font-medium text-secondary mt-1">Open Ops Alerts</div>
+                <div class="mt-3 text-xs text-text-muted">operational follow-ups</div>
+            </div>
+        </a>
+
+        <a href="/pnl/dashboard" class="group flex items-center gap-4 bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white hover:shadow-lg hover:scale-[1.01] transition-all">
+            <div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-black tabular-nums leading-none">{{if .LatestPNL}}₹{{printf "%.2f" .LatestPNL.NetProfit}}{{else}}₹0.00{{end}}</div>
+                <div class="text-xs font-medium text-white/80 mt-1">{{if .LatestPNL}}Net Profit · {{.LatestPNL.SnapshotDate}}{{else}}Latest Net Profit{{end}}</div>
+            </div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-white/70 ml-auto shrink-0"><path d="M9 18l6-6-6-6"/></svg>
+        </a>
     </div>
 
     <!-- Unacknowledged Signals -->
     {{if .RecentSignals}}
-    <div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm p-6 mb-6">
-        <h2 class="text-lg font-semibold mb-4 text-on-surface">⚠️ Unacknowledged Signals</h2>
-        <div class="space-y-3">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 bg-gradient-to-r from-amber-500/[0.07] to-transparent">
+            <div class="flex items-center gap-2">
+                <span class="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg></span>
+                <h2 class="text-sm font-bold text-on-surface">⚠️ Unacknowledged Signals</h2>
+            </div>
+            <span class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-amber-500 text-white text-xs font-bold tabular-nums">{{len .RecentSignals}}</span>
+        </div>
+        <div class="divide-y divide-border-subtle">
             {{range .RecentSignals}}
-            <div class="flex items-center justify-between p-3 border rounded-lg {{if eq .Direction "above"}}bg-emerald-500/10 border-emerald-500/20 text-on-surface{{else}}bg-red-500/10 border-red-500/20 text-on-surface{{end}}">
-                <div>
-                    <span class="font-medium text-sm">{{.SignalType}}</span>
-                    <span class="text-sm text-secondary ml-2">Value: {{printf "%.2f" .SignalValue}}</span>
-                    {{with .ThresholdValue}}<span class="text-sm text-text-muted ml-2">Threshold: {{printf "%.2f" .}}</span>{{end}}
-                    <span class="text-xs text-text-muted ml-2">({{.Direction}})</span>
+            <div class="px-4 sm:px-5 py-3.5 flex items-center gap-3 flex-wrap hover:bg-surface-container-low/40 transition-colors">
+                <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full border text-[11px] font-bold uppercase tracking-wide shrink-0 {{if eq .Direction "above"}}bg-amber-500/10 border-amber-500/15 text-amber-700{{else}}bg-blue-500/10 border-blue-500/15 text-blue-700{{end}}">
+                    {{if eq .Direction "above"}}▲ Above{{else}}▼ Below{{end}}
+                </span>
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-baseline gap-2 flex-wrap">
+                        <span class="text-sm font-bold text-on-surface">{{.SignalType}}</span>
+                        <span class="text-sm font-bold tabular-nums text-on-surface">{{printf "%.2f" .SignalValue}}</span>
+                        {{with .ThresholdValue}}<span class="text-xs text-text-muted tabular-nums">vs threshold {{printf "%.2f" .}}</span>{{end}}
+                        <span class="text-[11px] text-text-muted uppercase tracking-wide">({{.Direction}})</span>
+                    </div>
                 </div>
                 {{if can $.User "founder" "update"}}
-                <form method="POST" action="/api/v1/founder/signals/{{.ID}}/acknowledge" class="inline">
-                    <button type="submit" class="px-3 py-1 bg-primary text-on-primary text-xs font-medium rounded hover:bg-primary/90 cursor-pointer border-0">Acknowledge</button>
+                <form method="POST" action="/api/v1/founder/signals/{{.ID}}/acknowledge" class="inline shrink-0">
+                    <button type="submit" class="inline-flex px-3 py-1.5 rounded-full bg-primary text-on-primary text-xs font-bold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer border-0">Acknowledge</button>
                 </form>
                 {{end}}
             </div>
@@ -51,45 +104,60 @@
 
     <!-- Latest PNL Summary -->
     {{if .LatestPNL}}
-    <div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm p-6 mb-6">
-        <h2 class="text-lg font-semibold mb-4 text-on-surface">📊 Latest P&L ({{.LatestPNL.SnapshotDate}})</h2>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-                <span class="text-sm text-text-muted">Revenue</span>
-                <p class="text-xl font-bold text-emerald-500">₹{{printf "%.2f" .LatestPNL.Revenue}}</p>
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <h2 class="text-sm font-bold text-on-surface">📊 Latest P&amp;L</h2>
+                <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{.LatestPNL.SnapshotDate}}</span>
             </div>
-            <div>
-                <span class="text-sm text-text-muted">Expenses</span>
-                <p class="text-xl font-bold text-red-500">₹{{printf "%.2f" .LatestPNL.Expenses}}</p>
-            </div>
-            <div>
-                <span class="text-sm text-text-muted">Net Profit</span>
-                <p class="text-xl font-bold {{if gt .LatestPNL.NetProfit 0.0}}text-emerald-500{{else}}text-red-500{{end}}">₹{{printf "%.2f" .LatestPNL.NetProfit}}</p>
-            </div>
-            <div>
-                <span class="text-sm text-text-muted">Trips</span>
-                <p class="text-xl font-bold text-on-surface">{{.LatestPNL.TripCount}}</p>
-            </div>
+            <a href="/pnl/dashboard" class="text-xs font-semibold text-primary hover:underline">View full history →</a>
         </div>
-        <div class="mt-4">
-            <a href="/pnl/dashboard" class="text-primary hover:underline text-sm font-medium">View full P&L history →</a>
-        </div>
+        <dl class="p-5 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Revenue</dt>
+                <dd class="mt-1 text-lg font-black tabular-nums text-emerald-600 dark:text-emerald-400">₹{{printf "%.2f" .LatestPNL.Revenue}}</dd>
+            </div>
+            <div>
+                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Expenses</dt>
+                <dd class="mt-1 text-lg font-black tabular-nums text-red-600 dark:text-red-400">₹{{printf "%.2f" .LatestPNL.Expenses}}</dd>
+            </div>
+            <div>
+                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Net Profit</dt>
+                <dd class="mt-1 text-lg font-black tabular-nums {{if gt .LatestPNL.NetProfit 0.0}}text-emerald-600 dark:text-emerald-400{{else}}text-red-600 dark:text-red-400{{end}}">₹{{printf "%.2f" .LatestPNL.NetProfit}}</dd>
+            </div>
+            <div>
+                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Trips</dt>
+                <dd class="mt-1 text-lg font-black tabular-nums text-on-surface">{{.LatestPNL.TripCount}}</dd>
+            </div>
+        </dl>
     </div>
     {{end}}
 
     <!-- Quick Links -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <a href="/ops-alerts" class="block p-4 bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm hover:border-primary/50 transition-colors text-decoration-none">
-            <h3 class="font-semibold text-on-surface">🚨 Ops Alerts</h3>
-            <p class="text-sm text-text-muted mt-1">View and manage operational alerts</p>
+        <a href="/ops-alerts" class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-amber-500/20 transition-all text-decoration-none group">
+            <span class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600 shrink-0">🚨</span>
+            <span class="min-w-0">
+                <span class="block text-sm font-bold text-on-surface">Ops Alerts</span>
+                <span class="block text-xs text-text-muted mt-0.5">View and manage operational alerts</span>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted ml-auto shrink-0 group-hover:text-amber-600"><path d="M9 18l6-6-6-6"/></svg>
         </a>
-        <a href="/experiments" class="block p-4 bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm hover:border-primary/50 transition-colors text-decoration-none">
-            <h3 class="font-semibold text-on-surface">🧪 Experiments</h3>
-            <p class="text-sm text-text-muted mt-1">Manage A/B tests and feature flags</p>
+        <a href="/experiments" class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all text-decoration-none group">
+            <span class="w-9 h-9 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center shrink-0">🧪</span>
+            <span class="min-w-0">
+                <span class="block text-sm font-bold text-on-surface">Experiments</span>
+                <span class="block text-xs text-text-muted mt-0.5">Manage A/B tests and feature flags</span>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted ml-auto shrink-0 group-hover:text-primary"><path d="M9 18l6-6-6-6"/></svg>
         </a>
-        <a href="/founder/audit" class="block p-4 bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm hover:border-primary/50 transition-colors text-decoration-none">
-            <h3 class="font-semibold text-on-surface">📋 Audit Trail</h3>
-            <p class="text-sm text-text-muted mt-1">View founder action history</p>
+        <a href="/founder/audit" class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-blue-500/20 transition-all text-decoration-none group">
+            <span class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-base shrink-0">📋</span>
+            <span class="min-w-0">
+                <span class="block text-sm font-bold text-on-surface">Audit Trail</span>
+                <span class="block text-xs text-text-muted mt-0.5">View founder action history</span>
+            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted ml-auto shrink-0 group-hover:text-blue-600"><path d="M9 18l6-6-6-6"/></svg>
         </a>
     </div>
 </div>

@@ -1,17 +1,17 @@
 {{define "epod_success.html"}}
 <div class="min-h-screen bg-surface-container-low flex items-center justify-center p-6">
-    <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-8 text-center max-w-sm w-full">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-8 text-center max-w-sm w-full">
         <!-- Success Icon -->
         <div class="w-16 h-16 rounded-full bg-status-success/10 flex items-center justify-center mx-auto mb-5">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
         </div>
         <h2 class="text-xl font-semibold text-on-surface font-display">Delivery Confirmed!</h2>
         <p class="text-sm text-text-muted mt-2">
-            Trip <span class="font-mono font-medium text-on-surface">{{.TripNumber}}</span> delivered &amp; recorded successfully.
+            Trip <span class="font-mono font-semibold text-on-surface tabular-nums">{{.TripNumber}}</span> delivered &amp; recorded successfully.
         </p>
 
         <!-- Auto-triggered actions -->
-        <div class="mt-6 space-y-2.5 text-left bg-surface-container-low rounded-lg p-4">
+        <div class="mt-6 space-y-2.5 text-left bg-surface-container-low rounded-xl p-4">
             <div class="flex items-center gap-3 text-xs text-secondary">
                 <span class="w-5 h-5 rounded-full bg-status-success/10 flex items-center justify-center shrink-0">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M20 6 9 17l-5-5"/></svg>

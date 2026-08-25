@@ -16,7 +16,7 @@
     </p>
 
     {{if or .ErrorCode .Model .RequestID .Path}}
-    <div class="w-full max-w-md bg-surface-container-high/70 border border-outline-variant/70 rounded-xl p-4 mb-8 text-left text-xs font-mono space-y-2 backdrop-blur-sm shadow-xs">
+    <div class="w-full max-w-md bg-surface-container-lowest border border-border-subtle rounded-2xl p-4 mb-8 text-left text-xs font-mono space-y-2 shadow-sm">
         {{if .ErrorCode}}
         <div class="flex items-center justify-between">
             <span class="text-secondary font-sans font-medium">Error Identifier:</span>

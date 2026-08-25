@@ -1,7 +1,9 @@
 {{$a := .Accent}}{{if not $a}}{{$a = "primary"}}{{end}}
-{{$color := "text-primary"}}{{if eq $a "success"}}{{$color = "text-status-success"}}{{else if eq $a "warning"}}{{$color = "text-status-warning"}}{{else if eq $a "alert"}}{{$color = "text-status-alert"}}{{else if eq $a "neutral"}}{{$color = "text-text-muted"}}{{end}}
-<div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-4 text-center">
-  <div class="text-2xl font-bold tabular-nums {{$color}}">{{.Value}}</div>
-  <div class="text-xs text-secondary mt-1">{{.Label}}</div>
+{{$color := "text-primary"}}{{$grad := "from-primary via-violet-500 to-cyan-400"}}
+{{if eq $a "success"}}{{$color = "text-status-success"}}{{$grad = "from-emerald-500 to-teal-500"}}{{else if eq $a "warning"}}{{$color = "text-status-warning"}}{{$grad = "from-amber-500 to-orange-500"}}{{else if eq $a "alert"}}{{$color = "text-status-alert"}}{{$grad = "from-rose-500 to-red-500"}}{{else if eq $a "neutral"}}{{$color = "text-text-muted"}}{{$grad = "from-surface-container-high to-surface-container-low"}}{{end}}
+<div class="group relative overflow-hidden bg-surface-container-lowest rounded-xl border border-border-subtle shadow-sm p-4 text-center hover:shadow-md hover:-translate-y-px transition-all">
+  <div class="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r {{$grad}} opacity-80"></div>
+  <div class="text-stat text-2xl font-black tabular-nums {{$color}}">{{.Value}}</div>
+  <div class="text-xs font-medium text-secondary mt-1">{{.Label}}</div>
   {{if .Sub}}<div class="text-xs font-medium mt-0.5 {{$color}}">{{.Sub}}</div>{{end}}
 </div>

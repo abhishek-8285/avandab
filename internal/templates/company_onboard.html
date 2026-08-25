@@ -1,64 +1,74 @@
-<div class="max-w-2xl mx-auto">
-    <div class="bg-surface-container-lowest rounded-lg shadow-sm border border-border-subtle p-6 sm:p-8">
-        <div class="text-center mb-6">
-            <h1 class="text-xl font-semibold text-on-surface font-display">Company Setup &amp; Onboarding</h1>
-            <p class="mt-1 text-sm text-text-muted">Configure your transport fleet company details to complete onboarding</p>
+<div class="max-w-3xl mx-auto">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <div class="px-5 sm:px-8 pt-7 pb-5 text-center border-b border-border-subtle bg-surface-container-low/50">
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Company Setup &amp; Onboarding</h1>
+            <p class="mt-1 text-sm text-secondary">Configure your transport fleet company details to complete onboarding</p>
         </div>
 
-        {{if .FlashError}}{{template "alert.html" (dict "Tone" "error" "Message" .FlashError)}}{{end}}
+        <form method="POST" action="/company/onboard" enctype="multipart/form-data" class="p-5 sm:p-8 space-y-6">
+            {{if .FlashError}}{{template "alert.html" (dict "Tone" "error" "Message" .FlashError)}}{{end}}
 
-        <form method="POST" action="/company/onboard" enctype="multipart/form-data" class="space-y-4">
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Company Name *</label>
-                <input type="text" name="company_name" required value="{{.Settings.CompanyName}}" placeholder="e.g. Apex Logistics Corp"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-            </div>
+                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Company Identity</h2>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-secondary mb-1.5">Company Name *</label>
+                        <input type="text" name="company_name" required value="{{.Settings.CompanyName}}" placeholder="e.g. Apex Logistics Corp"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Contact Email *</label>
-                    <input type="email" name="email" required value="{{if .Settings.Email}}{{.Settings.Email}}{{end}}" placeholder="ops@company.com"
-                        class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Phone Number *</label>
-                    <input type="tel" name="phone" required value="{{if .Settings.Phone}}{{.Settings.Phone}}{{end}}" placeholder="+1-800-555-0199"
-                        class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                    <div>
+                        <label class="block text-xs font-bold text-secondary mb-1.5">Company Address</label>
+                        <textarea name="address" rows="2" placeholder="100 Transport Way, Suite 400"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">{{if .Settings.Address}}{{.Settings.Address}}{{end}}</textarea>
+                    </div>
                 </div>
             </div>
 
             <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Company Address</label>
-                <textarea name="address" rows="2" placeholder="100 Transport Way, Suite 400"
-                    class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">{{if .Settings.Address}}{{.Settings.Address}}{{end}}</textarea>
-            </div>
+                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Contact &amp; Compliance</h2>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-secondary mb-1.5">Contact Email *</label>
+                            <input type="email" name="email" required value="{{if .Settings.Email}}{{.Settings.Email}}{{end}}" placeholder="ops@company.com"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-secondary mb-1.5">Phone Number *</label>
+                            <input type="tel" name="phone" required value="{{if .Settings.Phone}}{{.Settings.Phone}}{{end}}" placeholder="+1-800-555-0199"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        </div>
+                    </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">GST/Tax ID</label>
-                    <input type="text" name="gst_number" value="{{if .Settings.GSTNumber}}{{.Settings.GSTNumber}}{{end}}" placeholder="27ABCDE1234F1Z5" pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]" title="GSTIN format: 27ABCDE1234F1Z5"
-                        class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-secondary mb-1.5">GST/Tax ID</label>
+                            <input type="text" name="gst_number" value="{{if .Settings.GSTNumber}}{{.Settings.GSTNumber}}{{end}}" placeholder="27ABCDE1234F1Z5" pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]" title="GSTIN format: 27ABCDE1234F1Z5"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-secondary mb-1.5">Currency</label>
+                            <select name="currency" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                <option value="USD">USD ($)</option>
+                                <option value="INR">INR (₹)</option>
+                                <option value="EUR">EUR (€)</option>
+                                <option value="GBP">GBP (£)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-secondary mb-1.5">Company Logo</label>
+                        <input type="file" name="logo" accept="image/*"
+                            class="w-full text-sm text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all cursor-pointer">
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Currency</label>
-                    <select name="currency" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-                        <option value="USD">USD ($)</option>
-                        <option value="INR">INR (₹)</option>
-                        <option value="EUR">EUR (€)</option>
-                        <option value="GBP">GBP (£)</option>
-                    </select>
-                </div>
             </div>
 
-            <div>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Company Logo</label>
-                <input type="file" name="logo" accept="image/*"
-                    class="w-full text-sm text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all cursor-pointer">
-            </div>
-
-            <div class="pt-4 flex justify-end space-x-3 flex-wrap gap-3">
+            <div class="sticky bottom-0 -mx-5 sm:-mx-8 -mb-5 sm:-mb-8 px-5 sm:px-8 py-3 bg-surface-container-lowest border-t border-border-subtle flex justify-end gap-3 flex-wrap">
                 {{template "btn.html" (dict "Variant" "secondary" "Label" "Skip for now" "Href" "/dashboard" "Class" "min-h-[44px]")}}
-                {{template "btn.html" (dict "Variant" "primary" "Label" "Save & Complete Onboarding" "Type" "submit" "Class" "min-h-[44px] px-6")}}
+                {{template "btn.html" (dict "Variant" "primary" "Label" "Save & Complete Onboarding" "Type" "submit" "Class" "min-h-[44px] px-6 shadow-sm")}}
             </div>
         </form>
     </div>

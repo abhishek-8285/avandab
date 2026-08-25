@@ -34,6 +34,7 @@ func GenerateInvoicePDF(d InvoicePDFData) ([]byte, error) {
 	pdf := fpdf.New("P", "mm", "A4", "")
 	pdf.SetMargins(marginL, marginT, marginR)
 	pdf.SetAutoPageBreak(true, footerH)
+	pdf.AliasNbPages("{nb}")
 	pdf.SetFooterFunc(func() {
 		pdf.SetY(-14)
 		pdf.SetFont("Arial", "I", 8)
@@ -183,11 +184,11 @@ func boxLabel(pdf *fpdf.Fpdf, label string, w float64) {
 
 func renderItemsGST(pdf *fpdf.Fpdf, tr func(string) string, d InvoicePDFData) {
 	intra := d.IntraState
-	cols := []float64{6, 46, 16, 13, 17, 19, 14, 14, 37}
+	cols := []float64{6, 44, 16, 13, 17, 19, 14, 14, 39}
 	headers := []string{"#", "Description", "HSN/SAC", "Qty", "Rate",
 		"Taxable", "CGST", "SGST", "Amount"}
 	if !intra {
-		cols = []float64{6, 46, 16, 13, 17, 19, 28, 37}
+		cols = []float64{6, 44, 16, 13, 17, 19, 24, 43}
 		headers = []string{"#", "Description", "HSN/SAC", "Qty", "Rate",
 			"Taxable", "IGST", "Amount"}
 	}
@@ -207,21 +208,20 @@ func renderItemsGST(pdf *fpdf.Fpdf, tr func(string) string, d InvoicePDFData) {
 			{cols[1], tr(clip(it.Description, 60)), "L"},
 			{cols[2], it.HSNSAC, "C"},
 			{cols[3], it.Quantity, "C"},
-			{cols[4], rs(it.Rate), "R"},
-			{cols[5], rs(it.TaxableValue), "R"},
 		}
-		x := 0
 		for _, c := range cells {
 			pdf.CellFormat(c.w, 7, c.text, "LR", 0, c.align, false, 0, "")
-			x++
 		}
+		cellFit(pdf, cols[4], 7, 8.5, rs(it.Rate), "LR")
+		cellFit(pdf, cols[5], 7, 8.5, rs(it.TaxableValue), "LR")
 		if intra {
-			pdf.CellFormat(cols[6], 7, rs(it.CGST), "LR", 0, "R", false, 0, "")
-			pdf.CellFormat(cols[7], 7, rs(it.SGST), "LR", 0, "R", false, 0, "")
+			cellFit(pdf, cols[6], 7, 8.5, rs(it.CGST), "LR")
+			cellFit(pdf, cols[7], 7, 8.5, rs(it.SGST), "LR")
 		} else {
-			pdf.CellFormat(cols[6], 7, rs(it.IGST), "LR", 0, "R", false, 0, "")
+			cellFit(pdf, cols[6], 7, 8.5, rs(it.IGST), "LR")
 		}
-		pdf.CellFormat(cols[len(cols)-1], 7, rs(it.Total), "LR", 1, "R", false, 0, "")
+		cellFit(pdf, cols[len(cols)-1], 7, 8.5, rs(it.Total), "LR")
+		pdf.Ln(7)
 	}
 	tableBottom(pdf, cols)
 }
@@ -237,8 +237,9 @@ func renderItemsSimple(pdf *fpdf.Fpdf, tr func(string) string, d InvoicePDFData)
 		pdf.CellFormat(cols[0], 7, fmt.Sprint(i+1), "LR", 0, "C", false, 0, "")
 		pdf.CellFormat(cols[1], 7, tr(clip(it.Description, 90)), "LR", 0, "L", false, 0, "")
 		pdf.CellFormat(cols[2], 7, it.Quantity, "LR", 0, "C", false, 0, "")
-		pdf.CellFormat(cols[3], 7, rs(it.Rate), "LR", 0, "R", false, 0, "")
-		pdf.CellFormat(cols[4], 7, rs(it.Total), "LR", 1, "R", false, 0, "")
+		cellFit(pdf, cols[3], 7, 9, rs(it.Rate), "LR")
+		cellFit(pdf, cols[4], 7, 9, rs(it.Total), "LR")
+		pdf.Ln(7)
 	}
 	tableBottom(pdf, cols)
 }
@@ -457,6 +458,25 @@ func clip(s string, maxChars int) string {
 		return s
 	}
 	return string(r[:maxChars-1]) + "…"
+}
+
+// cellFit writes a right-aligned currency string into a cell of width w,
+// shrinking the font size down to 7pt if it would otherwise overflow,
+// then restores the caller's font size. Prevents "Rs. 2,000.00" from
+// bleeding into adjacent columns.
+func cellFit(pdf *fpdf.Fpdf, w, h, baseSize float64, text, border string) {
+	restore := func() { pdf.SetFont("Arial", "", baseSize) }
+	for _, sz := range []float64{baseSize, 8.5, 8, 7.5, 7} {
+		pdf.SetFont("Arial", "", sz)
+		if pdf.GetStringWidth(text)+1.0 <= w {
+			pdf.CellFormat(w, h, text, border, 0, "R", false, 0, "")
+			restore()
+			return
+		}
+	}
+	pdf.SetFont("Arial", "", 7)
+	pdf.CellFormat(w, h, text, border, 0, "R", false, 0, "")
+	restore()
 }
 
 // rs formats rupee amounts with thousand separators (Indian grouping).

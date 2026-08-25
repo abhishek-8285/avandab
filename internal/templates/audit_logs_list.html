@@ -1,15 +1,16 @@
 {{template "page_header.html" (dict "Title" "Audit Logs" "Subtitle" "View security audit trails and data mutation history")}}
 
-<div class="bg-surface-container-lowest border border-border-subtle rounded-lg shadow-sm flex flex-col h-full overflow-hidden">
-    <!-- Sticky Search & Filter Bar (Stitch Design) -->
-    <form method="GET" action="/audit-logs" class="px-4 py-2 border-b border-border-subtle flex flex-wrap items-center gap-2 bg-surface-container-lowest sticky top-0 z-10">
-        <div class="relative flex-1 min-w-[240px] max-w-md">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input type="text" name="q" value="{{.Query}}" placeholder="Filter audit logs by action or table..."
-                class="bg-surface-container-low border border-border-subtle rounded-md py-2 pl-9 pr-4 text-sm text-on-surface w-full focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
-        </div>
-        {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Label" "Filter" "Type" "submit")}}
-    </form>
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm flex flex-col h-full overflow-hidden">
+    {{template "filter_bar.html" (dict
+        "Action" "/audit-logs"
+        "Query" .Query
+        "StatusFilter" .StatusFilter
+        "ShowDates" true
+        "DateFrom" .DateFrom
+        "DateTo" .DateTo
+        "ShowSearch" true
+        "SearchPlaceholder" "Filter audit logs by action or table..."
+    )}}
 
     <!-- Data Table Fragment (Datastar refresh target) -->
     <div id="list-table">

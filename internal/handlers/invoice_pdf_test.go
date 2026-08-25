@@ -27,7 +27,7 @@ func TestInvoicePDF_SellerFromCompanySettings(t *testing.T) {
 	h.init()
 
 	_, err := db.Exec(`UPDATE company_settings SET company_name='Devi Transport Co',
-		address='22 Goods Yard, Nashik', gst_number='27PQRSX5678K1Z2', state_code='27',
+		address='22 Goods Yard, Nashik', gst_number='27AABCU9603R1ZX', state_code='27',
 		phone='9700000000', email='accounts@devi.example' WHERE id = 1`)
 	require.NoError(t, err)
 	_, err = db.Exec(`INSERT INTO customers (id, name, phone, gst, address) VALUES ('cust-pdf', 'Bharat Steels', '+91-9000000001', '29AABCB1234C1Z7', '4 Steel Zone, Bengaluru')`)
@@ -55,7 +55,7 @@ func TestInvoicePDF_SellerFromCompanySettings(t *testing.T) {
 
 	assert.Equal(t, "Devi Transport Co", data.Company.Name, "seller name must come from company_settings")
 	assert.NotContains(t, data.Company.Name, "Apex", "hardcoded legacy seller name leaked")
-	assert.Equal(t, "27PQRSX5678K1Z2", data.Company.GSTIN)
+	assert.Equal(t, "27AABCU9603R1ZX", data.Company.GSTIN)
 	assert.Equal(t, "Bharat Steels", data.Customer.Name)
 	assert.Equal(t, "29", data.Customer.StateCode, "buyer state from GST prefix")
 	assert.False(t, data.IntraState, "27 vs 29 is inter-state supply")
@@ -82,4 +82,29 @@ func TestInvoicePDF_SellerFromCompanySettings(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Contains(t, resp.Header.Get("Content-Disposition"), "INV-PDF-1.pdf")
 	assert.True(t, bytes.HasPrefix(w.Body.Bytes(), []byte("%PDF-")), "response body must be a PDF")
+}
+
+func TestValidGSTINFormat(t *testing.T) {
+	cases := []struct {
+		gstin string
+		want  bool
+		why   string
+	}{
+		{"27AABCU9603R1ZX", true, "classic GSTN doc example (company)"},
+		{"29AABCB1234C1Z7", true, "valid company GSTIN, different state"},
+		{"07AAACP0000M1Z9", true, "valid proprietor GSTIN"},
+		{"07KUKPS5477RDAF", false, "real-world bad value: idx12 'D' not digit, idx13 'A' not Z"},
+		{"27PQRSX5678K1Z2", false, "entity letter idx5 'S' not in P/F/C/H/A/T/B/L/J/G"},
+		{"27AABCU9603R1Z", false, "too short"},
+		{"27AABCU9603R1ZX1", false, "too long"},
+		{"X7AABCU9603R1ZX", false, "state code not numeric"},
+		{"27AABCU9603R1Z7", true, "alnum check digit"},
+		{"", false, "empty"},
+	}
+	for _, tc := range cases {
+		got := validGSTINFormat(tc.gstin)
+		if got != tc.want {
+			t.Errorf("validGSTINFormat(%q) = %v, want %v (%s)", tc.gstin, got, tc.want, tc.why)
+		}
+	}
 }

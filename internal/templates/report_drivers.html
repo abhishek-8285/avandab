@@ -1,47 +1,62 @@
-<div class="space-y-6">
+<div class="space-y-5 max-w-[1600px] mx-auto">
     <!-- Title & Action -->
-    <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
-        <div>
-            <h1 class="text-xl font-semibold text-on-surface font-display">Driver Roster Report</h1>
-            <p class="text-sm text-text-muted mt-1">Driver licensing audit, readiness, and active status tracking</p>
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        <div class="min-w-0">
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Driver Roster Report</h1>
+            <p class="text-sm text-secondary mt-1">Driver licensing audit, readiness, and active status tracking</p>
         </div>
-        <div class="flex items-center gap-2 flex-wrap">
+        <div class="flex items-center gap-2 flex-wrap shrink-0">
             {{if can .User "reports" "read"}}
             <div class="flex items-center gap-2 print:hidden">
-                <a href="/reports/drivers.csv{{if .QueryString}}?{{.QueryString}}{{end}}" class="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-all">
+                <a href="/reports/drivers.csv{{if .QueryString}}?{{.QueryString}}{{end}}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     Export CSV
                 </a>
             </div>
             {{end}}
-            <button onclick="window.print()" class="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface-container-low px-4 py-2 text-sm font-medium text-on-surface hover:bg-surface-container transition-all">
+            <button onclick="window.print()" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 hover:shadow-sm transition-all">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>Print Report
             </button>
         </div>
     </div>
 
-    <!-- Analytics Summary Cards -->
-    <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-4 border-l-4 border-l-primary">
-            <div class="text-xs font-semibold text-text-muted uppercase tracking-wider">Total Drivers</div>
-            <div class="text-2xl font-bold text-on-surface mt-1" data-numeric>{{.TotalDrivers}}</div>
+    <!-- KPI Strip -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-violet-500 opacity-80"></div>
+            <div class="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/15 grid place-items-center text-violet-600">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+            </div>
+            <div class="mt-4">
+                <div class="text-3xl font-black tracking-tight tabular-nums text-on-surface" data-numeric>{{.TotalDrivers}}</div>
+                <div class="text-sm font-medium text-secondary mt-1">Total Drivers</div>
+            </div>
         </div>
-        <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-4 border-l-4 border-l-status-success">
-            <div class="text-xs font-semibold text-text-muted uppercase tracking-wider">Available & Ready</div>
-            <div class="text-2xl font-bold text-status-success mt-1" data-numeric>{{.AvailableDrivers}}</div>
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition-all duration-200">
+            <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-80"></div>
+            <div class="flex items-start justify-between">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+                </div>
+                <span class="inline-flex items-center px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Ready</span>
+            </div>
+            <div class="mt-4">
+                <div class="text-3xl font-black tracking-tight tabular-nums text-status-success" data-numeric>{{.AvailableDrivers}}</div>
+                <div class="text-sm font-medium text-secondary mt-1">Available &amp; Ready</div>
+            </div>
         </div>
     </div>
 
     <!-- Filter Form -->
-    <form method="GET" action="/reports/drivers" class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm p-4 flex flex-col sm:flex-row sm:items-end gap-3 flex-wrap">
+    <form method="GET" action="/reports/drivers" class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm px-4 py-3 flex flex-col sm:flex-row sm:items-end gap-3 flex-wrap">
         <div class="flex-1 min-w-[12rem]">
-            <label for="drivers-q" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Search</label>
+            <label for="drivers-q" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Search</label>
             <input type="text" id="drivers-q" name="q" value="{{.Query}}" placeholder="Search by name, phone, license..."
-                class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
         </div>
         <div class="w-full sm:w-48">
-            <label for="drivers-status" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Status</label>
-            <select id="drivers-status" name="status" class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+            <label for="drivers-status" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Status</label>
+            <select id="drivers-status" name="status" class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                 <option value="">All Statuses</option>
                 <option value="available" {{if eq .StatusFilter "available"}}selected{{end}}>Available</option>
                 <option value="on_trip" {{if eq .StatusFilter "on_trip"}}selected{{end}}>On Trip</option>
@@ -49,16 +64,23 @@
                 <option value="inactive" {{if eq .StatusFilter "inactive"}}selected{{end}}>Inactive</option>
             </select>
         </div>
-        <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-all">
+        <button type="submit" class="inline-flex items-center justify-center gap-2 self-stretch sm:self-auto px-5 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all">
             Filter Report
         </button>
     </form>
 
     <!-- Drivers Table -->
-    <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm overflow-hidden">
-        <div class="overflow-x-auto -mx-2 px-2">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+            <div>
+                <h3 class="text-sm font-bold text-on-surface">Roster</h3>
+                <p class="text-xs text-text-muted">Drivers matching the current filter</p>
+            </div>
+            <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Drivers}} shown</span>
+        </div>
+        <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-border-subtle">
-                <thead>
+                <thead class="bg-surface-container-low">
                     <tr>
                         <th class="th-cell">Driver ID</th>
                         <th class="th-cell">Name</th>
@@ -67,16 +89,16 @@
                         <th class="th-cell">Status</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-border-subtle bg-surface-container-lowest">
+                <tbody class="divide-y divide-border-subtle">
                     {{if .Drivers}}
                     {{range .Drivers}}
-                    <tr class="hover:bg-surface-container-low transition-colors">
-                        <td class="px-4 py-2.5 text-sm font-semibold text-on-surface">{{.DriverID}}</td>
-                        <td class="px-4 py-2.5 text-sm text-on-surface">{{.FirstName}} {{.LastName}}</td>
-                        <td class="px-4 py-2.5 text-sm text-on-surface" data-numeric>{{.Phone}}</td>
-                        <td class="px-4 py-2.5 text-sm text-on-surface">{{.LicenseNumber}}</td>
-                        <td class="px-4 py-2.5 text-sm">
-                            <span class="px-2.5 py-1 text-xs font-medium rounded-full {{statusBadge .Status}}">{{.Status}}</span>
+                    <tr class="hover:bg-surface-container-low/50 transition-colors">
+                        <td class="px-3 py-2 text-sm font-bold text-primary tabular-nums">{{.DriverID}}</td>
+                        <td class="px-3 py-2 text-sm"><span class="font-medium text-on-surface">{{.FirstName}} {{.LastName}}</span></td>
+                        <td class="px-3 py-2 text-sm tabular-nums text-secondary" data-numeric>{{.Phone}}</td>
+                        <td class="px-3 py-2 text-sm tabular-nums text-on-surface">{{.LicenseNumber}}</td>
+                        <td class="px-3 py-2 text-sm">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                         </td>
                     </tr>
                     {{end}}
@@ -91,7 +113,7 @@
             </table>
         </div>
 
-        <div class="px-5 py-4 border-t border-border-subtle">
+        <div class="px-5 py-3 border-t border-border-subtle">
             {{template "pagination.html" .}}
         </div>
     </div>
