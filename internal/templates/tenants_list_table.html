@@ -1,0 +1,74 @@
+<div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-border-subtle">
+        <thead class="bg-surface-container-low">
+            <tr>
+                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">ID</th>
+                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Organization</th>
+                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Slug</th>
+                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
+                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Users</th>
+                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Created</th>
+                <th class="px-3 py-2 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
+            {{if .Tenants}}
+            {{range .Tenants}}
+            <tr class="hover:bg-surface-container-low/50 transition-colors group">
+                <td class="px-3 py-2 text-xs font-mono text-secondary whitespace-nowrap">{{.ID}}</td>
+                <td class="px-3 py-2 text-sm font-semibold text-on-surface whitespace-nowrap">{{.Name}}</td>
+                <td class="px-3 py-2 text-sm font-mono text-xs text-secondary">{{.Slug}}</td>
+                <td class="px-3 py-2">
+                    {{if eq .Status "active"}}
+                    <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/15"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{t "tenants.active"}}</span>
+                    {{else}}
+                    <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold rounded-full bg-red-500/10 text-red-700 border border-red-500/15"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{t "tenants.suspended"}}</span>
+                    {{end}}
+                </td>
+                <td class="px-3 py-2 text-sm tabular-nums">{{.UserCount}}</td>
+                <td class="px-3 py-2 text-sm text-secondary whitespace-nowrap">{{date_only .CreatedAt}}</td>
+                <td class="px-3 py-2 text-right whitespace-nowrap">
+                    <button type="button" data-id="{{.ID}}" data-next="{{if eq .Status "active"}}suspended{{else}}active{{end}}"
+                            aria-pressed="{{if eq .Status "active"}}true{{else}}false{{end}}"
+                            onclick="toggleTenant(this)"
+                            class="js-tenant-toggle inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold cursor-pointer transition-all active:scale-[0.98] {{if eq .Status "active"}}bg-status-alert/10 text-status-alert border border-status-alert/20 hover:bg-status-alert/20{{else}}bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20{{end}}">
+                        {{if eq .Status "active"}}Suspend{{else}}Activate{{end}}
+                    </button>
+                </td>
+            </tr>
+            {{end}}
+            {{else}}
+            <tr>
+                <td colspan="7" class="py-12 text-center text-secondary">
+                    {{template "empty_state.html" (dict "Icon" "manage_accounts" "Title" (t "tenants.empty.title") "Message" (t "tenants.empty.message") "ActionHref" "/tenants/new" "ActionIcon" "add" "ActionLabel" (t "tenants.new"))}}
+                </td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+</div>
+
+<script>
+async function toggleTenant(btn) {
+    const id = btn.dataset.id;
+    const next = btn.dataset.next;
+    btn.disabled = true;
+    try {
+        const res = await fetch('/tenants/' + encodeURIComponent(id) + '/' + (next === 'active' ? 'activate' : 'suspend'), {
+            method: 'POST'
+        });
+        if (!res.ok) {
+            let msg = 'Could not update tenant';
+            try { const p = await res.json(); if (p.message) msg = p.message; } catch (e) {}
+            window.FlyToast.show(msg, { tone: 'error' });
+            return;
+        }
+        window.FlyToast.show(next === 'suspended' ? 'Tenant suspended' : 'Tenant activated', { tone: 'success' });
+        location.reload();
+    } catch (err) {
+        window.FlyToast.show('Network error while updating tenant', { tone: 'error' });
+    } finally {
+        btn.disabled = false;
+    }
+}
+</script>

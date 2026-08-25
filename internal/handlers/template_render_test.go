@@ -571,6 +571,7 @@ func TestRenderFragment_ListTables(t *testing.T) {
 		"trip_list_table.html",
 		"audit_logs_list_table.html",
 		"booking_list_table.html",
+		"tenants_list_table.html",
 	}
 
 	for _, tbl := range tables {

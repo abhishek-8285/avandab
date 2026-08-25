@@ -1157,6 +1157,9 @@ func main() {
 			// Users (Admin only)
 			r.Route("/users", app.Users.Routes)
 
+			// Tenants — super-admin org provisioning UI (Spec 24)
+			r.Route("/tenants", handlers.NewTenantsHandlers(app).Routes)
+
 			// Drivers
 			r.Route("/drivers", app.Drivers.Routes)
 

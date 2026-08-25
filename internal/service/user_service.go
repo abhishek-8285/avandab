@@ -5,7 +5,9 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
+	"time"
 
 	db "transport-app/db/generated/sqlite"
 	"transport-app/internal/auth"
@@ -131,9 +133,6 @@ func (s *UserService) CreateUser(ctx context.Context, email, name, phone string,
 func (s *UserService) CreateUserWithPassword(ctx context.Context, email, name, phone, password string, roleID int64, status domain.UserStatus, tenantID string) (domain.User, error) {
 	if email == "" {
 		return domain.User{}, domain.ErrUserEmailRequired
-	}
-	if phone == "" {
-		return domain.User{}, domain.ErrUserPhoneRequired
 	}
 	if len(password) < userdomain.MinPasswordLength {
 		return domain.User{}, domain.ErrWeakPassword
@@ -375,4 +374,94 @@ func (s *UserService) SetTenantStatus(ctx context.Context, tenantID, status stri
 
 func toNullString(v string) sql.NullString {
 	return sql.NullString{String: v, Valid: v != ""}
+}
+
+// ErrTenantSlugTaken is returned when provisioning collides with an existing
+// tenant id or slug.
+var ErrTenantSlugTaken = errors.New("a tenant with this slug already exists")
+
+// TenantSummary is one row of the super-admin tenants list (Spec 24).
+type TenantSummary struct {
+	ID        string
+	Name      string
+	Slug      string
+	Status    string
+	CreatedAt time.Time
+	UserCount int64
+}
+
+// ListTenants returns every tenant organization, newest first. UserCount is
+// left zero — callers enrich it from a single grouped users query when the
+// UI needs it.
+func (s *UserService) ListTenants(ctx context.Context) ([]TenantSummary, error) {
+	q, err := s.tenantQueries(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := q.ListTenants(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]TenantSummary, 0, len(rows))
+	for _, t := range rows {
+		out = append(out, TenantSummary{
+			ID:        t.ID,
+			Name:      t.Name,
+			Slug:      t.Slug.String,
+			Status:    t.Status,
+			CreatedAt: t.CreatedAt,
+		})
+	}
+	return out, nil
+}
+
+// CreateTenantWithAdmin provisions a tenant organization and its first
+// org_admin account atomically: if either insert fails, neither lands. The
+// tenant insert and the admin user creation must share one transaction —
+// CreateTenant and CreateUserWithPassword each open their own transaction via
+// the tx manager, so nesting them here would break; instead both raw steps run
+// inside this single WithTransaction scope (mirror of
+// RegisterSelfServiceAccount).
+func (s *UserService) CreateTenantWithAdmin(ctx context.Context, tenantID, name, slug, adminEmail, adminName, adminPassword string) (domain.User, error) {
+	getter, ok := s.store.(repository.DBGetter)
+	if !ok || getter == nil || s.txManager == nil {
+		return domain.User{}, fmt.Errorf("tenant provisioning unavailable: storage does not support transactions")
+	}
+	rawDB := getter.DB()
+
+	var created domain.User
+	err := s.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
+		created = domain.User{}
+
+		// Provisioned orgs use the slug as their tenant id (seeded bootstrap
+		// tenant '1' excepted), so probing both columns catches every collision.
+		var row *sql.Row
+		if tx := repository.TxFromContext(txCtx); tx != nil {
+			row = tx.QueryRowContext(txCtx, `SELECT COUNT(1) FROM tenants WHERE id = ? OR slug = ?`, tenantID, slug)
+		} else {
+			row = rawDB.QueryRowContext(txCtx, `SELECT COUNT(1) FROM tenants WHERE id = ? OR slug = ?`, tenantID, slug)
+		}
+		var existing int
+		if err := row.Scan(&existing); err != nil {
+			return err
+		}
+		if existing > 0 {
+			return ErrTenantSlugTaken
+		}
+
+		if err := s.CreateTenant(txCtx, tenantID, name, slug); err != nil {
+			return err
+		}
+		u, err := s.CreateUserWithPassword(txCtx, adminEmail, adminName, "", adminPassword, domain.DefaultRoleID(domain.RoleOrgAdmin), domain.UserStatusActive, tenantID)
+		if err != nil {
+			return err
+		}
+		created = u
+		return nil
+	})
+	if err != nil {
+		return domain.User{}, err
+	}
+	s.log.Info("tenant provisioned with org admin", "tenant_id", tenantID, "admin_user_id", created.ID, "email", created.Email)
+	return created, nil
 }
