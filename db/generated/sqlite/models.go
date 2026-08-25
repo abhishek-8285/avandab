@@ -1222,6 +1222,15 @@ type TelemetrySnapshot struct {
 	DriverID    sql.NullString  `json:"driver_id"`
 }
 
+type Tenant struct {
+	ID        string         `json:"id"`
+	Name      string         `json:"name"`
+	Slug      sql.NullString `json:"slug"`
+	Status    string         `json:"status"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+}
+
 type Trip struct {
 	ID                    string          `json:"id"`
 	TripNumber            string          `json:"trip_number"`
@@ -1315,6 +1324,7 @@ type User struct {
 	UpdatedAt       time.Time      `json:"updated_at"`
 	Timezone        string         `json:"timezone"`
 	ThemePreference string         `json:"theme_preference"`
+	TenantID        string         `json:"tenant_id"`
 }
 
 type UserRole struct {
