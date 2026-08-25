@@ -222,16 +222,29 @@ type CreditDebitNote struct {
 }
 
 type Customer struct {
-	ID        string         `json:"id"`
-	Name      string         `json:"name"`
-	Company   sql.NullString `json:"company"`
-	Phone     string         `json:"phone"`
-	Email     sql.NullString `json:"email"`
-	Gst       sql.NullString `json:"gst"`
-	Address   sql.NullString `json:"address"`
-	Notes     sql.NullString `json:"notes"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
+	ID               string         `json:"id"`
+	Name             string         `json:"name"`
+	Company          sql.NullString `json:"company"`
+	Phone            string         `json:"phone"`
+	Email            sql.NullString `json:"email"`
+	Gst              sql.NullString `json:"gst"`
+	Address          sql.NullString `json:"address"`
+	Notes            sql.NullString `json:"notes"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
+	CustomerCode     sql.NullString `json:"customer_code"`
+	Title            sql.NullString `json:"title"`
+	ContactPerson    sql.NullString `json:"contact_person"`
+	InternalID       sql.NullString `json:"internal_id"`
+	PhotoUrl         sql.NullString `json:"photo_url"`
+	PlaceUuid        sql.NullString `json:"place_uuid"`
+	Meta             string         `json:"meta"`
+	BillingAddress   sql.NullString `json:"billing_address"`
+	Type             string         `json:"type"`
+	Status           string         `json:"status"`
+	PaymentTermsDays int64          `json:"payment_terms_days"`
+	TenantID         string         `json:"tenant_id"`
+	StateCode        sql.NullString `json:"state_code"`
 }
 
 type CustomerUser struct {

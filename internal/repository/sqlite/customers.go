@@ -12,20 +12,56 @@ import (
 // CustomerRepository implementation
 
 func (r *SQLRepository) CreateCustomer(ctx context.Context, customer domain.Customer) (domain.Customer, error) {
+	code := sql.NullString{String: customer.CustomerCode, Valid: customer.CustomerCode != ""}
+	if code.String == "" {
+		code = sql.NullString{Valid: false}
+	}
+	meta := customer.Meta
+	if meta == "" {
+		meta = "{}"
+	}
+	custType := customer.Type
+	if custType == "" {
+		custType = "individual"
+	}
+	status := customer.Status
+	if status == "" {
+		status = "active"
+	}
+	tenantID := customer.TenantID
+	if tenantID == "" {
+		tenantID = tenantIDFromCtx(ctx)
+		if tenantID == "" {
+			tenantID = "1"
+		}
+	}
 	created, err := r.Q(ctx).CreateCustomer(ctx, db.CreateCustomerParams{
-		ID:      string(customer.ID),
-		Name:    customer.Name,
-		Company: nullString(customer.Company),
-		Phone:   customer.Phone,
-		Email:   nullString(customer.Email),
-		Gst:     nullString(customer.GST),
-		Address: nullString(customer.Address),
-		Notes:   nullString(customer.Notes),
+		ID:               string(customer.ID),
+		CustomerCode:     code,
+		Name:             customer.Name,
+		Title:            nullString(customer.Title),
+		Company:          nullString(customer.Company),
+		ContactPerson:    nullString(customer.ContactPerson),
+		Phone:            customer.Phone,
+		Email:            nullString(customer.Email),
+		Gst:              nullString(customer.GST),
+		Address:          nullString(customer.Address),
+		BillingAddress:   nullString(customer.BillingAddress),
+		InternalID:       nullString(customer.InternalID),
+		PhotoUrl:         nullString(customer.PhotoURL),
+		PlaceUuid:        nullString(customer.PlaceUUID),
+		Meta:             meta,
+		Type:             custType,
+		Status:           status,
+		PaymentTermsDays: int64(customer.PaymentTermsDays),
+		TenantID:         tenantID,
+		StateCode:        nullString(customer.StateCode),
+		Notes:            nullString(customer.Notes),
 	})
 	if err != nil {
 		return domain.Customer{}, err
 	}
-	return toDomainCustomer(created), nil
+	return toDomainCustomerFromCreateRow(created), nil
 }
 
 func (r *SQLRepository) GetCustomerByID(ctx context.Context, id domain.CustomerID) (domain.Customer, error) {
@@ -33,7 +69,7 @@ func (r *SQLRepository) GetCustomerByID(ctx context.Context, id domain.CustomerI
 	if err != nil {
 		return domain.Customer{}, err
 	}
-	return toDomainCustomer(c), nil
+	return toDomainCustomerFromGetRow(c), nil
 }
 
 func (r *SQLRepository) GetCustomerByPhone(ctx context.Context, phone string) (domain.Customer, error) {
@@ -41,24 +77,56 @@ func (r *SQLRepository) GetCustomerByPhone(ctx context.Context, phone string) (d
 	if err != nil {
 		return domain.Customer{}, err
 	}
-	return toDomainCustomer(c), nil
+	return toDomainCustomerFromPhoneRow(c), nil
 }
 
 func (r *SQLRepository) UpdateCustomer(ctx context.Context, customer domain.Customer) (domain.Customer, error) {
+	meta := customer.Meta
+	if meta == "" {
+		meta = "{}"
+	}
+	custType := customer.Type
+	if custType == "" {
+		custType = "individual"
+	}
+	status := customer.Status
+	if status == "" {
+		status = "active"
+	}
+	tenantID := customer.TenantID
+	if tenantID == "" {
+		tenantID = tenantIDFromCtx(ctx)
+		if tenantID == "" {
+			tenantID = "1"
+		}
+	}
 	updated, err := r.Q(ctx).UpdateCustomer(ctx, db.UpdateCustomerParams{
-		Name:    customer.Name,
-		Company: nullString(customer.Company),
-		Phone:   customer.Phone,
-		Email:   nullString(customer.Email),
-		Gst:     nullString(customer.GST),
-		Address: nullString(customer.Address),
-		Notes:   nullString(customer.Notes),
-		ID:      string(customer.ID),
+		CustomerCode:     sql.NullString{String: customer.CustomerCode, Valid: customer.CustomerCode != ""},
+		Name:             customer.Name,
+		Title:            nullString(customer.Title),
+		Company:          nullString(customer.Company),
+		ContactPerson:    nullString(customer.ContactPerson),
+		Phone:            customer.Phone,
+		Email:            nullString(customer.Email),
+		Gst:              nullString(customer.GST),
+		Address:          nullString(customer.Address),
+		BillingAddress:   nullString(customer.BillingAddress),
+		InternalID:       nullString(customer.InternalID),
+		PhotoUrl:         nullString(customer.PhotoURL),
+		PlaceUuid:        nullString(customer.PlaceUUID),
+		Meta:             meta,
+		Type:             custType,
+		Status:           status,
+		PaymentTermsDays: int64(customer.PaymentTermsDays),
+		TenantID:         tenantID,
+		StateCode:        nullString(customer.StateCode),
+		Notes:            nullString(customer.Notes),
+		ID:               string(customer.ID),
 	})
 	if err != nil {
 		return domain.Customer{}, err
 	}
-	return toDomainCustomer(updated), nil
+	return toDomainCustomerFromUpdateRow(updated), nil
 }
 
 func (r *SQLRepository) DeleteCustomer(ctx context.Context, id domain.CustomerID) error {
@@ -71,6 +139,9 @@ func (r *SQLRepository) SearchCustomers(ctx context.Context, query string, limit
 		Column2: sql.NullString{String: query, Valid: true},
 		Column3: sql.NullString{String: query, Valid: true},
 		Column4: sql.NullString{String: query, Valid: true},
+		Column5: sql.NullString{String: query, Valid: true},
+		Column6: sql.NullString{String: query, Valid: true},
+		Column7: sql.NullString{String: query, Valid: true},
 		Limit:   int64(limit),
 		Offset:  int64(offset),
 	})
@@ -79,7 +150,7 @@ func (r *SQLRepository) SearchCustomers(ctx context.Context, query string, limit
 	}
 	result := make([]domain.Customer, len(rows))
 	for i, c := range rows {
-		result[i] = toDomainCustomer(c)
+		result[i] = toDomainCustomerFromSearchRow(c)
 	}
 	return result, nil
 }
@@ -90,6 +161,9 @@ func (r *SQLRepository) CountCustomers(ctx context.Context, query string) (int64
 		Column2: sql.NullString{String: query, Valid: true},
 		Column3: sql.NullString{String: query, Valid: true},
 		Column4: sql.NullString{String: query, Valid: true},
+		Column5: sql.NullString{String: query, Valid: true},
+		Column6: sql.NullString{String: query, Valid: true},
+		Column7: sql.NullString{String: query, Valid: true},
 	})
 	if err != nil {
 		return 0, err

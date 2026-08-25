@@ -73,7 +73,9 @@ Single source of truth for `db/migrations/` version numbers. Repo head is
 | 00097 | money_ledger — append-only txn ledger (payment_recorded hook live) | Invoice/txn system wave 1 |
 | 00098 | credit_debit_notes + note_sequences — GST post-issuance corrections | Invoice/txn system wave 2 |
 | 00099 | invoices.irn_cancelled_at — IRN 24h cancel window | Spec 07 continuation |
-| 00100+ | future specs | reserved |
+| 00100 | customers Fleetbase parity (customer_code, title, contact_person, internal_id, photo_url, place_uuid, meta, billing_address, type, status, payment_terms_days, tenant_id) | Fleetbase Contacts/Customers gap |
+| 00101 | customers state_code from GSTIN (e-invoice place_of_supply) + index | GST state split |
+| 00102+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

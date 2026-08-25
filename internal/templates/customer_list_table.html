@@ -2,11 +2,11 @@
     <table class="min-w-full divide-y divide-border-subtle">
         <thead class="bg-surface-container-low">
             <tr>
-                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Customer Name</th>
-                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Company</th>
-                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Phone</th>
-                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Email</th>
-                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">GST Number</th>
+                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Customer</th>
+                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Type</th>
+                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Contact</th>
+                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Company · GST</th>
+                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
                 <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
             </tr>
         </thead>
@@ -14,11 +14,43 @@
             {{if .Customers}}
             {{range .Customers}}
             <tr class="hover:bg-surface-container-low/50 transition-colors group">
-                <td class="px-3 py-2 text-sm font-bold text-on-surface">{{.Name}}</td>
-                <td class="px-3 py-2 text-sm text-secondary">{{nullString .Company}}</td>
-                <td class="px-3 py-2 whitespace-nowrap text-sm font-semibold text-primary tabular-nums" data-numeric>{{.Phone}}</td>
-                <td class="px-3 py-2 text-sm text-secondary">{{nullString .Email}}</td>
-                <td class="px-3 py-2 whitespace-nowrap text-xs font-mono uppercase text-secondary">{{nullString .GST}}</td>
+                <td class="px-3 py-2">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        {{if .PhotoURL}}<img src="{{.PhotoURL}}" alt="" class="w-7 h-7 rounded-full object-cover border border-border-subtle shrink-0">{{else}}<span class="w-7 h-7 rounded-full bg-primary/10 border border-primary/15 grid place-items-center text-[11px] font-black text-primary shrink-0">{{slice .Name 0 1}}</span>{{end}}
+                        <div class="min-w-0">
+                            <div class="text-sm font-bold text-on-surface leading-none truncate flex items-center gap-1.5">
+                                {{if .Title}}<span class="text-xs font-semibold text-text-muted">{{nullString .Title}}</span>{{end}}
+                                <span class="truncate">{{.Name}}</span>
+                            </div>
+                            <div class="text-xs font-mono tabular-nums text-text-muted flex items-center gap-1.5 mt-0.5">
+                                <span class="truncate">{{.CustomerCode}}</span>
+                                {{if .InternalID}}<span class="hidden sm:inline opacity-50">·</span><span class="hidden sm:inline truncate">{{nullString .InternalID}}</span>{{end}}
+                            </div>
+                        </div>
+                    </div>
+                </td>
+                <td class="px-3 py-2">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border
+                        {{if eq .Type "supplier"}} bg-amber-50 text-amber-700 border-amber-200
+                        {{else if eq .Type "facilitator"}} bg-violet-50 text-violet-700 border-violet-200
+                        {{else if eq .Type "contact"}} bg-slate-50 text-slate-700 border-slate-200
+                        {{else}} bg-sky-50 text-sky-700 border-sky-200{{end}}">
+                        {{.Type}}
+                    </span>
+                    {{if .ContactPerson}}<div class="text-xs text-secondary mt-1 truncate">{{nullString .ContactPerson}}</div>{{end}}
+                </td>
+                <td class="px-3 py-2 min-w-0">
+                    <div class="text-sm font-semibold text-primary tabular-nums whitespace-nowrap" data-numeric>{{.Phone}}</div>
+                    <div class="text-xs text-secondary truncate">{{nullString .Email}}</div>
+                </td>
+                <td class="px-3 py-2 min-w-0">
+                    <div class="text-sm text-secondary truncate">{{nullString .Company}}</div>
+                    <div class="text-xs font-mono uppercase text-text-muted truncate">{{nullString .GST}}</div>
+                </td>
+                <td class="px-3 py-2 whitespace-nowrap">
+                    <span class="status-badge {{statusBadge .Status}}">{{.Status}}</span>
+                    {{if .PaymentTermsDays}}<div class="text-xs tabular-nums text-text-muted mt-1">Net {{.PaymentTermsDays}}</div>{{end}}
+                </td>
                 <td class="px-3 py-2 text-right">
                     <div class="flex items-center justify-end gap-1.5">
                         <a href="/customers/{{.ID}}" class="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/10 border border-primary/15 text-[11px] font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors">View</a>
@@ -30,7 +62,7 @@
             {{else}}
             <tr>
                 <td colspan="6" class="p-0">
-                    {{template "empty_state.html" (dict "Icon" "group" "Title" "No customers found" "Message" "No customers match the search criteria." "ActionHref" "/customers/new" "ActionIcon" "add" "ActionLabel" "New Customer")}}
+                    {{template "empty_state.html" (dict "Icon" "group" "Title" "No customers found" "Message" "No customers match the search — try code, name, phone, email or contact person." "ActionHref" "/customers/new" "ActionIcon" "add" "ActionLabel" "New Customer")}}
                 </td>
             </tr>
             {{end}}

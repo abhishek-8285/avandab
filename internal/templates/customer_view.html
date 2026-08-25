@@ -2,23 +2,34 @@
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
     <div class="lg:col-span-2 space-y-4">
-        <!-- Hero identity band -->
+        <!-- Hero -->
         <div class="relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 sm:p-6">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-violet-500 to-cyan-400 opacity-90"></div>
-            <div class="flex justify-between items-start gap-4 flex-wrap">
-                <div class="min-w-0">
-                    <h1 class="text-xl sm:text-2xl font-black tracking-tight text-on-surface font-display">{{.Customer.Name}}</h1>
+            <div class="flex gap-4">
+                {{if .Customer.PhotoURL}}<img src="{{nullString .Customer.PhotoURL}}" alt="" class="w-14 h-14 rounded-2xl object-cover border border-border-subtle shrink-0 hidden sm:block">{{else}}<div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-violet-600 grid place-items-center text-white font-black text-lg shrink-0 hidden sm:flex">{{slice .Customer.Name 0 1}}</div>{{end}}
+                <div class="min-w-0 flex-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h1 class="text-xl sm:text-2xl font-black tracking-tight text-on-surface font-display">{{if .Customer.Title}}<span class="text-sm font-semibold text-text-muted align-middle">{{nullString .Customer.Title}} </span>{{end}}{{.Customer.Name}}</h1>
+                        <span class="status-badge {{statusBadge .Customer.Status}} shrink-0">{{.Customer.Status}}</span>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border
+                            {{if eq .Customer.Type "supplier"}} bg-amber-50 text-amber-700 border-amber-200
+                            {{else if eq .Customer.Type "facilitator"}} bg-violet-50 text-violet-700 border-violet-200
+                            {{else if eq .Customer.Type "contact"}} bg-slate-50 text-slate-700 border-slate-200
+                            {{else}} bg-sky-50 text-sky-700 border-sky-200{{end}}">{{.Customer.Type}}</span>
+                    </div>
                     <p class="text-sm text-text-muted mt-1.5 flex flex-wrap items-center gap-2">
-                        {{if .Customer.Company}}<span class="font-medium text-secondary">{{.Customer.Company}}</span><span>·</span>{{end}}
-                        <span class="tabular-nums">Customer since {{datetime .Customer.CreatedAt}}</span>
+                        {{if .Customer.Company}}<span class="font-medium text-secondary">{{nullString .Customer.Company}}</span><span>·</span>{{end}}
+                        <span class="tabular-nums">Since {{datetime .Customer.CreatedAt}}</span>
+                        {{if .Customer.CustomerCode}}<span>·</span><span class="font-mono tabular-nums text-primary font-semibold">{{.Customer.CustomerCode}}</span>{{end}}
                     </p>
+                    {{if and .Customer.InternalID (ne (nullString .Customer.InternalID) .Customer.CustomerCode)}}<p class="text-xs font-mono tabular-nums text-text-muted mt-1">Ref: {{nullString .Customer.InternalID}}</p>{{end}}
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="hidden sm:flex items-center gap-2 shrink-0 self-start">
                     {{template "btn.html" (dict "Label" "Edit" "Href" (printf "/customers/%s/edit" .Customer.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit")}}
                 </div>
             </div>
 
-            <dl class="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-5 pt-5 border-t border-border-subtle">
+            <dl class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5 pt-5 border-t border-border-subtle">
                 <div class="rounded-xl bg-surface-container-low p-3">
                     <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Phone</dt>
                     <dd class="text-sm font-bold text-primary font-mono tabular-nums mt-1" data-numeric>{{.Customer.Phone}}</dd>
@@ -27,31 +38,60 @@
                     <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Email</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1 break-all">{{nullString .Customer.Email}}</dd>
                 </div>
-                <div class="rounded-xl bg-surface-container-low p-3 col-span-2 lg:col-span-1">
+                <div class="rounded-xl bg-surface-container-low p-3">
                     <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">GST</dt>
                     <dd class="text-sm font-semibold text-on-surface font-mono uppercase tabular-nums mt-1 break-all" data-numeric>{{nullString .Customer.GST}}</dd>
+                </div>
+                <div class="rounded-xl bg-surface-container-low p-3">
+                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Terms</dt>
+                    <dd class="text-sm font-bold text-on-surface tabular-nums mt-1">{{if .Customer.PaymentTermsDays}}Net {{.Customer.PaymentTermsDays}}{{else}}Due now{{end}}</dd>
                 </div>
             </dl>
         </div>
 
-        <!-- Details -->
+        <!-- Identity & Contact -->
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
-            <div class="px-5 py-3 border-b border-border-subtle">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between">
                 <h3 class="text-sm font-bold text-on-surface">Account Details</h3>
+                <span class="text-xs font-mono tabular-nums text-text-muted">{{.Customer.CustomerCode}}</span>
             </div>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 p-5">
                 <div class="border-b border-border-subtle pb-2">
                     <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Contact Person</dt>
-                    <dd class="text-sm font-semibold text-on-surface mt-1">{{.Customer.Name}}</dd>
+                    <dd class="text-sm font-semibold text-on-surface mt-1">{{if .Customer.ContactPerson}}{{nullString .Customer.ContactPerson}}{{else}}—{{end}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
                     <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Company</dt>
-                    <dd class="text-sm font-semibold text-on-surface mt-1">{{nullString .Customer.Company}}</dd>
+                    <dd class="text-sm font-semibold text-on-surface mt-1">{{if .Customer.Company}}{{nullString .Customer.Company}}{{else}}—{{end}}</dd>
                 </div>
-                <div class="sm:col-span-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Billing / Delivery Address</dt>
-                    <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed">{{nullString .Customer.Address}}</dd>
+                <div class="border-b border-border-subtle pb-2">
+                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Internal ID (ERP)</dt>
+                    <dd class="text-sm font-mono tabular-nums text-on-surface mt-1">{{if .Customer.InternalID}}{{nullString .Customer.InternalID}}{{else}}—{{end}}</dd>
                 </div>
+                <div class="border-b border-border-subtle pb-2">
+                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Title</dt>
+                    <dd class="text-sm font-semibold text-on-surface mt-1">{{if .Customer.Title}}{{nullString .Customer.Title}}{{else}}—{{end}}</dd>
+                </div>
+                <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Delivery / Primary Address</dt>
+                        <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed whitespace-pre-wrap">{{if .Customer.Address}}{{nullString .Customer.Address}}{{else}}—{{end}}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Billing Address</dt>
+                        <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed whitespace-pre-wrap">{{if .Customer.BillingAddress}}{{nullString .Customer.BillingAddress}}{{else}}<span class="text-text-muted">Same as delivery</span>{{end}}</dd>
+                    </div>
+                </div>
+                {{if .Customer.Notes}}<div class="sm:col-span-2 pt-2 border-t border-border-subtle">
+                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Notes</dt>
+                    <dd class="text-sm text-secondary mt-1 leading-relaxed whitespace-pre-wrap">{{nullString .Customer.Notes}}</dd>
+                </div>{{end}}
+                {{if and .Customer.Meta (ne .Customer.Meta "{}")}}<div class="sm:col-span-2">
+                    <details class="rounded-lg border border-border-subtle bg-surface-container-low/50 px-3 py-2">
+                        <summary class="text-xs font-bold text-secondary cursor-pointer">Additional data</summary>
+                        <pre class="text-xs font-mono text-on-surface mt-2 whitespace-pre-wrap break-all">{{.Customer.Meta}}</pre>
+                    </details>
+                </div>{{end}}
             </dl>
         </section>
 
@@ -62,7 +102,7 @@
                     <h3 class="text-sm font-bold text-on-surface">Recent Bookings</h3>
                     {{if .RecentBookings}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .RecentBookings}}</span>{{end}}
                 </div>
-                <a href="/bookings/new" class="text-xs font-semibold text-primary hover:underline text-decoration-none">New booking →</a>
+                <a href="/bookings/new?customer_id={{.Customer.ID}}" class="text-xs font-semibold text-primary hover:underline text-decoration-none">New booking →</a>
             </div>
             {{if .RecentBookings}}
             <div class="divide-y divide-border-subtle px-5 py-1">
@@ -80,7 +120,7 @@
                 {{end}}
             </div>
             {{else}}
-            <p class="p-5 text-sm text-text-muted">No bookings for this customer yet.</p>
+            <p class="p-5 text-sm text-text-muted">No bookings for this customer yet. <a href="/bookings/new?customer_id={{.Customer.ID}}" class="text-primary hover:underline">Create one</a>.</p>
             {{end}}
         </section>
     </div>
@@ -96,6 +136,9 @@
             </div>
             <div class="p-4 flex flex-col gap-2 items-stretch">
                 {{template "btn.html" (dict "Label" "Edit Customer" "Href" (printf "/customers/%s/edit" .Customer.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-border-subtle focus:ring-offset-2 w-full")}}
+                <form method="post" action="/customers/{{.Customer.ID}}/delete" onsubmit="return confirm('Delete customer {{.Customer.Name}}? This cannot be undone.')">
+                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-full bg-white border border-red-200 text-red-700 text-sm font-semibold px-4 py-2 min-h-[44px] hover:bg-red-50 transition-colors">Delete Customer</button>
+                </form>
             </div>
         </div>
 
@@ -128,22 +171,14 @@
             <div class="px-5 py-3 border-b border-border-subtle">
                 <h2 class="flex items-center gap-2 text-sm font-bold text-on-surface">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                    Account
+                    At a Glance
                 </h2>
             </div>
             <dl class="p-4 space-y-3">
-                <div>
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Name</dt>
-                    <dd class="text-sm font-semibold text-on-surface mt-1">{{.Customer.Name}}</dd>
-                </div>
-                <div>
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Contact</dt>
-                    <dd class="text-sm font-mono font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{.Customer.Phone}}</dd>
-                </div>
-                <div>
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">On Record Since</dt>
-                    <dd class="text-sm text-on-surface mt-1 tabular-nums">{{datetime .Customer.CreatedAt}}</dd>
-                </div>
+                <div class="flex justify-between gap-3"><dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Code</dt><dd class="text-xs font-mono font-semibold tabular-nums">{{.Customer.CustomerCode}}</dd></div>
+                {{if and .Customer.InternalID (ne (nullString .Customer.InternalID) .Customer.CustomerCode)}}<div class="flex justify-between gap-3"><dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Reference</dt><dd class="text-xs font-mono tabular-nums">{{nullString .Customer.InternalID}}</dd></div>{{end}}
+                <div class="flex justify-between gap-3"><dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Since</dt><dd class="text-xs tabular-nums">{{datetime .Customer.CreatedAt}}</dd></div>
+                {{if .Customer.PhotoURL}}<div class="pt-2 border-t border-border-subtle"><img src="{{nullString .Customer.PhotoURL}}" alt="customer logo" class="w-full rounded-xl object-cover border border-border-subtle max-h-32"></div>{{end}}
             </dl>
         </div>
 

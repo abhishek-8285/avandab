@@ -8,12 +8,13 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const countCustomers = `-- name: CountCustomers :one
 SELECT COUNT(*) AS count
 FROM customers
-WHERE (name LIKE '%' || ? || '%' OR company LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%')
+WHERE (customer_code LIKE '%' || ? || '%' OR name LIKE '%' || ? || '%' OR company LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%' OR contact_person LIKE '%' || ? || '%' OR internal_id LIKE '%' || ? || '%')
 `
 
 type CountCustomersParams struct {
@@ -21,6 +22,9 @@ type CountCustomersParams struct {
 	Column2 sql.NullString `json:"column_2"`
 	Column3 sql.NullString `json:"column_3"`
 	Column4 sql.NullString `json:"column_4"`
+	Column5 sql.NullString `json:"column_5"`
+	Column6 sql.NullString `json:"column_6"`
+	Column7 sql.NullString `json:"column_7"`
 }
 
 func (q *Queries) CountCustomers(ctx context.Context, arg CountCustomersParams) (int64, error) {
@@ -29,6 +33,9 @@ func (q *Queries) CountCustomers(ctx context.Context, arg CountCustomersParams) 
 		arg.Column2,
 		arg.Column3,
 		arg.Column4,
+		arg.Column5,
+		arg.Column6,
+		arg.Column7,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -36,42 +43,107 @@ func (q *Queries) CountCustomers(ctx context.Context, arg CountCustomersParams) 
 }
 
 const createCustomer = `-- name: CreateCustomer :one
-INSERT INTO customers (id, name, company, phone, email, gst, address, notes)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, name, company, phone, email, gst, address, notes, created_at, updated_at
+INSERT INTO customers (id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes, created_at, updated_at
 `
 
 type CreateCustomerParams struct {
-	ID      string         `json:"id"`
-	Name    string         `json:"name"`
-	Company sql.NullString `json:"company"`
-	Phone   string         `json:"phone"`
-	Email   sql.NullString `json:"email"`
-	Gst     sql.NullString `json:"gst"`
-	Address sql.NullString `json:"address"`
-	Notes   sql.NullString `json:"notes"`
+	ID               string         `json:"id"`
+	CustomerCode     sql.NullString `json:"customer_code"`
+	Name             string         `json:"name"`
+	Title            sql.NullString `json:"title"`
+	Company          sql.NullString `json:"company"`
+	ContactPerson    sql.NullString `json:"contact_person"`
+	Phone            string         `json:"phone"`
+	Email            sql.NullString `json:"email"`
+	Gst              sql.NullString `json:"gst"`
+	Address          sql.NullString `json:"address"`
+	BillingAddress   sql.NullString `json:"billing_address"`
+	InternalID       sql.NullString `json:"internal_id"`
+	PhotoUrl         sql.NullString `json:"photo_url"`
+	PlaceUuid        sql.NullString `json:"place_uuid"`
+	Meta             string         `json:"meta"`
+	Type             string         `json:"type"`
+	Status           string         `json:"status"`
+	PaymentTermsDays int64          `json:"payment_terms_days"`
+	TenantID         string         `json:"tenant_id"`
+	StateCode        sql.NullString `json:"state_code"`
+	Notes            sql.NullString `json:"notes"`
 }
 
-func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) (Customer, error) {
+type CreateCustomerRow struct {
+	ID               string         `json:"id"`
+	CustomerCode     sql.NullString `json:"customer_code"`
+	Name             string         `json:"name"`
+	Title            sql.NullString `json:"title"`
+	Company          sql.NullString `json:"company"`
+	ContactPerson    sql.NullString `json:"contact_person"`
+	Phone            string         `json:"phone"`
+	Email            sql.NullString `json:"email"`
+	Gst              sql.NullString `json:"gst"`
+	Address          sql.NullString `json:"address"`
+	BillingAddress   sql.NullString `json:"billing_address"`
+	InternalID       sql.NullString `json:"internal_id"`
+	PhotoUrl         sql.NullString `json:"photo_url"`
+	PlaceUuid        sql.NullString `json:"place_uuid"`
+	Meta             string         `json:"meta"`
+	Type             string         `json:"type"`
+	Status           string         `json:"status"`
+	PaymentTermsDays int64          `json:"payment_terms_days"`
+	TenantID         string         `json:"tenant_id"`
+	StateCode        sql.NullString `json:"state_code"`
+	Notes            sql.NullString `json:"notes"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
+}
+
+func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) (CreateCustomerRow, error) {
 	row := q.db.QueryRowContext(ctx, createCustomer,
 		arg.ID,
+		arg.CustomerCode,
 		arg.Name,
+		arg.Title,
 		arg.Company,
+		arg.ContactPerson,
 		arg.Phone,
 		arg.Email,
 		arg.Gst,
 		arg.Address,
+		arg.BillingAddress,
+		arg.InternalID,
+		arg.PhotoUrl,
+		arg.PlaceUuid,
+		arg.Meta,
+		arg.Type,
+		arg.Status,
+		arg.PaymentTermsDays,
+		arg.TenantID,
+		arg.StateCode,
 		arg.Notes,
 	)
-	var i Customer
+	var i CreateCustomerRow
 	err := row.Scan(
 		&i.ID,
+		&i.CustomerCode,
 		&i.Name,
+		&i.Title,
 		&i.Company,
+		&i.ContactPerson,
 		&i.Phone,
 		&i.Email,
 		&i.Gst,
 		&i.Address,
+		&i.BillingAddress,
+		&i.InternalID,
+		&i.PhotoUrl,
+		&i.PlaceUuid,
+		&i.Meta,
+		&i.Type,
+		&i.Status,
+		&i.PaymentTermsDays,
+		&i.TenantID,
+		&i.StateCode,
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -88,22 +160,123 @@ func (q *Queries) DeleteCustomer(ctx context.Context, id string) error {
 	return err
 }
 
-const getCustomerByID = `-- name: GetCustomerByID :one
-SELECT id, name, company, phone, email, gst, address, notes, created_at, updated_at
-FROM customers WHERE id = ?
+const getCustomerByCode = `-- name: GetCustomerByCode :one
+SELECT id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes, created_at, updated_at
+FROM customers WHERE customer_code = ? LIMIT 1
 `
 
-func (q *Queries) GetCustomerByID(ctx context.Context, id string) (Customer, error) {
-	row := q.db.QueryRowContext(ctx, getCustomerByID, id)
-	var i Customer
+type GetCustomerByCodeRow struct {
+	ID               string         `json:"id"`
+	CustomerCode     sql.NullString `json:"customer_code"`
+	Name             string         `json:"name"`
+	Title            sql.NullString `json:"title"`
+	Company          sql.NullString `json:"company"`
+	ContactPerson    sql.NullString `json:"contact_person"`
+	Phone            string         `json:"phone"`
+	Email            sql.NullString `json:"email"`
+	Gst              sql.NullString `json:"gst"`
+	Address          sql.NullString `json:"address"`
+	BillingAddress   sql.NullString `json:"billing_address"`
+	InternalID       sql.NullString `json:"internal_id"`
+	PhotoUrl         sql.NullString `json:"photo_url"`
+	PlaceUuid        sql.NullString `json:"place_uuid"`
+	Meta             string         `json:"meta"`
+	Type             string         `json:"type"`
+	Status           string         `json:"status"`
+	PaymentTermsDays int64          `json:"payment_terms_days"`
+	TenantID         string         `json:"tenant_id"`
+	StateCode        sql.NullString `json:"state_code"`
+	Notes            sql.NullString `json:"notes"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
+}
+
+func (q *Queries) GetCustomerByCode(ctx context.Context, customerCode sql.NullString) (GetCustomerByCodeRow, error) {
+	row := q.db.QueryRowContext(ctx, getCustomerByCode, customerCode)
+	var i GetCustomerByCodeRow
 	err := row.Scan(
 		&i.ID,
+		&i.CustomerCode,
 		&i.Name,
+		&i.Title,
 		&i.Company,
+		&i.ContactPerson,
 		&i.Phone,
 		&i.Email,
 		&i.Gst,
 		&i.Address,
+		&i.BillingAddress,
+		&i.InternalID,
+		&i.PhotoUrl,
+		&i.PlaceUuid,
+		&i.Meta,
+		&i.Type,
+		&i.Status,
+		&i.PaymentTermsDays,
+		&i.TenantID,
+		&i.StateCode,
+		&i.Notes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getCustomerByID = `-- name: GetCustomerByID :one
+SELECT id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes, created_at, updated_at
+FROM customers WHERE id = ?
+`
+
+type GetCustomerByIDRow struct {
+	ID               string         `json:"id"`
+	CustomerCode     sql.NullString `json:"customer_code"`
+	Name             string         `json:"name"`
+	Title            sql.NullString `json:"title"`
+	Company          sql.NullString `json:"company"`
+	ContactPerson    sql.NullString `json:"contact_person"`
+	Phone            string         `json:"phone"`
+	Email            sql.NullString `json:"email"`
+	Gst              sql.NullString `json:"gst"`
+	Address          sql.NullString `json:"address"`
+	BillingAddress   sql.NullString `json:"billing_address"`
+	InternalID       sql.NullString `json:"internal_id"`
+	PhotoUrl         sql.NullString `json:"photo_url"`
+	PlaceUuid        sql.NullString `json:"place_uuid"`
+	Meta             string         `json:"meta"`
+	Type             string         `json:"type"`
+	Status           string         `json:"status"`
+	PaymentTermsDays int64          `json:"payment_terms_days"`
+	TenantID         string         `json:"tenant_id"`
+	StateCode        sql.NullString `json:"state_code"`
+	Notes            sql.NullString `json:"notes"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
+}
+
+func (q *Queries) GetCustomerByID(ctx context.Context, id string) (GetCustomerByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getCustomerByID, id)
+	var i GetCustomerByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerCode,
+		&i.Name,
+		&i.Title,
+		&i.Company,
+		&i.ContactPerson,
+		&i.Phone,
+		&i.Email,
+		&i.Gst,
+		&i.Address,
+		&i.BillingAddress,
+		&i.InternalID,
+		&i.PhotoUrl,
+		&i.PlaceUuid,
+		&i.Meta,
+		&i.Type,
+		&i.Status,
+		&i.PaymentTermsDays,
+		&i.TenantID,
+		&i.StateCode,
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -112,21 +285,60 @@ func (q *Queries) GetCustomerByID(ctx context.Context, id string) (Customer, err
 }
 
 const getCustomerByPhone = `-- name: GetCustomerByPhone :one
-SELECT id, name, company, phone, email, gst, address, notes, created_at, updated_at
-FROM customers WHERE phone = ?
+SELECT id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes, created_at, updated_at
+FROM customers WHERE phone = ? LIMIT 1
 `
 
-func (q *Queries) GetCustomerByPhone(ctx context.Context, phone string) (Customer, error) {
+type GetCustomerByPhoneRow struct {
+	ID               string         `json:"id"`
+	CustomerCode     sql.NullString `json:"customer_code"`
+	Name             string         `json:"name"`
+	Title            sql.NullString `json:"title"`
+	Company          sql.NullString `json:"company"`
+	ContactPerson    sql.NullString `json:"contact_person"`
+	Phone            string         `json:"phone"`
+	Email            sql.NullString `json:"email"`
+	Gst              sql.NullString `json:"gst"`
+	Address          sql.NullString `json:"address"`
+	BillingAddress   sql.NullString `json:"billing_address"`
+	InternalID       sql.NullString `json:"internal_id"`
+	PhotoUrl         sql.NullString `json:"photo_url"`
+	PlaceUuid        sql.NullString `json:"place_uuid"`
+	Meta             string         `json:"meta"`
+	Type             string         `json:"type"`
+	Status           string         `json:"status"`
+	PaymentTermsDays int64          `json:"payment_terms_days"`
+	TenantID         string         `json:"tenant_id"`
+	StateCode        sql.NullString `json:"state_code"`
+	Notes            sql.NullString `json:"notes"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
+}
+
+func (q *Queries) GetCustomerByPhone(ctx context.Context, phone string) (GetCustomerByPhoneRow, error) {
 	row := q.db.QueryRowContext(ctx, getCustomerByPhone, phone)
-	var i Customer
+	var i GetCustomerByPhoneRow
 	err := row.Scan(
 		&i.ID,
+		&i.CustomerCode,
 		&i.Name,
+		&i.Title,
 		&i.Company,
+		&i.ContactPerson,
 		&i.Phone,
 		&i.Email,
 		&i.Gst,
 		&i.Address,
+		&i.BillingAddress,
+		&i.InternalID,
+		&i.PhotoUrl,
+		&i.PlaceUuid,
+		&i.Meta,
+		&i.Type,
+		&i.Status,
+		&i.PaymentTermsDays,
+		&i.TenantID,
+		&i.StateCode,
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -135,9 +347,9 @@ func (q *Queries) GetCustomerByPhone(ctx context.Context, phone string) (Custome
 }
 
 const searchCustomers = `-- name: SearchCustomers :many
-SELECT id, name, company, phone, email, gst, address, notes, created_at, updated_at
+SELECT id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes, created_at, updated_at
 FROM customers
-WHERE (name LIKE '%' || ? || '%' OR company LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%')
+WHERE (customer_code LIKE '%' || ? || '%' OR name LIKE '%' || ? || '%' OR company LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%' OR contact_person LIKE '%' || ? || '%' OR internal_id LIKE '%' || ? || '%')
 ORDER BY created_at DESC
 LIMIT ? OFFSET ?
 `
@@ -147,16 +359,48 @@ type SearchCustomersParams struct {
 	Column2 sql.NullString `json:"column_2"`
 	Column3 sql.NullString `json:"column_3"`
 	Column4 sql.NullString `json:"column_4"`
+	Column5 sql.NullString `json:"column_5"`
+	Column6 sql.NullString `json:"column_6"`
+	Column7 sql.NullString `json:"column_7"`
 	Limit   int64          `json:"limit"`
 	Offset  int64          `json:"offset"`
 }
 
-func (q *Queries) SearchCustomers(ctx context.Context, arg SearchCustomersParams) ([]Customer, error) {
+type SearchCustomersRow struct {
+	ID               string         `json:"id"`
+	CustomerCode     sql.NullString `json:"customer_code"`
+	Name             string         `json:"name"`
+	Title            sql.NullString `json:"title"`
+	Company          sql.NullString `json:"company"`
+	ContactPerson    sql.NullString `json:"contact_person"`
+	Phone            string         `json:"phone"`
+	Email            sql.NullString `json:"email"`
+	Gst              sql.NullString `json:"gst"`
+	Address          sql.NullString `json:"address"`
+	BillingAddress   sql.NullString `json:"billing_address"`
+	InternalID       sql.NullString `json:"internal_id"`
+	PhotoUrl         sql.NullString `json:"photo_url"`
+	PlaceUuid        sql.NullString `json:"place_uuid"`
+	Meta             string         `json:"meta"`
+	Type             string         `json:"type"`
+	Status           string         `json:"status"`
+	PaymentTermsDays int64          `json:"payment_terms_days"`
+	TenantID         string         `json:"tenant_id"`
+	StateCode        sql.NullString `json:"state_code"`
+	Notes            sql.NullString `json:"notes"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
+}
+
+func (q *Queries) SearchCustomers(ctx context.Context, arg SearchCustomersParams) ([]SearchCustomersRow, error) {
 	rows, err := q.db.QueryContext(ctx, searchCustomers,
 		arg.Column1,
 		arg.Column2,
 		arg.Column3,
 		arg.Column4,
+		arg.Column5,
+		arg.Column6,
+		arg.Column7,
 		arg.Limit,
 		arg.Offset,
 	)
@@ -164,17 +408,30 @@ func (q *Queries) SearchCustomers(ctx context.Context, arg SearchCustomersParams
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Customer
+	var items []SearchCustomersRow
 	for rows.Next() {
-		var i Customer
+		var i SearchCustomersRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.CustomerCode,
 			&i.Name,
+			&i.Title,
 			&i.Company,
+			&i.ContactPerson,
 			&i.Phone,
 			&i.Email,
 			&i.Gst,
 			&i.Address,
+			&i.BillingAddress,
+			&i.InternalID,
+			&i.PhotoUrl,
+			&i.PlaceUuid,
+			&i.Meta,
+			&i.Type,
+			&i.Status,
+			&i.PaymentTermsDays,
+			&i.TenantID,
+			&i.StateCode,
 			&i.Notes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -194,43 +451,108 @@ func (q *Queries) SearchCustomers(ctx context.Context, arg SearchCustomersParams
 
 const updateCustomer = `-- name: UpdateCustomer :one
 UPDATE customers
-SET name = ?, company = ?, phone = ?, email = ?, gst = ?, address = ?, notes = ?,
+SET customer_code = ?, name = ?, title = ?, company = ?, contact_person = ?, phone = ?, email = ?, gst = ?, address = ?, billing_address = ?, internal_id = ?, photo_url = ?, place_uuid = ?, meta = ?, type = ?, status = ?, payment_terms_days = ?, tenant_id = ?, state_code = ?, notes = ?,
     updated_at = datetime('now')
 WHERE id = ?
-RETURNING id, name, company, phone, email, gst, address, notes, created_at, updated_at
+RETURNING id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes, created_at, updated_at
 `
 
 type UpdateCustomerParams struct {
-	Name    string         `json:"name"`
-	Company sql.NullString `json:"company"`
-	Phone   string         `json:"phone"`
-	Email   sql.NullString `json:"email"`
-	Gst     sql.NullString `json:"gst"`
-	Address sql.NullString `json:"address"`
-	Notes   sql.NullString `json:"notes"`
-	ID      string         `json:"id"`
+	CustomerCode     sql.NullString `json:"customer_code"`
+	Name             string         `json:"name"`
+	Title            sql.NullString `json:"title"`
+	Company          sql.NullString `json:"company"`
+	ContactPerson    sql.NullString `json:"contact_person"`
+	Phone            string         `json:"phone"`
+	Email            sql.NullString `json:"email"`
+	Gst              sql.NullString `json:"gst"`
+	Address          sql.NullString `json:"address"`
+	BillingAddress   sql.NullString `json:"billing_address"`
+	InternalID       sql.NullString `json:"internal_id"`
+	PhotoUrl         sql.NullString `json:"photo_url"`
+	PlaceUuid        sql.NullString `json:"place_uuid"`
+	Meta             string         `json:"meta"`
+	Type             string         `json:"type"`
+	Status           string         `json:"status"`
+	PaymentTermsDays int64          `json:"payment_terms_days"`
+	TenantID         string         `json:"tenant_id"`
+	StateCode        sql.NullString `json:"state_code"`
+	Notes            sql.NullString `json:"notes"`
+	ID               string         `json:"id"`
 }
 
-func (q *Queries) UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) (Customer, error) {
+type UpdateCustomerRow struct {
+	ID               string         `json:"id"`
+	CustomerCode     sql.NullString `json:"customer_code"`
+	Name             string         `json:"name"`
+	Title            sql.NullString `json:"title"`
+	Company          sql.NullString `json:"company"`
+	ContactPerson    sql.NullString `json:"contact_person"`
+	Phone            string         `json:"phone"`
+	Email            sql.NullString `json:"email"`
+	Gst              sql.NullString `json:"gst"`
+	Address          sql.NullString `json:"address"`
+	BillingAddress   sql.NullString `json:"billing_address"`
+	InternalID       sql.NullString `json:"internal_id"`
+	PhotoUrl         sql.NullString `json:"photo_url"`
+	PlaceUuid        sql.NullString `json:"place_uuid"`
+	Meta             string         `json:"meta"`
+	Type             string         `json:"type"`
+	Status           string         `json:"status"`
+	PaymentTermsDays int64          `json:"payment_terms_days"`
+	TenantID         string         `json:"tenant_id"`
+	StateCode        sql.NullString `json:"state_code"`
+	Notes            sql.NullString `json:"notes"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
+}
+
+func (q *Queries) UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) (UpdateCustomerRow, error) {
 	row := q.db.QueryRowContext(ctx, updateCustomer,
+		arg.CustomerCode,
 		arg.Name,
+		arg.Title,
 		arg.Company,
+		arg.ContactPerson,
 		arg.Phone,
 		arg.Email,
 		arg.Gst,
 		arg.Address,
+		arg.BillingAddress,
+		arg.InternalID,
+		arg.PhotoUrl,
+		arg.PlaceUuid,
+		arg.Meta,
+		arg.Type,
+		arg.Status,
+		arg.PaymentTermsDays,
+		arg.TenantID,
+		arg.StateCode,
 		arg.Notes,
 		arg.ID,
 	)
-	var i Customer
+	var i UpdateCustomerRow
 	err := row.Scan(
 		&i.ID,
+		&i.CustomerCode,
 		&i.Name,
+		&i.Title,
 		&i.Company,
+		&i.ContactPerson,
 		&i.Phone,
 		&i.Email,
 		&i.Gst,
 		&i.Address,
+		&i.BillingAddress,
+		&i.InternalID,
+		&i.PhotoUrl,
+		&i.PlaceUuid,
+		&i.Meta,
+		&i.Type,
+		&i.Status,
+		&i.PaymentTermsDays,
+		&i.TenantID,
+		&i.StateCode,
 		&i.Notes,
 		&i.CreatedAt,
 		&i.UpdatedAt,
