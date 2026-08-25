@@ -63,7 +63,7 @@ func TestSQLiteRepo_VehicleCRUD(t *testing.T) {
 func TestSQLiteRepo_CustomerCRUD(t *testing.T) {
 	db := NewTestDB(t)
 	repo := NewTestRepo(t, db)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(context.Background())
 
 	customer := domain.Customer{
 		Name:  "Test Customer",

@@ -14,28 +14,30 @@ import (
 const countCustomers = `-- name: CountCustomers :one
 SELECT COUNT(*) AS count
 FROM customers
-WHERE (customer_code LIKE '%' || ? || '%' OR name LIKE '%' || ? || '%' OR company LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%' OR contact_person LIKE '%' || ? || '%' OR internal_id LIKE '%' || ? || '%')
+WHERE tenant_id = ? AND (customer_code LIKE '%' || ? || '%' OR name LIKE '%' || ? || '%' OR company LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%' OR contact_person LIKE '%' || ? || '%' OR internal_id LIKE '%' || ? || '%')
 `
 
 type CountCustomersParams struct {
-	Column1 sql.NullString `json:"column_1"`
-	Column2 sql.NullString `json:"column_2"`
-	Column3 sql.NullString `json:"column_3"`
-	Column4 sql.NullString `json:"column_4"`
-	Column5 sql.NullString `json:"column_5"`
-	Column6 sql.NullString `json:"column_6"`
-	Column7 sql.NullString `json:"column_7"`
+	TenantID string         `json:"tenant_id"`
+	Column2  sql.NullString `json:"column_2"`
+	Column3  sql.NullString `json:"column_3"`
+	Column4  sql.NullString `json:"column_4"`
+	Column5  sql.NullString `json:"column_5"`
+	Column6  sql.NullString `json:"column_6"`
+	Column7  sql.NullString `json:"column_7"`
+	Column8  sql.NullString `json:"column_8"`
 }
 
 func (q *Queries) CountCustomers(ctx context.Context, arg CountCustomersParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, countCustomers,
-		arg.Column1,
+		arg.TenantID,
 		arg.Column2,
 		arg.Column3,
 		arg.Column4,
 		arg.Column5,
 		arg.Column6,
 		arg.Column7,
+		arg.Column8,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -152,18 +154,28 @@ func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) 
 }
 
 const deleteCustomer = `-- name: DeleteCustomer :exec
-DELETE FROM customers WHERE id = ?
+DELETE FROM customers WHERE id = ? AND tenant_id = ?
 `
 
-func (q *Queries) DeleteCustomer(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, deleteCustomer, id)
+type DeleteCustomerParams struct {
+	ID       string `json:"id"`
+	TenantID string `json:"tenant_id"`
+}
+
+func (q *Queries) DeleteCustomer(ctx context.Context, arg DeleteCustomerParams) error {
+	_, err := q.db.ExecContext(ctx, deleteCustomer, arg.ID, arg.TenantID)
 	return err
 }
 
 const getCustomerByCode = `-- name: GetCustomerByCode :one
 SELECT id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes, created_at, updated_at
-FROM customers WHERE customer_code = ? LIMIT 1
+FROM customers WHERE customer_code = ? AND tenant_id = ? LIMIT 1
 `
+
+type GetCustomerByCodeParams struct {
+	CustomerCode sql.NullString `json:"customer_code"`
+	TenantID     string         `json:"tenant_id"`
+}
 
 type GetCustomerByCodeRow struct {
 	ID               string         `json:"id"`
@@ -191,8 +203,8 @@ type GetCustomerByCodeRow struct {
 	UpdatedAt        time.Time      `json:"updated_at"`
 }
 
-func (q *Queries) GetCustomerByCode(ctx context.Context, customerCode sql.NullString) (GetCustomerByCodeRow, error) {
-	row := q.db.QueryRowContext(ctx, getCustomerByCode, customerCode)
+func (q *Queries) GetCustomerByCode(ctx context.Context, arg GetCustomerByCodeParams) (GetCustomerByCodeRow, error) {
+	row := q.db.QueryRowContext(ctx, getCustomerByCode, arg.CustomerCode, arg.TenantID)
 	var i GetCustomerByCodeRow
 	err := row.Scan(
 		&i.ID,
@@ -224,8 +236,13 @@ func (q *Queries) GetCustomerByCode(ctx context.Context, customerCode sql.NullSt
 
 const getCustomerByID = `-- name: GetCustomerByID :one
 SELECT id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes, created_at, updated_at
-FROM customers WHERE id = ?
+FROM customers WHERE id = ? AND tenant_id = ?
 `
+
+type GetCustomerByIDParams struct {
+	ID       string `json:"id"`
+	TenantID string `json:"tenant_id"`
+}
 
 type GetCustomerByIDRow struct {
 	ID               string         `json:"id"`
@@ -253,8 +270,8 @@ type GetCustomerByIDRow struct {
 	UpdatedAt        time.Time      `json:"updated_at"`
 }
 
-func (q *Queries) GetCustomerByID(ctx context.Context, id string) (GetCustomerByIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getCustomerByID, id)
+func (q *Queries) GetCustomerByID(ctx context.Context, arg GetCustomerByIDParams) (GetCustomerByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getCustomerByID, arg.ID, arg.TenantID)
 	var i GetCustomerByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -286,8 +303,13 @@ func (q *Queries) GetCustomerByID(ctx context.Context, id string) (GetCustomerBy
 
 const getCustomerByPhone = `-- name: GetCustomerByPhone :one
 SELECT id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes, created_at, updated_at
-FROM customers WHERE phone = ? LIMIT 1
+FROM customers WHERE phone = ? AND tenant_id = ? LIMIT 1
 `
+
+type GetCustomerByPhoneParams struct {
+	Phone    string `json:"phone"`
+	TenantID string `json:"tenant_id"`
+}
 
 type GetCustomerByPhoneRow struct {
 	ID               string         `json:"id"`
@@ -315,8 +337,8 @@ type GetCustomerByPhoneRow struct {
 	UpdatedAt        time.Time      `json:"updated_at"`
 }
 
-func (q *Queries) GetCustomerByPhone(ctx context.Context, phone string) (GetCustomerByPhoneRow, error) {
-	row := q.db.QueryRowContext(ctx, getCustomerByPhone, phone)
+func (q *Queries) GetCustomerByPhone(ctx context.Context, arg GetCustomerByPhoneParams) (GetCustomerByPhoneRow, error) {
+	row := q.db.QueryRowContext(ctx, getCustomerByPhone, arg.Phone, arg.TenantID)
 	var i GetCustomerByPhoneRow
 	err := row.Scan(
 		&i.ID,
@@ -349,21 +371,22 @@ func (q *Queries) GetCustomerByPhone(ctx context.Context, phone string) (GetCust
 const searchCustomers = `-- name: SearchCustomers :many
 SELECT id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes, created_at, updated_at
 FROM customers
-WHERE (customer_code LIKE '%' || ? || '%' OR name LIKE '%' || ? || '%' OR company LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%' OR contact_person LIKE '%' || ? || '%' OR internal_id LIKE '%' || ? || '%')
+WHERE tenant_id = ? AND (customer_code LIKE '%' || ? || '%' OR name LIKE '%' || ? || '%' OR company LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%' OR contact_person LIKE '%' || ? || '%' OR internal_id LIKE '%' || ? || '%')
 ORDER BY created_at DESC
 LIMIT ? OFFSET ?
 `
 
 type SearchCustomersParams struct {
-	Column1 sql.NullString `json:"column_1"`
-	Column2 sql.NullString `json:"column_2"`
-	Column3 sql.NullString `json:"column_3"`
-	Column4 sql.NullString `json:"column_4"`
-	Column5 sql.NullString `json:"column_5"`
-	Column6 sql.NullString `json:"column_6"`
-	Column7 sql.NullString `json:"column_7"`
-	Limit   int64          `json:"limit"`
-	Offset  int64          `json:"offset"`
+	TenantID string         `json:"tenant_id"`
+	Column2  sql.NullString `json:"column_2"`
+	Column3  sql.NullString `json:"column_3"`
+	Column4  sql.NullString `json:"column_4"`
+	Column5  sql.NullString `json:"column_5"`
+	Column6  sql.NullString `json:"column_6"`
+	Column7  sql.NullString `json:"column_7"`
+	Column8  sql.NullString `json:"column_8"`
+	Limit    int64          `json:"limit"`
+	Offset   int64          `json:"offset"`
 }
 
 type SearchCustomersRow struct {
@@ -394,13 +417,14 @@ type SearchCustomersRow struct {
 
 func (q *Queries) SearchCustomers(ctx context.Context, arg SearchCustomersParams) ([]SearchCustomersRow, error) {
 	rows, err := q.db.QueryContext(ctx, searchCustomers,
-		arg.Column1,
+		arg.TenantID,
 		arg.Column2,
 		arg.Column3,
 		arg.Column4,
 		arg.Column5,
 		arg.Column6,
 		arg.Column7,
+		arg.Column8,
 		arg.Limit,
 		arg.Offset,
 	)

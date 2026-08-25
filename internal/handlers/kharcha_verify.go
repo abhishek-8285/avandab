@@ -36,8 +36,12 @@ func (h *KharchaVerifyHandlers) OCRExtract(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	var amt, conf any
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	if tenantID == "" {
+		tenantID = string(shared.DefaultTenant)
+	}
 	err = h.app.DB.QueryRowContext(r.Context(),
-		`SELECT ocr_amount, ocr_confidence FROM driver_expenses WHERE id = ?`, expenseID).
+		`SELECT ocr_amount, ocr_confidence FROM driver_expenses WHERE id = ? AND tenant_id = ?`, expenseID, tenantID).
 		Scan(&amt, &conf)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		httpx.Error(w, r, err)

@@ -10,7 +10,6 @@ import (
 
 	"transport-app/internal/fuel"
 	"transport-app/internal/repository"
-	"transport-app/internal/shared"
 )
 
 // FuelAuditClaim is the service-layer view of one audited (or pending) fuel
@@ -113,7 +112,7 @@ type vehicleAuditMeta struct {
 
 // loadAuditConfig reads the audit thresholds from company_config.
 func (s *FuelAuditService) loadAuditConfig(ctx context.Context) (fuelAuditConfig, error) {
-	t := string(shared.DefaultTenant)
+	t := tenantIDFor(ctx)
 	cfg := fuelAuditConfig{
 		claimTolerancePct:   fuel.DefaultClaimTolerancePct,
 		crosscheckMarginPct: fuel.DefaultClaimCrosscheckPct,
@@ -178,7 +177,8 @@ func (s *FuelAuditService) pendingFuelClaims(ctx context.Context, db *sql.DB) ([
 		WHERE de.category = 'fuel'
 		  AND COALESCE(de.audit_status,'pending') = 'pending'
 		  AND COALESCE(de.status,'pending') = 'pending'
-		ORDER BY de.created_at ASC`)
+		  AND de.tenant_id = ?
+		ORDER BY de.created_at ASC`, tenantIDFor(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -320,7 +320,7 @@ func (s *FuelAuditService) auditOne(ctx context.Context, db *sql.DB, cfg fuelAud
 		}
 
 		_, err = db.ExecContext(txCtx,
-			`UPDATE driver_expenses SET audit_status = ? WHERE id = ?`, result, expenseID)
+			`UPDATE driver_expenses SET audit_status = ? WHERE id = ? AND tenant_id = ?`, result, expenseID, tenantIDFor(txCtx))
 		return err
 	})
 }
@@ -481,7 +481,7 @@ func (s *FuelAuditService) ReviewClaim(ctx context.Context, expenseID, verdict, 
 			return fmt.Errorf("claim audit row not found")
 		}
 		_, err = db.ExecContext(txCtx,
-			`UPDATE driver_expenses SET audit_status = ? WHERE id = ?`, verdict, expenseID)
+			`UPDATE driver_expenses SET audit_status = ? WHERE id = ? AND tenant_id = ?`, verdict, expenseID, tenantIDFor(txCtx))
 		return err
 	})
 }
@@ -512,8 +512,8 @@ func (s *FuelAuditService) ListAuditClaims(ctx context.Context) ([]FuelAuditClai
 		LEFT JOIN drivers d ON d.id = de.driver_id
 		LEFT JOIN vehicles v ON v.id = t.vehicle_id
 		LEFT JOIN fuel_claim_audits fca ON fca.expense_id = de.id
-		WHERE de.category = 'fuel'
-		ORDER BY de.created_at DESC LIMIT 200`)
+		WHERE de.category = 'fuel' AND de.tenant_id = ?
+		ORDER BY de.created_at DESC LIMIT 200`, tenantIDFor(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -546,7 +546,7 @@ func (s *FuelAuditService) GetAuditDetail(ctx context.Context, expenseID string)
 		LEFT JOIN drivers d ON d.id = de.driver_id
 		LEFT JOIN vehicles v ON v.id = t.vehicle_id
 		LEFT JOIN fuel_claim_audits fca ON fca.expense_id = de.id
-		WHERE de.id = ?`, expenseID)
+		WHERE de.id = ? AND de.tenant_id = ?`, expenseID, tenantIDFor(ctx))
 	c, err := scanAuditClaim(row)
 	if err != nil {
 		return FuelAuditClaim{}, fmt.Errorf("claim not found: %w", err)
@@ -589,19 +589,23 @@ func (s *FuelAuditService) GetAuditStats(ctx context.Context) (FuelAuditStats, e
 	var st FuelAuditStats
 	_ = db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM driver_expenses
-		 WHERE category = 'fuel' AND COALESCE(audit_status,'pending') = 'pending'`).
+		 WHERE category = 'fuel' AND COALESCE(audit_status,'pending') = 'pending' AND tenant_id = ?`,
+		tenantIDFor(ctx)).
 		Scan(&st.PendingCount)
 	_ = db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM driver_expenses
-		 WHERE category = 'fuel' AND audit_status = 'needs_review'`).
+		 WHERE category = 'fuel' AND audit_status = 'needs_review' AND tenant_id = ?`,
+		tenantIDFor(ctx)).
 		Scan(&st.NeedsReviewCount)
 	_ = db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM driver_expenses
-		 WHERE category = 'fuel' AND audit_status = 'passed'`).
+		 WHERE category = 'fuel' AND audit_status = 'passed' AND tenant_id = ?`,
+		tenantIDFor(ctx)).
 		Scan(&st.PassedCount)
 	_ = db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM driver_expenses
-		 WHERE category = 'fuel' AND audit_status = 'failed'`).
+		 WHERE category = 'fuel' AND audit_status = 'failed' AND tenant_id = ?`,
+		tenantIDFor(ctx)).
 		Scan(&st.FailedCount)
 	_ = db.QueryRowContext(ctx,
 		`SELECT COALESCE(AVG(variance_pct),0) FROM fuel_claim_audits`).
@@ -617,7 +621,7 @@ func (s *FuelAuditService) GetAuditStats(ctx context.Context) (FuelAuditStats, e
 
 // EnforceMode reports whether fuel.audit_enforce='true' (annotate vs enforce).
 func (s *FuelAuditService) EnforceMode(ctx context.Context) (bool, error) {
-	v, err := s.config.Get(ctx, string(shared.DefaultTenant), fuel.ConfigAuditEnforce)
+	v, err := s.config.Get(ctx, tenantIDFor(ctx), fuel.ConfigAuditEnforce)
 	if err != nil || v == "" {
 		return fuel.DefaultAuditEnforce, nil
 	}

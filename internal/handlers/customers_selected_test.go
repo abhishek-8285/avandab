@@ -416,28 +416,62 @@ func TestSelectedCustomers_AuthChecks(t *testing.T) {
 	})
 }
 
-// TestSelectedCustomers_TenantIsolation ensures handler respects tenant context for data operations that are tenant-aware.
-// For customers (global), we verify that operations succeed regardless of tenant header and don't leak between tenants via search.
+// TestSelectedCustomers_TenantIsolation ensures customers are tenant-scoped:
+// each tenant's list sees only its own rows and cross-tenant reads miss.
 func TestSelectedCustomers_TenantIsolation(t *testing.T) {
 	db := newCustomersSelectedDB(t)
 	app := newCustomersSelectedApp(t, db, &mockAuthSvc{})
 	r := chi.NewRouter()
 	r.Route("/customers", app.Customers.Routes)
 
-	// Create customer as tenant "A" conceptually (but customers are not tenant-filtered)
-	_, err := app.Services.Customers.CreateCustomer(context.Background(), "TenantA User", "", "9000000030", "", "", "", "")
-	require.NoError(t, err)
+	// Seed one customer per tenant via CreateCustomerFull under each ctx.
+	seeded := map[string]domain.Customer{}
+	for _, tc := range []struct {
+		tenant, name, phone string
+	}{
+		{"1", "TenantA User", "9000000030"},
+		{"tenant-B", "TenantB User", "9000000031"},
+		{"another-tenant", "Another User", "9000000032"},
+	} {
+		ctx := shared.ContextWithTenantID(context.Background(), shared.TenantID(tc.tenant))
+		c, err := app.Services.Customers.CreateCustomerFull(ctx, service.CreateCustomerRequest{
+			Name:  tc.name,
+			Phone: tc.phone,
+		})
+		require.NoError(t, err)
+		require.Equal(t, tc.tenant, c.TenantID)
+		seeded[tc.tenant] = c
+	}
 
-	// List as tenant A and tenant B should both see the same customers (since no tenant filter), but should not error
-	for _, tenant := range []string{"1", "tenant-B", "another-tenant"} {
-		t.Run("tenant "+tenant, func(t *testing.T) {
+	// Each tenant's list sees ONLY its own customer.
+	for tenant, want := range seeded {
+		t.Run("list scoped "+tenant, func(t *testing.T) {
 			req := withTenantSession(httptest.NewRequest(http.MethodGet, "/customers/", nil), tenant, "user-1", "admin")
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, req)
 			assert.Equal(t, http.StatusOK, w.Code)
-			assert.Contains(t, w.Body.String(), "TenantA User")
+			body := w.Body.String()
+			assert.Contains(t, body, want.Name)
+			for other, c := range seeded {
+				if other != tenant {
+					assert.NotContains(t, body, c.Name, "tenant %s must not see %s rows", tenant, other)
+				}
+			}
 		})
 	}
+
+	// Cross-tenant GetCustomerByID returns not found (fail closed).
+	t.Run("cross-tenant get misses", func(t *testing.T) {
+		ctxB := shared.ContextWithTenantID(context.Background(), shared.TenantID("tenant-B"))
+		got, err := app.Services.Customers.GetCustomer(ctxB, seeded["1"].ID)
+		if err == nil {
+			require.NotEqual(t, seeded["1"].ID, got.ID, "tenant-B resolved another tenant's customer")
+		}
+		req := withTenantSession(httptest.NewRequest(http.MethodGet, "/customers/"+string(seeded["1"].ID), nil), "tenant-B", "user-1", "admin")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
 }
 
 // TestSelectedCustomers_PaginationEdge verifies pagination params handling and limits.

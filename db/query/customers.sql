@@ -5,7 +5,7 @@ RETURNING id, customer_code, name, title, company, contact_person, phone, email,
 
 -- name: GetCustomerByID :one
 SELECT id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes, created_at, updated_at
-FROM customers WHERE id = ?;
+FROM customers WHERE id = ? AND tenant_id = ?;
 
 -- name: UpdateCustomer :one
 UPDATE customers
@@ -15,24 +15,24 @@ WHERE id = ?
 RETURNING id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes, created_at, updated_at;
 
 -- name: DeleteCustomer :exec
-DELETE FROM customers WHERE id = ?;
+DELETE FROM customers WHERE id = ? AND tenant_id = ?;
 
 -- name: SearchCustomers :many
 SELECT id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes, created_at, updated_at
 FROM customers
-WHERE (customer_code LIKE '%' || ? || '%' OR name LIKE '%' || ? || '%' OR company LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%' OR contact_person LIKE '%' || ? || '%' OR internal_id LIKE '%' || ? || '%')
+WHERE tenant_id = ? AND (customer_code LIKE '%' || ? || '%' OR name LIKE '%' || ? || '%' OR company LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%' OR contact_person LIKE '%' || ? || '%' OR internal_id LIKE '%' || ? || '%')
 ORDER BY created_at DESC
 LIMIT ? OFFSET ?;
 
 -- name: CountCustomers :one
 SELECT COUNT(*) AS count
 FROM customers
-WHERE (customer_code LIKE '%' || ? || '%' OR name LIKE '%' || ? || '%' OR company LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%' OR contact_person LIKE '%' || ? || '%' OR internal_id LIKE '%' || ? || '%');
+WHERE tenant_id = ? AND (customer_code LIKE '%' || ? || '%' OR name LIKE '%' || ? || '%' OR company LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%' OR contact_person LIKE '%' || ? || '%' OR internal_id LIKE '%' || ? || '%');
 
 -- name: GetCustomerByPhone :one
 SELECT id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes, created_at, updated_at
-FROM customers WHERE phone = ? LIMIT 1;
+FROM customers WHERE phone = ? AND tenant_id = ? LIMIT 1;
 
 -- name: GetCustomerByCode :one
 SELECT id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes, created_at, updated_at
-FROM customers WHERE customer_code = ? LIMIT 1;
+FROM customers WHERE customer_code = ? AND tenant_id = ? LIMIT 1;

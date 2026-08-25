@@ -42,13 +42,20 @@ type DashboardData struct {
 	RecentActivity []repository.AuditLogWithUser
 }
 
+// dashboardCacheEntry is one tenant's snapshot of the aggregated dashboard.
+type dashboardCacheEntry struct {
+	data DashboardData
+	at   time.Time
+}
+
 // DashboardService provides dashboard data aggregation with high-performance memory caching.
+// The cache is keyed by tenant so one tenant's numbers are never served to
+// another (cross-tenant serve was a leak under the single-entry cache).
 type DashboardService struct {
 	baseService
-	cacheMu    sync.RWMutex
-	cachedData DashboardData
-	cachedAt   time.Time
-	ttl        time.Duration
+	cacheMu sync.RWMutex
+	cache   map[string]*dashboardCacheEntry
+	ttl     time.Duration
 }
 
 // GetDashboardData returns aggregated data for the dashboard with ultra-fast memory caching.
@@ -57,10 +64,11 @@ func (s *DashboardService) GetDashboardData(ctx context.Context) (DashboardData,
 	if ttl == 0 {
 		ttl = 3 * time.Second
 	}
+	tenantKey := tenantIDFor(ctx)
 
 	s.cacheMu.RLock()
-	if time.Since(s.cachedAt) < ttl {
-		data := s.cachedData
+	if entry, ok := s.cache[tenantKey]; ok && time.Since(entry.at) < ttl {
+		data := entry.data
 		s.cacheMu.RUnlock()
 		return data, nil
 	}
@@ -266,8 +274,10 @@ func (s *DashboardService) GetDashboardData(ctx context.Context) (DashboardData,
 	}
 
 	s.cacheMu.Lock()
-	s.cachedData = data
-	s.cachedAt = time.Now()
+	if s.cache == nil {
+		s.cache = make(map[string]*dashboardCacheEntry)
+	}
+	s.cache[tenantKey] = &dashboardCacheEntry{data: data, at: time.Now()}
 	s.cacheMu.Unlock()
 
 	return data, nil

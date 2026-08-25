@@ -5,9 +5,20 @@ import (
 	"database/sql"
 
 	"transport-app/internal/domain"
+	"transport-app/internal/shared"
 
 	db "transport-app/db/generated/sqlite"
 )
+
+// tenantIDForReads derives the acting tenant for customer reads, falling back
+// to the bootstrap default so read visibility matches write-side fallback
+// semantics (AGENTS.md Prohibition #4: no tenant literals at call sites).
+func tenantIDForReads(ctx context.Context) string {
+	if id := shared.TenantIDFromContext(ctx); id != "" {
+		return string(id)
+	}
+	return string(shared.DefaultTenant)
+}
 
 // CustomerRepository implementation
 
@@ -32,7 +43,7 @@ func (r *SQLRepository) CreateCustomer(ctx context.Context, customer domain.Cust
 	if tenantID == "" {
 		tenantID = tenantIDFromCtx(ctx)
 		if tenantID == "" {
-			tenantID = "1"
+			tenantID = string(shared.DefaultTenant)
 		}
 	}
 	created, err := r.Q(ctx).CreateCustomer(ctx, db.CreateCustomerParams{
@@ -65,7 +76,10 @@ func (r *SQLRepository) CreateCustomer(ctx context.Context, customer domain.Cust
 }
 
 func (r *SQLRepository) GetCustomerByID(ctx context.Context, id domain.CustomerID) (domain.Customer, error) {
-	c, err := r.Q(ctx).GetCustomerByID(ctx, string(id))
+	c, err := r.Q(ctx).GetCustomerByID(ctx, db.GetCustomerByIDParams{
+		ID:       string(id),
+		TenantID: tenantIDForReads(ctx),
+	})
 	if err != nil {
 		return domain.Customer{}, err
 	}
@@ -73,7 +87,10 @@ func (r *SQLRepository) GetCustomerByID(ctx context.Context, id domain.CustomerI
 }
 
 func (r *SQLRepository) GetCustomerByPhone(ctx context.Context, phone string) (domain.Customer, error) {
-	c, err := r.Q(ctx).GetCustomerByPhone(ctx, phone)
+	c, err := r.Q(ctx).GetCustomerByPhone(ctx, db.GetCustomerByPhoneParams{
+		Phone:    phone,
+		TenantID: tenantIDForReads(ctx),
+	})
 	if err != nil {
 		return domain.Customer{}, err
 	}
@@ -97,7 +114,7 @@ func (r *SQLRepository) UpdateCustomer(ctx context.Context, customer domain.Cust
 	if tenantID == "" {
 		tenantID = tenantIDFromCtx(ctx)
 		if tenantID == "" {
-			tenantID = "1"
+			tenantID = string(shared.DefaultTenant)
 		}
 	}
 	updated, err := r.Q(ctx).UpdateCustomer(ctx, db.UpdateCustomerParams{
@@ -130,20 +147,24 @@ func (r *SQLRepository) UpdateCustomer(ctx context.Context, customer domain.Cust
 }
 
 func (r *SQLRepository) DeleteCustomer(ctx context.Context, id domain.CustomerID) error {
-	return r.Q(ctx).DeleteCustomer(ctx, string(id))
+	return r.Q(ctx).DeleteCustomer(ctx, db.DeleteCustomerParams{
+		ID:       string(id),
+		TenantID: tenantIDForReads(ctx),
+	})
 }
 
 func (r *SQLRepository) SearchCustomers(ctx context.Context, query string, limit, offset int) ([]domain.Customer, error) {
 	rows, err := r.Q(ctx).SearchCustomers(ctx, db.SearchCustomersParams{
-		Column1: sql.NullString{String: query, Valid: true},
-		Column2: sql.NullString{String: query, Valid: true},
-		Column3: sql.NullString{String: query, Valid: true},
-		Column4: sql.NullString{String: query, Valid: true},
-		Column5: sql.NullString{String: query, Valid: true},
-		Column6: sql.NullString{String: query, Valid: true},
-		Column7: sql.NullString{String: query, Valid: true},
-		Limit:   int64(limit),
-		Offset:  int64(offset),
+		TenantID: tenantIDForReads(ctx),
+		Column2:  sql.NullString{String: query, Valid: true},
+		Column3:  sql.NullString{String: query, Valid: true},
+		Column4:  sql.NullString{String: query, Valid: true},
+		Column5:  sql.NullString{String: query, Valid: true},
+		Column6:  sql.NullString{String: query, Valid: true},
+		Column7:  sql.NullString{String: query, Valid: true},
+		Column8:  sql.NullString{String: query, Valid: true},
+		Limit:    int64(limit),
+		Offset:   int64(offset),
 	})
 	if err != nil {
 		return nil, err
@@ -157,13 +178,14 @@ func (r *SQLRepository) SearchCustomers(ctx context.Context, query string, limit
 
 func (r *SQLRepository) CountCustomers(ctx context.Context, query string) (int64, error) {
 	count, err := r.Q(ctx).CountCustomers(ctx, db.CountCustomersParams{
-		Column1: sql.NullString{String: query, Valid: true},
-		Column2: sql.NullString{String: query, Valid: true},
-		Column3: sql.NullString{String: query, Valid: true},
-		Column4: sql.NullString{String: query, Valid: true},
-		Column5: sql.NullString{String: query, Valid: true},
-		Column6: sql.NullString{String: query, Valid: true},
-		Column7: sql.NullString{String: query, Valid: true},
+		TenantID: tenantIDForReads(ctx),
+		Column2:  sql.NullString{String: query, Valid: true},
+		Column3:  sql.NullString{String: query, Valid: true},
+		Column4:  sql.NullString{String: query, Valid: true},
+		Column5:  sql.NullString{String: query, Valid: true},
+		Column6:  sql.NullString{String: query, Valid: true},
+		Column7:  sql.NullString{String: query, Valid: true},
+		Column8:  sql.NullString{String: query, Valid: true},
 	})
 	if err != nil {
 		return 0, err
