@@ -210,20 +210,22 @@ V1 verification matrix (Prove-It gate before flag flip):
 
 ---
 
-## 7. Phased rollout (build order)
+## 7. Phased rollout (build order) — ALL SHIPPED on `feature/multi-tenant-onboarding`
 
-1. **S1 (this package):** migration 00102 + spec + round-trip test.
-2. **S2 plumbing:** config flag, `TenantForUserLookup`, cache entry, sentinel.
-3. **P1 resolver:** replace `DefaultTenantResolver` wiring when flag on; bearer advisory-tid demotion.
-4. **P2 leaks:** thread `tenant_id` through the §0.5 inventory. Customers first — leading-predicate
-   form `WHERE tenant_id = ? AND (...)`, sqlc params named like the bookings precedent
-   (`bookings.sql.go` `SearchBookingsParams`: `TenantID, Column2..N, Limit, Offset`);
-   customers repo threads `shared.DefaultTenant` fallback replacing literal `"1"` at
-   `customers.go:35/:100`.
-5. **P3 overlay:** sharded TenantConfigReader + branding/billing keys.
-6. **F1 UI:** templates under template CI three layers — coverage test slice,
-   exemption list `template_coverage_test.go:678-696`, render tables `template_render_test.go:563-574`.
-7. **V1 Prove-It:** run §6 matrix + security gate.
+| Phase | Status | Commits |
+|---|---|---|
+| S1 migration 00102 + spec + roundtrip (fresh + with-data) | ✅ | `1358cc8` |
+| S2 user plumbing, scoped users list, suspension gates | ✅ | `25116ef` |
+| P1 resolver + edge enforcement behind `MULTI_TENANT_ENABLED` | ✅ | `1d85dd2` |
+| P2 leak batch (§0.5 inventory) + dashboard cache keying | ✅ | `9e7d779` |
+| P3 sharded TenantConfigReader + branding/billing overlay | ✅ | `df43bb7` |
+| F1 `/tenants` UI, suspend+session purge, template-CI ×3 | ✅ | `c327a63` |
+| V1 gate: live E2E a–j, race spot-check, security gate | ✅ | `11e181a` |
+| Post-gate audit fixes: roleIDFromName org_admin/driver, last-position guard, real tid claims | ✅ | `a3c46ac` |
+| Latent defects: Razorpay webhook tenant attribution (invoice/reference-derived), fuel-audit NULL-scan crash | ✅ | `19ed9ef` |
+
+Live-E2E evidence matrix in V1 report: provision → login → bidirectional data
+isolation → suspend kills sessions AND advisory-tid bearers → activate restores.
 
 ---
 
