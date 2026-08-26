@@ -377,3 +377,17 @@ func (r *paymentRepository) SetWebhookEventID(ctx context.Context, id aggregate.
 	_, err := r.exec(ctx).ExecContext(ctx, setWebhookEventIDSQL, eventID, string(id), string(tenantID))
 	return err
 }
+
+// FindReferenceTenant discovers the owning tenant of a payment by its gateway
+// reference (Razorpay payment id). Exists for unauthenticated refund webhooks
+// that must resolve tenancy without a request context (Spec 24 §Business logic).
+func (r *paymentRepository) FindReferenceTenant(ctx context.Context, reference string) (shared.TenantID, error) {
+	var tenantID string
+	err := r.exec(ctx).QueryRowContext(ctx,
+		`SELECT p.tenant_id FROM payments p WHERE p.reference = ?
+		 ORDER BY p.created_at DESC LIMIT 1`, reference).Scan(&tenantID)
+	if err != nil {
+		return "", err
+	}
+	return shared.TenantID(tenantID), nil
+}

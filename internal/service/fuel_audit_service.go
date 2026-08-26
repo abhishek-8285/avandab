@@ -645,6 +645,8 @@ type rowScanner interface {
 func scanAuditClaim(s rowScanner) (FuelAuditClaim, error) {
 	var c FuelAuditClaim
 	var expectedLevel, expectedOdo, kmpl, odoDelta, tankCap, levelDelta sql.NullFloat64
+	var varianceL, varianceP sql.NullFloat64
+	var resultStr sql.NullString
 	var reviewedBy, reviewNote *string
 	var reviewedAt *time.Time
 	if err := s.Scan(
@@ -652,13 +654,20 @@ func scanAuditClaim(s rowScanner) (FuelAuditClaim, error) {
 		&c.VehicleID, &c.VehicleReg, &c.Category, &c.Amount, &c.FuelLitres,
 		&c.Status, &c.AuditStatus,
 		&expectedLevel, &expectedOdo,
-		&c.VarianceLitres, &c.VariancePct, &c.Result, &kmpl,
+		&varianceL, &varianceP, &resultStr, &kmpl,
 		&odoDelta, &tankCap, &levelDelta,
 		&c.ChecksJSON, &c.CreatedAt,
 		&reviewedBy, &reviewedAt, &reviewNote,
 	); err != nil {
 		return FuelAuditClaim{}, err
 	}
+	if varianceL.Valid {
+		c.VarianceLitres = varianceL.Float64
+	}
+	if varianceP.Valid {
+		c.VariancePct = varianceP.Float64
+	}
+	c.Result = resultStr.String
 	if expectedLevel.Valid {
 		c.ExpectedLevel = &expectedLevel.Float64
 	}

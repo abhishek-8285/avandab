@@ -135,3 +135,28 @@ func TestFuelAudit_TenantIsolation(t *testing.T) {
 	require.NoError(t, err)
 	assert.Zero(t, betaStats.NeedsReviewCount+betaStats.PendingCount+betaStats.PassedCount+betaStats.FailedCount)
 }
+
+// TestFuelAudit_UnauditedClaimDoesNotCrash proves the LEFT JOIN NULL-scan fix:
+// a fuel expense with NO fuel_claim_audits row must list and read cleanly
+// (variance zero-valued, Result empty) instead of failing the whole query.
+func TestFuelAudit_UnauditedClaimDoesNotCrash(t *testing.T) {
+	db := NewTestDB(t)
+	svcs := NewTestServices(t, db)
+	acme := ctxAsTenant("acme")
+
+	expID, err := svcs.Kharcha.CreateExpenseWithOpts(acme, service.CreateExpenseOpts{
+		DriverID: "drv-f-1", Category: "fuel", Amount: 500,
+	})
+	require.NoError(t, err)
+
+	claims, err := svcs.FuelAudit.ListAuditClaims(acme)
+	require.NoError(t, err, "unaudited fuel claim must not break ListAuditClaims")
+	require.Len(t, claims, 1)
+	assert.Equal(t, expID, claims[0].ExpenseID)
+	assert.Zero(t, claims[0].VarianceLitres)
+	assert.Empty(t, claims[0].Result)
+
+	detail, err := svcs.FuelAudit.GetAuditDetail(acme, expID)
+	require.NoError(t, err, "unaudited fuel claim must not break GetAuditDetail")
+	assert.Equal(t, "fuel", detail.Category)
+}
