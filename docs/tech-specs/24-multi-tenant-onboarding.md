@@ -238,6 +238,21 @@ isolation → suspend kills sessions AND advisory-tid bearers → activate resto
 
 ---
 
+## 8.1 Isolation guarantees (enforced, test-locked)
+
+Every user/entity detail surface is same-tenant strict. Cross-tenant access
+reads as **404** (existence undisclosed), never 403 — no enumeration signal.
+
+| Guarantee | Enforcement | Proof |
+|---|---|---|
+| User list scoped | `users.tenant_id` predicate on SearchUsers/CountUsers/daterange; password_hash stripped from list rows | `TestMultiTenantUserIsolation` |
+| User view/edit/update/delete same-tenant only | handler guard `ensureTenantUser` → 404 on mismatch (`handlers/users.go`) | `TestUsers_CrossTenantDetailAccessDenied` |
+| Password reset cannot cross tenants (account-takeover path closed) | same guard before `ResetPassword` | subtest `password_reset_takeover_blocked` |
+| Own-tenant management unaffected | guard passes when `target.TenantID == ctx tenant` | `TestUsers_SameTenantManagementStillWorks` |
+| Platform globals (company_settings) locked under multi-tenant mode | `POST /settings/update` requires role `admin`(1) when `MULTI_TENANT_ENABLED=true`; org branding flows via per-tenant overlay keys instead | `TestSettings_PlatformGlobalsLockedUnderMultiTenant` |
+| Login/session/bearer bound to tenant lifecycle | `AuthService.Login`+`CreateSessionForUser` tenant-active gate; resolver rejects suspended orgs; bearer `tid` advisory-only | V1 live-E2E steps h/i |
+| Data-plane scoping | §0.5 inventory fixed in P2 (customers ×6, kharcha ×13, fuel-audit ×8, drivers/me, dashboard cache per-tenant key) | `multi_tenant_leaks_test.go`, inverted `TenantIsolation` |
+
 ## 9. Known limitations (Wave-2 deferred)
 
 - `audit_logs` / `files` tenant columns → migration **00103**.

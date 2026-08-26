@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"transport-app/internal/domain"
 	"transport-app/internal/middleware"
 )
 
@@ -75,6 +76,17 @@ func (h *SettingsHandlers) Index(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SettingsHandlers) Update(w http.ResponseWriter, r *http.Request) {
+	// company_settings is the PLATFORM-global singleton (Spec 24 §4.7): under
+	// multi-tenant mode only the platform administrator may write it — tenant
+	// branding flows through the per-tenant overlay instead.
+	if h.Config != nil && h.Config.MultiTenant.Enabled {
+		session, _ := h.getUserFromContext(r)
+		if session == nil || session.Role != string(domain.RoleAdmin) {
+			http.Error(w, "platform settings are managed by the platform administrator", http.StatusForbidden)
+			return
+		}
+	}
+
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		h.failPage(w, r, err, http.StatusBadRequest, "Invalid Form Submission")
 		return

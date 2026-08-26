@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"io"
@@ -23,6 +24,7 @@ import (
 
 	"transport-app/internal/auth"
 	"transport-app/internal/config"
+	"transport-app/internal/domain"
 	"transport-app/internal/events"
 	repoSQLite "transport-app/internal/repository/sqlite"
 	"transport-app/internal/service"
@@ -327,4 +329,135 @@ func TestSuggestTenantSlug(t *testing.T) {
 	long := suggestTenantSlug(strings.Repeat("abcdefgh ", 20))
 	assert.LessOrEqual(t, len(long), maxTenantSlugLen)
 	assert.NotRegexp(t, "(^|-)-( |$)", long)
+}
+
+// ---- Tenant isolation guarantees for user management (Spec 24 §Business logic) ----
+
+// newUsersIsolationApp wires the real Users handlers against a migrated DB and
+// returns it with two seeded tenants: acme (admin_acme) and beta (admin_beta).
+func newUsersIsolationApp(t *testing.T, multiTenant bool) (*App, string, string) {
+	t.Helper()
+	db := newTenantsTestDB(t)
+	app := newTenantsTestApp(t, db, nil, multiTenant)
+
+	mk := func(email, name, tenantID string) domain.User {
+		u, err := app.Services.Users.CreateUserWithPassword(
+			context.Background(), email, name, "", "StrongPass#123",
+			domain.DefaultRoleID(domain.RoleOrgAdmin), domain.UserStatusActive, tenantID)
+		require.NoError(t, err)
+		return u
+	}
+	acme := mk("acme-admin@x.test", "Acme Admin", "acme")
+	beta := mk("beta-admin@x.test", "Beta Admin", "beta")
+	return app, acme.ID.String(), beta.ID.String()
+}
+
+func usersRouter(app *App) *chi.Mux {
+	r := chi.NewRouter()
+	r.Route("/users", (&UserHandlers{App: app}).Routes)
+	return r
+}
+
+func asTenantAdmin(r *http.Request, tenant, userID string) *http.Request {
+	return withTenantSession(r, tenant, userID, "org_admin")
+}
+
+// TestUsers_CrossTenantDetailAccessDenied proves every user-detail surface is
+// same-tenant only: another org's admin gets 404 (existence undisclosed) on
+// view, edit, update, delete AND password reset — closing the account-takeover
+// path.
+func TestUsers_CrossTenantDetailAccessDenied(t *testing.T) {
+	app, acmeID, betaID := newUsersIsolationApp(t, true)
+	r := usersRouter(app)
+
+	form := url.Values{}
+	form.Set("email", "beta-admin@x.test")
+	form.Set("name", "Hijacked")
+	form.Set("role_id", "2")
+	form.Set("status", "active")
+
+	cases := []struct {
+		name   string
+		method string
+		path   string
+		body   *url.Values
+	}{
+		{"edit form leaks nothing", http.MethodGet, "/users/" + betaID + "/edit", nil},
+		{"update rejected", http.MethodPost, "/users/" + betaID + "/edit", &form},
+		{"delete rejected", http.MethodPost, "/users/" + betaID + "/delete", nil},
+		{"password reset takeover blocked", http.MethodPost, "/users/" + betaID + "/reset-password", nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var req *http.Request
+			if tc.body != nil {
+				req = httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body.Encode()))
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			} else {
+				req = httptest.NewRequest(tc.method, tc.path, nil)
+			}
+			w := httptest.NewRecorder()
+			r.ServeHTTP(w, asTenantAdmin(req, "acme", acmeID))
+			assert.Equal(t, http.StatusNotFound, w.Code, "cross-tenant access must read as not-found")
+		})
+	}
+
+	// The target row is untouched — especially its credentials.
+	u, err := app.Services.Users.GetUser(context.Background(), domain.UserID(betaID))
+	require.NoError(t, err)
+	assert.Equal(t, "Beta Admin", u.Name, "cross-tenant update must not apply")
+	assert.NotEmpty(t, u.PasswordHash, "reset-password must not run cross-tenant")
+}
+
+// TestUsers_SameTenantManagementStillWorks guards against over-blocking:
+// an org admin manages their OWN tenant's users normally.
+func TestUsers_SameTenantManagementStillWorks(t *testing.T) {
+	app, acmeID, _ := newUsersIsolationApp(t, true)
+	r := usersRouter(app)
+
+	// Edit form renders for own tenant.
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, asTenantAdmin(httptest.NewRequest(http.MethodGet, "/users/"+acmeID+"/edit", nil), "acme", acmeID))
+	require.Equal(t, http.StatusOK, w.Code)
+
+	// Update own user.
+	form := url.Values{
+		"email": {"acme-admin@x.test"}, "name": {"Acme Renamed"},
+		"role_id": {"6"}, "status": {"active"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/users/"+acmeID+"/edit", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w = httptest.NewRecorder()
+	r.ServeHTTP(w, asTenantAdmin(req, "acme", acmeID))
+	assert.Equal(t, http.StatusSeeOther, w.Code)
+
+	u, err := app.Services.Users.GetUser(context.Background(), domain.UserID(acmeID))
+	require.NoError(t, err)
+	assert.Equal(t, "Acme Renamed", u.Name)
+}
+
+// TestSettings_PlatformGlobalsLockedUnderMultiTenant proves the global
+// company_settings writer is platform-admin-only once MULTI_TENANT_ENABLED is
+// on — org admins cannot mutate branding/GST defaults of other orgs.
+func TestSettings_PlatformGlobalsLockedUnderMultiTenant(t *testing.T) {
+	db := newTenantsTestDB(t)
+	app := newTenantsTestApp(t, db, nil, true)
+
+	r := chi.NewRouter()
+	sh := &SettingsHandlers{App: app}
+	r.Post("/settings/update", sh.Update)
+
+	form := url.Values{"company_name": {"Evil Rebrand"}}
+	req := httptest.NewRequest(http.MethodPost, "/settings/update",
+		strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req = withTenantSession(req, "acme", "acme-admin-1", "org_admin")
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusForbidden, w.Code)
+
+	s, err := app.Services.Settings.GetSettings(context.Background())
+	require.NoError(t, err)
+	assert.NotEqual(t, "Evil Rebrand", s.CompanyName, "org admin must not rewrite platform globals")
 }
