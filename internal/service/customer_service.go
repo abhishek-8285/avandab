@@ -108,7 +108,7 @@ func (s *CustomerService) CreateCustomerFull(ctx context.Context, req CreateCust
 	// Tenant scoping
 	tenantID := string(shared.TenantIDFromContext(ctx))
 	if tenantID == "" {
-		tenantID = "1"
+		tenantID = string(shared.DefaultTenant)
 	}
 
 	// Check phone uniqueness (tenant-scoped at app layer; DB index is global)

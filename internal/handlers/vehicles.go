@@ -208,9 +208,13 @@ func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 	lastPos := map[string]interface{}{"Has": false}
 	var lat, lng, speed float64
 	var at sql.NullString
+	posTenantID := string(shared.TenantIDFromContext(r.Context()))
+	if posTenantID == "" {
+		posTenantID = string(shared.DefaultTenant)
+	}
 	if err := h.DB.QueryRowContext(r.Context(), `
 		SELECT latitude, longitude, speed, device_time
-		FROM vehicle_latest_position WHERE vehicle_id = ?`, id).
+		FROM vehicle_latest_position WHERE vehicle_id = ? AND tenant_id = ?`, id, posTenantID).
 		Scan(&lat, &lng, &speed, &at); err == nil {
 		lastPos = map[string]interface{}{"Has": true, "Lat": lat, "Lng": lng, "Speed": speed, "At": at.String}
 	}

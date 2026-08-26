@@ -220,6 +220,10 @@ func roleIDFromName(role string) int64 {
 		return 3
 	case "viewer":
 		return 4
+	case "driver":
+		return 5
+	case "org_admin":
+		return 6
 	default:
 		return 4
 	}
