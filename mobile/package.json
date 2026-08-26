@@ -63,6 +63,9 @@
   },
   "private": true,
   "overrides": {
-    "tar": "7.5.22"
+    "tar": "7.5.22",
+    "qs": "^6.15.3",
+    "@xmldom/xmldom": "^0.9.12",
+    "typed-rest-client": "^3.1.0"
   }
 }
