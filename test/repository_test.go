@@ -13,7 +13,7 @@ import (
 func TestSQLiteRepo_DriverCRUD(t *testing.T) {
 	db := NewTestDB(t)
 	repo := NewTestRepo(t, db)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(context.Background())
 
 	driver := domain.Driver{
 		ID:            domain.DriverID("driver-test-001"),
@@ -40,7 +40,7 @@ func TestSQLiteRepo_DriverCRUD(t *testing.T) {
 func TestSQLiteRepo_VehicleCRUD(t *testing.T) {
 	db := NewTestDB(t)
 	repo := NewTestRepo(t, db)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(context.Background())
 
 	vehicle := domain.Vehicle{
 		ID:                 domain.VehicleID("vehicle-test-001"),
@@ -85,7 +85,7 @@ func TestSQLiteRepo_CustomerCRUD(t *testing.T) {
 func TestSQLiteRepo_RouteCRUD(t *testing.T) {
 	db := NewTestDB(t)
 	repo := NewTestRepo(t, db)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(context.Background())
 
 	route := domain.Route{
 		ID:          domain.RouteID("route-test-001"),
@@ -106,7 +106,7 @@ func TestSQLiteRepo_RouteCRUD(t *testing.T) {
 func TestSQLiteRepo_BookingCRUD(t *testing.T) {
 	db := NewTestDB(t)
 	repo := NewTestRepo(t, db)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(context.Background())
 
 	customer, _ := repo.CreateCustomer(ctx, domain.Customer{Name: "Cust", Phone: "555"})
 	route, _ := repo.CreateRoute(ctx, domain.Route{ID: domain.RouteID("route-test-002"), Source: "A", Destination: "B"})
@@ -132,7 +132,7 @@ func TestSQLiteRepo_BookingCRUD(t *testing.T) {
 func TestSQLiteRepo_TripCRUD(t *testing.T) {
 	db := NewTestDB(t)
 	repo := NewTestRepo(t, db)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(context.Background())
 
 	route, _ := repo.CreateRoute(ctx, domain.Route{ID: domain.RouteID("route-test-003"), Source: "A", Destination: "B"})
 
@@ -157,7 +157,7 @@ func TestSQLiteRepo_TripCRUD(t *testing.T) {
 func TestSQLiteRepo_InvoiceAndPayment(t *testing.T) {
 	db := NewTestDB(t)
 	repo := NewTestRepo(t, db)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(context.Background())
 
 	customer, _ := repo.CreateCustomer(ctx, domain.Customer{Name: "Cust", Phone: "555"})
 

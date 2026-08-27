@@ -12,9 +12,13 @@ import (
 // RouteRepository implementation
 
 func (r *SQLRepository) CreateRoute(ctx context.Context, route domain.Route) (domain.Route, error) {
+	tid := route.TenantID
+	if tid == "" {
+		tid = tenantIDFromCtx(ctx)
+	}
 	created, err := r.Q(ctx).CreateRoute(ctx, db.CreateRouteParams{
 		ID:                  string(route.ID),
-		TenantID:            route.TenantID,
+		TenantID:            tid,
 		Source:              route.Source,
 		Destination:         route.Destination,
 		SourceNormalized:    route.SourceNormalized,

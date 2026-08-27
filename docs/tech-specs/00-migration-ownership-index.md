@@ -18,7 +18,7 @@ Single source of truth for `db/migrations/` version numbers. Repo head is
   `CREATE TRIGGER ... BEFORE INSERT/UPDATE OF tenant_id ... SELECT RAISE(ABORT, ...)`
   checking `tenants(id)`. Do NOT use `FOREIGN KEY (tenant_id) REFERENCES tenants(id)`
   via `ALTER TABLE ADD COLUMN` — SQLite cannot add FK that way; use triggers, not table rebuild.
-  Updates to this rule: 2026-08-27 (00103) supersedes the original "no FK" note.
+  Updates to this rule: 2026-08-27 (00103) supersedes the original "no FK" note; 00104 tightens to fail-closed on empty string (`WHEN IS NOT NULL` only).
 
 ## Canonical allocation (verified non-overlapping)
 
@@ -83,7 +83,8 @@ Single source of truth for `db/migrations/` version numbers. Repo head is
 | 00101 | customers state_code from GSTIN (e-invoice place_of_supply) + index | GST state split |
 | 00102 | tenants registry + users.tenant_id + tenants:manage permission (multi-tenant onboarding) | Spec 24 |
 | 00103 | tenant FK hardening — 51-table trigger enforcement + 21 missing tenant indexes | Spec 24 §9 (hardening) |
-| 00104+ | future specs | reserved |
+| 00104 | tenant FK strict + prod cleanup — reject empty tenant_id, delete 29 test-only tenants | Spec 24 §9 (hardening fix) |
+| 00105+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

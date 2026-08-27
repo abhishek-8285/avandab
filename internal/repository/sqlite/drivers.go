@@ -7,8 +7,6 @@ import (
 	"transport-app/internal/domain"
 
 	db "transport-app/db/generated/sqlite"
-
-	"transport-app/internal/shared"
 )
 
 // DriverRepository implementation
@@ -29,7 +27,7 @@ func (r *SQLRepository) CreateDriver(ctx context.Context, driver domain.Driver) 
 		EmergencyContactName:  nullString(driver.EmergencyContactName),
 		EmergencyContactPhone: nullString(driver.EmergencyContactPhone),
 		Notes:                 nullString(driver.Notes),
-		TenantID:              string(shared.TenantIDFromContext(ctx)),
+		TenantID:              tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Driver{}, err
@@ -66,7 +64,7 @@ func (r *SQLRepository) CreateDriver(ctx context.Context, driver domain.Driver) 
 func (r *SQLRepository) GetDriverByID(ctx context.Context, id domain.DriverID) (domain.Driver, error) {
 	row, err := r.Q(ctx).GetDriverByID(ctx, db.GetDriverByIDParams{
 		ID:       string(id),
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Driver{}, err
@@ -107,7 +105,7 @@ func (r *SQLRepository) GetDriverByID(ctx context.Context, id domain.DriverID) (
 func (r *SQLRepository) GetDriverByDriverID(ctx context.Context, driverID string) (domain.Driver, error) {
 	row, err := r.Q(ctx).GetDriverByDriverID(ctx, db.GetDriverByDriverIDParams{
 		DriverID: driverID,
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Driver{}, err
@@ -148,7 +146,7 @@ func (r *SQLRepository) GetDriverByDriverID(ctx context.Context, driverID string
 func (r *SQLRepository) GetDriverByPhone(ctx context.Context, phone string) (domain.Driver, error) {
 	row, err := r.Q(ctx).GetDriverByPhone(ctx, db.GetDriverByPhoneParams{
 		Phone:    phone,
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Driver{}, err
@@ -190,7 +188,7 @@ func (r *SQLRepository) UpdateDriver(ctx context.Context, driver domain.Driver) 
 		EmergencyContactPhone: nullString(driver.EmergencyContactPhone),
 		Notes:                 nullString(driver.Notes),
 		ID:                    string(driver.ID),
-		TenantID:              string(shared.TenantIDFromContext(ctx)),
+		TenantID:              tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Driver{}, err
@@ -227,13 +225,13 @@ func (r *SQLRepository) UpdateDriver(ctx context.Context, driver domain.Driver) 
 func (r *SQLRepository) DeleteDriver(ctx context.Context, id domain.DriverID) error {
 	return r.Q(ctx).DeleteDriver(ctx, db.DeleteDriverParams{
 		ID:       string(id),
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 }
 
 func (r *SQLRepository) SearchDrivers(ctx context.Context, query string, status string, limit, offset int) ([]domain.Driver, error) {
 	rows, err := r.Q(ctx).SearchDrivers(ctx, db.SearchDriversParams{
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 		Column2:  sql.NullString{String: query, Valid: true},
 		Column3:  sql.NullString{String: query, Valid: true},
 		Column4:  sql.NullString{String: query, Valid: true},
@@ -273,7 +271,7 @@ func (r *SQLRepository) SearchDrivers(ctx context.Context, query string, status 
 
 func (r *SQLRepository) CountDrivers(ctx context.Context, query string, status string) (int64, error) {
 	count, err := r.Q(ctx).CountDrivers(ctx, db.CountDriversParams{
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 		Column2:  sql.NullString{String: query, Valid: true},
 		Column3:  sql.NullString{String: query, Valid: true},
 		Column4:  sql.NullString{String: query, Valid: true},
@@ -288,7 +286,7 @@ func (r *SQLRepository) CountDrivers(ctx context.Context, query string, status s
 }
 
 func (r *SQLRepository) GetAvailableDrivers(ctx context.Context) ([]domain.Driver, error) {
-	rows, err := r.Q(ctx).GetAvailableDrivers(ctx, string(shared.TenantIDFromContext(ctx)))
+	rows, err := r.Q(ctx).GetAvailableDrivers(ctx, tenantIDFromCtx(ctx))
 	if err != nil {
 		return nil, err
 	}

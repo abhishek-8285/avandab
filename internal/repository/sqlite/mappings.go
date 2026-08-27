@@ -76,7 +76,10 @@ func int64ToBool(i int64) bool {
 }
 
 func tenantIDFromCtx(ctx context.Context) string {
-	return string(shared.TenantIDFromContext(ctx))
+	if t := shared.TenantIDFromContext(ctx); t != "" {
+		return string(t)
+	}
+	return string(shared.DefaultTenant)
 }
 
 func FromNullInt64(ni sql.NullInt64) *int64 {

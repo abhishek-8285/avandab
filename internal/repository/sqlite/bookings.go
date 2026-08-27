@@ -8,8 +8,6 @@ import (
 	"transport-app/internal/repository"
 
 	db "transport-app/db/generated/sqlite"
-
-	"transport-app/internal/shared"
 )
 
 // BookingRepository implementation
@@ -27,7 +25,7 @@ func (r *SQLRepository) CreateBooking(ctx context.Context, booking domain.Bookin
 		Price:         booking.Price,
 		Notes:         nullString(booking.Notes),
 		Status:        string(booking.Status),
-		TenantID:      string(shared.TenantIDFromContext(ctx)),
+		TenantID:      tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Booking{}, err
@@ -53,7 +51,7 @@ func (r *SQLRepository) CreateBooking(ctx context.Context, booking domain.Bookin
 func (r *SQLRepository) GetBookingByID(ctx context.Context, id domain.BookingID) (repository.BookingWithJoins, error) {
 	row, err := r.Q(ctx).GetBookingByID(ctx, db.GetBookingByIDParams{
 		ID:       string(id),
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return repository.BookingWithJoins{}, err
@@ -85,7 +83,7 @@ func (r *SQLRepository) GetBookingByID(ctx context.Context, id domain.BookingID)
 func (r *SQLRepository) GetBookingByNumber(ctx context.Context, number string) (repository.BookingWithJoins, error) {
 	row, err := r.Q(ctx).GetBookingByNumber(ctx, db.GetBookingByNumberParams{
 		BookingNumber: number,
-		TenantID:      string(shared.TenantIDFromContext(ctx)),
+		TenantID:      tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return repository.BookingWithJoins{}, err
@@ -117,7 +115,7 @@ func (r *SQLRepository) GetBookingByNumber(ctx context.Context, number string) (
 func (r *SQLRepository) UpdateBooking(ctx context.Context, booking domain.Booking) (domain.Booking, error) {
 	current, err := r.Q(ctx).GetBookingByID(ctx, db.GetBookingByIDParams{
 		ID:       string(booking.ID),
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Booking{}, err
@@ -135,7 +133,7 @@ func (r *SQLRepository) UpdateBooking(ctx context.Context, booking domain.Bookin
 		Notes:         nullString(booking.Notes),
 		Status:        string(booking.Status),
 		ID:            string(booking.ID),
-		TenantID:      string(shared.TenantIDFromContext(ctx)),
+		TenantID:      tenantIDFromCtx(ctx),
 		Version:       current.Version,
 	})
 	if err != nil {
@@ -162,7 +160,7 @@ func (r *SQLRepository) UpdateBooking(ctx context.Context, booking domain.Bookin
 func (r *SQLRepository) UpdateBookingStatus(ctx context.Context, id domain.BookingID, status domain.BookingStatus) (domain.Booking, error) {
 	current, err := r.Q(ctx).GetBookingByID(ctx, db.GetBookingByIDParams{
 		ID:       string(id),
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Booking{}, err
@@ -170,7 +168,7 @@ func (r *SQLRepository) UpdateBookingStatus(ctx context.Context, id domain.Booki
 	updated, err := r.Q(ctx).UpdateBookingStatus(ctx, db.UpdateBookingStatusParams{
 		Status:   string(status),
 		ID:       string(id),
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 		Version:  current.Version,
 	})
 	if err != nil {
@@ -197,13 +195,13 @@ func (r *SQLRepository) UpdateBookingStatus(ctx context.Context, id domain.Booki
 func (r *SQLRepository) DeleteBooking(ctx context.Context, id domain.BookingID) error {
 	return r.Q(ctx).DeleteBooking(ctx, db.DeleteBookingParams{
 		ID:       string(id),
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 }
 
 func (r *SQLRepository) SearchBookings(ctx context.Context, query string, status string, limit, offset int) ([]repository.BookingWithJoins, error) {
 	rows, err := r.Q(ctx).SearchBookings(ctx, db.SearchBookingsParams{
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 		Column2:  sql.NullString{String: query, Valid: true},
 		Column3:  sql.NullString{String: query, Valid: true},
 		Column4:  sql.NullString{String: query, Valid: true},
@@ -245,7 +243,7 @@ func (r *SQLRepository) SearchBookings(ctx context.Context, query string, status
 
 func (r *SQLRepository) ListBookingsByCustomer(ctx context.Context, customerID domain.CustomerID, limit int) ([]repository.BookingWithJoins, error) {
 	rows, err := r.Q(ctx).ListBookingsByCustomer(ctx, db.ListBookingsByCustomerParams{
-		TenantID:   string(shared.TenantIDFromContext(ctx)),
+		TenantID:   tenantIDFromCtx(ctx),
 		CustomerID: string(customerID),
 		Limit:      int64(limit),
 	})
@@ -282,7 +280,7 @@ func (r *SQLRepository) ListBookingsByCustomer(ctx context.Context, customerID d
 
 func (r *SQLRepository) CountBookings(ctx context.Context, query string, status string) (int64, error) {
 	count, err := r.Q(ctx).CountBookings(ctx, db.CountBookingsParams{
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 		Column2:  sql.NullString{String: query, Valid: true},
 		Column3:  sql.NullString{String: query, Valid: true},
 		Column4:  sql.NullString{String: query, Valid: true},
@@ -296,7 +294,7 @@ func (r *SQLRepository) CountBookings(ctx context.Context, query string, status 
 }
 
 func (r *SQLRepository) CountBookingsByDay(ctx context.Context) ([]repository.BookingsByDay, error) {
-	rows, err := r.Q(ctx).CountBookingsByDay(ctx, string(shared.TenantIDFromContext(ctx)))
+	rows, err := r.Q(ctx).CountBookingsByDay(ctx, tenantIDFromCtx(ctx))
 	if err != nil {
 		return nil, err
 	}

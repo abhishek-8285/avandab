@@ -8,8 +8,6 @@ import (
 	"transport-app/internal/repository"
 
 	db "transport-app/db/generated/sqlite"
-
-	"transport-app/internal/shared"
 )
 
 // InvoiceRepository implementation
@@ -31,7 +29,7 @@ func (r *SQLRepository) CreateInvoice(ctx context.Context, invoice domain.Invoic
 		Discount:      invoice.Discount,
 		Total:         invoice.Total,
 		PaymentStatus: string(invoice.PaymentStatus),
-		TenantID:      string(shared.TenantIDFromContext(ctx)),
+		TenantID:      tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Invoice{}, err
@@ -57,7 +55,7 @@ func (r *SQLRepository) CreateInvoice(ctx context.Context, invoice domain.Invoic
 func (r *SQLRepository) GetInvoiceByID(ctx context.Context, id domain.InvoiceID) (repository.InvoiceWithJoins, error) {
 	row, err := r.Q(ctx).GetInvoiceByID(ctx, db.GetInvoiceByIDParams{
 		ID:       string(id),
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return repository.InvoiceWithJoins{}, err
@@ -73,7 +71,7 @@ func (r *SQLRepository) GetInvoiceByID(ctx context.Context, id domain.InvoiceID)
 func (r *SQLRepository) GetInvoiceByNumber(ctx context.Context, number string) (repository.InvoiceWithJoins, error) {
 	row, err := r.Q(ctx).GetInvoiceByNumber(ctx, db.GetInvoiceByNumberParams{
 		InvoiceNumber: number,
-		TenantID:      string(shared.TenantIDFromContext(ctx)),
+		TenantID:      tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return repository.InvoiceWithJoins{}, err
@@ -89,7 +87,7 @@ func (r *SQLRepository) GetInvoiceByNumber(ctx context.Context, number string) (
 func (r *SQLRepository) GetInvoiceByTripID(ctx context.Context, tripID domain.TripID) (repository.InvoiceWithJoins, error) {
 	row, err := r.Q(ctx).GetInvoiceByTripID(ctx, db.GetInvoiceByTripIDParams{
 		TripID:   sql.NullString{String: string(tripID), Valid: true},
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return repository.InvoiceWithJoins{}, err
@@ -105,7 +103,7 @@ func (r *SQLRepository) GetInvoiceByTripID(ctx context.Context, tripID domain.Tr
 func (r *SQLRepository) GetInvoiceByBookingID(ctx context.Context, bookingID domain.BookingID) (repository.InvoiceWithJoins, error) {
 	row, err := r.Q(ctx).GetInvoiceByBookingID(ctx, db.GetInvoiceByBookingIDParams{
 		BookingID: string(bookingID),
-		TenantID:  string(shared.TenantIDFromContext(ctx)),
+		TenantID:  tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return repository.InvoiceWithJoins{}, err
@@ -135,7 +133,7 @@ func (r *SQLRepository) UpdateInvoice(ctx context.Context, invoice domain.Invoic
 		Total:         invoice.Total,
 		PaymentStatus: string(invoice.PaymentStatus),
 		ID:            string(invoice.ID),
-		TenantID:      string(shared.TenantIDFromContext(ctx)),
+		TenantID:      tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Invoice{}, err
@@ -162,7 +160,7 @@ func (r *SQLRepository) UpdateInvoicePaymentStatus(ctx context.Context, id domai
 	updated, err := r.Q(ctx).UpdateInvoicePaymentStatus(ctx, db.UpdateInvoicePaymentStatusParams{
 		PaymentStatus: string(status),
 		ID:            string(id),
-		TenantID:      string(shared.TenantIDFromContext(ctx)),
+		TenantID:      tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Invoice{}, err
@@ -188,13 +186,13 @@ func (r *SQLRepository) UpdateInvoicePaymentStatus(ctx context.Context, id domai
 func (r *SQLRepository) DeleteInvoice(ctx context.Context, id domain.InvoiceID) error {
 	return r.Q(ctx).DeleteInvoice(ctx, db.DeleteInvoiceParams{
 		ID:       string(id),
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 }
 
 func (r *SQLRepository) ListInvoicesByCustomer(ctx context.Context, customerID domain.CustomerID, limit int) ([]repository.InvoiceWithJoins, error) {
 	rows, err := r.Q(ctx).ListInvoicesByCustomer(ctx, db.ListInvoicesByCustomerParams{
-		TenantID:   string(shared.TenantIDFromContext(ctx)),
+		TenantID:   tenantIDFromCtx(ctx),
 		CustomerID: string(customerID),
 		Limit:      int64(limit),
 	})
@@ -215,7 +213,7 @@ func (r *SQLRepository) ListInvoicesByCustomer(ctx context.Context, customerID d
 
 func (r *SQLRepository) SearchInvoices(ctx context.Context, query string, status string, limit, offset int) ([]repository.InvoiceWithJoins, error) {
 	rows, err := r.Q(ctx).SearchInvoices(ctx, db.SearchInvoicesParams{
-		TenantID:      string(shared.TenantIDFromContext(ctx)),
+		TenantID:      tenantIDFromCtx(ctx),
 		Column2:       sql.NullString{String: query, Valid: true},
 		Column3:       sql.NullString{String: query, Valid: true},
 		Column4:       status,
@@ -240,7 +238,7 @@ func (r *SQLRepository) SearchInvoices(ctx context.Context, query string, status
 
 func (r *SQLRepository) CountInvoices(ctx context.Context, query string, status string) (int64, error) {
 	count, err := r.Q(ctx).CountInvoices(ctx, db.CountInvoicesParams{
-		TenantID:      string(shared.TenantIDFromContext(ctx)),
+		TenantID:      tenantIDFromCtx(ctx),
 		Column2:       sql.NullString{String: query, Valid: true},
 		Column3:       sql.NullString{String: query, Valid: true},
 		Column4:       status,
@@ -253,7 +251,7 @@ func (r *SQLRepository) CountInvoices(ctx context.Context, query string, status 
 }
 
 func (r *SQLRepository) GetPendingInvoices(ctx context.Context) ([]repository.InvoiceWithJoins, error) {
-	rows, err := r.Q(ctx).GetPendingInvoices(ctx, string(shared.TenantIDFromContext(ctx)))
+	rows, err := r.Q(ctx).GetPendingInvoices(ctx, tenantIDFromCtx(ctx))
 	if err != nil {
 		return nil, err
 	}
