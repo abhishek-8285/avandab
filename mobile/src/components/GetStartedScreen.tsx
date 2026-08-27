@@ -56,9 +56,8 @@ export function GetStartedScreen({ onGetStarted, onSignIn }: GetStartedScreenPro
                 },
               ]}
             />
-            <Text style={styles.statusText}>NETWORK ONLINE</Text>
+            <Text style={styles.statusText}>AVANDAB NETWORK</Text>
           </View>
-          <Text style={styles.timestamp}>14:32 IST</Text>
         </View>
 
         {/* Bottom hero overlay stats - driver ops focus, no earning pitch */}
@@ -152,7 +151,7 @@ const styles = StyleSheet.create({
     left: Spacing.lg,
     right: Spacing.lg,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
   },
   statusItem: {
@@ -172,13 +171,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
     fontFamily: Font.mono,
-  },
-  timestamp: {
-    color: Colors.textOnChromeMuted,
-    fontSize: 10,
-    fontWeight: '600',
-    fontFamily: Font.mono,
-    letterSpacing: 1,
   },
   heroStats: {
     position: 'absolute',
