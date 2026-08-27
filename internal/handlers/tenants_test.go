@@ -338,6 +338,8 @@ func TestSuggestTenantSlug(t *testing.T) {
 func newUsersIsolationApp(t *testing.T, multiTenant bool) (*App, string, string) {
 	t.Helper()
 	db := newTenantsTestDB(t)
+	// 00103 enforces FK — tenants must exist before users.
+	_, _ = db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('acme','Acme','acme'), ('beta','Beta','beta')`)
 	app := newTenantsTestApp(t, db, nil, multiTenant)
 
 	mk := func(email, name, tenantID string) domain.User {

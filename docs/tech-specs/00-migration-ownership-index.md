@@ -11,8 +11,14 @@ Single source of truth for `db/migrations/` version numbers. Repo head is
   `00042`. Every other spec only seeds rows or adds columns — never a second
   `CREATE TABLE`.
 - Every new migration has correct `-- +goose Up` / `-- +goose Down`.
-- `tenant_id` is a free-form `TEXT` (no `tenants` table exists). Do NOT add
-  `FOREIGN KEY (tenant_id) REFERENCES tenants(id)` — it will fail `goose up`.
+- `tenant_id` is `TEXT` referencing `tenants(id)` via triggers (since 00102/00103).
+  Before 00102 `tenants` did not exist — free-form `TEXT` with no FK was required.
+  Since 00102 `tenants` exists and all rows backfilled to default tenant via 00065,
+  **trigger-based FK enforcement is allowed and required from 00103 onwards**:
+  `CREATE TRIGGER ... BEFORE INSERT/UPDATE OF tenant_id ... SELECT RAISE(ABORT, ...)`
+  checking `tenants(id)`. Do NOT use `FOREIGN KEY (tenant_id) REFERENCES tenants(id)`
+  via `ALTER TABLE ADD COLUMN` — SQLite cannot add FK that way; use triggers, not table rebuild.
+  Updates to this rule: 2026-08-27 (00103) supersedes the original "no FK" note.
 
 ## Canonical allocation (verified non-overlapping)
 
@@ -76,7 +82,8 @@ Single source of truth for `db/migrations/` version numbers. Repo head is
 | 00100 | customers Fleetbase parity (customer_code, title, contact_person, internal_id, photo_url, place_uuid, meta, billing_address, type, status, payment_terms_days, tenant_id) | Fleetbase Contacts/Customers gap |
 | 00101 | customers state_code from GSTIN (e-invoice place_of_supply) + index | GST state split |
 | 00102 | tenants registry + users.tenant_id + tenants:manage permission (multi-tenant onboarding) | Spec 24 |
-| 00103+ | future specs | reserved |
+| 00103 | tenant FK hardening — 51-table trigger enforcement + 21 missing tenant indexes | Spec 24 §9 (hardening) |
+| 00104+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

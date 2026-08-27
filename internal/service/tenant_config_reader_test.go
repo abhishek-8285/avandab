@@ -32,6 +32,8 @@ func setupTenantConfigTestDB(t *testing.T) (*sql.DB, Store) {
 	t.Cleanup(func() { _ = db.Close() })
 	_ = goose.SetDialect("sqlite")
 	require.NoError(t, goose.Up(db, "../../db/migrations"))
+	// 00103 enforces FK — seed tenants used in overlay tests (company_config FK).
+	_, _ = db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('acme','Acme','acme'), ('beta','Beta','beta')`)
 	return db, sqlite.NewRepository(db)
 }
 

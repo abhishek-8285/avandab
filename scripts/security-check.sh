@@ -37,6 +37,9 @@ if [ -n "$CHANGED_GO_FILES" ]; then
 fi
 echo "✅ No hard-coded tenant literals in changed code"
 
+# ── Tenant isolation lint (compile-time safety) ──────────────────────────────
+./scripts/tenant-lint.sh
+
 # ── Secret-pattern scan on changed files ─────────────────────────────────────
 if [ -n "$LINT_BASE" ]; then
   SECRET_DIFF=$(git diff "$LINT_BASE" -- '*.go' '*.sh' '*.yml' '*.yaml' '*.env*' 2>/dev/null \

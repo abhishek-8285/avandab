@@ -21,6 +21,7 @@ func ctxAsTenant(t string) context.Context {
 // the acting tenant: an expense created under acme is invisible to beta.
 func TestKharcha_TenantIsolation(t *testing.T) {
 	db := NewTestDB(t)
+	_, _ = db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('acme','Acme','acme'), ('beta','Beta','beta')`)
 	svcs := NewTestServices(t, db)
 
 	acme := ctxAsTenant("acme")
@@ -80,6 +81,7 @@ func TestKharcha_TenantIsolation(t *testing.T) {
 // lists claims belonging to the acting tenant.
 func TestFuelAudit_TenantIsolation(t *testing.T) {
 	db := NewTestDB(t)
+	_, _ = db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('acme','Acme','acme'), ('beta','Beta','beta')`)
 	svcs := NewTestServices(t, db)
 
 	acme := ctxAsTenant("acme")
@@ -141,6 +143,7 @@ func TestFuelAudit_TenantIsolation(t *testing.T) {
 // (variance zero-valued, Result empty) instead of failing the whole query.
 func TestFuelAudit_UnauditedClaimDoesNotCrash(t *testing.T) {
 	db := NewTestDB(t)
+	_, _ = db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('acme','Acme','acme')`)
 	svcs := NewTestServices(t, db)
 	acme := ctxAsTenant("acme")
 

@@ -45,6 +45,8 @@ func newAlertsTestDB(t *testing.T) *sql.DB {
 
 	_ = goose.SetDialect("sqlite")
 	require.NoError(t, goose.Up(db, migrationsDir))
+	// 00103 enforces tenant FK — seed common tenants (including 'tenant-42' used in inbox_enrich_test).
+	_, _ = db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('tenant-42','Tenant 42','tenant-42')`)
 	t.Cleanup(func() { _ = db.Close() })
 	return db
 }

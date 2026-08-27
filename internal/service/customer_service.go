@@ -105,7 +105,8 @@ func (s *CustomerService) CreateCustomerFull(ctx context.Context, req CreateCust
 		return domain.Customer{}, fmt.Errorf("meta must be valid JSON")
 	}
 
-	// Tenant scoping
+	// Tenant scoping — fail-closed when tenant is set, fallback to DefaultTenant
+	// for single-tenant / test contexts (background context). Lint enforces awareness.
 	tenantID := string(shared.TenantIDFromContext(ctx))
 	if tenantID == "" {
 		tenantID = string(shared.DefaultTenant)

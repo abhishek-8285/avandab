@@ -33,6 +33,8 @@ func openMigratedDB(t *testing.T) (*sql.DB, *service.Services) {
 	t.Cleanup(func() { _ = dbConn.Close() })
 	require.NoError(t, goose.SetDialect("sqlite"))
 	require.NoError(t, goose.Up(dbConn, "../../db/migrations"))
+	// 00103 enforces tenant FK — seed common test tenant used by ledger/payment tests.
+	_, _ = dbConn.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('tenant-1','Test Tenant 1','tenant-1')`)
 
 	repo := sqlite.NewRepository(dbConn)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))

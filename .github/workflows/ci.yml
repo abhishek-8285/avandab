@@ -74,6 +74,9 @@ jobs:
           fi
           echo "No hardcoded tenant literals in production code. Tenant is always context-derived."
 
+      - name: Tenant Isolation Lint
+        run: ./scripts/tenant-lint.sh
+
       - name: Check CDN Tailwind references in templates
         run: |
           CDN_REFS=$(grep -rn 'cdn.tailwindcss.com' internal/templates/ || true)
@@ -167,6 +170,9 @@ jobs:
 
       - name: Run Security Scanners
         run: ./scripts/security-check.sh
+
+      - name: Tenant Isolation Lint
+        run: ./scripts/tenant-lint.sh
 
   # ──────────────────────────────────────────────────────────
   # Job 4: Mobile (fully independent, parallel with backend)

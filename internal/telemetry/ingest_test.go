@@ -30,6 +30,8 @@ func newTestIngestorDB(t *testing.T) *sql.DB {
 	require.NoError(t, err)
 	_ = goose.SetDialect("sqlite")
 	require.NoError(t, goose.Up(db, "../../db/migrations"))
+	// 00103 enforces tenant_id FKs — seed common test tenants used across telemetry tests.
+	_, _ = db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('1','Default','default'), ('2','Tenant 2','tenant-2'), ('7','Tenant 7','tenant-7'), ('9','Tenant 9','tenant-9'), ('other-tenant','Other Tenant','other-tenant'), ('tenant-1','Test Tenant 1','tenant-1'), ('tenant-a','Tenant A','tenant-a'), ('tenant-b','Tenant B','tenant-b')`)
 	t.Cleanup(func() { _ = db.Close() })
 	return db
 }

@@ -255,7 +255,7 @@ reads as **404** (existence undisclosed), never 403 — no enumeration signal.
 
 ## 9. Known limitations (Wave-2 deferred)
 
-- `audit_logs` / `files` tenant columns → migration **00103**.
+- ~~`audit_logs` / `files` tenant columns → migration **00103**~~ → **00103 shipped** (2026-08-27) as trigger-based FK hardening for all 51 existing `tenant_id` tables (bookings, trips, drivers, vehicles, invoices, payments, routes, dispatches, customers, fuel_prices, telemetry_devices, telemetry_raw_events, geofences, alerts, driver_expenses, maintenance_records, pnl_daily, ops_alerts + 33 others; 21 missing indexes added). `audit_logs`/`files` still have no `tenant_id` column — deferred to future migration (out of 00103 scope; 00103 enforces only existing tenant columns).
 - Share-link suspension kill-switch (JOIN trips pattern `db/query/share.go:714`).
 - Portal tracking intra-tenant fallback (`customer_portal.go:359-382`).
 - Agent `get_open_alerts` tool (`tools.go:751`).

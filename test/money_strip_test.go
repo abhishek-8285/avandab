@@ -47,7 +47,7 @@ func seedMoneyStripFixtures(t *testing.T, db *sql.DB, day time.Time) {
 	must(`INSERT INTO invoices (id, invoice_number, booking_id, customer_id, subtotal, tax, total, payment_status, status, paid_amount, tenant_id, created_at, updated_at)
 	      VALUES ('inv-a3','INVA3','bk-y','cust-y',1000,0,1000,'pending','outstanding',0,'tenant-a',?,?)`, dayStr+" 12:00:00", dayStr)
 	must(`INSERT INTO payments (id, invoice_id, amount, payment_date, method, tenant_id, created_at, updated_at)
-	      VALUES ('pay-a3','inv-a3',300,?,?,'upi','tenant-a',?)`, dayStr+" 13:00:00", "cash", dayStr)
+	      VALUES ('pay-a3','inv-a3',300,?,'upi','tenant-a',?,?)`, dayStr+" 13:00:00", dayStr, dayStr)
 
 	// Spent: fuel expense (not absorbed into any settlement line) + toll.
 	must(`INSERT INTO driver_expenses (id, trip_id, driver_id, expense_type, category, amount, description, tenant_id, created_at)

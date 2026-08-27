@@ -52,3 +52,19 @@ func TenantRequired(ctx context.Context) (TenantID, error) {
 	}
 	return t, nil
 }
+
+// RequireTenantID is an alias for TenantRequired — preferred name for lint.
+// Lint enforces RequireTenantID/TenantRequired/MustTenantID presence.
+func RequireTenantID(ctx context.Context) (TenantID, error) {
+	return TenantRequired(ctx)
+}
+
+// MustTenantID panics if tenant is missing. Use only where panic is appropriate
+// (e.g., background jobs where missing tenant is a programmer error).
+func MustTenantID(ctx context.Context) TenantID {
+	t, err := TenantRequired(ctx)
+	if err != nil {
+		panic("tenant not set in context: call RequireTenantID and handle error, or ensure middleware set tenant via ContextWithTenantID")
+	}
+	return t
+}

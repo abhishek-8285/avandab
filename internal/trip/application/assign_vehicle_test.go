@@ -35,6 +35,8 @@ func newTripTestDB(t *testing.T) *sql.DB {
 
 	_ = goose.SetDialect("sqlite")
 	require.NoError(t, goose.Up(db, migrationsDir))
+	// 00103 enforces tenant_id FK via triggers — seed test tenant used by helpers.
+	_, _ = db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('tenant-1','Test Tenant 1','tenant-1')`)
 	t.Cleanup(func() { _ = db.Close() })
 	return db
 }

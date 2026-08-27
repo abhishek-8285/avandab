@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,6 +14,10 @@ import (
 	"transport-app/internal/shared"
 )
 
+func isAlreadyExists(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "UNIQUE constraint failed")
+}
+
 // TestMultiTenantUserIsolation — Spec 24 §Business logic: users are created
 // into an explicit tenant, list/count are tenant-scoped, password hashes never
 // leak into search results, and login is rejected while the tenant is
@@ -22,8 +27,12 @@ func TestMultiTenantUserIsolation(t *testing.T) {
 	svc := NewTestServices(t, db)
 	ctx := context.Background()
 
-	require.NoError(t, svc.Users.CreateTenant(ctx, "acme", "Acme Ltd", "acme"))
-	require.NoError(t, svc.Users.CreateTenant(ctx, "beta", "Beta Ltd", "beta"))
+	if err := svc.Users.CreateTenant(ctx, "acme", "Acme Ltd", "acme"); err != nil && !isAlreadyExists(err) {
+		require.NoError(t, err)
+	}
+	if err := svc.Users.CreateTenant(ctx, "beta", "Beta Ltd", "beta"); err != nil && !isAlreadyExists(err) {
+		require.NoError(t, err)
+	}
 
 	acmeCtx := shared.ContextWithTenantID(ctx, "acme")
 	betaCtx := shared.ContextWithTenantID(ctx, "beta")
