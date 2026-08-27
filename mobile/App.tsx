@@ -15,7 +15,6 @@ import { SplashScreen } from './src/components/SplashScreen';
 import { GetStartedScreen } from './src/components/GetStartedScreen';
 import { OnboardingOverviewScreen } from './src/components/OnboardingOverviewScreen';
 import { BookingScheduleScreen } from './src/components/BookingScheduleScreen';
-import { EarningsOverviewScreen } from './src/components/EarningsOverviewScreen';
 import { LoginScreen } from './src/components/LoginScreen';
 import { RegisterScreen } from './src/components/RegisterScreen';
 import { ForgotPasswordScreen } from './src/components/ForgotPasswordScreen';
@@ -51,7 +50,6 @@ type AuthStackParamList = {
   GetStarted: undefined;
   OnboardingOverview: undefined;
   BookingSchedule: undefined;
-  EarningsOverview: undefined;
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
@@ -95,15 +93,7 @@ function AuthNavigator() {
       <AuthStack.Screen name="BookingSchedule">
         {({ navigation }) => (
           <BookingScheduleScreen
-            onNext={() => navigation.navigate('EarningsOverview')}
-            onBack={() => navigation.goBack()}
-          />
-        )}
-      </AuthStack.Screen>
-      <AuthStack.Screen name="EarningsOverview">
-        {({ navigation }) => (
-          <EarningsOverviewScreen
-            onFinish={() => navigation.navigate('Login')}
+            onNext={() => navigation.navigate('Login')}
             onBack={() => navigation.goBack()}
           />
         )}
