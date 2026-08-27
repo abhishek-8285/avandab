@@ -10,7 +10,6 @@ import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-quer
 import { Colors, Font, Radius, Spacing } from './src/constants/theme';
 import { getApiBaseURL } from './src/constants/network';
 import { TripCard, SkeletonLoader } from './src/components/TripCard';
-import { LiveDriverTrackingMap } from './src/components/LiveDriverTrackingMap';
 import { SplashScreen } from './src/components/SplashScreen';
 import { GetStartedScreen } from './src/components/GetStartedScreen';
 import { OnboardingOverviewScreen } from './src/components/OnboardingOverviewScreen';
@@ -26,7 +25,6 @@ import { ProfileScreen } from './src/components/ProfileScreen';
 import { IssuesScreen } from './src/components/IssuesScreen';
 import { DB } from './src/services/storage';
 import { Telemetry } from './src/services/telemetry';
-import { BackgroundGPS } from './src/services/backgroundLocation';
 import { Analytics } from './src/services/analytics';
 import { MQTT } from './src/services/mqtt';
 import { SyncEngine, startNetworkWatcher, stopNetworkWatcher } from './src/services/syncEngine';
@@ -36,12 +34,10 @@ import ConsentManager from './src/services/consentManager';
 import { SyncStatusBar } from './src/components/SyncStatusBar';
 import { ComplianceBanner } from './src/components/ComplianceBanner';
 import { PaisaScreen } from './src/components/PaisaScreen';
-import { VoiceExpenseButton } from './src/components/VoiceExpenseButton';
 import { useAuthStore } from './src/stores/authStore';
 import { useSyncStore } from './src/stores/syncStore';
 import { Trip } from './src/types/api';
 import { mapTripStatus, RawTrip } from './src/utils/tripMapper';
-import { CameraView } from 'expo-camera';
 
 const queryClient = new QueryClient();
 
@@ -255,10 +251,6 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
     longitude: null,
     error: null,
   });
-  const [cameraState, setCameraState] = useState<{ granted: boolean; error: string | null }>({
-    granted: false,
-    error: null,
-  });
 
   const { token, user, logout, loadSession } = useAuthStore();
   const driverIdentifier = user?.driverId || user?.id || '';
@@ -293,21 +285,6 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
     };
   }, [user?.id, user?.driverId]);
 
-  const handleManualSync = async () => {
-    if (!driverIdentifier) return;
-    try {
-      Analytics.track('driver_manual_sync_clicked');
-      const res = await SyncEngine.syncPendingLogs(driverIdentifier);
-      if (res.error) {
-        Alert.alert('Sync Warning', res.error);
-      } else {
-        Alert.alert('Auto-Sync Engine Success', `Successfully synced ${res.syncedCount} offline GPS records to Go backend.`);
-        handleFetchDBLogs();
-      }
-    } catch (e: any) {
-      Alert.alert('Sync Error', e.message || 'Failed to sync');
-    }
-  };
 
   const handleRequestLocation = async () => {
     try {
@@ -354,64 +331,10 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
     }
   };
 
-  const [showCameraView, setShowCameraView] = useState(false);
-  const [bgGpsOn, setBgGpsOn] = useState(false);
-  const [dbLogs, setDbLogs] = useState<{ id: number; latitude: number; longitude: number; timestamp: string }[]>([]);
 
-  useEffect(() => {
-    BackgroundGPS.isRunning().then(setBgGpsOn);
-    return () => BackgroundGPS.setForegroundEcho(null);
-  }, []);
 
-  const handleToggleBackgroundGPS = async () => {
-    if (bgGpsOn) {
-      await BackgroundGPS.stop();
-      setBgGpsOn(false);
-      Alert.alert('Background GPS Off', 'Location tracking now runs only while the app is open.');
-      return;
-    }
-    const res = await BackgroundGPS.start();
-    if (res.started) {
-      setBgGpsOn(true);
-      // Echo OS-level fixes into the same live UI state as foreground tracking.
-      BackgroundGPS.setForegroundEcho((lat, lng) => {
-        setLocationState((prev) => ({ ...prev, granted: true, latitude: lat, longitude: lng }));
-        if (driverIdentifier) {
-          MQTT.publishLocation(driverIdentifier, lat, lng);
-        }
-      });
-      Alert.alert('Background GPS On', 'Trip position keeps streaming when the app is backgrounded.');
-    } else {
-      Alert.alert('Background GPS Unavailable', res.error || 'Could not start background location.');
-    }
-  };
 
-  const handleFetchDBLogs = async () => {
-    try {
-      Analytics.track('driver_fetched_db_logs');
-      const logs = await DB.getUnsyncedGPSLogs();
-      setDbLogs(logs.slice(-5));
-      Alert.alert('SQLite Database Query Success', `Retrieved ${logs.length} persisted location logs from mobile SQLite DB.`);
-    } catch (e: any) {
-      Alert.alert('DB Error', e.message || 'Failed to read SQLite database');
-    }
-  };
 
-  const handleRequestCamera = async () => {
-    try {
-      Analytics.track('driver_camera_requested');
-      const cam = await Telemetry.requestCameraPermission();
-      setCameraState(cam);
-      if (cam.granted) {
-        setShowCameraView(true);
-        Analytics.track('driver_camera_viewfinder_opened');
-      } else {
-        Alert.alert('Camera Permission Denied', cam.error || 'Please grant camera permission in Settings.');
-      }
-    } catch (e: any) {
-      Alert.alert('Camera Error', e.message || 'Failed to request camera');
-    }
-  };
 
   const handleSignOut = () => {
     // Full teardown: no live listeners may survive a logout.
@@ -1018,6 +941,42 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: Colors.borderLight,
     marginVertical: Spacing.md,
+  },
+  routeContainer: {
+    gap: 0,
+  },
+  routeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  routeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 2,
+  },
+  routeDotOrigin: {
+    backgroundColor: Colors.success,
+  },
+  routeDotDest: {
+    backgroundColor: Colors.danger,
+  },
+  locationText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    flex: 1,
+  },
+  routeConnector: {
+    width: 1,
+    height: 10,
+    backgroundColor: Colors.border,
+    marginLeft: 3.5,
+  },
+  hint: {
+    fontSize: 10,
+    color: Colors.textMuted,
+    fontStyle: 'italic',
   },
   actionBtn: {
     backgroundColor: Colors.chrome,
