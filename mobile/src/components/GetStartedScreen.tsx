@@ -61,21 +61,21 @@ export function GetStartedScreen({ onGetStarted, onSignIn }: GetStartedScreenPro
           <Text style={styles.timestamp}>14:32 IST</Text>
         </View>
 
-        {/* Bottom hero overlay stats */}
+        {/* Bottom hero overlay stats - driver ops focus, no earning pitch */}
         <View style={styles.heroStats}>
           <View style={styles.heroStat}>
-            <Text style={styles.heroStatValue}>2,847</Text>
-            <Text style={styles.heroStatLabel}>ACTIVE DRIVERS</Text>
-          </View>
-          <View style={styles.heroStatDivider} />
-          <View style={styles.heroStat}>
-            <Text style={styles.heroStatValue}>₹1.5K</Text>
-            <Text style={styles.heroStatLabel}>AVG DAILY EARN</Text>
-          </View>
-          <View style={styles.heroStatDivider} />
-          <View style={styles.heroStat}>
-            <Text style={styles.heroStatValue}>24/7</Text>
+            <Text style={styles.heroStatValue}>LIVE</Text>
             <Text style={styles.heroStatLabel}>DISPATCH</Text>
+          </View>
+          <View style={styles.heroStatDivider} />
+          <View style={styles.heroStat}>
+            <Text style={styles.heroStatValue}>GPS</Text>
+            <Text style={styles.heroStatLabel}>TRACKING</Text>
+          </View>
+          <View style={styles.heroStatDivider} />
+          <View style={styles.heroStat}>
+            <Text style={styles.heroStatValue}>POD</Text>
+            <Text style={styles.heroStatLabel}>VERIFIED</Text>
           </View>
         </View>
       </View>
@@ -92,15 +92,15 @@ export function GetStartedScreen({ onGetStarted, onSignIn }: GetStartedScreenPro
         <View style={styles.featureList}>
           <View style={styles.featureRow}>
             <MaterialCommunityIcons name="radar" size={14} color={Colors.primary} />
-            <Text style={styles.featureText}>MQTT live location streaming</Text>
+            <Text style={styles.featureText}>Live trip assignments & dispatch updates</Text>
           </View>
           <View style={styles.featureRow}>
             <MaterialCommunityIcons name="barcode-scan" size={14} color={Colors.primary} />
-            <Text style={styles.featureText}>Barcode POD verification</Text>
+            <Text style={styles.featureText}>Photo & signature proof-of-delivery</Text>
           </View>
           <View style={styles.featureRow}>
-            <MaterialCommunityIcons name="bank-transfer" size={14} color={Colors.primary} />
-            <Text style={styles.featureText}>Instant settlement payouts</Text>
+            <MaterialCommunityIcons name="map-marker-path" size={14} color={Colors.primary} />
+            <Text style={styles.featureText}>Turn-by-turn navigation & GPS tracking</Text>
           </View>
         </View>
 

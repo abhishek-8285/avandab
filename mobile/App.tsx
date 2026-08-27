@@ -591,138 +591,74 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
             })()
           )
         ) : (
-          <View style={styles.infoCard}>
-            <View style={styles.infoCardHeader}>
-              <Text style={styles.infoTitle}>TELEMETRY & INSTRUMENTATION</Text>
-              <Text style={styles.infoMeta}>DISPATCH PANEL</Text>
-            </View>
-            <Text style={styles.infoBody}>
-              Request native permissions and monitor instrumented GPS location & camera state.
-            </Text>
+          <View style={{ gap: Spacing.md }}>
+            {/* Active trip summary + quick actions - no debug telemetry */}
+            {activeTrip ? (
+              <View style={styles.infoCard}>
+                <View style={styles.infoCardHeader}>
+                  <Text style={styles.infoTitle}>ACTIVE TRIP</Text>
+                  <Text style={styles.infoMeta}>{activeTrip.tripNumber}</Text>
+                </View>
+                <View style={styles.routeContainer}>
+                  <View style={styles.routeRow}>
+                    <View style={[styles.routeDot, styles.routeDotOrigin]} />
+                    <Text style={styles.locationText} numberOfLines={1}>{activeTrip.origin}</Text>
+                  </View>
+                  <View style={styles.routeConnector} />
+                  <View style={styles.routeRow}>
+                    <View style={[styles.routeDot, styles.routeDotDest]} />
+                    <Text style={styles.locationText} numberOfLines={1}>{activeTrip.destination}</Text>
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: Spacing.md }}>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.actionBtnTeal, { flex: 1 }]}
+                    onPress={() => onStartNav && onStartNav(activeTrip)}
+                  >
+                    <MaterialCommunityIcons name="navigation" size={14} color={Colors.textOnPrimary} />
+                    <Text style={styles.actionBtnText}>NAVIGATE</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, { flex: 1, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border }]}
+                    onPress={() => onOpenExpenses && onOpenExpenses(activeTrip.id)}
+                  >
+                    <MaterialCommunityIcons name="receipt" size={14} color={Colors.primary} />
+                    <Text style={[styles.actionBtnText, { color: Colors.primary }]}>EXPENSE</Text>
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, marginTop: 8 }]}
+                  onPress={() => onOpenIssues && onOpenIssues()}
+                >
+                  <MaterialCommunityIcons name="alert-circle-outline" size={14} color={Colors.warning} />
+                  <Text style={[styles.actionBtnText, { color: Colors.textPrimary }]}>REPORT ISSUE</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.infoCard}>
+                <Text style={styles.infoTitle}>NO ACTIVE TRIP</Text>
+                <Text style={styles.infoBody}>You have no dispatched trips. Pull to refresh or contact dispatch.</Text>
+              </View>
+            )}
 
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.actionBtnTeal, { marginTop: 0, marginBottom: 8 }]}
-              onPress={() => onOpenExpenses && onOpenExpenses(activeTrip?.id)}
-              disabled={!activeTrip}
-            >
-              <MaterialCommunityIcons name="receipt" size={14} color={Colors.textOnPrimary} />
-              <Text style={styles.actionBtnText}>
-                {activeTrip ? `LOG EXPENSE · ${activeTrip.tripNumber}` : 'LOG EXPENSE (NO ACTIVE TRIP)'}
-              </Text>
-            </TouchableOpacity>
-
-            <VoiceExpenseButton tripId={activeTrip?.id} disabled={!activeTrip} />
-
-            {/* Telemetry Status Grid */}
-            <View style={styles.telemetrySection}>
+            {/* Minimal status - no raw LAT/LNG dump, no DB rows, no camera finder */}
+            <View style={styles.infoCard}>
               <View style={styles.telemetryRow}>
-                <Text style={styles.telemetryLabel}>GPS TELEMETRY</Text>
+                <Text style={styles.telemetryLabel}>GPS</Text>
                 <View style={[styles.statusPill, locationState.granted ? styles.statusPillActive : styles.statusPillPending]}>
                   <View style={[styles.statusPillDot, { backgroundColor: locationState.granted ? Colors.success : Colors.warning }]} />
                   <Text style={[styles.telemetryValue, { color: locationState.granted ? Colors.success : Colors.warning }]}>
-                    {locationState.granted ? 'ACTIVE · 10S' : 'NOT GRANTED'}
+                    {locationState.granted ? 'ON' : 'OFF'}
                   </Text>
                 </View>
               </View>
-
-              {locationState.granted && locationState.latitude ? (
-                <View style={styles.gpsDisplayBox}>
-                  <View style={styles.gpsRow}>
-                    <Text style={styles.gpsLabel}>LAT</Text>
-                    <Text style={styles.gpsValue}>{locationState.latitude.toFixed(6)}°N</Text>
-                  </View>
-                  <View style={styles.gpsRow}>
-                    <Text style={styles.gpsLabel}>LNG</Text>
-                    <Text style={styles.gpsValue}>{locationState.longitude?.toFixed(6)}°E</Text>
-                  </View>
-                  <View style={styles.gpsRow}>
-                    <Text style={styles.gpsLabel}>PERSIST</Text>
-                    <Text style={styles.gpsSuccessText}>SQLITE · MQTT STREAM</Text>
-                  </View>
-
-                  <TouchableOpacity
-                    style={[styles.dbFetchBtn, bgGpsOn ? styles.bgGpsOnBtn : styles.bgGpsOffBtn, { marginTop: 8 }]}
-                    onPress={handleToggleBackgroundGPS}
-                  >
-                    <MaterialCommunityIcons name={bgGpsOn ? 'shield-check-outline' : 'shield-off-outline'} size={12} color={Colors.textOnPrimary} />
-                    <Text style={styles.dbFetchBtnText}>{bgGpsOn ? 'BACKGROUND GPS · ON' : 'BACKGROUND GPS · OFF'}</Text>
-                  </TouchableOpacity>
-
-                  {/* Uber-Style Live Interactive Map — only with real fix, no fake fallback */}
-                  {locationState.longitude != null && activeTrip && (
-                    <LiveDriverTrackingMap
-                      driverLatitude={locationState.latitude}
-                      driverLongitude={locationState.longitude}
-                      pickupLabel={activeTrip.origin}
-                      destinationLabel={activeTrip.destination}
-                      vehicleLabel={activeTrip.vehiclePlate ? `Vehicle #${activeTrip.vehiclePlate}` : undefined}
-                    />
-                  )}
-
-                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                    <TouchableOpacity style={[styles.dbFetchBtn, { flex: 1 }]} onPress={handleFetchDBLogs}>
-                      <MaterialCommunityIcons name="database-search-outline" size={12} color={Colors.textOnPrimary} />
-                      <Text style={styles.dbFetchBtnText}>FETCH LOGS</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity style={[styles.dbFetchBtn, styles.dbSyncBtn, { flex: 1 }]} onPress={handleManualSync}>
-                      <MaterialCommunityIcons name="cloud-upload-outline" size={12} color={Colors.textOnPrimary} />
-                      <Text style={styles.dbFetchBtnText}>SYNC BACKEND</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {dbLogs.length > 0 && (
-                    <View style={styles.dbLogsContainer}>
-                      <Text style={styles.dbLogsTitle}>OFFLINE_GPS_LOGS · {dbLogs.length} ROWS</Text>
-                      {dbLogs.map((log) => (
-                        <View key={log.id} style={styles.dbLogRow}>
-                          <Text style={styles.dbLogId}>#{log.id}</Text>
-                          <Text style={styles.dbLogCoords}>{log.latitude.toFixed(4)}, {log.longitude.toFixed(4)}</Text>
-                          <Text style={styles.dbLogTime}>{new Date(log.timestamp).toLocaleTimeString()}</Text>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-              ) : (
-                <TouchableOpacity style={styles.actionBtn} onPress={handleRequestLocation}>
+              {!locationState.granted && (
+                <TouchableOpacity style={[styles.actionBtn, { marginTop: Spacing.sm }]} onPress={handleRequestLocation}>
                   <MaterialCommunityIcons name="crosshairs-gps" size={14} color={Colors.textOnPrimary} />
-                  <Text style={styles.actionBtnText}>REQUEST & INSTRUMENT GPS</Text>
+                  <Text style={styles.actionBtnText}>ENABLE LOCATION</Text>
                 </TouchableOpacity>
               )}
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.telemetrySection}>
-              <View style={styles.telemetryRow}>
-                <Text style={styles.telemetryLabel}>CAMERA HARDWARE</Text>
-                <View style={[styles.statusPill, cameraState.granted ? styles.statusPillActive : styles.statusPillPending]}>
-                  <View style={[styles.statusPillDot, { backgroundColor: cameraState.granted ? Colors.success : Colors.warning }]} />
-                  <Text style={[styles.telemetryValue, { color: cameraState.granted ? Colors.success : Colors.warning }]}>
-                    {cameraState.granted ? 'READY' : 'NOT GRANTED'}
-                  </Text>
-                </View>
-              </View>
-
-              {showCameraView ? (
-                <View style={styles.cameraContainer}>
-                  <CameraView style={styles.cameraView} facing="back">
-                    <View style={styles.scannerOverlay}>
-                      <View style={styles.scanTargetBox} />
-                      <Text style={styles.scanInstructionText}>ALIGN CARGO BARCODE</Text>
-                    </View>
-                  </CameraView>
-                  <TouchableOpacity style={styles.closeCameraBtn} onPress={() => setShowCameraView(false)}>
-                    <Text style={styles.closeCameraBtnText}>CLOSE FINDER</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity style={[styles.actionBtn, styles.actionBtnTeal]} onPress={handleRequestCamera}>
-                  <MaterialCommunityIcons name="barcode-scan" size={14} color={Colors.textOnPrimary} />
-                  <Text style={styles.actionBtnText}>OPEN BARCODE SCANNER</Text>
-                </TouchableOpacity>
-              )}
+              <Text style={[styles.hint, { marginTop: Spacing.sm }]}>Diagnostics & background tracking moved to Profile.</Text>
             </View>
           </View>
         )}
