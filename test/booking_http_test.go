@@ -110,7 +110,7 @@ func mustParseJSON(t *testing.T, b []byte, v interface{}) {
 // through the HTTP transport layer — POST, GET, POST confirm, GET, POST cancel, GET.
 func TestBookingHTTP_CreateConfirmViewCancel(t *testing.T) {
 	env := setupBookingHTTPTest(t)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1") // tenant-scoped repo seam (fail-closed)
 
 	customer, err := env.Services.Customers.CreateCustomer(ctx, "Test Co", "TCO", "555-0001", "tc@example.com", "", "", "")
 	require.NoError(t, err)
@@ -178,7 +178,7 @@ func TestBookingHTTP_CreateConfirmViewCancel(t *testing.T) {
 
 func TestBookingHTTP_CompleteWorkflow(t *testing.T) {
 	env := setupBookingHTTPTest(t)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1") // tenant-scoped repo seam (fail-closed)
 
 	customer, _ := env.Services.Customers.CreateCustomer(ctx, "Complete Co", "CC", "555-0005", "cc@example.com", "", "", "")
 	route, _ := env.Services.Routes.CreateRoute(ctx, "A", "B", 100, 2, 5000, "")
@@ -237,7 +237,7 @@ func TestBookingHTTP_GetNotFound(t *testing.T) {
 
 func TestBookingHTTP_Delete(t *testing.T) {
 	env := setupBookingHTTPTest(t)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1") // tenant-scoped repo seam (fail-closed)
 
 	customer, _ := env.Services.Customers.CreateCustomer(ctx, "Del Co", "DC", "555-0006", "dc@example.com", "", "", "")
 	route, _ := env.Services.Routes.CreateRoute(ctx, "C", "D", 120, 3, 4000, "")
@@ -266,7 +266,7 @@ func TestBookingHTTP_Delete(t *testing.T) {
 
 func TestBookingHTTP_AuditLogCreated(t *testing.T) {
 	env := setupBookingHTTPTest(t)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1") // tenant-scoped repo seam (fail-closed)
 
 	customer, _ := env.Services.Customers.CreateCustomer(ctx, "Audit Co", "AC", "555-0007", "ac@example.com", "", "", "")
 	route, _ := env.Services.Routes.CreateRoute(ctx, "E", "F", 80, 1, 2000, "")
@@ -305,7 +305,7 @@ func TestBookingHTTP_AuditLogCreated(t *testing.T) {
 
 func TestBookingHTTP_Update(t *testing.T) {
 	env := setupBookingHTTPTest(t)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1") // tenant-scoped repo seam (fail-closed)
 
 	customer, _ := env.Services.Customers.CreateCustomer(ctx, "Update Co", "UC", "555-0004", "uc@example.com", "", "", "")
 	route, _ := env.Services.Routes.CreateRoute(ctx, "A", "B", 100, 2, 5000, "")

@@ -134,7 +134,10 @@ func (r *SQLRepository) UpdateUserLastLogin(ctx context.Context, userID domain.U
 }
 
 func (r *SQLRepository) DeleteUser(ctx context.Context, userID domain.UserID) error {
-	return r.Q(ctx).DeleteUser(ctx, string(userID))
+	return r.Q(ctx).DeleteUser(ctx, db.DeleteUserParams{
+		ID:       string(userID),
+		TenantID: tenantIDFromCtx(ctx),
+	})
 }
 
 func (r *SQLRepository) SearchUsers(ctx context.Context, query string, status string, limit, offset int, tenantID string) ([]repository.UserWithRole, error) {

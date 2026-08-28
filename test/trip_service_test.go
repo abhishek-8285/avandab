@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"testing"
+	"transport-app/internal/shared"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,7 +15,7 @@ import (
 func TestTripService_CreateTrip(t *testing.T) {
 	db := NewTestDB(t)
 	svc := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	// Create prerequisites
 	driver, err := svc.Drivers.CreateDriver(ctx,
@@ -54,7 +55,7 @@ func TestTripService_CreateTrip(t *testing.T) {
 func TestTripService_AssignDriver_BusyDriver(t *testing.T) {
 	db := NewTestDB(t)
 	svc := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	driver, err := svc.Drivers.CreateDriver(ctx,
 		"John", "Driver", "555-1234", "", "", "LIC123", "2026-12-31", 5, nil, nil, nil)
@@ -80,7 +81,7 @@ func TestTripService_AssignDriver_BusyDriver(t *testing.T) {
 func TestTripService_Cancel_Then_Complete(t *testing.T) {
 	db := NewTestDB(t)
 	svc := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	route, _ := svc.Routes.CreateRoute(ctx, "A", "B", 100, 2, 5000, "")
 	trip, _ := svc.Trips.CreateTrip(ctx, service.CreateTripRequest{RouteID: route.ID, DepartureTime: "2026-08-10T08:00:00"})
@@ -97,7 +98,7 @@ func TestTripService_Cancel_Then_Complete(t *testing.T) {
 func TestTripService_CompletedTrip_Immutable(t *testing.T) {
 	db := NewTestDB(t)
 	svc := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	route, _ := svc.Routes.CreateRoute(ctx, "A", "B", 100, 2, 5000, "")
 	driver, _ := svc.Drivers.CreateDriver(ctx, "John", "Driver", "555-1234", "", "", "LIC123", "2026-12-31", 5, nil, nil, nil)
@@ -125,7 +126,7 @@ func TestTripService_CompletedTrip_Immutable(t *testing.T) {
 func TestBookingService_CreateAndConfirm(t *testing.T) {
 	db := NewTestDB(t)
 	svc := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	customer, err := svc.Customers.CreateCustomer(ctx, "Test Customer", "Acme Corp", "555-0100", "test@acme.com", "27AABCU9603R1ZX", "123 Main St", "")
 	require.NoError(t, err)
@@ -153,7 +154,7 @@ func TestBookingService_CreateAndConfirm(t *testing.T) {
 func TestInvoiceService_GenerateFromTrip(t *testing.T) {
 	db := NewTestDB(t)
 	svc := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	customer, _ := svc.Customers.CreateCustomer(ctx, "Test Customer", "", "555-0100", "", "", "", "")
 	route, _ := svc.Routes.CreateRoute(ctx, "A", "B", 100, 2, 5000, "")
@@ -197,7 +198,7 @@ func TestInvoiceService_GenerateFromTrip(t *testing.T) {
 func TestDriverService_ListDrivers(t *testing.T) {
 	db := NewTestDB(t)
 	svc := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	_, err := svc.Drivers.CreateDriver(ctx, "John", "Driver", "555-1234", "", "", "LIC123", "2026-12-31", 5, nil, nil, nil)
 	require.NoError(t, err)
@@ -211,7 +212,7 @@ func TestDriverService_ListDrivers(t *testing.T) {
 func TestVehicleService_ListVehicles(t *testing.T) {
 	db := NewTestDB(t)
 	svc := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	_, err := svc.Vehicles.CreateVehicle(ctx, "ABC-1234", "V100", domain.VehicleTypeTruck, 20, domain.FuelTypeDiesel, "2027-01-01", "2027-01-01", "2027-01-01", "0")
 	require.NoError(t, err)
@@ -225,7 +226,7 @@ func TestVehicleService_ListVehicles(t *testing.T) {
 func TestRepository_TypeCheck(t *testing.T) {
 	db := NewTestDB(t)
 	repo := NewTestRepo(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	var _ service.Store = repo
 

@@ -7,6 +7,7 @@ import (
 	"sync"
 	"testing"
 	"time"
+	"transport-app/internal/shared"
 
 	"transport-app/internal/auth"
 	"transport-app/internal/domain"
@@ -24,7 +25,7 @@ import (
 func TestSync1_1_DriverLicenseExpired(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	pastExpiry := time.Now().AddDate(0, 0, -5).Format("2006-01-02")
 	d, err := svcs.Drivers.CreateDriver(
@@ -43,7 +44,7 @@ func TestSync1_1_DriverLicenseExpired(t *testing.T) {
 func TestSync1_2_1_3_VehicleComplianceAndRenewal(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	futureExpiry := time.Now().AddDate(1, 0, 0).Format("2006-01-02")
 	pastExpiry := time.Now().AddDate(0, 0, -10).Format("2006-01-02")
@@ -81,7 +82,7 @@ func TestSync1_2_1_3_VehicleComplianceAndRenewal(t *testing.T) {
 func TestSync1_4_ValidAssignment(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	futureExpiry := time.Now().AddDate(1, 0, 0).Format("2006-01-02")
 
@@ -107,7 +108,7 @@ func TestSync1_4_ValidAssignment(t *testing.T) {
 func TestSync2_1_InvalidStateTransition(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	futureExpiry := time.Now().AddDate(1, 0, 0).Format("2006-01-02")
 	cust, _ := svcs.Customers.CreateCustomer(ctx, "Test Cust", "Corp", "999-3001", "", "", "", "")
@@ -139,7 +140,7 @@ func TestSync2_1_InvalidStateTransition(t *testing.T) {
 func TestSync2_2_2_3_EPODDeliveryAndValidation(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	futureExpiry := time.Now().AddDate(1, 0, 0).Format("2006-01-02")
 	cust, _ := svcs.Customers.CreateCustomer(ctx, "Pod Cust", "Corp", "999-4001", "", "", "", "")
@@ -185,7 +186,7 @@ func TestSync2_2_2_3_EPODDeliveryAndValidation(t *testing.T) {
 func TestSync3_TelemetryAlerting(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripID1 := domain.TripID("trp-tele-1")
 	drvID1 := domain.DriverID("drv-tele-1")
@@ -238,7 +239,7 @@ func TestSync3_TelemetryAlerting(t *testing.T) {
 func TestSync4_FinancialSettlement(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	grossFare := 10000.0
 	approvedFuel := 2000.0
@@ -320,7 +321,7 @@ func TestSec8_AuditLoggingWithClientIP(t *testing.T) {
 func TestEdgeCase1_DoubleEPODRaceCondition(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	futureExpiry := time.Now().AddDate(1, 0, 0).Format("2006-01-02")
 	cust, _ := svcs.Customers.CreateCustomer(ctx, "Race Cust", "Corp", "999-5001", "", "", "", "")
@@ -378,7 +379,7 @@ func TestEdgeCase1_DoubleEPODRaceCondition(t *testing.T) {
 func TestEdgeCase2_LargeTelemetryBatchIngestion(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripID := domain.TripID("trp-batch")
 	drvID := domain.DriverID("drv-batch")
@@ -399,7 +400,7 @@ func TestEdgeCase2_LargeTelemetryBatchIngestion(t *testing.T) {
 func TestEdgeCase3_ReverseRoutePricing(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	// Create route with reverse pricing Pune -> Mumbai
 	rt, err := svcs.Routes.CreateRoute(ctx, "Mumbai", "Pune", 150, 3.5, 4500, "Highway NH48")

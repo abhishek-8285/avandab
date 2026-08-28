@@ -22,4 +22,4 @@ SELECT id, name, slug, status, created_at, updated_at FROM tenants ORDER BY crea
 UPDATE tenants SET status = ?, updated_at = datetime('now') WHERE id = ?;
 
 -- name: CountAdminsGlobal :one
-SELECT COUNT(*) FROM users WHERE role_id = 1;
+SELECT COUNT(*) FROM users WHERE tenant_id = ? AND role_id = 1;

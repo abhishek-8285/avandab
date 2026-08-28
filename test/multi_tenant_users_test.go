@@ -25,7 +25,7 @@ func isAlreadyExists(err error) bool {
 func TestMultiTenantUserIsolation(t *testing.T) {
 	db := NewTestDB(t)
 	svc := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	if err := svc.Users.CreateTenant(ctx, "acme", "Acme Ltd", "acme"); err != nil && !isAlreadyExists(err) {
 		require.NoError(t, err)

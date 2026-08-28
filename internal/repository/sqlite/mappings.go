@@ -75,11 +75,24 @@ func int64ToBool(i int64) bool {
 	return i != 0
 }
 
+// tenantIDFromCtx resolves the tenant for a query. Fail closed: a context
+// with neither a tenant (set by auth middleware) nor an explicit global-scope
+// marker (shared.WithGlobalScope, for system jobs) is a programmer error and
+// panics. A silent DefaultTenant fallback here would let a request that lost
+// its tenant context read tenant 1's data — invisible to the FK triggers, the
+// leak tests, and tenant-lint, because it sits inside the trusted adapter.
+// Request-path panics surface as 500s via the Recoverer middleware; worker
+// panics are contained by leader.RunAsLeader / resilience wrappers.
 func tenantIDFromCtx(ctx context.Context) string {
 	if t := shared.TenantIDFromContext(ctx); t != "" {
 		return string(t)
 	}
-	return string(shared.DefaultTenant)
+	if shared.IsGlobalScope(ctx) {
+		return string(shared.DefaultTenant)
+	}
+	panic("tenant: no tenant in context and no global scope marker — " +
+		"request paths get tenant from auth middleware; system jobs must " +
+		"use shared.WithGlobalScope(ctx) explicitly")
 }
 
 func FromNullInt64(ni sql.NullInt64) *int64 {

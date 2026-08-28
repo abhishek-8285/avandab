@@ -23,7 +23,7 @@ func TestUserThemePreferences(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
 	repo := NewTestRepo(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	// 1. Create a test user
 	u, err := svcs.Users.CreateUserWithPassword(ctx, "theme_test@example.com", "Theme Tester", "9876543210", "StrongPassword123!", 1, domain.UserStatusActive, string(shared.DefaultTenant))

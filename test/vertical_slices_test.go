@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 	"time"
+	"transport-app/internal/shared"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -28,7 +29,7 @@ func TestSprint1_CreateBooking(t *testing.T) {
 	sqlUoW := uow.NewSQLUnitOfWork(db)
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
-	ctx := ContextWithTestTenant(context.Background())
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	svc := NewTestServices(t, db)
 	route, err := svc.Routes.CreateRoute(ctx, "Mumbai", "Delhi", 1400, 24, 15000, "")
@@ -56,7 +57,7 @@ func TestSprint1_ConfirmAndCancelBooking(t *testing.T) {
 	sqlUoW := uow.NewSQLUnitOfWork(db)
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
-	ctx := ContextWithTestTenant(context.Background())
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	svc := NewTestServices(t, db)
 	route, _ := svc.Routes.CreateRoute(ctx, "A", "B", 100, 2, 5000, "")
@@ -105,7 +106,7 @@ func TestSprint1_ListBookings(t *testing.T) {
 	sqlUoW := uow.NewSQLUnitOfWork(db)
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
-	ctx := ContextWithTestTenant(context.Background())
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	svc := NewTestServices(t, db)
 	route, _ := svc.Routes.CreateRoute(ctx, "X", "Y", 200, 3, 8000, "")
@@ -138,7 +139,7 @@ func TestSprint1_UpdateBooking(t *testing.T) {
 	sqlUoW := uow.NewSQLUnitOfWork(db)
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
-	ctx := ContextWithTestTenant(context.Background())
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	svc := NewTestServices(t, db)
 	route, _ := svc.Routes.CreateRoute(ctx, "A", "B", 100, 2, 5000, "")
@@ -183,7 +184,7 @@ func TestSprint1_CompleteBooking(t *testing.T) {
 	sqlUoW := uow.NewSQLUnitOfWork(db)
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
-	ctx := ContextWithTestTenant(context.Background())
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	svc := NewTestServices(t, db)
 	route, _ := svc.Routes.CreateRoute(ctx, "A", "B", 100, 2, 5000, "")
@@ -239,7 +240,7 @@ func TestSprint2_CreateTripAndLifecycle(t *testing.T) {
 	sqlUoW := uow.NewSQLUnitOfWork(db)
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
-	ctx := ContextWithTestTenant(context.Background())
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	svc := NewTestServices(t, db)
 	route, _ := svc.Routes.CreateRoute(ctx, "Mumbai", "Pune", 150, 3, 3000, "")
@@ -317,7 +318,7 @@ func TestSprint2_CancelTrip(t *testing.T) {
 	sqlUoW := uow.NewSQLUnitOfWork(db)
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
-	ctx := ContextWithTestTenant(context.Background())
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	svc := NewTestServices(t, db)
 	route, _ := svc.Routes.CreateRoute(ctx, "C", "D", 100, 2, 2000, "")
@@ -345,7 +346,7 @@ func TestSprint2_ScheduleTrip(t *testing.T) {
 	sqlUoW := uow.NewSQLUnitOfWork(db)
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
-	ctx := ContextWithTestTenant(context.Background())
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	svc := NewTestServices(t, db)
 	route, _ := svc.Routes.CreateRoute(ctx, "E", "F", 120, 3, 2500, "")
@@ -377,7 +378,7 @@ func TestSprint2_TripExecutionTransitionErrors(t *testing.T) {
 	sqlUoW := uow.NewSQLUnitOfWork(db)
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
-	ctx := ContextWithTestTenant(context.Background())
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	svc := NewTestServices(t, db)
 	route, _ := svc.Routes.CreateRoute(ctx, "G", "H", 80, 1, 1500, "")
@@ -436,7 +437,7 @@ func TestSprint3_GenerateAndGetInvoice(t *testing.T) {
 	sqlUoW := uow.NewSQLUnitOfWork(db)
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
-	ctx := ContextWithTestTenant(context.Background())
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	svc := NewTestServices(t, db)
 	customer, err := svc.Customers.CreateCustomer(ctx, "Acme Corp", "Acme", "555-9000", "acme@example.com", "", "", "")
@@ -469,7 +470,7 @@ func TestSprint3_GenerateInvoice_Idempotent(t *testing.T) {
 	sqlUoW := uow.NewSQLUnitOfWork(db)
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
-	ctx := ContextWithTestTenant(context.Background())
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	svc := NewTestServices(t, db)
 	customer, err := svc.Customers.CreateCustomer(ctx, "Beta Ltd", "Beta", "555-1111", "beta@example.com", "", "", "")
@@ -501,7 +502,7 @@ func TestSprint3_GenerateInvoice_InvalidInput(t *testing.T) {
 	sqlUoW := uow.NewSQLUnitOfWork(db)
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
-	ctx := ContextWithTestTenant(context.Background())
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	generateUC := invoiceApp.NewGenerateInvoiceUseCase(sqlUoW, idGen, realClock)
 
@@ -534,7 +535,7 @@ func TestSprint4_RecordPaymentAndGet(t *testing.T) {
 	sqlUoW := uow.NewSQLUnitOfWork(db)
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
-	ctx := ContextWithTestTenant(context.Background())
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	// First generate an invoice to have a valid invoice ID
 	genUC := invoiceApp.NewGenerateInvoiceUseCase(sqlUoW, idGen, realClock)
@@ -572,7 +573,7 @@ func TestSprint4_RecordPayment_InvalidAmount(t *testing.T) {
 	sqlUoW := uow.NewSQLUnitOfWork(db)
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
-	ctx := ContextWithTestTenant(context.Background())
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	recordUC := paymentApp.NewRecordPaymentUseCase(sqlUoW, idGen, realClock)
 

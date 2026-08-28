@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"testing"
+	"transport-app/internal/shared"
 
 	"github.com/stretchr/testify/require"
 )
@@ -10,7 +11,7 @@ import (
 func TestCustomerService_Validations(t *testing.T) {
 	db := NewTestDB(t)
 	services := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	// 1. Create a customer successfully
 	c1, err := services.Customers.CreateCustomer(

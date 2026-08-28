@@ -3,6 +3,7 @@ package test
 import (
 	"context"
 	"testing"
+	"transport-app/internal/shared"
 
 	"github.com/stretchr/testify/require"
 	"transport-app/internal/service"
@@ -11,7 +12,7 @@ import (
 func TestCustomerFleetbaseParity_CreateFull(t *testing.T) {
 	db := NewTestDB(t)
 	services := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	pts := 30
 	c, err := services.Customers.CreateCustomerFull(ctx, service.CreateCustomerRequest{
@@ -83,7 +84,7 @@ func TestCustomerFleetbaseParity_CreateFull(t *testing.T) {
 func TestCustomerFleetbaseParity_TypeAndMetaValidation(t *testing.T) {
 	db := NewTestDB(t)
 	services := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	// Invalid type
 	_, err := services.Customers.CreateCustomerFull(ctx, service.CreateCustomerRequest{
@@ -124,7 +125,7 @@ func TestCustomerFleetbaseParity_TypeAndMetaValidation(t *testing.T) {
 func TestCustomerFleetbaseParity_UpdateFull(t *testing.T) {
 	db := NewTestDB(t)
 	services := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	base, err := services.Customers.CreateCustomer(ctx, "Update Test Co", "UT", "9876500030", "ut@example.com", "", "addr", "notes")
 	require.NoError(t, err)
@@ -163,7 +164,7 @@ func TestCustomerFleetbaseParity_UpdateFull(t *testing.T) {
 func TestCustomerFleetbaseParity_AutoCodeAndLegacyCreate(t *testing.T) {
 	db := NewTestDB(t)
 	services := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	// Legacy 7-arg still auto-generates customer_code and defaults
 	c, err := services.Customers.CreateCustomer(ctx, "Legacy Co", "LC", "9876500040", "legacy@example.com", "", "addr", "")
@@ -177,7 +178,7 @@ func TestCustomerFleetbaseParity_AutoCodeAndLegacyCreate(t *testing.T) {
 func TestCustomerFleetbaseParity_StateCodeDerived(t *testing.T) {
 	db := NewTestDB(t)
 	services := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	c, err := services.Customers.CreateCustomerFull(ctx, service.CreateCustomerRequest{
 		Name:  "State Co",

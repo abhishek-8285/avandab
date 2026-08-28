@@ -50,7 +50,7 @@ WHERE id = ?
 RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at;
 
 -- name: DeleteUser :exec
-DELETE FROM users WHERE id = ?;
+DELETE FROM users WHERE id = ? AND tenant_id = ?;
 
 -- name: SearchUsers :many
 SELECT u.id, u.email, u.tenant_id, u.name, u.phone, u.role_id, u.status, u.last_login_at, u.theme_preference, u.created_at, u.updated_at,

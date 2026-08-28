@@ -13,6 +13,7 @@ import (
 	bookingevents "transport-app/internal/domain/booking"
 	"transport-app/internal/events"
 	"transport-app/internal/service"
+	"transport-app/internal/shared"
 )
 
 // TestEventBusUnification_BookingConfirmedReachesAutomationAndFounder proves
@@ -33,7 +34,7 @@ func TestEventBusUnification_BookingConfirmedReachesAutomationAndFounder(t *test
 	defer unsub()
 
 	svc := NewTestServicesWithBus(t, db, bus)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	customer, err := svc.Customers.CreateCustomer(ctx, "Bus Test Customer", "", "9999999999", "", "", "", "")
 	require.NoError(t, err)

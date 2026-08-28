@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"testing"
 	"time"
+	"transport-app/internal/shared"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,7 +26,7 @@ import (
 func seedMoneyStripFixtures(t *testing.T, db *sql.DB, day time.Time) {
 	t.Helper()
 	dayStr := day.Format("2006-01-02")
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	must := func(query string, args ...any) {
 		_, err := db.ExecContext(ctx, query, args...)
@@ -68,7 +69,7 @@ func seedMoneyStripFixtures(t *testing.T, db *sql.DB, day time.Time) {
 func TestSpec22_MoneyStrip_MatchesReportTotals(t *testing.T) {
 	db := NewTestDB(t)
 	svc := service.NewPNLService(db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 	day := time.Date(2026, 8, 24, 0, 0, 0, 0, time.UTC)
 
 	seedMoneyStripFixtures(t, db, day)

@@ -26,7 +26,7 @@ func founderServices(t *testing.T) (*service.FounderSignalsService, *service.Fou
 
 func TestFounderSignal_Emit(t *testing.T) {
 	sig, _ := founderServices(t)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	id, err := sig.EmitSignal(ctx, service.FounderSignal{
 		TenantID:    "1",
@@ -47,7 +47,7 @@ func TestFounderSignal_Emit(t *testing.T) {
 
 func TestFounderSignal_EmitIfThreshold(t *testing.T) {
 	sig, _ := founderServices(t)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	// Above threshold → emitted.
 	ok, err := sig.EmitIfThreshold(ctx, "1", service.SignalRevenueMilestone, 150000, 100000, `{}`)
@@ -72,7 +72,7 @@ func TestFounderSignal_EmitIfThreshold(t *testing.T) {
 
 func TestFounderSignal_Acknowledge(t *testing.T) {
 	sig, _ := founderServices(t)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	id, err := sig.EmitSignal(ctx, service.FounderSignal{
 		TenantID:    "1",
@@ -98,7 +98,7 @@ func TestFounderSignal_Acknowledge(t *testing.T) {
 
 func TestFounderSignal_ListFilters(t *testing.T) {
 	sig, _ := founderServices(t)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	_, _ = sig.EmitSignal(ctx, service.FounderSignal{TenantID: "1", SignalType: service.SignalRevenueMilestone, SignalValue: 1, Direction: service.DirectionAbove})
 	_, _ = sig.EmitSignal(ctx, service.FounderSignal{TenantID: "1", SignalType: service.SignalCashFlowAlert, SignalValue: -1, Direction: service.DirectionBelow})
@@ -123,7 +123,7 @@ func TestFounderSignal_ListFilters(t *testing.T) {
 
 func TestFounderAudit_Record(t *testing.T) {
 	sig, audit := founderServices(t)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	require.NoError(t, audit.RecordAudit(ctx, service.AuditEntry{
 		TenantID:     "1",
@@ -152,7 +152,7 @@ func TestFounderAudit_Record(t *testing.T) {
 
 func TestFounderAudit_ListFilters(t *testing.T) {
 	_, audit := founderServices(t)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	_ = audit.RecordAudit(ctx, service.AuditEntry{TenantID: "1", ActorID: "u1", ActorRole: "admin", Action: service.AuditActionExperimentStart, ResourceType: "experiment", ResourceID: "e1", Details: "{}"})
 	_ = audit.RecordAudit(ctx, service.AuditEntry{TenantID: "1", ActorID: "u2", ActorRole: "admin", Action: service.AuditActionSignalAcknowledge, ResourceType: "founder_signal", ResourceID: "s1", Details: "{}"})
@@ -169,7 +169,7 @@ func TestFounderAudit_ListFilters(t *testing.T) {
 
 func TestFounderSignal_HooksFire(t *testing.T) {
 	sig, _ := founderServices(t)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	// Revenue milestone above threshold.
 	ok, err := sig.EmitRevenueMilestone(ctx, "1", 250000, 100000)
@@ -209,7 +209,7 @@ func TestFounderSignal_HooksFire(t *testing.T) {
 
 func TestFounderDashboard_Aggregation(t *testing.T) {
 	svc := NewTestServices(t, NewTestDB(t))
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 	sig := svc.FounderSignals
 
 	// Seed: 2 unacknowledged signals, 1 running experiment, 1 open ops alert, 1 PNL snapshot.

@@ -11,11 +11,11 @@ import (
 )
 
 const countAdminsGlobal = `-- name: CountAdminsGlobal :one
-SELECT COUNT(*) FROM users WHERE role_id = 1
+SELECT COUNT(*) FROM users WHERE tenant_id = ? AND role_id = 1
 `
 
-func (q *Queries) CountAdminsGlobal(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countAdminsGlobal)
+func (q *Queries) CountAdminsGlobal(ctx context.Context, tenantID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countAdminsGlobal, tenantID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

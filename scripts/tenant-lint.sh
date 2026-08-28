@@ -52,10 +52,14 @@ PY
   fi
 done
 
-# Warnings for extended tenant tables (51) not yet hardened — soft gate
+# Hard errors for extended tenant tables (51) — all tenant tables must be scoped
 for f in db/query/*.sql; do
   [ -e "$f" ] || continue
-  if ! python3 - "$f" "${TENANT_TABLES[@]}" <<'PY' 2>&1 | grep -q "::warning"
+  # Global tables that join tenant tables for enrichment but are not tenant-isolation boundaries
+  if [[ "$f" == *audit_logs.sql || "$f" == *auth_sessions.sql ]]; then
+    continue
+  fi
+  if ! python3 - "$f" "${TENANT_TABLES[@]}" <<'PY'
 import sys, re
 path = sys.argv[1]
 tables = sys.argv[2:]
@@ -76,11 +80,11 @@ for i in range(1, len(parts), 2):
         # If any strict table, it would have been an error above; here warn for non-strict
         if any(t in strict for t in tenant_touched):
             continue
-        print(f"::warning file={path},line=1::SQL query '{qname}' touches tenant table(s) {tenant_touched} without tenant_id (extended check, warning until hardened)")
+        print(f"::error file={path},line=1::SQL query '{qname}' touches tenant table(s) {tenant_touched} without tenant_id")
         sys.exit(1)
 PY
   then
-    WARNINGS=$((WARNINGS+1))
+    ERRORS=$((ERRORS+1))
   fi
 done
 

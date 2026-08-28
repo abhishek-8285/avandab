@@ -23,7 +23,7 @@ import (
 // ContextWithTestTenant wraps a parent context with the single-tenant bootstrap
 // tenant. Tests that exercise tenant-scoped repositories (drivers, vehicles,
 // trips, bookings, invoices, payments) must use this instead of a bare
-// context.Background(), because TenantIDFromContext is fail-closed.
+// shared.ContextWithTenantID(context.Background(), "1"), because TenantIDFromContext is fail-closed.
 func ContextWithTestTenant(parent context.Context) context.Context {
 	return shared.ContextWithTenantID(parent, shared.DefaultTenant)
 }
