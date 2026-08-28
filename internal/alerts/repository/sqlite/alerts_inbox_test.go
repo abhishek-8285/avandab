@@ -28,6 +28,7 @@ func newInboxTestDB(t *testing.T) *sql.DB {
 	}
 	_ = goose.SetDialect("sqlite")
 	require.NoError(t, goose.Up(db, migrationsDir))
+	_, _ = db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('1','Default','default'), ('2','Tenant 2','tenant-2')`)
 	t.Cleanup(func() { _ = db.Close() })
 	return db
 }

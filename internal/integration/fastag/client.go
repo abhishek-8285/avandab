@@ -153,6 +153,9 @@ func (c *clientImpl) DeductToll(ctx context.Context, req DeductTollRequest) (Tol
 			source = "MANUAL"
 		}
 		tenantID := shared.TenantIDFromContext(ctx)
+		if tenantID == "" {
+			tenantID = shared.DefaultTenant
+		}
 		_, err := c.db.ExecContext(ctx, `
 			INSERT INTO fastag_transactions (
 				id, tenant_id, tag_id, vehicle_number, trip_id, plaza_id, plaza_name,

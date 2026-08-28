@@ -38,6 +38,8 @@ func newOpsErrorsTestApp(t *testing.T) (*App, *opserrors.Reporter) {
 	}
 	_ = goose.SetDialect("sqlite")
 	require.NoError(t, goose.Up(db, migrationsDir))
+	_, _ = db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES
+		('1','Default','default'), ('tenant-1','Test Tenant 1','tenant-1'), ('2','Tenant 2','tenant-2')`)
 
 	if filepath.Base(cwd) == "handlers" {
 		_ = os.Chdir("../..")

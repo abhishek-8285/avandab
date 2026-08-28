@@ -33,8 +33,12 @@ func openMigratedDB(t *testing.T) (*sql.DB, *service.Services) {
 	t.Cleanup(func() { _ = dbConn.Close() })
 	require.NoError(t, goose.SetDialect("sqlite"))
 	require.NoError(t, goose.Up(dbConn, "../../db/migrations"))
-	// 00103 enforces tenant FK — seed common test tenant used by ledger/payment tests.
-	_, _ = dbConn.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('tenant-1','Test Tenant 1','tenant-1')`)
+	// 00104/00105 strict FK — seed all common test tenants (00103 seeds deleted in 00105 prod cleanup).
+	_, _ = dbConn.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES
+		('1','Default','default'), ('2','Tenant 2','tenant-2'), ('tenant-1','Test Tenant 1','tenant-1'),
+		('tenant-val','Tenant Val','tenant-val'), ('tenant-seq','Tenant Seq','tenant-seq'),
+		('tenant-a','Tenant A','tenant-a'), ('tenant-b','Tenant B','tenant-b'),
+		('acme','Acme','acme'), ('beta','Beta','beta'), ('tenant-ledger','Tenant Ledger','tenant-ledger')`)
 
 	repo := sqlite.NewRepository(dbConn)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
