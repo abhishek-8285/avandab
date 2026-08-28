@@ -84,7 +84,9 @@ Single source of truth for `db/migrations/` version numbers. Repo head is
 | 00102 | tenants registry + users.tenant_id + tenants:manage permission (multi-tenant onboarding) | Spec 24 |
 | 00103 | tenant FK hardening — 51-table trigger enforcement + 21 missing tenant indexes | Spec 24 §9 (hardening) |
 | 00104 | tenant FK strict + prod cleanup — reject empty tenant_id, delete 29 test-only tenants | Spec 24 §9 (hardening fix) |
-| 00105+ | future specs | reserved |
+| 00105 | tenant strict + prod cleanup — strict empty + keep 1,2,tenant-1,tenant-a,tenant-b | Spec 24 §9 (hardening fix) |
+| 00106 | revoked_refresh_tokens — auth hardening (renamed from duplicate 00054) | 10 |
+| 00107+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

@@ -1025,6 +1025,12 @@ type ProviderPollState struct {
 	BackoffUntil        sql.NullTime   `json:"backoff_until"`
 }
 
+type RevokedRefreshToken struct {
+	TokenHash string    `json:"token_hash"`
+	RevokedAt time.Time `json:"revoked_at"`
+	UserID    string    `json:"user_id"`
+}
+
 type Role struct {
 	ID          int64          `json:"id"`
 	Name        string         `json:"name"`
