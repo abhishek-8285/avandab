@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"transport-app/internal/service"
+	"transport-app/internal/shared"
 )
 
 func itoa(i int) string { return strconv.Itoa(i) }
@@ -21,7 +22,7 @@ func addDays(d int) time.Time { return time.Now().AddDate(0, 0, d) }
 // newRunningExperiment creates + starts an experiment with the given traffic split.
 func newRunningExperiment(t *testing.T, svc *service.ExperimentsService, tenant, name string, split float64) string {
 	t.Helper()
-	id, err := svc.CreateExperiment(context.Background(), service.Experiment{
+	id, err := svc.CreateExperiment(shared.ContextWithTenantID(context.Background(), "1"), service.Experiment{
 		TenantID:     tenant,
 		Name:         name,
 		TrafficSplit: split,
@@ -29,13 +30,13 @@ func newRunningExperiment(t *testing.T, svc *service.ExperimentsService, tenant,
 		CreatedBy:    "tester",
 	})
 	require.NoError(t, err)
-	require.NoError(t, svc.StartExperiment(context.Background(), id))
+	require.NoError(t, svc.StartExperiment(shared.ContextWithTenantID(context.Background(), "1"), id))
 	return id
 }
 
 func TestExperiment_CreateAndLifecycle(t *testing.T) {
 	svc := NewTestServices(t, NewTestDB(t)).Experiments
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 	tenant := "1"
 
 	id, err := svc.CreateExperiment(ctx, service.Experiment{TenantID: tenant, Name: "layout_test", TrafficSplit: 50})
@@ -68,7 +69,7 @@ func TestExperiment_CreateAndLifecycle(t *testing.T) {
 
 func TestExperiment_InvalidTransitions(t *testing.T) {
 	svc := NewTestServices(t, NewTestDB(t)).Experiments
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	// Cannot start a running experiment.
 	running := newRunningExperiment(t, svc, "1", "x1", 50)
@@ -87,7 +88,7 @@ func TestExperiment_InvalidTransitions(t *testing.T) {
 
 func TestExperiment_DeterministicAssignment(t *testing.T) {
 	svc := NewTestServices(t, NewTestDB(t)).Experiments
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 	id := newRunningExperiment(t, svc, "1", "det", 50)
 
 	// Same subject → same variant across repeated calls.
@@ -119,7 +120,7 @@ func TestExperiment_DeterministicAssignment(t *testing.T) {
 
 func TestExperiment_TrafficSplit(t *testing.T) {
 	svc := NewTestServices(t, NewTestDB(t)).Experiments
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	// traffic_split=100 → all variant B.
 	allB := newRunningExperiment(t, svc, "1", "split100", 100)
@@ -140,7 +141,7 @@ func TestExperiment_TrafficSplit(t *testing.T) {
 
 func TestExperiment_OnlyRunningAssigns(t *testing.T) {
 	svc := NewTestServices(t, NewTestDB(t)).Experiments
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	draftID, _ := svc.CreateExperiment(ctx, service.Experiment{TenantID: "1", Name: "onlyrun", TrafficSplit: 50})
 	_, err := svc.AssignVariant(ctx, "1", draftID, service.SubjectTypeUser, "u")
@@ -165,7 +166,7 @@ func TestExperiment_OnlyRunningAssigns(t *testing.T) {
 
 func TestExperiment_FeatureFlagEvaluation(t *testing.T) {
 	svc := NewTestServices(t, NewTestDB(t)).Experiments
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	// Non-existent experiment → control.
 	assert.Equal(t, service.VariantA, svc.EvaluateFeatureFlag(ctx, "1", "does_not_exist", service.SubjectTypeUser, "u"))
@@ -188,7 +189,7 @@ func TestExperiment_FeatureFlagEvaluation(t *testing.T) {
 
 func TestExperiment_DateBounds(t *testing.T) {
 	svc := NewTestServices(t, NewTestDB(t)).Experiments
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	// Future start_date → assignment fails.
 	futureID, _ := svc.CreateExperiment(ctx, service.Experiment{
@@ -222,7 +223,7 @@ func TestExperiment_DateBounds(t *testing.T) {
 
 func TestExperiment_MetricRecording(t *testing.T) {
 	svc := NewTestServices(t, NewTestDB(t)).Experiments
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 	id := newRunningExperiment(t, svc, "1", "metrics", 50)
 
 	// Assign a subject, then record a metric.

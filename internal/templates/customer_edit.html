@@ -1,79 +1,244 @@
-<div class="max-w-3xl mx-auto py-2">
+<div class="max-w-4xl mx-auto py-2">
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="relative px-6 py-4 border-b border-border-subtle">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-violet-500 to-cyan-400 opacity-90"></div>
-            <h2 class="text-base sm:text-lg font-black tracking-tight text-on-surface font-display flex items-center gap-2">
-                <span class="w-8 h-8 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
-                {{if .Customer}}Edit Customer{{else}}New Customer{{end}}
-            </h2>
-            <p class="text-xs text-text-muted mt-1">Account identity, GSTIN and billing contact</p>
-            <a href="/customers" class="absolute right-5 top-1/2 -translate-y-1/2 text-xs font-semibold text-secondary hover:text-on-surface transition-colors">Back to list</a>
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h2 class="text-base sm:text-lg font-black tracking-tight text-on-surface font-display flex items-center gap-2">
+                        <span class="w-8 h-8 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
+                        {{if .Customer}}Edit Customer{{else}}New Customer{{end}}
+                    </h2>
+                    <p class="text-xs text-text-muted mt-1">Customer profile, GST and billing preferences</p>
+                    {{if .Customer}}{{if .Customer.CustomerCode}}<p class="text-xs font-mono tabular-nums text-primary mt-1">{{.Customer.CustomerCode}}</p>{{end}}{{end}}
+                </div>
+                <a href="/customers" class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-secondary hover:text-on-surface transition-colors shrink-0 mt-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><path d="m15 18-6-6 6-6"/></svg> Back to list</a>
+            </div>
         </div>
 
         {{if .FlashError}}
         {{template "alert.html" (dict "Tone" "error" "Message" .FlashError)}}
         {{end}}
 
-        <form method="POST" action="/customers{{if .Customer}}/{{.Customer.ID}}/edit{{else}}/new{{end}}">
-            <div class="p-6 space-y-5">
-                <section>
-                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Identity</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Full Name *</label>
-                            <input type="text" name="name" value="{{if .Customer}}{{.Customer.Name}}{{end}}" required
-                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                                placeholder="e.g. Acme Corp / Rajesh Kumar">
+        {{ $c := .Customer }}
+        <form method="POST" action="/customers{{if $c}}/{{$c.ID}}/edit{{else}}/new{{end}}" enctype="multipart/form-data" class="divide-y divide-border-subtle/60">
+            <!-- Identity -->
+            <section class="p-6 space-y-4">
+                <div class="flex items-center justify-between gap-3">
+                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Identity</h3>
+                    <span class="text-[11px] text-text-muted hidden sm:inline">* required</span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="sm:col-span-1">
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Customer Code</label>
+                        {{if $c}}
+                        <div class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-mono uppercase tabular-nums text-on-surface flex items-center justify-between gap-2">
+                            <span>{{$c.CustomerCode}}</span>
+                            <input type="hidden" name="customer_code" value="{{$c.CustomerCode}}">
+                            <button type="button" onclick="navigator.clipboard.writeText('{{$c.CustomerCode}}')" class="text-xs font-semibold text-primary hover:underline">Copy</button>
                         </div>
-                        <div>
-                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Company / Organization</label>
-                            <input type="text" name="company" value="{{if .Customer}}{{nullString .Customer.Company}}{{end}}"
-                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                                placeholder="Company name">
-                        </div>
-                    </div>
-                </section>
-
-                <section>
-                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Contact</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Phone Number *</label>
-                            <input type="tel" name="phone" value="{{if .Customer}}{{.Customer.Phone}}{{end}}" required
-                                pattern="(\+?91[\s-]?|0)?[6-9][0-9]{4}[\s-]?[0-9]{5}" title="Indian mobile: 9876543210 or +91 98765 43210"
-                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-mono tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                                placeholder="+91 98765 43210">
-                        </div>
-                        <div>
-                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Email Address</label>
-                            <input type="email" name="email" value="{{if .Customer}}{{nullString .Customer.Email}}{{end}}"
-                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                                placeholder="billing@company.com">
-                        </div>
-                    </div>
-
-                    <div class="mt-4">
-                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">GST Number</label>
-                        <input type="text" name="gst" value="{{if .Customer}}{{nullString .Customer.GST}}{{end}}" maxlength="15"
-                            pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]" title="15-char GSTIN, e.g. 27ABCDE1234F1Z5 — 2-digit state, PAN, entity number, Z, check digit"
+                        <p class="text-[11px] text-text-muted mt-1">System code — not editable</p>
+                        {{else}}
+                        <input type="text" name="customer_code" value=""
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-mono uppercase tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                            placeholder="27ABCDE1234F1Z5">
-                        <p class="text-[11px] text-text-muted mt-1">Optional for B2C. 15-char GSTIN — validated server-side before save.</p>
+                            placeholder="Leave blank for CUST-XXXXXXXX" pattern="CUST-[A-Z0-9-]+" title="Leave empty to auto-generate">
+                        <p class="text-[11px] text-text-muted mt-1">Auto-generated if left blank</p>
+                        {{end}}
                     </div>
-                </section>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Full Name *</label>
+                        <input type="text" name="name" value="{{if $c}}{{$c.Name}}{{end}}" required
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            placeholder="e.g. Acme Logistics / Rajesh Kumar">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Title</label>
+                        <input type="text" name="title" value="{{if $c}}{{nullString $c.Title}}{{end}}" list="customer-title-list"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            placeholder="Mr / Ms / Dr">
+                        <datalist id="customer-title-list"><option value="Mr"><option value="Ms"><option value="Mrs"><option value="Dr"><option value="M/s"></datalist>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Company / Organization</label>
+                        <input type="text" name="company" value="{{if $c}}{{nullString $c.Company}}{{end}}"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            placeholder="Legal entity name">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Contact Person</label>
+                        <input type="text" name="contact_person" value="{{if $c}}{{nullString $c.ContactPerson}}{{end}}"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            placeholder="Primary billing contact">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Logo</label>
+                        {{if $c}}{{if $c.PhotoURL}}<img id="photo_preview" src="{{nullString $c.PhotoURL}}" alt="logo" class="h-12 w-12 rounded-lg object-cover border border-border-subtle mb-2">{{else}}<div id="photo_preview" class="h-12 w-12 rounded-lg bg-surface-container-low border border-dashed border-border-subtle grid place-items-center text-text-muted text-xs mb-2">no img</div>{{end}}{{else}}<div id="photo_preview" class="h-12 w-12 rounded-lg bg-surface-container-low border border-dashed border-border-subtle grid place-items-center text-text-muted text-xs mb-2">no img</div>{{end}}
+                        <input type="file" name="logo" id="logo" accept="image/png,image/jpeg,image/webp,image/gif"
+                            class="w-full text-sm text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all cursor-pointer">
+                        <input type="hidden" name="photo_url" value="{{if $c}}{{nullString $c.PhotoURL}}{{end}}">
+                        <p class="text-[11px] text-text-muted mt-1">PNG/JPG/WebP/GIF — leave empty to keep current</p>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">GST State <span class="font-normal normal-case tracking-normal">auto from GSTIN</span></label>
+                        <div class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-mono tabular-nums text-on-surface">
+                            {{if $c}}{{if $c.StateCode}}{{nullString $c.StateCode}}{{else}}—{{end}}{{else}}—{{end}} <span class="text-text-muted text-xs">{{if $c}}{{if $c.GST}}derived from {{nullString $c.GST}}{{else}}enter GST to derive{{end}}{{else}}enter GST to derive{{end}}</span>
+                        </div>
+                        <p class="text-[11px] text-text-muted mt-1">2-digit state code for e-invoicing</p>
+                    </div>
+                </div>
+            </section>
 
-                <section>
-                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Billing Address</h3>
-                    <textarea name="address" rows="2"
+            <!-- Classification -->
+            <section class="p-6 space-y-4 bg-surface-container-low/30">
+                <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Classification</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Type</label>
+                        <select name="type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            {{ $t := "" }}{{if $c}}{{$t = $c.Type}}{{end}}
+                            <option value="customer" {{if eq $t "customer"}}selected{{end}}>Customer — recipient</option>
+                            <option value="supplier" {{if eq $t "supplier"}}selected{{end}}>Supplier — pickup origin</option>
+                            <option value="facilitator" {{if eq $t "facilitator"}}selected{{end}}>Facilitator — coordinator</option>
+                            <option value="contact" {{if eq $t "contact"}}selected{{end}}>Contact — general</option>
+                            <option value="company" {{if eq $t "company"}}selected{{end}}>Company (legacy)</option>
+                            <option value="individual" {{if eq $t "individual"}}selected{{end}}>Individual (legacy)</option>
+                        </select>
+                        <p class="text-[11px] text-text-muted mt-1">Customer pays, supplier provides goods</p>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Status</label>
+                        <select name="status" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            {{ $s := "active" }}{{if $c}}{{$s = $c.Status}}{{end}}
+                            <option value="active" {{if eq $s "active"}}selected{{end}}>Active</option>
+                            <option value="inactive" {{if eq $s "inactive"}}selected{{end}}>Inactive</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Payment Terms (days)</label>
+                        <input type="number" name="payment_terms_days" min="0" max="365" value="{{if $c}}{{$c.PaymentTermsDays}}{{else}}0{{end}}"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <p class="text-[11px] text-text-muted mt-1">Net 0 = due now · 30/45 typical</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Contact -->
+            <section class="p-6 space-y-4">
+                <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Contact</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Phone Number *</label>
+                        <input type="tel" name="phone" value="{{if $c}}{{$c.Phone}}{{end}}" required
+                            pattern="(\+?91[\s-]?|0)?[6-9][0-9]{4}[\s-]?[0-9]{5}" title="Indian mobile: 9876543210 or +91 98765 43210"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-mono tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            placeholder="+91 98765 43210">
+                        <p class="text-[11px] text-text-muted mt-1">Unique per tenant · used for portal & notifications</p>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Email Address</label>
+                        <input type="email" name="email" value="{{if $c}}{{nullString $c.Email}}{{end}}"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            placeholder="billing@company.com">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">GST Number</label>
+                    <input type="text" name="gst" value="{{if $c}}{{nullString $c.GST}}{{end}}" maxlength="15"
+                        pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]" title="15-char GSTIN, e.g. 27ABCDE1234F1Z5"
+                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-mono uppercase tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                        placeholder="27ABCDE1234F1Z5">
+                    <p class="text-[11px] text-text-muted mt-1">Validated server-side · state code derived for e-invoicing</p>
+                </div>
+            </section>
+
+            <!-- Addresses -->
+            <section class="p-6 space-y-4 bg-surface-container-low/30">
+                <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Addresses</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Delivery / Primary Address</label>
+                        <textarea name="address" rows="3"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            placeholder="Door no., street, city, pincode">{{if $c}}{{nullString $c.Address}}{{end}}</textarea>
+                        <p class="text-[11px] text-text-muted mt-1">Primary delivery address</p>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Billing Address</label>
+                        <textarea name="billing_address" rows="3"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            placeholder="GST billing address if different from delivery">{{if $c}}{{nullString $c.BillingAddress}}{{end}}</textarea>
+                        <p class="text-[11px] text-text-muted mt-1">Leave blank to use delivery address for billing</p>
+                    </div>
+                </div>
+                <details class="rounded-xl border border-border-subtle bg-surface-container-low overflow-hidden">
+                    <summary class="list-none px-4 py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-surface-container transition-colors">
+                        <span class="text-xs font-bold text-secondary">Advanced — linked location & reference</span>
+                        <span class="text-xs font-mono text-text-muted">▾</span>
+                    </summary>
+                    <div class="px-4 pb-4 pt-3 border-t border-border-subtle space-y-4">
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Internal Reference</label>
+                            <input type="text" name="internal_id" value="{{if $c}}{{if ne (nullString $c.InternalID) $c.CustomerCode}}{{nullString $c.InternalID}}{{end}}{{end}}"
+                                class="w-full bg-surface-container-lowest border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-mono tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                                placeholder="Your ERP / accounting ID">
+                            <p class="text-[11px] text-text-muted mt-1">Optional, for your accounting system</p>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Linked Location ID</label>
+                            <input type="text" name="place_uuid" value="{{if $c}}{{nullString $c.PlaceUUID}}{{end}}"
+                                class="w-full bg-surface-container-lowest border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-mono tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                                placeholder="Leave blank — used for map pins when available">
+                        </div>
+                    </div>
+                </details>
+            </section>
+
+            <!-- Notes -->
+            <section class="p-6 space-y-4">
+                <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Notes</h3>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Internal Notes</label>
+                    <textarea name="notes" rows="2"
                         class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
-                        placeholder="Full street address...">{{if .Customer}}{{nullString .Customer.Address}}{{end}}</textarea>
-                </section>
-            </div>
+                        placeholder="Ops-only notes…">{{if $c}}{{nullString $c.Notes}}{{end}}</textarea>
+                </div>
+                <details class="group rounded-xl border border-border-subtle bg-surface-container-low/50 overflow-hidden">
+                    <summary class="list-none px-4 py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-surface-container-low transition-colors">
+                        <span class="text-xs font-bold text-secondary">Advanced — additional data</span>
+                        <span class="text-xs font-mono text-text-muted group-open:rotate-180 transition-transform">▾</span>
+                    </summary>
+                    <div class="px-4 pb-4 pt-3 border-t border-border-subtle">
+                        <textarea name="meta" rows="3"
+                            class="w-full bg-surface-container-lowest border border-border-subtle rounded-lg px-3 py-2.5 text-xs font-mono text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                            placeholder='{"key":"value"}'>{{if $c}}{{if $c.Meta}}{{$c.Meta}}{{else}}{}{{end}}{{else}}{}{{end}}</textarea>
+                        <p class="text-[11px] text-text-muted mt-1">Optional JSON — for integrations</p>
+                    </div>
+                </details>
+            </section>
 
-            <div class="sticky bottom-0 bg-surface-container-lowest border-t border-border-subtle px-6 py-3 flex justify-end gap-2 flex-wrap">
-                {{template "btn.html" (dict "Label" "Cancel" "Href" "/customers" "Variant" "secondary" "Size" "sm")}}
-                {{template "btn.html" (dict "Label" "Save Customer" "Type" "submit" "Size" "sm")}}
+            <div class="sticky bottom-0 bg-surface-container-lowest border-t border-border-subtle px-6 py-3 flex justify-between items-center gap-3 flex-wrap">
+                <a href="/customers" class="text-xs font-semibold text-secondary hover:text-on-surface">Cancel</a>
+                <div class="flex gap-2">
+                    {{template "btn.html" (dict "Label" "Save Customer" "Type" "submit" "Size" "sm")}}
+                </div>
             </div>
         </form>
     </div>
 </div>
+<script>
+(function(){
+  var inp=document.getElementById('logo'), prev=document.getElementById('photo_preview');
+  if(inp&&prev){
+    inp.addEventListener('change', function(){
+      var f=inp.files&&inp.files[0];
+      if(!f){ return; }
+      var url=URL.createObjectURL(f);
+      if(prev.tagName.toLowerCase()!=='img'){ var img=document.createElement('img'); img.id='photo_preview'; img.className='h-12 w-12 rounded-lg object-cover border border-border-subtle mb-2'; prev.replaceWith(img); prev=img; }
+      prev.src=url;
+    });
+  }
+})();
+</script>

@@ -42,6 +42,11 @@ func (a *ApprovalService) GatedTool(t *RegisteredTool) *RegisteredTool {
 		Name:        t.Name,
 		Description: t.Description + " [REQUIRES ADMIN APPROVAL: the action is submitted for review, not executed immediately]",
 		Parameters:  t.Parameters,
+		// RBAC tag intentionally not copied: submitting for approval is not
+		// the privileged act — the ADMIN who approves is, and the action
+		// executes under the admin's identity (which holds the permission).
+		// The original (permission-tagged) handler stays registered for
+		// post-approval execution.
 		Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
 			requester := userNameFrom(ctx)
 			if requester == "" {

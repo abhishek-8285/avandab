@@ -186,7 +186,10 @@ func (uc *RazorpayWebhookUseCase) ExecuteEvent(ctx context.Context, rawBody []by
 
 	uc.touchLastReceived()
 
-	tenantID := shared.TenantIDFromContext(ctx)
+	// Webhook-event bookkeeping is platform-global: public route carries no
+	// request tenant, and event-id dedup must hold regardless of which invoice
+	// the payload references.
+	tenantID := fallbackTenant(ctx)
 
 	// In-memory hot cache (survives within a process).
 	if id, ok := uc.isProcessed(eventID); ok {
@@ -252,12 +255,95 @@ func (uc *RazorpayWebhookUseCase) Status() RazorpayWebhookStatus {
 	}
 }
 
+// invoiceTenantSource is the optional capability on the invoices repository
+// used to attribute webhook records when no request tenant exists.
+type invoiceTenantSource interface {
+	TenantForInvoice(ctx context.Context, invoiceID string) (shared.TenantID, error)
+}
+
+// paymentReferenceTenantSource is the optional capability on the payments
+// repository used to route refund webhooks back to the original payment's
+// tenant.
+type paymentReferenceTenantSource interface {
+	FindReferenceTenant(ctx context.Context, reference string) (shared.TenantID, error)
+}
+
+// fallbackTenant returns the request-context tenant, or the bootstrap default
+// for platform-global bookkeeping rows written from the public webhook route.
+func fallbackTenant(ctx context.Context) shared.TenantID {
+	if tid := shared.TenantIDFromContext(ctx); tid != "" {
+		return tid
+	}
+	return shared.DefaultTenant
+}
+
+// resolveInvoiceTenant attributes a webhook payload to the invoice's owning
+// tenant. The Razorpay route is public (signature-authenticated only), so the
+// request context carries no tenant — the referenced record is authoritative.
+// Returns "" when the invoice does not exist; callers keep their existing
+// not-attributable handling instead of guessing a tenant.
+func (uc *RazorpayWebhookUseCase) resolveInvoiceTenant(ctx context.Context, invoiceID string) shared.TenantID {
+	if uc.uow == nil || invoiceID == "" {
+		return ""
+	}
+	var out shared.TenantID
+	_ = uc.uow.Execute(ctx, func(txCtx ports.TxContext) error {
+		src, ok := txCtx.Repositories().Invoices().(invoiceTenantSource)
+		if !ok {
+			return errors.New("invoices repository lacks TenantForInvoice capability")
+		}
+		tid, err := src.TenantForInvoice(txCtx, invoiceID)
+		if err != nil {
+			return err
+		}
+		out = tid
+		return nil
+	})
+	return out
+}
+
+// resolvePaymentReferenceTenant mirrors resolveInvoiceTenant for refund flows,
+// discovering tenancy from the original gateway payment reference.
+func (uc *RazorpayWebhookUseCase) resolvePaymentReferenceTenant(ctx context.Context, reference string) shared.TenantID {
+	if uc.uow == nil || reference == "" {
+		return ""
+	}
+	var out shared.TenantID
+	_ = uc.uow.Execute(ctx, func(txCtx ports.TxContext) error {
+		src, ok := txCtx.Repositories().Payments().(paymentReferenceTenantSource)
+		if !ok {
+			return errors.New("payments repository lacks FindReferenceTenant capability")
+		}
+		tid, err := src.FindReferenceTenant(txCtx, reference)
+		if err != nil {
+			return err
+		}
+		out = tid
+		return nil
+	})
+	return out
+}
+
 func (uc *RazorpayWebhookUseCase) recordPaymentEntity(ctx context.Context, entity RazorpayPaymentEntity) (paymentagg.PaymentID, error) {
 	if entity.ID == "" {
 		return "", ErrWebhookInvoiceMissing
 	}
 
-	tenantID := shared.TenantIDFromContext(ctx)
+	if entity.Notes.InvoiceID == "" {
+		// Cannot attribute the payment to an invoice. Acknowledge the webhook
+		// (200, no retry storm) and surface an alert — the payment must not be
+		// silently dropped (Spec 11 §5.1).
+		uc.acknowledgeUnattributable(ctx, "payment.captured", entity.ID, "")
+		return "", nil
+	}
+
+	// Public route: tenancy comes from the referenced invoice, never ctx.
+	tenantID := uc.resolveInvoiceTenant(ctx, entity.Notes.InvoiceID)
+	if tenantID == "" {
+		slog.Default().Warn("razorpay webhook references unknown invoice; acknowledged without recording",
+			"payment_id", entity.ID, "invoice_id", entity.Notes.InvoiceID)
+		return "", nil
+	}
 
 	// Race with the /verify flow: if the payment was already recorded via
 	// checkout verification, return the existing payment — never double count.
@@ -301,7 +387,18 @@ func (uc *RazorpayWebhookUseCase) recordOrderEntity(ctx context.Context, entity 
 		return "", ErrWebhookInvoiceMissing
 	}
 
-	tenantID := shared.TenantIDFromContext(ctx)
+	if entity.Notes.InvoiceID == "" {
+		uc.acknowledgeUnattributable(ctx, "order.paid", entity.ID, "")
+		return "", nil
+	}
+
+	// Public route: tenancy comes from the referenced invoice, never ctx.
+	tenantID := uc.resolveInvoiceTenant(ctx, entity.Notes.InvoiceID)
+	if tenantID == "" {
+		slog.Default().Warn("razorpay webhook order references unknown invoice; acknowledged without recording",
+			"order_id", entity.ID, "invoice_id", entity.Notes.InvoiceID)
+		return "", nil
+	}
 
 	existing, err := uc.findByReference(ctx, entity.ID, tenantID)
 	if err != nil {
@@ -309,11 +406,6 @@ func (uc *RazorpayWebhookUseCase) recordOrderEntity(ctx context.Context, entity 
 	}
 	if existing != "" {
 		return existing, nil
-	}
-
-	if entity.Notes.InvoiceID == "" {
-		uc.acknowledgeUnattributable(ctx, "order.paid", entity.ID, "")
-		return "", nil
 	}
 
 	reference := entity.ID
@@ -329,7 +421,9 @@ func (uc *RazorpayWebhookUseCase) recordOrderEntity(ctx context.Context, entity 
 
 // acknowledgeUnattributable logs a warning and emits a payment-failed alert
 // when a webhook payload cannot be linked to an invoice. The webhook itself is
-// acknowledged with HTTP 200 so Razorpay stops retrying.
+// acknowledgeUnattributable logs a warning and emits a payment-failed alert
+// so ops can reconcile manually. The webhook itself is still answered with
+// HTTP 200 so Razorpay stops retrying.
 func (uc *RazorpayWebhookUseCase) acknowledgeUnattributable(ctx context.Context, eventType, paymentID, invoiceID string) {
 	slog.Default().Warn("razorpay webhook payment has no notes.invoice_id; acknowledged without recording",
 		"event", eventType, "payment_id", paymentID, "invoice_id", invoiceID)
@@ -356,7 +450,12 @@ func (uc *RazorpayWebhookUseCase) processRefundEntity(ctx context.Context, entit
 		return "", errors.New("reverse payment use case not configured")
 	}
 
-	tenantID := shared.TenantIDFromContext(ctx)
+	// Refunds route to the original payment's tenant — the public webhook
+	// context carries none (Spec 24 §Business logic).
+	tenantID := uc.resolvePaymentReferenceTenant(ctx, entity.PaymentID)
+	if tenantID == "" {
+		return "", ErrWebhookOriginalPaymentNotFound
+	}
 
 	originalID, err := uc.findByReference(ctx, entity.PaymentID, tenantID)
 	if err != nil {

@@ -48,6 +48,34 @@ func TestRunAsLeader_RunsFnOnceLeaseAcquired(t *testing.T) {
 	}
 }
 
+func TestRunAsLeader_RecoversFromWorkerPanicAndReleasesLease(t *testing.T) {
+	db := testDB(t)
+	m := leader.NewManager(db, "panic-inst", 2*time.Second, slog.Default())
+
+	panicked := make(chan struct{})
+	go m.RunAsLeader(context.Background(), "panic_job", func(ctx context.Context) {
+		close(panicked)
+		panic("boom")
+	})
+
+	select {
+	case <-panicked:
+	case <-time.After(3 * time.Second):
+		t.Fatal("fn never ran")
+	}
+
+	// After the panic is recovered the lease must be released, so a fresh
+	// claim by the same or another instance can win it again.
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		if m.TryRunAsLeader(context.Background(), "panic_job", func(ctx context.Context) {}) {
+			return // lease released despite the panic
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	t.Fatal("lease not released after worker panic")
+}
+
 func TestRunAsLeader_SecondInstanceWaits(t *testing.T) {
 	db := testDB(t)
 	release := make(chan struct{})

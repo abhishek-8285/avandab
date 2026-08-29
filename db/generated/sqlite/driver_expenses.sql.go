@@ -12,8 +12,8 @@ import (
 
 const createDriverExpense = `-- name: CreateDriverExpense :one
 INSERT INTO driver_expenses (id, trip_id, driver_id, expense_type, amount, description, receipt_url,
-    status, category, requested_by)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    status, category, requested_by, tenant_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id, trip_id, driver_id, expense_type, amount, description, receipt_url,
     status, category, requested_by, approved_by, rejected_reason, approved_at,
     approved, created_at
@@ -30,6 +30,7 @@ type CreateDriverExpenseParams struct {
 	Status      string         `json:"status"`
 	Category    string         `json:"category"`
 	RequestedBy sql.NullString `json:"requested_by"`
+	TenantID    string         `json:"tenant_id"`
 }
 
 type CreateDriverExpenseRow struct {
@@ -62,6 +63,7 @@ func (q *Queries) CreateDriverExpense(ctx context.Context, arg CreateDriverExpen
 		arg.Status,
 		arg.Category,
 		arg.RequestedBy,
+		arg.TenantID,
 	)
 	var i CreateDriverExpenseRow
 	err := row.Scan(
@@ -85,11 +87,16 @@ func (q *Queries) CreateDriverExpense(ctx context.Context, arg CreateDriverExpen
 }
 
 const deleteDriverExpense = `-- name: DeleteDriverExpense :exec
-DELETE FROM driver_expenses WHERE id = ?
+DELETE FROM driver_expenses WHERE id = ? AND tenant_id = ?
 `
 
-func (q *Queries) DeleteDriverExpense(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, deleteDriverExpense, id)
+type DeleteDriverExpenseParams struct {
+	ID       string `json:"id"`
+	TenantID string `json:"tenant_id"`
+}
+
+func (q *Queries) DeleteDriverExpense(ctx context.Context, arg DeleteDriverExpenseParams) error {
+	_, err := q.db.ExecContext(ctx, deleteDriverExpense, arg.ID, arg.TenantID)
 	return err
 }
 
@@ -97,8 +104,13 @@ const getDriverExpenseByID = `-- name: GetDriverExpenseByID :one
 SELECT id, trip_id, driver_id, expense_type, amount, description, receipt_url,
     status, category, requested_by, approved_by, rejected_reason, approved_at,
     approved, created_at
-FROM driver_expenses WHERE id = ?
+FROM driver_expenses WHERE id = ? AND tenant_id = ?
 `
+
+type GetDriverExpenseByIDParams struct {
+	ID       string `json:"id"`
+	TenantID string `json:"tenant_id"`
+}
 
 type GetDriverExpenseByIDRow struct {
 	ID             string         `json:"id"`
@@ -118,8 +130,8 @@ type GetDriverExpenseByIDRow struct {
 	CreatedAt      sql.NullTime   `json:"created_at"`
 }
 
-func (q *Queries) GetDriverExpenseByID(ctx context.Context, id string) (GetDriverExpenseByIDRow, error) {
-	row := q.db.QueryRowContext(ctx, getDriverExpenseByID, id)
+func (q *Queries) GetDriverExpenseByID(ctx context.Context, arg GetDriverExpenseByIDParams) (GetDriverExpenseByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getDriverExpenseByID, arg.ID, arg.TenantID)
 	var i GetDriverExpenseByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -145,8 +157,13 @@ const listDriverExpensesByDriver = `-- name: ListDriverExpensesByDriver :many
 SELECT id, trip_id, driver_id, expense_type, amount, description, receipt_url,
     status, category, requested_by, approved_by, rejected_reason, approved_at,
     approved, created_at
-FROM driver_expenses WHERE driver_id = ? ORDER BY created_at DESC
+FROM driver_expenses WHERE driver_id = ? AND tenant_id = ? ORDER BY created_at DESC
 `
+
+type ListDriverExpensesByDriverParams struct {
+	DriverID sql.NullString `json:"driver_id"`
+	TenantID string         `json:"tenant_id"`
+}
 
 type ListDriverExpensesByDriverRow struct {
 	ID             string         `json:"id"`
@@ -166,8 +183,8 @@ type ListDriverExpensesByDriverRow struct {
 	CreatedAt      sql.NullTime   `json:"created_at"`
 }
 
-func (q *Queries) ListDriverExpensesByDriver(ctx context.Context, driverID sql.NullString) ([]ListDriverExpensesByDriverRow, error) {
-	rows, err := q.db.QueryContext(ctx, listDriverExpensesByDriver, driverID)
+func (q *Queries) ListDriverExpensesByDriver(ctx context.Context, arg ListDriverExpensesByDriverParams) ([]ListDriverExpensesByDriverRow, error) {
+	rows, err := q.db.QueryContext(ctx, listDriverExpensesByDriver, arg.DriverID, arg.TenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -210,9 +227,14 @@ SELECT id, trip_id, driver_id, expense_type, amount, description, receipt_url,
     status, category, requested_by, approved_by, rejected_reason, approved_at,
     approved, created_at
 FROM driver_expenses
-WHERE COALESCE(status, 'pending') = ?
+WHERE tenant_id = ? AND COALESCE(status, 'pending') = ?
 ORDER BY created_at ASC
 `
+
+type ListDriverExpensesByStatusParams struct {
+	TenantID string `json:"tenant_id"`
+	Status   string `json:"status"`
+}
 
 type ListDriverExpensesByStatusRow struct {
 	ID             string         `json:"id"`
@@ -232,8 +254,8 @@ type ListDriverExpensesByStatusRow struct {
 	CreatedAt      sql.NullTime   `json:"created_at"`
 }
 
-func (q *Queries) ListDriverExpensesByStatus(ctx context.Context, status string) ([]ListDriverExpensesByStatusRow, error) {
-	rows, err := q.db.QueryContext(ctx, listDriverExpensesByStatus, status)
+func (q *Queries) ListDriverExpensesByStatus(ctx context.Context, arg ListDriverExpensesByStatusParams) ([]ListDriverExpensesByStatusRow, error) {
+	rows, err := q.db.QueryContext(ctx, listDriverExpensesByStatus, arg.TenantID, arg.Status)
 	if err != nil {
 		return nil, err
 	}
@@ -275,8 +297,13 @@ const listDriverExpensesByTrip = `-- name: ListDriverExpensesByTrip :many
 SELECT id, trip_id, driver_id, expense_type, amount, description, receipt_url,
     status, category, requested_by, approved_by, rejected_reason, approved_at,
     approved, created_at
-FROM driver_expenses WHERE trip_id = ? ORDER BY created_at DESC
+FROM driver_expenses WHERE trip_id = ? AND tenant_id = ? ORDER BY created_at DESC
 `
+
+type ListDriverExpensesByTripParams struct {
+	TripID   sql.NullString `json:"trip_id"`
+	TenantID string         `json:"tenant_id"`
+}
 
 type ListDriverExpensesByTripRow struct {
 	ID             string         `json:"id"`
@@ -296,8 +323,8 @@ type ListDriverExpensesByTripRow struct {
 	CreatedAt      sql.NullTime   `json:"created_at"`
 }
 
-func (q *Queries) ListDriverExpensesByTrip(ctx context.Context, tripID sql.NullString) ([]ListDriverExpensesByTripRow, error) {
-	rows, err := q.db.QueryContext(ctx, listDriverExpensesByTrip, tripID)
+func (q *Queries) ListDriverExpensesByTrip(ctx context.Context, arg ListDriverExpensesByTripParams) ([]ListDriverExpensesByTripRow, error) {
+	rows, err := q.db.QueryContext(ctx, listDriverExpensesByTrip, arg.TripID, arg.TenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -338,7 +365,7 @@ func (q *Queries) ListDriverExpensesByTrip(ctx context.Context, tripID sql.NullS
 const updateDriverExpenseStatus = `-- name: UpdateDriverExpenseStatus :one
 UPDATE driver_expenses
 SET status = ?, approved_by = ?, rejected_reason = ?, approved_at = datetime('now')
-WHERE id = ?
+WHERE id = ? AND tenant_id = ?
 RETURNING id, trip_id, driver_id, expense_type, amount, description, receipt_url,
     status, category, requested_by, approved_by, rejected_reason, approved_at,
     approved, created_at
@@ -349,6 +376,7 @@ type UpdateDriverExpenseStatusParams struct {
 	ApprovedBy     sql.NullString `json:"approved_by"`
 	RejectedReason sql.NullString `json:"rejected_reason"`
 	ID             string         `json:"id"`
+	TenantID       string         `json:"tenant_id"`
 }
 
 type UpdateDriverExpenseStatusRow struct {
@@ -375,6 +403,7 @@ func (q *Queries) UpdateDriverExpenseStatus(ctx context.Context, arg UpdateDrive
 		arg.ApprovedBy,
 		arg.RejectedReason,
 		arg.ID,
+		arg.TenantID,
 	)
 	var i UpdateDriverExpenseStatusRow
 	err := row.Scan(

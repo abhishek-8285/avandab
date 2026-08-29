@@ -438,3 +438,16 @@ func (r *invoiceRepository) FindByBookingID(ctx context.Context, bookingID strin
 func (r *invoiceRepository) FindByTripID(ctx context.Context, tripID string, tenantID shared.TenantID) (*aggregate.InvoiceAggregate, error) {
 	return r.findInvoiceBySQL(ctx, findInvoiceByTripSQL, tripID, string(tenantID))
 }
+
+// TenantForInvoice discovers the owning tenant for an invoice id. Exists for
+// unauthenticated flows (Razorpay webhook) that must attribute records to the
+// invoice's tenant without a request-context tenant (Spec 24 §Business logic).
+func (r *invoiceRepository) TenantForInvoice(ctx context.Context, invoiceID string) (shared.TenantID, error) {
+	var tenantID string
+	err := r.exec(ctx).QueryRowContext(ctx,
+		`SELECT tenant_id FROM invoices WHERE id = ?`, invoiceID).Scan(&tenantID)
+	if err != nil {
+		return "", err
+	}
+	return shared.TenantID(tenantID), nil
+}

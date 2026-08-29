@@ -8,8 +8,8 @@ import (
 
 // UserService defines the interface for user management operations.
 type UserService interface {
-	CreateUser(ctx context.Context, email, name, phone string, roleID int64, status UserStatus) (User, error)
-	CreateUserWithPassword(ctx context.Context, email, name, phone, password string, roleID int64, status UserStatus) (User, error)
+	CreateUser(ctx context.Context, email, name, phone string, roleID int64, status UserStatus, tenantID string) (User, error)
+	CreateUserWithPassword(ctx context.Context, email, name, phone, password string, roleID int64, status UserStatus, tenantID string) (User, error)
 	GetUser(ctx context.Context, id types.UserID) (User, error)
 	ListUsers(ctx context.Context, query, status string, limit, offset int) ([]UserWithRole, int64, error)
 	UpdateUser(ctx context.Context, id types.UserID, email, name, phone string, roleID int64, status UserStatus) (User, error)

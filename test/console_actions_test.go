@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"transport-app/internal/shared"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -87,7 +88,7 @@ func TestSpec22_EwayBillExtend(t *testing.T) {
 // approve/reject routes must stay mounted on /kharcha/{id}.
 func TestSpec22_KharchaActionEndpointsExist(t *testing.T) {
 	db := NewTestDB(t)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 	var n int
 	require.NoError(t, db.QueryRowContext(ctx,
 		`SELECT count(*) FROM sqlite_master WHERE type='table' AND name IN ('driver_expenses','audit_logs','eway_bills','eway_bill_events')`).

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 	"time"
+	"transport-app/internal/shared"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -69,7 +70,7 @@ func createExpense(t *testing.T, svcs *service.Services, ctx context.Context, tr
 func TestKharcha_KH1_CreateAndListPending(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripID := setupInTransitTrip(t, svcs, ctx)
 	createExpense(t, svcs, ctx, string(tripID), "drv-kh1", "fuel", 1500.0, "Diesel top-up at NH48 pump")
@@ -94,7 +95,7 @@ func TestKharcha_KH1_CreateAndListPending(t *testing.T) {
 func TestKharcha_KH2_ApproveExpense(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripID := setupInTransitTrip(t, svcs, ctx)
 	expID := createExpense(t, svcs, ctx, string(tripID), "drv-kh2", "advance", 2000.0, "Driver cash advance")
@@ -116,7 +117,7 @@ func TestKharcha_KH2_ApproveExpense(t *testing.T) {
 func TestKharcha_KH3_RejectExpense(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripID := setupInTransitTrip(t, svcs, ctx)
 	expID := createExpense(t, svcs, ctx, string(tripID), "drv-kh3", "food", 500.0, "Restaurant bill")
@@ -137,7 +138,7 @@ func TestKharcha_KH3_RejectExpense(t *testing.T) {
 func TestKharcha_KH4_RejectWithoutReason_Fails(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripID := setupInTransitTrip(t, svcs, ctx)
 	expID := createExpense(t, svcs, ctx, string(tripID), "drv-kh4", "toll", 300.0, "")
@@ -152,7 +153,7 @@ func TestKharcha_KH4_RejectWithoutReason_Fails(t *testing.T) {
 func TestKharcha_KH5_DoubleApprove_Idempotent(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripID := setupInTransitTrip(t, svcs, ctx)
 	expID := createExpense(t, svcs, ctx, string(tripID), "drv-kh5", "repair", 800.0, "")
@@ -171,7 +172,7 @@ func TestKharcha_KH5_DoubleApprove_Idempotent(t *testing.T) {
 func TestKharcha_KH6_LedgerFiltering(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripA := setupInTransitTrip(t, svcs, ctx)
 	createExpense(t, svcs, ctx, string(tripA), "drv-kh6", "toll", 100.0, "")
@@ -197,7 +198,7 @@ func TestKharcha_KH6_LedgerFiltering(t *testing.T) {
 func TestKharcha_KH7_Stats(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripID := setupInTransitTrip(t, svcs, ctx)
 	id1 := createExpense(t, svcs, ctx, string(tripID), "drv-kh7a", "fuel", 500.0, "")
@@ -217,7 +218,7 @@ func TestKharcha_KH7_Stats(t *testing.T) {
 func TestKharcha_KH8_GetUnknownExpense(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	_, err := svcs.Kharcha.GetExpenseByID(ctx, "expense-does-not-exist")
 	assert.Error(t, err)
@@ -229,7 +230,7 @@ func TestKharcha_KH8_GetUnknownExpense(t *testing.T) {
 func TestKharcha_KH9_ZeroAmount_Rejected(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripID := setupInTransitTrip(t, svcs, ctx)
 	_, err := svcs.Kharcha.CreateExpense(ctx, string(tripID), "drv-kh9", "fuel", 0.0, "", "", 0)
@@ -239,7 +240,7 @@ func TestKharcha_KH9_ZeroAmount_Rejected(t *testing.T) {
 func TestKharcha_KH10_NegativeAmount_Rejected(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripID := setupInTransitTrip(t, svcs, ctx)
 	_, err := svcs.Kharcha.CreateExpense(ctx, string(tripID), "drv-kh10", "advance", -250.0, "", "", 0)
@@ -254,7 +255,7 @@ func TestKharcha_KH10_NegativeAmount_Rejected(t *testing.T) {
 func TestEPOD_POD1_HappyPath(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripID := setupInTransitTrip(t, svcs, ctx)
 	otpCode, _ := svcs.Trips.EnsurePODOTP(ctx, string(tripID))
@@ -277,7 +278,7 @@ func TestEPOD_POD1_HappyPath(t *testing.T) {
 func TestEPOD_POD2_SignatureFallback(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripID := setupInTransitTrip(t, svcs, ctx)
 	otpCode, _ := svcs.Trips.EnsurePODOTP(ctx, string(tripID))
@@ -294,7 +295,7 @@ func TestEPOD_POD2_SignatureFallback(t *testing.T) {
 func TestEPOD_POD3_BothURLsEmpty_Fails(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripID := setupInTransitTrip(t, svcs, ctx)
 	_, err := svcs.Trips.DeliverWithPOD(ctx, string(tripID), service.DeliverWithPODRequest{
@@ -309,7 +310,7 @@ func TestEPOD_POD3_BothURLsEmpty_Fails(t *testing.T) {
 func TestEPOD_POD4_WrongState_Fails(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	rt, _ := svcs.Routes.CreateRoute(ctx, "A", "B", 100, 2, 5000, "")
 	trp, err := svcs.Trips.CreateTrip(ctx, service.CreateTripRequest{
@@ -328,7 +329,7 @@ func TestEPOD_POD4_WrongState_Fails(t *testing.T) {
 func TestEPOD_POD5_DoubleDeliver_SecondFails(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripID := setupInTransitTrip(t, svcs, ctx)
 	otpCode, _ := svcs.Trips.EnsurePODOTP(ctx, string(tripID))
@@ -350,7 +351,7 @@ func TestEPOD_POD5_DoubleDeliver_SecondFails(t *testing.T) {
 func TestEPOD_POD6_EventFiring(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripID := setupInTransitTrip(t, svcs, ctx)
 	otpCode, _ := svcs.Trips.EnsurePODOTP(ctx, string(tripID))
@@ -373,7 +374,7 @@ func TestEPOD_POD6_EventFiring(t *testing.T) {
 func TestKharcha_INT1_FullWorkflow(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripID := setupInTransitTrip(t, svcs, ctx)
 	expID := createExpense(t, svcs, ctx, string(tripID), "drv-int1", "fuel", 2000.0, "Petrol before Jaipur bypass")
@@ -405,7 +406,7 @@ func TestKharcha_INT1_FullWorkflow(t *testing.T) {
 func TestKharcha_INT2_MixedApprovalFlow(t *testing.T) {
 	db := NewTestDB(t)
 	svcs := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	tripID := setupInTransitTrip(t, svcs, ctx)
 

@@ -222,16 +222,29 @@ type CreditDebitNote struct {
 }
 
 type Customer struct {
-	ID        string         `json:"id"`
-	Name      string         `json:"name"`
-	Company   sql.NullString `json:"company"`
-	Phone     string         `json:"phone"`
-	Email     sql.NullString `json:"email"`
-	Gst       sql.NullString `json:"gst"`
-	Address   sql.NullString `json:"address"`
-	Notes     sql.NullString `json:"notes"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
+	ID               string         `json:"id"`
+	Name             string         `json:"name"`
+	Company          sql.NullString `json:"company"`
+	Phone            string         `json:"phone"`
+	Email            sql.NullString `json:"email"`
+	Gst              sql.NullString `json:"gst"`
+	Address          sql.NullString `json:"address"`
+	Notes            sql.NullString `json:"notes"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
+	CustomerCode     sql.NullString `json:"customer_code"`
+	Title            sql.NullString `json:"title"`
+	ContactPerson    sql.NullString `json:"contact_person"`
+	InternalID       sql.NullString `json:"internal_id"`
+	PhotoUrl         sql.NullString `json:"photo_url"`
+	PlaceUuid        sql.NullString `json:"place_uuid"`
+	Meta             string         `json:"meta"`
+	BillingAddress   sql.NullString `json:"billing_address"`
+	Type             string         `json:"type"`
+	Status           string         `json:"status"`
+	PaymentTermsDays int64          `json:"payment_terms_days"`
+	TenantID         string         `json:"tenant_id"`
+	StateCode        sql.NullString `json:"state_code"`
 }
 
 type CustomerUser struct {
@@ -1012,6 +1025,12 @@ type ProviderPollState struct {
 	BackoffUntil        sql.NullTime   `json:"backoff_until"`
 }
 
+type RevokedRefreshToken struct {
+	TokenHash string    `json:"token_hash"`
+	RevokedAt time.Time `json:"revoked_at"`
+	UserID    string    `json:"user_id"`
+}
+
 type Role struct {
 	ID          int64          `json:"id"`
 	Name        string         `json:"name"`
@@ -1209,6 +1228,15 @@ type TelemetrySnapshot struct {
 	DriverID    sql.NullString  `json:"driver_id"`
 }
 
+type Tenant struct {
+	ID        string         `json:"id"`
+	Name      string         `json:"name"`
+	Slug      sql.NullString `json:"slug"`
+	Status    string         `json:"status"`
+	CreatedAt time.Time      `json:"created_at"`
+	UpdatedAt time.Time      `json:"updated_at"`
+}
+
 type Trip struct {
 	ID                    string          `json:"id"`
 	TripNumber            string          `json:"trip_number"`
@@ -1302,6 +1330,7 @@ type User struct {
 	UpdatedAt       time.Time      `json:"updated_at"`
 	Timezone        string         `json:"timezone"`
 	ThemePreference string         `json:"theme_preference"`
+	TenantID        string         `json:"tenant_id"`
 }
 
 type UserRole struct {

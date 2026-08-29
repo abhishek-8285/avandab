@@ -589,3 +589,104 @@ func TestRazorpayVerify_NotConfiguredFailsClosed(t *testing.T) {
 	})
 	require.ErrorIs(t, err, ErrRazorpayNotConfigured)
 }
+
+// ---- tenant-discovery capability fakes (Spec 24 §Business logic) ----
+
+// TenantForInvoice lets webhook tests attribute payloads to non-default
+// tenants; the production sqlite repository implements the same narrow
+// interface.
+func (r *fakeInvoiceRepo) TenantForInvoice(_ context.Context, invoiceID string) (shared.TenantID, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if inv, ok := r.byID[invoiceagg.InvoiceID(invoiceID)]; ok {
+		return inv.TenantID, nil
+	}
+	return "", sql.ErrNoRows
+}
+
+// FindReferenceTenant mirrors payment_repository.FindReferenceTenant for
+// refund routing tests.
+func (r *fakePaymentRepo) FindReferenceTenant(_ context.Context, reference string) (shared.TenantID, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if id, ok := r.byRef[reference]; ok {
+		if p, ok2 := r.byID[id]; ok2 {
+			return p.TenantID, nil
+		}
+	}
+	return "", sql.ErrNoRows
+}
+
+// TestRazorpayWebhook_PaymentCaptured_UsesInvoiceTenant proves public-route
+// payments land in the REFERENCED INVOICE's tenant, not a request-context
+// default (context here intentionally carries no tenant).
+func TestRazorpayWebhook_PaymentCaptured_UsesInvoiceTenant(t *testing.T) {
+	ctx, uow, _, _, webhookUC, clock, _ := setupWebhookUnitTest(t)
+
+	acmeTenant := shared.TenantID("acme")
+	inv := invoiceagg.NewInvoiceAggregate(
+		invoiceagg.InvoiceID("inv-acme-9"), acmeTenant, "INV/ACME/0001",
+		"bk-1", "cust-1", nil, 1000, 0, 0, 1000,
+		invoiceagg.PaymentStatusPending, clock.Now(),
+	)
+	require.NoError(t, uow.repos.invoices.Save(ctx, inv))
+
+	payload := fmt.Sprintf(`{
+		"event":"payment.captured",
+		"payload":{"payment":{"entity":{
+			"id":"pay_acme_1","order_id":"order_1","amount":100000,
+			"status":"captured","notes":{"invoice_id":"inv-acme-9"}
+		}}}
+	}`)
+
+	sig := signWebhook(t, []byte(payload), testWebhookSecret)
+	paymentID, err := webhookUC.Execute(ctx, []byte(payload), sig)
+	require.NoError(t, err)
+	require.NotEmpty(t, paymentID)
+
+	recorded, err := uow.repos.payments.Find(ctx, paymentID, acmeTenant)
+	require.NoError(t, err, "payment must be recorded under the invoice's tenant")
+	assert.Equal(t, acmeTenant, recorded.TenantID)
+}
+
+// TestRazorpayWebhook_Refund_RoutesToOriginalPaymentTenant proves refunds
+// resolve tenancy from the original gateway reference (no ctx tenant).
+func TestRazorpayWebhook_Refund_RoutesToOriginalPaymentTenant(t *testing.T) {
+	ctx, uow, recordUC, _, webhookUC, clock, _ := setupWebhookUnitTest(t)
+
+	betaTenant := shared.TenantID("beta")
+	require.NoError(t, uow.repos.invoices.Save(ctx, invoiceagg.NewInvoiceAggregate(
+		invoiceagg.InvoiceID("inv-beta-1"), betaTenant, "INV/BETA/0001",
+		"bk-1", "cust-1", nil, 500, 0, 0, 500,
+		invoiceagg.PaymentStatusPending, clock.Now(),
+	)))
+	betaRef := "pay_beta_1"
+	orig, err := recordUC.Execute(shared.ContextWithTenantID(ctx, betaTenant), RecordPaymentCommand{
+		TenantID:    betaTenant,
+		InvoiceID:   "inv-beta-1",
+		PaymentDate: clock.Now(),
+		Amount:      500,
+		Method:      paymentagg.PaymentMethodRazorpay,
+		Reference:   &betaRef,
+	})
+	require.NoError(t, err)
+
+	payload := fmt.Sprintf(`{
+		"event":"refund.processed",
+		"payload":{"refund":{"entity":{
+			"id":"rfnd_1","payment_id":"%s","amount":50000
+		}}}
+	}`, betaRef)
+
+	sig := signWebhook(t, []byte(payload), testWebhookSecret)
+	reversalID, err := webhookUC.Execute(ctx, []byte(payload), sig)
+	require.NoError(t, err)
+	require.NotEqual(t, orig, reversalID, "refund records a new reversal payment")
+
+	uow.repos.payments.mu.Lock()
+	reversal := uow.repos.payments.byID[reversalID]
+	uow.repos.payments.mu.Unlock()
+	require.NotNil(t, reversal)
+	assert.Equal(t, betaTenant, reversal.TenantID,
+		"reversal must be recorded under the original payment's tenant")
+}

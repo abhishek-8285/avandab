@@ -64,11 +64,16 @@ func (h *APIAuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		roleName = string(domain.RoleAdmin)
 	}
 
+	userTenantID := user.TenantID
+	if userTenantID == "" {
+		userTenantID = string(shared.DefaultTenant)
+	}
+
 	expiresAt := time.Now().Add(24 * time.Hour)
 	token, err := auth.IssueAPIToken(h.secret, auth.APITokenClaims{
 		UserID:    string(user.ID),
 		Role:      roleName,
-		TenantID:  string(shared.DefaultTenant),
+		TenantID:  userTenantID,
 		IssuedAt:  time.Now().Unix(),
 		ExpiresAt: expiresAt.Unix(),
 	})
@@ -120,11 +125,16 @@ func (h *APIAuthHandler) IssueToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	resultTenantID := result.User.TenantID
+	if resultTenantID == "" {
+		resultTenantID = string(shared.DefaultTenant)
+	}
+
 	expiresAt := time.Now().Add(24 * time.Hour)
 	token, err := auth.IssueAPIToken(h.secret, auth.APITokenClaims{
 		UserID:    string(result.User.ID),
 		Role:      string(result.User.Role.Name),
-		TenantID:  string(shared.DefaultTenant), // Single-tenant; extend when multi-tenancy is added.
+		TenantID:  resultTenantID,
 		IssuedAt:  time.Now().Unix(),
 		ExpiresAt: expiresAt.Unix(),
 	})

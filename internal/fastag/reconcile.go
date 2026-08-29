@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	intFastag "transport-app/internal/integration/fastag"
+	"transport-app/internal/shared"
 )
 
 type candidateTrip struct {
@@ -27,7 +28,10 @@ func (s *FASTagService) Reconcile(ctx context.Context, vehicleNumber, fromDate, 
 	}
 
 	pulledCount := len(pulledTxs)
-	tenantID := "1"
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		tenantID = string(shared.DefaultTenant)
+	}
 
 	// 2. Persist new transactions into fastag_transactions (source='PROVIDER')
 	for _, p := range pulledTxs {
@@ -94,9 +98,10 @@ func (s *FASTagService) Reconcile(ctx context.Context, vehicleNumber, fromDate, 
 		LEFT JOIN vehicles v ON t.vehicle_id = v.id
 		WHERE (v.registration_number = ? OR ? = '' OR t.vehicle_id = ?)
 		  AND t.status IN ('scheduled', 'assigned', 'started', 'reached_pickup', 'in_transit', 'delivered', 'completed')
+		  AND t.tenant_id = ?
 		ORDER BY t.departure_time ASC
 	`
-	tRows, err := s.db.QueryContext(ctx, tripQuery, vehicleNumber, vehicleNumber, vehicleNumber)
+	tRows, err := s.db.QueryContext(ctx, tripQuery, vehicleNumber, vehicleNumber, vehicleNumber, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -159,9 +164,9 @@ func (s *FASTagService) Reconcile(ctx context.Context, vehicleNumber, fromDate, 
 
 				_, kErr := s.db.ExecContext(ctx, `
 					INSERT INTO driver_expenses (
-						id, trip_id, driver_id, expense_type, category, amount, description, approved, status, approved_at
-					) VALUES (?, ?, ?, 'toll', 'toll', ?, ?, 1, 'approved', datetime('now'))
-				`, kID, bestTrip.ID, driverIDVal, txn.Amount, desc)
+						id, trip_id, driver_id, expense_type, category, amount, description, approved, status, approved_at, tenant_id
+					) VALUES (?, ?, ?, 'toll', 'toll', ?, ?, 1, 'approved', datetime('now'), ?)
+				`, kID, bestTrip.ID, driverIDVal, txn.Amount, desc, tenantID)
 
 				if kErr == nil {
 					kharchaCreated++

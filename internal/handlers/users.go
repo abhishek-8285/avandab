@@ -10,6 +10,7 @@ import (
 
 	"transport-app/internal/domain"
 	"transport-app/internal/middleware"
+	"transport-app/internal/shared"
 )
 
 // UserHandlers handles user management (admin only).
@@ -79,6 +80,10 @@ func (h *UserHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	roleID, _ := strconv.ParseInt(r.PostFormValue("role_id"), 10, 64)
 
 	pwd := r.PostFormValue("password")
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	if tenantID == "" {
+		tenantID = string(shared.DefaultTenant)
+	}
 	var created domain.User
 	var err error
 
@@ -91,6 +96,7 @@ func (h *UserHandlers) Create(w http.ResponseWriter, r *http.Request) {
 			pwd,
 			roleID,
 			domain.UserStatus(r.PostFormValue("status")),
+			tenantID,
 		)
 	} else {
 		created, err = h.Services.Users.CreateUser(
@@ -100,6 +106,7 @@ func (h *UserHandlers) Create(w http.ResponseWriter, r *http.Request) {
 			r.PostFormValue("phone"),
 			roleID,
 			domain.UserStatus(r.PostFormValue("status")),
+			tenantID,
 		)
 	}
 
@@ -122,6 +129,30 @@ func (h *UserHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/users", http.StatusSeeOther)
 }
 
+// tenantOf normalizes a user's tenant for comparison, treating legacy rows
+// with an empty column as the bootstrap tenant.
+func tenantOf(tenantID string) string {
+	if tenantID == "" {
+		return string(shared.DefaultTenant)
+	}
+	return tenantID
+}
+
+// ensureTenantUser enforces same-tenant user management: when the target user
+// belongs to another organization the handler answers 404 (existence not
+// disclosed). Spec 24 §Business logic — no cross-tenant user detail access.
+func (h *UserHandlers) ensureTenantUser(w http.ResponseWriter, r *http.Request, u domain.User) bool {
+	ctxTenant := string(shared.TenantIDFromContext(r.Context()))
+	if ctxTenant == "" {
+		ctxTenant = string(shared.DefaultTenant)
+	}
+	if tenantOf(u.TenantID) != ctxTenant {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return false
+	}
+	return true
+}
+
 func (h *UserHandlers) Edit(w http.ResponseWriter, r *http.Request) {
 	id := domain.UserID(chi.URLParam(r, "id"))
 	session, _ := h.getUserFromContext(r)
@@ -129,6 +160,9 @@ func (h *UserHandlers) Edit(w http.ResponseWriter, r *http.Request) {
 	user, err := h.Services.Users.GetUser(r.Context(), id)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+	if !h.ensureTenantUser(w, r, user) {
 		return
 	}
 
@@ -145,6 +179,15 @@ func (h *UserHandlers) Update(w http.ResponseWriter, r *http.Request) {
 
 	id := domain.UserID(chi.URLParam(r, "id"))
 	roleID, _ := strconv.ParseInt(r.PostFormValue("role_id"), 10, 64)
+
+	target, err := h.Services.Users.GetUser(r.Context(), id)
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+	if !h.ensureTenantUser(w, r, target) {
+		return
+	}
 
 	updated, err := h.Services.Users.UpdateUser(
 		r.Context(), id,
@@ -182,6 +225,14 @@ func (h *UserHandlers) getRoleNameByID(ctx context.Context, roleID int64) string
 
 func (h *UserHandlers) Delete(w http.ResponseWriter, r *http.Request) {
 	id := domain.UserID(chi.URLParam(r, "id"))
+	target, err := h.Services.Users.GetUser(r.Context(), id)
+	if err != nil {
+		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+	if !h.ensureTenantUser(w, r, target) {
+		return
+	}
 	if err := h.Services.Users.DeleteUser(r.Context(), id); err != nil {
 		h.failPage(w, r, err, http.StatusInternalServerError, "Could Not Delete User")
 		return
@@ -191,9 +242,12 @@ func (h *UserHandlers) Delete(w http.ResponseWriter, r *http.Request) {
 
 func (h *UserHandlers) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	id := domain.UserID(chi.URLParam(r, "id"))
-	_, err := h.Services.Users.GetUser(r.Context(), id)
+	target, err := h.Services.Users.GetUser(r.Context(), id)
 	if err != nil {
 		http.Error(w, "User not found", http.StatusNotFound)
+		return
+	}
+	if !h.ensureTenantUser(w, r, target) {
 		return
 	}
 

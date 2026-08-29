@@ -87,6 +87,7 @@ type Config struct {
 	OCRHTTPURL           string
 	OCRHTTPKey           string
 	BootstrapAdmin       BootstrapAdminConfig
+	MultiTenant          MultiTenantConfig
 	RAG                  RAGConfig
 	Agent                AgentConfig
 	Experiment           ExperimentConfig
@@ -239,6 +240,13 @@ type BootstrapAdminConfig struct {
 	Password string
 }
 
+// MultiTenantConfig gates per-user tenant resolution (Spec 24). Disabled
+// (default) keeps the single-org bootstrap tenant for every request; enabled
+// resolves each user's tenant from users.tenant_id and rejects suspended orgs.
+type MultiTenantConfig struct {
+	Enabled bool
+}
+
 // Load reads configuration from environment variables.
 func Load() *Config {
 	maxUpload := int64(10 << 20) // 10 MB default
@@ -323,6 +331,9 @@ func Load() *Config {
 			Email:    os.Getenv("BOOTSTRAP_ADMIN_EMAIL"),
 			Name:     getEnv("BOOTSTRAP_ADMIN_NAME", "Admin"),
 			Password: os.Getenv("BOOTSTRAP_ADMIN_PASSWORD"),
+		},
+		MultiTenant: MultiTenantConfig{
+			Enabled: getEnv("MULTI_TENANT_ENABLED", "false") == "true",
 		},
 		RAG: RAGConfig{
 			Enabled:          getEnv("RAG_ENABLED", "false") == "true",

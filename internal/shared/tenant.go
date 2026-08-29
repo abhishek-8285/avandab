@@ -52,3 +52,42 @@ func TenantRequired(ctx context.Context) (TenantID, error) {
 	}
 	return t, nil
 }
+
+// RequireTenantID is an alias for TenantRequired — preferred name for lint.
+// Lint enforces RequireTenantID/TenantRequired/MustTenantID presence.
+func RequireTenantID(ctx context.Context) (TenantID, error) {
+	return TenantRequired(ctx)
+}
+
+// MustTenantID panics if tenant is missing. Use only where panic is appropriate
+// (e.g., background jobs where missing tenant is a programmer error).
+func MustTenantID(ctx context.Context) TenantID {
+	t, err := TenantRequired(ctx)
+	if err != nil {
+		panic("tenant not set in context: call RequireTenantID and handle error, or ensure middleware set tenant via ContextWithTenantID")
+	}
+	return t
+}
+
+// ── Global scope (system jobs) ──────────────────────────────────────────────
+//
+// Background workers (outbox relay, sweeps, tickers, bootstrap) legitimately
+// run without a request tenant. They must mark that intent explicitly instead
+// of relying on a silent default: repositories resolve a global-scope context
+// to DefaultTenant, and any other context without a tenant fails closed
+// (panics) at the repository seam.
+//
+// Never mark a request-derived context: that disables the fail-closed guard
+// for the whole request.
+type globalScopeKey struct{}
+
+// WithGlobalScope marks ctx as intentionally tenant-less (system job).
+func WithGlobalScope(ctx context.Context) context.Context {
+	return context.WithValue(ctx, globalScopeKey{}, true)
+}
+
+// IsGlobalScope reports whether ctx was marked with WithGlobalScope.
+func IsGlobalScope(ctx context.Context) bool {
+	v, _ := ctx.Value(globalScopeKey{}).(bool)
+	return v
+}

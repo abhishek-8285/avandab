@@ -631,6 +631,20 @@ func TestAllTemplatesRender(t *testing.T) {
 			"Order": []string{"Operations"},
 			"User":  user,
 		}},
+		{"tenants_list", "tenants_list.html", map[string]interface{}{
+			"Tenants": []service.TenantSummary{
+				{ID: "acme", Name: "Acme Corp", Slug: "acme", Status: "active", CreatedAt: now, UserCount: 3},
+				{ID: "beta", Name: "Beta Ltd", Slug: "beta", Status: "suspended", CreatedAt: now, UserCount: 0},
+			},
+			"Total": 2, "Active": int64(1), "Suspended": int64(1),
+			"User": user,
+		}},
+		{"tenants_edit", "tenants_edit.html", map[string]interface{}{
+			"Form":          TenantForm{Name: "Acme Corp", Slug: "acme-corp", Email: "admin@acme.test", AdminName: "Ada Admin"},
+			"MultiTenantOn": true,
+			"FlashError":    "",
+			"User":          user,
+		}},
 		{"search_results", "search_results.html", map[string]interface{}{
 			"Query": "MH01",
 			"Sections": []SearchSection{{
@@ -689,6 +703,7 @@ func TestAllTemplatesRender(t *testing.T) {
 		"scorecard_leaderboard.html", "scorecard_table.html", "settlement_list.html",
 		"settlement_view.html", "trip_list.html", "trip_list_table.html", "trip_view.html",
 		"user_list.html", "user_list_table.html", "vehicle_list.html", "vehicle_list_table.html",
+		"tenants_list_table.html",
 		"console.html", "alert_inbox.html", "money_strip.html",
 		"fleet_strip.html", "context_panel.html", "bookings_board.html",
 	} {

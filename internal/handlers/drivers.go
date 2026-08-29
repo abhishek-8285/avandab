@@ -370,6 +370,10 @@ func (h *DriverHandlers) GetMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		tenantID = string(shared.DefaultTenant)
+	}
 	var d struct {
 		ID        string
 		DriverID  string
@@ -379,13 +383,16 @@ func (h *DriverHandlers) GetMe(w http.ResponseWriter, r *http.Request) {
 		Status    string
 	}
 
-	// Query driver linked to user by ID, user_id (if matches ID), or email
+	// Query driver linked to user by ID, user_id (if matches ID), or email —
+	// scoped to the acting tenant so a cross-tenant user id/email match never
+	// resolves (Spec 13 §2.2).
 	err := h.DB.QueryRowContext(ctx, `
 		SELECT id, driver_id, first_name, last_name, phone, status
 		FROM drivers
-		WHERE id = ? OR email = (SELECT email FROM users WHERE id = ?)
+		WHERE (id = ? OR email = (SELECT email FROM users WHERE id = ?))
+		  AND tenant_id = ?
 		LIMIT 1
-	`, session.UserID, session.UserID).Scan(&d.ID, &d.DriverID, &d.FirstName, &d.LastName, &d.Phone, &d.Status)
+	`, session.UserID, session.UserID, tenantID).Scan(&d.ID, &d.DriverID, &d.FirstName, &d.LastName, &d.Phone, &d.Status)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "driver not found"})
@@ -407,9 +414,10 @@ func (h *DriverHandlers) GetMe(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN vehicles v ON t.vehicle_id = v.id
 		WHERE (t.driver_id = ? OR t.driver_id = ? OR t.driver_id = ?)
 		  AND t.status IN ('assigned', 'started', 'reached_pickup', 'in_transit')
+		  AND t.tenant_id = ?
 		ORDER BY t.departure_time DESC, t.created_at DESC
 		LIMIT 1
-	`, d.ID, d.DriverID, session.UserID).Scan(&vehiclePlate, &vehicleID)
+	`, d.ID, d.DriverID, session.UserID, tenantID).Scan(&vehiclePlate, &vehicleID)
 
 	// Check current location from latest snapshot or vehicle latest position
 	type Location struct {

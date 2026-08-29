@@ -75,8 +75,24 @@ func int64ToBool(i int64) bool {
 	return i != 0
 }
 
+// tenantIDFromCtx resolves the tenant for a query. Fail closed: a context
+// with neither a tenant (set by auth middleware) nor an explicit global-scope
+// marker (shared.WithGlobalScope, for system jobs) is a programmer error and
+// panics. A silent DefaultTenant fallback here would let a request that lost
+// its tenant context read tenant 1's data — invisible to the FK triggers, the
+// leak tests, and tenant-lint, because it sits inside the trusted adapter.
+// Request-path panics surface as 500s via the Recoverer middleware; worker
+// panics are contained by leader.RunAsLeader / resilience wrappers.
 func tenantIDFromCtx(ctx context.Context) string {
-	return string(shared.TenantIDFromContext(ctx))
+	if t := shared.TenantIDFromContext(ctx); t != "" {
+		return string(t)
+	}
+	if shared.IsGlobalScope(ctx) {
+		return string(shared.DefaultTenant)
+	}
+	panic("tenant: no tenant in context and no global scope marker — " +
+		"request paths get tenant from auth middleware; system jobs must " +
+		"use shared.WithGlobalScope(ctx) explicitly")
 }
 
 func FromNullInt64(ni sql.NullInt64) *int64 {
@@ -109,6 +125,7 @@ func toCreateUserRowWithRole(u db.CreateUserRow, role domain.Role) domain.User {
 	return domain.User{
 		ID:              domain.UserID(u.ID),
 		Email:           u.Email,
+		TenantID:        u.TenantID,
 		PasswordHash:    u.PasswordHash,
 		Name:            u.Name,
 		Phone:           fromNullString(u.Phone),
@@ -126,6 +143,7 @@ func toGetUserByIDRowWithRole(u db.GetUserByIDRow, role domain.Role) domain.User
 	return domain.User{
 		ID:              domain.UserID(u.ID),
 		Email:           u.Email,
+		TenantID:        u.TenantID,
 		PasswordHash:    u.PasswordHash,
 		Name:            u.Name,
 		Phone:           fromNullString(u.Phone),
@@ -143,6 +161,7 @@ func toGetUserByEmailRowWithRole(u db.GetUserByEmailRow, role domain.Role) domai
 	return domain.User{
 		ID:              domain.UserID(u.ID),
 		Email:           u.Email,
+		TenantID:        u.TenantID,
 		PasswordHash:    u.PasswordHash,
 		Name:            u.Name,
 		Phone:           fromNullString(u.Phone),
@@ -160,6 +179,7 @@ func toUpdateUserRowWithRole(u db.UpdateUserRow, role domain.Role) domain.User {
 	return domain.User{
 		ID:              domain.UserID(u.ID),
 		Email:           u.Email,
+		TenantID:        u.TenantID,
 		PasswordHash:    u.PasswordHash,
 		Name:            u.Name,
 		Phone:           fromNullString(u.Phone),
@@ -177,6 +197,7 @@ func toUpdateUserThemePreferenceRowWithRole(u db.UpdateUserThemePreferenceRow, r
 	return domain.User{
 		ID:              domain.UserID(u.ID),
 		Email:           u.Email,
+		TenantID:        u.TenantID,
 		PasswordHash:    u.PasswordHash,
 		Name:            u.Name,
 		Phone:           fromNullString(u.Phone),
@@ -194,6 +215,7 @@ func toUpdateUserPasswordRowWithRole(u db.UpdateUserPasswordRow, role domain.Rol
 	return domain.User{
 		ID:              domain.UserID(u.ID),
 		Email:           u.Email,
+		TenantID:        u.TenantID,
 		PasswordHash:    u.PasswordHash,
 		Name:            u.Name,
 		Phone:           fromNullString(u.Phone),
@@ -211,6 +233,7 @@ func toUpdateUserLastLoginRowWithRole(u db.UpdateUserLastLoginRow, role domain.R
 	return domain.User{
 		ID:              domain.UserID(u.ID),
 		Email:           u.Email,
+		TenantID:        u.TenantID,
 		PasswordHash:    u.PasswordHash,
 		Name:            u.Name,
 		Phone:           fromNullString(u.Phone),
@@ -277,16 +300,169 @@ func toDomainVehicle(v db.Vehicle) domain.Vehicle {
 
 func toDomainCustomer(c db.Customer) domain.Customer {
 	return domain.Customer{
-		ID:        domain.CustomerID(c.ID),
-		Name:      c.Name,
-		Company:   fromNullString(c.Company),
-		Phone:     c.Phone,
-		Email:     fromNullString(c.Email),
-		GST:       fromNullString(c.Gst),
-		Address:   fromNullString(c.Address),
-		Notes:     fromNullString(c.Notes),
-		CreatedAt: c.CreatedAt,
-		UpdatedAt: c.UpdatedAt,
+		ID:               domain.CustomerID(c.ID),
+		CustomerCode:     c.CustomerCode.String,
+		Title:            fromNullString(c.Title),
+		Name:             c.Name,
+		Company:          fromNullString(c.Company),
+		ContactPerson:    fromNullString(c.ContactPerson),
+		Phone:            c.Phone,
+		Email:            fromNullString(c.Email),
+		GST:              fromNullString(c.Gst),
+		Address:          fromNullString(c.Address),
+		BillingAddress:   fromNullString(c.BillingAddress),
+		InternalID:       fromNullString(c.InternalID),
+		PhotoURL:         fromNullString(c.PhotoUrl),
+		PlaceUUID:        fromNullString(c.PlaceUuid),
+		Meta:             c.Meta,
+		Type:             c.Type,
+		Status:           c.Status,
+		PaymentTermsDays: int(c.PaymentTermsDays),
+		TenantID:         c.TenantID,
+		StateCode:        fromNullString(c.StateCode),
+		Notes:            fromNullString(c.Notes),
+		CreatedAt:        c.CreatedAt,
+		UpdatedAt:        c.UpdatedAt,
+	}
+}
+
+func toDomainCustomerFromCreateRow(r db.CreateCustomerRow) domain.Customer {
+	return domain.Customer{
+		ID:               domain.CustomerID(r.ID),
+		CustomerCode:     r.CustomerCode.String,
+		Title:            fromNullString(r.Title),
+		Name:             r.Name,
+		Company:          fromNullString(r.Company),
+		ContactPerson:    fromNullString(r.ContactPerson),
+		Phone:            r.Phone,
+		Email:            fromNullString(r.Email),
+		GST:              fromNullString(r.Gst),
+		Address:          fromNullString(r.Address),
+		BillingAddress:   fromNullString(r.BillingAddress),
+		InternalID:       fromNullString(r.InternalID),
+		PhotoURL:         fromNullString(r.PhotoUrl),
+		PlaceUUID:        fromNullString(r.PlaceUuid),
+		Meta:             r.Meta,
+		Type:             r.Type,
+		Status:           r.Status,
+		PaymentTermsDays: int(r.PaymentTermsDays),
+		TenantID:         r.TenantID,
+		StateCode:        fromNullString(r.StateCode),
+		Notes:            fromNullString(r.Notes),
+		CreatedAt:        r.CreatedAt,
+		UpdatedAt:        r.UpdatedAt,
+	}
+}
+
+func toDomainCustomerFromGetRow(r db.GetCustomerByIDRow) domain.Customer {
+	return domain.Customer{
+		ID:               domain.CustomerID(r.ID),
+		CustomerCode:     r.CustomerCode.String,
+		Title:            fromNullString(r.Title),
+		Name:             r.Name,
+		Company:          fromNullString(r.Company),
+		ContactPerson:    fromNullString(r.ContactPerson),
+		Phone:            r.Phone,
+		Email:            fromNullString(r.Email),
+		GST:              fromNullString(r.Gst),
+		Address:          fromNullString(r.Address),
+		BillingAddress:   fromNullString(r.BillingAddress),
+		InternalID:       fromNullString(r.InternalID),
+		PhotoURL:         fromNullString(r.PhotoUrl),
+		PlaceUUID:        fromNullString(r.PlaceUuid),
+		Meta:             r.Meta,
+		Type:             r.Type,
+		Status:           r.Status,
+		PaymentTermsDays: int(r.PaymentTermsDays),
+		TenantID:         r.TenantID,
+		StateCode:        fromNullString(r.StateCode),
+		Notes:            fromNullString(r.Notes),
+		CreatedAt:        r.CreatedAt,
+		UpdatedAt:        r.UpdatedAt,
+	}
+}
+
+func toDomainCustomerFromPhoneRow(r db.GetCustomerByPhoneRow) domain.Customer {
+	return domain.Customer{
+		ID:               domain.CustomerID(r.ID),
+		CustomerCode:     r.CustomerCode.String,
+		Title:            fromNullString(r.Title),
+		Name:             r.Name,
+		Company:          fromNullString(r.Company),
+		ContactPerson:    fromNullString(r.ContactPerson),
+		Phone:            r.Phone,
+		Email:            fromNullString(r.Email),
+		GST:              fromNullString(r.Gst),
+		Address:          fromNullString(r.Address),
+		BillingAddress:   fromNullString(r.BillingAddress),
+		InternalID:       fromNullString(r.InternalID),
+		PhotoURL:         fromNullString(r.PhotoUrl),
+		PlaceUUID:        fromNullString(r.PlaceUuid),
+		Meta:             r.Meta,
+		Type:             r.Type,
+		Status:           r.Status,
+		PaymentTermsDays: int(r.PaymentTermsDays),
+		TenantID:         r.TenantID,
+		StateCode:        fromNullString(r.StateCode),
+		Notes:            fromNullString(r.Notes),
+		CreatedAt:        r.CreatedAt,
+		UpdatedAt:        r.UpdatedAt,
+	}
+}
+
+func toDomainCustomerFromUpdateRow(r db.UpdateCustomerRow) domain.Customer {
+	return domain.Customer{
+		ID:               domain.CustomerID(r.ID),
+		CustomerCode:     r.CustomerCode.String,
+		Title:            fromNullString(r.Title),
+		Name:             r.Name,
+		Company:          fromNullString(r.Company),
+		ContactPerson:    fromNullString(r.ContactPerson),
+		Phone:            r.Phone,
+		Email:            fromNullString(r.Email),
+		GST:              fromNullString(r.Gst),
+		Address:          fromNullString(r.Address),
+		BillingAddress:   fromNullString(r.BillingAddress),
+		InternalID:       fromNullString(r.InternalID),
+		PhotoURL:         fromNullString(r.PhotoUrl),
+		PlaceUUID:        fromNullString(r.PlaceUuid),
+		Meta:             r.Meta,
+		Type:             r.Type,
+		Status:           r.Status,
+		PaymentTermsDays: int(r.PaymentTermsDays),
+		TenantID:         r.TenantID,
+		StateCode:        fromNullString(r.StateCode),
+		Notes:            fromNullString(r.Notes),
+		CreatedAt:        r.CreatedAt,
+		UpdatedAt:        r.UpdatedAt,
+	}
+}
+
+func toDomainCustomerFromSearchRow(r db.SearchCustomersRow) domain.Customer {
+	return domain.Customer{
+		ID:               domain.CustomerID(r.ID),
+		CustomerCode:     r.CustomerCode.String,
+		Title:            fromNullString(r.Title),
+		Name:             r.Name,
+		Company:          fromNullString(r.Company),
+		ContactPerson:    fromNullString(r.ContactPerson),
+		Phone:            r.Phone,
+		Email:            fromNullString(r.Email),
+		GST:              fromNullString(r.Gst),
+		Address:          fromNullString(r.Address),
+		BillingAddress:   fromNullString(r.BillingAddress),
+		InternalID:       fromNullString(r.InternalID),
+		PhotoURL:         fromNullString(r.PhotoUrl),
+		PlaceUUID:        fromNullString(r.PlaceUuid),
+		Meta:             r.Meta,
+		Type:             r.Type,
+		Status:           r.Status,
+		PaymentTermsDays: int(r.PaymentTermsDays),
+		TenantID:         r.TenantID,
+		StateCode:        fromNullString(r.StateCode),
+		Notes:            fromNullString(r.Notes),
+		CreatedAt:        r.CreatedAt,
+		UpdatedAt:        r.UpdatedAt,
 	}
 }
 

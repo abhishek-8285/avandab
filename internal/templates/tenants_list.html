@@ -1,0 +1,40 @@
+{{template "page_header.html" (dict "Title" (t "tenants.title") "Subtitle" "Customer organizations provisioned on this deployment" "ActionHref" "/tenants/new" "ActionIcon" "add" "ActionLabel" (t "tenants.new"))}}
+
+<div class="space-y-4">
+    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+            <div class="w-9 h-9 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><rect width="16" height="18" x="4" y="3" rx="2"/><path d="M8 7h2"/><path d="M14 7h2"/><path d="M8 11h2"/><path d="M14 11h2"/><path d="M8 15h2"/><path d="M14 15h2"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{if .Total}}{{.Total}}{{else}}0{{end}}</div>
+                <div class="text-xs text-secondary font-medium mt-1">Total Tenants</div>
+            </div>
+        </div>
+        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+            <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{if .Active}}{{.Active}}{{else}}0{{end}}</div>
+                <div class="text-xs text-secondary font-medium mt-1">{{t "tenants.active"}}</div>
+            </div>
+        </div>
+        <div class="col-span-2 lg:col-span-1 flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+            <div class="w-9 h-9 rounded-lg bg-red-500/10 border border-red-500/15 grid place-items-center text-red-600 shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="4.9" x2="19.1" y1="4.9" y2="19.1"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{if .Suspended}}{{.Suspended}}{{else}}0{{end}}</div>
+                <div class="text-xs text-secondary font-medium mt-1">{{t "tenants.suspended"}}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden flex flex-col">
+        <!-- Data Table Fragment (Datastar refresh target) -->
+        <div id="list-table">
+            {{template "tenants_list_table.html" .}}
+        </div>
+    </div>
+</div>

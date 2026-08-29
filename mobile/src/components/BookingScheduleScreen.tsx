@@ -18,7 +18,7 @@ export function BookingScheduleScreen({ onNext, onBack }: BookingScheduleScreenP
         <TouchableOpacity onPress={onBack} style={styles.iconButton}>
           <MaterialCommunityIcons name="arrow-left" size={18} color={Colors.textOnChrome} />
         </TouchableOpacity>
-        <Text style={styles.headerLabel}>ONBOARDING · 02/03</Text>
+        <Text style={styles.headerLabel}>ONBOARDING · 02/02</Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -43,12 +43,11 @@ export function BookingScheduleScreen({ onNext, onBack }: BookingScheduleScreenP
           <View style={styles.indicators}>
             <View style={styles.dot} />
             <View style={[styles.dot, styles.dotActive]} />
-            <View style={styles.dot} />
           </View>
 
           <TouchableOpacity style={styles.nextButton} activeOpacity={0.85} onPress={onNext}>
-            <Text style={styles.nextButtonText}>NEXT</Text>
-            <Text style={styles.nextArrow}>→</Text>
+            <MaterialCommunityIcons name="check" size={14} color={Colors.textOnPrimary} />
+            <Text style={styles.nextButtonText}>FINISH</Text>
           </TouchableOpacity>
         </View>
       </View>

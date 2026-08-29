@@ -2,6 +2,7 @@ package application
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/google/uuid"
 
@@ -36,7 +37,7 @@ func logAudit(txCtx ports.TxContext, action, recordID string, oldValues, newValu
 	if !ok {
 		return
 	}
-	_, _ = auditRepo.CreateAuditLog(txCtx, audit.AuditLog{
+	if _, err := auditRepo.CreateAuditLog(txCtx, audit.AuditLog{
 		ID:        types.FileID(uuid.NewString()),
 		UserID:    getUserID(txCtx),
 		Action:    action,
@@ -45,7 +46,10 @@ func logAudit(txCtx ports.TxContext, action, recordID string, oldValues, newValu
 		OldValues: oldValues,
 		NewValues: newValues,
 		IPAddress: getUserIP(txCtx),
-	})
+	}); err != nil {
+		// Audit writes are compliance-critical — never fail silently.
+		slog.Error("audit log write failed", "action", action, "record_id", recordID, "error", err)
+	}
 }
 
 // getUserID extracts the user ID from the session context, if present.

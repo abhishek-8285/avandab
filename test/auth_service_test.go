@@ -11,6 +11,7 @@ import (
 
 	"transport-app/internal/domain"
 	"transport-app/internal/service"
+	"transport-app/internal/shared"
 )
 
 // randomPassword returns a cryptographically random 16-byte hex string.
@@ -26,10 +27,10 @@ func randomPassword(t *testing.T) string {
 // mirroring the env-based bootstrap flow (migrations no longer seed one).
 func createTestAdmin(t *testing.T, svc *service.Services) (domain.User, string) {
 	t.Helper()
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 	password := randomPassword(t)
 
-	created, err := svc.Users.CreateUserWithPassword(ctx, "admin@transport.local", "Admin User", "555-0100", password, 1, domain.UserStatusActive)
+	created, err := svc.Users.CreateUserWithPassword(ctx, "admin@transport.local", "Admin User", "555-0100", password, 1, domain.UserStatusActive, string(shared.DefaultTenant))
 	require.NoError(t, err)
 	return created, password
 }
@@ -38,7 +39,7 @@ func TestAuthService_Login(t *testing.T) {
 	db := NewTestDB(t)
 	svc := NewTestServices(t, db)
 	_, password := createTestAdmin(t, svc)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	result, err := svc.Auth.Login(ctx, service.LoginRequest{
 		Email:    "admin@transport.local",
@@ -55,7 +56,7 @@ func TestAuthService_Login_InvalidCredentials(t *testing.T) {
 	svc := NewTestServices(t, db)
 	_, _ = createTestAdmin(t, svc)
 
-	_, err := svc.Auth.Login(context.Background(), service.LoginRequest{
+	_, err := svc.Auth.Login(shared.ContextWithTenantID(context.Background(), "1"), service.LoginRequest{
 		Email:    "admin@transport.local",
 		Password: "wrongpassword-that-does-not-match",
 	})
@@ -68,7 +69,7 @@ func TestAuthService_GetProfile(t *testing.T) {
 	svc := NewTestServices(t, db)
 	admin, _ := createTestAdmin(t, svc)
 
-	user, err := svc.Auth.GetProfile(context.Background(), admin.ID)
+	user, err := svc.Auth.GetProfile(shared.ContextWithTenantID(context.Background(), "1"), admin.ID)
 	require.NoError(t, err)
 	assert.Equal(t, "admin@transport.local", user.Email)
 	assert.Equal(t, "Admin User", user.Name)

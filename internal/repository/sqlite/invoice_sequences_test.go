@@ -27,6 +27,10 @@ func setupSequencesTestDB(t *testing.T) *sql.DB {
 	require.NoError(t, err)
 	_ = goose.SetDialect("sqlite")
 	require.NoError(t, goose.Up(db, "../../../db/migrations"))
+	_, _ = db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES
+		('tenant-seq','Tenant Seq','tenant-seq'), ('tenant-A','Tenant A Cap','tenant-a-cap'),
+		('tenant-B','Tenant B Cap','tenant-b2'), ('tenant-fmt','Test Tenant FMT','tenant-fmt'), ('tenant-loop','Test Tenant Loop','tenant-loop'),
+		('tenant-1','Test Tenant 1','tenant-1'), ('1','Default','default')`)
 	t.Cleanup(func() { _ = db.Close() })
 	return db
 }

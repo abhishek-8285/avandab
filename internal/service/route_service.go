@@ -25,7 +25,15 @@ func (s *RouteService) WithGeocoder(g Geocoder) *RouteService {
 }
 
 func tenantIDFromContext(ctx context.Context) string {
-	return string(shared.TenantIDFromContext(ctx))
+	if t := shared.TenantIDFromContext(ctx); t != "" {
+		return string(t)
+	}
+	if shared.IsGlobalScope(ctx) {
+		return string(shared.DefaultTenant)
+	}
+	panic("tenant: no tenant in context and no global scope marker — " +
+		"request paths get tenant from auth middleware; system jobs must " +
+		"use shared.WithGlobalScope(ctx) explicitly")
 }
 
 func normalizePlace(s string) string {

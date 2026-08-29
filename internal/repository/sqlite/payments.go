@@ -7,8 +7,6 @@ import (
 	"transport-app/internal/repository"
 
 	db "transport-app/db/generated/sqlite"
-
-	"transport-app/internal/shared"
 )
 
 // PaymentRepository implementation
@@ -22,7 +20,7 @@ func (r *SQLRepository) CreatePayment(ctx context.Context, payment domain.Paymen
 		Method:      string(payment.Method),
 		Reference:   nullString(payment.Reference),
 		Remarks:     nullString(payment.Remarks),
-		TenantID:    string(shared.TenantIDFromContext(ctx)),
+		TenantID:    tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Payment{}, err
@@ -45,7 +43,7 @@ func (r *SQLRepository) CreatePayment(ctx context.Context, payment domain.Paymen
 func (r *SQLRepository) GetPaymentByID(ctx context.Context, id domain.PaymentID) (repository.PaymentWithInvoice, error) {
 	row, err := r.Q(ctx).GetPaymentByID(ctx, db.GetPaymentByIDParams{
 		ID:       string(id),
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return repository.PaymentWithInvoice{}, err
@@ -60,14 +58,14 @@ func (r *SQLRepository) GetPaymentByID(ctx context.Context, id domain.PaymentID)
 func (r *SQLRepository) DeletePayment(ctx context.Context, id domain.PaymentID) error {
 	return r.Q(ctx).DeletePayment(ctx, db.DeletePaymentParams{
 		ID:       string(id),
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 }
 
 func (r *SQLRepository) GetPaymentsByInvoice(ctx context.Context, invoiceID domain.InvoiceID) ([]domain.Payment, error) {
 	rows, err := r.Q(ctx).GetPaymentsByInvoice(ctx, db.GetPaymentsByInvoiceParams{
 		InvoiceID: string(invoiceID),
-		TenantID:  string(shared.TenantIDFromContext(ctx)),
+		TenantID:  tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return nil, err
@@ -92,13 +90,13 @@ func (r *SQLRepository) GetPaymentsByInvoice(ctx context.Context, invoiceID doma
 func (r *SQLRepository) SumPaymentsByInvoice(ctx context.Context, invoiceID domain.InvoiceID) (float64, error) {
 	return r.Q(ctx).SumPaymentsByInvoice(ctx, db.SumPaymentsByInvoiceParams{
 		InvoiceID: string(invoiceID),
-		TenantID:  string(shared.TenantIDFromContext(ctx)),
+		TenantID:  tenantIDFromCtx(ctx),
 	})
 }
 
 func (r *SQLRepository) SearchPayments(ctx context.Context, method string, limit, offset int) ([]repository.PaymentWithInvoice, error) {
 	rows, err := r.Q(ctx).SearchPayments(ctx, db.SearchPaymentsParams{
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 		Column2:  method,
 		Method:   method,
 		Limit:    int64(limit),
@@ -120,7 +118,7 @@ func (r *SQLRepository) SearchPayments(ctx context.Context, method string, limit
 
 func (r *SQLRepository) CountPayments(ctx context.Context, method string) (int64, error) {
 	count, err := r.Q(ctx).CountPayments(ctx, db.CountPaymentsParams{
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 		Column2:  method,
 		Method:   method,
 	})
@@ -131,7 +129,7 @@ func (r *SQLRepository) CountPayments(ctx context.Context, method string) (int64
 }
 
 func (r *SQLRepository) GetTotalRevenue(ctx context.Context) (float64, error) {
-	rev, err := r.Q(ctx).GetTotalRevenue(ctx, string(shared.TenantIDFromContext(ctx)))
+	rev, err := r.Q(ctx).GetTotalRevenue(ctx, tenantIDFromCtx(ctx))
 	if err != nil {
 		return 0, err
 	}
@@ -139,7 +137,7 @@ func (r *SQLRepository) GetTotalRevenue(ctx context.Context) (float64, error) {
 }
 
 func (r *SQLRepository) GetMonthlyRevenue(ctx context.Context) ([]repository.MonthlyRevenue, error) {
-	rows, err := r.Q(ctx).GetMonthlyRevenue(ctx, string(shared.TenantIDFromContext(ctx)))
+	rows, err := r.Q(ctx).GetMonthlyRevenue(ctx, tenantIDFromCtx(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +152,7 @@ func (r *SQLRepository) GetMonthlyRevenue(ctx context.Context) ([]repository.Mon
 }
 
 func (r *SQLRepository) GetRevenueByDay(ctx context.Context) ([]repository.RevenueByDay, error) {
-	rows, err := r.Q(ctx).GetRevenueByDay(ctx, string(shared.TenantIDFromContext(ctx)))
+	rows, err := r.Q(ctx).GetRevenueByDay(ctx, tenantIDFromCtx(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -171,7 +169,7 @@ func (r *SQLRepository) GetRevenueByDay(ctx context.Context) ([]repository.Reven
 func (r *SQLRepository) GetPaymentsByCustomer(ctx context.Context, customerID domain.CustomerID, limit, offset int) ([]repository.PaymentWithInvoice, error) {
 	rows, err := r.Q(ctx).GetPaymentsByCustomer(ctx, db.GetPaymentsByCustomerParams{
 		ID:       string(customerID),
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 		Limit:    int64(limit),
 		Offset:   int64(offset),
 	})
@@ -202,6 +200,6 @@ func (r *SQLRepository) GetPaymentsByCustomer(ctx context.Context, customerID do
 func (r *SQLRepository) CountPaymentsByCustomer(ctx context.Context, customerID domain.CustomerID) (int64, error) {
 	return r.Q(ctx).CountPaymentsByCustomer(ctx, db.CountPaymentsByCustomerParams{
 		ID:       string(customerID),
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 }

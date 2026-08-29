@@ -23,7 +23,7 @@ func TestPhase12_FullIntegration(t *testing.T) {
 	db := NewTestDB(t)
 	t.Cleanup(func() { _ = db.Close() })
 	svc := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 	tenantID := "1"
 
 	// 1. Generate PNL snapshot.
@@ -131,7 +131,7 @@ func TestPhase12_OpsAlerts_HTTP(t *testing.T) {
 	})
 	app.OpsAlerts.RegisterRoutes(r)
 
-	id, err := svcs.OpsAlerts.CreateAlert(context.Background(), service.OpsAlert{
+	id, err := svcs.OpsAlerts.CreateAlert(shared.ContextWithTenantID(context.Background(), "1"), service.OpsAlert{
 		TenantID: "1", AlertType: service.OpsAlertVehicleBreakdown, Severity: service.OpsAlertSeverityMedium, Title: "brk",
 	})
 	require.NoError(t, err)

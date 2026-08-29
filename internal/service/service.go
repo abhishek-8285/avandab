@@ -14,6 +14,7 @@ import (
 	"transport-app/internal/founder"
 	"transport-app/internal/founder/alerts"
 	fuel "transport-app/internal/fuel"
+	invoiceapp "transport-app/internal/invoice/application"
 	"transport-app/internal/repository"
 )
 
@@ -74,6 +75,11 @@ type Services struct {
 	FounderAudit   *FounderAuditService
 	EWayBill       *ewaybill.EWayBillService
 
+	// TenantConfigs reads per-tenant settings overrides from company_config
+	// (Spec 24 §Business logic overlay). Nil when the store exposes no raw DB
+	// — every consumer nil-checks and falls through to legacy behavior.
+	TenantConfigs *TenantConfigReader
+
 	store Store
 	cfg   *config.Config
 	log   *slog.Logger
@@ -108,7 +114,23 @@ func NewServices(store Store, cfg *config.Config, log *slog.Logger, eventBus eve
 		log.Warn("store does not implement DB() — TxManager unavailable")
 	}
 
-	bs := baseService{store: store, cfg: cfg, log: log, txManager: tm, events: eventBus}
+	// Per-tenant settings overlay (Spec 24 §Business logic overlay). Built
+	// over the raw DB when available; left nil otherwise so every call site
+	// falls through to the legacy company_settings-only behavior.
+	var tenantCfg *TenantConfigReader
+	if dbGetter, ok := store.(repository.DBGetter); ok && dbGetter != nil {
+		tenantCfg = NewTenantConfigReader(dbGetter.DB())
+	}
+	s.TenantConfigs = tenantCfg
+
+	// Publish the overlay as the invoice application layer's process-wide
+	// default. SetDefaultTenantOverlay (not constructor injection) is used
+	// deliberately: NewGenerateInvoiceUseCase has 45+ call sites across
+	// handlers, facades and tests; additive registration keeps them all
+	// untouched. Nil is a legal value — the use case then skips overlaying.
+	invoiceapp.SetDefaultTenantOverlay(tenantCfg)
+
+	bs := baseService{store: store, cfg: cfg, log: log, txManager: tm, events: eventBus, tenantCfg: tenantCfg}
 	s.Auth = &AuthService{baseService: bs}
 	s.Users = &UserService{baseService: bs}
 	s.Drivers = &DriverService{baseService: bs}
@@ -248,4 +270,8 @@ type baseService struct {
 	log       *slog.Logger
 	txManager repository.TxManager
 	events    events.EventBus
+
+	// tenantCfg is the shared per-tenant settings overlay reader; nil in
+	// tests/fakes without a raw DB (overlay helpers become pass-through).
+	tenantCfg *TenantConfigReader
 }

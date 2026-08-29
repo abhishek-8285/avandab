@@ -7,9 +7,10 @@ import { Colors, Font, Radius, Spacing } from '../constants/theme';
 interface GetStartedScreenProps {
   onGetStarted: () => void;
   onSignIn: () => void;
+  onOpenQRDemo: () => void;
 }
 
-export function GetStartedScreen({ onGetStarted, onSignIn }: GetStartedScreenProps) {
+export function GetStartedScreen({ onGetStarted, onSignIn, onOpenQRDemo }: GetStartedScreenProps) {
   const pulseAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -56,26 +57,25 @@ export function GetStartedScreen({ onGetStarted, onSignIn }: GetStartedScreenPro
                 },
               ]}
             />
-            <Text style={styles.statusText}>NETWORK ONLINE</Text>
+            <Text style={styles.statusText}>AVANDAB NETWORK</Text>
           </View>
-          <Text style={styles.timestamp}>14:32 IST</Text>
         </View>
 
-        {/* Bottom hero overlay stats */}
+        {/* Bottom hero overlay stats - driver ops focus, no earning pitch */}
         <View style={styles.heroStats}>
           <View style={styles.heroStat}>
-            <Text style={styles.heroStatValue}>2,847</Text>
-            <Text style={styles.heroStatLabel}>ACTIVE DRIVERS</Text>
-          </View>
-          <View style={styles.heroStatDivider} />
-          <View style={styles.heroStat}>
-            <Text style={styles.heroStatValue}>₹1.5K</Text>
-            <Text style={styles.heroStatLabel}>AVG DAILY EARN</Text>
-          </View>
-          <View style={styles.heroStatDivider} />
-          <View style={styles.heroStat}>
-            <Text style={styles.heroStatValue}>24/7</Text>
+            <Text style={styles.heroStatValue}>LIVE</Text>
             <Text style={styles.heroStatLabel}>DISPATCH</Text>
+          </View>
+          <View style={styles.heroStatDivider} />
+          <View style={styles.heroStat}>
+            <Text style={styles.heroStatValue}>GPS</Text>
+            <Text style={styles.heroStatLabel}>TRACKING</Text>
+          </View>
+          <View style={styles.heroStatDivider} />
+          <View style={styles.heroStat}>
+            <Text style={styles.heroStatValue}>POD</Text>
+            <Text style={styles.heroStatLabel}>VERIFIED</Text>
           </View>
         </View>
       </View>
@@ -92,15 +92,15 @@ export function GetStartedScreen({ onGetStarted, onSignIn }: GetStartedScreenPro
         <View style={styles.featureList}>
           <View style={styles.featureRow}>
             <MaterialCommunityIcons name="radar" size={14} color={Colors.primary} />
-            <Text style={styles.featureText}>MQTT live location streaming</Text>
+            <Text style={styles.featureText}>Live trip assignments & dispatch updates</Text>
           </View>
           <View style={styles.featureRow}>
             <MaterialCommunityIcons name="barcode-scan" size={14} color={Colors.primary} />
-            <Text style={styles.featureText}>Barcode POD verification</Text>
+            <Text style={styles.featureText}>Photo & signature proof-of-delivery</Text>
           </View>
           <View style={styles.featureRow}>
-            <MaterialCommunityIcons name="bank-transfer" size={14} color={Colors.primary} />
-            <Text style={styles.featureText}>Instant settlement payouts</Text>
+            <MaterialCommunityIcons name="map-marker-path" size={14} color={Colors.primary} />
+            <Text style={styles.featureText}>Turn-by-turn navigation & GPS tracking</Text>
           </View>
         </View>
 
@@ -121,6 +121,15 @@ export function GetStartedScreen({ onGetStarted, onSignIn }: GetStartedScreenPro
           <Text style={styles.signInText}>
             Already registered? <Text style={styles.signInLink}>SIGN IN</Text>
           </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.qrDemoButton}
+          activeOpacity={0.8}
+          onPress={onOpenQRDemo}
+        >
+          <MaterialCommunityIcons name="qrcode-scan" size={14} color={Colors.primary} />
+          <Text style={styles.qrDemoText}>TRY QR SCANNER / GENERATOR</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -152,7 +161,7 @@ const styles = StyleSheet.create({
     left: Spacing.lg,
     right: Spacing.lg,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     alignItems: 'center',
   },
   statusItem: {
@@ -172,13 +181,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
     fontFamily: Font.mono,
-  },
-  timestamp: {
-    color: Colors.textOnChromeMuted,
-    fontSize: 10,
-    fontWeight: '600',
-    fontFamily: Font.mono,
-    letterSpacing: 1,
   },
   heroStats: {
     position: 'absolute',
@@ -292,5 +294,24 @@ const styles = StyleSheet.create({
   signInLink: {
     color: Colors.primary,
     fontWeight: '800',
+  },
+  qrDemoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  qrDemoText: {
+    color: Colors.primary,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    fontFamily: Font.mono,
   },
 });

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 	"time"
+	"transport-app/internal/shared"
 
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/assert"
@@ -16,7 +17,7 @@ import (
 // inbox columns, and rolls down cleanly (up → downTo(91) → up).
 func TestSpec22_Migration00092RoundTrip(t *testing.T) {
 	db := NewTestDB(t)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	// Seed one pre-00092-shaped row is impossible post-up (columns exist),
 	// so verify the backfill semantics directly: insert with defaults, then

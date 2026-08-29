@@ -746,7 +746,7 @@ func TestAuthRequired_SuccessWithValidSession(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rr.Code)
 }
 
-func TestAuthRequired_TenantResolverErrorFallsBack(t *testing.T) {
+func TestAuthRequired_TenantResolverErrorRejects(t *testing.T) {
 	store := auth.NewSessionStore("test-secret-32-bytes-long-xxxxxx2", false)
 	rec := httptest.NewRecorder()
 	store.CreateSession(rec, "usr-2", "dispatcher", "Disp")
@@ -756,14 +756,21 @@ func TestAuthRequired_TenantResolverErrorFallsBack(t *testing.T) {
 		return "", assert.AnError
 	}
 	handler := AuthRequired(store, "/login", failingResolver)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, shared.DefaultTenant, shared.TenantIDFromContext(r.Context()))
-		w.WriteHeader(http.StatusOK)
+		t.Error("should not reach next: resolver error must reject, not fall back")
 	}))
 	req := httptest.NewRequest("GET", "/", nil)
 	req.AddCookie(cookie)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
-	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, http.StatusSeeOther, rr.Code)
+	assert.Equal(t, "/login", rr.Header().Get("Location"))
+	flash := false
+	for _, c := range rr.Result().Cookies() {
+		if c.Name == "flash_error" && c.Value != "" {
+			flash = true
+		}
+	}
+	assert.True(t, flash, "expected flash_error cookie with resolver error message")
 }
 
 func TestAuthRequired_CustomTenantResolver(t *testing.T) {
@@ -1101,7 +1108,7 @@ func TestRequireAPIAuth_BearerExpiredToken(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 }
 
-func TestRequireAPIAuth_SessionFallbackWithResolverError(t *testing.T) {
+func TestRequireAPIAuth_SessionResolverErrorRejects(t *testing.T) {
 	secret := []byte("session-err-secret-32-bytes-long-xxxxx")
 	store := auth.NewSessionStore(string(secret), false)
 	rec := httptest.NewRecorder()
@@ -1110,19 +1117,15 @@ func TestRequireAPIAuth_SessionFallbackWithResolverError(t *testing.T) {
 	failing := func(ctx context.Context, userID string) (shared.TenantID, error) {
 		return "", assert.AnError
 	}
-	called := false
 	handler := RequireAPIAuth(store, secret, failing)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		called = true
-		// should have fallen back to DefaultTenant
-		assert.Equal(t, shared.DefaultTenant, shared.TenantIDFromContext(r.Context()))
-		w.WriteHeader(http.StatusOK)
+		t.Error("should not reach next: resolver error must reject, not fall back")
 	}))
 	req := httptest.NewRequest("GET", "/api/test", nil)
 	req.AddCookie(cookie)
 	rr := httptest.NewRecorder()
 	handler.ServeHTTP(rr, req)
-	assert.True(t, called)
-	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+	assert.Contains(t, rr.Body.String(), assert.AnError.Error())
 }
 
 func TestRequireAPIAuth_BearerWithNilStore(t *testing.T) {

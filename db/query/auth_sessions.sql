@@ -15,5 +15,8 @@ WHERE s.token_hash = ?;
 -- name: DeleteSession :exec
 DELETE FROM sessions WHERE token_hash = ?;
 
+-- name: DeleteSessionsForUser :exec
+DELETE FROM sessions WHERE user_id = ?;
+
 -- name: DeleteExpiredSessions :exec
 DELETE FROM sessions WHERE expires_at < datetime('now');

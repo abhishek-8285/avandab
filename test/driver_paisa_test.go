@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"testing"
 	"time"
+	"transport-app/internal/shared"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -38,7 +39,7 @@ func seedPaisaFixtures(t *testing.T, db *sql.DB, day string) {
 func TestSpec22_DriverBalance_Formula(t *testing.T) {
 	db := NewTestDB(t)
 	svc := service.NewDriverBalanceService(db, nil)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 	day := "2026-08-20 10:00:00"
 	seedPaisaFixtures(t, db, day)
 
@@ -74,7 +75,7 @@ func TestSpec22_DriverBalance_Formula(t *testing.T) {
 // flips to 'paid' when the settlement is marked paid; pending ones never are.
 func TestSpec22_AdvanceLifecycleThroughSettlement(t *testing.T) {
 	db := NewTestDB(t)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 	day := "2026-08-20 10:00:00"
 
 	seedPaisaFixtures(t, db, day)

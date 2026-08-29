@@ -512,7 +512,7 @@ func TestPhase6_10_RBAC_Enforcement(t *testing.T) {
 	ewbHandler.Mount(r)
 
 	// Request /ewaybill with a session context but disallowed permissions -> 403 Forbidden
-	ctx := context.WithValue(context.Background(), auth.ContextUser, &auth.SessionData{UserID: "unauth-user", Role: "guest"})
+	ctx := context.WithValue(shared.ContextWithTenantID(context.Background(), "1"), auth.ContextUser, &auth.SessionData{UserID: "unauth-user", Role: "guest"})
 	ctx = shared.ContextWithTenantID(ctx, "1")
 
 	req := httptest.NewRequest("GET", "/ewaybill", nil)

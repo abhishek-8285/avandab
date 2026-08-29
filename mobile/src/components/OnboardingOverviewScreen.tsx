@@ -15,7 +15,7 @@ export function OnboardingOverviewScreen({ onNext, onSkip }: OnboardingOverviewS
 
       {/* Dark chrome header */}
       <View style={styles.header}>
-        <Text style={styles.headerLabel}>ONBOARDING · 01/03</Text>
+        <Text style={styles.headerLabel}>ONBOARDING · 01/02</Text>
         <TouchableOpacity onPress={onSkip} style={styles.skipButton}>
           <Text style={styles.skipText}>SKIP</Text>
         </TouchableOpacity>
@@ -38,13 +38,12 @@ export function OnboardingOverviewScreen({ onNext, onSkip }: OnboardingOverviewS
         <Text style={styles.headline}>DISPATCH READY</Text>
         <View style={styles.titleUnderline} />
         <Text style={styles.description}>
-          Join India's fastest-growing freight network. Earn up to ₹1,500 daily with flexible shifts and instant bank payouts.
+          Receive assigned trips, get real-time dispatch updates and navigate to delivery with live GPS guidance.
         </Text>
 
         <View style={styles.footerRow}>
           <View style={styles.indicators}>
             <View style={[styles.dot, styles.dotActive]} />
-            <View style={styles.dot} />
             <View style={styles.dot} />
           </View>
 

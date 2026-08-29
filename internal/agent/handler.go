@@ -14,12 +14,20 @@ import (
 
 // Handler exposes the agent over HTTP.
 type Handler struct {
-	orch *Orchestrator
-	env  *ToolEnv
+	orch        *Orchestrator
+	env         *ToolEnv
+	permChecker PermissionChecker
 }
 
 func NewHandler(orch *Orchestrator, env *ToolEnv) *Handler {
 	return &Handler{orch: orch, env: env}
+}
+
+// WithPermissionChecker sets the RBAC checker enforced for permission-gated
+// tools. Without it, gated tools fail closed (read-only assistant).
+func (h *Handler) WithPermissionChecker(pc PermissionChecker) *Handler {
+	h.permChecker = pc
+	return h
 }
 
 // RegisterRoutes mounts the agent chat endpoint on a chi router.
@@ -45,9 +53,13 @@ func (h *Handler) handleChat(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusUnauthorized, "authentication required")
 		return
 	}
-	// Viewers can read dashboards via the UI; the agent's read tools expose
-	// customer contact details, so require at least a dispatcher role.
-	if session.Role == "viewer" {
+	// The agent's read tools expose customer contact details, revenue and
+	// unpaid invoices, so chat is staff-only. Deny explicitly and fail closed
+	// on unknown roles (driver accounts exist via the mobile API).
+	switch session.Role {
+	case "admin", "org_admin", "dispatcher", "accountant":
+		// trusted staff roles
+	default:
 		writeErr(w, http.StatusForbidden, "insufficient permissions for the assistant")
 		return
 	}
@@ -59,6 +71,9 @@ func (h *Handler) handleChat(w http.ResponseWriter, r *http.Request) {
 	// Identity travels per-request via context, never via shared state.
 	ctx := context.WithValue(r.Context(), userIDCtxKey, userID)
 	ctx = context.WithValue(ctx, userNameCtxKey, operatorName)
+	if h.permChecker != nil {
+		ctx = WithPermissionChecker(ctx, h.permChecker)
+	}
 
 	var req agentChatRequest
 	body, err := io.ReadAll(r.Body)

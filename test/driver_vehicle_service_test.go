@@ -8,12 +8,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"transport-app/internal/domain"
 	"transport-app/internal/service"
+	"transport-app/internal/shared"
 )
 
 func TestDriverVehicleService_Validations(t *testing.T) {
 	db := NewTestDB(t)
 	services := NewTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	// --- DRIVER TESTS ---
 

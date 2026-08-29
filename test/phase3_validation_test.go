@@ -48,6 +48,38 @@ func newPhase3DB(t *testing.T) *sql.DB {
 
 	_ = goose.SetDialect("sqlite")
 	require.NoError(t, goose.Up(db, migrationsDir))
+	_, _ = db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES
+			('1','Default','default'), ('2','Tenant 2','tenant-2'), ('7','Tenant 7','tenant-7'), ('9','Tenant 9','tenant-9'),
+			('other-tenant','Other Tenant','other-tenant'), ('another-tenant','Another Tenant','another-tenant'),
+			('tenant-1','Test Tenant 1','tenant-1'), ('tenant-2','Test Tenant 2','tenant-2b'),
+			('tenant-7','Test Tenant 7','tenant-7b'), ('tenant-9','Test Tenant 9','tenant-9b'),
+			('tenant-999','Test Tenant 999','tenant-999'), ('tenant-a','Tenant A','tenant-a'),
+			('tenant-b','Tenant B','tenant-b'), ('tenant-A','Tenant A Cap','tenant-a-cap'),
+			('tenant-B','Tenant B Cap','tenant-b2'), ('tenant-zz','Tenant ZZ','tenant-zz'),
+			('tenant-seq','Tenant Seq','tenant-seq'), ('tenant-cap','Tenant Cap','tenant-cap'),
+			('tenant-dn','Tenant DN','tenant-dn'), ('tenant-ledger','Tenant Ledger','tenant-ledger'),
+			('tenant-val','Tenant Val','tenant-val'), ('tenant-fmt','Test Tenant FMT','tenant-fmt'),
+			('tenant-loop','Test Tenant Loop','tenant-loop'), ('tn-b','Tenant TN-B','tn-b'),
+			('tn-kpi','Tenant TN-KPI','tn-kpi'), ('tenant-c','Tenant C','tenant-c'),
+			('tenant-d','Tenant D','tenant-d'), ('tenant-forged','Tenant Forged','tenant-forged'),
+			('tenant-42','Tenant 42','tenant-42'), ('test-tenant','Test Tenant','test-tenant'),
+			('acme','Acme','acme'), ('beta','Beta','beta')`)
+	_, _ = db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES
+			('1','Default','default'), ('2','Tenant 2','tenant-2'), ('7','Tenant 7','tenant-7'), ('9','Tenant 9','tenant-9'),
+			('other-tenant','Other Tenant','other-tenant'), ('another-tenant','Another Tenant','another-tenant'),
+			('tenant-1','Test Tenant 1','tenant-1'), ('tenant-2','Test Tenant 2','tenant-2b'),
+			('tenant-7','Test Tenant 7','tenant-7b'), ('tenant-9','Test Tenant 9','tenant-9b'),
+			('tenant-999','Test Tenant 999','tenant-999'), ('tenant-a','Tenant A','tenant-a'),
+			('tenant-b','Tenant B','tenant-b'), ('tenant-A','Tenant A Cap','tenant-a-cap'),
+			('tenant-B','Tenant B Cap','tenant-b2'), ('tenant-zz','Tenant ZZ','tenant-zz'),
+			('tenant-seq','Tenant Seq','tenant-seq'), ('tenant-cap','Tenant Cap','tenant-cap'),
+			('tenant-dn','Tenant DN','tenant-dn'), ('tenant-ledger','Tenant Ledger','tenant-ledger'),
+			('tenant-val','Tenant Val','tenant-val'), ('tenant-fmt','Test Tenant FMT','tenant-fmt'),
+			('tenant-loop','Test Tenant Loop','tenant-loop'), ('tn-b','Tenant TN-B','tn-b'),
+			('tn-kpi','Tenant TN-KPI','tn-kpi'), ('tenant-c','Tenant C','tenant-c'),
+			('tenant-d','Tenant D','tenant-d'), ('tenant-forged','Tenant Forged','tenant-forged'),
+			('tenant-42','Tenant 42','tenant-42'), ('test-tenant','Test Tenant','test-tenant'),
+			('acme','Acme','acme'), ('beta','Beta','beta')`)
 	t.Cleanup(func() { _ = db.Close() })
 	return db
 }
@@ -85,7 +117,7 @@ func TestPhase3_3A_MarkerStatesAndPriority(t *testing.T) {
 	require.NoError(t, err)
 
 	liveStore := telemetry.NewLiveStore(db, 15*time.Minute)
-	vehicles, err := liveStore.Live(context.Background(), "1", "", time.Now())
+	vehicles, err := liveStore.Live(shared.ContextWithTenantID(context.Background(), "1"), "1", "", time.Now())
 	require.NoError(t, err)
 	require.Len(t, vehicles, 4)
 
@@ -104,7 +136,7 @@ func TestPhase3_3A_MarkerStatesAndPriority(t *testing.T) {
 // SSE Event framing and filter support
 func TestPhase3_3B_SSEStreamingAndFilter(t *testing.T) {
 	hub := realtime.NewHub(15, nil)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(shared.ContextWithTenantID(context.Background(), "1"))
 	defer cancel()
 
 	// Filter for trip-123
@@ -224,7 +256,7 @@ func TestPhase3_3D_HybridETACalculator(t *testing.T) {
 	}
 
 	etaSvc := eta.NewEtaService(db, 15, 30, 5)
-	res, err := etaSvc.Calculate(context.Background(), "trip-eta")
+	res, err := etaSvc.Calculate(shared.ContextWithTenantID(context.Background(), "1"), "trip-eta")
 	require.NoError(t, err)
 
 	assert.Equal(t, "hybrid", res.Method)
@@ -258,7 +290,7 @@ func TestPhase3_3E_DispatchBlockerAndOverride(t *testing.T) {
 
 	// Assign driver first
 	assignDriverUC := tripapp.NewAssignDriverUseCase(unitOfWork, clk)
-	err = assignDriverUC.Execute(context.Background(), tripapp.AssignDriverCommand{
+	err = assignDriverUC.Execute(shared.ContextWithTenantID(context.Background(), "1"), tripapp.AssignDriverCommand{
 		TripID:   aggregate.TripID("trip-blk"),
 		DriverID: "d-1",
 		TenantID: shared.TenantID("tenant-1"),
@@ -268,7 +300,7 @@ func TestPhase3_3E_DispatchBlockerAndOverride(t *testing.T) {
 	assignVehUC := tripapp.NewAssignVehicleUseCase(unitOfWork, clk)
 
 	// Driver assigned, now try to assign maintenance-due vehicle without override
-	err = assignVehUC.Execute(context.Background(), tripapp.AssignVehicleCommand{
+	err = assignVehUC.Execute(shared.ContextWithTenantID(context.Background(), "1"), tripapp.AssignVehicleCommand{
 		TripID:              aggregate.TripID("trip-blk"),
 		VehicleID:           "v-blocked",
 		TenantID:            shared.TenantID("tenant-1"),
@@ -278,7 +310,7 @@ func TestPhase3_3E_DispatchBlockerAndOverride(t *testing.T) {
 	assert.Contains(t, err.Error(), "maintenance")
 
 	// Now assign with override
-	err = assignVehUC.Execute(context.Background(), tripapp.AssignVehicleCommand{
+	err = assignVehUC.Execute(shared.ContextWithTenantID(context.Background(), "1"), tripapp.AssignVehicleCommand{
 		TripID:              aggregate.TripID("trip-blk"),
 		VehicleID:           "v-blocked",
 		TenantID:            shared.TenantID("tenant-1"),

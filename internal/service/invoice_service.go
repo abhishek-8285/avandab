@@ -43,9 +43,13 @@ func (s *InvoiceService) GenerateInvoiceFromTrip(ctx context.Context, tripID dom
 	var tax float64
 	var discount float64
 
+	// company_settings remains the GLOBAL default writer; billing.* tenant
+	// rows overlay it per tenant (Spec 24 §Business logic overlay).
 	settings, _ := s.store.GetCompanySettings(ctx)
-	if settings.GSTEnabled {
-		tax = subtotal * (settings.GSTRate / 100.0)
+	gstEnabled := s.overlayBool(ctx, ConfigKeyGSTEnabled, settings.GSTEnabled)
+	gstRate := s.overlayFloat(ctx, ConfigKeyGSTRate, settings.GSTRate)
+	if gstEnabled {
+		tax = subtotal * (gstRate / 100.0)
 	}
 
 	total := subtotal + tax - discount

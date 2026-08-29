@@ -185,7 +185,8 @@ func (h *AuthHandlers) Register(w http.ResponseWriter, r *http.Request) {
 	if sessResult, err := h.Services.Auth.CreateSessionForUser(r.Context(), user.ID); err == nil && sessResult != nil {
 		h.AuthStore.CreateSessionWithToken(w, user.ID.String(), roleName, user.Name, sessResult.SessionToken)
 	} else {
-		h.AuthStore.CreateSession(w, user.ID.String(), roleName, user.Name)
+		http.Error(w, "session creation failed; please retry registration", http.StatusInternalServerError)
+		return
 	}
 
 	targetURL := "/dashboard"

@@ -1098,7 +1098,7 @@ func TestResolveBookingPricing(t *testing.T) {
 	settingsRepo := &mockSettingsRepoApp{settings: companydomain.CompanySettings{GSTEnabled: true, GSTRate: 10}}
 	prov := &mockProviderAppInv{booking: bookingRepo, audit: settingsRepo, inv: &mockInvoiceRepoApp{}}
 	tx := &mockTxAppInv{Context: context.Background(), prov: prov}
-	pricing, ok := resolveBookingPricing(tx, "1", "bk-1")
+	pricing, ok := resolveBookingPricing(tx, "1", "bk-1", nil)
 	require.True(t, ok)
 	assert.Equal(t, 1000.0, pricing.subtotal)
 	assert.Equal(t, 100.0, pricing.tax)
@@ -1108,7 +1108,7 @@ func TestResolveBookingPricing(t *testing.T) {
 	settingsRepo2 := &mockSettingsRepoApp{settings: companydomain.CompanySettings{GSTEnabled: false}}
 	prov2 := &mockProviderAppInv{booking: bookingRepo, audit: settingsRepo2}
 	tx2 := &mockTxAppInv{Context: context.Background(), prov: prov2}
-	pricing2, ok := resolveBookingPricing(tx2, "1", "bk-1")
+	pricing2, ok := resolveBookingPricing(tx2, "1", "bk-1", nil)
 	require.True(t, ok)
 	assert.Equal(t, 0.0, pricing2.tax)
 
@@ -1116,19 +1116,19 @@ func TestResolveBookingPricing(t *testing.T) {
 	bookingErr := &mockBookingRepoApp{getReadModelErr: errors.New("not found")}
 	prov3 := &mockProviderAppInv{booking: bookingErr, audit: settingsRepo}
 	tx3 := &mockTxAppInv{Context: context.Background(), prov: prov3}
-	_, ok = resolveBookingPricing(tx3, "1", "bk-1")
+	_, ok = resolveBookingPricing(tx3, "1", "bk-1", nil)
 	assert.False(t, ok)
 
 	// bookings type assertion fails -> false
 	prov4 := &mockProviderAppInv{booking: "bad", audit: settingsRepo}
 	tx4 := &mockTxAppInv{Context: context.Background(), prov: prov4}
-	_, ok = resolveBookingPricing(tx4, "1", "bk-1")
+	_, ok = resolveBookingPricing(tx4, "1", "bk-1", nil)
 	assert.False(t, ok)
 
 	// audit logs not found but still true with tax 0
 	prov5 := &mockProviderAppInv{booking: bookingRepo, audit: nil}
 	tx5 := &mockTxAppInv{Context: context.Background(), prov: prov5}
-	pricing5, ok := resolveBookingPricing(tx5, "1", "bk-1")
+	pricing5, ok := resolveBookingPricing(tx5, "1", "bk-1", nil)
 	require.True(t, ok)
 	assert.Equal(t, 0.0, pricing5.tax)
 
@@ -1136,7 +1136,7 @@ func TestResolveBookingPricing(t *testing.T) {
 	negBooking := &mockBookingRepoApp{getReadModelResult: bookingdomain.BookingReadModel{Price: -50}}
 	prov6 := &mockProviderAppInv{booking: negBooking, audit: settingsRepo}
 	tx6 := &mockTxAppInv{Context: context.Background(), prov: prov6}
-	pricing6, ok := resolveBookingPricing(tx6, "1", "bk-1")
+	pricing6, ok := resolveBookingPricing(tx6, "1", "bk-1", nil)
 	require.True(t, ok)
 	assert.Equal(t, 0.0, pricing6.subtotal)
 	assert.Equal(t, 0.0, pricing6.tax)

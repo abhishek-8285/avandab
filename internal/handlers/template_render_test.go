@@ -22,6 +22,7 @@ import (
 	"transport-app/internal/ewaybill"
 	invoiceapp "transport-app/internal/invoice/application"
 	paymentapp "transport-app/internal/payment/application"
+	"transport-app/internal/repository"
 	"transport-app/internal/service"
 	tripapp "transport-app/internal/trip/application"
 )
@@ -210,13 +211,13 @@ func TestAllTemplatesRenderCleanly(t *testing.T) {
 			"Pagination": dummyPagination,
 		}},
 		{"user_list.html", map[string]interface{}{
-			"Users":        []domain.User{{ID: "u-1", Name: "User 1", Email: "u1@example.com", Role: domain.Role{Name: domain.RoleAdmin}, Status: domain.UserStatusActive}},
+			"Users":        []repository.UserWithRole{{ID: domain.UserID("u-1"), Name: "User 1", Email: "u1@example.com", RoleName: string(domain.RoleAdmin), Status: string(domain.UserStatusActive)}},
 			"Pagination":   dummyPagination,
 			"Query":        "",
 			"StatusFilter": "",
 		}},
 		{"user_list_table.html", map[string]interface{}{
-			"Users":      []domain.User{{ID: "u-1", Name: "User 1", Email: "u1@example.com", Role: domain.Role{Name: domain.RoleAdmin}, Status: domain.UserStatusActive}},
+			"Users":      []repository.UserWithRole{{ID: domain.UserID("u-1"), Name: "User 1", Email: "u1@example.com", RoleName: string(domain.RoleAdmin), Status: string(domain.UserStatusActive)}},
 			"Pagination": dummyPagination,
 		}},
 		{"route_list.html", map[string]interface{}{
@@ -571,6 +572,7 @@ func TestRenderFragment_ListTables(t *testing.T) {
 		"trip_list_table.html",
 		"audit_logs_list_table.html",
 		"booking_list_table.html",
+		"tenants_list_table.html",
 	}
 
 	for _, tbl := range tables {

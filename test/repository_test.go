@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 	"time"
+	"transport-app/internal/shared"
 
 	"github.com/stretchr/testify/require"
 
@@ -13,7 +14,7 @@ import (
 func TestSQLiteRepo_DriverCRUD(t *testing.T) {
 	db := NewTestDB(t)
 	repo := NewTestRepo(t, db)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	driver := domain.Driver{
 		ID:            domain.DriverID("driver-test-001"),
@@ -40,7 +41,7 @@ func TestSQLiteRepo_DriverCRUD(t *testing.T) {
 func TestSQLiteRepo_VehicleCRUD(t *testing.T) {
 	db := NewTestDB(t)
 	repo := NewTestRepo(t, db)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	vehicle := domain.Vehicle{
 		ID:                 domain.VehicleID("vehicle-test-001"),
@@ -63,7 +64,7 @@ func TestSQLiteRepo_VehicleCRUD(t *testing.T) {
 func TestSQLiteRepo_CustomerCRUD(t *testing.T) {
 	db := NewTestDB(t)
 	repo := NewTestRepo(t, db)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	customer := domain.Customer{
 		Name:  "Test Customer",
@@ -85,7 +86,7 @@ func TestSQLiteRepo_CustomerCRUD(t *testing.T) {
 func TestSQLiteRepo_RouteCRUD(t *testing.T) {
 	db := NewTestDB(t)
 	repo := NewTestRepo(t, db)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	route := domain.Route{
 		ID:          domain.RouteID("route-test-001"),
@@ -106,7 +107,7 @@ func TestSQLiteRepo_RouteCRUD(t *testing.T) {
 func TestSQLiteRepo_BookingCRUD(t *testing.T) {
 	db := NewTestDB(t)
 	repo := NewTestRepo(t, db)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	customer, _ := repo.CreateCustomer(ctx, domain.Customer{Name: "Cust", Phone: "555"})
 	route, _ := repo.CreateRoute(ctx, domain.Route{ID: domain.RouteID("route-test-002"), Source: "A", Destination: "B"})
@@ -132,7 +133,7 @@ func TestSQLiteRepo_BookingCRUD(t *testing.T) {
 func TestSQLiteRepo_TripCRUD(t *testing.T) {
 	db := NewTestDB(t)
 	repo := NewTestRepo(t, db)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	route, _ := repo.CreateRoute(ctx, domain.Route{ID: domain.RouteID("route-test-003"), Source: "A", Destination: "B"})
 
@@ -157,7 +158,7 @@ func TestSQLiteRepo_TripCRUD(t *testing.T) {
 func TestSQLiteRepo_InvoiceAndPayment(t *testing.T) {
 	db := NewTestDB(t)
 	repo := NewTestRepo(t, db)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	customer, _ := repo.CreateCustomer(ctx, domain.Customer{Name: "Cust", Phone: "555"})
 

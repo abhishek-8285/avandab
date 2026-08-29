@@ -17,13 +17,13 @@ type apiPrincipal struct {
 	TenantID shared.TenantID
 }
 
-// TenantResolver derives the tenant for an authenticated user. Until migration
-// 00056 (sessions.tenant_id) lands it returns the single-tenant default; after
-// that it reads the user's tenant from the session store.
+// TenantResolver derives the tenant for an authenticated user. DefaultTenantResolver
+// serves single-org deployments; TenantForUserResolver resolves per-user from
+// users.tenant_id and rejects suspended tenants.
 type TenantResolver func(ctx context.Context, userID string) (shared.TenantID, error)
 
-// DefaultTenantResolver is the single-tenant bootstrap resolver. Replace with a
-// session-backed lookup when migration 00056 (sessions.tenant_id) lands.
+// DefaultTenantResolver is the single-tenant bootstrap resolver used when
+// MULTI_TENANT_ENABLED=false.
 func DefaultTenantResolver(_ context.Context, _ string) (shared.TenantID, error) {
 	return shared.DefaultTenant, nil
 }
@@ -105,10 +105,17 @@ func resolveAPIPrincipal(r *http.Request, store *auth.SessionStore, secret []byt
 			}
 		}
 
+		// Tenant comes from the server-side resolver, never the token: the
+		// claims tid is advisory only and must not decide authorization.
+		tenantID, terr := tenantResolver(r.Context(), claims.UserID)
+		if terr != nil {
+			return apiPrincipal{}, terr
+		}
+
 		return apiPrincipal{
 			UserID:   claims.UserID,
 			Role:     role,
-			TenantID: shared.TenantID(claims.TenantID),
+			TenantID: tenantID,
 		}, nil
 	}
 
@@ -118,12 +125,9 @@ func resolveAPIPrincipal(r *http.Request, store *auth.SessionStore, secret []byt
 		return apiPrincipal{}, auth.ErrTokenInvalid
 	}
 
-	// Derive the tenant through the resolver instead of hardcoding it. The
-	// resolver currently returns the single-tenant default; after migration
-	// 00056 it reads sessions.tenant_id.
 	tenantID, err := tenantResolver(r.Context(), session.UserID)
 	if err != nil {
-		tenantID = shared.DefaultTenant // nolint:tenant-hardcode
+		return apiPrincipal{}, err
 	}
 	return apiPrincipal{
 		UserID:   session.UserID,

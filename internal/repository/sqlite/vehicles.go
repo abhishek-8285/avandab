@@ -9,8 +9,6 @@ import (
 	"transport-app/internal/domain"
 
 	db "transport-app/db/generated/sqlite"
-
-	"transport-app/internal/shared"
 )
 
 // VehicleRepository implementation
@@ -28,7 +26,7 @@ func (r *SQLRepository) CreateVehicle(ctx context.Context, vehicle domain.Vehicl
 		PermitExpiry:       vehicle.PermitExpiry,
 		Status:             string(vehicle.Status),
 		CurrentMileage:     nullFloat(vehicle.CurrentMileage),
-		TenantID:           string(shared.TenantIDFromContext(ctx)),
+		TenantID:           tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Vehicle{}, err
@@ -59,7 +57,7 @@ func (r *SQLRepository) CreateVehicle(ctx context.Context, vehicle domain.Vehicl
 func (r *SQLRepository) GetVehicleByID(ctx context.Context, id domain.VehicleID) (domain.Vehicle, error) {
 	row, err := r.Q(ctx).GetVehicleByID(ctx, db.GetVehicleByIDParams{
 		ID:       string(id),
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Vehicle{}, err
@@ -95,7 +93,7 @@ func (r *SQLRepository) GetVehicleByID(ctx context.Context, id domain.VehicleID)
 func (r *SQLRepository) GetVehicleByRegistration(ctx context.Context, regNum string) (domain.Vehicle, error) {
 	row, err := r.Q(ctx).GetVehicleByRegistration(ctx, db.GetVehicleByRegistrationParams{
 		RegistrationNumber: regNum,
-		TenantID:           string(shared.TenantIDFromContext(ctx)),
+		TenantID:           tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Vehicle{}, err
@@ -141,7 +139,7 @@ func (r *SQLRepository) UpdateVehicle(ctx context.Context, vehicle domain.Vehicl
 		Status:             string(vehicle.Status),
 		CurrentMileage:     nullFloat(vehicle.CurrentMileage),
 		ID:                 string(vehicle.ID),
-		TenantID:           string(shared.TenantIDFromContext(ctx)),
+		TenantID:           tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Vehicle{}, err
@@ -172,13 +170,13 @@ func (r *SQLRepository) UpdateVehicle(ctx context.Context, vehicle domain.Vehicl
 func (r *SQLRepository) DeleteVehicle(ctx context.Context, id domain.VehicleID) error {
 	return r.Q(ctx).DeleteVehicle(ctx, db.DeleteVehicleParams{
 		ID:       string(id),
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 }
 
 func (r *SQLRepository) SearchVehicles(ctx context.Context, query string, status string, limit, offset int) ([]domain.Vehicle, error) {
 	rows, err := r.Q(ctx).SearchVehicles(ctx, db.SearchVehiclesParams{
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 		Column2:  sql.NullString{String: query, Valid: true},
 		Column3:  sql.NullString{String: query, Valid: true},
 		Column4:  sql.NullString{String: query, Valid: true},
@@ -214,7 +212,7 @@ func (r *SQLRepository) SearchVehicles(ctx context.Context, query string, status
 
 func (r *SQLRepository) CountVehicles(ctx context.Context, query string, status string) (int64, error) {
 	count, err := r.Q(ctx).CountVehicles(ctx, db.CountVehiclesParams{
-		TenantID: string(shared.TenantIDFromContext(ctx)),
+		TenantID: tenantIDFromCtx(ctx),
 		Column2:  sql.NullString{String: query, Valid: true},
 		Column3:  sql.NullString{String: query, Valid: true},
 		Column4:  sql.NullString{String: query, Valid: true},
@@ -228,7 +226,7 @@ func (r *SQLRepository) CountVehicles(ctx context.Context, query string, status 
 }
 
 func (r *SQLRepository) GetAvailableVehicles(ctx context.Context) ([]domain.Vehicle, error) {
-	rows, err := r.Q(ctx).GetAvailableVehicles(ctx, string(shared.TenantIDFromContext(ctx)))
+	rows, err := r.Q(ctx).GetAvailableVehicles(ctx, tenantIDFromCtx(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +253,7 @@ func (r *SQLRepository) GetAvailableVehicles(ctx context.Context) ([]domain.Vehi
 }
 
 func (r *SQLRepository) GetIdleVehicles(ctx context.Context) ([]domain.Vehicle, error) {
-	rows, err := r.Q(ctx).GetIdleVehicles(ctx, string(shared.TenantIDFromContext(ctx)))
+	rows, err := r.Q(ctx).GetIdleVehicles(ctx, tenantIDFromCtx(ctx))
 	if err != nil {
 		return nil, err
 	}

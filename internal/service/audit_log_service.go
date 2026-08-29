@@ -91,7 +91,7 @@ func getUserIP(ctx context.Context) *string {
 
 // logAudit is a helper for services to create audit log entries.
 func (s *baseService) logAudit(ctx context.Context, userID *domain.UserID, action, table, recordID string, oldValues, newValues *string) {
-	_, _ = s.store.CreateAuditLog(ctx, domain.AuditLog{
+	if _, err := s.store.CreateAuditLog(ctx, domain.AuditLog{
 		ID:        domain.FileID(generateID()),
 		UserID:    userID,
 		Action:    action,
@@ -100,5 +100,8 @@ func (s *baseService) logAudit(ctx context.Context, userID *domain.UserID, actio
 		OldValues: oldValues,
 		NewValues: newValues,
 		IPAddress: getUserIP(ctx),
-	})
+	}); err != nil && s.log != nil {
+		// Audit writes are compliance-critical — never fail silently.
+		s.log.Error("audit log write failed", "action", action, "table", table, "record_id", recordID, "error", err)
+	}
 }

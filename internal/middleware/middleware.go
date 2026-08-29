@@ -161,12 +161,15 @@ func AuthRequired(store *auth.SessionStore, loginPath string, tenantResolver Ten
 				return
 			}
 
-			// Derive the tenant through the resolver instead of hardcoding it.
-			// The resolver currently returns the single-tenant default; after
-			// migration 00056 it reads sessions.tenant_id.
+			// Derive the tenant through the resolver; a failure (unknown
+			// user, suspended org, DB error) must NOT fall back to the
+			// bootstrap tenant — kill the session and bounce to login.
 			tenantID, err := tenantResolver(r.Context(), data.UserID)
 			if err != nil {
-				tenantID = shared.DefaultTenant // nolint:tenant-hardcode
+				store.ClearSession(w)
+				http.SetCookie(w, &http.Cookie{Name: "flash_error", Value: err.Error(), Path: "/", HttpOnly: true, MaxAge: 30})
+				http.Redirect(w, r, loginPath, http.StatusSeeOther)
+				return
 			}
 
 			ctx := context.WithValue(r.Context(), auth.ContextUser, data)
@@ -217,6 +220,10 @@ func roleIDFromName(role string) int64 {
 		return 3
 	case "viewer":
 		return 4
+	case "driver":
+		return 5
+	case "org_admin":
+		return 6
 	default:
 		return 4
 	}

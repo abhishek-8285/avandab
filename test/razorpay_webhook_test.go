@@ -14,6 +14,7 @@ import (
 	invoiceApp "transport-app/internal/invoice/application"
 	paymentApp "transport-app/internal/payment/application"
 
+	"transport-app/internal/shared"
 	"transport-app/internal/shared/clock"
 	"transport-app/internal/shared/id"
 	"transport-app/internal/shared/uow"
@@ -56,7 +57,7 @@ func setupWebhookTest(t *testing.T) (context.Context, *paymentApp.RazorpayWebhoo
 	sqlUoW := uow.NewSQLUnitOfWork(db)
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
-	ctx := ContextWithTestTenant(context.Background())
+	ctx := ContextWithTestTenant(shared.ContextWithTenantID(context.Background(), "1"))
 
 	svc := NewTestServices(t, db)
 	customer, err := svc.Customers.CreateCustomer(ctx, "Webhook Co", "Webhook", "555-7777", "webhook@example.com", "", "", "")
@@ -94,7 +95,7 @@ func TestRazorpayWebhook_NotConfigured(t *testing.T) {
 	recordUC := paymentApp.NewRecordPaymentUseCase(sqlUoW, id.NewUUIDGenerator(), clock.NewRealClock())
 	uc := paymentApp.NewRazorpayWebhookUseCase(recordUC, sqlUoW, "", clock.NewRealClock())
 	body := razorpayCapturedEvent("pay_x", "inv_x", 100)
-	_, err := uc.Execute(context.Background(), body, "sig")
+	_, err := uc.Execute(shared.ContextWithTenantID(context.Background(), "1"), body, "sig")
 	assert.ErrorIs(t, err, paymentApp.ErrWebhookNotConfigured)
 }
 

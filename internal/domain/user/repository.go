@@ -24,8 +24,8 @@ type UserRepository interface {
 	UpdateUserThemePreference(ctx context.Context, userID types.UserID, theme string) (User, error)
 	UpdateUserLastLogin(ctx context.Context, userID types.UserID) (User, error)
 	DeleteUser(ctx context.Context, userID types.UserID) error
-	SearchUsers(ctx context.Context, query string, status string, limit, offset int) ([]UserWithRole, error)
-	CountUsers(ctx context.Context, query string, status string) (int64, error)
+	SearchUsers(ctx context.Context, query string, status string, limit, offset int, tenantID string) ([]UserWithRole, error)
+	CountUsers(ctx context.Context, query string, status string, tenantID string) (int64, error)
 }
 
 // UserWithRole is a user with their role name joined.

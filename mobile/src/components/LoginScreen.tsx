@@ -165,24 +165,6 @@ export function LoginScreen({ onLoginSuccess, onForgotPassword, onRegisterLink }
           )}
         </TouchableOpacity>
 
-        <View style={styles.dividerRow}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>OR</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <View style={styles.socialRow}>
-          <TouchableOpacity style={styles.socialBtn} activeOpacity={0.8} onPress={() => Alert.alert('Single Sign-On', 'Google Sign-In is coming soon.')}>
-            <MaterialCommunityIcons name="google" size={14} color="#4285F4" />
-            <Text style={styles.socialBtnText}>GOOGLE</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.socialBtn} activeOpacity={0.8} onPress={() => Alert.alert('Single Sign-On', 'Microsoft Sign-In is coming soon.')}>
-            <MaterialCommunityIcons name="microsoft" size={14} color="#00a4ef" />
-            <Text style={styles.socialBtnText}>MICROSOFT</Text>
-          </TouchableOpacity>
-        </View>
-
         {onRegisterLink && (
           <TouchableOpacity style={styles.registerLink} onPress={onRegisterLink}>
             <Text style={styles.registerLinkText}>
@@ -314,48 +296,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 2,
-    fontFamily: Font.mono,
-  },
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.border,
-  },
-  dividerText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: Colors.textMuted,
-    paddingHorizontal: 12,
-    letterSpacing: 1,
-    fontFamily: Font.mono,
-  },
-  socialRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: Spacing.lg,
-  },
-  socialBtn: {
-    flex: 1,
-    height: 42,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: Colors.surface,
-  },
-  socialBtnText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    letterSpacing: 1,
     fontFamily: Font.mono,
   },
   registerLink: {

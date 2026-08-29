@@ -11,6 +11,7 @@ import (
 
 	intOCR "transport-app/internal/integration/ocr"
 	"transport-app/internal/service"
+	"transport-app/internal/shared"
 )
 
 func seedVerifyFixtures(t *testing.T, db *sql.DB) {
@@ -33,12 +34,12 @@ func seedVerifyFixtures(t *testing.T, db *sql.DB) {
 // TestSpec22_OCRMockCanned — Spec 22 §7 S8: the mock adapter returns the
 // spec's canned fixture regardless of input.
 func TestSpec22_OCRMockCanned(t *testing.T) {
-	res, err := intOCR.NewMockClient().Extract(context.Background(), "/receipts/x.jpg")
+	res, err := intOCR.NewMockClient().Extract(shared.ContextWithTenantID(context.Background(), "1"), "/receipts/x.jpg")
 	require.NoError(t, err)
 	assert.InDelta(t, 3000.0, res.Amount, 0.001)
 	assert.InDelta(t, 0.94, res.Confidence, 0.001)
 
-	_, err = intOCR.NewMockClient().Extract(context.Background(), "")
+	_, err = intOCR.NewMockClient().Extract(shared.ContextWithTenantID(context.Background(), "1"), "")
 	assert.Error(t, err, "no receipt on file must fail honestly")
 }
 
@@ -66,7 +67,7 @@ func TestSpec22_VerificationRuleTable(t *testing.T) {
 	db := NewTestDB(t)
 	seedVerifyFixtures(t, db)
 	svc := service.NewKharchaVerifyService(db, nil, intOCR.NewMockClient())
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	stateOf := func(id string) string {
 		t.Helper()

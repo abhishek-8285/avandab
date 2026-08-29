@@ -105,13 +105,13 @@ func TestSpec22_BackwardsDragRejectedByServer(t *testing.T) {
 	uowImpl := uow.NewSQLUnitOfWork(db)
 	confirmUC := bookingapp.NewConfirmBookingUseCase(uowImpl, clock.NewRealClock())
 
-	err := confirmUC.Execute(context.Background(), bookingapp.ConfirmBookingCommand{
+	err := confirmUC.Execute(shared.ContextWithTenantID(context.Background(), "1"), bookingapp.ConfirmBookingCommand{
 		BookingID: bookingagg.BookingID("bk-d1"), // completed
 		TenantID:  shared.TenantID("tenant-a"),
 	})
 	assert.Error(t, err, "completed booking must not be confirmable")
 
-	err = confirmUC.Execute(context.Background(), bookingapp.ConfirmBookingCommand{
+	err = confirmUC.Execute(shared.ContextWithTenantID(context.Background(), "1"), bookingapp.ConfirmBookingCommand{
 		BookingID: bookingagg.BookingID("bk-c1"), // already confirmed
 		TenantID:  shared.TenantID("tenant-a"),
 	})

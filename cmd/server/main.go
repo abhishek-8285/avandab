@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"syscall"
@@ -138,9 +139,14 @@ func main() {
 	logging.Setup(cfg.LogLevel, cfg.AppEnv)
 
 	logger := slog.Default()
-	if cfg.IsProduction() && cfg.UsingKnownDefaultSecret() {
-		logger.Error("Refusing to start in production with known default secrets. Set strong, unique COOKIE_SECRET, API_SECRET and RAZORPAY_* values in the environment.")
+	// Guard extends beyond production: any non-development deployment
+	// (staging, smoke, prod) must never run on committed default secrets.
+	if !cfg.IsDevelopment() && cfg.UsingKnownDefaultSecret() {
+		logger.Error("Refusing to start with known default secrets. Set strong, unique COOKIE_SECRET, API_SECRET and RAZORPAY_* values in the environment.")
 		os.Exit(1)
+	}
+	if cfg.IsDevelopment() && cfg.UsingKnownDefaultSecret() {
+		logger.Warn("Running on default secrets — development only. Never deploy without strong, unique COOKIE_SECRET and API_SECRET values.")
 	}
 	port := cfg.Port
 	if port == "" {
@@ -299,7 +305,9 @@ func main() {
 
 	// Create the initial admin account from env vars (optional; skipped when
 	// an admin already exists or the vars are unset).
-	bootstrapAdmin(ctx, services, authSvc, cfg, logger)
+	// Global scope: bootstrap runs before any tenant middleware exists; the
+	// initial admin belongs to the bootstrap tenant (DefaultTenant).
+	bootstrapAdmin(shared.WithGlobalScope(ctx), services, authSvc, cfg, logger)
 
 	// Initialize handlers app
 	resetTokens := auth.NewResetTokenStore(0)
@@ -601,6 +609,23 @@ func main() {
 	}
 	authAPIHandler := authAPIHandlers.NewAPIAuthHandler(services.Auth, services.Users, apiSecret)
 
+	// ── Tenant resolution (Spec 24) ─────────────────────────────────────
+	// Gate off (default): every request resolves to the bootstrap tenant.
+	// Gate on (MULTI_TENANT_ENABLED=true): per-user lookup of users.tenant_id
+	// joined to tenants.status; suspended orgs are rejected at the edge.
+	tenantResolver := middleware.TenantResolver(middleware.DefaultTenantResolver)
+	if cfg.MultiTenant.Enabled {
+		logger.Info("multi-tenant mode enabled: per-user tenant resolution active")
+		tenantResolver = middleware.TenantForUserResolver(func(ctx context.Context, userID string) (string, string, error) {
+			var tenantID, status string
+			row := database.QueryRowContext(ctx, `SELECT u.tenant_id, COALESCE(t.status,'active') FROM users u LEFT JOIN tenants t ON t.id = u.tenant_id WHERE u.id = ?`, userID)
+			if err := row.Scan(&tenantID, &status); err != nil {
+				return "", "", err
+			}
+			return tenantID, status, nil
+		}, appCache)
+	}
+
 	// ── Telemetry Ingestion Pipeline (Phase 1) ─────────────────────────
 	telemetryCfg := cfg.Telemetry
 	ingestCfg := telemetry.IngestConfig{
@@ -735,7 +760,7 @@ func main() {
 
 	// Protected: Telemetry, and all /api/v1/* routes require a valid session or Bearer token
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.RequireAPIAuth(authStore, apiSecret, middleware.DefaultTenantResolver))
+		r.Use(middleware.RequireAPIAuth(authStore, apiSecret, tenantResolver))
 		r.With(featureGate("telemetry")).Group(func(r chi.Router) {
 			telemetry.RegisterTelemetryRoutes(r, ingestor, database, time.Duration(cfg.LiveMap.TelemetryStaleMin)*time.Minute, etaService)
 			telemetry.RegisterGeocodeRoute(r, cfg.LiveMap.NominatimURL)
@@ -848,7 +873,7 @@ func main() {
 	// Deprecated v2 alias routes (rewrite to v1) plus /api/v2/health.
 	// Aliased routes require the same API auth as v1; the public health check
 	// is mounted separately so probes stay unauthenticated.
-	apiversion.MountV2(r, middleware.RequireAPIAuth(authStore, apiSecret, middleware.DefaultTenantResolver), http.HandlerFunc(healthChecker.HealthHandler), bookingAPIHandler, tripAPIHandler, invoiceAPIHandler, paymentAPIHandler)
+	apiversion.MountV2(r, middleware.RequireAPIAuth(authStore, apiSecret, tenantResolver), http.HandlerFunc(healthChecker.HealthHandler), bookingAPIHandler, tripAPIHandler, invoiceAPIHandler, paymentAPIHandler)
 
 	// ── AI Agent: multi-agent orchestrator + RL learning + approvals ────
 	if cfg.Agent.Enabled {
@@ -899,11 +924,15 @@ func main() {
 			orch.AddAgent(sub)
 		}
 		agentAPI = agent.NewHandler(orch, toolEnv)
+		// Enforce per-user RBAC on the assistant's read tools (same
+		// permissions as the REST API that serves the same data).
+		agentAPI.WithPermissionChecker(authSvc)
 		logger.Info("AI agent enabled", "model", cfg.Agent.Model, "sub_agents", len(orch.AgentNames()), "approval_required", cfg.Agent.RequireApproval)
 
 		// API routes (bearer/session) — approval queue + chat
 		r.Group(func(r chi.Router) {
-			r.Use(middleware.RequireAPIAuth(authStore, apiSecret, middleware.DefaultTenantResolver))
+			r.Use(middleware.RequireAPIAuth(authStore, apiSecret, tenantResolver))
+			r.Use(middleware.RateLimitDistributed(appCache, 30)) // LLM cost control + flood guard
 			r.Use(agentRequestTimeout(5 * time.Minute))
 			agentAPI.RegisterAPIRoute(r)
 			if approvalSvc != nil {
@@ -927,7 +956,7 @@ func main() {
 
 	// Uploaded files (logos, documents) - require authentication
 	uploadsServer := http.FileServer(http.Dir(cfg.UploadDir))
-	r.With(middleware.RequireAuth(authStore, middleware.DefaultTenantResolver)).Handle("/uploads/*", http.StripPrefix("/uploads/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	r.With(middleware.RequireAuth(authStore, tenantResolver)).Handle("/uploads/*", http.StripPrefix("/uploads/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "private, no-cache")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		uploadsServer.ServeHTTP(w, r)
@@ -1095,7 +1124,7 @@ func main() {
 
 		// Protected routes
 		r.Group(func(r chi.Router) {
-			r.Use(middleware.RequireAuth(authStore, middleware.DefaultTenantResolver))
+			r.Use(middleware.RequireAuth(authStore, tenantResolver))
 
 			// Trip share links (Spec 04 §4)
 			r.With(middleware.ResourcePermission(authSvc, "shares", "create")).Post("/trips/{id}/share", app.Share.CreateShare)
@@ -1139,6 +1168,9 @@ func main() {
 
 			// Users (Admin only)
 			r.Route("/users", app.Users.Routes)
+
+			// Tenants — super-admin org provisioning UI (Spec 24)
+			r.Route("/tenants", handlers.NewTenantsHandlers(app).Routes)
 
 			// Drivers
 			r.Route("/drivers", app.Drivers.Routes)
@@ -1243,6 +1275,7 @@ func main() {
 			r.With(featureGate("agent")).Route("/assistant", app.Assistant.Routes)
 			if agentAPI != nil {
 				r.Group(func(r chi.Router) {
+					r.Use(middleware.RateLimitDistributed(appCache, 30)) // LLM cost control + flood guard
 					r.Use(agentRequestTimeout(5 * time.Minute))
 					agentAPI.RegisterRoutes(r)
 				})
@@ -1293,10 +1326,25 @@ func main() {
 	var runLeadered func(name string, fn func(context.Context))
 	if cfg.WorkerLeaderLock {
 		leaderMgr := leader.NewManager(database, "", 0, logger)
-		runLeadered = func(name string, fn func(context.Context)) { go leaderMgr.RunAsLeader(ctx, name, fn) }
+		// Global scope: background workers run without a request tenant — mark
+		// the intent explicitly so the repo seam resolves them to DefaultTenant
+		// instead of panicking (fail-closed guard in sqlite.tenantIDFromCtx).
+		runLeadered = func(name string, fn func(context.Context)) {
+			go leaderMgr.RunAsLeader(shared.WithGlobalScope(ctx), name, fn)
+		}
 	} else {
 		logger.Warn("WORKER_LEADER_LOCK=false: background workers will duplicate across replicas")
-		runLeadered = func(name string, fn func(context.Context)) { go fn(ctx) }
+		runLeadered = func(name string, fn func(context.Context)) {
+			go func() {
+				// Mirror leader.RunAsLeader: a panicking worker must not kill the server.
+				defer func() {
+					if r := recover(); r != nil {
+						logger.Error("background worker panicked", "worker", name, "panic", r, "stack", string(debug.Stack()))
+					}
+				}()
+				fn(shared.WithGlobalScope(ctx))
+			}()
+		}
 	}
 
 	// SQLite WAL checkpoint hygiene: the WAL grew unbounded (>500MB observed)
@@ -1621,7 +1669,7 @@ func bootstrapAdmin(ctx context.Context, services *service.Services, authSvc aut
 		}
 	}
 
-	user, err := services.Users.CreateUserWithPassword(ctx, ba.Email, ba.Name, "", ba.Password, 1, domain.UserStatusActive)
+	user, err := services.Users.CreateUserWithPassword(ctx, ba.Email, ba.Name, "", ba.Password, 1, domain.UserStatusActive, string(shared.DefaultTenant))
 	if err != nil {
 		logger.Error("bootstrap admin failed", "error", err)
 		return

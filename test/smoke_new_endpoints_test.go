@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+	"transport-app/internal/shared"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -82,7 +83,7 @@ func doSmoke(t *testing.T, h http.Handler, method, path string, body interface{}
 
 func seedBooking(t *testing.T, svcs *service.Services, uow ports.UnitOfWork, price float64) (string, string) {
 	t.Helper()
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "1")
 	customer, err := svcs.Customers.CreateCustomer(ctx, "Smoke Co", "SC", "555-0001", "smk@example.com", "", "", "")
 	require.NoError(t, err)
 	route, err := svcs.Routes.CreateRoute(ctx, "Pune", "Mumbai", 200, 4, price, "")

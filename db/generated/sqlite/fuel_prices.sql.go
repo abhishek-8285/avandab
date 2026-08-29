@@ -48,21 +48,31 @@ func (q *Queries) CreateFuelPrice(ctx context.Context, arg CreateFuelPriceParams
 }
 
 const deleteFuelPrice = `-- name: DeleteFuelPrice :exec
-DELETE FROM fuel_prices WHERE id = ?
+DELETE FROM fuel_prices WHERE id = ? AND tenant_id = ?
 `
 
-func (q *Queries) DeleteFuelPrice(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, deleteFuelPrice, id)
+type DeleteFuelPriceParams struct {
+	ID       string `json:"id"`
+	TenantID string `json:"tenant_id"`
+}
+
+func (q *Queries) DeleteFuelPrice(ctx context.Context, arg DeleteFuelPriceParams) error {
+	_, err := q.db.ExecContext(ctx, deleteFuelPrice, arg.ID, arg.TenantID)
 	return err
 }
 
 const getFuelPriceByID = `-- name: GetFuelPriceByID :one
 SELECT id, tenant_id, state, city, diesel_price, petrol_price, updated_at
-FROM fuel_prices WHERE id = ?
+FROM fuel_prices WHERE id = ? AND tenant_id = ?
 `
 
-func (q *Queries) GetFuelPriceByID(ctx context.Context, id string) (FuelPrice, error) {
-	row := q.db.QueryRowContext(ctx, getFuelPriceByID, id)
+type GetFuelPriceByIDParams struct {
+	ID       string `json:"id"`
+	TenantID string `json:"tenant_id"`
+}
+
+func (q *Queries) GetFuelPriceByID(ctx context.Context, arg GetFuelPriceByIDParams) (FuelPrice, error) {
+	row := q.db.QueryRowContext(ctx, getFuelPriceByID, arg.ID, arg.TenantID)
 	var i FuelPrice
 	err := row.Scan(
 		&i.ID,
@@ -145,7 +155,7 @@ func (q *Queries) ListFuelPrices(ctx context.Context, tenantID string) ([]FuelPr
 const updateFuelPrice = `-- name: UpdateFuelPrice :one
 UPDATE fuel_prices
 SET state = ?, city = ?, diesel_price = ?, petrol_price = ?, updated_at = CURRENT_TIMESTAMP
-WHERE id = ?
+WHERE id = ? AND tenant_id = ?
 RETURNING id, tenant_id, state, city, diesel_price, petrol_price, updated_at
 `
 
@@ -155,6 +165,7 @@ type UpdateFuelPriceParams struct {
 	DieselPrice float64        `json:"diesel_price"`
 	PetrolPrice float64        `json:"petrol_price"`
 	ID          string         `json:"id"`
+	TenantID    string         `json:"tenant_id"`
 }
 
 func (q *Queries) UpdateFuelPrice(ctx context.Context, arg UpdateFuelPriceParams) (FuelPrice, error) {
@@ -164,6 +175,7 @@ func (q *Queries) UpdateFuelPrice(ctx context.Context, arg UpdateFuelPriceParams
 		arg.DieselPrice,
 		arg.PetrolPrice,
 		arg.ID,
+		arg.TenantID,
 	)
 	var i FuelPrice
 	err := row.Scan(

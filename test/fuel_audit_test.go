@@ -89,8 +89,12 @@ func TestFuelAudit_EnforceMode_E2E(t *testing.T) {
 	ctx := shared.ContextWithTenantID(context.Background(), "tenant-1")
 	futureDate := time.Now().AddDate(1, 0, 0).Format("2006-01-02")
 
-	// Enable enforce mode
-	_, err := dbConn.Exec(`UPDATE company_config SET value = 'true' WHERE key = 'fuel.audit_enforce'`)
+	// Enable enforce mode FOR tenant-1 (config reads are tenant-scoped;
+	// company_config PK is (tenant_id, key)).
+	_, err := dbConn.Exec(`
+		INSERT INTO company_config (tenant_id, key, value)
+		VALUES ('tenant-1', 'fuel.audit_enforce', 'true')
+		ON CONFLICT(tenant_id, key) DO UPDATE SET value = 'true'`)
 	require.NoError(t, err)
 
 	_, err = dbConn.Exec(`

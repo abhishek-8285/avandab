@@ -12,7 +12,9 @@
     "test": "go test ./...",
     "test:cover": "go test -coverprofile=coverage.out -covermode=atomic ./test",
     "test:cover:html": "go tool cover -html=coverage.out",
-    "test:ui": "playwright test"
+    "test:ui": "playwright test",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +27,9 @@
     "tailwindcss": "^4.3.3"
   },
   "dependencies": {
-    "@playwright/test": "^1.62.1"
+    "@playwright/test": "^1.62.1",
+    "expo": "~57.0.18",
+    "react": "19.2.3",
+    "react-native": "0.86.3"
   }
 }

@@ -133,7 +133,14 @@ func (s *SessionStore) ValidateSession(r *http.Request) (*SessionData, bool) {
 		return nil, false
 	}
 
-	if s.validator != nil && data.Token != "" {
+	if s.validator != nil {
+		// Server-side verification is mandatory when a validator is configured.
+		// A cookie without a token cannot be checked against the session store,
+		// and its role claim is client-controlled — reject it outright
+		// (Spec 10 §5.2: every session is server-side and revocable).
+		if data.Token == "" {
+			return nil, false
+		}
 		validated, err := s.validator.ValidateSessionToken(r.Context(), data.Token)
 		if err != nil || validated == nil {
 			return nil, false
