@@ -68,3 +68,26 @@ func MustTenantID(ctx context.Context) TenantID {
 	}
 	return t
 }
+
+// ── Global scope (system jobs) ──────────────────────────────────────────────
+//
+// Background workers (outbox relay, sweeps, tickers, bootstrap) legitimately
+// run without a request tenant. They must mark that intent explicitly instead
+// of relying on a silent default: repositories resolve a global-scope context
+// to DefaultTenant, and any other context without a tenant fails closed
+// (panics) at the repository seam.
+//
+// Never mark a request-derived context: that disables the fail-closed guard
+// for the whole request.
+type globalScopeKey struct{}
+
+// WithGlobalScope marks ctx as intentionally tenant-less (system job).
+func WithGlobalScope(ctx context.Context) context.Context {
+	return context.WithValue(ctx, globalScopeKey{}, true)
+}
+
+// IsGlobalScope reports whether ctx was marked with WithGlobalScope.
+func IsGlobalScope(ctx context.Context) bool {
+	v, _ := ctx.Value(globalScopeKey{}).(bool)
+	return v
+}

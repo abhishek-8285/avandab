@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"syscall"
@@ -138,9 +139,14 @@ func main() {
 	logging.Setup(cfg.LogLevel, cfg.AppEnv)
 
 	logger := slog.Default()
-	if cfg.IsProduction() && cfg.UsingKnownDefaultSecret() {
-		logger.Error("Refusing to start in production with known default secrets. Set strong, unique COOKIE_SECRET, API_SECRET and RAZORPAY_* values in the environment.")
+	// Guard extends beyond production: any non-development deployment
+	// (staging, smoke, prod) must never run on committed default secrets.
+	if !cfg.IsDevelopment() && cfg.UsingKnownDefaultSecret() {
+		logger.Error("Refusing to start with known default secrets. Set strong, unique COOKIE_SECRET, API_SECRET and RAZORPAY_* values in the environment.")
 		os.Exit(1)
+	}
+	if cfg.IsDevelopment() && cfg.UsingKnownDefaultSecret() {
+		logger.Warn("Running on default secrets — development only. Never deploy without strong, unique COOKIE_SECRET and API_SECRET values.")
 	}
 	port := cfg.Port
 	if port == "" {
@@ -299,7 +305,9 @@ func main() {
 
 	// Create the initial admin account from env vars (optional; skipped when
 	// an admin already exists or the vars are unset).
-	bootstrapAdmin(ctx, services, authSvc, cfg, logger)
+	// Global scope: bootstrap runs before any tenant middleware exists; the
+	// initial admin belongs to the bootstrap tenant (DefaultTenant).
+	bootstrapAdmin(shared.WithGlobalScope(ctx), services, authSvc, cfg, logger)
 
 	// Initialize handlers app
 	resetTokens := auth.NewResetTokenStore(0)
@@ -916,11 +924,15 @@ func main() {
 			orch.AddAgent(sub)
 		}
 		agentAPI = agent.NewHandler(orch, toolEnv)
+		// Enforce per-user RBAC on the assistant's read tools (same
+		// permissions as the REST API that serves the same data).
+		agentAPI.WithPermissionChecker(authSvc)
 		logger.Info("AI agent enabled", "model", cfg.Agent.Model, "sub_agents", len(orch.AgentNames()), "approval_required", cfg.Agent.RequireApproval)
 
 		// API routes (bearer/session) — approval queue + chat
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequireAPIAuth(authStore, apiSecret, tenantResolver))
+			r.Use(middleware.RateLimitDistributed(appCache, 30)) // LLM cost control + flood guard
 			r.Use(agentRequestTimeout(5 * time.Minute))
 			agentAPI.RegisterAPIRoute(r)
 			if approvalSvc != nil {
@@ -1263,6 +1275,7 @@ func main() {
 			r.With(featureGate("agent")).Route("/assistant", app.Assistant.Routes)
 			if agentAPI != nil {
 				r.Group(func(r chi.Router) {
+					r.Use(middleware.RateLimitDistributed(appCache, 30)) // LLM cost control + flood guard
 					r.Use(agentRequestTimeout(5 * time.Minute))
 					agentAPI.RegisterRoutes(r)
 				})
@@ -1313,10 +1326,25 @@ func main() {
 	var runLeadered func(name string, fn func(context.Context))
 	if cfg.WorkerLeaderLock {
 		leaderMgr := leader.NewManager(database, "", 0, logger)
-		runLeadered = func(name string, fn func(context.Context)) { go leaderMgr.RunAsLeader(ctx, name, fn) }
+		// Global scope: background workers run without a request tenant — mark
+		// the intent explicitly so the repo seam resolves them to DefaultTenant
+		// instead of panicking (fail-closed guard in sqlite.tenantIDFromCtx).
+		runLeadered = func(name string, fn func(context.Context)) {
+			go leaderMgr.RunAsLeader(shared.WithGlobalScope(ctx), name, fn)
+		}
 	} else {
 		logger.Warn("WORKER_LEADER_LOCK=false: background workers will duplicate across replicas")
-		runLeadered = func(name string, fn func(context.Context)) { go fn(ctx) }
+		runLeadered = func(name string, fn func(context.Context)) {
+			go func() {
+				// Mirror leader.RunAsLeader: a panicking worker must not kill the server.
+				defer func() {
+					if r := recover(); r != nil {
+						logger.Error("background worker panicked", "worker", name, "panic", r, "stack", string(debug.Stack()))
+					}
+				}()
+				fn(shared.WithGlobalScope(ctx))
+			}()
+		}
 	}
 
 	// SQLite WAL checkpoint hygiene: the WAL grew unbounded (>500MB observed)

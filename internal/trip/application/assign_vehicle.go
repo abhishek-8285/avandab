@@ -94,21 +94,23 @@ func (uc *AssignVehicleUseCase) checkVehicleCompliance(ctx ports.TxContext, cmd 
 			if cmd.OverrideMaintenance && len(strings.TrimSpace(cmd.OverrideReason)) >= 10 {
 				reasonJSON := fmt.Sprintf(`{"vehicle_id":%q,"blocked_by":%q,"reason":%q}`, cmd.VehicleID, expiry.name, cmd.OverrideReason)
 				logAudit(ctx, "assign_vehicle_override", string(cmd.TripID), nil, &reasonJSON)
+				// dispatch_overrides schema is owned by migration 00073 — no
+				// runtime DDL. A failed audit insert fails the override loudly:
+				// a compliance override without an audit trail must not land.
 				if dbGetter, ok := ctx.Repositories().AuditLogs().(repository.DBGetter); ok && dbGetter.DB() != nil {
 					tenant := cmd.TenantID
 					if tenant == "" {
 						tenant = shared.DefaultTenant
 					}
-					_, _ = dbGetter.DB().ExecContext(ctx, `CREATE TABLE IF NOT EXISTS dispatch_overrides (
-                        id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL DEFAULT '1', trip_id TEXT NOT NULL, vehicle_id TEXT, driver_id TEXT, blocked_by TEXT NOT NULL, reason TEXT NOT NULL, overridden_by TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now'))
-                    )`)
 					overriddenBy := ""
 					if uid := getUserID(ctx); uid != nil {
 						overriddenBy = string(*uid)
 					}
 					blockedBy := expiry.name + "_expiry"
-					_, _ = dbGetter.DB().ExecContext(ctx, `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-						fmt.Sprintf("ovr-%d", time.Now().UnixNano()), string(tenant), string(cmd.TripID), cmd.VehicleID, "", blockedBy, cmd.OverrideReason, overriddenBy)
+					if _, ierr := dbGetter.DB().ExecContext(ctx, `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+						fmt.Sprintf("ovr-%d", time.Now().UnixNano()), string(tenant), string(cmd.TripID), cmd.VehicleID, "", blockedBy, cmd.OverrideReason, overriddenBy); ierr != nil {
+						return ierr
+					}
 				}
 				recordComplianceCheck(ctx, "vehicle", cmd.VehicleID, expiry.name, "warning", "bypassed by override")
 				continue

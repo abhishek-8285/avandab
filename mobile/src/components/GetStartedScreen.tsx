@@ -7,9 +7,10 @@ import { Colors, Font, Radius, Spacing } from '../constants/theme';
 interface GetStartedScreenProps {
   onGetStarted: () => void;
   onSignIn: () => void;
+  onOpenQRDemo: () => void;
 }
 
-export function GetStartedScreen({ onGetStarted, onSignIn }: GetStartedScreenProps) {
+export function GetStartedScreen({ onGetStarted, onSignIn, onOpenQRDemo }: GetStartedScreenProps) {
   const pulseAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -120,6 +121,15 @@ export function GetStartedScreen({ onGetStarted, onSignIn }: GetStartedScreenPro
           <Text style={styles.signInText}>
             Already registered? <Text style={styles.signInLink}>SIGN IN</Text>
           </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.qrDemoButton}
+          activeOpacity={0.8}
+          onPress={onOpenQRDemo}
+        >
+          <MaterialCommunityIcons name="qrcode-scan" size={14} color={Colors.primary} />
+          <Text style={styles.qrDemoText}>TRY QR SCANNER / GENERATOR</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -284,5 +294,24 @@ const styles = StyleSheet.create({
   signInLink: {
     color: Colors.primary,
     fontWeight: '800',
+  },
+  qrDemoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: Spacing.sm,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.sm,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  qrDemoText: {
+    color: Colors.primary,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.5,
+    fontFamily: Font.mono,
   },
 });

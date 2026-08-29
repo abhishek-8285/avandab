@@ -1,24 +1,13 @@
 ## Context Engine (CCE)
 
-This project uses Code Context Engine for intelligent code retrieval and
-cross-session memory.
-
-### Searching the codebase
-
-**Use `context_search` instead of reading files directly** when exploring
-the codebase, answering questions about code, or understanding how things
-work. `context_search` returns the most relevant code chunks with
-confidence scores instead of whole files.
-
-When to use `context_search`:
-- Answering questions about the codebase ("how does X work?", "where is Y?")
-- Exploring structure or architecture
-- Finding related code, functions, or patterns
+Code retrieval + cross-session memory. **Use `context_search` instead of
+reading files directly** when exploring the codebase, answering "how does
+X work?", or finding related code — it returns the most relevant chunks
+with confidence scores instead of whole files.
 
 Other tools:
 - `expand_chunk` for full source of a compressed result
 - `related_context` for what calls/imports a function
-- `session_recall` to recall past decisions
 
 ### Cross-session memory
 
@@ -54,17 +43,14 @@ The project has a RAG system for codebase search and custom knowledge.
 4. **I read a doc file** — any `.md`, `.txt`, `.pdf` with business/domain content
 5. **User says "teach the RAG"** — obvious, but explicit
 
-### Don't teach when:
+### Skip when nothing is new:
 
-- Code is just boilerplate (CRUD scaffolding, imports, struct definitions)
-- The knowledge is already obvious from code structure
-- User hasn't asked for it and nothing new was shared
+Boilerplate (CRUD scaffolding, struct definitions), knowledge already
+obvious from code structure, or no fresh domain content shared.
 
 ### How I teach:
 
 ```bash
-# Find the content first (read the file)
-# Then teach it:
 bin/rag teach "topic name" file.md
 
 # Or from stdin:
@@ -143,8 +129,7 @@ On a blocker: halt and report — never fake a workaround.
 4. Migration safety: new migrations must apply AND roll back (`goose up`/`down`)
 5. Spec alignment: quote the exact spec section your code fulfills
    (e.g., "Spec 09 §5.1")
-6. Security gate: `LINT_BASE=$(git rev-parse HEAD) ./scripts/security-check.sh`
-   — exit 0. No task is done until this passes.
+6. Security gate — see "Security Gate" below. No task is done until it passes.
 
 ### Security Gate (mandatory on EVERY change — any agent, any tool)
 Every code change — ZCode, Claude Code, any other AI agent, humans — MUST
@@ -154,8 +139,7 @@ pass the security gate before the work is called done:
 LINT_BASE=$(git rev-parse HEAD) ./scripts/security-check.sh
 ```
 
-- What it runs: golangci-lint (gosec enabled), govulncheck (Go deps),
-  npm audit (mobile), hard-coded-tenant scan, secret-pattern scan.
+- Runs gosec lint, govulncheck, npm audit, hard-coded-tenant + secret scans.
   `LINT_BASE` ratchets to changed code so legacy lint debt doesn't block.
 - Enforcement is layered so no agent can silently skip it:
   `hooks/pre-commit` (via `git config core.hooksPath hooks`) runs the full

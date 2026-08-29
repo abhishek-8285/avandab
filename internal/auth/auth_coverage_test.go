@@ -198,23 +198,19 @@ func TestValidateSession_Branches(t *testing.T) {
 		store.SetValidator(nil)
 	})
 
-	t.Run("token empty skips validator", func(t *testing.T) {
+	t.Run("token empty rejected when validator configured", func(t *testing.T) {
 		mv := &coverageValidator{err: errors.New("should not be called")}
-		store.SetValidator(mv)
-		rec := httptest.NewRecorder()
-		store.CreateSession(rec, "u-no-token", "viewer", "NoToken") // token ""
-		// Must re-create with original store's signer that has validator, but CreateSession uses same store
-		// So create directly via store (which has validator, but token empty => ValidateSession should skip validator)
 		store2 := NewSessionStore(secret, false)
 		store2.SetValidator(mv)
 		rec2 := httptest.NewRecorder()
-		store2.CreateSession(rec2, "u-no-token", "viewer", "NoToken")
+		store2.CreateSession(rec2, "u-no-token", "viewer", "NoToken") // token ""
 		req := httptest.NewRequest("GET", "/", nil)
 		req.AddCookie(rec2.Result().Cookies()[0])
-		data, ok := store2.ValidateSession(req)
-		require.True(t, ok)
-		assert.Equal(t, "viewer", data.Role)
-		store.SetValidator(nil)
+		// A tokenless cookie's role claim is client-controlled and cannot be
+		// verified against the session store — it must be rejected outright
+		// (forgeable-session bypass fix; Spec 10 §5.2).
+		_, ok := store2.ValidateSession(req)
+		assert.False(t, ok)
 	})
 
 	t.Run("tampered signature", func(t *testing.T) {

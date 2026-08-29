@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"runtime/debug"
 	"time"
 )
 
@@ -117,6 +118,13 @@ func (m *Manager) RunAsLeader(ctx context.Context, name string, fn func(ctx cont
 
 	func() {
 		defer m.Release(context.WithoutCancel(ctx), name)
+		// A panic in any worker must never take down the whole server —
+		// recover, log loudly, and release the lease so a replica can retry.
+		defer func() {
+			if r := recover(); r != nil {
+				m.log.Error("leader: worker panicked", "lease", name, "panic", r, "stack", string(debug.Stack()))
+			}
+		}()
 		fn(renewCtx)
 	}()
 }
@@ -131,6 +139,11 @@ func (m *Manager) TryRunAsLeader(ctx context.Context, name string, fn func(ctx c
 	}
 	go func() {
 		defer m.Release(context.WithoutCancel(ctx), name)
+		defer func() {
+			if r := recover(); r != nil {
+				m.log.Error("leader: worker panicked", "lease", name, "panic", r, "stack", string(debug.Stack()))
+			}
+		}()
 		fn(ctx)
 	}()
 	return true

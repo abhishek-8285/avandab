@@ -34,6 +34,7 @@ import ConsentManager from './src/services/consentManager';
 import { SyncStatusBar } from './src/components/SyncStatusBar';
 import { ComplianceBanner } from './src/components/ComplianceBanner';
 import { PaisaScreen } from './src/components/PaisaScreen';
+import { QRDemoScreen } from './src/components/QRDemoScreen';
 import { useAuthStore } from './src/stores/authStore';
 import { useSyncStore } from './src/stores/syncStore';
 import { Trip } from './src/types/api';
@@ -49,6 +50,7 @@ type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
+  QRDemo: undefined;
 };
 
 type DriverStackParamList = {
@@ -75,8 +77,12 @@ function AuthNavigator() {
           <GetStartedScreen
             onGetStarted={() => navigation.navigate('OnboardingOverview')}
             onSignIn={() => navigation.navigate('Login')}
+            onOpenQRDemo={() => navigation.navigate('QRDemo')}
           />
         )}
+      </AuthStack.Screen>
+      <AuthStack.Screen name="QRDemo">
+        {() => <QRDemoScreen />}
       </AuthStack.Screen>
       <AuthStack.Screen name="OnboardingOverview">
         {({ navigation }) => (
@@ -238,7 +244,7 @@ interface MainScreenProps {
 }
 
 function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, onOpenIssues }: MainScreenProps) {
-  const [activeTab, setActiveTab] = useState<'trips' | 'dispatch' | 'paisa'>('trips');
+  const [activeTab, setActiveTab] = useState<'trips' | 'dispatch' | 'paisa' | 'qr'>('trips');
   const [tripFilter, setTripFilter] = useState<'active' | 'history'>('active');
   const [locationState, setLocationState] = useState<{
     granted: boolean;
@@ -445,6 +451,12 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
         >
           <Text style={[styles.tabText, activeTab === 'paisa' && styles.activeTabText]}>PAISA</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'qr' && styles.activeTab]}
+          onPress={() => setActiveTab('qr')}
+        >
+          <Text style={[styles.tabText, activeTab === 'qr' && styles.activeTabText]}>QR</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Trip filter chips (trips tab only) */}
@@ -470,7 +482,8 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
           <PaisaScreen tripId={undefined} />
         </View>
       )}
-      {activeTab !== 'paisa' && (
+      {activeTab === 'qr' && <QRDemoScreen />}
+      {activeTab !== 'paisa' && activeTab !== 'qr' && (
       <ScrollView style={styles.content} contentContainerStyle={styles.contentPadding}>
         {activeTab === 'trips' ? (
           isLoading ? (

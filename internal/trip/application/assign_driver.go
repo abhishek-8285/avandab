@@ -52,15 +52,14 @@ func (uc *AssignDriverUseCase) Execute(ctx context.Context, cmd AssignDriverComm
 			if cmd.OverrideMaintenance && len(strings.TrimSpace(cmd.OverrideReason)) >= 10 {
 				reasonJSON := fmt.Sprintf(`{"driver_id":%q,"reason":%q,"blocked_by":%q}`, cmd.DriverID, cmd.OverrideReason, err.Error())
 				logAudit(txCtx, "assign_driver_override", string(cmd.TripID), nil, &reasonJSON)
-				// Insert dispatch_overrides for audit (best-effort)
+				// dispatch_overrides schema is owned by migration 00073 — no
+				// runtime DDL. A failed audit insert fails the override loudly:
+				// a compliance override without an audit trail must not land.
 				if dbGetter, ok := txCtx.Repositories().AuditLogs().(repository.DBGetter); ok && dbGetter.DB() != nil {
 					tenant := cmd.TenantID
 					if tenant == "" {
 						tenant = shared.DefaultTenant
 					}
-					_, _ = dbGetter.DB().ExecContext(txCtx, `CREATE TABLE IF NOT EXISTS dispatch_overrides (
-                        id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL DEFAULT '1', trip_id TEXT NOT NULL, vehicle_id TEXT, driver_id TEXT, blocked_by TEXT NOT NULL, reason TEXT NOT NULL, overridden_by TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now'))
-                    )`)
 					var vehicleID string
 					if t.VehicleID != nil {
 						vehicleID = *t.VehicleID
@@ -73,8 +72,10 @@ func (uc *AssignDriverUseCase) Execute(ctx context.Context, cmd AssignDriverComm
 					if strings.Contains(strings.ToLower(err.Error()), "license") {
 						blockedBy = "license_expiry"
 					}
-					_, _ = dbGetter.DB().ExecContext(txCtx, `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-						fmt.Sprintf("ovr-%d", time.Now().UnixNano()), string(tenant), string(cmd.TripID), vehicleID, cmd.DriverID, blockedBy, cmd.OverrideReason, overriddenBy)
+					if _, ierr := dbGetter.DB().ExecContext(txCtx, `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
+						fmt.Sprintf("ovr-%d", time.Now().UnixNano()), string(tenant), string(cmd.TripID), vehicleID, cmd.DriverID, blockedBy, cmd.OverrideReason, overriddenBy); ierr != nil {
+						return fmt.Errorf("record dispatch override audit: %w", ierr)
+					}
 				}
 			} else {
 				return err

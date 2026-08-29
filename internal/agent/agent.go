@@ -11,12 +11,26 @@ import (
 // ToolFunc executes a tool with parsed JSON arguments and returns a string result.
 type ToolFunc func(ctx context.Context, args json.RawMessage) (string, error)
 
+// PermissionChecker authorizes whether the acting user may run a
+// permission-gated tool. Satisfied by auth.AuthorizationService (Casbin).
+type PermissionChecker interface {
+	Can(userID, resource, action string) bool
+}
+
 // RegisteredTool pairs a schema with its implementation.
 type RegisteredTool struct {
 	Name        string
 	Description string
 	Parameters  map[string]any
 	Handler     ToolFunc
+	// Resource/Action bind the tool to the same Casbin permission as its
+	// REST counterpart (e.g. search_customers -> customers:read, the same
+	// gate as GET /customers). Empty means the tool is not per-user gated
+	// (e.g. get_dashboard, whose REST page is open to all authenticated
+	// users). Approval-gated tools carry their permission too, so they stay
+	// RBAC-checked when approval is disabled.
+	Resource string
+	Action   string
 }
 
 // Tool implements the chat-completions tool schema.
@@ -159,6 +173,15 @@ func (a *Agent) executeTool(ctx context.Context, fn FunctionCall) (string, error
 		if t.Name != fn.Name {
 			continue
 		}
+		// RBAC: enforce the same permission the REST API enforces for the
+		// data this tool exposes. Fail closed when the permission is set but
+		// no checker is available or the check denies.
+		if t.Resource != "" || t.Action != "" {
+			pc := permissionCheckerFrom(ctx)
+			if pc == nil || !pc.Can(userIDFrom(ctx), t.Resource, t.Action) {
+				return "", fmt.Errorf("permission denied for tool %q (requires %s:%s)", fn.Name, t.Resource, t.Action)
+			}
+		}
 		return t.Handler(ctx, normalizeArgs(fn.Arguments))
 	}
 	return "", fmt.Errorf("unknown tool %q", fn.Name)
@@ -181,6 +204,7 @@ func normalizeArgs(args json.RawMessage) json.RawMessage {
 const (
 	userIDCtxKey   ctxKey = "agent_user_id"
 	userNameCtxKey ctxKey = "agent_user_name"
+	authzCtxKey    ctxKey = "agent_authz"
 )
 
 // userIDFrom returns the acting user id from context ("" when absent).
@@ -189,6 +213,27 @@ func userIDFrom(ctx context.Context) string {
 		return v
 	}
 	return ""
+}
+
+// WithAgentUser carries the acting user's identity into the tool-execution
+// context. The handler uses it per request; tests may use it directly.
+func WithAgentUser(ctx context.Context, userID, userName string) context.Context {
+	ctx = context.WithValue(ctx, userIDCtxKey, userID)
+	ctx = context.WithValue(ctx, userNameCtxKey, userName)
+	return ctx
+}
+
+// WithPermissionChecker carries the RBAC checker into the tool-execution
+// context. Without it, permission-gated tools fail closed.
+func WithPermissionChecker(ctx context.Context, pc PermissionChecker) context.Context {
+	return context.WithValue(ctx, authzCtxKey, pc)
+}
+
+func permissionCheckerFrom(ctx context.Context) PermissionChecker {
+	if v, ok := ctx.Value(authzCtxKey).(PermissionChecker); ok {
+		return v
+	}
+	return nil
 }
 
 // userNameFrom returns the acting user's display name from context.

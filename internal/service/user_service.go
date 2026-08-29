@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	db "transport-app/db/generated/sqlite"
@@ -39,6 +40,20 @@ func (s *UserService) RegisterSelfServiceAccount(ctx context.Context, email, nam
 	claimed := false
 	err := s.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		claimed = false
+
+		// Cross-engine claim safety: SQLite's lock manager rejects stale-snapshot
+		// writers (SQLITE_BUSY on the COUNT→INSERT upgrade), so the claim cannot
+		// double-fire. Postgres READ COMMITTED has no such guard — two concurrent
+		// registrations could both see admins==0. Serialize the claim with a
+		// transaction-scoped advisory lock when running on Postgres.
+		if isPostgresDriver(rawDB) {
+			if tx := repository.TxFromContext(txCtx); tx != nil {
+				if _, err := tx.ExecContext(txCtx, `SELECT pg_advisory_xact_lock(hashtext('mvtms_first_run_admin_claim'))`); err != nil {
+					return err
+				}
+			}
+		}
+
 		var row *sql.Row
 		if tx := repository.TxFromContext(txCtx); tx != nil {
 			row = tx.QueryRowContext(txCtx, `SELECT COUNT(*) FROM users WHERE role_id = 1`)
@@ -379,6 +394,17 @@ func toNullString(v string) sql.NullString {
 // ErrTenantSlugTaken is returned when provisioning collides with an existing
 // tenant id or slug.
 var ErrTenantSlugTaken = errors.New("a tenant with this slug already exists")
+
+// isPostgresDriver reports whether the sql.DB handle is backed by a Postgres
+// driver. database/sql exposes no driver name at runtime, so this matches the
+// concrete driver type registered in internal/database (pgx/v5/stdlib →
+// "*stdlib.Driver"; also tolerates lib/pq "*pq.Driver").
+func isPostgresDriver(handle *sql.DB) bool {
+	t := fmt.Sprintf("%T", handle.Driver())
+	return strings.Contains(t, "stdlib.Driver") ||
+		strings.Contains(t, "pq.Driver") ||
+		strings.Contains(t, "postgres")
+}
 
 // TenantSummary is one row of the super-admin tenants list (Spec 24).
 type TenantSummary struct {

@@ -46,7 +46,9 @@ func TestInvoicePDF_SellerFromCompanySettings(t *testing.T) {
 		'996511', 'TRIP', 45000, 45000, 0, 0, 5, 0, 0, 2250, 47250)`)
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	// Tenant ctx: mirrors auth middleware — invoice reads are tenant-scoped
+	// and the repo seam fails closed without it (see sqlite.tenantIDFromCtx).
+	ctx := shared.ContextWithTenantID(context.Background(), shared.DefaultTenant)
 	dto, err := h.getUC.Execute(ctx, invoiceapp.GetInvoiceQuery{ID: "inv-pdf", TenantID: shared.DefaultTenant})
 	require.NoError(t, err)
 

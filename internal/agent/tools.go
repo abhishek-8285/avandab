@@ -40,6 +40,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "search_routes",
 			Description: "Search routes by source or destination city. Returns route ids, distance, estimated hours and standard fare.",
+			Resource:    "routes",
+			Action:      "read",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -79,6 +81,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "get_quote",
 			Description: "Get a fare quote between two cities. Looks up the route and computes fare with GST. Returns distance, hours, base fare and total.",
+			Resource:    "routes",
+			Action:      "read",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -141,6 +145,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "create_booking",
 			Description: "Create a new booking. Requires customer_id, route_id, pickup_date (YYYY-MM-DD HH:MM), vehicle_type, passengers and price.",
+			Resource:    "bookings",
+			Action:      "create",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -196,6 +202,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "search_customers",
 			Description: "Search customers by name, phone or company.",
+			Resource:    "customers",
+			Action:      "read",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -238,6 +246,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "get_booking",
 			Description: "Get booking details by booking number (e.g. BK-0001) or booking id.",
+			Resource:    "bookings",
+			Action:      "read",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -272,6 +282,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "list_trips",
 			Description: "List trips, optionally filtered by status (draft, scheduled, assigned, started, reached_pickup, in_transit, delivered, completed, cancelled) or a search term.",
+			Resource:    "trips",
+			Action:      "read",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -326,6 +338,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "get_trip",
 			Description: "Get trip details by trip number (e.g. TR-0001) or trip id.",
+			Resource:    "trips",
+			Action:      "read",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -363,6 +377,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "list_available_drivers",
 			Description: "List drivers currently available for assignment.",
+			Resource:    "drivers",
+			Action:      "read",
 			Parameters: map[string]any{
 				"type":       "object",
 				"properties": map[string]any{},
@@ -391,6 +407,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "list_available_vehicles",
 			Description: "List vehicles currently available for assignment.",
+			Resource:    "vehicles",
+			Action:      "read",
 			Parameters: map[string]any{
 				"type":       "object",
 				"properties": map[string]any{},
@@ -424,6 +442,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "assign_driver",
 			Description: "Assign a driver to a trip. Requires trip id and driver id.",
+			Resource:    "trips",
+			Action:      "assign",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -450,6 +470,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "assign_vehicle",
 			Description: "Assign a vehicle to a trip. Requires trip id and vehicle id. Driver must be assigned first.",
+			Resource:    "trips",
+			Action:      "assign",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -476,6 +498,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "get_invoice",
 			Description: "Get invoice details by number (e.g. INV-0001) including outstanding balance.",
+			Resource:    "invoices",
+			Action:      "read",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -513,6 +537,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "list_unpaid_invoices",
 			Description: "List invoices that are not fully paid (pending or partially paid).",
+			Resource:    "invoices",
+			Action:      "read",
 			Parameters: map[string]any{
 				"type":       "object",
 				"properties": map[string]any{},
@@ -550,6 +576,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "record_payment",
 			Description: "Record a payment against an invoice. Requires invoice id, amount and method (cash, upi, bank_transfer, cheque).",
+			Resource:    "payments",
+			Action:      "create",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -598,6 +626,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "get_revenue",
 			Description: "Get total revenue and monthly revenue figures.",
+			Resource:    "reports",
+			Action:      "read",
 			Parameters: map[string]any{
 				"type":       "object",
 				"properties": map[string]any{},
@@ -621,6 +651,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "list_pending_kharcha",
 			Description: "List driver expenses (kharcha) waiting for approval.",
+			Resource:    "trips",
+			Action:      "read",
 			Parameters: map[string]any{
 				"type":       "object",
 				"properties": map[string]any{},
@@ -651,6 +683,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "approve_kharcha",
 			Description: "Approve a pending driver expense (kharcha). Requires expense id.",
+			Resource:    "trips",
+			Action:      "update",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -678,6 +712,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "reject_kharcha",
 			Description: "Reject a pending driver expense (kharcha). Requires expense id and reason.",
+			Resource:    "trips",
+			Action:      "update",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -731,6 +767,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "get_open_alerts",
 			Description: "List open operational alerts (source, severity, entity, title). Optional severity filter.",
+			Resource:    "alerts",
+			Action:      "read",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
@@ -790,6 +828,8 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 		{
 			Name:        "extend_ewaybill",
 			Description: "Request e-way bill extension for a trip. Requires trip id. Subject to geofence evidence gate.",
+			Resource:    "trips",
+			Action:      "update",
 			Parameters: map[string]any{
 				"type": "object",
 				"properties": map[string]any{
