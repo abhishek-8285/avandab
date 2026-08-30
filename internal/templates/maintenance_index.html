@@ -177,7 +177,7 @@
                         </td>
                         <td class="px-3 py-2 text-right">
                             {{if and (not .ResolvedAt) (can $.User "maintenance" "update")}}
-                            <form method="POST" action="/maintenance/dtc/{{.ID}}/resolve" class="inline">
+                            <form method="POST" action="/maintenance/dtc/{{.ID}}/resolve" class="inline" hx-post="/maintenance/dtc/{{.ID}}/resolve" hx-target="closest tr" hx-swap="outerMorph" hx-indicator="closest form">
                                 <input type="hidden" name="vehicle_id" value="{{.VehicleID}}">
                                 <button type="submit" class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-surface-container-lowest border border-border-subtle text-xs font-semibold text-on-surface hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-status-alert transition-all cursor-pointer">Resolve</button>
                             </form>

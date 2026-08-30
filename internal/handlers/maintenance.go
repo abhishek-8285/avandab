@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"fmt"
+	"html/template"
 	"net/http"
 	"strconv"
 	"time"
@@ -321,12 +322,25 @@ func (h *MaintenanceHandlers) ResolveDTC(w http.ResponseWriter, r *http.Request)
 	vehicleID := r.FormValue("vehicle_id")
 
 	if err := h.repo.ResolveDtcEvent(r.Context(), id); err != nil {
+		if isDatastarRequest(r) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`<span class="text-status-alert text-xs">` + template.HTMLEscapeString(err.Error()) + `</span>`))
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if vehicleID != "" && h.worker != nil {
 		h.worker.EvaluateResolution(r.Context(), vehicleID)
+	}
+
+	if isDatastarRequest(r) {
+		w.Header().Set("HX-Trigger", `{"showToast": {"tone":"success","msg":"DTC resolved"}}`)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(`<span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-emerald-500/10 border border-emerald-500/15 text-emerald-700 font-bold">Resolved</span>`))
+		return
 	}
 
 	http.Redirect(w, r, "/maintenance", http.StatusSeeOther)

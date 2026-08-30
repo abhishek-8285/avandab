@@ -10,7 +10,7 @@
                       hx-get="/kharcha/pending"
                       hx-trigger="every 30s"
                       hx-target="#kharcha-queue"
-                      hx-swap="innerHTML">
+                      hx-swap="innerMorph">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live
                 </span>
             </div>
@@ -224,7 +224,7 @@
                         hx-get="/kharcha/ledger"
                         hx-trigger="change"
                         hx-target="#ledger-body"
-                        hx-swap="innerHTML"
+                        hx-swap="innerMorph"
                         hx-include="#ledger-trip-filter"
                         class="bg-surface-container-low border border-border-subtle rounded-full px-3 py-2 text-xs font-medium text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer">
                     <option value="">All Trips</option>
@@ -287,7 +287,7 @@ function openRejectModal(expenseID, driverName, amount) {
     // Wire HTMX swap on the target row
     document.getElementById('reject-form').setAttribute('hx-post', '/kharcha/' + expenseID + '/reject');
     document.getElementById('reject-form').setAttribute('hx-target', '#expense-row-' + expenseID);
-    document.getElementById('reject-form').setAttribute('hx-swap', 'outerHTML');
+    document.getElementById('reject-form').setAttribute('hx-swap', 'outerMorph');
 
     var modal = document.getElementById('reject-modal');
     modal.classList.remove('hidden');
@@ -301,6 +301,10 @@ function closeRejectModal() {
     modal.classList.remove('flex');
 }
 
+document.getElementById('reject-form').addEventListener('htmx:after:request', function() {
+    closeRejectModal();
+});
+// legacy fallback for htmx 2
 document.getElementById('reject-form').addEventListener('htmx:afterRequest', function() {
     closeRejectModal();
 });

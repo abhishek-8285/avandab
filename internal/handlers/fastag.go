@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"html/template"
 	"net/http"
 	"strconv"
 
@@ -140,6 +141,12 @@ func (h *FASTagHandlers) Reconcile(w http.ResponseWriter, r *http.Request) {
 
 	res, err := h.svc.Reconcile(r.Context(), vehicleNumber, fromDate, toDate)
 	if err != nil {
+		if isDatastarRequest(r) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`<div class="px-3 py-2 text-xs font-semibold text-status-alert bg-status-alert/10 rounded">` + template.HTMLEscapeString(err.Error()) + `</div>`))
+			return
+		}
 		httpx.Error(w, r, err)
 		return
 	}
@@ -147,6 +154,17 @@ func (h *FASTagHandlers) Reconcile(w http.ResponseWriter, r *http.Request) {
 	if wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(res)
+		return
+	}
+
+	if isDatastarRequest(r) {
+		w.Header().Set("HX-Trigger", `{"showToast": {"tone":"success","msg":"Reconciliation complete"}}`)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		matched := 0
+		if res != nil {
+			matched = res.Matched
+		}
+		_, _ = w.Write([]byte(`<div class="px-3 py-2 text-xs font-semibold text-status-success bg-status-success/10 rounded border border-status-success/20">Reconciled ` + template.HTMLEscapeString(vehicleNumber) + ` — ` + strconv.Itoa(matched) + ` events matched</div>`))
 		return
 	}
 

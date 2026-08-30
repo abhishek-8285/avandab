@@ -15,7 +15,7 @@
     <td class="px-3 py-2 text-xs text-secondary tabular-nums whitespace-nowrap">{{datetime .CreatedAt}}</td>
     <td class="px-3 py-2 text-right">
         {{if can $.User "telemetry" "update"}}
-        <form method="POST" action="/telemetry/quarantine/{{.ID}}/resolve" class="inline-flex flex-wrap items-center justify-end gap-2" hx-target="#quarantine-rows" hx-swap="outerHTML">
+        <form method="POST" action="/telemetry/quarantine/{{.ID}}/resolve" class="inline-flex flex-wrap items-center justify-end gap-2" hx-post="/telemetry/quarantine/{{.ID}}/resolve" hx-target="#quarantine-rows" hx-swap="innerMorph" hx-indicator="closest form">
             <label class="inline-flex items-center gap-1 text-xs text-secondary cursor-pointer">
                 <input type="radio" name="action" value="register_new" class="accent-primary" checked> Register new
             </label>

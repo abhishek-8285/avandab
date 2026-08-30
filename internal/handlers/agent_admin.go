@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"html/template"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -53,7 +54,19 @@ func (h *AgentAdminHandlers) Approve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, err := h.Approval.Approve(r.Context(), chi.URLParam(r, "id"), session.UserID, session.Name); err != nil {
+		if isDatastarRequest(r) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`<div class="px-4 py-2 text-xs font-semibold text-status-alert bg-status-alert/10 rounded">` + template.HTMLEscapeString(err.Error()) + `</div>`))
+			return
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if isDatastarRequest(r) {
+		w.Header().Set("HX-Trigger", `{"showToast": {"tone":"success","msg":"Action approved"}}`)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(`<div class="px-4 py-3 text-xs font-semibold text-status-success bg-status-success/10 rounded border border-status-success/20">✓ Approved — pending list will refresh</div>`))
 		return
 	}
 	http.Redirect(w, r, "/agent-actions", http.StatusSeeOther)
@@ -67,11 +80,29 @@ func (h *AgentAdminHandlers) Reject(w http.ResponseWriter, r *http.Request) {
 	}
 	reason := r.FormValue("reason")
 	if reason == "" {
+		if isDatastarRequest(r) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`<div class="px-4 py-2 text-xs font-semibold text-status-alert bg-status-alert/10 rounded">reason is required</div>`))
+			return
+		}
 		http.Error(w, "reason is required", http.StatusBadRequest)
 		return
 	}
 	if _, err := h.Approval.Reject(r.Context(), chi.URLParam(r, "id"), session.Name, reason); err != nil {
+		if isDatastarRequest(r) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = w.Write([]byte(`<div class="px-4 py-2 text-xs font-semibold text-status-alert bg-status-alert/10 rounded">` + template.HTMLEscapeString(err.Error()) + `</div>`))
+			return
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if isDatastarRequest(r) {
+		w.Header().Set("HX-Trigger", `{"showToast": {"tone":"success","msg":"Action rejected"}}`)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(`<div class="px-4 py-3 text-xs font-semibold text-status-success bg-status-success/10 rounded border border-status-success/20">Rejected</div>`))
 		return
 	}
 	http.Redirect(w, r, "/agent-actions", http.StatusSeeOther)

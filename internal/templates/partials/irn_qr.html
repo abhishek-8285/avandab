@@ -55,7 +55,8 @@
         </div>
         <button hx-post="/invoices/{{.Invoice.ID}}/generate-irn"
                 hx-target="#irn-block"
-                hx-swap="outerHTML"
+                hx-swap="outerMorph"
+                hx-indicator="closest button"
                 class="px-4 py-2 bg-primary text-on-primary font-semibold text-sm rounded-md hover:bg-primary/90 shadow whitespace-nowrap min-h-[40px] flex items-center gap-2">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />

@@ -33,9 +33,9 @@
         </div>
 
         {{if .Actions}}
-        <div class="divide-y divide-border-subtle">
+        <div id="agent-actions-list" class="divide-y divide-border-subtle">
             {{range .Actions}}
-            <div class="relative p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center gap-4 hover:bg-amber-500/[0.04] transition-colors">
+            <div id="agent-action-{{.ID}}" class="relative p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center gap-4 hover:bg-amber-500/[0.04] transition-colors">
                 <span class="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-amber-500 to-orange-500 opacity-70 lg:opacity-60"></span>
                 <div class="flex-1 min-w-0 lg:pl-2">
                     <div class="flex items-center gap-2 flex-wrap">
@@ -47,7 +47,7 @@
                     <pre class="mt-2 text-[11px] leading-relaxed text-text-muted bg-surface-container-low rounded-lg p-3 border border-border-subtle overflow-x-auto">{{.ArgsJSON}}</pre>
                 </div>
                 <div class="flex items-center gap-2 shrink-0 flex-wrap lg:pl-2">
-                    <form method="POST" action="/agent-actions/{{.ID}}/approve">
+                    <form method="POST" action="/agent-actions/{{.ID}}/approve" hx-post="/agent-actions/{{.ID}}/approve" hx-target="#agent-action-{{.ID}}" hx-swap="outerMorph" hx-indicator="closest form">
                         <button type="submit"
                                 class="inline-flex items-center gap-2 rounded-full bg-status-success text-on-primary px-4 py-2 text-sm font-bold shadow-sm hover:opacity-90 hover:-translate-y-px transition-all cursor-pointer border-0">
                             ✓ Approve
@@ -79,7 +79,7 @@
     <div class="relative bg-surface-container-lowest rounded-2xl w-full max-w-md p-6 shadow-2xl animate-fade-in border border-border-subtle">
         <h3 class="text-base font-bold text-on-surface font-display">Reject Agent Action</h3>
         <p class="text-sm text-text-muted mt-1">Rejecting <strong id="reject-tool" class="text-on-surface"></strong></p>
-        <form id="reject-form" method="POST" class="mt-4">
+        <form id="reject-form" method="POST" class="mt-4" hx-target="#agent-actions-list" hx-swap="innerMorph">
             <textarea name="reason" id="reject-reason" rows="3"
                       class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-none"
                       placeholder="Reason for rejection (required)..." required></textarea>
@@ -102,9 +102,13 @@ function openRejectModal(actionID, toolName) {
     document.getElementById('reject-tool').textContent = toolName;
     document.getElementById('reject-reason').value = '';
     document.getElementById('reject-form').action = '/agent-actions/' + actionID + '/reject';
+    document.getElementById('reject-form').setAttribute('hx-post', '/agent-actions/' + actionID + '/reject');
+    document.getElementById('reject-form').setAttribute('hx-target', '#agent-action-' + actionID);
+    document.getElementById('reject-form').setAttribute('hx-swap', 'outerMorph');
     var modal = document.getElementById('reject-modal');
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+    htmx.process(document.getElementById('reject-form'));
 }
 
 function closeRejectModal() {
@@ -113,8 +117,14 @@ function closeRejectModal() {
     modal.classList.remove('flex');
 }
 
-document.getElementById('reject-form').addEventListener('submit', function() {
+document.getElementById('reject-form').addEventListener('htmx:after:request', function() {
     closeRejectModal();
+});
+document.getElementById('reject-form').addEventListener('htmx:afterRequest', function() {
+    closeRejectModal();
+});
+document.getElementById('reject-form').addEventListener('submit', function() {
+    if (!this.hasAttribute('hx-post')) closeRejectModal();
 });
 </script>
 {{end}}

@@ -3,7 +3,7 @@
     {{range .Hidden}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}
     <span class="text-[11px] font-bold tracking-wider uppercase text-text-muted mr-1">{{default "Filters:" .Label}}</span>
     {{range .Chips}}
-    <a href="{{$.Action}}{{if .Value}}?status={{.Value}}{{end}}" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq $sf (default "" .Value)}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">{{.Label}}</a>
+    <a href="{{$.Action}}{{if .Value}}?status={{.Value}}{{end}}" hx-get="{{$.Action}}{{if .Value}}?status={{.Value}}{{end}}" hx-target="#list-table" hx-swap="innerMorph" hx-push-url="true" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq $sf (default "" .Value)}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">{{.Label}}</a>
     {{end}}
     <div class="ml-auto flex items-center gap-2">
         {{if .ShowDates}}
@@ -28,6 +28,7 @@
         <div class="relative min-w-[180px] flex-1 sm:flex-none">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             <input type="text" name="q" value="{{if .Query}}{{.Query}}{{end}}" placeholder="{{default "Search…" .SearchPlaceholder}}"
+                hx-get="{{.Action}}" hx-trigger="keyup changed delay:300ms, search" hx-target="#list-table" hx-swap="innerMorph" hx-push-url="true" hx-include="closest form"
                 class="bg-surface-container-low border border-border-subtle rounded-full py-2 pl-9 pr-4 text-sm text-on-surface placeholder:text-text-muted w-full focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
         </div>
         {{end}}

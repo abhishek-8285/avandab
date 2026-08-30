@@ -75,7 +75,7 @@
             <button
                 hx-post="/kharcha/{{.ID}}/approve"
                 hx-target="#expense-row-{{.ID}}"
-                hx-swap="outerHTML"
+                hx-swap="outerMorph"
                 hx-indicator="#spin-{{.ID}}"
                 class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-status-success hover:bg-status-success/90 text-on-primary text-xs font-bold shadow-sm transition-all">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M20 6 9 17l-5-5"/></svg>

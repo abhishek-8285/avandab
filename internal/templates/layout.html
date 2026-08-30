@@ -796,6 +796,8 @@
             // htmx/datastar fragments inserted after load won't fire DOMContentLoaded — observe
             new MutationObserver(function(muts){ muts.forEach(function(m){ m.addedNodes.forEach(function(n){ if(n.nodeType===1) replaceIcons(n); }); }); }).observe(document.body,{childList:true, subtree:true});
             document.body.addEventListener('htmx:load', function(e){ replaceIcons(e.target); });
+            document.body.addEventListener('htmx:after:swap', function(e){ replaceIcons(e.target); });
+            // legacy fallback for htmx 2 event name (harmless if 4 only)
             document.body.addEventListener('htmx:afterSwap', function(e){ replaceIcons(e.target); });
         });
     </script>

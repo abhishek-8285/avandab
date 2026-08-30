@@ -22,19 +22,19 @@
     <td class="px-3 py-2 text-right whitespace-nowrap">
         {{if can $.User "telemetry" "update"}}
         {{if eq .Status "inventory"}}
-        <form method="POST" action="/telemetry/devices/{{.IMEI}}/assign" class="inline-flex items-center gap-1" hx-target="#telemetry-device-rows" hx-swap="outerHTML">
+        <form method="POST" action="/telemetry/devices/{{.IMEI}}/assign" class="inline-flex items-center gap-1" hx-post="/telemetry/devices/{{.IMEI}}/assign" hx-target="#telemetry-device-rows" hx-swap="innerMorph" hx-indicator="closest form">
             <input type="hidden" name="vehicle_id" value="{{nullString .VehicleID}}" class="w-28 bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1 text-xs font-mono text-on-surface" placeholder="vehicle id">
             <button type="submit" class="inline-flex items-center rounded-full bg-primary text-on-primary px-2.5 py-1 text-[11px] font-bold hover:bg-primary/90 transition-all">Assign</button>
         </form>
         {{else if eq .Status "assigned"}}
-        <form method="POST" action="/telemetry/devices/{{.IMEI}}/activate" class="inline" hx-target="#telemetry-device-rows" hx-swap="outerHTML">
+        <form method="POST" action="/telemetry/devices/{{.IMEI}}/activate" class="inline" hx-post="/telemetry/devices/{{.IMEI}}/activate" hx-target="#telemetry-device-rows" hx-swap="innerMorph" hx-indicator="closest form">
             <button type="submit" class="text-primary hover:underline font-bold text-xs">Activate</button>
         </form>
-        <form method="POST" action="/telemetry/devices/{{.IMEI}}/retire" class="inline ml-2" hx-target="#telemetry-device-rows" hx-swap="outerHTML">
+        <form method="POST" action="/telemetry/devices/{{.IMEI}}/retire" class="inline ml-2" hx-post="/telemetry/devices/{{.IMEI}}/retire" hx-target="#telemetry-device-rows" hx-swap="innerMorph" hx-indicator="closest form">
             <button type="submit" class="text-status-alert hover:underline font-bold text-xs">Retire</button>
         </form>
         {{else if eq .Status "active"}}
-        <form method="POST" action="/telemetry/devices/{{.IMEI}}/retire" class="inline" hx-target="#telemetry-device-rows" hx-swap="outerHTML">
+        <form method="POST" action="/telemetry/devices/{{.IMEI}}/retire" class="inline" hx-post="/telemetry/devices/{{.IMEI}}/retire" hx-target="#telemetry-device-rows" hx-swap="innerMorph" hx-indicator="closest form">
             <button type="submit" class="text-status-alert hover:underline font-bold text-xs">Retire</button>
         </form>
         {{end}}
