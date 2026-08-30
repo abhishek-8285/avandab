@@ -226,6 +226,12 @@ func (h *KharchaHandlers) Approve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.Services.Kharcha.ApproveExpense(ctx, expenseID, session.UserID); err != nil {
+		if isDatastarRequest(r) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = fmt.Fprintf(w, `<div class="px-6 py-4 bg-red-50 text-red-600 text-sm font-semibold border-l-4 border-red-500">Error: %s</div>`, template.HTMLEscapeString(err.Error()))
+			return
+		}
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = fmt.Fprintf(w, `<div class="px-6 py-4 bg-red-50 text-red-600 text-sm font-semibold border-l-4 border-red-500">Error: %s</div>`, template.HTMLEscapeString(err.Error()))
 		return
@@ -235,6 +241,20 @@ func (h *KharchaHandlers) Approve(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Silently replace row with approved confirmation
 		_, _ = fmt.Fprintf(w, `<div class="px-6 py-4 flex items-center gap-3 bg-emerald-50/60"><span class="w-2 h-2 rounded-full bg-emerald-500"></span><span class="text-sm font-semibold text-emerald-700">Expense approved successfully.</span></div>`)
+		return
+	}
+
+	// htmx 4 hx-partial: row morph + badge/KPI morph + toast trigger in one response
+	if isDatastarRequest(r) {
+		stats, _ := h.Services.Kharcha.GetKharchaStats(ctx)
+		pending, _ := h.Services.Kharcha.ListPendingExpenses(ctx)
+		w.Header().Set("HX-Trigger", `{"showToast":{"tone":"success","msg":"Expense approved"}}`)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		// row
+		_ = h.Templates.ExecuteTemplate(w, "kharcha_row_approved.html", expense)
+		// OOB partials via htmx 4 <template hx type="partial">
+		_, _ = fmt.Fprintf(w, `<template hx type="partial" hx-target="#kharcha-queue-count" hx-swap="innerMorph">%d waiting</template>`, len(pending))
+		_, _ = fmt.Fprintf(w, `<template hx type="partial" hx-target="#kpi-pending-count" hx-swap="innerMorph">%d</template>`, stats.PendingCount)
 		return
 	}
 
@@ -258,6 +278,12 @@ func (h *KharchaHandlers) Reject(w http.ResponseWriter, r *http.Request) {
 	reason := r.FormValue("reason")
 
 	if err := h.Services.Kharcha.RejectExpense(ctx, expenseID, session.UserID, reason); err != nil {
+		if isDatastarRequest(r) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = fmt.Fprintf(w, `<div class="px-6 py-4 bg-red-50 text-red-600 text-sm font-semibold border-l-4 border-red-500">Error: %s</div>`, template.HTMLEscapeString(err.Error()))
+			return
+		}
 		w.WriteHeader(http.StatusBadRequest)
 		_, _ = fmt.Fprintf(w, `<div class="px-6 py-4 bg-red-50 text-red-600 text-sm font-semibold border-l-4 border-red-500">Error: %s</div>`, template.HTMLEscapeString(err.Error()))
 		return
@@ -266,6 +292,17 @@ func (h *KharchaHandlers) Reject(w http.ResponseWriter, r *http.Request) {
 	expense, err := h.Services.Kharcha.GetExpenseByID(ctx, expenseID)
 	if err != nil {
 		_, _ = fmt.Fprintf(w, `<div class="px-6 py-4 flex items-center gap-3 bg-rose-50/60"><span class="w-2 h-2 rounded-full bg-rose-500"></span><span class="text-sm font-semibold text-rose-700">Expense rejected.</span></div>`)
+		return
+	}
+
+	if isDatastarRequest(r) {
+		stats, _ := h.Services.Kharcha.GetKharchaStats(ctx)
+		pending, _ := h.Services.Kharcha.ListPendingExpenses(ctx)
+		w.Header().Set("HX-Trigger", `{"showToast":{"tone":"success","msg":"Expense rejected"}}`)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = h.Templates.ExecuteTemplate(w, "kharcha_row_rejected.html", expense)
+		_, _ = fmt.Fprintf(w, `<template hx type="partial" hx-target="#kharcha-queue-count" hx-swap="innerMorph">%d waiting</template>`, len(pending))
+		_, _ = fmt.Fprintf(w, `<template hx type="partial" hx-target="#kpi-pending-count" hx-swap="innerMorph">%d</template>`, stats.PendingCount)
 		return
 	}
 

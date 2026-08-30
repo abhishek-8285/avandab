@@ -107,7 +107,7 @@
                 <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/15">Awaiting approval</span>
             </div>
             <div class="mt-4">
-                <div class="text-stat text-status-warning tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.Stats.PendingCount}}</div>
+                <div id="kpi-pending-count" class="text-stat text-status-warning tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.Stats.PendingCount}}</div>
                 <div class="text-sm font-medium text-secondary mt-1">Pending</div>
                 <div class="mt-3 flex items-center gap-2 text-xs text-text-muted"><span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> queue refreshes every 30s</div>
             </div>
@@ -201,7 +201,7 @@
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between flex-wrap gap-3">
             <div class="flex items-center gap-3">
                 <h3 class="text-sm font-bold text-on-surface">Pending Approvals</h3>
-                <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .PendingExpenses}} waiting</span>
+                <span id="kharcha-queue-count" class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .PendingExpenses}} waiting</span>
             </div>
             <p class="text-xs text-text-muted">Approve or reject driver expense requests</p>
         </div>
