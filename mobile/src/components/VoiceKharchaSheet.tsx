@@ -10,6 +10,7 @@ import {
   Easing,
   Alert,
   Platform,
+  Vibration,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import {
@@ -201,6 +202,7 @@ export function VoiceKharchaSheet({
         }
 
         setIsListening(true);
+        Vibration.vibrate(35);
         // Start live Android Speech Recognizer with Hindi + Indian English recognition
         await ExpoSpeechRecognitionModule.start({
           lang: 'hi-IN',
@@ -302,7 +304,10 @@ export function VoiceKharchaSheet({
     } catch {
       Alert.alert('Error', 'Failed to save expense. Please try again.');
     } finally {
+      Vibration.vibrate(50);
       setSaving(false);
+      onSaved?.();
+      onClose();
     }
   };
 

@@ -174,6 +174,27 @@ export const TripCard: React.FC<TripCardProps> = ({
 
         <View style={styles.buttonGroup}>
           <TouchableOpacity
+            style={styles.callBtn}
+            activeOpacity={0.85}
+            onPress={() => {
+              Linking.openURL('tel:+919876543210').catch(() => {});
+            }}
+          >
+            <MaterialCommunityIcons name="phone" size={16} color="#008069" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.whatsappBtn}
+            activeOpacity={0.85}
+            onPress={() => {
+              const text = encodeURIComponent(`Avandab Fleet: Trip #${tripNumber} (${driverName}): En route from ${origin} to ${destination}`);
+              Linking.openURL(`https://wa.me/919876543210?text=${text}`).catch(() => {});
+            }}
+          >
+            <MaterialCommunityIcons name="whatsapp" size={18} color="#25d366" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.navigateBtn}
             activeOpacity={0.85}
             onPress={handleStartMap}
@@ -403,6 +424,29 @@ const styles = StyleSheet.create({
   },
   buttonGroup: {
     marginLeft: 'auto',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  callBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e7ffdb',
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  whatsappBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#e7ffdb',
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   navigateBtn: {
     flexDirection: 'row',
@@ -410,8 +454,9 @@ const styles = StyleSheet.create({
     gap: 5,
     backgroundColor: '#008069',
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 16,
+    elevation: 2,
   },
   navigateBtnText: {
     color: '#ffffff',
