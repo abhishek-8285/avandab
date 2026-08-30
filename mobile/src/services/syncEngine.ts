@@ -2,6 +2,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { getApiBaseURL } from '../constants/network';
 import { DB } from './storage';
 import { OfflineQueue } from './offlineQueue';
+import { sosService } from './sosService';
 import { useAuthStore } from '../stores/authStore';
 import { applyNetInfoState, useSyncStore } from '../stores/syncStore';
 
@@ -22,7 +23,12 @@ export function startNetworkWatcher(): void {
     }
 
     if (isConnected && !wasConnected) {
-      // Just reconnected — flush offline queues in batch (pods/expenses/gps)
+      // 1. Priority: Immediately flush any pending emergency SOS commands
+      sosService.retryPendingSOS().catch((err) => {
+        console.warn('[SOS] Immediate reconnect retry failed:', err);
+      });
+
+      // 2. Flush offline queues in batch (pods/expenses/gps)
       OfflineQueue.flush()
         .then(({ podsFlushed, gpsFlushed, expensesFlushed }) => {
           if (podsFlushed > 0 || gpsFlushed > 0 || (expensesFlushed ?? 0) > 0) {
@@ -55,7 +61,7 @@ export function stopNetworkWatcher(): void {
 const OFFLINE_FLUSH_BATCH = 20;
 
 class SyncEngineService {
-  private syncTimer: NodeJS.Timeout | null = null;
+  private syncTimer: ReturnType<typeof setInterval> | null = null;
   private isSyncing = false;
 
   startAutoSync(driverId: string, intervalMs = 15000): void {

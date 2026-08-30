@@ -87,7 +87,14 @@ Single source of truth for `db/migrations/` version numbers. Repo head is
 | 00105 | tenant strict + prod cleanup — strict empty + keep 1,2,tenant-1,tenant-a,tenant-b | Spec 24 §9 (hardening fix) |
 | 00106 | revoked_refresh_tokens — auth hardening (renamed from duplicate 00054) | 10 |
 | 00107 | prod cleanup — delete 29 test-only tenants (00103 seeds) | Spec 24 §9 (hardening fix) |
-| 00108+ | future specs | reserved |
+| 00108 | driver lifecycle refactor (driver_kyc_verifications, driver_payout_accounts, etc.) | Spec 13 / Phase 1 |
+| 00109 | dispatch offers & driver command idempotency (dispatch_offers, driver_commands) | Spec 09 / Phase 6 |
+| 00110 | customer quotes & booking pipeline (customer_quotes, customer_booking_details) | Phase 7 |
+| 00111 | driver settlement ledger & payout orchestration (driver_ledger_entries, payout_instructions, provider_events) | Phase 8 |
+| 00113 | `driver_settlements.tenant_id` — Multi-tenant driver settlements & multi-stop EWB stage tracking | Priority 5B |
+| 00114 | `commercial_entitlements_and_subscriptions` — Plan catalog, tenant subscriptions, quotas, meters & usage events | Spec 25 Commercialization |
+| 00115 | `subscription_webhook_events` — Razorpay subscription webhooks idempotency & out-of-order protection | Spec 25A Lifecycle |
+| 00116+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

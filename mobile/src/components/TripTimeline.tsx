@@ -19,6 +19,47 @@ function stageIdx(status: Trip['status']): number {
 
 export function TripTimeline({ trip }: { trip?: Trip | null }) {
   if (!trip) return null;
+
+  if (trip.stops && trip.stops.length > 0) {
+    const stops = [...trip.stops].sort((a, b) => a.stopSequence - b.stopSequence);
+    return (
+      <View style={styles.card}>
+        <Text style={styles.title}>MULTI-STOP ROUTE ({stops.length} STOPS)</Text>
+        <View style={styles.row}>
+          {stops.map((s, i) => {
+            const done = s.status === 'completed' || s.status === 'skipped';
+            const active = s.status === 'arrived' || s.status === 'servicing' || s.status === 'en_route';
+            const iconName =
+              s.stopType === 'pickup'
+                ? 'arrow-up-bold-box-outline'
+                : s.stopType === 'drop'
+                  ? 'arrow-down-bold-box-outline'
+                  : 'map-marker-outline';
+
+            return (
+              <View key={s.id || `stop-${i}`} style={styles.stage}>
+                <View style={[styles.dot, done && styles.dotDone, active && styles.dotActive]}>
+                  <MaterialCommunityIcons
+                    name={done ? 'check' : (iconName as any)}
+                    size={14}
+                    color={done || active ? '#fff' : Colors.textMuted}
+                  />
+                </View>
+                <Text style={[styles.label, done && styles.labelDone]} numberOfLines={1}>
+                  {s.locationName || `Stop ${s.stopSequence}`}
+                </Text>
+                {i < stops.length - 1 && <View style={[styles.connector, done && styles.connectorDone]} />}
+              </View>
+            );
+          })}
+        </View>
+        <Text style={styles.hint}>
+          Ref {trip.tripNumber || trip.id} · {stops[0]?.locationName || trip.origin} → {stops[stops.length - 1]?.locationName || trip.destination}
+        </Text>
+      </View>
+    );
+  }
+
   const idx = stageIdx(trip.status);
   return (
     <View style={styles.card}>

@@ -51,6 +51,7 @@ export async function getDriverBalance(): Promise<DriverBalance | null> {
 /** GET /api/driver/settlements */
 export async function getDriverSettlements(): Promise<DriverSettlement[]> {
   const res = await fetch(`${getApiBaseURL()}/api/driver/settlements`, { headers: authHeaders() });
+  if (res.status === 403 || res.status === 404) return [];
   if (!res.ok) throw new Error(`settlements fetch failed (${res.status})`);
   const data = await res.json();
   return data.settlements ?? [];
@@ -59,6 +60,7 @@ export async function getDriverSettlements(): Promise<DriverSettlement[]> {
 /** GET /api/driver/advances */
 export async function getAdvanceRequests(): Promise<AdvanceRequest[]> {
   const res = await fetch(`${getApiBaseURL()}/api/driver/advances`, { headers: authHeaders() });
+  if (res.status === 403 || res.status === 404) return [];
   if (!res.ok) throw new Error(`advances fetch failed (${res.status})`);
   const data = await res.json();
   return data.advances ?? [];

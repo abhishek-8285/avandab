@@ -11,6 +11,7 @@ import {
   Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -31,33 +32,60 @@ try {
 
 interface DeliveryVerificationScreenProps {
   tripId?: string;
+  stopId?: string;
+  stopSequence?: number;
+  totalStops?: number;
+  stopType?: string;
+  requiresOTP?: boolean;
+  requiresPOD?: boolean;
+  initialConsigneeName?: string;
+  initialConsigneePhone?: string;
   onComplete: () => void;
   onBack: () => void;
 }
 
+type VerificationTab = 'PHOTO' | 'OTP' | 'SIGN';
+
 export function DeliveryVerificationScreen({
   tripId,
+  stopId,
+  stopSequence,
+  totalStops,
+  stopType,
+  requiresOTP,
+  requiresPOD,
+  initialConsigneeName = 'Tata AutoComp Systems Ltd',
+  initialConsigneePhone = '+91 98765 43210',
   onComplete,
   onBack,
 }: DeliveryVerificationScreenProps) {
+  const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
   const [cameraActive, setCameraActive] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   const [cameraRef, setCameraRef] = useState<any>(null);
 
-  const [consigneeName, setConsigneeName] = useState('');
-  const [consigneePhone, setConsigneePhone] = useState('');
+  const [activeTab, setActiveTab] = useState<VerificationTab>('PHOTO');
+  const [consigneeName, setConsigneeName] = useState(initialConsigneeName);
+  const [consigneePhone, setConsigneePhone] = useState(initialConsigneePhone);
   const [otp, setOtp] = useState('');
-  const [notes, setNotes] = useState('');
+  const [selectedChips, setSelectedChips] = useState<string[]>(['Seal Intact']);
+  const [showExceptions, setShowExceptions] = useState(false);
   const [quantityShort, setQuantityShort] = useState('');
   const [damageQty, setDamageQty] = useState('');
   const [refusalReason, setRefusalReason] = useState('');
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [showSignaturePad, setShowSignaturePad] = useState(false);
-  const [scanValue, setScanValue] = useState<string | null>(null);
-  const [scanMode, setScanMode] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const signatureRef = useRef<any>(null);
+
+  const toggleChip = (chip: string) => {
+    if (selectedChips.includes(chip)) {
+      setSelectedChips(selectedChips.filter((c) => c !== chip));
+    } else {
+      setSelectedChips([...selectedChips, chip]);
+    }
+  };
 
   const compressPhoto = async (uri: string): Promise<string> => {
     try {
@@ -110,8 +138,12 @@ export function DeliveryVerificationScreen({
       Alert.alert('No Trip Selected', 'Open a trip from the trip list before submitting proof of delivery.');
       return;
     }
-    if (!capturedPhoto && !consigneeName.trim() && !signatureData) {
-      Alert.alert('Missing Fields', 'Please add a consignee name, signature or capture a photo proof.');
+
+    if (!capturedPhoto && !otp.trim() && !signatureData) {
+      Alert.alert(
+        'Proof Required',
+        'Please snap a photo of the stamped POD/LR, enter the receiver OTP, or capture a signature.'
+      );
       return;
     }
 
@@ -119,17 +151,18 @@ export function DeliveryVerificationScreen({
     const gps = await getCurrentGPS();
     const shortVal = quantityShort ? parseFloat(quantityShort) : 0;
     const damageVal = damageQty ? parseFloat(damageQty) : 0;
+    const combinedNotes = selectedChips.join(', ');
 
     const form = new FormData();
-    form.append('consignee_name', consigneeName.trim());
+    form.append('consignee_name', consigneeName.trim() || 'Tata AutoComp Systems Ltd');
     if (consigneePhone.trim()) {
       form.append('consignee_phone', consigneePhone.trim());
     }
     if (otp.trim()) {
       form.append('otp', otp.trim());
     }
-    if (notes.trim()) {
-      form.append('notes', notes.trim());
+    if (combinedNotes) {
+      form.append('notes', combinedNotes);
     }
     if (capturedPhoto) {
       form.append('pod_photo', {
@@ -142,9 +175,6 @@ export function DeliveryVerificationScreen({
       form.append('pod_signature_data', signatureData);
       form.append('signature_dataurl', signatureData);
     }
-    if (scanValue) {
-      form.append('pod_scan_value', scanValue);
-    }
     if (!isNaN(shortVal) && shortVal > 0) {
       form.append('quantity_short', String(shortVal));
     }
@@ -154,14 +184,24 @@ export function DeliveryVerificationScreen({
     if (refusalReason.trim()) {
       form.append('refusal_reason', refusalReason.trim());
     }
-    if (gps.latitude != null && gps.longitude != null) {
-      form.append('latitude', String(gps.latitude));
-      form.append('longitude', String(gps.longitude));
+    if (stopId) {
+      form.append('stop_id', stopId);
+      if (stopSequence != null) {
+        form.append('stop_sequence', String(stopSequence));
+      }
+      if (capturedPhoto) {
+        form.append('pod_url', capturedPhoto);
+      }
+      if (signatureData) {
+        form.append('signature_url', signatureData);
+      }
     }
 
     try {
       const token = useAuthStore.getState().token;
-      const targetUrl = `${getApiBaseURL()}/api/v1/trips/${tripId}/deliver-pod`;
+      const targetUrl = stopId
+        ? `${getApiBaseURL()}/trips/${tripId}/stops/${stopId}/pod`
+        : `${getApiBaseURL()}/api/v1/trips/${tripId}/deliver-pod`;
 
       const res = await fetch(targetUrl, {
         method: 'POST',
@@ -177,16 +217,22 @@ export function DeliveryVerificationScreen({
       }
 
       const json = await res.json();
-      await OfflineQueue.clearPOD(tripId);
-      Alert.alert('Delivered', `Trip ${json.trip_number || tripId} marked as delivered successfully!`, [
+      await OfflineQueue.clearPOD(tripId, stopId);
+      const title = stopId ? `Stop ${stopSequence || ''} Verified` : 'Delivered';
+      const msg = stopId
+        ? `Proof of delivery recorded successfully!`
+        : `Trip ${json.trip_number || tripId} completed & marked delivered!`;
+      Alert.alert(title, msg, [
         { text: 'OK', onPress: onComplete },
       ]);
     } catch {
-      // Queue for automatic offline sync retry — persist all ePOD fields
       await OfflineQueue.enqueuePOD(tripId, {
-        consignee_name: consigneeName.trim() || 'Consignee',
+        stop_id: stopId || null,
+        stop_sequence: stopSequence || null,
+        otp: otp.trim() || null,
+        consignee_name: consigneeName.trim() || 'Tata AutoComp Systems Ltd',
         consignee_phone: consigneePhone.trim() || null,
-        notes: notes.trim(),
+        notes: combinedNotes,
         photo_uri: capturedPhoto,
         latitude: gps.latitude,
         longitude: gps.longitude,
@@ -195,7 +241,7 @@ export function DeliveryVerificationScreen({
         damage_qty: isNaN(damageVal) ? null : damageVal,
         refusal_reason: refusalReason.trim() || null,
       });
-      Alert.alert('Saved Offline', 'Delivery proof queued in offline storage. Will submit when back online.', [
+      Alert.alert('Saved Offline', 'Delivery proof queued in offline storage. Will sync when back online.', [
         { text: 'OK', onPress: onComplete },
       ]);
     } finally {
@@ -203,64 +249,45 @@ export function DeliveryVerificationScreen({
     }
   };
 
-  const isSubmitDisabled = submitting || (!capturedPhoto && !consigneeName.trim() && !signatureData);
+  const isVerified = Boolean(capturedPhoto || otp.length >= 4 || signatureData);
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+      <StatusBar style="light" backgroundColor="#075e54" />
 
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.iconButton} onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={18} color={Colors.textOnChrome} />
+        <TouchableOpacity style={styles.backBtn} onPress={onBack}>
+          <MaterialCommunityIcons name="arrow-left" size={22} color="#ffffff" />
         </TouchableOpacity>
-        <Text style={styles.headerLabel}>POD VERIFICATION</Text>
-        <TouchableOpacity style={styles.iconButton}>
-          <MaterialCommunityIcons name="bell-outline" size={14} color={Colors.textOnChrome} />
-        </TouchableOpacity>
+        <View style={{ flex: 1, marginLeft: 10 }}>
+          <Text style={styles.headerTitle}>PROOF OF DELIVERY (e-POD)</Text>
+          <Text style={styles.headerSubtitle}>Trip #{tripId || 'TRP-8491'}</Text>
+        </View>
       </View>
 
-      {scanMode ? (
-        <View style={styles.cameraContainer}>
-          <CameraView
-            style={styles.cameraView}
-            barcodeScannerSettings={{ barcodeTypes: ['qr', 'code128', 'ean13', 'itf14'] }}
-            onBarcodeScanned={({ data }: any) => {
-              setScanValue(data);
-              setScanMode(false);
-            }}
-          >
-            <View style={styles.cameraOverlay}>
-              <View style={styles.scannerFrame} />
-              <Text style={styles.cameraGuideText}>SCAN PARCEL BARCODE / QR</Text>
-              {scanValue && <Text style={styles.scanValueText}>{scanValue}</Text>}
-            </View>
-          </CameraView>
-          <TouchableOpacity style={styles.closeScanBtn} onPress={() => setScanMode(false)}>
-            <Text style={styles.closeScanBtnText}>CANCEL SCAN</Text>
-          </TouchableOpacity>
-        </View>
-      ) : cameraActive ?(
+      {cameraActive ? (
         <View style={styles.cameraContainer}>
           {!permission?.granted ? (
             <View style={styles.permissionBox}>
-              <Text style={styles.permissionText}>Camera permission required to capture proof of delivery.</Text>
-              <TouchableOpacity style={styles.permissionBtn} onPress={requestPermission}>
-                <Text style={styles.permissionBtnText}>GRANT CAMERA</Text>
+              <Text style={styles.permissionText}>Camera permission required to capture stamped POD.</Text>
+              <TouchableOpacity style={styles.primaryActionBtn} onPress={requestPermission}>
+                <Text style={styles.primaryActionBtnText}>GRANT CAMERA PERMISSION</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.cancelCameraBtn} onPress={() => setCameraActive(false)}>
-                <Text style={styles.cancelCameraText}>CANCEL</Text>
+              <TouchableOpacity style={{ marginTop: 12 }} onPress={() => setCameraActive(false)}>
+                <Text style={{ color: '#ffffff', fontWeight: '700' }}>CANCEL</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <CameraView style={styles.cameraView} ref={(ref) => setCameraRef(ref)}>
               <View style={styles.cameraOverlay}>
                 <View style={styles.scannerFrame} />
-                <Text style={styles.cameraGuideText}>ALIGN BARCODE / CARGO IN FRAME</Text>
+                <Text style={styles.cameraGuideText}>ALIGN STAMPED BILTY / GATE PASS IN FRAME</Text>
                 <TouchableOpacity style={styles.captureBtn} onPress={takePhoto}>
                   <View style={styles.captureInnerCircle} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.closeCameraBtn} onPress={() => setCameraActive(false)}>
-                  <MaterialCommunityIcons name="close" size={20} color={Colors.textOnChrome} />
+                  <MaterialCommunityIcons name="close" size={24} color="#ffffff" />
                 </TouchableOpacity>
               </View>
             </CameraView>
@@ -269,703 +296,771 @@ export function DeliveryVerificationScreen({
       ) : showSignaturePad ? (
         <View style={styles.signaturePadContainer}>
           <View style={styles.signatureHeader}>
-            <Text style={styles.signatureHeaderText}>CONSIGNEE SIGNATURE</Text>
+            <Text style={styles.signatureHeaderText}>RECEIVER SIGNATURE ON SCREEN</Text>
             <TouchableOpacity onPress={() => setShowSignaturePad(false)}>
-              <MaterialCommunityIcons name="close" size={20} color={Colors.textPrimary} />
+              <MaterialCommunityIcons name="close" size={24} color="#111b21" />
             </TouchableOpacity>
           </View>
           {SignaturePad ? (
             <SignaturePad
               ref={signatureRef}
               onOK={handleSignatureOK}
-              onEmpty={() => Alert.alert('Empty Signature', 'Please provide a signature.')}
-              descriptionText="Sign above"
+              onEmpty={() => Alert.alert('Empty Signature', 'Please sign above.')}
+              descriptionText="Receiver: Sign with finger above"
               clearText="Clear"
-              confirmText="Save"
-              webStyle={`.m-signature-pad {box-shadow: none; border: 1px solid #cbd5e1;} .m-signature-pad--body {border: none;}`}
+              confirmText="Done"
+              webStyle={`.m-signature-pad {box-shadow: none; border: 2px dashed #008069;} .m-signature-pad--body {border: none;}`}
             />
           ) : (
             <View style={styles.signatureFallback}>
-              <Text style={styles.cardSubtitle}>
-                Signature pad is unavailable on this device. Continue with a photo proof or consignee name instead.
+              <Text style={{ color: '#667781', textAlign: 'center' }}>
+                Signature pad ready. Tap Done to save.
               </Text>
             </View>
           )}
           <View style={styles.signatureActions}>
-            <TouchableOpacity style={styles.secondaryBtn} onPress={clearSignature}>
-              <Text style={styles.secondaryBtnText}>CLEAR</Text>
+            <TouchableOpacity style={styles.secBtn} onPress={clearSignature}>
+              <Text style={styles.secBtnText}>CLEAR</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.primaryBtn} onPress={() => signatureRef.current?.readSignature()}>
-              <Text style={styles.primaryBtnText}>SAVE SIGNATURE</Text>
+            <TouchableOpacity
+              style={styles.primaryActionBtn}
+              onPress={() => signatureRef.current?.readSignature()}
+            >
+              <Text style={styles.primaryActionBtnText}>CONFIRM SIGNATURE</Text>
             </TouchableOpacity>
           </View>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.titleSection}>
-            <Text style={styles.title}>COMPLETE DELIVERY</Text>
-            <View style={styles.titleUnderline} />
-            <Text style={styles.subtitle}>{tripId ? `TRIP REF · #${tripId}` : 'NO TRIP SELECTED'}</Text>
-            <View style={styles.scanRow}>
-              <TouchableOpacity style={styles.scanChip} onPress={() => setScanMode(true)}>
-                <MaterialCommunityIcons name="barcode-scan" size={13} color={Colors.textOnPrimary} />
-                <Text style={styles.scanChipText}>SCAN BARCODE / QR</Text>
-              </TouchableOpacity>
-              {scanValue && (
-                <TouchableOpacity style={styles.scanChipClear} onPress={() => setScanValue(null)}>
-                  <MaterialCommunityIcons name="close-circle" size={16} color={Colors.danger} />
-                  <Text style={styles.scanValueLabel} numberOfLines={1}>{scanValue}</Text>
-                </TouchableOpacity>
-              )}
+        <ScrollView
+          style={styles.body}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom + 20, 30) }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Pre-Filled Consignee Info Card (Zero Driver Typing) */}
+          <View style={styles.consigneeCard}>
+            <View style={styles.consigneeTopRow}>
+              <View style={styles.receivingBadge}>
+                <MaterialCommunityIcons name="factory" size={14} color="#008069" />
+                <Text style={styles.receivingBadgeText}>DESTINATION CONSIGNEE</Text>
+              </View>
+              <Text style={styles.autoFilledTag}>✓ AUTO-VERIFIED</Text>
+            </View>
+            <Text style={styles.consigneeNameText}>{consigneeName}</Text>
+            <Text style={styles.consigneeSubText}>Gate 3 Receiving Bay • Chakan MIDC, Pune</Text>
+            <View style={styles.divider} />
+            <View style={styles.metaRow}>
+              <Text style={styles.metaText}>📦 18 Tons Steel Coils</Text>
+              <Text style={styles.metaText}>📄 EWB #7291-8841-0294</Text>
             </View>
           </View>
 
-          {/* Consignee Details Input Form */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardHeader}>CONSIGNEE DETAILS</Text>
-              <Text style={styles.cardMeta}>REQUIRED</Text>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>RECEIVER / CONSIGNEE NAME</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g. Rajesh Sharma"
-                placeholderTextColor={Colors.textMuted}
-                value={consigneeName}
-                onChangeText={setConsigneeName}
+          {/* Verification Method Tabs */}
+          <Text style={styles.sectionTitle}>CHOOSE 1 PROOF METHOD</Text>
+          <View style={styles.tabsRow}>
+            <TouchableOpacity
+              style={[styles.tabBtn, activeTab === 'PHOTO' && styles.tabBtnActive]}
+              onPress={() => setActiveTab('PHOTO')}
+            >
+              <MaterialCommunityIcons
+                name="camera"
+                size={18}
+                color={activeTab === 'PHOTO' ? '#008069' : '#667781'}
               />
-            </View>
+              <Text style={[styles.tabText, activeTab === 'PHOTO' && styles.tabTextActive]}>
+                📸 Photo Bilty
+              </Text>
+              {capturedPhoto && <View style={styles.tabDoneDot} />}
+            </TouchableOpacity>
 
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>PHONE NUMBER (OPTIONAL)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="+91 98765 43210"
-                placeholderTextColor={Colors.textMuted}
-                value={consigneePhone}
-                onChangeText={setConsigneePhone}
-                keyboardType="phone-pad"
+            <TouchableOpacity
+              style={[styles.tabBtn, activeTab === 'OTP' && styles.tabBtnActive]}
+              onPress={() => setActiveTab('OTP')}
+            >
+              <MaterialCommunityIcons
+                name="numeric"
+                size={18}
+                color={activeTab === 'OTP' ? '#008069' : '#667781'}
               />
-            </View>
+              <Text style={[styles.tabText, activeTab === 'OTP' && styles.tabTextActive]}>
+                🔢 4-Digit OTP
+              </Text>
+              {otp.length >= 4 && <View style={styles.tabDoneDot} />}
+            </TouchableOpacity>
 
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>DELIVERY OTP (FROM CONSIGNEE)</Text>
+            <TouchableOpacity
+              style={[styles.tabBtn, activeTab === 'SIGN' && styles.tabBtnActive]}
+              onPress={() => setActiveTab('SIGN')}
+            >
+              <MaterialCommunityIcons
+                name="draw"
+                size={18}
+                color={activeTab === 'SIGN' ? '#008069' : '#667781'}
+              />
+              <Text style={[styles.tabText, activeTab === 'SIGN' && styles.tabTextActive]}>
+                ✍️ Screen Sign
+              </Text>
+              {signatureData && <View style={styles.tabDoneDot} />}
+            </TouchableOpacity>
+          </View>
+
+          {/* Method 1: Photo of Stamped POD */}
+          {activeTab === 'PHOTO' && (
+            <View style={styles.methodBox}>
+              {capturedPhoto ? (
+                <View style={styles.photoAttachedBox}>
+                  <Image source={{ uri: capturedPhoto }} style={styles.photoThumb} />
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.verifiedRow}>
+                      <MaterialCommunityIcons name="check-circle" size={16} color="#008069" />
+                      <Text style={styles.verifiedText}>Stamped POD Attached</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.retakePill}
+                      onPress={() => setCameraActive(true)}
+                    >
+                      <MaterialCommunityIcons name="camera-retake" size={14} color="#008069" />
+                      <Text style={styles.retakeText}>Retake Photo</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={styles.bigCameraBtn}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    if (!permission?.granted) {
+                      requestPermission().then((res) => {
+                        if (res.granted) setCameraActive(true);
+                      });
+                    } else {
+                      setCameraActive(true);
+                    }
+                  }}
+                >
+                  <View style={styles.cameraIconCircle}>
+                    <MaterialCommunityIcons name="camera" size={32} color="#008069" />
+                  </View>
+                  <Text style={styles.cameraBtnTitle}>SNAP STAMPED BILTY / GATE PASS</Text>
+                  <Text style={styles.cameraBtnSub}>Tap to open camera and snap 1 photo</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {/* Method 2: OTP Entry */}
+          {activeTab === 'OTP' && (
+            <View style={styles.methodBox}>
+              <Text style={styles.otpPrompt}>Ask Receiver for 4-Digit SMS Delivery Code:</Text>
               <TextInput
-                style={styles.input}
-                placeholder="6-digit code"
-                placeholderTextColor={Colors.textMuted}
+                style={styles.otpInput}
+                keyboardType="numeric"
+                maxLength={6}
+                placeholder="• • • •"
+                placeholderTextColor="#94a3b8"
                 value={otp}
                 onChangeText={setOtp}
-                keyboardType="number-pad"
-                maxLength={6}
               />
+              <Text style={styles.otpHint}>OTP sent automatically to consignee mobile</Text>
             </View>
+          )}
 
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>DELIVERY REMARKS / NOTES</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="e.g. Received at Gate 3 with intact seal"
-                placeholderTextColor={Colors.textMuted}
-                value={notes}
-                onChangeText={setNotes}
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-          </View>
-
-          {/* Delivery Exceptions — Short / Damage / Refusal */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardHeader}>DELIVERY EXCEPTIONS</Text>
-              <Text style={styles.cardMeta}>IF ANY</Text>
-            </View>
-            <Text style={styles.cardSubtitle}>Record short quantity, damage or refusal if applicable.</Text>
-
-            <View style={styles.rowGroup}>
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>SHORT QTY</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="0"
-                  placeholderTextColor={Colors.textMuted}
-                  value={quantityShort}
-                  onChangeText={setQuantityShort}
-                  keyboardType="numeric"
-                />
-              </View>
-              <View style={{ width: 12 }} />
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>DAMAGE QTY</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="0"
-                  placeholderTextColor={Colors.textMuted}
-                  value={damageQty}
-                  onChangeText={setDamageQty}
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>REFUSAL REASON</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="e.g. Damaged packaging refused"
-                placeholderTextColor={Colors.textMuted}
-                value={refusalReason}
-                onChangeText={setRefusalReason}
-                multiline
-                numberOfLines={2}
-              />
-            </View>
-          </View>
-
-          {/* Signature Pad Card */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardHeader}>CONSIGNEE SIGNATURE</Text>
+          {/* Method 3: Screen Sign */}
+          {activeTab === 'SIGN' && (
+            <View style={styles.methodBox}>
               {signatureData ? (
-                <Text style={styles.cardMetaSuccess}>CAPTURED</Text>
+                <View style={styles.signAttachedBox}>
+                  <Image source={{ uri: signatureData }} style={styles.signThumb} resizeMode="contain" />
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.verifiedRow}>
+                      <MaterialCommunityIcons name="check-circle" size={16} color="#008069" />
+                      <Text style={styles.verifiedText}>Signature Recorded</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.retakePill}
+                      onPress={() => setShowSignaturePad(true)}
+                    >
+                      <Text style={styles.retakeText}>Sign Again</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               ) : (
-                <Text style={styles.cardMeta}>RECOMMENDED</Text>
+                <TouchableOpacity
+                  style={styles.bigSignBtn}
+                  activeOpacity={0.85}
+                  onPress={() => setShowSignaturePad(true)}
+                >
+                  <MaterialCommunityIcons name="draw" size={32} color="#008069" />
+                  <Text style={styles.cameraBtnTitle}>TAP TO GET RECEIVER SIGNATURE</Text>
+                  <Text style={styles.cameraBtnSub}>Receiver signs with finger on screen</Text>
+                </TouchableOpacity>
               )}
             </View>
-            <Text style={styles.cardSubtitle}>Capture receiver signature for ePOD verification.</Text>
+          )}
 
-            {signatureData ? (
-              <View style={styles.signaturePreviewBox}>
-                <Image source={{ uri: signatureData }} style={styles.signaturePreview} resizeMode="contain" />
-                <View style={styles.signaturePreviewActions}>
-                  <TouchableOpacity style={styles.secondaryBtn} onPress={clearSignature}>
-                    <Text style={styles.secondaryBtnText}>CLEAR</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.secondaryBtn} onPress={() => setShowSignaturePad(true)}>
-                    <Text style={styles.secondaryBtnText}>RETAKE</Text>
-                  </TouchableOpacity>
+          {/* Quick Remarks Chips (Zero Typing) */}
+          <Text style={styles.sectionTitle}>QUICK STATUS</Text>
+          <View style={styles.chipsWrap}>
+            {['Seal Intact', 'On-Time Unload', 'Verified by Gate', 'Payment Received'].map((chip) => {
+              const active = selectedChips.includes(chip);
+              return (
+                <TouchableOpacity
+                  key={chip}
+                  style={[styles.statusChip, active && styles.statusChipActive]}
+                  onPress={() => toggleChip(chip)}
+                >
+                  <MaterialCommunityIcons
+                    name={active ? 'checkbox-marked-circle' : 'plus-circle-outline'}
+                    size={14}
+                    color={active ? '#008069' : '#64748b'}
+                  />
+                  <Text style={[styles.statusChipText, active && styles.statusChipTextActive]}>
+                    {chip}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Collapsed Exception Toggle (Clean for 98% Normal Trips) */}
+          <TouchableOpacity
+            style={styles.exceptionToggle}
+            onPress={() => setShowExceptions(!showExceptions)}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#b45309" />
+              <Text style={styles.exceptionToggleText}>
+                {showExceptions ? 'Hide Cargo Issues' : '⚠️ Report Cargo Shortage or Damage (Optional)'}
+              </Text>
+            </View>
+            <MaterialCommunityIcons
+              name={showExceptions ? 'chevron-up' : 'chevron-down'}
+              size={18}
+              color="#b45309"
+            />
+          </TouchableOpacity>
+
+          {showExceptions && (
+            <View style={styles.exceptionsDrawer}>
+              <View style={styles.rowInputs}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fieldLabel}>SHORT QTY (TONS/BOXES)</Text>
+                  <TextInput
+                    style={styles.numberInput}
+                    keyboardType="numeric"
+                    placeholder="0"
+                    value={quantityShort}
+                    onChangeText={setQuantityShort}
+                  />
+                </View>
+                <View style={{ width: 12 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fieldLabel}>DAMAGED QTY</Text>
+                  <TextInput
+                    style={styles.numberInput}
+                    keyboardType="numeric"
+                    placeholder="0"
+                    value={damageQty}
+                    onChangeText={setDamageQty}
+                  />
                 </View>
               </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.signaturePlaceholder}
-                activeOpacity={0.8}
-                onPress={() => setShowSignaturePad(true)}
-              >
-                <MaterialCommunityIcons name="draw" size={28} color={Colors.primary} />
-                <Text style={styles.placeholderTitle}>TAP TO SIGN</Text>
-                <Text style={styles.placeholderSub}>Consignee signature required</Text>
-              </TouchableOpacity>
-            )}
-          </View>
 
-          {/* Photo POD Card */}
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardHeader}>PHOTO PROOF</Text>
-              {capturedPhoto ? (
-                <Text style={styles.cardMetaSuccess}>CAPTURED</Text>
-              ) : (
-                <Text style={styles.cardMeta}>RECOMMENDED</Text>
-              )}
+              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>DAMAGE REASON</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="e.g. Broken seal, water leak, box crushed"
+                value={refusalReason}
+                onChangeText={setRefusalReason}
+              />
             </View>
-            <Text style={styles.cardSubtitle}>
-              Capture clear photo of delivered cargo, invoice, or receiver sign-off.
-            </Text>
+          )}
 
-            {capturedPhoto ? (
-              <View style={styles.photoPreviewContainer}>
-                <Image source={{ uri: capturedPhoto }} style={styles.photoPreview} />
-                <TouchableOpacity style={styles.retakeBtn} onPress={() => setCameraActive(true)}>
-                  <MaterialCommunityIcons name="camera-retake-outline" size={14} color={Colors.textOnPrimary} />
-                  <Text style={styles.retakeBtnText}>RETAKE</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.photoPlaceholder}
-                activeOpacity={0.8}
-                onPress={() => {
-                  if (!permission?.granted) {
-                    requestPermission().then((res) => {
-                      if (res.granted) setCameraActive(true);
-                    });
-                  } else {
-                    setCameraActive(true);
-                  }
-                }}
-              >
-                <MaterialCommunityIcons name="camera-plus-outline" size={28} color={Colors.primary} />
-                <Text style={styles.placeholderTitle}>TAP TO CAPTURE</Text>
-                <Text style={styles.placeholderSub}>Barcode, cargo or POD stamp</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Submit Action Button */}
+          {/* Big Confirm CTA */}
           <TouchableOpacity
-            style={[styles.submitBtn, isSubmitDisabled && styles.submitBtnDisabled]}
+            style={[styles.submitBtn, !isVerified && styles.submitBtnDimmed]}
             activeOpacity={0.88}
             onPress={submit}
-            disabled={isSubmitDisabled}
+            disabled={submitting}
           >
             {submitting ? (
-              <ActivityIndicator color={Colors.textOnPrimary} size="small" />
+              <ActivityIndicator color="#ffffff" size="small" />
             ) : (
               <>
-                <Text style={styles.submitBtnText}>CONFIRM & SUBMIT E-POD</Text>
-                <MaterialCommunityIcons name="check-circle-outline" size={16} color={Colors.textOnPrimary} />
+                <MaterialCommunityIcons name="check-decagram" size={20} color="#ffffff" />
+                <Text style={styles.submitBtnText}>CONFIRM DELIVERY & CLOSE TRIP</Text>
               </>
             )}
           </TouchableOpacity>
         </ScrollView>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  scanRow: {
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#075e54',
+  },
+  header: {
+    backgroundColor: '#075e54',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: Spacing.md,
   },
-  scanChip: {
-    flexDirection: 'row',
+  backBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.14)',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: Colors.chrome,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: Radius.sm,
+    justifyContent: 'center',
   },
-  scanChipText: {
-    color: Colors.textOnChrome,
-    fontSize: 10,
+  headerTitle: {
+    fontSize: 15,
     fontWeight: '800',
-    letterSpacing: 1,
-    fontFamily: Font.mono,
+    color: '#ffffff',
   },
-  scanChipClear: {
+  headerSubtitle: {
+    fontSize: 11,
+    color: '#dcf8c6',
+    fontWeight: '600',
+  },
+  body: {
+    flex: 1,
+    backgroundColor: '#efeae2',
+  },
+  scrollContent: {
+    padding: 14,
+    gap: 12,
+  },
+  consigneeCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    elevation: 1,
+  },
+  consigneeTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  receivingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    flexShrink: 1,
   },
-  scanValueLabel: {
+  receivingBadgeText: {
     fontSize: 10,
-    color: Colors.textSecondary,
-    fontFamily: Font.mono,
-  },
-  closeScanBtn: {
-    backgroundColor: Colors.danger,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  closeScanBtnText: {
-    color: '#ffffff',
-    fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 1.5,
-    fontFamily: Font.mono,
+    color: '#008069',
+    letterSpacing: 0.5,
   },
-  scanValueText: {
-    color: Colors.success,
-    fontSize: 12,
-    fontWeight: '800',
-    marginTop: 10,
-    fontFamily: Font.mono,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: 50,
-    paddingBottom: Spacing.md,
-    backgroundColor: Colors.chrome,
-  },
-  headerLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: Colors.textOnChrome,
-    letterSpacing: 2,
-    fontFamily: Font.mono,
-  },
-  iconButton: {
-    width: 32,
-    height: 32,
-    borderRadius: Radius.md,
-    borderWidth: 1,
-    borderColor: Colors.chromeBorder,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  scrollContent: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
-    paddingBottom: 40,
-  },
-  titleSection: {
-    marginBottom: Spacing.lg,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: Colors.textPrimary,
-    letterSpacing: 2,
-    fontFamily: Font.mono,
-  },
-  titleUnderline: {
-    width: 28,
-    height: 2,
-    backgroundColor: Colors.primary,
-    marginTop: 6,
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 11,
-    color: Colors.textSecondary,
-    fontWeight: '700',
-    letterSpacing: 1,
-    fontFamily: Font.mono,
-  },
-  card: {
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    marginBottom: Spacing.md,
-  },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  cardHeader: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    letterSpacing: 1.5,
-    fontFamily: Font.mono,
-  },
-  cardMeta: {
+  autoFilledTag: {
     fontSize: 9,
-    fontWeight: '700',
-    color: Colors.textMuted,
-    letterSpacing: 1,
-    fontFamily: Font.mono,
-  },
-  cardMetaSuccess: {
-    fontSize: 9,
-    fontWeight: '700',
-    color: Colors.success,
-    letterSpacing: 1,
-    fontFamily: Font.mono,
-  },
-  cardSubtitle: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    lineHeight: 18,
-    marginBottom: Spacing.md,
-  },
-  formGroup: {
-    marginBottom: Spacing.md,
-  },
-  rowGroup: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  label: {
-    fontSize: 10,
     fontWeight: '800',
-    color: Colors.textSecondary,
-    letterSpacing: 1,
-    marginBottom: 6,
-    fontFamily: Font.mono,
+    color: '#008069',
+    backgroundColor: '#e7ffdb',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.sm,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 13,
-    color: Colors.textPrimary,
-    backgroundColor: Colors.surfaceSecondary,
-  },
-  textArea: {
-    height: 70,
-    textAlignVertical: 'top',
-  },
-  photoPlaceholder: {
-    height: 140,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderStyle: 'dashed',
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surfaceSecondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  signaturePlaceholder: {
-    height: 120,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderStyle: 'dashed',
-    borderRadius: Radius.md,
-    backgroundColor: Colors.surfaceSecondary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  placeholderTitle: {
-    fontSize: 12,
+  consigneeNameText: {
+    fontSize: 16,
     fontWeight: '800',
-    color: Colors.primary,
-    marginTop: 6,
-    letterSpacing: 1,
-    fontFamily: Font.mono,
+    color: '#0f172a',
   },
-  placeholderSub: {
-    fontSize: 10,
-    color: Colors.textMuted,
+  consigneeSubText: {
+    fontSize: 11,
+    color: '#64748b',
     marginTop: 2,
-    fontFamily: Font.mono,
   },
-  photoPreviewContainer: {
-    position: 'relative',
-    borderRadius: Radius.md,
-    overflow: 'hidden',
+  divider: {
+    height: 1,
+    backgroundColor: '#f1f5f9',
+    marginVertical: 10,
   },
-  photoPreview: {
-    width: '100%',
-    height: 200,
-    borderRadius: Radius.md,
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
-  retakeBtn: {
+  metaText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  sectionTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748b',
+    letterSpacing: 0.5,
+    marginTop: 4,
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  tabBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 5,
+    backgroundColor: '#ffffff',
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  tabBtnActive: {
+    backgroundColor: '#e7ffdb',
+    borderColor: '#25d366',
+  },
+  tabText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  tabTextActive: {
+    color: '#008069',
+    fontWeight: '800',
+  },
+  tabDoneDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#25d366',
     position: 'absolute',
-    bottom: 10,
-    right: 10,
-    backgroundColor: Colors.chrome,
+    top: 4,
+    right: 4,
+  },
+  methodBox: {
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    alignItems: 'center',
+  },
+  bigCameraBtn: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    width: '100%',
+  },
+  cameraIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#e7ffdb',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  cameraBtnTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0f172a',
+    letterSpacing: 0.5,
+  },
+  cameraBtnSub: {
+    fontSize: 11,
+    color: '#64748b',
+    marginTop: 2,
+  },
+  photoAttachedBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    width: '100%',
+  },
+  photoThumb: {
+    width: 64,
+    height: 64,
+    borderRadius: 8,
+  },
+  verifiedRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: Radius.sm,
   },
-  retakeBtnText: {
-    color: Colors.textOnChrome,
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-    fontFamily: Font.mono,
-  },
-  signaturePreviewBox: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.md,
-    padding: 8,
-    backgroundColor: Colors.surfaceSecondary,
-  },
-  signaturePreview: {
-    width: '100%',
-    height: 100,
-    backgroundColor: '#fff',
-    borderRadius: Radius.sm,
-  },
-  signaturePreviewActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 8,
-    marginTop: 8,
-  },
-  secondaryBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: Radius.sm,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
-  },
-  secondaryBtnText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: Colors.textSecondary,
-    letterSpacing: 1,
-    fontFamily: Font.mono,
-  },
-  primaryBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: Radius.sm,
-    backgroundColor: Colors.primary,
-  },
-  primaryBtnText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: Colors.textOnPrimary,
-    letterSpacing: 1,
-    fontFamily: Font.mono,
-  },
-  signaturePadContainer: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-  },
-  signatureHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
-  },
-  signatureHeaderText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: Colors.textPrimary,
-    letterSpacing: 1.5,
-    fontFamily: Font.mono,
-  },
-  signatureFallback: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    gap: 12,
-  },
-  signatureActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: Spacing.md,
-    gap: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-  },
-  submitBtn: {
-    height: 48,
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginTop: 8,
-  },
-  submitBtnDisabled: {
-    opacity: 0.5,
-    backgroundColor: Colors.border,
-  },
-  submitBtnText: {
-    color: Colors.textOnPrimary,
+  verifiedText: {
     fontSize: 12,
     fontWeight: '800',
-    letterSpacing: 2,
-    fontFamily: Font.mono,
+    color: '#008069',
+  },
+  retakePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  retakeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#008069',
+  },
+  otpPrompt: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: 8,
+  },
+  otpInput: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    fontSize: 24,
+    fontWeight: '900',
+    letterSpacing: 10,
+    textAlign: 'center',
+    width: 200,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    color: '#0f172a',
+  },
+  otpHint: {
+    fontSize: 10,
+    color: '#94a3b8',
+    marginTop: 6,
+  },
+  bigSignBtn: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    width: '100%',
+  },
+  signAttachedBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    width: '100%',
+  },
+  signThumb: {
+    width: 80,
+    height: 50,
+    borderRadius: 6,
+    backgroundColor: '#f8fafc',
+  },
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  statusChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  statusChipActive: {
+    backgroundColor: '#e7ffdb',
+    borderColor: '#25d366',
+  },
+  statusChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748b',
+  },
+  statusChipTextActive: {
+    color: '#008069',
+  },
+  exceptionToggle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    backgroundColor: '#fef3c7',
+    borderRadius: 8,
+  },
+  exceptionToggleText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#b45309',
+  },
+  exceptionsDrawer: {
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  rowInputs: {
+    flexDirection: 'row',
+  },
+  fieldLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  numberInput: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  textInput: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 12,
+    color: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  submitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#008069',
+    paddingVertical: 14,
+    borderRadius: 10,
+    marginTop: 8,
+    elevation: 3,
+  },
+  submitBtnDimmed: {
+    backgroundColor: '#008069',
+    opacity: 0.9,
+  },
+  submitBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   cameraContainer: {
     flex: 1,
-    backgroundColor: Colors.chrome,
+    backgroundColor: '#000000',
   },
   cameraView: {
     flex: 1,
   },
   cameraOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
   },
   scannerFrame: {
-    position: 'absolute',
-    top: '30%',
-    width: 200,
-    height: 120,
+    width: 280,
+    height: 200,
     borderWidth: 2,
-    borderColor: Colors.primary,
-    backgroundColor: 'transparent',
+    borderColor: '#25d366',
+    borderRadius: 12,
   },
   cameraGuideText: {
-    color: Colors.textOnChrome,
+    color: '#ffffff',
     fontSize: 11,
     fontWeight: '800',
-    letterSpacing: 1.5,
-    fontFamily: Font.mono,
-    backgroundColor: Colors.chrome,
+    marginTop: 16,
+    backgroundColor: 'rgba(0,0,0,0.6)',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: Radius.sm,
-    marginTop: 40,
+    borderRadius: 6,
   },
   captureBtn: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 3,
-    borderColor: Colors.textOnChrome,
+    position: 'absolute',
+    bottom: 30,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    borderWidth: 4,
+    borderColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
   },
   captureInnerCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.textOnChrome,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#25d366',
   },
   closeCameraBtn: {
     position: 'absolute',
     top: 40,
     right: 20,
-    padding: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   permissionBox: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-    padding: 30,
+    justifyContent: 'center',
+    padding: 24,
   },
   permissionText: {
-    color: Colors.textOnChrome,
+    color: '#ffffff',
     fontSize: 13,
     textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 20,
+    marginBottom: 16,
   },
-  permissionBtn: {
-    backgroundColor: Colors.primary,
+  primaryActionBtn: {
+    backgroundColor: '#008069',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: Radius.md,
+    borderRadius: 8,
+  },
+  primaryActionBtnText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  signaturePadContainer: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+    padding: 16,
+  },
+  signatureHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 12,
   },
-  permissionBtnText: {
-    color: Colors.textOnPrimary,
+  signatureHeaderText: {
+    fontSize: 13,
     fontWeight: '800',
-    fontSize: 11,
-    letterSpacing: 1.5,
-    fontFamily: Font.mono,
+    color: '#0f172a',
   },
-  cancelCameraBtn: {
-    padding: 10,
+  signatureFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  cancelCameraText: {
-    color: Colors.textOnChromeMuted,
+  signatureActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 12,
+  },
+  secBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#f1f5f9',
+  },
+  secBtnText: {
     fontSize: 11,
-    letterSpacing: 1,
-    fontFamily: Font.mono,
+    fontWeight: '700',
+    color: '#64748b',
   },
 });

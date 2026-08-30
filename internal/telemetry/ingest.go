@@ -147,6 +147,18 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 		if device.VehicleID != nil {
 			vehicleID = *device.VehicleID
 		}
+		if vehicleID == "" {
+			var vid string
+			if errV := ing.deviceStore.db.QueryRowContext(txCtx, `
+				SELECT COALESCE(t.vehicle_id, v.id, '')
+				FROM drivers d
+				LEFT JOIN trips t ON (t.driver_id = d.id OR t.driver_id = d.driver_id) AND t.status IN ('assigned', 'started', 'reached_pickup', 'in_transit')
+				LEFT JOIN vehicles v ON (v.registration_number = d.notes OR v.vehicle_number = d.notes) AND v.tenant_id = d.tenant_id
+				WHERE d.id = ? OR d.driver_id = ?
+				LIMIT 1`, frame.IMEI, frame.IMEI).Scan(&vid); errV == nil && vid != "" {
+				vehicleID = vid
+			}
+		}
 
 		// Step 7: Insert position
 		positionID := ing.idGen.GenerateUUID()
@@ -156,7 +168,7 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 		}
 
 		// Step 8: Upsert vehicle_latest_position (only newer device_time wins)
-		if device.VehicleID != nil {
+		if vehicleID != "" {
 			if err := ing.upsertLatestPosition(txCtx, vehicleID, device.TenantID, frame, adjustedOdometer, adjustedFuel, receivedAt); err != nil {
 				return fmt.Errorf("latest position upsert: %w", err)
 			}
@@ -167,7 +179,7 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 		// This requires coordination with the booking spec. Deferred to Phase 2.
 
 		// Step 10: Enrich + INSERT telemetry_snapshots
-		if err := ing.insertSnapshot(txCtx, frame, device, adjustedOdometer, adjustedFuel, positionID, receivedAt); err != nil {
+		if err := ing.insertSnapshot(txCtx, frame, device, vehicleID, adjustedOdometer, adjustedFuel, positionID, receivedAt); err != nil {
 			return fmt.Errorf("snapshot insert: %w", err)
 		}
 
@@ -359,11 +371,10 @@ func (ing *Ingestor) upsertLatestPosition(ctx context.Context, vehicleID, tenant
 
 // insertSnapshot enriches and inserts a telemetry_snapshots row.
 // Decision D5: new rows use UUIDs; old 'snap-*' IDs are not migrated.
-func (ing *Ingestor) insertSnapshot(ctx context.Context, frame RawFrame, device *Device, odometer, fuel *float64, positionID string, receivedAt time.Time) error {
+func (ing *Ingestor) insertSnapshot(ctx context.Context, frame RawFrame, device *Device, vehicleID string, odometer, fuel *float64, positionID string, receivedAt time.Time) error {
 	db := txOrDB(ctx, ing.deviceStore.db)
 	snapshotID := uuid.NewString() // UUID per Decision D5
-	vehicleID := ""
-	if device.VehicleID != nil {
+	if vehicleID == "" && device.VehicleID != nil {
 		vehicleID = *device.VehicleID
 	}
 	_, err := db.ExecContext(ctx,

@@ -24,7 +24,7 @@ describe('DeliveryVerificationScreen', () => {
     global.fetch = globalFetch;
   });
 
-  test('submits multipart form to /api/v1/trips/{tripId}/deliver-pod on confirm', async () => {
+  test('submits multipart form to /api/v1/trips/{tripId}/deliver-pod on confirm with OTP', async () => {
     const onComplete = jest.fn();
     const onBack = jest.fn();
 
@@ -34,20 +34,17 @@ describe('DeliveryVerificationScreen', () => {
     });
     global.fetch = fetchMock as any;
 
-    const { getByPlaceholderText, getByText } = render(
+    const { getByText, getByPlaceholderText } = render(
       <DeliveryVerificationScreen tripId="trip_99" onComplete={onComplete} onBack={onBack} />
     );
 
-    const nameInput = getByPlaceholderText('e.g. Rajesh Sharma');
-    fireEvent.changeText(nameInput, 'Suresh Verma');
+    // Switch to OTP mode
+    fireEvent.press(getByText('🔢 4-Digit OTP'));
 
-    const phoneInput = getByPlaceholderText('+91 98765 43210');
-    fireEvent.changeText(phoneInput, '+91 98765 43210');
+    const otpInput = getByPlaceholderText('• • • •');
+    fireEvent.changeText(otpInput, '4819');
 
-    const notesInput = getByPlaceholderText('e.g. Received at Gate 3 with intact seal');
-    fireEvent.changeText(notesInput, 'Package received with seal intact');
-
-    const submitBtn = getByText('CONFIRM & SUBMIT E-POD');
+    const submitBtn = getByText('CONFIRM DELIVERY & CLOSE TRIP');
     await act(async () => {
       fireEvent.press(submitBtn);
     });
@@ -60,7 +57,7 @@ describe('DeliveryVerificationScreen', () => {
     expect(calledUrl).toContain('/api/v1/trips/trip_99/deliver-pod');
   });
 
-  test('calls onBack handler when back button is pressed', () => {
+  test('renders header and auto-verified consignee details', () => {
     const onComplete = jest.fn();
     const onBack = jest.fn();
 
@@ -68,7 +65,8 @@ describe('DeliveryVerificationScreen', () => {
       <DeliveryVerificationScreen tripId="trip_back" onComplete={onComplete} onBack={onBack} />
     );
 
-    expect(getByText('POD VERIFICATION')).toBeTruthy();
+    expect(getByText('PROOF OF DELIVERY (e-POD)')).toBeTruthy();
+    expect(getByText('Tata AutoComp Systems Ltd')).toBeTruthy();
   });
 
   test('falls back to OfflineQueue.enqueuePOD on network failure', async () => {
@@ -77,14 +75,17 @@ describe('DeliveryVerificationScreen', () => {
 
     global.fetch = jest.fn().mockRejectedValue(new Error('Offline connection failed')) as any;
 
-    const { getByPlaceholderText, getByText } = render(
+    const { getByText, getByPlaceholderText } = render(
       <DeliveryVerificationScreen tripId="trip_offline_77" onComplete={onComplete} onBack={onBack} />
     );
 
-    const nameInput = getByPlaceholderText('e.g. Rajesh Sharma');
-    fireEvent.changeText(nameInput, 'Warehouse Receiver');
+    // Switch to OTP mode
+    fireEvent.press(getByText('🔢 4-Digit OTP'));
 
-    const submitBtn = getByText('CONFIRM & SUBMIT E-POD');
+    const otpInput = getByPlaceholderText('• • • •');
+    fireEvent.changeText(otpInput, '1234');
+
+    const submitBtn = getByText('CONFIRM DELIVERY & CLOSE TRIP');
     await act(async () => {
       fireEvent.press(submitBtn);
     });

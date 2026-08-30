@@ -62,6 +62,30 @@ func extractVehicleID(payload interface{}) string {
 	return ""
 }
 
+func extractTenantID(payload interface{}) string {
+	if m, ok := payload.(map[string]interface{}); ok {
+		if tid, ok := m["TenantID"].(string); ok && tid != "" {
+			return tid
+		}
+		if tid, ok := m["tenant_id"].(string); ok && tid != "" {
+			return tid
+		}
+	}
+	b, err := json.Marshal(payload)
+	if err == nil {
+		var m map[string]interface{}
+		if err := json.Unmarshal(b, &m); err == nil {
+			if tid, ok := m["tenant_id"].(string); ok && tid != "" {
+				return tid
+			}
+			if tid, ok := m["TenantID"].(string); ok && tid != "" {
+				return tid
+			}
+		}
+	}
+	return ""
+}
+
 func haversineDistance(lat1, lon1, lat2, lon2 float64) float64 {
 	const R = 6371.0
 	dLat := (lat2 - lat1) * (math.Pi / 180.0)

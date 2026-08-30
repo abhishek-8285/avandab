@@ -220,6 +220,9 @@ func (uc *GenerateInvoiceUseCase) GenerateInTx(txCtx ports.TxContext, cmd Genera
 // already present (dedupe by ref_id), so Subtotal equals the sum of all lines
 // (Spec 02 §6 gotcha #1).
 func attachLineItems(inv *aggregate.InvoiceAggregate, cmd GenerateInvoiceCommand, idGen ports.IDGenerator) {
+	if inv.IRN != nil && *inv.IRN != "" {
+		return // Hard mutation boundary: IRN-sealed invoices cannot modify line items
+	}
 	hasFreight := false
 	existingRefs := make(map[string]bool, len(inv.LineItems))
 	for _, li := range inv.LineItems {

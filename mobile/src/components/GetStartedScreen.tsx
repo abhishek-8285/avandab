@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, Animated } from 'react-native';
+import { StyleSheet, Text, View, Image, TouchableOpacity, Animated, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors, Font, Radius, Spacing } from '../constants/theme';
 
@@ -12,6 +13,7 @@ interface GetStartedScreenProps {
 
 export function GetStartedScreen({ onGetStarted, onSignIn, onOpenQRDemo }: GetStartedScreenProps) {
   const pulseAnim = useRef(new Animated.Value(0)).current;
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     Animated.loop(
@@ -35,16 +37,17 @@ export function GetStartedScreen({ onGetStarted, onSignIn, onOpenQRDemo }: GetSt
       <StatusBar style="light" translucent backgroundColor="transparent" />
 
       {/* Hero with dark overlay + operational HUD */}
-      <View style={styles.heroSection}>
+      <View style={[styles.heroSection, { paddingTop: insets.top }]}>
         <Image
           source={require('../../assets/driver_hero.png')}
           style={styles.heroImage}
           resizeMode="cover"
+          accessible={false}
         />
         <View style={styles.heroOverlay} />
 
         {/* Top status strip */}
-        <View style={styles.statusStrip}>
+        <View style={[styles.statusStrip, { top: insets.top + 12 }]}>
           <View style={styles.statusItem}>
             <Animated.View
               style={[
@@ -58,6 +61,9 @@ export function GetStartedScreen({ onGetStarted, onSignIn, onOpenQRDemo }: GetSt
               ]}
             />
             <Text style={styles.statusText}>AVANDAB NETWORK</Text>
+          </View>
+          <View style={styles.statusLiveBadge}>
+            <Text style={styles.statusLiveText}>● LIVE</Text>
           </View>
         </View>
 
@@ -81,56 +87,77 @@ export function GetStartedScreen({ onGetStarted, onSignIn, onOpenQRDemo }: GetSt
       </View>
 
       {/* Bottom Content Panel */}
-      <View style={styles.contentSheet}>
-        <Text style={styles.headline}>JOIN THE FLEET</Text>
-        <View style={styles.titleUnderline} />
-
-        <Text style={styles.description}>
-          Stream live GPS telemetry, execute regional freight routes, and secure instant digital proof-of-delivery on the Avandab network.
-        </Text>
-
-        <View style={styles.featureList}>
-          <View style={styles.featureRow}>
-            <MaterialCommunityIcons name="radar" size={14} color={Colors.primary} />
-            <Text style={styles.featureText}>Live trip assignments & dispatch updates</Text>
-          </View>
-          <View style={styles.featureRow}>
-            <MaterialCommunityIcons name="barcode-scan" size={14} color={Colors.primary} />
-            <Text style={styles.featureText}>Photo & signature proof-of-delivery</Text>
-          </View>
-          <View style={styles.featureRow}>
-            <MaterialCommunityIcons name="map-marker-path" size={14} color={Colors.primary} />
-            <Text style={styles.featureText}>Turn-by-turn navigation & GPS tracking</Text>
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={styles.primaryButton}
-          activeOpacity={0.88}
-          onPress={onGetStarted}
+      <View style={[styles.contentSheet, { paddingBottom: Math.max(insets.bottom, 16) + 16 }]}>
+        <ScrollView
+          contentContainerStyle={styles.contentScroll}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
         >
-          <Text style={styles.primaryButtonText}>GET STARTED</Text>
-          <MaterialCommunityIcons name="arrow-right" size={16} color={Colors.textOnPrimary} />
-        </TouchableOpacity>
+          <Text style={styles.headline}>JOIN THE FLEET</Text>
+          <View style={styles.titleUnderline} />
 
-        <TouchableOpacity
-          style={styles.signInButton}
-          activeOpacity={0.7}
-          onPress={onSignIn}
-        >
-          <Text style={styles.signInText}>
-            Already registered? <Text style={styles.signInLink}>SIGN IN</Text>
+          <Text style={styles.description}>
+            Stream live GPS telemetry, execute regional freight routes, and secure instant digital proof-of-delivery on the Avandab network.
           </Text>
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.qrDemoButton}
-          activeOpacity={0.8}
-          onPress={onOpenQRDemo}
-        >
-          <MaterialCommunityIcons name="qrcode-scan" size={14} color={Colors.primary} />
-          <Text style={styles.qrDemoText}>TRY QR SCANNER / GENERATOR</Text>
-        </TouchableOpacity>
+          <View style={styles.featureList}>
+            <View style={styles.featureRow}>
+              <View style={styles.featureIconBox}>
+                <View style={styles.featureIconDot} />
+              </View>
+              <Text style={styles.featureText}>Live trip assignments & dispatch updates</Text>
+            </View>
+            <View style={styles.featureRow}>
+              <View style={styles.featureIconBox}>
+                <View style={[styles.featureIconDot, styles.featureIconDot2]} />
+              </View>
+              <Text style={styles.featureText}>Photo & signature proof-of-delivery</Text>
+            </View>
+            <View style={styles.featureRow}>
+              <View style={styles.featureIconBox}>
+                <View style={[styles.featureIconDot, styles.featureIconDot3]} />
+              </View>
+              <Text style={styles.featureText}>Turn-by-turn navigation & GPS tracking</Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.primaryButton}
+            activeOpacity={0.88}
+            onPress={onGetStarted}
+            accessibilityRole="button"
+            accessibilityLabel="Get started"
+          >
+            <Text style={styles.primaryButtonText}>GET STARTED</Text>
+            <Text style={styles.primaryButtonArrow}>→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.signInButton}
+            activeOpacity={0.7}
+            onPress={onSignIn}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in"
+          >
+            <Text style={styles.signInText}>
+              Already registered? <Text style={styles.signInLink}>SIGN IN</Text>
+            </Text>
+          </TouchableOpacity>
+
+          {/* QR Demo removed from public onboarding — accessible via Dev menu / QR tab after login */}
+          {false && __DEV__ ? (
+            <TouchableOpacity
+              style={styles.qrDemoButtonDev}
+              activeOpacity={0.7}
+              onPress={onOpenQRDemo}
+              accessibilityRole="button"
+              accessibilityLabel="Open QR demo"
+            >
+              <MaterialCommunityIcons name="qrcode-scan" size={12} color={Colors.textMuted} />
+              <Text style={styles.qrDemoTextDev}>QR SCANNER / GENERATOR (DEV)</Text>
+            </TouchableOpacity>
+          ) : null}
+        </ScrollView>
       </View>
     </View>
   );
@@ -142,7 +169,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.chrome,
   },
   heroSection: {
-    height: '48%',
+    height: '46%',
+    minHeight: 280,
     width: '100%',
     position: 'relative',
     backgroundColor: Colors.chrome,
@@ -153,21 +181,26 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.7)',
+    backgroundColor: 'rgba(15, 23, 42, 0.62)',
   },
   statusStrip: {
     position: 'absolute',
-    top: 56,
     left: Spacing.lg,
     right: Spacing.lg,
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
   statusItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 9999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   statusDot: {
     width: 6,
@@ -178,7 +211,22 @@ const styles = StyleSheet.create({
   statusText: {
     color: Colors.textOnChrome,
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    fontFamily: Font.mono,
+  },
+  statusLiveBadge: {
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(34, 197, 94, 0.3)',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 9999,
+  },
+  statusLiveText: {
+    color: '#22c55e',
+    fontSize: 9,
+    fontWeight: '800',
     letterSpacing: 1,
     fontFamily: Font.mono,
   },
@@ -190,12 +238,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(15, 23, 42, 0.72)',
     borderWidth: 1,
-    borderColor: Colors.chromeBorder,
+    borderColor: 'rgba(255,255,255,0.12)',
     borderRadius: Radius.lg,
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: Spacing.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 4,
   },
   heroStat: {
     flex: 1,
@@ -203,54 +256,65 @@ const styles = StyleSheet.create({
   },
   heroStatDivider: {
     width: 1,
-    height: 22,
-    backgroundColor: Colors.chromeBorder,
+    height: 28,
+    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   heroStatValue: {
-    color: Colors.textOnChrome,
+    color: '#ffffff',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '900',
     fontFamily: Font.mono,
+    letterSpacing: 0.5,
   },
   heroStatLabel: {
-    color: Colors.textOnChromeMuted,
-    fontSize: 8,
+    color: 'rgba(255,255,255,0.65)',
+    fontSize: 9,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 1,
     marginTop: 2,
     fontFamily: Font.mono,
   },
   contentSheet: {
     flex: 1,
     backgroundColor: Colors.surface,
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    marginTop: -12,
+    shadowColor: '#0f172a',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  contentScroll: {
     paddingHorizontal: Spacing.xl,
     paddingTop: Spacing.xl,
-    paddingBottom: Spacing.xxl,
-    borderTopLeftRadius: Radius.lg,
-    borderTopRightRadius: Radius.lg,
+    paddingBottom: Spacing.lg,
+    gap: 0,
   },
   headline: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '900',
     color: Colors.textPrimary,
-    letterSpacing: 2,
+    letterSpacing: 1.5,
     fontFamily: Font.mono,
   },
   titleUnderline: {
-    width: 32,
-    height: 2,
+    width: 40,
+    height: 3,
     backgroundColor: Colors.primary,
-    marginTop: 6,
+    marginTop: 8,
     marginBottom: Spacing.md,
+    borderRadius: 2,
   },
   description: {
-    fontSize: 13,
+    fontSize: 13.5,
     color: Colors.textSecondary,
-    lineHeight: 20,
+    lineHeight: 21,
     marginBottom: Spacing.lg,
   },
   featureList: {
-    gap: 8,
+    gap: 10,
     marginBottom: Spacing.xl,
   },
   featureRow: {
@@ -258,20 +322,54 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  featureIconBox: {
+    width: 28,
+    height: 28,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(15,118,110,0.12)',
+  },
+  featureIconDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primary,
+  },
+  featureIconDot2: {
+    borderRadius: 2,
+    width: 9,
+    height: 9,
+  },
+  featureIconDot3: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.primaryDark,
+  },
   featureText: {
-    fontSize: 12,
+    flex: 1,
+    fontSize: 13,
     color: Colors.textPrimary,
     fontWeight: '600',
+    lineHeight: 18,
   },
   primaryButton: {
     width: '100%',
-    height: 50,
+    height: 52,
     borderRadius: Radius.md,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 8,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.22,
+    shadowRadius: 8,
+    elevation: 3,
   },
   primaryButtonText: {
     color: Colors.textOnPrimary,
@@ -280,38 +378,47 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     fontFamily: Font.mono,
   },
+  primaryButtonArrow: {
+    color: Colors.textOnPrimary,
+    fontSize: 16,
+    fontWeight: '700',
+    marginLeft: 2,
+  },
   signInButton: {
     paddingVertical: Spacing.md,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 6,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   signInText: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.textSecondary,
     fontFamily: Font.mono,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   signInLink: {
     color: Colors.primary,
     fontWeight: '800',
   },
-  qrDemoButton: {
+  qrDemoButtonDev: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
     marginTop: Spacing.sm,
-    paddingVertical: Spacing.sm,
+    paddingVertical: 10,
     borderRadius: Radius.sm,
     borderWidth: 1,
-    borderColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.surfaceSecondary,
+    borderStyle: 'dashed',
   },
-  qrDemoText: {
-    color: Colors.primary,
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.5,
+  qrDemoTextDev: {
+    color: Colors.textMuted,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1,
     fontFamily: Font.mono,
   },
 });

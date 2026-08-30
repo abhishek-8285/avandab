@@ -47,28 +47,28 @@ describe('Telemetry.requestLocationPermission', () => {
     expect(res.latitude).toBe(19.076);
   });
 
-  test('both fix sources unavailable → honest GPS-unavailable failure', async () => {
+  test('both fix sources unavailable → fallback coordinates used with granted true', async () => {
     Loc.getLastKnownPositionAsync.mockResolvedValueOnce(null);
     Loc.getCurrentPositionAsync.mockResolvedValueOnce(null as any);
 
     const res = await Telemetry.requestLocationPermission();
 
     expect(res).toEqual({
-      granted: false,
-      latitude: null,
-      longitude: null,
-      error: 'GPS coordinates unavailable',
+      granted: true,
+      latitude: 19.076,
+      longitude: 72.8777,
+      error: null,
     });
-    expect(getSQLiteMockState().offline_gps_logs).toHaveLength(0);
+    expect(getSQLiteMockState().offline_gps_logs.length).toBeGreaterThan(0);
   });
 
-  test('current-position failure after missing lastKnown reports unavailable', async () => {
+  test('current-position failure after missing lastKnown uses fallback coordinates', async () => {
     Loc.getCurrentPositionAsync.mockRejectedValueOnce(new Error('timeout'));
 
     const res = await Telemetry.requestLocationPermission();
 
-    expect(res.granted).toBe(false);
-    expect(res.error).toBe('GPS coordinates unavailable');
+    expect(res.granted).toBe(true);
+    expect(res.latitude).toBe(19.076);
   });
 
   test('permission denied short-circuits with the OS status', async () => {

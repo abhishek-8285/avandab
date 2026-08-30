@@ -127,8 +127,31 @@ func NewEWayBillService(db *sql.DB, bus events.EventBus, client intEWB.Client, l
 
 // GeneratePartA creates a Part-A E-Way Bill for a trip.
 func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARequest) (*EWayBillRecord, error) {
-	if req.TripID == "" {
-		return nil, errors.New("trip_id is required")
+	// 0. Replay / Idempotency check: if an active/part_a EWB already exists for this trip, return it
+	var existingRec EWayBillRecord
+	var existingVehNum sql.NullString
+	err := s.db.QueryRowContext(ctx, `
+		SELECT id, trip_id, ewb_number, status, generation_date, valid_until,
+		       from_place, from_state_code, to_place, to_state_code,
+		       goods_value, distance, doc_type, doc_no, doc_date,
+		       qr_code, gen_mode, vehicle_number, created_at
+		FROM eway_bills
+		WHERE trip_id = ? AND status != 'cancelled'
+		LIMIT 1
+	`, req.TripID).Scan(
+		&existingRec.ID, &existingRec.TripID, &existingRec.EwbNumber, &existingRec.Status,
+		&existingRec.GenerationDate, &existingRec.ValidUntil, &existingRec.FromPlace,
+		&existingRec.FromStateCode, &existingRec.ToPlace, &existingRec.ToStateCode,
+		&existingRec.GoodsValue, &existingRec.Distance, &existingRec.DocType,
+		&existingRec.DocNo, &existingRec.DocDate, &existingRec.QRCode,
+		&existingRec.GenMode, &existingVehNum, &existingRec.CreatedAt,
+	)
+	if err == nil && existingRec.EwbNumber != "" {
+		if existingVehNum.Valid {
+			existingRec.VehicleNumber = &existingVehNum.String
+		}
+		existingRec.ValidUpto = existingRec.ValidUntil.Format(time.RFC3339)
+		return &existingRec, nil
 	}
 
 	// 1. Resolve trip, route, customer, booking data
@@ -136,7 +159,7 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 	var tripNumber, routeSource, routeDest string
 	var custGST, compGST, compState, vehicleNumber sql.NullString
 
-	err := s.db.QueryRowContext(ctx, `
+	err = s.db.QueryRowContext(ctx, `
 		SELECT t.trip_number, r.source, r.destination, r.distance, r.standard_fare,
 		       b.price, c.gst, cs.gst_number, cs.state_code, v.registration_number
 		FROM trips t
@@ -167,11 +190,24 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 		return nil, ErrGoodsValueTooLow
 	}
 
+	// Check if an invoice already exists for this trip / booking
+	var existingInvNum sql.NullString
+	_ = s.db.QueryRowContext(ctx, `
+		SELECT invoice_number FROM invoices
+		WHERE (trip_id = ? OR booking_id = (SELECT booking_id FROM trips WHERE id = ?))
+		  AND status != 'cancelled'
+		LIMIT 1
+	`, req.TripID, req.TripID).Scan(&existingInvNum)
+
 	if req.DocType == "" {
 		req.DocType = "INV"
 	}
 	if req.DocNo == "" {
-		req.DocNo = tripNumber
+		if existingInvNum.Valid && existingInvNum.String != "" {
+			req.DocNo = existingInvNum.String
+		} else {
+			req.DocNo = tripNumber
+		}
 	}
 	if req.DocDate == "" {
 		req.DocDate = time.Now().Format("2006-01-02")
@@ -275,7 +311,15 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 	// 4. Update trip eway_bill_ref
 	_, _ = s.db.ExecContext(ctx, `UPDATE trips SET eway_bill_ref = ? WHERE id = ?`, clientResp.EwbNumber, req.TripID)
 
-	// 5. Append eway_bill_events row
+	// 5. Update invoice ewb_number cross-link
+	_, _ = s.db.ExecContext(ctx, `
+		UPDATE invoices
+		SET ewb_number = ?, updated_at = datetime('now')
+		WHERE (trip_id = ? OR booking_id = (SELECT booking_id FROM trips WHERE id = ?))
+		  AND (ewb_number IS NULL OR ewb_number = '')
+	`, clientResp.EwbNumber, req.TripID, req.TripID)
+
+	// 6. Append eway_bill_events row
 	s.logEvent(ctx, clientResp.EwbNumber, req.TripID, "PART_A_GENERATED", partAJSON, "system")
 
 	return &EWayBillRecord{

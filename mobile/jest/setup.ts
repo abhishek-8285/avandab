@@ -20,6 +20,16 @@ jest.mock('expo-font', () => ({
   isLoaded: jest.fn().mockReturnValue(true),
   loadAsync: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock('react-native-safe-area-context', () => {
+  const inset = { top: 0, right: 0, bottom: 0, left: 0 };
+  return {
+    SafeAreaProvider: ({ children }: any) => children,
+    SafeAreaConsumer: ({ children }: any) => children(inset),
+    SafeAreaView: ({ children }: any) => children,
+    useSafeAreaInsets: () => inset,
+    useSafeAreaFrame: () => ({ x: 0, y: 0, width: 390, height: 844 }),
+  };
+});
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn().mockResolvedValue(null),
   setItemAsync: jest.fn().mockResolvedValue(undefined),
@@ -68,6 +78,17 @@ jest.mock('expo-image-picker', () => ({
   MediaTypeOptions: { Images: 'Images', Videos: 'Videos', All: 'All' },
 }), { virtual: true });
 
+// Mock expo-speech-recognition
+jest.mock('expo-speech-recognition', () => ({
+  ExpoSpeechRecognitionModule: {
+    requestPermissionsAsync: jest.fn().mockResolvedValue({ granted: true, status: 'granted' }),
+    start: jest.fn().mockResolvedValue(undefined),
+    stop: jest.fn().mockResolvedValue(undefined),
+    abort: jest.fn().mockResolvedValue(undefined),
+  },
+  useSpeechRecognitionEvent: jest.fn(),
+}), { virtual: true });
+
 // Mock react-native-signature-canvas
 jest.mock('react-native-signature-canvas', () => 'SignaturePad', { virtual: true });
 jest.mock('react-native-webview', () => ({
@@ -88,15 +109,24 @@ jest.mock('react-i18next', () => ({
 }), { virtual: true });
 
 // Mock @react-native-async-storage/async-storage
+const mockAsyncStorageData: Record<string, string> = {};
+const mockAsyncStorage = {
+  getItem: jest.fn(async (key: string) => mockAsyncStorageData[key] ?? null),
+  setItem: jest.fn(async (key: string, value: string) => {
+    mockAsyncStorageData[key] = String(value);
+  }),
+  removeItem: jest.fn(async (key: string) => {
+    delete mockAsyncStorageData[key];
+  }),
+  clear: jest.fn(async () => {
+    Object.keys(mockAsyncStorageData).forEach((k) => delete mockAsyncStorageData[k]);
+  }),
+  getAllKeys: jest.fn(async () => Object.keys(mockAsyncStorageData)),
+};
 jest.mock('@react-native-async-storage/async-storage', () => ({
-  default: {
-    getItem: jest.fn().mockResolvedValue(null),
-    setItem: jest.fn().mockResolvedValue(undefined),
-    removeItem: jest.fn().mockResolvedValue(undefined),
-  },
-  getItem: jest.fn().mockResolvedValue(null),
-  setItem: jest.fn().mockResolvedValue(undefined),
-  removeItem: jest.fn().mockResolvedValue(undefined),
+  __esModule: true,
+  default: mockAsyncStorage,
+  ...mockAsyncStorage,
 }));
 
 // In-memory mock database state for expo-sqlite
@@ -133,6 +163,9 @@ jest.mock('expo-sqlite', () => ({
         return rows[0] ?? null;
       }
       if (query.includes('queued_pods WHERE trip_id =')) {
+        if (query.includes('stop_id') && params.length >= 3 && params[2] != null) {
+          return sqliteMockState.queued_pods.find((p) => p.trip_id === params[0] && p.stop_id === params[2]) || null;
+        }
         return sqliteMockState.queued_pods.find((p) => p.trip_id === params[0]) || null;
       }
       return null;
@@ -172,7 +205,26 @@ jest.mock('expo-sqlite', () => ({
         // New schema: (trip_id, consignee_name, consignee_phone, notes, photo_uri, latitude, longitude, pod_signature_data, quantity_short, damage_qty, refusal_reason)
         // Old schema fallback: (trip_id, consignee_name, notes, photo_uri, latitude, longitude)
         let pod: any;
-        if (query.includes('consignee_phone')) {
+        if (query.includes('stop_id')) {
+          pod = {
+            id: sqliteMockState.queued_pods.length + 1,
+            trip_id: params[0],
+            stop_id: params[1] ?? null,
+            stop_sequence: params[2] ?? null,
+            otp: params[3] ?? null,
+            consignee_name: params[4],
+            consignee_phone: params[5] ?? null,
+            notes: params[6],
+            photo_uri: params[7],
+            latitude: params[8],
+            longitude: params[9],
+            pod_signature_data: params[10] ?? null,
+            quantity_short: params[11] ?? null,
+            damage_qty: params[12] ?? null,
+            refusal_reason: params[13] ?? null,
+            created_at: new Date().toISOString(),
+          };
+        } else if (query.includes('consignee_phone')) {
           pod = {
             id: sqliteMockState.queued_pods.length + 1,
             trip_id: params[0],
@@ -208,7 +260,13 @@ jest.mock('expo-sqlite', () => ({
         }
         sqliteMockState.queued_pods.push(pod);
       } else if (query.includes('DELETE FROM queued_pods WHERE trip_id =')) {
-        sqliteMockState.queued_pods = sqliteMockState.queued_pods.filter((p) => p.trip_id !== params[0]);
+        if (query.includes('stop_id =') && params[1]) {
+          sqliteMockState.queued_pods = sqliteMockState.queued_pods.filter(
+            (p) => !(p.trip_id === params[0] && (p.stop_id === params[1] || !p.stop_id))
+          );
+        } else {
+          sqliteMockState.queued_pods = sqliteMockState.queued_pods.filter((p) => p.trip_id !== params[0]);
+        }
       } else if (query.includes('INSERT INTO queued_gps')) {
         const gps = {
           id: sqliteMockState.queued_gps.length + 1,

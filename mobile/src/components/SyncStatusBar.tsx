@@ -1,25 +1,33 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { Colors, Font } from '../constants/theme';
+import { Colors, Font, Radius } from '../constants/theme';
 import { useSyncStore, type SyncStatus } from '../stores/syncStore';
+import { useLanguageStore } from '../stores/languageStore';
+import { t } from '../i18n';
 
 const STATUS_COLOR: Record<SyncStatus, string> = {
-  online_synced: Colors.success,
-  syncing: Colors.info,
-  offline_saved: Colors.warning,
-  error: Colors.danger,
+  online_synced: '#25d366',
+  syncing: '#00a884',
+  offline_saved: '#f59e0b',
+  error: '#ef4444',
+};
+
+const STATUS_FALLBACKS: Record<SyncStatus, string> = {
+  online_synced: 'Online — Synced',
+  syncing: 'Syncing…',
+  offline_saved: 'Offline — Saved',
+  error: 'Sync error',
 };
 
 export function SyncStatusBar() {
   const status = useSyncStore((s) => s.status);
-  const { t } = useTranslation();
+  const { locale } = useLanguageStore();
   const labelKey = `sync.status_${status}`;
 
   return (
     <View style={styles.bar} accessibilityLabel={labelKey} accessibilityRole="text">
-      <View style={[styles.dot, { backgroundColor: STATUS_COLOR[status] ?? Colors.warning }]} />
-      <Text style={styles.label}>{t(labelKey)}</Text>
+      <View style={[styles.dot, { backgroundColor: STATUS_COLOR[status] ?? '#25d366' }]} />
+      <Text style={styles.label}>{t(labelKey, STATUS_FALLBACKS[status] ?? 'Online', locale)}</Text>
     </View>
   );
 }
@@ -29,9 +37,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    backgroundColor: Colors.chrome,
+    gap: 5,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 8,
     paddingVertical: 3,
+    borderRadius: Radius.full,
   },
   dot: {
     width: 6,
@@ -39,10 +51,8 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   label: {
-    color: Colors.textOnChromeMuted,
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 1,
-    fontFamily: Font.mono,
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '700',
   },
 });

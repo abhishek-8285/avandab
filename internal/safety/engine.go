@@ -42,6 +42,9 @@ type Engine struct {
 }
 
 func NewEngine(db *sql.DB, uow ports.UnitOfWork, cfg *fuel.ConfigReader, log *slog.Logger) *Engine {
+	if log == nil {
+		log = slog.Default()
+	}
 	return &Engine{
 		db:       db,
 		uow:      uow,
@@ -77,9 +80,17 @@ func (e *Engine) WithLocation(loc *time.Location) *Engine {
 	return e
 }
 
+func (e *Engine) WithTenantID(tenantID shared.TenantID) *Engine {
+	if tenantID != "" {
+		e.tenantID = tenantID
+	}
+	return e
+}
+
 func (e *Engine) Run(ctx context.Context) {
-	interval, err := e.config.GetDurationSeconds(ctx, string(e.tenantID), ConfigTickInterval, DefaultTickInterval)
-	if err != nil {
+	policy, err := LoadSafetyPolicy(ctx, string(e.tenantID), e.config)
+	interval := DefaultTickInterval
+	if err == nil && policy.GapTolerance > 0 {
 		interval = DefaultTickInterval
 	}
 	e.log.Info("safety engine started", "interval", interval.String())
@@ -102,19 +113,19 @@ func (e *Engine) Run(ctx context.Context) {
 }
 
 func (e *Engine) Tick(ctx context.Context) (int, error) {
-	cfg, err := e.loadConfig(ctx)
+	policy, err := LoadSafetyPolicy(ctx, string(e.tenantID), e.config)
 	if err != nil {
-		return 0, fmt.Errorf("safety: load config: %w", err)
+		return 0, fmt.Errorf("safety: load policy: %w", err)
 	}
 
-	vehicles, err := e.activeVehicles(ctx)
+	vehicles, err := e.activeVehicles(ctx, policy)
 	if err != nil {
 		return 0, fmt.Errorf("safety: active vehicles: %w", err)
 	}
 
 	total := 0
 	for _, vid := range vehicles {
-		n, err := e.processVehicle(ctx, vid, cfg)
+		n, err := e.processVehicle(ctx, vid, policy)
 		if err != nil {
 			return total, fmt.Errorf("safety: vehicle %s: %w", vid, err)
 		}
@@ -123,8 +134,11 @@ func (e *Engine) Tick(ctx context.Context) (int, error) {
 	return total, nil
 }
 
-func (e *Engine) activeVehicles(ctx context.Context) ([]string, error) {
-	cutoff := e.now().Add(-24 * time.Hour)
+func (e *Engine) activeVehicles(ctx context.Context, policy SafetyPolicy) ([]string, error) {
+	cutoff := e.now().Add(-policy.GapTolerance)
+	if policy.GapTolerance <= 0 {
+		cutoff = e.now().Add(-24 * time.Hour)
+	}
 	rows, err := e.db.QueryContext(ctx,
 		`SELECT DISTINCT vehicle_id FROM telemetry_snapshots
 		 WHERE vehicle_id IS NOT NULL AND vehicle_id != '' AND timestamp > ?
@@ -144,7 +158,7 @@ func (e *Engine) activeVehicles(ctx context.Context) ([]string, error) {
 	return out, rows.Err()
 }
 
-func (e *Engine) processVehicle(ctx context.Context, vehicleID string, cfg engineConfig) (int, error) {
+func (e *Engine) processVehicle(ctx context.Context, vehicleID string, policy SafetyPolicy) (int, error) {
 	e.mu.Lock()
 	st, ok := e.state[vehicleID]
 	if !ok {
@@ -161,7 +175,7 @@ func (e *Engine) processVehicle(ctx context.Context, vehicleID string, cfg engin
 			return 0, err
 		}
 		for _, f := range frames {
-			detect(cfg, st, f, e.loc)
+			detect(policy, st, f, e.loc)
 		}
 		return 0, nil
 	}
@@ -174,13 +188,12 @@ func (e *Engine) processVehicle(ctx context.Context, vehicleID string, cfg engin
 	emitted := 0
 	for _, f := range frames {
 		if f.driverID == "" {
-			if d := e.tripDriver(ctx, f.tripID); d != "" {
-				f.driverID = d
-			} else if st.driverID != "" {
-				f.driverID = st.driverID
-			}
+			f.driverID = e.resolveDriver(ctx, vehicleID, f.tripID)
 		}
-		events := detect(cfg, st, f, e.loc)
+		if f.driverID == "" && st.driverID != "" {
+			f.driverID = st.driverID
+		}
+		events := detect(policy, st, f, e.loc)
 		if len(events) == 0 {
 			continue
 		}
@@ -196,36 +209,91 @@ func (e *Engine) processVehicle(ctx context.Context, vehicleID string, cfg engin
 		if len(attributed) == 0 {
 			continue
 		}
-		if err := e.persist(ctx, f, attributed); err != nil {
+		persistedCount, err := e.persist(ctx, f, attributed)
+		if err != nil {
 			return emitted, err
 		}
-		emitted += len(attributed)
-		if e.behaviourHook != nil {
+		emitted += persistedCount
+		if persistedCount > 0 && e.behaviourHook != nil {
 			e.behaviourHook(ctx, f.driverID)
 		}
 	}
 	return emitted, nil
 }
 
-func (e *Engine) persist(ctx context.Context, s snapshot, events []detectedEvent) error {
-	return e.uow.Execute(ctx, func(txCtx ports.TxContext) error {
-		db := txOrDB(txCtx, e.db)
+// ProcessSnapshotsDirect allows direct in-memory / event-driven evaluation of snapshots.
+func (e *Engine) ProcessSnapshotsDirect(ctx context.Context, policy SafetyPolicy, vehicleID string, frames []snapshot) (int, error) {
+	e.mu.Lock()
+	st, ok := e.state[vehicleID]
+	if !ok {
+		st = newState()
+		e.state[vehicleID] = st
+	}
+	e.mu.Unlock()
+
+	emitted := 0
+	for _, f := range frames {
+		if f.driverID == "" && st.driverID != "" {
+			f.driverID = st.driverID
+		}
+		events := detect(policy, st, f, e.loc)
+		if len(events) == 0 {
+			continue
+		}
+		attributed := make([]detectedEvent, 0, len(events))
 		for _, ev := range events {
-			if _, err := db.ExecContext(txCtx,
-				`INSERT INTO driver_behaviour_events
+			if f.driverID == "" {
+				continue
+			}
+			attributed = append(attributed, ev)
+		}
+		if len(attributed) == 0 {
+			continue
+		}
+		persistedCount, err := e.persist(ctx, f, attributed)
+		if err != nil {
+			return emitted, err
+		}
+		emitted += persistedCount
+		if persistedCount > 0 && e.behaviourHook != nil {
+			e.behaviourHook(ctx, f.driverID)
+		}
+	}
+	return emitted, nil
+}
+
+func (e *Engine) persist(ctx context.Context, s snapshot, events []detectedEvent) (int, error) {
+	persistedCount := 0
+	err := e.uow.Execute(ctx, func(txCtx ports.TxContext) error {
+		db := txOrDB(txCtx, e.db)
+		alerts := make([]any, 0)
+		for _, ev := range events {
+			// Deterministic idempotency identity: tenant + vehicle + event_type + timestamp
+			eventID := fmt.Sprintf("dbe_%s_%s_%d", s.vehicleID, ev.eventType, ev.occurredAt.Unix())
+			res, err := db.ExecContext(txCtx,
+				`INSERT OR IGNORE INTO driver_behaviour_events
 				    (id, driver_id, trip_id, vehicle_id, event_type, severity, weight, metadata, occurred_at)
 				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				e.idGen.GenerateUUID(), s.driverID, strOrNull(s.tripID), s.vehicleID,
-				ev.eventType, ev.severity, ev.weight, ev.metadata, timeStr(ev.occurredAt)); err != nil {
+				eventID, s.driverID, strOrNull(s.tripID), s.vehicleID,
+				ev.eventType, ev.severity, ev.weight, ev.metadata, timeStr(ev.occurredAt))
+			if err != nil {
 				return err
 			}
+			rowsAffected, err := res.RowsAffected()
+			if err != nil {
+				return err
+			}
+			if rowsAffected > 0 {
+				persistedCount++
+				alerts = append(alerts, e.buildAlert(s, ev))
+			}
 		}
-		alerts := make([]any, 0, len(events))
-		for _, ev := range events {
-			alerts = append(alerts, e.buildAlert(s, ev))
+		if len(alerts) > 0 {
+			return e.alerts.SaveEvents(txCtx, s.vehicleID, "Vehicle", alerts)
 		}
-		return e.alerts.SaveEvents(txCtx, s.vehicleID, "Vehicle", alerts)
+		return nil
 	})
+	return persistedCount, err
 }
 
 func (e *Engine) buildAlert(s snapshot, ev detectedEvent) founderalerts.AlertEvent {
@@ -285,11 +353,12 @@ func alertTitle(eventType string) string {
 
 func (e *Engine) loadRecent(ctx context.Context, vehicleID string, n int) ([]snapshot, error) {
 	rows, err := e.db.QueryContext(ctx,
-		`SELECT id, COALESCE(trip_id,''), vehicle_id, COALESCE(driver_id,''),
-		        timestamp, COALESCE(speed,0), ignition
-		 FROM telemetry_snapshots
-		 WHERE vehicle_id = ?
-		 ORDER BY timestamp DESC
+		`SELECT s.id, COALESCE(s.trip_id,''), s.vehicle_id, COALESCE(t.driver_id,''),
+		        s.timestamp, COALESCE(s.speed,0), COALESCE(s.latitude, 0), COALESCE(s.longitude, 0), s.ignition
+		 FROM telemetry_snapshots s
+		 LEFT JOIN trips t ON s.trip_id = t.id
+		 WHERE s.vehicle_id = ?
+		 ORDER BY s.timestamp DESC
 		 LIMIT ?`, vehicleID, n)
 	if err != nil {
 		return nil, err
@@ -307,11 +376,12 @@ func (e *Engine) loadRecent(ctx context.Context, vehicleID string, n int) ([]sna
 
 func (e *Engine) loadAfter(ctx context.Context, vehicleID string, after time.Time) ([]snapshot, error) {
 	rows, err := e.db.QueryContext(ctx,
-		`SELECT id, COALESCE(trip_id,''), vehicle_id, COALESCE(driver_id,''),
-		        timestamp, COALESCE(speed,0), ignition
-		 FROM telemetry_snapshots
-		 WHERE vehicle_id = ? AND timestamp > ?
-		 ORDER BY timestamp ASC
+		`SELECT s.id, COALESCE(s.trip_id,''), s.vehicle_id, COALESCE(t.driver_id,''),
+		        s.timestamp, COALESCE(s.speed,0), COALESCE(s.latitude, 0), COALESCE(s.longitude, 0), s.ignition
+		 FROM telemetry_snapshots s
+		 LEFT JOIN trips t ON s.trip_id = t.id
+		 WHERE s.vehicle_id = ? AND s.timestamp > ?
+		 ORDER BY s.timestamp ASC
 		 LIMIT ?`, vehicleID, timeStr(after), defaultSnapshotsPerSweep)
 	if err != nil {
 		return nil, err
@@ -326,7 +396,7 @@ func scanSnapshots(rows *sql.Rows) ([]snapshot, error) {
 		var s snapshot
 		var ign sql.NullBool
 		if err := rows.Scan(&s.id, &s.tripID, &s.vehicleID, &s.driverID,
-			&s.ts, &s.speed, &ign); err != nil {
+			&s.ts, &s.speed, &s.lat, &s.lng, &ign); err != nil {
 			return nil, err
 		}
 		if ign.Valid {
@@ -336,6 +406,20 @@ func scanSnapshots(rows *sql.Rows) ([]snapshot, error) {
 		out = append(out, s)
 	}
 	return out, rows.Err()
+}
+
+func (e *Engine) resolveDriver(ctx context.Context, vehicleID, tripID string) string {
+	if tripID != "" {
+		if d := e.tripDriver(ctx, tripID); d != "" {
+			return d
+		}
+	}
+	var driverID string
+	if err := e.db.QueryRowContext(ctx,
+		`SELECT COALESCE(driver_id,'') FROM trips WHERE vehicle_id = ? AND status IN ('in_transit', 'dispatched', 'active', 'scheduled') ORDER BY departure_time DESC LIMIT 1`, vehicleID).Scan(&driverID); err == nil && driverID != "" {
+		return driverID
+	}
+	return ""
 }
 
 func (e *Engine) tripDriver(ctx context.Context, tripID string) string {

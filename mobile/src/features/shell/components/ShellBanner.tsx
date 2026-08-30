@@ -9,7 +9,7 @@ export function ShellBanner({ vehicleId, onSetup }: { vehicleId: string | null; 
     <>
       <View style={styles.bannerContainer}>
         <View style={styles.bannerIconBox}>
-          <MaterialCommunityIcons name="clipboard-alert-outline" size={14} color={Colors.warning} />
+          <MaterialCommunityIcons name="alert-circle" size={15} color={Colors.warning} />
         </View>
         <View style={styles.bannerTextContainer}>
           <Text style={styles.bannerTitle}>PROFILE SETUP INCOMPLETE</Text>

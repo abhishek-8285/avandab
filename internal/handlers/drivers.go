@@ -375,24 +375,37 @@ func (h *DriverHandlers) GetMe(w http.ResponseWriter, r *http.Request) {
 		tenantID = string(shared.DefaultTenant)
 	}
 	var d struct {
-		ID        string
-		DriverID  string
-		FirstName string
-		LastName  string
-		Phone     string
-		Status    string
+		ID            string
+		DriverID      string
+		FirstName     string
+		LastName      string
+		Phone         string
+		Status        string
+		LicenseNumber string
+		LicenseExpiry string
+		BankDetails   string
+		Aadhaar       string
+		Pan           string
+		Notes         string
 	}
 
 	// Query driver linked to user by ID, user_id (if matches ID), or email —
 	// scoped to the acting tenant so a cross-tenant user id/email match never
 	// resolves (Spec 13 §2.2).
 	err := h.DB.QueryRowContext(ctx, `
-		SELECT id, driver_id, first_name, last_name, phone, status
+		SELECT id, driver_id, first_name, last_name, phone, status,
+		       COALESCE(license_number, ''), COALESCE(license_expiry, ''),
+		       COALESCE(bank_details, ''), COALESCE(aadhaar, ''), COALESCE(pan, ''),
+		       COALESCE(notes, '')
 		FROM drivers
 		WHERE (id = ? OR email = (SELECT email FROM users WHERE id = ?))
 		  AND tenant_id = ?
 		LIMIT 1
-	`, session.UserID, session.UserID, tenantID).Scan(&d.ID, &d.DriverID, &d.FirstName, &d.LastName, &d.Phone, &d.Status)
+	`, session.UserID, session.UserID, tenantID).Scan(
+		&d.ID, &d.DriverID, &d.FirstName, &d.LastName, &d.Phone, &d.Status,
+		&d.LicenseNumber, &d.LicenseExpiry, &d.BankDetails, &d.Aadhaar, &d.Pan,
+		&d.Notes,
+	)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "driver not found"})
@@ -418,6 +431,19 @@ func (h *DriverHandlers) GetMe(w http.ResponseWriter, r *http.Request) {
 		ORDER BY t.departure_time DESC, t.created_at DESC
 		LIMIT 1
 	`, d.ID, d.DriverID, session.UserID, tenantID).Scan(&vehiclePlate, &vehicleID)
+
+	if vehiclePlate == "" && d.Notes != "" {
+		var vID, vReg string
+		if errV := h.DB.QueryRowContext(ctx, `
+			SELECT id, registration_number
+			FROM vehicles
+			WHERE (registration_number = ? OR vehicle_number = ?)
+			  AND tenant_id = ?
+			LIMIT 1`, d.Notes, d.Notes, tenantID).Scan(&vID, &vReg); errV == nil {
+			vehiclePlate = vReg
+			vehicleID = vID
+		}
+	}
 
 	// Check current location from latest snapshot or vehicle latest position
 	type Location struct {
@@ -456,10 +482,117 @@ func (h *DriverHandlers) GetMe(w http.ResponseWriter, r *http.Request) {
 		"status":           d.Status,
 		"vehicle_plate":    vehiclePlate,
 		"current_location": curLoc,
+		"license_number":   d.LicenseNumber,
+		"license_expiry":   d.LicenseExpiry,
+		"bank_details":     d.BankDetails,
+		"aadhaar":          d.Aadhaar,
+		"pan":              d.Pan,
 	}
 
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+// UpdateMe updates the driver profile, driving license, and bank details for the authenticated user.
+func (h *DriverHandlers) UpdateMe(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	session, ok := h.getUserFromContext(r)
+	if !ok || session == nil || session.UserID == "" {
+		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	var req struct {
+		LicenseNumber string `json:"license_number"`
+		LicenseExpiry string `json:"license_expiry"`
+		BankDetails   string `json:"bank_details"`
+		Aadhaar       string `json:"aadhaar"`
+		Pan           string `json:"pan"`
+		Status        string `json:"status"`
+		VehicleNumber string `json:"vehicle_number"`
+		VehiclePlate  string `json:"vehicle_plate"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	ctx := r.Context()
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		tenantID = string(shared.DefaultTenant)
+	}
+
+	var driverID string
+	err := h.DB.QueryRowContext(ctx, `
+		SELECT id FROM drivers
+		WHERE (id = ? OR email = (SELECT email FROM users WHERE id = ?))
+		  AND tenant_id = ?
+		LIMIT 1`, session.UserID, session.UserID, tenantID).Scan(&driverID)
+	if err != nil {
+		writeJSONError(w, http.StatusNotFound, "driver not found")
+		return
+	}
+
+	vNum := strings.ToUpper(strings.TrimSpace(req.VehicleNumber))
+	if vNum == "" {
+		vNum = strings.ToUpper(strings.TrimSpace(req.VehiclePlate))
+	}
+	if vNum != "" {
+		var existingVID string
+		errV := h.DB.QueryRowContext(ctx, `SELECT id FROM vehicles WHERE registration_number = ? AND tenant_id = ?`, vNum, tenantID).Scan(&existingVID)
+		if errV != nil {
+			existingVID = uuid.New().String()
+			_, _ = h.DB.ExecContext(ctx, `
+				INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, capacity, fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, tenant_id)
+				VALUES (?, ?, ?, 'truck', 5000, 'diesel', date('now', '+1 year'), date('now', '+1 year'), date('now', '+1 year'), 'available', ?)`,
+				existingVID, vNum, vNum, tenantID)
+		}
+		_, _ = h.DB.ExecContext(ctx, `UPDATE drivers SET notes = ? WHERE id = ? AND tenant_id = ?`, vNum, driverID, tenantID)
+
+		// Link telemetry synthetic device to this vehicle
+		_, _ = h.DB.ExecContext(ctx, `
+			UPDATE telemetry_devices
+			SET vehicle_id = ?, status = 'active', updated_at = CURRENT_TIMESTAMP
+			WHERE (imei = ? OR imei = ?) AND tenant_id = ?`,
+			existingVID, driverID, session.UserID, tenantID)
+	}
+
+	query := `
+		UPDATE drivers
+		SET updated_at = CURRENT_TIMESTAMP,
+		    license_number = CASE WHEN ? != '' THEN ? ELSE license_number END,
+		    license_expiry = CASE WHEN ? != '' THEN ? ELSE license_expiry END,
+		    bank_details = CASE WHEN ? != '' THEN ? ELSE bank_details END,
+		    aadhaar = CASE WHEN ? != '' THEN ? ELSE aadhaar END,
+		    pan = CASE WHEN ? != '' THEN ? ELSE pan END,
+		    status = CASE WHEN ? IN ('available', 'leave', 'inactive') THEN ? ELSE status END
+		WHERE id = ? AND tenant_id = ?`
+
+	res, err := h.DB.ExecContext(ctx, query,
+		req.LicenseNumber, req.LicenseNumber,
+		req.LicenseExpiry, req.LicenseExpiry,
+		req.BankDetails, req.BankDetails,
+		req.Aadhaar, req.Aadhaar,
+		req.Pan, req.Pan,
+		req.Status, req.Status,
+		driverID, tenantID)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "update failed: "+err.Error())
+		return
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		writeJSONError(w, http.StatusNotFound, "driver not found")
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success":       true,
+		"driver_id":     driverID,
+		"status":        req.Status,
+		"vehicle_plate": vNum,
+	})
 }
 
 // UpdateMyStatus lets the authenticated driver flip their own duty status

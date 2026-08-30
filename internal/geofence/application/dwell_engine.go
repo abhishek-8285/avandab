@@ -110,10 +110,38 @@ func (e *DwellEngine) Evaluate(current domain.EngineState, fix domain.Fix, zones
 		}
 
 	case domain.StateInside:
-		cur := zoneByID(zones, current.GeofenceID)
-		// Exit test: zone contracted by hysteresis. If the zone is no
-		// longer active/loaded, stay inside (no spurious exit noise).
-		if cur != nil && !cur.ContainsExit(fix.Latitude, fix.Longitude, e.config.HysteresisMetres) {
+		var cur *domain.Geofence
+		if current.GeofenceID != nil {
+			cur = zoneByID(zones, current.GeofenceID)
+		} else {
+			cur = entryZone
+		}
+		if cur == nil {
+			// Previous zone is no longer active
+			if entryZone != nil {
+				next.State = domain.StateEntering
+				t := now
+				next.ZoneEnteredAt = &t
+				next.GeofenceID = &entryZone.ID
+				next.ZoneKind = &entryZone.Kind
+				next.ConfirmedAt = nil
+				next.ExitStartedAt = nil
+			} else {
+				next.State = domain.StateOutside
+				next.GeofenceID = nil
+				next.ZoneKind = nil
+				next.ZoneEnteredAt = nil
+				next.ConfirmedAt = nil
+				next.ExitStartedAt = nil
+			}
+			break
+		}
+		if current.GeofenceID == nil {
+			next.GeofenceID = &cur.ID
+			next.ZoneKind = &cur.Kind
+		}
+		// Exit test: zone contracted by hysteresis.
+		if !cur.ContainsExit(fix.Latitude, fix.Longitude, e.config.HysteresisMetres) {
 			next.State = domain.StateLeaving
 			t := now
 			next.ExitStartedAt = &t
@@ -121,13 +149,18 @@ func (e *DwellEngine) Evaluate(current domain.EngineState, fix domain.Fix, zones
 
 	case domain.StateLeaving:
 		if entryZone != nil {
-			// Jitter: fix back inside → revert to inside.
-			next.State = domain.StateInside
-			next.ExitStartedAt = nil
-			if entryZone.ID != *current.GeofenceID {
+			// Jitter or transition to new zone
+			if current.GeofenceID == nil || entryZone.ID != *current.GeofenceID {
+				next.State = domain.StateEntering
+				t := now
+				next.ZoneEnteredAt = &t
 				next.GeofenceID = &entryZone.ID
 				next.ZoneKind = &entryZone.Kind
+				next.ExitStartedAt = nil
+				break
 			}
+			next.State = domain.StateInside
+			next.ExitStartedAt = nil
 			break
 		}
 		if current.ExitStartedAt == nil || now.Sub(*current.ExitStartedAt) >= e.config.Debounce {

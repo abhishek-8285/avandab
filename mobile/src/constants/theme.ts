@@ -1,43 +1,53 @@
-// Avandab Driver Pro - Dense, data-first UI tokens for professional drivers.
+// Avandab Driver Pro - WhatsApp Style Theme tokens for Indian Commercial Drivers.
 
 export const Colors = {
-  // Brand
-  primary: '#0f766e',          // Teal-700 - saturated accent for active states
-  primaryDark: '#115e59',
-  primaryLight: '#ccfbf1',
-  primarySubtle: '#99f6e4',
+  // WhatsApp Signature Palette
+  primary: '#008069',          // WhatsApp Deep Green
+  primaryDark: '#075e54',      // Classic WhatsApp Header Dark Green
+  primaryLight: '#dcf8c6',     // WhatsApp Message Bubble Light Green
+  primarySubtle: '#e7ffdb',
+  accent: '#25d366',           // WhatsApp Vibrant Green Accent
+  whatsappAccent: '#25d366',   // WhatsApp Vibrant Green Floating Action
 
-  // Dark chrome (headers, top bars, status banners)
-  chrome: '#0f172a',           // Slate 900
-  chromeLight: '#1e293b',      // Slate 800
-  chromeBorder: '#334155',     // Slate 700
+  // Header & Dark chrome
+  chrome: '#075e54',           // WhatsApp Header Teal
+  chromeLight: '#128c7e',      // WhatsApp Tab Bar Active
+  chromeBorder: '#0b4e46',
 
   // Backgrounds & surfaces
-  background: '#f1f5f9',       // Slate 100
+  background: '#efeae2',       // Classic WhatsApp soft background
   surface: '#ffffff',
-  surfaceSecondary: '#f8fafc', // Slate 50
+  surfaceSecondary: '#f0f2f5', // WhatsApp List Item Hover/Secondary
+  bubbleGreen: '#dcf8c6',
+  bubbleWhite: '#ffffff',
 
   // Text
-  textPrimary: '#0f172a',      // Slate 900
-  textSecondary: '#475569',    // Slate 600
-  textMuted: '#94a3b8',        // Slate 400
+  textPrimary: '#111b21',      // WhatsApp Primary Text (Very sharp dark)
+  textSecondary: '#667781',    // WhatsApp Secondary / Timestamp Grey
+  textMuted: '#8696a0',        // WhatsApp Muted Text
   textOnPrimary: '#ffffff',
-  textOnChrome: '#e2e8f0',     // Slate 200 (on dark chrome)
-  textOnChromeMuted: '#94a3b8',
+  textOnChrome: '#ffffff',
+  textOnChromeMuted: '#e9edef',
 
-  // Status - high contrast
-  success: '#15803d',
-  successBg: '#dcfce7',
-  warning: '#b45309',
+  // Status
+  success: '#00a884',
+  successBg: '#dcf8c6',
+  warning: '#f59e0b',
   warningBg: '#fef3c7',
-  danger: '#dc2626',
+  danger: '#ea0038',
   dangerBg: '#fee2e2',
-  info: '#0369a1',
+  info: '#0284c7',
   infoBg: '#e0f2fe',
 
-  // Borders - sharper visibility
-  border: '#cbd5e1',           // Slate 300
-  borderLight: '#e2e8f0',      // Slate 200
+  // Borders
+  border: '#e9edef',           // Subtle WhatsApp separator
+  borderLight: '#f0f2f5',
+
+  // Shell & Navigation aliases
+  headerBg: '#075e54',
+  headerBorder: '#054c44',
+  tabActive: '#ffffff',
+  tabInactive: 'rgba(255, 255, 255, 0.75)',
 };
 
 export const Font = {
@@ -47,10 +57,11 @@ export const Font = {
 
 export const Radius = {
   none: 0,
-  sm: 2,
-  md: 4,
-  lg: 6,
-  xl: 8,
+  sm: 4,
+  md: 8,
+  lg: 12,
+  xl: 16,
+  full: 9999,
 };
 
 export const Spacing = {
@@ -64,17 +75,24 @@ export const Spacing = {
 
 export const Shadows = {
   card: {
-    shadowColor: '#0f172a',
+    shadowColor: '#111b21',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
   modal: {
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
+    shadowColor: '#111b21',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
     elevation: 8,
+  },
+  fab: {
+    shadowColor: '#111b21',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
   },
 };

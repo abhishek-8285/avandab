@@ -99,6 +99,9 @@ func (r *tripRepository) Save(ctx context.Context, t *aggregate.TripAggregate) e
 		}
 		t.Version = 1
 	}
+
+	_ = r.saveStops(ctx, t)
+
 	err = r.outbox.SaveEvents(ctx, string(t.ID), "Trip", t.Events())
 	if err != nil {
 		return err
@@ -140,7 +143,10 @@ func (r *tripRepository) Find(ctx context.Context, id aggregate.TripID, tenantID
 		DeliveredAt:     row.DeliveredAt,
 		CompletedAt:     row.CompletedAt,
 	}
-	return converters.MapToAggregate(m), nil
+	agg := converters.MapToAggregate(m)
+	stops, _ := r.loadStops(ctx, string(id), string(tenantID))
+	agg.Stops = stops
+	return agg, nil
 }
 
 func (r *tripRepository) FindByNumber(ctx context.Context, number string, tenantID shared.TenantID) (*aggregate.TripAggregate, error) {
@@ -176,7 +182,10 @@ func (r *tripRepository) FindByNumber(ctx context.Context, number string, tenant
 		DeliveredAt:     row.DeliveredAt,
 		CompletedAt:     row.CompletedAt,
 	}
-	return converters.MapToAggregate(m), nil
+	agg := converters.MapToAggregate(m)
+	stops, _ := r.loadStops(ctx, row.ID, string(tenantID))
+	agg.Stops = stops
+	return agg, nil
 }
 
 func (r *tripRepository) Exists(ctx context.Context, id aggregate.TripID, tenantID shared.TenantID) (bool, error) {
@@ -593,4 +602,178 @@ WHERE t.tenant_id = ?
 	}
 
 	return readModels, count, nil
+}
+
+type tripDBTx interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+func (r *tripRepository) getDBTx(ctx context.Context) tripDBTx {
+	if tx := repository.TxFromContext(ctx); tx != nil {
+		return tx
+	}
+	return r.dbConn
+}
+
+func (r *tripRepository) saveStops(ctx context.Context, t *aggregate.TripAggregate) error {
+	if len(t.Stops) == 0 {
+		return nil
+	}
+	q := r.getDBTx(ctx)
+	for _, s := range t.Stops {
+		_, err := q.ExecContext(ctx, `
+			INSERT INTO trip_stops (
+				id, tenant_id, trip_id, stop_sequence, stop_type, location_name, address,
+				latitude, longitude, geofence_radius_m, consignee_name, consignee_phone, consignee_email,
+				planned_arrival, actual_arrival, actual_departure, status,
+				otp_required, otp_code, otp_expires_at, otp_verified_at,
+				pod_required, pod_url, pod_signature_url, pod_verified_at, pod_notes, failure_reason,
+				created_at, updated_at
+			) VALUES (
+				?, ?, ?, ?, ?, ?, ?,
+				?, ?, ?, ?, ?, ?,
+				?, ?, ?, ?,
+				?, ?, ?, ?,
+				?, ?, ?, ?, ?, ?,
+				?, ?
+			)
+			ON CONFLICT(trip_id, stop_sequence) DO UPDATE SET
+				status = excluded.status,
+				actual_arrival = excluded.actual_arrival,
+				actual_departure = excluded.actual_departure,
+				otp_verified_at = excluded.otp_verified_at,
+				pod_url = excluded.pod_url,
+				pod_signature_url = excluded.pod_signature_url,
+				pod_verified_at = excluded.pod_verified_at,
+				pod_notes = excluded.pod_notes,
+				failure_reason = excluded.failure_reason,
+				updated_at = excluded.updated_at
+		`,
+			s.ID, string(t.TenantID), string(t.ID), s.StopSequence, string(s.StopType), s.LocationName, s.Address,
+			s.Latitude, s.Longitude, s.GeofenceRadiusM, s.ConsigneeName, s.ConsigneePhone, s.ConsigneeEmail,
+			s.PlannedArrival, s.ActualArrival, s.ActualDeparture, string(s.Status),
+			s.OTPRequired, s.OTPCode, s.OTPExpiresAt, s.OTPVerifiedAt,
+			s.PODRequired, s.PODURL, s.PODSignatureURL, s.PODVerifiedAt, s.PODNotes, s.FailureReason,
+			s.CreatedAt, s.UpdatedAt,
+		)
+		if err != nil {
+			if strings.Contains(err.Error(), "no such table") {
+				return nil
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *tripRepository) loadStops(ctx context.Context, tripID, tenantID string) ([]aggregate.TripStop, error) {
+	q := r.getDBTx(ctx)
+	rows, err := q.QueryContext(ctx, `
+		SELECT id, tenant_id, trip_id, stop_sequence, stop_type, location_name, address,
+		       latitude, longitude, geofence_radius_m, consignee_name, consignee_phone, consignee_email,
+		       planned_arrival, actual_arrival, actual_departure, status,
+		       otp_required, otp_code, otp_expires_at, otp_verified_at,
+		       pod_required, pod_url, pod_signature_url, pod_verified_at, pod_notes, failure_reason,
+		       created_at, updated_at
+		FROM trip_stops
+		WHERE trip_id = ? AND tenant_id = ?
+		ORDER BY stop_sequence ASC
+	`, tripID, tenantID)
+	if err != nil {
+		if strings.Contains(err.Error(), "no such table") {
+			return nil, nil
+		}
+		return nil, err
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	var stops []aggregate.TripStop
+	for rows.Next() {
+		var s aggregate.TripStop
+		var tid, trid, stype, status string
+		var planArr, actArr, actDep, otpExp, otpVer, podVer, crAt, upAt sql.NullTime
+		var lat, lng sql.NullFloat64
+		var cName, cPhone, cEmail, otpCode, podURL, podSig, podNotes, failReason sql.NullString
+		var otpReq, podReq int
+
+		if err := rows.Scan(
+			&s.ID, &tid, &trid, &s.StopSequence, &stype, &s.LocationName, &s.Address,
+			&lat, &lng, &s.GeofenceRadiusM, &cName, &cPhone, &cEmail,
+			&planArr, &actArr, &actDep, &status,
+			&otpReq, &otpCode, &otpExp, &otpVer,
+			&podReq, &podURL, &podSig, &podVer, &podNotes, &failReason,
+			&crAt, &upAt,
+		); err != nil {
+			return nil, err
+		}
+
+		s.TenantID = shared.TenantID(tid)
+		s.TripID = aggregate.TripID(trid)
+		s.StopType = aggregate.StopType(stype)
+		s.Status = aggregate.StopStatus(status)
+		s.OTPRequired = otpReq == 1
+		s.PODRequired = podReq == 1
+
+		if lat.Valid {
+			s.Latitude = &lat.Float64
+		}
+		if lng.Valid {
+			s.Longitude = &lng.Float64
+		}
+		if cName.Valid {
+			s.ConsigneeName = cName.String
+		}
+		if cPhone.Valid {
+			s.ConsigneePhone = cPhone.String
+		}
+		if cEmail.Valid {
+			s.ConsigneeEmail = cEmail.String
+		}
+		if otpCode.Valid {
+			s.OTPCode = otpCode.String
+		}
+		if podURL.Valid {
+			s.PODURL = podURL.String
+		}
+		if podSig.Valid {
+			s.PODSignatureURL = podSig.String
+		}
+		if podNotes.Valid {
+			s.PODNotes = podNotes.String
+		}
+		if failReason.Valid {
+			s.FailureReason = failReason.String
+		}
+		if planArr.Valid {
+			s.PlannedArrival = &planArr.Time
+		}
+		if actArr.Valid {
+			s.ActualArrival = &actArr.Time
+		}
+		if actDep.Valid {
+			s.ActualDeparture = &actDep.Time
+		}
+		if otpExp.Valid {
+			s.OTPExpiresAt = &otpExp.Time
+		}
+		if otpVer.Valid {
+			s.OTPVerifiedAt = &otpVer.Time
+		}
+		if podVer.Valid {
+			s.PODVerifiedAt = &podVer.Time
+		}
+		if crAt.Valid {
+			s.CreatedAt = crAt.Time
+		}
+		if upAt.Valid {
+			s.UpdatedAt = upAt.Time
+		}
+
+		stops = append(stops, s)
+	}
+	return stops, nil
 }

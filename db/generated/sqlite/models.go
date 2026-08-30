@@ -104,6 +104,20 @@ type AlertSource struct {
 	CreatedAt   time.Time      `json:"created_at"`
 }
 
+type AuditEvent struct {
+	ID          string         `json:"id"`
+	TenantID    string         `json:"tenant_id"`
+	ActorUserID sql.NullString `json:"actor_user_id"`
+	EntityType  string         `json:"entity_type"`
+	EntityID    string         `json:"entity_id"`
+	Action      string         `json:"action"`
+	OldState    sql.NullString `json:"old_state"`
+	NewState    sql.NullString `json:"new_state"`
+	Reason      sql.NullString `json:"reason"`
+	RequestID   sql.NullString `json:"request_id"`
+	CreatedAt   time.Time      `json:"created_at"`
+}
+
 type AuditLog struct {
 	ID        string         `json:"id"`
 	UserID    sql.NullString `json:"user_id"`
@@ -247,6 +261,56 @@ type Customer struct {
 	StateCode        sql.NullString `json:"state_code"`
 }
 
+type CustomerBookingDetail struct {
+	BookingID            string          `json:"booking_id"`
+	TenantID             string          `json:"tenant_id"`
+	QuoteID              sql.NullString  `json:"quote_id"`
+	IdempotencyKey       sql.NullString  `json:"idempotency_key"`
+	PickupAddress        string          `json:"pickup_address"`
+	PickupLat            sql.NullFloat64 `json:"pickup_lat"`
+	PickupLng            sql.NullFloat64 `json:"pickup_lng"`
+	PickupContactName    sql.NullString  `json:"pickup_contact_name"`
+	PickupContactPhone   sql.NullString  `json:"pickup_contact_phone"`
+	DeliveryAddress      string          `json:"delivery_address"`
+	DeliveryLat          sql.NullFloat64 `json:"delivery_lat"`
+	DeliveryLng          sql.NullFloat64 `json:"delivery_lng"`
+	DeliveryContactName  sql.NullString  `json:"delivery_contact_name"`
+	DeliveryContactPhone sql.NullString  `json:"delivery_contact_phone"`
+	ScheduledAt          sql.NullTime    `json:"scheduled_at"`
+	CargoDescription     sql.NullString  `json:"cargo_description"`
+	SpecialInstructions  sql.NullString  `json:"special_instructions"`
+	PaymentStatus        string          `json:"payment_status"`
+	PaymentMethod        sql.NullString  `json:"payment_method"`
+	CancellationReason   sql.NullString  `json:"cancellation_reason"`
+	CancelledBy          sql.NullString  `json:"cancelled_by"`
+	CancelledAt          sql.NullTime    `json:"cancelled_at"`
+	CreatedAt            time.Time       `json:"created_at"`
+	UpdatedAt            time.Time       `json:"updated_at"`
+}
+
+type CustomerQuote struct {
+	ID             string    `json:"id"`
+	TenantID       string    `json:"tenant_id"`
+	CustomerID     string    `json:"customer_id"`
+	Origin         string    `json:"origin"`
+	Destination    string    `json:"destination"`
+	CargoType      string    `json:"cargo_type"`
+	VehicleType    string    `json:"vehicle_type"`
+	WeightKg       float64   `json:"weight_kg"`
+	DistanceKm     float64   `json:"distance_km"`
+	BaseRate       float64   `json:"base_rate"`
+	PerKmRate      float64   `json:"per_km_rate"`
+	EstimatedToll  float64   `json:"estimated_toll"`
+	Subtotal       float64   `json:"subtotal"`
+	GstRate        float64   `json:"gst_rate"`
+	GstAmount      float64   `json:"gst_amount"`
+	DiscountAmount float64   `json:"discount_amount"`
+	TotalPrice     float64   `json:"total_price"`
+	Status         string    `json:"status"`
+	ExpiresAt      time.Time `json:"expires_at"`
+	CreatedAt      time.Time `json:"created_at"`
+}
+
 type CustomerUser struct {
 	ID         string `json:"id"`
 	CustomerID string `json:"customer_id"`
@@ -281,6 +345,19 @@ type Dispatch struct {
 	TenantID     sql.NullString `json:"tenant_id"`
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
+}
+
+type DispatchOffer struct {
+	ID          string       `json:"id"`
+	TenantID    string       `json:"tenant_id"`
+	BookingID   string       `json:"booking_id"`
+	DriverID    string       `json:"driver_id"`
+	VehicleID   string       `json:"vehicle_id"`
+	Status      string       `json:"status"`
+	OfferedAt   time.Time    `json:"offered_at"`
+	ExpiresAt   time.Time    `json:"expires_at"`
+	RespondedAt sql.NullTime `json:"responded_at"`
+	CreatedAt   time.Time    `json:"created_at"`
 }
 
 type DispatchOverride struct {
@@ -350,6 +427,32 @@ type DriverBehaviourEvent struct {
 	CreatedAt  time.Time      `json:"created_at"`
 }
 
+type DriverCommand struct {
+	CommandID       string         `json:"command_id"`
+	TenantID        string         `json:"tenant_id"`
+	DriverID        string         `json:"driver_id"`
+	CommandType     string         `json:"command_type"`
+	Status          string         `json:"status"`
+	ResponsePayload sql.NullString `json:"response_payload"`
+	ExecutedAt      time.Time      `json:"executed_at"`
+}
+
+type DriverComplianceDocument struct {
+	ID              string         `json:"id"`
+	TenantID        string         `json:"tenant_id"`
+	DriverID        string         `json:"driver_id"`
+	DocumentType    string         `json:"document_type"`
+	StorageKey      string         `json:"storage_key"`
+	MimeType        string         `json:"mime_type"`
+	FileSizeBytes   int64          `json:"file_size_bytes"`
+	DocumentHash    string         `json:"document_hash"`
+	Status          string         `json:"status"`
+	RejectionReason sql.NullString `json:"rejection_reason"`
+	VerifiedBy      sql.NullString `json:"verified_by"`
+	VerifiedAt      sql.NullTime   `json:"verified_at"`
+	CreatedAt       time.Time      `json:"created_at"`
+}
+
 type DriverDocument struct {
 	ID         string         `json:"id"`
 	DriverID   string         `json:"driver_id"`
@@ -390,6 +493,20 @@ type DriverExpense struct {
 	TenantID          string          `json:"tenant_id"`
 }
 
+type DriverIdentity struct {
+	ID                 string         `json:"id"`
+	TenantID           string         `json:"tenant_id"`
+	DriverID           string         `json:"driver_id"`
+	IdentityType       string         `json:"identity_type"`
+	MaskedValue        string         `json:"masked_value"`
+	EncryptedValue     string         `json:"encrypted_value"`
+	LookupHash         string         `json:"lookup_hash"`
+	VaultReference     sql.NullString `json:"vault_reference"`
+	VerificationStatus string         `json:"verification_status"`
+	VerifiedAt         sql.NullTime   `json:"verified_at"`
+	CreatedAt          time.Time      `json:"created_at"`
+}
+
 type DriverIssue struct {
 	ID        string         `json:"id"`
 	TenantID  string         `json:"tenant_id"`
@@ -401,6 +518,80 @@ type DriverIssue struct {
 	PhotoUrl  sql.NullString `json:"photo_url"`
 	Status    string         `json:"status"`
 	CreatedAt time.Time      `json:"created_at"`
+}
+
+type DriverLedgerEntry struct {
+	ID            string         `json:"id"`
+	TenantID      string         `json:"tenant_id"`
+	DriverID      string         `json:"driver_id"`
+	TripID        sql.NullString `json:"trip_id"`
+	EntryType     string         `json:"entry_type"`
+	Amount        float64        `json:"amount"`
+	Currency      string         `json:"currency"`
+	ReferenceType string         `json:"reference_type"`
+	ReferenceID   string         `json:"reference_id"`
+	BalanceAfter  float64        `json:"balance_after"`
+	Description   sql.NullString `json:"description"`
+	CreatedAt     time.Time      `json:"created_at"`
+}
+
+type DriverLicense struct {
+	ID                 string         `json:"id"`
+	TenantID           string         `json:"tenant_id"`
+	DriverID           string         `json:"driver_id"`
+	LicenseNumber      string         `json:"license_number"`
+	IssuingAuthority   sql.NullString `json:"issuing_authority"`
+	IssuedOn           sql.NullTime   `json:"issued_on"`
+	ExpiresOn          time.Time      `json:"expires_on"`
+	IsCurrent          int64          `json:"is_current"`
+	SupersededAt       sql.NullTime   `json:"superseded_at"`
+	VerificationStatus string         `json:"verification_status"`
+	VerifiedAt         sql.NullTime   `json:"verified_at"`
+	CreatedAt          time.Time      `json:"created_at"`
+}
+
+type DriverLicenseClass struct {
+	ID         string       `json:"id"`
+	LicenseID  string       `json:"license_id"`
+	TenantID   string       `json:"tenant_id"`
+	ClassCode  string       `json:"class_code"`
+	ValidFrom  sql.NullTime `json:"valid_from"`
+	ValidUntil sql.NullTime `json:"valid_until"`
+	CreatedAt  time.Time    `json:"created_at"`
+}
+
+type DriverOnboarding struct {
+	DriverID       string       `json:"driver_id"`
+	TenantID       string       `json:"tenant_id"`
+	CurrentStep    string       `json:"current_step"`
+	IdentityStatus string       `json:"identity_status"`
+	LicenseStatus  string       `json:"license_status"`
+	VehicleStatus  string       `json:"vehicle_status"`
+	BankStatus     string       `json:"bank_status"`
+	OverallStatus  string       `json:"overall_status"`
+	StartedAt      time.Time    `json:"started_at"`
+	CompletedAt    sql.NullTime `json:"completed_at"`
+}
+
+type DriverPayoutAccount struct {
+	ID                     string         `json:"id"`
+	TenantID               string         `json:"tenant_id"`
+	DriverID               string         `json:"driver_id"`
+	AccountHolderName      string         `json:"account_holder_name"`
+	AccountNumberEncrypted string         `json:"account_number_encrypted"`
+	AccountNumberMasked    string         `json:"account_number_masked"`
+	IfscCode               string         `json:"ifsc_code"`
+	BankName               string         `json:"bank_name"`
+	IsPrimary              int64          `json:"is_primary"`
+	VerificationStatus     string         `json:"verification_status"`
+	VerificationReference  sql.NullString `json:"verification_reference"`
+	VerifiedBy             sql.NullString `json:"verified_by"`
+	VerifiedAt             sql.NullTime   `json:"verified_at"`
+	RejectedReason         sql.NullString `json:"rejected_reason"`
+	ValidFrom              time.Time      `json:"valid_from"`
+	ValidUntil             sql.NullTime   `json:"valid_until"`
+	HoldPayouts            int64          `json:"hold_payouts"`
+	CreatedAt              time.Time      `json:"created_at"`
 }
 
 type DriverScore struct {
@@ -415,27 +606,61 @@ type DriverScore struct {
 }
 
 type DriverSettlement struct {
-	ID               string         `json:"id"`
-	TripID           string         `json:"trip_id"`
-	DriverID         string         `json:"driver_id"`
-	GrossFare        float64        `json:"gross_fare"`
-	AdvancesKharcha  float64        `json:"advances_kharcha"`
-	Deductions       float64        `json:"deductions"`
-	NetPayout        float64        `json:"net_payout"`
-	Status           string         `json:"status"`
-	PaymentRef       sql.NullString `json:"payment_ref"`
-	PaidAt           sql.NullTime   `json:"paid_at"`
-	CreatedAt        time.Time      `json:"created_at"`
-	UpdatedAt        time.Time      `json:"updated_at"`
-	PerformanceBonus float64        `json:"performance_bonus"`
-	CommissionAmount float64        `json:"commission_amount"`
-	TdsRate          float64        `json:"tds_rate"`
-	TdsAmount        float64        `json:"tds_amount"`
-	RateModel        string         `json:"rate_model"`
-	RateBasisJson    sql.NullString `json:"rate_basis_json"`
-	ConfirmedAt      sql.NullTime   `json:"confirmed_at"`
-	DisputedAt       sql.NullTime   `json:"disputed_at"`
-	DisputeReason    sql.NullString `json:"dispute_reason"`
+	ID                string         `json:"id"`
+	TripID            string         `json:"trip_id"`
+	DriverID          string         `json:"driver_id"`
+	GrossFare         float64        `json:"gross_fare"`
+	AdvancesKharcha   float64        `json:"advances_kharcha"`
+	Deductions        float64        `json:"deductions"`
+	NetPayout         float64        `json:"net_payout"`
+	Status            string         `json:"status"`
+	PaymentRef        sql.NullString `json:"payment_ref"`
+	PaidAt            sql.NullTime   `json:"paid_at"`
+	CreatedAt         time.Time      `json:"created_at"`
+	UpdatedAt         time.Time      `json:"updated_at"`
+	PerformanceBonus  float64        `json:"performance_bonus"`
+	CommissionAmount  float64        `json:"commission_amount"`
+	TdsRate           float64        `json:"tds_rate"`
+	TdsAmount         float64        `json:"tds_amount"`
+	RateModel         string         `json:"rate_model"`
+	RateBasisJson     sql.NullString `json:"rate_basis_json"`
+	ConfirmedAt       sql.NullTime   `json:"confirmed_at"`
+	DisputedAt        sql.NullTime   `json:"disputed_at"`
+	DisputeReason     sql.NullString `json:"dispute_reason"`
+	TenantID          string         `json:"tenant_id"`
+	CommissionRate    float64        `json:"commission_rate"`
+	TollAdjustment    float64        `json:"toll_adjustment"`
+	AdvanceDeductions float64        `json:"advance_deductions"`
+}
+
+type DriverVehicleAssignment struct {
+	ID             string         `json:"id"`
+	TenantID       string         `json:"tenant_id"`
+	DriverID       string         `json:"driver_id"`
+	VehicleID      string         `json:"vehicle_id"`
+	AssignmentType string         `json:"assignment_type"`
+	Status         string         `json:"status"`
+	StartedAt      sql.NullTime   `json:"started_at"`
+	EndedAt        sql.NullTime   `json:"ended_at"`
+	AssignedBy     sql.NullString `json:"assigned_by"`
+	AcceptedAt     sql.NullTime   `json:"accepted_at"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+}
+
+type DriverVehicleLatestPosition struct {
+	TenantID   string          `json:"tenant_id"`
+	VehicleID  string          `json:"vehicle_id"`
+	SessionID  string          `json:"session_id"`
+	DriverID   string          `json:"driver_id"`
+	Latitude   float64         `json:"latitude"`
+	Longitude  float64         `json:"longitude"`
+	Accuracy   sql.NullFloat64 `json:"accuracy"`
+	Speed      float64         `json:"speed"`
+	Heading    sql.NullFloat64 `json:"heading"`
+	OccurredAt time.Time       `json:"occurred_at"`
+	ReceivedAt time.Time       `json:"received_at"`
+	Source     string          `json:"source"`
 }
 
 type DtcEvent struct {
@@ -990,6 +1215,24 @@ type Payment struct {
 	WebhookEventID    sql.NullString `json:"webhook_event_id"`
 }
 
+type PayoutInstruction struct {
+	ID               string         `json:"id"`
+	TenantID         string         `json:"tenant_id"`
+	DriverID         string         `json:"driver_id"`
+	PayoutAccountID  sql.NullString `json:"payout_account_id"`
+	Amount           float64        `json:"amount"`
+	Currency         string         `json:"currency"`
+	IdempotencyKey   string         `json:"idempotency_key"`
+	ProviderPayoutID sql.NullString `json:"provider_payout_id"`
+	Status           string         `json:"status"`
+	FailureReason    sql.NullString `json:"failure_reason"`
+	Utr              sql.NullString `json:"utr"`
+	InitiatedAt      time.Time      `json:"initiated_at"`
+	CompletedAt      sql.NullTime   `json:"completed_at"`
+	CreatedAt        time.Time      `json:"created_at"`
+	UpdatedAt        time.Time      `json:"updated_at"`
+}
+
 type Permission struct {
 	ID          int64          `json:"id"`
 	Name        string         `json:"name"`
@@ -1013,6 +1256,16 @@ type PnlDaily struct {
 	TripCount     int64     `json:"trip_count"`
 	VehicleCount  int64     `json:"vehicle_count"`
 	CreatedAt     time.Time `json:"created_at"`
+}
+
+type ProviderEvent struct {
+	ID              string    `json:"id"`
+	TenantID        string    `json:"tenant_id"`
+	Provider        string    `json:"provider"`
+	ProviderEventID string    `json:"provider_event_id"`
+	EventType       string    `json:"event_type"`
+	Payload         string    `json:"payload"`
+	ProcessedAt     time.Time `json:"processed_at"`
 }
 
 type ProviderPollState struct {
@@ -1144,6 +1397,41 @@ type ShareLink struct {
 	RevokedAt         sql.NullTime   `json:"revoked_at"`
 }
 
+type StopPodAttachment struct {
+	ID        string    `json:"id"`
+	TenantID  string    `json:"tenant_id"`
+	StopID    string    `json:"stop_id"`
+	TripID    string    `json:"trip_id"`
+	FileUrl   string    `json:"file_url"`
+	FileType  string    `json:"file_type"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type SubscriptionPlan struct {
+	ID              string      `json:"id"`
+	Name            string      `json:"name"`
+	Description     string      `json:"description"`
+	MonthlyPriceInr interface{} `json:"monthly_price_inr"`
+	FeaturesJson    string      `json:"features_json"`
+	QuotasJson      string      `json:"quotas_json"`
+	IsActive        int64       `json:"is_active"`
+	CreatedAt       time.Time   `json:"created_at"`
+	UpdatedAt       time.Time   `json:"updated_at"`
+}
+
+type SubscriptionWebhookEvent struct {
+	ID                     string    `json:"id"`
+	TenantID               string    `json:"tenant_id"`
+	Provider               string    `json:"provider"`
+	EventID                string    `json:"event_id"`
+	EventType              string    `json:"event_type"`
+	PayloadJson            string    `json:"payload_json"`
+	ProviderSubscriptionID string    `json:"provider_subscription_id"`
+	EventTimestamp         time.Time `json:"event_timestamp"`
+	ProcessedAt            time.Time `json:"processed_at"`
+	Status                 string    `json:"status"`
+}
+
 type TelemetryAlert struct {
 	ID        string          `json:"id"`
 	TripID    sql.NullString  `json:"trip_id"`
@@ -1176,6 +1464,35 @@ type TelemetryDevice struct {
 	DeviceSecretHash sql.NullString `json:"device_secret_hash"`
 	CreatedAt        time.Time      `json:"created_at"`
 	UpdatedAt        time.Time      `json:"updated_at"`
+}
+
+type TelemetryEvent struct {
+	ID            string          `json:"id"`
+	TenantID      string          `json:"tenant_id"`
+	SessionID     string          `json:"session_id"`
+	ClientEventID string          `json:"client_event_id"`
+	OccurredAt    time.Time       `json:"occurred_at"`
+	ReceivedAt    time.Time       `json:"received_at"`
+	Latitude      float64         `json:"latitude"`
+	Longitude     float64         `json:"longitude"`
+	Speed         float64         `json:"speed"`
+	Accuracy      sql.NullFloat64 `json:"accuracy"`
+	Heading       sql.NullFloat64 `json:"heading"`
+	Altitude      sql.NullFloat64 `json:"altitude"`
+	RawPayload    sql.NullString  `json:"raw_payload"`
+}
+
+type TelemetryInstallation struct {
+	ID                string    `json:"id"`
+	TenantID          string    `json:"tenant_id"`
+	AppInstallationID string    `json:"app_installation_id"`
+	Platform          string    `json:"platform"`
+	AppVersion        string    `json:"app_version"`
+	DeviceModel       string    `json:"device_model"`
+	OsVersion         string    `json:"os_version"`
+	Status            string    `json:"status"`
+	LastSeenAt        time.Time `json:"last_seen_at"`
+	CreatedAt         time.Time `json:"created_at"`
 }
 
 type TelemetryPosition struct {
@@ -1211,6 +1528,23 @@ type TelemetryRawEvent struct {
 	Payload       string         `json:"payload"`
 }
 
+type TelemetrySession struct {
+	ID              string         `json:"id"`
+	TenantID        string         `json:"tenant_id"`
+	InstallationID  string         `json:"installation_id"`
+	DriverID        string         `json:"driver_id"`
+	VehicleID       sql.NullString `json:"vehicle_id"`
+	TripID          sql.NullString `json:"trip_id"`
+	SessionType     string         `json:"session_type"`
+	Status          string         `json:"status"`
+	StartReason     string         `json:"start_reason"`
+	EndReason       sql.NullString `json:"end_reason"`
+	StartedAt       time.Time      `json:"started_at"`
+	EndedAt         sql.NullTime   `json:"ended_at"`
+	TotalDistanceKm float64        `json:"total_distance_km"`
+	PositionsCount  int64          `json:"positions_count"`
+}
+
 type TelemetrySnapshot struct {
 	ID          string          `json:"id"`
 	TripID      sql.NullString  `json:"trip_id"`
@@ -1235,6 +1569,54 @@ type Tenant struct {
 	Status    string         `json:"status"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
+}
+
+type TenantEntitlementOverride struct {
+	ID              string       `json:"id"`
+	TenantID        string       `json:"tenant_id"`
+	EntitlementType string       `json:"entitlement_type"`
+	KeyName         string       `json:"key_name"`
+	OverrideValue   string       `json:"override_value"`
+	Reason          string       `json:"reason"`
+	ExpiresAt       sql.NullTime `json:"expires_at"`
+	CreatedAt       time.Time    `json:"created_at"`
+}
+
+type TenantSubscription struct {
+	ID                     string         `json:"id"`
+	TenantID               string         `json:"tenant_id"`
+	PlanID                 string         `json:"plan_id"`
+	Status                 string         `json:"status"`
+	CurrentPeriodStart     time.Time      `json:"current_period_start"`
+	CurrentPeriodEnd       time.Time      `json:"current_period_end"`
+	TrialEnd               sql.NullTime   `json:"trial_end"`
+	ProviderSubscriptionID sql.NullString `json:"provider_subscription_id"`
+	CreatedAt              time.Time      `json:"created_at"`
+	UpdatedAt              time.Time      `json:"updated_at"`
+}
+
+type TenantUsageEvent struct {
+	ID               string    `json:"id"`
+	TenantID         string    `json:"tenant_id"`
+	QuotaKey         string    `json:"quota_key"`
+	Quantity         int64     `json:"quantity"`
+	IdempotencyKey   string    `json:"idempotency_key"`
+	SourceEntityType string    `json:"source_entity_type"`
+	SourceEntityID   string    `json:"source_entity_id"`
+	Timestamp        time.Time `json:"timestamp"`
+}
+
+type TenantUsageMeter struct {
+	ID               string    `json:"id"`
+	TenantID         string    `json:"tenant_id"`
+	QuotaKey         string    `json:"quota_key"`
+	PeriodStart      time.Time `json:"period_start"`
+	PeriodEnd        time.Time `json:"period_end"`
+	UsedQuantity     int64     `json:"used_quantity"`
+	ReservedQuantity int64     `json:"reserved_quantity"`
+	MaxQuantity      int64     `json:"max_quantity"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
 }
 
 type Trip struct {
@@ -1317,6 +1699,38 @@ type TripFeedback struct {
 	CreatedAt  string `json:"created_at"`
 }
 
+type TripStop struct {
+	ID              string          `json:"id"`
+	TenantID        string          `json:"tenant_id"`
+	TripID          string          `json:"trip_id"`
+	StopSequence    int64           `json:"stop_sequence"`
+	StopType        string          `json:"stop_type"`
+	LocationName    string          `json:"location_name"`
+	Address         string          `json:"address"`
+	Latitude        sql.NullFloat64 `json:"latitude"`
+	Longitude       sql.NullFloat64 `json:"longitude"`
+	GeofenceRadiusM float64         `json:"geofence_radius_m"`
+	ConsigneeName   sql.NullString  `json:"consignee_name"`
+	ConsigneePhone  sql.NullString  `json:"consignee_phone"`
+	ConsigneeEmail  sql.NullString  `json:"consignee_email"`
+	PlannedArrival  sql.NullTime    `json:"planned_arrival"`
+	ActualArrival   sql.NullTime    `json:"actual_arrival"`
+	ActualDeparture sql.NullTime    `json:"actual_departure"`
+	Status          string          `json:"status"`
+	OtpRequired     int64           `json:"otp_required"`
+	OtpCode         sql.NullString  `json:"otp_code"`
+	OtpExpiresAt    sql.NullTime    `json:"otp_expires_at"`
+	OtpVerifiedAt   sql.NullTime    `json:"otp_verified_at"`
+	PodRequired     int64           `json:"pod_required"`
+	PodUrl          sql.NullString  `json:"pod_url"`
+	PodSignatureUrl sql.NullString  `json:"pod_signature_url"`
+	PodVerifiedAt   sql.NullTime    `json:"pod_verified_at"`
+	PodNotes        sql.NullString  `json:"pod_notes"`
+	FailureReason   sql.NullString  `json:"failure_reason"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+}
+
 type User struct {
 	ID              string         `json:"id"`
 	Email           string         `json:"email"`
@@ -1367,6 +1781,38 @@ type Vehicle struct {
 	PucExpiry                 sql.NullTime    `json:"puc_expiry"`
 }
 
+type VehicleClaim struct {
+	ID                 string         `json:"id"`
+	TenantID           string         `json:"tenant_id"`
+	DriverID           string         `json:"driver_id"`
+	RegistrationNumber string         `json:"registration_number"`
+	RcDocumentID       sql.NullString `json:"rc_document_id"`
+	Status             string         `json:"status"`
+	ReviewedBy         sql.NullString `json:"reviewed_by"`
+	ReviewedAt         sql.NullTime   `json:"reviewed_at"`
+	RejectionReason    sql.NullString `json:"rejection_reason"`
+	CreatedAt          time.Time      `json:"created_at"`
+	UpdatedAt          time.Time      `json:"updated_at"`
+}
+
+type VehicleComplianceDocument struct {
+	ID                 string         `json:"id"`
+	TenantID           string         `json:"tenant_id"`
+	VehicleID          string         `json:"vehicle_id"`
+	DocumentType       string         `json:"document_type"`
+	DocumentNumber     string         `json:"document_number"`
+	StorageKey         sql.NullString `json:"storage_key"`
+	IssuedOn           sql.NullTime   `json:"issued_on"`
+	ExpiresOn          time.Time      `json:"expires_on"`
+	IsCurrent          int64          `json:"is_current"`
+	SupersededAt       sql.NullTime   `json:"superseded_at"`
+	VerificationStatus string         `json:"verification_status"`
+	VerifiedBy         sql.NullString `json:"verified_by"`
+	VerifiedAt         sql.NullTime   `json:"verified_at"`
+	RejectionReason    sql.NullString `json:"rejection_reason"`
+	CreatedAt          time.Time      `json:"created_at"`
+}
+
 type VehicleDocument struct {
 	ID         string         `json:"id"`
 	VehicleID  string         `json:"vehicle_id"`
@@ -1403,6 +1849,31 @@ type VehicleLatestPosition struct {
 	Odometer    sql.NullFloat64 `json:"odometer"`
 	DriverID    sql.NullString  `json:"driver_id"`
 	TripID      sql.NullString  `json:"trip_id"`
+}
+
+type VehicleOwnership struct {
+	ID             string       `json:"id"`
+	TenantID       string       `json:"tenant_id"`
+	VehicleID      string       `json:"vehicle_id"`
+	OwnerPartyType string       `json:"owner_party_type"`
+	OwnerPartyID   string       `json:"owner_party_id"`
+	ValidFrom      time.Time    `json:"valid_from"`
+	ValidUntil     sql.NullTime `json:"valid_until"`
+	CreatedAt      time.Time    `json:"created_at"`
+}
+
+type VerificationAttempt struct {
+	ID                string         `json:"id"`
+	TenantID          string         `json:"tenant_id"`
+	EntityType        string         `json:"entity_type"`
+	EntityID          string         `json:"entity_id"`
+	Provider          string         `json:"provider"`
+	ProviderReference sql.NullString `json:"provider_reference"`
+	Status            string         `json:"status"`
+	RequestedAt       time.Time      `json:"requested_at"`
+	CompletedAt       sql.NullTime   `json:"completed_at"`
+	FailureCode       sql.NullString `json:"failure_code"`
+	FailureReason     sql.NullString `json:"failure_reason"`
 }
 
 type WorkerLease struct {

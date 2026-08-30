@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"transport-app/internal/config"
+	"transport-app/internal/deviation"
 	"transport-app/internal/domain"
 	bookingevents "transport-app/internal/domain/booking"
 	tripevents "transport-app/internal/domain/trip"
@@ -14,6 +15,7 @@ import (
 	"transport-app/internal/founder"
 	"transport-app/internal/founder/alerts"
 	fuel "transport-app/internal/fuel"
+	geofenceapp "transport-app/internal/geofence/application"
 	invoiceapp "transport-app/internal/invoice/application"
 	"transport-app/internal/repository"
 )
@@ -45,35 +47,38 @@ type Store interface {
 
 // Services holds all service instances and shared dependencies.
 type Services struct {
-	Auth           *AuthService
-	Users          *UserService
-	Drivers        *DriverService
-	Vehicles       *VehicleService
-	Customers      *CustomerService
-	Routes         *RouteService
-	Bookings       *BookingService
-	Trips          *TripService
-	Invoices       *InvoiceService
-	Payments       *PaymentService
-	Notes          *CreditNoteService
-	Settings       *CompanySettingsService
-	Dashboard      *DashboardService
-	Files          *FileService
-	Audit          *AuditLogService
-	Founder        *founder.FounderService
-	Compliance     *ComplianceService
-	Settlements    *DriverSettlementService
-	Telemetry      *TelemetryService
-	Kharcha        *KharchaService
-	FuelAudit      *FuelAuditService
-	Scorecard      *ScorecardService
-	Documents      *DocumentService
-	PNL            *PNLService
-	OpsAlerts      *OpsAlertService
-	Experiments    *ExperimentsService
-	FounderSignals *FounderSignalsService
-	FounderAudit   *FounderAuditService
-	EWayBill       *ewaybill.EWayBillService
+	Auth              *AuthService
+	Users             *UserService
+	Drivers           *DriverService
+	Vehicles          *VehicleService
+	Customers         *CustomerService
+	Routes            *RouteService
+	Bookings          *BookingService
+	Trips             *TripService
+	Invoices          *InvoiceService
+	Payments          *PaymentService
+	Notes             *CreditNoteService
+	Settings          *CompanySettingsService
+	Dashboard         *DashboardService
+	Files             *FileService
+	Audit             *AuditLogService
+	Founder           *founder.FounderService
+	Compliance        *ComplianceService
+	Settlements       *DriverSettlementService
+	Telemetry         *TelemetryService
+	Kharcha           *KharchaService
+	FuelAudit         *FuelAuditService
+	Scorecard         *ScorecardService
+	Documents         *DocumentService
+	PNL               *PNLService
+	OpsAlerts         *OpsAlertService
+	Experiments       *ExperimentsService
+	FounderSignals    *FounderSignalsService
+	FounderAudit      *FounderAuditService
+	EWayBill          *ewaybill.EWayBillService
+	Deviation         *deviation.Engine
+	GeofenceEvaluator *geofenceapp.RealtimeEvaluator
+	Events            events.EventBus
 
 	// TenantConfigs reads per-tenant settings overrides from company_config
 	// (Spec 24 §Business logic overlay). Nil when the store exposes no raw DB
@@ -106,6 +111,7 @@ func NewServices(store Store, cfg *config.Config, log *slog.Logger, eventBus eve
 	if eventBus == nil {
 		eventBus = events.NewInMemoryBus()
 	}
+	s.Events = eventBus
 
 	var tm repository.TxManager
 	if dbGetter, ok := store.(repository.DBGetter); ok {
@@ -190,6 +196,12 @@ func NewServices(store Store, cfg *config.Config, log *slog.Logger, eventBus eve
 		// Founder-signal integration points (Spec 16 §6 hooks).
 		s.OpsAlerts.SetFounderSignals(s.FounderSignals)
 		s.PNL.SetFounderSignals(s.FounderSignals)
+
+		// GPS Route Deviation Engine (Spec 03 §P3C).
+		s.Deviation = deviation.NewEngine(dbGetter.DB(), s.Events, fuel.NewConfigReader(dbGetter.DB()), log)
+
+		// Realtime Geofence Evaluator (Spec 02 §P3D).
+		s.GeofenceEvaluator = geofenceapp.NewRealtimeEvaluator(dbGetter.DB(), s.Events, geofenceapp.NewConfigReader(dbGetter.DB()), log)
 	}
 
 	// Instantiate Telegram Bot Notifier if token configured, otherwise graceful fallback
@@ -257,8 +269,8 @@ func (s *Services) initEventHandlers() {
 		if _, err := s.Invoices.GenerateInvoiceFromTrip(ctx, tripID); err != nil {
 			s.log.Error("auto-invoice generation failed for delivered trip", "trip_id", tripID, "error", err)
 		}
-		if _, err := s.Settlements.CreateSettlementForTrip(ctx, tripID, 1200.0, 200.0, 50.0); err != nil {
-			s.log.Error("auto-settlement creation failed for delivered trip", "trip_id", tripID, "error", err)
+		if _, err := s.Settlements.GenerateSettlement(ctx, string(tripID), false); err != nil {
+			s.log.Error("auto-settlement generation failed for delivered trip", "trip_id", tripID, "error", err)
 		}
 		return nil
 	})

@@ -2,44 +2,101 @@
     <table class="min-w-full divide-y divide-border-subtle">
         <thead class="bg-surface-container-low">
             <tr>
-                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">ID</th>
                 <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Organization</th>
-                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Slug</th>
-                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
+                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Plan &amp; MRR</th>
+                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Commercial Status</th>
+                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Trip Quota Usage</th>
                 <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Users</th>
-                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Created</th>
-                <th class="px-3 py-2 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
+                <th class="px-3 py-2 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Platform Controls</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
             {{if .Tenants}}
             {{range .Tenants}}
             <tr class="hover:bg-surface-container-low/50 transition-colors group">
-                <td class="px-3 py-2 text-xs font-mono text-secondary whitespace-nowrap">{{.ID}}</td>
-                <td class="px-3 py-2 text-sm font-semibold text-on-surface whitespace-nowrap">{{.Name}}</td>
-                <td class="px-3 py-2 text-sm font-mono text-xs text-secondary">{{.Slug}}</td>
-                <td class="px-3 py-2">
-                    {{if eq .Status "active"}}
-                    <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/15"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{t "tenants.active"}}</span>
+                <!-- Org Name & ID -->
+                <td class="px-3 py-2.5 whitespace-nowrap">
+                    <div class="font-semibold text-on-surface">{{.Name}}</div>
+                    <div class="font-mono text-xs text-text-muted">{{.Slug}} · ID: {{.ID}}</div>
+                </td>
+
+                <!-- Plan & MRR -->
+                <td class="px-3 py-2.5 whitespace-nowrap">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold font-mono rounded-full {{if eq .PlanID "GROWTH"}}bg-primary/10 text-primary border border-primary/20{{else if eq .PlanID "SCALE"}}bg-purple-500/10 text-purple-600 border border-purple-500/20{{else if eq .PlanID "ENTERPRISE"}}bg-amber-500/10 text-amber-700 border border-amber-500/20{{else}}bg-surface-container text-text-muted border border-border-subtle{{end}}">
+                        {{.PlanID}}
+                    </span>
+                    <span class="text-xs font-semibold tabular-nums text-text-muted ml-1.5">{{if gt .MonthlyPrice 0.0}}₹{{printf "%.0f" .MonthlyPrice}}/mo{{else}}Free{{end}}</span>
+                </td>
+
+                <!-- Commercial Status -->
+                <td class="px-3 py-2.5 whitespace-nowrap">
+                    {{if eq .SubStatus "ACTIVE"}}
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/15"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>ACTIVE</span>
+                    {{else if eq .SubStatus "TRIAL"}}
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-cyan-500/10 text-cyan-700 border border-cyan-500/15"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-pulse"></span>TRIAL</span>
+                    {{else if eq .SubStatus "PAST_DUE"}}
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/15"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>PAST DUE</span>
+                    {{else if eq .SubStatus "READ_ONLY"}}
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-slate-500/10 text-slate-700 border border-slate-500/15"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>READ ONLY</span>
                     {{else}}
-                    <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold rounded-full bg-red-500/10 text-red-700 border border-red-500/15"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{t "tenants.suspended"}}</span>
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-red-500/10 text-red-700 border border-red-500/15"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.SubStatus}}</span>
                     {{end}}
                 </td>
-                <td class="px-3 py-2 text-sm tabular-nums">{{.UserCount}}</td>
-                <td class="px-3 py-2 text-sm text-secondary whitespace-nowrap">{{date_only .CreatedAt}}</td>
-                <td class="px-3 py-2 text-right whitespace-nowrap">
-                    <button type="button" data-id="{{.ID}}" data-next="{{if eq .Status "active"}}suspended{{else}}active{{end}}"
-                            aria-pressed="{{if eq .Status "active"}}true{{else}}false{{end}}"
-                            onclick="toggleTenant(this)"
-                            class="js-tenant-toggle inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold cursor-pointer transition-all active:scale-[0.98] {{if eq .Status "active"}}bg-status-alert/10 text-status-alert border border-status-alert/20 hover:bg-status-alert/20{{else}}bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20{{end}}">
-                        {{if eq .Status "active"}}Suspend{{else}}Activate{{end}}
-                    </button>
+
+                <!-- Usage Quota Meter -->
+                <td class="px-3 py-2.5 whitespace-nowrap min-w-[140px]">
+                    {{if gt .TripsMax 0}}
+                    <div class="flex items-center justify-between text-xs tabular-nums mb-1">
+                        <span class="font-medium {{if .IsNearQuota}}text-status-alert font-bold{{else}}text-on-surface{{end}}">{{.TripsUsed}} / {{.TripsMax}} trips</span>
+                        <span class="text-text-muted text-[10px]">{{printf "%.0f" .QuotaUsagePct}}%</span>
+                    </div>
+                    <div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+                        <div class="h-full rounded-full {{if .IsNearQuota}}bg-status-alert{{else}}bg-primary{{end}}" style="width: {{printf "%.0f" .QuotaUsagePct}}%;"></div>
+                    </div>
+                    {{else}}
+                    <span class="text-xs text-text-muted">Unlimited / Enterprise</span>
+                    {{end}}
+                </td>
+
+                <!-- Users -->
+                <td class="px-3 py-2.5 text-sm tabular-nums whitespace-nowrap">{{.UserCount}}</td>
+
+                <!-- Platform Owner Actions -->
+                <td class="px-3 py-2.5 text-right whitespace-nowrap">
+                    <div class="inline-flex items-center gap-2">
+                        <!-- Quick Plan Changer Form -->
+                        <form method="POST" action="/tenants/{{.ID}}/plan" class="inline-flex items-center">
+                            <select name="plan_id" onchange="this.form.submit()" class="bg-surface-container-low border border-border-subtle rounded-full text-xs font-semibold px-2 py-1 text-on-surface cursor-pointer focus:ring-1 focus:ring-primary">
+                                <option value="STARTER" {{if eq .PlanID "STARTER"}}selected{{end}}>Starter</option>
+                                <option value="GROWTH" {{if eq .PlanID "GROWTH"}}selected{{end}}>Growth</option>
+                                <option value="SCALE" {{if eq .PlanID "SCALE"}}selected{{end}}>Scale</option>
+                                <option value="ENTERPRISE" {{if eq .PlanID "ENTERPRISE"}}selected{{end}}>Enterprise</option>
+                            </select>
+                        </form>
+
+                        <!-- Extend Trial Form -->
+                        {{if eq .SubStatus "TRIAL"}}
+                        <form method="POST" action="/tenants/{{.ID}}/extend-trial" class="inline">
+                            <button type="submit" title="Grant +14 days trial extension" class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold bg-cyan-500/10 text-cyan-700 border border-cyan-500/20 hover:bg-cyan-500/20 transition-all">
+                                +14d Trial
+                            </button>
+                        </form>
+                        {{end}}
+
+                        <!-- Suspend / Activate Toggle -->
+                        <button type="button" data-id="{{.ID}}" data-next="{{if eq .Status "active"}}suspended{{else}}active{{end}}"
+                                aria-pressed="{{if eq .Status "active"}}true{{else}}false{{end}}"
+                                onclick="toggleTenant(this)"
+                                class="js-tenant-toggle inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold cursor-pointer transition-all active:scale-[0.98] {{if eq .Status "active"}}bg-status-alert/10 text-status-alert border border-status-alert/20 hover:bg-status-alert/20{{else}}bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20{{end}}">
+                            {{if eq .Status "active"}}Suspend{{else}}Activate{{end}}
+                        </button>
+                    </div>
                 </td>
             </tr>
             {{end}}
             {{else}}
             <tr>
-                <td colspan="7" class="py-12 text-center text-secondary">
+                <td colspan="6" class="py-12 text-center text-secondary">
                     {{template "empty_state.html" (dict "Icon" "manage_accounts" "Title" (t "tenants.empty.title") "Message" (t "tenants.empty.message") "ActionHref" "/tenants/new" "ActionIcon" "add" "ActionLabel" (t "tenants.new"))}}
                 </td>
             </tr>
@@ -58,16 +115,11 @@ async function toggleTenant(btn) {
             method: 'POST'
         });
         if (!res.ok) {
-            let msg = 'Could not update tenant';
-            try { const p = await res.json(); if (p.message) msg = p.message; } catch (e) {}
-            window.FlyToast.show(msg, { tone: 'error' });
-            return;
+            throw new Error('HTTP ' + res.status);
         }
-        window.FlyToast.show(next === 'suspended' ? 'Tenant suspended' : 'Tenant activated', { tone: 'success' });
-        location.reload();
+        window.location.reload();
     } catch (err) {
-        window.FlyToast.show('Network error while updating tenant', { tone: 'error' });
-    } finally {
+        alert('Action failed: ' + err.message);
         btn.disabled = false;
     }
 }

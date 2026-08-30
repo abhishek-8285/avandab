@@ -52,27 +52,28 @@ export function LoginScreen({ onLoginSuccess, onForgotPassword, onRegisterLink }
         return;
       }
 
-      const defaultName = email.split('@')[0];
+      // Use server-provided name/email when available for consistency with registration
+      const serverName = (data.name as string) || email.split('@')[0];
+      const serverEmail = (data.email as string) || email;
+      const serverRole = (data.role as string) || 'driver';
       await setAuth(data.token, {
         id: data.user_id,
-        name: defaultName,
-        role: 'driver',
-        email: email,
+        name: serverName,
+        role: serverRole,
+        email: serverEmail,
       });
 
-      // Fetch driver profile to retrieve driverId and linked name
+      // Fetch driver profile to retrieve driverId only - do not overwrite name
+      // to keep register/login consistent (both use users.Name). Driver profile
+      // name divergence (e.g. abhishek vs testcheck) is handled by not clobbering.
       try {
         const meRes = await fetch(`${getApiBaseURL()}/api/v1/drivers/me`, {
           headers: { Authorization: `Bearer ${data.token}` },
         });
         if (meRes.ok) {
           const me = await meRes.json();
-          useAuthStore.getState().setDriverId(me.driver_id);
-          if (me.name) {
-            const { user } = useAuthStore.getState();
-            if (user) {
-              await useAuthStore.getState().setAuth(data.token, { ...user, name: me.name });
-            }
+          if (me.driver_id) {
+            useAuthStore.getState().setDriverId(me.driver_id);
           }
         }
       } catch {
@@ -159,10 +160,36 @@ export function LoginScreen({ onLoginSuccess, onForgotPassword, onRegisterLink }
             <ActivityIndicator color={Colors.textOnPrimary} />
           ) : (
             <View style={styles.btnContent}>
-              <Text style={styles.submitBtnText}>AUTHENTICATE</Text>
-              <MaterialCommunityIcons name="arrow-right" size={14} color={Colors.textOnPrimary} />
+              <Text style={styles.submitBtnText}>ENTER DUTY (ड्यूटी शुरू करें)</Text>
+              <MaterialCommunityIcons name="arrow-right" size={16} color={Colors.textOnPrimary} />
             </View>
           )}
+        </TouchableOpacity>
+
+        {/* 1-Tap Quick Driver Demo Sign-In */}
+        <TouchableOpacity
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            backgroundColor: '#e7ffdb',
+            borderWidth: 1,
+            borderColor: '#bbf7d0',
+            paddingVertical: 12,
+            borderRadius: Radius.md,
+            marginTop: 12,
+          }}
+          activeOpacity={0.85}
+          onPress={() => {
+            setEmail('driver@avandab.com');
+            setPassword('password123');
+          }}
+        >
+          <MaterialCommunityIcons name="truck-fast" size={16} color="#008069" />
+          <Text style={{ fontSize: 11, fontWeight: '800', color: '#008069' }}>
+            AUTO-FILL DRIVER (Abhishek • DL-01)
+          </Text>
         </TouchableOpacity>
 
         {onRegisterLink && (

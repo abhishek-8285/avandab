@@ -7,6 +7,9 @@ const DB_NAME = 'offline_queue.db';
 export interface QueuedPOD {
   id: number;
   trip_id: string;
+  stop_id?: string | null;
+  stop_sequence?: number | null;
+  otp?: string | null;
   consignee_name: string;
   consignee_phone: string | null;
   notes: string;
@@ -55,6 +58,9 @@ class OfflineQueueService {
       CREATE TABLE IF NOT EXISTS queued_pods (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         trip_id TEXT NOT NULL,
+        stop_id TEXT,
+        stop_sequence INTEGER,
+        otp TEXT,
         consignee_name TEXT NOT NULL DEFAULT '',
         consignee_phone TEXT,
         notes TEXT NOT NULL DEFAULT '',
@@ -91,6 +97,15 @@ class OfflineQueueService {
     `);
     // Upgrade path for existing databases missing new columns
     try {
+      await this.db.execAsync(`ALTER TABLE queued_pods ADD COLUMN stop_id TEXT`);
+    } catch {}
+    try {
+      await this.db.execAsync(`ALTER TABLE queued_pods ADD COLUMN stop_sequence INTEGER`);
+    } catch {}
+    try {
+      await this.db.execAsync(`ALTER TABLE queued_pods ADD COLUMN otp TEXT`);
+    } catch {}
+    try {
       await this.db.execAsync(`ALTER TABLE queued_pods ADD COLUMN consignee_phone TEXT`);
     } catch {}
     try {
@@ -119,6 +134,9 @@ class OfflineQueueService {
   async enqueuePOD(
     tripId: string,
     data: {
+      stop_id?: string | null;
+      stop_sequence?: number | null;
+      otp?: string | null;
       consignee_name: string;
       consignee_phone?: string | null;
       notes?: string;
@@ -132,18 +150,21 @@ class OfflineQueueService {
     }
   ): Promise<void> {
     if (!this.db) await this.init();
-    // Dedupe: don't queue twice for the same trip
+    // Dedupe: don't queue twice for the same trip and stop
     const existing = await this.db!.getFirstAsync<QueuedPOD>(
-      'SELECT id FROM queued_pods WHERE trip_id = ?',
-      [tripId]
+      'SELECT id FROM queued_pods WHERE trip_id = ? AND ((stop_id IS NULL AND ? IS NULL) OR stop_id = ?)',
+      [tripId, data.stop_id ?? null, data.stop_id ?? null]
     );
     if (existing) return;
 
     await this.db!.runAsync(
-      `INSERT INTO queued_pods (trip_id, consignee_name, consignee_phone, notes, photo_uri, latitude, longitude, pod_signature_data, quantity_short, damage_qty, refusal_reason)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO queued_pods (trip_id, stop_id, stop_sequence, otp, consignee_name, consignee_phone, notes, photo_uri, latitude, longitude, pod_signature_data, quantity_short, damage_qty, refusal_reason)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         tripId,
+        data.stop_id ?? null,
+        data.stop_sequence ?? null,
+        data.otp ?? null,
         data.consignee_name,
         data.consignee_phone ?? null,
         data.notes || '',
@@ -158,9 +179,13 @@ class OfflineQueueService {
     );
   }
 
-  async clearPOD(tripId: string): Promise<void> {
+  async clearPOD(tripId: string, stopId?: string): Promise<void> {
     if (!this.db) await this.init();
-    await this.db!.runAsync('DELETE FROM queued_pods WHERE trip_id = ?', [tripId]);
+    if (stopId) {
+      await this.db!.runAsync('DELETE FROM queued_pods WHERE trip_id = ? AND (stop_id = ? OR stop_id IS NULL)', [tripId, stopId]);
+    } else {
+      await this.db!.runAsync('DELETE FROM queued_pods WHERE trip_id = ?', [tripId]);
+    }
   }
 
   async pendingPODs(): Promise<QueuedPOD[]> {
@@ -285,15 +310,28 @@ class OfflineQueueService {
         if (pod.refusal_reason) {
           form.append('refusal_reason', pod.refusal_reason);
         }
+        if (pod.otp) {
+          form.append('otp', pod.otp);
+        }
+        if (pod.photo_uri) {
+          form.append('pod_url', pod.photo_uri);
+        }
+        if (pod.pod_signature_data) {
+          form.append('signature_url', pod.pod_signature_data);
+        }
 
-        const res = await fetch(`${getApiBaseURL()}/api/v1/trips/${pod.trip_id}/deliver-pod`, {
+        const url = pod.stop_id
+          ? `${getApiBaseURL()}/trips/${pod.trip_id}/stops/${pod.stop_id}/pod`
+          : `${getApiBaseURL()}/api/v1/trips/${pod.trip_id}/deliver-pod`;
+
+        const res = await fetch(url, {
           method: 'POST',
           headers: { Authorization: `Bearer ${token}` },
           body: form,
         });
 
         if (res.ok) {
-          await this.clearPOD(pod.trip_id);
+          await this.clearPOD(pod.trip_id, pod.stop_id || undefined);
           podsFlushed++;
         } else {
           // Server rejected this POD — log and continue to next

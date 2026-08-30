@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -58,9 +60,31 @@ func (h *TenantsHandlers) Routes(r chi.Router) {
 	r.With(gate("manage")).Post("/new", h.Create)
 	r.With(gate("manage")).Post("/{id}/suspend", h.Suspend)
 	r.With(gate("manage")).Post("/{id}/activate", h.Activate)
+	r.With(gate("manage")).Post("/{id}/plan", h.UpdatePlan)
+	r.With(gate("manage")).Post("/{id}/extend-trial", h.ExtendTrial)
+	r.With(gate("manage")).Post("/{id}/override", h.SetOverride)
 }
 
-// List renders the tenants page; Datastar requests get only the table fragment.
+// TenantCommercialItem enriches a tenant with subscription and quota metrics.
+type TenantCommercialItem struct {
+	ID            string  `json:"id"`
+	Name          string  `json:"name"`
+	Slug          string  `json:"slug"`
+	Status        string  `json:"status"`
+	CreatedAt     string  `json:"created_at"`
+	UserCount     int64   `json:"user_count"`
+	PlanID        string  `json:"plan_id"`
+	SubStatus     string  `json:"sub_status"`
+	MonthlyPrice  float64 `json:"monthly_price"`
+	PeriodEnd     string  `json:"period_end"`
+	TrialEnd      string  `json:"trial_end"`
+	TripsUsed     int     `json:"trips_used"`
+	TripsMax      int     `json:"trips_max"`
+	QuotaUsagePct float64 `json:"quota_usage_pct"`
+	IsNearQuota   bool    `json:"is_near_quota"`
+}
+
+// List renders the tenants page with Commercial Intelligence; Datastar requests get only the table fragment.
 func (h *TenantsHandlers) List(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
 
@@ -72,24 +96,102 @@ func (h *TenantsHandlers) List(w http.ResponseWriter, r *http.Request) {
 	}
 	h.applyUserCounts(r, list)
 
-	var activeCount, suspendedCount int64
+	var activeCount, suspendedCount, trialCount, paidCount, pastDueCount, nearQuotaCount int64
+	var totalMRR float64
+
+	commercialList := make([]TenantCommercialItem, 0, len(list))
+
 	for _, t := range list {
-		switch t.Status {
-		case "active":
+		item := TenantCommercialItem{
+			ID:        t.ID,
+			Name:      t.Name,
+			Slug:      t.Slug,
+			Status:    t.Status,
+			CreatedAt: t.CreatedAt.Format("2006-01-02"),
+			UserCount: t.UserCount,
+			PlanID:    "STARTER",
+			SubStatus: "TRIAL",
+		}
+
+		if t.Status == "active" {
 			activeCount++
-		case "suspended":
+		} else if t.Status == "suspended" {
 			suspendedCount++
 		}
+
+		// Query commercial subscription details if available
+		if h.DB != nil {
+			var planID, subStatus string
+			var price float64
+			var periodEndStr sql.NullString
+			var trialEndStr sql.NullString
+			subErr := h.DB.QueryRowContext(r.Context(), `
+				SELECT ts.plan_id, ts.status, sp.monthly_price_inr, ts.current_period_end, ts.trial_end
+				FROM tenant_subscriptions ts
+				JOIN subscription_plans sp ON sp.id = ts.plan_id
+				WHERE ts.tenant_id = ?
+			`, t.ID).Scan(&planID, &subStatus, &price, &periodEndStr, &trialEndStr)
+
+			if subErr == nil {
+				item.PlanID = planID
+				item.SubStatus = subStatus
+				item.MonthlyPrice = price
+				if periodEndStr.Valid {
+					item.PeriodEnd = periodEndStr.String
+				}
+				if trialEndStr.Valid {
+					item.TrialEnd = trialEndStr.String
+				}
+
+				if subStatus == "TRIAL" {
+					trialCount++
+				} else if subStatus == "ACTIVE" {
+					paidCount++
+					totalMRR += price
+				} else if subStatus == "PAST_DUE" {
+					pastDueCount++
+				}
+			} else {
+				trialCount++
+			}
+
+			// Query trip quota meter
+			var usedQty, maxQty int
+			mErr := h.DB.QueryRowContext(r.Context(), `
+				SELECT used_quantity, max_quantity
+				FROM tenant_usage_meters
+				WHERE tenant_id = ? AND quota_key = 'max_trips_per_month'
+				ORDER BY updated_at DESC LIMIT 1
+			`, t.ID).Scan(&usedQty, &maxQty)
+
+			if mErr == nil && maxQty > 0 {
+				item.TripsUsed = usedQty
+				item.TripsMax = maxQty
+				item.QuotaUsagePct = float64(usedQty) / float64(maxQty) * 100.0
+				if item.QuotaUsagePct >= 80.0 {
+					item.IsNearQuota = true
+					nearQuotaCount++
+				}
+			}
+		}
+
+		commercialList = append(commercialList, item)
 	}
 
 	data := PageData{
-		Title: "Tenants",
+		Title: "Platform Commercial Control Center",
 		User:  session,
 		Extra: map[string]interface{}{
-			"Tenants":   list,
-			"Total":     len(list),
-			"Active":    activeCount,
-			"Suspended": suspendedCount,
+			"Tenants":          commercialList,
+			"Total":            len(commercialList),
+			"Active":           activeCount,
+			"Suspended":        suspendedCount,
+			"Trials":           trialCount,
+			"Paid":             paidCount,
+			"TotalMRR":         totalMRR,
+			"PastDue":          pastDueCount,
+			"NearQuotaCount":   nearQuotaCount,
+			"CommercialAlerts": pastDueCount + nearQuotaCount,
 		},
 	}
 
@@ -98,6 +200,71 @@ func (h *TenantsHandlers) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.renderPage(w, r, "tenants_list.html", data)
+}
+
+// UpdatePlan updates a tenant's subscription plan directly from Platform Admin.
+func (h *TenantsHandlers) UpdatePlan(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	planID := r.PostFormValue("plan_id")
+	if planID == "" {
+		planID = "GROWTH"
+	}
+	if h.DB != nil {
+		now := time.Now().UTC()
+		end := now.Add(30 * 24 * time.Hour)
+		_, _ = h.DB.ExecContext(r.Context(), `
+			INSERT INTO tenant_subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, created_at, updated_at)
+			VALUES (?, ?, ?, 'ACTIVE', ?, ?, ?, ?)
+			ON CONFLICT(tenant_id) DO UPDATE SET
+				plan_id = excluded.plan_id,
+				status = 'ACTIVE',
+				current_period_start = excluded.current_period_start,
+				current_period_end = excluded.current_period_end,
+				updated_at = CURRENT_TIMESTAMP
+		`, "sub_"+id, id, planID, now.Format(time.RFC3339), end.Format(time.RFC3339), now.Format(time.RFC3339), now.Format(time.RFC3339))
+	}
+	h.auditTenant(r, "tenant.plan_update", id, map[string]string{"plan_id": planID})
+	http.Redirect(w, r, "/tenants", http.StatusSeeOther)
+}
+
+// ExtendTrial grants an additional 14 days to a trial tenant.
+func (h *TenantsHandlers) ExtendTrial(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if h.DB != nil {
+		now := time.Now().UTC()
+		newTrial := now.Add(14 * 24 * time.Hour)
+		_, _ = h.DB.ExecContext(r.Context(), `
+			UPDATE tenant_subscriptions
+			SET trial_end = ?, status = 'TRIAL', updated_at = CURRENT_TIMESTAMP
+			WHERE tenant_id = ?
+		`, newTrial.Format(time.RFC3339), id)
+	}
+	h.auditTenant(r, "tenant.extend_trial", id, map[string]string{"extended_days": "14"})
+	http.Redirect(w, r, "/tenants", http.StatusSeeOther)
+}
+
+// SetOverride configures a privileged feature or quota override.
+func (h *TenantsHandlers) SetOverride(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	entType := r.PostFormValue("entitlement_type")
+	keyName := r.PostFormValue("key_name")
+	val := r.PostFormValue("override_value")
+	reason := r.PostFormValue("reason")
+	if entType == "" {
+		entType = "FEATURE"
+	}
+	if h.DB != nil {
+		recID := "ovr_" + id + "_" + keyName
+		_, _ = h.DB.ExecContext(r.Context(), `
+			INSERT INTO tenant_entitlement_overrides (id, tenant_id, entitlement_type, key_name, override_value, reason)
+			VALUES (?, ?, ?, ?, ?, ?)
+			ON CONFLICT(tenant_id, entitlement_type, key_name) DO UPDATE SET
+				override_value = excluded.override_value,
+				reason = excluded.reason
+		`, recID, id, entType, keyName, val, reason)
+	}
+	h.auditTenant(r, "tenant.override", id, map[string]string{"key": keyName, "val": val})
+	http.Redirect(w, r, "/tenants", http.StatusSeeOther)
 }
 
 // applyUserCounts enriches the list with per-tenant user totals from one

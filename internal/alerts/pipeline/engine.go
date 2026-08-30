@@ -77,7 +77,7 @@ type IngestEvent struct {
 
 // ProcessEvent processes an incoming event from the event bus.
 func (e *Engine) ProcessEvent(ctx context.Context, ev events.Event) error {
-	if ev.Type == "SOSEvent" || ev.Type == "telemetry.sos" {
+	if ev.Type == "SOSEvent" || ev.Type == "telemetry.sos" || ev.Type == events.SOSEvent {
 		return e.HandleSOS(ctx, ev)
 	}
 	ingestEv, err := e.normalizeEvent(ev)

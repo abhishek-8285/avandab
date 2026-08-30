@@ -455,10 +455,63 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 		}
 	}
 
+	// Query stops for multi-stop progression
+	type stopSummary struct {
+		ID           string `json:"id"`
+		StopSequence int    `json:"stop_sequence"`
+		StopType     string `json:"stop_type"`
+		LocationName string `json:"location_name"`
+		Status       string `json:"status"`
+	}
+	type customerProgression struct {
+		TotalStops        int     `json:"total_stops"`
+		CompletedStops    int     `json:"completed_stops"`
+		ProgressPercent   float64 `json:"progress_percent"`
+		AllStopsCompleted bool    `json:"all_stops_completed"`
+	}
+	var stopsList []stopSummary
+	var currentStop *stopSummary
+	var prog *customerProgression
+	completedCount := 0
+
+	sRows, sErr := h.DB.QueryContext(r.Context(), `
+		SELECT id, stop_sequence, stop_type, COALESCE(location_name, ''), status
+		FROM trip_stops
+		WHERE trip_id = ?
+		ORDER BY stop_sequence ASC
+	`, tripID)
+	if sErr == nil {
+		defer func() { _ = sRows.Close() }()
+		for sRows.Next() {
+			var st stopSummary
+			if err := sRows.Scan(&st.ID, &st.StopSequence, &st.StopType, &st.LocationName, &st.Status); err == nil {
+				if st.Status == "completed" {
+					completedCount++
+				} else if (st.Status != "skipped") && currentStop == nil {
+					stCopy := st
+					currentStop = &stCopy
+				}
+				stopsList = append(stopsList, st)
+			}
+		}
+		if len(stopsList) > 0 {
+			p := customerProgression{
+				TotalStops:        len(stopsList),
+				CompletedStops:    completedCount,
+				ProgressPercent:   float64(completedCount) / float64(len(stopsList)) * 100.0,
+				AllStopsCompleted: completedCount == len(stopsList),
+			}
+			if p.AllStopsCompleted {
+				p.ProgressPercent = 100.0
+			}
+			prog = &p
+		}
+	}
+
 	// JSON response (Spec 21 §2.3: {"trip_number":"TRP-001","status":"in_transit","eta_min":...})
 	if wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		resp := map[string]interface{}{
 			"trip_number":   tripNumber,
 			"status":        status,
 			"eta_min":       etaMinStr,
@@ -468,7 +521,13 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 			"last_seen":     lastSeenStr,
 			"lat":           lat,
 			"lng":           lng,
-		})
+		}
+		if len(stopsList) > 0 {
+			resp["stops"] = stopsList
+			resp["current_stop"] = currentStop
+			resp["progression"] = prog
+		}
+		_ = json.NewEncoder(w).Encode(resp)
 		return
 	}
 
@@ -488,6 +547,9 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 			"Lat":          lat,
 			"Lng":          lng,
 			"BookingID":    bookingID.String,
+			"Stops":        stopsList,
+			"CurrentStop":  currentStop,
+			"Progression":  prog,
 		},
 	})
 }

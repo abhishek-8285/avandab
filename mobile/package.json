@@ -24,10 +24,12 @@
     "expo": "~52.0.0",
     "expo-camera": "~16.0.18",
     "expo-constants": "~17.0.8",
+    "expo-file-system": "~18.0.11",
     "expo-image-manipulator": "~13.0.6",
     "expo-image-picker": "~16.0.6",
     "expo-location": "~18.0.10",
     "expo-secure-store": "~14.0.0",
+    "expo-speech-recognition": "^1.1.1",
     "expo-sqlite": "~15.1.4",
     "expo-status-bar": "~2.0.0",
     "expo-task-manager": "^13.0.0",
@@ -65,7 +67,7 @@
   },
   "private": true,
   "overrides": {
-    "tar": "6.2.1",
+    "tar": "^7.5.21",
     "qs": "^6.15.3",
     "@xmldom/xmldom": "^0.9.12",
     "typed-rest-client": "^3.1.0"

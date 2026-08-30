@@ -633,10 +633,10 @@ func TestAllTemplatesRender(t *testing.T) {
 		}},
 		{"tenants_list", "tenants_list.html", map[string]interface{}{
 			"Tenants": []service.TenantSummary{
-				{ID: "acme", Name: "Acme Corp", Slug: "acme", Status: "active", CreatedAt: now, UserCount: 3},
-				{ID: "beta", Name: "Beta Ltd", Slug: "beta", Status: "suspended", CreatedAt: now, UserCount: 0},
+				{ID: "acme", Name: "Acme Corp", Slug: "acme", Status: "active", CreatedAt: now, UserCount: 3, PlanID: "GROWTH", SubStatus: "ACTIVE", MonthlyPrice: 4999.0, TripsUsed: 25, TripsMax: 250, QuotaUsagePct: 10.0},
+				{ID: "beta", Name: "Beta Ltd", Slug: "beta", Status: "suspended", CreatedAt: now, UserCount: 0, PlanID: "STARTER", SubStatus: "TRIAL", MonthlyPrice: 0.0, TripsUsed: 8, TripsMax: 10, QuotaUsagePct: 80.0, IsNearQuota: true},
 			},
-			"Total": 2, "Active": int64(1), "Suspended": int64(1),
+			"Total": 2, "Active": int64(1), "Suspended": int64(1), "Trials": int64(1), "Paid": int64(1), "TotalMRR": 4999.0, "PastDue": int64(0), "NearQuotaCount": int64(1), "CommercialAlerts": int64(1),
 			"User": user,
 		}},
 		{"tenants_edit", "tenants_edit.html", map[string]interface{}{
@@ -706,6 +706,7 @@ func TestAllTemplatesRender(t *testing.T) {
 		"tenants_list_table.html",
 		"console.html", "alert_inbox.html", "money_strip.html",
 		"fleet_strip.html", "context_panel.html", "bookings_board.html",
+		"multistop_timeline.html",
 	} {
 		covered[n] = true
 	}

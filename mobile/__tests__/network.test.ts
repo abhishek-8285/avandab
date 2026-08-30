@@ -15,29 +15,27 @@ describe('network constants (env overrides)', () => {
     (global as any).__DEV__ = ORIGINAL_DEV;
   });
 
-  test('production defaults use https/wss and standard ports', () => {
-    (global as any).__DEV__ = false;
+  test('canonical defaults use https/wss and avandab.com', () => {
     let net: any;
     jest.isolateModules(() => {
       net = require('../src/constants/network');
     });
     expect(net.API_SCHEME).toBe('https');
     expect(net.MQTT_SCHEME).toBe('wss');
-    expect(net.getBackendHost()).toBe('api.avandab.com');
-    expect(net.getApiBaseURL()).toBe('https://api.avandab.com');
-    expect(net.getMQTTBrokerURL()).toBe('wss://api.avandab.com:8883');
+    expect(net.getBackendHost()).toBe('avandab.com');
+    expect(net.getApiBaseURL()).toBe('https://avandab.com');
+    expect(net.getMQTTBrokerURL()).toBe('wss://avandab.com:8883');
   });
 
-  test('dev defaults use http/ws on localhost with explicit ports', () => {
-    (global as any).__DEV__ = true;
-    let net: any;
-    jest.isolateModules(() => {
-      net = require('../src/constants/network');
-    });
-    expect(net.API_SCHEME).toBe('http');
-    expect(net.MQTT_SCHEME).toBe('ws');
-    expect(net.getBackendHost()).toBe('127.0.0.1');
-    expect(net.getApiBaseURL()).toBe('http://127.0.0.1:8080');
-    expect(net.getMQTTBrokerURL()).toBe('ws://127.0.0.1:9001');
+  test('custom host overrides respect setCustomBackendHost', () => {
+    let net = require('../src/constants/network');
+    net.setCustomBackendHost('custom.avandab.com');
+
+    expect(net.getBackendHost()).toBe('custom.avandab.com');
+    expect(net.getApiBaseURL()).toBe('https://custom.avandab.com');
+    expect(net.getMQTTBrokerURL()).toBe('wss://custom.avandab.com:8883');
+
+    net.setCustomBackendHost(null);
+    expect(net.getBackendHost()).toBe('avandab.com');
   });
 });

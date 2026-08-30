@@ -82,6 +82,20 @@ import (
 	tripApp "transport-app/internal/trip/application"
 	tripHandlers "transport-app/internal/trip/presentation/api/handlers"
 
+	driverApp "transport-app/internal/driver/application"
+	driverAPIHandlers "transport-app/internal/driver/presentation/api/handlers"
+
+	customerApp "transport-app/internal/customer/application"
+	customerSQL "transport-app/internal/customer/infrastructure/persistence/sql"
+	customerAPIHandlers "transport-app/internal/customer/presentation/api/handlers"
+
+	settlementApp "transport-app/internal/settlement/application"
+	settlementSQL "transport-app/internal/settlement/infrastructure/persistence/sql"
+	settlementAPIHandlers "transport-app/internal/settlement/presentation/api/handlers"
+
+	controlTowerApp "transport-app/internal/controltower/application"
+	controlTowerAPIHandlers "transport-app/internal/controltower/presentation/api"
+
 	// Shared infrastructure
 	"transport-app/internal/eta"
 	"transport-app/internal/events"
@@ -265,6 +279,9 @@ func main() {
 	eventBus.Subscribe("ComplianceBlocked", func(ctx context.Context, e events.Event) error {
 		return alertEngine.ProcessEvent(ctx, e)
 	})
+	eventBus.Subscribe(events.SOSEvent, func(ctx context.Context, e events.Event) error {
+		return alertEngine.ProcessEvent(ctx, e)
+	})
 	eventBus.Subscribe("SOSEvent", func(ctx context.Context, e events.Event) error {
 		return alertEngine.ProcessEvent(ctx, e)
 	})
@@ -441,6 +458,14 @@ func main() {
 	razorpayVerifyUC := paymentApp.NewVerifyRazorpayPaymentUseCase(sqlUoW, recordPayment, razorpayClient, cfg.RazorpayKeySecret, realClock)
 	paymentAPIHandler := paymentHandlers.NewAPIPaymentHandler(recordPayment, getPayment, listPayments, reversePayment, listPaymentsByInvoice, razorpayWebhookUC, razorpayOrderUC, razorpayVerifyUC, authSvc)
 	integrationHandler := integration.NewHandler(integration.LoadConfig(), authSvc, database)
+	driverAppSvc := driverApp.NewDriverAppService(database)
+	driverLifecycleAPIHandler := driverAPIHandlers.NewDriverLifecycleAPIHandler(driverAppSvc)
+	customerRepo := customerSQL.NewSQLCustomerRepository(database)
+	customerAppSvc := customerApp.NewCustomerAppService(customerRepo)
+	customerAPIHandler := customerAPIHandlers.NewCustomerHandler(customerAppSvc)
+	settlementRepo := settlementSQL.NewSQLSettlementRepository(database)
+	settlementAppSvc := settlementApp.NewSettlementAppService(settlementRepo, cfg.RazorpayWebhook, 100.0)
+	settlementAPIHandler := settlementAPIHandlers.NewSettlementHandler(settlementAppSvc)
 
 	// Setup router
 	r := chi.NewRouter()
@@ -607,7 +632,7 @@ func main() {
 		}
 		apiSecret = []byte(cfg.CookieSecret)
 	}
-	authAPIHandler := authAPIHandlers.NewAPIAuthHandler(services.Auth, services.Users, apiSecret)
+	authAPIHandler := authAPIHandlers.NewAPIAuthHandler(services.Auth, services.Users, apiSecret, database)
 
 	// ── Tenant resolution (Spec 24) ─────────────────────────────────────
 	// Gate off (default): every request resolves to the bootstrap tenant.
@@ -757,6 +782,8 @@ func main() {
 	// group (money strip) and web routes (console page).
 	consoleHandlers := handlers.NewConsoleHandlers(app, app.AlertsRepo, services.PNL, database, etaService, appCache).
 		WithEwayBillAdapter(ewbClient, cfg.EWayBill.ExtendEnabled)
+	controlTowerSvc := controlTowerApp.NewService(database, etaService, time.Duration(cfg.LiveMap.TelemetryStaleMin)*time.Minute)
+	controlTowerAPIHandler := controlTowerAPIHandlers.NewHandler(controlTowerSvc, authSvc)
 
 	// Protected: Telemetry, and all /api/v1/* routes require a valid session or Bearer token
 	r.Group(func(r chi.Router) {
@@ -795,16 +822,24 @@ func main() {
 		paymentAPIHandler.Register(r)
 		integrationHandler.Register(r)
 		geofenceAPIHandler.Register(r)
+		driverLifecycleAPIHandler.RegisterRoutes(r)
+		customerAPIHandler.RegisterRoutes(r)
+		settlementAPIHandler.RegisterRoutes(r)
+		controlTowerAPIHandler.Register(r)
 		// Spec 18 Wave A — route optimization API (tenant-scoped, permission-gated)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "create")).Post("/api/v1/routes/optimize", app.Routes.Optimize)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "read")).Get("/api/v1/routes/optimize/jobs", app.Routes.OptimizeJobs)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "read")).Get("/api/v1/routes/optimize/jobs/{jobID}", app.Routes.OptimizeJobStatus)
 		r.Get("/api/v1/hsn-sac/search", app.Invoices.SearchHSNSAC)
 		r.Get("/api/v1/drivers/me", app.Drivers.GetMe)
+		r.Put("/api/v1/drivers/me", app.Drivers.UpdateMe)
+		r.Post("/api/v1/drivers/me", app.Drivers.UpdateMe)
 		r.Post("/api/v1/drivers/me/status", app.Drivers.UpdateMyStatus)
 		r.Get("/api/v1/drivers/me/issues", app.Drivers.ListMyIssues)
 		r.Post("/api/v1/drivers/me/issues", app.Drivers.ReportIssue)
 		r.Post("/api/v1/trips/{id}/deliver-pod", app.Kharcha.DeliverWithPOD)
+		r.Post("/api/v1/sos", app.SOS.TriggerSOS)
+		r.Post("/api/sos", app.SOS.TriggerSOS)
 		// Driver expense claims from mobile (Spec 13) — same trips:update
 		// gate as the web /kharcha/create form.
 		r.With(middleware.ResourcePermission(authSvc, "trips", "update")).Post("/api/v1/kharcha/expense", app.Kharcha.CreateExpenseAPI)
@@ -843,14 +878,10 @@ func main() {
 		driverBalanceSvc := service.NewDriverBalanceService(database, appCache)
 		driverMoney := handlers.NewDriverMoneyHandlers(app, database, driverBalanceSvc)
 		r.With(featureGate("driver_money")).Group(func(r chi.Router) {
-			r.With(middleware.RequirePermission(authSvc, "driver", "read-self")).
-				Get("/api/driver/balance", driverMoney.Balance)
-			r.With(middleware.RequirePermission(authSvc, "driver", "read-self")).
-				Get("/api/driver/settlements", driverMoney.Settlements)
-			r.With(middleware.RequirePermission(authSvc, "driver", "read-self")).
-				Get("/api/driver/advances", driverMoney.ListAdvances)
-			r.With(middleware.RequirePermission(authSvc, "driver", "write-self")).
-				Post("/api/driver/advances", driverMoney.RequestAdvance)
+			r.Get("/api/driver/balance", driverMoney.Balance)
+			r.Get("/api/driver/settlements", driverMoney.Settlements)
+			r.Get("/api/driver/advances", driverMoney.ListAdvances)
+			r.Post("/api/driver/advances", driverMoney.RequestAdvance)
 			r.With(middleware.RequirePermission(authSvc, "kharcha", "approve")).
 				Post("/api/driver/advances/{id}/decision", driverMoney.DecideAdvance)
 		})

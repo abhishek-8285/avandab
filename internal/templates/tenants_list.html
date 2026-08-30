@@ -1,38 +1,61 @@
-{{template "page_header.html" (dict "Title" (t "tenants.title") "Subtitle" "Customer organizations provisioned on this deployment" "ActionHref" "/tenants/new" "ActionIcon" "add" "ActionLabel" (t "tenants.new"))}}
+{{template "page_header.html" (dict "Title" "Platform Commercial Control Center" "Subtitle" "Customer organizations, subscriptions, MRR, and commercial quota governance" "ActionHref" "/tenants/new" "ActionIcon" "add" "ActionLabel" (t "tenants.new"))}}
 
-<div class="space-y-4">
-    <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
-            <div class="w-9 h-9 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><rect width="16" height="18" x="4" y="3" rx="2"/><path d="M8 7h2"/><path d="M14 7h2"/><path d="M8 11h2"/><path d="M14 11h2"/><path d="M8 15h2"/><path d="M14 15h2"/></svg>
+<div class="space-y-5">
+    <!-- Commercial KPI Grid -->
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+        <!-- Total Orgs -->
+        <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-3.5 hover:border-primary/20 transition-all">
+            <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-text-muted">Total Orgs</span>
+                <span class="w-2 h-2 rounded-full bg-primary"></span>
             </div>
-            <div class="min-w-0">
-                <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{if .Total}}{{.Total}}{{else}}0{{end}}</div>
-                <div class="text-xs text-secondary font-medium mt-1">Total Tenants</div>
-            </div>
+            <div class="text-2xl font-bold tabular-nums text-on-surface mt-1.5">{{if .Total}}{{.Total}}{{else}}0{{end}}</div>
+            <div class="text-[11px] text-text-muted mt-0.5">{{if .Active}}{{.Active}}{{else}}0{{end}} active, {{if .Suspended}}{{.Suspended}}{{else}}0{{end}} suspended</div>
         </div>
-        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
-            <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+
+        <!-- Active Trials -->
+        <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-3.5 hover:border-primary/20 transition-all">
+            <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-text-muted">Active Trials</span>
+                <span class="w-2 h-2 rounded-full bg-cyan-500"></span>
             </div>
-            <div class="min-w-0">
-                <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{if .Active}}{{.Active}}{{else}}0{{end}}</div>
-                <div class="text-xs text-secondary font-medium mt-1">{{t "tenants.active"}}</div>
-            </div>
+            <div class="text-2xl font-bold tabular-nums text-cyan-600 mt-1.5">{{if .Trials}}{{.Trials}}{{else}}0{{end}}</div>
+            <div class="text-[11px] text-text-muted mt-0.5">Starter evaluations</div>
         </div>
-        <div class="col-span-2 lg:col-span-1 flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
-            <div class="w-9 h-9 rounded-lg bg-red-500/10 border border-red-500/15 grid place-items-center text-red-600 shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="4.9" x2="19.1" y1="4.9" y2="19.1"/></svg>
+
+        <!-- Paid Subscriptions -->
+        <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-3.5 hover:border-primary/20 transition-all">
+            <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-text-muted">Paid Subscriptions</span>
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
             </div>
-            <div class="min-w-0">
-                <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{if .Suspended}}{{.Suspended}}{{else}}0{{end}}</div>
-                <div class="text-xs text-secondary font-medium mt-1">{{t "tenants.suspended"}}</div>
+            <div class="text-2xl font-bold tabular-nums text-emerald-600 mt-1.5">{{if .Paid}}{{.Paid}}{{else}}0{{end}}</div>
+            <div class="text-[11px] text-text-muted mt-0.5">Growth &amp; Scale tiers</div>
+        </div>
+
+        <!-- Monthly Recurring Revenue (MRR) -->
+        <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-3.5 hover:border-primary/20 transition-all">
+            <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-text-muted">Monthly MRR</span>
+                <span class="w-2 h-2 rounded-full bg-status-success"></span>
             </div>
+            <div class="text-2xl font-black tabular-nums text-status-success mt-1.5">₹{{if .TotalMRR}}{{printf "%.0f" .TotalMRR}}{{else}}0{{end}}</div>
+            <div class="text-[11px] text-text-muted mt-0.5">Contracted recurring</div>
+        </div>
+
+        <!-- Past Due / Near Quota Alerts -->
+        <div class="col-span-2 lg:col-span-1 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-3.5 hover:border-primary/20 transition-all">
+            <div class="flex items-center justify-between gap-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-text-muted">Commercial Alerts</span>
+                <span class="w-2 h-2 rounded-full bg-status-alert {{if .CommercialAlerts}}animate-ping{{end}}"></span>
+            </div>
+            <div class="text-2xl font-bold tabular-nums text-status-alert mt-1.5">{{if .CommercialAlerts}}{{.CommercialAlerts}}{{else}}0{{end}}</div>
+            <div class="text-[11px] text-text-muted mt-0.5">{{if .NearQuotaCount}}{{.NearQuotaCount}}{{else}}0{{end}} near quota, {{if .PastDue}}{{.PastDue}}{{else}}0{{end}} past due</div>
         </div>
     </div>
 
+    <!-- Commercial Organizations Table -->
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden flex flex-col">
-        <!-- Data Table Fragment (Datastar refresh target) -->
         <div id="list-table">
             {{template "tenants_list_table.html" .}}
         </div>

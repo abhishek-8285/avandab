@@ -222,7 +222,56 @@ func TestDriverStatusAndIssues(t *testing.T) {
 		Issues []map[string]interface{} `json:"issues"`
 	}
 	require.NoError(t, json.NewDecoder(resp5.Body).Decode(&list))
-	resp5.Body.Close()
 	require.Len(t, list.Issues, 1)
 	assert.Equal(t, "Tyre wear front-left", list.Issues[0]["message"])
+}
+
+func TestDriverUpdateMe(t *testing.T) {
+	dbConn, app, _ := setupMobileAPITestEnv(t)
+	defer dbConn.Close()
+
+	_, err := dbConn.Exec(`INSERT INTO users (id, email, password_hash, name, role_id, status)
+		VALUES ('u-upd-1', 'upd@example.com', 'hash', 'Update Driver', 5, 'active')`)
+	require.NoError(t, err)
+	_, err = dbConn.Exec(`INSERT INTO drivers (id, driver_id, first_name, last_name, phone, email, license_number, license_expiry, status, tenant_id)
+		VALUES ('d-upd-1', 'DRV-UPD', 'Update', 'Driver', '+919900000003', 'upd@example.com', 'OLD-DL', '2025-01-01', 'inactive', '1')`)
+	require.NoError(t, err)
+
+	currentUser := &auth.SessionData{UserID: "u-upd-1"}
+	r := chi.NewRouter()
+	r.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			ctx := shared.ContextWithTenantID(req.Context(), shared.DefaultTenant)
+			ctx = context.WithValue(ctx, auth.ContextUser, currentUser)
+			next.ServeHTTP(w, req.WithContext(ctx))
+		})
+	})
+	r.Get("/api/v1/drivers/me", app.Drivers.GetMe)
+	r.Put("/api/v1/drivers/me", app.Drivers.UpdateMe)
+	r.Post("/api/v1/drivers/me", app.Drivers.UpdateMe)
+	srv := httptest.NewServer(r)
+	defer srv.Close()
+
+	// Update license and bank details
+	payload := `{"license_number":"MH1420210088991","license_expiry":"2032-12-31","bank_details":"HDFC BANK · ****6587","status":"available"}`
+	req, err := http.NewRequest("PUT", srv.URL+"/api/v1/drivers/me", strings.NewReader(payload))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, 200, resp.StatusCode)
+	resp.Body.Close()
+
+	// Fetch via GET /api/v1/drivers/me and verify persistence
+	resp2, err := http.Get(srv.URL + "/api/v1/drivers/me")
+	require.NoError(t, err)
+	require.Equal(t, 200, resp2.StatusCode)
+	var me map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp2.Body).Decode(&me))
+	resp2.Body.Close()
+
+	assert.Equal(t, "MH1420210088991", me["license_number"])
+	assert.Equal(t, "2032-12-31", me["license_expiry"])
+	assert.Equal(t, "HDFC BANK · ****6587", me["bank_details"])
+	assert.Equal(t, "available", me["status"])
 }

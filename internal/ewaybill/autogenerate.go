@@ -5,7 +5,10 @@ import (
 	"database/sql"
 	"strings"
 
+	"github.com/google/uuid"
+
 	"transport-app/internal/events"
+	"transport-app/internal/shared"
 )
 
 // SubscribeTripEvents registers listeners for trip lifecycle events.
@@ -20,16 +23,35 @@ func (s *EWayBillService) SubscribeTripEvents(bus events.EventBus) {
 			return nil
 		}
 
-		// Check company_config for ewaybill_auto_generate
-		autoGen := s.isAutoGenerateEnabled(ctx)
+		tenantID := extractTenantID(e.Payload)
+		if tenantID == "" {
+			tenantID = string(shared.TenantIDFromContext(ctx))
+		}
+		if tenantID == "" {
+			tenantID = string(shared.DefaultTenant)
+		}
+
+		// Check company_config for ewaybill_auto_generate per-tenant
+		autoGen := s.isAutoGenerateEnabled(ctx, tenantID)
 		if !autoGen {
-			s.logger.Debug("ewaybill auto-generate skipped (disabled in config)", "trip_id", tripID)
+			s.logger.Debug("ewaybill auto-generate skipped (disabled in config)", "trip_id", tripID, "tenant_id", tenantID)
+			return nil
+		}
+
+		// Check if an E-Way Bill already exists for this trip
+		var existingEwb string
+		err := s.db.QueryRowContext(ctx, `
+			SELECT ewb_number FROM eway_bills
+			WHERE trip_id = ? AND status != 'cancelled' LIMIT 1
+		`, tripID).Scan(&existingEwb)
+		if err == nil && existingEwb != "" {
+			s.logger.Debug("ewaybill auto-generate skipped (already exists)", "trip_id", tripID, "ewb_number", existingEwb)
 			return nil
 		}
 
 		// Load trip goods_value
 		var goodsVal float64
-		err := s.db.QueryRowContext(ctx, `
+		err = s.db.QueryRowContext(ctx, `
 			SELECT b.price
 			FROM trips t
 			JOIN bookings b ON t.booking_id = b.id
@@ -72,20 +94,58 @@ func (s *EWayBillService) SubscribeTripEvents(bus events.EventBus) {
 		}
 
 		var ewbNum string
-		err = s.db.QueryRowContext(ctx, `SELECT ewb_number FROM eway_bills WHERE trip_id = ? AND (vehicle_number IS NULL OR vehicle_number = '')`, tripID).Scan(&ewbNum)
+		err = s.db.QueryRowContext(ctx, `SELECT ewb_number FROM eway_bills WHERE trip_id = ? AND (vehicle_number IS NULL OR vehicle_number = '') AND status != 'cancelled'`, tripID).Scan(&ewbNum)
 		if err == nil && ewbNum != "" {
 			_, _ = s.AttachPartB(ctx, ewbNum, regNum, "")
 		}
 		return nil
 	})
+
+	deliveryHandler := func(ctx context.Context, e events.Event) error {
+		tripID := extractTripID(e.Payload)
+		if tripID == "" {
+			return nil
+		}
+
+		var ewbNum string
+		err := s.db.QueryRowContext(ctx, `
+			SELECT ewb_number FROM eway_bills
+			WHERE trip_id = ? AND status IN ('active', 'part_a')
+			LIMIT 1`, tripID).Scan(&ewbNum)
+		if err != nil || ewbNum == "" {
+			return nil
+		}
+
+		// Reconcile delivery: mark E-Way Bill as delivered/completed
+		_, err = s.db.ExecContext(ctx, `
+			UPDATE eway_bills
+			SET status = 'delivered'
+			WHERE ewb_number = ? AND status IN ('active', 'part_a')
+		`, ewbNum)
+		if err == nil {
+			eventID := uuid.NewString()
+			_, _ = s.db.ExecContext(ctx, `
+				INSERT INTO eway_bill_events (id, ewb_number, trip_id, event_type, payload, created_by, created_at)
+				VALUES (?, ?, ?, 'DELIVERED', '{"reason":"trip_delivered"}', 'system', datetime('now'))
+			`, eventID, ewbNum, tripID)
+		}
+		return nil
+	}
+
+	bus.Subscribe("TripDeliveredEvent", deliveryHandler)
+	bus.Subscribe("trip.delivered", deliveryHandler)
+	bus.Subscribe("TripCompletedEvent", deliveryHandler)
+	bus.Subscribe("trip.completed", deliveryHandler)
+	bus.Subscribe("EPODVerifiedEvent", deliveryHandler)
+	bus.Subscribe("epod.verified", deliveryHandler)
 }
 
-func (s *EWayBillService) isAutoGenerateEnabled(ctx context.Context) bool {
+func (s *EWayBillService) isAutoGenerateEnabled(ctx context.Context, tenantID string) bool {
 	var val string
-	// company_config columns are `key`/`value` (migration 00042) — an earlier
-	// revision queried config_key/config_value, which always failed and fell
-	// back to "enabled".
-	err := s.db.QueryRowContext(ctx, `SELECT value FROM company_config WHERE key = 'ewaybill_auto_generate' LIMIT 1`).Scan(&val)
+	err := s.db.QueryRowContext(ctx, `
+		SELECT value FROM company_config
+		WHERE tenant_id = ? AND key = 'ewaybill_auto_generate'
+		LIMIT 1`, tenantID).Scan(&val)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return true // default true per spec

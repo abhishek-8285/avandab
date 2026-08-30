@@ -406,14 +406,23 @@ func isPostgresDriver(handle *sql.DB) bool {
 		strings.Contains(t, "postgres")
 }
 
-// TenantSummary is one row of the super-admin tenants list (Spec 24).
+// TenantSummary is one row of the super-admin tenants list (Spec 24 & Spec 25).
 type TenantSummary struct {
-	ID        string
-	Name      string
-	Slug      string
-	Status    string
-	CreatedAt time.Time
-	UserCount int64
+	ID            string
+	Name          string
+	Slug          string
+	Status        string
+	CreatedAt     time.Time
+	UserCount     int64
+	PlanID        string
+	SubStatus     string
+	MonthlyPrice  float64
+	PeriodEnd     string
+	TrialEnd      string
+	TripsUsed     int
+	TripsMax      int
+	QuotaUsagePct float64
+	IsNearQuota   bool
 }
 
 // ListTenants returns every tenant organization, newest first. UserCount is

@@ -40,6 +40,12 @@
             </div>
         </dl>
 
+        {{if .Stops}}
+        <div class="mt-6">
+            {{template "multistop_timeline.html" (dict "Mode" "customer" "Stops" .Stops "CurrentStop" .CurrentStop "Progression" .Progression)}}
+        </div>
+        {{end}}
+
         <div class="mt-6 flex gap-3 flex-wrap">
             <a href="/customer/bookings" class="inline-flex items-center rounded-full bg-surface-container-lowest border border-border-subtle px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">Back to Shipments</a>
             <a href="/customer/tracking/{{.TripID}}" data-poll-url="/customer/tracking/{{.TripID}}" id="refresh-tracking" class="inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all">Refresh</a>
@@ -68,7 +74,6 @@
 (function(){
     var tripId = "{{.TripID}}";
     var url = "/customer/tracking/" + tripId;
-    var acceptsJSON = true;
     function poll(){
         fetch(url, {headers: {"Accept":"application/json"}, credentials:"same-origin"})
             .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
@@ -78,6 +83,15 @@
                     el.innerHTML = "<div>Trip: "+(data.trip_number||tripId)+" | Status: "+(data.status||"")+" | Vehicle: "+(data.vehicle_label||"")+"</div>"+
                         "<div>ETA: "+(data.eta_min||"—")+" — "+(data.eta_max||"—")+" ("+(data.eta_method||"")+")</div>"+
                         "<div>Last seen: "+(data.last_seen||"—")+"</div>";
+                }
+                if(data.stops && data.stops.length > 0){
+                    var total = data.stops.length;
+                    var completed = data.stops.filter(function(s){ return s.status === 'completed'; }).length;
+                    var pct = total > 0 ? (completed / total) * 100 : 0;
+                    var pBar = document.getElementById("multistop-progress-bar");
+                    if(pBar) pBar.style.width = Math.round(pct) + "%";
+                    var sumEl = document.getElementById("multistop-summary");
+                    if(sumEl) sumEl.textContent = completed + " of " + total + " stops complete";
                 }
             })
             .catch(function(){});

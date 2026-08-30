@@ -32,6 +32,7 @@ module.exports = {
     },
     android: {
       package: 'com.avandab.mobile',
+      usesCleartextTraffic: true,
       permissions: [
         'CAMERA',
         'ACCESS_COARSE_LOCATION',

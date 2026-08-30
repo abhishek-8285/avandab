@@ -39,6 +39,9 @@ const (
 	FuelTheftAlert    = "telemetry.fuel_theft_alert"
 
 	GeofenceZoneBreach = "geofence.zone_breach"
+
+	// Driver Safety & Emergency (Spec 05 §8)
+	SOSEvent = "driver.sos_triggered"
 )
 
 // EventTypeOf maps a domain event struct to its canonical event-type string.

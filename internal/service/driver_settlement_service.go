@@ -248,6 +248,10 @@ func (s *DriverSettlementService) GenerateSettlement(ctx context.Context, tripID
 		return nil, fmt.Errorf("commit settlement: %w", err)
 	}
 
+	// Spec Phase 8 §P0: Money & Settlement Integrity
+	// Append immutable driver ledger entries so available balance & wallet stay synchronized
+	_ = s.recordLedgerForSettlement(ctx, db, "", driverID.String, tripID, settlementID, rateResult.GrossFare, rateResult.Commission, advances, deductions, tdsAmount, bonus)
+
 	// 9. Emit SettlementGenerated Event
 	if s.events != nil {
 		s.events.Publish(ctx, events.Event{
@@ -263,6 +267,62 @@ func (s *DriverSettlementService) GenerateSettlement(ctx context.Context, tripID
 	}
 
 	return s.findByTripID(ctx, db, tripID)
+}
+
+func (s *DriverSettlementService) recordLedgerForSettlement(ctx context.Context, db *sql.DB, tenantID, driverID, tripID, settlementID string, grossFare, commission, advances, deductions, tdsAmount, bonus float64) error {
+	var tableName string
+	_ = db.QueryRowContext(ctx, `SELECT name FROM sqlite_master WHERE type='table' AND name='driver_ledger_entries'`).Scan(&tableName)
+	if tableName == "" {
+		return nil
+	}
+
+	var count int
+	_ = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM driver_ledger_entries WHERE reference_type = 'settlement' AND reference_id = ?`, settlementID).Scan(&count)
+	if count > 0 {
+		return nil
+	}
+
+	if tenantID == "" {
+		tenantID = string(shared.TenantIDFromContext(ctx))
+		if tenantID == "" {
+			tenantID = string(shared.DefaultTenant)
+		}
+	}
+
+	appendEntry := func(entryType, desc string, amt float64) {
+		if amt == 0 {
+			return
+		}
+		var currBal float64
+		_ = db.QueryRowContext(ctx, `SELECT balance_after FROM driver_ledger_entries WHERE tenant_id = ? AND driver_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1`, tenantID, driverID).Scan(&currBal)
+		newBal := currBal + amt
+		entryID := "led_" + uuid.NewString()
+		_, _ = db.ExecContext(ctx, `
+			INSERT INTO driver_ledger_entries (id, tenant_id, driver_id, trip_id, entry_type, amount, currency, reference_type, reference_id, balance_after, description, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, 'INR', 'settlement', ?, ?, ?, datetime('now'))
+		`, entryID, tenantID, driverID, tripID, entryType, amt, settlementID, newBal, desc)
+	}
+
+	if grossFare > 0 {
+		appendEntry("TRIP_EARNING", fmt.Sprintf("Trip %s gross fare", tripID), grossFare)
+	}
+	if commission > 0 {
+		appendEntry("COMMISSION", fmt.Sprintf("Platform commission for trip %s", tripID), -commission)
+	}
+	if advances > 0 {
+		appendEntry("ADVANCE_DEDUCTION", fmt.Sprintf("Approved advances/kharcha for trip %s", tripID), -advances)
+	}
+	if deductions > 0 {
+		appendEntry("PENALTY", fmt.Sprintf("Trip deductions for trip %s", tripID), -deductions)
+	}
+	if tdsAmount > 0 {
+		appendEntry("PENALTY", fmt.Sprintf("TDS deduction (194C) for trip %s", tripID), -tdsAmount)
+	}
+	if bonus > 0 {
+		appendEntry("BONUS", fmt.Sprintf("Performance bonus for trip %s", tripID), bonus)
+	}
+
+	return nil
 }
 
 func (s *DriverSettlementService) calculateGrossFare(ctx context.Context, db *sql.DB, tripID, bookingID, routeID string) (RateResult, error) {

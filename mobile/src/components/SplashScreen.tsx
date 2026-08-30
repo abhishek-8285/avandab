@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { StyleSheet, Text, View, Animated } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors, Font, Radius } from '../constants/theme';
+import { Font, Radius } from '../constants/theme';
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -19,24 +19,24 @@ export function SplashScreen({ onFinish }: SplashScreenProps) {
       Animated.parallel([
         Animated.timing(logoOpacity, {
           toValue: 1,
-          duration: 600,
+          duration: 400,
           useNativeDriver: true,
         }),
         Animated.timing(logoTranslateY, {
           toValue: 0,
-          duration: 600,
+          duration: 400,
           useNativeDriver: true,
         }),
       ]),
       Animated.parallel([
         Animated.timing(textOpacity, {
           toValue: 1,
-          duration: 500,
+          duration: 300,
           useNativeDriver: true,
         }),
         Animated.timing(textTranslateY, {
           toValue: 0,
-          duration: 500,
+          duration: 300,
           useNativeDriver: true,
         }),
       ]),
@@ -44,14 +44,14 @@ export function SplashScreen({ onFinish }: SplashScreenProps) {
 
     const timer = setTimeout(() => {
       onFinish();
-    }, 2000);
+    }, 250);
 
     return () => clearTimeout(timer);
   }, []);
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" backgroundColor={Colors.chrome} />
+      <StatusBar style="light" backgroundColor="#075e54" />
 
       <View style={styles.content}>
         <Animated.View
@@ -63,7 +63,7 @@ export function SplashScreen({ onFinish }: SplashScreenProps) {
             },
           ]}
         >
-          <MaterialCommunityIcons name="truck-fast" size={56} color={Colors.primary} />
+          <MaterialCommunityIcons name="truck-fast" size={54} color="#008069" />
         </Animated.View>
 
         <Animated.View
@@ -89,7 +89,7 @@ export function SplashScreen({ onFinish }: SplashScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.chrome,
+    backgroundColor: '#075e54',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -98,43 +98,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoContainer: {
-    width: 96,
-    height: 96,
+    width: 92,
+    height: 92,
     borderRadius: Radius.lg,
-    backgroundColor: Colors.chromeLight,
-    borderWidth: 1,
-    borderColor: Colors.chromeBorder,
+    backgroundColor: '#e7ffdb',
+    borderWidth: 2,
+    borderColor: '#25d366',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
+    elevation: 4,
   },
   textContainer: {
     alignItems: 'center',
   },
   brandTitle: {
-    color: Colors.textOnChrome,
-    fontSize: 28,
+    color: '#ffffff',
+    fontSize: 26,
     fontWeight: '900',
     letterSpacing: 4,
     fontFamily: Font.mono,
   },
   divider: {
-    width: 40,
-    height: 1,
-    backgroundColor: Colors.primary,
+    width: 44,
+    height: 2,
+    backgroundColor: '#25d366',
     marginVertical: 8,
   },
   brandSubtitle: {
-    color: Colors.primary,
+    color: '#dcf8c6',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
     letterSpacing: 3,
     fontFamily: Font.mono,
   },
   versionTag: {
-    color: Colors.textOnChromeMuted,
+    color: 'rgba(255,255,255,0.7)',
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
     letterSpacing: 1,
     fontFamily: Font.mono,
     marginTop: 32,

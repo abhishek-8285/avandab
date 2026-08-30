@@ -32,13 +32,13 @@ func TestIsAutoGenerateEnabled_ReadsCompanyConfig(t *testing.T) {
 	svc := NewEWayBillService(db, nil, nil, nil, Config{})
 	ctx := context.Background()
 
-	assert.True(t, svc.isAutoGenerateEnabled(ctx), "missing config row must default to true")
+	assert.True(t, svc.isAutoGenerateEnabled(ctx, "1"), "missing config row must default to true")
 
 	_, err = db.Exec(`INSERT INTO company_config (tenant_id, key, value) VALUES ('1', 'ewaybill_auto_generate', 'false')`)
 	require.NoError(t, err)
-	assert.False(t, svc.isAutoGenerateEnabled(ctx), "config value 'false' must disable auto-generate")
+	assert.False(t, svc.isAutoGenerateEnabled(ctx, "1"), "config value 'false' must disable auto-generate")
 
-	_, err = db.Exec(`UPDATE company_config SET value = 'true' WHERE key = 'ewaybill_auto_generate'`)
+	_, err = db.Exec(`UPDATE company_config SET value = 'true' WHERE tenant_id = '1' AND key = 'ewaybill_auto_generate'`)
 	require.NoError(t, err)
-	assert.True(t, svc.isAutoGenerateEnabled(ctx))
+	assert.True(t, svc.isAutoGenerateEnabled(ctx, "1"))
 }

@@ -1,9 +1,8 @@
-const isLocalDev = typeof __DEV__ !== 'undefined' ? Boolean(__DEV__) : false;
-export const API_SCHEME = process.env.EXPO_PUBLIC_API_SCHEME || (isLocalDev ? 'http' : 'https');
-export const MQTT_SCHEME = process.env.EXPO_PUBLIC_MQTT_SCHEME || (isLocalDev ? 'ws' : 'wss');
-export const BACKEND_HOST = process.env.EXPO_PUBLIC_BACKEND_HOST || (isLocalDev ? '127.0.0.1' : 'api.avandab.com');
-export const API_PORT = process.env.EXPO_PUBLIC_API_PORT ? Number(process.env.EXPO_PUBLIC_API_PORT) : (isLocalDev ? 8080 : 443);
-export const MQTT_BROKER_PORT = process.env.EXPO_PUBLIC_MQTT_BROKER_PORT ? Number(process.env.EXPO_PUBLIC_MQTT_BROKER_PORT) : (isLocalDev ? 9001 : 8883);
+export const API_SCHEME = process.env.EXPO_PUBLIC_API_SCHEME || 'https';
+export const MQTT_SCHEME = process.env.EXPO_PUBLIC_MQTT_SCHEME || 'wss';
+export const BACKEND_HOST = process.env.EXPO_PUBLIC_BACKEND_HOST || 'avandab.com';
+export const API_PORT = process.env.EXPO_PUBLIC_API_PORT ? Number(process.env.EXPO_PUBLIC_API_PORT) : 443;
+export const MQTT_BROKER_PORT = process.env.EXPO_PUBLIC_MQTT_BROKER_PORT ? Number(process.env.EXPO_PUBLIC_MQTT_BROKER_PORT) : 8883;
 
 export const API_BASE_URL = API_PORT === 443 || API_PORT === 80
   ? `${API_SCHEME}://${BACKEND_HOST}`
@@ -12,16 +11,28 @@ export const MQTT_BROKER_URL = MQTT_BROKER_PORT === 443 || MQTT_BROKER_PORT === 
   ? `${MQTT_SCHEME}://${BACKEND_HOST}`
   : `${MQTT_SCHEME}://${BACKEND_HOST}:${MQTT_BROKER_PORT}`;
 
+let customBackendHost: string | null = null;
+export function setCustomBackendHost(host: string | null): void {
+  customBackendHost = host;
+}
+
 export function getBackendHost(): string {
-  return BACKEND_HOST;
+  if (customBackendHost) return customBackendHost;
+  return process.env['EXPO_PUBLIC_BACKEND_HOST'] || 'avandab.com';
 }
 
 export function getApiBaseURL(): string {
-  return API_BASE_URL;
+  const scheme = process.env['EXPO_PUBLIC_API_SCHEME'] || 'https';
+  const host = getBackendHost();
+  const port = process.env['EXPO_PUBLIC_API_PORT'] ? Number(process.env['EXPO_PUBLIC_API_PORT']) : 443;
+  return port === 443 || port === 80 ? `${scheme}://${host}` : `${scheme}://${host}:${port}`;
 }
 
 export function getMQTTBrokerURL(): string {
-  return MQTT_BROKER_URL;
+  const scheme = process.env['EXPO_PUBLIC_MQTT_SCHEME'] || 'wss';
+  const host = getBackendHost();
+  const port = process.env['EXPO_PUBLIC_MQTT_BROKER_PORT'] ? Number(process.env['EXPO_PUBLIC_MQTT_BROKER_PORT']) : 8883;
+  return port === 443 || port === 80 ? `${scheme}://${host}` : `${scheme}://${host}:${port}`;
 }
 
 export const DEFAULT_LATITUDE = 19.076;

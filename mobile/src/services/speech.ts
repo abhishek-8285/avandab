@@ -59,7 +59,8 @@ const KNOWN_NETWORKS: [RegExp, string][] = [
 
 const AMOUNT_PATTERNS = [
   /(?:₹|rs\.?|inr)\s*(\d+(?:\.\d+)?)/i,
-  /(\d+(?:\.\d+)?)\s*(?:rupees?|rupaye|रुपये)/i,
+  /(\d+(?:\.\d+)?)\s*(?:rupees?|rupaye|रुपये|का|ka|की|ki|के|ke)/i,
+  /\b(\d{2,6}(?:\.\d+)?)\b/,
 ];
 
 function normalizeText(text: string): string {

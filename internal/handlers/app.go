@@ -126,6 +126,8 @@ type App struct {
 	ABExperiments *ExperimentHandlers
 	// Founder powers the founder signals + audit visibility layer (Spec 16 §6, §7).
 	Founder *FounderHandlers
+	// SOS powers the driver panic/emergency SOS endpoint (Phase 8 §P3A).
+	SOS *SOSHandlers
 }
 
 // NewApp creates a new handler app with all handler groups initialized.
@@ -214,6 +216,8 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 		// Spec 22 §10-S12 — pilot KPI scorecard source.
 		app.Founder.KPIs = service.NewKPIService(app.DB)
 	}
+
+	app.SOS = NewSOSHandlers(app, db)
 
 	return app
 }

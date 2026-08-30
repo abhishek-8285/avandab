@@ -97,17 +97,18 @@ const cacheTTL = 60 * time.Second
 type ConfigReader struct {
 	db      *sql.DB
 	mu      sync.RWMutex
-	cache   map[string]string // key -> value
-	cacheAt time.Time
+	cache   map[string]map[string]string // tenantID -> (key -> value)
+	cacheAt map[string]time.Time         // tenantID -> timestamp
 	now     func() time.Time
 }
 
 // NewConfigReader constructs a ConfigReader.
 func NewConfigReader(db *sql.DB) *ConfigReader {
 	return &ConfigReader{
-		db:    db,
-		cache: make(map[string]string),
-		now:   time.Now,
+		db:      db,
+		cache:   make(map[string]map[string]string),
+		cacheAt: make(map[string]time.Time),
+		now:     time.Now,
 	}
 }
 
@@ -119,7 +120,10 @@ func (c *ConfigReader) Get(ctx context.Context, tenantID, key string) (string, e
 	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.cache[key], nil
+	if tCache, ok := c.cache[tenantID]; ok {
+		return tCache[key], nil
+	}
+	return "", nil
 }
 
 // GetFloat parses a key as a float, falling back to def.
@@ -161,7 +165,8 @@ func (c *ConfigReader) getDuration(ctx context.Context, tenantID, key string, de
 // than cacheTTL.
 func (c *ConfigReader) refreshIfStale(ctx context.Context, tenantID string) error {
 	c.mu.RLock()
-	stale := c.cacheAt.IsZero() || c.now().Sub(c.cacheAt) > cacheTTL
+	lastAt, exists := c.cacheAt[tenantID]
+	stale := !exists || lastAt.IsZero() || c.now().Sub(lastAt) > cacheTTL
 	c.mu.RUnlock()
 	if !stale {
 		return nil
@@ -169,7 +174,8 @@ func (c *ConfigReader) refreshIfStale(ctx context.Context, tenantID string) erro
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if !c.cacheAt.IsZero() && c.now().Sub(c.cacheAt) <= cacheTTL {
+	lastAt, exists = c.cacheAt[tenantID]
+	if exists && !lastAt.IsZero() && c.now().Sub(lastAt) <= cacheTTL {
 		return nil
 	}
 
@@ -191,7 +197,7 @@ func (c *ConfigReader) refreshIfStale(ctx context.Context, tenantID string) erro
 	if err := rows.Err(); err != nil {
 		return err
 	}
-	c.cache = fresh
-	c.cacheAt = c.now()
+	c.cache[tenantID] = fresh
+	c.cacheAt[tenantID] = c.now()
 	return nil
 }

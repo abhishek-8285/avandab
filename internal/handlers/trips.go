@@ -53,6 +53,9 @@ type TripHandlers struct {
 	assignDriverUC    *tripapp.AssignDriverUseCase
 	assignVehicleUC   *tripapp.AssignVehicleUseCase
 	generateInvoiceUC *invoiceApp.GenerateInvoiceUseCase
+	reachStopUC       *tripapp.ReachStopUseCase
+	submitStopPODUC   *tripapp.SubmitStopPODUseCase
+	completeStopUC    *tripapp.CompleteStopUseCase
 	detRepo           *geofencerepo.EventLogRepository
 }
 
@@ -75,6 +78,9 @@ func (h *TripHandlers) init() {
 		h.assignDriverUC = tripapp.NewAssignDriverUseCase(uowImpl, clockImpl)
 		h.assignVehicleUC = tripapp.NewAssignVehicleUseCase(uowImpl, clockImpl)
 		h.generateInvoiceUC = invoiceApp.NewGenerateInvoiceUseCase(uowImpl, idGenImpl, clockImpl)
+		h.reachStopUC = tripapp.NewReachStopUseCase(uowImpl, clockImpl)
+		h.submitStopPODUC = tripapp.NewSubmitStopPODUseCase(uowImpl, clockImpl)
+		h.completeStopUC = tripapp.NewCompleteStopUseCase(uowImpl, clockImpl)
 		h.detRepo = geofencerepo.NewEventLogRepository(h.DB)
 	}
 }
@@ -97,6 +103,9 @@ func (h *TripHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/deliver", h.Deliver)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/complete", h.CompleteTrip)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "cancel")).Post("/{id}/cancel", h.CancelTrip)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/stops/{stopId}/reach", h.ReachStop)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/stops/{stopId}/pod", h.SubmitStopPOD)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/stops/{stopId}/complete", h.CompleteStop)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "shares", "create")).Post("/{id}/share", h.App.Share.CreateShare)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "read")).Get("/{id}/compliance", h.TripComplianceFragment)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/send-pod-otp", h.SendPODOTPSMS)
@@ -392,6 +401,84 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	type stopItem struct {
+		ID              string
+		StopSequence    int
+		StopType        string
+		LocationName    string
+		Address         string
+		Status          string
+		ActualArrival   *time.Time
+		ActualDeparture *time.Time
+		RequiresPOD     bool
+		PODUrl          string
+		RequiresOTP     bool
+		ConsigneeName   string
+		ConsigneePhone  string
+	}
+	type progressionInfo struct {
+		TotalStops        int
+		CompletedStops    int
+		ProgressPercent   float64
+		AllStopsCompleted bool
+	}
+	var stopsList []stopItem
+	var currentStop *stopItem
+	var progression *progressionInfo
+
+	if h.DB != nil {
+		rows, err := h.DB.QueryContext(r.Context(), `
+			SELECT id, stop_sequence, stop_type, COALESCE(location_name, ''), COALESCE(address, ''),
+			       status, actual_arrival, actual_departure, COALESCE(requires_pod, 0), COALESCE(pod_url, ''),
+			       COALESCE(requires_otp, 0), COALESCE(consignee_name, ''), COALESCE(consignee_phone, '')
+			FROM trip_stops
+			WHERE trip_id = ?
+			ORDER BY stop_sequence ASC
+		`, id)
+		if err == nil {
+			defer func() { _ = rows.Close() }()
+			completedCount := 0
+			for rows.Next() {
+				var s stopItem
+				var arrStr, depStr sql.NullString
+				var reqPOD, reqOTP int
+				if err := rows.Scan(&s.ID, &s.StopSequence, &s.StopType, &s.LocationName, &s.Address, &s.Status, &arrStr, &depStr, &reqPOD, &s.PODUrl, &reqOTP, &s.ConsigneeName, &s.ConsigneePhone); err == nil {
+					s.RequiresPOD = reqPOD == 1
+					s.RequiresOTP = reqOTP == 1
+					if arrStr.Valid && arrStr.String != "" {
+						if t, err := time.Parse(time.RFC3339, arrStr.String); err == nil {
+							s.ActualArrival = &t
+						}
+					}
+					if depStr.Valid && depStr.String != "" {
+						if t, err := time.Parse(time.RFC3339, depStr.String); err == nil {
+							s.ActualDeparture = &t
+						}
+					}
+					if s.Status == "completed" {
+						completedCount++
+					} else if (s.Status != "skipped") && currentStop == nil {
+						sCopy := s
+						currentStop = &sCopy
+					}
+					stopsList = append(stopsList, s)
+				}
+			}
+			if len(stopsList) > 0 {
+				prog := progressionInfo{
+					TotalStops:        len(stopsList),
+					CompletedStops:    completedCount,
+					ProgressPercent:   float64(completedCount) / float64(len(stopsList)) * 100.0,
+					AllStopsCompleted: completedCount == len(stopsList),
+				}
+				if prog.AllStopsCompleted {
+					prog.ProgressPercent = 100.0
+				}
+				progression = &prog
+			}
+		}
+	}
+
 	h.renderPage(w, r, "trip_view.html", PageData{
 		Title: "View Trip",
 		User:  session,
@@ -410,6 +497,9 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 			"KharchaTotal":      kharchaTotal,
 			"Invoice":           tripInvoice,
 			"Duration":          duration,
+			"Stops":             stopsList,
+			"CurrentStop":       currentStop,
+			"Progression":       progression,
 		},
 	})
 }
@@ -940,4 +1030,105 @@ func (h *TripHandlers) CancelTrip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/trips/"+id, http.StatusSeeOther)
+}
+
+func (h *TripHandlers) ReachStop(w http.ResponseWriter, r *http.Request) {
+	h.init()
+	tripID := chi.URLParam(r, "id")
+	stopID := chi.URLParam(r, "stopId")
+	tenantID := shared.TenantIDFromContext(r.Context())
+
+	err := h.reachStopUC.Execute(r.Context(), tripapp.ReachStopCommand{
+		TripID:   tripagg.TripID(tripID),
+		StopID:   stopID,
+		TenantID: tenantID,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if wantsJSON(r) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "arrived", "stop_id": stopID, "trip_id": tripID})
+		return
+	}
+	http.Redirect(w, r, "/trips/"+tripID, http.StatusSeeOther)
+}
+
+func (h *TripHandlers) SubmitStopPOD(w http.ResponseWriter, r *http.Request) {
+	h.init()
+	tripID := chi.URLParam(r, "id")
+	stopID := chi.URLParam(r, "stopId")
+	tenantID := shared.TenantIDFromContext(r.Context())
+
+	var podURL, signatureURL, notes, otp string
+	ct := r.Header.Get("Content-Type")
+	if strings.Contains(ct, "application/json") {
+		var req struct {
+			PODURL       string `json:"pod_url"`
+			SignatureURL string `json:"signature_url"`
+			Notes        string `json:"notes"`
+			OTP          string `json:"otp"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&req)
+		podURL = req.PODURL
+		signatureURL = req.SignatureURL
+		notes = req.Notes
+		otp = req.OTP
+	} else {
+		_ = r.ParseForm()
+		podURL = r.FormValue("pod_url")
+		signatureURL = r.FormValue("signature_url")
+		notes = r.FormValue("notes")
+		otp = r.FormValue("otp")
+	}
+
+	err := h.submitStopPODUC.Execute(r.Context(), tripapp.SubmitStopPODCommand{
+		TripID:       tripagg.TripID(tripID),
+		StopID:       stopID,
+		TenantID:     tenantID,
+		PODURL:       podURL,
+		SignatureURL: signatureURL,
+		Notes:        notes,
+		OTP:          otp,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if wantsJSON(r) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "pod_verified", "stop_id": stopID, "trip_id": tripID})
+		return
+	}
+	http.Redirect(w, r, "/trips/"+tripID, http.StatusSeeOther)
+}
+
+func (h *TripHandlers) CompleteStop(w http.ResponseWriter, r *http.Request) {
+	h.init()
+	tripID := chi.URLParam(r, "id")
+	stopID := chi.URLParam(r, "stopId")
+	tenantID := shared.TenantIDFromContext(r.Context())
+
+	err := h.completeStopUC.Execute(r.Context(), tripapp.CompleteStopCommand{
+		TripID:   tripagg.TripID(tripID),
+		StopID:   stopID,
+		TenantID: tenantID,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if wantsJSON(r) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]string{"status": "completed", "stop_id": stopID, "trip_id": tripID})
+		return
+	}
+	http.Redirect(w, r, "/trips/"+tripID, http.StatusSeeOther)
 }
