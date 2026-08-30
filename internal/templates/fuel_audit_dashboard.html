@@ -41,7 +41,7 @@
                 </div>
             </div>
             <div class="mt-4">
-                <div class="text-stat text-primary tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.AuditStats.PendingCount}}</div>
+                <div id="fuel-kpi-pending" class="text-stat text-primary tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.AuditStats.PendingCount}}</div>
                 <div class="text-sm font-medium text-secondary mt-1">Pending</div>
                 <div class="mt-3 text-xs text-text-muted">awaiting audit run</div>
             </div>
@@ -57,7 +57,7 @@
                 <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/15">Flagged</span>
             </div>
             <div class="mt-4">
-                <div class="text-stat text-status-warning tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.AuditStats.NeedsReviewCount}}</div>
+                <div id="fuel-kpi-needs-review" class="text-stat text-status-warning tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.AuditStats.NeedsReviewCount}}</div>
                 <div class="text-sm font-medium text-secondary mt-1">Needs Review</div>
                 <div class="mt-3 flex items-center gap-2 text-xs text-text-muted"><span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> flagged by checks A/B/C</div>
             </div>
@@ -73,7 +73,7 @@
                 <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/15">Within tolerance</span>
             </div>
             <div class="mt-4">
-                <div class="text-stat text-status-success tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.AuditStats.PassedCount}}</div>
+                <div id="fuel-kpi-passed" class="text-stat text-status-success tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.AuditStats.PassedCount}}</div>
                 <div class="text-sm font-medium text-secondary mt-1">Passed</div>
                 <div class="mt-3 text-xs text-text-muted">claimed vs expected in range</div>
             </div>
@@ -89,7 +89,7 @@
                 <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-rose-500/10 text-rose-700 border border-rose-500/15">Admin verdict</span>
             </div>
             <div class="mt-4">
-                <div class="text-stat text-status-alert tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.AuditStats.FailedCount}}</div>
+                <div id="fuel-kpi-failed" class="text-stat text-status-alert tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.AuditStats.FailedCount}}</div>
                 <div class="text-sm font-medium text-secondary mt-1">Failed</div>
                 <div class="mt-3 text-xs text-text-muted">rejected after manual review</div>
             </div>
@@ -104,7 +104,7 @@
                 </div>
             </div>
             <div class="mt-4">
-                <div class="text-stat text-primary tabular-nums text-3xl font-black tracking-tight" data-numeric>{{printf "%.1f" .AuditStats.AvgVariancePct}}%</div>
+                <div id="fuel-kpi-variance" class="text-stat text-primary tabular-nums text-3xl font-black tracking-tight" data-numeric>{{printf "%.1f" .AuditStats.AvgVariancePct}}%</div>
                 <div class="text-sm font-medium text-secondary mt-1">Avg Variance</div>
                 <div class="mt-3 text-xs text-text-muted">claimed vs expected litres</div>
             </div>

@@ -1078,6 +1078,17 @@ func (h *InvoiceHandlers) GenerateIRN(w http.ResponseWriter, r *http.Request) {
 		TenantID: tenantID,
 	})
 
+	if isDatastarRequest(r) {
+		w.Header().Set("HX-Trigger", `{"showToast":{"tone":"success","msg":"IRN generated"}}`)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_ = h.Templates.ExecuteTemplate(w, "irn_qr.html", map[string]interface{}{"Invoice": invDTO})
+		// htmx 4 partials: hero badge + locked pill morph in same response
+		_, _ = fmt.Fprintf(w, `<template hx type="partial" hx-target="#invoice-einvoiced-badge" hx-swap="outerMorph"><span id="invoice-einvoiced-badge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wide bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg> E-Invoiced</span></template>`)
+		_, _ = fmt.Fprintf(w, `<template hx type="partial" hx-target="#invoice-locked-pill" hx-swap="outerMorph"><span id="invoice-locked-pill" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-low border border-border-subtle text-xs font-semibold text-text-muted" title="This invoice has an IRN or recorded payments, so it is immutable. Corrections are made via credit/debit notes only."><svg class="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg> Locked — corrections via credit/debit notes</span></template>`)
+		_, _ = fmt.Fprintf(w, `<template hx type="partial" hx-target="#invoice-manage-link" hx-swap="outerMorph"><span id="invoice-manage-link" class="hidden"></span></template>`)
+		return
+	}
+
 	h.renderFragment(w, "irn_qr.html", map[string]interface{}{
 		"Invoice": invDTO,
 	})

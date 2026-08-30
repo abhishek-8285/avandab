@@ -105,12 +105,27 @@ func (h *FuelAuditHandlers) RunAudit(w http.ResponseWriter, r *http.Request) {
 
 	audited, err := h.Services.FuelAudit.RunAudit(ctx)
 	if err != nil {
+		if isDatastarRequest(r) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = fmt.Fprintf(w, `<div class="px-4 py-2 text-xs font-semibold text-status-alert bg-status-alert/10 rounded">Audit failed: %s</div>`, template.HTMLEscapeString(err.Error()))
+			return
+		}
 		h.renderError(w, http.StatusInternalServerError, "Audit Run Failed", err.Error(), session)
 		return
 	}
 
 	if isDatastarRequest(r) {
+		stats, _ := h.Services.FuelAudit.GetAuditStats(ctx)
+		w.Header().Set("HX-Trigger", `{"showToast":{"tone":"success","msg":"Audit pass complete"}}`)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = fmt.Fprintf(w, `<div class="px-4 py-2 text-xs font-semibold text-status-success bg-status-success/10 rounded">Audit pass complete — %d claim(s) evaluated.</div>`, audited)
+		// htmx 4 partials: KPIs morph in same response (queue refreshes via every 30s poll)
+		_, _ = fmt.Fprintf(w, `<template hx type="partial" hx-target="#fuel-kpi-pending" hx-swap="innerMorph">%d</template>`, stats.PendingCount)
+		_, _ = fmt.Fprintf(w, `<template hx type="partial" hx-target="#fuel-kpi-needs-review" hx-swap="innerMorph">%d</template>`, stats.NeedsReviewCount)
+		_, _ = fmt.Fprintf(w, `<template hx type="partial" hx-target="#fuel-kpi-passed" hx-swap="innerMorph">%d</template>`, stats.PassedCount)
+		_, _ = fmt.Fprintf(w, `<template hx type="partial" hx-target="#fuel-kpi-failed" hx-swap="innerMorph">%d</template>`, stats.FailedCount)
+		_, _ = fmt.Fprintf(w, `<template hx type="partial" hx-target="#fuel-kpi-variance" hx-swap="innerMorph">%.1f%%</template>`, stats.AvgVariancePct)
 		return
 	}
 	http.Redirect(w, r, "/fuel/audit", http.StatusSeeOther)
