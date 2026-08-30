@@ -25,7 +25,7 @@
             <td class="px-3 py-2 text-xs font-bold text-primary tabular-nums">{{.TripNumber}}</td>
             <td class="px-3 py-2 text-xs font-medium text-secondary uppercase tabular-nums">{{.VehicleReg}}</td>
             <td class="px-3 py-2 text-sm text-right font-bold text-on-surface tabular-nums" data-numeric>
-                {{if .FuelLitres}}{{printf "%.1f" .FuelLitres}} L{{else}}—{{end}}
+                {{if .FuelLitres}}{{printf "%.1f" (derefFloat .FuelLitres)}} L{{else}}—{{end}}
             </td>
             <td class="px-3 py-2 text-sm text-right font-semibold text-secondary tabular-nums" data-numeric>
                 {{if gt .ExpectedBest 0.0}}{{printf "%.1f" .ExpectedBest}} L{{else}}—{{end}}
@@ -33,7 +33,7 @@
             <td class="px-3 py-2 text-sm" data-numeric>
                 {{if gt .ExpectedBest 0.0}}
                 <span class="inline-flex px-2 py-0.5 rounded-full border text-[11px] font-bold tabular-nums {{auditBadge .Result}}"
-                      title="Claimed {{printf "%.1f" .FuelLitres}}L, Expected {{printf "%.1f" .ExpectedBest}}L ±{{printf "%.1f" .VariancePct}}%">
+                      title="Claimed {{if .FuelLitres}}{{printf "%.1f" (derefFloat .FuelLitres)}}L{{else}}0.0L{{end}}, Expected {{printf "%.1f" .ExpectedBest}}L ±{{printf "%.1f" .VariancePct}}%">
                     {{if .VarianceLitres}}{{if gt .VarianceLitres 0.0}}+{{end}}{{printf "%.1f" .VarianceLitres}}{{else}}0.0{{end}} L
                 </span>
                 {{else}}

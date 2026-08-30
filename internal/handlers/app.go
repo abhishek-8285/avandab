@@ -294,6 +294,12 @@ func parseTemplatesLang(authSrv auth.AuthorizationService, lang string) (*templa
 		"auditBadge":  auditResultBadge,
 		"tierBadge":   tierBadgeClass,
 		"priceFormat": func(f float64) string { return fmt.Sprintf("%.2f", f) },
+		"derefFloat": func(f *float64) float64 {
+			if f == nil {
+				return 0
+			}
+			return *f
+		},
 		"yesNo": func(b bool) string {
 			if b {
 				return "Yes"
