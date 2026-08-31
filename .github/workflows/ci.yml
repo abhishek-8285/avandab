@@ -132,7 +132,7 @@ jobs:
 
       - name: SQLC generate check
         run: |
-          go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+          go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
           make generate
           if [ -n "$(git status --porcelain)" ]; then
             echo "::error::sqlc generated files are out of date"
