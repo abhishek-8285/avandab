@@ -35,6 +35,10 @@ func NewComplianceHandlers(app *App, compliance *service.ComplianceService) *Com
 
 // Routes mounts compliance endpoints.
 func (h *ComplianceHandlers) Routes(r chi.Router) {
+	// Bare /compliance should not 404 — redirect to dashboard for nav links/bookmarks.
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/compliance/dashboard", http.StatusSeeOther)
+	})
 	// Creating an exemption mutates compliance state — requires update,
 	// not just the read gate wrapping this mount.
 	r.With(middleware.ResourcePermission(h.AuthSrv, "compliance", "update")).Post("/exemptions", h.CreateExemption)

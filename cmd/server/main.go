@@ -1184,6 +1184,8 @@ func main() {
 				r.With(middleware.ResourcePermission(authSvc, "ops_alerts", "read")).Get("/ops-alerts", app.Founder.OpsAlertsPage)
 				r.With(featureGate("pnl"), middleware.ResourcePermission(authSvc, "pnl", "read")).Get("/pnl/dashboard", app.Founder.PNLDashboardPage)
 				r.With(featureGate("experiments"), middleware.ResourcePermission(authSvc, "experiments", "read")).Get("/experiments", app.Founder.ExperimentsPage)
+				// Legacy /founder/audit -> /audit-logs (templates referenced old path, now 303)
+				r.Get("/founder/audit", http.RedirectHandler("/audit-logs", http.StatusSeeOther).ServeHTTP)
 			}
 
 			// Live Fleet Map (Spec 12 §2.2, §4.3)

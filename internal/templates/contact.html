@@ -12,8 +12,20 @@
         Avandab Support &amp; Inquiries
     </div>
     <h1 class="font-display text-2xl sm:text-3xl font-bold text-on-surface mb-4 tracking-tight">Get in Touch with Our Team</h1>
-    <p class="text-sm text-on-surface-variant leading-relaxed max-w-2xl mx-auto md:mx-0">Have a question about our fleet operations, route dispatches, or enterprise pricing? Submit your inquiry or track an existing ticket below.</p>
+     <p class="text-sm text-on-surface-variant leading-relaxed max-w-2xl mx-auto md:mx-0">Have a question about our fleet operations, route dispatches, or enterprise pricing? Submit your inquiry or track an existing ticket below.</p>
 </section>
+
+{{if .ErrorRef}}
+<div class="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-8 flex items-start gap-3">
+    <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 grid place-items-center text-amber-600 shrink-0">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+    </div>
+    <div class="min-w-0">
+        <h3 class="text-sm font-bold text-amber-900 dark:text-amber-200">You came from an error page</h3>
+        <p class="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">We’ve pre-filled your support request with the error reference. Our team will use it to trace logs. <span class="font-mono font-semibold">Ref: {{.ErrorRef}}</span>{{if .ErrorAbout}} · {{.ErrorAbout}}{{end}}</p>
+    </div>
+</div>
+{{end}}
 
 {{if .SubmittedNum}}
 <!-- Success Alert Banner with Ticket Number -->
@@ -69,7 +81,7 @@
 <label for="contact-category" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Inquiry Category *</label>
 <select id="contact-category" name="category" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" required="">
 <option value="">Select a category</option>
-<option value="support">General Support</option>
+<option value="support" {{if eq .ErrorAbout "error-page"}}selected{{end}}>General Support</option>
 <option value="fleet">Fleet Carrier Onboarding</option>
 <option value="quote">Shipper &amp; Load Quotation</option>
 <option value="billing">Billing &amp; Invoicing Issue</option>
@@ -78,11 +90,12 @@
 </div>
 <div>
 <label for="contact-subject" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Subject *</label>
-<input id="contact-subject" name="subject" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-text-muted" required="" type="text" placeholder="Brief subject of inquiry">
+<input id="contact-subject" name="subject" value="{{.PrefillSubject}}" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-text-muted" required="" type="text" placeholder="Brief subject of inquiry">
 </div>
 <div>
 <label for="contact-message" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Detailed Message *</label>
-<textarea id="contact-message" name="message" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-text-muted" required="" rows="4" placeholder="Describe your request in detail..."></textarea>
+<textarea id="contact-message" name="message" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder:text-text-muted" required="" rows="4" placeholder="Describe your request in detail...">{{.PrefillMessage}}</textarea>
+{{if .ErrorRef}}<input type="hidden" name="error_ref" value="{{.ErrorRef}}">{{end}}
 </div>
 <div class="pt-4">
 <button class="inline-flex justify-center items-center gap-2 w-full md:w-auto rounded-full bg-primary text-on-primary px-5 py-2.5 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer border-0" type="submit">

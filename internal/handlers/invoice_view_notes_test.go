@@ -91,8 +91,8 @@ func TestInvoiceView_PassesNotesAndLocked(t *testing.T) {
 	assert.Contains(t, body, "Issue Credit Note", "note form must always be reachable")
 	assert.Contains(t, body, "/invoices/inv-view/credit-note")
 	assert.Contains(t, body, "/invoices/inv-view/debit-note")
-	assert.Contains(t, body, "Manage Line Items", "unlocked invoice keeps edit entry point")
-	assert.NotContains(t, body, "Locked — corrections", "bare invoice is not locked")
+	assert.Contains(t, body, `id="invoice-manage-link" class="inline-flex"`, "unlocked invoice keeps edit entry point")
+	assert.Contains(t, body, `id="invoice-locked-pill" class="hidden"`, "bare invoice is not locked")
 
 	_, err := db.Exec(`INSERT INTO payments (id, invoice_id, payment_date, amount, method)
 		VALUES ('pay-view-1', 'inv-view', datetime('now'), 5000, 'cash')`)
@@ -102,8 +102,8 @@ func TestInvoiceView_PassesNotesAndLocked(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
 	body = w.Body.String()
 
-	assert.Contains(t, body, "Locked — corrections", "payment presence must lock the UI")
-	assert.NotContains(t, body, "Manage Line Items", "locked invoice hides line-item editor link")
+	assert.Contains(t, body, `id="invoice-locked-pill" class="inline-flex`, "payment presence must lock the UI")
+	assert.Contains(t, body, `id="invoice-manage-link" class="hidden"`, "locked invoice hides line-item editor link")
 
 	_, err = db.Exec(`INSERT INTO credit_debit_notes
 		(id, tenant_id, note_number, note_type, invoice_id, reason, taxable_value, igst, cgst, sgst, total)

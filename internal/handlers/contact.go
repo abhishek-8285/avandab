@@ -56,6 +56,8 @@ func (h *ContactHandlers) Page(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
 	ticketNo := r.URL.Query().Get("ticket")
 	email := r.URL.Query().Get("email")
+	ref := r.URL.Query().Get("ref")
+	about := r.URL.Query().Get("about")
 
 	var ticket *ContactTicket
 	var searchErr string
@@ -74,6 +76,20 @@ func (h *ContactHandlers) Page(w http.ResponseWriter, r *http.Request) {
 			"SearchEmail":    email,
 			"SubmittedNum":   r.URL.Query().Get("submitted"),
 			"SubmittedEmail": email,
+			"ErrorRef":       ref,
+			"ErrorAbout":     about,
+			"PrefillSubject": func() string {
+				if about == "error-page" && ref != "" {
+					return "Support request — error ref " + ref
+				}
+				return ""
+			}(),
+			"PrefillMessage": func() string {
+				if about == "error-page" && ref != "" {
+					return "I encountered an error (Ref: " + ref + "). Please help.\n\nDetails:\n"
+				}
+				return ""
+			}(),
 		},
 	}
 
@@ -95,6 +111,15 @@ func (h *ContactHandlers) Submit(w http.ResponseWriter, r *http.Request) {
 	subject := r.PostFormValue("subject")
 	category := r.PostFormValue("category")
 	message := r.PostFormValue("message")
+	if ref := r.PostFormValue("error_ref"); ref != "" {
+		message = "[Error Ref: " + ref + "]\n" + message
+		if subject == "" {
+			subject = "Support request — error ref " + ref
+		}
+		if category == "" {
+			category = "support"
+		}
+	}
 
 	if name == "" || email == "" || subject == "" || message == "" {
 		http.Redirect(w, r, "/contact-us?error=Missing+required+fields", http.StatusSeeOther)

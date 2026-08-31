@@ -380,7 +380,10 @@ jest.mock('mqtt', () => ({
 
 // Virtual mock for optional expo-notifications so guarded require succeeds in tests
 jest.mock('expo-notifications', () => ({
+  setNotificationHandler: jest.fn(),
   scheduleNotificationAsync: jest.fn(),
   requestPermissionsAsync: jest.fn().mockResolvedValue(true),
   getPermissionsAsync: jest.fn().mockResolvedValue({ granted: true }),
+  dismissNotificationAsync: jest.fn(),
+  getExpoPushTokenAsync: jest.fn().mockResolvedValue({ data: 'ExponentPushToken[test]' }),
 }), { virtual: true });

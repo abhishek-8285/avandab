@@ -39,6 +39,7 @@ import { SyncStatusBar } from './src/components/SyncStatusBar';
 import { ComplianceBanner } from './src/components/ComplianceBanner';
 import { PaisaScreen } from './src/components/PaisaScreen';
 import { useLanguageStore } from './src/stores/languageStore';
+import { NotificationService } from './src/services/notificationService';
 import { t } from './src/i18n';
 import { QRDemoScreen } from './src/components/QRDemoScreen';
 import { useAuthStore } from './src/stores/authStore';
@@ -73,6 +74,18 @@ type DriverStackParamList = {
 
 const AuthStack = createStackNavigator<AuthStackParamList>();
 const DriverStack = createStackNavigator<DriverStackParamList>();
+
+function FirstTimeSetupRoute({ navigation }: { navigation: any }) {
+  const token = useAuthStore((s) => s.token);
+  const user = useAuthStore((s) => s.user);
+  return (
+    <DriverOnboardingScreen
+      token={token || undefined}
+      user={user || undefined}
+      onComplete={() => navigation.navigate('Main')}
+    />
+  );
+}
 
 function AuthNavigator() {
   return (
@@ -149,17 +162,9 @@ function DriverNavigator() {
         )}
       </DriverStack.Screen>
       <DriverStack.Screen name="FirstTimeSetup">
-        {({ navigation }) => {
-          const token = useAuthStore((s) => s.token);
-          const user = useAuthStore((s) => s.user);
-          return (
-            <DriverOnboardingScreen
-              token={token || undefined}
-              user={user || undefined}
-              onComplete={() => navigation.navigate('Main')}
-            />
-          );
-        }}
+        {({ navigation }) => (
+          <FirstTimeSetupRoute navigation={navigation} />
+        )}
       </DriverStack.Screen>
       <DriverStack.Screen name="ActiveNavigation">
         {({ navigation, route }) => (
@@ -232,6 +237,7 @@ export default function App() {
     useLanguageStore.getState().loadLanguage();
     OfflineQueue.init().catch(() => {});
     ConsentManager.init().catch(() => {});
+    NotificationService.init().catch(() => {});
   }, []);
 
   useEffect(() => {
