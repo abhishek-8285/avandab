@@ -122,7 +122,7 @@ func TestGenerateInvoicePDF_IRNAndQRRendered(t *testing.T) {
 	d.IRNAckNo = "112010036408862"
 	d.IRNAckDate = "2026-08-24 10:00:00"
 	d.EWBNumber = "271002349876"
-	d.SignedQR = tinyPNG
+	d.SignedQR = tinyPNG()
 	b, err := GenerateInvoicePDF(d)
 	if err != nil {
 		t.Fatal(err)

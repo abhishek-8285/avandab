@@ -10,9 +10,7 @@ import (
 	"testing"
 )
 
-// tinyPNG is a real, fully-encoded 1x1 PNG produced by the stdlib so the
-// generator's image validation accepts it.
-var tinyPNG = func() []byte {
+func tinyPNG() []byte {
 	img := image.NewRGBA(image.Rect(0, 0, 1, 1))
 	img.Set(0, 0, color.Black)
 	var buf bytes.Buffer
@@ -20,28 +18,29 @@ var tinyPNG = func() []byte {
 		panic(err)
 	}
 	return buf.Bytes()
-}()
+}
 
 func TestQRImageBytes(t *testing.T) {
+	pngData := tinyPNG()
 	if got := QRImageBytes(""); got != nil {
 		t.Errorf("empty = %v", got)
 	}
 	// Raw PNG bytes pass through.
-	if got := QRImageBytes(string(tinyPNG)); !bytes.Equal(got, tinyPNG) {
+	if got := QRImageBytes(string(pngData)); !bytes.Equal(got, pngData) {
 		t.Errorf("raw png = %v", got)
 	}
 	// Standard base64 of PNG decodes.
-	b64 := base64.StdEncoding.EncodeToString(tinyPNG)
-	if got := QRImageBytes(b64); !bytes.Equal(got, tinyPNG) {
+	b64 := base64.StdEncoding.EncodeToString(pngData)
+	if got := QRImageBytes(b64); !bytes.Equal(got, pngData) {
 		t.Errorf("b64 png mismatch")
 	}
 	// data-URI prefix handled.
-	if got := QRImageBytes("data:image/png;base64," + b64); !bytes.Equal(got, tinyPNG) {
+	if got := QRImageBytes("data:image/png;base64," + b64); !bytes.Equal(got, pngData) {
 		t.Errorf("data uri mismatch")
 	}
 	// URL-safe raw base64 handled.
-	raw := base64.RawURLEncoding.EncodeToString(tinyPNG)
-	if got := QRImageBytes(raw); !bytes.Equal(got, tinyPNG) {
+	raw := base64.RawURLEncoding.EncodeToString(pngData)
+	if got := QRImageBytes(raw); !bytes.Equal(got, pngData) {
 		t.Errorf("url-safe b64 mismatch")
 	}
 	// URLs and junk are rejected — never fetched.

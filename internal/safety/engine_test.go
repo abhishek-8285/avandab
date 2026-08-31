@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"transport-app/internal/fuel"
 	"transport-app/internal/shared"
 	"transport-app/internal/shared/uow"
@@ -74,12 +76,9 @@ type frameSpec struct {
 	tripID   string
 }
 
-var frameSeq int
-
 func insertFrames(t *testing.T, db *sql.DB, t0 time.Time, specs []frameSpec) {
 	t.Helper()
 	for _, sp := range specs {
-		frameSeq++
 		var ign interface{}
 		if sp.ignition != nil {
 			if *sp.ignition {
@@ -97,7 +96,7 @@ func insertFrames(t *testing.T, db *sql.DB, t0 time.Time, specs []frameSpec) {
 		_, err := db.Exec(`INSERT INTO telemetry_snapshots
 			(id, vehicle_id, timestamp, speed, latitude, longitude, ignition, trip_id)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			fmt.Sprintf("sf-%d", frameSeq), "v1", timeStr(t0.Add(sp.offset)),
+			fmt.Sprintf("sf-%s", uuid.NewString()), "v1", timeStr(t0.Add(sp.offset)),
 			sp.speed, sp.lat, sp.lng, ign, trip)
 		require.NoError(t, err)
 	}
