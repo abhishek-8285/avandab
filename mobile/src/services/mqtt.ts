@@ -1,6 +1,7 @@
 import mqtt from 'mqtt';
 import { getMQTTBrokerURL } from '../constants/network';
 import { useAuthStore } from '../stores/authStore';
+import { NotificationService } from './notificationService';
 
 export interface TripDispatchUpdate {
   trip_id: string;
@@ -109,6 +110,12 @@ class MQTTTelemetryService {
                 status: typeof parsed.status === 'string' ? parsed.status : '',
                 time: typeof parsed.time === 'string' ? parsed.time : '',
               });
+              // Push system notification bar alert
+              NotificationService.showDispatchNotification(
+                parsed.trip_id,
+                parsed.origin || 'Fleet Hub',
+                parsed.destination || 'Delivery Location',
+              ).catch(() => {});
             }
           } catch {
             // non-JSON payload — log only

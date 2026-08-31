@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { sosService, SOSTriggerResult } from '../services/sosService';
+import { NotificationService } from '../services/notificationService';
 import { Colors, Font, Radius, Spacing } from '../constants/theme';
 
 interface SOSButtonProps {
@@ -57,6 +58,9 @@ export function SOSButton({
       setLastResult(result);
       setSending(false);
       setModalVisible(false);
+
+      // Trigger system notification bar alert
+      NotificationService.showSOSAlert(tripId).catch(() => {});
 
       if (onSOSSent) {
         onSOSSent(result);

@@ -1,6 +1,7 @@
 import { getApiBaseURL } from '../constants/network';
 import { useAuthStore } from '../stores/authStore';
 import { RetryableOperation } from '../utils/retry';
+import { NotificationService } from './notificationService';
 
 interface PendingTrip {
   id: string;
@@ -191,6 +192,11 @@ class TripPollerService {
         this.acceptedTripIds.add(tripId);
         this.acceptedCount += 1;
         this.emitAccepted({ tripId });
+        NotificationService.showDispatchNotification(
+          tripId,
+          'Avandab Logistics Hub',
+          'Assigned Consignee Route',
+        ).catch(() => {});
       }
       console.log(`[TRIP POLLER SUCCESS] Trip ${tripId} auto-accepted (HTTP ${status})`);
     } catch (err) {
