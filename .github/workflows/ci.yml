@@ -168,8 +168,11 @@ jobs:
         working-directory: ./mobile
         run: npm ci
 
+      - name: Fetch base for lint ratchet
+        run: git fetch origin master --depth=1 || true
+
       - name: Run Security Scanners
-        run: ./scripts/security-check.sh
+        run: LINT_BASE=origin/master ./scripts/security-check.sh
 
       - name: Tenant Isolation Lint
         run: ./scripts/tenant-lint.sh
