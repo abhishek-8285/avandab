@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"strings"
+	"sync"
 	"time"
+
+	"golang.org/x/sync/singleflight"
 
 	"transport-app/internal/controltower/domain"
 	"transport-app/internal/eta"
@@ -16,6 +19,9 @@ type Service struct {
 	db         *sql.DB
 	etaService *eta.EtaService
 	staleMin   time.Duration
+
+	initOnce sync.Once
+	sfGroup  singleflight.Group
 }
 
 // NewService constructs a Control Tower projection service.
@@ -28,6 +34,28 @@ func NewService(db *sql.DB, etaService *eta.EtaService, staleMin time.Duration) 
 		etaService: etaService,
 		staleMin:   staleMin,
 	}
+}
+
+func (s *Service) ensureIndexes(ctx context.Context) {
+	s.initOnce.Do(func() {
+		stmts := []string{
+			`CREATE INDEX IF NOT EXISTS idx_trip_stops_trip_id ON trip_stops(trip_id)`,
+			`CREATE INDEX IF NOT EXISTS idx_trip_stops_trip_seq ON trip_stops(trip_id, stop_sequence)`,
+			`CREATE INDEX IF NOT EXISTS idx_telemetry_vehicle_ts ON telemetry_snapshots(vehicle_id, timestamp DESC)`,
+			`CREATE INDEX IF NOT EXISTS idx_telemetry_alerts_trip ON telemetry_alerts(trip_id, resolved)`,
+			`CREATE INDEX IF NOT EXISTS idx_ewb_trip_created ON ewb_requests(trip_id, created_at DESC)`,
+			`CREATE INDEX IF NOT EXISTS idx_trips_tenant ON trips(tenant_id)`,
+			`CREATE INDEX IF NOT EXISTS idx_trips_id_tenant ON trips(id, tenant_id)`,
+		}
+		for _, stmt := range stmts {
+			_, _ = s.db.ExecContext(ctx, stmt)
+		}
+		// Pragmas to reduce contention under high concurrency (no-op on non-sqlite).
+		_, _ = s.db.ExecContext(ctx, `PRAGMA journal_mode=WAL`)
+		_, _ = s.db.ExecContext(ctx, `PRAGMA synchronous=NORMAL`)
+		_, _ = s.db.ExecContext(ctx, `PRAGMA busy_timeout=10000`)
+		_, _ = s.db.ExecContext(ctx, `PRAGMA cache_size=-64000`)
+	})
 }
 
 // parseTimeFlex parses standard RFC3339 or SQLite datetime strings safely.
@@ -54,6 +82,7 @@ func parseTimeFlex(s string) *time.Time {
 
 // GetTrips returns authoritative Control Tower projections for all trips under the tenant.
 func (s *Service) GetTrips(ctx context.Context, tenantID shared.TenantID, statusFilter string) ([]domain.ControlTowerTrip, error) {
+	s.ensureIndexes(ctx)
 	tenantStr := string(tenantID)
 	if tenantStr == "" {
 		tenantStr = string(shared.DefaultTenant)
@@ -117,6 +146,31 @@ func (s *Service) GetTrips(ctx context.Context, tenantID shared.TenantID, status
 
 // GetTrip returns the authoritative Control Tower projection for a specific trip under the tenant.
 func (s *Service) GetTrip(ctx context.Context, tenantID shared.TenantID, tripID string) (*domain.ControlTowerTrip, error) {
+	s.ensureIndexes(ctx)
+	tenantStr := string(tenantID)
+	if tenantStr == "" {
+		tenantStr = string(shared.DefaultTenant)
+	}
+	key := tenantStr + ":" + tripID
+	v, err, _ := s.sfGroup.Do(key, func() (interface{}, error) {
+		return s.getTripUncached(ctx, tenantID, tripID)
+	})
+	if err != nil {
+		return nil, err
+	}
+	proj, ok := v.(*domain.ControlTowerTrip)
+	if !ok || proj == nil {
+		if v == nil {
+			return nil, nil
+		}
+		return nil, err
+	}
+	// Return a shallow copy to avoid caller mutating shared singleflight result
+	cp := *proj
+	return &cp, nil
+}
+
+func (s *Service) getTripUncached(ctx context.Context, tenantID shared.TenantID, tripID string) (*domain.ControlTowerTrip, error) {
 	tenantStr := string(tenantID)
 	if tenantStr == "" {
 		tenantStr = string(shared.DefaultTenant)
