@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Route } from '@playwright/test';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Driver lifecycle E2E — product-spec flow:
@@ -50,7 +50,7 @@ const AUTH_USER = JSON.stringify({
  */
 async function injectAuth(page: Page): Promise<void> {
   await page.addInitScript(
-    ({ token, user }) => {
+    ({ token, user }: { token: string; user: string }) => {
       window.localStorage.setItem('auth_token', token);
       window.localStorage.setItem('auth_user', user);
       // expo-secure-store web key shape: value wrapped in JSON envelope
@@ -74,7 +74,7 @@ test.describe.serial('driver lifecycle', () => {
   });
 
   async function mockBackend(page: Page): Promise<void> {
-    await page.route('**/api/v1/**', async (route) => {
+    await page.route('**/api/v1/**', async (route: Route) => {
       const url = new URL(route.request().url());
       const path = url.pathname;
 
@@ -117,7 +117,7 @@ test.describe.serial('driver lifecycle', () => {
     });
   }
 
-  test('full lifecycle: launch, login, dispatch, gps, epod, offline expense, flush', async ({ page }) => {
+  test('full lifecycle: launch, login, dispatch, gps, epod, offline expense, flush', async ({ page }: { page: Page }) => {
     test.skip(
       !DIST,
       'no web export at dist-web/index.html — run `npx expo export --platform web --output-dir dist-web` (see README: react-dom/react-native-web/@expo/metro-runtime not installed)'
