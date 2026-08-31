@@ -19,11 +19,11 @@ import (
 	"transport-app/internal/shared"
 )
 
-func setupPWATestRouter(pwaEnabled bool) (*chi.Mux, *App, *config.Config) {
-	// Set working directory to repo root if needed
+func setupPWATestRouter(t *testing.T, pwaEnabled bool) (*chi.Mux, *App, *config.Config) {
+	t.Helper()
 	cwd, _ := os.Getwd()
 	if filepath.Base(cwd) == "handlers" {
-		_ = os.Chdir("../..")
+		t.Chdir("../..")
 	}
 
 	cfg := &config.Config{
@@ -76,7 +76,7 @@ func setupPWATestRouter(pwaEnabled bool) (*chi.Mux, *App, *config.Config) {
 }
 
 func TestManifestContentType(t *testing.T) {
-	r, _, _ := setupPWATestRouter(true)
+	r, _, _ := setupPWATestRouter(t, true)
 
 	req := httptest.NewRequest("GET", "/manifest.webmanifest", nil)
 	rec := httptest.NewRecorder()
@@ -97,7 +97,7 @@ func TestManifestContentType(t *testing.T) {
 }
 
 func TestServiceWorkerContentType(t *testing.T) {
-	r, _, _ := setupPWATestRouter(true)
+	r, _, _ := setupPWATestRouter(t, true)
 
 	req := httptest.NewRequest("GET", "/sw.js", nil)
 	rec := httptest.NewRecorder()
@@ -117,7 +117,7 @@ func TestServiceWorkerContentType(t *testing.T) {
 }
 
 func TestPWADisabled(t *testing.T) {
-	r, _, _ := setupPWATestRouter(false)
+	r, _, _ := setupPWATestRouter(t, false)
 
 	// 1. /manifest.webmanifest -> 404
 	reqM := httptest.NewRequest("GET", "/manifest.webmanifest", nil)
@@ -142,7 +142,7 @@ func TestPWADisabled(t *testing.T) {
 }
 
 func TestPWAEnabledLayout(t *testing.T) {
-	r, _, _ := setupPWATestRouter(true)
+	r, _, _ := setupPWATestRouter(t, true)
 
 	req := httptest.NewRequest("GET", "/dashboard", nil)
 	rec := httptest.NewRecorder()
@@ -157,7 +157,7 @@ func TestPWAEnabledLayout(t *testing.T) {
 }
 
 func TestIconsExistAndValid(t *testing.T) {
-	r, _, _ := setupPWATestRouter(true)
+	r, _, _ := setupPWATestRouter(t, true)
 
 	// 1. icon-192.png
 	req192 := httptest.NewRequest("GET", "/static/icons/icon-192.png", nil)
@@ -187,7 +187,7 @@ func TestIconsExistAndValid(t *testing.T) {
 }
 
 func TestFaviconSVGServingAndMime(t *testing.T) {
-	r, _, _ := setupPWATestRouter(true)
+	r, _, _ := setupPWATestRouter(t, true)
 
 	req := httptest.NewRequest("GET", "/static/img/favicon.svg", nil)
 	rec := httptest.NewRecorder()

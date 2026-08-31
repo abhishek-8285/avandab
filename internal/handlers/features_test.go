@@ -18,7 +18,7 @@ func newFeatureTestApp(t *testing.T) *App {
 	// runs with cwd in the package directory, so chdir to the root first
 	// (mirrors TestAllTemplatesRenderCleanly).
 	if cwd, _ := os.Getwd(); filepath.Base(cwd) == "handlers" {
-		_ = os.Chdir("../..")
+		t.Chdir("../..")
 	}
 	tmpl, err := parseTemplates(&mockAuthSvc{})
 	if err != nil {

@@ -35,10 +35,14 @@ func newCustomersSelectedDB(t *testing.T) *sql.DB {
 	name := fmt.Sprintf("test_customers_sel_%d_%s", time.Now().UnixNano(), strings.ReplaceAll(t.Name(), "/", "_"))
 	db, err := sql.Open("sqlite", "file:"+name+"?mode=memory&cache=shared&_pragma=journal_mode(WAL)")
 	require.NoError(t, err)
-	cwd, _ := os.Getwd()
 	migrationsDir := "../../db/migrations"
-	if filepath.Base(cwd) == "basic" {
-		migrationsDir = "db/migrations"
+	if _, err := os.Stat(migrationsDir); os.IsNotExist(err) {
+		for _, cand := range []string{"db/migrations", "../db/migrations", "../../db/migrations"} {
+			if _, err := os.Stat(cand); err == nil {
+				migrationsDir = cand
+				break
+			}
+		}
 	}
 	goose.SetLogger(goose.NopLogger())
 	_ = goose.SetDialect("sqlite")
@@ -67,7 +71,7 @@ func newCustomersSelectedApp(t *testing.T, db *sql.DB, authSrv auth.Authorizatio
 	t.Helper()
 	cwd, _ := os.Getwd()
 	if filepath.Base(cwd) == "handlers" {
-		_ = os.Chdir("../..")
+		t.Chdir("../..")
 	}
 	if authSrv == nil {
 		authSrv = &mockAuthSvc{}

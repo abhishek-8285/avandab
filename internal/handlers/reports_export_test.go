@@ -36,10 +36,14 @@ func newReportsTestDB(t *testing.T) *sql.DB {
 	db, err := sql.Open("sqlite", "file:"+name+"?mode=memory&cache=shared&_pragma=journal_mode(WAL)")
 	require.NoError(t, err)
 
-	cwd, _ := os.Getwd()
 	migrationsDir := "../../db/migrations"
-	if filepath.Base(cwd) == "basic" {
-		migrationsDir = "db/migrations"
+	if _, err := os.Stat(migrationsDir); os.IsNotExist(err) {
+		for _, cand := range []string{"db/migrations", "../db/migrations", "../../db/migrations"} {
+			if _, err := os.Stat(cand); err == nil {
+				migrationsDir = cand
+				break
+			}
+		}
 	}
 
 	_ = goose.SetDialect("sqlite")
@@ -99,7 +103,7 @@ func TestGenerateReportPDF_MagicBytes(t *testing.T) {
 func TestReportsExport_RBACAndEndpoints(t *testing.T) {
 	cwd, _ := os.Getwd()
 	if filepath.Base(cwd) == "handlers" {
-		_ = os.Chdir("../..")
+		t.Chdir("../..")
 	}
 
 	db := newReportsTestDB(t)

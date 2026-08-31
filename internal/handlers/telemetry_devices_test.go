@@ -27,7 +27,7 @@ func newTelemetryTestApp(t *testing.T, authSrv auth.AuthorizationService) *App {
 	t.Helper()
 	cwd, _ := os.Getwd()
 	if filepath.Base(cwd) == "handlers" {
-		_ = os.Chdir("../..")
+		t.Chdir("../..")
 	}
 	tmpl, err := parseTemplates(authSrv)
 	require.NoError(t, err)

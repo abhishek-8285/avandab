@@ -37,10 +37,14 @@ func setupFilesAPITest(t *testing.T, allowed map[string]bool) (*App, http.Handle
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = dbConn.Close() })
 
-	cwd, _ := os.Getwd()
 	migrationsDir := "../../db/migrations"
-	if filepath.Base(cwd) == "basic" {
-		migrationsDir = "db/migrations"
+	if _, err := os.Stat(migrationsDir); os.IsNotExist(err) {
+		for _, cand := range []string{"db/migrations", "../db/migrations", "../../db/migrations"} {
+			if _, err := os.Stat(cand); err == nil {
+				migrationsDir = cand
+				break
+			}
+		}
 	}
 	goose.SetLogger(goose.NopLogger())
 	_ = goose.SetDialect("sqlite")

@@ -47,7 +47,7 @@ func TestAllTemplatesRenderCleanly(t *testing.T) {
 	// Change working directory to project root if running from internal/handlers
 	cwd, _ := os.Getwd()
 	if filepath.Base(cwd) == "handlers" {
-		_ = os.Chdir("../..")
+		t.Chdir("../..")
 	}
 
 	tmpl, err := parseTemplates(&mockAuthSvc{})
@@ -659,7 +659,7 @@ func TestLayoutNoHardcodedAdminRole(t *testing.T) {
 
 func TestRenderError_LayoutVersion(t *testing.T) {
 	if cwd, _ := os.Getwd(); filepath.Base(cwd) == "handlers" {
-		_ = os.Chdir("../..")
+		t.Chdir("../..")
 	}
 	tmpl, err := parseTemplates(&mockAuthSvc{})
 	require.NoError(t, err)
@@ -679,7 +679,7 @@ func TestRenderError_LayoutVersion(t *testing.T) {
 
 func TestNotFoundHandler_HTML(t *testing.T) {
 	if cwd, _ := os.Getwd(); filepath.Base(cwd) == "handlers" {
-		_ = os.Chdir("../..")
+		t.Chdir("../..")
 	}
 	tmpl, err := parseTemplates(&mockAuthSvc{})
 	require.NoError(t, err)
@@ -704,7 +704,7 @@ func TestNotFoundHandler_HTML(t *testing.T) {
 
 func TestNotFoundHandler_API(t *testing.T) {
 	if cwd, _ := os.Getwd(); filepath.Base(cwd) == "handlers" {
-		_ = os.Chdir("../..")
+		t.Chdir("../..")
 	}
 	tmpl, err := parseTemplates(&mockAuthSvc{})
 	require.NoError(t, err)
@@ -733,7 +733,7 @@ func TestNotFoundHandler_API(t *testing.T) {
 
 func TestMethodNotAllowedHandler_HTML(t *testing.T) {
 	if cwd, _ := os.Getwd(); filepath.Base(cwd) == "handlers" {
-		_ = os.Chdir("../..")
+		t.Chdir("../..")
 	}
 	tmpl, err := parseTemplates(&mockAuthSvc{})
 	require.NoError(t, err)
@@ -756,7 +756,7 @@ func TestMethodNotAllowedHandler_HTML(t *testing.T) {
 
 func TestRenderErrorInfo_WithModelAndCode(t *testing.T) {
 	if cwd, _ := os.Getwd(); filepath.Base(cwd) == "handlers" {
-		_ = os.Chdir("../..")
+		t.Chdir("../..")
 	}
 	tmpl, err := parseTemplates(&mockAuthSvc{})
 	require.NoError(t, err)
@@ -786,7 +786,7 @@ func TestRenderErrorInfo_WithModelAndCode(t *testing.T) {
 
 func TestHandleShareIndex_PublicVsAuth(t *testing.T) {
 	if cwd, _ := os.Getwd(); filepath.Base(cwd) == "handlers" {
-		_ = os.Chdir("../..")
+		t.Chdir("../..")
 	}
 	tmpl, err := parseTemplates(&mockAuthSvc{})
 	require.NoError(t, err)

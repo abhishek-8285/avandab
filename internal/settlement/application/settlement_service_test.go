@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,8 +21,11 @@ import (
 )
 
 func setupSettlementTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite", ":memory:")
+	// Use shared in-memory DB with WAL + busy timeout so 10 concurrent workers share same schema and serialize correctly
+	dsn := fmt.Sprintf("file:%s_%d?mode=memory&cache=shared&_pragma=journal_mode(WAL)&_pragma=busy_timeout=5000", t.Name(), time.Now().UnixNano())
+	db, err := sql.Open("sqlite", dsn)
 	require.NoError(t, err)
+	db.SetMaxOpenConns(1)
 
 	schema := `
 	CREATE TABLE tenants (id TEXT PRIMARY KEY, name TEXT);

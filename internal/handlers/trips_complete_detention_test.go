@@ -27,7 +27,7 @@ func handlerTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	cwd, _ := os.Getwd()
 	if filepath.Base(cwd) == "handlers" {
-		_ = os.Chdir("../..")
+		t.Chdir("../..")
 	}
 	name := fmt.Sprintf("test_handlers_%s_%d", strings.ReplaceAll(t.Name(), "/", "_"), time.Now().UnixNano())
 	db, err := sql.Open("sqlite", "file:"+name+"?mode=memory&cache=shared&_pragma=journal_mode(WAL)")

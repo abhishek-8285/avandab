@@ -24,7 +24,7 @@ import (
 func newRegisterTestApp(t *testing.T) *App {
 	t.Helper()
 	if cwd, _ := os.Getwd(); filepath.Base(cwd) == "handlers" {
-		_ = os.Chdir("../..")
+		t.Chdir("../..")
 	}
 	db := newCustomersSelectedDB(t)
 	tmpl, err := parseTemplates(&mockAuthSvc{})

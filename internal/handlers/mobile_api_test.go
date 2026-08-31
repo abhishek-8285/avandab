@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -41,10 +40,14 @@ func setupMobileAPITestEnv(t *testing.T) (*sql.DB, *App, *tripapihandlers.APITri
 	dbConn, err := sql.Open("sqlite", "file:"+name+"?mode=memory&cache=shared&_pragma=journal_mode(WAL)")
 	require.NoError(t, err)
 
-	cwd, _ := os.Getwd()
 	migrationsDir := "../../db/migrations"
-	if filepath.Base(cwd) == "basic" {
-		migrationsDir = "db/migrations"
+	if _, err := os.Stat(migrationsDir); os.IsNotExist(err) {
+		for _, cand := range []string{"db/migrations", "../db/migrations", "../../db/migrations"} {
+			if _, err := os.Stat(cand); err == nil {
+				migrationsDir = cand
+				break
+			}
+		}
 	}
 
 	goose.SetLogger(goose.NopLogger())

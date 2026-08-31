@@ -38,7 +38,7 @@ import (
 func TestAllTemplatesRender(t *testing.T) {
 	cwd, _ := os.Getwd()
 	if filepath.Base(cwd) == "handlers" {
-		_ = os.Chdir("../..")
+		t.Chdir("../..")
 	}
 
 	tmpl, err := parseTemplates(&mockAuthSvc{})

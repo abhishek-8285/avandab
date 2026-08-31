@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -50,10 +49,14 @@ func setupSOSTestEnvironment(t *testing.T) (*sql.DB, *handlers.App, *events.InMe
 	db, err := sql.Open("sqlite", ":memory:")
 	require.NoError(t, err)
 
-	cwd, _ := os.Getwd()
 	migrationsDir := "../../db/migrations"
-	if filepath.Base(cwd) == "basic" {
-		migrationsDir = "db/migrations"
+	if _, err := os.Stat(migrationsDir); os.IsNotExist(err) {
+		for _, cand := range []string{"db/migrations", "../db/migrations", "../../db/migrations"} {
+			if _, err := os.Stat(cand); err == nil {
+				migrationsDir = cand
+				break
+			}
+		}
 	}
 
 	require.NoError(t, goose.SetDialect("sqlite"))

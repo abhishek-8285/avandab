@@ -21,7 +21,7 @@ import (
 func newAuthTestApp(t *testing.T) *AuthHandlers {
 	t.Helper()
 	if cwd, _ := os.Getwd(); filepath.Base(cwd) == "handlers" {
-		_ = os.Chdir("../..")
+		t.Chdir("../..")
 	}
 	tmpl, err := parseTemplates(&mockAuthSvc{})
 	require.NoError(t, err)

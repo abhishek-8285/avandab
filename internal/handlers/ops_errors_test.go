@@ -31,10 +31,14 @@ func newOpsErrorsTestApp(t *testing.T) (*App, *opserrors.Reporter) {
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 
-	cwd, _ := os.Getwd()
 	migrationsDir := "../../db/migrations"
-	if filepath.Base(cwd) == "basic" {
-		migrationsDir = "db/migrations"
+	if _, err := os.Stat(migrationsDir); os.IsNotExist(err) {
+		for _, cand := range []string{"db/migrations", "../db/migrations", "../../db/migrations"} {
+			if _, err := os.Stat(cand); err == nil {
+				migrationsDir = cand
+				break
+			}
+		}
 	}
 	_ = goose.SetDialect("sqlite")
 	require.NoError(t, goose.Up(db, migrationsDir))
@@ -55,8 +59,9 @@ func newOpsErrorsTestApp(t *testing.T) (*App, *opserrors.Reporter) {
 			('tenant-42','Tenant 42','tenant-42'), ('test-tenant','Test Tenant','test-tenant'),
 			('acme','Acme','acme'), ('beta','Beta','beta')`)
 
+	cwd, _ := os.Getwd()
 	if filepath.Base(cwd) == "handlers" {
-		_ = os.Chdir("../..")
+		t.Chdir("../..")
 	}
 	authSrv := allowAllAuthSvc{}
 	tmpl, err := parseTemplates(authSrv)

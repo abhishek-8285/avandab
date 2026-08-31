@@ -371,6 +371,14 @@ func parseTemplatesLang(authSrv auth.AuthorizationService, lang string) (*templa
 	templatesDir := os.Getenv("TEMPLATES_DIR")
 	if templatesDir == "" {
 		templatesDir = "internal/templates"
+		if _, err := os.Stat(templatesDir); os.IsNotExist(err) {
+			for _, cand := range []string{"../../internal/templates", "../internal/templates", "./internal/templates"} {
+				if _, err := os.Stat(cand); err == nil {
+					templatesDir = cand
+					break
+				}
+			}
+		}
 	}
 	partialsDir := filepath.Join(templatesDir, "partials")
 
