@@ -107,22 +107,27 @@ export const DB = {
     return rows;
   },
 
-  async logGPSLocation(lat: number, lng: number, accuracy?: number | null): Promise<void> {
+  async logGPSLocation(
+    lat: number,
+    lng: number,
+    accuracy?: number | null,
+    extra?: { speed?: number | null; heading?: number | null; motion?: boolean | null; battery_level?: number | null }
+  ): Promise<void> {
     await initDatabase();
     if (!db) return;
 
     await db.runAsync(
-      'INSERT INTO offline_gps_logs (latitude, longitude, timestamp, accuracy) VALUES (?, ?, ?, ?);',
-      [lat, lng, new Date().toISOString(), accuracy ?? null]
+      'INSERT INTO offline_gps_logs (latitude, longitude, timestamp, accuracy, speed, heading, motion, battery_level) VALUES (?, ?, ?, ?, ?, ?, ?, ?);',
+      [lat, lng, new Date().toISOString(), accuracy ?? null, extra?.speed ?? null, extra?.heading ?? null, extra?.motion == null ? null : (extra.motion ? 1 : 0), extra?.battery_level ?? null]
     );
   },
 
-  async getUnsyncedGPSLogs(): Promise<{ id: number; latitude: number; longitude: number; timestamp: string; accuracy_m: number | null }[]> {
+  async getUnsyncedGPSLogs(): Promise<{ id: number; latitude: number; longitude: number; timestamp: string; accuracy_m: number | null; speed: number | null; heading: number | null; motion: number | null; battery_level: number | null }[]> {
     await initDatabase();
     if (!db) return [];
 
-    const rows = await db.getAllAsync<{ id: number; latitude: number; longitude: number; timestamp: string; accuracy_m: number | null }>(
-      `SELECT id, latitude, longitude, timestamp, accuracy AS accuracy_m FROM offline_gps_logs WHERE synced = 0 ORDER BY id ASC LIMIT 50;`
+    const rows = await db.getAllAsync<{ id: number; latitude: number; longitude: number; timestamp: string; accuracy_m: number | null; speed: number | null; heading: number | null; motion: number | null; battery_level: number | null }>(
+      `SELECT id, latitude, longitude, timestamp, accuracy AS accuracy_m, speed, heading, motion, battery_level FROM offline_gps_logs WHERE synced = 0 ORDER BY id ASC LIMIT 50;`
     );
     return rows;
   },

@@ -27,6 +27,7 @@ func (h *DriverLifecycleAPIHandler) RegisterRoutes(r chi.Router) {
 		r.Post("/me/documents", h.SubmitDocument)
 		r.Post("/me/vehicle-claims", h.ClaimVehicle)
 		r.Post("/me/payout-account", h.SubmitPayoutAccount)
+		r.Post("/me/push-token", h.RegisterPushToken)
 		r.Get("/me/offers", h.GetPendingOffers)
 		r.Post("/me/commands", h.ProcessCommand)
 
@@ -470,4 +471,44 @@ func (h *DriverLifecycleAPIHandler) ProcessCommand(w http.ResponseWriter, r *htt
 
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func (h *DriverLifecycleAPIHandler) RegisterPushToken(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	tenantID, userID, ok := h.getContextData(r)
+	if !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	var req struct {
+		DeviceID  string `json:"device_id"`
+		PushToken string `json:"push_token"`
+		Platform  string `json:"platform"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
+		return
+	}
+
+	if req.DeviceID == "" || req.PushToken == "" {
+		http.Error(w, `{"error":"device_id and push_token are required"}`, http.StatusBadRequest)
+		return
+	}
+
+	if req.Platform == "" {
+		req.Platform = "android"
+	}
+
+	err := h.appService.RegisterPushToken(r.Context(), tenantID, userID, userID, req.DeviceID, req.PushToken, req.Platform)
+	if err != nil {
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"message": "push token registered",
+	})
 }

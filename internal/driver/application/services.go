@@ -612,3 +612,28 @@ func (s *DriverAppService) EvaluateDispatchEligibility(ctx context.Context, tena
 
 	return s.engine.EvaluateDispatch(evalCtx), nil
 }
+
+// ─── 8. PUSH TOKEN REGISTRATION ─────────────────────────────────────────────
+
+func (s *DriverAppService) RegisterPushToken(ctx context.Context, tenantID, driverID, userID, deviceID, pushToken, platform string) error {
+	if tenantID == "" || driverID == "" || deviceID == "" || pushToken == "" {
+		return errors.New("missing required fields for push token registration")
+	}
+	if platform == "" {
+		platform = "android"
+	}
+	id := uuid.New().String()
+	now := time.Now().UTC()
+
+	query := `
+		INSERT INTO driver_push_tokens (id, tenant_id, driver_id, user_id, device_id, push_token, platform, is_active, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+		ON CONFLICT (tenant_id, driver_id, device_id) DO UPDATE SET
+			push_token = excluded.push_token,
+			platform = excluded.platform,
+			is_active = 1,
+			updated_at = excluded.updated_at
+	`
+	_, err := s.exec(ctx).ExecContext(ctx, query, id, tenantID, driverID, userID, deviceID, pushToken, platform, now, now)
+	return err
+}

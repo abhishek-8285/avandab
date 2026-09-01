@@ -2,6 +2,24 @@ import * as Location from 'expo-location';
 import { Camera } from 'expo-camera';
 import { DB } from './storage';
 
+// readBatteryPct returns the phone battery as 0-100, or null when the
+// platform refuses (expo-battery absence/emulator quirk must never break a
+// GPS fix — every caller treats null as "unknown").
+export async function readBatteryPct(): Promise<number | null> {
+  try {
+    const Battery = require('expo-battery');
+    if (Battery && typeof Battery.getBatteryLevelAsync === 'function') {
+      const lvl = await Battery.getBatteryLevelAsync();
+      if (typeof lvl === 'number' && lvl >= 0 && lvl <= 1) {
+        return Math.round(lvl * 100);
+      }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export interface LocationState {
   granted: boolean;
   latitude: number | null;
@@ -33,7 +51,7 @@ class TelemetryService {
       }
 
       // Fast location retrieval with timeout fallback
-      let coords: { latitude: number; longitude: number; accuracy: number | null } | null = null;
+      let coords: { latitude: number; longitude: number; accuracy: number | null; speed: number | null; heading: number | null } | null = null;
 
       try {
         const locationPromise = Location.getLastKnownPositionAsync();
@@ -45,6 +63,8 @@ class TelemetryService {
             latitude: lastKnown.coords.latitude,
             longitude: lastKnown.coords.longitude,
             accuracy: lastKnown.coords.accuracy ?? null,
+            speed: typeof lastKnown.coords.speed === 'number' ? lastKnown.coords.speed : null,
+            heading: typeof lastKnown.coords.heading === 'number' ? lastKnown.coords.heading : null,
           };
         }
       } catch {}
@@ -60,6 +80,8 @@ class TelemetryService {
               latitude: current.coords.latitude,
               longitude: current.coords.longitude,
               accuracy: current.coords.accuracy ?? null,
+              speed: typeof current.coords.speed === 'number' ? current.coords.speed : null,
+              heading: typeof current.coords.heading === 'number' ? current.coords.heading : null,
             };
           }
         } catch {}
@@ -69,8 +91,15 @@ class TelemetryService {
       const defaultLng = coords ? coords.longitude : 72.8777;
 
       try {
-        // Log telemetry event to offline SQLite database
-        await DB.logGPSLocation(defaultLat, defaultLng, coords?.accuracy ?? null);
+        // Log telemetry event to offline SQLite database (battery read is
+        // best-effort — null must never block the fix).
+        const batteryPct = await readBatteryPct();
+        await DB.logGPSLocation(defaultLat, defaultLng, coords?.accuracy ?? null, {
+          speed: coords?.speed ?? null,
+          heading: coords?.heading ?? null,
+          motion: coords?.speed != null ? coords.speed > 0.5 : null,
+          battery_level: batteryPct,
+        });
       } catch {}
 
       return {
@@ -105,8 +134,15 @@ class TelemetryService {
           typeof loc.coords.speed === 'number' && loc.coords.speed >= 0
             ? Math.round(loc.coords.speed * 3.6)
             : null;
-        // Instrument location telemetry: log to SQLite DB
-        await DB.logGPSLocation(latitude, longitude, loc.coords.accuracy ?? null);
+        // Instrument location telemetry: log to SQLite DB (speed in m/s from
+        // the platform; motion derived — anything under 0.5 m/s is parked).
+        const batteryPct = await readBatteryPct();
+        await DB.logGPSLocation(latitude, longitude, loc.coords.accuracy ?? null, {
+          speed: typeof loc.coords.speed === 'number' ? loc.coords.speed : null,
+          heading: typeof loc.coords.heading === 'number' ? loc.coords.heading : null,
+          motion: typeof loc.coords.speed === 'number' ? loc.coords.speed > 0.5 : null,
+          battery_level: batteryPct,
+        });
         onLocationUpdate(latitude, longitude, speedKmh);
       }
     );

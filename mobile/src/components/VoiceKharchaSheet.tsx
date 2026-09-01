@@ -84,8 +84,15 @@ export function VoiceKharchaSheet({
   });
 
   useSpeechRecognitionEvent('error', (event) => {
-    setIsListening(false);
     console.log('[SPEECH RECOGNITION ERROR]', event.error, event.message);
+    setIsListening(false);
+    if (event.error === 'language-not-supported') {
+      setNoExpenseWarning('Voice model not installed on device. You can tap any preset phrase below or type directly.');
+    } else if (event.error === 'no-speech' || event.error === 'speech-timeout') {
+      setNoExpenseWarning('No voice detected. Tap mic to speak, or tap a preset button below.');
+    } else if (event.error) {
+      setNoExpenseWarning(`Voice input: ${event.message || event.error}. Tap a preset below or type.`);
+    }
   });
 
   useSpeechRecognitionEvent('volumechange', (event) => {
@@ -203,9 +210,9 @@ export function VoiceKharchaSheet({
 
         setIsListening(true);
         Vibration.vibrate(35);
-        // Start live Android Speech Recognizer with Hindi + Indian English recognition
+
+        // Start live Android Speech Recognizer using device's default language
         await ExpoSpeechRecognitionModule.start({
-          lang: 'hi-IN',
           interimResults: true,
           maxAlternatives: 1,
           continuous: false,

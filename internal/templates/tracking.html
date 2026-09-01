@@ -248,6 +248,10 @@
                             <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted">Heading</div>
                             <div class="text-xs font-medium mt-0.5" id="intel-heading">—</div>
                         </div>
+                        <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
+                            <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted">Battery</div>
+                            <div class="text-sm font-bold mt-0.5" id="intel-battery">—</div>
+                        </div>
                     </div>
 
                     <div>
@@ -272,6 +276,10 @@
                             <div class="flex items-center justify-between text-secondary">
                                 <span>Last GPS Update:</span>
                                 <span class="font-mono text-on-surface" id="intel-timestamp">—</span>
+                            </div>
+                            <div class="flex items-center justify-between text-secondary">
+                                <span>Device:</span>
+                                <span class="font-mono text-on-surface" id="intel-device">—</span>
                             </div>
                         </div>
                     </div>
@@ -812,6 +820,8 @@
         var intelPanel = document.getElementById('intel-detail-panel');
         var intelVehicleId = document.getElementById('intel-vehicle-id');
         var intelSpeed = document.getElementById('intel-speed');
+        var intelBattery = document.getElementById('intel-battery');
+        var intelDevice = document.getElementById('intel-device');
         var intelFuel = document.getElementById('intel-fuel');
         var intelOdo = document.getElementById('intel-odo');
         var intelHeading = document.getElementById('intel-heading');
@@ -913,6 +923,22 @@
                 if (intelFuel) intelFuel.textContent = (v.fuel_level != null) ? Number(v.fuel_level).toFixed(0) + '%' : '—';
                 if (intelOdo) intelOdo.textContent = (v.odometer != null) ? Number(v.odometer).toFixed(1) + ' km' : '—';
                 if (intelHeading) intelHeading.textContent = (v.heading != null) ? Math.round(v.heading) + '° (' + headingToCompass(v.heading) + ')' : '—';
+                if (intelBattery) {
+                    if (v.battery_level != null) {
+                        var b = Number(v.battery_level);
+                        intelBattery.textContent = Math.round(b) + '%';
+                        intelBattery.className = 'text-sm font-bold mt-0.5 ' + (b <= 20 ? 'text-status-error' : 'text-status-success');
+                    } else {
+                        intelBattery.textContent = '—';
+                    }
+                }
+                if (intelDevice) {
+                    var devBits = [];
+                    if (v.motion === false) { devBits.push('PARKED'); }
+                    else if (v.motion === true) { devBits.push('MOVING'); }
+                    if (v.valid === false) { devBits.push('NO GPS FIX'); }
+                    intelDevice.textContent = devBits.length ? devBits.join(' · ') : 'OK';
+                }
                 if (intelTrip) {
                     if (v.trip_id) {
                         intelTrip.innerHTML = '<a href="/trips/' + encodeURIComponent(v.trip_id) + '" class="hover:underline" title="Open trip">' + esc(v.trip_id) + '</a>';
@@ -1315,6 +1341,28 @@
                 '<div style="color:' + c + ';font-weight:700">' + esc(statusLabels[v.status] || v.status || '') + ' · ' + (v.speed || 0).toFixed(0) + ' km/h</div>';
             if (v.driver_name) {
                 html += '<div style="opacity:.75">' + esc(v.driver_name) + '</div>';
+            }
+            // Device source / hardware provider badge
+            if (v.provider) {
+                var provLabel = v.provider === 'ais140' ? '📡 AIS-140 GPS' :
+                                v.provider === 'gt06' ? '📡 Hardware Tracker' :
+                                v.provider === 'teltonika' ? '📡 Teltonika OBD' : '📱 Mobile App';
+                html += '<div style="font-size:10px;font-weight:800;color:#059669;margin-top:2px">' + provLabel + '</div>';
+            }
+            // Device health (migration 00117): battery % + parked/fix flags.
+            if (v.battery_level != null) {
+                var b = Number(v.battery_level);
+                html += '<div style="opacity:.85">Battery ' + Math.round(b) + '%' + (b <= 20 ? ' ⚠' : '') + '</div>';
+            }
+            if (v.gsm_signal != null) {
+                var bars = v.gsm_signal >= 3 ? '●●●●' : v.gsm_signal >= 2 ? '●●●○' : '●○○○';
+                html += '<div style="opacity:.85">Signal ' + bars + '</div>';
+            }
+            if (v.motion === false) {
+                html += '<div style="opacity:.75">PARKED</div>';
+            }
+            if (v.valid === false) {
+                html += '<div style="color:#d97706">No GPS fix</div>';
             }
             return html;
         }

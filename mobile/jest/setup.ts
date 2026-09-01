@@ -321,6 +321,10 @@ jest.mock('expo-sqlite', () => ({
           longitude: params[1],
           timestamp: params[2],
           accuracy: params[3] ?? null,
+          speed: params[4] ?? null,
+          heading: params[5] ?? null,
+          motion: params[6] ?? null,
+          battery_level: params[7] ?? null,
           synced: 0,
         };
         sqliteMockState.offline_gps_logs.push(log);

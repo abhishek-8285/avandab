@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // newTestRouter builds a chi router with the telemetry routes wired to a
@@ -113,4 +114,59 @@ func TestHandleTelemetrySnapshots_SuccessAndInvalid(t *testing.T) {
 	if wBad.Code != http.StatusBadRequest {
 		t.Fatalf("expected status 400 for missing trip_id, got %d", wBad.Code)
 	}
+}
+
+// TestHandleTelemetrySync_ProviderParityFields (migration 00117): mobile sends
+// speed/heading/battery/satellites/motion; they must reach telemetry_positions.
+// Older app versions omit them — the NULL columns prove back-compat.
+func TestHandleTelemetrySync_ProviderParityFields(t *testing.T) {
+	db := newTestIngestorDB(t)
+	ing := newTestIngestor(t, db, nil)
+	vID := "vh-sync-par"
+	insertTestVehicle(t, db, vID)
+	imei := "IMEI-SYNC-PAR"
+	insertTestDevice(t, db, imei, DeviceStatusActive, &vID)
+	r := chi.NewRouter()
+	RegisterTelemetryRoutes(r, ing, db, 15*time.Minute)
+
+	batt := 64.0
+	sats := 11
+	moving := true
+	reqPayload := SyncBatchRequest{
+		DeviceID: imei,
+		Logs: []GPSLogPayload{
+			{ID: 10, Latitude: 19.07, Longitude: 72.87, Timestamp: "2026-08-31T13:30:15Z",
+				Speed: 52.5, Heading: 240, BatteryLevel: &batt, Satellites: &sats, Motion: &moving},
+			{ID: 11, Latitude: 19.08, Longitude: 72.88, Timestamp: "2026-08-31T13:30:25Z"},
+		},
+	}
+	body, _ := json.Marshal(reqPayload)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest("POST", "/api/v1/telemetry/sync", bytes.NewReader(body)))
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp SyncBatchResponse
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.Equal(t, 2, resp.SyncedCount)
+
+	// Rich log: parity fields persisted.
+	var speed, heading, battery float64
+	var sat int
+	var motion bool
+	require.NoError(t, db.QueryRow(`SELECT p.speed, p.heading, p.battery_level, p.satellites, p.motion
+		FROM telemetry_positions p JOIN telemetry_raw_events e ON e.id = p.raw_event_id
+		WHERE e.provider_msg_id = 'sync:10'`).Scan(&speed, &heading, &battery, &sat, &motion))
+	assert.InDelta(t, 52.5, speed, 0.01)
+	assert.InDelta(t, 240, heading, 0.01)
+	assert.InDelta(t, 64.0, battery, 0.01)
+	assert.Equal(t, 11, sat)
+	assert.True(t, motion)
+
+	// Bare log (old app shape): parity columns NULL, position still accepted.
+	var nNull int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM telemetry_positions p
+		JOIN telemetry_raw_events e ON e.id = p.raw_event_id
+		WHERE e.provider_msg_id = 'sync:11' AND p.battery_level IS NULL AND p.speed = 0`).Scan(&nNull))
+	assert.Equal(t, 1, nNull)
 }

@@ -170,6 +170,10 @@ class SyncEngineService {
                 longitude: b.longitude,
                 timestamp: b.timestamp,
                 ...(b.accuracy_m != null ? { accuracy_m: b.accuracy_m } : {}),
+                ...(b.speed != null ? { speed: b.speed } : {}),
+                ...(b.heading != null ? { heading: b.heading } : {}),
+                ...(b.motion != null ? { motion: b.motion === 1 } : {}),
+                ...(b.battery_level != null ? { battery_level: b.battery_level } : {}),
               })),
             }),
           });

@@ -323,6 +323,21 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
         TripPoller.start(activeId);
       }
     });
+    NotificationService.setOnAcceptDispatch((tripId) => {
+      if (onStartNav) {
+        onStartNav({
+          id: tripId,
+          tripNumber: tripId,
+          driverName: user?.name || 'Abhishek',
+          vehiclePlate: 'DL-01-AB-1234',
+          origin: 'JNPT Port, Navi Mumbai',
+          destination: 'Chakan MIDC, Pune',
+          status: 'IN_TRANSIT',
+          startTime: '10:30 AM',
+        } as any);
+      }
+    });
+
     // In-app dispatch alerts (trip assignment/status pushed over MQTT)
     const unsubscribeDispatch = MQTT.onDispatch((u) => {
       Alert.alert('DISPATCH UPDATE', `Trip ${u.trip_id} · ${u.status || 'update'}`);
@@ -451,7 +466,7 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
 
             <TouchableOpacity 
               style={styles.headerIconBtn} 
-              onPress={() => navigation.navigate('Profile')}
+              onPress={() => onOpenProfile ? onOpenProfile() : navigation.navigate('Profile')}
               accessibilityLabel="Settings & Profile"
               hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
             >
@@ -465,7 +480,7 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
           <TouchableOpacity 
             style={styles.driverSubRow} 
             activeOpacity={0.8}
-            onPress={() => navigation.navigate('Profile')}
+            onPress={() => onOpenProfile ? onOpenProfile() : navigation.navigate('Profile')}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <MaterialCommunityIcons name="account-circle" size={16} color="#dcf8c6" />
@@ -506,8 +521,8 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
           onPress={() => setActiveTab('paisa')}
         >
           <View style={styles.tabLabelRow}>
-            <MaterialCommunityIcons name="cash-multiple" size={16} color={activeTab === 'paisa' ? '#ffffff' : 'rgba(255,255,255,0.7)'} />
-            <Text style={[styles.tabText, activeTab === 'paisa' && styles.activeTabText]}>{t('tabs.paisa', 'PAISA', locale)}</Text>
+            <MaterialCommunityIcons name="book-open-variant" size={16} color={activeTab === 'paisa' ? '#ffffff' : 'rgba(255,255,255,0.7)'} />
+            <Text style={[styles.tabText, activeTab === 'paisa' && styles.activeTabText]}>{t('tabs.paisa', 'KHATA', locale)}</Text>
           </View>
         </TouchableOpacity>
       </View>
@@ -587,7 +602,7 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
                       status="IN_TRANSIT"
                       startTime="10:30 AM"
                       cargoWeight="18 Tons"
-                      estimatedFare="24,500"
+                      advanceAmount={5000}
                       onPress={() => onStartNav && onStartNav({
                         id: 'TRP-8491',
                         tripNumber: 'TRP-8491',
@@ -634,6 +649,8 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
                   destination={trip.destination}
                   status={trip.status}
                   startTime={trip.startTime}
+                  advanceAmount={5000}
+                  cargoWeight="18 Tons"
                   onPress={() => onStartNav && onStartNav(trip)}
                   onNavigate={() => onStartNav && onStartNav(trip)}
                 />
@@ -659,7 +676,9 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
                 <View style={styles.loadBadge}>
                   <Text style={styles.loadBadgeText}>{t('dispatch.instant', 'INSTANT DISPATCH', locale)}</Text>
                 </View>
-                <Text style={styles.loadFareText}>₹24,500</Text>
+                <View style={[styles.loadBadge, { backgroundColor: '#f0fdf4' }]}>
+                  <Text style={[styles.loadBadgeText, { color: '#008069' }]}>18 TONS</Text>
+                </View>
               </View>
 
               <View style={styles.loadRoute}>
@@ -738,7 +757,9 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
                 <View style={[styles.loadBadge, { backgroundColor: '#e0f2fe' }]}>
                   <Text style={[styles.loadBadgeText, { color: '#0284c7' }]}>{t('dispatch.scheduled', 'SCHEDULED TOMORROW', locale)}</Text>
                 </View>
-                <Text style={styles.loadFareText}>₹34,000</Text>
+                <View style={[styles.loadBadge, { backgroundColor: '#f0fdf4' }]}>
+                  <Text style={[styles.loadBadgeText, { color: '#008069' }]}>14 TONS</Text>
+                </View>
               </View>
 
               <View style={styles.loadRoute}>

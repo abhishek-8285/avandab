@@ -10,6 +10,8 @@ import { useAuthStore } from '../stores/authStore';
 import { useLanguageStore } from '../stores/languageStore';
 import { MQTT } from '../services/mqtt';
 import { BackgroundGPS } from '../services/backgroundLocation';
+import { VoiceAnnouncement } from '../services/voiceAnnouncement';
+import { NotificationService } from '../services/notificationService';
 import { SupportedLocale, t } from '../i18n';
 
 interface DriverProfile {
@@ -40,6 +42,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
   const [profile, setProfile] = useState<DriverProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [bgGpsOn, setBgGpsOn] = useState(true);
+  const [voiceOn, setVoiceOn] = useState(VoiceAnnouncement.isEnabled());
   const [dutyStatus, setDutyStatus] = useState<'available' | 'break' | 'inactive'>('available');
 
   // Modals
@@ -325,6 +328,63 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                 </View>
                 <View style={styles.changeBadge}>
                   <Text style={styles.changeBadgeText}>{t('profile.edit', 'CHANGE', locale)}</Text>
+                </View>
+              </TouchableOpacity>
+
+              <View style={styles.divider} />
+
+              {/* Vernacular Voice Alerts Toggle */}
+              <TouchableOpacity
+                style={styles.interactiveRow}
+                onPress={() => {
+                  const nextState = !voiceOn;
+                  VoiceAnnouncement.setEnabled(nextState);
+                  setVoiceOn(nextState);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={styles.rowIconBox}>
+                  <MaterialCommunityIcons name={voiceOn ? "volume-high" : "volume-off"} size={20} color={voiceOn ? "#008069" : "#667781"} />
+                </View>
+                <View style={styles.rowContent}>
+                  <Text style={styles.rowLabel}>Vernacular Voice Announcements</Text>
+                  <Text style={[styles.rowValue, { color: voiceOn ? '#00a884' : '#667781' }]}>
+                    {voiceOn ? `ENABLED (${(LANGUAGES.find((l) => l.code === locale)?.label || 'Hindi')})` : 'MUTED'}
+                  </Text>
+                </View>
+                <View style={[styles.changeBadge, { backgroundColor: voiceOn ? '#e7ffdb' : '#f0f2f5' }]}>
+                  <Text style={[styles.changeBadgeText, { color: voiceOn ? '#008069' : '#667781' }]}>
+                    {voiceOn ? 'ON' : 'OFF'}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Test Notification & Audio Button */}
+              <TouchableOpacity
+                style={[styles.interactiveRow, { backgroundColor: '#f0fdf4' }]}
+                onPress={() => {
+                  NotificationService.showDispatchNotification({
+                    tripNumber: 'TRP-8491',
+                    origin: 'JNPT Port, Navi Mumbai',
+                    destination: 'Chakan MIDC, Pune',
+                    advanceAmount: 5000,
+                  }).catch(() => {});
+                  Alert.alert(
+                    '🔔 Test Alert Fired!',
+                    'Playing spoken voice announcement in your language and pushed system notification bar banner.'
+                  );
+                }}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.rowIconBox, { backgroundColor: '#dcf8c6' }]}>
+                  <MaterialCommunityIcons name="bell-ring" size={20} color="#008069" />
+                </View>
+                <View style={styles.rowContent}>
+                  <Text style={[styles.rowLabel, { color: '#008069', fontWeight: '800' }]}>Test Notification & Voice</Text>
+                  <Text style={styles.rowValue}>Tap to trigger live alert sound & speech</Text>
+                </View>
+                <View style={[styles.changeBadge, { backgroundColor: '#008069' }]}>
+                  <Text style={[styles.changeBadgeText, { color: '#ffffff' }]}>PLAY</Text>
                 </View>
               </TouchableOpacity>
 

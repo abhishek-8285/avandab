@@ -17,6 +17,10 @@ import (
 )
 
 // GPSLogPayload is a single GPS log uploaded in batch by the mobile app.
+// Provider-parity fields (migration 00117) are optional: older app versions
+// keep working — the phone already knows speed/heading/battery for free and
+// just wasn't sending them. Motion/Valid are nullable so "absent" is
+// distinguishable from "false".
 type GPSLogPayload struct {
 	ID        int64   `json:"id"`
 	Latitude  float64 `json:"latitude"`
@@ -25,6 +29,14 @@ type GPSLogPayload struct {
 	// AccuracyM is horizontal accuracy in metres (optional; mobile sends it
 	// when the platform reports it).
 	AccuracyM float64 `json:"accuracy_m,omitempty"`
+	// Speed in km/h and Heading in degrees (0-360), from the location API.
+	Speed   float64 `json:"speed,omitempty"`
+	Heading float64 `json:"heading,omitempty"`
+	// Device/fix health signals. BatteryLevel is the phone battery percent;
+	// Satellites is GNSS satellite count (when the platform exposes it).
+	BatteryLevel *float64 `json:"battery_level,omitempty"`
+	Satellites   *int     `json:"satellites,omitempty"`
+	Motion       *bool    `json:"motion,omitempty"`
 }
 
 // SyncBatchRequest is the mobile-app sync payload. DeviceID is the synthetic
@@ -135,10 +147,15 @@ func HandleTelemetrySync(ing *Ingestor) http.HandlerFunc {
 				IMEI:          imei,
 				Latitude:      logItem.Latitude,
 				Longitude:     logItem.Longitude,
+				Speed:         logItem.Speed,
+				Heading:       logItem.Heading,
 				Provider:      "own",
 				ProviderMsgID: "sync:" + strconv.FormatInt(logItem.ID, 10),
 				RawPayload:    []byte(`{"source":"sync_batch"}`),
 				DeviceTime:    ts,
+				BatteryLevel:  logItem.BatteryLevel,
+				Satellites:    logItem.Satellites,
+				Motion:        logItem.Motion,
 			}
 
 			result, err := ing.IngestRawFrame(r.Context(), frame)

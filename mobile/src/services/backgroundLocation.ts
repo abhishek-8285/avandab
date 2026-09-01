@@ -3,6 +3,7 @@ import * as Location from 'expo-location';
 import { DB } from './storage';
 import { MQTT } from './mqtt';
 import { useAuthStore } from '../stores/authStore';
+import { readBatteryPct } from './telemetry';
 
 export const BACKGROUND_LOCATION_TASK = 'AVANDAB_BACKGROUND_GPS';
 
@@ -27,11 +28,19 @@ export async function backgroundGPSTask({ data, error }: any): Promise<void> {
   const locations: any[] = data?.locations ?? [];
   const driverId =
     useAuthStore.getState().user?.driverId || useAuthStore.getState().user?.id || '';
+  // Battery read once per batch — a native call per fix is wasted work when
+  // the level moves a fraction of a percent between fixes.
+  const batteryPct = await readBatteryPct();
   for (const loc of locations) {
     const { latitude, longitude } = loc.coords ?? {};
     if (latitude == null || longitude == null) continue;
     try {
-      await DB.logGPSLocation(latitude, longitude, loc.coords.accuracy ?? null);
+      await DB.logGPSLocation(latitude, longitude, loc.coords.accuracy ?? null, {
+        speed: typeof loc.coords.speed === 'number' ? loc.coords.speed : null,
+        heading: typeof loc.coords.heading === 'number' ? loc.coords.heading : null,
+        motion: typeof loc.coords.speed === 'number' ? loc.coords.speed > 0.5 : null,
+        battery_level: batteryPct,
+      });
     } catch (e: any) {
       console.log('[BG-GPS] SQLite log failed:', e?.message);
     }

@@ -16,6 +16,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SOSButton } from './SOSButton';
+import { LiveDriverTrackingMap } from './LiveDriverTrackingMap';
 import { Telemetry } from '../services/telemetry';
 import { Colors, Font, Radius, Spacing } from '../constants/theme';
 import { Trip } from '../types/api';
@@ -323,6 +324,18 @@ export function ActiveNavigationScreen({
             <MaterialCommunityIcons name="chevron-right" size={22} color="#ffffff" />
           </TouchableOpacity>
         </View>
+
+        {/* Live Interactive Leaflet Map with Route & Controls */}
+        <LiveDriverTrackingMap
+          driverLatitude={coords.latitude}
+          driverLongitude={coords.longitude}
+          pickupLabel={origin}
+          destinationLabel={destination}
+          vehicleLabel={vehiclePlate}
+          speedKmh={coords.speedKmh ?? 48}
+          height={240}
+          onOpenExternalNav={() => launchNavigation(currentContent.navTarget)}
+        />
 
         {/* Clean 3-Item Quick Action Row */}
         <View style={styles.actionRow}>

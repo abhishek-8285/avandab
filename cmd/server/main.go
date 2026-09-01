@@ -661,8 +661,24 @@ func main() {
 		RawRetentionDays:        telemetryCfg.RawRetentionDays,
 	}
 	ingestor := telemetry.NewIngestor(database, sqlUoW, eventBus, idGen, nil, ingestCfg)
+
+	// ── High-Throughput Async Ingestion Queue ─────────────────────────
+	asyncQueue := telemetry.NewAsyncIngestQueue(10000, 4, ingestor, logger)
+	asyncQueue.Start(ctx)
+	ingestor.SetQueue(asyncQueue)
+
 	mqttHandler := telemetry.NewMQTTIngestHandler(ingestor, logger)
 	httpHandler := telemetry.NewHTTPIngestHandler(ingestor, telemetry.NewDeviceStore(database), telemetryCfg.DeviceSecretPepper)
+
+	// ── Physical Hardware GPS TCP Server (GT06 / AIS-140) ─────────────
+	tcpPort := os.Getenv("TELEMETRY_TCP_PORT")
+	if tcpPort == "" {
+		tcpPort = ":5023"
+	}
+	tcpServer := telemetry.NewTCPIngestServer(tcpPort, ingestor, telemetry.NewDeviceStore(database), logger)
+	if err := tcpServer.Start(ctx); err != nil {
+		logger.Warn("telemetry hardware TCP server startup warning", "error", err)
+	}
 
 	// ── High-Performance Architecture Protocols ──────────────────────
 	// 1. MQTT Broker Client Setup
@@ -1671,6 +1687,8 @@ func main() {
 
 	<-ctx.Done()
 	logger.Info("Shutting down server")
+	_ = tcpServer.Stop()
+	asyncQueue.Drain(5 * time.Second)
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {

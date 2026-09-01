@@ -26,8 +26,13 @@ type LiveVehicle struct {
 	FuelLevel     *float64   `json:"fuel_level,omitempty"`
 	Odometer      *float64   `json:"odometer,omitempty"`
 	Status        string     `json:"status"`
-	EtaMin        *time.Time `json:"eta_min,omitempty"` // wired in Spec 04 3D
-	EtaMax        *time.Time `json:"eta_max,omitempty"` // wired in Spec 04 3D
+	BatteryLevel  *float64   `json:"battery_level,omitempty"` // device battery % (00117)
+	GSMSignal     *int       `json:"gsm_signal,omitempty"`    // GSM signal strength (0-4)
+	Provider      string     `json:"provider,omitempty"`      // "ais140", "gt06", "teltonika", "own"
+	Motion        *bool      `json:"motion,omitempty"`        // false = parked (00117)
+	Valid         *bool      `json:"valid,omitempty"`         // false = bad GNSS fix (00117)
+	EtaMin        *time.Time `json:"eta_min,omitempty"`       // wired in Spec 04 3D
+	EtaMax        *time.Time `json:"eta_max,omitempty"`       // wired in Spec 04 3D
 	EtaMethod     string     `json:"eta_method,omitempty"`
 	RemainingKM   *float64   `json:"remaining_km,omitempty"` // distance left to destination (hybrid ETA)
 	RouteKM       *float64   `json:"route_km,omitempty"`     // planned route distance, enables trip-progress %
@@ -68,6 +73,10 @@ type LiveStore struct {
 	maintenanceDueChecked sync.Once
 	hasHeading            bool
 	headingChecked        sync.Once
+	// hasVLPParity probes vehicle_latest_position for the 00117 columns;
+	// stale DBs (pre-00117) fall back to NULLs instead of erroring.
+	hasVLPParity     bool
+	vlpParityChecked sync.Once
 
 	// etaService calculates hybrid ETA for active trips (Spec 04 §5, 3D).
 	etaService *eta.EtaService
@@ -156,9 +165,18 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 	if !s.hasHeading {
 		headingSel = "NULL as heading"
 	}
+	s.vlpParityChecked.Do(func() {
+		s.hasVLPParity = columnExists(s.db, "vehicle_latest_position", "battery_level")
+	})
+	vlpJoin, vlpSel := "", "NULL as battery_level, NULL as motion, NULL as valid"
+	if s.hasVLPParity {
+		vlpJoin = `LEFT JOIN vehicle_latest_position vlp ON vlp.vehicle_id = s.vehicle_id`
+		vlpSel = "vlp.battery_level, vlp.motion, vlp.valid"
+	}
 	q := `
 		SELECT s.trip_id, s.vehicle_id, s.latitude, s.longitude, s.speed,
 		       s.fuel_level, s.odometer, ` + headingSel + `, s.timestamp,
+		       ` + vlpSel + `,
 		       COALESCE(v.vehicle_number, v.registration_number, '') as vehicle_num,
 		       COALESCE(NULLIF(TRIM(COALESCE(d.first_name, '') || ' ' || COALESCE(d.last_name, '')), ''), '') as driver_name,
 		       COALESCE(d.phone, '') as driver_phone,
@@ -172,6 +190,7 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 		    GROUP BY vehicle_id
 		) latest ON latest.vehicle_id = s.vehicle_id AND latest.ts = s.timestamp
 		JOIN vehicles v ON v.id = s.vehicle_id AND v.tenant_id = ?
+		` + vlpJoin + `
 		LEFT JOIN trips t ON t.id = s.trip_id
 		LEFT JOIN drivers d ON d.id = t.driver_id
 		LEFT JOIN routes rt ON rt.id = t.route_id
@@ -188,9 +207,10 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 		var lv LiveVehicle
 		var tripID, vehicleID, vehNum, driverName, driverPhone sql.NullString
 		var lat, lng, speed sql.NullFloat64
-		var fuel, odo, heading, routeKM sql.NullFloat64
+		var fuel, odo, heading, routeKM, battery sql.NullFloat64
+		var motion, valid sql.NullInt64
 		var ts time.Time
-		if err := rows.Scan(&tripID, &vehicleID, &lat, &lng, &speed, &fuel, &odo, &heading, &ts, &vehNum, &driverName, &driverPhone, &routeKM); err != nil {
+		if err := rows.Scan(&tripID, &vehicleID, &lat, &lng, &speed, &fuel, &odo, &heading, &ts, &battery, &motion, &valid, &vehNum, &driverName, &driverPhone, &routeKM); err != nil {
 			return nil, err
 		}
 		if !vehicleID.Valid {
@@ -230,6 +250,18 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 		}
 		if heading.Valid {
 			lv.Heading = &heading.Float64
+		}
+		if battery.Valid {
+			b := battery.Float64
+			lv.BatteryLevel = &b
+		}
+		if motion.Valid {
+			m := motion.Int64 != 0
+			lv.Motion = &m
+		}
+		if valid.Valid {
+			v := valid.Int64 != 0
+			lv.Valid = &v
 		}
 		lv.Ts = ts.UTC()
 		out = append(out, lv)

@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"transport-app/internal/eta"
+	"transport-app/internal/telemetry/providers"
 )
 
 // insertTestRoute inserts a route row (FK target for trips).
@@ -215,6 +216,37 @@ func TestLiveStore_Empty(t *testing.T) {
 	vehicles, err := store.Live(context.Background(), "1", "", time.Now().UTC())
 	require.NoError(t, err)
 	assert.Empty(t, vehicles)
+}
+
+// TestLiveStore_ParityFieldsSurfaced (migration 00117): battery/motion/valid
+// flow from vehicle_latest_position into the /telemetry/live response.
+func TestLiveStore_ParityFieldsSurfaced(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicleReg(t, db, "v-par-live", "REG-PAR")
+	insertTestDevice(t, db, "IMEI-LIVE-PAR", DeviceStatusActive, strPtr("v-par-live"))
+	ing := newTestIngestor(t, db, nil)
+	ctx := context.Background()
+
+	batt := 44.0
+	moving := true
+	frame := providers.RawFrame{IMEI: "IMEI-LIVE-PAR", DeviceTime: time.Now().UTC().Add(-time.Second),
+		Latitude: 19.07, Longitude: 72.87, Speed: 30,
+		Provider: "own", ProviderMsgID: "lp-1",
+		BatteryLevel: &batt, Motion: &moving}
+	_, err := ing.IngestRawFrame(ctx, frame)
+	require.NoError(t, err)
+
+	s := NewLiveStore(db, 15*time.Minute)
+	got, err := s.Live(ctx, "1", "", time.Now().UTC())
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	lv := got[0]
+	require.NotNil(t, lv.BatteryLevel, "battery must surface in live response")
+	assert.InDelta(t, 44.0, *lv.BatteryLevel, 0.01)
+	require.NotNil(t, lv.Motion)
+	assert.True(t, *lv.Motion)
+	require.NotNil(t, lv.Valid, "trusted frame stores valid=1 → response carries valid:true")
+	assert.True(t, *lv.Valid)
 }
 
 func TestLiveStore_WithEtaService(t *testing.T) {

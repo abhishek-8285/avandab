@@ -94,7 +94,9 @@ Single source of truth for `db/migrations/` version numbers. Repo head is
 | 00113 | `driver_settlements.tenant_id` — Multi-tenant driver settlements & multi-stop EWB stage tracking | Priority 5B |
 | 00114 | `commercial_entitlements_and_subscriptions` — Plan catalog, tenant subscriptions, quotas, meters & usage events | Spec 25 Commercialization |
 | 00115 | `subscription_webhook_events` — Razorpay subscription webhooks idempotency & out-of-order protection | Spec 25A Lifecycle |
-| 00116+ | future specs | reserved |
+| 00116 | `driver_push_tokens` — Mobile FCM push token registry & system notification delivery | Spec 05 / Mobile Push |
+| 00117 | telemetry provider-parity columns: `telemetry_positions` + `vehicle_latest_position` gain satellites/battery_level/external_voltage/gsm_signal/motion/valid (+fix_time on positions) — Traccar/Teltonika/Samsara ingest parity, invalid-fix guard | Spec 17 §5 / Telemetry Parity |
+| 00117+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

@@ -181,6 +181,48 @@ func TestMQTTIngestHandler_ValidMessage(t *testing.T) {
 	assert.Equal(t, 1, count)
 }
 
+// TestMQTTIngestHandler_ParityFieldsPersisted (migration 00117): parity
+// signals published on the MQTT topic must survive into telemetry_positions —
+// the hardwired-tracker door for tamper/low-battery/poor-signal guards.
+func TestMQTTIngestHandler_ParityFieldsPersisted(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicle(t, db, "vh-mqtt-par")
+	insertTestDevice(t, db, "IMEI-MQTT-PAR", DeviceStatusActive, strPtr("vh-mqtt-par"))
+
+	ing := newTestIngestor(t, db, nil)
+	h := NewMQTTIngestHandler(ing, nil)
+
+	payload := `{
+		"imei": "IMEI-MQTT-PAR",
+		"seq": 43,
+		"device_time": "2026-08-31T13:30:00Z",
+		"latitude": 19.07,
+		"longitude": 72.83,
+		"speed": 12.5,
+		"satellites": 10,
+		"battery_level": 91.5,
+		"external_voltage": 13.9,
+		"gsm_signal": 4,
+		"motion": true,
+		"valid": true
+	}`
+	h.HandleMessage(context.Background(), "avandab/telemetry/devices/IMEI-MQTT-PAR/gps", []byte(payload))
+
+	var sats int
+	var batt, volt float64
+	var gsm int
+	var motion bool
+	err := db.QueryRow(`SELECT satellites, battery_level, external_voltage, gsm_signal, motion
+		FROM telemetry_positions WHERE imei = 'IMEI-MQTT-PAR'`).
+		Scan(&sats, &batt, &volt, &gsm, &motion)
+	require.NoError(t, err)
+	assert.Equal(t, 10, sats)
+	assert.InDelta(t, 91.5, batt, 0.01)
+	assert.InDelta(t, 13.9, volt, 0.01)
+	assert.Equal(t, 4, gsm)
+	assert.True(t, motion)
+}
+
 // TestMQTTIngestHandler_IMEIMismatch verifies the spoof guard drops frames
 // when payload IMEI does not match topic IMEI, and records an audit entry.
 func TestMQTTIngestHandler_IMEIMismatch(t *testing.T) {

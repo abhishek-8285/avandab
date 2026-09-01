@@ -43,6 +43,10 @@ export interface QueuedGPS {
   longitude: number;
   timestamp: string;
   accuracy_m: number | null;
+  speed: number | null;
+  heading: number | null;
+  motion: number | null;
+  battery_level: number | null;
   created_at: string;
 }
 
@@ -80,6 +84,10 @@ class OfflineQueueService {
         longitude REAL NOT NULL,
         timestamp TEXT NOT NULL,
         accuracy_m REAL,
+        speed REAL,
+        heading REAL,
+        motion INTEGER,
+        battery_level REAL,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
       CREATE TABLE IF NOT EXISTS offline_expenses (
@@ -122,6 +130,19 @@ class OfflineQueueService {
     } catch {}
     try {
       await this.db.execAsync(`ALTER TABLE offline_expenses ADD COLUMN idempotency_key TEXT`);
+    } catch {}
+    // GPS provider-parity columns (server migration 00117 counterpart)
+    try {
+      await this.db.execAsync(`ALTER TABLE queued_gps ADD COLUMN speed REAL`);
+    } catch {}
+    try {
+      await this.db.execAsync(`ALTER TABLE queued_gps ADD COLUMN heading REAL`);
+    } catch {}
+    try {
+      await this.db.execAsync(`ALTER TABLE queued_gps ADD COLUMN motion INTEGER`);
+    } catch {}
+    try {
+      await this.db.execAsync(`ALTER TABLE queued_gps ADD COLUMN battery_level REAL`);
     } catch {}
     // Expire pods older than 7 days
     try {
@@ -245,12 +266,16 @@ class OfflineQueueService {
     longitude: number;
     timestamp: string;
     accuracy_m?: number | null;
+    speed?: number | null;
+    heading?: number | null;
+    motion?: boolean | null;
+    battery_level?: number | null;
   }): Promise<void> {
     if (!this.db) await this.init();
     await this.db!.runAsync(
-      `INSERT INTO queued_gps (driver_id, latitude, longitude, timestamp, accuracy_m)
-       VALUES (?, ?, ?, ?, ?)`,
-      [log.driver_id, log.latitude, log.longitude, log.timestamp, log.accuracy_m ?? null]
+      `INSERT INTO queued_gps (driver_id, latitude, longitude, timestamp, accuracy_m, speed, heading, motion, battery_level)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [log.driver_id, log.latitude, log.longitude, log.timestamp, log.accuracy_m ?? null, log.speed ?? null, log.heading ?? null, log.motion == null ? null : (log.motion ? 1 : 0), log.battery_level ?? null]
     );
   }
 
@@ -410,6 +435,10 @@ class OfflineQueueService {
                 longitude: g.longitude,
                 timestamp: g.timestamp,
                 accuracy_m: g.accuracy_m,
+                ...(g.speed != null ? { speed: g.speed } : {}),
+                ...(g.heading != null ? { heading: g.heading } : {}),
+                ...(g.motion != null ? { motion: g.motion === 1 } : {}),
+                ...(g.battery_level != null ? { battery_level: g.battery_level } : {}),
               })),
             }),
           });

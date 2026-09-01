@@ -594,6 +594,19 @@ type DriverPayoutAccount struct {
 	CreatedAt              time.Time      `json:"created_at"`
 }
 
+type DriverPushToken struct {
+	ID        string    `json:"id"`
+	TenantID  string    `json:"tenant_id"`
+	DriverID  string    `json:"driver_id"`
+	UserID    string    `json:"user_id"`
+	DeviceID  string    `json:"device_id"`
+	PushToken string    `json:"push_token"`
+	Platform  string    `json:"platform"`
+	IsActive  int64     `json:"is_active"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type DriverScore struct {
 	ID          string    `json:"id"`
 	DriverID    string    `json:"driver_id"`
@@ -1496,25 +1509,32 @@ type TelemetryInstallation struct {
 }
 
 type TelemetryPosition struct {
-	ID          string          `json:"id"`
-	TenantID    string          `json:"tenant_id"`
-	Imei        string          `json:"imei"`
-	DeviceTime  time.Time       `json:"device_time"`
-	ReceivedAt  time.Time       `json:"received_at"`
-	Latitude    float64         `json:"latitude"`
-	Longitude   float64         `json:"longitude"`
-	Speed       sql.NullFloat64 `json:"speed"`
-	Heading     sql.NullFloat64 `json:"heading"`
-	Ignition    sql.NullInt64   `json:"ignition"`
-	EngineHours sql.NullFloat64 `json:"engine_hours"`
-	Accuracy    sql.NullFloat64 `json:"accuracy"`
-	FuelLevel   sql.NullFloat64 `json:"fuel_level"`
-	Odometer    sql.NullFloat64 `json:"odometer"`
-	DriverID    sql.NullString  `json:"driver_id"`
-	TripID      sql.NullString  `json:"trip_id"`
-	VehicleID   sql.NullString  `json:"vehicle_id"`
-	Provider    string          `json:"provider"`
-	RawEventID  sql.NullString  `json:"raw_event_id"`
+	ID              string          `json:"id"`
+	TenantID        string          `json:"tenant_id"`
+	Imei            string          `json:"imei"`
+	DeviceTime      time.Time       `json:"device_time"`
+	ReceivedAt      time.Time       `json:"received_at"`
+	Latitude        float64         `json:"latitude"`
+	Longitude       float64         `json:"longitude"`
+	Speed           sql.NullFloat64 `json:"speed"`
+	Heading         sql.NullFloat64 `json:"heading"`
+	Ignition        sql.NullInt64   `json:"ignition"`
+	EngineHours     sql.NullFloat64 `json:"engine_hours"`
+	Accuracy        sql.NullFloat64 `json:"accuracy"`
+	FuelLevel       sql.NullFloat64 `json:"fuel_level"`
+	Odometer        sql.NullFloat64 `json:"odometer"`
+	DriverID        sql.NullString  `json:"driver_id"`
+	TripID          sql.NullString  `json:"trip_id"`
+	VehicleID       sql.NullString  `json:"vehicle_id"`
+	Provider        string          `json:"provider"`
+	RawEventID      sql.NullString  `json:"raw_event_id"`
+	Satellites      sql.NullInt64   `json:"satellites"`
+	BatteryLevel    sql.NullFloat64 `json:"battery_level"`
+	ExternalVoltage sql.NullFloat64 `json:"external_voltage"`
+	GsmSignal       sql.NullInt64   `json:"gsm_signal"`
+	Motion          sql.NullInt64   `json:"motion"`
+	Valid           int64           `json:"valid"`
+	FixTime         sql.NullTime    `json:"fix_time"`
 }
 
 type TelemetryRawEvent struct {
@@ -1833,22 +1853,28 @@ type VehicleGeofence struct {
 }
 
 type VehicleLatestPosition struct {
-	VehicleID   string          `json:"vehicle_id"`
-	TenantID    string          `json:"tenant_id"`
-	Imei        sql.NullString  `json:"imei"`
-	DeviceTime  time.Time       `json:"device_time"`
-	ReceivedAt  time.Time       `json:"received_at"`
-	Latitude    float64         `json:"latitude"`
-	Longitude   float64         `json:"longitude"`
-	Speed       sql.NullFloat64 `json:"speed"`
-	Heading     sql.NullFloat64 `json:"heading"`
-	Ignition    sql.NullInt64   `json:"ignition"`
-	EngineHours sql.NullFloat64 `json:"engine_hours"`
-	Accuracy    sql.NullFloat64 `json:"accuracy"`
-	FuelLevel   sql.NullFloat64 `json:"fuel_level"`
-	Odometer    sql.NullFloat64 `json:"odometer"`
-	DriverID    sql.NullString  `json:"driver_id"`
-	TripID      sql.NullString  `json:"trip_id"`
+	VehicleID       string          `json:"vehicle_id"`
+	TenantID        string          `json:"tenant_id"`
+	Imei            sql.NullString  `json:"imei"`
+	DeviceTime      time.Time       `json:"device_time"`
+	ReceivedAt      time.Time       `json:"received_at"`
+	Latitude        float64         `json:"latitude"`
+	Longitude       float64         `json:"longitude"`
+	Speed           sql.NullFloat64 `json:"speed"`
+	Heading         sql.NullFloat64 `json:"heading"`
+	Ignition        sql.NullInt64   `json:"ignition"`
+	EngineHours     sql.NullFloat64 `json:"engine_hours"`
+	Accuracy        sql.NullFloat64 `json:"accuracy"`
+	FuelLevel       sql.NullFloat64 `json:"fuel_level"`
+	Odometer        sql.NullFloat64 `json:"odometer"`
+	DriverID        sql.NullString  `json:"driver_id"`
+	TripID          sql.NullString  `json:"trip_id"`
+	Satellites      sql.NullInt64   `json:"satellites"`
+	BatteryLevel    sql.NullFloat64 `json:"battery_level"`
+	ExternalVoltage sql.NullFloat64 `json:"external_voltage"`
+	GsmSignal       sql.NullInt64   `json:"gsm_signal"`
+	Motion          sql.NullInt64   `json:"motion"`
+	Valid           int64           `json:"valid"`
 }
 
 type VehicleOwnership struct {

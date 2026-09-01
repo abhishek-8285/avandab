@@ -52,22 +52,28 @@ func (h *MQTTIngestHandler) HandleMessage(ctx context.Context, topic string, pay
 
 	// Step 4: Build RawFrame.
 	frame := providers.RawFrame{
-		IMEI:          imei,
-		Latitude:      p.Latitude,
-		Longitude:     p.Longitude,
-		Speed:         p.Speed,
-		Heading:       p.Heading,
-		Ignition:      p.Ignition,
-		EngineHours:   p.EngineHours,
-		Accuracy:      p.Accuracy,
-		FuelLevel:     p.FuelLevel,
-		Odometer:      p.Odometer,
-		DriverID:      p.DriverID,
-		TripID:        p.TripID,
-		SOS:           p.SOS,
-		Provider:      "own",
-		ProviderMsgID: fmt.Sprintf("mqtt:%d", p.Seq),
-		RawPayload:    payload,
+		IMEI:            imei,
+		Latitude:        p.Latitude,
+		Longitude:       p.Longitude,
+		Speed:           p.Speed,
+		Heading:         p.Heading,
+		Ignition:        p.Ignition,
+		EngineHours:     p.EngineHours,
+		Accuracy:        p.Accuracy,
+		FuelLevel:       p.FuelLevel,
+		Odometer:        p.Odometer,
+		Satellites:      p.Satellites,
+		BatteryLevel:    p.BatteryLevel,
+		ExternalVoltage: p.ExternalVoltage,
+		GSMSignal:       p.GSMSignal,
+		Motion:          p.Motion,
+		Valid:           p.Valid,
+		DriverID:        p.DriverID,
+		TripID:          p.TripID,
+		SOS:             p.SOS,
+		Provider:        "own",
+		ProviderMsgID:   fmt.Sprintf("mqtt:%d", p.Seq),
+		RawPayload:      payload,
 	}
 
 	if p.DeviceTime != "" {
@@ -76,23 +82,13 @@ func (h *MQTTIngestHandler) HandleMessage(ctx context.Context, topic string, pay
 		}
 	}
 
-	// Step 5: Ingest through canonical pipeline.
-	result, err := h.ingestor.IngestRawFrame(ctx, frame)
-	if err != nil {
+	// Step 5: Ingest through canonical async pipeline.
+	if err := h.ingestor.IngestAsync(ctx, frame); err != nil {
 		h.logger.Error("MQTT pipeline error", "imei", imei, "error", err)
 		return
 	}
 
-	if result.Quarantined {
-		h.logger.Warn("MQTT device quarantined", "imei", imei, "reason", result.Reason)
-		return
-	}
-	if result.Deduped {
-		h.logger.Debug("MQTT frame deduped", "imei", imei, "provider_msg_id", frame.ProviderMsgID)
-	}
-
-	// Step 6: SOS detection — emission happens inside the ingest pipeline
-	// (same outbox transaction as the position).
+	// Step 6: SOS detection log
 	if p.SOS {
 		h.logger.Warn("MQTT SOS received", "imei", imei,
 			"lat", frame.Latitude, "lng", frame.Longitude)
@@ -114,9 +110,17 @@ type mqttPayload struct {
 	Accuracy    *float64 `json:"accuracy,omitempty"`
 	FuelLevel   *float64 `json:"fuel_level,omitempty"`
 	Odometer    *float64 `json:"odometer,omitempty"`
-	DriverID    string   `json:"driver_id,omitempty"`
-	TripID      string   `json:"trip_id,omitempty"`
-	SOS         bool     `json:"sos"`
+	// Provider-parity signals (migration 00117): hardwired trackers report
+	// voltage/satellites/GSM; app bridges may report phone battery.
+	Satellites      *int     `json:"satellites,omitempty"`
+	BatteryLevel    *float64 `json:"battery_level,omitempty"`
+	ExternalVoltage *float64 `json:"external_voltage,omitempty"`
+	GSMSignal       *int     `json:"gsm_signal,omitempty"`
+	Motion          *bool    `json:"motion,omitempty"`
+	Valid           *bool    `json:"valid,omitempty"`
+	DriverID        string   `json:"driver_id,omitempty"`
+	TripID          string   `json:"trip_id,omitempty"`
+	SOS             bool     `json:"sos"`
 }
 
 // extractIMEIFromTopic parses "avandab/telemetry/devices/{imei}/gps" -> "{imei}".

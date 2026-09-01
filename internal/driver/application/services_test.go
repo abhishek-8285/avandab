@@ -107,6 +107,22 @@ func setupAppServiceTestDB(t *testing.T) *sql.DB {
 		}
 	}
 
+	mig116Bytes, err := os.ReadFile("../../../db/migrations/00116_driver_push_tokens.sql")
+	require.NoError(t, err)
+
+	raw116 := string(mig116Bytes)
+	if idx := strings.Index(raw116, "-- +goose Down"); idx != -1 {
+		raw116 = raw116[:idx]
+	}
+
+	for _, stmt := range strings.Split(raw116, ";") {
+		trimmed := strings.TrimSpace(stmt)
+		if trimmed != "" {
+			_, err := db.Exec(trimmed)
+			require.NoError(t, err, "failed executing 116: %s", trimmed)
+		}
+	}
+
 	t.Cleanup(func() {
 		_ = db.Close()
 	})
@@ -448,4 +464,41 @@ func TestDriverAppService_FullTripStateMachineAndPODEnforcement(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, respOK.Success)
 	assert.Equal(t, "completed", respOK.TripState)
+}
+
+func TestRegisterPushToken(t *testing.T) {
+	db := setupAppServiceTestDB(t)
+	svc := application.NewDriverAppService(db)
+	ctx := context.Background()
+
+	tenantID := "tenant-test-1"
+	_, err := db.Exec("INSERT INTO tenants (id, name, slug) VALUES (?, ?, ?)", tenantID, "Test Fleet", "test-fleet")
+	require.NoError(t, err)
+
+	driverID := "drv-push-1"
+	userID := "usr-push-1"
+	deviceID := "device-rmx-8i"
+	pushToken := "ExponentPushToken[xxxxxxxxxxxxxx]"
+
+	// Register token
+	err = svc.RegisterPushToken(ctx, tenantID, driverID, userID, deviceID, pushToken, "android")
+	require.NoError(t, err)
+
+	// Verify persistence
+	var count int
+	var storedToken string
+	err = db.QueryRow("SELECT count(*), push_token FROM driver_push_tokens WHERE tenant_id = ? AND driver_id = ? AND device_id = ?", tenantID, driverID, deviceID).Scan(&count, &storedToken)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+	assert.Equal(t, pushToken, storedToken)
+
+	// Idempotent update on same device
+	updatedToken := "ExponentPushToken[yyyyyyyyyyyyyy]"
+	err = svc.RegisterPushToken(ctx, tenantID, driverID, userID, deviceID, updatedToken, "android")
+	require.NoError(t, err)
+
+	err = db.QueryRow("SELECT count(*), push_token FROM driver_push_tokens WHERE tenant_id = ? AND driver_id = ? AND device_id = ?", tenantID, driverID, deviceID).Scan(&count, &storedToken)
+	require.NoError(t, err)
+	assert.Equal(t, 1, count)
+	assert.Equal(t, updatedToken, storedToken)
 }

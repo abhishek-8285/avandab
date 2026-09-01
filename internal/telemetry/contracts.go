@@ -35,6 +35,10 @@ const (
 	AlertKindHarshBrake = "harsh_braking"
 	AlertKindHarshAccel = "harsh_acceleration"
 	AlertKindTow        = "tow"
+	// Device-health kinds (migration 00117) — emitted by the ingestion
+	// deviceHealthGuard on healthy→unhealthy transitions.
+	AlertKindLowBattery = "low_battery"
+	AlertKindPoorSignal = "poor_signal"
 )
 
 // Alert severity levels.

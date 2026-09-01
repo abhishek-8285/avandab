@@ -3,6 +3,7 @@ import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity, Linking } 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors, Font, Radius, Spacing } from '../constants/theme';
 import { useLanguageStore } from '../stores/languageStore';
+import { NotificationService } from '../services/notificationService';
 import { t } from '../i18n';
 
 interface TripCardProps {
@@ -16,7 +17,7 @@ interface TripCardProps {
   onPress?: () => void;
   onNavigate?: () => void;
   cargoWeight?: string;
-  estimatedFare?: string;
+  advanceAmount?: number;
 }
 
 export const TripCard: React.FC<TripCardProps> = ({
@@ -30,7 +31,7 @@ export const TripCard: React.FC<TripCardProps> = ({
   onPress,
   onNavigate,
   cargoWeight,
-  estimatedFare,
+  advanceAmount = 5000,
 }) => {
   const { locale } = useLanguageStore();
 
@@ -87,9 +88,7 @@ export const TripCard: React.FC<TripCardProps> = ({
   const badge = getStatusBadge();
 
   return (
-    <TouchableOpacity
-      activeOpacity={0.92}
-      onPress={handleStartMap}
+    <View
       style={[
         styles.card,
         status === 'IN_TRANSIT' && styles.cardActiveBorder,
@@ -157,54 +156,68 @@ export const TripCard: React.FC<TripCardProps> = ({
         </View>
       </View>
 
-      {/* Action Strip */}
-      <View style={styles.actionStrip}>
-        <View style={styles.fareInfoBlock}>
-          {cargoWeight ? (
-            <Text style={styles.weightText}>📦 {cargoWeight}</Text>
-          ) : (
-            <Text style={styles.weightText}>📦 18 Tons</Text>
-          )}
-          {estimatedFare ? (
-            <Text style={styles.fareText}>₹{estimatedFare}</Text>
-          ) : (
-            <Text style={styles.fareText}>₹24,500</Text>
-          )}
+      {/* Cargo & Route Details Strip */}
+      <View style={styles.summaryStrip}>
+        <View style={styles.cargoChip}>
+          <Text style={styles.weightText}>{cargoWeight ? `📦 ${cargoWeight}` : '📦 18 Tons Steel Coils'}</Text>
         </View>
+        <View style={styles.routeStatusBadge}>
+          <View style={styles.statusPulseDot} />
+          <Text style={styles.routeStatusLabel}>{status === 'IN_TRANSIT' ? 'LIVE ROUTE' : 'DISPATCH READY'}</Text>
+        </View>
+      </View>
 
-        <View style={styles.buttonGroup}>
+      {/* Action Toolbar: Quick Contact Icons + Full-Width Navigate */}
+      <View style={styles.actionStrip}>
+        <View style={styles.leftActions}>
           <TouchableOpacity
-            style={styles.callBtn}
+            style={styles.actionIconBtn}
             activeOpacity={0.85}
-            onPress={() => {
-              Linking.openURL('tel:+919876543210').catch(() => {});
-            }}
+            accessibilityLabel="Call Dispatcher"
+            onPress={() => Linking.openURL('tel:+919876543210').catch(() => {})}
           >
-            <MaterialCommunityIcons name="phone" size={16} color="#008069" />
+            <MaterialCommunityIcons name="phone" size={17} color="#008069" />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.whatsappBtn}
+            style={styles.actionIconBtn}
             activeOpacity={0.85}
+            accessibilityLabel="WhatsApp Hub"
             onPress={() => {
               const text = encodeURIComponent(`Avandab Fleet: Trip #${tripNumber} (${driverName}): En route from ${origin} to ${destination}`);
               Linking.openURL(`https://wa.me/919876543210?text=${text}`).catch(() => {});
             }}
           >
-            <MaterialCommunityIcons name="whatsapp" size={18} color="#25d366" />
+            <MaterialCommunityIcons name="whatsapp" size={19} color="#25d366" />
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.navigateBtn}
+            style={styles.actionIconBtn}
             activeOpacity={0.85}
-            onPress={handleStartMap}
+            accessibilityLabel="Play Voice Alert & Push Notification"
+            onPress={() => {
+              NotificationService.showDispatchNotification({
+                tripNumber,
+                origin,
+                destination,
+                advanceAmount,
+              }).catch(() => {});
+            }}
           >
-            <MaterialCommunityIcons name="navigation-variant" size={15} color="#ffffff" />
-            <Text style={styles.navigateBtnText}>{t('trips.start_map', 'START MAP', locale)}</Text>
+            <MaterialCommunityIcons name="bell-ring-outline" size={17} color="#008069" />
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          style={styles.navigateBtn}
+          activeOpacity={0.85}
+          onPress={handleStartMap}
+        >
+          <MaterialCommunityIcons name="navigation-variant" size={16} color="#ffffff" />
+          <Text style={styles.navigateBtnText}>{t('trips.start_map', 'START MAP', locale)}</Text>
+        </TouchableOpacity>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 };
 
@@ -398,7 +411,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     marginVertical: 1,
   },
-  actionStrip: {
+  summaryStrip: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -407,41 +420,58 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#f0f2f5',
   },
-  fareInfoBlock: {
+  cargoChip: {
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  weightText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  routeStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#e0f2fe',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#bae6fd',
+  },
+  statusPulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#0284c7',
+  },
+  routeStatusLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#0284c7',
+    letterSpacing: 0.5,
+  },
+  actionStrip: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 10,
+  },
+  leftActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  weightText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#667781',
-  },
-  fareText: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#008069',
-  },
-  buttonGroup: {
-    marginLeft: 'auto',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  callBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#e7ffdb',
-    borderWidth: 1,
-    borderColor: '#bbf7d0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  whatsappBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  actionIconBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#e7ffdb',
     borderWidth: 1,
     borderColor: '#bbf7d0',
@@ -449,18 +479,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   navigateBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    justifyContent: 'center',
+    gap: 6,
     backgroundColor: '#008069',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 16,
-    elevation: 2,
+    height: 38,
+    borderRadius: 19,
+    shadowColor: '#008069',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 3,
   },
   navigateBtnText: {
     color: '#ffffff',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
