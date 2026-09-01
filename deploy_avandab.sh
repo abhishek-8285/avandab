@@ -44,9 +44,9 @@ echo "Pushing binary..."
 adb push bin/server_arm64 /data/local/tmp/server
 adb shell "chmod +x /data/local/tmp/server"
 
-if [ -f "mvtms.db" ]; then
-    echo "Pushing database (mvtms.db)..."
-    adb push mvtms.db /data/local/tmp/mvtms.db
+if [ -f "transport.db" ]; then
+    echo "Pushing database (transport.db)..."
+    adb push transport.db /data/local/tmp/transport.db
 fi
 
 echo "Pushing templates..."
@@ -62,28 +62,32 @@ echo -e "\n${CYAN}[4/6] Setting up ADB port forwarding (tcp:8092)...${NC}"
 adb forward tcp:8092 tcp:8092 || true
 echo -e "${GREEN}✅ ADB Port forwarding ready (localhost:8092 -> TECNO:8092).${NC}"
 
-# 5. Start Background Server on Android Device
+# 5. Start Background Server with Auto-Restart Watchdog on Android Device
 echo -e "\n${CYAN}[5/6] Starting Avandab server on TECNO device...${NC}"
-adb shell "PID=\$(cat /data/local/tmp/mvtms_server.pid 2>/dev/null); [ -n \"\$PID\" ] && kill -9 \$PID 2>/dev/null || true"
+adb shell "PID=\$(cat /data/local/tmp/mvtms_server.pid 2>/dev/null); [ -n \"\$PID\" ] && kill -9 \$PID 2>/dev/null || true; killall server 2>/dev/null || true"
 cat << 'RUNEOF' > bin/start_device.sh
 #!/system/bin/sh
 cd /data/local/tmp
 ulimit -n 65535 2>/dev/null || true
-su -c 'sysctl -w net.core.netdev_max_backlog=10000; sysctl -w net.ipv4.tcp_fastopen=3; sysctl -w vm.swappiness=20; sysctl -w vm.vfs_cache_pressure=10; sysctl -w kernel.sched_migration_cost_ns=5000000; sysctl -w kernel.sched_wakeup_granularity_ns=10000000; sysctl -w kernel.sched_min_granularity_ns=5000000; sysctl -w kernel.sched_latency_ns=20000000; sysctl -w net.ipv4.tcp_keepalive_time=30; sysctl -w net.ipv4.tcp_tw_reuse=1; sysctl -w net.ipv4.tcp_fin_timeout=15; sysctl -w net.core.netdev_budget=600; sysctl -w fs.file-max=2097152' 2>/dev/null || true
 
 export GOMAXPROCS=8
 export PORT=8092
 export ENV=production
-export LOG_LEVEL=error
+export LOG_LEVEL=info
 export GODEBUG=netdns=go+1
-export DATABASE_URL='file:mvtms.db?_journal_mode=WAL&_synchronous=NORMAL&_temp_store=MEMORY&_busy_timeout=10000&_cache_size=-131072&_mmap_size=536870912&cache=shared&mode=rwc'
+export DATABASE_URL='file:transport.db?_journal_mode=WAL&_synchronous=NORMAL&_temp_store=MEMORY&_busy_timeout=10000&cache=shared&mode=rwc'
 export APP_DOMAIN='avandab.com'
-if [ -z "${COOKIE_SECRET}" ]; then
-  echo "COOKIE_SECRET is not set" >&2
-  exit 1
-fi
-export COOKIE_SECRET
-nohup taskset c0 ./server > /dev/null 2>&1 &
+export COOKIE_SECRET="${COOKIE_SECRET:-avandab-production-secret-auth-key-2026-secure-32chars}"
+
+# Background Auto-Restart Watchdog Loop
+nohup sh -c '
+while true; do
+    echo "[WATCHDOG] Starting Avandab server $(date)..." >> /data/local/tmp/server_8092.log
+    ./server >> /data/local/tmp/server_8092.log 2>&1
+    echo "[WATCHDOG] Server stopped with exit code $?. Auto-restarting in 1s..." >> /data/local/tmp/server_8092.log
+    sleep 1
+done' > /dev/null 2>&1 &
+
 echo $! > /data/local/tmp/mvtms_server.pid
 RUNEOF
 adb push bin/start_device.sh /data/local/tmp/start.sh > /dev/null
@@ -91,9 +95,8 @@ adb shell "chmod +x /data/local/tmp/start.sh"
 adb shell "/data/local/tmp/start.sh"
 sleep 2
 
-sleep 2
 echo -e "${YELLOW}Server Boot Output Log:${NC}"
-adb shell "cat /data/local/tmp/server_8092.log"
+adb shell "cat /data/local/tmp/server_8092.log 2>/dev/null | tail -n 20" || true
 
 # 6. Direct Deployment Complete (No Cloudflare Tunnel)
 echo -e "\n${BLUE}==============================================================================${NC}"
