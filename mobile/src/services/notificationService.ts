@@ -174,6 +174,7 @@ class MobileNotificationService {
         },
         trigger: {
           channelId: 'dispatches',
+          seconds: 1,
         } as any,
       });
 
@@ -202,6 +203,7 @@ class MobileNotificationService {
         },
         trigger: {
           channelId: 'emergency',
+          seconds: 1,
         } as any,
       });
 

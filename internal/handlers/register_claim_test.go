@@ -47,11 +47,12 @@ func newRegisterTestApp(t *testing.T) *App {
 	return app
 }
 
-func postRegister(app *App, email, password string) *httptest.ResponseRecorder {
+func postRegisterWithCompany(app *App, name, email, password, companyName string) *httptest.ResponseRecorder {
 	form := url.Values{}
-	form.Set("name", "Fleet Owner")
+	form.Set("name", name)
 	form.Set("email", email)
 	form.Set("phone", "9900112233")
+	form.Set("company_name", companyName)
 	form.Set("password", password)
 	form.Set("confirm_password", password)
 	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(form.Encode()))
@@ -61,34 +62,44 @@ func postRegister(app *App, email, password string) *httptest.ResponseRecorder {
 	return rr
 }
 
-func TestRegister_FirstRunClaimBecomesAdminAndOnboards(t *testing.T) {
+func TestRegister_SelfServiceAccountProvisionsIsolatedTenant(t *testing.T) {
 	app := newRegisterTestApp(t)
 
-	rr := postRegister(app, "owner@fleet.test", "strong-pass-1")
+	rr := postRegisterWithCompany(app, "Fleet Owner", "owner@fleet.test", "strong-pass-1", "Fast Freight")
 	assert.Equal(t, http.StatusSeeOther, rr.Code)
 	loc := rr.Header().Get("Location")
-	assert.Equal(t, "/company/onboard", loc, "first registrant must be sent to company onboarding")
+	assert.Equal(t, "/company/onboard", loc, "self-registered admin must be sent to company onboarding")
 
 	var roleID int
-	require.NoError(t, app.DB.QueryRow(`SELECT role_id FROM users WHERE email = 'owner@fleet.test'`).Scan(&roleID))
-	assert.Equal(t, 1, roleID, "first self-registered account must hold the admin role")
+	var tenantID string
+	require.NoError(t, app.DB.QueryRow(`SELECT role_id, tenant_id FROM users WHERE email = 'owner@fleet.test'`).Scan(&roleID, &tenantID))
+	assert.Equal(t, 1, roleID, "self-registered account must hold the admin role")
+	assert.NotEqual(t, "1", tenantID, "must not be assigned to default tenant 1")
+
+	var tenantName string
+	require.NoError(t, app.DB.QueryRow(`SELECT name FROM tenants WHERE id = ?`, tenantID).Scan(&tenantName))
+	assert.Equal(t, "Fast Freight", tenantName)
 }
 
-func TestRegister_SecondRegistrantStaysViewer(t *testing.T) {
+func TestRegister_MultipleRegistrationsGetIsolatedTenants(t *testing.T) {
 	app := newRegisterTestApp(t)
 
-	rr1 := postRegister(app, "owner@fleet.test", "strong-pass-1")
+	rr1 := postRegisterWithCompany(app, "Alice Owner", "owner1@fleet.test", "strong-pass-1", "Alice Logistics")
 	require.Equal(t, http.StatusSeeOther, rr1.Code)
+	assert.Equal(t, "/company/onboard", rr1.Header().Get("Location"))
 
-	rr2 := postRegister(app, "staff@fleet.test", "strong-pass-2")
+	rr2 := postRegisterWithCompany(app, "Bob Owner", "owner2@fleet.test", "strong-pass-2", "Bob Transport")
 	assert.Equal(t, http.StatusSeeOther, rr2.Code)
-	assert.Equal(t, "/dashboard", rr2.Header().Get("Location"), "later registrants go to dashboard as viewers")
+	assert.Equal(t, "/company/onboard", rr2.Header().Get("Location"))
 
-	var roleID int
-	require.NoError(t, app.DB.QueryRow(`SELECT role_id FROM users WHERE email = 'staff@fleet.test'`).Scan(&roleID))
-	assert.NotEqual(t, 1, roleID, "second registrant must not gain admin")
+	var tid1, tid2 string
+	var roleID1, roleID2 int
+	require.NoError(t, app.DB.QueryRow(`SELECT role_id, tenant_id FROM users WHERE email = 'owner1@fleet.test'`).Scan(&roleID1, &tid1))
+	require.NoError(t, app.DB.QueryRow(`SELECT role_id, tenant_id FROM users WHERE email = 'owner2@fleet.test'`).Scan(&roleID2, &tid2))
 
-	var admins int
-	require.NoError(t, app.DB.QueryRow(`SELECT COUNT(*) FROM users WHERE role_id = 1`).Scan(&admins))
-	assert.Equal(t, 1, admins)
+	assert.Equal(t, 1, roleID1)
+	assert.Equal(t, 1, roleID2)
+	assert.NotEqual(t, "1", tid1)
+	assert.NotEqual(t, "1", tid2)
+	assert.NotEqual(t, tid1, tid2, "two distinct self-registered users must get two different isolated tenant IDs")
 }

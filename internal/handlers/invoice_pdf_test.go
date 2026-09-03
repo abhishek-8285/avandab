@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	invoiceapp "transport-app/internal/invoice/application"
+	pdfgen "transport-app/internal/pdf"
 	"transport-app/internal/shared"
 )
 
@@ -58,6 +59,8 @@ func TestInvoicePDF_SellerFromCompanySettings(t *testing.T) {
 	assert.Equal(t, "Devi Transport Co", data.Company.Name, "seller name must come from company_settings")
 	assert.NotContains(t, data.Company.Name, "Apex", "hardcoded legacy seller name leaked")
 	assert.Equal(t, "27AABCU9603R1ZX", data.Company.GSTIN)
+	assert.Equal(t, "AABCU9603R", data.Company.PAN, "PAN should be extracted from GSTIN")
+	assert.Equal(t, "TAX INVOICE", data.LegalTitle)
 	assert.Equal(t, "Bharat Steels", data.Customer.Name)
 	assert.Equal(t, "29", data.Customer.StateCode, "buyer state from GST prefix")
 	assert.False(t, data.IntraState, "27 vs 29 is inter-state supply")
@@ -86,6 +89,79 @@ func TestInvoicePDF_SellerFromCompanySettings(t *testing.T) {
 	assert.True(t, bytes.HasPrefix(w.Body.Bytes(), []byte("%PDF-")), "response body must be a PDF")
 }
 
+func TestInvoicePDF_3TierClassification(t *testing.T) {
+	db := newInvoiceLineTestDB(t)
+	app := newMaintHandlerApp(t, db, maintAllowAuthSvc{})
+	app.Invoices = &InvoiceHandlers{App: app}
+	h := app.Invoices
+	h.init()
+
+	_, err := db.Exec(`INSERT INTO customers (id, name, phone, gst, address) VALUES ('cust-3t', 'Hindalco Ltd', '+91-9000000002', '27AABCH1234C1Z1', '5 Factory Road, Pune')`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO routes (id, tenant_id, source, destination, distance, estimated_hours, standard_fare) VALUES ('rt-3t', '1', 'Pune', 'Mumbai', 150, 4, 12000)`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO bookings (id, tenant_id, booking_number, customer_id, pickup_date, route_id, vehicle_type, price) VALUES ('bk-3t', '1', 'BK-3T', 'cust-3t', date('now','+1 day'), 'rt-3t', 'truck', 12000)`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO invoices (id, invoice_number, booking_id, customer_id, subtotal, tax, total, tenant_id)
+		VALUES ('inv-3t', 'INV-3T-1', 'bk-3t', 'cust-3t', 12000, 0, 12000, '1')`)
+	require.NoError(t, err)
+
+	ctx := shared.ContextWithTenantID(context.Background(), shared.DefaultTenant)
+	dto, err := h.getUC.Execute(ctx, invoiceapp.GetInvoiceQuery{ID: "inv-3t", TenantID: shared.DefaultTenant})
+	require.NoError(t, err)
+
+	// 1. Tier 1: GST Registered Enterprise
+	t.Run("Tier 1 GST Enterprise generates TAX INVOICE", func(t *testing.T) {
+		_, err := db.Exec(`UPDATE company_settings SET company_name='Super Transporters Corp',
+			gst_number='27AABCU9603R1ZX', pan_number='AABCU9603R' WHERE id = 1`)
+		require.NoError(t, err)
+
+		data, err := h.buildInvoicePDFData(ctx, &dto, 0, 12000)
+		require.NoError(t, err)
+		assert.Equal(t, "TAX INVOICE", data.LegalTitle)
+		assert.Equal(t, "27AABCU9603R1ZX", data.Company.GSTIN)
+		assert.Equal(t, "AABCU9603R", data.Company.PAN)
+
+		pdfBytes, err := pdfgen.GenerateInvoicePDF(*data)
+		require.NoError(t, err)
+		assert.True(t, bytes.HasPrefix(pdfBytes, []byte("%PDF-")))
+	})
+
+	// 2. Tier 2: Non-GST with PAN
+	t.Run("Tier 2 Non-GST with PAN generates BILL OF SUPPLY / FREIGHT BILL", func(t *testing.T) {
+		_, err := db.Exec(`UPDATE company_settings SET company_name='Deshmukh Road Carriers',
+			gst_number='', pan_number='BKZPK9876L' WHERE id = 1`)
+		require.NoError(t, err)
+
+		data, err := h.buildInvoicePDFData(ctx, &dto, 0, 12000)
+		require.NoError(t, err)
+		assert.Equal(t, "BILL OF SUPPLY / FREIGHT BILL", data.LegalTitle)
+		assert.Empty(t, data.Company.GSTIN)
+		assert.Equal(t, "BKZPK9876L", data.Company.PAN)
+
+		pdfBytes, err := pdfgen.GenerateInvoicePDF(*data)
+		require.NoError(t, err)
+		assert.True(t, bytes.HasPrefix(pdfBytes, []byte("%PDF-")))
+	})
+
+	// 3. Tier 3: Micro Transporter without GST or PAN
+	t.Run("Tier 3 Micro Transporter generates CONSIGNMENT FREIGHT BILL", func(t *testing.T) {
+		_, err := db.Exec(`UPDATE company_settings SET company_name='Gopal Tempo Service',
+			gst_number='', pan_number='' WHERE id = 1`)
+		require.NoError(t, err)
+
+		data, err := h.buildInvoicePDFData(ctx, &dto, 0, 12000)
+		require.NoError(t, err)
+		assert.Equal(t, "CONSIGNMENT FREIGHT BILL", data.LegalTitle)
+		assert.Empty(t, data.Company.GSTIN)
+		assert.Empty(t, data.Company.PAN)
+
+		pdfBytes, err := pdfgen.GenerateInvoicePDF(*data)
+		require.NoError(t, err)
+		assert.True(t, bytes.HasPrefix(pdfBytes, []byte("%PDF-")))
+	})
+}
+
 func TestValidGSTINFormat(t *testing.T) {
 	cases := []struct {
 		gstin string
@@ -107,6 +183,29 @@ func TestValidGSTINFormat(t *testing.T) {
 		got := validGSTINFormat(tc.gstin)
 		if got != tc.want {
 			t.Errorf("validGSTINFormat(%q) = %v, want %v (%s)", tc.gstin, got, tc.want, tc.why)
+		}
+	}
+}
+
+func TestValidPANFormat(t *testing.T) {
+	cases := []struct {
+		pan  string
+		want bool
+		why  string
+	}{
+		{"ABCDE1234F", true, "valid standard PAN"},
+		{"BKZPK9876L", true, "valid individual PAN"},
+		{"AABCU9603R", true, "valid company PAN"},
+		{"ABCDE12345", false, "last char is digit, must be letter"},
+		{"12345ABCDE", false, "letters and digits inverted"},
+		{"ABCDE1234", false, "too short (9 chars)"},
+		{"ABCDE1234FA", false, "too long (11 chars)"},
+		{"", false, "empty"},
+	}
+	for _, tc := range cases {
+		got := validPANFormat(tc.pan)
+		if got != tc.want {
+			t.Errorf("validPANFormat(%q) = %v, want %v (%s)", tc.pan, got, tc.want, tc.why)
 		}
 	}
 }

@@ -102,7 +102,37 @@ type Config struct {
 	Storage              StorageConfig
 	WorkerLeaderLock     bool
 	Notify               NotifyConfig
+	Comm                 CommConfig
+	Google               GoogleConfig
+	FCM                  FCMConfig
 }
+
+// CommConfig controls the durable outbound queue (comm_outbox, migration
+// 00118). The worker delivers email through the SMTP adapter (Phase 2);
+// WhatsApp consumes the same queue in Phase 3. Disabled only via
+// COMM_OUTBOX_WORKER=false; an unconfigured SMTP relay makes rows fail
+// honestly and dead-letter instead of vanishing (no fake successes).
+type CommConfig struct {
+	OutboxWorker bool
+}
+
+// GoogleOAuthConfig holds "Sign in with Google" OAuth settings. An empty
+// ClientID keeps the feature disabled: the /auth/google routes redirect to
+// /login with a flash message and the UI button is hidden. Zero-cost tier —
+// no SDK dependency, stdlib-only OAuth2 code flow (internal/auth/oauth.go).
+type GoogleOAuthConfig struct {
+	ClientID     string
+	ClientSecret string
+	RedirectURL  string
+}
+
+// Enabled reports whether Google OAuth is configured.
+func (c *GoogleOAuthConfig) Enabled() bool {
+	return c != nil && c.ClientID != ""
+}
+
+// GoogleConfig is an alias for backwards compatibility.
+type GoogleConfig = GoogleOAuthConfig
 
 // NotifyConfig holds outbound delivery channel settings. Empty values keep a
 // channel unconfigured — sends then fail honestly instead of faking success.
@@ -112,8 +142,21 @@ type NotifyConfig struct {
 	SMTPUser        string
 	SMTPPassword    string
 	SMTPFrom        string
+	SMTPDirect      bool
 	SMSWebhookURL   string
 	SMSWebhookToken string
+	// Email pool — dynamic multi-provider failover with quota tracking.
+	EmailPoolEnabled   bool
+	EmailPoolStrategy  string
+	EmailProvidersJSON string
+}
+
+// FCMConfig holds Firebase Cloud Messaging settings for driver push notifications.
+type FCMConfig struct {
+	ProjectID          string
+	ServerKey          string
+	ServiceAccountJSON string
+	Endpoint           string
 }
 
 // GSTNConfig holds configuration for GSTN / GSP / E-Invoicing (Spec 07).
@@ -150,10 +193,12 @@ type EWayBillConfig struct {
 type AlertConfig struct {
 	TelegramBotToken string
 	TelegramChatID   string
-	WhatsAppProvider string // mock | gupshup | meta (Spec 22 §6)
-	WhatsAppAPIKey   string // gupshup
-	WhatsAppToken    string // meta cloud API
+	WhatsAppProvider string // mock | gupshup | meta | evolution | webhook (Spec 22 §6)
+	WhatsAppAPIKey   string // gupshup / evolution / webhook
+	WhatsAppToken    string // meta cloud API / webhook
 	WhatsAppPhoneID  string // meta cloud API phone number id
+	WhatsAppURL      string // evolution / generic webhook
+	WhatsAppInstance string // evolution instance name
 }
 
 // ExperimentConfig configures the server-side A/B experiment framework.
@@ -413,9 +458,11 @@ func Load() *Config {
 		TelegramBotToken: getEnv("ALERT_TELEGRAM_BOT_TOKEN", os.Getenv("FOUNDER_TELEGRAM_BOT_TOKEN")),
 		TelegramChatID:   getEnv("ALERT_TELEGRAM_CHAT_ID", os.Getenv("FOUNDER_TELEGRAM_CHAT_ID")),
 		WhatsAppProvider: getEnv("WHATSAPP_PROVIDER", "mock"),
-		WhatsAppAPIKey:   getEnv("WHATSAPP_GUPSHUP_API_KEY", ""),
-		WhatsAppToken:    getEnv("WHATSAPP_META_TOKEN", ""),
-		WhatsAppPhoneID:  getEnv("WHATSAPP_META_PHONE_ID", ""),
+		WhatsAppAPIKey:   getEnv("WHATSAPP_GUPSHUP_API_KEY", getEnv("WHATSAPP_API_KEY", "")),
+		WhatsAppToken:    getEnv("WHATSAPP_META_TOKEN", getEnv("WHATSAPP_TOKEN", "")),
+		WhatsAppPhoneID:  getEnv("WHATSAPP_META_PHONE_ID", getEnv("WHATSAPP_PHONE_ID", "")),
+		WhatsAppURL:      getEnv("WHATSAPP_URL", getEnv("WHATSAPP_EVOLUTION_URL", "")),
+		WhatsAppInstance: getEnv("WHATSAPP_INSTANCE", getEnv("WHATSAPP_EVOLUTION_INSTANCE", "default")),
 	}
 
 	// Spec 05 §7, Spec 07 — E-Way Bill lifecycle worker configuration.
@@ -471,14 +518,42 @@ func Load() *Config {
 	}
 	cfg.WorkerLeaderLock = getEnvBool("WORKER_LEADER_LOCK", true)
 
+	smtpPass := os.Getenv("SMTP_PASSWORD")
+	if smtpPass == "" {
+		smtpPass = os.Getenv("SMTP_PASS")
+	}
+	smtpPass = strings.ReplaceAll(smtpPass, " ", "")
+
 	cfg.Notify = NotifyConfig{
-		SMTPHost:        os.Getenv("SMTP_HOST"),
-		SMTPPort:        os.Getenv("SMTP_PORT"),
-		SMTPUser:        os.Getenv("SMTP_USER"),
-		SMTPPassword:    os.Getenv("SMTP_PASSWORD"),
-		SMTPFrom:        os.Getenv("SMTP_FROM"),
-		SMSWebhookURL:   os.Getenv("SMS_WEBHOOK_URL"),
-		SMSWebhookToken: os.Getenv("SMS_WEBHOOK_TOKEN"),
+		SMTPHost:           os.Getenv("SMTP_HOST"),
+		SMTPPort:           os.Getenv("SMTP_PORT"),
+		SMTPUser:           os.Getenv("SMTP_USER"),
+		SMTPPassword:       smtpPass,
+		SMTPFrom:           os.Getenv("SMTP_FROM"),
+		SMTPDirect:         getEnvBool("SMTP_DIRECT", false) || strings.EqualFold(os.Getenv("SMTP_HOST"), "direct"),
+		SMSWebhookURL:      os.Getenv("SMS_WEBHOOK_URL"),
+		SMSWebhookToken:    os.Getenv("SMS_WEBHOOK_TOKEN"),
+		EmailPoolEnabled:   getEnvBool("EMAIL_POOL_ENABLED", true),
+		EmailPoolStrategy:  getEnv("EMAIL_POOL_STRATEGY", getEnv("EMAIL_PROVIDER_STRATEGY", "priority")),
+		EmailProvidersJSON: os.Getenv("EMAIL_PROVIDERS_JSON"),
+	}
+	cfg.Comm = CommConfig{
+		OutboxWorker: getEnvBool("COMM_OUTBOX_WORKER", true),
+	}
+
+	// Google OAuth ("Sign in with Google") — zero-cost web identity.
+	cfg.Google = GoogleConfig{
+		ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+		ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+		RedirectURL:  getEnv("GOOGLE_REDIRECT_URL", ""),
+	}
+
+	// FCM Push Notification configuration for driver mobile apps.
+	cfg.FCM = FCMConfig{
+		ProjectID:          os.Getenv("FCM_PROJECT_ID"),
+		ServerKey:          os.Getenv("FCM_SERVER_KEY"),
+		ServiceAccountJSON: getEnv("FCM_SERVICE_ACCOUNT", os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")),
+		Endpoint:           os.Getenv("FCM_ENDPOINT"),
 	}
 
 	if err := cfg.Validate(); err != nil {

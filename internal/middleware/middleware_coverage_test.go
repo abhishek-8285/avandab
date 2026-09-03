@@ -474,6 +474,7 @@ func TestSPAMiddleware_SPAButDownloadPathBypasses(t *testing.T) {
 		"/uploads/image.png",
 		"/robots.txt",
 		"/sitemap.xml",
+		"/llms.txt",
 	}
 	for _, p := range paths {
 		var captured http.ResponseWriter
@@ -515,6 +516,7 @@ func TestIsDownloadPath_Coverage(t *testing.T) {
 	assert.True(t, isDownloadPath("/uploads/photo.jpg"))
 	assert.True(t, isDownloadPath("/robots.txt"))
 	assert.True(t, isDownloadPath("/sitemap.xml"))
+	assert.True(t, isDownloadPath("/llms.txt"))
 	assert.False(t, isDownloadPath("/dashboard"))
 	assert.False(t, isDownloadPath("/api/trips"))
 	assert.False(t, isDownloadPath("/"))

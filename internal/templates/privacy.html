@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Privacy Policy - Avandab</title>
-    <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+    <title>{{if .Title}}{{.Title}} - Avandab{{else}}Privacy Policy - Avandab{{end}}</title>
+    {{template "seo_head.html" .}}
+    <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
     <link rel="stylesheet" href="/static/css/fonts.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link rel="stylesheet" href="/static/css/material-icons.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link rel="stylesheet" href="/static/css/material-symbols.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
@@ -103,7 +104,7 @@
     </main>
 
     {{template "cookie-consent" .}}
-    <script src="/static/js/loader.js?v=20260818"></script>
-    <script src="/static/js/theme.js?v={{if .Version}}{{.Version}}{{else}}20260820{{end}}"></script>
+    <script src="/static/js/loader.js?v=20260818" defer></script>
+    <script src="/static/js/theme.js?v={{if .Version}}{{.Version}}{{else}}20260820{{end}}" defer></script>
 </body>
 </html>

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -62,6 +63,84 @@ func (m metaSender) send(ctx context.Context, phone, text string) error {
 	req.Header.Set("Authorization", "Bearer "+m.token)
 	req.Header.Set("Content-Type", "application/json")
 	return doWhatsAppHTTP(m.http, req)
+}
+
+// evolutionSender posts to Evolution API v1/v2 endpoint.
+type evolutionSender struct {
+	baseURL  string
+	instance string
+	apiKey   string
+	http     *http.Client
+}
+
+func (e evolutionSender) send(ctx context.Context, phone, text string) error {
+	if e.baseURL == "" {
+		return fmt.Errorf("evolution: missing base url")
+	}
+	instance := e.instance
+	if instance == "" {
+		instance = "default"
+	}
+	base := strings.TrimRight(e.baseURL, "/")
+	var endpoint string
+	if strings.Contains(base, "/message/sendText") {
+		endpoint = base
+	} else {
+		endpoint = fmt.Sprintf("%s/message/sendText/%s", base, instance)
+	}
+	payload, err := json.Marshal(map[string]any{
+		"number": phone,
+		"text":   text,
+	})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if e.apiKey != "" {
+		req.Header.Set("apikey", e.apiKey)
+	}
+	return doWhatsAppHTTP(e.http, req)
+}
+
+// webhookSender posts to a generic webhook HTTP adapter.
+type webhookSender struct {
+	url    string
+	apiKey string
+	token  string
+	http   *http.Client
+}
+
+func (w webhookSender) send(ctx context.Context, phone, text string) error {
+	if w.url == "" {
+		return fmt.Errorf("generic webhook: missing url")
+	}
+	payload, err := json.Marshal(map[string]any{
+		"recipient": phone,
+		"phone":     phone,
+		"number":    phone,
+		"to":        phone,
+		"message":   text,
+		"text":      text,
+	})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, w.url, bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if w.apiKey != "" {
+		req.Header.Set("apikey", w.apiKey)
+	}
+	if w.token != "" {
+		req.Header.Set("Authorization", "Bearer "+w.token)
+	}
+	return doWhatsAppHTTP(w.http, req)
 }
 
 func doWhatsAppHTTP(c *http.Client, req *http.Request) error {

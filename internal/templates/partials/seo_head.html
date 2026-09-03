@@ -1,0 +1,23 @@
+{{/* Shared SEO head — descriptions, canonical, robots, OG/Twitter, JSON-LD.
+  Expects: .Title, .SEODescription, .CanonicalPath, .NoIndex, .OGImage, .OGType, .SEOJSONLD
+  Safe for map data (missing keys = empty) and struct data (fields must exist on pd structs in app.go). */}}
+{{if .SEODescription}}<meta name="description" content="{{.SEODescription}}">{{else}}<meta name="description" content="Avandab - Modern Fleet & Logistics Operations for Indian transporters">{{end}}
+{{if .CanonicalPath}}<link rel="canonical" href="https://avandab.com{{.CanonicalPath}}">{{end}}
+{{if .NoIndex}}<meta name="robots" content="noindex, follow">{{end}}
+<meta name="theme-color" content="#2563eb">
+<meta property="og:site_name" content="Avandab">
+<meta property="og:type" content="{{if .OGType}}{{.OGType}}{{else}}website{{end}}">
+<meta property="og:title" content="{{if .Title}}{{.Title}} - Avandab{{else}}Avandab - Modern Fleet &amp; Logistics Operations{{end}}">
+<meta property="og:description" content="{{if .SEODescription}}{{.SEODescription}}{{else}}Avandab - Modern Fleet &amp; Logistics Operations for Indian transporters{{end}}">
+{{if .CanonicalPath}}<meta property="og:url" content="https://avandab.com{{.CanonicalPath}}">{{end}}
+<meta property="og:image" content="{{if .OGImage}}{{.OGImage}}{{else}}https://avandab.com/static/icons/icon-512.png{{end}}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{if .Title}}{{.Title}} - Avandab{{else}}Avandab - Modern Fleet &amp; Logistics Operations{{end}}">
+<meta name="twitter:description" content="{{if .SEODescription}}{{.SEODescription}}{{else}}Avandab - Modern Fleet &amp; Logistics Operations for Indian transporters{{end}}">
+<meta name="twitter:image" content="{{if .OGImage}}{{.OGImage}}{{else}}https://avandab.com/static/icons/icon-512.png{{end}}">
+<link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+{{if .CanonicalPath}}<link rel="alternate" hreflang="en" href="https://avandab.com{{.CanonicalPath}}"><link rel="alternate" hreflang="x-default" href="https://avandab.com{{.CanonicalPath}}">{{end}}
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Avandab","url":"https://avandab.com/","logo":"https://avandab.com/static/icons/icon-512.png","contactPoint":[{"@type":"ContactPoint","telephone":"+91-8285336507","contactType":"customer service","areaServed":"IN"}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Avandab","url":"https://avandab.com/","potentialAction":{"@type":"SearchAction","target":"https://avandab.com/search?q={query}","query-input":"required name=query"}}</script>
+{{if .SEOJSONLD}}{{.SEOJSONLD}}{{end}}

@@ -5,12 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <title>{{.Title}} - Avandab</title>
+    {{if .CanonicalPath}}<link rel="canonical" href="https://avandab.com{{.CanonicalPath}}">{{end}}
+    {{if .NoIndex}}<meta name="robots" content="noindex, follow">{{else if .CanonicalPath}}<meta name="robots" content="index, follow">{{else}}<meta name="robots" content="noindex, follow">{{end}}
+    {{if .SEODescription}}<meta name="description" content="{{.SEODescription}}">{{end}}
+    <meta name="theme-color" content="#2563eb">
+    <meta property="og:site_name" content="Avandab">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{.Title}} - Avandab">
+    {{if .SEODescription}}<meta property="og:description" content="{{.SEODescription}}">{{end}}
+    {{if .CanonicalPath}}<meta property="og:url" content="https://avandab.com{{.CanonicalPath}}">{{end}}
+    <meta property="og:image" content="https://avandab.com/static/icons/icon-512.png">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{.Title}} - Avandab">
+    {{if .SEODescription}}<meta name="twitter:description" content="{{.SEODescription}}">{{end}}
+    <meta name="twitter:image" content="https://avandab.com/static/icons/icon-512.png">
     <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+    <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
     <link rel="stylesheet" href="/static/css/material-icons.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link rel="stylesheet" href="/static/css/fonts.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link rel="stylesheet" href="/static/css/material-symbols.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link href="https://api.fontshare.com/v2/css?f[]=satoshi@700,500,400&display=swap" rel="stylesheet">
-    <script src="/static/js/loader.js?v=20260818"></script>
+    <script src="/static/js/loader.js?v=20260818" defer></script>
     <script type="module" src="/static/js/datastar.js?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}" defer></script>
     <link rel="stylesheet" href="/static/css/tailwind.css?v={{if .Version}}{{.Version}}{{else}}20260821{{end}}">
     <link rel="stylesheet" href="/static/css/app.css?v={{if .Version}}{{.Version}}{{else}}20260821{{end}}">
@@ -54,23 +70,55 @@
     </div>
 
     {{if .FlashError}}
-    <div class="fixed bottom-4 right-4 safe-bottom safe-right max-w-md w-full bg-status-alert/10 border-l-4 border-status-alert text-status-alert p-4 rounded-xl shadow-xl flex items-start justify-between z-50">
-        <span class="flex-1 text-sm font-medium">{{.FlashError}}</span>
-        <button type="button" class="flash-dismiss ml-2 text-status-alert hover:text-status-alert focus:outline-none flex items-center justify-center min-h-[32px] min-w-[32px]" aria-label="Dismiss error" onclick="this.parentElement.remove()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    <aside id="flash-toast-error" class="flash-toast fixed bottom-4 right-4 safe-bottom safe-right max-w-md w-full bg-surface-container-lowest dark:bg-surface-container-low border border-border-subtle border-l-4 border-l-status-alert text-on-surface p-4 rounded-xl shadow-2xl flex items-start gap-3 z-50 transition-all duration-300" role="alert" aria-live="assertive">
+        <div class="p-1.5 rounded-lg bg-status-alert/10 text-status-alert shrink-0 mt-0.5">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+        </div>
+        <div class="flex-1 min-w-0">
+            <div class="text-xs font-bold text-status-alert uppercase tracking-wider mb-0.5">Notice</div>
+            <div class="text-sm font-medium text-on-surface leading-snug break-words">{{.FlashError}}</div>
+        </div>
+        <button type="button" class="flash-dismiss text-text-muted hover:text-on-surface p-1 rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-center shrink-0 cursor-pointer border-0 bg-transparent" aria-label="Dismiss error" onclick="dismissFlashToast(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
-    </div>
+    </aside>
     {{end}}
 
     {{if .FlashSuccess}}
-    <div class="fixed bottom-4 right-4 safe-bottom safe-right max-w-md w-full bg-status-success/10 border-l-4 border-status-success text-status-success p-4 rounded-xl shadow-xl flex items-start justify-between z-50">
-        <span class="flex-1 text-sm font-medium">{{.FlashSuccess}}</span>
-        <button type="button" class="flash-dismiss ml-2 text-status-success hover:text-status-success focus:outline-none flex items-center justify-center min-h-[32px] min-w-[32px]" aria-label="Dismiss message" onclick="this.parentElement.remove()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+    <aside id="flash-toast-success" class="flash-toast fixed bottom-4 right-4 safe-bottom safe-right max-w-md w-full bg-surface-container-lowest dark:bg-surface-container-low border border-border-subtle border-l-4 border-l-status-success text-on-surface p-4 rounded-xl shadow-2xl flex items-start gap-3 z-50 transition-all duration-300" role="status" aria-live="polite">
+        <div class="p-1.5 rounded-lg bg-status-success/10 text-status-success shrink-0 mt-0.5">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="flex-1 min-w-0">
+            <div class="text-xs font-bold text-status-success uppercase tracking-wider mb-0.5">Success</div>
+            <div class="text-sm font-medium text-on-surface leading-snug break-words">{{.FlashSuccess}}</div>
+        </div>
+        <button type="button" class="flash-dismiss text-text-muted hover:text-on-surface p-1 rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-center shrink-0 cursor-pointer border-0 bg-transparent" aria-label="Dismiss message" onclick="dismissFlashToast(this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
         </button>
-    </div>
+    </aside>
     {{end}}
 
+    <script>
+        function dismissFlashToast(el) {
+            var toast = (el && el.closest) ? el.closest('.flash-toast') : (el ? el.parentElement : null);
+            if (toast) {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(8px)';
+                setTimeout(function() { toast.remove(); }, 250);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            var toasts = document.querySelectorAll('.flash-toast');
+            toasts.forEach(function(toast) {
+                setTimeout(function() {
+                    if (toast && toast.parentNode) {
+                        dismissFlashToast(toast);
+                    }
+                }, 6000);
+            });
+        });
+    </script>
     <script src="/static/js/theme.js?v={{if .Version}}{{.Version}}{{else}}20260820{{end}}"></script>
 </body>
 </html>

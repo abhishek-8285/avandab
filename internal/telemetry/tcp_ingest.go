@@ -165,7 +165,31 @@ func (s *TCPIngestServer) handleConnection(ctx context.Context, conn net.Conn) {
 			continue
 		}
 
-		// 2. GT06 / Concox Binary Hex Packet (0x78 0x78 or 0x79 0x79)
+		// 2. Teltonika Binary Packet (Handshake 0x00 0x0F or Codec 8 0x00 0x00 0x00 0x00)
+		if len(packet) >= 2 && packet[0] == 0x00 {
+			telRes, telErr := providers.ParseTeltonikaPacket(packet, sessionIMEI)
+			if telErr == nil && telRes != nil {
+				if telRes.IMEI != "" {
+					sessionIMEI = telRes.IMEI
+				}
+				if len(telRes.ACKResponse) > 0 {
+					_ = conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+					if _, writeErr := conn.Write(telRes.ACKResponse); writeErr != nil {
+						s.logger.Warn("failed to send Teltonika ACK to device", "imei", sessionIMEI, "error", writeErr)
+					}
+				}
+				for _, f := range telRes.Frames {
+					if f != nil && f.IMEI != "" {
+						if ingestErr := s.ingestor.IngestAsync(ctx, *f); ingestErr != nil {
+							s.logger.Error("teltonika GPS ingest failed", "imei", f.IMEI, "error", ingestErr)
+						}
+					}
+				}
+				continue
+			}
+		}
+
+		// 3. GT06 / Concox Binary Hex Packet (0x78 0x78 or 0x79 0x79)
 		res, err := providers.ParseGT06Packet(packet, sessionIMEI)
 		if err != nil {
 			s.logger.Debug("unknown packet format", "remote", remoteAddr, "error", err)

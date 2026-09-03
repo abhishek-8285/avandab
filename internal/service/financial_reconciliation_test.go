@@ -609,7 +609,7 @@ func TestFinancialReconciliation_DoubleBookingKharchaGuardAndPNL(t *testing.T) {
 	`, tenantID, tripID, driverID)
 
 	pnlSvc := service.NewPNLService(db)
-	snapshot, err := pnlSvc.GenerateDailySnapshot(context.Background(), tenantID, time.Now())
+	snapshot, err := pnlSvc.GenerateDailySnapshot(context.Background(), tenantID, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("GenerateDailySnapshot failed: %v", err)
 	}

@@ -52,6 +52,7 @@ import (
 	"transport-app/internal/maintenance"
 	"transport-app/internal/middleware"
 	"transport-app/internal/mqttservice"
+	fcmnotifications "transport-app/internal/notifications"
 	"transport-app/internal/openapispec"
 	"transport-app/internal/operations/audit"
 	"transport-app/internal/operations/dashboard"
@@ -97,6 +98,7 @@ import (
 	controlTowerAPIHandlers "transport-app/internal/controltower/presentation/api"
 
 	// Shared infrastructure
+	"transport-app/internal/comm"
 	"transport-app/internal/eta"
 	"transport-app/internal/events"
 	"transport-app/internal/features"
@@ -137,6 +139,95 @@ func agentRequestTimeout(d time.Duration) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// seoSitemap is the single source of truth for /sitemap.xml. Only indexable
+// public pages are listed — auth (/login, /register) and private app routes
+// (/dashboard, /pay/, /share, /api/, /customer/) are intentionally omitted.
+const seoSitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://avandab.com/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://avandab.com/contact-us</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://avandab.com/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://avandab.com/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://avandab.com/refunds</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://avandab.com/features/dashboard</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://avandab.com/features/trips</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://avandab.com/features/routes</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://avandab.com/features/bookings</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://avandab.com/features/vehicles</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://avandab.com/features/drivers</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://avandab.com/features/customers</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://avandab.com/features/invoices</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://avandab.com/features/payments</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://avandab.com/features/reports</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://avandab.com/features/audit-logs</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://avandab.com/features/settings</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://avandab.com/features/users</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://avandab.com/features/company</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://avandab.com/features/kharcha</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://avandab.com/features/assistant</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+</urlset>`
+
+const seoRobots = "User-agent: *\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /drivers\nDisallow: /vehicles\nDisallow: /customers\nDisallow: /routes\nDisallow: /invoices\nDisallow: /payments\nDisallow: /reports\nDisallow: /settings\nDisallow: /users\nDisallow: /login\nDisallow: /register\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /uploads/\n" +
+	"# AI search / assistant crawlers — allowed on public pages only, same rules as (*).\n" +
+	"User-agent: GPTBot\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: ChatGPT-User\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: ClaudeBot\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: anthropic-ai\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: CCBot\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: PerplexityBot\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: Google-Extended\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: Applebot-Extended\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: Meta-ExternalAgent\nAllow: /$\nAllow: /contact-us\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"Sitemap: https://avandab.com/sitemap.xml\n"
+
+// seoLLMs is the /llms.txt body — a machine-readable summary so AI assistants
+// cite public pages accurately and never invent private URLs.
+const seoLLMs = "# Avandab\n\n" +
+	"> Avandab replaces WhatsApp, spreadsheets and calls with one live cockpit — dispatch, track, e-POD, GST invoice and payments for Indian fleets.\n\n" +
+	"- Home: https://avandab.com/\n" +
+	"- Contact & support status: https://avandab.com/contact-us\n" +
+	"- Privacy: https://avandab.com/privacy\n" +
+	"- Terms: https://avandab.com/terms\n" +
+	"- Refunds: https://avandab.com/refunds\n\n" +
+	"## Features\n\n" +
+	"- Operations Cockpit: https://avandab.com/features/dashboard\n" +
+	"- Live Dispatch & Trips: https://avandab.com/features/trips\n" +
+	"- Route Optimization: https://avandab.com/features/routes\n" +
+	"- Bookings & Requests: https://avandab.com/features/bookings\n" +
+	"- Vehicle Fleet & Maintenance: https://avandab.com/features/vehicles\n" +
+	"- Driver Licensing & Directory: https://avandab.com/features/drivers\n" +
+	"- Customer Directory: https://avandab.com/features/customers\n" +
+	"- Invoices & Receipts: https://avandab.com/features/invoices\n" +
+	"- Safe & Easy Payments: https://avandab.com/features/payments\n" +
+	"- Fleet & Revenue Reports: https://avandab.com/features/reports\n" +
+	"- Audit Logs & Compliance: https://avandab.com/features/audit-logs\n" +
+	"- System & Workspace Settings: https://avandab.com/features/settings\n" +
+	"- Team & User Management: https://avandab.com/features/users\n" +
+	"- Company Profile & Onboarding: https://avandab.com/features/company\n" +
+	"- Expense Ledger (Kharcha): https://avandab.com/features/kharcha\n" +
+	"- AI Operations Assistant: https://avandab.com/features/assistant\n\n" +
+	"## Notes\n\n" +
+	"- Public pages only. App routes (/dashboard, /bookings, /trips, /pay/, /share, /api/, /customer/) require login and must not be cited as public links.\n" +
+	"- Support: support@avandab.com, dispatch hotline +91 8285336507.\n"
+
+func serveSitemap(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/xml")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	_, _ = w.Write([]byte(seoSitemap))
+}
+
+func serveRobots(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	_, _ = w.Write([]byte(seoRobots))
+}
+
+func serveLLMs(w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=86400")
+	_, _ = w.Write([]byte(seoLLMs))
 }
 
 func main() {
@@ -222,13 +313,31 @@ func main() {
 	telegramProvider := alertchannels.NewTelegramProvider(cfg, logger)
 	stubProviders := alertchannels.NewStubProviders(logger)
 
-	emailSender := notifications.NewSMTPEmailSender(notifications.SMTPConfig{
-		Host:     cfg.Notify.SMTPHost,
-		Port:     cfg.Notify.SMTPPort,
-		User:     cfg.Notify.SMTPUser,
-		Password: cfg.Notify.SMTPPassword,
-		From:     cfg.Notify.SMTPFrom,
-	})
+	var emailSender notifications.RichEmailSender
+	var emailPool *notifications.EmailPool
+	if cfg.Notify.EmailPoolEnabled {
+		// Explicit JSON from config takes precedence; otherwise auto-assemble
+		// Brevo/Resend/Primary/Direct from env — zero extra cost.
+		if cfg.Notify.EmailProvidersJSON != "" {
+			_ = os.Setenv("EMAIL_PROVIDERS_JSON", cfg.Notify.EmailProvidersJSON)
+		}
+		if cfg.Notify.EmailPoolStrategy != "" {
+			_ = os.Setenv("EMAIL_POOL_STRATEGY", cfg.Notify.EmailPoolStrategy)
+		}
+		pool := notifications.NewEmailPoolFromEnv(database, logger)
+		emailPool = pool
+		emailSender = pool
+		logger.Info("email provider pool enabled", "strategy", pool.Strategy(), "providers", len(pool.ListProviders()))
+	} else {
+		emailSender = notifications.NewEmailSenderFromConfig(notifications.SMTPConfig{
+			Host:     cfg.Notify.SMTPHost,
+			Port:     cfg.Notify.SMTPPort,
+			User:     cfg.Notify.SMTPUser,
+			Password: cfg.Notify.SMTPPassword,
+			From:     cfg.Notify.SMTPFrom,
+			Direct:   cfg.Notify.SMTPDirect,
+		})
+	}
 	smsSender := notifications.NewWebhookSMSSender(cfg.Notify.SMSWebhookURL, cfg.Notify.SMSWebhookToken)
 	notifSvc := notifications.NewServiceWithChannels(emailSender, smsSender)
 
@@ -248,6 +357,8 @@ func main() {
 		"api_key":         cfg.Alerts.WhatsAppAPIKey,
 		"token":           cfg.Alerts.WhatsAppToken,
 		"phone_number_id": cfg.Alerts.WhatsAppPhoneID,
+		"url":             cfg.Alerts.WhatsAppURL,
+		"instance":        cfg.Alerts.WhatsAppInstance,
 	}
 	whatsappChannel := alertchannels.NewLoggingProvider(
 		alertchannels.NewWhatsAppProvider(cfg.Alerts.WhatsAppProvider, whatsappCreds, logger),
@@ -329,6 +440,7 @@ func main() {
 	// Initialize handlers app
 	resetTokens := auth.NewResetTokenStore(0)
 	app := handlers.NewApp(services, cfg, authStore, database, authSvc, resetTokens)
+	app.OTPStore = auth.NewOTPStore(0)
 	// Spec 22 S9 — compliance radar (docs 30/7/1d + EWB 12/4h) fed by the
 	// existing pipeline; sweep is leader-elected hourly below.
 	complianceRadar := service.NewComplianceRadarService(database, alertEngine, logger)
@@ -346,6 +458,15 @@ func main() {
 	}
 	app.Cache = appCache
 	app.Notify = notifSvc
+
+	// "Sign in with Google" — zero-cost web identity (Phase 1). Empty client
+	// id keeps the flow disabled: routes redirect to /login with a flash
+	// message and the UI hides the button. Degradation, not breakage.
+	if cfg.Google.ClientID != "" && cfg.Google.ClientSecret != "" {
+		app.GoogleOAuth = auth.NewGoogleOAuthConfig(
+			cfg.Google.ClientID, cfg.Google.ClientSecret, cfg.Google.RedirectURL)
+	}
+	googleAuth := handlers.NewGoogleOAuthHandlers(app, app.GoogleOAuth)
 
 	// Standardized route locations (gap #46): best-effort forward geocoding
 	// of route endpoints whenever a Nominatim-compatible service is set.
@@ -381,6 +502,20 @@ func main() {
 	app.Settlements = handlers.NewSettlementHandlers(app, services.Settlements, authSvc)
 	app.Documents = handlers.NewDocumentHandlers(app, services.Documents, authSvc)
 	app.FilesAPI = handlers.NewFilesAPIHandlers(app, services.Files, authSvc)
+
+	// FCM Push Notification Engine for Driver Apps & Real-time Alerts
+	fcmConfig := fcmnotifications.FCMConfig{
+		ProjectID:          cfg.FCM.ProjectID,
+		ServerKey:          cfg.FCM.ServerKey,
+		ServiceAccountJSON: cfg.FCM.ServiceAccountJSON,
+		Endpoint:           cfg.FCM.Endpoint,
+	}
+	fcmService := fcmnotifications.NewFCMService(database, fcmConfig, logger)
+	fcmService.SubscribeEvents(eventBus)
+
+	// Comm Event Subscriber: automatically queues transactional emails (invoices, POD receipts, auth)
+	commSubscriber := comm.NewEventSubscriber(database, logger)
+	commSubscriber.SubscribeEvents(eventBus)
 
 	// ── Ops: error reporting, login audit, dashboard ─────────────────────
 	reporter := opserrors.NewReporter(notifSvc, opserrors.NewSQLiteStore(database), cfg.AppEnv, Version)
@@ -457,6 +592,9 @@ func main() {
 	razorpayOrderUC := paymentApp.NewCreateRazorpayOrderUseCase(sqlUoW, razorpayClient, cfg.RazorpayKeyID)
 	razorpayVerifyUC := paymentApp.NewVerifyRazorpayPaymentUseCase(sqlUoW, recordPayment, razorpayClient, cfg.RazorpayKeySecret, realClock)
 	paymentAPIHandler := paymentHandlers.NewAPIPaymentHandler(recordPayment, getPayment, listPayments, reversePayment, listPaymentsByInvoice, razorpayWebhookUC, razorpayOrderUC, razorpayVerifyUC, authSvc)
+	if app.Payments != nil {
+		app.Payments.SetRazorpayUseCases(razorpayOrderUC, razorpayVerifyUC)
+	}
 	integrationHandler := integration.NewHandler(integration.LoadConfig(), authSvc, database)
 	driverAppSvc := driverApp.NewDriverAppService(database)
 	driverLifecycleAPIHandler := driverAPIHandlers.NewDriverLifecycleAPIHandler(driverAppSvc)
@@ -516,106 +654,7 @@ func main() {
 
 	// Direct SEO Endpoints
 	r.Get("/sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/xml")
-		sitemap := `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://avandab.com/</loc>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/login</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/register</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/dashboard</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/trips</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/routes</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/bookings</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/vehicles</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/drivers</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/customers</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/invoices</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/payments</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/reports</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/audit-logs</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/settings</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/users</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/company</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/kharcha</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/assistant</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-</urlset>`
-		_, _ = w.Write([]byte(sitemap))
+		serveSitemap(w)
 	})
 
 	// API discovery and OpenAPI spec (public)
@@ -769,6 +808,11 @@ func main() {
 	r.With(middleware.RateLimitDistributed(appCache, 10)).Post("/api/v1/auth/forgot-password", app.Auth.ForgotPasswordAPI)
 	r.With(middleware.RateLimitDistributed(appCache, 10)).Post("/api/v1/auth/reset-password", app.Auth.ResetPasswordAPI)
 
+	// Public: SMS OTP phone verification (Phase 4) — rate-limited against
+	// free-tier SMS credits abuse (30s throttle also enforced in OTPStore.
+	r.With(middleware.RateLimitDistributed(appCache, 5)).Post("/api/v1/auth/otp/send", app.OTP.SendOTP)
+	r.With(middleware.RateLimitDistributed(appCache, 15)).Post("/api/v1/auth/otp/verify", app.OTP.VerifyOTP)
+
 	// ── AI Agent (operations assistant) — built after RAG below ─────────
 	var agentAPI *agent.Handler
 	var approvalSvc *agent.ApprovalService
@@ -854,6 +898,8 @@ func main() {
 		r.Get("/api/v1/drivers/me/issues", app.Drivers.ListMyIssues)
 		r.Post("/api/v1/drivers/me/issues", app.Drivers.ReportIssue)
 		r.Post("/api/v1/trips/{id}/deliver-pod", app.Kharcha.DeliverWithPOD)
+		r.With(middleware.ResourcePermission(authSvc, "trips", "update")).Post("/api/v1/driver/trips/{id}/stops/{stopId}/pod", app.Trips.SubmitStopPOD)
+		r.With(middleware.ResourcePermission(authSvc, "trips", "update")).Post("/api/v1/trips/{id}/stops/{stopId}/pod", app.Trips.SubmitStopPOD)
 		r.Post("/api/v1/sos", app.SOS.TriggerSOS)
 		r.Post("/api/sos", app.SOS.TriggerSOS)
 		// Driver expense claims from mobile (Spec 13) — same trips:update
@@ -915,6 +961,20 @@ func main() {
 			Post("/api/expenses/{id}/ocr", kharchaVerifyHandlers.OCRExtract)
 		r.With(middleware.RequirePermission(authSvc, "kharcha", "approve")).
 			Get("/api/expenses/flagged", kharchaVerifyHandlers.FlaggedQueue)
+
+		// ── Dynamic Email Provider Pool (zero-cost relay optimization) ──
+		// Brevo 9k + Resend 3k with quota-aware failover; admin can switch
+		// primary or disable/enable providers at runtime without restart.
+		if emailPool != nil {
+			emailPoolHandler := handlers.NewEmailPoolHandler(app, emailPool)
+			r.Get("/api/admin/email/providers", emailPoolHandler.ListProviders)
+			r.Get("/api/admin/email/usage", emailPoolHandler.GetUsage)
+			r.Get("/api/admin/email/providers/{name}", emailPoolHandler.GetProvider)
+			// Mutations require admin/owner — reuse users:manage gate
+			r.With(middleware.RequirePermission(authSvc, "users", "manage")).Put("/api/admin/email/providers/{name}", emailPoolHandler.UpdateProvider)
+			r.With(middleware.RequirePermission(authSvc, "users", "manage")).Post("/api/admin/email/providers/{name}/switch-primary", emailPoolHandler.SwitchPrimary)
+			r.With(middleware.RequirePermission(authSvc, "users", "manage")).Post("/api/admin/email/providers/{name}/reset-usage", emailPoolHandler.ResetUsage)
+		}
 	})
 
 	// Deprecated v2 alias routes (rewrite to v1) plus /api/v2/health.
@@ -1001,8 +1061,13 @@ func main() {
 		fileServer.ServeHTTP(w, r)
 	})))
 
-	// Uploaded files (logos, documents) - require authentication
+	// Uploaded files (pod photos, signatures, company logos, documents)
 	uploadsServer := http.FileServer(http.Dir(cfg.UploadDir))
+	r.Handle("/uploads/pod/*", http.StripPrefix("/uploads/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=86400")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		uploadsServer.ServeHTTP(w, r)
+	})))
 	r.With(middleware.RequireAuth(authStore, tenantResolver)).Handle("/uploads/*", http.StripPrefix("/uploads/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "private, no-cache")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -1016,130 +1081,23 @@ func main() {
 		r.Get("/", app.Marketing)
 		app.MountPWARoutes(r)
 		r.Get("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "text/plain")
-			_, _ = w.Write([]byte("User-agent: *\nAllow: /\nSitemap: https://avandab.com/sitemap.xml\n"))
+			serveRobots(w)
 		})
 		r.Get("/sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/xml")
-			sitemap := `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://avandab.com/</loc>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/login</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/register</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/privacy</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/terms</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/refunds</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/dashboard</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/trips</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/routes</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/bookings</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/vehicles</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/drivers</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/customers</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/invoices</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/payments</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/reports</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/audit-logs</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/settings</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/users</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/company</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/kharcha</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://avandab.com/features/assistant</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.3</priority>
-  </url>
-</urlset>`
-			_, _ = w.Write([]byte(sitemap))
+			serveSitemap(w)
+		})
+		r.Get("/llms.txt", func(w http.ResponseWriter, r *http.Request) {
+			serveLLMs(w)
 		})
 		r.Get("/login", app.Auth.LoginPage)
 		r.With(middleware.RateLimitDistributed(appCache, 10)).Post("/login", app.Auth.Login)
 		r.Get("/register", app.Auth.RegisterPage)
 		r.With(middleware.RateLimitDistributed(appCache, 10)).Post("/register", app.Auth.Register)
+
+		// Google OAuth — public by design (AGENTS.md rule 5 exception, same
+		// class as telemetry device ingest). Unconfigured → redirect /login.
+		r.With(middleware.RateLimitDistributed(appCache, 20)).Get("/auth/google", googleAuth.Begin)
+		r.With(middleware.RateLimitDistributed(appCache, 20)).Get("/auth/google/callback", googleAuth.Callback)
 		r.Get("/forgot-password", app.Auth.ForgotPasswordPage)
 		r.With(middleware.RateLimitDistributed(appCache, 10)).Post("/forgot-password", app.Auth.SubmitForgotPassword)
 		r.Get("/reset-password", app.Auth.ResetPasswordPage)
@@ -1169,9 +1127,25 @@ func main() {
 			r.With(middleware.RateLimitDistributed(appCache, 30), middleware.NoCache).Get("/share/{token}/data", app.Share.ShareData)
 		})
 
+		// Public Digital e-POD Certificate Viewer (login-free)
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.ContentSecurityPolicy(cfg.LiveMap.CSPEnabled))
+			r.Get("/epod/{tripId}", app.Trips.PublicEPODCertificate)
+			r.Get("/epod/{tripId}/stops/{stopId}", app.Trips.PublicEPODCertificate)
+		})
+
+		// Public Digital Freight Invoice Payment Portal (Spec 11 §5.1) — login-free
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.ContentSecurityPolicy(cfg.LiveMap.CSPEnabled))
+			r.Get("/pay/{invoiceId}", app.Payments.PublicPay)
+			r.With(middleware.RateLimitDistributed(appCache, 20)).Post("/pay/{invoiceId}/razorpay/order", app.Payments.PublicRazorpayOrder)
+			r.With(middleware.RateLimitDistributed(appCache, 20)).Post("/pay/{invoiceId}/razorpay/verify", app.Payments.PublicRazorpayVerify)
+		})
+
 		// Protected routes
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequireAuth(authStore, tenantResolver))
+			r.Use(middleware.RequireCompanyCompliance(services.Settings))
 
 			// Trip share links (Spec 04 §4)
 			r.With(middleware.ResourcePermission(authSvc, "shares", "create")).Post("/trips/{id}/share", app.Share.CreateShare)
@@ -1458,6 +1432,19 @@ func main() {
 	outboxRelay := outbox.NewRelay(database, eventBus, logger)
 	runLeadered("outbox_relay", outboxRelay.Run)
 	go sseHub.Run(ctx) // per-replica: SSE fan-out must live where connections are
+
+	// Comm outbox worker (Phase 2 — email & WhatsApp): delivers comm_outbox rows through
+	// the SMTP adapter and WhatsApp provider. In development when unconfigured, logs captured
+	// messages cleanly.
+	if cfg.Comm.OutboxWorker {
+		var activeSender notifications.EmailSender = emailSender
+		if emailPool == nil && !emailSender.Configured() {
+			activeSender = notifications.NewLogEmailSender(logger)
+		}
+		var activeWASender comm.WhatsAppSender = whatsappChannel
+		commWorker := comm.NewWorker(database, activeSender, activeWASender, logger)
+		runLeadered("comm_outbox", commWorker.Run)
+	}
 
 	if dwellWorker != nil {
 		runLeadered("geofence_dwell", func(ctx context.Context) {

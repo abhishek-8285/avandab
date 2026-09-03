@@ -355,5 +355,6 @@ func isDownloadPath(path string) bool {
 		strings.HasPrefix(path, "/static/") ||
 		strings.HasPrefix(path, "/uploads/") ||
 		path == "/robots.txt" ||
-		path == "/sitemap.xml"
+		path == "/sitemap.xml" ||
+		path == "/llms.txt"
 }

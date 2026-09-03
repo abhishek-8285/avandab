@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"transport-app/internal/auth"
+	"transport-app/internal/operations/notifications"
 	"transport-app/internal/shared"
 )
 
@@ -26,14 +27,57 @@ func setupAuthAPIEnv(t *testing.T) (*httptest.Server, *App, func()) {
 	t.Helper()
 	dbConn, app, _ := setupMobileAPITestEnv(t)
 	app.ResetTokens = auth.NewResetTokenStore(15 * time.Minute)
+	app.OTPStore = auth.NewOTPStore(0)
 	app.Auth = &AuthHandlers{App: app}
+	app.OTP = &OTPHandlers{App: app}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /api/v1/auth/forgot-password", app.Auth.ForgotPasswordAPI)
 	mux.HandleFunc("POST /api/v1/auth/reset-password", app.Auth.ResetPasswordAPI)
+	mux.HandleFunc("POST /api/v1/auth/otp/send", app.OTP.SendOTP)
+	mux.HandleFunc("POST /api/v1/auth/otp/verify", app.OTP.VerifyOTP)
 	srv := httptest.NewServer(mux)
 
 	return srv, app, func() { srv.Close(); dbConn.Close() }
+}
+
+func TestForgotPasswordAPI_SMTPConfigured_EnqueuesOutbox(t *testing.T) {
+	srv, app, cleanup := setupAuthAPIEnv(t)
+	defer cleanup()
+
+	// When SMTP is configured the reset email must go through the durable
+	// comm_outbox queue (Phase 2) instead of being dropped or dev-linked.
+	app.Notify = notifications.NewServiceWithChannels(
+		notifications.NewSMTPEmailSender(notifications.SMTPConfig{
+			Host: "smtp.test", From: "noreply@test",
+		}),
+		nil,
+	)
+
+	_, err := app.DB.Exec(`INSERT INTO tenants (id, name, slug, status) VALUES ('t-acme', 'Acme', 'acme', 'active')`)
+	require.NoError(t, err)
+	_, err = app.DB.Exec(`INSERT INTO users (id, email, password_hash, name, role_id, status, tenant_id)
+		VALUES ('u-reset-2', 'reset2@example.com', 'hash', 'Reset User 2', 5, 'active', 't-acme')`)
+	require.NoError(t, err)
+
+	body, _ := json.Marshal(map[string]string{"email": "reset2@example.com"})
+	resp, err := srv.Client().Post(srv.URL+"/api/v1/auth/forgot-password", "application/json", bytes.NewReader(body))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	var out map[string]interface{}
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&out))
+	// Testing env must never return the raw link — the durable queue takes over.
+	_, hasLink := out["reset_link"]
+	assert.False(t, hasLink)
+
+	var channel, recipient, template, tenantID string
+	err = app.DB.QueryRow(`SELECT channel, recipient, template, tenant_id FROM comm_outbox WHERE recipient = ?`, "reset2@example.com").
+		Scan(&channel, &recipient, &template, &tenantID)
+	require.NoError(t, err, "reset email must be queued in comm_outbox")
+	assert.Equal(t, "email", channel)
+	assert.Equal(t, "password_reset", template)
+	assert.Equal(t, "t-acme", tenantID, "tenant must come from the user record, never hardcoded")
 }
 
 func TestForgotPasswordAPI_UnknownEmail_GenericResponse(t *testing.T) {

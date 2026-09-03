@@ -120,8 +120,8 @@ func TestSelectedDashboard_Index_RedirectWhenNoCompany(t *testing.T) {
 // query param override, and tenant isolation (different tenants both succeed).
 func TestSelectedDashboard_Index_Success(t *testing.T) {
 	db := newDashboardSelectedDB(t)
-	// Seed company_settings with a name so redirect does not trigger (migration 00010 already inserts one, but ensure)
-	_, _ = db.Exec(`INSERT OR REPLACE INTO company_settings (id, company_name, currency, timezone) VALUES (1, 'TestCo', 'INR', 'Asia/Kolkata')`)
+	// Seed company_settings with full compliance details so redirect does not trigger
+	_, _ = db.Exec(`INSERT OR REPLACE INTO company_settings (id, company_name, currency, timezone, address, phone, email) VALUES (1, 'TestCo', 'INR', 'Asia/Kolkata', '123 Logistics St', '+91 9876543210', 'ops@test.co')`)
 	cfg := &config.Config{
 		AppEnv:       "testing",
 		CookieSecret: "test-secret-32",
@@ -183,7 +183,7 @@ func TestSelectedDashboard_Index_Success(t *testing.T) {
 // TestSelectedDashboard_Index_WithoutSession ensures handler handles nil session (auth isolation).
 func TestSelectedDashboard_Index_WithoutSession(t *testing.T) {
 	db := newDashboardSelectedDB(t)
-	_, _ = db.Exec(`INSERT OR REPLACE INTO company_settings (id, company_name) VALUES (1, 'TestCo')`)
+	_, _ = db.Exec(`INSERT OR REPLACE INTO company_settings (id, company_name, address, phone, email) VALUES (1, 'TestCo', '123 Logistics St', '+91 9876543210', 'ops@test.co')`)
 	authSrv := &mockAuthSvc{}
 	app := newDashboardSelectedApp(t, db, nil, authSrv)
 
@@ -358,7 +358,7 @@ func TestSelectedDashboard_Routes_Auth(t *testing.T) {
 	rAllow := chi.NewRouter()
 	tmpAppAllow := newDashboardSelectedApp(t, db, nil, allowSrv)
 	// Seed company for success
-	_, _ = db.Exec(`INSERT OR REPLACE INTO company_settings (id, company_name) VALUES (1, 'TestCo')`)
+	_, _ = db.Exec(`INSERT OR REPLACE INTO company_settings (id, company_name, address, phone, email) VALUES (1, 'TestCo', '123 Logistics St', '+91 9876543210', 'ops@test.co')`)
 	rAllow.With(middleware.ResourcePermission(allowSrv, "dashboard", "read")).Get("/dashboard", tmpAppAllow.Dashboard.Index)
 	req2 := withSession(httptest.NewRequest(http.MethodGet, "/dashboard", nil), "admin-1", "admin")
 	req2 = req2.WithContext(shared.ContextWithTenantID(req2.Context(), shared.DefaultTenant))

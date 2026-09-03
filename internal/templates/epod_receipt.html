@@ -1,0 +1,293 @@
+{{define "epod_receipt.html"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Proof of Delivery (e-POD) · {{.TripNumber}} · {{.CompanyName}} - Avandab</title>
+    <meta name="description" content="Digital proof of delivery receipt — Avandab">
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#2563eb">
+    <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/static/css/tailwind.css">
+    {{template "theme_head.html" .}}
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background: #ffffff !important; color: #000000 !important; }
+            .cert-card { border: 1px solid #cbd5e1 !important; box-shadow: none !important; margin: 0 !important; max-width: 100% !important; }
+            .print-avoid-break { page-break-inside: avoid; break-inside: avoid; }
+        }
+    </style>
+</head>
+<body class="bg-surface-container-low text-on-surface min-h-screen antialiased flex flex-col font-sans">
+    <!-- Top Action Bar (hidden on print) -->
+    <header class="no-print bg-surface-container-lowest border-b border-border-subtle px-4 py-3 sm:px-8 shadow-xs sticky top-0 z-30">
+        <div class="max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <a href="/" class="text-xs font-semibold text-text-muted hover:text-on-surface flex items-center gap-1.5 transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="m15 18-6-6 6-6"/></svg>
+                    Home
+                </a>
+                <span class="text-border-subtle">|</span>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Verified Delivery Certificate
+                </span>
+            </div>
+            <div class="flex items-center gap-2.5">
+                <button onclick="window.print()" class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-primary text-on-primary hover:bg-primary/90 shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/30 cursor-pointer">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+                    Print / Download PDF
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Certificate Container -->
+    <main class="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-8 flex flex-col justify-start">
+        <div class="cert-card bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm p-6 sm:p-10 space-y-8 relative overflow-hidden">
+            <!-- Decorative watermark seal -->
+            <div class="absolute -right-16 -top-16 w-64 h-64 bg-emerald-500/5 rounded-full pointer-events-none blur-2xl"></div>
+
+            <!-- Certificate Header -->
+            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-border-subtle">
+                <div class="flex items-start gap-4">
+                    {{if .CompanyLogo}}
+                    <img src="{{.CompanyLogo}}" alt="{{.CompanyName}}" class="w-14 h-14 rounded-xl object-contain border border-border-subtle bg-surface-container-lowest p-1" />
+                    {{else}}
+                    <div class="w-14 h-14 rounded-xl bg-blue-600 text-white font-black text-xl flex items-center justify-center shadow-xs shrink-0 font-display">
+                        FF
+                    </div>
+                    {{end}}
+                    <div>
+                        <h1 class="text-xl sm:text-2xl font-bold text-on-surface tracking-tight font-display">{{.CompanyName}}</h1>
+                        <p class="text-xs text-text-muted mt-0.5">Automated Freight &amp; Logistics Management System</p>
+                        <div class="mt-2 inline-flex items-center gap-1.5 text-xs text-secondary font-medium">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                            Electronic Proof of Delivery (e-POD)
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-left sm:text-right flex flex-col sm:items-end">
+                    <div class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-mono font-bold bg-surface-container-low text-on-surface border border-border-subtle">
+                        CERT #{{.CertificateNumber}}
+                    </div>
+                    <div class="text-[11px] text-text-muted mt-1.5">
+                        Issued: <span class="font-medium text-on-surface">{{if .DeliveredAt}}{{.DeliveredAt}}{{else if .ArrivalTime}}{{.ArrivalTime}}{{else}}{{.GeneratedAt}}{{end}}</span>
+                    </div>
+                    <div class="mt-2">
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold {{statusBadge .Status}} capitalize">
+                            {{.Status}}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Shipment Metadata Grid -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-xl bg-surface-container-low/70 border border-border-subtle print-avoid-break">
+                <div>
+                    <div class="text-[11px] font-medium text-text-muted uppercase tracking-wider">Trip Number</div>
+                    <div class="text-sm font-bold font-mono text-on-surface mt-0.5">{{.TripNumber}}</div>
+                </div>
+                <div>
+                    <div class="text-[11px] font-medium text-text-muted uppercase tracking-wider">Vehicle Reg No.</div>
+                    <div class="text-sm font-bold font-mono text-on-surface mt-0.5">{{if .VehicleReg}}{{.VehicleReg}}{{else}}—{{end}}</div>
+                </div>
+                <div>
+                    <div class="text-[11px] font-medium text-text-muted uppercase tracking-wider">Driver Assigned</div>
+                    <div class="text-sm font-semibold text-on-surface mt-0.5">
+                        {{if .DriverName}}{{.DriverName}}{{else}}—{{end}}
+                        {{if .DriverPhone}}<span class="block text-[11px] text-text-muted font-normal">{{.DriverPhone}}</span>{{end}}
+                    </div>
+                </div>
+                <div>
+                    <div class="text-[11px] font-medium text-text-muted uppercase tracking-wider">Delivery Timestamp</div>
+                    <div class="text-sm font-semibold text-on-surface mt-0.5">
+                        {{if .DeliveredAt}}{{.DeliveredAt}}{{else if .ArrivalTime}}{{.ArrivalTime}}{{else}}—{{end}}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Consignee & Stop Information Card -->
+            <div class="border border-border-subtle rounded-xl p-5 space-y-4 print-avoid-break">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-sm font-bold text-on-surface uppercase tracking-wider flex items-center gap-2">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-primary"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                        Delivery Stop &amp; Consignee Details
+                    </h2>
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/15 uppercase">
+                        {{.StopType}} {{if .StopSequence}}(Stop #{{.StopSequence}}){{end}}
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div class="space-y-1.5">
+                        <div class="text-text-muted font-medium">Destination / Facility:</div>
+                        <div class="font-semibold text-sm text-on-surface">{{if .LocationName}}{{.LocationName}}{{else}}Main Delivery Point{{end}}</div>
+                        <div class="text-secondary leading-relaxed">{{if .Address}}{{.Address}}{{else}}—{{end}}</div>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="text-text-muted font-medium">Consignee (Receiver):</div>
+                        <div class="font-semibold text-sm text-on-surface">{{if .ConsigneeName}}{{.ConsigneeName}}{{else}}Authorized Consignee{{end}}</div>
+                        <div class="text-secondary">
+                            {{if .ConsigneePhone}}Phone: <span class="font-mono text-on-surface font-medium">{{.ConsigneePhone}}</span>{{end}}
+                            {{if .ConsigneeEmail}}<span class="block">Email: {{.ConsigneeEmail}}</span>{{end}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OTP Verification & Security Seal Banner -->
+            <div class="print-avoid-break">
+                {{if .OTPVerified}}
+                <div class="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-900 dark:text-emerald-200">
+                    <div class="w-9 h-9 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 flex items-center justify-center shrink-0 font-bold text-base">
+                        ✓
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                            ✅ OTP Verified Delivery
+                        </div>
+                        <div class="text-xs text-emerald-800 dark:text-emerald-300/90 mt-0.5">
+                            Handover verified cryptographically via secure single-use consignee PIN authentication{{if .OTPVerifiedAt}} at <span class="font-semibold">{{.OTPVerifiedAt}}</span>{{end}}.
+                        </div>
+                    </div>
+                </div>
+                {{else if .OTPRequired}}
+                <div class="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 text-amber-900 dark:text-amber-200">
+                    <div class="w-9 h-9 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-300 flex items-center justify-center shrink-0 font-bold text-base">
+                        !
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold uppercase tracking-wider">
+                            OTP Verification
+                        </div>
+                        <div class="text-xs text-amber-800 dark:text-amber-300/90 mt-0.5">
+                            OTP delivery verification requirement recorded.
+                        </div>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+
+            <!-- Evidence Section: Digital Signature & Cargo Photo -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 print-avoid-break">
+                <!-- Consignee Signature -->
+                <div class="border border-border-subtle rounded-xl p-5 flex flex-col justify-between space-y-3 bg-surface-container-low/30">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-primary"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                Consignee Digital Signature
+                            </h3>
+                            <span class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded">e-Signed</span>
+                        </div>
+                        <p class="text-[11px] text-text-muted mt-1">Confirmed receipt of freight in sound condition.</p>
+                    </div>
+
+                    <div class="h-36 w-full rounded-lg border border-border-subtle bg-surface-container-lowest flex items-center justify-center p-2 overflow-hidden shadow-2xs">
+                        {{if .SignatureURL}}
+                        <img src="{{.SignatureURL}}" alt="Consignee Signature" class="max-h-full max-w-full object-contain" />
+                        {{else}}
+                        <div class="text-center text-text-muted text-xs space-y-1">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 mx-auto opacity-50"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                            <span>Digital Signature Captured</span>
+                        </div>
+                        {{end}}
+                    </div>
+
+                    <div class="text-[11px] text-secondary flex justify-between items-center pt-1 border-t border-border-subtle">
+                        <span>Signee: <strong class="text-on-surface">{{if .ConsigneeName}}{{.ConsigneeName}}{{else}}Consignee / Agent{{end}}</strong></span>
+                        <span class="font-mono text-text-muted">{{if .DeliveredAt}}{{.DeliveredAt}}{{else if .ArrivalTime}}{{.ArrivalTime}}{{else}}Verified{{end}}</span>
+                    </div>
+                </div>
+
+                <!-- Cargo Delivery Photo -->
+                <div class="border border-border-subtle rounded-xl p-5 flex flex-col justify-between space-y-3 bg-surface-container-low/30">
+                    <div>
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-primary"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                                Delivery Cargo Photo (e-POD)
+                            </h3>
+                            <span class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded">Geotagged</span>
+                        </div>
+                        <p class="text-[11px] text-text-muted mt-1">Proof of unloading and condition upon delivery.</p>
+                    </div>
+
+                    <div class="h-36 w-full rounded-lg border border-border-subtle bg-surface-container-lowest flex items-center justify-center p-2 overflow-hidden shadow-2xs">
+                        {{if .PODURL}}
+                        <img src="{{.PODURL}}" alt="Cargo Delivery Photo" class="max-h-full max-w-full object-contain rounded" />
+                        {{else}}
+                        <div class="text-center text-text-muted text-xs space-y-1">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6 mx-auto opacity-50"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                            <span>Cargo Delivery Photo Attached</span>
+                        </div>
+                        {{end}}
+                    </div>
+
+                    <div class="text-[11px] text-secondary flex justify-between items-center pt-1 border-t border-border-subtle">
+                        <span>Evidence: <strong class="text-on-surface">Unloaded Freight</strong></span>
+                        <span class="font-mono text-text-muted">Direct Upload</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Delivery Remarks / Notes (if present) -->
+            {{if .Notes}}
+            <div class="p-4 rounded-xl bg-surface-container-low border border-border-subtle text-xs space-y-1 print-avoid-break">
+                <span class="font-bold text-secondary uppercase tracking-wider text-[11px]">Delivery Remarks &amp; Observations:</span>
+                <p class="text-on-surface italic">"{{.Notes}}"</p>
+            </div>
+            {{end}}
+
+            <!-- Multi-Stop Leg Timeline (if multi-stop trip) -->
+            {{if .Stops}}
+            <div class="border-t border-border-subtle pt-6 space-y-3 print-avoid-break">
+                <h3 class="text-xs font-bold text-on-surface uppercase tracking-wider">Multi-Stop Journey Execution Summary</h3>
+                <div class="space-y-2">
+                    {{range .Stops}}
+                    <div class="flex items-center justify-between p-3 rounded-lg border {{if .IsSelected}}border-primary/40 bg-primary/5{{else}}border-border-subtle bg-surface-container-low/40{{end}} text-xs">
+                        <div class="flex items-center gap-3">
+                            <span class="w-6 h-6 rounded-full {{if eq .Status "completed"}}bg-emerald-500/10 text-emerald-600 dark:text-emerald-400{{else}}bg-surface-container-highest text-secondary{{end}} font-bold flex items-center justify-center text-[11px] font-mono shrink-0">
+                                {{.StopSequence}}
+                            </span>
+                            <div>
+                                <div class="font-semibold text-on-surface flex items-center gap-2">
+                                    {{.LocationName}}
+                                    <span class="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-surface-container-lowest text-text-muted border border-border-subtle">{{.StopType}}</span>
+                                </div>
+                                <div class="text-[11px] text-text-muted">{{if .Address}}{{.Address}}{{end}} {{if .ConsigneeName}}· Recv: {{.ConsigneeName}}{{end}}</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="capitalize px-2 py-0.5 rounded text-[11px] font-semibold {{statusBadge .Status}}">{{.Status}}</span>
+                            {{if .ActualArrival}}<div class="text-[10px] text-text-muted mt-0.5 font-mono">{{.ActualArrival}}</div>{{end}}
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+            {{end}}
+
+            <!-- Certificate Security Verification Footer -->
+            <div class="border-t border-border-subtle pt-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 text-[11px] text-text-muted print-avoid-break">
+                <div class="space-y-1">
+                    <div class="font-mono text-[10px] text-secondary">
+                        Digital Verification Seal: <span class="text-on-surface font-semibold select-all">{{.VerificationHash}}</span>
+                    </div>
+                    <p class="text-text-muted">
+                        This digital e-POD certificate is electronically generated and verified by the {{.CompanyName}} operating network. For cargo discrepancies or seal disputes, contact <a href="mailto:epod@avandab.com" class="text-primary font-medium hover:underline">epod@avandab.com</a> or <a href="mailto:claims@avandab.com" class="text-primary font-medium hover:underline">claims@avandab.com</a>.
+                    </p>
+                </div>
+                <div class="text-left sm:text-right font-mono text-[10px] text-text-muted shrink-0">
+                    Status: <span class="text-emerald-600 dark:text-emerald-400 font-bold">VERIFIED_DELIVERY</span>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
+{{end}}

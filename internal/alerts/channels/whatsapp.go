@@ -38,6 +38,20 @@ func NewWhatsAppProvider(provider string, creds map[string]string, logger *slog.
 		s = gupshupSender{apiKey: creds["api_key"], http: httpDoer(creds)}
 	case "meta":
 		s = metaSender{token: creds["token"], phoneNumberID: creds["phone_number_id"], http: httpDoer(creds)}
+	case "evolution":
+		s = evolutionSender{
+			baseURL:  creds["url"],
+			instance: creds["instance"],
+			apiKey:   creds["api_key"],
+			http:     httpDoer(creds),
+		}
+	case "webhook", "generic":
+		s = webhookSender{
+			url:    creds["url"],
+			apiKey: creds["api_key"],
+			token:  creds["token"],
+			http:   httpDoer(creds),
+		}
 	default:
 		logger.Info("whatsapp provider unconfigured — mock (log-only) sender active")
 	}
@@ -58,6 +72,11 @@ func (p *WhatsAppProvider) Send(ctx context.Context, msg Message) error {
 	}
 	text := fmt.Sprintf("%s\n%s", msg.Title, msg.Body)
 	return p.sender.send(ctx, msg.Phone, text)
+}
+
+// SendWhatsApp sends a direct WhatsApp message without alert rank filtering.
+func (p *WhatsAppProvider) SendWhatsApp(ctx context.Context, phone, text string) error {
+	return p.sender.send(ctx, phone, text)
 }
 
 // mockWASender logs the delivery — the S10 exit gate's "mock send logged".

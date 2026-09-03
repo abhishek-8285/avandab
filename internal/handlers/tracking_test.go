@@ -97,22 +97,30 @@ func TestTrackingLayout_MapAssetsConditional(t *testing.T) {
 	run := func(extra map[string]interface{}) string {
 		var buf strings.Builder
 		require.NoError(t, layout.Execute(&buf, struct {
-			Title         string
-			Content       template.HTML
-			User          *auth.SessionData
-			Query         string
-			Notifications interface{}
-			UnreadCount   int
-			HasUnread     bool
-			FlashError    string
-			FlashSuccess  string
-			Version       string
-			PWAEnabled    bool
-			Extra         map[string]interface{}
+			Title          string
+			Content        template.HTML
+			User           *auth.SessionData
+			Query          string
+			Notifications  interface{}
+			UnreadCount    int
+			HasUnread      bool
+			FlashError     string
+			FlashSuccess   string
+			Version        string
+			PWAEnabled     bool
+			Features       map[string]bool
+			Extra          map[string]interface{}
+			CanonicalPath  string
+			NoIndex        bool
+			SEODescription string
+			OGImage        string
+			OGType         string
+			SEOJSONLD      template.HTML
 		}{
 			Title: "X", Content: template.HTML("<p>x</p>"), User: nil,
 			Notifications: nil, UnreadCount: 0, HasUnread: false,
 			FlashError: "", FlashSuccess: "", Version: "v1", PWAEnabled: false, Extra: extra,
+			CanonicalPath: "/tracking", NoIndex: true,
 		}))
 		return buf.String()
 	}

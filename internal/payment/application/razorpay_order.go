@@ -136,7 +136,13 @@ func (uc *VerifyRazorpayPaymentUseCase) Execute(ctx context.Context, cmd VerifyR
 		return "", ErrRazorpayInvalidSignature
 	}
 
-	tenantID := shared.TenantIDFromContext(ctx)
+	tenantID := cmd.TenantID
+	if tenantID == "" {
+		tenantID = shared.TenantIDFromContext(ctx)
+	}
+	if tenantID != "" {
+		ctx = shared.ContextWithTenantID(ctx, tenantID)
+	}
 
 	existing, err := uc.findRazorpayPayment(ctx, tenantID, cmd.PaymentID)
 	if err != nil {

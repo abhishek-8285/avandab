@@ -6,7 +6,7 @@ UPDATE company_settings
 SET company_name = ?, logo_path = ?, currency = ?, timezone = ?,
     gst_enabled = ?, gst_rate = ?, booking_prefix = ?, trip_prefix = ?, invoice_prefix = ?,
     financial_year = ?,
-    address = ?, phone = ?, email = ?, gst_number = ?,
+    address = ?, phone = ?, email = ?, gst_number = ?, pan_number = ?,
     updated_at = datetime('now')
 WHERE id = 1
 RETURNING *;

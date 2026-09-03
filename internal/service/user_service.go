@@ -24,67 +24,121 @@ type UserService struct {
 }
 
 // RegisterSelfServiceAccount provisions an account created through public
-// self-registration using the first-run claim model: the first account on a
-// deployment becomes its admin, every later registration is least-privilege
-// viewer. The admin check and the insert run in one transaction, so two
-// simultaneous registrations can never both win the claim. Returns the user
-// and whether this registration claimed the admin role.
-func (s *UserService) RegisterSelfServiceAccount(ctx context.Context, email, name, phone, password string) (domain.User, bool, error) {
+// self-registration with an isolated tenant organization. The registering
+// user becomes the admin (role_id = 1) of their newly provisioned tenant,
+// ensuring strict multi-tenant isolation and zero cross-tenant data leaks.
+func (s *UserService) RegisterSelfServiceAccount(ctx context.Context, email, name, phone, password, companyName string) (domain.User, bool, error) {
 	getter, ok := s.store.(repository.DBGetter)
 	if !ok || getter == nil || s.txManager == nil {
 		return domain.User{}, false, fmt.Errorf("self-registration unavailable: storage does not support transactions")
 	}
 	rawDB := getter.DB()
 
-	var created domain.User
-	claimed := false
-	err := s.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
-		claimed = false
+	compName := strings.TrimSpace(companyName)
+	if compName == "" {
+		userName := strings.TrimSpace(name)
+		if userName != "" {
+			compName = userName + "'s Fleet"
+		} else {
+			compName = "My Fleet"
+		}
+	}
 
-		// Cross-engine claim safety: SQLite's lock manager rejects stale-snapshot
-		// writers (SQLITE_BUSY on the COUNT→INSERT upgrade), so the claim cannot
-		// double-fire. Postgres READ COMMITTED has no such guard — two concurrent
-		// registrations could both see admins==0. Serialize the claim with a
-		// transaction-scoped advisory lock when running on Postgres.
-		if isPostgresDriver(rawDB) {
-			if tx := repository.TxFromContext(txCtx); tx != nil {
-				if _, err := tx.ExecContext(txCtx, `SELECT pg_advisory_xact_lock(hashtext('mvtms_first_run_admin_claim'))`); err != nil {
-					return err
-				}
-			}
+	var created domain.User
+	err := s.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
+		// Reject duplicate email
+		if _, err := s.store.GetUserByEmail(txCtx, email); err == nil {
+			return domain.ErrUserEmailExists
 		}
 
+		baseSlug := suggestTenantSlug(compName)
+		shortUID := generateID()[:8]
+		tenantID := fmt.Sprintf("tenant_%s", shortUID)
+
+		// Probe slug uniqueness
+		var slugCount int
 		var row *sql.Row
 		if tx := repository.TxFromContext(txCtx); tx != nil {
-			row = tx.QueryRowContext(txCtx, `SELECT COUNT(*) FROM users WHERE role_id = 1`)
+			row = tx.QueryRowContext(txCtx, `SELECT COUNT(1) FROM tenants WHERE slug = ?`, baseSlug)
 		} else {
-			row = rawDB.QueryRowContext(txCtx, `SELECT COUNT(*) FROM users WHERE role_id = 1`)
+			row = rawDB.QueryRowContext(txCtx, `SELECT COUNT(1) FROM tenants WHERE slug = ?`, baseSlug)
 		}
-		var admins int
-		if err := row.Scan(&admins); err != nil {
+		if err := row.Scan(&slugCount); err != nil {
 			return err
 		}
 
-		roleID := domain.DefaultRoleID(domain.RoleViewer)
-		if admins == 0 {
-			roleID = domain.DefaultRoleID(domain.RoleAdmin)
-			claimed = true
+		slug := baseSlug
+		if slugCount > 0 {
+			slug = fmt.Sprintf("%s-%s", baseSlug, shortUID[:6])
 		}
 
-		u, err := s.CreateUserWithPassword(txCtx, email, name, phone, password, roleID, domain.UserStatusActive, string(shared.DefaultTenant))
+		// Provision isolated tenant organization
+		if err := s.CreateTenant(txCtx, tenantID, compName, slug); err != nil {
+			return fmt.Errorf("failed to create tenant: %w", err)
+		}
+
+		// Create user with RoleAdmin (role_id = 1) in their new isolated tenant
+		roleID := domain.DefaultRoleID(domain.RoleAdmin)
+		u, err := s.CreateUserWithPassword(txCtx, email, name, phone, password, roleID, domain.UserStatusActive, tenantID)
 		if err != nil {
 			return err
 		}
 		created = u
+
+		// Seed initial trial subscription if subscription table exists
+		now := time.Now().UTC()
+		trialEnd := now.Add(14 * 24 * time.Hour)
+		subID := "sub_" + tenantID
+		if tx := repository.TxFromContext(txCtx); tx != nil {
+			_, _ = tx.ExecContext(txCtx, `
+				INSERT OR IGNORE INTO tenant_subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, trial_end, created_at, updated_at)
+				VALUES (?, ?, 'STARTER', 'TRIAL', ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+			`, subID, tenantID, now.Format(time.RFC3339), trialEnd.Format(time.RFC3339), trialEnd.Format(time.RFC3339))
+		} else {
+			_, _ = rawDB.ExecContext(txCtx, `
+				INSERT OR IGNORE INTO tenant_subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, trial_end, created_at, updated_at)
+				VALUES (?, ?, 'STARTER', 'TRIAL', ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+			`, subID, tenantID, now.Format(time.RFC3339), trialEnd.Format(time.RFC3339), trialEnd.Format(time.RFC3339))
+		}
+
 		return nil
 	})
 	if err != nil {
 		return domain.User{}, false, err
 	}
-	if claimed && s.log != nil {
-		s.log.Info("first-run claim: self-registered account became admin", "user_id", created.ID, "email", created.Email)
+	if s.log != nil {
+		s.log.Info("self-registered tenant and admin created", "tenant_id", created.TenantID, "user_id", created.ID, "email", created.Email)
 	}
-	return created, claimed, nil
+	return created, true, nil
+}
+
+// suggestTenantSlug normalizes free text into a slug candidate: lowercase,
+// [a-z0-9-], collapsed separators, trimmed, max 32 chars.
+func suggestTenantSlug(name string) string {
+	lower := strings.ToLower(strings.TrimSpace(name))
+	var b strings.Builder
+	prevDash := false
+	for _, rn := range lower {
+		if b.Len() >= 32 {
+			break
+		}
+		switch {
+		case rn >= 'a' && rn <= 'z' || rn >= '0' && rn <= '9':
+			b.WriteRune(rn)
+			prevDash = false
+		case rn == ' ' || rn == '-' || rn == '_' || rn == '.' || rn == ',' || rn == '&' || rn == '/':
+			if !prevDash && b.Len() > 0 {
+				b.WriteByte('-')
+				prevDash = true
+			}
+		default:
+		}
+	}
+	out := strings.Trim(b.String(), "-")
+	if out == "" {
+		out = "fleet"
+	}
+	return out
 }
 
 // generateTemporaryPassword returns a cryptographically random 16-character
@@ -95,6 +149,114 @@ func generateTemporaryPassword() (string, error) {
 		return "", err
 	}
 	return base64.RawURLEncoding.EncodeToString(buf), nil
+}
+
+// ResolveGoogleUser maps a verified Google identity (OIDC subject + verified
+// email) onto an Avandab account:
+//
+//  1. google_sub already linked → return that account (no mutation).
+//  2. Existing active password account with the same email → link the Google
+//     identity (link-only UPDATE; an account already bound to a *different*
+//     sub is rejected — no silent identity takeover).
+//  3. No match → provision a new isolated tenant with the registrant as
+//     admin (same transactional path as password self-registration) and link.
+//
+// Returns (user, isNewTenantAdmin, error). Suspended accounts are rejected
+// with domain.ErrUnauthorized in every branch.
+func (s *UserService) ResolveGoogleUser(ctx context.Context, googleSub, email, name string) (domain.User, bool, error) {
+	googleSub = strings.TrimSpace(googleSub)
+	email = strings.ToLower(strings.TrimSpace(email))
+	if googleSub == "" || email == "" {
+		return domain.User{}, false, fmt.Errorf("google identity requires sub and email")
+	}
+
+	// 1. Already-linked Google account.
+	if u, found, err := s.getUserByGoogleSub(ctx, googleSub); err != nil {
+		return domain.User{}, false, err
+	} else if found {
+		if u.Status != domain.UserStatusActive {
+			return domain.User{}, false, domain.ErrUnauthorized
+		}
+		return u, false, nil
+	}
+
+	// 2. Same email, password account → link.
+	existing, err := s.store.GetUserByEmail(ctx, email)
+	if err == nil {
+		if existing.Status != domain.UserStatusActive {
+			return domain.User{}, false, domain.ErrUnauthorized
+		}
+		if err := s.linkGoogleSub(ctx, string(existing.ID), googleSub); err != nil {
+			return domain.User{}, false, err
+		}
+		existing.Role.Name = auth.RoleNameForID(existing.Role.ID)
+		s.log.Info("google identity linked to existing account", "user_id", existing.ID)
+		return existing, false, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) && !errors.Is(err, domain.ErrUserNotFound) {
+		return domain.User{}, false, err
+	}
+
+	// 3. New operator → provision isolated tenant + admin, then link.
+	tempPassword, err := generateTemporaryPassword()
+	if err != nil {
+		return domain.User{}, false, err
+	}
+	u, isAdmin, err := s.RegisterSelfServiceAccount(ctx, email, sanitizeName(name), "", tempPassword, "")
+	if err != nil {
+		return domain.User{}, false, err
+	}
+	if err := s.linkGoogleSub(ctx, string(u.ID), googleSub); err != nil {
+		// Provisioning succeeded but the link failed — surface it; the user
+		// can still recover via password reset since email is real.
+		s.log.Warn("google_sub link after provisioning failed", "user_id", u.ID, "error", err)
+	}
+	return u, isAdmin, nil
+}
+
+// getUserByGoogleSub looks up a Google-linked account. Raw SQL because the
+// repository store interface is not google-aware (and must not become so for
+// one column). Returns found=false on no match.
+func (s *UserService) getUserByGoogleSub(ctx context.Context, googleSub string) (domain.User, bool, error) {
+	getter, ok := s.store.(repository.DBGetter)
+	if !ok || getter == nil {
+		return domain.User{}, false, fmt.Errorf("google sign-in unavailable: storage does not support raw DB access")
+	}
+	row := getter.DB().QueryRowContext(ctx,
+		`SELECT id, email, name, role_id, tenant_id, status FROM users WHERE google_sub = ? LIMIT 1`, googleSub)
+	var u domain.User
+	var roleID int64
+	var status string
+	if err := row.Scan(&u.ID, &u.Email, &u.Name, &roleID, &u.TenantID, &status); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.User{}, false, nil
+		}
+		return domain.User{}, false, err
+	}
+	u.Role = domain.Role{ID: roleID, Name: auth.RoleNameForID(roleID)}
+	u.Status = domain.UserStatus(status)
+	return u, true, nil
+}
+
+// linkGoogleSub binds google_sub to a user. The guarded WHERE makes the link
+// idempotent and refuses to overwrite an identity already bound to a
+// different Google account.
+func (s *UserService) linkGoogleSub(ctx context.Context, userID, googleSub string) error {
+	getter, ok := s.store.(repository.DBGetter)
+	if !ok || getter == nil {
+		return fmt.Errorf("google link unavailable: storage does not support raw DB access")
+	}
+	res, err := getter.DB().ExecContext(ctx,
+		`UPDATE users SET google_sub = ?, auth_provider = 'google', updated_at = datetime('now')
+		 WHERE id = ? AND (google_sub IS NULL OR google_sub = ?)`,
+		googleSub, userID, googleSub)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return fmt.Errorf("account already linked to a different Google identity")
+	}
+	return nil
 }
 
 // CreateUser creates a new user with a randomly generated temporary password.

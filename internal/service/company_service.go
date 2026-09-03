@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 
 	"transport-app/internal/domain"
 )
@@ -17,7 +18,15 @@ func (s *CompanySettingsService) GetSettings(ctx context.Context) (domain.Compan
 }
 
 // UpdateSettings updates the company settings.
-func (s *CompanySettingsService) UpdateSettings(ctx context.Context, companyName, currency, timezone string, gstEnabled bool, gstRate float64, bookingPrefix, tripPrefix, invoicePrefix, financialYear string, address, phone, email, gstNumber string, logoPath *string) (domain.CompanySettings, error) {
+func (s *CompanySettingsService) UpdateSettings(ctx context.Context, companyName, currency, timezone string, gstEnabled bool, gstRate float64, bookingPrefix, tripPrefix, invoicePrefix, financialYear string, address, phone, email, gstNumber, panNumber string, logoPath *string) (domain.CompanySettings, error) {
+	gstNumber = strings.TrimSpace(strings.ToUpper(gstNumber))
+	panNumber = strings.TrimSpace(strings.ToUpper(panNumber))
+
+	// If gst_number is provided, automatically extract PAN (gst_number[2:12]) if pan_number is empty
+	if gstNumber != "" && len(gstNumber) == 15 && panNumber == "" {
+		panNumber = gstNumber[2:12]
+	}
+
 	settings := domain.CompanySettings{
 		CompanyName:   companyName,
 		Currency:      currency,
@@ -32,6 +41,7 @@ func (s *CompanySettingsService) UpdateSettings(ctx context.Context, companyName
 		Phone:         &phone,
 		Email:         &email,
 		GSTNumber:     &gstNumber,
+		PanNumber:     &panNumber,
 		LogoPath:      logoPath,
 	}
 

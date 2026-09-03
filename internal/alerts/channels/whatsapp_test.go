@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -70,6 +73,8 @@ func TestWhatsApp_RankGate(t *testing.T) {
 func TestWhatsApp_TransportsFailHonestWithoutCreds(t *testing.T) {
 	g := gupshupSender{}
 	m := metaSender{}
+	e := evolutionSender{}
+	w := webhookSender{}
 	ctx := context.Background()
 	if err := g.send(ctx, "+911234567890", "x"); err == nil {
 		t.Error("gupshup without api key must fail")
@@ -77,6 +82,74 @@ func TestWhatsApp_TransportsFailHonestWithoutCreds(t *testing.T) {
 	if err := m.send(ctx, "+911234567890", "x"); err == nil {
 		t.Error("meta without token must fail")
 	}
+	if err := e.send(ctx, "+911234567890", "x"); err == nil {
+		t.Error("evolution without base url must fail")
+	}
+	if err := w.send(ctx, "+911234567890", "x"); err == nil {
+		t.Error("webhook without url must fail")
+	}
+}
+
+func TestWhatsApp_SendWhatsAppDirect(t *testing.T) {
+	sender := &countingSender{}
+	p := &WhatsAppProvider{gate: true, sender: sender, logger: waLogger()}
+	ctx := context.Background()
+
+	require.NoError(t, p.SendWhatsApp(ctx, "+919999988888", "Direct Dispatch Message"))
+	assert.Equal(t, 1, sender.sends)
+}
+
+func TestWhatsApp_EvolutionTransport_HTTPServer(t *testing.T) {
+	var receivedPath, receivedKey, receivedBody string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedPath = r.URL.Path
+		receivedKey = r.Header.Get("apikey")
+		body, _ := io.ReadAll(r.Body)
+		receivedBody = string(body)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"SUCCESS"}`))
+	}))
+	defer ts.Close()
+
+	creds := map[string]string{
+		"url":      ts.URL,
+		"instance": "avandab_main",
+		"api_key":  "evo_secret_key_123",
+	}
+	p := NewWhatsAppProvider("evolution", creds, waLogger())
+	ctx := context.Background()
+
+	err := p.SendWhatsApp(ctx, "+919876543210", "Test Evolution Message")
+	require.NoError(t, err)
+	assert.Equal(t, "/message/sendText/avandab_main", receivedPath)
+	assert.Equal(t, "evo_secret_key_123", receivedKey)
+	assert.Contains(t, receivedBody, `"+919876543210"`)
+	assert.Contains(t, receivedBody, `"Test Evolution Message"`)
+}
+
+func TestWhatsApp_WebhookTransport_HTTPServer(t *testing.T) {
+	var receivedAuth, receivedBody string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		receivedAuth = r.Header.Get("Authorization")
+		body, _ := io.ReadAll(r.Body)
+		receivedBody = string(body)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer ts.Close()
+
+	creds := map[string]string{
+		"url":   ts.URL + "/webhook/dispatch",
+		"token": "bearer_token_abc",
+	}
+	p := NewWhatsAppProvider("webhook", creds, waLogger())
+	ctx := context.Background()
+
+	err := p.SendWhatsApp(ctx, "+919876543210", "Test Webhook Message")
+	require.NoError(t, err)
+	assert.Equal(t, "Bearer bearer_token_abc", receivedAuth)
+	assert.Contains(t, receivedBody, `"+919876543210"`)
+	assert.Contains(t, receivedBody, `"Test Webhook Message"`)
 }
 
 func TestLoggingProvider_RecordsSendAndFailure(t *testing.T) {

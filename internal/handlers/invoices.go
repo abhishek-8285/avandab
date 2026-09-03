@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ import (
 	"transport-app/internal/shared/gstin"
 	id "transport-app/internal/shared/id"
 	uow "transport-app/internal/shared/uow"
+	"transport-app/internal/validate"
 )
 
 // InvoiceHandlers handles invoice management.
@@ -200,12 +202,61 @@ func (h *InvoiceHandlers) invoiceViewExtra(r *http.Request, invoiceID string, in
 		}
 	}
 
+	custPhone := ""
+	cust, errCust := h.Services.Customers.GetCustomer(r.Context(), domain.CustomerID(invoice.CustomerID))
+	if errCust == nil {
+		custPhone = cleanPhoneForWhatsApp(cust.Phone)
+	}
+
+	dueDateStr := ""
+	var d sql.NullString
+	if err := h.DB.QueryRowContext(r.Context(), `SELECT COALESCE(due_date, '') FROM invoices WHERE id = ?`, invoiceID).Scan(&d); err == nil && d.String != "" {
+		if t, err := time.Parse("2006-01-02 15:04:05", d.String); err == nil {
+			dueDateStr = t.Format("02 Jan 2006")
+		} else if len(d.String) >= 10 {
+			dueDateStr = d.String[:10]
+		}
+	}
+
+	scheme := "http"
+	if r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+	host := r.Host
+	payURL := fmt.Sprintf("%s://%s/pay/%s", scheme, host, invoiceID)
+	if host == "" {
+		payURL = fmt.Sprintf("/pay/%s", invoiceID)
+	}
+
+	waText := fmt.Sprintf(
+		"Dear %s, please find details for Invoice #%s.\n\n"+
+			"• Total Amount: ₹%.2f\n"+
+			"• Outstanding Balance: ₹%.2f\n",
+		invoice.CustomerName, invoice.InvoiceNumber, invoice.Total, balance,
+	)
+	if dueDateStr != "" {
+		waText += fmt.Sprintf("• Due Date: %s\n", dueDateStr)
+	}
+	waText += fmt.Sprintf("\nPay securely online: %s\nThank you for your business!", payURL)
+
+	waShareURL := fmt.Sprintf("https://wa.me/%s?text=%s", custPhone, url.QueryEscape(waText))
+
+	prof := h.loadCompanyProfile(r.Context())
+
 	return map[string]interface{}{
-		"Invoice":  invoice,
-		"Payments": payments,
-		"Balance":  balance,
-		"Locked":   locked,
-		"Notes":    notes,
+		"Invoice":             invoice,
+		"Payments":            payments,
+		"Balance":             balance,
+		"Locked":              locked,
+		"Notes":               notes,
+		"CustomerPhone":       custPhone,
+		"PublicPayURL":        payURL,
+		"PublicPayPath":       fmt.Sprintf("/pay/%s", invoiceID),
+		"WhatsAppShareURL":    waShareURL,
+		"WhatsAppInvoiceText": waText,
+		"Company":             prof,
+		"TaxTier":             prof.TaxTier(),
+		"LegalTitle":          prof.LegalTitle(),
 	}
 }
 
@@ -348,6 +399,11 @@ func (h *InvoiceHandlers) buildInvoicePDFData(ctx context.Context,
 			"gstin", prof.GSTNumber, "tenant", shared.TenantIDFromContext(ctx))
 		prof.GSTNumber = ""
 	}
+	if prof.PanNumber != "" && !validPANFormat(prof.PanNumber) {
+		slog.Warn("supplier PAN failed format check; not rendering in PDF",
+			"pan", prof.PanNumber, "tenant", shared.TenantIDFromContext(ctx))
+		prof.PanNumber = ""
+	}
 	if custGSTIN != "" && !validGSTINFormat(custGSTIN) {
 		slog.Warn("customer GSTIN failed format check; not rendering in PDF",
 			"gstin", custGSTIN, "tenant", shared.TenantIDFromContext(ctx))
@@ -390,10 +446,12 @@ func (h *InvoiceHandlers) buildInvoicePDFData(ctx context.Context,
 			Name:      prof.Name,
 			Address:   prof.Address,
 			GSTIN:     prof.GSTNumber,
+			PAN:       prof.PanNumber,
 			StateCode: prof.StateCode,
 			Phone:     prof.Phone,
 			Email:     prof.Email,
 		},
+		LegalTitle: prof.LegalTitle(),
 		Customer: pdfgen.PDFParty{
 			Name:      custName,
 			Address:   custAddr,
@@ -453,9 +511,31 @@ type companyProfile struct {
 	Name      string
 	Address   string
 	GSTNumber string
+	PanNumber string
 	StateCode string
 	Phone     string
 	Email     string
+}
+
+func (p companyProfile) TaxTier() int {
+	if p.GSTNumber != "" && validGSTINFormat(p.GSTNumber) {
+		return 1
+	}
+	if p.PanNumber != "" && validPANFormat(p.PanNumber) {
+		return 2
+	}
+	return 3
+}
+
+func (p companyProfile) LegalTitle() string {
+	switch p.TaxTier() {
+	case 1:
+		return "TAX INVOICE"
+	case 2:
+		return "BILL OF SUPPLY / FREIGHT BILL"
+	default:
+		return "CONSIGNMENT FREIGHT BILL"
+	}
 }
 
 // loadCompanyProfile reads company_settings for the seller block.
@@ -466,15 +546,18 @@ func (h *InvoiceHandlers) loadCompanyProfile(ctx context.Context) companyProfile
 	p := companyProfile{StateCode: "27"}
 	row := h.DB.QueryRowContext(ctx, `
 		SELECT COALESCE(company_name, ''), COALESCE(address, ''),
-		       COALESCE(gst_number, ''), COALESCE(state_code, '27'),
+		       COALESCE(gst_number, ''), COALESCE(pan_number, ''), COALESCE(state_code, '27'),
 		       COALESCE(phone, ''), COALESCE(email, '')
 		FROM company_settings WHERE id = 1`)
-	if err := row.Scan(&p.Name, &p.Address, &p.GSTNumber, &p.StateCode,
+	if err := row.Scan(&p.Name, &p.Address, &p.GSTNumber, &p.PanNumber, &p.StateCode,
 		&p.Phone, &p.Email); err != nil {
 		slog.Warn("company_settings unavailable for invoice PDF", "error", err)
 	}
 	if p.StateCode == "" {
 		p.StateCode = "27"
+	}
+	if p.GSTNumber != "" && len(p.GSTNumber) == 15 && p.PanNumber == "" {
+		p.PanNumber = p.GSTNumber[2:12]
 	}
 	return p
 }
@@ -1140,4 +1223,9 @@ func (h *InvoiceHandlers) SearchHSNSAC(w http.ResponseWriter, r *http.Request) {
 // validGSTINFormat delegates to the shared GSTIN structural validator.
 func validGSTINFormat(g string) bool {
 	return gstin.Valid(g)
+}
+
+// validPANFormat delegates to the shared PAN format validator.
+func validPANFormat(p string) bool {
+	return validate.ValidPAN(p)
 }

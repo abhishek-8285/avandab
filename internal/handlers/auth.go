@@ -6,10 +6,10 @@ import (
 	"log/slog"
 	"net/http"
 
+	"transport-app/internal/comm"
 	"transport-app/internal/domain"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
-	"transport-app/internal/shared/ports"
 )
 
 // AuthHandlers handles authentication-related HTTP requests.
@@ -19,8 +19,10 @@ type AuthHandlers struct {
 
 // ForgotPasswordAPI handles JSON password-reset requests from API clients
 // (mobile driver app). The response is identical whether or not the account
-// exists, to prevent enumeration. In development the reset link is returned
-// so the flow is usable without a mailer (mirrors SubmitForgotPassword).
+// exists, to prevent enumeration. When SMTP is configured the reset email is
+// queued durably via comm_outbox (Phase 2 outbox consumer); in development
+// the reset link is returned so the flow is usable without a mailer (mirrors
+// SubmitForgotPassword).
 func (h *AuthHandlers) ForgotPasswordAPI(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Email string `json:"email"`
@@ -39,7 +41,7 @@ func (h *AuthHandlers) ForgotPasswordAPI(w http.ResponseWriter, r *http.Request)
 		if token, err := h.App.ResetTokens.Create(req.Email); err == nil {
 			link := fmt.Sprintf("%s://%s/reset-password?token=%s", requestScheme(r), r.Host, token)
 			slog.Info("password reset link generated (api)", "email", req.Email)
-			if h.Config.IsDevelopment() {
+			if !h.enqueueResetEmail(r, user, link) && h.Config.IsDevelopment() {
 				resp["reset_link"] = link
 			}
 		}
@@ -121,6 +123,10 @@ func (h *AuthHandlers) LoginPage(w http.ResponseWriter, r *http.Request) {
 		pd.Extra["Redirect"] = red
 	}
 
+	if h.App.GoogleEnabledFor() {
+		pd.Extra["GoogleEnabled"] = true
+	}
+
 	h.renderAuthPage(w, "login_form.html", pd)
 }
 
@@ -146,6 +152,12 @@ func (h *AuthHandlers) RegisterPage(w http.ResponseWriter, r *http.Request) {
 		}
 		pd.Extra["Error"] = cookie.Value
 	}
+	if h.App.GoogleEnabledFor() {
+		if pd.Extra == nil {
+			pd.Extra = map[string]interface{}{}
+		}
+		pd.Extra["GoogleEnabled"] = true
+	}
 	h.renderAuthPage(w, "register_form.html", pd)
 }
 
@@ -159,19 +171,18 @@ func (h *AuthHandlers) Register(w http.ResponseWriter, r *http.Request) {
 	name := r.PostFormValue("name")
 	email := r.PostFormValue("email")
 	phone := r.PostFormValue("phone")
+	companyName := r.PostFormValue("company_name")
 	password := r.PostFormValue("password")
 	confirm := r.PostFormValue("confirm_password")
 
 	if password != confirm {
-		h.renderRegisterError(w, r, "Passwords do not match", email, name, phone)
+		h.renderRegisterError(w, r, "Passwords do not match", email, name, phone, companyName)
 		return
 	}
 
-	// First-run claim: the first self-registered account becomes the
-	// deployment's admin; later registrations stay least-privilege viewer.
-	user, isAdmin, err := h.Services.Users.RegisterSelfServiceAccount(r.Context(), email, name, phone, password)
+	user, isAdmin, err := h.Services.Users.RegisterSelfServiceAccount(r.Context(), email, name, phone, password, companyName)
 	if err != nil {
-		h.renderRegisterError(w, r, err.Error(), email, name, phone)
+		h.renderRegisterError(w, r, err.Error(), email, name, phone, companyName)
 		return
 	}
 
@@ -203,14 +214,16 @@ func (h *AuthHandlers) Register(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, targetURL, http.StatusSeeOther)
 }
 
-func (h *AuthHandlers) renderRegisterError(w http.ResponseWriter, r *http.Request, errMsg, email, name, phone string) {
+func (h *AuthHandlers) renderRegisterError(w http.ResponseWriter, r *http.Request, errMsg, email, name, phone, companyName string) {
 	if isDatastarRequest(r) {
 		h.renderFragment(w, "register_form.html", map[string]interface{}{
-			"Title": "Create Account",
-			"Error": errMsg,
-			"Email": email,
-			"Name":  name,
-			"Phone": phone,
+			"Title":         "Create Account",
+			"Error":         errMsg,
+			"Email":         email,
+			"Name":          name,
+			"Phone":         phone,
+			"CompanyName":   companyName,
+			"GoogleEnabled": h.App.GoogleEnabledFor(),
 		})
 		return
 	}
@@ -420,10 +433,10 @@ func (h *AuthHandlers) ForgotPasswordPage(w http.ResponseWriter, r *http.Request
 
 // SubmitForgotPassword processes password reset requests. It issues a
 // single-use reset token for the account (when it exists and is active) and
-// surfaces the reset link. In production the link would be emailed; with no
-// SMTP mailer configured we render it directly in development so the flow is
-// actually usable. The generic success message is always shown to avoid
-// leaking whether an account exists.
+// surfaces the reset link. With SMTP configured the email is queued durably
+// through comm_outbox (Phase 2 outbox worker); without a mailer we render the
+// link directly in development so the flow is actually usable. The generic
+// success message is always shown to avoid leaking whether an account exists.
 func (h *AuthHandlers) SubmitForgotPassword(w http.ResponseWriter, r *http.Request) {
 	email := r.PostFormValue("email")
 	pd := PageData{
@@ -441,18 +454,7 @@ func (h *AuthHandlers) SubmitForgotPassword(w http.ResponseWriter, r *http.Reque
 		if err == nil {
 			link := fmt.Sprintf("%s://%s/reset-password?token=%s", requestScheme(r), r.Host, token)
 			slog.Info("password reset link generated", "email", email)
-			if h.App != nil && h.App.Notify != nil && h.App.Notify.EmailConfigured() {
-				body := "A password reset was requested for your account.\n\n" +
-					"Reset your password using this single-use link (valid for a short window):\n" + link + "\n\n" +
-					"If you did not request this, ignore this email."
-				if serr := h.App.Notify.SendEmail(r.Context(), ports.NotificationMessage{
-					Recipient: email,
-					Subject:   "Reset your password",
-					Body:      body,
-				}); serr != nil {
-					slog.Error("password reset email delivery failed", "email", email, "error", serr)
-				}
-			} else if h.Config.IsDevelopment() {
+			if !h.enqueueResetEmail(r, user, link) && h.Config.IsDevelopment() {
 				// No mailer configured: dev convenience shows the link on-page.
 				pd.Extra["ResetLink"] = link
 			}
@@ -461,6 +463,24 @@ func (h *AuthHandlers) SubmitForgotPassword(w http.ResponseWriter, r *http.Reque
 
 	pd.Extra["SuccessMsg"] = "If an account exists for " + email + ", password reset instructions have been sent."
 	h.renderAuthPage(w, "forgot_password.html", pd)
+}
+
+// enqueueResetEmail durably queues a password-reset email through comm_outbox
+// (Phase 2 — the outbox worker delivers via SMTP). The tenant is taken from
+// the user's own record (never hardcoded); comm_outbox requires a tenant_id.
+// Returns true when the email was queued, false when SMTP is unconfigured so
+// callers can fall back to the dev link.
+func (h *AuthHandlers) enqueueResetEmail(r *http.Request, user domain.User, link string) bool {
+	if h.App == nil || h.App.DB == nil || h.App.Notify == nil || !h.App.Notify.EmailConfigured() {
+		return false
+	}
+	body := "A password reset was requested for your account.\n\n" +
+		"Reset your password using this single-use link (valid for a short window):\n" + link + "\n\n" +
+		"If you did not request this, ignore this email."
+	if _, err := comm.EnqueueEmail(r.Context(), h.App.DB, user.TenantID, user.Email, "password_reset", "Reset your password", body); err != nil {
+		slog.Error("password reset email enqueue failed", "email", user.Email, "error", err)
+	}
+	return true
 }
 
 // requestScheme returns http or https based on the request context.

@@ -39,14 +39,14 @@ func (h *APIAuthHandler) Register(r chi.Router) {
 	r.Post("/api/v1/auth/register", h.RegisterUser)
 }
 
-// RegisterUser handles public REST user registration. Only the least-privilege
-// viewer role may be self-requested; privileged role requests are rejected.
+// RegisterUser handles public REST user registration.
 func (h *APIAuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Name          string `json:"name"`
 		Email         string `json:"email"`
 		Phone         string `json:"phone"`
 		Password      string `json:"password"`
+		CompanyName   string `json:"company_name"`   // Optional company / fleet name
 		Role          string `json:"role"`           // "driver", "dispatcher", "admin"
 		VehicleNumber string `json:"vehicle_number"` // Optional metadata
 	}
@@ -59,10 +59,7 @@ func (h *APIAuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// First-run claim: the first account on the deployment becomes admin;
-	// every later registration is least-privilege viewer regardless of any
-	// requested role. Privileged role assignment otherwise stays admin-only.
-	user, isAdmin, err := h.userSvc.RegisterSelfServiceAccount(r.Context(), req.Email, req.Name, req.Phone, req.Password)
+	user, isAdmin, err := h.userSvc.RegisterSelfServiceAccount(r.Context(), req.Email, req.Name, req.Phone, req.Password, req.CompanyName)
 	if err != nil {
 		apiError(w, http.StatusBadRequest, err.Error())
 		return

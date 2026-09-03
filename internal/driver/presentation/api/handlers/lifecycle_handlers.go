@@ -28,6 +28,7 @@ func (h *DriverLifecycleAPIHandler) RegisterRoutes(r chi.Router) {
 		r.Post("/me/vehicle-claims", h.ClaimVehicle)
 		r.Post("/me/payout-account", h.SubmitPayoutAccount)
 		r.Post("/me/push-token", h.RegisterPushToken)
+		r.Post("/push-token", h.RegisterPushToken)
 		r.Get("/me/offers", h.GetPendingOffers)
 		r.Post("/me/commands", h.ProcessCommand)
 
@@ -35,6 +36,9 @@ func (h *DriverLifecycleAPIHandler) RegisterRoutes(r chi.Router) {
 		r.Post("/{id}/vehicle-claims/{claimId}/verify", h.VerifyVehicleClaim)
 		r.Post("/{id}/vehicle-assignments", h.AssignVehicle)
 	})
+
+	r.Post("/api/v1/driver/push-token", h.RegisterPushToken)
+	r.Post("/api/v1/driver/me/push-token", h.RegisterPushToken)
 
 	r.Route("/api/v1/telemetry", func(r chi.Router) {
 		r.Post("/sessions/start", h.StartTelemetrySession)
@@ -482,25 +486,47 @@ func (h *DriverLifecycleAPIHandler) RegisterPushToken(w http.ResponseWriter, r *
 	}
 
 	var req struct {
-		DeviceID  string `json:"device_id"`
-		PushToken string `json:"push_token"`
-		Platform  string `json:"platform"`
+		DriverID      string `json:"driver_id"`
+		DeviceID      string `json:"device_id"`
+		PushToken     string `json:"push_token"`
+		ExpoPushToken string `json:"expo_push_token"`
+		Token         string `json:"token"`
+		Platform      string `json:"platform"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `{"error":"invalid body"}`, http.StatusBadRequest)
 		return
 	}
 
-	if req.DeviceID == "" || req.PushToken == "" {
-		http.Error(w, `{"error":"device_id and push_token are required"}`, http.StatusBadRequest)
+	pushToken := req.PushToken
+	if pushToken == "" {
+		pushToken = req.ExpoPushToken
+	}
+	if pushToken == "" {
+		pushToken = req.Token
+	}
+
+	if pushToken == "" {
+		http.Error(w, `{"error":"push_token is required"}`, http.StatusBadRequest)
 		return
 	}
 
-	if req.Platform == "" {
-		req.Platform = "android"
+	platform := req.Platform
+	if platform == "" {
+		platform = "android"
 	}
 
-	err := h.appService.RegisterPushToken(r.Context(), tenantID, userID, userID, req.DeviceID, req.PushToken, req.Platform)
+	deviceID := req.DeviceID
+	if deviceID == "" {
+		deviceID = platform + "-" + userID
+	}
+
+	driverID := req.DriverID
+	if driverID == "" {
+		driverID = userID
+	}
+
+	err := h.appService.RegisterPushToken(r.Context(), tenantID, driverID, userID, deviceID, pushToken, platform)
 	if err != nil {
 		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
 		return

@@ -9,6 +9,7 @@ type InvoicePDFData struct {
 	Customer PDFParty
 
 	InvoiceNumber string
+	LegalTitle    string
 	Status        string
 	PaymentStatus string
 	InvoiceDate   string
@@ -50,6 +51,7 @@ type PDFParty struct {
 	Name      string
 	Address   string
 	GSTIN     string
+	PAN       string
 	StateCode string
 	Phone     string
 	Email     string

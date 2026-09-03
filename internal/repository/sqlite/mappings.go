@@ -666,6 +666,7 @@ func toDomainCompanySetting(c db.CompanySetting) domain.CompanySettings {
 		Phone:         fromNullString(c.Phone),
 		Email:         fromNullString(c.Email),
 		GSTNumber:     fromNullString(c.GstNumber),
+		PanNumber:     fromNullString(c.PanNumber),
 		FinancialYear: fromNullString(c.FinancialYear),
 		CreatedAt:     c.CreatedAt,
 		UpdatedAt:     c.UpdatedAt,

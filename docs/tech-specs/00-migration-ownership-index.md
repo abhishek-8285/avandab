@@ -96,7 +96,10 @@ Single source of truth for `db/migrations/` version numbers. Repo head is
 | 00115 | `subscription_webhook_events` — Razorpay subscription webhooks idempotency & out-of-order protection | Spec 25A Lifecycle |
 | 00116 | `driver_push_tokens` — Mobile FCM push token registry & system notification delivery | Spec 05 / Mobile Push |
 | 00117 | telemetry provider-parity columns: `telemetry_positions` + `vehicle_latest_position` gain satellites/battery_level/external_voltage/gsm_signal/motion/valid (+fix_time on positions) — Traccar/Teltonika/Samsara ingest parity, invalid-fix guard | Spec 17 §5 / Telemetry Parity |
-| 00117+ | future specs | reserved |
+| 00118 | `comm_outbox` durable outbound queue (email/WhatsApp outbox pattern, jitter-based rate limiting) + `users.auth_provider`/`google_sub`/`phone_verified_at` external identity columns | Spec 06 Auth / Zero-cost identity & comms |
+| 00119 | `company_settings.pan_number` — 3-Tier Tax & Legal Operator Classification (GST Enterprise / Non-GST PAN / Micro Transporter) | Compliance / Freight Taxation |
+| 00120 | `email_providers` + `email_send_log` + `email_provider_counters` + `comm_outbox.provider` — dynamic email provider pool with quota-aware failover (Brevo 9k + Resend 3k) | Zero-cost relay optimization |
+| 00121+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

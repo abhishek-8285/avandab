@@ -151,3 +151,126 @@ func TestServiceChannelsHonestWhenUnconfigured(t *testing.T) {
 	require.Error(t, err)
 	assert.False(t, errors.Is(err, nil))
 }
+
+func TestSMTPEmailSender_DeliversHTML(t *testing.T) {
+	sink := newSMTPSink(t)
+	host, port, _ := net.SplitHostPort(sink.addr())
+	sender := NewSMTPEmailSender(SMTPConfig{Host: host, Port: port, From: "billing@fleet.test"})
+	require.True(t, sender.Configured())
+
+	err := sender.SendHTML(context.Background(), "customer@test.com", "Invoice Ready",
+		"Your invoice is ready. Total: INR 5000",
+		"<h1>Invoice Ready</h1><p>Total: <strong>INR 5000</strong></p>")
+	require.NoError(t, err)
+
+	msg := <-sink.messages
+	assert.Contains(t, msg, "From: billing@fleet.test")
+	assert.Contains(t, msg, "To: customer@test.com")
+	assert.Contains(t, msg, "Subject: Invoice Ready")
+	assert.Contains(t, msg, "Content-Type: multipart/alternative")
+	assert.Contains(t, msg, "text/plain")
+	assert.Contains(t, msg, "Your invoice is ready. Total: INR 5000")
+	assert.Contains(t, msg, "text/html")
+	assert.Contains(t, msg, "<h1>Invoice Ready</h1>")
+}
+
+func TestSMTPEmailSender_DeliversWithPDFAttachment(t *testing.T) {
+	sink := newSMTPSink(t)
+	host, port, _ := net.SplitHostPort(sink.addr())
+	sender := NewSMTPEmailSender(SMTPConfig{Host: host, Port: port, From: "invoices@fleet.test"})
+	require.True(t, sender.Configured())
+
+	fakePDF := []byte("%PDF-1.4 test invoice content 12345")
+	err := sender.SendWithAttachments(context.Background(), "accounts@client.test", "Invoice #INV-2026-001",
+		"Please find attached invoice.",
+		"<p>Please find attached invoice <b>#INV-2026-001</b>.</p>",
+		[]Attachment{
+			{
+				Filename:    "invoice_INV-2026-001.pdf",
+				ContentType: "application/pdf",
+				Data:        fakePDF,
+			},
+		})
+	require.NoError(t, err)
+
+	msg := <-sink.messages
+	assert.Contains(t, msg, "From: invoices@fleet.test")
+	assert.Contains(t, msg, "To: accounts@client.test")
+	assert.Contains(t, msg, "Content-Type: multipart/mixed")
+	assert.Contains(t, msg, `Content-Type: application/pdf; name="invoice_INV-2026-001.pdf"`)
+	assert.Contains(t, `Content-Disposition: attachment; filename="invoice_INV-2026-001.pdf"`, "invoice_INV-2026-001.pdf")
+	assert.Contains(t, msg, "Content-Transfer-Encoding: base64")
+	// Verify base64 encoding contains the encoded pdf string
+	assert.Contains(t, msg, "JVBERi0xLjQgdGVzdCBpbnZvaWNlIGNvbnRlbnQgMTIzNDU=")
+}
+
+func TestLogEmailSender_CapturesCleanly(t *testing.T) {
+	devSender := NewLogEmailSender(nil)
+	require.True(t, devSender.Configured())
+
+	err := devSender.Send(context.Background(), "user@test.com", "Subject", "Body")
+	require.NoError(t, err)
+
+	err = devSender.SendHTML(context.Background(), "user@test.com", "Subject", "Text", "<p>HTML</p>")
+	require.NoError(t, err)
+
+	err = devSender.SendWithAttachments(context.Background(), "user@test.com", "Subject", "Text", "<p>HTML</p>", []Attachment{
+		{Filename: "doc.pdf", ContentType: "application/pdf", Data: []byte("sample")},
+	})
+	require.NoError(t, err)
+}
+
+func TestNewEmailSenderFromConfig(t *testing.T) {
+	// 1. Direct host
+	directSender := NewEmailSenderFromConfig(SMTPConfig{
+		Host: "direct",
+	})
+	_, isDirect := directSender.(*DirectMXEmailSender)
+	assert.True(t, isDirect, "Host='direct' must instantiate *DirectMXEmailSender")
+	assert.True(t, directSender.Configured())
+
+	// 2. Direct flag
+	directFlagSender := NewEmailSenderFromConfig(SMTPConfig{
+		Direct: true,
+	})
+	_, isDirectFlag := directFlagSender.(*DirectMXEmailSender)
+	assert.True(t, isDirectFlag, "Direct=true must instantiate *DirectMXEmailSender")
+	assert.True(t, directFlagSender.Configured())
+
+	// 3. Localhost (Postfix mode)
+	localSender := NewEmailSenderFromConfig(SMTPConfig{
+		Host: "localhost",
+		From: "billing@avandab.com",
+	})
+	smtpLocal, isSMTP := localSender.(*SMTPEmailSender)
+	assert.True(t, isSMTP, "Host='localhost' must instantiate *SMTPEmailSender")
+	assert.Equal(t, "25", smtpLocal.cfg.Port, "localhost default port must be 25")
+	assert.Empty(t, smtpLocal.cfg.User, "localhost must not use auth")
+	assert.True(t, localSender.Configured())
+
+	// 4. 127.0.0.1
+	ipSender := NewEmailSenderFromConfig(SMTPConfig{
+		Host: "127.0.0.1",
+		From: "billing@avandab.com",
+	})
+	smtpIP, isSMTPIP := ipSender.(*SMTPEmailSender)
+	assert.True(t, isSMTPIP)
+	assert.Equal(t, "25", smtpIP.cfg.Port)
+
+	// 5. External relay (e.g. Gmail)
+	gmailSender := NewEmailSenderFromConfig(SMTPConfig{
+		Host:     "smtp.gmail.com",
+		User:     "user@gmail.com",
+		Password: "secret-password",
+		From:     "user@gmail.com",
+	})
+	smtpGmail, isGmail := gmailSender.(*SMTPEmailSender)
+	assert.True(t, isGmail)
+	assert.Equal(t, "587", smtpGmail.cfg.Port)
+	assert.Equal(t, "user@gmail.com", smtpGmail.cfg.User)
+	assert.True(t, gmailSender.Configured())
+
+	// 6. Unconfigured
+	unconfiguredSender := NewEmailSenderFromConfig(SMTPConfig{})
+	assert.False(t, unconfiguredSender.Configured())
+}

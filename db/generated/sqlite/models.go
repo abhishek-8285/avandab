@@ -148,6 +148,22 @@ type Booking struct {
 	Version       int64           `json:"version"`
 }
 
+type CommOutbox struct {
+	ID            string         `json:"id"`
+	TenantID      string         `json:"tenant_id"`
+	Channel       string         `json:"channel"`
+	Recipient     string         `json:"recipient"`
+	Template      string         `json:"template"`
+	PayloadJson   string         `json:"payload_json"`
+	Status        string         `json:"status"`
+	Attempts      int64          `json:"attempts"`
+	NextAttemptAt time.Time      `json:"next_attempt_at"`
+	LastError     sql.NullString `json:"last_error"`
+	CreatedAt     time.Time      `json:"created_at"`
+	SentAt        sql.NullTime   `json:"sent_at"`
+	Provider      sql.NullString `json:"provider"`
+}
+
 type CompanyConfig struct {
 	TenantID  string    `json:"tenant_id"`
 	Key       string    `json:"key"`
@@ -177,6 +193,7 @@ type CompanySetting struct {
 	MaintenanceDefaultIntervalDays sql.NullInt64   `json:"maintenance_default_interval_days"`
 	MaintenanceCriticalDtcs        sql.NullString  `json:"maintenance_critical_dtcs"`
 	StateCode                      string          `json:"state_code"`
+	PanNumber                      sql.NullString  `json:"pan_number"`
 }
 
 type ComplianceCheck struct {
@@ -687,6 +704,41 @@ type DtcEvent struct {
 	OccurredAt  time.Time      `json:"occurred_at"`
 	ResolvedAt  sql.NullTime   `json:"resolved_at"`
 	CreatedAt   time.Time      `json:"created_at"`
+}
+
+type EmailProvider struct {
+	Provider     string         `json:"provider"`
+	Enabled      int64          `json:"enabled"`
+	Priority     int64          `json:"priority"`
+	DailyQuota   int64          `json:"daily_quota"`
+	MonthlyQuota int64          `json:"monthly_quota"`
+	CostPer1k    float64        `json:"cost_per_1k"`
+	Host         sql.NullString `json:"host"`
+	Port         sql.NullString `json:"port"`
+	FromAddr     sql.NullString `json:"from_addr"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+}
+
+type EmailProviderCounter struct {
+	Provider     string    `json:"provider"`
+	DailyUsed    int64     `json:"daily_used"`
+	MonthlyUsed  int64     `json:"monthly_used"`
+	CurrentDay   string    `json:"current_day"`
+	CurrentMonth string    `json:"current_month"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+type EmailSendLog struct {
+	ID        string         `json:"id"`
+	Provider  string         `json:"provider"`
+	TenantID  string         `json:"tenant_id"`
+	Recipient string         `json:"recipient"`
+	Template  string         `json:"template"`
+	Subject   sql.NullString `json:"subject"`
+	Status    string         `json:"status"`
+	Error     sql.NullString `json:"error"`
+	CreatedAt time.Time      `json:"created_at"`
 }
 
 type EngineState struct {
@@ -1765,6 +1817,9 @@ type User struct {
 	Timezone        string         `json:"timezone"`
 	ThemePreference string         `json:"theme_preference"`
 	TenantID        string         `json:"tenant_id"`
+	AuthProvider    string         `json:"auth_provider"`
+	GoogleSub       sql.NullString `json:"google_sub"`
+	PhoneVerifiedAt sql.NullTime   `json:"phone_verified_at"`
 }
 
 type UserRole struct {

@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="description" content="Avandab - Premium Transport & Fleet Management System">
-    <meta name="mobile-web-app-capable" content="yes">
     <title>{{.Title}} - Avandab</title>
-    <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+    {{template "seo_head.html" .}}
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
     <link rel="stylesheet" href="/static/css/material-icons.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link rel="stylesheet" href="/static/css/fonts.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link rel="stylesheet" href="/static/css/material-symbols.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link href="https://api.fontshare.com/v2/css?f[]=satoshi@700,500,400&display=swap" rel="stylesheet">
-    <script src="/static/js/loader.js?v=20260818"></script>
+    <script src="/static/js/loader.js?v=20260818" defer></script>
     <script type="module" src="/static/js/datastar.js?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}" defer></script>
     <script src="/static/js/htmx.min.js?v={{if .Version}}{{.Version}}{{else}}20260822{{end}}" defer></script>
     <link rel="stylesheet" href="/static/css/tailwind.css?v={{if .Version}}{{.Version}}{{else}}20260821{{end}}">
@@ -458,11 +458,11 @@
                     </div>
 
                     <!-- Help & Support Dropdown -->
-                    <div class="relative group">
-                        <button type="button" class="hover:bg-surface-container p-2 rounded-lg transition-colors text-secondary hover:text-primary border-0 bg-transparent cursor-pointer flex items-center justify-center" aria-label="Help & Support">
+                    <div class="relative" id="help-menu-wrapper">
+                        <button type="button" id="help-menu-btn" class="hover:bg-surface-container p-2 rounded-lg transition-colors text-secondary hover:text-primary border-0 bg-transparent cursor-pointer flex items-center justify-center" aria-label="Help & Support" aria-expanded="false" aria-haspopup="true">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
                         </button>
-                        <div class="absolute right-0 top-full mt-2 w-56 bg-surface-container-lowest border border-border-subtle rounded-xl shadow-xl z-50 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 py-1.5 text-on-surface-variant text-xs">
+                        <div id="help-menu-dropdown" class="absolute right-0 top-full mt-2 w-56 bg-surface-container-lowest border border-border-subtle rounded-xl shadow-xl z-50 overflow-hidden hidden py-1.5 text-on-surface-variant text-xs">
                             <a href="/contact-us" class="flex items-center gap-3 px-4 py-2 hover:bg-surface-container-low hover:text-primary transition-colors text-decoration-none">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-text-muted shrink-0"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
                                 <span>{{t "topbar.help"}}</span>
@@ -480,9 +480,9 @@
 
                     {{if .User}}
                     <!-- Profile Avatar Dropdown -->
-                    <div class="relative group cursor-pointer border-l border-border-subtle pl-4 sm:pl-6">
-                        <div class="flex items-center gap-2.5">
-                            <div class="w-9 h-9 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-xs ring-2 ring-primary/20 shadow-xs uppercase">
+                    <div class="relative border-l border-border-subtle pl-4 sm:pl-6" id="user-menu-wrapper">
+                        <button type="button" id="user-menu-btn" class="flex items-center gap-2.5 border-0 bg-transparent p-0 cursor-pointer text-left focus:outline-none rounded-full group" aria-label="User menu" aria-expanded="false" aria-haspopup="true">
+                            <div class="w-9 h-9 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-xs ring-2 ring-primary/20 shadow-xs uppercase group-hover:ring-primary/40 transition-all">
                                 {{if .User.Name}}{{slice .User.Name 0 2}}{{else}}AD{{end}}
                             </div>
                             <div class="flex items-center gap-2">
@@ -491,9 +491,9 @@
                                     <span class="hidden lg:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider">{{replace .User.Role "_" " " -1}}</span>
                                 {{end}}
                             </div>
-                        </div>
+                        </button>
 
-                        <div class="absolute right-0 top-full mt-2 w-60 bg-surface-container-lowest border border-border-subtle rounded-xl shadow-xl z-50 overflow-hidden opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-150 py-1.5 text-on-surface-variant text-xs">
+                        <div id="user-menu-dropdown" class="absolute right-0 top-full mt-2 w-60 max-w-[90vw] bg-surface-container-lowest border border-border-subtle rounded-xl shadow-xl z-50 overflow-hidden hidden py-1.5 text-on-surface-variant text-xs">
                             <div class="px-4 py-2.5 border-b border-border-subtle">
                                 <div class="font-bold text-on-surface truncate">{{.User.Name}}</div>
                                 <div class="flex items-center gap-1.5 mt-1">
@@ -546,23 +546,54 @@
     </div>
 
         {{if .FlashError}}
-        <div class="fixed bottom-4 right-4 safe-bottom safe-right max-w-md w-full bg-status-alert/10 border-l-4 border-status-alert text-status-alert p-4 rounded-xl shadow-xl flex items-start justify-between">
-            <span class="flex-1">{{.FlashError}}</span>
-            <button type="button" class="flash-dismiss ml-2 text-status-alert hover:text-status-alert active:text-status-alert focus:outline-none focus:ring-2 focus:ring-status-alert rounded min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label="Dismiss error">
+        <aside id="flash-toast-error" class="flash-toast fixed bottom-4 right-4 safe-bottom safe-right max-w-md w-full bg-surface-container-lowest dark:bg-surface-container-low border border-border-subtle border-l-4 border-l-status-alert text-on-surface p-4 rounded-xl shadow-2xl flex items-start gap-3 z-50 transition-all duration-300" role="alert" aria-live="assertive">
+            <div class="p-1.5 rounded-lg bg-status-alert/10 text-status-alert shrink-0 mt-0.5">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="text-xs font-bold text-status-alert uppercase tracking-wider mb-0.5">Notice</div>
+                <div class="text-sm font-medium text-on-surface leading-snug break-words">{{.FlashError}}</div>
+            </div>
+            <button type="button" class="flash-dismiss text-text-muted hover:text-on-surface p-1 rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-center shrink-0 cursor-pointer border-0 bg-transparent" aria-label="Dismiss error" onclick="dismissFlashToast(this)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
-        </div>
+        </aside>
         {{end}}
         {{if .FlashSuccess}}
-        <div class="fixed bottom-4 right-4 safe-bottom safe-right max-w-md w-full bg-status-success/10 border-l-4 border-status-success text-status-success p-4 rounded-xl shadow-xl flex items-start justify-between">
-            <span class="flex-1">{{.FlashSuccess}}</span>
-            <button type="button" class="flash-dismiss ml-2 text-status-success hover:text-status-success active:text-status-success focus:outline-none focus:ring-2 focus:ring-status-success rounded min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label="Dismiss message">
+        <aside id="flash-toast-success" class="flash-toast fixed bottom-4 right-4 safe-bottom safe-right max-w-md w-full bg-surface-container-lowest dark:bg-surface-container-low border border-border-subtle border-l-4 border-l-status-success text-on-surface p-4 rounded-xl shadow-2xl flex items-start gap-3 z-50 transition-all duration-300" role="status" aria-live="polite">
+            <div class="p-1.5 rounded-lg bg-status-success/10 text-status-success shrink-0 mt-0.5">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="text-xs font-bold text-status-success uppercase tracking-wider mb-0.5">Success</div>
+                <div class="text-sm font-medium text-on-surface leading-snug break-words">{{.FlashSuccess}}</div>
+            </div>
+            <button type="button" class="flash-dismiss text-text-muted hover:text-on-surface p-1 rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-center shrink-0 cursor-pointer border-0 bg-transparent" aria-label="Dismiss message" onclick="dismissFlashToast(this)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
-        </div>
+        </aside>
         {{end}}
 
     <script>
+        function dismissFlashToast(el) {
+            var toast = (el && el.closest) ? el.closest('.flash-toast') : (el ? el.parentElement : null);
+            if (toast) {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(8px)';
+                setTimeout(function() { toast.remove(); }, 250);
+            }
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            var toasts = document.querySelectorAll('.flash-toast');
+            toasts.forEach(function(toast) {
+                setTimeout(function() {
+                    if (toast && toast.parentNode) {
+                        dismissFlashToast(toast);
+                    }
+                }, 6000);
+            });
+        });
+
         (function() {
             var sidebar = document.getElementById('sidebar');
             var overlay = document.getElementById('mobile-overlay');
@@ -660,26 +691,76 @@
             });
         });
 
-        // Notifications Click Toggle & Mark Read
+        // Universal Topbar Dropdowns Controller (User, Help, Notifications)
         document.addEventListener('DOMContentLoaded', function() {
-            var bellBtn = document.getElementById('notif-bell-btn');
-            var menu = document.getElementById('notif-menu');
-            var wrapper = document.getElementById('notif-dropdown-wrapper');
-            var markReadBtn = document.getElementById('notif-mark-read');
-            var badge = document.getElementById('notif-badge');
+            function setupDropdown(btnId, menuId, wrapperId) {
+                var btn = document.getElementById(btnId);
+                var menu = document.getElementById(menuId);
+                if (!btn || !menu) return;
 
-            if (bellBtn && menu) {
-                bellBtn.addEventListener('click', function(e) {
+                btn.addEventListener('click', function(e) {
                     e.stopPropagation();
-                    menu.classList.toggle('hidden');
-                });
+                    var willOpen = menu.classList.contains('hidden');
+                    // Close all other dropdowns first
+                    ['user-menu-dropdown', 'help-menu-dropdown', 'notif-menu', 'theme-dropdown'].forEach(function(id) {
+                        var m = document.getElementById(id);
+                        if (m && m !== menu) m.classList.add('hidden');
+                    });
+                    ['user-menu-btn', 'help-menu-btn', 'notif-bell-btn', 'theme-menu-btn'].forEach(function(id) {
+                        var b = document.getElementById(id);
+                        if (b && b !== btn) b.setAttribute('aria-expanded', 'false');
+                    });
 
-                document.addEventListener('click', function(e) {
-                    if (wrapper && !wrapper.contains(e.target)) {
+                    if (willOpen) {
+                        menu.classList.remove('hidden');
+                        btn.setAttribute('aria-expanded', 'true');
+                    } else {
                         menu.classList.add('hidden');
+                        btn.setAttribute('aria-expanded', 'false');
                     }
                 });
             }
+
+            setupDropdown('user-menu-btn', 'user-menu-dropdown', 'user-menu-wrapper');
+            setupDropdown('help-menu-btn', 'help-menu-dropdown', 'help-menu-wrapper');
+            setupDropdown('notif-bell-btn', 'notif-menu', 'notif-dropdown-wrapper');
+
+            // Close all dropdowns when clicking outside
+            document.addEventListener('click', function(e) {
+                var wrappers = ['user-menu-wrapper', 'help-menu-wrapper', 'notif-dropdown-wrapper', 'theme-menu-wrapper'];
+                var clickedInsideAny = wrappers.some(function(id) {
+                    var el = document.getElementById(id);
+                    return el && el.contains(e.target);
+                });
+                if (!clickedInsideAny) {
+                    ['user-menu-dropdown', 'help-menu-dropdown', 'notif-menu', 'theme-dropdown'].forEach(function(id) {
+                        var m = document.getElementById(id);
+                        if (m) m.classList.add('hidden');
+                    });
+                    ['user-menu-btn', 'help-menu-btn', 'notif-bell-btn', 'theme-menu-btn'].forEach(function(id) {
+                        var b = document.getElementById(id);
+                        if (b) b.setAttribute('aria-expanded', 'false');
+                    });
+                }
+            });
+
+            // Close all dropdowns on Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    ['user-menu-dropdown', 'help-menu-dropdown', 'notif-menu', 'theme-dropdown'].forEach(function(id) {
+                        var m = document.getElementById(id);
+                        if (m) m.classList.add('hidden');
+                    });
+                    ['user-menu-btn', 'help-menu-btn', 'notif-bell-btn', 'theme-menu-btn'].forEach(function(id) {
+                        var b = document.getElementById(id);
+                        if (b) b.setAttribute('aria-expanded', 'false');
+                    });
+                }
+            });
+
+            var markReadBtn = document.getElementById('notif-mark-read');
+            var badge = document.getElementById('notif-badge');
+            var bellBtn = document.getElementById('notif-bell-btn');
 
             if (markReadBtn) {
                 markReadBtn.addEventListener('click', function() {

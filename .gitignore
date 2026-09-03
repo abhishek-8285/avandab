@@ -79,3 +79,8 @@ fleet-*.csv
 # Strix runs
 strix_runs/
 
+
+# Secrets — never commit
+config/firebase-service-account.json
+mobile/android/app/google-services.json
+uploads/

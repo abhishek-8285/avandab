@@ -1,9 +1,9 @@
 <header class="header">
-    <nav class="navigation">
-        <div id="mobile-menu-toggle" class="navigation-button-container hidden">
-            <div class="navigation-button">
+    <nav class="navigation" aria-label="Primary">
+        <div class="navigation-button-container hidden">
+            <button id="mobile-menu-toggle" type="button" class="navigation-button" aria-label="Toggle navigation" aria-expanded="false">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
-            </div>
+            </button>
         </div>
 
 
@@ -22,7 +22,7 @@
             <div class="navigation-body-container">
                 <ul class="navigation-top-menu navigation-top-menu-main">
                     <li class="navigation-top-menu-item">
-                        <span class="navigation-top-menu-label navigation-top-menu-label-arrow">Operations</span>
+                        <button type="button" class="navigation-top-menu-label navigation-top-menu-label-arrow" aria-expanded="false" aria-haspopup="true">Operations</button>
                         <ul class="navigation-top-menu-sublist">
                             <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/dashboard"><span class="navigation-top-menu-label">Operations Cockpit</span></a></li>
                             <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/trips"><span class="navigation-top-menu-label">Live Dispatch</span></a></li>
@@ -31,7 +31,7 @@
                         </ul>
                     </li>
                     <li class="navigation-top-menu-item">
-                        <span class="navigation-top-menu-label navigation-top-menu-label-arrow">Fleet Management</span>
+                        <button type="button" class="navigation-top-menu-label navigation-top-menu-label-arrow" aria-expanded="false" aria-haspopup="true">Fleet Management</button>
                         <ul class="navigation-top-menu-sublist">
                             <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/vehicles"><span class="navigation-top-menu-label">Active Units</span></a></li>
                             <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/drivers"><span class="navigation-top-menu-label">Drivers Directory</span></a></li>
@@ -39,7 +39,7 @@
                         </ul>
                     </li>
                     <li class="navigation-top-menu-item">
-                        <span class="navigation-top-menu-label navigation-top-menu-label-arrow">Finance &amp; Reports</span>
+                        <button type="button" class="navigation-top-menu-label navigation-top-menu-label-arrow" aria-expanded="false" aria-haspopup="true">Finance &amp; Reports</button>
                         <ul class="navigation-top-menu-sublist">
                             <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/invoices"><span class="navigation-top-menu-label">Invoices</span></a></li>
                             <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/payments"><span class="navigation-top-menu-label">Payments &amp; Receipts</span></a></li>

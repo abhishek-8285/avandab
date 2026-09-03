@@ -12,6 +12,7 @@ import (
 	"transport-app/internal/middleware"
 	paymentapp "transport-app/internal/payment/application"
 	paymentagg "transport-app/internal/payment/domain/aggregate"
+	"transport-app/internal/payment/razorpay"
 	"transport-app/internal/shared"
 	clock "transport-app/internal/shared/clock"
 	id "transport-app/internal/shared/id"
@@ -24,6 +25,13 @@ type PaymentHandlers struct {
 	recordUC *paymentapp.RecordPaymentUseCase
 	listUC   *paymentapp.ListPaymentsUseCase
 	getUC    *paymentapp.GetPaymentUseCase
+	orderUC  *paymentapp.CreateRazorpayOrderUseCase
+	verifyUC *paymentapp.VerifyRazorpayPaymentUseCase
+}
+
+func (h *PaymentHandlers) SetRazorpayUseCases(orderUC *paymentapp.CreateRazorpayOrderUseCase, verifyUC *paymentapp.VerifyRazorpayPaymentUseCase) {
+	h.orderUC = orderUC
+	h.verifyUC = verifyUC
 }
 
 func (h *PaymentHandlers) init() {
@@ -35,6 +43,27 @@ func (h *PaymentHandlers) init() {
 		h.recordUC = paymentapp.NewRecordPaymentUseCase(uowImpl, idGenImpl, clockImpl)
 		h.listUC = paymentapp.NewListPaymentsUseCase(uowImpl)
 		h.getUC = paymentapp.NewGetPaymentUseCase(uowImpl)
+	}
+	if h.orderUC == nil {
+		uowImpl := uow.NewSQLUnitOfWork(h.DB)
+		var keyID, keySecret string
+		if h.Config != nil {
+			keyID = h.Config.RazorpayKeyID
+			keySecret = h.Config.RazorpayKeySecret
+		}
+		client := razorpay.NewRazorpayClient(keyID, keySecret)
+		h.orderUC = paymentapp.NewCreateRazorpayOrderUseCase(uowImpl, client, keyID)
+	}
+	if h.verifyUC == nil {
+		uowImpl := uow.NewSQLUnitOfWork(h.DB)
+		clockImpl := clock.NewRealClock()
+		var keyID, keySecret string
+		if h.Config != nil {
+			keyID = h.Config.RazorpayKeyID
+			keySecret = h.Config.RazorpayKeySecret
+		}
+		client := razorpay.NewRazorpayClient(keyID, keySecret)
+		h.verifyUC = paymentapp.NewVerifyRazorpayPaymentUseCase(uowImpl, h.recordUC, client, keySecret, clockImpl)
 	}
 }
 

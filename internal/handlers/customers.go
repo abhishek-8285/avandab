@@ -37,6 +37,11 @@ func (h *CustomerHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "customers", "update")).Post("/{id}/edit", h.Update)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "customers", "delete")).Post("/{id}/delete", h.Delete)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "customers", "update")).Post("/{id}/portal-users", h.GrantPortalAccess)
+
+	// Consolidated Monthly Freight Invoicing & Customer Statement of Account (Khata)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "customers", "read")).Get("/{id}/unbilled-trips", h.UnbilledTrips)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "invoices", "create")).Post("/{id}/invoices/consolidate", h.ConsolidateInvoices)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "customers", "read")).Get("/{id}/statement", h.Statement)
 }
 
 // GrantPortalAccess links (or creates) a user account to this customer so

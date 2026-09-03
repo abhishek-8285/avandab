@@ -108,7 +108,7 @@
 <!-- Right Column: Info & Status (5 cols) -->
 <div class="lg:col-span-5 space-y-6">
 <!-- Ticket Status -->
-<div class="bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm p-6">
+<div id="track-status-section" class="bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm p-6 scroll-mt-24">
 <div class="flex items-center gap-2 mb-4 text-primary">
 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
 <h3 class="text-lg font-semibold text-on-surface font-display m-0">Check Contact Ticket Status</h3>
@@ -151,32 +151,128 @@
 {{end}}
 </div>
 <!-- Direct Channels -->
-<div class="bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm p-6">
-<div class="flex items-center gap-2 mb-6 border-b border-border-subtle pb-2 text-primary">
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 16c0 3-2 3-2 3-2 0-2-3-2-3s2-1.5 2-3.5c0-1 .23-2 .66-2.85"/></svg>
-<h3 class="text-lg font-semibold text-on-surface font-display m-0">Direct Operating Channels</h3>
+<div class="bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm p-6 space-y-6">
+    <div class="flex items-center gap-2 border-b border-border-subtle pb-3 text-primary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 16c0 3-2 3-2 3-2 0-2-3-2-3s2-1.5 2-3.5c0-1 .23-2 .66-2.85"/></svg>
+        <h3 class="text-lg font-semibold text-on-surface font-display m-0">Official Department Directory</h3>
+    </div>
+
+    <!-- 24/7 Hotline -->
+    <div class="flex gap-3.5 items-start p-3.5 rounded-xl bg-primary/5 border border-primary/15">
+        <div class="bg-primary text-on-primary rounded-lg p-2 shrink-0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </div>
+        <div>
+            <div class="text-[11px] font-bold uppercase tracking-wider text-text-muted">24/7 Fleet Dispatch Hotline</div>
+            <div class="font-mono text-sm font-bold text-on-surface mt-0.5">+91 8285336507</div>
+            <div class="text-[11px] text-text-muted">Live emergency transport coordination</div>
+        </div>
+    </div>
+
+    <!-- Department Grid -->
+    <div class="space-y-4 text-xs">
+        <!-- 1. Operations & Dispatch -->
+        <div class="border-t border-border-subtle pt-3">
+            <div class="text-[10px] font-black uppercase tracking-wider text-primary mb-2">🚚 Fleet Operations, Tracking &amp; Telemetry</div>
+            <div class="space-y-2">
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">Trip Assignments &amp; Routes:</span>
+                    <a href="mailto:dispatch@avandab.com" class="font-mono font-semibold text-primary hover:underline">dispatch@avandab.com</a>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">Live Tracking &amp; ETA:</span>
+                    <a href="mailto:tracking@avandab.com" class="font-mono font-semibold text-primary hover:underline">tracking@avandab.com</a>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">Digital Proof of Delivery (e-POD):</span>
+                    <a href="mailto:epod@avandab.com" class="font-mono font-semibold text-primary hover:underline">epod@avandab.com</a>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">FASTag Toll Disputes:</span>
+                    <a href="mailto:fastag@avandab.com" class="font-mono font-semibold text-primary hover:underline">fastag@avandab.com</a>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">Diesel Logs &amp; Fuel Audits:</span>
+                    <a href="mailto:fuel@avandab.com" class="font-mono font-semibold text-primary hover:underline">fuel@avandab.com</a>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">Workshop &amp; Maintenance:</span>
+                    <a href="mailto:maintenance@avandab.com" class="font-mono font-semibold text-primary hover:underline">maintenance@avandab.com</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Billing & Finance -->
+        <div class="border-t border-border-subtle pt-3">
+            <div class="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2">💰 Billing, GST Invoices &amp; Accounts</div>
+            <div class="space-y-2">
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">GST Invoices &amp; Razorpay Pay:</span>
+                    <a href="mailto:billing@avandab.com" class="font-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">billing@avandab.com</a>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">Ledger, Khata &amp; Settlements:</span>
+                    <a href="mailto:accounts@avandab.com" class="font-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">accounts@avandab.com</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Support, Claims & Emergency -->
+        <div class="border-t border-border-subtle pt-3">
+            <div class="text-[10px] font-black uppercase tracking-wider text-red-600 dark:text-red-400 mb-2">🚨 Customer Care, Claims &amp; 24/7 SOS Radar</div>
+            <div class="space-y-2">
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">General Support &amp; Helpdesk:</span>
+                    <a href="mailto:support@avandab.com" class="font-mono font-semibold text-primary hover:underline">support@avandab.com</a>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">24/7 Highway SOS &amp; Breakdown:</span>
+                    <a href="mailto:sos@avandab.com" class="font-mono font-bold text-red-600 dark:text-red-400 hover:underline">sos@avandab.com</a>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">Driver Welfare &amp; Highway Help:</span>
+                    <a href="mailto:driver-help@avandab.com" class="font-mono font-semibold text-primary hover:underline">driver-help@avandab.com</a>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">Cargo Damage &amp; Claims:</span>
+                    <a href="mailto:claims@avandab.com" class="font-mono font-semibold text-red-600 dark:text-red-400 hover:underline">claims@avandab.com</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Legal & Corporate -->
+        <div class="border-t border-border-subtle pt-3">
+            <div class="text-[10px] font-black uppercase tracking-wider text-secondary mb-2">⚖️ Legal, Sales &amp; Executive</div>
+            <div class="space-y-2">
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">Corporate Freight Contracts:</span>
+                    <a href="mailto:sales@avandab.com" class="font-mono font-semibold text-primary hover:underline">sales@avandab.com</a>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">Transporter &amp; Fleet KYC:</span>
+                    <a href="mailto:onboarding@avandab.com" class="font-mono font-semibold text-primary hover:underline">onboarding@avandab.com</a>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">GST &amp; E-Way Bill Compliance:</span>
+                    <a href="mailto:compliance@avandab.com" class="font-mono font-semibold text-primary hover:underline">compliance@avandab.com</a>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">Legal, Contracts &amp; Privacy:</span>
+                    <a href="mailto:legal@avandab.com" class="font-mono font-semibold text-primary hover:underline">legal@avandab.com</a>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">Platform Security &amp; Vulnerabilities:</span>
+                    <a href="mailto:security@avandab.com" class="font-mono font-semibold text-primary hover:underline">security@avandab.com</a>
+                </div>
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-on-surface-variant">Founder &amp; Executive Office:</span>
+                    <a href="mailto:abhishek@avandab.com" class="font-mono font-semibold text-primary hover:underline">abhishek@avandab.com</a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-<div class="space-y-6">
-<div class="flex gap-4 items-start">
-<div class="bg-surface-container-low border border-border-subtle rounded-md p-2.5 flex items-center justify-center text-primary">
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-</div>
-<div>
-<div class="text-xs font-bold uppercase tracking-wider text-text-muted mb-1">24/7 Fleet Dispatch Hotline</div>
-<div class="font-mono text-sm text-on-surface">+91 8285336507-AVANDAB</div>
-</div>
-</div>
-<div class="flex gap-4 items-start">
-<div class="bg-surface-container-low border border-border-subtle rounded-md p-2.5 flex items-center justify-center text-primary">
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h9"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><path d="M16 19a5 5 0 0 0 2-4"/><path d="m19 19-2-2"/></svg>
-</div>
-<div>
-<div class="text-xs font-bold uppercase tracking-wider text-text-muted mb-1">Support Email</div>
-<div class="font-mono text-sm text-on-surface">support@avandab.com</div>
-</div>
-</div>
-</div>
-</div>
+
 <!-- Quick Links -->
 <div class="bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm p-6">
 <h3 class="text-lg font-semibold text-on-surface font-display mb-4">Quick Support</h3>

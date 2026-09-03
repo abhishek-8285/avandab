@@ -564,9 +564,20 @@ button:disabled:hover {
             align-items: center;
             gap: 6px;
             transition: color 0.15s ease;
+            background: transparent;
+            border: 0;
+            font-family: inherit;
+        }
+        button.navigation-top-menu-label:focus-visible,
+        .navigation-top-menu-link:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+            border-radius: 6px;
         }
         .navigation-top-menu-item:hover > .navigation-top-menu-label,
-        .navigation-top-menu-item:hover > .navigation-top-menu-link {
+        .navigation-top-menu-item:hover > .navigation-top-menu-link,
+        .navigation-top-menu-item:focus-within > .navigation-top-menu-label,
+        .navigation-top-menu-item:focus-within > .navigation-top-menu-link {
             color: var(--color-primary);
         }
         .navigation-top-menu-label-arrow::after {
@@ -580,7 +591,8 @@ button:disabled:hover {
             margin-top: -2px;
             transition: transform 0.2s ease;
         }
-        .navigation-top-menu-item:hover > .navigation-top-menu-label-arrow::after {
+        .navigation-top-menu-item:hover > .navigation-top-menu-label-arrow::after,
+        .navigation-top-menu-item:focus-within > .navigation-top-menu-label-arrow::after {
             transform: rotate(225deg);
             border-color: var(--color-primary);
         }
@@ -599,7 +611,8 @@ button:disabled:hover {
             display: none;
             z-index: 110;
         }
-        .navigation-top-menu-item:hover > .navigation-top-menu-sublist {
+        .navigation-top-menu-item:hover > .navigation-top-menu-sublist,
+        .navigation-top-menu-item:focus-within > .navigation-top-menu-sublist {
             display: block;
         }
         .navigation-top-menu-sublist .navigation-top-menu-link {
@@ -754,12 +767,14 @@ button:disabled:hover {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
             }
         }
-        .footer-ecasb .footer-col h4 {
+        .footer-ecasb .footer-col h4,
+        .footer-ecasb .footer-col .footer-heading {
             font-family: 'Outfit', sans-serif;
             font-weight: 700;
             font-size: 1rem;
             color: var(--color-on-surface);
             margin-bottom: 1.25rem;
+            margin-top: 0;
         }
         .footer-ecasb .footer-col ul {
             list-style: none;

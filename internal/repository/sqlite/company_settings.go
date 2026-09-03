@@ -34,6 +34,7 @@ func (r *SQLRepository) UpdateCompanySettings(ctx context.Context, settings doma
 		Phone:         nullString(settings.Phone),
 		Email:         nullString(settings.Email),
 		GstNumber:     nullString(settings.GSTNumber),
+		PanNumber:     nullString(settings.PanNumber),
 	})
 	if err != nil {
 		return domain.CompanySettings{}, err

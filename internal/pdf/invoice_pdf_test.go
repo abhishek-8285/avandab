@@ -146,3 +146,75 @@ func TestGenerateInvoicePDF_URLQRIsNotFetched(t *testing.T) {
 		t.Error("URL leaked into document")
 	}
 }
+
+func TestGenerateInvoicePDF_3Tiers(t *testing.T) {
+	// 1. Tier 1: GST Registered Enterprise
+	t.Run("Tier 1: Tax Invoice", func(t *testing.T) {
+		d := gstFixture(true)
+		d.LegalTitle = "TAX INVOICE"
+		b, err := GenerateInvoicePDF(d)
+		if err != nil {
+			t.Fatal(err)
+		}
+		validPDF(t, b, 2000)
+	})
+
+	// 2. Tier 2: Non-GST with PAN
+	t.Run("Tier 2: Bill of Supply / Freight Bill", func(t *testing.T) {
+		d := InvoicePDFData{
+			Company: PDFParty{
+				Name:    "Rathore Goods Transport",
+				Address: "3 Transport Nagar, Jaipur",
+				PAN:     "ABCDE1234F",
+				Phone:   "+91-9876543210",
+			},
+			Customer: PDFParty{
+				Name:    "Sunrise Textiles",
+				Address: "Bhiwandi, Maharashtra",
+			},
+			InvoiceNumber: "F-BILL-101",
+			InvoiceDate:   "02 Sep 2026",
+			LegalTitle:    "BILL OF SUPPLY / FREIGHT BILL",
+			Subtotal:      25000,
+			Total:         25000,
+			Balance:       25000,
+			Items: []PDFLineItem{
+				{Description: "Full Truck Load Freight - Jaipur to Bhiwandi", Quantity: "1 TRIP", Rate: 25000, Total: 25000},
+			},
+		}
+		b, err := GenerateInvoicePDF(d)
+		if err != nil {
+			t.Fatal(err)
+		}
+		validPDF(t, b, 1200)
+	})
+
+	// 3. Tier 3: Micro Transporter without GST or PAN
+	t.Run("Tier 3: Consignment Freight Bill", func(t *testing.T) {
+		d := InvoicePDFData{
+			Company: PDFParty{
+				Name:    "Khan Mini Transport",
+				Address: "Old City Gate, Bhopal",
+				Phone:   "+91-9822211100",
+			},
+			Customer: PDFParty{
+				Name:    "Patel Traders",
+				Address: "Indore",
+			},
+			InvoiceNumber: "BILTY-505",
+			InvoiceDate:   "02 Sep 2026",
+			LegalTitle:    "CONSIGNMENT FREIGHT BILL",
+			Subtotal:      8500,
+			Total:         8500,
+			Balance:       8500,
+			Items: []PDFLineItem{
+				{Description: "Local Freight Haulage - Bhopal to Indore", Quantity: "1 TRIP", Rate: 8500, Total: 8500},
+			},
+		}
+		b, err := GenerateInvoicePDF(d)
+		if err != nil {
+			t.Fatal(err)
+		}
+		validPDF(t, b, 1200)
+	})
+}

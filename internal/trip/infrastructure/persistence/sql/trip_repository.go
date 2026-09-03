@@ -622,7 +622,16 @@ func (r *tripRepository) saveStops(ctx context.Context, t *aggregate.TripAggrega
 		return nil
 	}
 	q := r.getDBTx(ctx)
+	now := time.Now()
 	for _, s := range t.Stops {
+		crAt := s.CreatedAt
+		if crAt.IsZero() {
+			crAt = now
+		}
+		upAt := s.UpdatedAt
+		if upAt.IsZero() {
+			upAt = now
+		}
 		_, err := q.ExecContext(ctx, `
 			INSERT INTO trip_stops (
 				id, tenant_id, trip_id, stop_sequence, stop_type, location_name, address,
@@ -640,6 +649,11 @@ func (r *tripRepository) saveStops(ctx context.Context, t *aggregate.TripAggrega
 				?, ?
 			)
 			ON CONFLICT(trip_id, stop_sequence) DO UPDATE SET
+				location_name = excluded.location_name,
+				address = excluded.address,
+				consignee_name = excluded.consignee_name,
+				consignee_phone = excluded.consignee_phone,
+				consignee_email = excluded.consignee_email,
 				status = excluded.status,
 				actual_arrival = excluded.actual_arrival,
 				actual_departure = excluded.actual_departure,
@@ -656,7 +670,7 @@ func (r *tripRepository) saveStops(ctx context.Context, t *aggregate.TripAggrega
 			s.PlannedArrival, s.ActualArrival, s.ActualDeparture, string(s.Status),
 			s.OTPRequired, s.OTPCode, s.OTPExpiresAt, s.OTPVerifiedAt,
 			s.PODRequired, s.PODURL, s.PODSignatureURL, s.PODVerifiedAt, s.PODNotes, s.FailureReason,
-			s.CreatedAt, s.UpdatedAt,
+			crAt, upAt,
 		)
 		if err != nil {
 			if strings.Contains(err.Error(), "no such table") {

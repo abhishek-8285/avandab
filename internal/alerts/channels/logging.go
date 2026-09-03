@@ -32,6 +32,22 @@ func (l *LoggingProvider) Send(ctx context.Context, msg Message) error {
 	return err
 }
 
+// SendWhatsApp forwards direct WhatsApp delivery to downstream provider if supported.
+func (l *LoggingProvider) SendWhatsApp(ctx context.Context, phone, text string) error {
+	if s, ok := l.next.(interface {
+		SendWhatsApp(ctx context.Context, phone, text string) error
+	}); ok {
+		err := s.SendWhatsApp(ctx, phone, text)
+		status, detail := "sent", ""
+		if err != nil {
+			status, detail = "failed", err.Error()
+		}
+		l.record(ctx, Message{Phone: phone, Body: text}, status, detail)
+		return err
+	}
+	return l.Send(ctx, Message{Phone: phone, Body: text})
+}
+
 func (l *LoggingProvider) record(ctx context.Context, msg Message, status, detail string) {
 	target := msg.Phone
 	if target == "" {

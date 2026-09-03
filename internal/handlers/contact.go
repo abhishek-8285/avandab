@@ -67,8 +67,11 @@ func (h *ContactHandlers) Page(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pd := PageData{
-		Title: "Contact Us & Support Status",
-		User:  session,
+		Title:          "Contact Us & Support Status",
+		SEODescription: "Contact Avandab support — fleet onboarding, billing, tracking help and ticket status lookup.",
+		CanonicalPath:  "/contact-us",
+		NoIndex:        false,
+		User:           session,
 		Extra: map[string]interface{}{
 			"Ticket":         ticket,
 			"SearchErr":      searchErr,

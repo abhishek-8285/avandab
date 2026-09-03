@@ -3,14 +3,20 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -106,6 +112,8 @@ func (h *TripHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/stops/{stopId}/reach", h.ReachStop)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/stops/{stopId}/pod", h.SubmitStopPOD)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/stops/{stopId}/complete", h.CompleteStop)
+	r.Get("/{id}/epod", h.PublicEPODCertificate)
+	r.Get("/{id}/stops/{stopId}/epod", h.PublicEPODCertificate)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "shares", "create")).Post("/{id}/share", h.App.Share.CreateShare)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "read")).Get("/{id}/compliance", h.TripComplianceFragment)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/send-pod-otp", h.SendPODOTPSMS)
@@ -1057,32 +1065,253 @@ func (h *TripHandlers) ReachStop(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/trips/"+tripID, http.StatusSeeOther)
 }
 
+// safePODExtension returns a sanitized, whitelisted extension for saved POD files.
+func safePODExtension(filename, contentType string) string {
+	ext := strings.ToLower(filepath.Ext(filepath.Base(filepath.Clean(filename))))
+	switch ext {
+	case ".jpg", ".jpeg", ".png", ".gif", ".webp", ".pdf", ".svg":
+		if ext == ".jpeg" {
+			return ".jpg"
+		}
+		return ext
+	}
+	switch contentType {
+	case "image/jpeg":
+		return ".jpg"
+	case "image/png":
+		return ".png"
+	case "image/gif":
+		return ".gif"
+	case "image/webp":
+		return ".webp"
+	case "application/pdf":
+		return ".pdf"
+	case "image/svg+xml":
+		return ".svg"
+	default:
+		return ".jpg"
+	}
+}
+
+func saveUploadedPODFile(header *multipart.FileHeader, baseDir string) (string, error) {
+	if header == nil {
+		return "", nil
+	}
+	file, err := header.Open()
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = file.Close() }()
+
+	buf := make([]byte, 512)
+	n, err := io.ReadFull(file, buf)
+	if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+		return "", err
+	}
+	if n == 0 {
+		return "", nil
+	}
+
+	detected := http.DetectContentType(buf[:n])
+	ext := safePODExtension(header.Filename, detected)
+
+	podDir := filepath.Join(baseDir, "pod")
+	if err := os.MkdirAll(podDir, 0o750); err != nil {
+		return "", err
+	}
+
+	filename := uuid.NewString() + ext
+	targetPath := filepath.Join(podDir, filename)
+
+	dest, err := os.Create(targetPath)
+	if err != nil {
+		return "", err
+	}
+	if _, err := io.Copy(dest, io.MultiReader(bytes.NewReader(buf[:n]), file)); err != nil {
+		_ = dest.Close()
+		_ = os.Remove(targetPath)
+		return "", err
+	}
+	if err := dest.Close(); err != nil {
+		_ = os.Remove(targetPath)
+		return "", err
+	}
+
+	return "/uploads/pod/" + filename, nil
+}
+
+func saveBase64PODImage(dataURI, baseDir string) (string, error) {
+	parts := strings.SplitN(dataURI, ",", 2)
+	if len(parts) != 2 {
+		return "", errors.New("invalid data uri")
+	}
+	header := parts[0]
+	data := parts[1]
+
+	ext := ".png"
+	if strings.Contains(header, "image/jpeg") || strings.Contains(header, "image/jpg") {
+		ext = ".jpg"
+	} else if strings.Contains(header, "image/webp") {
+		ext = ".webp"
+	}
+
+	raw, err := base64.StdEncoding.DecodeString(data)
+	if err != nil {
+		return "", err
+	}
+
+	podDir := filepath.Join(baseDir, "pod")
+	if err := os.MkdirAll(podDir, 0o750); err != nil {
+		return "", err
+	}
+
+	filename := uuid.NewString() + ext
+	targetPath := filepath.Join(podDir, filename)
+	if err := os.WriteFile(targetPath, raw, 0o600); err != nil {
+		return "", err
+	}
+	return "/uploads/pod/" + filename, nil
+}
+
 func (h *TripHandlers) SubmitStopPOD(w http.ResponseWriter, r *http.Request) {
 	h.init()
 	tripID := chi.URLParam(r, "id")
+	if tripID == "" {
+		tripID = chi.URLParam(r, "tripId")
+	}
 	stopID := chi.URLParam(r, "stopId")
+	if stopID == "" {
+		stopID = chi.URLParam(r, "stop_id")
+	}
 	tenantID := shared.TenantIDFromContext(r.Context())
+	if tenantID == "" {
+		tenantID = shared.DefaultTenant
+	}
+
+	uploadBaseDir := "./uploads"
+	if h.Config != nil && h.Config.UploadDir != "" {
+		uploadBaseDir = h.Config.UploadDir
+	}
 
 	var podURL, signatureURL, notes, otp string
 	ct := r.Header.Get("Content-Type")
-	if strings.Contains(ct, "application/json") {
+
+	if strings.Contains(ct, "multipart/form-data") {
+		r.Body = http.MaxBytesReader(w, r.Body, 25<<20)
+		if err := r.ParseMultipartForm(25 << 20); err == nil {
+			podURL = r.FormValue("pod_url")
+			signatureURL = r.FormValue("signature_url")
+			notes = r.FormValue("notes")
+			otp = r.FormValue("otp")
+			if stopID == "" {
+				stopID = r.FormValue("stop_id")
+			}
+			if tripID == "" {
+				tripID = r.FormValue("trip_id")
+			}
+
+			// Direct POD photo / document file upload
+			for _, key := range []string{"pod_file", "photo", "pod_photo", "file"} {
+				if fhs, ok := r.MultipartForm.File[key]; ok && len(fhs) > 0 {
+					if saved, err := saveUploadedPODFile(fhs[0], uploadBaseDir); err == nil && saved != "" {
+						podURL = saved
+						break
+					}
+				}
+			}
+
+			// Direct consignee signature file upload
+			for _, key := range []string{"signature_file", "signature", "signature_photo"} {
+				if fhs, ok := r.MultipartForm.File[key]; ok && len(fhs) > 0 {
+					if saved, err := saveUploadedPODFile(fhs[0], uploadBaseDir); err == nil && saved != "" {
+						signatureURL = saved
+						break
+					}
+				}
+			}
+
+			// Signature canvas data URI support
+			sigData := r.FormValue("signature_data")
+			if sigData == "" && strings.HasPrefix(r.FormValue("signature"), "data:image/") {
+				sigData = r.FormValue("signature")
+			}
+			if strings.HasPrefix(sigData, "data:image/") {
+				if saved, err := saveBase64PODImage(sigData, uploadBaseDir); err == nil && saved != "" {
+					signatureURL = saved
+				}
+			}
+		}
+	} else if strings.Contains(ct, "application/json") {
 		var req struct {
+			TripID       string `json:"trip_id"`
+			StopID       string `json:"stop_id"`
 			PODURL       string `json:"pod_url"`
 			SignatureURL string `json:"signature_url"`
 			Notes        string `json:"notes"`
 			OTP          string `json:"otp"`
+			Photo        string `json:"photo"`
+			Signature    string `json:"signature"`
 		}
 		_ = json.NewDecoder(r.Body).Decode(&req)
+		if tripID == "" && req.TripID != "" {
+			tripID = req.TripID
+		}
+		if stopID == "" && req.StopID != "" {
+			stopID = req.StopID
+		}
 		podURL = req.PODURL
+		if podURL == "" && req.Photo != "" {
+			podURL = req.Photo
+		}
 		signatureURL = req.SignatureURL
+		if signatureURL == "" && req.Signature != "" {
+			signatureURL = req.Signature
+		}
+		if strings.HasPrefix(signatureURL, "data:image/") {
+			if saved, err := saveBase64PODImage(signatureURL, uploadBaseDir); err == nil && saved != "" {
+				signatureURL = saved
+			}
+		}
 		notes = req.Notes
 		otp = req.OTP
 	} else {
 		_ = r.ParseForm()
+		if tripID == "" {
+			tripID = r.FormValue("trip_id")
+		}
+		if stopID == "" {
+			stopID = r.FormValue("stop_id")
+		}
 		podURL = r.FormValue("pod_url")
+		if podURL == "" {
+			podURL = r.FormValue("photo")
+		}
 		signatureURL = r.FormValue("signature_url")
+		if signatureURL == "" {
+			signatureURL = r.FormValue("signature")
+		}
+		sigData := r.FormValue("signature_data")
+		if strings.HasPrefix(sigData, "data:image/") {
+			if saved, err := saveBase64PODImage(sigData, uploadBaseDir); err == nil && saved != "" {
+				signatureURL = saved
+			}
+		} else if strings.HasPrefix(signatureURL, "data:image/") {
+			if saved, err := saveBase64PODImage(signatureURL, uploadBaseDir); err == nil && saved != "" {
+				signatureURL = saved
+			}
+		}
 		notes = r.FormValue("notes")
 		otp = r.FormValue("otp")
+	}
+
+	// Auto-locate default stop if omitted
+	if stopID == "" && h.App != nil && h.App.DB != nil {
+		var sID string
+		_ = h.App.DB.QueryRowContext(r.Context(),
+			`SELECT id FROM trip_stops WHERE trip_id = ? ORDER BY stop_sequence DESC LIMIT 1`, tripID).Scan(&sID)
+		if sID != "" {
+			stopID = sID
+		}
 	}
 
 	err := h.submitStopPODUC.Execute(r.Context(), tripapp.SubmitStopPODCommand{
@@ -1099,13 +1328,423 @@ func (h *TripHandlers) SubmitStopPOD(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Mirror to legacy trips table and stop_pod_attachments for cross-compatibility
+	if h.App != nil && h.App.DB != nil {
+		_, _ = h.App.DB.ExecContext(r.Context(), `
+			UPDATE trips
+			SET pod_url = COALESCE(NULLIF(?, ''), pod_url),
+			    pod_photo_url = COALESCE(NULLIF(?, ''), pod_photo_url),
+			    pod_signature_url = COALESCE(NULLIF(?, ''), pod_signature_url),
+			    pod_notes = COALESCE(NULLIF(?, ''), pod_notes),
+			    pod_captured_at = CURRENT_TIMESTAMP
+			WHERE id = ? OR trip_number = ?`,
+			podURL, podURL, signatureURL, notes, tripID, tripID,
+		)
+		if podURL != "" && stopID != "" {
+			_, _ = h.App.DB.ExecContext(r.Context(), `
+				INSERT INTO stop_pod_attachments (id, tenant_id, stop_id, trip_id, file_url, file_type, created_at)
+				VALUES (?, ?, ?, ?, ?, 'photo', CURRENT_TIMESTAMP)`,
+				uuid.NewString(), string(tenantID), stopID, tripID, podURL,
+			)
+		}
+		if signatureURL != "" && stopID != "" {
+			_, _ = h.App.DB.ExecContext(r.Context(), `
+				INSERT INTO stop_pod_attachments (id, tenant_id, stop_id, trip_id, file_url, file_type, created_at)
+				VALUES (?, ?, ?, ?, ?, 'signature', CURRENT_TIMESTAMP)`,
+				uuid.NewString(), string(tenantID), stopID, tripID, signatureURL,
+			)
+		}
+	}
+
 	if wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(map[string]string{"status": "pod_verified", "stop_id": stopID, "trip_id": tripID})
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":        "pod_verified",
+			"stop_id":       stopID,
+			"trip_id":       tripID,
+			"pod_url":       podURL,
+			"signature_url": signatureURL,
+			"epod_url":      "/epod/" + tripID,
+		})
 		return
 	}
-	http.Redirect(w, r, "/trips/"+tripID, http.StatusSeeOther)
+	http.Redirect(w, r, "/epod/"+tripID, http.StatusSeeOther)
+}
+
+// EPODReceiptStopView represents an individual stop in the e-POD journey summary.
+type EPODReceiptStopView struct {
+	ID              string
+	StopSequence    int
+	StopType        string
+	LocationName    string
+	Address         string
+	Status          string
+	ActualArrival   string
+	ActualDeparture string
+	ConsigneeName   string
+	ConsigneePhone  string
+	ConsigneeEmail  string
+	OTPRequired     bool
+	OTPVerified     bool
+	OTPVerifiedAt   string
+	PODRequired     bool
+	PODVerified     bool
+	PODURL          string
+	SignatureURL    string
+	Notes           string
+	IsSelected      bool
+}
+
+// EPODReceiptView holds all template data for the public e-POD verification page.
+type EPODReceiptView struct {
+	TripID            string
+	TripNumber        string
+	Status            string
+	CompanyName       string
+	CompanyLogo       string
+	VehicleReg        string
+	DriverName        string
+	DriverPhone       string
+	DepartureTime     string
+	ArrivalTime       string
+	DeliveredAt       string
+	StopSequence      int
+	StopType          string
+	LocationName      string
+	Address           string
+	ConsigneeName     string
+	ConsigneePhone    string
+	ConsigneeEmail    string
+	OTPRequired       bool
+	OTPVerified       bool
+	OTPVerifiedAt     string
+	PODRequired       bool
+	PODVerified       bool
+	PODURL            string
+	SignatureURL      string
+	Notes             string
+	VerificationHash  string
+	CertificateNumber string
+	GeneratedAt       string
+	Stops             []EPODReceiptStopView
+}
+
+// PublicEPODCertificate renders the public verified electronic proof of delivery certificate (GET /epod/{tripId}).
+func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Request) {
+	h.init()
+	tripID := chi.URLParam(r, "tripId")
+	if tripID == "" {
+		tripID = chi.URLParam(r, "id")
+	}
+	stopID := chi.URLParam(r, "stopId")
+
+	if tripID == "" {
+		http.Error(w, "Trip ID required", http.StatusBadRequest)
+		return
+	}
+
+	if h.App == nil || h.App.DB == nil {
+		http.Error(w, "Database unavailable", http.StatusInternalServerError)
+		return
+	}
+
+	var (
+		resolvedTripID, tenantID, tripNumber, status string
+		departureTime                                time.Time
+		arrivalTime                                  sql.NullTime
+		startedAt, reachedPickupAt                   sql.NullTime
+		inTransitAt, deliveredAt                     sql.NullTime
+		completedAt                                  sql.NullTime
+		driverID, vehicleID                          sql.NullString
+		podURL, podPhotoURL                          sql.NullString
+		podSigURL, podConsName                       sql.NullString
+		podConsPhone                                 sql.NullString
+		podOTPVerified                               int
+		podCapturedAt                                sql.NullTime
+		podNotes                                     sql.NullString
+	)
+
+	err := h.App.DB.QueryRowContext(r.Context(), `
+		SELECT id, tenant_id, trip_number, status, departure_time, arrival_time,
+		       started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at,
+		       COALESCE(driver_id, ''), COALESCE(vehicle_id, ''),
+		       COALESCE(pod_url, ''), COALESCE(pod_photo_url, ''), COALESCE(pod_signature_url, ''),
+		       COALESCE(pod_consignee_name, ''), COALESCE(pod_consignee_phone, ''),
+		       COALESCE(pod_otp_verified, 0), pod_captured_at, COALESCE(pod_notes, '')
+		FROM trips
+		WHERE id = ? OR trip_number = ?
+		LIMIT 1
+	`, tripID, tripID).Scan(
+		&resolvedTripID, &tenantID, &tripNumber, &status, &departureTime, &arrivalTime,
+		&startedAt, &reachedPickupAt, &inTransitAt, &deliveredAt, &completedAt,
+		&driverID, &vehicleID,
+		&podURL, &podPhotoURL, &podSigURL,
+		&podConsName, &podConsPhone,
+		&podOTPVerified, &podCapturedAt, &podNotes,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, "e-POD Certificate not found for trip: "+tripID, http.StatusNotFound)
+			return
+		}
+		http.Error(w, "Failed to load trip: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Lookup vehicle
+	var vehicleReg string
+	if vehicleID.Valid && vehicleID.String != "" {
+		_ = h.App.DB.QueryRowContext(r.Context(), `
+			SELECT COALESCE(registration_number, vehicle_number, '') FROM vehicles WHERE id = ?
+		`, vehicleID.String).Scan(&vehicleReg)
+	}
+
+	// Lookup driver
+	var driverName, driverPhone string
+	if driverID.Valid && driverID.String != "" {
+		_ = h.App.DB.QueryRowContext(r.Context(), `
+			SELECT COALESCE(first_name || ' ' || last_name, ''), COALESCE(phone, '')
+			FROM drivers WHERE id = ? OR driver_id = ?
+		`, driverID.String, driverID.String).Scan(&driverName, &driverPhone)
+	}
+
+	// Lookup company settings / name & logo
+	companyName := "FlyFleet Logistics"
+	companyLogo := ""
+	var cName, cLogo sql.NullString
+	if err := h.App.DB.QueryRowContext(r.Context(), `
+		SELECT COALESCE(company_name, ''), COALESCE(logo_url, '') FROM company_settings WHERE id = 1 LIMIT 1
+	`).Scan(&cName, &cLogo); err == nil {
+		if cName.Valid && cName.String != "" {
+			companyName = cName.String
+		}
+		if cLogo.Valid && cLogo.String != "" {
+			companyLogo = cLogo.String
+		}
+	}
+	if companyName == "FlyFleet Logistics" && tenantID != "" {
+		var tName sql.NullString
+		if err := h.App.DB.QueryRowContext(r.Context(), `SELECT COALESCE(name, '') FROM tenants WHERE id = ?`, tenantID).Scan(&tName); err == nil && tName.Valid && tName.String != "" {
+			companyName = tName.String
+		}
+	}
+
+	// Query trip_stops
+	rows, err := h.App.DB.QueryContext(r.Context(), `
+		SELECT id, stop_sequence, stop_type, COALESCE(location_name, ''), COALESCE(address, ''),
+		       status, actual_arrival, actual_departure,
+		       COALESCE(otp_required, 0), otp_verified_at,
+		       COALESCE(pod_required, 0), COALESCE(pod_url, ''), COALESCE(pod_signature_url, ''),
+		       pod_verified_at, COALESCE(pod_notes, ''),
+		       COALESCE(consignee_name, ''), COALESCE(consignee_phone, ''), COALESCE(consignee_email, '')
+		FROM trip_stops
+		WHERE trip_id = ?
+		ORDER BY stop_sequence ASC
+	`, resolvedTripID)
+
+	var stops []EPODReceiptStopView
+	var selectedStop *EPODReceiptStopView
+
+	if err == nil {
+		defer func() { _ = rows.Close() }()
+		for rows.Next() {
+			var s EPODReceiptStopView
+			var arrTime, depTime, otpVerTime, podVerTime sql.NullTime
+			var reqOTP, reqPOD int
+			if err := rows.Scan(
+				&s.ID, &s.StopSequence, &s.StopType, &s.LocationName, &s.Address,
+				&s.Status, &arrTime, &depTime,
+				&reqOTP, &otpVerTime,
+				&reqPOD, &s.PODURL, &s.SignatureURL,
+				&podVerTime, &s.Notes,
+				&s.ConsigneeName, &s.ConsigneePhone, &s.ConsigneeEmail,
+			); err == nil {
+				s.OTPRequired = reqOTP == 1
+				s.PODRequired = reqPOD == 1
+				if otpVerTime.Valid {
+					s.OTPVerified = true
+					s.OTPVerifiedAt = otpVerTime.Time.Format("02 Jan 2006, 15:04 MST")
+				}
+				if podVerTime.Valid {
+					s.PODVerified = true
+				}
+				if arrTime.Valid {
+					s.ActualArrival = arrTime.Time.Format("02 Jan 2006, 15:04")
+				}
+				if depTime.Valid {
+					s.ActualDeparture = depTime.Time.Format("02 Jan 2006, 15:04")
+				}
+
+				if stopID != "" && s.ID == stopID {
+					s.IsSelected = true
+					sc := s
+					selectedStop = &sc
+				}
+				stops = append(stops, s)
+			}
+		}
+	}
+
+	// Pick default selected stop if not explicitly chosen
+	if selectedStop == nil && len(stops) > 0 {
+		for i := range stops {
+			if stops[i].PODURL != "" || stops[i].SignatureURL != "" || stops[i].PODVerified {
+				stops[i].IsSelected = true
+				selectedStop = &stops[i]
+				break
+			}
+		}
+		if selectedStop == nil {
+			for i := len(stops) - 1; i >= 0; i-- {
+				if stops[i].StopType == "drop" || stops[i].Status == "completed" {
+					stops[i].IsSelected = true
+					selectedStop = &stops[i]
+					break
+				}
+			}
+		}
+		if selectedStop == nil {
+			stops[len(stops)-1].IsSelected = true
+			selectedStop = &stops[len(stops)-1]
+		}
+	}
+
+	// Prepare final view data
+	finalPODURL := podPhotoURL.String
+	if finalPODURL == "" {
+		finalPODURL = podURL.String
+	}
+	finalSigURL := podSigURL.String
+	finalConsName := podConsName.String
+	finalConsPhone := podConsPhone.String
+	finalNotes := podNotes.String
+	finalOTPVerified := podOTPVerified == 1
+	var finalOTPVerifiedAt string
+	if finalOTPVerified && podCapturedAt.Valid {
+		finalOTPVerifiedAt = podCapturedAt.Time.Format("02 Jan 2006, 15:04 MST")
+	}
+
+	stopSeq := 1
+	stopType := "Delivery / Drop"
+	locName := "Main Facility"
+	addr := ""
+	consEmail := ""
+
+	if selectedStop != nil {
+		stopSeq = selectedStop.StopSequence
+		if selectedStop.StopType != "" {
+			stopType = selectedStop.StopType
+		}
+		if selectedStop.LocationName != "" {
+			locName = selectedStop.LocationName
+		}
+		if selectedStop.Address != "" {
+			addr = selectedStop.Address
+		}
+		if selectedStop.ConsigneeName != "" {
+			finalConsName = selectedStop.ConsigneeName
+		}
+		if selectedStop.ConsigneePhone != "" {
+			finalConsPhone = selectedStop.ConsigneePhone
+		}
+		if selectedStop.ConsigneeEmail != "" {
+			consEmail = selectedStop.ConsigneeEmail
+		}
+		if selectedStop.PODURL != "" {
+			finalPODURL = selectedStop.PODURL
+		}
+		if selectedStop.SignatureURL != "" {
+			finalSigURL = selectedStop.SignatureURL
+		}
+		if selectedStop.Notes != "" {
+			finalNotes = selectedStop.Notes
+		}
+		if selectedStop.OTPVerified {
+			finalOTPVerified = true
+			if selectedStop.OTPVerifiedAt != "" {
+				finalOTPVerifiedAt = selectedStop.OTPVerifiedAt
+			}
+		}
+	}
+
+	delivTimestamp := ""
+	if deliveredAt.Valid {
+		delivTimestamp = deliveredAt.Time.Format("02 Jan 2006, 15:04 MST")
+	} else if arrivalTime.Valid {
+		delivTimestamp = arrivalTime.Time.Format("02 Jan 2006, 15:04 MST")
+	} else if podCapturedAt.Valid {
+		delivTimestamp = podCapturedAt.Time.Format("02 Jan 2006, 15:04 MST")
+	}
+
+	// Generate tamper-proof SHA-256 digital verification hash
+	rawHashInput := fmt.Sprintf("%s:%s:%s:%s:%s:%s", resolvedTripID, tripNumber, vehicleReg, finalConsName, delivTimestamp, tenantID)
+	hBytes := sha256.Sum256([]byte(rawHashInput))
+	verHash := strings.ToUpper(hex.EncodeToString(hBytes[:]))
+
+	certNumber := "EPOD-" + tripNumber
+	if strings.Contains(tripNumber, "TRIP-") {
+		certNumber = strings.Replace(tripNumber, "TRIP-", "EPOD-", 1)
+	}
+
+	view := EPODReceiptView{
+		TripID:            resolvedTripID,
+		TripNumber:        tripNumber,
+		Status:            status,
+		CompanyName:       companyName,
+		CompanyLogo:       companyLogo,
+		VehicleReg:        vehicleReg,
+		DriverName:        driverName,
+		DriverPhone:       driverPhone,
+		DepartureTime:     departureTime.Format("02 Jan 2006, 15:04"),
+		DeliveredAt:       delivTimestamp,
+		StopSequence:      stopSeq,
+		StopType:          stopType,
+		LocationName:      locName,
+		Address:           addr,
+		ConsigneeName:     finalConsName,
+		ConsigneePhone:    finalConsPhone,
+		ConsigneeEmail:    consEmail,
+		OTPRequired:       true,
+		OTPVerified:       finalOTPVerified,
+		OTPVerifiedAt:     finalOTPVerifiedAt,
+		PODRequired:       true,
+		PODVerified:       finalPODURL != "" || finalSigURL != "" || finalOTPVerified,
+		PODURL:            finalPODURL,
+		SignatureURL:      finalSigURL,
+		Notes:             finalNotes,
+		VerificationHash:  verHash,
+		CertificateNumber: certNumber,
+		GeneratedAt:       time.Now().Format("02 Jan 2006, 15:04 MST"),
+		Stops:             stops,
+	}
+
+	if wantsJSON(r) || r.URL.Query().Get("format") == "json" {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(view)
+		return
+	}
+
+	h.renderStandalone(w, "epod_receipt.html", view)
+}
+
+func (h *TripHandlers) renderStandalone(w http.ResponseWriter, name string, data interface{}) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+
+	if h.App == nil || h.App.Templates == nil {
+		http.Error(w, "templates not initialized", http.StatusInternalServerError)
+		return
+	}
+	tmpl := h.App.Templates.Lookup(name)
+	if tmpl == nil {
+		http.Error(w, fmt.Sprintf("template %q not found", name), http.StatusInternalServerError)
+		return
+	}
+	if err := tmpl.Execute(w, data); err != nil {
+		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
+	}
 }
 
 func (h *TripHandlers) CompleteStop(w http.ResponseWriter, r *http.Request) {

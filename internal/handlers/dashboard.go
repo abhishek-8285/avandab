@@ -22,7 +22,8 @@ func (h *DashboardHandlers) Index(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
 
 	company, _ := h.Services.Settings.GetSettings(r.Context())
-	if company.CompanyName == "" && session != nil && session.Role == "admin" {
+	if session != nil && (session.Role == "admin" || session.Role == "org_admin") && isCompanyIncomplete(company) {
+		http.SetCookie(w, flashCookie("flash_error", "Please complete mandatory company compliance details to unlock fleet operations."))
 		http.Redirect(w, r, "/company/onboard", http.StatusSeeOther)
 		return
 	}

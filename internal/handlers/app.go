@@ -49,9 +49,18 @@ type App struct {
 	// ResetTokens issues and verifies single-use password-reset tokens.
 	ResetTokens *auth.ResetTokenStore
 
+	// OTPStore issues and verifies one-time SMS passcodes (Phase 4 phone
+	// verification). Nil disables /api/v1/auth/otp/* with a generic 500.
+	OTPStore *auth.OTPStore
+
 	// Notify delivers outbound email/SMS (nil-safe: handlers check
 	// EmailConfigured/SMSConfigured before offering delivery UX).
 	Notify *notifications.Service
+
+	// GoogleOAuth is the "Sign in with Google" client config; nil or an
+	// empty ClientID disables the flow (routes redirect to /login, UI
+	// button hidden). Zero-cost identity plan Phase 1.
+	GoogleOAuth *auth.OAuthConfig
 
 	// Cache is the config-selected cache backend (none | memory | redis).
 	// Hot reads should go through it instead of hitting the DB directly.
@@ -62,6 +71,7 @@ type App struct {
 
 	// Handler groups
 	Auth       *AuthHandlers
+	OTP        *OTPHandlers
 	Dashboard  *DashboardHandlers
 	Users      *UserHandlers
 	Drivers    *DriverHandlers
@@ -158,6 +168,7 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	app.Experiments = experiments.NewRecorder(db)
 
 	app.Auth = &AuthHandlers{App: app}
+	app.OTP = &OTPHandlers{App: app}
 	app.Dashboard = &DashboardHandlers{App: app}
 	app.Users = &UserHandlers{App: app}
 	app.Drivers = &DriverHandlers{App: app}
@@ -444,17 +455,23 @@ func formatDate(t time.Time) string {
 
 // PageData is the base data passed to all page templates.
 type PageData struct {
-	Title         string
-	Version       string
-	User          *auth.SessionData
-	UserDetail    interface{}
-	Roles         interface{}
-	Settings      interface{}
-	FlashError    string
-	FlashSuccess  string
-	RazorpayKeyID string
-	PWAEnabled    bool
-	Extra         map[string]interface{}
+	Title          string
+	Version        string
+	User           *auth.SessionData
+	UserDetail     interface{}
+	Roles          interface{}
+	Settings       interface{}
+	FlashError     string
+	FlashSuccess   string
+	RazorpayKeyID  string
+	PWAEnabled     bool
+	CanonicalPath  string
+	NoIndex        bool
+	SEODescription string
+	OGImage        string
+	OGType         string
+	SEOJSONLD      template.HTML
+	Extra          map[string]interface{}
 }
 
 // PaginationData contains pagination data for templates.
@@ -575,15 +592,21 @@ func buildTemplateData(data PageData) map[string]interface{} {
 		v = AppVersion
 	}
 	m := map[string]interface{}{
-		"Title":        data.Title,
-		"Version":      v,
-		"User":         data.User,
-		"UserDetail":   data.UserDetail,
-		"Roles":        data.Roles,
-		"Settings":     data.Settings,
-		"FlashError":   data.FlashError,
-		"FlashSuccess": data.FlashSuccess,
-		"PWAEnabled":   data.PWAEnabled,
+		"Title":          data.Title,
+		"Version":        v,
+		"User":           data.User,
+		"UserDetail":     data.UserDetail,
+		"Roles":          data.Roles,
+		"Settings":       data.Settings,
+		"FlashError":     data.FlashError,
+		"FlashSuccess":   data.FlashSuccess,
+		"PWAEnabled":     data.PWAEnabled,
+		"CanonicalPath":  data.CanonicalPath,
+		"NoIndex":        data.NoIndex,
+		"SEODescription": data.SEODescription,
+		"OGImage":        data.OGImage,
+		"OGType":         data.OGType,
+		"SEOJSONLD":      data.SEOJSONLD,
 	}
 	for k, v := range data.Extra {
 		m[k] = v
@@ -617,6 +640,26 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 		}
 	}
 	data.PWAEnabled = pwaEnabled
+	if data.CanonicalPath == "" && r != nil {
+		data.CanonicalPath = r.URL.Path
+	}
+	if data.CanonicalPath != "" {
+		// Authenticated app pages are private; tell crawlers not to index them.
+		data.NoIndex = true
+	}
+
+	if data.FlashSuccess == "" && r != nil {
+		if c, err := r.Cookie("flash_success"); err == nil && c.Value != "" {
+			data.FlashSuccess = c.Value
+			http.SetCookie(w, &http.Cookie{Name: "flash_success", Value: "", Path: "/", MaxAge: -1})
+		}
+	}
+	if data.FlashError == "" && r != nil {
+		if c, err := r.Cookie("flash_error"); err == nil && c.Value != "" {
+			data.FlashError = c.Value
+			http.SetCookie(w, &http.Cookie{Name: "flash_error", Value: "", Path: "/", MaxAge: -1})
+		}
+	}
 
 	templateData := buildTemplateData(data)
 
@@ -644,7 +687,7 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 	// it is a dormant fast-path for future native-SPA clients. Do not delete
 	// unless the team decides to remove SPA support entirely.
 	if s, ok := w.(interface{ IsSPARequest() bool }); ok && s.IsSPARequest() {
-		w.Header().Set("X-Page-Title", data.Title)
+		w.Header().Set("X-Page-Title", data.Title+" - Avandab")
 		_, _ = w.Write([]byte(buf.String()))
 		return
 	}
@@ -668,19 +711,25 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 	}
 
 	pd := struct {
-		Title         string
-		Content       template.HTML
-		User          *auth.SessionData
-		Query         string
-		Notifications interface{}
-		UnreadCount   int
-		HasUnread     bool
-		FlashError    string
-		FlashSuccess  string
-		Version       string
-		PWAEnabled    bool
-		Features      map[string]bool
-		Extra         map[string]interface{}
+		Title          string
+		Content        template.HTML
+		User           *auth.SessionData
+		Query          string
+		Notifications  interface{}
+		UnreadCount    int
+		HasUnread      bool
+		FlashError     string
+		FlashSuccess   string
+		Version        string
+		PWAEnabled     bool
+		Features       map[string]bool
+		Extra          map[string]interface{}
+		CanonicalPath  string
+		NoIndex        bool
+		SEODescription string
+		OGImage        string
+		OGType         string
+		SEOJSONLD      template.HTML
 	}{
 		Title:   data.Title,
 		Content: template.HTML(buf.String()),
@@ -700,11 +749,17 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 			}
 			return nil
 		}(),
-		FlashError:   data.FlashError,
-		FlashSuccess: data.FlashSuccess,
-		Version:      AppVersion,
-		PWAEnabled:   pwaEnabled,
-		Extra:        data.Extra,
+		FlashError:     data.FlashError,
+		FlashSuccess:   data.FlashSuccess,
+		Version:        AppVersion,
+		PWAEnabled:     pwaEnabled,
+		Extra:          data.Extra,
+		CanonicalPath:  data.CanonicalPath,
+		NoIndex:        data.NoIndex,
+		SEODescription: data.SEODescription,
+		OGImage:        data.OGImage,
+		OGType:         data.OGType,
+		SEOJSONLD:      data.SEOJSONLD,
 	}
 
 	if err := layout.Execute(w, pd); err != nil {
@@ -740,19 +795,31 @@ func (a *App) renderAuthPage(w http.ResponseWriter, name string, data PageData) 
 	}
 
 	pd := struct {
-		Title        string
-		Content      template.HTML
-		User         *auth.SessionData
-		FlashError   string
-		FlashSuccess string
-		Version      string
+		Title          string
+		Content        template.HTML
+		User           *auth.SessionData
+		FlashError     string
+		FlashSuccess   string
+		Version        string
+		CanonicalPath  string
+		NoIndex        bool
+		SEODescription string
+		OGImage        string
+		OGType         string
+		SEOJSONLD      template.HTML
 	}{
-		Title:        data.Title,
-		Content:      template.HTML(buf.String()),
-		User:         data.User,
-		FlashError:   data.FlashError,
-		FlashSuccess: data.FlashSuccess,
-		Version:      AppVersion,
+		Title:          data.Title,
+		Content:        template.HTML(buf.String()),
+		User:           data.User,
+		FlashError:     data.FlashError,
+		FlashSuccess:   data.FlashSuccess,
+		Version:        AppVersion,
+		CanonicalPath:  data.CanonicalPath,
+		NoIndex:        data.NoIndex,
+		SEODescription: data.SEODescription,
+		OGImage:        data.OGImage,
+		OGType:         data.OGType,
+		SEOJSONLD:      data.SEOJSONLD,
 	}
 
 	if err := authLayout.Execute(w, pd); err != nil {
@@ -824,40 +891,97 @@ const homeCacheTTL = 15 * time.Minute
 
 var (
 	homeCacheMu    sync.Mutex
-	cachedHomeHTML []byte
-	cachedHomeAt   time.Time
+	cachedHomeHTML map[string][]byte
+	cachedHomeAt   map[string]time.Time
 )
+
+func homeCacheKey(lang, version string) string { return lang + "|" + version }
+
+// seoFAQJSONLD builds a FAQPage JSON-LD block from feature FAQs.
+func seoFAQJSONLD(faq []FAQItem) template.HTML {
+	if len(faq) == 0 {
+		return ""
+	}
+	type qa struct {
+		Type           string            `json:"@type"`
+		Name           string            `json:"name"`
+		AcceptedAnswer map[string]string `json:"acceptedAnswer"`
+	}
+	type faqPage struct {
+		Context    string `json:"@context"`
+		Type       string `json:"@type"`
+		MainEntity []qa   `json:"mainEntity"`
+	}
+	fp := faqPage{Context: "https://schema.org", Type: "FAQPage"}
+	for _, f := range faq {
+		fp.MainEntity = append(fp.MainEntity, qa{
+			Type:           "Question",
+			Name:           f.Question,
+			AcceptedAnswer: map[string]string{"@type": "Answer", "text": f.Answer},
+		})
+	}
+	b, err := json.Marshal(fp)
+	if err != nil {
+		return ""
+	}
+	return template.HTML(`<script type="application/ld+json">` + string(b) + `</script>`)
+}
 
 // Marketing renders the landing homepage using an in-memory cache with TTL.
 func (a *App) Marketing(w http.ResponseWriter, r *http.Request) {
+	lang := "en"
+	if c, err := r.Cookie("lang"); err == nil && i18n.Normalize(c.Value) == "hi" {
+		lang = "hi"
+	}
+	key := homeCacheKey(lang, AppVersion)
 	homeCacheMu.Lock()
-	if len(cachedHomeHTML) == 0 || time.Since(cachedHomeAt) > homeCacheTTL {
-		tmpl := a.Templates.Lookup("home.html")
+	if cachedHomeHTML == nil {
+		cachedHomeHTML = map[string][]byte{}
+		cachedHomeAt = map[string]time.Time{}
+	}
+	_, ok := cachedHomeHTML[key]
+	cachedAt, okAt := cachedHomeAt[key]
+	if !ok || !okAt || time.Since(cachedAt) > homeCacheTTL {
+		tmpl := a.templatesFor(r).Lookup("home.html")
 		if tmpl != nil {
 			var buf bytes.Buffer
-			data := map[string]interface{}{"Version": AppVersion}
+			data := map[string]interface{}{
+				"Version":        AppVersion,
+				"Title":          "Modern Fleet & Logistics Operations",
+				"SEODescription": "Avandab replaces WhatsApp, spreadsheets and calls with one live cockpit — dispatch, track, e-POD, GST invoice and payments for Indian fleets.",
+				"CanonicalPath":  "/",
+				"NoIndex":        false,
+				"OGType":         "website",
+			}
 			if err := tmpl.Execute(&buf, data); err == nil {
-				cachedHomeHTML = buf.Bytes()
-				cachedHomeAt = time.Now()
+				cachedHomeHTML[key] = buf.Bytes()
+				cachedHomeAt[key] = time.Now()
 			}
 		}
 	}
-	html := cachedHomeHTML
+	pageHTML := cachedHomeHTML[key]
 	homeCacheMu.Unlock()
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800")
-	if len(html) > 0 {
-		_, _ = w.Write(html)
+	if len(pageHTML) > 0 {
+		_, _ = w.Write(pageHTML)
 		return
 	}
 
-	tmpl := a.Templates.Lookup("home.html")
+	tmpl := a.templatesFor(r).Lookup("home.html")
 	if tmpl == nil {
 		http.Error(w, "home template not found", http.StatusInternalServerError)
 		return
 	}
-	data := map[string]interface{}{"Version": AppVersion}
+	data := map[string]interface{}{
+		"Version":        AppVersion,
+		"Title":          "Modern Fleet & Logistics Operations",
+		"SEODescription": "Avandab replaces WhatsApp, spreadsheets and calls with one live cockpit — dispatch, track, e-POD, GST invoice and payments for Indian fleets.",
+		"CanonicalPath":  "/",
+		"NoIndex":        false,
+		"OGType":         "website",
+	}
 	if err := tmpl.Execute(w, data); err != nil {
 		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
 	}
@@ -865,14 +989,31 @@ func (a *App) Marketing(w http.ResponseWriter, r *http.Request) {
 
 // PolicyPage renders a static legal/policy page template by file name.
 func (a *App) PolicyPage(w http.ResponseWriter, r *http.Request, name string) {
-	tmpl := a.Templates.Lookup(name)
+	tmpl := a.templatesFor(r).Lookup(name)
 	if tmpl == nil {
 		http.Error(w, name+" template not found", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800")
-	data := map[string]interface{}{"Version": AppVersion}
+	seo := map[string]map[string]string{
+		"privacy.html": {"Title": "Privacy Policy", "Desc": "Avandab Privacy Policy — how we collect, use and protect fleet, driver and customer data under India's DPDP Act, 2023.", "Path": "/privacy"},
+		"terms.html":   {"Title": "Terms of Service", "Desc": "Avandab Terms of Service — service, payment, cancellation, liability and dispute terms for fleet operations.", "Path": "/terms"},
+		"refunds.html": {"Title": "Refund Policy", "Desc": "Avandab Refund Policy — eligibility, submission window and processing for undelivered services.", "Path": "/refunds"},
+	}
+	meta := seo[name]
+	title, desc, path := name, "", "/"
+	if meta != nil {
+		title, desc, path = meta["Title"], meta["Desc"], meta["Path"]
+	}
+	data := map[string]interface{}{
+		"Version":        AppVersion,
+		"Title":          title,
+		"SEODescription": desc,
+		"CanonicalPath":  path,
+		"NoIndex":        false,
+		"OGType":         "website",
+	}
 	if err := tmpl.Execute(w, data); err != nil {
 		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
 	}
@@ -910,8 +1051,18 @@ func (a *App) FeaturePage(w http.ResponseWriter, r *http.Request) {
 			related = append(related, rf)
 		}
 	}
-	data := map[string]interface{}{"Version": AppVersion, "Feature": fc, "RelatedFeatures": related}
-	tmpl := a.Templates.Lookup("feature.html")
+	data := map[string]interface{}{
+		"Version":         AppVersion,
+		"Feature":         fc,
+		"RelatedFeatures": related,
+		"Title":           fc.Title,
+		"SEODescription":  fc.Summary,
+		"CanonicalPath":   "/features/" + fc.Slug,
+		"NoIndex":         false,
+		"OGType":          "article",
+		"SEOJSONLD":       seoFAQJSONLD(fc.FAQ),
+	}
+	tmpl := a.templatesFor(r).Lookup("feature.html")
 	if tmpl == nil {
 		http.Error(w, "feature.html template not found", http.StatusInternalServerError)
 		return
@@ -1131,27 +1282,36 @@ func (a *App) renderErrorInfo(w http.ResponseWriter, r *http.Request, info Error
 	}
 
 	if err := layout.Execute(w, struct {
-		Title         string
-		Content       template.HTML
-		User          *auth.SessionData
-		Query         string
-		Notifications interface{}
-		UnreadCount   int
-		HasUnread     bool
-		FlashError    string
-		FlashSuccess  string
-		Version       string
-		PWAEnabled    bool
-		Features      map[string]bool
-		Extra         map[string]interface{}
+		Title          string
+		Content        template.HTML
+		User           *auth.SessionData
+		Query          string
+		Notifications  interface{}
+		UnreadCount    int
+		HasUnread      bool
+		FlashError     string
+		FlashSuccess   string
+		Version        string
+		PWAEnabled     bool
+		Features       map[string]bool
+		Extra          map[string]interface{}
+		CanonicalPath  string
+		NoIndex        bool
+		SEODescription string
+		OGImage        string
+		OGType         string
+		SEOJSONLD      template.HTML
 	}{
-		Title:      info.Title,
-		Content:    template.HTML(buf.String()),
-		User:       info.User,
-		Version:    AppVersion,
-		PWAEnabled: pwaEnabled,
-		Features:   nil,
-		Extra:      map[string]interface{}{},
+		Title:          info.Title,
+		Content:        template.HTML(buf.String()),
+		User:           info.User,
+		Version:        AppVersion,
+		PWAEnabled:     pwaEnabled,
+		Features:       nil,
+		Extra:          map[string]interface{}{},
+		CanonicalPath:  "",
+		NoIndex:        true,
+		SEODescription: "An error occurred — Avandab Operations Platform",
 	}); err != nil {
 		slog.Error("error layout execution failed", "statusCode", info.StatusCode, "title", info.Title, "error", err)
 		_, _ = w.Write([]byte(fallback))

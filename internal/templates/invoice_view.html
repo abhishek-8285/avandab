@@ -6,6 +6,21 @@
         <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-violet-500 to-cyan-400 opacity-80"></div>
         <div class="flex items-start justify-between gap-4 flex-wrap">
             <div class="min-w-0">
+                <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider
+                        {{if eq .TaxTier 1}}bg-primary/10 text-primary border border-primary/20
+                        {{else if eq .TaxTier 2}}bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-300/40
+                        {{else}}bg-surface-container-high text-secondary border border-border-subtle{{end}}">
+                        {{if .LegalTitle}}{{.LegalTitle}}{{else}}TAX INVOICE{{end}}
+                    </span>
+                    {{if eq .TaxTier 1}}
+                    <span class="text-[11px] font-semibold text-text-muted">Tier 1 • GST Registered</span>
+                    {{else if eq .TaxTier 2}}
+                    <span class="text-[11px] font-semibold text-amber-700 dark:text-amber-300">Tier 2 • Non-GST (PAN: {{if .Company.PanNumber}}{{.Company.PanNumber}}{{end}})</span>
+                    {{else}}
+                    <span class="text-[11px] font-semibold text-text-muted">Tier 3 • Micro Transporter (Rule 54(3))</span>
+                    {{end}}
+                </div>
                 <div class="flex items-center gap-3 flex-wrap">
                     <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-on-surface font-display tabular-nums">{{.Invoice.InvoiceNumber}}</h1>
                     <span id="invoice-status-badge" class="status-badge {{statusBadge .Invoice.PaymentStatus}}">{{.Invoice.PaymentStatus}}</span>
@@ -23,6 +38,11 @@
                     {{end}}
                 </div>
                 <p class="text-sm text-text-muted mt-1">Issued <span class="time-display" data-utc-time="{{.Invoice.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .Invoice.CreatedAt}}</span></p>
+                {{if eq .TaxTier 2}}
+                <p class="text-xs text-amber-700 dark:text-amber-300/90 mt-1 font-medium">Sec. 31(3)(c) Bill of Supply • Sec. 9(3) RCM applies • Sec. 194C(6) TDS exempt on declaration</p>
+                {{else if eq .TaxTier 3}}
+                <p class="text-xs text-text-muted mt-1 font-medium">Issued under Rule 54(3) CGST Rules (Consignment Freight Bilty / Micro Transporter)</p>
+                {{end}}
             </div>
             <div class="flex flex-wrap items-center gap-2 shrink-0">
                 <span id="invoice-locked-pill" class="{{if not .Locked}}hidden{{else}}inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-low border border-border-subtle text-xs font-semibold text-text-muted{{end}}"
@@ -33,6 +53,20 @@
                 <span id="invoice-manage-link" class="{{if not .Locked}}inline-flex{{else}}hidden{{end}}">
                 {{template "btn.html" (dict "Variant" "secondary" "Size" "md" "Href" (printf "/invoices/%v/line-items" .Invoice.ID) "Icon" "edit" "Label" "Manage Line Items")}}
                 </span>
+                <a href="{{.WhatsAppShareURL}}" target="_blank" rel="noopener noreferrer"
+                    class="inline-flex items-center gap-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 text-sm font-semibold shadow-sm hover:-translate-y-px transition-all">
+                    <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.072-2.091-.497-1.785-.727-2.923-2.55-3.012-2.67-.088-.119-.728-.968-.728-1.847 0-.879.461-1.312.625-1.488.164-.177.359-.221.479-.221.121 0 .241.001.347.006.111.006.26-.042.406.31.15.361.51 1.246.555 1.337.045.091.075.197.015.316-.06.121-.09.196-.18.301-.09.106-.188.236-.269.317-.091.09-.186.187-.08.369.105.182.468.771 1.004 1.248.69.614 1.272.805 1.453.896.181.09.287.076.393-.045.106-.122.455-.53.576-.712.12-.181.241-.151.405-.091.164.061 1.042.491 1.221.58.179.09.298.136.343.212.045.076.045.439-.099.844zM12 2C6.477 2 2 6.477 2 12c0 1.891.526 3.66 1.438 5.176L2 22l4.981-1.396A9.957 9.957 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/>
+                    </svg>
+                    <span>Share via WhatsApp</span>
+                </a>
+                <button type="button" onclick="copyPublicPaymentLink('{{.Invoice.ID}}')"
+                    class="inline-flex items-center gap-2 rounded-full bg-surface-container-lowest border border-border-subtle text-on-surface hover:bg-surface-container-low px-4 py-2 text-sm font-semibold shadow-xs transition-all">
+                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                    <span id="hero-copy-btn-text">Copy Payment Link</span>
+                </button>
                 <a href="/invoices/{{.Invoice.ID}}/pdf" download
                     class="inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all">
                     <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -57,8 +91,21 @@
                 </div>
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 p-5">
                     <div>
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Customer</dt>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Customer (Bill To)</dt>
                         <dd class="text-sm font-semibold text-on-surface mt-0.5">{{.Invoice.CustomerName}}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Transporter / Issuer</dt>
+                        <dd class="text-sm font-semibold text-on-surface mt-0.5">
+                            {{if .Company.Name}}{{.Company.Name}}{{else}}Avandab Fleet Operator{{end}}
+                            {{if eq .TaxTier 1}}
+                                <span class="block text-xs font-mono text-text-muted mt-0.5">GSTIN: {{.Company.GSTNumber}} (State: {{.Company.StateCode}})</span>
+                            {{else if eq .TaxTier 2}}
+                                <span class="block text-xs font-mono text-amber-700 dark:text-amber-300 mt-0.5">PAN: {{.Company.PanNumber}} • Sec 31(3)(c) Bill of Supply</span>
+                            {{else}}
+                                <span class="block text-xs text-text-muted mt-0.5">Rule 54(3) Consignment Bilty (Micro Transporter)</span>
+                            {{end}}
+                        </dd>
                     </div>
                     <div>
                         <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Booking</dt>
@@ -250,7 +297,85 @@
                 </div>
             </div>
 
+            <!-- Customer Payment & WhatsApp Share Card -->
+            <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+                <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-sm font-bold text-on-surface">Customer Payment Link</h3>
+                        <p class="text-xs text-text-muted">Instant online settlement link</p>
+                    </div>
+                </div>
+                <div class="p-4 space-y-3">
+                    <a href="{{.WhatsAppShareURL}}" target="_blank" rel="noopener noreferrer"
+                       class="w-full inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold px-4 py-2.5 shadow-sm transition-all text-decoration-none">
+                        <svg class="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.312.045-.694.072-2.091-.497-1.785-.727-2.923-2.55-3.012-2.67-.088-.119-.728-.968-.728-1.847 0-.879.461-1.312.625-1.488.164-.177.359-.221.479-.221.121 0 .241.001.347.006.111.006.26-.042.406.31.15.361.51 1.246.555 1.337.045.091.075.197.015.316-.06.121-.09.196-.18.301-.09.106-.188.236-.269.317-.091.09-.186.187-.08.369.105.182.468.771 1.004 1.248.69.614 1.272.805 1.453.896.181.09.287.076.393-.045.106-.122.455-.53.576-.712.12-.181.241-.151.405-.091.164.061 1.042.491 1.221.58.179.09.298.136.343.212.045.076.045.439-.099.844zM12 2C6.477 2 2 6.477 2 12c0 1.891.526 3.66 1.438 5.176L2 22l4.981-1.396A9.957 9.957 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2z"/>
+                        </svg>
+                        <span>Share on WhatsApp</span>
+                    </a>
+                    <button type="button" onclick="copyPublicPaymentLink('{{.Invoice.ID}}')"
+                            class="w-full inline-flex items-center justify-center gap-2 rounded-full bg-surface-container-low border border-border-subtle text-on-surface hover:bg-surface-container text-sm font-semibold px-4 py-2 transition-all">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        <span id="side-copy-btn-text">Copy Payment Link</span>
+                    </button>
+                    <a href="/pay/{{.Invoice.ID}}" target="_blank"
+                       class="w-full inline-flex items-center justify-center gap-1 text-xs text-primary font-semibold hover:underline text-decoration-none">
+                        Open Customer Checkout Page →
+                    </a>
+                </div>
+            </div>
+
+            <!-- Billing Support Card -->
+            <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 text-xs space-y-2.5">
+                <div class="font-bold text-on-surface uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5 text-primary"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    Finance &amp; Accounts Desk
+                </div>
+                <div class="space-y-1 text-text-muted text-[11px]">
+                    <div class="flex justify-between items-center">
+                        <span>Invoice Inquiries:</span>
+                        <a href="mailto:billing@avandab.com" class="font-mono text-primary hover:underline">billing@avandab.com</a>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span>TDS &amp; Bank Proofs:</span>
+                        <a href="mailto:accounts@avandab.com" class="font-mono text-primary hover:underline">accounts@avandab.com</a>
+                    </div>
+                </div>
+            </div>
+
             {{template "irn_qr.html" .}}
         </aside>
     </div>
 </div>
+
+<script>
+function copyPublicPaymentLink(invoiceId) {
+    const url = window.location.origin + '/pay/' + invoiceId;
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(url).then(() => {
+            updateCopyBtnLabels('Copied Link!');
+        }).catch(() => {
+            promptCopy(url);
+        });
+    } else {
+        promptCopy(url);
+    }
+}
+
+function promptCopy(url) {
+    window.prompt('Copy customer payment URL:', url);
+}
+
+function updateCopyBtnLabels(msg) {
+    const hero = document.getElementById('hero-copy-btn-text');
+    const side = document.getElementById('side-copy-btn-text');
+    if (hero) hero.innerText = msg;
+    if (side) side.innerText = msg;
+    setTimeout(() => {
+        if (hero) hero.innerText = 'Copy Payment Link';
+        if (side) side.innerText = 'Copy Payment Link';
+    }, 2500);
+}
+</script>

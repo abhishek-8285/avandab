@@ -36,13 +36,17 @@ func GenerateInvoicePDF(d InvoicePDFData) ([]byte, error) {
 	pdf.SetAutoPageBreak(true, footerH)
 	pdf.AliasNbPages("{nb}")
 	pdf.SetFooterFunc(func() {
-		pdf.SetY(-14)
-		pdf.SetFont("Arial", "I", 8)
+		pdf.SetY(-16)
+		pdf.SetFont("Arial", "", 7.5)
 		pdf.SetTextColor(mutedText, mutedText, mutedText)
-		pdf.CellFormat(0, 6,
+		pdf.CellFormat(0, 4,
+			"For Billing queries & TDS certificates: billing@avandab.com | accounts@avandab.com",
+			"", 1, "C", false, 0, "")
+		pdf.SetFont("Arial", "I", 7.5)
+		pdf.CellFormat(0, 4,
 			fmt.Sprintf("Generated %s", time.Now().Format("02 Jan 2006 15:04")),
 			"", 0, "L", false, 0, "")
-		pdf.CellFormat(0, 6, fmt.Sprintf("Page %d of {nb}", pdf.PageNo()),
+		pdf.CellFormat(0, 4, fmt.Sprintf("Page %d of {nb}", pdf.PageNo()),
 			"", 0, "R", false, 0, "")
 	})
 	basic := pdf.UnicodeTranslatorFromDescriptor("")
@@ -100,15 +104,44 @@ func renderHeader(pdf *fpdf.Fpdf, tr func(string) string, d InvoicePDFData) {
 		pdf.SetFont("Arial", "B", 9)
 		pdf.CellFormat(105, 5, tr("GSTIN: "+d.Company.GSTIN+
 			stateSuffix(d.Company.StateCode)), "", 1, "L", false, 0, "")
+	} else if d.Company.PAN != "" {
+		pdf.SetFont("Arial", "B", 9)
+		pdf.CellFormat(105, 5, tr("PAN: "+d.Company.PAN), "", 1, "L", false, 0, "")
+		pdf.SetFont("Arial", "I", 7.5)
+		pdf.SetTextColor(mutedText, mutedText, mutedText)
+		pdf.MultiCell(105, 3.6, tr("Section 31(3)(c) Bill of Supply | Sec 9(3) RCM Applicable | Sec 194C(6) TDS Exempt"), "", "L", false)
+	} else {
+		pdf.SetFont("Arial", "I", 7.5)
+		pdf.SetTextColor(mutedText, mutedText, mutedText)
+		pdf.MultiCell(105, 3.6, tr("Rule 54(3) CGST Rules (Consignment Freight Bilty / Micro Transporter)"), "", "L", false)
 	}
 	sellerY := pdf.GetY()
 
 	// Title + core metadata, right column.
 	titleX := 112.0
 	pdf.SetXY(titleX, marginT)
-	pdf.SetFont("Arial", "B", 20)
+
+	title := d.LegalTitle
+	if title == "" {
+		if d.Company.GSTIN != "" {
+			title = "TAX INVOICE"
+		} else if d.Company.PAN != "" {
+			title = "BILL OF SUPPLY / FREIGHT BILL"
+		} else {
+			title = "CONSIGNMENT FREIGHT BILL"
+		}
+	}
+
+	titleFontSize := 20.0
+	if len(title) > 24 {
+		titleFontSize = 12.0
+	} else if len(title) > 15 {
+		titleFontSize = 14.0
+	}
+
+	pdf.SetFont("Arial", "B", titleFontSize)
 	pdf.SetTextColor(darkText, darkText, darkText)
-	pdf.CellFormat(84, 10, "TAX INVOICE", "", 2, "R", false, 0, "")
+	pdf.CellFormat(84, 10, title, "", 2, "R", false, 0, "")
 
 	pdf.SetFont("Arial", "", 9)
 	meta := [][2]string{

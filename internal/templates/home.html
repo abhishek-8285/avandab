@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Avandab - Modern Fleet & Logistics Operations</title>
-    <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
+    <title>{{if .Title}}{{.Title}} - Avandab{{else}}Avandab - Modern Fleet & Logistics Operations{{end}}</title>
+    {{template "seo_head.html" .}}
+    <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+    <link rel="dns-prefetch" href="https://api.fontshare.com">
     <link rel="stylesheet" href="/static/css/fonts.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link rel="stylesheet" href="/static/css/material-icons.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link rel="stylesheet" href="/static/css/material-symbols.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link href="https://api.fontshare.com/v2/css?f[]=satoshi@700,500,400&display=swap" rel="stylesheet">
-    <script src="/static/js/loader.js?v=20260818"></script>
+    <script src="/static/js/loader.js?v=20260818" defer></script>
     <script type="module" src="/static/js/datastar.js?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}" defer></script>
     <link rel="stylesheet" href="/static/css/tailwind.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link rel="stylesheet" href="/static/css/app.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
@@ -353,6 +355,12 @@
         .solved-points li{display:flex;gap:.55rem;align-items:flex-start;font-size:.85rem;color:var(--color-on-surface);font-weight:600}
         .solved-points li::before{content:"✓";flex-shrink:0;width:20px;height:20px;border-radius:50%;background:color-mix(in srgb,var(--color-primary) 14%,transparent);color:var(--color-primary);font-size:.72rem;font-weight:900;display:inline-flex;align-items:center;justify-content:center;margin-top:.1rem}
         .cta-row{display:flex;flex-wrap:wrap;gap:.8rem;margin-top:1.4rem}
+        .story-continue{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:7;display:flex;align-items:center;gap:.4rem;background:var(--color-surface-container-lowest);border:1px solid var(--color-border-subtle);border-radius:999px;padding:.42rem .85rem;font-size:.7rem;font-weight:800;color:var(--color-secondary);box-shadow:0 8px 24px rgba(2,20,15,.18);text-decoration:none;animation:hintBounce 1.6s ease-in-out infinite;transition:opacity .35s,transform .35s}
+        .story-continue svg{width:14px;height:14px;flex-shrink:0}
+        @keyframes hintBounce{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(4px)}}
+        .story-continue.is-hidden{opacity:0;pointer-events:none;transform:translateX(-50%) translateY(-8px)}
+        .chapter-continue{display:flex;align-items:center;justify-content:center;gap:.4rem;margin-top:1rem;font-size:.72rem;font-weight:700;color:var(--color-secondary);opacity:.9}
+        .chapter-continue svg{width:14px;height:14px}
 
         @media (max-width:640px){
             .story-stage{--roadH:72px}
@@ -386,6 +394,7 @@
             .story-stage[data-state="solved"] .fx-dash{transform:translate(-50%,0)}
             .dash-row{font-size:.68rem;padding:.45rem .75rem}
             .zip.zp2{display:none}
+            .story-continue{top:10px;font-size:.64rem;padding:.35rem .7rem}
         }
 
         @media (max-height:600px){
@@ -408,6 +417,7 @@
             .reveal{opacity:1;transform:none;transition:none}
             .story-stage *,.story-stage *::before,.story-stage *::after{animation:none!important;transition:none!important}
             .story-progress-bar{display:none}
+            .story-continue{animation:none!important}
         }
 
     </style>
@@ -954,6 +964,10 @@
                 <div class="road-base"></div>
                 <div class="lane-dashes"></div>
             </div>
+            <a href="#benefits" class="story-continue is-hidden" id="story-continue" aria-label="Scroll to see all features">
+                <span class="sc-text">Scroll — 30+ modules ahead</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+            </a>
         </div>
 
         <div class="story-chapter" data-scene="business">
@@ -1012,6 +1026,7 @@
                         See all features
                     </a>
                 </div>
+                <div class="chapter-continue" aria-hidden="true"><span>Keep scrolling — features & comparison below</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></div>
             </div>
         </div>
     </section>
@@ -1154,11 +1169,6 @@
                             <td class="px-4 py-2.5 text-sm font-semibold text-primary tabular-nums bg-primary/10">Instant SPA transitions</td>
                             <td class="px-4 py-2.5 text-sm text-text-muted">Heavy page load latency</td>
                         </tr>
-                        <tr>
-                            <td class="px-4 py-2.5 text-sm font-semibold text-on-surface">Data Ownership</td>
-                            <td class="px-4 py-2.5 text-sm font-semibold text-primary tabular-nums bg-primary/10">Full export & self-host option</td>
-                            <td class="px-4 py-2.5 text-sm text-text-muted">Proprietary cloud lock-in</td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -1224,6 +1234,39 @@
                 update();
             } else if (bar) {
                 bar.style.display = "none";
+            }
+            var cont = document.getElementById("story-continue");
+            var benefits = document.getElementById("benefits");
+            var storyEl = document.getElementById("story");
+            if (cont && benefits && storyEl && "IntersectionObserver" in window) {
+                var storyInView = false;
+                var benefitsInView = false;
+                var syncCont = function () {
+                    if (benefitsInView) cont.classList.add("is-hidden");
+                    else if (storyInView) cont.classList.remove("is-hidden");
+                    else cont.classList.add("is-hidden");
+                };
+                var ioStory = new IntersectionObserver(function (ents) {
+                    ents.forEach(function (e) { storyInView = e.isIntersecting; syncCont(); });
+                }, { threshold: 0.05 });
+                ioStory.observe(storyEl);
+                var io2 = new IntersectionObserver(function (ents) {
+                    ents.forEach(function (e) { benefitsInView = e.isIntersecting; syncCont(); });
+                }, { threshold: 0.05 });
+                io2.observe(benefits);
+                var scText = cont.querySelector(".sc-text");
+                var io3 = new IntersectionObserver(function (ents) {
+                    ents.forEach(function (e) {
+                        if (!e.isIntersecting || !scText) return;
+                        if (e.target.dataset.scene === "solved") scText.textContent = "Keep scrolling — features & comparison ↓";
+                        else scText.textContent = "Scroll — 30+ modules ahead";
+                    });
+                }, { rootMargin: "-42% 0px -42% 0px", threshold: 0 });
+                chapters.forEach(function (c) { io3.observe(c); });
+                cont.addEventListener("click", function (e) {
+                    e.preventDefault();
+                    benefits.scrollIntoView({ behavior: "smooth", block: "start" });
+                });
             }
         })();
     </script>
