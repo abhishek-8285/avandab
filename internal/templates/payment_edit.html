@@ -9,21 +9,21 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 sm:p-6 space-y-5">
             <!-- Invoice context -->
             <div>
-                <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Invoice</h3>
+                <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Invoice</h3>
                 <div class="rounded-xl bg-surface-container-low border border-border-subtle p-4">
-                    <dd class="text-sm font-bold text-on-surface font-mono">{{.Invoice.InvoiceNumber}}</dd>
+                    <dd class="text-sm font-bold text-on-surface font-data-mono">{{.Invoice.InvoiceNumber}}</dd>
                     <p class="text-sm text-text-muted mt-1">Total: <span class="tabular-nums font-semibold text-on-surface" data-numeric>₹{{printf "%.2f" .Invoice.Total}}</span> · Balance: <span class="tabular-nums font-semibold text-on-surface" data-numeric>₹{{printf "%.2f" .Balance}}</span></p>
                 </div>
             </div>
 
             <div>
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Amount *</label>
+                <label class="block text-eyebrow text-text-muted mb-1.5">Amount *</label>
                 <input type="number" step="0.01" min="0.01" name="amount" value="{{if gt .Balance 0.0}}{{printf "%.2f" .Balance}}{{end}}" required
                     class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
 
             <div>
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Method</label>
+                <label class="block text-eyebrow text-text-muted mb-1.5">Method</label>
                 <select name="method" class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     <option value="cash">Cash</option>
                     <option value="upi">UPI</option>
@@ -34,19 +34,19 @@
             </div>
 
             <div>
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Payment Date</label>
+                <label class="block text-eyebrow text-text-muted mb-1.5">Payment Date</label>
                 <input type="date" name="payment_date" value="{{date_only .Now}}"
                     class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
 
             <div>
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Reference</label>
+                <label class="block text-eyebrow text-text-muted mb-1.5">Reference</label>
                 <input type="text" name="reference"
                     class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
 
             <div>
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Remarks</label>
+                <label class="block text-eyebrow text-text-muted mb-1.5">Remarks</label>
                 <textarea name="remarks" rows="2"
                     class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"></textarea>
             </div>

@@ -22,7 +22,7 @@
     </div>
     <div class="min-w-0">
         <h3 class="text-sm font-bold text-amber-900 dark:text-amber-200">You came from an error page</h3>
-        <p class="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">We’ve pre-filled your support request with the error reference. Our team will use it to trace logs. <span class="font-mono font-semibold">Ref: {{.ErrorRef}}</span>{{if .ErrorAbout}} · {{.ErrorAbout}}{{end}}</p>
+        <p class="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">We’ve pre-filled your support request with the error reference. Our team will use it to trace logs. <span class="font-data-mono font-semibold">Ref: {{.ErrorRef}}</span>{{if .ErrorAbout}} · {{.ErrorAbout}}{{end}}</p>
     </div>
 </div>
 {{end}}
@@ -37,7 +37,7 @@
         <div>
             <h4 class="font-display font-semibold text-base text-status-success">Inquiry Submitted Successfully!</h4>
             <p class="text-xs text-status-success mt-0.5">
-                Your reference ticket number is <strong class="font-mono font-bold underline">{{.SubmittedNum}}</strong>. Save this number to check your status updates anytime.
+                Your reference ticket number is <strong class="font-data-mono font-bold underline">{{.SubmittedNum}}</strong>. Save this number to check your status updates anytime.
             </p>
         </div>
     </div>
@@ -129,7 +129,7 @@
     <div class="flex items-center justify-between border-b border-border-subtle pb-2">
         <div>
             <span class="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Ticket Number</span>
-            <div class="font-mono font-bold text-sm text-primary tabular-nums">{{.Ticket.TicketNumber}}</div>
+            <div class="font-data-mono font-bold text-sm text-primary tabular-nums">{{.Ticket.TicketNumber}}</div>
         </div>
         <div>
             {{if eq .Ticket.Status "pending"}}
@@ -163,8 +163,8 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
         </div>
         <div>
-            <div class="text-[11px] font-bold uppercase tracking-wider text-text-muted">24/7 Fleet Dispatch Hotline</div>
-            <div class="font-mono text-sm font-bold text-on-surface mt-0.5">+91 8285336507</div>
+            <div class="text-eyebrow text-text-muted">24/7 Fleet Dispatch Hotline</div>
+            <div class="font-data-mono text-sm font-bold text-on-surface mt-0.5">+91 8285336507</div>
             <div class="text-[11px] text-text-muted">Live emergency transport coordination</div>
         </div>
     </div>
@@ -177,27 +177,27 @@
             <div class="space-y-2">
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Trip Assignments &amp; Routes:</span>
-                    <a href="mailto:dispatch@avandab.com" class="font-mono font-semibold text-primary hover:underline">dispatch@avandab.com</a>
+                    <a href="mailto:dispatch@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">dispatch@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Live Tracking &amp; ETA:</span>
-                    <a href="mailto:tracking@avandab.com" class="font-mono font-semibold text-primary hover:underline">tracking@avandab.com</a>
+                    <a href="mailto:tracking@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">tracking@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Digital Proof of Delivery (e-POD):</span>
-                    <a href="mailto:epod@avandab.com" class="font-mono font-semibold text-primary hover:underline">epod@avandab.com</a>
+                    <a href="mailto:epod@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">epod@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">FASTag Toll Disputes:</span>
-                    <a href="mailto:fastag@avandab.com" class="font-mono font-semibold text-primary hover:underline">fastag@avandab.com</a>
+                    <a href="mailto:fastag@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">fastag@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Diesel Logs &amp; Fuel Audits:</span>
-                    <a href="mailto:fuel@avandab.com" class="font-mono font-semibold text-primary hover:underline">fuel@avandab.com</a>
+                    <a href="mailto:fuel@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">fuel@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Workshop &amp; Maintenance:</span>
-                    <a href="mailto:maintenance@avandab.com" class="font-mono font-semibold text-primary hover:underline">maintenance@avandab.com</a>
+                    <a href="mailto:maintenance@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">maintenance@avandab.com</a>
                 </div>
             </div>
         </div>
@@ -208,11 +208,11 @@
             <div class="space-y-2">
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">GST Invoices &amp; Razorpay Pay:</span>
-                    <a href="mailto:billing@avandab.com" class="font-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">billing@avandab.com</a>
+                    <a href="mailto:billing@avandab.com" class="font-data-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">billing@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Ledger, Khata &amp; Settlements:</span>
-                    <a href="mailto:accounts@avandab.com" class="font-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">accounts@avandab.com</a>
+                    <a href="mailto:accounts@avandab.com" class="font-data-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">accounts@avandab.com</a>
                 </div>
             </div>
         </div>
@@ -223,19 +223,19 @@
             <div class="space-y-2">
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">General Support &amp; Helpdesk:</span>
-                    <a href="mailto:support@avandab.com" class="font-mono font-semibold text-primary hover:underline">support@avandab.com</a>
+                    <a href="mailto:support@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">support@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">24/7 Highway SOS &amp; Breakdown:</span>
-                    <a href="mailto:sos@avandab.com" class="font-mono font-bold text-red-600 dark:text-red-400 hover:underline">sos@avandab.com</a>
+                    <a href="mailto:sos@avandab.com" class="font-data-mono font-bold text-red-600 dark:text-red-400 hover:underline">sos@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Driver Welfare &amp; Highway Help:</span>
-                    <a href="mailto:driver-help@avandab.com" class="font-mono font-semibold text-primary hover:underline">driver-help@avandab.com</a>
+                    <a href="mailto:driver-help@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">driver-help@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Cargo Damage &amp; Claims:</span>
-                    <a href="mailto:claims@avandab.com" class="font-mono font-semibold text-red-600 dark:text-red-400 hover:underline">claims@avandab.com</a>
+                    <a href="mailto:claims@avandab.com" class="font-data-mono font-semibold text-red-600 dark:text-red-400 hover:underline">claims@avandab.com</a>
                 </div>
             </div>
         </div>
@@ -246,27 +246,27 @@
             <div class="space-y-2">
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Corporate Freight Contracts:</span>
-                    <a href="mailto:sales@avandab.com" class="font-mono font-semibold text-primary hover:underline">sales@avandab.com</a>
+                    <a href="mailto:sales@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">sales@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Transporter &amp; Fleet KYC:</span>
-                    <a href="mailto:onboarding@avandab.com" class="font-mono font-semibold text-primary hover:underline">onboarding@avandab.com</a>
+                    <a href="mailto:onboarding@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">onboarding@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">GST &amp; E-Way Bill Compliance:</span>
-                    <a href="mailto:compliance@avandab.com" class="font-mono font-semibold text-primary hover:underline">compliance@avandab.com</a>
+                    <a href="mailto:compliance@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">compliance@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Legal, Contracts &amp; Privacy:</span>
-                    <a href="mailto:legal@avandab.com" class="font-mono font-semibold text-primary hover:underline">legal@avandab.com</a>
+                    <a href="mailto:legal@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">legal@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Platform Security &amp; Vulnerabilities:</span>
-                    <a href="mailto:security@avandab.com" class="font-mono font-semibold text-primary hover:underline">security@avandab.com</a>
+                    <a href="mailto:security@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">security@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Founder &amp; Executive Office:</span>
-                    <a href="mailto:abhishek@avandab.com" class="font-mono font-semibold text-primary hover:underline">abhishek@avandab.com</a>
+                    <a href="mailto:abhishek@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">abhishek@avandab.com</a>
                 </div>
             </div>
         </div>

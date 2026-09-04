@@ -16,7 +16,7 @@
     </p>
 
     {{if or .ErrorCode .Model .RequestID .Path}}
-    <div class="w-full max-w-md bg-surface-container-lowest border border-border-subtle rounded-2xl p-4 mb-8 text-left text-xs font-mono space-y-2 shadow-sm">
+    <div class="w-full max-w-md bg-surface-container-lowest border border-border-subtle rounded-2xl p-4 mb-8 text-left text-xs font-data-mono space-y-2 shadow-sm">
         {{if .ErrorCode}}
         <div class="flex items-center justify-between">
             <span class="text-secondary font-sans font-medium">Error Identifier:</span>
@@ -38,7 +38,7 @@
         {{if .RequestID}}
         <div class="flex items-center justify-between">
             <span class="text-secondary font-sans font-medium">Request ID:</span>
-            <span class="text-secondary select-all font-mono">{{.RequestID}}</span>
+            <span class="text-secondary select-all font-data-mono">{{.RequestID}}</span>
         </div>
         {{end}}
     </div>

@@ -95,6 +95,16 @@ Rules:
 3. Report revenue and dashboard figures in INR.`,
 			Tools: pick("list_trips", "get_trip", "list_available_drivers", "list_available_vehicles", "assign_driver", "assign_vehicle", "get_dashboard", "get_revenue", "get_open_alerts", "extend_ewaybill"),
 		},
+		{
+			Name:        "maintenance",
+			Description: "maintenance job cards (work orders): listing, opening, assigning and closing",
+			SystemPrompt: `You are the MAINTENANCE specialist of the Avandab AI operations assistant. You handle job cards for vehicle servicing.
+Rules:
+1. To open a job card you need: vehicle id and title. Ask for anything missing. Never invent vehicle ids — confirm the vehicle first.
+2. Move cards along open → assigned → in_progress → done (on_hold loops back, cancelled closes). Closing as done writes the service record.
+3. Opening and transitioning cards require admin sign-off — submit the action and tell the user it is pending approval.`,
+			Tools: pick("list_work_orders", "get_work_order", "create_work_order", "transition_work_order"),
+		},
 	}
 
 	if opts.RagService != nil {

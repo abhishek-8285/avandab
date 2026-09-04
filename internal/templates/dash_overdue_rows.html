@@ -1,0 +1,17 @@
+{{if .Stats.OverdueTrips}}
+{{range .Stats.OverdueTrips}}
+<a href="/trips/{{.ID}}" data-drill="overdue-trip" class="group flex items-center gap-3 px-4 py-3 hover:bg-rose-500/[0.04] transition-colors">
+    <div class="w-8 h-8 rounded-lg bg-rose-500/10 grid place-items-center text-rose-600 shrink-0 group-hover:bg-rose-500 group-hover:text-white transition-colors"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg></div>
+    <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2"><span class="text-sm font-bold text-on-surface">{{.TripNumber}}</span><span class="px-1.5 py-0.5 text-[10px] font-bold rounded-full {{statusBadge .Status}}">{{.Status}}</span></div>
+        <p class="text-xs text-text-muted truncate">{{.RouteSource}} → {{.RouteDestination}} • departed {{datetime .DepartureTime}}</p>
+    </div>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted group-hover:text-rose-600 shrink-0"><path d="M9 18l6-6-6-6"/></svg>
+</a>
+{{end}}
+{{else}}
+<div class="px-4 py-10 text-center">
+    <div class="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
+    <p class="text-sm font-medium text-on-surface mt-3">All clear</p><p class="text-xs text-text-muted">No overdue trips</p>
+</div>
+{{end}}

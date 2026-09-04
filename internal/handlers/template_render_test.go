@@ -18,6 +18,10 @@ import (
 	"transport-app/internal/auth"
 	"transport-app/internal/booking/application"
 	"transport-app/internal/domain"
+	domainbooking "transport-app/internal/domain/booking"
+	domaininvoice "transport-app/internal/domain/invoice"
+	domainpayment "transport-app/internal/domain/payment"
+	domaintrip "transport-app/internal/domain/trip"
 	driverapp "transport-app/internal/driver/application"
 	"transport-app/internal/ewaybill"
 	invoiceapp "transport-app/internal/invoice/application"
@@ -116,6 +120,36 @@ func TestAllTemplatesRenderCleanly(t *testing.T) {
 		Phone:           "555-1234",
 		LicenseNumber:   "LIC-001",
 		Status:          "available",
+	}
+
+	// Dashboard fixtures mirror production wiring: Index passes
+	// service.DashboardData holding repository join structs (nullable
+	// *string joins, int64 counts) — not application DTOs.
+	sampleDashboardTrip := repository.TripWithJoins{
+		Trip: domaintrip.Trip{
+			ID: "trip-1", TripNumber: "TRIP-001",
+			DepartureTime: time.Now(), Status: domaintrip.TripScheduled,
+		},
+		DriverFirstName:     strPtr("John"),
+		DriverLastName:      strPtr("Doe"),
+		VehicleRegistration: strPtr("KA-01-HH-1234"),
+		RouteSource:         "Source City",
+		RouteDestination:    "Dest City",
+	}
+	sampleDashboardBooking := repository.BookingWithJoins{
+		Booking:      domainbooking.Booking{BookingNumber: "BK-001", PickupDate: time.Now(), Price: 1000.00},
+		CustomerName: "ACME Corp",
+	}
+	sampleDashboardPayment := repository.PaymentWithInvoice{
+		Payment:       domainpayment.Payment{Amount: 500.00, Method: domainpayment.PaymentMethodCash, PaymentDate: time.Now()},
+		InvoiceNumber: "INV-001",
+	}
+	sampleDashboardInvoice := repository.InvoiceWithJoins{
+		Invoice: domaininvoice.Invoice{
+			ID: "inv-1", InvoiceNumber: "INV-001", Total: 1180.00,
+			PaymentStatus: domaininvoice.PaymentStatusPending, CreatedAt: time.Now(),
+		},
+		CustomerName: "ACME Corp",
 	}
 
 	dummyPagination := PaginationData{
@@ -286,19 +320,23 @@ func TestAllTemplatesRenderCleanly(t *testing.T) {
 		{"dashboard.html", buildTemplateData(PageData{
 			Title: "Dashboard",
 			Extra: map[string]interface{}{
-				"Stats": map[string]interface{}{
-					"TodaysTripsCount":       1,
-					"ActiveTripsCount":       1,
-					"CompletedTripsCount":    0,
-					"CancelledTripsCount":    0,
-					"AvailableVehiclesCount": 5,
-					"AvailableDriversCount":  3,
-					"PendingPaymentsCount":   2,
-					"MonthlyRevenue":         15000.0,
-					"DeltaYesterday":         0,
-					"UpcomingTrips":          []tripapp.TripResponseDTO{sampleTripDTO},
-					"RecentBookings":         []application.BookingResponseDTO{sampleBookingDTO},
-					"RecentPayments":         []paymentapp.PaymentResponseDTO{samplePaymentDTO},
+				// Production types (service.DashboardData + repository joins),
+				// not application DTOs — the template dereferences *string
+				// joins and runs int64 arithmetic on the counts.
+				"Stats": service.DashboardData{
+					TodaysTripsCount:       1,
+					ActiveTripsCount:       1,
+					CompletedTripsCount:    0,
+					CancelledTripsCount:    0,
+					AvailableVehiclesCount: 5,
+					AvailableDriversCount:  3,
+					PendingPaymentsCount:   2,
+					MonthlyRevenue:         15000.0,
+					DeltaYesterday:         0,
+					UpcomingTrips:          []repository.TripWithJoins{sampleDashboardTrip},
+					RecentBookings:         []repository.BookingWithJoins{sampleDashboardBooking},
+					RecentPayments:         []repository.PaymentWithInvoice{sampleDashboardPayment},
+					PendingInvoices:        []repository.InvoiceWithJoins{sampleDashboardInvoice},
 				},
 			},
 		})},
@@ -306,31 +344,35 @@ func TestAllTemplatesRenderCleanly(t *testing.T) {
 			Title: "Dashboard",
 			Extra: map[string]interface{}{
 				"DashboardVariant": "B",
+				"FeatureEwaybill":  true,
+				"FeatureFastag":    true,
 				"ChartData": map[string]interface{}{
 					"variant":       "B",
 					"statusCounts":  map[string]int64{"scheduled": 3, "completed": 1},
 					"revenueByDay":  []map[string]interface{}{{"Day": "2026-08-18", "Total": 1200.0}},
 					"bookingsByDay": []map[string]interface{}{{"Day": "2026-08-18", "Count": 4}},
 				},
-				"Stats": map[string]interface{}{
-					"TodaysTripsCount":       4,
-					"ActiveTripsCount":       3,
-					"CompletedTripsCount":    1,
-					"CancelledTripsCount":    0,
-					"AvailableVehiclesCount": 5,
-					"AvailableDriversCount":  3,
-					"PendingPaymentsCount":   2,
-					"MonthlyRevenue":         15000.0,
-					"DeltaYesterday":         1,
-					"OverdueTrips":           []tripapp.TripResponseDTO{sampleTripDTO},
-					"IdleVehicles": []map[string]interface{}{{
-						"RegistrationNumber": "KA-01-HH-1234",
-						"VehicleType":        "truck",
-						"UpdatedAt":          time.Now(),
-					}},
-					"UpcomingTrips":  []tripapp.TripResponseDTO{sampleTripDTO},
-					"RecentBookings": []application.BookingResponseDTO{sampleBookingDTO},
-					"RecentPayments": []paymentapp.PaymentResponseDTO{samplePaymentDTO},
+				"Stats": service.DashboardData{
+					TodaysTripsCount:       4,
+					ActiveTripsCount:       3,
+					CompletedTripsCount:    1,
+					CancelledTripsCount:    0,
+					AvailableVehiclesCount: 5,
+					AvailableDriversCount:  3,
+					PendingPaymentsCount:   2,
+					MonthlyRevenue:         15000.0,
+					DeltaYesterday:         1,
+					OverdueTrips:           []repository.TripWithJoins{sampleDashboardTrip},
+					IdleVehicles:           []domain.Vehicle{{RegistrationNumber: "KA-01-HH-1234", VehicleType: "truck", UpdatedAt: time.Now()}},
+					UpcomingTrips:          []repository.TripWithJoins{sampleDashboardTrip},
+					RecentBookings:         []repository.BookingWithJoins{sampleDashboardBooking},
+					RecentPayments:         []repository.PaymentWithInvoice{sampleDashboardPayment},
+					PendingInvoices:        []repository.InvoiceWithJoins{sampleDashboardInvoice},
+					Attention: service.AttentionCounts{
+						UnassignedBookings: 2,
+						MaintenanceDue:     1,
+						OpenAlerts:         3,
+					},
 				},
 			},
 		})},

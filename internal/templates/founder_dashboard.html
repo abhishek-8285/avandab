@@ -16,7 +16,7 @@
                 <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/15 grid place-items-center text-rose-600 group-hover:bg-rose-500 group-hover:text-white transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
                 </div>
-                {{if gt .UnacknowledgedSignals 0}}<span class="inline-flex px-2 py-1 rounded-full bg-rose-500/10 border border-rose-500/15 text-[11px] font-bold uppercase tracking-wider text-rose-700">Needs review</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-bold uppercase tracking-wider text-emerald-700">Clear</span>{{end}}
+                {{if gt .UnacknowledgedSignals 0}}<span class="inline-flex px-2 py-1 rounded-full bg-rose-500/10 border border-rose-500/15 text-eyebrow text-rose-700">Needs review</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-eyebrow text-emerald-700">Clear</span>{{end}}
             </div>
             <div class="mt-4">
                 <div class="text-stat tabular-nums text-3xl font-black tracking-tight {{if gt .UnacknowledgedSignals 0}}text-status-alert{{else}}text-status-success{{end}}">{{.UnacknowledgedSignals}}</div>
@@ -31,7 +31,7 @@
                 <div class="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/15 grid place-items-center text-violet-600 group-hover:bg-violet-500 group-hover:text-white transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/></svg>
                 </div>
-                <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-violet-500/10 text-violet-700 border border-violet-500/15">Running</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-violet-500/10 text-violet-700 border border-violet-500/15">Running</span>
             </div>
             <div class="mt-4">
                 <div class="text-stat text-primary tabular-nums text-3xl font-black tracking-tight">{{.ActiveExperiments}}</div>
@@ -46,7 +46,7 @@
                 <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
                 </div>
-                <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/15">Open</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/15">Open</span>
             </div>
             <div class="mt-4">
                 <div class="text-stat text-status-warning tabular-nums text-3xl font-black tracking-tight">{{.OpenOpsAlerts}}</div>
@@ -114,19 +114,19 @@
         </div>
         <dl class="p-5 grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Revenue</dt>
+                <dt class="text-eyebrow text-text-muted">Revenue</dt>
                 <dd class="mt-1 text-lg font-black tabular-nums text-emerald-600 dark:text-emerald-400">₹{{printf "%.2f" .LatestPNL.Revenue}}</dd>
             </div>
             <div>
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Expenses</dt>
+                <dt class="text-eyebrow text-text-muted">Expenses</dt>
                 <dd class="mt-1 text-lg font-black tabular-nums text-red-600 dark:text-red-400">₹{{printf "%.2f" .LatestPNL.Expenses}}</dd>
             </div>
             <div>
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Net Profit</dt>
+                <dt class="text-eyebrow text-text-muted">Net Profit</dt>
                 <dd class="mt-1 text-lg font-black tabular-nums {{if gt .LatestPNL.NetProfit 0.0}}text-emerald-600 dark:text-emerald-400{{else}}text-red-600 dark:text-red-400{{end}}">₹{{printf "%.2f" .LatestPNL.NetProfit}}</dd>
             </div>
             <div>
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Trips</dt>
+                <dt class="text-eyebrow text-text-muted">Trips</dt>
                 <dd class="mt-1 text-lg font-black tabular-nums text-on-surface">{{.LatestPNL.TripCount}}</dd>
             </div>
         </dl>

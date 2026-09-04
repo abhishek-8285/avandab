@@ -1,26 +1,22 @@
 {{$sf := ""}}{{if .StatusFilter}}{{$sf = .StatusFilter}}{{end}}
 <form method="GET" action="{{.Action}}" data-filterbar class="px-4 py-2.5 border-b border-border-subtle flex flex-wrap items-center gap-2 bg-surface-container-lowest sticky top-0 z-10">
     {{range .Hidden}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}
-    <span class="text-[11px] font-bold tracking-wider uppercase text-text-muted mr-1">{{default "Filters:" .Label}}</span>
+    <span class="text-eyebrow text-text-muted mr-1">{{default "Filters:" .Label}}</span>
     {{range .Chips}}
     <a href="{{$.Action}}{{if .Value}}?status={{.Value}}{{end}}" hx-get="{{$.Action}}{{if .Value}}?status={{.Value}}{{end}}" hx-target="#list-table" hx-swap="innerMorph" hx-push-url="true" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq $sf (default "" .Value)}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">{{.Label}}</a>
     {{end}}
     <div class="ml-auto flex items-center gap-2">
         {{if .ShowDates}}
-        <div class="flex items-center gap-1.5 bg-surface-container-low border border-border-subtle rounded-full px-3 py-1.5 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 transition-all">
-            <div class="relative">
-                <input type="text" inputmode="numeric" name="{{default "from" .FromName}}" value="{{inDate .DateFrom}}" placeholder="dd-mm-yyyy" maxlength="10" autocomplete="off" aria-label="From date"
-                    class="bg-transparent text-xs text-on-surface tabular-nums focus:outline-none w-[6.5rem] placeholder:text-text-muted/70">
-                <input type="date" data-picker tabindex="-1" aria-hidden="true" value="{{if .DateFrom}}{{.DateFrom}}{{end}}"
-                    class="absolute right-0 top-1/2 -translate-y-1/2 w-6 h-6 opacity-0 cursor-pointer m-0 p-0 border-0">
-            </div>
-            <span class="text-text-muted text-xs">→</span>
-            <div class="relative">
-                <input type="text" inputmode="numeric" name="{{default "to" .ToName}}" value="{{inDate .DateTo}}" placeholder="dd-mm-yyyy" maxlength="10" autocomplete="off" aria-label="To date"
-                    class="bg-transparent text-xs text-on-surface tabular-nums focus:outline-none w-[6.5rem] placeholder:text-text-muted/70">
-                <input type="date" data-picker tabindex="-1" aria-hidden="true" value="{{if .DateTo}}{{.DateTo}}{{end}}"
-                    class="absolute right-0 top-1/2 -translate-y-1/2 w-6 h-6 opacity-0 cursor-pointer m-0 p-0 border-0">
-            </div>
+        <div data-daterange class="relative flex items-center gap-1.5 bg-surface-container-low border border-border-subtle rounded-full pl-3 pr-1.5 py-1.5 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 transition-all">
+            <input type="text" inputmode="numeric" data-from name="{{default "from" .FromName}}" value="{{inDate .DateFrom}}" placeholder="dd-mm-yyyy" maxlength="10" autocomplete="off" aria-label="From date, dd-mm-yyyy"
+                class="bg-transparent text-xs text-on-surface tabular-nums focus:outline-none w-[6.5rem] placeholder:text-text-muted/70">
+            <span class="text-text-muted text-xs select-none" aria-hidden="true">→</span>
+            <input type="text" inputmode="numeric" data-to name="{{default "to" .ToName}}" value="{{inDate .DateTo}}" placeholder="dd-mm-yyyy" maxlength="10" autocomplete="off" aria-label="To date, dd-mm-yyyy"
+                class="bg-transparent text-xs text-on-surface tabular-nums focus:outline-none w-[6.5rem] placeholder:text-text-muted/70">
+            <button type="button" data-calbtn aria-label="Open calendar" aria-expanded="false" aria-haspopup="dialog"
+                class="w-7 h-7 inline-flex items-center justify-center rounded-full text-text-muted hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer border-0 bg-transparent">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 pointer-events-none"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
+            </button>
         </div>
         <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-full bg-surface-container-lowest border border-border-subtle text-xs font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 transition-all">Apply</button>
         {{end}}
@@ -36,41 +32,255 @@
     </div>
 </form>
 {{if .ShowDates}}
+<style>
+    .av-cal { background: var(--color-surface-container-lowest); border: 1px solid var(--color-border-subtle); color: var(--color-on-surface); border-radius: .875rem; box-shadow: 0 16px 48px rgba(0,0,0,.35); width: 17rem; max-width: calc(100vw - 2rem); padding: .625rem; font-size: .75rem; }
+    .av-cal-tabs { display: flex; gap: .375rem; margin-bottom: .5rem; }
+    .av-cal-tab { flex: 1; border: 1px solid var(--color-border-subtle); background: var(--color-surface-container-low); color: var(--color-on-surface-variant); border-radius: .55rem; padding: .3rem .45rem; font-size: .68rem; text-align: left; cursor: pointer; line-height: 1.25; }
+    .av-cal-tab b { display: block; font-size: .58rem; text-transform: uppercase; letter-spacing: .06em; color: var(--color-text-muted); font-weight: 700; }
+    .av-cal-tab span { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--color-on-surface); }
+    .av-cal-tab[data-active="true"] { border-color: var(--color-primary); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent); }
+    .av-cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: .375rem; }
+    .av-cal-title { font-weight: 700; font-size: .78rem; }
+    .av-cal-navbtn { width: 1.6rem; height: 1.6rem; display: inline-flex; align-items: center; justify-content: center; border-radius: 9999px; border: 1px solid transparent; background: transparent; color: var(--color-on-surface-variant); cursor: pointer; }
+    .av-cal-navbtn:hover { background: var(--color-surface-container-low); color: var(--color-primary); border-color: var(--color-border-subtle); }
+    .av-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+    .av-cal-dow { text-align: center; font-size: .6rem; font-weight: 700; color: var(--color-text-muted); padding: .2rem 0; text-transform: uppercase; }
+    .av-cal-day { aspect-ratio: 1; display: inline-flex; align-items: center; justify-content: center; border-radius: .45rem; border: 1px solid transparent; background: transparent; color: var(--color-on-surface); font-size: .72rem; font-variant-numeric: tabular-nums; cursor: pointer; min-height: 1.7rem; }
+    .av-cal-day:hover { background: var(--color-surface-container-low); border-color: var(--color-border-subtle); }
+    .av-cal-day[data-outside="true"] { opacity: .35; }
+    .av-cal-day[data-inrange="true"] { background: var(--color-primary-container); color: var(--color-on-primary-container); border-radius: .3rem; }
+    .av-cal-day[data-selected="true"] { background: var(--color-primary); color: var(--color-on-primary); font-weight: 700; border-radius: .45rem; }
+    .av-cal-day[data-today="true"]:not([data-selected="true"]) { border-color: var(--color-primary); }
+    .av-cal-day:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
+    .av-cal-presets { display: flex; flex-wrap: nowrap; gap: .3rem; margin-top: .5rem; padding-top: .5rem; border-top: 1px solid var(--color-border-subtle); }
+    .av-cal-preset { font-size: .64rem; font-weight: 600; padding: .25rem .5rem; border-radius: 9999px; border: 1px solid var(--color-border-subtle); background: var(--color-surface-container-low); color: var(--color-on-surface-variant); cursor: pointer; white-space: nowrap; }
+    .av-cal-preset:hover { color: var(--color-primary); border-color: var(--color-primary); }
+    .av-cal-foot { display: flex; justify-content: space-between; margin-top: .375rem; }
+    .av-cal-link { background: transparent; border: 0; color: var(--color-primary); font-size: .7rem; font-weight: 600; cursor: pointer; padding: .2rem .35rem; border-radius: .4rem; }
+    .av-cal-link:hover { text-decoration: underline; }
+    /* Kill Tailwind v4 preflight boxed-input styling inside the pill: borderless, no focus ring. */
+    [data-daterange] input[data-from], [data-daterange] input[data-to] { background: transparent; border: 0; box-shadow: none !important; }
+    [data-daterange] input[data-from]:focus, [data-daterange] input[data-to]:focus { outline: none; border: 0; box-shadow: none !important; }
+</style>
 <script>
     (function () {
         function toIN(iso) {
             if (!iso) return "";
-            var p = iso.split("-");
-            return p.length === 3 ? p[2] + "-" + p[1] + "-" + p[0] : iso;
+            var p = String(iso).split("-");
+            return p.length === 3 ? p[2] + "-" + p[1] + "-" + p[0] : String(iso);
         }
         function toISO(dmy) {
-            var p = dmy.split(/[-\/]/);
-            if (p.length !== 3 || p[0].length !== 2 || p[1].length !== 2 || p[2].length !== 4) return null;
-            return p[2] + "-" + p[1] + "-" + p[0];
+            if (!dmy) return "";
+            var s = String(dmy).trim();
+            var m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (m) return s;
+            var p = s.split(/[-\/.]/);
+            if (p.length !== 3) return "";
+            var dd = p[0].padStart(2, "0"), mm = p[1].padStart(2, "0"), yyyy = p[2];
+            if (yyyy.length === 2) yyyy = "20" + yyyy;
+            if (!/^\d{2}$/.test(dd) || !/^\d{2}$/.test(mm) || !/^\d{4}$/.test(yyyy)) return "";
+            var d = new Date(+yyyy, +mm - 1, +dd);
+            if (d.getFullYear() !== +yyyy || d.getMonth() !== +mm - 1 || d.getDate() !== +dd) return "";
+            return yyyy + "-" + mm + "-" + dd;
         }
+        function isISO(s) { return /^\d{4}-\d{2}-\d{2}$/.test(s || ""); }
+        function todayISO(d) {
+            d = d || new Date();
+            var m = String(d.getMonth() + 1).padStart(2, "0"), dd = String(d.getDate()).padStart(2, "0");
+            return d.getFullYear() + "-" + m + "-" + dd;
+        }
+        function addDays(iso, n) {
+            var p = iso.split("-"), d = new Date(+p[0], +p[1] - 1, +p[2]);
+            d.setDate(d.getDate() + n);
+            return todayISO(d);
+        }
+        var MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+        // One shared fixed-position popover (avoids overflow:hidden clipping in list cards).
+        var pop = document.getElementById("av-cal-pop");
+        if (!pop) {
+            pop = document.createElement("div");
+            pop.id = "av-cal-pop";
+            pop.className = "av-cal";
+            pop.setAttribute("role", "dialog");
+            pop.setAttribute("aria-label", "Choose date range");
+            pop.style.cssText = "position:fixed;z-index:9999;display:none;";
+            document.body.appendChild(pop);
+        }
+        var ctx = null; // {form, wrap, from, to, btn, viewY, viewM, active}
+
+        function close() {
+            pop.style.display = "none";
+            if (ctx && ctx.btn) ctx.btn.setAttribute("aria-expanded", "false");
+            ctx = null;
+            document.removeEventListener("pointerdown", onDoc, true);
+        }
+        function onDoc(e) {
+            if (!ctx) return;
+            if (pop.contains(e.target) || ctx.wrap.contains(e.target)) return;
+            close();
+        }
+        function position() {
+            if (!ctx) return;
+            var r = ctx.wrap.getBoundingClientRect();
+            var pw = 272, ph = pop.offsetHeight || 340;
+            var x = Math.min(Math.max(8, r.right - pw), window.innerWidth - pw - 8);
+            var y = r.bottom + 8;
+            if (y + ph > window.innerHeight - 8) y = Math.max(8, r.top - ph - 8);
+            pop.style.left = x + "px";
+            pop.style.top = y + "px";
+        }
+        function openFor(form, active, toggle) {
+            var wrap = form.querySelector("[data-daterange]");
+            var from = form.querySelector("[data-from]"), to = form.querySelector("[data-to]");
+            var btn = form.querySelector("[data-calbtn]");
+            if (!wrap || !from || !to) return;
+            if (ctx && ctx.form === form && pop.style.display !== "none") {
+                if (toggle) { close(); return; }
+                // Already open: just switch the active side.
+                if (active) { ctx.active = active; render(); }
+                return;
+            }
+            var anchor = toISO(from.value) || toISO(to.value) || todayISO();
+            var p = anchor.split("-");
+            ctx = { form: form, wrap: wrap, from: from, to: to, btn: btn, viewY: +p[0], viewM: +p[1] - 1, active: active || (document.activeElement === to ? "to" : "from") };
+            if (btn) btn.setAttribute("aria-expanded", "true");
+            render();
+            pop.style.display = "block";
+            position();
+            document.addEventListener("pointerdown", onDoc, true);
+        }
+        function pick(iso) {
+            if (!ctx) return;
+            if (ctx.active === "from") {
+                ctx.from.value = toIN(iso);
+                ctx.active = "to";
+                setTimeout(function(){ ctx && ctx.to.focus(); }, 0);
+            } else {
+                ctx.to.value = toIN(iso);
+                var f = toISO(ctx.from.value), t = toISO(ctx.to.value);
+                if (f && t && t < f) { // keep range ordered
+                    ctx.from.value = toIN(t);
+                    ctx.to.value = toIN(f);
+                }
+                ctx.active = "from";
+            }
+            render();
+            position();
+        }
+        function render() {
+            if (!ctx) return;
+            var fISO = toISO(ctx.from.value), tISO = toISO(ctx.to.value);
+            if (fISO && !isISO(fISO)) fISO = "";
+            if (tISO && !isISO(tISO)) tISO = "";
+            var y = ctx.viewY, m = ctx.viewM;
+            var first = new Date(y, m, 1);
+            var startOffset = first.getDay(); // Sunday-first, matches ops locale
+            var daysInMonth = new Date(y, m + 1, 0).getDate();
+            var daysPrev = new Date(y, m, 0).getDate();
+            var tISOtoday = todayISO();
+            var h = "";
+            h += '<div class="av-cal-tabs" role="tablist">';
+            h += '<button type="button" class="av-cal-tab" data-tab="from" data-active="' + (ctx.active === "from") + '"><b>From</b><span>' + (ctx.from.value || "dd-mm-yyyy") + '</span></button>';
+            h += '<button type="button" class="av-cal-tab" data-tab="to" data-active="' + (ctx.active === "to") + '"><b>To</b><span>' + (ctx.to.value || "dd-mm-yyyy") + '</span></button>';
+            h += "</div>";
+            h += '<div class="av-cal-nav"><button type="button" class="av-cal-navbtn" data-nav="-1" aria-label="Previous month">‹</button>';
+            h += '<div class="av-cal-title">' + MONTHS[m] + " " + y + "</div>";
+            h += '<button type="button" class="av-cal-navbtn" data-nav="1" aria-label="Next month">›</button></div>';
+            h += '<div class="av-cal-grid" role="grid">';
+            ["S","M","T","W","T","F","S"].forEach(function (d) { h += '<div class="av-cal-dow">' + d + "</div>"; });
+            var total = Math.ceil((startOffset + daysInMonth) / 7) * 7; // 4-6 rows only as needed
+            for (var i = 0; i < total; i++) {
+                var dayNum, cellY = y, cellM = m, outside = false;
+                if (i < startOffset) { dayNum = daysPrev - startOffset + 1 + i; cellM = m - 1; outside = true; }
+                else if (i >= startOffset + daysInMonth) { dayNum = i - startOffset - daysInMonth + 1; cellM = m + 1; outside = true; }
+                else { dayNum = i - startOffset + 1; }
+                var dd = new Date(cellY, cellM, dayNum);
+                var iso = todayISO(dd);
+                var sel = iso === fISO || iso === tISO;
+                var inR = fISO && tISO && iso > fISO && iso < tISO;
+                h += '<button type="button" role="gridcell" class="av-cal-day" data-day="' + iso + '"'
+                    + ' data-outside="' + outside + '" data-selected="' + sel + '" data-inrange="' + (!!inR) + '" data-today="' + (iso === tISOtoday) + '"'
+                    + ' aria-label="' + toIN(iso) + '">' + dd.getDate() + "</button>";
+            }
+            h += "</div>";
+            h += '<div class="av-cal-presets">'
+                + '<button type="button" class="av-cal-preset" data-preset="today">Today</button>'
+                + '<button type="button" class="av-cal-preset" data-preset="week">Last 7 days</button>'
+                + '<button type="button" class="av-cal-preset" data-preset="month">This month</button>'
+                + '<button type="button" class="av-cal-preset" data-preset="clear">Clear</button>'
+                + "</div>";
+            h += '<div class="av-cal-foot"><button type="button" class="av-cal-link" data-act="today">Jump to today</button>'
+                + '<button type="button" class="av-cal-link" data-act="done">Done</button></div>';
+            pop.innerHTML = h;
+        }
+
+        pop.addEventListener("click", function (e) {
+            if (!ctx) return;
+            var t = e.target.closest("[data-day],[data-nav],[data-preset],[data-tab],[data-act]");
+            if (!t) return;
+            if (t.hasAttribute("data-day")) { pick(t.getAttribute("data-day")); return; }
+            if (t.hasAttribute("data-nav")) {
+                ctx.viewM += +t.getAttribute("data-nav");
+                if (ctx.viewM < 0) { ctx.viewM = 11; ctx.viewY--; }
+                if (ctx.viewM > 11) { ctx.viewM = 0; ctx.viewY++; }
+                render(); position(); return;
+            }
+            if (t.hasAttribute("data-tab")) { ctx.active = t.getAttribute("data-tab"); render(); return; }
+            if (t.hasAttribute("data-preset")) {
+                var k = t.getAttribute("data-preset"), now = todayISO();
+                if (k === "today") { ctx.from.value = toIN(now); ctx.to.value = toIN(now); }
+                else if (k === "week") { ctx.from.value = toIN(addDays(now, -6)); ctx.to.value = toIN(now); }
+                else if (k === "month") { ctx.from.value = toIN(now.slice(0, 8) + "01"); ctx.to.value = toIN(now); }
+                else { ctx.from.value = ""; ctx.to.value = ""; }
+                render(); position(); return;
+            }
+            if (t.getAttribute("data-act") === "today") {
+                var n = todayISO().split("-");
+                ctx.viewY = +n[0]; ctx.viewM = +n[1] - 1; render(); position(); return;
+            }
+            if (t.getAttribute("data-act") === "done") { close(); ctx && ctx.form.requestSubmit(); }
+        });
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape" && ctx) close();
+        });
+        window.addEventListener("resize", function () { if (ctx) position(); });
+        window.addEventListener("scroll", function () { if (ctx) position(); }, true);
+
         document.querySelectorAll("form[data-filterbar]").forEach(function (form) {
             if (form.__fbWired) return;
             form.__fbWired = true;
-            var from = form.querySelector('input[name="from"]'), to = form.querySelector('input[name="to"]');
+            var from = form.querySelector("[data-from]"), to = form.querySelector("[data-to]");
+            var btn = form.querySelector("[data-calbtn]");
             if (!from || !to) return;
-            var pickers = form.querySelectorAll("[data-picker]");
-            pickers.forEach(function (pick, idx) {
-                var txt = idx === 0 ? from : to;
-                // Click anywhere on the hotspot opens that side's native calendar.
-                pick.addEventListener("click", function () {
-                    try { pick.showPicker(); } catch (e) { /* older browsers: native indicator still clickable */ }
+            function autoDash(inp) {
+                inp.addEventListener("input", function () {
+                    var d = inp.value.replace(/\D/g, "").slice(0, 8);
+                    var out = d;
+                    if (d.length > 4) out = d.slice(0, 2) + "-" + d.slice(2, 4) + "-" + d.slice(4);
+                    else if (d.length > 2) out = d.slice(0, 2) + "-" + d.slice(2);
+                    inp.value = out;
                 });
-                pick.addEventListener("change", function () {
-                    txt.value = toIN(pick.value);
-                    if (idx === 0 && pick.value) { to.focus(); }
+                inp.addEventListener("blur", function () {
+                    if (!inp.value) return;
+                    var iso = toISO(inp.value);
+                    inp.value = iso ? toIN(iso) : "";
                 });
-            });
+            }
+            autoDash(from); autoDash(to);
+            if (btn) btn.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); openFor(form, document.activeElement === to ? "to" : "from", true); });
+            // Native-like behaviour: single click / tab into a date field opens the calendar.
+            from.addEventListener("focus", function () { openFor(form, "from", false); });
+            to.addEventListener("focus", function () { openFor(form, "to", false); });
+            from.addEventListener("click", function () { openFor(form, "from", false); });
+            to.addEventListener("click", function () { openFor(form, "to", false); });
             form.addEventListener("submit", function () {
                 [from, to].forEach(function (inp) {
                     var iso = toISO(inp.value);
                     if (iso) { inp.value = iso; return; }
-                    if (inp.value && !/^\d{4}-\d{2}-\d{2}$/.test(inp.value)) inp.value = "";
+                    if (inp.value && !isISO(inp.value)) inp.value = "";
                 });
+                close();
             });
         });
     })();

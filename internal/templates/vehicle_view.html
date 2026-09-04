@@ -7,7 +7,7 @@
     <div class="p-5 pt-6">
         <div class="flex items-start justify-between gap-4 flex-wrap">
             <div class="min-w-0">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Fleet Unit</p>
+                <p class="text-eyebrow text-text-muted">Fleet Unit</p>
                 <div class="flex items-center gap-3 flex-wrap mt-0.5">
                     <h1 class="text-2xl font-bold tracking-tight text-on-surface font-display tabular-nums">{{.Vehicle.RegistrationNumber}}</h1>
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full {{statusBadge .Vehicle.Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Vehicle.Status}}</span>
@@ -28,19 +28,19 @@
 
         <dl class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5 pt-5 border-t border-border-subtle">
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Status</dt>
+                <dt class="text-eyebrow text-text-muted">Status</dt>
                 <dd class="mt-1"><span class="status-badge {{statusBadge .Vehicle.Status}}">{{.Vehicle.Status}}</span></dd>
             </div>
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Fuel</dt>
+                <dt class="text-eyebrow text-text-muted">Fuel</dt>
                 <dd class="text-sm font-semibold text-on-surface capitalize mt-1">{{.Vehicle.FuelType}}</dd>
             </div>
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Capacity</dt>
+                <dt class="text-eyebrow text-text-muted">Capacity</dt>
                 <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{print .Vehicle.Capacity}}</dd>
             </div>
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Odometer</dt>
+                <dt class="text-eyebrow text-text-muted">Odometer</dt>
                 <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{print .Vehicle.CurrentMileage}} km</dd>
             </div>
         </dl>
@@ -52,19 +52,19 @@
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                 <div>
-                    <h3 class="text-sm font-bold text-on-surface">Compliance</h3>
+                    <h2 class="text-sm font-bold text-on-surface">Compliance</h2>
                     <p class="text-xs text-text-muted">Document expiry and maintenance standing</p>
                 </div>
             </div>
             <div class="p-5">
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                     <div class="sm:col-span-2">
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Documents</dt>
+                        <dt class="text-eyebrow text-text-muted">Documents</dt>
                         <dd class="mt-2">
                             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                 {{range .DocCards}}
                                 <div class="rounded-xl border border-border-subtle bg-surface-container-low p-3">
-                                    <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">{{.Name}}</p>
+                                    <p class="text-eyebrow text-text-muted">{{.Name}}</p>
                                     {{if .HasDate}}
                                     <p class="text-sm font-bold text-on-surface mt-1 tabular-nums" data-numeric>{{.Expiry}}</p>
                                     {{if lt .Days 0}}
@@ -83,7 +83,7 @@
                         </dd>
                     </div>
                     <div class="pt-3 border-t border-border-subtle sm:col-span-2">
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Maintenance</dt>
+                        <dt class="text-eyebrow text-text-muted">Maintenance</dt>
                         <dd class="mt-1.5">
                             {{if .IsMaintenanceDue}}
                             <span class="inline-flex px-2 py-1 text-xs font-bold rounded-full bg-status-warning/10 text-status-warning border border-status-warning/20">Due Since: {{.MaintenanceDue}}</span>
@@ -101,7 +101,7 @@
 
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
-                <h3 class="text-sm font-bold text-on-surface">Recent Trips</h3>
+                <h2 class="text-sm font-bold text-on-surface">Recent Trips</h2>
                 {{if .RecentTrips}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .RecentTrips}}</span>{{end}}
             </div>
             <div class="p-2">
@@ -128,7 +128,7 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2 bg-gradient-to-r from-amber-500/[0.07] to-transparent">
                 <span class="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
-                <h3 class="text-sm font-bold text-on-surface">Maintenance Status</h3>
+                <h2 class="text-sm font-bold text-on-surface">Maintenance Status</h2>
             </div>
             <div class="p-5">
                 {{if .IsMaintenanceDue}}
@@ -172,24 +172,56 @@
         </div>
 
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 bg-gradient-to-r from-blue-500/[0.06] to-transparent">
+                <div class="flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
+                    <h2 class="text-sm font-bold text-on-surface">Open Job Cards</h2>
+                </div>
+                {{if .OpenWorkOrders}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .OpenWorkOrders}}</span>{{end}}
+            </div>
+            <div class="p-2">
+                {{if .OpenWorkOrders}}
+                <div class="divide-y divide-border-subtle">
+                    {{range .OpenWorkOrders}}
+                    <a href="/maintenance/work-orders/{{.ID}}" class="group flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-surface-container-low/60 transition-colors text-decoration-none rounded-lg -mx-1">
+                        <span class="min-w-0">
+                            <span class="block text-sm font-bold text-primary truncate group-hover:underline">{{.Title}}</span>
+                            <span class="block text-xs text-text-muted tabular-nums">{{if .Assignee}}{{.Assignee}}{{else}}Unassigned{{end}}{{if .CreatedAt.Valid}} · {{.CreatedAt.Time.Format "02-01-2006"}}{{end}}</span>
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}} shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
+                    </a>
+                    {{end}}
+                </div>
+                {{else}}
+                <p class="text-sm text-text-muted px-3 py-4">No open job cards for this vehicle.</p>
+                {{end}}
+                {{if can .User "maintenance" "create"}}
+                <div class="px-3 py-2 border-t border-border-subtle">
+                    <a href="/maintenance/work-orders/new?vehicle_id={{.Vehicle.ID}}" class="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:underline">+ New job card</a>
+                </div>
+                {{end}}
+            </div>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2 bg-gradient-to-r from-blue-500/[0.06] to-transparent">
                 <span class="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
-                <h3 class="text-sm font-bold text-on-surface">Last Telemetry</h3>
+                <h2 class="text-sm font-bold text-on-surface">Last Telemetry</h2>
             </div>
             <div class="p-5">
                 {{if .LastPosition.Has}}
                 <dl class="grid grid-cols-2 gap-4">
                     <div>
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Speed</dt>
+                        <dt class="text-eyebrow text-text-muted">Speed</dt>
                         <dd class="text-sm font-semibold text-on-surface mt-1 tabular-nums" data-numeric>{{printf "%.0f" .LastPosition.Speed}} km/h</dd>
                     </div>
                     <div>
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Position</dt>
-                        <dd class="font-mono text-xs text-on-surface mt-1">{{printf "%.4f" .LastPosition.Lat}}, {{printf "%.4f" .LastPosition.Lng}}</dd>
+                        <dt class="text-eyebrow text-text-muted">Position</dt>
+                        <dd class="font-data-mono text-xs text-on-surface mt-1">{{printf "%.4f" .LastPosition.Lat}}, {{printf "%.4f" .LastPosition.Lng}}</dd>
                     </div>
                     <div class="col-span-2">
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Device Time</dt>
-                        <dd class="font-mono text-xs text-on-surface mt-1">{{.LastPosition.At}}</dd>
+                        <dt class="text-eyebrow text-text-muted">Device Time</dt>
+                        <dd class="font-data-mono text-xs text-on-surface mt-1">{{.LastPosition.At}}</dd>
                     </div>
                 </dl>
                 {{else}}

@@ -13,6 +13,7 @@ import (
 	"transport-app/internal/alerts/domain"
 	sqliterepo "transport-app/internal/alerts/repository/sqlite"
 	"transport-app/internal/events"
+	"transport-app/internal/shared"
 )
 
 type mockProvider struct {
@@ -69,7 +70,7 @@ func TestEscalation_MultiStepSchedule(t *testing.T) {
 	`)
 	require.NoError(t, err)
 
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "tenant-42")
 	ev := events.Event{
 		Type: "AlertEvent",
 		Payload: map[string]interface{}{
@@ -151,7 +152,7 @@ func TestFlusher_StormBatchConsolidation(t *testing.T) {
 	engine.SetClock(clk)
 	flusher.SetClock(clk)
 
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "tenant-42")
 	ev := events.Event{
 		Type: "AlertEvent",
 		Payload: map[string]interface{}{

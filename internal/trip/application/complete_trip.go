@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"transport-app/internal/repository"
 	"transport-app/internal/shared"
 	"transport-app/internal/shared/ports"
 	"transport-app/internal/trip/domain"
@@ -24,11 +25,19 @@ type CompleteTripCommand struct {
 type CompleteTripUseCase struct {
 	uow   ports.UnitOfWork
 	clock ports.Clock
+	meter ports.UsageMeter
 }
 
 // NewCompleteTripUseCase creates a new CompleteTripUseCase.
 func NewCompleteTripUseCase(uow ports.UnitOfWork, clock ports.Clock) *CompleteTripUseCase {
 	return &CompleteTripUseCase{uow: uow, clock: clock}
+}
+
+// WithUsageMeter converts the booking's quota hold into usage on completion.
+// Chain after construction; safe to omit.
+func (uc *CompleteTripUseCase) WithUsageMeter(meter ports.UsageMeter) *CompleteTripUseCase {
+	uc.meter = meter
+	return uc
 }
 
 // Execute performs the transition.
@@ -47,6 +56,13 @@ func (uc *CompleteTripUseCase) Execute(ctx context.Context, cmd CompleteTripComm
 		}
 		if err := repo.Save(txCtx, t); err != nil {
 			return err
+		}
+		// Convert the booking's quota hold into usage. Metering is keyed by
+		// booking so retried completions cannot double-count.
+		if uc.meter != nil && t.BookingID != nil && *t.BookingID != "" {
+			if err := uc.meter.CommitBooking(txCtx, repository.TxFromContext(txCtx), cmd.TenantID, *t.BookingID); err != nil {
+				return err
+			}
 		}
 		logAudit(txCtx, ActionComplete, string(t.ID), nil, nil)
 		if cmd.OnCompleted != nil {

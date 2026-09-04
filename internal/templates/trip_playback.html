@@ -6,12 +6,12 @@
         <div>
             <h1 class="text-lg font-bold tracking-tight text-on-surface font-display flex items-center gap-2 flex-wrap">
                 Trip Playback
-                <span class="font-mono text-sm font-normal text-text-muted">{{.Trip.TripNumber}}</span>
+                <span class="font-data-mono text-sm font-normal text-text-muted">{{.Trip.TripNumber}}</span>
                 <span class="status-badge {{statusBadge .Trip.Status}}">{{.Trip.Status}}</span>
             </h1>
             <p class="text-xs text-text-muted mt-1">
                 {{.Trip.RouteSource}} → {{.Trip.RouteDestination}} · Dep {{datetime .Trip.DepartureTime}}{{if .Trip.ArrivalTime}} → Arr {{datetime .Trip.ArrivalTime}}{{end}}
-                {{if .Trip.VehicleRegistrationNumber}} · <span class="font-mono">{{.Trip.VehicleRegistrationNumber}}</span>{{end}}
+                {{if .Trip.VehicleRegistrationNumber}} · <span class="font-data-mono">{{.Trip.VehicleRegistrationNumber}}</span>{{end}}
                 {{if .Trip.DriverDisplayID}} · {{.Trip.DriverDisplayID}}{{end}}
             </p>
         </div>
@@ -32,18 +32,18 @@
             <div class="text-center space-y-2">
                 <div class="w-8 h-8 mx-auto rounded-full border-2 border-primary/30 border-t-primary animate-spin"></div>
                 <div class="text-xs font-medium text-secondary">Loading trip trail…</div>
-                <div class="text-[10px] font-mono text-text-muted" id="pb-status-detail"></div>
+                <div class="text-[10px] font-data-mono text-text-muted" id="pb-status-detail"></div>
             </div>
         </div>
 
         <div class="absolute top-3 left-3 right-3 z-10 pointer-events-none flex flex-wrap gap-2">
             <div class="bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-lg px-3 py-2 shadow-lg pointer-events-auto flex flex-wrap gap-4 text-[11px]">
-                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Points</span> <span class="font-mono font-bold text-on-surface" id="pb-stat-points">—</span></span>
-                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Distance</span> <span class="font-mono font-bold text-on-surface" id="pb-stat-distance">—</span></span>
-                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Duration</span> <span class="font-mono font-bold text-on-surface" id="pb-stat-duration">—</span></span>
-                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Avg</span> <span class="font-mono font-bold text-on-surface" id="pb-stat-avg">—</span></span>
-                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Max</span> <span class="font-mono font-bold text-on-surface" id="pb-stat-max">—</span></span>
-                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Stops</span> <span class="font-mono font-bold text-on-surface" id="pb-stat-stops">—</span></span>
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Points</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-points">—</span></span>
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Distance</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-distance">—</span></span>
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Duration</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-duration">—</span></span>
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Avg</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-avg">—</span></span>
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Max</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-max">—</span></span>
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Stops</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-stops">—</span></span>
                 <span id="pb-stat-truncated" class="hidden text-amber-600 font-semibold">+ more</span>
             </div>
             <div class="ml-auto bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-lg px-2 py-1.5 shadow-lg pointer-events-auto flex items-center gap-1">
@@ -63,7 +63,7 @@
                 </button>
                 <div class="flex-1 min-w-0 space-y-1">
                     <input type="range" id="pb-scrub" min="0" max="100" value="0" class="w-full accent-primary cursor-pointer" />
-                    <div class="flex items-center justify-between text-[10px] font-mono text-text-muted">
+                    <div class="flex items-center justify-between text-[10px] font-data-mono text-text-muted">
                         <span id="pb-time-start">—</span>
                         <span id="pb-time-current" class="font-semibold text-on-surface">—</span>
                         <span id="pb-time-end">—</span>
@@ -88,7 +88,7 @@
                     <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#ef4444"></span>End</span>
                     <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#8b5cf6"></span>Geofence</span>
                 </div>
-                <div class="font-mono text-text-muted" id="pb-hint">Space play/pause · ←→ step · F fit</div>
+                <div class="font-data-mono text-text-muted" id="pb-hint">Space play/pause · ←→ step · F fit</div>
             </div>
         </div>
     </div>
@@ -96,10 +96,10 @@
     <!-- Detention list for this trip -->
     <div id="pb-detentions" class="hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-4 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
-            <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Detention Windows (pickup/drop)</h3>
+            <h2 class="text-eyebrow text-text-muted">Detention Windows (pickup/drop)</h2>
         </div>
         <div class="p-4">
-            <div id="pb-detentions-list" class="space-y-1 text-xs font-mono"></div>
+            <div id="pb-detentions-list" class="space-y-1 text-xs font-data-mono"></div>
         </div>
     </div>
 </div>
@@ -311,7 +311,7 @@
                     +' <span class="text-text-muted">'+esc(d.zone_name||'')+'</span>'
                     +' · '+fmtTs(d.entered_at)+(d.exited_at?' → '+fmtTs(d.exited_at):' (open)')
                     +'</span>'
-                    +'<span class="flex items-center gap-2"><span class="font-mono">'+d.dwell_seconds+'s</span>'
+                    +'<span class="flex items-center gap-2"><span class="font-data-mono">'+d.dwell_seconds+'s</span>'
                     +'<span class="px-1.5 py-0.5 rounded text-[10px] font-bold" style="background:'+statusColor+'14;color:'+statusColor+'">'+esc(d.status)+'</span>'
                     +'</span></div>';
             });

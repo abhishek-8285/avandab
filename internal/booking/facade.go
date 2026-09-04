@@ -8,15 +8,16 @@ import (
 
 // CreateBookingCommand represents an immutable command to create a booking.
 type CreateBookingCommand struct {
-	TenantID    shared.TenantID
-	CustomerID  string
-	RouteID     string
-	PickupDate  string
-	VehicleType string
-	Passengers  int64
-	CargoWeight *float64
-	Price       float64
-	Notes       string
+	TenantID       shared.TenantID
+	CustomerID     string
+	RouteID        string
+	PickupDate     string
+	VehicleType    string
+	Passengers     int64
+	CargoWeight    *float64
+	Price          float64
+	Notes          string
+	IdempotencyKey string
 }
 
 // BookingFacade defines the public API of the Booking module.

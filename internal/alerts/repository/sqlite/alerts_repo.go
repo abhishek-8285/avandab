@@ -9,7 +9,6 @@ import (
 
 	"transport-app/internal/alerts/domain"
 	"transport-app/internal/alerts/repository"
-	"transport-app/internal/shared"
 )
 
 type sqlAlertRepository struct {
@@ -146,7 +145,7 @@ func (r *sqlAlertRepository) CreateAlert(ctx context.Context, a *domain.Alert) e
 		}
 	}
 	if a.TenantID == "" {
-		a.TenantID = string(shared.DefaultTenant)
+		return errors.New("alerts: refusing to persist unattributed alert (tenant_id empty)")
 	}
 	if a.SeverityRank == 0 {
 		a.SeverityRank = domain.SeverityToRank(a.Severity)
@@ -624,6 +623,24 @@ func (r *sqlAlertRepository) ReopenExpiredSnoozes(ctx context.Context, now time.
 		    snoozed_until = NULL,
 		    updated_at = CURRENT_TIMESTAMP
 		WHERE ack_status = 'snoozed' AND snoozed_until IS NOT NULL AND snoozed_until <= ?`, now)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+// ReopenExpiredSnoozesForTenant reopens only one org's expired snoozes so a
+// global sweep never touches orgs that disabled the inbox.
+func (r *sqlAlertRepository) ReopenExpiredSnoozesForTenant(ctx context.Context, tenantID string, now time.Time) (int64, error) {
+	if tenantID == "" {
+		return 0, errors.New("alerts: tenant id required for scoped snooze reopen")
+	}
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE alerts
+		SET ack_status = 'open',
+		    snoozed_until = NULL,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE tenant_id = ? AND ack_status = 'snoozed' AND snoozed_until IS NOT NULL AND snoozed_until <= ?`, tenantID, now)
 	if err != nil {
 		return 0, err
 	}

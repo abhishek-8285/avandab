@@ -1,0 +1,17 @@
+{{if .Stats.IdleVehicles}}
+{{range .Stats.IdleVehicles}}
+<a href="/vehicles/{{.ID}}" data-drill="idle-vehicle" class="group flex items-center gap-3 px-4 py-3 hover:bg-amber-500/[0.05] transition-colors">
+    <div class="w-8 h-8 rounded-lg bg-amber-500/10 grid place-items-center text-amber-600 shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg></div>
+    <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2"><span class="text-sm font-bold text-on-surface">{{.RegistrationNumber}}</span><span class="text-xs text-text-muted uppercase tracking-wide">{{.VehicleType}}</span></div>
+        <p class="text-xs text-text-muted">idle • last updated {{datetime .UpdatedAt}}</p>
+    </div>
+    <span class="text-xs font-semibold text-amber-700 bg-amber-500/10 border border-amber-500/15 px-2 py-1 rounded-full hidden sm:inline-flex">Assign</span>
+</a>
+{{end}}
+{{else}}
+<div class="px-4 py-10 text-center">
+    <div class="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
+    <p class="text-sm font-medium text-on-surface mt-3">Fleet active</p><p class="text-xs text-text-muted">No idle vehicles</p>
+</div>
+{{end}}

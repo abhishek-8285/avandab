@@ -81,43 +81,45 @@ func (q *Queries) CountBookingsByDay(ctx context.Context, tenantID string) ([]Co
 
 const createBooking = `-- name: CreateBooking :one
 INSERT INTO bookings (id, booking_number, customer_id, pickup_date, route_id,
-    vehicle_type, passengers, cargo_weight, price, notes, status, tenant_id, version)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+    vehicle_type, passengers, cargo_weight, price, notes, status, tenant_id, version, idempotency_key)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
 RETURNING id, booking_number, customer_id, pickup_date, route_id, vehicle_type,
-    passengers, cargo_weight, price, notes, status, tenant_id, version, created_at, updated_at
+    passengers, cargo_weight, price, notes, status, tenant_id, version, created_at, updated_at, idempotency_key
 `
 
 type CreateBookingParams struct {
-	ID            string          `json:"id"`
-	BookingNumber string          `json:"booking_number"`
-	CustomerID    string          `json:"customer_id"`
-	PickupDate    time.Time       `json:"pickup_date"`
-	RouteID       string          `json:"route_id"`
-	VehicleType   string          `json:"vehicle_type"`
-	Passengers    int64           `json:"passengers"`
-	CargoWeight   sql.NullFloat64 `json:"cargo_weight"`
-	Price         float64         `json:"price"`
-	Notes         sql.NullString  `json:"notes"`
-	Status        string          `json:"status"`
-	TenantID      string          `json:"tenant_id"`
+	ID             string          `json:"id"`
+	BookingNumber  string          `json:"booking_number"`
+	CustomerID     string          `json:"customer_id"`
+	PickupDate     time.Time       `json:"pickup_date"`
+	RouteID        string          `json:"route_id"`
+	VehicleType    string          `json:"vehicle_type"`
+	Passengers     int64           `json:"passengers"`
+	CargoWeight    sql.NullFloat64 `json:"cargo_weight"`
+	Price          float64         `json:"price"`
+	Notes          sql.NullString  `json:"notes"`
+	Status         string          `json:"status"`
+	TenantID       string          `json:"tenant_id"`
+	IdempotencyKey sql.NullString  `json:"idempotency_key"`
 }
 
 type CreateBookingRow struct {
-	ID            string          `json:"id"`
-	BookingNumber string          `json:"booking_number"`
-	CustomerID    string          `json:"customer_id"`
-	PickupDate    time.Time       `json:"pickup_date"`
-	RouteID       string          `json:"route_id"`
-	VehicleType   string          `json:"vehicle_type"`
-	Passengers    int64           `json:"passengers"`
-	CargoWeight   sql.NullFloat64 `json:"cargo_weight"`
-	Price         float64         `json:"price"`
-	Notes         sql.NullString  `json:"notes"`
-	Status        string          `json:"status"`
-	TenantID      string          `json:"tenant_id"`
-	Version       int64           `json:"version"`
-	CreatedAt     time.Time       `json:"created_at"`
-	UpdatedAt     time.Time       `json:"updated_at"`
+	ID             string          `json:"id"`
+	BookingNumber  string          `json:"booking_number"`
+	CustomerID     string          `json:"customer_id"`
+	PickupDate     time.Time       `json:"pickup_date"`
+	RouteID        string          `json:"route_id"`
+	VehicleType    string          `json:"vehicle_type"`
+	Passengers     int64           `json:"passengers"`
+	CargoWeight    sql.NullFloat64 `json:"cargo_weight"`
+	Price          float64         `json:"price"`
+	Notes          sql.NullString  `json:"notes"`
+	Status         string          `json:"status"`
+	TenantID       string          `json:"tenant_id"`
+	Version        int64           `json:"version"`
+	CreatedAt      time.Time       `json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
+	IdempotencyKey sql.NullString  `json:"idempotency_key"`
 }
 
 func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (CreateBookingRow, error) {
@@ -134,6 +136,7 @@ func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (C
 		arg.Notes,
 		arg.Status,
 		arg.TenantID,
+		arg.IdempotencyKey,
 	)
 	var i CreateBookingRow
 	err := row.Scan(
@@ -152,6 +155,7 @@ func (q *Queries) CreateBooking(ctx context.Context, arg CreateBookingParams) (C
 		&i.Version,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.IdempotencyKey,
 	)
 	return i, err
 }
@@ -210,6 +214,70 @@ type GetBookingByIDRow struct {
 func (q *Queries) GetBookingByID(ctx context.Context, arg GetBookingByIDParams) (GetBookingByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getBookingByID, arg.ID, arg.TenantID)
 	var i GetBookingByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.BookingNumber,
+		&i.CustomerID,
+		&i.PickupDate,
+		&i.RouteID,
+		&i.VehicleType,
+		&i.Passengers,
+		&i.CargoWeight,
+		&i.Price,
+		&i.Notes,
+		&i.Status,
+		&i.TenantID,
+		&i.Version,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CustomerName,
+		&i.CustomerCompany,
+		&i.RouteSource,
+		&i.RouteDestination,
+	)
+	return i, err
+}
+
+const getBookingByIdempotencyKey = `-- name: GetBookingByIdempotencyKey :one
+SELECT b.id, b.booking_number, b.customer_id, b.pickup_date, b.route_id, b.vehicle_type,
+    b.passengers, b.cargo_weight, b.price, b.notes, b.status, b.tenant_id, b.version, b.created_at, b.updated_at,
+    c.name AS customer_name, c.company AS customer_company, r.source AS route_source, r.destination AS route_destination
+FROM bookings b
+JOIN customers c ON b.customer_id = c.id
+JOIN routes r ON b.route_id = r.id
+WHERE b.idempotency_key = ? AND b.tenant_id = ?
+`
+
+type GetBookingByIdempotencyKeyParams struct {
+	IdempotencyKey sql.NullString `json:"idempotency_key"`
+	TenantID       string         `json:"tenant_id"`
+}
+
+type GetBookingByIdempotencyKeyRow struct {
+	ID               string          `json:"id"`
+	BookingNumber    string          `json:"booking_number"`
+	CustomerID       string          `json:"customer_id"`
+	PickupDate       time.Time       `json:"pickup_date"`
+	RouteID          string          `json:"route_id"`
+	VehicleType      string          `json:"vehicle_type"`
+	Passengers       int64           `json:"passengers"`
+	CargoWeight      sql.NullFloat64 `json:"cargo_weight"`
+	Price            float64         `json:"price"`
+	Notes            sql.NullString  `json:"notes"`
+	Status           string          `json:"status"`
+	TenantID         string          `json:"tenant_id"`
+	Version          int64           `json:"version"`
+	CreatedAt        time.Time       `json:"created_at"`
+	UpdatedAt        time.Time       `json:"updated_at"`
+	CustomerName     string          `json:"customer_name"`
+	CustomerCompany  sql.NullString  `json:"customer_company"`
+	RouteSource      string          `json:"route_source"`
+	RouteDestination string          `json:"route_destination"`
+}
+
+func (q *Queries) GetBookingByIdempotencyKey(ctx context.Context, arg GetBookingByIdempotencyKeyParams) (GetBookingByIdempotencyKeyRow, error) {
+	row := q.db.QueryRowContext(ctx, getBookingByIdempotencyKey, arg.IdempotencyKey, arg.TenantID)
+	var i GetBookingByIdempotencyKeyRow
 	err := row.Scan(
 		&i.ID,
 		&i.BookingNumber,

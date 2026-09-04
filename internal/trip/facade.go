@@ -10,11 +10,12 @@ import (
 
 // CreateTripCommand represents an immutable command to schedule a new trip.
 type CreateTripCommand struct {
-	TenantID      shared.TenantID
-	BookingID     *string
-	RouteID       string
-	DepartureTime time.Time
-	Remarks       string
+	TenantID       shared.TenantID
+	BookingID      *string
+	RouteID        string
+	DepartureTime  time.Time
+	Remarks        string
+	IdempotencyKey string
 }
 
 // TripFacade defines the public API of the Trip module.

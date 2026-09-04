@@ -19,7 +19,7 @@
     <form method="POST" action="/routes{{if $route}}/{{$route.ID}}/edit{{else}}/new{{end}}" class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="p-6 space-y-6">
             <section>
-                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Lane</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Lane</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Source *</label>
@@ -35,28 +35,28 @@
             </section>
 
             <section>
-                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Tariff</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Tariff</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Distance (km)</label>
                         <input type="number" step="0.1" name="distance" value="{{if $route}}{{$route.Distance}}{{end}}"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-mono placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Est. Hours</label>
                         <input type="number" step="0.1" name="estimated_hours" value="{{if $route}}{{$route.EstimatedHours}}{{end}}"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-mono placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Standard Fare</label>
                         <input type="number" step="0.01" name="standard_fare" value="{{if $route}}{{$route.StandardFare}}{{end}}"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-mono placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                 </div>
             </section>
 
             <section>
-                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Direction &amp; Reverse Leg</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Direction &amp; Reverse Leg</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Direction</label>
@@ -68,18 +68,18 @@
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Reverse Distance (km)</label>
                         <input type="number" step="0.1" name="reverse_distance" value="{{if and $route $route.ReverseDistance}}{{index $route.ReverseDistance}}{{end}}" placeholder="optional"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-mono placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Reverse Fare</label>
                         <input type="number" step="0.01" name="reverse_standard_fare" value="{{if and $route $route.ReverseStandardFare}}{{index $route.ReverseStandardFare}}{{end}}" placeholder="optional"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-mono placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                 </div>
             </section>
 
             <section>
-                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Remarks</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Remarks</h2>
                 <textarea name="remarks" rows="2"
                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">{{if $route}}{{nullString $route.Remarks}}{{end}}</textarea>
             </section>

@@ -1,9 +1,18 @@
 -- name: CreateBooking :one
 INSERT INTO bookings (id, booking_number, customer_id, pickup_date, route_id,
-    vehicle_type, passengers, cargo_weight, price, notes, status, tenant_id, version)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+    vehicle_type, passengers, cargo_weight, price, notes, status, tenant_id, version, idempotency_key)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
 RETURNING id, booking_number, customer_id, pickup_date, route_id, vehicle_type,
-    passengers, cargo_weight, price, notes, status, tenant_id, version, created_at, updated_at;
+    passengers, cargo_weight, price, notes, status, tenant_id, version, created_at, updated_at, idempotency_key;
+
+-- name: GetBookingByIdempotencyKey :one
+SELECT b.id, b.booking_number, b.customer_id, b.pickup_date, b.route_id, b.vehicle_type,
+    b.passengers, b.cargo_weight, b.price, b.notes, b.status, b.tenant_id, b.version, b.created_at, b.updated_at,
+    c.name AS customer_name, c.company AS customer_company, r.source AS route_source, r.destination AS route_destination
+FROM bookings b
+JOIN customers c ON b.customer_id = c.id
+JOIN routes r ON b.route_id = r.id
+WHERE b.idempotency_key = ? AND b.tenant_id = ?;
 
 -- name: GetBookingByID :one
 SELECT b.id, b.booking_number, b.customer_id, b.pickup_date, b.route_id, b.vehicle_type,

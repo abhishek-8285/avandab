@@ -60,7 +60,7 @@
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h3 class="text-sm font-bold text-on-surface">Outstanding Invoices</h3>
+                <h2 class="text-sm font-bold text-on-surface">Outstanding Invoices</h2>
                 <p class="text-xs text-text-muted">Every unpaid invoice in the ledger</p>
             </div>
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{.TotalInvoices}} invoices</span>
@@ -100,7 +100,7 @@
                 {{if .Invoices}}
                 <tfoot class="bg-surface-container-low border-t border-border-subtle">
                     <tr>
-                        <td colspan="2" class="px-3 py-2.5 text-[11px] font-bold uppercase tracking-wider text-text-muted">Total Outstanding · {{.TotalInvoices}} invoices</td>
+                        <td colspan="2" class="px-3 py-2.5 text-eyebrow text-text-muted">Total Outstanding · {{.TotalInvoices}} invoices</td>
                         <td class="px-3 py-2.5 text-sm text-right font-black tabular-nums text-status-alert" data-numeric>₹{{printf "%.2f" .TotalOutstanding}}</td>
                         <td colspan="2" class="px-3 py-2.5"></td>
                     </tr>

@@ -1,15 +1,15 @@
 <tr class="hover:bg-surface-container-low/50 transition">
-    <td class="px-4 py-3 font-mono font-semibold text-primary">
+    <td class="px-4 py-3 font-data-mono font-semibold text-primary">
         <a href="/ewaybill/{{.EwbNumber}}" class="hover:underline">{{.EwbNumber}}</a>
     </td>
     <td class="px-4 py-3">
         {{if .TripNumber}}
         <a href="/trips/{{.TripID}}" class="text-on-surface hover:text-primary font-medium">{{.TripNumber}}</a>
         {{else}}
-        <span class="font-mono text-xs">{{.TripID}}</span>
+        <span class="font-data-mono text-xs">{{.TripID}}</span>
         {{end}}
     </td>
-    <td class="px-4 py-3 font-mono text-xs">
+    <td class="px-4 py-3 font-data-mono text-xs">
         {{if .VehicleNumber}}
         <span class="px-2 py-0.5 rounded bg-surface-container border border-border-subtle">{{.VehicleNumber}}</span>
         {{else}}
@@ -19,7 +19,7 @@
     <td class="px-4 py-3 text-xs text-text-muted">
         <span class="font-medium text-on-surface">{{.FromPlace}}</span> → <span class="font-medium text-on-surface">{{.ToPlace}}</span>
     </td>
-    <td class="px-4 py-3 font-mono text-right text-xs">₹{{printf "%.2f" .GoodsValue}}</td>
+    <td class="px-4 py-3 font-data-mono text-right text-xs">₹{{printf "%.2f" .GoodsValue}}</td>
     <td class="px-4 py-3 text-center">
         {{if eq .Status "active"}}
             {{if and (not .VehicleNumber) (eq .ExtensionCount 0)}}
@@ -37,8 +37,8 @@
         <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-surface-container text-text-muted">{{.Status}}</span>
         {{end}}
     </td>
-    <td class="px-4 py-3 font-mono text-xs text-text-muted">{{.ValidUntil.Format "02 Jan 15:04"}}</td>
-    <td class="px-4 py-3 text-center text-xs font-mono">{{.ExtensionCount}}</td>
+    <td class="px-4 py-3 font-data-mono text-xs text-text-muted">{{.ValidUntil.Format "02 Jan 15:04"}}</td>
+    <td class="px-4 py-3 text-center text-xs font-data-mono">{{.ExtensionCount}}</td>
     <td class="px-4 py-3 text-center">
         <div class="flex items-center justify-center gap-1">
             <a href="/ewaybill/{{.EwbNumber}}" class="px-2 py-1 text-xs bg-surface-container text-on-surface rounded hover:bg-surface-container-high">

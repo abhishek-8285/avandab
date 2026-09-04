@@ -100,26 +100,32 @@
   --font-body-sm: "Plus Jakarta Sans", sans-serif;
   --font-headline-lg: "Outfit", sans-serif;
   --font-headline-md: "Outfit", sans-serif;
-  --font-label-caps: "Plus Jakarta Sans", sans-serif;
-  --font-data-mono: "Plus Jakarta Sans", sans-serif;
+  /* Tabular data: real monospace so figures align (was Plus Jakarta Sans) */
+  --font-data-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
 
-  /* Font sizes with line-height */
-  --text-body-sm: 13px;
-  --text-body-sm--line-height: 18px;
-  --text-body-md: 14px;
-  --text-body-md--line-height: 20px;
-  --text-body-lg: 16px;
-  --text-body-lg--line-height: 24px;
-  --text-data-mono: 14px;
-  --text-data-mono--line-height: 20px;
-  --text-headline-md: 20px;
-  --text-headline-md--line-height: 28px;
-  --text-headline-lg: 24px;
-  --text-headline-lg--line-height: 32px;
-  --text-display: 36px;
-  --text-display--line-height: 1.2;
-  --text-label-caps: 11px;
-  --text-label-caps--line-height: 16px;
+  /* Font sizes in rem — respects the user's browser base-size setting.
+     Title tier fills the 16→24 gap (card/section headers). */
+  --text-body-sm: 0.8125rem;
+  --text-body-sm--line-height: 1.125rem;
+  --text-body-md: 0.875rem;
+  --text-body-md--line-height: 1.25rem;
+  --text-body-lg: 1rem;
+  --text-body-lg--line-height: 1.5rem;
+  --text-title-sm: 0.875rem;
+  --text-title-sm--line-height: 1.25rem;
+  --text-title-md: 1rem;
+  --text-title-md--line-height: 1.5rem;
+  --text-title-lg: 1.375rem;
+  --text-title-lg--line-height: 1.75rem;
+  --text-data-mono: 0.875rem;
+  --text-data-mono--line-height: 1.25rem;
+  --text-headline-md: 1.25rem;
+  --text-headline-md--line-height: 1.75rem;
+  --text-headline-lg: 1.5rem;
+  --text-headline-lg--line-height: 2rem;
+  /* Fluid display: 2.35rem → 3.85rem across viewports (was 4 one-off classes) */
+  --text-display: clamp(2.35rem, 1.6rem + 3.5vw, 3.85rem);
+  --text-display--line-height: 1.05;
 
   /* Spacing tokens */
   --spacing-unit: 4px;
@@ -132,6 +138,16 @@
 
 /* Dark mode via .dark class */
 @variant dark (&:where(.dark, .dark *));
+
+/* Eyebrow labels: caps without letter-spacing read cramped — tracking is
+   part of the token (Tailwind --text-* can't carry it, so @utility). */
+@utility text-eyebrow {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
 
 :root.dark {
   --color-primary: #3b82f6;

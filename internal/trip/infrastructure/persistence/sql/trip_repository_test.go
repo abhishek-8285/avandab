@@ -62,7 +62,8 @@ CREATE TABLE trips (
     reached_pickup_at DATETIME,
     in_transit_at DATETIME,
     delivered_at DATETIME,
-    completed_at DATETIME
+    completed_at DATETIME,
+    idempotency_key TEXT
 );
 CREATE TABLE outbox_events (
     id TEXT PRIMARY KEY,
@@ -637,7 +638,7 @@ func TestTripRepository_CheckDriverConflict_NoConflictInitially(t *testing.T) {
 	seedDriver(t, dbConn, "drv-1", "DRV-001", "John", "Doe", "1", "john@example.com")
 	repo := NewTripRepository(dbConn)
 	ctx := context.Background()
-	conflicts, err := repo.CheckDriverConflict(ctx, "drv-1", "1", "")
+	conflicts, err := repo.CheckDriverConflict(ctx, "drv-1", "1", "", time.Now(), nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 0)
 }
@@ -656,7 +657,7 @@ func TestTripRepository_CheckDriverConflict_WithConflict(t *testing.T) {
 	require.NoError(t, repo.Save(ctx, agg))
 	// Directly update status to scheduled to ensure conflict query matches (Assign sets assigned which is also conflict)
 	// Already assigned -> should be conflict
-	conflicts, err := repo.CheckDriverConflict(ctx, "drv-1", "1", "")
+	conflicts, err := repo.CheckDriverConflict(ctx, "drv-1", "1", "", now, nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 1)
 	require.Equal(t, "tr-1", conflicts[0].ID)
@@ -678,11 +679,11 @@ func TestTripRepository_CheckDriverConflict_ExcludeTripID(t *testing.T) {
 	require.NoError(t, agg2.AssignDriver("drv-1", now))
 	require.NoError(t, repo.Save(ctx, agg2))
 	// Without exclude -> 2 conflicts
-	conflicts, err := repo.CheckDriverConflict(ctx, "drv-1", "1", "")
+	conflicts, err := repo.CheckDriverConflict(ctx, "drv-1", "1", "", now, nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 2)
 	// Exclude tr-1 -> only tr-2
-	conflicts, err = repo.CheckDriverConflict(ctx, "drv-1", "1", "tr-1")
+	conflicts, err = repo.CheckDriverConflict(ctx, "drv-1", "1", "tr-1", now, nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 1)
 	require.Equal(t, "tr-2", conflicts[0].ID)
@@ -699,10 +700,10 @@ func TestTripRepository_CheckDriverConflict_TenantIsolation(t *testing.T) {
 	agg := newTestTripAgg("tr-1", "1", "TR-0001", nil, "route-1", now.Add(2*time.Hour), "Test", now)
 	require.NoError(t, agg.AssignDriver("drv-1", now))
 	require.NoError(t, repo.Save(ctx, agg))
-	conflicts, err := repo.CheckDriverConflict(ctx, "drv-1", "2", "")
+	conflicts, err := repo.CheckDriverConflict(ctx, "drv-1", "2", "", now, nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 0)
-	conflicts, err = repo.CheckDriverConflict(ctx, "drv-1", "1", "")
+	conflicts, err = repo.CheckDriverConflict(ctx, "drv-1", "1", "", now, nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 1)
 }
@@ -730,7 +731,7 @@ func TestTripRepository_CheckDriverConflict_StatusFiltering(t *testing.T) {
 	require.NoError(t, aggSched.Schedule(now))
 	require.NoError(t, aggSched.AssignDriver("drv-1", now))
 	require.NoError(t, repo.Save(ctx, aggSched))
-	conflicts, err := repo.CheckDriverConflict(ctx, "drv-1", "1", "")
+	conflicts, err := repo.CheckDriverConflict(ctx, "drv-1", "1", "", now, nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 1)
 	require.Equal(t, "tr-sched", conflicts[0].ID)
@@ -743,7 +744,7 @@ func TestTripRepository_CheckDriverConflict_EmptyDriverID(t *testing.T) {
 	seedRoute(t, dbConn, "route-1", "A", "B")
 	repo := NewTripRepository(dbConn)
 	ctx := context.Background()
-	conflicts, err := repo.CheckDriverConflict(ctx, "", "1", "")
+	conflicts, err := repo.CheckDriverConflict(ctx, "", "1", "", time.Now(), nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 0)
 }
@@ -758,7 +759,7 @@ func TestTripRepository_CheckDriverConflict_WithArrivalTime(t *testing.T) {
 	arrival := now.Add(5 * time.Hour)
 	_, err := dbConn.Exec(`INSERT INTO trips (id, trip_number, driver_id, route_id, departure_time, arrival_time, status, tenant_id, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`, "tr-arr", "TR-ARR", "drv-1", "route-1", now.Add(2*time.Hour), arrival, "scheduled", "1")
 	require.NoError(t, err)
-	conflicts, err := repo.CheckDriverConflict(ctx, "drv-1", "1", "")
+	conflicts, err := repo.CheckDriverConflict(ctx, "drv-1", "1", "", now, nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 1)
 	require.NotNil(t, conflicts[0].ArrivalTime)
@@ -766,7 +767,7 @@ func TestTripRepository_CheckDriverConflict_WithArrivalTime(t *testing.T) {
 	// Insert another without arrival
 	_, err = dbConn.Exec(`INSERT INTO trips (id, trip_number, driver_id, route_id, departure_time, status, tenant_id, version) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`, "tr-no-arr", "TR-NOARR", "drv-1", "route-1", now.Add(6*time.Hour), "assigned", "1")
 	require.NoError(t, err)
-	conflicts, err = repo.CheckDriverConflict(ctx, "drv-1", "1", "")
+	conflicts, err = repo.CheckDriverConflict(ctx, "drv-1", "1", "", now, nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 2)
 	var foundNoArr bool
@@ -784,7 +785,7 @@ func TestTripRepository_CheckDriverConflict_ErrorClosedDB(t *testing.T) {
 	repo := NewTripRepository(dbConn)
 	ctx := context.Background()
 	_ = dbConn.Close()
-	_, err := repo.CheckDriverConflict(ctx, "drv-1", "1", "")
+	_, err := repo.CheckDriverConflict(ctx, "drv-1", "1", "", time.Now(), nil)
 	require.Error(t, err)
 }
 
@@ -798,7 +799,7 @@ func TestTripRepository_CheckVehicleConflict_NoConflictInitially(t *testing.T) {
 	seedVehicle(t, dbConn, "veh-1", "MH01AB1234", "V-001", "1")
 	repo := NewTripRepository(dbConn)
 	ctx := context.Background()
-	conflicts, err := repo.CheckVehicleConflict(ctx, "veh-1", "1", "")
+	conflicts, err := repo.CheckVehicleConflict(ctx, "veh-1", "1", "", time.Now(), nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 0)
 }
@@ -812,7 +813,7 @@ func TestTripRepository_CheckVehicleConflict_WithConflict(t *testing.T) {
 	now := time.Date(2026, 8, 6, 12, 0, 0, 0, time.UTC)
 	_, err := dbConn.Exec(`INSERT INTO trips (id, trip_number, vehicle_id, route_id, departure_time, status, tenant_id, version) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`, "tr-1", "TR-0001", "veh-1", "route-1", now.Add(2*time.Hour), "scheduled", "1")
 	require.NoError(t, err)
-	conflicts, err := repo.CheckVehicleConflict(ctx, "veh-1", "1", "")
+	conflicts, err := repo.CheckVehicleConflict(ctx, "veh-1", "1", "", now, nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 1)
 	require.Equal(t, "tr-1", conflicts[0].ID)
@@ -829,10 +830,10 @@ func TestTripRepository_CheckVehicleConflict_ExcludeTripID(t *testing.T) {
 	require.NoError(t, err)
 	_, err = dbConn.Exec(`INSERT INTO trips (id, trip_number, vehicle_id, route_id, departure_time, status, tenant_id, version) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`, "tr-2", "TR-0002", "veh-1", "route-1", now.Add(3*time.Hour), "assigned", "1")
 	require.NoError(t, err)
-	conflicts, err := repo.CheckVehicleConflict(ctx, "veh-1", "1", "")
+	conflicts, err := repo.CheckVehicleConflict(ctx, "veh-1", "1", "", now, nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 2)
-	conflicts, err = repo.CheckVehicleConflict(ctx, "veh-1", "1", "tr-1")
+	conflicts, err = repo.CheckVehicleConflict(ctx, "veh-1", "1", "tr-1", now, nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 1)
 	require.Equal(t, "tr-2", conflicts[0].ID)
@@ -847,10 +848,10 @@ func TestTripRepository_CheckVehicleConflict_TenantIsolation(t *testing.T) {
 	now := time.Date(2026, 8, 6, 12, 0, 0, 0, time.UTC)
 	_, err := dbConn.Exec(`INSERT INTO trips (id, trip_number, vehicle_id, route_id, departure_time, status, tenant_id, version) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`, "tr-1", "TR-0001", "veh-1", "route-1", now.Add(2*time.Hour), "scheduled", "1")
 	require.NoError(t, err)
-	conflicts, err := repo.CheckVehicleConflict(ctx, "veh-1", "2", "")
+	conflicts, err := repo.CheckVehicleConflict(ctx, "veh-1", "2", "", now, nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 0)
-	conflicts, err = repo.CheckVehicleConflict(ctx, "veh-1", "1", "")
+	conflicts, err = repo.CheckVehicleConflict(ctx, "veh-1", "1", "", now, nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 1)
 }
@@ -868,7 +869,7 @@ func TestTripRepository_CheckVehicleConflict_StatusFiltering(t *testing.T) {
 	require.NoError(t, err)
 	_, err = dbConn.Exec(`INSERT INTO trips (id, trip_number, vehicle_id, route_id, departure_time, status, tenant_id, version) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`, "tr-sched", "TR-SCHED", "veh-1", "route-1", now.Add(4*time.Hour), "scheduled", "1")
 	require.NoError(t, err)
-	conflicts, err := repo.CheckVehicleConflict(ctx, "veh-1", "1", "")
+	conflicts, err := repo.CheckVehicleConflict(ctx, "veh-1", "1", "", now, nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 1)
 	require.Equal(t, "tr-sched", conflicts[0].ID)
@@ -879,7 +880,7 @@ func TestTripRepository_CheckVehicleConflict_EmptyVehicleID(t *testing.T) {
 	seedRoute(t, dbConn, "route-1", "A", "B")
 	repo := NewTripRepository(dbConn)
 	ctx := context.Background()
-	conflicts, err := repo.CheckVehicleConflict(ctx, "", "1", "")
+	conflicts, err := repo.CheckVehicleConflict(ctx, "", "1", "", time.Now(), nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 0)
 }
@@ -894,13 +895,13 @@ func TestTripRepository_CheckVehicleConflict_WithArrivalTime(t *testing.T) {
 	arrival := now.Add(5 * time.Hour)
 	_, err := dbConn.Exec(`INSERT INTO trips (id, trip_number, vehicle_id, route_id, departure_time, arrival_time, status, tenant_id, version) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`, "tr-arr", "TR-ARR", "veh-1", "route-1", now.Add(2*time.Hour), arrival, "scheduled", "1")
 	require.NoError(t, err)
-	conflicts, err := repo.CheckVehicleConflict(ctx, "veh-1", "1", "")
+	conflicts, err := repo.CheckVehicleConflict(ctx, "veh-1", "1", "", now, nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 1)
 	require.NotNil(t, conflicts[0].ArrivalTime)
 	_, err = dbConn.Exec(`INSERT INTO trips (id, trip_number, vehicle_id, route_id, departure_time, status, tenant_id, version) VALUES (?, ?, ?, ?, ?, ?, ?, 1)`, "tr-no-arr", "TR-NOARR", "veh-1", "route-1", now.Add(6*time.Hour), "assigned", "1")
 	require.NoError(t, err)
-	conflicts, err = repo.CheckVehicleConflict(ctx, "veh-1", "1", "")
+	conflicts, err = repo.CheckVehicleConflict(ctx, "veh-1", "1", "", now, nil)
 	require.NoError(t, err)
 	require.Len(t, conflicts, 2)
 }
@@ -910,7 +911,7 @@ func TestTripRepository_CheckVehicleConflict_ErrorClosedDB(t *testing.T) {
 	repo := NewTripRepository(dbConn)
 	ctx := context.Background()
 	_ = dbConn.Close()
-	_, err := repo.CheckVehicleConflict(ctx, "veh-1", "1", "")
+	_, err := repo.CheckVehicleConflict(ctx, "veh-1", "1", "", time.Now(), nil)
 	require.Error(t, err)
 }
 

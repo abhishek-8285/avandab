@@ -7,7 +7,7 @@
     <div class="p-5 pt-6">
         <div class="flex items-start justify-between gap-4 flex-wrap">
             <div class="min-w-0">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Driver Profile</p>
+                <p class="text-eyebrow text-text-muted">Driver Profile</p>
                 <div class="flex items-center gap-3 flex-wrap mt-0.5">
                     <h1 class="text-2xl font-bold tracking-tight text-on-surface font-display">{{.Driver.FirstName}} {{.Driver.LastName}}</h1>
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full {{statusBadge .Driver.Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Driver.Status}}</span>
@@ -28,19 +28,19 @@
 
         <dl class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5 pt-5 border-t border-border-subtle">
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Status</dt>
+                <dt class="text-eyebrow text-text-muted">Status</dt>
                 <dd class="mt-1"><span class="status-badge {{statusBadge .Driver.Status}}">{{.Driver.Status}}</span></dd>
             </div>
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Phone</dt>
-                <dd class="text-sm font-semibold text-on-surface font-mono mt-1 tabular-nums" data-numeric>{{.Driver.Phone}}</dd>
+                <dt class="text-eyebrow text-text-muted">Phone</dt>
+                <dd class="text-sm font-semibold text-on-surface font-data-mono mt-1 tabular-nums" data-numeric>{{.Driver.Phone}}</dd>
             </div>
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">License Expiry</dt>
+                <dt class="text-eyebrow text-text-muted">License Expiry</dt>
                 <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{date_only .Driver.LicenseExpiry}}</dd>
             </div>
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Experience</dt>
+                <dt class="text-eyebrow text-text-muted">Experience</dt>
                 <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{.Driver.ExperienceYears}} years</dd>
             </div>
         </dl>
@@ -51,28 +51,28 @@
     <div class="lg:col-span-2 space-y-4">
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle">
-                <h3 class="text-sm font-bold text-on-surface">Details</h3>
+                <h2 class="text-sm font-bold text-on-surface">Details</h2>
             </div>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 p-5">
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Email</dt>
+                    <dt class="text-eyebrow text-text-muted">Email</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1 break-all">{{nullString .Driver.Email}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">License Number</dt>
-                    <dd class="font-mono text-sm font-semibold text-on-surface mt-1">{{.Driver.LicenseNumber}}</dd>
+                    <dt class="text-eyebrow text-text-muted">License Number</dt>
+                    <dd class="font-data-mono text-sm font-semibold text-on-surface mt-1">{{.Driver.LicenseNumber}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Emergency Contact</dt>
+                    <dt class="text-eyebrow text-text-muted">Emergency Contact</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1 tabular-nums">{{nullString .Driver.EmergencyContactName}} / {{nullString .Driver.EmergencyContactPhone}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Address</dt>
+                    <dt class="text-eyebrow text-text-muted">Address</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">{{nullString .Driver.Address}}</dd>
                 </div>
                 {{with nullString .Driver.Notes}}
                 <div class="sm:col-span-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Notes</dt>
+                    <dt class="text-eyebrow text-text-muted">Notes</dt>
                     <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed">{{.}}</dd>
                 </div>
                 {{end}}
@@ -81,7 +81,7 @@
 
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
-                <h3 class="text-sm font-bold text-on-surface">Recent Trips</h3>
+                <h2 class="text-sm font-bold text-on-surface">Recent Trips</h2>
                 {{if .RecentTrips}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .RecentTrips}}</span>{{end}}
             </div>
             <div class="p-2">
@@ -107,7 +107,7 @@
     <div class="space-y-4">
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 bg-gradient-to-r from-emerald-500/[0.06] to-transparent">
-                <h3 class="text-sm font-bold text-on-surface">Safety Scorecard</h3>
+                <h2 class="text-sm font-bold text-on-surface">Safety Scorecard</h2>
             </div>
             <div class="p-5">
                 {{if .Tier.Valid}}
@@ -126,7 +126,7 @@
 
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
-                <h3 class="text-sm font-bold text-on-surface">Uploaded Documents</h3>
+                <h2 class="text-sm font-bold text-on-surface">Uploaded Documents</h2>
                 {{if .Files}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Files}}</span>{{end}}
             </div>
             <div class="p-5">
@@ -153,7 +153,7 @@
 <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
     <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2 bg-gradient-to-r from-blue-500/[0.06] to-transparent">
         <span class="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg></span>
-        <h3 class="text-sm font-bold text-on-surface">Recent Behaviour Events</h3>
+        <h2 class="text-sm font-bold text-on-surface">Recent Behaviour Events</h2>
     </div>
         <div class="p-2">
             {{if .BehaviourEvents}}

@@ -7,7 +7,6 @@ import (
 
 	tripevents "transport-app/internal/domain/trip"
 	"transport-app/internal/events"
-	"transport-app/internal/shared"
 )
 
 // SubscribeTripEvents wires the ETA history recorder to the event bus.
@@ -63,7 +62,13 @@ func (s *EtaService) SubscribeTripEvents(bus events.EventBus, logger *slog.Logge
 			tenantID = resolveTenant(ctx, s, tripID)
 		}
 		if tenantID == "" {
-			tenantID = string(shared.DefaultTenant)
+			// Fail closed: never poison another org's ETA history.
+			// The trip row itself carries the tenant, so this only fires
+			// for deleted/unknown trips.
+			if logger != nil {
+				logger.Warn("eta: skipped (tenant unknown)", "trip_id", tripID)
+			}
+			return nil
 		}
 
 		segments, err := s.extractSegments(ctx, tripID)

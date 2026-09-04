@@ -27,6 +27,9 @@ func TestKeywordRoute(t *testing.T) {
 		"how do I cancel a booking per policy?": "support",
 		"how many trips today":                  "ops",
 		"anything unusual":                      "ops",
+		"open a job card for brake repair":      "maintenance",
+		"which work orders are open":            "maintenance",
+		"vehicle maintenance due soon":          "maintenance",
 	}
 	for q, want := range cases {
 		if got := o.keywordRoute(q); got != want {

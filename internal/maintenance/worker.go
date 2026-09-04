@@ -81,12 +81,19 @@ func (w *Worker) EvaluateSchedules(ctx context.Context) {
 		w.logger.Error("failed to list active maintenance schedules", "error", err)
 		return
 	}
+	tenantByVehicle := w.resolveVehicleTenants(ctx, schedules)
 
 	now := time.Now().UTC()
 
 	for _, s := range schedules {
+		tenant := tenantByVehicle[s.VehicleID]
+		if tenant == "" {
+			w.logger.Warn("maintenance: schedule skipped (unknown vehicle org)", "vehicle_id", s.VehicleID)
+			continue
+		}
 		isDue := false
 		var reason string
+		var dueDate *time.Time
 
 		// 1. Odometer-based evaluation
 		latestOdo, err := w.repo.GetLatestOdometer(ctx, s.VehicleID)
@@ -116,36 +123,151 @@ func (w *Worker) EvaluateSchedules(ctx context.Context) {
 				if s.LastDoneAt != nil {
 					lastAt = *s.LastDoneAt
 				}
-				dueDate := lastAt.Add(time.Duration(*s.IntervalDays) * 24 * time.Hour)
-				if now.After(dueDate) || now.Equal(dueDate) {
+				due := lastAt.Add(time.Duration(*s.IntervalDays) * 24 * time.Hour)
+				dueDate = &due
+				if now.After(due) || now.Equal(due) {
 					isDue = true
 					reason = fmt.Sprintf("interval %d days exceeded since %s", *s.IntervalDays, lastAt.Format("2006-01-02"))
 				}
+			} else if s.DueAt != nil {
+				dueDate = s.DueAt
 			}
 		}
 
 		if isDue {
-			w.markVehicleDue(ctx, s.VehicleID, s.ServiceType, reason, now)
+			w.markVehicleDue(ctx, s.VehicleID, tenant, s.ID, s.ServiceType, reason, now)
+		} else if dueDate != nil {
+			// Advance reminder: due soon but not yet. Fires once per window
+			// per vehicle+service (deduped on the notifications table).
+			if daysLeft := int(dueDate.Sub(now).Hours() / 24); daysLeft >= 0 && daysLeft <= w.reminderWindowDays(ctx, tenant) {
+				w.sendDueSoonReminder(ctx, tenant, s.VehicleID, s.ServiceType, *dueDate, daysLeft)
+			}
 		}
 	}
 }
 
-func (w *Worker) markVehicleDue(ctx context.Context, vehicleID, serviceType, reason string, dueDate time.Time) {
+// reminderWindowDays reads the per-org advance-warning window
+// (company_config maintenance.reminder_days, default 7, clamped 1..30).
+func (w *Worker) reminderWindowDays(ctx context.Context, tenant string) int {
+	var raw string
+	if err := w.db.QueryRowContext(ctx,
+		`SELECT value FROM company_config WHERE tenant_id = ? AND key = 'maintenance.reminder_days'`, tenant).Scan(&raw); err == nil {
+		var days int
+		if _, err := fmt.Sscanf(strings.TrimSpace(raw), "%d", &days); err == nil {
+			if days < 1 {
+				return 1
+			}
+			if days > 30 {
+				return 30
+			}
+			return days
+		}
+	}
+	return 7
+}
+
+// sendDueSoonReminder notifies the org's admins once per window that a
+// service date is approaching. No bus event: reminders are inbox-only so
+// alert pipelines stay reserved for actual dues.
+func (w *Worker) sendDueSoonReminder(ctx context.Context, tenant, vehicleID, serviceType string, due time.Time, daysLeft int) {
+	title := fmt.Sprintf("Maintenance Due Soon: %s", serviceType)
+	var recent int
+	_ = w.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM notifications
+		WHERE title = ? AND message LIKE '%' || ? || '%'
+		  AND created_at > datetime('now', '-7 days')`, title, vehicleID).Scan(&recent)
+	if recent > 0 {
+		return
+	}
+	msg := fmt.Sprintf("Vehicle %s needs %s maintenance on %s (%d days left)", vehicleID, serviceType, due.Format("2006-01-02"), daysLeft)
+	w.notifyOrgAdmins(ctx, tenant, title, msg)
+}
+
+// resolveVehicleTenants attributes vehicles to their orgs in one query.
+// Unknown vehicles resolve to "" and are skipped by callers.
+func (w *Worker) resolveVehicleTenants(ctx context.Context, schedules []domain.Schedule) map[string]string {
+	out := make(map[string]string, len(schedules))
+	ids := make([]string, 0, len(schedules))
+	seen := map[string]bool{}
+	for _, s := range schedules {
+		if !seen[s.VehicleID] {
+			seen[s.VehicleID] = true
+			ids = append(ids, s.VehicleID)
+		}
+	}
+	if len(ids) == 0 {
+		return out
+	}
+	placeholders := strings.Repeat("?,", len(ids))
+	placeholders = strings.TrimSuffix(placeholders, ",")
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	rows, err := w.db.QueryContext(ctx,
+		`SELECT id, tenant_id FROM vehicles WHERE id IN (`+placeholders+`)`, args...)
+	if err != nil {
+		return out
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var vehID, tenant string
+		if err := rows.Scan(&vehID, &tenant); err == nil {
+			out[vehID] = tenant
+		}
+	}
+	return out
+}
+
+// vehicleTenant resolves one vehicle's org ("" when unknown).
+func (w *Worker) vehicleTenant(ctx context.Context, vehicleID string) string {
+	var tenant string
+	_ = w.db.QueryRowContext(ctx, `SELECT tenant_id FROM vehicles WHERE id = ?`, vehicleID).Scan(&tenant)
+	return tenant
+}
+
+// notifyOrgAdmins delivers an in-app notification to every active admin and
+// org_admin of the tenant (they own the vehicles). Falls back to the legacy
+// 'system' recipient only when the org has no admin users at all.
+func (w *Worker) notifyOrgAdmins(ctx context.Context, tenant, title, msg string) {
+	rows, err := w.db.QueryContext(ctx,
+		`SELECT id FROM users WHERE tenant_id = ? AND status = 'active' AND role_id IN (1, 6)`, tenant)
+	recipients := []string{}
+	if err == nil {
+		defer func() { _ = rows.Close() }()
+		for rows.Next() {
+			var uid string
+			if err := rows.Scan(&uid); err == nil && uid != "" {
+				recipients = append(recipients, uid)
+			}
+		}
+	}
+	if len(recipients) == 0 {
+		recipients = []string{"system"}
+	}
+	for _, uid := range recipients {
+		_, _ = w.db.ExecContext(ctx, `
+			INSERT INTO notifications (id, user_id, title, message, channel, status, created_at)
+			VALUES (?, ?, ?, ?, 'in_app', 'unread', CURRENT_TIMESTAMP)`,
+			uuid.NewString(), uid, title, msg)
+	}
+}
+
+func (w *Worker) markVehicleDue(ctx context.Context, vehicleID, tenant, scheduleID, serviceType, reason string, dueDate time.Time) {
 	err := w.repo.SetMaintenanceDue(ctx, vehicleID, dueDate)
 	if err != nil {
 		w.logger.Error("failed to set maintenance_due on vehicle", "vehicle_id", vehicleID, "error", err)
 		return
 	}
 
-	// Insert in-app notification
-	notifID := uuid.NewString()
+	// Notify the owning org's admins (not a dead 'system' recipient).
 	title := fmt.Sprintf("Maintenance Due: %s", serviceType)
 	msg := fmt.Sprintf("Vehicle %s requires %s maintenance: %s", vehicleID, serviceType, reason)
-	_, _ = w.db.ExecContext(ctx, `
-		INSERT INTO notifications (id, user_id, title, message, channel, status, created_at)
-		VALUES (?, 'system', ?, ?, 'in_app', 'unread', CURRENT_TIMESTAMP)`,
-		notifID, title, msg,
-	)
+	w.notifyOrgAdmins(ctx, tenant, title, msg)
+
+	// Open exactly one job card per cause so detection flows into tracked
+	// work; repeat sweeps and DTC storms dedupe on the open card.
+	w.ensureJobCard(ctx, tenant, vehicleID, scheduleID, serviceType, reason, dueDate)
 
 	// Publish maintenance.due event on bus
 	if w.bus != nil {
@@ -153,6 +275,7 @@ func (w *Worker) markVehicleDue(ctx context.Context, vehicleID, serviceType, rea
 			Type: "maintenance.due",
 			Payload: map[string]interface{}{
 				"vehicle_id":   vehicleID,
+				"tenant_id":    tenant,
 				"service_type": serviceType,
 				"reason":       reason,
 				"due_date":     dueDate.Format("2006-01-02"),
@@ -160,6 +283,41 @@ func (w *Worker) markVehicleDue(ctx context.Context, vehicleID, serviceType, rea
 		}
 		w.bus.Publish(ctx, evt)
 	}
+}
+
+// ensureJobCard opens one 'open' job card per cause (schedule or DTC storm)
+// and silently keeps the existing open card on repeat sweeps. Tenant and
+// vehicle are required — unknown orgs never get cards (fail-closed).
+func (w *Worker) ensureJobCard(ctx context.Context, tenant, vehicleID, scheduleID, serviceType, reason string, due time.Time) {
+	if tenant == "" || vehicleID == "" {
+		w.logger.Warn("maintenance: job card skipped (unknown vehicle org)", "vehicle_id", vehicleID)
+		return
+	}
+	open, err := w.repo.FindOpenWorkOrder(ctx, tenant, vehicleID, scheduleID)
+	if err != nil {
+		w.logger.Error("failed to check open job cards", "vehicle_id", vehicleID, "error", err)
+		return
+	}
+	if open != nil {
+		return
+	}
+	wo := domain.WorkOrder{
+		ID:          uuid.NewString(),
+		TenantID:    tenant,
+		VehicleID:   vehicleID,
+		Title:       fmt.Sprintf("Maintenance due: %s", serviceType),
+		Description: reason,
+		Status:      domain.WorkOrderOpen,
+		DueAt:       &due,
+	}
+	if scheduleID != "" {
+		wo.ScheduleID = &scheduleID
+	}
+	if err := w.repo.CreateWorkOrder(ctx, wo); err != nil {
+		w.logger.Error("failed to open job card", "vehicle_id", vehicleID, "error", err)
+		return
+	}
+	w.logger.Info("maintenance: job card opened", "vehicle_id", vehicleID, "service_type", serviceType, "tenant_id", tenant)
 }
 
 // EvaluateResolution checks if all due conditions for a vehicle have been cleared.
@@ -210,6 +368,7 @@ func (w *Worker) EvaluateResolution(ctx context.Context, vehicleID string) {
 				Type: "maintenance.cleared",
 				Payload: map[string]interface{}{
 					"vehicle_id": vehicleID,
+					"tenant_id":  w.vehicleTenant(ctx, vehicleID),
 					"cleared_at": time.Now().UTC().Format(time.RFC3339),
 				},
 			}
@@ -329,7 +488,7 @@ func (w *Worker) HandleDtcEvent(ctx context.Context, payload interface{}) error 
 	}
 
 	if inserted && isCritical {
-		w.markVehicleDue(ctx, vehicleID, "engine", fmt.Sprintf("Critical DTC %s detected", dtcCode), occurredAt)
+		w.markVehicleDue(ctx, vehicleID, w.vehicleTenant(ctx, vehicleID), "", "engine", fmt.Sprintf("Critical DTC %s detected", dtcCode), occurredAt)
 	}
 
 	return nil

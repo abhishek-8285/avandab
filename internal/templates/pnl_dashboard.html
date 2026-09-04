@@ -11,11 +11,11 @@
         </div>
         <div class="flex flex-wrap items-end gap-2 shrink-0">
             <div>
-                <label for="pnl-from" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1">From</label>
+                <label for="pnl-from" class="block text-eyebrow text-text-muted mb-1">From</label>
                 <input type="date" id="pnl-from" class="rounded-lg bg-surface-container-low border border-border-subtle text-sm text-on-surface px-3 py-2 tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" value="{{.From}}">
             </div>
             <div>
-                <label for="pnl-to" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1">To</label>
+                <label for="pnl-to" class="block text-eyebrow text-text-muted mb-1">To</label>
                 <input type="date" id="pnl-to" class="rounded-lg bg-surface-container-low border border-border-subtle text-sm text-on-surface px-3 py-2 tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" value="{{.To}}">
             </div>
             <button onclick="loadPNL()" class="inline-flex items-center px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer border-0">Load</button>
@@ -98,7 +98,7 @@
     <div id="pnl-container" class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h3 class="text-sm font-bold text-on-surface">Daily Snapshots</h3>
+                <h2 class="text-sm font-bold text-on-surface">Daily Snapshots</h2>
                 <p class="text-xs text-text-muted">One row per generated day, oldest first</p>
             </div>
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Snapshots}} days</span>

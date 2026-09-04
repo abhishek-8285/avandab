@@ -17,6 +17,7 @@ import (
 	"transport-app/internal/alerts/domain"
 	sqliterepo "transport-app/internal/alerts/repository/sqlite"
 	"transport-app/internal/events"
+	"transport-app/internal/shared"
 )
 
 type mockClock struct {
@@ -59,7 +60,7 @@ func TestEngine_DedupAndCooldown(t *testing.T) {
 	clk := &mockClock{current: time.Date(2026, 8, 19, 12, 0, 0, 0, time.UTC)}
 	engine.SetClock(clk)
 
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "tenant-42")
 
 	ev := events.Event{
 		Type: "AlertEvent",
@@ -113,7 +114,7 @@ func TestEngine_CooldownExpiry(t *testing.T) {
 	clk := &mockClock{current: time.Date(2026, 8, 19, 12, 0, 0, 0, time.UTC)}
 	engine.SetClock(clk)
 
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "tenant-42")
 
 	ev := events.Event{
 		Type: "AlertEvent",
@@ -156,7 +157,7 @@ func TestEngine_StormBatching_Occurrences(t *testing.T) {
 	clk := &mockClock{current: time.Date(2026, 8, 19, 12, 0, 0, 0, time.UTC)}
 	engine.SetClock(clk)
 
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "tenant-42")
 
 	ev := events.Event{
 		Type: "AlertEvent",
@@ -232,7 +233,7 @@ func TestEngine_LegacyFuelEventMapping(t *testing.T) {
 
 	clk := &mockClock{current: time.Date(2026, 8, 20, 8, 0, 0, 0, time.UTC)}
 	engine.SetClock(clk)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "tenant-42")
 
 	cases := []struct {
 		eventType     string

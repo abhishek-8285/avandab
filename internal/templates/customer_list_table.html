@@ -2,12 +2,12 @@
     <table class="min-w-full divide-y divide-border-subtle">
         <thead class="bg-surface-container-low">
             <tr>
-                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Customer</th>
-                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Type</th>
-                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Contact</th>
-                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Company · GST</th>
-                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
-                <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
+                <th class="px-3 py-2.5 text-left text-eyebrow text-text-muted">Customer</th>
+                <th class="px-3 py-2.5 text-left text-eyebrow text-text-muted">Type</th>
+                <th class="px-3 py-2.5 text-left text-eyebrow text-text-muted">Contact</th>
+                <th class="px-3 py-2.5 text-left text-eyebrow text-text-muted">Company · GST</th>
+                <th class="px-3 py-2.5 text-left text-eyebrow text-text-muted">Status</th>
+                <th class="px-3 py-2.5 text-right text-eyebrow text-text-muted">Actions</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-border-subtle">
@@ -22,7 +22,7 @@
                                 {{if .Title}}<span class="text-xs font-semibold text-text-muted">{{nullString .Title}}</span>{{end}}
                                 <span class="truncate">{{.Name}}</span>
                             </div>
-                            <div class="text-xs font-mono tabular-nums text-text-muted flex items-center gap-1.5 mt-0.5">
+                            <div class="text-xs font-data-mono tabular-nums text-text-muted flex items-center gap-1.5 mt-0.5">
                                 <span class="truncate">{{.CustomerCode}}</span>
                                 {{if .InternalID}}<span class="hidden sm:inline opacity-50">·</span><span class="hidden sm:inline truncate">{{nullString .InternalID}}</span>{{end}}
                             </div>
@@ -45,7 +45,7 @@
                 </td>
                 <td class="px-3 py-2 min-w-0">
                     <div class="text-sm text-secondary truncate">{{nullString .Company}}</div>
-                    <div class="text-xs font-mono uppercase text-text-muted truncate">{{nullString .GST}}</div>
+                    <div class="text-xs font-data-mono uppercase text-text-muted truncate">{{nullString .GST}}</div>
                 </td>
                 <td class="px-3 py-2 whitespace-nowrap">
                     <span class="status-badge {{statusBadge .Status}}">{{.Status}}</span>

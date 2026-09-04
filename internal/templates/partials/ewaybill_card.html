@@ -1,7 +1,7 @@
 {{if can .User "ewaybill" "read"}}
 <div class="border border-border-subtle rounded-lg p-4 mt-6 bg-surface-container-low shadow-sm">
     <div class="flex justify-between items-center mb-3">
-        <h3 class="text-base font-semibold text-on-surface flex items-center gap-2">
+        <h3 class="text-title-md font-semibold text-on-surface flex items-center gap-2">
             <span>E-Way Bill</span>
             {{if .EWayBill}}
                 <span class="px-2 py-0.5 text-xs font-medium rounded-full {{if eq .EWayBill.Status "active"}}bg-status-success/20 text-status-success{{else if eq .EWayBill.Status "part_a"}}bg-status-info/20 text-status-info{{else if eq .EWayBill.Status "cancelled"}}bg-status-alert/20 text-status-alert{{else}}bg-status-warn/20 text-status-warn{{end}}">
@@ -15,7 +15,7 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
         <div>
             <span class="text-text-muted block text-xs">EWB Number</span>
-            <span class="font-mono font-medium text-on-surface">{{.EWayBill.EwbNumber}}</span>
+            <span class="font-data-mono font-medium text-on-surface">{{.EWayBill.EwbNumber}}</span>
         </div>
         <div>
             <span class="text-text-muted block text-xs">Valid Until</span>

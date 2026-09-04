@@ -1,0 +1,22 @@
+{{if .Stats.UpcomingTrips}}
+{{range .Stats.UpcomingTrips}}
+<tr data-drill="upcoming-trip" data-href="/trips/{{.ID}}" data-status="{{.Status}}" data-search="{{.TripNumber}} {{nullString .DriverFirstName}} {{nullString .DriverLastName}} {{nullString .VehicleRegistration}} {{.RouteSource}} {{.RouteDestination}}" tabindex="0" onclick="if(this.dataset.href)location.href=this.dataset.href" onkeydown="if(event.key==='Enter'||event.key===' '){if(this.dataset.href)location.href=this.dataset.href}" class="group cursor-pointer hover:bg-surface-container-low/60 transition-colors">
+    <td class="px-4 py-3 text-sm font-bold text-primary group-hover:text-primary/90 tabular-nums">{{.TripNumber}}</td>
+    <td class="px-4 py-3 text-sm"><div class="flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-primary/10 border border-primary/15 grid place-items-center text-[10px] font-bold text-primary">{{slice (nullString .DriverFirstName) 0 1}}{{slice (nullString .DriverLastName) 0 1}}</span><span class="font-medium text-on-surface">{{nullString .DriverFirstName}} {{nullString .DriverLastName}}</span></div></td>
+    <td class="px-4 py-3 text-sm"><span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-surface-container border border-border-subtle text-xs font-medium tabular-nums">{{nullString .VehicleRegistration}}</span></td>
+    <td class="px-4 py-3 text-sm"><span class="font-medium text-on-surface">{{.RouteSource}}</span> <span class="text-text-muted">→</span> <span class="font-medium text-on-surface">{{.RouteDestination}}</span></td>
+    <td class="px-4 py-3 text-sm tabular-nums"><span class="time-display" data-utc-time="{{.DepartureTime.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .DepartureTime}}</span></td>
+    <td class="px-4 py-3 text-sm">
+        <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
+    </td>
+    <td class="px-4 py-3 text-right"><a href="/trips/{{.ID}}" onclick="event.stopPropagation()" class="inline-flex items-center px-2.5 py-1 rounded-full bg-primary text-on-primary text-xs font-semibold hover:bg-primary/90">Open</a></td>
+</tr>
+{{end}}
+{{else}}
+<tr><td colspan="7" class="px-4 py-12 text-center">
+    <div class="flex flex-col items-center gap-2">
+        <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg></div>
+        <p class="text-sm font-medium text-on-surface">No trips scheduled today</p><p class="text-xs text-text-muted">Create a trip to get started</p><a href="/trips/new" class="mt-1 inline-flex px-3 py-1.5 rounded-full bg-primary text-on-primary text-xs font-bold">+ New Trip</a>
+    </div>
+</td></tr>
+{{end}}

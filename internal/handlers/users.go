@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
@@ -65,9 +66,48 @@ func (h *UserHandlers) List(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// isActingAdmin reports whether the request comes from a global admin session.
+func (h *UserHandlers) isActingAdmin(r *http.Request) bool {
+	session, ok := h.getUserFromContext(r)
+	return ok && session != nil && session.Role == string(domain.RoleAdmin)
+}
+
+// visibleRoles hides the global admin role from non-admin actors in the
+// New/Edit dropdowns. The backend guard ensureRoleAssignable stays the
+// source of truth; this only avoids showing an option that 403s on submit.
+func (h *UserHandlers) visibleRoles(r *http.Request, roles []domain.Role) []domain.Role {
+	if h.isActingAdmin(r) {
+		return roles
+	}
+	out := make([]domain.Role, 0, len(roles))
+	for _, role := range roles {
+		if role.Name == domain.RoleAdmin {
+			continue
+		}
+		out = append(out, role)
+	}
+	return out
+}
+
+// ensureRoleAssignable blocks privilege escalation: the global admin role
+// (tenants:manage + cross-tenant access) can only be granted by an acting
+// administrator. Without this, any org_admin (a paying customer's own admin)
+// could mint a global admin inside their tenant via the role_id form field.
+func (h *UserHandlers) ensureRoleAssignable(w http.ResponseWriter, r *http.Request, roleID int64) bool {
+	if roleID != domain.DefaultRoleID(domain.RoleAdmin) {
+		return true
+	}
+	if h.isActingAdmin(r) {
+		return true
+	}
+	http.Error(w, "Only administrators can assign the admin role", http.StatusForbidden)
+	return false
+}
+
 func (h *UserHandlers) New(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
 	roles, _ := h.Services.Users.ListRoles(r.Context())
+	roles = h.visibleRoles(r, roles)
 	h.renderForm(w, r, "user_edit.html", PageData{Title: "New User", User: session, Roles: roles})
 }
 
@@ -82,7 +122,13 @@ func (h *UserHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	pwd := r.PostFormValue("password")
 	tenantID := string(shared.TenantIDFromContext(r.Context()))
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		// Fail closed: never drop a new user into tenant "1" when the
+		// request carries no resolved tenant.
+		h.failPage(w, r, errors.New("tenant not set in request context"), http.StatusBadRequest, "Invalid Request Context")
+		return
+	}
+	if !h.ensureRoleAssignable(w, r, roleID) {
+		return
 	}
 	var created domain.User
 	var err error
@@ -112,6 +158,7 @@ func (h *UserHandlers) Create(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		roles, _ := h.Services.Users.ListRoles(r.Context())
+		roles = h.visibleRoles(r, roles)
 		session, _ := h.getUserFromContext(r)
 		h.renderForm(w, r, "user_edit.html", PageData{Title: "New User", User: session, FlashError: err.Error(), Roles: roles})
 		return
@@ -167,6 +214,7 @@ func (h *UserHandlers) Edit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	roles, _ := h.Services.Users.ListRoles(r.Context())
+	roles = h.visibleRoles(r, roles)
 
 	h.renderForm(w, r, "user_edit.html", PageData{Title: "Edit User", User: session, UserDetail: user, Roles: roles})
 }
@@ -179,6 +227,10 @@ func (h *UserHandlers) Update(w http.ResponseWriter, r *http.Request) {
 
 	id := domain.UserID(chi.URLParam(r, "id"))
 	roleID, _ := strconv.ParseInt(r.PostFormValue("role_id"), 10, 64)
+
+	if !h.ensureRoleAssignable(w, r, roleID) {
+		return
+	}
 
 	target, err := h.Services.Users.GetUser(r.Context(), id)
 	if err != nil {

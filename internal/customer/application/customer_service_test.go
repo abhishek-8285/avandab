@@ -378,6 +378,13 @@ func TestPhase7_BookingCancellationBeforeTrip(t *testing.T) {
 		VALUES ('off-cancel-1', 'tenant-1', ?, 'drv-1', 'veh-1', 'offered', datetime('now'), datetime('now', '+15 minutes'))`,
 		booking.BookingID)
 
+	// Assigned (not yet started) trip for the same booking
+	_, err = db.Exec(`
+		INSERT INTO trips (id, tenant_id, booking_id, driver_id, vehicle_id, status)
+		VALUES ('trip-cancel-1', 'tenant-1', ?, 'drv-1', 'veh-1', 'assigned')`,
+		booking.BookingID)
+	require.NoError(t, err)
+
 	// 2. Customer cancels booking before trip start
 	err = svc.CancelBooking(ctx, tenantID, customerID, booking.BookingID, "Order rescheduled by supplier")
 	require.NoError(t, err)
@@ -392,4 +399,10 @@ func TestPhase7_BookingCancellationBeforeTrip(t *testing.T) {
 	err = db.QueryRow(`SELECT status FROM dispatch_offers WHERE id = 'off-cancel-1'`).Scan(&offerStatus)
 	require.NoError(t, err)
 	assert.Equal(t, "cancelled", offerStatus)
+
+	// Invariant: linked assigned trip was cascade-cancelled (no orphan trips)
+	var tripStatus string
+	err = db.QueryRow(`SELECT status FROM trips WHERE id = 'trip-cancel-1'`).Scan(&tripStatus)
+	require.NoError(t, err)
+	assert.Equal(t, "cancelled", tripStatus)
 }

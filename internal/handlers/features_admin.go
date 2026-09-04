@@ -29,6 +29,10 @@ func (h *FeaturesAdmin) tenantID(r *http.Request) string {
 
 func (h *FeaturesAdmin) Page(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
+	if session == nil || session.Role != "admin" {
+		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+		return
+	}
 	tenantID := h.tenantID(r)
 
 	categories := map[string][]features.SnapshotEntry{}
@@ -51,6 +55,10 @@ func (h *FeaturesAdmin) Page(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *FeaturesAdmin) Toggle(w http.ResponseWriter, r *http.Request) {
+	if session, ok := h.getUserFromContext(r); !ok || session == nil || session.Role != "admin" {
+		httpx.Error(w, r, apperr.New(apperr.CodeForbidden).WithDetail("only administrators can change feature flags"))
+		return
+	}
 	var body struct {
 		Feature string `json:"feature"`
 		Enabled bool   `json:"enabled"`

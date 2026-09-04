@@ -18,10 +18,15 @@ type relayTestEvent struct {
 }
 
 func TestRelayDispatchesAndMarksPublished(t *testing.T) {
-	db, err := sql.Open("sqlite", ":memory:")
+	// Named shared-cache memory DB: plain ":memory:" gives every pooled
+	// connection a PRIVATE empty database, so under parallel load the
+	// writer and the relay can land on different conns (missing table →
+	// skipped ticks → 2s deadline flake). Single connection for determinism.
+	db, err := sql.Open("sqlite", "file:relay_dispatch_test?mode=memory&cache=shared")
 	if err != nil {
 		t.Fatal(err)
 	}
+	db.SetMaxOpenConns(1)
 	defer db.Close()
 	if _, err := db.Exec(`CREATE TABLE outbox_events (
 		id TEXT PRIMARY KEY,

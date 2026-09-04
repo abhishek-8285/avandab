@@ -3,9 +3,12 @@ package sql
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 
 	"transport-app/internal/maintenance/domain"
 	"transport-app/internal/shared"
@@ -23,16 +26,34 @@ func NewMaintenanceRepository(db *sql.DB) *MaintenanceRepository {
 
 // ListActiveSchedules returns active schedules, optionally filtered by vehicleID.
 func (r *MaintenanceRepository) ListActiveSchedules(ctx context.Context, vehicleID string) ([]domain.Schedule, error) {
-	query := `SELECT id, vehicle_id, service_type, interval_km, interval_days,
-	                 last_done_km, last_done_at, due_km, due_at, active, created_at, updated_at
-	          FROM maintenance_schedules
-	          WHERE active = 1`
+	return r.listSchedules(ctx, vehicleID, "", true)
+}
+
+func (r *MaintenanceRepository) ListActiveSchedulesForTenant(ctx context.Context, vehicleID, tenantID string) ([]domain.Schedule, error) {
+	return r.listSchedules(ctx, vehicleID, tenantID, true)
+}
+
+func (r *MaintenanceRepository) listSchedules(ctx context.Context, vehicleID, tenantID string, activeOnly bool) ([]domain.Schedule, error) {
+	query := `SELECT s.id, s.vehicle_id, s.service_type, s.interval_km, s.interval_days,
+	                 s.last_done_km, s.last_done_at, s.due_km, s.due_at, s.active, s.created_at, s.updated_at
+	          FROM maintenance_schedules s`
 	var args []interface{}
+	clauses := []string{}
+	if activeOnly {
+		clauses = append(clauses, "s.active = 1")
+	}
 	if vehicleID != "" {
-		query += " AND vehicle_id = ?"
+		clauses = append(clauses, "s.vehicle_id = ?")
 		args = append(args, vehicleID)
 	}
-	query += " ORDER BY created_at DESC"
+	if tenantID != "" {
+		clauses = append(clauses, "s.vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = ?)")
+		args = append(args, tenantID)
+	}
+	if len(clauses) > 0 {
+		query += " WHERE " + strings.Join(clauses, " AND ")
+	}
+	query += " ORDER BY s.created_at DESC"
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -92,58 +113,11 @@ func (r *MaintenanceRepository) ListActiveSchedules(ctx context.Context, vehicle
 
 // ListSchedules returns all schedules (active and inactive).
 func (r *MaintenanceRepository) ListSchedules(ctx context.Context, vehicleID string) ([]domain.Schedule, error) {
-	query := `SELECT id, vehicle_id, service_type, interval_km, interval_days,
-	                 last_done_km, last_done_at, due_km, due_at, active, created_at, updated_at
-	          FROM maintenance_schedules`
-	var args []interface{}
-	if vehicleID != "" {
-		query += " WHERE vehicle_id = ?"
-		args = append(args, vehicleID)
-	}
-	query += " ORDER BY created_at DESC"
+	return r.listSchedules(ctx, vehicleID, "", false)
+}
 
-	rows, err := r.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var list []domain.Schedule
-	for rows.Next() {
-		var s domain.Schedule
-		var intKM, lastKM, dueKM sql.NullFloat64
-		var intDays sql.NullInt64
-		var lastDoneAt, dueAt sql.NullTime
-		if err := rows.Scan(
-			&s.ID, &s.VehicleID, &s.ServiceType, &intKM, &intDays,
-			&lastKM, &lastDoneAt, &dueKM, &dueAt, &s.Active, &s.CreatedAt, &s.UpdatedAt,
-		); err != nil {
-			continue
-		}
-		if intKM.Valid {
-			s.IntervalKM = &intKM.Float64
-		}
-		if intDays.Valid {
-			d := int(intDays.Int64)
-			s.IntervalDays = &d
-		}
-		if lastKM.Valid {
-			s.LastDoneKM = &lastKM.Float64
-		}
-		if lastDoneAt.Valid {
-			t := lastDoneAt.Time.UTC()
-			s.LastDoneAt = &t
-		}
-		if dueKM.Valid {
-			s.DueKM = &dueKM.Float64
-		}
-		if dueAt.Valid {
-			t := dueAt.Time.UTC()
-			s.DueAt = &t
-		}
-		list = append(list, s)
-	}
-	return list, rows.Err()
+func (r *MaintenanceRepository) ListSchedulesForTenant(ctx context.Context, vehicleID, tenantID string) ([]domain.Schedule, error) {
+	return r.listSchedules(ctx, vehicleID, tenantID, false)
 }
 
 // GetLatestOdometer returns the max odometer from snapshots, falling back to vehicles.odometer / current_mileage.
@@ -292,6 +266,15 @@ func (r *MaintenanceRepository) ResolveDtcEvent(ctx context.Context, id string) 
 
 // InsertRecord adds a completed maintenance record and updates the associated schedule.
 func (r *MaintenanceRepository) InsertRecord(ctx context.Context, rec domain.Record) error {
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		// Workshop records carry cost/vendor data: attribute to the
+		// vehicle's own org, never the bootstrap tenant.
+		_ = r.db.QueryRowContext(ctx, `SELECT tenant_id FROM vehicles WHERE id = ?`, rec.VehicleID).Scan(&tenantID)
+	}
+	if tenantID == "" {
+		return errors.New("maintenance: cannot record without tenant")
+	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -302,7 +285,7 @@ func (r *MaintenanceRepository) InsertRecord(ctx context.Context, rec domain.Rec
 		INSERT INTO maintenance_records (id, vehicle_id, schedule_id, service_type, performed_at, odometer_km, cost, vendor, notes, recorded_by, tenant_id)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		rec.ID, rec.VehicleID, rec.ScheduleID, rec.ServiceType, rec.PerformedAt.UTC().Format("2006-01-02 15:04:05"),
-		rec.OdometerKM, rec.Cost, rec.Vendor, rec.Notes, rec.RecordedBy, tenantFromCtx(ctx),
+		rec.OdometerKM, rec.Cost, rec.Vendor, rec.Notes, rec.RecordedBy, tenantID,
 	)
 	if err != nil {
 		return err
@@ -428,16 +411,33 @@ func (r *MaintenanceRepository) ListDueVehicles(ctx context.Context, tenantID st
 }
 
 // ListRecords returns completed maintenance records for a vehicle or fleetwide.
+// tenantID scopes to one org ("" = all); records carry their own tenant.
 func (r *MaintenanceRepository) ListRecords(ctx context.Context, vehicleID string, limit int) ([]domain.Record, error) {
+	return r.listRecords(ctx, vehicleID, "", limit)
+}
+
+func (r *MaintenanceRepository) ListRecordsForTenant(ctx context.Context, vehicleID, tenantID string, limit int) ([]domain.Record, error) {
+	return r.listRecords(ctx, vehicleID, tenantID, limit)
+}
+
+func (r *MaintenanceRepository) listRecords(ctx context.Context, vehicleID, tenantID string, limit int) ([]domain.Record, error) {
 	if limit <= 0 {
 		limit = 50
 	}
 	query := `SELECT id, vehicle_id, schedule_id, service_type, performed_at, odometer_km, cost, vendor, notes, recorded_by, created_at
 	          FROM maintenance_records`
 	var args []interface{}
+	clauses := []string{}
 	if vehicleID != "" {
-		query += " WHERE vehicle_id = ?"
+		clauses = append(clauses, "vehicle_id = ?")
 		args = append(args, vehicleID)
+	}
+	if tenantID != "" {
+		clauses = append(clauses, "tenant_id = ?")
+		args = append(args, tenantID)
+	}
+	if len(clauses) > 0 {
+		query += " WHERE " + strings.Join(clauses, " AND ")
 	}
 	query += " ORDER BY performed_at DESC LIMIT ?"
 	args = append(args, limit)
@@ -482,18 +482,35 @@ func (r *MaintenanceRepository) ListRecords(ctx context.Context, vehicleID strin
 }
 
 // ListDtcEvents returns DTC events for a vehicle or fleetwide.
+// tenantID scopes via the vehicle (DTC rows carry no tenant of their own).
 func (r *MaintenanceRepository) ListDtcEvents(ctx context.Context, vehicleID string, limit int) ([]domain.DtcEvent, error) {
+	return r.listDtcEvents(ctx, vehicleID, "", limit)
+}
+
+func (r *MaintenanceRepository) ListDtcEventsForTenant(ctx context.Context, vehicleID, tenantID string, limit int) ([]domain.DtcEvent, error) {
+	return r.listDtcEvents(ctx, vehicleID, tenantID, limit)
+}
+
+func (r *MaintenanceRepository) listDtcEvents(ctx context.Context, vehicleID, tenantID string, limit int) ([]domain.DtcEvent, error) {
 	if limit <= 0 {
 		limit = 50
 	}
-	query := `SELECT id, vehicle_id, trip_id, dtc_code, severity, description, raw_payload, occurred_at, resolved_at, created_at
-	          FROM dtc_events`
+	query := `SELECT d.id, d.vehicle_id, d.trip_id, d.dtc_code, d.severity, d.description, d.raw_payload, d.occurred_at, d.resolved_at, d.created_at
+	          FROM dtc_events d`
 	var args []interface{}
+	clauses := []string{}
 	if vehicleID != "" {
-		query += " WHERE vehicle_id = ?"
+		clauses = append(clauses, "d.vehicle_id = ?")
 		args = append(args, vehicleID)
 	}
-	query += " ORDER BY occurred_at DESC LIMIT ?"
+	if tenantID != "" {
+		clauses = append(clauses, "d.vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = ?)")
+		args = append(args, tenantID)
+	}
+	if len(clauses) > 0 {
+		query += " WHERE " + strings.Join(clauses, " AND ")
+	}
+	query += " ORDER BY d.occurred_at DESC LIMIT ?"
 	args = append(args, limit)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
@@ -530,11 +547,293 @@ func (r *MaintenanceRepository) ListDtcEvents(ctx context.Context, vehicleID str
 	return list, rows.Err()
 }
 
-// tenantFromCtx derives the acting tenant from the request context,
-// defaulting to the bootstrap tenant for worker-initiated writes.
-func tenantFromCtx(ctx context.Context) string {
-	if id := shared.TenantIDFromContext(ctx); id != "" {
-		return string(id)
+// ── Work orders (job cards) ─────────────────────────────────────────────
+// All reads/writes are tenant-scoped; empty tenant matches nothing.
+
+// CreateWorkOrder opens a job card in 'open' status.
+func (r *MaintenanceRepository) CreateWorkOrder(ctx context.Context, w domain.WorkOrder) error {
+	if w.TenantID == "" || w.VehicleID == "" || w.Title == "" {
+		return errors.New("maintenance: tenant, vehicle and title are required")
 	}
-	return string(shared.DefaultTenant)
+	if w.Status == "" {
+		w.Status = domain.WorkOrderOpen
+	}
+	_, err := r.db.ExecContext(ctx, `
+		INSERT INTO work_orders (id, tenant_id, vehicle_id, schedule_id, trip_id, title, description,
+			assignee, vendor, cost_estimate, cost_actual, status, due_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		w.ID, w.TenantID, w.VehicleID, nullStr(w.ScheduleID), nullStr(w.TripID),
+		w.Title, w.Description, w.Assignee, w.Vendor,
+		nullFloat(w.CostEstimate), nullFloat(w.CostActual), w.Status, nullTime(w.DueAt))
+	return err
+}
+
+// FindWorkOrder returns one card of the org (nil, nil when absent/foreign).
+func (r *MaintenanceRepository) FindWorkOrder(ctx context.Context, tenantID, id string) (*domain.WorkOrder, error) {
+	row := r.db.QueryRowContext(ctx, `
+		SELECT id, tenant_id, vehicle_id, schedule_id, trip_id, title, description,
+			assignee, vendor, cost_estimate, cost_actual, status, due_at, closed_at,
+			created_at, updated_at
+		FROM work_orders WHERE id = ? AND tenant_id = ?`, id, tenantID)
+	w, err := scanWorkOrder(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return w, nil
+}
+
+// ListWorkOrders returns the org's cards, optionally filtered by status.
+func (r *MaintenanceRepository) ListWorkOrders(ctx context.Context, tenantID, status string, limit int) ([]domain.WorkOrder, error) {
+	if tenantID == "" {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 50
+	}
+	query := `SELECT id, tenant_id, vehicle_id, schedule_id, trip_id, title, description,
+			assignee, vendor, cost_estimate, cost_actual, status, due_at, closed_at,
+			created_at, updated_at
+		FROM work_orders WHERE tenant_id = ?`
+	args := []interface{}{tenantID}
+	if status != "" {
+		query += " AND status = ?"
+		args = append(args, status)
+	}
+	query += " ORDER BY created_at DESC LIMIT ?"
+	args = append(args, limit)
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []domain.WorkOrder
+	for rows.Next() {
+		w, err := scanWorkOrder(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *w)
+	}
+	return out, rows.Err()
+}
+
+// FindOpenWorkOrder returns the newest non-terminal card for the vehicle,
+// optionally pinned to one schedule (nil, nil when the books are clear).
+// The worker uses it to open exactly one job card per cause.
+func (r *MaintenanceRepository) FindOpenWorkOrder(ctx context.Context, tenantID, vehicleID, scheduleID string) (*domain.WorkOrder, error) {
+	if tenantID == "" || vehicleID == "" {
+		return nil, nil
+	}
+	query := `SELECT id, tenant_id, vehicle_id, schedule_id, trip_id, title, description,
+			assignee, vendor, cost_estimate, cost_actual, status, due_at, closed_at,
+			created_at, updated_at
+		FROM work_orders
+		WHERE tenant_id = ? AND vehicle_id = ? AND status NOT IN ('done','cancelled')`
+	args := []interface{}{tenantID, vehicleID}
+	if scheduleID != "" {
+		query += " AND schedule_id = ?"
+		args = append(args, scheduleID)
+	}
+	query += " ORDER BY created_at DESC LIMIT 1"
+	w, err := scanWorkOrder(r.db.QueryRowContext(ctx, query, args...))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return w, nil
+}
+
+// TransitionWorkOrder moves a card along open → assigned → in_progress → done
+// (on_hold loops back). Terminal cards (done/cancelled) are immutable;
+// closing stamps closed_at. Cross-org transitions affect zero rows.
+func (r *MaintenanceRepository) TransitionWorkOrder(ctx context.Context, tenantID, id, toStatus string) error {
+	switch toStatus {
+	case domain.WorkOrderOpen, domain.WorkOrderAssigned, domain.WorkOrderInProgress,
+		domain.WorkOrderOnHold, domain.WorkOrderDone, domain.WorkOrderCancelled:
+	default:
+		return fmt.Errorf("maintenance: unknown work order status %q", toStatus)
+	}
+	var res sql.Result
+	var err error
+	if toStatus == domain.WorkOrderDone || toStatus == domain.WorkOrderCancelled {
+		res, err = r.db.ExecContext(ctx, `
+			UPDATE work_orders SET status = ?, closed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+			WHERE id = ? AND tenant_id = ? AND status NOT IN ('done','cancelled')`,
+			toStatus, id, tenantID)
+	} else {
+		res, err = r.db.ExecContext(ctx, `
+			UPDATE work_orders SET status = ?, updated_at = CURRENT_TIMESTAMP
+			WHERE id = ? AND tenant_id = ? AND status NOT IN ('done','cancelled')`,
+			toStatus, id, tenantID)
+	}
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errors.New("maintenance: work order not found or already terminal")
+	}
+	return nil
+}
+
+// AssignWorkOrder sets mechanic/vendor and moves open cards to assigned.
+func (r *MaintenanceRepository) AssignWorkOrder(ctx context.Context, tenantID, id, assignee, vendor string) error {
+	if tenantID == "" || id == "" {
+		return errors.New("maintenance: tenant and work order id required")
+	}
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE work_orders SET assignee = ?, vendor = ?,
+			status = CASE WHEN status = 'open' THEN 'assigned' ELSE status END,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE id = ? AND tenant_id = ? AND status NOT IN ('done','cancelled')`,
+		assignee, vendor, id, tenantID)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errors.New("maintenance: work order not found or already terminal")
+	}
+	return nil
+}
+
+// CompleteWorkOrder closes a card as done AND writes the service record in
+// one place, so HTTP, web and agent callers close the books identically.
+// The record carries the linked schedule's service type (fallback general),
+// the latest odometer (so interval schedules resolve), cost, vendor and the
+// actor. Callers re-run resolution afterwards to clear the due flag.
+func (r *MaintenanceRepository) CompleteWorkOrder(ctx context.Context, tenantID, id, actor string) (*domain.WorkOrder, error) {
+	if tenantID == "" || id == "" {
+		return nil, errors.New("maintenance: tenant and work order id required")
+	}
+	wo, err := r.FindWorkOrder(ctx, tenantID, id)
+	if err != nil {
+		return nil, err
+	}
+	if wo == nil {
+		return nil, errors.New("maintenance: work order not found")
+	}
+	if wo.Terminal() {
+		return nil, errors.New("maintenance: work order already terminal")
+	}
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE work_orders SET status = 'done', closed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+		WHERE id = ? AND tenant_id = ? AND status NOT IN ('done','cancelled')`,
+		id, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return nil, errors.New("maintenance: work order not found or already terminal")
+	}
+	done, err := r.FindWorkOrder(ctx, tenantID, id)
+	if err != nil || done == nil {
+		return nil, errors.New("maintenance: work order closed but not readable")
+	}
+
+	serviceType := "general"
+	if done.ScheduleID != nil && *done.ScheduleID != "" {
+		if schedules, err := r.ListSchedulesForTenant(ctx, done.VehicleID, tenantID); err == nil {
+			for _, s := range schedules {
+				if s.ID == *done.ScheduleID && s.ServiceType != "" {
+					serviceType = s.ServiceType
+					break
+				}
+			}
+		}
+	}
+	now := time.Now().UTC()
+	rec := domain.Record{
+		ID:          uuid.NewString(),
+		VehicleID:   done.VehicleID,
+		ScheduleID:  done.ScheduleID,
+		ServiceType: serviceType,
+		PerformedAt: now,
+	}
+	if odo, err := r.GetLatestOdometer(ctx, done.VehicleID); err == nil && odo > 0 {
+		rec.OdometerKM = &odo
+	}
+	if done.CostActual != nil {
+		rec.Cost = done.CostActual
+	} else if done.CostEstimate != nil {
+		rec.Cost = done.CostEstimate
+	}
+	if done.Vendor != "" {
+		rec.Vendor = &done.Vendor
+	}
+	notes := fmt.Sprintf("Closed job card: %s", done.Title)
+	if done.Description != "" {
+		notes += " — " + done.Description
+	}
+	rec.Notes = &notes
+	if actor != "" {
+		rec.RecordedBy = &actor
+	}
+	if err := r.InsertRecord(ctx, rec); err != nil {
+		return nil, fmt.Errorf("maintenance: card closed but service record failed: %w", err)
+	}
+	return done, nil
+}
+
+type workOrderScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanWorkOrder(row workOrderScanner) (*domain.WorkOrder, error) {
+	var w domain.WorkOrder
+	var schedID, tripID sql.NullString
+	var costEst, costAct sql.NullFloat64
+	var dueAt, closedAt sql.NullTime
+	var createdAt, updatedAt time.Time
+	if err := row.Scan(&w.ID, &w.TenantID, &w.VehicleID, &schedID, &tripID,
+		&w.Title, &w.Description, &w.Assignee, &w.Vendor, &costEst, &costAct,
+		&w.Status, &dueAt, &closedAt, &createdAt, &updatedAt); err != nil {
+		return nil, err
+	}
+	if schedID.Valid {
+		w.ScheduleID = &schedID.String
+	}
+	if tripID.Valid {
+		w.TripID = &tripID.String
+	}
+	if costEst.Valid {
+		w.CostEstimate = &costEst.Float64
+	}
+	if costAct.Valid {
+		w.CostActual = &costAct.Float64
+	}
+	if dueAt.Valid {
+		w.DueAt = &dueAt.Time
+	}
+	if closedAt.Valid {
+		w.ClosedAt = &closedAt.Time
+	}
+	w.CreatedAt = createdAt
+	return &w, nil
+}
+
+func nullStr(s *string) sql.NullString {
+	if s != nil && *s != "" {
+		return sql.NullString{String: *s, Valid: true}
+	}
+	return sql.NullString{}
+}
+
+func nullFloat(f *float64) sql.NullFloat64 {
+	if f != nil {
+		return sql.NullFloat64{Float64: *f, Valid: true}
+	}
+	return sql.NullFloat64{}
+}
+
+func nullTime(t *time.Time) sql.NullTime {
+	if t != nil && !t.IsZero() {
+		return sql.NullTime{Time: *t, Valid: true}
+	}
+	return sql.NullTime{}
 }

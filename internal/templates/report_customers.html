@@ -47,7 +47,7 @@
     <!-- Search Toolbar -->
     <form method="GET" action="/reports/customers" class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm px-4 py-3 flex flex-col sm:flex-row sm:items-end gap-3 flex-wrap">
         <div class="flex-1 min-w-[12rem]">
-            <label for="customers-q" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Search</label>
+            <label for="customers-q" class="block text-eyebrow text-text-muted mb-1.5">Search</label>
             <input type="text" id="customers-q" name="q" value="{{.Query}}" placeholder="Search by customer name, company, email, phone..."
                 class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
         </div>
@@ -60,7 +60,7 @@
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h3 class="text-sm font-bold text-on-surface">Directory</h3>
+                <h2 class="text-sm font-bold text-on-surface">Directory</h2>
                 <p class="text-xs text-text-muted">Customers matching the current search</p>
             </div>
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Customers}} shown</span>

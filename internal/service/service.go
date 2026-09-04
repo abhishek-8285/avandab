@@ -43,6 +43,17 @@ type Store interface {
 	// sequential invoice number ("INV/2026-27/0001") for the tenant's
 	// current financial year (invoice_sequences, migration 00048).
 	NextInvoiceNumber(ctx context.Context, tenantID string, prefix string) (string, error)
+
+	// Attention counts feed the dashboard exception strip. All tenant-scoped.
+	CountUnassignedBookings(ctx context.Context) (int64, error)
+	CountMaintenanceDue(ctx context.Context) (int64, error)
+	CountOpenWorkOrders(ctx context.Context) (int64, error)
+	CountGarageVehicles(ctx context.Context) (int64, error)
+	CountOpenAlerts(ctx context.Context) (int64, error)
+	CountActiveDTCs(ctx context.Context) (int64, error)
+	CountExpiringEwaybills(ctx context.Context) (int64, error)
+	CountPendingKharcha(ctx context.Context) (int64, error)
+	CountLowFastag(ctx context.Context, threshold float64) (int64, error)
 }
 
 // Services holds all service instances and shared dependencies.

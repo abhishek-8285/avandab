@@ -1,6 +1,6 @@
 {{range .Entries}}
 <tr class="hover:bg-surface-container-low/60 transition-colors group">
-    <td class="px-3 py-2 text-sm font-mono font-bold text-primary tabular-nums whitespace-nowrap">{{.IMEI}}</td>
+    <td class="px-3 py-2 text-sm font-data-mono font-bold text-primary tabular-nums whitespace-nowrap">{{.IMEI}}</td>
     <td class="px-3 py-2 text-sm text-on-surface whitespace-nowrap">
         {{if eq .Reason "retired_device"}}
         {{template "status_dot.html" (dict "Tone" "alert" "Label" "Retired device")}}
@@ -10,8 +10,8 @@
         {{template "status_dot.html" (dict "Tone" "warning" "Label" "Unknown device")}}
         {{end}}
     </td>
-    <td class="px-3 py-2 text-xs font-mono text-secondary">{{.Source}}</td>
-    <td class="px-3 py-2 text-xs font-mono text-secondary max-w-xs truncate" title="{{.RawPayload}}">{{.RawPayload}}</td>
+    <td class="px-3 py-2 text-xs font-data-mono text-secondary">{{.Source}}</td>
+    <td class="px-3 py-2 text-xs font-data-mono text-secondary max-w-xs truncate" title="{{.RawPayload}}">{{.RawPayload}}</td>
     <td class="px-3 py-2 text-xs text-secondary tabular-nums whitespace-nowrap">{{datetime .CreatedAt}}</td>
     <td class="px-3 py-2 text-right">
         {{if can $.User "telemetry" "update"}}
@@ -25,7 +25,7 @@
             <label class="inline-flex items-center gap-1 text-xs text-secondary cursor-pointer">
                 <input type="radio" name="action" value="reject" class="accent-primary"> Reject
             </label>
-            <input type="text" name="vehicle_id" placeholder="vehicle id" class="w-28 bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1 text-xs font-mono text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+            <input type="text" name="vehicle_id" placeholder="vehicle id" class="w-28 bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1 text-xs font-data-mono text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
             <button type="submit" class="inline-flex items-center rounded-full bg-primary text-on-primary px-2.5 py-1 text-[11px] font-bold hover:bg-primary/90 transition-all">Resolve</button>
         </form>
         {{end}}

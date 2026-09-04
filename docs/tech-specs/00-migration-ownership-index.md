@@ -99,6 +99,10 @@ Single source of truth for `db/migrations/` version numbers. Repo head is
 | 00118 | `comm_outbox` durable outbound queue (email/WhatsApp outbox pattern, jitter-based rate limiting) + `users.auth_provider`/`google_sub`/`phone_verified_at` external identity columns | Spec 06 Auth / Zero-cost identity & comms |
 | 00119 | `company_settings.pan_number` — 3-Tier Tax & Legal Operator Classification (GST Enterprise / Non-GST PAN / Micro Transporter) | Compliance / Freight Taxation |
 | 00120 | `email_providers` + `email_send_log` + `email_provider_counters` + `comm_outbox.provider` — dynamic email provider pool with quota-aware failover (Brevo 9k + Resend 3k) | Zero-cost relay optimization |
+| 00121 | booking/trip list + lookup composite indexes (tenant,status,date / booking/driver/vehicle) — P6 scale hardening | Multi-tenant perf |
+| 00122 | `bookings.idempotency_key` + `trips.idempotency_key` (tenant-scoped unique partial indexes) — P6 retry safety | Multi-tenant perf |
+| 00123 | `work_orders` job cards + indexes — maintenance feature layer | Fleet maintenance |
+| 00124 | `work_orders` tenant FK triggers (00103 convention, late-applied; no new indexes) | Fleet maintenance |
 | 00121+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a

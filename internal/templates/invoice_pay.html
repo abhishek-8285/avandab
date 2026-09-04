@@ -69,7 +69,7 @@
                     <div>
                         <h1 class="text-xl sm:text-2xl font-bold text-on-surface tracking-tight font-display">{{.Company.Name}}</h1>
                         {{if .Company.GSTIN}}
-                        <p class="text-xs font-mono font-medium text-text-muted mt-0.5">GSTIN: <span class="text-on-surface font-semibold">{{.Company.GSTIN}}</span></p>
+                        <p class="text-xs font-data-mono font-medium text-text-muted mt-0.5">GSTIN: <span class="text-on-surface font-semibold">{{.Company.GSTIN}}</span></p>
                         {{end}}
                         {{if .Company.Address}}
                         <p class="text-xs text-text-muted mt-0.5 max-w-md">{{.Company.Address}}</p>
@@ -78,7 +78,7 @@
                 </div>
 
                 <div class="text-left sm:text-right flex flex-col sm:items-end">
-                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono font-bold bg-surface-container-low text-on-surface border border-border-subtle">
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-data-mono font-bold bg-surface-container-low text-on-surface border border-border-subtle">
                         INVOICE #{{.Invoice.InvoiceNumber}}
                     </div>
                     <div class="text-[11px] text-text-muted mt-2 space-y-0.5">
@@ -106,7 +106,7 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 print-avoid-break">
                 <!-- Shipper / Customer Card -->
                 <div class="p-4 sm:p-5 rounded-xl bg-surface-container-low/70 border border-border-subtle space-y-2">
-                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle/60 pb-1.5 flex items-center justify-between">
+                    <h3 class="text-eyebrow text-text-muted border-b border-border-subtle/60 pb-1.5 flex items-center justify-between">
                         <span>Billed To (Shipper)</span>
                         <svg class="w-3.5 h-3.5 text-text-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
                     </h3>
@@ -115,7 +115,7 @@
                     <div class="text-xs text-text-muted font-medium">{{.Invoice.CustomerCompany}}</div>
                     {{end}}
                     {{if .Invoice.CustomerGSTIN}}
-                    <div class="text-xs text-text-muted font-mono">GSTIN: <span class="text-on-surface font-semibold">{{.Invoice.CustomerGSTIN}}</span></div>
+                    <div class="text-xs text-text-muted font-data-mono">GSTIN: <span class="text-on-surface font-semibold">{{.Invoice.CustomerGSTIN}}</span></div>
                     {{end}}
                     {{if .Invoice.CustomerAddress}}
                     <div class="text-xs text-text-muted mt-1 leading-relaxed">{{.Invoice.CustomerAddress}}</div>
@@ -130,18 +130,18 @@
 
                 <!-- Shipment & Trip Card -->
                 <div class="p-4 sm:p-5 rounded-xl bg-surface-container-low/70 border border-border-subtle space-y-2">
-                    <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle/60 pb-1.5 flex items-center justify-between">
+                    <h3 class="text-eyebrow text-text-muted border-b border-border-subtle/60 pb-1.5 flex items-center justify-between">
                         <span>Shipment &amp; Logistics Details</span>
                         <svg class="w-3.5 h-3.5 text-text-muted" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
                     </h3>
                     <div class="grid grid-cols-2 gap-2 text-xs">
                         <div>
                             <span class="text-text-muted block text-[10px] uppercase font-semibold">Booking No.</span>
-                            <span class="font-mono font-bold text-on-surface">{{if .Invoice.BookingNumber}}{{.Invoice.BookingNumber}}{{else}}—{{end}}</span>
+                            <span class="font-data-mono font-bold text-on-surface">{{if .Invoice.BookingNumber}}{{.Invoice.BookingNumber}}{{else}}—{{end}}</span>
                         </div>
                         <div>
                             <span class="text-text-muted block text-[10px] uppercase font-semibold">Trip Reference</span>
-                            <span class="font-mono font-bold text-on-surface">{{if .Invoice.TripNumber}}{{.Invoice.TripNumber}}{{else}}—{{end}}</span>
+                            <span class="font-data-mono font-bold text-on-surface">{{if .Invoice.TripNumber}}{{.Invoice.TripNumber}}{{else}}—{{end}}</span>
                         </div>
                     </div>
                     {{if or .Invoice.Origin .Invoice.Destination}}
@@ -157,7 +157,7 @@
                     {{if .Invoice.IRN}}
                     <div class="pt-1">
                         <span class="text-text-muted block text-[10px] uppercase font-semibold">GST e-Invoice IRN</span>
-                        <span class="font-mono text-[11px] text-text-muted truncate block" title="{{.Invoice.IRN}}">{{printf "%.28s" .Invoice.IRN}}…</span>
+                        <span class="font-data-mono text-[11px] text-text-muted truncate block" title="{{.Invoice.IRN}}">{{printf "%.28s" .Invoice.IRN}}…</span>
                     </div>
                     {{end}}
                 </div>
@@ -182,7 +182,7 @@
                             {{range .LineItems}}
                             <tr class="hover:bg-surface-container-low/40 transition-colors">
                                 <td class="px-4 py-3 font-medium text-on-surface">{{.Description}}</td>
-                                <td class="px-3 py-3 text-center font-mono text-text-muted">{{if .HSNSAC}}{{.HSNSAC}}{{else}}996511{{end}}</td>
+                                <td class="px-3 py-3 text-center font-data-mono text-text-muted">{{if .HSNSAC}}{{.HSNSAC}}{{else}}996511{{end}}</td>
                                 <td class="px-3 py-3 text-right tabular-nums text-on-surface">{{if gt .Quantity 0.0}}{{printf "%.0f" .Quantity}}{{else}}1{{end}}</td>
                                 <td class="px-3 py-3 text-right tabular-nums text-on-surface">₹{{printf "%.2f" .UnitPrice}}</td>
                                 <td class="px-4 py-3 text-right tabular-nums font-medium text-on-surface">₹{{printf "%.2f" .TaxableValue}}</td>
@@ -274,7 +274,7 @@
                     <div class="inline-block bg-surface-container-lowest border border-border-subtle rounded-xl p-4 text-xs max-w-md text-left space-y-1.5 shadow-xs">
                         <div class="flex justify-between text-text-muted">
                             <span>Payment Ref / TXN ID:</span>
-                            <span class="font-mono font-bold text-on-surface">{{if .LatestPayment.RazorpayPaymentID}}{{.LatestPayment.RazorpayPaymentID}}{{else if .LatestPayment.Reference}}{{.LatestPayment.Reference}}{{else}}{{.LatestPayment.ID}}{{end}}</span>
+                            <span class="font-data-mono font-bold text-on-surface">{{if .LatestPayment.RazorpayPaymentID}}{{.LatestPayment.RazorpayPaymentID}}{{else if .LatestPayment.Reference}}{{.LatestPayment.Reference}}{{else}}{{.LatestPayment.ID}}{{end}}</span>
                         </div>
                         <div class="flex justify-between text-text-muted">
                             <span>Settled Amount:</span>
@@ -302,7 +302,7 @@
                 <div class="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-surface-container-low to-surface-container border border-border-subtle shadow-sm space-y-6">
                     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
-                            <span class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Instant Freight Payment</span>
+                            <span class="text-eyebrow text-text-muted">Instant Freight Payment</span>
                             <h2 class="text-xl sm:text-2xl font-black text-on-surface font-display mt-0.5">Pay Outstanding Balance</h2>
                             <p class="text-xs text-text-muted mt-1">One-click instant payment via UPI, QR Code, Cards, or NetBanking.</p>
                         </div>
@@ -357,7 +357,7 @@
                                 <td class="px-4 py-2 text-on-surface">{{.PaymentDate}}</td>
                                 <td class="px-4 py-2 text-right font-bold text-emerald-600 dark:text-emerald-400">₹{{printf "%.2f" .Amount}}</td>
                                 <td class="px-4 py-2 uppercase font-medium text-text-muted">{{.Method}}</td>
-                                <td class="px-4 py-2 font-mono text-text-muted">{{if .RazorpayPaymentID}}{{.RazorpayPaymentID}}{{else}}{{.Reference}}{{end}}</td>
+                                <td class="px-4 py-2 font-data-mono text-text-muted">{{if .RazorpayPaymentID}}{{.RazorpayPaymentID}}{{else}}{{.Reference}}{{end}}</td>
                             </tr>
                             {{end}}
                         </tbody>

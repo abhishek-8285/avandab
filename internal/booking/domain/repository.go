@@ -34,6 +34,7 @@ type BookingRepository interface {
 	Save(ctx context.Context, b *aggregate.BookingAggregate) error
 	Find(ctx context.Context, id aggregate.BookingID, tenantID shared.TenantID) (*aggregate.BookingAggregate, error)
 	FindByNumber(ctx context.Context, number string, tenantID shared.TenantID) (*aggregate.BookingAggregate, error)
+	FindByIdempotencyKey(ctx context.Context, key string, tenantID shared.TenantID) (*aggregate.BookingAggregate, error)
 	Exists(ctx context.Context, id aggregate.BookingID, tenantID shared.TenantID) (bool, error)
 	Delete(ctx context.Context, id aggregate.BookingID, tenantID shared.TenantID) error
 

@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -15,6 +16,7 @@ import (
 	bookingapp "transport-app/internal/booking/application"
 	bookingagg "transport-app/internal/booking/domain/aggregate"
 	"transport-app/internal/domain"
+	entitlementApp "transport-app/internal/entitlement/application"
 	"transport-app/internal/httpx"
 	"transport-app/internal/logging"
 	"transport-app/internal/middleware"
@@ -57,9 +59,13 @@ func (h *BookingHandlers) init() {
 		clockImpl := clock.NewRealClock()
 		idGenImpl := id.NewUUIDGenerator()
 
-		h.createUC = bookingapp.NewCreateBookingUseCase(uowImpl, idGenImpl, clockImpl)
+		metering := entitlementApp.NewService(h.DB)
+		h.createUC = bookingapp.NewCreateBookingUseCase(uowImpl, idGenImpl, clockImpl).
+			WithOperationGate(metering).
+			WithUsageMeter(metering)
 		h.confirmUC = bookingapp.NewConfirmBookingUseCase(uowImpl, clockImpl)
-		h.cancelUC = bookingapp.NewCancelBookingUseCase(uowImpl, clockImpl)
+		h.cancelUC = bookingapp.NewCancelBookingUseCase(uowImpl, clockImpl).
+			WithUsageMeter(metering)
 		h.getUC = bookingapp.NewGetBookingUseCase(uowImpl)
 		h.listUC = bookingapp.NewListBookingsUseCase(uowImpl)
 		h.updateUC = bookingapp.NewUpdateBookingUseCase(uowImpl)
@@ -151,15 +157,16 @@ func (h *BookingHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	tenantID := shared.TenantIDFromContext(r.Context())
 
 	_, err := h.createUC.Execute(r.Context(), bookingapp.CreateBookingCommand{
-		TenantID:    tenantID,
-		CustomerID:  customerID,
-		RouteID:     routeID,
-		PickupDate:  r.PostFormValue("pickup_date"),
-		VehicleType: r.PostFormValue("vehicle_type"),
-		Passengers:  passengers,
-		CargoWeight: &cargoWeight,
-		Price:       price,
-		Notes:       r.PostFormValue("notes"),
+		TenantID:       tenantID,
+		CustomerID:     customerID,
+		RouteID:        routeID,
+		PickupDate:     r.PostFormValue("pickup_date"),
+		VehicleType:    r.PostFormValue("vehicle_type"),
+		Passengers:     passengers,
+		CargoWeight:    &cargoWeight,
+		Price:          price,
+		Notes:          r.PostFormValue("notes"),
+		IdempotencyKey: strings.TrimSpace(r.Header.Get("Idempotency-Key")),
 	})
 	if err != nil {
 		session, _ := h.getUserFromContext(r)

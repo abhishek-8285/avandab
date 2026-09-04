@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="/static/css/app.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     {{template "theme_head.html" .}}
 </head>
-<body>
+<body class="has-public-nav">
     {{template "public_header.html" .}}
 
     <!-- Hero -->
@@ -347,7 +347,7 @@
                         <div class="grid grid-cols-2 gap-2.5">
                           <div class="rounded-xl border border-emerald-500/20 bg-background p-3 shadow-sm">
                             <div class="flex items-start justify-between">
-                              <span class="rounded bg-on-surface px-1.5 py-1 font-mono text-[10px] font-extrabold leading-none tracking-widest text-surface-container-lowest">MH12 AB 1234</span>
+                              <span class="rounded bg-on-surface px-1.5 py-1 font-data-mono text-[10px] font-extrabold leading-none tracking-widest text-surface-container-lowest">MH12 AB 1234</span>
                               <span class="flex h-2.5 w-2.5"><span class="absolute inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 opacity-75" style="animation:vehPulse 1.4s ease-in-out infinite"></span><span class="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-surface-container-lowest"></span></span>
                             </div>
                             <div class="mt-2 flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span><span class="text-[11px] font-extrabold text-emerald-700">Available</span><span class="ml-auto text-[10px] font-semibold text-text-muted">16ft · 7.5T</span></div>
@@ -364,7 +364,7 @@
                           </div>
                           <div class="rounded-xl border border-amber-500/25 bg-background p-3 shadow-sm">
                             <div class="flex items-start justify-between">
-                              <span class="rounded bg-on-surface px-1.5 py-1 font-mono text-[10px] font-extrabold leading-none tracking-widest text-surface-container-lowest">MH14 CD 5678</span>
+                              <span class="rounded bg-on-surface px-1.5 py-1 font-data-mono text-[10px] font-extrabold leading-none tracking-widest text-surface-container-lowest">MH14 CD 5678</span>
                               <span class="h-2.5 w-2.5 rounded-full bg-amber-500 ring-2 ring-surface-container-lowest" style="animation:vehPulse 1.6s ease-in-out infinite"></span>
                             </div>
                             <div class="mt-2 flex items-center gap-1.5"><span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span><span class="text-[11px] font-extrabold text-amber-700">In Service</span><span class="ml-auto text-[10px] font-semibold text-text-muted">22ft · 12T</span></div>
@@ -379,13 +379,13 @@
                             </div>
                           </div>
                           <div class="rounded-xl border border-border-subtle bg-background p-3">
-                            <div class="flex items-center justify-between"><span class="font-mono text-[10px] font-extrabold tracking-widest text-on-surface">MH09 EF 9012</span><span class="h-2 w-2 rounded-full bg-emerald-500"></span></div>
+                            <div class="flex items-center justify-between"><span class="font-data-mono text-[10px] font-extrabold tracking-widest text-on-surface">MH09 EF 9012</span><span class="h-2 w-2 rounded-full bg-emerald-500"></span></div>
                             <div class="mt-1 text-[11px] font-bold text-secondary">Available · 18ft</div>
                             <div class="mt-2 h-1 overflow-hidden rounded-full bg-border-subtle"><span class="block h-full rounded-full bg-primary" style="--w:92%;animation:vehBar 1.1s .35s ease-out forwards"></span></div>
                             <div class="mt-1 text-[10px] text-text-muted">92% service ok</div>
                           </div>
                           <div class="rounded-xl border border-border-subtle bg-background p-3">
-                            <div class="flex items-center justify-between"><span class="font-mono text-[10px] font-extrabold tracking-widest text-on-surface">MH43 GH 3456</span><span class="h-2 w-2 rounded-full bg-slate-400"></span></div>
+                            <div class="flex items-center justify-between"><span class="font-data-mono text-[10px] font-extrabold tracking-widest text-on-surface">MH43 GH 3456</span><span class="h-2 w-2 rounded-full bg-slate-400"></span></div>
                             <div class="mt-1 text-[11px] font-bold text-secondary">Idle · 14ft</div>
                             <div class="mt-2 h-1 overflow-hidden rounded-full bg-border-subtle"><span class="block h-full rounded-full bg-primary" style="--w:64%;animation:vehBar 1.1s .5s ease-out forwards"></span></div>
                             <div class="mt-1 text-[10px] text-text-muted">64% · FASTag linked</div>
@@ -432,7 +432,7 @@
                               </div>
                               <div class="mt-0.5 flex items-center gap-1 text-[10px] text-text-muted">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-3 w-3 shrink-0"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10"/><path d="M7 12h10"/><path d="M7 16h6"/></svg>
-                                <span class="font-mono truncate">MH12 202309451</span><span class="opacity-40">·</span><span>HMV</span>
+                                <span class="font-data-mono truncate">MH12 202309451</span><span class="opacity-40">·</span><span>HMV</span>
                               </div>
                             </div>
                           </div>
@@ -467,7 +467,7 @@
                               </div>
                               <div class="mt-0.5 flex items-center gap-1 text-[10px] text-text-muted">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-3 w-3 shrink-0"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10"/><path d="M7 12h10"/><path d="M7 16h6"/></svg>
-                                <span class="font-mono truncate">MH14 202201889</span><span class="opacity-40">·</span><span>LMV</span>
+                                <span class="font-data-mono truncate">MH14 202201889</span><span class="opacity-40">·</span><span>LMV</span>
                               </div>
                             </div>
                           </div>
@@ -500,7 +500,7 @@
                             <div class="min-w-0 flex-1">
                               <div class="text-sm font-bold leading-none text-on-surface">Shree Traders Pvt Ltd</div>
                               <div class="mt-0.5 flex items-center gap-1">
-                                <span class="font-mono text-[10px] leading-none text-text-muted">GSTIN 27ABECS1234F1Z5</span>
+                                <span class="font-data-mono text-[10px] leading-none text-text-muted">GSTIN 27ABECS1234F1Z5</span>
                                 <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-status-success text-white">
                                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="h-2.5 w-2.5"><path d="M5 13l4 4L19 7"/></svg>
                                 </span>
@@ -539,7 +539,7 @@
                             <div class="space-y-2.5">
                               <div class="relative flex items-center gap-2">
                                 <span class="absolute -left-6 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary ring-2 ring-background"><span class="h-1.5 w-1.5 rounded-full bg-white"></span></span>
-                                <span class="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">BK-2101</span>
+                                <span class="rounded bg-primary/10 px-1.5 py-0.5 font-data-mono text-[10px] font-bold text-primary">BK-2101</span>
                                 <span class="text-[11px] text-on-surface-variant">Pune → Mumbai</span>
                                 <span class="ml-auto text-[10px] text-text-muted">12 Apr</span>
                               </div>
@@ -547,7 +547,7 @@
                                 <span class="absolute -left-6 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-surface-container-low ring-2 ring-background border border-border-subtle">
                                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-2.5 w-2.5 text-text-muted"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M10 13H8"/><path d="M16 17H8"/><path d="M13 13h1"/></svg>
                                 </span>
-                                <span class="rounded bg-surface-container-low px-1.5 py-0.5 font-mono text-[10px] font-bold text-on-surface-variant">INV-221</span>
+                                <span class="rounded bg-surface-container-low px-1.5 py-0.5 font-data-mono text-[10px] font-bold text-on-surface-variant">INV-221</span>
                                 <span class="text-[11px] font-medium text-on-surface">₹15,930</span>
                                 <span class="rounded-full bg-status-warning/10 px-1.5 py-0.5 text-[9px] font-semibold text-status-warning">Due</span>
                                 <span class="ml-auto text-[10px] text-text-muted">16 Apr</span>
@@ -579,7 +579,7 @@
                                 <div class="text-[10px] leading-none text-text-muted">Maharashtra · 27</div>
                               </div>
                               <div class="text-right">
-                                <div class="font-mono text-sm font-bold leading-none text-primary">INV-221</div>
+                                <div class="font-data-mono text-sm font-bold leading-none text-primary">INV-221</div>
                                 <div class="text-[10px] text-text-muted">16 Apr 2026</div>
                                 <div class="text-[10px] font-medium text-text-muted">Due 23 Apr</div>
                               </div>
@@ -598,7 +598,7 @@
                                   <div class="text-xs font-medium text-on-surface">Freight</div>
                                   <div class="text-[10px] text-text-muted">Pune → Mumbai · 1 trip</div>
                                 </div>
-                                <span class="font-mono text-xs font-semibold text-on-surface">₹12,000</span>
+                                <span class="font-data-mono text-xs font-semibold text-on-surface">₹12,000</span>
                               </div>
                               <div class="relative flex items-center justify-between rounded-lg bg-amber-500/10 px-2.5 py-2 ring-1 ring-amber-500/20">
                                 <span class="absolute left-0 top-1 bottom-1 w-0.5 rounded-full bg-amber-500"></span>
@@ -614,14 +614,14 @@
                                     <div class="text-[10px] text-text-muted">24h waiting</div>
                                   </div>
                                 </div>
-                                <span class="font-mono text-xs font-semibold text-on-surface">₹1,500</span>
+                                <span class="font-data-mono text-xs font-semibold text-on-surface">₹1,500</span>
                               </div>
                               <div class="space-y-1 rounded-lg bg-surface-container-low/30 px-2.5 py-2">
-                                <div class="flex justify-between text-[11px]"><span class="text-text-muted">Subtotal</span><span class="font-mono font-medium text-on-surface">₹13,500</span></div>
-                                <div class="flex justify-between text-[11px]"><span class="text-text-muted">CGST 9%</span><span class="font-mono text-on-surface">₹1,215</span></div>
-                                <div class="flex justify-between text-[11px]"><span class="text-text-muted">SGST 9%</span><span class="font-mono text-on-surface">₹1,215</span></div>
+                                <div class="flex justify-between text-[11px]"><span class="text-text-muted">Subtotal</span><span class="font-data-mono font-medium text-on-surface">₹13,500</span></div>
+                                <div class="flex justify-between text-[11px]"><span class="text-text-muted">CGST 9%</span><span class="font-data-mono text-on-surface">₹1,215</span></div>
+                                <div class="flex justify-between text-[11px]"><span class="text-text-muted">SGST 9%</span><span class="font-data-mono text-on-surface">₹1,215</span></div>
                                 <div class="my-1 h-px bg-border-subtle"></div>
-                                <div class="flex justify-between text-xs"><span class="font-bold text-on-surface">Total (GST 18%)</span><span class="font-mono font-bold text-primary">₹15,930</span></div>
+                                <div class="flex justify-between text-xs"><span class="font-bold text-on-surface">Total (GST 18%)</span><span class="font-data-mono font-bold text-primary">₹15,930</span></div>
                               </div>
                             </div>
                           </div>
@@ -895,7 +895,7 @@
                           <div class="col-span-3 rounded-xl border border-border-subtle bg-background p-3">
                             <div class="text-[10px] font-semibold uppercase tracking-wide text-text-muted">GSTIN</div>
                             <div class="mt-1 flex items-center gap-1.5">
-                              <span class="font-mono text-xs font-bold tracking-tight text-on-surface">27AAACP1234Q1Z5</span>
+                              <span class="font-data-mono text-xs font-bold tracking-tight text-on-surface">27AAACP1234Q1Z5</span>
                               <span class="flex h-4 w-4 items-center justify-center rounded-full bg-status-success text-white" style="animation:compPop .4s ease-out .85s both">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" class="h-2.5 w-2.5"><path d="M5 12l4 4l8 -8"/></svg>
                               </span>
@@ -1026,7 +1026,7 @@
                             <span class="inline-flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-primary"></span>FASTag • HDFC</span>
                             <span>→</span>
                             <span class="inline-flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-status-success"></span>Ledger</span>
-                            <span class="ml-auto font-mono text-[10px]">Txn #8824501</span>
+                            <span class="ml-auto font-data-mono text-[10px]">Txn #8824501</span>
                           </div>
                         </div>
                     {{else if eq .Feature.Slug "assistant"}}
@@ -1209,7 +1209,7 @@
                         {{end}}
                         <span class="relative z-10 flex h-10 w-10 flex-none items-center justify-center rounded-full bg-primary text-sm font-bold text-on-primary shadow-sm">{{add $i 1}}</span>
                         <div class="pb-2">
-                            <p class="text-base font-semibold text-on-surface">{{$s}}</p>
+                            <p class="text-title-md font-semibold text-on-surface">{{$s}}</p>
                         </div>
                     </div>
                     {{end}}
@@ -1395,22 +1395,22 @@
                 <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     <div class="rounded-2xl border border-border-subtle bg-surface-container-lowest p-6 shadow-sm">
                         <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/></svg></span>
-                        <h3 class="mt-4 text-base font-semibold text-on-surface">GST-ready invoicing</h3>
+                        <h3 class="mt-4 text-title-md font-semibold text-on-surface">GST-ready invoicing</h3>
                         <p class="mt-1.5 text-sm leading-relaxed text-secondary">Professional, compliant invoices generated from completed trips.</p>
                     </div>
                     <div class="rounded-2xl border border-border-subtle bg-surface-container-lowest p-6 shadow-sm">
                         <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-                        <h3 class="mt-4 text-base font-semibold text-on-surface">Bank-grade security</h3>
+                        <h3 class="mt-4 text-title-md font-semibold text-on-surface">Bank-grade security</h3>
                         <p class="mt-1.5 text-sm leading-relaxed text-secondary">Encryption in transit and at rest with role-based access control.</p>
                     </div>
                     <div class="rounded-2xl border border-border-subtle bg-surface-container-lowest p-6 shadow-sm">
                         <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></span>
-                        <h3 class="mt-4 text-base font-semibold text-on-surface">DPDPA-aligned trails</h3>
+                        <h3 class="mt-4 text-title-md font-semibold text-on-surface">DPDPA-aligned trails</h3>
                         <p class="mt-1.5 text-sm leading-relaxed text-secondary">Append-only audit logs so every action is traceable.</p>
                     </div>
                     <div class="rounded-2xl border border-border-subtle bg-surface-container-lowest p-6 shadow-sm">
                         <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-2.8a.5.5 0 0 0-.45-.3H3a.5.5 0 0 0-.45.3L1.14 12.2a1.5 1.5 0 0 0 0 1.6L2.6 16.6A.5.5 0 0 0 3.05 17H18"/></svg></span>
-                        <h3 class="mt-4 text-base font-semibold text-on-surface">Driver mobile app</h3>
+                        <h3 class="mt-4 text-title-md font-semibold text-on-surface">Driver mobile app</h3>
                         <p class="mt-1.5 text-sm leading-relaxed text-secondary">e-POD and live status updates from the road, on any phone.</p>
                     </div>
                 </div>
@@ -1430,7 +1430,7 @@
                             {{iconWithClass .Icon "w-6 h-6"}}
                         </span>
                         <span class="min-w-0">
-                            <span class="block text-base font-semibold text-on-surface">{{.Title}}</span>
+                            <span class="block text-title-md font-semibold text-on-surface">{{.Title}}</span>
                             <span class="block truncate text-sm text-text-muted">{{.Tagline}}</span>
                         </span>
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>

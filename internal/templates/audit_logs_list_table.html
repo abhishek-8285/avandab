@@ -2,12 +2,12 @@
     <table class="min-w-full divide-y divide-border-subtle">
         <thead class="bg-surface-container-low">
             <tr>
-                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Timestamp</th>
-                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">User Account</th>
-                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Action</th>
-                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Target Table</th>
-                <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Record ID</th>
-                <th class="px-3 py-2 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">IP Address</th>
+                <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Timestamp</th>
+                <th class="px-3 py-2 text-left text-eyebrow text-text-muted">User Account</th>
+                <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Action</th>
+                <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Target Table</th>
+                <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Record ID</th>
+                <th class="px-3 py-2 text-right text-eyebrow text-text-muted">IP Address</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
@@ -17,9 +17,9 @@
                 <td class="px-3 py-2 text-xs tabular-nums text-secondary whitespace-nowrap" data-numeric><span class="time-display" data-utc-time="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .CreatedAt}}</span></td>
                 <td class="px-3 py-2 text-sm">{{if .UserName}}<span class="font-semibold text-on-surface">{{.UserName}}</span>{{else}}<span class="text-text-muted">System</span>{{end}}</td>
                 <td class="px-3 py-2"><span class="inline-flex px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/15 text-[11px] font-bold uppercase tracking-wide text-primary">{{.Action}}</span></td>
-                <td class="px-3 py-2 text-xs font-mono text-secondary">{{.TableName}}</td>
-                <td class="px-3 py-2 text-xs font-mono tabular-nums text-secondary">{{if .RecordID}}{{.RecordID}}{{else}}-{{end}}</td>
-                <td class="px-3 py-2 text-right text-xs font-mono tabular-nums text-secondary whitespace-nowrap">{{if .IPAddress}}{{.IPAddress}}{{else}}-{{end}}</td>
+                <td class="px-3 py-2 text-xs font-data-mono text-secondary">{{.TableName}}</td>
+                <td class="px-3 py-2 text-xs font-data-mono tabular-nums text-secondary">{{if .RecordID}}{{.RecordID}}{{else}}-{{end}}</td>
+                <td class="px-3 py-2 text-right text-xs font-data-mono tabular-nums text-secondary whitespace-nowrap">{{if .IPAddress}}{{.IPAddress}}{{else}}-{{end}}</td>
             </tr>
             {{end}}
             {{else}}

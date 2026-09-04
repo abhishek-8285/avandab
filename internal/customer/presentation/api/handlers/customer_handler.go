@@ -33,9 +33,11 @@ func (h *CustomerHandler) RegisterRoutes(r chi.Router) {
 }
 
 func (h *CustomerHandler) getTenantAndCustomer(r *http.Request) (string, string, bool) {
+	// Fail closed: no silent DefaultTenant fallback. A request without a
+	// resolved tenant must never read or write tenant "1" data.
 	tenantID := string(shared.TenantIDFromContext(r.Context()))
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		return "", "", false
 	}
 
 	session, ok := r.Context().Value(auth.ContextUser).(*auth.SessionData)

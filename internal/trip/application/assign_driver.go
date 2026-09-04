@@ -56,9 +56,14 @@ func (uc *AssignDriverUseCase) Execute(ctx context.Context, cmd AssignDriverComm
 				// runtime DDL. A failed audit insert fails the override loudly:
 				// a compliance override without an audit trail must not land.
 				if dbGetter, ok := txCtx.Repositories().AuditLogs().(repository.DBGetter); ok && dbGetter.DB() != nil {
+					// Attribute the override to the trip's own tenant —
+					// never the bootstrap tenant (cross-org audit leak).
 					tenant := cmd.TenantID
 					if tenant == "" {
-						tenant = shared.DefaultTenant
+						tenant = t.TenantID
+					}
+					if tenant == "" {
+						return fmt.Errorf("cannot record dispatch override audit: tenant unknown")
 					}
 					var vehicleID string
 					if t.VehicleID != nil {
@@ -94,7 +99,9 @@ func (uc *AssignDriverUseCase) Execute(ctx context.Context, cmd AssignDriverComm
 				}
 			}
 		}
-		conflicts, err := repo.CheckDriverConflict(txCtx, cmd.DriverID, cmd.TenantID, string(cmd.TripID))
+		// Overlap check against the trip's own window: a driver running an
+		// earlier trip that ends before this one departs is assignable.
+		conflicts, err := repo.CheckDriverConflict(txCtx, cmd.DriverID, cmd.TenantID, string(cmd.TripID), t.DepartureTime, t.ArrivalTime)
 		if err != nil {
 			return err
 		}

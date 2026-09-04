@@ -14,7 +14,7 @@
             <div class="text-sm text-on-surface">{{.Error}}</div>
             {{if .Results}}
             <ul class="pt-2 mt-1 border-t border-rose-500/15 list-disc pl-5 text-xs text-secondary space-y-0.5 tabular-nums">
-                {{range .Results}}{{if not .Success}}<li><span class="font-mono font-semibold">{{.IMEI}}</span>: {{.Error}}</li>{{end}}{{end}}
+                {{range .Results}}{{if not .Success}}<li><span class="font-data-mono font-semibold">{{.IMEI}}</span>: {{.Error}}</li>{{end}}{{end}}
             </ul>
             {{end}}
         </div>
@@ -28,7 +28,7 @@
             </div>
             {{if .Results}}
             <ul class="pt-2 mt-1 border-t border-emerald-500/15 list-disc pl-5 text-xs text-secondary space-y-0.5 tabular-nums">
-                {{range .Results}}<li><span class="font-mono font-semibold">{{.IMEI}}</span> → {{.DeviceID}}</li>{{end}}
+                {{range .Results}}<li><span class="font-data-mono font-semibold">{{.IMEI}}</span> → {{.DeviceID}}</li>{{end}}
             </ul>
             {{end}}
         </div>

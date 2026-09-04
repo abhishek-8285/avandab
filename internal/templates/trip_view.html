@@ -14,7 +14,7 @@
                         {{.Trip.RouteDestination}}
                     </h1>
                     <div class="flex items-center gap-3 mt-1 flex-wrap">
-                        <span class="font-mono text-sm font-bold text-primary tabular-nums">{{.Trip.TripNumber}}</span>
+                        <span class="font-data-mono text-sm font-bold text-primary tabular-nums">{{.Trip.TripNumber}}</span>
                         <span class="status-badge inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Trip.Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Trip.Status}}</span>
                         <span class="text-xs text-text-muted">· Created <span class="tabular-nums">{{datetime .Trip.CreatedAt}}</span></span>
                     </div>
@@ -27,19 +27,19 @@
 
             <dl class="grid grid-cols-2 lg:grid-cols-4 gap-3 px-5 pt-4 pb-5 mt-3 border-t border-border-subtle">
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Departure</dt>
+                    <dt class="text-eyebrow text-text-muted">Departure</dt>
                     <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{datetime .Trip.DepartureTime}}</dd>
                 </div>
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Arrival</dt>
+                    <dt class="text-eyebrow text-text-muted">Arrival</dt>
                     <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{if .Trip.ArrivalTime}}{{datetime .Trip.ArrivalTime}}{{else}}—{{end}}</dd>
                 </div>
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Duration</dt>
+                    <dt class="text-eyebrow text-text-muted">Duration</dt>
                     <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{if .Duration}}{{.Duration}}{{else}}—{{end}}</dd>
                 </div>
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">{{if .PnL.TripID}}Est. Margin{{else}}Customer Fare{{end}}</dt>
+                    <dt class="text-eyebrow text-text-muted">{{if .PnL.TripID}}Est. Margin{{else}}Customer Fare{{end}}</dt>
                     <dd class="text-base font-black mt-1 tabular-nums {{if .PnL.TripID}}{{if .PnL.MarginAvailable}}{{if .PnL.LowMargin}}text-status-alert{{else}}text-status-success{{end}}{{else}}text-on-surface{{end}}{{else}}text-primary{{end}}" data-numeric>
                         {{if .PnL.TripID}}
                             {{if .PnL.MarginAvailable}}₹{{printf "%.0f–%.0f" .PnL.MarginLow .PnL.MarginHigh}}{{else}}Pending{{end}}
@@ -69,16 +69,16 @@
             <div class="p-5">
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Booking</dt>
+                    <dt class="text-eyebrow text-text-muted">Booking</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">
                         {{with .Booking}}
-                        <a href="/bookings/{{.ID}}" class="text-primary hover:underline font-mono font-bold text-decoration-none">{{.BookingNumber}}</a>
+                        <a href="/bookings/{{.ID}}" class="text-primary hover:underline font-data-mono font-bold text-decoration-none">{{.BookingNumber}}</a>
                         <span class="text-text-muted">· status {{.Status}}</span>
                         {{else}}<span class="text-text-muted">No booking linked</span>{{end}}
                     </dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Customer</dt>
+                    <dt class="text-eyebrow text-text-muted">Customer</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">
                         {{with .Booking}}{{if .CustomerName}}
                         <a href="/customers/{{.CustomerID}}" class="hover:text-primary transition-colors text-decoration-none">{{.CustomerName}}</a>
@@ -86,7 +86,7 @@
                     </dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Driver</dt>
+                    <dt class="text-eyebrow text-text-muted">Driver</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">
                         {{if .Trip.DriverID}}
                         <a href="/drivers/{{.Trip.DriverID}}" class="hover:text-primary transition-colors text-decoration-none">{{if .Trip.DriverFirstName}}{{.Trip.DriverFirstName}} {{.Trip.DriverLastName}}{{else}}{{.Trip.DriverDisplayID}}{{end}}</a>
@@ -94,16 +94,16 @@
                     </dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Vehicle</dt>
+                    <dt class="text-eyebrow text-text-muted">Vehicle</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">
                         {{if .Trip.VehicleID}}
-                        <a href="/vehicles/{{.Trip.VehicleID}}" class="hover:text-primary transition-colors text-decoration-none font-mono font-bold tabular-nums">{{.Trip.VehicleRegistrationNumber}}</a>
+                        <a href="/vehicles/{{.Trip.VehicleID}}" class="hover:text-primary transition-colors text-decoration-none font-data-mono font-bold tabular-nums">{{.Trip.VehicleRegistrationNumber}}</a>
                         <span class="text-text-muted text-xs">· {{.Trip.VehicleNumber}}</span>
                         {{else}}<span class="text-text-muted">Unassigned</span>{{end}}
                     </dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Route</dt>
+                    <dt class="text-eyebrow text-text-muted">Route</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">
                         {{if .Trip.RouteID}}<a href="/routes/{{.Trip.RouteID}}" class="hover:text-primary transition-colors text-decoration-none">{{end}}
                         {{.Trip.RouteSource}} → {{.Trip.RouteDestination}}{{if .Trip.RouteID}}</a>{{end}}
@@ -111,13 +111,13 @@
                 </div>
                 {{with .Booking}}{{if or .CargoWeight .Passengers}}
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Cargo / Passengers</dt>
+                    <dt class="text-eyebrow text-text-muted">Cargo / Passengers</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1 tabular-nums" data-numeric>{{if .CargoWeight}}{{.CargoWeight}} kg{{end}}{{if and .CargoWeight .Passengers}} · {{end}}{{if .Passengers}}{{.Passengers}} pax{{end}}</dd>
                 </div>
                 {{end}}{{end}}
                 {{if .Trip.Remarks}}
                 <div class="sm:col-span-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Remarks</dt>
+                    <dt class="text-eyebrow text-text-muted">Remarks</dt>
                     <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed">{{.Trip.Remarks}}</dd>
                 </div>
                 {{end}}
@@ -126,8 +126,8 @@
             {{if .PODOTP}}
             <section class="mt-6 pt-5 border-t border-border-subtle">
                 <div class="flex items-center gap-3 flex-wrap">
-                    <h3 class="text-base font-semibold text-on-surface font-display">Delivery OTP</h3>
-                    <span class="px-3 py-1 rounded-lg border border-primary/30 bg-primary/10 text-primary font-mono text-lg font-black tracking-[0.3em] select-all tabular-nums" data-numeric>{{.PODOTP}}</span>
+                    <h3 class="text-title-md font-semibold text-on-surface font-display">Delivery OTP</h3>
+                    <span class="px-3 py-1 rounded-lg border border-primary/30 bg-primary/10 text-primary font-data-mono text-lg font-black tracking-[0.3em] select-all tabular-nums" data-numeric>{{.PODOTP}}</span>
                     <span class="text-xs text-text-muted">Read this code to the consignee at delivery — the driver must type it back to complete the e-POD. Valid 48h.</span>
                     <form method="post" action="/trips/{{.Trip.ID}}/send-pod-otp" class="inline">
                         <button type="submit" class="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-container-lowest px-3 py-1.5 text-xs font-semibold text-on-surface hover:bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-border-subtle">Send by SMS</button>
@@ -147,11 +147,11 @@
                     {{if .PnL.MarginAvailable}}{{if .PnL.LowMargin}}<span class="inline-flex px-2 py-1 rounded-full bg-status-alert/10 border border-status-alert/15 text-[11px] font-bold text-status-alert">Margin risk above 10%</span>{{end}}{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-status-warning/10 border border-status-warning/15 text-[11px] font-bold text-status-warning">Pending fuel verification</span>{{end}}
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Quoted fare</dt><dd class="text-sm font-bold text-on-surface tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .PnL.QuotedFare}}</dd></div>
-                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Fuel cost (estimated)</dt><dd class="text-sm font-bold text-on-surface tabular-nums mt-1" data-numeric>{{if .PnL.MarginAvailable}}₹{{printf "%.2f–%.2f" .PnL.FuelCostLow .PnL.FuelCostHigh}}{{else}}Pending{{end}}</dd></div>
-                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Tolls</dt><dd class="text-sm font-bold text-on-surface tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .PnL.TollCost}}</dd></div>
-                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Approved kharcha</dt><dd class="text-sm font-bold text-on-surface tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .PnL.KharchaApproved}}</dd></div>
-                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Estimated margin</dt><dd class="text-sm font-black tabular-nums mt-1 {{if .PnL.LowMargin}}text-status-alert{{else}}text-status-success{{end}}" data-numeric>{{if .PnL.MarginAvailable}}{{printf "%.2f–%.2f" .PnL.MarginLow .PnL.MarginHigh}} ({{printf "%.1f" .PnL.MarginPercentage}}%){{else}}Pending verification{{end}}</dd></div>
+                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-eyebrow text-text-muted">Quoted fare</dt><dd class="text-sm font-bold text-on-surface tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .PnL.QuotedFare}}</dd></div>
+                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-eyebrow text-text-muted">Fuel cost (estimated)</dt><dd class="text-sm font-bold text-on-surface tabular-nums mt-1" data-numeric>{{if .PnL.MarginAvailable}}₹{{printf "%.2f–%.2f" .PnL.FuelCostLow .PnL.FuelCostHigh}}{{else}}Pending{{end}}</dd></div>
+                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-eyebrow text-text-muted">Tolls</dt><dd class="text-sm font-bold text-on-surface tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .PnL.TollCost}}</dd></div>
+                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-eyebrow text-text-muted">Approved kharcha</dt><dd class="text-sm font-bold text-on-surface tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .PnL.KharchaApproved}}</dd></div>
+                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-eyebrow text-text-muted">Estimated margin</dt><dd class="text-sm font-black tabular-nums mt-1 {{if .PnL.LowMargin}}text-status-alert{{else}}text-status-success{{end}}" data-numeric>{{if .PnL.MarginAvailable}}{{printf "%.2f–%.2f" .PnL.MarginLow .PnL.MarginHigh}} ({{printf "%.1f" .PnL.MarginPercentage}}%){{else}}Pending verification{{end}}</dd></div>
                 </div>
                 <p class="text-xs text-text-muted mt-3">Fuel consumed estimate: {{printf "%.1f" .PnL.FuelConsumedLiters}} L · Confidence: {{.PnL.Confidence}}</p>
             </section>
@@ -253,7 +253,7 @@
             </div>
             <div class="p-5 space-y-4">
                 <div class="bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white hover:shadow-lg transition-all">
-                    <div class="text-[11px] font-bold uppercase tracking-wider text-white/80">Invoice Total</div>
+                    <div class="text-eyebrow text-white/80">Invoice Total</div>
                     <div class="text-2xl font-black tabular-nums leading-tight mt-1">₹{{printf "%.2f" .Total}}</div>
                     <a href="/invoices/{{.ID}}" class="text-xs font-semibold text-white/90 hover:text-white hover:underline text-decoration-none mt-2 inline-block">{{.InvoiceNumber}} · View invoice →</a>
                 </div>

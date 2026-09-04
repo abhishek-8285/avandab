@@ -77,7 +77,7 @@
 <div id="reject-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
     <div id="reject-backdrop" class="absolute inset-0 bg-surface-container-highest/50 backdrop-blur-sm" onclick="closeRejectModal()"></div>
     <div class="relative bg-surface-container-lowest rounded-2xl w-full max-w-md p-6 shadow-2xl animate-fade-in border border-border-subtle">
-        <h3 class="text-base font-bold text-on-surface font-display">Reject Agent Action</h3>
+        <h3 class="text-title-md font-bold text-on-surface font-display">Reject Agent Action</h3>
         <p class="text-sm text-text-muted mt-1">Rejecting <strong id="reject-tool" class="text-on-surface"></strong></p>
         <form id="reject-form" method="POST" class="mt-4" hx-target="#agent-actions-list" hx-swap="innerMorph">
             <textarea name="reason" id="reject-reason" rows="3"

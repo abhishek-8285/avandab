@@ -42,7 +42,7 @@
         <!-- Tag Wallets -->
         <div class="lg:col-span-2 bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
-                <h3 class="text-sm font-bold text-on-surface">Tag Wallet Balances</h3>
+                <h2 class="text-sm font-bold text-on-surface">Tag Wallet Balances</h2>
                 <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Tags}} tags</span>
             </div>
             <div class="overflow-x-auto">
@@ -61,7 +61,7 @@
                         {{range .Tags}}
                         <tr class="hover:bg-surface-container-low/50 transition-colors">
                             <td class="px-3 py-2 text-sm font-bold text-primary tabular-nums">{{.VehicleNumber}}</td>
-                            <td class="px-3 py-2 text-xs font-mono text-on-surface">{{.TagID}}</td>
+                            <td class="px-3 py-2 text-xs font-data-mono text-on-surface">{{.TagID}}</td>
                             <td class="px-3 py-2 text-xs text-on-surface">{{.Issuer}} <span class="text-text-muted">({{.TagClass}})</span></td>
                             <td class="px-3 py-2 text-sm font-bold text-primary tabular-nums text-right" data-numeric>₹{{printf "%.2f" .Balance}}</td>
                             <td class="px-3 py-2">
@@ -92,23 +92,23 @@
         <!-- Reconciliation Action Card -->
         <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden self-start">
             <div class="px-5 py-3 border-b border-border-subtle">
-                <h3 class="text-sm font-bold text-on-surface">Toll Reconciliation</h3>
+                <h2 class="text-sm font-bold text-on-surface">Toll Reconciliation</h2>
                 <p class="text-xs text-text-muted mt-0.5">Pull provider toll logs, greedily match them to active trip time windows, and automatically create driver kharcha ledger entries.</p>
             </div>
             <div class="p-5">
                 {{if can .User "fastag" "update"}}
                 <form method="POST" action="/fastag/reconcile" hx-post="/fastag/reconcile" hx-target="#fastag-reconcile-result" hx-swap="innerMorph" hx-indicator="closest form" class="space-y-3">
                     <div>
-                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Vehicle Number (Optional)</label>
+                        <label class="block text-eyebrow text-text-muted mb-1.5">Vehicle Number (Optional)</label>
                         <input type="text" name="vehicle_number" placeholder="e.g. MH12AB1234 (blank for all)" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" />
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div>
-                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">From Date</label>
+                            <label class="block text-eyebrow text-text-muted mb-1.5">From Date</label>
                             <input type="date" name="from_date" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" />
                         </div>
                         <div>
-                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">To Date</label>
+                            <label class="block text-eyebrow text-text-muted mb-1.5">To Date</label>
                             <input type="date" name="to_date" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" />
                         </div>
                     </div>
@@ -131,7 +131,7 @@
                         Toll Dispute &amp; Blacklist Desk
                     </span>
                     <p class="text-text-muted text-[11px]">
-                        Report double toll charges or blacklisted tag status to <a href="mailto:fastag@avandab.com" class="font-mono text-primary font-semibold hover:underline">fastag@avandab.com</a>.
+                        Report double toll charges or blacklisted tag status to <a href="mailto:fastag@avandab.com" class="font-data-mono text-primary font-semibold hover:underline">fastag@avandab.com</a>.
                     </p>
                 </div>
             </div>
@@ -141,7 +141,7 @@
     <!-- Recent Transactions -->
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
-            <h3 class="text-sm font-bold text-on-surface">Recent Toll Deductions</h3>
+            <h2 class="text-sm font-bold text-on-surface">Recent Toll Deductions</h2>
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Transactions}} events</span>
         </div>
         {{template "fastag_transactions.html" .Transactions}}

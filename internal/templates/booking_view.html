@@ -13,7 +13,7 @@
                         {{.Booking.RouteDestination}}
                     </h1>
                     <p class="text-sm text-text-muted mt-1.5 flex flex-wrap items-center gap-2">
-                        <span class="font-mono font-bold text-primary">{{.Booking.BookingNumber}}</span>
+                        <span class="font-data-mono font-bold text-primary">{{.Booking.BookingNumber}}</span>
                         <span>·</span>
                         <span class="tabular-nums">Created {{datetime .Booking.CreatedAt}}</span>
                     </p>
@@ -28,19 +28,19 @@
 
             <dl class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5 pt-5 border-t border-border-subtle">
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Pickup</dt>
+                    <dt class="text-eyebrow text-text-muted">Pickup</dt>
                     <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{datetime .Booking.PickupDate}}</dd>
                 </div>
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Quoted Fare</dt>
+                    <dt class="text-eyebrow text-text-muted">Quoted Fare</dt>
                     <dd class="text-lg font-black text-primary tabular-nums mt-0.5" data-numeric>₹{{printf "%.2f" .Booking.Price}}</dd>
                 </div>
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Load</dt>
+                    <dt class="text-eyebrow text-text-muted">Load</dt>
                     <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{if .Booking.CargoWeight}}{{.Booking.CargoWeight}} kg · {{end}}{{.Booking.Passengers}} pax</dd>
                 </div>
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Vehicle Type</dt>
+                    <dt class="text-eyebrow text-text-muted">Vehicle Type</dt>
                     <dd class="text-sm font-semibold text-on-surface capitalize mt-1">{{.Booking.VehicleType}}</dd>
                 </div>
             </dl>
@@ -53,7 +53,7 @@
             </div>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 p-5">
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Customer</dt>
+                    <dt class="text-eyebrow text-text-muted">Customer</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">
                         {{if .Booking.CustomerID}}
                         <a href="/customers/{{.Booking.CustomerID}}" class="hover:text-primary transition-colors text-decoration-none">{{.Booking.CustomerName}}</a>
@@ -62,23 +62,23 @@
                     </dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Route</dt>
+                    <dt class="text-eyebrow text-text-muted">Route</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">
                         {{if .Booking.RouteID}}<a href="/routes/{{.Booking.RouteID}}" class="hover:text-primary transition-colors text-decoration-none">{{end}}
                         {{.Booking.RouteSource}} → {{.Booking.RouteDestination}}{{if .Booking.RouteID}}</a>{{end}}
                     </dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Passengers</dt>
+                    <dt class="text-eyebrow text-text-muted">Passengers</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1 tabular-nums" data-numeric>{{.Booking.Passengers}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Cargo Weight</dt>
+                    <dt class="text-eyebrow text-text-muted">Cargo Weight</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1 tabular-nums" data-numeric>{{if .Booking.CargoWeight}}{{.Booking.CargoWeight}} kg{{else}}—{{end}}</dd>
                 </div>
                 {{if .Booking.Notes}}
                 <div class="sm:col-span-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Notes</dt>
+                    <dt class="text-eyebrow text-text-muted">Notes</dt>
                     <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed">{{.Booking.Notes}}</dd>
                 </div>
                 {{end}}
@@ -200,8 +200,8 @@
                 {{with .RelatedTrip}}
                 <a href="/trips/{{.ID}}" class="flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface-container-low p-3 hover:bg-surface-container hover:border-primary/20 transition-all text-decoration-none group">
                     <span class="min-w-0">
-                        <span class="block text-[11px] font-bold uppercase tracking-wider text-text-muted">Trip</span>
-                        <span class="block text-sm font-bold text-on-surface font-mono mt-0.5 truncate">{{.TripNumber}}</span>
+                        <span class="block text-eyebrow text-text-muted">Trip</span>
+                        <span class="block text-sm font-bold text-on-surface font-data-mono mt-0.5 truncate">{{.TripNumber}}</span>
                         <span class="status-badge {{statusBadge .Status}} mt-1.5 inline-flex">{{.Status}}</span>
                     </span>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-primary transition-colors"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
@@ -210,8 +210,8 @@
                 {{with .RelatedInvoice}}
                 <a href="/invoices/{{.ID}}" class="flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface-container-low p-3 hover:bg-surface-container hover:border-primary/20 transition-all text-decoration-none group">
                     <span class="min-w-0">
-                        <span class="block text-[11px] font-bold uppercase tracking-wider text-text-muted">Invoice</span>
-                        <span class="block text-sm font-bold text-on-surface font-mono mt-0.5 truncate">{{.InvoiceNumber}}</span>
+                        <span class="block text-eyebrow text-text-muted">Invoice</span>
+                        <span class="block text-sm font-bold text-on-surface font-data-mono mt-0.5 truncate">{{.InvoiceNumber}}</span>
                         <span class="text-xs text-secondary tabular-nums font-semibold mt-1 inline-block" data-numeric>₹{{printf "%.2f" .Total}} · {{.PaymentStatus}}</span>
                     </span>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-primary transition-colors"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>

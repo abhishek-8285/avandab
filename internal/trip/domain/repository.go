@@ -50,6 +50,8 @@ type TripRepository interface {
 	Save(ctx context.Context, t *aggregate.TripAggregate) error
 	Find(ctx context.Context, id aggregate.TripID, tenantID shared.TenantID) (*aggregate.TripAggregate, error)
 	FindByNumber(ctx context.Context, number string, tenantID shared.TenantID) (*aggregate.TripAggregate, error)
+	FindByBookingID(ctx context.Context, bookingID string, tenantID shared.TenantID) (*aggregate.TripAggregate, error)
+	FindByIdempotencyKey(ctx context.Context, key string, tenantID shared.TenantID) (*aggregate.TripAggregate, error)
 	Exists(ctx context.Context, id aggregate.TripID, tenantID shared.TenantID) (bool, error)
 
 	// Read Model Queries
@@ -57,7 +59,10 @@ type TripRepository interface {
 	SearchReadModels(ctx context.Context, tenantID shared.TenantID, query string, status string, limit int, offset int) ([]TripReadModel, int64, error)
 	SearchReadModelsByDriver(ctx context.Context, tenantID shared.TenantID, driverIDs []string, query string, status string, limit int, offset int) ([]TripReadModel, int64, error)
 
-	// Conflict Checks
-	CheckDriverConflict(ctx context.Context, driverID string, tenantID shared.TenantID, excludeTripID string) ([]ConflictInfo, error)
-	CheckVehicleConflict(ctx context.Context, vehicleID string, tenantID shared.TenantID, excludeTripID string) ([]ConflictInfo, error)
+	// Conflict Checks. The window bounds the trip being assigned: only
+	// existing trips whose [departure, arrival] overlaps the window count.
+	// A nil windowEnd means open-ended. Status-only checks over-blocked
+	// drivers/vehicles forever, killing utilization at scale.
+	CheckDriverConflict(ctx context.Context, driverID string, tenantID shared.TenantID, excludeTripID string, windowStart time.Time, windowEnd *time.Time) ([]ConflictInfo, error)
+	CheckVehicleConflict(ctx context.Context, vehicleID string, tenantID shared.TenantID, excludeTripID string, windowStart time.Time, windowEnd *time.Time) ([]ConflictInfo, error)
 }

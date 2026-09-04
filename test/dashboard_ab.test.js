@@ -28,9 +28,12 @@ async function registerFreshUser(page) {
       await page.fill('input[name="company_name"]', 'PW Fleet ' + Date.now());
       await page.fill('input[name="email"]', `ops${Date.now()}@test.com`);
       await page.fill('input[name="phone"]', '9876500000');
+      // Server validates address; scope the submit to the onboarding form
+      // (the layout also renders logout submit buttons).
+      await page.fill('textarea[name="address"]', 'Plot 42, Transport Nagar, Delhi 110042');
       await Promise.all([
         page.waitForURL('**/dashboard', { waitUntil: 'domcontentloaded' }),
-        page.click('button[type="submit"]'),
+        page.click('#onboarding-form button[type="submit"]'),
       ]);
     }
     await page.waitForURL('**/dashboard', { waitUntil: 'domcontentloaded' });
@@ -40,6 +43,9 @@ async function registerFreshUser(page) {
 }
 
 test.describe('Dashboard A/B variants', () => {
+  // Fresh-user registration hits SQLite writes; run serially to avoid
+  // lock contention between parallel contexts.
+  test.describe.configure({ mode: 'serial' });
   test('variant B renders KPI cards, charts and alert feed', async ({ page }) => {
     await registerFreshUser(page);
 

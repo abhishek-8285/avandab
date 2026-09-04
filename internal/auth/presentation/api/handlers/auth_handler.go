@@ -13,7 +13,6 @@ import (
 	"transport-app/internal/auth"
 	"transport-app/internal/domain"
 	"transport-app/internal/service"
-	"transport-app/internal/shared"
 )
 
 // APIAuthHandler handles REST authentication endpoints.
@@ -71,7 +70,12 @@ func (h *APIAuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 
 	userTenantID := user.TenantID
 	if userTenantID == "" {
-		userTenantID = string(shared.DefaultTenant)
+		// Service invariant violated: a fresh registration must carry its
+		// isolated tenant. Never fall back to DefaultTenant here — that
+		// would write the new user's vehicle/driver/device rows into
+		// another org.
+		apiError(w, http.StatusInternalServerError, "registration failed: tenant provisioning error")
+		return
 	}
 
 	// Link vehicle & driver profile if vehicle registration number provided or role is driver
@@ -165,7 +169,11 @@ func (h *APIAuthHandler) IssueToken(w http.ResponseWriter, r *http.Request) {
 
 	resultTenantID := result.User.TenantID
 	if resultTenantID == "" {
-		resultTenantID = string(shared.DefaultTenant)
+		// users.tenant_id is NOT NULL DEFAULT '1' plus backfill 00065, so an
+		// empty tenant here means data corruption. Fail closed instead of
+		// minting a token scoped to another org.
+		apiError(w, http.StatusInternalServerError, "account misconfigured, contact support")
+		return
 	}
 
 	expiresAt := time.Now().Add(24 * time.Hour)

@@ -45,6 +45,13 @@ func (uc *StartTripUseCase) Execute(ctx context.Context, cmd StartTripCommand) e
 			return err
 		}
 
+		// A trip must have a driver before it can move. Vehicle stays
+		// optional for now (legacy trips start driver-only); TODO enforce
+		// vehicle-required once dispatch UI guarantees vehicle selection.
+		if t.DriverID == nil || *t.DriverID == "" {
+			return errors.New("driver must be assigned before trip can start")
+		}
+
 		// Re-validate full compliance gate before allowing trip to start (Spec 05 §5)
 		if t.DriverID != nil && *t.DriverID != "" {
 			if err := uc.checkDriverCompliance(txCtx, *t.DriverID, cmd.TenantID); err != nil {

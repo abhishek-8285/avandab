@@ -19,7 +19,7 @@
         </div>
         <div class="flex items-center gap-3 shrink-0">
             <div class="text-right hidden md:block">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Claim amount</p>
+                <p class="text-eyebrow text-text-muted">Claim amount</p>
                 <p class="text-xl font-black text-on-surface tabular-nums" data-numeric>₹{{priceFormat .Claim.Amount}}</p>
             </div>
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold {{auditBadge .Claim.Result}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Claim.Result}}</span>
@@ -29,15 +29,15 @@
     <!-- Claim summary -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Claimed Litres</p>
+            <p class="text-eyebrow text-text-muted">Claimed Litres</p>
             <p class="text-xl font-black text-on-surface tabular-nums leading-none mt-2" data-numeric>{{if .Claim.FuelLitres}}{{printf "%.1f" .Claim.FuelLitres}} L{{else}}—{{end}}</p>
         </div>
         <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Expected (best)</p>
+            <p class="text-eyebrow text-text-muted">Expected (best)</p>
             <p class="text-xl font-black text-on-surface tabular-nums leading-none mt-2" data-numeric>{{if gt .Claim.ExpectedBest 0.0}}{{printf "%.1f" .Claim.ExpectedBest}} L{{else}}—{{end}}</p>
         </div>
         <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Variance</p>
+            <p class="text-eyebrow text-text-muted">Variance</p>
             <p class="text-xl font-black tabular-nums leading-none mt-2
                 {{if eq .Claim.Result "passed"}}text-status-success
                 {{else if eq .Claim.Result "failed"}}text-status-alert
@@ -46,7 +46,7 @@
             </p>
         </div>
         <div class="bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-white/70">Amount</p>
+            <p class="text-eyebrow text-white/70">Amount</p>
             <p class="text-xl font-black tabular-nums leading-none mt-2" data-numeric>₹{{priceFormat .Claim.Amount}}</p>
         </div>
     </div>
@@ -54,7 +54,7 @@
     <!-- Checks A / B / C -->
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle">
-            <h3 class="text-sm font-bold text-on-surface">Telemetry Checks</h3>
+            <h2 class="text-sm font-bold text-on-surface">Telemetry Checks</h2>
             <p class="text-xs text-text-muted mt-0.5">How the claimed litres reconcile against sensor and odometer evidence</p>
         </div>
         <div class="divide-y divide-border-subtle">
@@ -114,7 +114,7 @@
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h3 class="text-sm font-bold text-on-surface">Refill Events in Window</h3>
+                <h2 class="text-sm font-bold text-on-surface">Refill Events in Window</h2>
                 <p class="text-xs text-text-muted mt-0.5">refill_detected fuel events that fed Check A</p>
             </div>
             {{if .Claim.RefillEvents}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Claim.RefillEvents}}</span>{{end}}
@@ -155,7 +155,7 @@
     {{if or (eq .Claim.Result "needs_review") (eq .Claim.Status "pending")}}
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle">
-            <h3 class="text-sm font-bold text-on-surface">Admin Verdict</h3>
+            <h2 class="text-sm font-bold text-on-surface">Admin Verdict</h2>
             <p class="text-xs text-text-muted mt-0.5">Override the automated result — the decision is recorded in the audit trail</p>
         </div>
         <form method="POST" action="/fuel/audit/{{.Claim.ExpenseID}}/review" class="p-5 space-y-3">

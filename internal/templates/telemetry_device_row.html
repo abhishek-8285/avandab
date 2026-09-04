@@ -1,6 +1,6 @@
 {{range .Devices}}
 <tr class="hover:bg-surface-container-low/60 transition-colors group">
-    <td class="px-3 py-2 text-sm font-mono font-bold text-primary tabular-nums whitespace-nowrap">{{.IMEI}}</td>
+    <td class="px-3 py-2 text-sm font-data-mono font-bold text-primary tabular-nums whitespace-nowrap">{{.IMEI}}</td>
     <td class="px-3 py-2 text-sm text-on-surface whitespace-nowrap">
         {{if eq .Status "active"}}
         {{template "status_dot.html" (dict "Tone" "success" "Label" "Active")}}
@@ -16,14 +16,14 @@
         {{template "status_dot.html" (dict "Tone" "neutral" "Label" .Status)}}
         {{end}}
     </td>
-    <td class="px-3 py-2 text-xs font-mono text-secondary">{{nullString .VehicleID}}</td>
+    <td class="px-3 py-2 text-xs font-data-mono text-secondary">{{nullString .VehicleID}}</td>
     <td class="px-3 py-2"><span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-secondary">{{.DeviceType}}</span></td>
     <td class="px-3 py-2 text-xs text-secondary tabular-nums whitespace-nowrap">{{derefTime .LastSeenAt}}</td>
     <td class="px-3 py-2 text-right whitespace-nowrap">
         {{if can $.User "telemetry" "update"}}
         {{if eq .Status "inventory"}}
         <form method="POST" action="/telemetry/devices/{{.IMEI}}/assign" class="inline-flex items-center gap-1" hx-post="/telemetry/devices/{{.IMEI}}/assign" hx-target="#telemetry-device-rows" hx-swap="innerMorph" hx-indicator="closest form">
-            <input type="hidden" name="vehicle_id" value="{{nullString .VehicleID}}" class="w-28 bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1 text-xs font-mono text-on-surface" placeholder="vehicle id">
+            <input type="hidden" name="vehicle_id" value="{{nullString .VehicleID}}" class="w-28 bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1 text-xs font-data-mono text-on-surface" placeholder="vehicle id">
             <button type="submit" class="inline-flex items-center rounded-full bg-primary text-on-primary px-2.5 py-1 text-[11px] font-bold hover:bg-primary/90 transition-all">Assign</button>
         </form>
         {{else if eq .Status "assigned"}}

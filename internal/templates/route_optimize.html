@@ -5,15 +5,15 @@
   <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
     <div class="px-5 py-3 border-b border-border-subtle">
       <h3 class="text-sm font-bold text-on-surface">Create Optimization Job</h3>
-      <p class="text-xs text-text-muted mt-0.5">Provider: <span class="font-mono">{{.RoutingProvider}}</span> (configure via <span class="font-mono">ROUTING_PROVIDER=mock|osrm-public|osrm-selfhost</span> and <span class="font-mono">OSRM_URL</span>). Max 50 shipments.</p>
+      <p class="text-xs text-text-muted mt-0.5">Provider: <span class="font-data-mono">{{.RoutingProvider}}</span> (configure via <span class="font-data-mono">ROUTING_PROVIDER=mock|osrm-public|osrm-selfhost</span> and <span class="font-data-mono">OSRM_URL</span>). Max 50 shipments.</p>
     </div>
     <div class="p-5">
       <form id="optimize-form" onsubmit="return submitOptimize(event)" class="space-y-3">
         <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Shipments JSON <span class="text-text-muted normal-case tracking-normal">(array of {id, latitude, longitude})</span>
-          <textarea name="shipments" rows="6" class="mt-1 w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-mono" placeholder='[{"id":"s1","latitude":19.076,"longitude":72.877},{"id":"s2","latitude":19.218,"longitude":72.978}]'>[{"id":"s1","latitude":19.076,"longitude":72.877},{"id":"s2","latitude":19.218,"longitude":72.978}]</textarea>
+          <textarea name="shipments" rows="6" class="mt-1 w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-data-mono" placeholder='[{"id":"s1","latitude":19.076,"longitude":72.877},{"id":"s2","latitude":19.218,"longitude":72.978}]'>[{"id":"s1","latitude":19.076,"longitude":72.877},{"id":"s2","latitude":19.218,"longitude":72.978}]</textarea>
         </label>
         <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Vehicles JSON
-          <textarea name="vehicles" rows="3" class="mt-1 w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-mono" placeholder='[{"id":"v1","start_lat":19.076,"start_lng":72.877,"capacity":100}]'>[{"id":"v1","start_lat":19.076,"start_lng":72.877,"capacity":100}]</textarea>
+          <textarea name="vehicles" rows="3" class="mt-1 w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-data-mono" placeholder='[{"id":"v1","start_lat":19.076,"start_lng":72.877,"capacity":100}]'>[{"id":"v1","start_lat":19.076,"start_lng":72.877,"capacity":100}]</textarea>
         </label>
         <div class="flex items-center gap-2 pt-1">
           {{template "btn.html" (dict "Label" "Optimize" "Type" "submit" "Icon" "route")}}
@@ -39,10 +39,10 @@
     <h3 class="text-sm font-bold text-on-surface">How it works</h3>
   </div>
   <ul class="p-5 pt-4 text-xs text-text-muted list-disc ml-4 space-y-1">
-    <li><span class="font-mono">mock</span>: greedy nearest-neighbor, zero deps, deterministic.</li>
-    <li><span class="font-mono">osrm-public</span>: <span class="font-mono">http://router.project-osrm.org</span> table API + greedy assignment, falls back to mock on error/rate-limit.</li>
-    <li><span class="font-mono">osrm-selfhost</span>: <span class="font-mono">OSRM_URL</span> (e.g. <span class="font-mono">http://osrm.internal:5000</span>), docs in <span class="font-mono">docs/ops/osrm-setup.md</span>.</li>
-    <li>Jobs are tenant-scoped and stored in <span class="font-mono">route_optimization_jobs</span> (migration 00066).</li>
+    <li><span class="font-data-mono">mock</span>: greedy nearest-neighbor, zero deps, deterministic.</li>
+    <li><span class="font-data-mono">osrm-public</span>: <span class="font-data-mono">http://router.project-osrm.org</span> table API + greedy assignment, falls back to mock on error/rate-limit.</li>
+    <li><span class="font-data-mono">osrm-selfhost</span>: <span class="font-data-mono">OSRM_URL</span> (e.g. <span class="font-data-mono">http://osrm.internal:5000</span>), docs in <span class="font-data-mono">docs/ops/osrm-setup.md</span>.</li>
+    <li>Jobs are tenant-scoped and stored in <span class="font-data-mono">route_optimization_jobs</span> (migration 00066).</li>
   </ul>
 </div>
 </div>

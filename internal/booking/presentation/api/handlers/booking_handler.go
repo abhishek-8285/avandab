@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -72,31 +73,36 @@ func writeJSONError(w http.ResponseWriter, status int, msg string) {
 
 func (h *APIBookingHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		CustomerID  string   `json:"customer_id"`
-		RouteID     string   `json:"route_id"`
-		PickupDate  string   `json:"pickup_date"`
-		VehicleType string   `json:"vehicle_type"`
-		Passengers  int64    `json:"passengers"`
-		CargoWeight *float64 `json:"cargo_weight"`
-		Price       float64  `json:"price"`
-		Notes       string   `json:"notes"`
+		CustomerID     string   `json:"customer_id"`
+		RouteID        string   `json:"route_id"`
+		PickupDate     string   `json:"pickup_date"`
+		VehicleType    string   `json:"vehicle_type"`
+		Passengers     int64    `json:"passengers"`
+		CargoWeight    *float64 `json:"cargo_weight"`
+		Price          float64  `json:"price"`
+		Notes          string   `json:"notes"`
+		IdempotencyKey string   `json:"idempotency_key"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	if req.IdempotencyKey == "" {
+		req.IdempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	}
 
 	cmd := application.CreateBookingCommand{
-		TenantID:    shared.TenantIDFromContext(r.Context()),
-		CustomerID:  req.CustomerID,
-		RouteID:     req.RouteID,
-		PickupDate:  req.PickupDate,
-		VehicleType: req.VehicleType,
-		Passengers:  req.Passengers,
-		CargoWeight: req.CargoWeight,
-		Price:       req.Price,
-		Notes:       req.Notes,
+		TenantID:       shared.TenantIDFromContext(r.Context()),
+		CustomerID:     req.CustomerID,
+		RouteID:        req.RouteID,
+		PickupDate:     req.PickupDate,
+		VehicleType:    req.VehicleType,
+		Passengers:     req.Passengers,
+		CargoWeight:    req.CargoWeight,
+		Price:          req.Price,
+		Notes:          req.Notes,
+		IdempotencyKey: req.IdempotencyKey,
 	}
 
 	id, err := h.createUC.Execute(r.Context(), cmd)

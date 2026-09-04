@@ -35,11 +35,45 @@ type DashboardData struct {
 	OverdueTrips []repository.TripWithJoins
 	IdleVehicles []domain.Vehicle
 
+	// Exception strip (variant B): actionable backlogs, all tenant-scoped.
+	Attention AttentionCounts
+
 	// Tables
-	UpcomingTrips  []repository.TripWithJoins
-	RecentBookings []repository.BookingWithJoins
-	RecentPayments []repository.PaymentWithInvoice
-	RecentActivity []repository.AuditLogWithUser
+	UpcomingTrips   []repository.TripWithJoins
+	RecentBookings  []repository.BookingWithJoins
+	RecentPayments  []repository.PaymentWithInvoice
+	PendingInvoices []repository.InvoiceWithJoins
+	RecentActivity  []repository.AuditLogWithUser
+}
+
+// FastagLowBalanceKey is the company_config key overriding the low-balance
+// attention threshold (INR) per tenant. Missing/invalid/non-positive values
+// fall back to DefaultLowFastagThreshold. Dotted-key convention follows the
+// Spec 24 overlay (cf. billing.gst_rate).
+const FastagLowBalanceKey = "fastag.low_balance_threshold"
+
+// DefaultLowFastagThreshold is the wallet balance (INR) below which a FASTag
+// tag needs attention when the tenant sets no override.
+const DefaultLowFastagThreshold = 500.0
+
+// AttentionCounts is one tenant's exception-strip snapshot.
+type AttentionCounts struct {
+	UnassignedBookings int64
+	MaintenanceDue     int64
+	OpenWorkOrders     int64
+	GarageVehicles     int64
+	OpenAlerts         int64
+	ActiveDTCs         int64
+	ExpiringEwaybills  int64
+	PendingKharcha     int64
+	LowFastag          int64
+}
+
+// Total sums every backlog item for the strip's show/hide gate.
+func (a AttentionCounts) Total() int64 {
+	return a.UnassignedBookings + a.MaintenanceDue + a.OpenWorkOrders +
+		a.GarageVehicles + a.OpenAlerts + a.ActiveDTCs + a.ExpiringEwaybills +
+		a.PendingKharcha + a.LowFastag
 }
 
 // dashboardCacheEntry is one tenant's snapshot of the aggregated dashboard.
@@ -82,6 +116,7 @@ func (s *DashboardService) GetDashboardData(ctx context.Context) (DashboardData,
 		upcomingTrips                                                                []repository.TripWithJoins
 		recentBookings                                                               []repository.BookingWithJoins
 		recentPayments                                                               []repository.PaymentWithInvoice
+		pendingInvoices                                                              []repository.InvoiceWithJoins
 		recentActivity                                                               []repository.AuditLogWithUser
 		statusCounts                                                                 map[domain.TripStatus]int64
 		revenueSeries                                                                []repository.MonthlyRevenue
@@ -90,9 +125,11 @@ func (s *DashboardService) GetDashboardData(ctx context.Context) (DashboardData,
 		overdueTrips                                                                 []repository.TripWithJoins
 		idleVehicles                                                                 []domain.Vehicle
 		yesterdayCount                                                               int64
+		attention                                                                    AttentionCounts
 	)
 
 	today := time.Now().Format("2006-01-02")
+	todayTime := time.Now()
 	yesterday := time.Now().AddDate(0, 0, -1).Format("2006-01-02")
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -101,12 +138,16 @@ func (s *DashboardService) GetDashboardData(ctx context.Context) (DashboardData,
 		counts, err := s.store.CountTripsByStatusForDate(ctx, today)
 		if err == nil {
 			statusCounts = counts
-			todaysTripsCount = counts[domain.TripScheduled] + counts[domain.TripAssigned] +
-				counts[domain.TripStarted] + counts[domain.TripCompleted] + counts[domain.TripCancelled] +
-				counts[domain.TripDraft]
-			activeTripsCount = counts[domain.TripScheduled] + counts[domain.TripAssigned] + counts[domain.TripStarted]
 			completedTripsCount = counts[domain.TripCompleted]
 			cancelledTripsCount = counts[domain.TripCancelled]
+			// Sum every status the DB returns: en-route states (in_transit,
+			// delivered, reached_pickup) must not vanish from the board.
+			// Active = anything neither terminal nor draft.
+			for _, n := range counts {
+				todaysTripsCount += n
+			}
+			activeTripsCount = todaysTripsCount - completedTripsCount -
+				cancelledTripsCount - counts[domain.TripDraft]
 		}
 		return nil
 	})
@@ -129,11 +170,15 @@ func (s *DashboardService) GetDashboardData(ctx context.Context) (DashboardData,
 		return nil
 	})
 
-	// 4. Pending invoices count
+	// 4. Pending invoices (count + oldest-first rows for the alert feed)
 	g.Go(func() error {
-		pendingInvoices, err := s.store.GetPendingInvoices(ctx)
+		pending, err := s.store.GetPendingInvoices(ctx)
 		if err == nil {
-			pendingPaymentsCount = len(pendingInvoices)
+			pendingPaymentsCount = len(pending)
+			if len(pending) > 10 {
+				pending = pending[:10]
+			}
+			pendingInvoices = pending
 		}
 		return nil
 	})
@@ -154,20 +199,24 @@ func (s *DashboardService) GetDashboardData(ctx context.Context) (DashboardData,
 		return nil
 	})
 
-	// 10. Revenue by day (last 30 days, for the area chart)
+	// 10. Revenue by day (last 30 days, for the area chart; zero-filled)
 	g.Go(func() error {
 		rows, err := s.store.GetRevenueByDay(ctx)
 		if err == nil {
-			revenueByDay = rows
+			revenueByDay = ZeroFillRevenueByDay(rows, todayTime)
+		} else {
+			revenueByDay = ZeroFillRevenueByDay(nil, todayTime)
 		}
 		return nil
 	})
 
-	// 11. Bookings by day (last 30 days, for the bar chart)
+	// 11. Bookings by day (last 30 days, for the bar chart; zero-filled)
 	g.Go(func() error {
 		rows, err := s.store.CountBookingsByDay(ctx)
 		if err == nil {
-			bookingsByDay = rows
+			bookingsByDay = ZeroFillBookingsByDay(rows, todayTime)
+		} else {
+			bookingsByDay = ZeroFillBookingsByDay(nil, todayTime)
 		}
 		return nil
 	})
@@ -194,13 +243,69 @@ func (s *DashboardService) GetDashboardData(ctx context.Context) (DashboardData,
 		return nil
 	})
 
-	// 14. Yesterday's trip count (for the delta chip)
+	// 14. Yesterday's trip count (for the delta chip; sum-all, same as today)
 	g.Go(func() error {
 		counts, err := s.store.CountTripsByStatusForDate(ctx, yesterday)
 		if err == nil {
-			yesterdayCount = counts[domain.TripScheduled] + counts[domain.TripAssigned] +
-				counts[domain.TripStarted] + counts[domain.TripCompleted] + counts[domain.TripCancelled] +
-				counts[domain.TripDraft]
+			for _, n := range counts {
+				yesterdayCount += n
+			}
+		}
+		return nil
+	})
+
+	// 15. Exception strip (each failure degrades to 0, like the rest)
+	g.Go(func() error {
+		if n, err := s.store.CountUnassignedBookings(ctx); err == nil {
+			attention.UnassignedBookings = n
+		}
+		return nil
+	})
+	g.Go(func() error {
+		if n, err := s.store.CountMaintenanceDue(ctx); err == nil {
+			attention.MaintenanceDue = n
+		}
+		if n, err := s.store.CountOpenWorkOrders(ctx); err == nil {
+			attention.OpenWorkOrders = n
+		}
+		if n, err := s.store.CountGarageVehicles(ctx); err == nil {
+			attention.GarageVehicles = n
+		}
+		return nil
+	})
+	g.Go(func() error {
+		if n, err := s.store.CountOpenAlerts(ctx); err == nil {
+			attention.OpenAlerts = n
+		}
+		if n, err := s.store.CountActiveDTCs(ctx); err == nil {
+			attention.ActiveDTCs = n
+		}
+		return nil
+	})
+	g.Go(func() error {
+		if n, err := s.store.CountExpiringEwaybills(ctx); err == nil {
+			attention.ExpiringEwaybills = n
+		}
+		if n, err := s.store.CountPendingKharcha(ctx); err == nil {
+			attention.PendingKharcha = n
+		}
+		// Per-tenant low-balance threshold with safe default. tenantCfg is
+		// nil-safe (tests/fakes without a raw DB fall through to default).
+		threshold := DefaultLowFastagThreshold
+		if v := s.tenantCfg.GetFloat(ctx, tenantIDFor(ctx), FastagLowBalanceKey, DefaultLowFastagThreshold); v > 0 {
+			threshold = v
+		}
+		if n, err := s.store.CountLowFastag(ctx, threshold); err == nil {
+			attention.LowFastag = n
+		}
+		return nil
+	})
+	g.Go(func() error {
+		counts, err := s.store.CountTripsByStatusForDate(ctx, yesterday)
+		if err == nil {
+			for _, n := range counts {
+				yesterdayCount += n
+			}
 		}
 		return nil
 	})
@@ -267,9 +372,11 @@ func (s *DashboardService) GetDashboardData(ctx context.Context) (DashboardData,
 		DeltaYesterday:         todaysTripsCount - yesterdayCount,
 		OverdueTrips:           overdueTrips,
 		IdleVehicles:           idleVehicles,
+		Attention:              attention,
 		UpcomingTrips:          upcomingTrips,
 		RecentBookings:         recentBookings,
 		RecentPayments:         recentPayments,
+		PendingInvoices:        pendingInvoices,
 		RecentActivity:         recentActivity,
 	}
 

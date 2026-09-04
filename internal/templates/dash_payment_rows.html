@@ -1,0 +1,9 @@
+{{range .Stats.RecentPayments}}
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+    <td class="px-4 py-2.5 text-sm font-bold text-primary tabular-nums">{{.InvoiceNumber}}</td>
+    <td class="px-4 py-2.5 text-sm font-bold tabular-nums text-right">{{printf "₹%.2f" .Amount}}</td>
+    <td class="px-4 py-2.5 text-sm"><span class="inline-flex px-2 py-1 rounded-full bg-surface-container border border-border-subtle text-xs font-medium">{{.Method}}</span></td>
+    <td class="px-4 py-2.5 text-sm tabular-nums"><span class="time-display" data-utc-time="{{.PaymentDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PaymentDate}}</span></td>
+</tr>
+{{end}}
+{{if not .Stats.RecentPayments}}<tr><td colspan="4" class="px-4 py-8 text-center text-sm text-text-muted">No payments yet</td></tr>{{end}}

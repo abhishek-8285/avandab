@@ -20,9 +20,9 @@
                     <p class="text-sm text-text-muted mt-1.5 flex flex-wrap items-center gap-2">
                         {{if .Customer.Company}}<span class="font-medium text-secondary">{{nullString .Customer.Company}}</span><span>·</span>{{end}}
                         <span class="tabular-nums">Since {{datetime .Customer.CreatedAt}}</span>
-                        {{if .Customer.CustomerCode}}<span>·</span><span class="font-mono tabular-nums text-primary font-semibold">{{.Customer.CustomerCode}}</span>{{end}}
+                        {{if .Customer.CustomerCode}}<span>·</span><span class="font-data-mono tabular-nums text-primary font-semibold">{{.Customer.CustomerCode}}</span>{{end}}
                     </p>
-                    {{if and .Customer.InternalID (ne (nullString .Customer.InternalID) .Customer.CustomerCode)}}<p class="text-xs font-mono tabular-nums text-text-muted mt-1">Ref: {{nullString .Customer.InternalID}}</p>{{end}}
+                    {{if and .Customer.InternalID (ne (nullString .Customer.InternalID) .Customer.CustomerCode)}}<p class="text-xs font-data-mono tabular-nums text-text-muted mt-1">Ref: {{nullString .Customer.InternalID}}</p>{{end}}
                 </div>
                 <div class="hidden sm:flex items-center gap-2 shrink-0 self-start">
                     {{template "btn.html" (dict "Label" "Statement (Khata)" "Href" (printf "/customers/%s/statement" .Customer.ID) "Variant" "secondary" "Size" "sm" "Icon" "receipt")}}
@@ -33,19 +33,19 @@
 
             <dl class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5 pt-5 border-t border-border-subtle">
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Phone</dt>
-                    <dd class="text-sm font-bold text-primary font-mono tabular-nums mt-1" data-numeric>{{.Customer.Phone}}</dd>
+                    <dt class="text-eyebrow text-text-muted">Phone</dt>
+                    <dd class="text-sm font-bold text-primary font-data-mono tabular-nums mt-1" data-numeric>{{.Customer.Phone}}</dd>
                 </div>
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Email</dt>
+                    <dt class="text-eyebrow text-text-muted">Email</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1 break-all">{{nullString .Customer.Email}}</dd>
                 </div>
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">GST</dt>
-                    <dd class="text-sm font-semibold text-on-surface font-mono uppercase tabular-nums mt-1 break-all" data-numeric>{{nullString .Customer.GST}}</dd>
+                    <dt class="text-eyebrow text-text-muted">GST</dt>
+                    <dd class="text-sm font-semibold text-on-surface font-data-mono uppercase tabular-nums mt-1 break-all" data-numeric>{{nullString .Customer.GST}}</dd>
                 </div>
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Terms</dt>
+                    <dt class="text-eyebrow text-text-muted">Terms</dt>
                     <dd class="text-sm font-bold text-on-surface tabular-nums mt-1">{{if .Customer.PaymentTermsDays}}Net {{.Customer.PaymentTermsDays}}{{else}}Due now{{end}}</dd>
                 </div>
             </dl>
@@ -55,43 +55,43 @@
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between">
                 <h3 class="text-sm font-bold text-on-surface">Account Details</h3>
-                <span class="text-xs font-mono tabular-nums text-text-muted">{{.Customer.CustomerCode}}</span>
+                <span class="text-xs font-data-mono tabular-nums text-text-muted">{{.Customer.CustomerCode}}</span>
             </div>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 p-5">
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Contact Person</dt>
+                    <dt class="text-eyebrow text-text-muted">Contact Person</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">{{if .Customer.ContactPerson}}{{nullString .Customer.ContactPerson}}{{else}}—{{end}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Company</dt>
+                    <dt class="text-eyebrow text-text-muted">Company</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">{{if .Customer.Company}}{{nullString .Customer.Company}}{{else}}—{{end}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Internal ID (ERP)</dt>
-                    <dd class="text-sm font-mono tabular-nums text-on-surface mt-1">{{if .Customer.InternalID}}{{nullString .Customer.InternalID}}{{else}}—{{end}}</dd>
+                    <dt class="text-eyebrow text-text-muted">Internal ID (ERP)</dt>
+                    <dd class="text-sm font-data-mono tabular-nums text-on-surface mt-1">{{if .Customer.InternalID}}{{nullString .Customer.InternalID}}{{else}}—{{end}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Title</dt>
+                    <dt class="text-eyebrow text-text-muted">Title</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">{{if .Customer.Title}}{{nullString .Customer.Title}}{{else}}—{{end}}</dd>
                 </div>
                 <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Delivery / Primary Address</dt>
+                        <dt class="text-eyebrow text-text-muted">Delivery / Primary Address</dt>
                         <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed whitespace-pre-wrap">{{if .Customer.Address}}{{nullString .Customer.Address}}{{else}}—{{end}}</dd>
                     </div>
                     <div>
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Billing Address</dt>
+                        <dt class="text-eyebrow text-text-muted">Billing Address</dt>
                         <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed whitespace-pre-wrap">{{if .Customer.BillingAddress}}{{nullString .Customer.BillingAddress}}{{else}}<span class="text-text-muted">Same as delivery</span>{{end}}</dd>
                     </div>
                 </div>
                 {{if .Customer.Notes}}<div class="sm:col-span-2 pt-2 border-t border-border-subtle">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Notes</dt>
+                    <dt class="text-eyebrow text-text-muted">Notes</dt>
                     <dd class="text-sm text-secondary mt-1 leading-relaxed whitespace-pre-wrap">{{nullString .Customer.Notes}}</dd>
                 </div>{{end}}
                 {{if and .Customer.Meta (ne .Customer.Meta "{}")}}<div class="sm:col-span-2">
                     <details class="rounded-lg border border-border-subtle bg-surface-container-low/50 px-3 py-2">
                         <summary class="text-xs font-bold text-secondary cursor-pointer">Additional data</summary>
-                        <pre class="text-xs font-mono text-on-surface mt-2 whitespace-pre-wrap break-all">{{.Customer.Meta}}</pre>
+                        <pre class="text-xs font-data-mono text-on-surface mt-2 whitespace-pre-wrap break-all">{{.Customer.Meta}}</pre>
                     </details>
                 </div>{{end}}
             </dl>
@@ -111,7 +111,7 @@
                 {{range .RecentBookings}}
                 <a href="/bookings/{{.ID}}" class="flex items-center justify-between gap-3 py-2.5 hover:bg-surface-container-low/60 transition-colors text-decoration-none rounded px-2 -mx-2 group">
                     <span class="min-w-0 flex items-center gap-2.5">
-                        <span class="text-sm font-bold text-primary font-mono tabular-nums shrink-0" data-numeric>{{.BookingNumber}}</span>
+                        <span class="text-sm font-bold text-primary font-data-mono tabular-nums shrink-0" data-numeric>{{.BookingNumber}}</span>
                         <span class="text-sm text-text-muted truncate hidden sm:inline"><span class="font-medium text-on-surface">{{.RouteSource}}</span> → <span class="font-medium text-on-surface">{{.RouteDestination}}</span></span>
                     </span>
                     <span class="flex items-center gap-3 shrink-0">
@@ -159,7 +159,7 @@
                 {{range .RecentInvoices}}
                 <a href="/invoices/{{.ID}}" class="flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface-container-low p-3 hover:bg-surface-container hover:border-primary/20 transition-all text-decoration-none group">
                     <span class="min-w-0">
-                        <span class="block text-xs font-bold text-on-surface font-mono truncate" data-numeric>{{.InvoiceNumber}}</span>
+                        <span class="block text-xs font-bold text-on-surface font-data-mono truncate" data-numeric>{{.InvoiceNumber}}</span>
                         <span class="block text-xs text-secondary font-semibold tabular-nums mt-0.5" data-numeric>₹{{printf "%.2f" .Total}}</span>
                     </span>
                     <span class="status-badge {{statusBadge .PaymentStatus}} shrink-0">{{.PaymentStatus}}</span>
@@ -185,9 +185,9 @@
                 </h2>
             </div>
             <dl class="p-4 space-y-3">
-                <div class="flex justify-between gap-3"><dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Code</dt><dd class="text-xs font-mono font-semibold tabular-nums">{{.Customer.CustomerCode}}</dd></div>
-                {{if and .Customer.InternalID (ne (nullString .Customer.InternalID) .Customer.CustomerCode)}}<div class="flex justify-between gap-3"><dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Reference</dt><dd class="text-xs font-mono tabular-nums">{{nullString .Customer.InternalID}}</dd></div>{{end}}
-                <div class="flex justify-between gap-3"><dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Since</dt><dd class="text-xs tabular-nums">{{datetime .Customer.CreatedAt}}</dd></div>
+                <div class="flex justify-between gap-3"><dt class="text-eyebrow text-text-muted">Code</dt><dd class="text-xs font-data-mono font-semibold tabular-nums">{{.Customer.CustomerCode}}</dd></div>
+                {{if and .Customer.InternalID (ne (nullString .Customer.InternalID) .Customer.CustomerCode)}}<div class="flex justify-between gap-3"><dt class="text-eyebrow text-text-muted">Reference</dt><dd class="text-xs font-data-mono tabular-nums">{{nullString .Customer.InternalID}}</dd></div>{{end}}
+                <div class="flex justify-between gap-3"><dt class="text-eyebrow text-text-muted">Since</dt><dd class="text-xs tabular-nums">{{datetime .Customer.CreatedAt}}</dd></div>
                 {{if .Customer.PhotoURL}}<div class="pt-2 border-t border-border-subtle"><img src="{{nullString .Customer.PhotoURL}}" alt="customer logo" class="w-full rounded-xl object-cover border border-border-subtle max-h-32"></div>{{end}}
             </dl>
         </div>
@@ -202,15 +202,15 @@
             <form method="post" action="{{printf "/customers/%s/portal-users" .Customer.ID}}" class="p-4 space-y-3">
                 <p class="text-xs text-secondary">Creates a shipper login (customer role) linked to this customer. Existing users are linked as-is.</p>
                 <div>
-                    <label for="portal-email" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted">Email</label>
+                    <label for="portal-email" class="block text-eyebrow text-text-muted">Email</label>
                     <input id="portal-email" name="email" type="email" required class="mt-1 w-full rounded-lg border border-border-subtle bg-surface-container-low px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                 </div>
                 <div>
-                    <label for="portal-phone" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted">Phone</label>
+                    <label for="portal-phone" class="block text-eyebrow text-text-muted">Phone</label>
                     <input id="portal-phone" name="phone" type="tel" required class="mt-1 w-full rounded-lg border border-border-subtle bg-surface-container-low px-3 py-2 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                 </div>
                 <div>
-                    <label for="portal-password" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted">Initial Password</label>
+                    <label for="portal-password" class="block text-eyebrow text-text-muted">Initial Password</label>
                     <input id="portal-password" name="password" type="password" minlength="8" required class="mt-1 w-full rounded-lg border border-border-subtle bg-surface-container-low px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     <span class="text-[11px] text-secondary mt-1 block">Ignored when linking an existing user.</span>
                 </div>

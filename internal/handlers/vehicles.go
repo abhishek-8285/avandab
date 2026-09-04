@@ -237,6 +237,25 @@ func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Open job cards for this vehicle (own org only; empty tenant matches nothing).
+	type openWorkOrder struct {
+		ID, Title, Status, Assignee string
+		CreatedAt                   sql.NullTime
+	}
+	workOrders := []openWorkOrder{}
+	if rows, err := h.DB.QueryContext(r.Context(), `
+		SELECT id, title, status, assignee, created_at FROM work_orders
+		WHERE vehicle_id = ? AND tenant_id = ? AND status NOT IN ('done','cancelled')
+		ORDER BY created_at DESC LIMIT 10`, id, string(shared.TenantIDFromContext(r.Context()))); err == nil {
+		defer func() { _ = rows.Close() }()
+		for rows.Next() {
+			var wo openWorkOrder
+			if rows.Scan(&wo.ID, &wo.Title, &wo.Status, &wo.Assignee, &wo.CreatedAt) == nil {
+				workOrders = append(workOrders, wo)
+			}
+		}
+	}
+
 	extra := map[string]interface{}{
 		"Vehicle":                   vehicle,
 		"Files":                     files,
@@ -248,6 +267,7 @@ func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 		"DocCards":                  docCards,
 		"LastPosition":              lastPos,
 		"RecentTrips":               trips,
+		"OpenWorkOrders":            workOrders,
 	}
 
 	session, _ := h.getUserFromContext(r)

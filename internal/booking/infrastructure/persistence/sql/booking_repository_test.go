@@ -58,6 +58,7 @@ func TestBookingRepository_SaveAndFind(t *testing.T) {
 			version INTEGER NOT NULL DEFAULT 1,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			idempotency_key TEXT,
 			FOREIGN KEY (customer_id) REFERENCES customers(id),
 			FOREIGN KEY (route_id) REFERENCES routes(id)
 		);
@@ -158,6 +159,7 @@ const bookingTestSchema = `
 			version INTEGER NOT NULL DEFAULT 1,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			idempotency_key TEXT,
 			FOREIGN KEY (customer_id) REFERENCES customers(id),
 			FOREIGN KEY (route_id) REFERENCES routes(id)
 		);

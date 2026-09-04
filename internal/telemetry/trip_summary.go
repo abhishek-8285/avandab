@@ -50,7 +50,8 @@ func TripSummaryHandler(db *sql.DB) http.HandlerFunc {
 		}
 		tenantID := string(shared.TenantIDFromContext(r.Context()))
 		if tenantID == "" {
-			tenantID = string(shared.DefaultTenant)
+			http.Error(w, `{"error":"authentication required"}`, http.StatusUnauthorized)
+			return
 		}
 
 		const q = `

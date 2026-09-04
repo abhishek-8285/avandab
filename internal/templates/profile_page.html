@@ -26,14 +26,14 @@
                             <span class="font-black text-xl text-primary tabular-nums profile-initial">{{if $u}}{{slice $u.Name 0 1}}{{else}}U{{end}}</span>
                         </div>
                         <div class="min-w-0">
-                            <div class="font-display text-base font-bold text-on-surface truncate">{{if $u}}{{$u.Name}}{{else}}—{{end}}</div>
+                            <div class="font-display text-title-md font-bold text-on-surface truncate">{{if $u}}{{$u.Name}}{{else}}—{{end}}</div>
                             <div class="text-xs text-secondary capitalize mt-0.5">{{if and $u $u.Role}}{{$u.Role.Name}}{{else}}Member{{end}}</div>
                             <div class="text-xs text-text-muted mt-0.5 truncate">{{if $u}}{{$u.Email}}{{end}}</div>
                         </div>
                     </div>
 
                     <div>
-                        <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Editable Details</h3>
+                        <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Editable Details</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
                             <div class="flex flex-col gap-1">
                                 <label class="block text-xs font-bold text-secondary mb-1">Full Name <span class="text-status-alert">*</span></label>
@@ -56,7 +56,7 @@
                     </div>
 
                     <div>
-                        <h3 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Managed by Admin</h3>
+                        <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Managed by Admin</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
                             <div class="flex flex-col gap-1">
                                 <label class="block text-xs font-bold text-secondary mb-1">Role</label>
@@ -117,7 +117,7 @@
                     <h2 class="text-sm font-bold text-on-surface">Local Time Alignment</h2>
                 </div>
                 <div class="p-5 text-center">
-                    <div class="text-2xl font-black font-mono text-primary tracking-wider tabular-nums" id="tz-clock">--:--:--</div>
+                    <div class="text-2xl font-black font-data-mono text-primary tracking-wider tabular-nums" id="tz-clock">--:--:--</div>
                     <div class="text-xs text-text-muted font-medium mt-1" id="tz-date">--</div>
                     <div class="inline-block mt-3 px-2.5 py-1 bg-primary/10 text-primary text-[11px] font-bold rounded-full border border-primary/15" id="tz-badge">UTC</div>
                 </div>
@@ -129,11 +129,11 @@
                 </div>
                 <dl class="p-5 space-y-3">
                     <div>
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Account ID</dt>
-                        <dd class="mt-1"><p class="font-mono text-xs text-text-muted bg-surface-container-low px-2 py-1.5 rounded break-all select-all">{{if $u}}{{$u.ID}}{{else}}—{{end}}</p></dd>
+                        <dt class="text-eyebrow text-text-muted">Account ID</dt>
+                        <dd class="mt-1"><p class="font-data-mono text-xs text-text-muted bg-surface-container-low px-2 py-1.5 rounded break-all select-all">{{if $u}}{{$u.ID}}{{else}}—{{end}}</p></dd>
                     </div>
                     <div class="border-t border-border-subtle pt-3">
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Account Status</dt>
+                        <dt class="text-eyebrow text-text-muted">Account Status</dt>
                         <dd class="mt-1">
                             {{if $u}}
                                 {{if eq (printf "%s" $u.Status) "active"}}
@@ -149,11 +149,11 @@
                         </dd>
                     </div>
                     <div class="border-t border-border-subtle pt-3">
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Member Since</dt>
+                        <dt class="text-eyebrow text-text-muted">Member Since</dt>
                         <dd class="mt-1 text-sm font-semibold text-on-surface tabular-nums">{{if $u}}{{datetime $u.CreatedAt}}{{else}}—{{end}}</dd>
                     </div>
                     <div class="border-t border-border-subtle pt-3">
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Last Login</dt>
+                        <dt class="text-eyebrow text-text-muted">Last Login</dt>
                         <dd class="mt-1 text-sm font-semibold text-on-surface tabular-nums">
                             {{if and $u $u.LastLoginAt}}{{datetime $u.LastLoginAt}}{{else}}<span class="text-text-muted font-medium">Not recorded</span>{{end}}
                         </dd>

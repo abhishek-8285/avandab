@@ -38,6 +38,12 @@ type DwellWorker struct {
 	tenantID string
 	db       *sql.DB
 
+	// featureGate reports whether the dwell/geofences feature is on for an
+	// org. Nil means ungated (tests, tooling). Production wires the
+	// features registry so one org disabling geofences stops only its own
+	// sweep instead of the global tick.
+	featureGate func(tenantID string) bool
+
 	fixes     domain.FixRepository
 	geofences domain.GeofenceRepository
 	states    domain.EngineStateRepository
@@ -75,6 +81,52 @@ func (w *DwellWorker) WithTripTransitions(reachPickup *tripapp.ReachPickupUseCas
 	return w
 }
 
+// WithFeatureGate scopes each sweep to orgs with the feature on.
+// Chain after construction; safe to omit (ungated).
+func (w *DwellWorker) WithFeatureGate(gate func(tenantID string) bool) *DwellWorker {
+	w.featureGate = gate
+	return w
+}
+
+// resolveFixTenants attributes each fix to its vehicle's org. Fixes for
+// unknown vehicles are returned under "" and skipped by Tick with a warning
+// (never processed as another org).
+func (w *DwellWorker) resolveFixTenants(ctx context.Context, fixes []domain.Fix) map[string]string {
+	out := make(map[string]string, len(fixes))
+	ids := make([]string, 0, len(fixes))
+	seen := map[string]bool{}
+	for _, f := range fixes {
+		if !seen[f.VehicleID] {
+			seen[f.VehicleID] = true
+			ids = append(ids, f.VehicleID)
+		}
+	}
+	byVehicle := map[string]string{}
+	if len(ids) > 0 {
+		placeholders := strings.Repeat("?,", len(ids))
+		placeholders = strings.TrimSuffix(placeholders, ",")
+		args := make([]any, len(ids))
+		for i, id := range ids {
+			args[i] = id
+		}
+		rows, err := w.db.QueryContext(ctx,
+			`SELECT id, tenant_id FROM vehicles WHERE id IN (`+placeholders+`)`, args...)
+		if err == nil {
+			defer func() { _ = rows.Close() }()
+			for rows.Next() {
+				var vehID, tenant string
+				if err := rows.Scan(&vehID, &tenant); err == nil {
+					byVehicle[vehID] = tenant
+				}
+			}
+		}
+	}
+	for _, f := range fixes {
+		out[f.VehicleID] = byVehicle[f.VehicleID]
+	}
+	return out
+}
+
 // Run blocks until ctx is cancelled, sweeping on poll_interval_seconds.
 func (w *DwellWorker) Run(ctx context.Context) {
 	interval, err := w.config.GetDurationSeconds(ctx, w.tenantID,
@@ -106,17 +158,21 @@ func (w *DwellWorker) Run(ctx context.Context) {
 	}
 }
 
-// Tick processes one sweep of new fixes. Returns the number of fixes handled.
+// Tick processes one sweep of new fixes, attributing each fix to its
+// vehicle's org. Fixes for unknown vehicles are skipped (never processed as
+// another org); orgs with the feature off are skipped per tenant.
+// Returns the number of fixes handled.
 func (w *DwellWorker) Tick(ctx context.Context) (int, error) {
 	fixes, err := w.fixes.LoadNewFixes(ctx, maxFixesPerSweep)
 	if err != nil {
 		return 0, err
 	}
+	tenantByVehicle := w.resolveFixTenants(ctx, fixes)
 
 	engine := application.NewDwellEngine(application.EngineConfig{
-		Debounce:         mustDuration(ctx, w, application.ConfigDwellDebounceSeconds, application.DefaultDwellDebounce),
-		BufferMetres:     mustFloat(ctx, w, application.ConfigBufferMetres, application.DefaultBufferMetres),
-		HysteresisMetres: mustFloat(ctx, w, application.ConfigHysteresisMetres, application.DefaultHysteresisMetres),
+		Debounce:         mustDuration(ctx, w, w.tenantID, application.ConfigDwellDebounceSeconds, application.DefaultDwellDebounce),
+		BufferMetres:     mustFloat(ctx, w, w.tenantID, application.ConfigBufferMetres, application.DefaultBufferMetres),
+		HysteresisMetres: mustFloat(ctx, w, w.tenantID, application.ConfigHysteresisMetres, application.DefaultHysteresisMetres),
 	})
 
 	handled := 0
@@ -127,20 +183,29 @@ func (w *DwellWorker) Tick(ctx context.Context) (int, error) {
 		default:
 		}
 
+		tenant := tenantByVehicle[fix.VehicleID]
+		if tenant == "" {
+			w.log.Warn("dwell worker: fix skipped (unknown vehicle org)", "vehicle", fix.VehicleID)
+			continue
+		}
+		if w.featureGate != nil && !w.featureGate(tenant) {
+			continue
+		}
+
 		// Trip context gates zone evaluation for pickup/drop zones and
 		// enables auto-transitions (Spec 02 §5).
 		tripStatus, routeSource, routeDest := "", "", ""
 		if fix.TripID != nil {
-			tripStatus, routeSource, routeDest = w.tripContext(ctx, *fix.TripID)
+			tripStatus, routeSource, routeDest = w.tripContext(ctx, *fix.TripID, tenant)
 		}
 
-		zones, err := w.zonesFor(ctx, fix.VehicleID, fix.TripID, tripStatus, routeSource, routeDest)
+		zones, err := w.zonesFor(ctx, fix.VehicleID, fix.TripID, tripStatus, routeSource, routeDest, tenant)
 		if err != nil {
 			w.log.Error("dwell worker: zones load failed", "vehicle", fix.VehicleID, "error", err)
 			continue
 		}
 
-		current, err := w.states.GetByVehicle(ctx, w.tenantID, fix.VehicleID)
+		current, err := w.states.GetByVehicle(ctx, tenant, fix.VehicleID)
 		if err != nil {
 			if !errors.Is(err, sqlrepo.ErrNoEngineState) {
 				w.log.Error("dwell worker: state load failed", "vehicle", fix.VehicleID, "error", err)
@@ -148,17 +213,17 @@ func (w *DwellWorker) Tick(ctx context.Context) (int, error) {
 			}
 			current = &domain.EngineState{
 				VehicleID: fix.VehicleID,
-				TenantID:  w.tenantID,
+				TenantID:  tenant,
 				State:     domain.StateOutside,
 			}
 		}
 
 		next, zoneEvents := engine.Evaluate(*current, fix, zones)
-		if err := w.persist(ctx, *current, next, fix, zoneEvents); err != nil {
+		if err := w.persist(ctx, *current, next, fix, zoneEvents, tenant); err != nil {
 			w.log.Error("dwell worker: persist failed", "vehicle", fix.VehicleID, "error", err)
 			continue
 		}
-		w.applyTransitions(ctx, fix, zoneEvents, tripStatus)
+		w.applyTransitions(ctx, fix, zoneEvents, tripStatus, tenant)
 		handled++
 	}
 	return handled, nil
@@ -167,12 +232,12 @@ func (w *DwellWorker) Tick(ctx context.Context) (int, error) {
 // tripContext reads the trip status and route endpoints via plain SQL so the
 // aggregate guard prerequisites are checked before invoking use cases
 // (Spec 02 §5 note). Returns empty strings when the trip is missing.
-func (w *DwellWorker) tripContext(ctx context.Context, tripID string) (status, routeSource, routeDest string) {
+func (w *DwellWorker) tripContext(ctx context.Context, tripID, tenant string) (status, routeSource, routeDest string) {
 	row := w.db.QueryRowContext(ctx,
 		`SELECT t.status, COALESCE(r.source, ''), COALESCE(r.destination, '')
 		 FROM trips t
 		 LEFT JOIN routes r ON r.id = t.route_id
-		 WHERE t.id = ? AND t.tenant_id = ?`, tripID, w.tenantID)
+		 WHERE t.id = ? AND t.tenant_id = ?`, tripID, tenant)
 	if err := row.Scan(&status, &routeSource, &routeDest); err != nil {
 		return "", "", ""
 	}
@@ -184,12 +249,12 @@ func (w *DwellWorker) tripContext(ctx context.Context, tripID string) (status, r
 // in an eligible status and (if route_name is set) the trip's route endpoint
 // matches — LOWER(TRIM()) comparison (Spec 02 §5 route fallback).
 func (w *DwellWorker) zonesFor(ctx context.Context, vehicleID string, tripID *string,
-	tripStatus, routeSource, routeDest string) ([]domain.Geofence, error) {
-	bound, err := w.geofences.ListBoundForVehicle(ctx, w.tenantID, vehicleID)
+	tripStatus, routeSource, routeDest, tenant string) ([]domain.Geofence, error) {
+	bound, err := w.geofences.ListBoundForVehicle(ctx, tenant, vehicleID)
 	if err != nil {
 		return nil, err
 	}
-	active, err := w.geofences.ListActiveByTenant(ctx, w.tenantID)
+	active, err := w.geofences.ListActiveByTenant(ctx, tenant)
 	if err != nil {
 		return nil, err
 	}
@@ -241,15 +306,15 @@ func (w *DwellWorker) zoneApplies(z domain.Geofence, tripID *string, tripStatus,
 // the persist transaction commits. Each use case opens its own UnitOfWork,
 // so it must never be invoked inside persist (nested transactions would
 // deadlock — 1E lesson). Errors are logged, never fatal to the sweep.
-func (w *DwellWorker) applyTransitions(ctx context.Context, fix domain.Fix, zoneEvents []application.ZoneEvent, tripStatus string) {
+func (w *DwellWorker) applyTransitions(ctx context.Context, fix domain.Fix, zoneEvents []application.ZoneEvent, tripStatus, tenant string) {
 	if fix.TripID == nil {
 		return
 	}
-	autoReach, err := w.config.GetBool(ctx, w.tenantID, application.ConfigAutoReachPickup, false)
+	autoReach, err := w.config.GetBool(ctx, tenant, application.ConfigAutoReachPickup, false)
 	if err != nil {
 		autoReach = false
 	}
-	autoTransit, err := w.config.GetBool(ctx, w.tenantID, application.ConfigAutoStartTransit, false)
+	autoTransit, err := w.config.GetBool(ctx, tenant, application.ConfigAutoStartTransit, false)
 	if err != nil {
 		autoTransit = false
 	}
@@ -260,7 +325,7 @@ func (w *DwellWorker) applyTransitions(ctx context.Context, fix domain.Fix, zone
 			tripStatus == string(tripaggregate.TripStarted) && autoReach && w.reachPickupUC != nil:
 			if err := w.reachPickupUC.Execute(ctx, tripapp.ReachPickupCommand{
 				TripID:   tripaggregate.TripID(*fix.TripID),
-				TenantID: shared.TenantID(w.tenantID),
+				TenantID: shared.TenantID(tenant),
 			}); err != nil {
 				w.log.Warn("dwell worker: ReachPickup rejected by aggregate", "trip", *fix.TripID, "error", err)
 			}
@@ -269,7 +334,7 @@ func (w *DwellWorker) applyTransitions(ctx context.Context, fix domain.Fix, zone
 			tripStatus == string(tripaggregate.TripReachedPickup) && autoTransit && w.startTransitUC != nil:
 			if err := w.startTransitUC.Execute(ctx, tripapp.StartTransitCommand{
 				TripID:   tripaggregate.TripID(*fix.TripID),
-				TenantID: shared.TenantID(w.tenantID),
+				TenantID: shared.TenantID(tenant),
 			}); err != nil {
 				w.log.Warn("dwell worker: StartTransit rejected by aggregate", "trip", *fix.TripID, "error", err)
 			}
@@ -278,7 +343,7 @@ func (w *DwellWorker) applyTransitions(ctx context.Context, fix domain.Fix, zone
 			tripStatus == string(tripaggregate.TripReachedPickup) && autoTransit && w.startTransitUC != nil:
 			if err := w.startTransitUC.Execute(ctx, tripapp.StartTransitCommand{
 				TripID:   tripaggregate.TripID(*fix.TripID),
-				TenantID: shared.TenantID(w.tenantID),
+				TenantID: shared.TenantID(tenant),
 			}); err != nil {
 				w.log.Warn("dwell worker: StartTransit rejected by aggregate", "trip", *fix.TripID, "error", err)
 			}
@@ -289,7 +354,7 @@ func (w *DwellWorker) applyTransitions(ctx context.Context, fix domain.Fix, zone
 // persist writes the state transition, zone events, detentions and outbox
 // alerts atomically via the UnitOfWork (Spec 02 §4 — outbox in same tx).
 func (w *DwellWorker) persist(ctx context.Context, current, next domain.EngineState,
-	fix domain.Fix, zoneEvents []application.ZoneEvent) error {
+	fix domain.Fix, zoneEvents []application.ZoneEvent, tenant string) error {
 
 	return w.uow.Execute(ctx, func(txCtx ports.TxContext) error {
 		if err := w.states.Upsert(txCtx, next); err != nil {
@@ -302,7 +367,7 @@ func (w *DwellWorker) persist(ctx context.Context, current, next domain.EngineSt
 			lng := fix.Longitude
 			if err := w.logs.InsertEvent(txCtx, domain.GeofenceEvent{
 				ID:         eventID,
-				TenantID:   w.tenantID,
+				TenantID:   tenant,
 				VehicleID:  &fix.VehicleID,
 				TripID:     fix.TripID,
 				GeofenceID: &ev.Zone.ID,
@@ -318,17 +383,17 @@ func (w *DwellWorker) persist(ctx context.Context, current, next domain.EngineSt
 
 			switch ev.EventType {
 			case domain.EventEntering:
-				if err := w.openDetention(txCtx, fix, ev); err != nil {
+				if err := w.openDetention(txCtx, fix, ev, tenant); err != nil {
 					return err
 				}
 			case domain.EventLeaving:
-				if err := w.closeDetention(txCtx, fix, ev); err != nil {
+				if err := w.closeDetention(txCtx, fix, ev, tenant); err != nil {
 					return err
 				}
 			case domain.EventBreach:
 				sev := application.SeverityFor(ev.Zone.Kind)
 				alert := application.GeofenceAlertEvent{
-					TenantID:   w.tenantID,
+					TenantID:   tenant,
 					VehicleID:  fix.VehicleID,
 					TripID:     strOrEmpty(fix.TripID),
 					GeofenceID: ev.Zone.ID,
@@ -356,7 +421,7 @@ func (w *DwellWorker) persist(ctx context.Context, current, next domain.EngineSt
 }
 
 // openDetention starts a pickup/drop dwell window on confirmed entry.
-func (w *DwellWorker) openDetention(txCtx context.Context, fix domain.Fix, ev application.ZoneEvent) error {
+func (w *DwellWorker) openDetention(txCtx context.Context, fix domain.Fix, ev application.ZoneEvent, tenant string) error {
 	if ev.Zone.Kind != domain.KindPickup && ev.Zone.Kind != domain.KindDrop {
 		return nil
 	}
@@ -365,7 +430,7 @@ func (w *DwellWorker) openDetention(txCtx context.Context, fix domain.Fix, ev ap
 	}
 	return w.logs.OpenDetention(txCtx, domain.Detention{
 		ID:         w.idGen.GenerateUUID(),
-		TenantID:   w.tenantID,
+		TenantID:   tenant,
 		TripID:     *fix.TripID,
 		VehicleID:  &fix.VehicleID,
 		GeofenceID: &ev.Zone.ID,
@@ -378,14 +443,14 @@ func (w *DwellWorker) openDetention(txCtx context.Context, fix domain.Fix, ev ap
 // closeDetention closes the matching open window with its dwell duration and
 // computes the billable seconds + amount (Spec 02 §5/§6: amount is rounded to
 // 2 decimals = billable_hours × rate_per_hour).
-func (w *DwellWorker) closeDetention(txCtx context.Context, fix domain.Fix, ev application.ZoneEvent) error {
+func (w *DwellWorker) closeDetention(txCtx context.Context, fix domain.Fix, ev application.ZoneEvent, tenant string) error {
 	if ev.Zone.Kind != domain.KindPickup && ev.Zone.Kind != domain.KindDrop {
 		return nil
 	}
 	if fix.TripID == nil {
 		return nil
 	}
-	d, err := w.logs.FindOpenDetention(txCtx, w.tenantID, *fix.TripID, ev.Zone.Kind)
+	d, err := w.logs.FindOpenDetention(txCtx, tenant, *fix.TripID, ev.Zone.Kind)
 	if err != nil || d == nil {
 		return err
 	}
@@ -393,8 +458,8 @@ func (w *DwellWorker) closeDetention(txCtx context.Context, fix domain.Fix, ev a
 	if dwell < 0 {
 		dwell = 0
 	}
-	free := int64(mustDuration(txCtx, w, application.ConfigDetentionFreeSeconds, application.DefaultDetentionFree).Seconds())
-	rate := mustFloat(txCtx, w, application.ConfigDetentionRatePerHour, application.DefaultDetentionRate)
+	free := int64(mustDuration(txCtx, w, tenant, application.ConfigDetentionFreeSeconds, application.DefaultDetentionFree).Seconds())
+	rate := mustFloat(txCtx, w, tenant, application.ConfigDetentionRatePerHour, application.DefaultDetentionRate)
 	amount := math.Round((float64(dwell-free)/3600.0*rate)*100) / 100
 	if amount < 0 {
 		amount = 0
@@ -402,16 +467,16 @@ func (w *DwellWorker) closeDetention(txCtx context.Context, fix domain.Fix, ev a
 	return w.logs.CloseDetention(txCtx, d.ID, ev.At, dwell, free, rate, amount)
 }
 
-func mustDuration(ctx context.Context, w *DwellWorker, key string, def time.Duration) time.Duration {
-	d, err := w.config.GetDurationSeconds(ctx, w.tenantID, key, def)
+func mustDuration(ctx context.Context, w *DwellWorker, tenant, key string, def time.Duration) time.Duration {
+	d, err := w.config.GetDurationSeconds(ctx, tenant, key, def)
 	if err != nil {
 		return def
 	}
 	return d
 }
 
-func mustFloat(ctx context.Context, w *DwellWorker, key string, def float64) float64 {
-	f, err := w.config.GetFloat(ctx, w.tenantID, key, def)
+func mustFloat(ctx context.Context, w *DwellWorker, tenant, key string, def float64) float64 {
+	f, err := w.config.GetFloat(ctx, tenant, key, def)
 	if err != nil {
 		return def
 	}

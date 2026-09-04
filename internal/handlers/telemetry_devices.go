@@ -58,19 +58,23 @@ func (h *TelemetryDeviceHandlers) QuarantineRoutes(r chi.Router) {
 }
 
 func (h *TelemetryDeviceHandlers) tenantID(ctx context.Context) string {
-	t := shared.TenantIDFromContext(ctx)
-	if t == "" {
-		return string(shared.DefaultTenant)
-	}
-	return string(t)
+	// Fail closed: no DefaultTenant fallback. Reads with an empty tenant
+	// return nothing; writes are blocked by requireTenant below.
+	return string(shared.TenantIDFromContext(ctx))
 }
 
 func (h *TelemetryDeviceHandlers) withTenant(ctx context.Context) context.Context {
-	t := shared.TenantIDFromContext(ctx)
-	if t == "" {
-		return shared.ContextWithTenantID(ctx, shared.DefaultTenant)
-	}
 	return ctx
+}
+
+// requireTenant blocks mutating device-registry calls that arrive without a
+// resolved tenant instead of writing them into tenant "1".
+func (h *TelemetryDeviceHandlers) requireTenant(w http.ResponseWriter, r *http.Request) (string, bool) {
+	if t := h.tenantID(r.Context()); t != "" {
+		return t, true
+	}
+	http.Error(w, "tenant not set in request context", http.StatusBadRequest)
+	return "", false
 }
 
 // List renders the devices table (full page or Datastar fragment).
@@ -138,6 +142,9 @@ func (h *TelemetryDeviceHandlers) BulkRegisterForm(w http.ResponseWriter, r *htt
 // BulkRegister accepts a JSON array or CSV paste and registers atomically.
 func (h *TelemetryDeviceHandlers) BulkRegister(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
+	if _, ok := h.requireTenant(w, r); !ok {
+		return
+	}
 	ctx := h.withTenant(r.Context())
 
 	body, err := io.ReadAll(r.Body)
@@ -193,6 +200,9 @@ func (h *TelemetryDeviceHandlers) BulkRegister(w http.ResponseWriter, r *http.Re
 func (h *TelemetryDeviceHandlers) Assign(w http.ResponseWriter, r *http.Request) {
 	imei := chi.URLParam(r, "imei")
 	vehicleID := r.PostFormValue("vehicle_id")
+	if _, ok := h.requireTenant(w, r); !ok {
+		return
+	}
 	ctx := h.withTenant(r.Context())
 	if err := h.service.AssignDevice(ctx, imei, vehicleID); err != nil {
 		renderErrorFragment(w, r, "Assign failed", err.Error())
@@ -204,6 +214,9 @@ func (h *TelemetryDeviceHandlers) Assign(w http.ResponseWriter, r *http.Request)
 // Activate provisions the device secret and returns it once.
 func (h *TelemetryDeviceHandlers) Activate(w http.ResponseWriter, r *http.Request) {
 	imei := chi.URLParam(r, "imei")
+	if _, ok := h.requireTenant(w, r); !ok {
+		return
+	}
 	ctx := h.withTenant(r.Context())
 	result, err := h.service.ActivateDevice(ctx, imei)
 	if err != nil {
@@ -224,6 +237,9 @@ func (h *TelemetryDeviceHandlers) Activate(w http.ResponseWriter, r *http.Reques
 // Retire moves a device to retired (quarantined by the pipeline thereafter).
 func (h *TelemetryDeviceHandlers) Retire(w http.ResponseWriter, r *http.Request) {
 	imei := chi.URLParam(r, "imei")
+	if _, ok := h.requireTenant(w, r); !ok {
+		return
+	}
 	ctx := h.withTenant(r.Context())
 	if err := h.service.RetireDevice(ctx, imei); err != nil {
 		renderErrorFragment(w, r, "Retire failed", err.Error())
@@ -262,6 +278,9 @@ func (h *TelemetryDeviceHandlers) Resolve(w http.ResponseWriter, r *http.Request
 	var vID *string
 	if vehicleID != "" {
 		vID = &vehicleID
+	}
+	if _, ok := h.requireTenant(w, r); !ok {
+		return
 	}
 	ctx := h.withTenant(r.Context())
 	if err := h.service.ResolveQuarantine(ctx, telemetry.ResolveQuarantineCommand{

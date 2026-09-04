@@ -152,9 +152,16 @@ func (c *clientImpl) DeductToll(ctx context.Context, req DeductTollRequest) (Tol
 		if source == "" {
 			source = "MANUAL"
 		}
-		tenantID := shared.TenantIDFromContext(ctx)
+		tenantID := string(shared.TenantIDFromContext(ctx))
+		if tenantID == "" && req.TripID != "" {
+			// Toll money must land in the trip owner's org.
+			_ = c.db.QueryRowContext(ctx, `SELECT tenant_id FROM trips WHERE id = ?`, req.TripID).Scan(&tenantID)
+		}
+		if tenantID == "" && req.TagID != "" {
+			_ = c.db.QueryRowContext(ctx, `SELECT tenant_id FROM fastag_tags WHERE tag_id = ? OR id = ?`, req.TagID, req.TagID).Scan(&tenantID)
+		}
 		if tenantID == "" {
-			tenantID = shared.DefaultTenant
+			return TollTransaction{}, fmt.Errorf("fastag: cannot record toll without tenant (trip %q tag %q)", req.TripID, req.TagID)
 		}
 		_, err := c.db.ExecContext(ctx, `
 			INSERT INTO fastag_transactions (

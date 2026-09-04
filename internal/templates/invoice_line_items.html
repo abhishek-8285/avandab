@@ -12,7 +12,7 @@
             </div>
             <p class="text-sm text-text-muted mt-1">
                 Customer: <span class="font-semibold text-on-surface">{{.Customer.Name}}</span>
-                {{if .Customer.GST}}(GSTIN: <span class="font-mono">{{.Customer.GST}}</span>){{end}} |
+                {{if .Customer.GST}}(GSTIN: <span class="font-data-mono">{{.Customer.GST}}</span>){{end}} |
                 Tax Mode: <span class="font-semibold">{{if .IsIntraState}}Intra-State (CGST + SGST){{else}}Inter-State (IGST){{end}}</span>
             </p>
         </div>
@@ -33,33 +33,33 @@
     <!-- Line Items Table -->
     <div class="bg-surface-container-lowest rounded-lg border border-border-subtle shadow-sm overflow-hidden">
         <div class="p-4 border-b border-border-subtle flex justify-between items-center gap-4 flex-wrap bg-surface-container-low/50">
-            <h2 class="text-base font-semibold text-on-surface">Itemized Charges &amp; Tax Split</h2>
+            <h2 class="text-title-md font-semibold text-on-surface">Itemized Charges &amp; Tax Split</h2>
             <span class="text-xs text-text-muted">{{len .LineItems}} item(s)</span>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">HSN/SAC</th>
-                        <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Description</th>
-                        <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Qty</th>
-                        <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Rate (₹)</th>
-                        <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Taxable (₹)</th>
+                        <th class="px-3 py-2.5 text-left text-eyebrow text-text-muted">HSN/SAC</th>
+                        <th class="px-3 py-2.5 text-left text-eyebrow text-text-muted">Description</th>
+                        <th class="px-3 py-2.5 text-right text-eyebrow text-text-muted">Qty</th>
+                        <th class="px-3 py-2.5 text-right text-eyebrow text-text-muted">Rate (₹)</th>
+                        <th class="px-3 py-2.5 text-right text-eyebrow text-text-muted">Taxable (₹)</th>
                         {{if .IsIntraState}}
-                        <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">CGST</th>
-                        <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">SGST</th>
+                        <th class="px-3 py-2.5 text-right text-eyebrow text-text-muted">CGST</th>
+                        <th class="px-3 py-2.5 text-right text-eyebrow text-text-muted">SGST</th>
                         {{else}}
-                        <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">IGST</th>
+                        <th class="px-3 py-2.5 text-right text-eyebrow text-text-muted">IGST</th>
                         {{end}}
-                        <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Total (₹)</th>
-                        <th class="px-3 py-2.5 text-center text-[11px] font-bold tracking-wider uppercase text-text-muted">Action</th>
+                        <th class="px-3 py-2.5 text-right text-eyebrow text-text-muted">Total (₹)</th>
+                        <th class="px-3 py-2.5 text-center text-eyebrow text-text-muted">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
                     {{if .LineItems}}
                         {{range .LineItems}}
                         <tr class="hover:bg-surface-container-low/50 transition-colors">
-                            <td class="px-3 py-2 text-sm font-mono text-xs font-bold text-primary">{{.HSNSACCode}}</td>
+                            <td class="px-3 py-2 text-sm font-data-mono text-xs font-bold text-primary">{{.HSNSACCode}}</td>
                             <td class="px-3 py-2 text-sm text-on-surface">{{.Description}}</td>
                             <td class="px-3 py-2 text-sm text-right text-on-surface tabular-nums whitespace-nowrap" data-numeric>{{printf "%.2f" .Quantity}} {{.Unit}}</td>
                             <td class="px-3 py-2 text-sm text-right text-on-surface tabular-nums whitespace-nowrap" data-numeric>₹{{printf "%.2f" .Rate}}</td>
@@ -107,7 +107,7 @@
 
     <!-- Add Line Item Form -->
     <div class="bg-surface-container-lowest p-6 rounded-lg border border-border-subtle shadow-sm">
-        <h3 class="text-base font-semibold text-on-surface mb-4">Add Line Item</h3>
+        <h3 class="text-title-md font-semibold text-on-surface mb-4">Add Line Item</h3>
         {{if .Locked}}
         {{template "alert.html" dict "Message" (printf "This invoice is locked (%s). Line items can no longer be added or changed." .LockReason)}}
         {{end}}

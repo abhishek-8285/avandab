@@ -105,6 +105,9 @@ type TripAggregate struct {
 	UpdatedAt time.Time
 	Version   int64
 
+	// IdempotencyKey dedupes retried creates (empty = no key).
+	IdempotencyKey string
+
 	events []any
 }
 
@@ -299,9 +302,17 @@ func (t *TripAggregate) Schedule(now time.Time) error {
 }
 
 // AssignDriver associates a driver.
+// Only allowed before the trip starts moving; re-assigning after start
+// would silently downgrade status back to assigned and lose the timeline.
 func (t *TripAggregate) AssignDriver(driverID string, now time.Time) error {
 	if t.Status == TripCompleted || t.Status == TripCancelled {
 		return errors.New("cannot assign driver to completed or cancelled trip")
+	}
+	switch t.Status {
+	case TripDraft, TripScheduled, TripAssigned:
+		// allowed
+	default:
+		return errors.New("cannot assign driver after trip has started")
 	}
 	t.DriverID = &driverID
 	t.Status = TripAssigned
@@ -316,12 +327,19 @@ func (t *TripAggregate) AssignDriver(driverID string, now time.Time) error {
 }
 
 // AssignVehicle associates a vehicle.
+// Requires a driver first and is only allowed before the trip starts moving.
 func (t *TripAggregate) AssignVehicle(vehicleID string, now time.Time) error {
 	if t.DriverID == nil || *t.DriverID == "" {
 		return errors.New("driver must be assigned before vehicle")
 	}
 	if t.Status == TripCompleted || t.Status == TripCancelled {
 		return errors.New("cannot assign vehicle to completed or cancelled trip")
+	}
+	switch t.Status {
+	case TripDraft, TripScheduled, TripAssigned:
+		// allowed
+	default:
+		return errors.New("cannot assign vehicle after trip has started")
 	}
 	t.VehicleID = &vehicleID
 	t.UpdatedAt = now
@@ -444,6 +462,11 @@ func (t *TripAggregate) Cancel(now time.Time) error {
 		OccurredAt: now,
 	})
 	return nil
+}
+
+// SetIdempotencyKey attaches the client-supplied dedupe key before Save.
+func (t *TripAggregate) SetIdempotencyKey(key string) {
+	t.IdempotencyKey = key
 }
 
 // Events returns collected events.

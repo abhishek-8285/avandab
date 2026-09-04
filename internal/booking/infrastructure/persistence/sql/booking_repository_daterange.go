@@ -37,6 +37,10 @@ WHERE b.tenant_id = ?
   AND (? = '' OR b.status = ?)`
 
 func (r *bookingRepository) SearchReadModelsDateRange(ctx context.Context, tenantID shared.TenantID, query string, status string, from string, to string, limit int, offset int) ([]bookingdomain.BookingReadModel, int64, error) {
+	// "unassigned" can't be expressed by the fixed consts below.
+	if status == StatusFilterUnassigned {
+		return r.searchUnassignedBookings(ctx, tenantID, query, from, to, limit, offset)
+	}
 	rows, err := r.dbConn.QueryContext(ctx, bookingSearchSelect+bookingDateClause+`
 ORDER BY b.pickup_date DESC
 LIMIT ? OFFSET ?`,

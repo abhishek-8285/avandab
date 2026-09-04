@@ -160,7 +160,11 @@ func (s *EventSubscriber) HandleInvoiceEvent(ctx context.Context, e events.Event
 		invoiceNumber = invoiceID
 	}
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		// Fail closed: never attribute another org's invoice email to the
+		// bootstrap tenant. Skip loudly so the missing tenant gets fixed.
+		s.logger.Warn("comm event subscriber: invoice email skipped (tenant unknown)",
+			"invoice_id", invoiceID, "event_type", e.Type)
+		return nil
 	}
 
 	if customerEmail == "" {
@@ -228,7 +232,9 @@ func (s *EventSubscriber) HandlePODEvent(ctx context.Context, e events.Event) er
 		tripNumber = tripID
 	}
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		s.logger.Warn("comm event subscriber: POD receipt skipped (tenant unknown)",
+			"trip_id", tripID, "event_type", e.Type)
+		return nil
 	}
 
 	// 1. Enqueue Email receipt if email is present
@@ -322,7 +328,9 @@ func (s *EventSubscriber) HandleTripDispatchEvent(ctx context.Context, e events.
 	}
 
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		s.logger.Warn("comm event subscriber: trip dispatch WhatsApp skipped (tenant unknown)",
+			"trip_id", tripID, "driver_id", driverID, "event_type", e.Type)
+		return nil
 	}
 
 	if driverPhone == "" {
@@ -399,7 +407,9 @@ func (s *EventSubscriber) HandleTrackingEvent(ctx context.Context, e events.Even
 			bookingNumber = bookingID
 		}
 		if tenantID == "" {
-			tenantID = string(shared.DefaultTenant)
+			s.logger.Warn("comm event subscriber: booking tracking WhatsApp skipped (tenant unknown)",
+				"booking_id", bookingID, "event_type", e.Type)
+			return nil
 		}
 
 		if customerPhone == "" {
@@ -463,7 +473,9 @@ func (s *EventSubscriber) HandleTrackingEvent(ctx context.Context, e events.Even
 		tripNumber = tripID
 	}
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		s.logger.Warn("comm event subscriber: trip tracking WhatsApp skipped (tenant unknown)",
+			"trip_id", tripID, "event_type", e.Type)
+		return nil
 	}
 
 	if customerPhone == "" {
@@ -496,8 +508,18 @@ func (s *EventSubscriber) HandleAuthEvent(ctx context.Context, e events.Event) e
 	if tenantID == "" {
 		tenantID = string(shared.TenantIDFromContext(ctx))
 	}
+	if tenantID == "" && s.db != nil && email != "" {
+		// Resolve the account's own tenant so password-reset and welcome
+		// emails are scoped correctly instead of landing in tenant "1".
+		var dbTenant sql.NullString
+		if err := s.db.QueryRowContext(ctx, `SELECT tenant_id FROM users WHERE email = ? LIMIT 1`, email).Scan(&dbTenant); err == nil && dbTenant.Valid && dbTenant.String != "" {
+			tenantID = dbTenant.String
+		}
+	}
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		s.logger.Warn("comm event subscriber: auth email skipped (tenant unknown)",
+			"email", email, "event_type", e.Type)
+		return nil
 	}
 
 	if email == "" {

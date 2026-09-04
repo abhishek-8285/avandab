@@ -1,0 +1,9 @@
+{{range .Stats.RecentBookings}}
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+    <td class="px-4 py-2.5 text-sm font-bold text-primary tabular-nums"><a href="/bookings/{{.ID}}" class="hover:underline">{{.BookingNumber}}</a></td>
+    <td class="px-4 py-2.5 text-sm font-medium text-on-surface">{{.CustomerName}}</td>
+    <td class="px-4 py-2.5 text-sm tabular-nums"><span class="time-display" data-utc-time="{{.PickupDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PickupDate}}</span></td>
+    <td class="px-4 py-2.5 text-sm font-bold tabular-nums text-right">{{printf "₹%.2f" .Price}}</td>
+</tr>
+{{end}}
+{{if not .Stats.RecentBookings}}<tr><td colspan="4" class="px-4 py-8 text-center text-sm text-text-muted">No bookings yet — <a href="/bookings/new" class="text-primary font-semibold hover:underline">create one</a></td></tr>{{end}}

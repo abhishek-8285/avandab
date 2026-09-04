@@ -30,14 +30,14 @@
             <table class="min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Severity</th>
-                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Alert Details</th>
-                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Source &amp; Type</th>
-                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Entity</th>
-                        <th class="px-3 py-2 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Occurrences</th>
-                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Last Seen</th>
-                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
-                        <th class="px-3 py-2 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Severity</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Alert Details</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Source &amp; Type</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Entity</th>
+                        <th class="px-3 py-2 text-right text-eyebrow text-text-muted">Occurrences</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Last Seen</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Status</th>
+                        <th class="px-3 py-2 text-right text-eyebrow text-text-muted">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
@@ -73,12 +73,12 @@
                             </td>
                             <td class="px-3 py-2 whitespace-nowrap">
                                 <span class="font-medium text-xs text-on-surface">{{.Source}}</span>
-                                <div class="text-xs text-text-muted font-mono mt-0.5">{{.AlertType}}</div>
+                                <div class="text-xs text-text-muted font-data-mono mt-0.5">{{.AlertType}}</div>
                             </td>
                             <td class="px-3 py-2 whitespace-nowrap text-xs">
                                 {{if .EntityID}}
                                     <span class="font-medium text-on-surface capitalize">{{if .EntityType}}{{.EntityType}}{{else}}Entity{{end}}:</span>
-                                    <span class="font-mono font-semibold text-primary">{{.EntityID}}</span>
+                                    <span class="font-data-mono font-semibold text-primary">{{.EntityID}}</span>
                                 {{else}}
                                     <span class="text-text-muted">Global</span>
                                 {{end}}

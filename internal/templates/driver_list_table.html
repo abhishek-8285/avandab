@@ -2,27 +2,27 @@
     <table class="min-w-full divide-y divide-border-subtle">
         <thead class="bg-surface-container-low">
             <tr>
-                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted w-32">Driver ID</th>
-                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Driver Name</th>
-                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Phone Number</th>
-                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">License</th>
-                <th class="px-3 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
-                <th class="px-3 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
+                <th class="px-3 py-2.5 text-left text-eyebrow text-text-muted w-32">Driver ID</th>
+                <th class="px-3 py-2.5 text-left text-eyebrow text-text-muted">Driver Name</th>
+                <th class="px-3 py-2.5 text-left text-eyebrow text-text-muted">Phone Number</th>
+                <th class="px-3 py-2.5 text-left text-eyebrow text-text-muted">License</th>
+                <th class="px-3 py-2.5 text-left text-eyebrow text-text-muted">Status</th>
+                <th class="px-3 py-2.5 text-right text-eyebrow text-text-muted">Actions</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
             {{if .Drivers}}
             {{range .Drivers}}
             <tr class="hover:bg-surface-container-low/50 transition-colors group" data-href="/drivers/{{.ID}}" onclick="if(this.dataset.href)location.href=this.dataset.href">
-                <td class="px-3 py-2 font-mono font-bold text-secondary tabular-nums">{{.DriverID}}</td>
+                <td class="px-3 py-2 font-data-mono font-bold text-secondary tabular-nums">{{.DriverID}}</td>
                 <td class="px-3 py-2">
                     <div class="flex items-center gap-2.5">
                         <span class="w-7 h-7 rounded-full bg-violet-500/10 border border-violet-500/15 grid place-items-center text-[10px] font-bold text-violet-600 shrink-0">{{slice .FirstName 0 1}}{{slice .LastName 0 1}}</span>
                         <span class="font-semibold text-on-surface">{{.FirstName}} {{.LastName}}</span>
                     </div>
                 </td>
-                <td class="px-3 py-2 font-mono text-xs tabular-nums text-secondary">{{.Phone}}</td>
-                <td class="px-3 py-2 font-mono text-xs text-secondary">{{.LicenseNumber}}</td>
+                <td class="px-3 py-2 font-data-mono text-xs tabular-nums text-secondary">{{.Phone}}</td>
+                <td class="px-3 py-2 font-data-mono text-xs text-secondary">{{.LicenseNumber}}</td>
                 <td class="px-3 py-2">
                     <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                 </td>

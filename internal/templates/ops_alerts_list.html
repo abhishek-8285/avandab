@@ -23,12 +23,12 @@
             <table class="min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Severity</th>
-                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Type</th>
-                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Title</th>
-                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
-                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Created</th>
-                        <th class="px-3 py-2 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Severity</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Type</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Title</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Status</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Created</th>
+                        <th class="px-3 py-2 text-right text-eyebrow text-text-muted">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
@@ -44,7 +44,7 @@
                                 {{.Severity}}
                             </span>
                         </td>
-                        <td class="px-3 py-2 text-xs font-mono text-secondary whitespace-nowrap">{{.AlertType}}</td>
+                        <td class="px-3 py-2 text-xs font-data-mono text-secondary whitespace-nowrap">{{.AlertType}}</td>
                         <td class="px-3 py-2 font-semibold max-w-sm truncate" title="{{.Title}}">{{.Title}}</td>
                         <td class="px-3 py-2 whitespace-nowrap">
                             <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold

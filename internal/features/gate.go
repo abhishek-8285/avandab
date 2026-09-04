@@ -13,21 +13,28 @@ func Gate(reg *Registry, key string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			tenantID := string(shared.TenantIDFromContext(r.Context()))
+			f, _ := ByKey(key)
 			if tenantID == "" {
-				tenantID = string(shared.DefaultTenant)
+				// Fail closed: never serve another org's (or defaults')
+				// features to an unresolved tenant.
+				deny(w, r, f)
+				return
 			}
 			if reg.Enabled(r.Context(), tenantID, key) {
 				next.ServeHTTP(w, r)
 				return
 			}
-			f, _ := ByKey(key)
-			if f.Tier == TierAddon {
-				http.Error(w,
-					"This add-on is not enabled for your organisation. Contact your account manager to enable "+f.Name+".",
-					http.StatusForbidden)
-				return
-			}
-			http.NotFound(w, r)
+			deny(w, r, f)
 		})
 	}
+}
+
+func deny(w http.ResponseWriter, r *http.Request, f Feature) {
+	if f.Tier == TierAddon {
+		http.Error(w,
+			"This add-on is not enabled for your organisation. Contact your account manager to enable "+f.Name+".",
+			http.StatusForbidden)
+		return
+	}
+	http.NotFound(w, r)
 }

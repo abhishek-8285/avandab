@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"math"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -35,6 +36,7 @@ type snapshotRow struct {
 // vehicleFuelState is the per-vehicle in-memory state (Spec 03 §2.1).
 type vehicleFuelState struct {
 	vehicleID    string
+	tenantID     string
 	sensorFitted bool
 	tankCapacity float64
 	unit         string // "percent" (default) or "litres"
@@ -111,6 +113,11 @@ type FuelEngine struct {
 
 	tenantID shared.TenantID
 
+	// featureGate reports whether the fuel_audit feature is on for an org.
+	// Nil means ungated (tests, tooling). Production wires the features
+	// registry so one org disabling fuel_audit stops only its own sweep.
+	featureGate func(tenantID string) bool
+
 	mu    sync.Mutex
 	state map[string]*vehicleFuelState // keyed by vehicle_id
 	now   func() time.Time
@@ -149,6 +156,41 @@ func (e *FuelEngine) WithAlertSaver(s alertSaver) *FuelEngine {
 		e.alerts = s
 	}
 	return e
+}
+
+// WithFeatureGate scopes each sweep to orgs with the feature on.
+// Chain after construction; safe to omit (ungated).
+func (e *FuelEngine) WithFeatureGate(gate func(tenantID string) bool) *FuelEngine {
+	e.featureGate = gate
+	return e
+}
+
+// resolveVehicleTenants attributes vehicles to their orgs in one query.
+// Unknown vehicles resolve to "" and are skipped by Tick.
+func (e *FuelEngine) resolveVehicleTenants(ctx context.Context, vids []string) map[string]string {
+	out := make(map[string]string, len(vids))
+	if len(vids) == 0 {
+		return out
+	}
+	placeholders := strings.Repeat("?,", len(vids))
+	placeholders = strings.TrimSuffix(placeholders, ",")
+	args := make([]any, len(vids))
+	for i, id := range vids {
+		args[i] = id
+	}
+	rows, err := e.db.QueryContext(ctx,
+		`SELECT id, tenant_id FROM vehicles WHERE id IN (`+placeholders+`)`, args...)
+	if err != nil {
+		return out
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var vehID, tenant string
+		if err := rows.Scan(&vehID, &tenant); err == nil {
+			out[vehID] = tenant
+		}
+	}
+	return out
 }
 
 // WithBehaviourHook registers the scorecard incremental recompute hook
@@ -197,24 +239,40 @@ func (e *FuelEngine) Run(ctx context.Context) {
 	}
 }
 
-// Tick processes one sweep: discovers active vehicles, warms state on cache
-// miss, then runs the detection pipeline per new snapshot. Returns the
-// number of snapshots consumed. Safe for tests: deterministic, no
-// background goroutines.
+// Tick processes one sweep: discovers active vehicles, attributes each to
+// its org, then runs the detection pipeline per new snapshot. Orgs with the
+// feature off and unknown vehicles are skipped, never processed as another
+// org. Returns the number of snapshots consumed.
 func (e *FuelEngine) Tick(ctx context.Context) (int, error) {
-	cfg, err := e.loadConfig(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("fuel: load config: %w", err)
-	}
-
-	vehicles, err := e.activeVehicles(ctx, cfg)
+	// Discovery uses the compiled default gap window (a work-volume knob, not
+	// correctness); per-org thresholds load below once the org is known.
+	vehicles, err := e.activeVehicles(ctx, engineConfig{gapTolerance: DefaultGapTolerance})
 	if err != nil {
 		return 0, fmt.Errorf("fuel: active vehicles: %w", err)
 	}
+	tenantByVehicle := e.resolveVehicleTenants(ctx, vehicles)
+	cfgs := map[string]engineConfig{}
 
 	total := 0
 	for _, vid := range vehicles {
-		processed, err := e.processVehicle(ctx, vid, cfg)
+		tenant := tenantByVehicle[vid]
+		if tenant == "" {
+			e.log.Warn("fuel engine: vehicle skipped (unknown org)", "vehicle", vid)
+			continue
+		}
+		if e.featureGate != nil && !e.featureGate(tenant) {
+			continue
+		}
+		cfg, ok := cfgs[tenant]
+		if !ok {
+			var err error
+			cfg, err = e.loadConfig(ctx, tenant)
+			if err != nil {
+				return total, fmt.Errorf("fuel: load config: %w", err)
+			}
+			cfgs[tenant] = cfg
+		}
+		processed, err := e.processVehicle(ctx, vid, tenant, cfg)
 		if err != nil {
 			// A UoW failure means events were not durably written — abort the
 			// sweep so the next tick retries from the same watermark. The
@@ -229,8 +287,8 @@ func (e *FuelEngine) Tick(ctx context.Context) (int, error) {
 }
 
 // loadConfig reads all thresholds from company_config with compiled defaults.
-func (e *FuelEngine) loadConfig(ctx context.Context) (engineConfig, error) {
-	t := string(e.tenantID)
+func (e *FuelEngine) loadConfig(ctx context.Context, tenant string) (engineConfig, error) {
+	t := tenant
 	cfg := engineConfig{
 		medianWindow:      DefaultMedianWindow,
 		spikeDeviationPct: DefaultSpikeDeviationPct,
@@ -325,7 +383,7 @@ func (e *FuelEngine) activeVehicles(ctx context.Context, cfg engineConfig) ([]st
 
 // processVehicle handles one vehicle: warms state on cache miss, then feeds
 // new snapshots through the pipeline.
-func (e *FuelEngine) processVehicle(ctx context.Context, vehicleID string, cfg engineConfig) (int, error) {
+func (e *FuelEngine) processVehicle(ctx context.Context, vehicleID, tenant string, cfg engineConfig) (int, error) {
 	meta, err := e.vehicleMeta(ctx, vehicleID)
 	if err != nil {
 		return 0, err
@@ -336,6 +394,7 @@ func (e *FuelEngine) processVehicle(ctx context.Context, vehicleID string, cfg e
 	if !exists {
 		st = &vehicleFuelState{
 			vehicleID:     vehicleID,
+			tenantID:      tenant,
 			sensorFitted:  meta.sensorFitted,
 			tankCapacity:  meta.tankCapacity,
 			unit:          cfg.levelUnit,
@@ -344,6 +403,8 @@ func (e *FuelEngine) processVehicle(ctx context.Context, vehicleID string, cfg e
 			baselineLevel: math.NaN(),
 		}
 		e.state[vehicleID] = st
+	} else {
+		st.tenantID = tenant
 	}
 	e.mu.Unlock()
 
@@ -827,7 +888,7 @@ func (e *FuelEngine) buildAlert(st *vehicleFuelState, s snapshotRow, ev fuelEven
 		Priority:  alertPriority(ev.severity),
 		Title:     alertTitle(ev.eventType),
 		Summary:   fmt.Sprintf("%s on vehicle %s (est. %.1f L)", alertTitle(ev.eventType), s.vehicleID, ev.estimated),
-		CompanyID: string(e.tenantID),
+		CompanyID: st.tenantID,
 		Metadata:  meta,
 		Timestamp: s.ts,
 	}

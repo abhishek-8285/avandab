@@ -7,9 +7,15 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	"transport-app/internal/domain"
 	"transport-app/internal/ewaybill"
+	"transport-app/internal/maintenance"
+	maintdomain "transport-app/internal/maintenance/domain"
+	maintsql "transport-app/internal/maintenance/infrastructure/sql"
 	"transport-app/internal/service"
+	"transport-app/internal/shared"
 )
 
 // ToolEnv carries live service dependencies + the acting user.
@@ -868,6 +874,221 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				return fmt.Sprintf("extended ewb %s until %s", updated.EwbNumber, updated.ValidUntil.Format(time.RFC3339)), nil
 			},
 		},
+		{
+			Name:        "list_work_orders",
+			Description: "List maintenance job cards (work orders) for the org, optionally filtered by status (open, assigned, in_progress, on_hold, done, cancelled).",
+			Resource:    "maintenance",
+			Action:      "read",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"status": optStr("optional status filter"),
+					"limit":  map[string]any{"type": "integer", "description": "max results (default 20)"},
+				},
+			},
+			Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
+				var in struct {
+					Status string `json:"status"`
+					Limit  int    `json:"limit"`
+				}
+				if len(args) > 0 {
+					_ = json.Unmarshal(args, &in)
+				}
+				if in.Limit <= 0 {
+					in.Limit = 20
+				}
+				if in.Limit > 50 {
+					in.Limit = 50
+				}
+				repo, err := maintenanceRepo(env)
+				if err != nil {
+					return "", err
+				}
+				orders, err := repo.ListWorkOrders(ctx, string(shared.TenantIDFromContext(ctx)), in.Status, in.Limit)
+				if err != nil {
+					return "", err
+				}
+				type row struct {
+					ID       string `json:"id"`
+					Title    string `json:"title"`
+					Vehicle  string `json:"vehicle_id"`
+					Assignee string `json:"assignee"`
+					Status   string `json:"status"`
+				}
+				out := make([]row, 0, len(orders))
+				for _, w := range orders {
+					out = append(out, row{w.ID, w.Title, w.VehicleID, w.Assignee, w.Status})
+				}
+				if len(out) == 0 {
+					return "No job cards found" + statusClause(in.Status), nil
+				}
+				return jsonString(out)
+			},
+		},
+		{
+			Name:        "get_work_order",
+			Description: "Get one maintenance job card by id: status, vehicle, assignee, costs, due/closed dates.",
+			Resource:    "maintenance",
+			Action:      "read",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"id": optStr("job card id"),
+				},
+				"required": []string{"id"},
+			},
+			Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
+				var in struct {
+					ID string `json:"id"`
+				}
+				if err := json.Unmarshal(args, &in); err != nil {
+					return "", err
+				}
+				repo, err := maintenanceRepo(env)
+				if err != nil {
+					return "", err
+				}
+				wo, err := repo.FindWorkOrder(ctx, string(shared.TenantIDFromContext(ctx)), in.ID)
+				if err != nil {
+					return "", err
+				}
+				if wo == nil {
+					return "", fmt.Errorf("job card %s not found", in.ID)
+				}
+				return jsonString(workOrderJSON(wo))
+			},
+		},
+		{
+			Name:        "create_work_order",
+			Description: "Open a maintenance job card in 'open' status. Requires vehicle_id and title. Never invent vehicle ids — confirm the vehicle first.",
+			Resource:    "maintenance",
+			Action:      "create",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"vehicle_id":    optStr("vehicle id (veh_...)"),
+					"title":         optStr("short work description, e.g. 'Brake pad replacement'"),
+					"description":   optStr("optional symptoms, findings, parts needed"),
+					"assignee":      optStr("optional mechanic name"),
+					"vendor":        optStr("optional garage / vendor"),
+					"cost_estimate": map[string]any{"type": "number", "description": "optional estimated cost in INR"},
+					"schedule_id":   optStr("optional linked preventive-maintenance schedule id"),
+					"due_at":        optStr("optional due date RFC3339, e.g. '2026-09-10T00:00:00Z'"),
+				},
+				"required": []string{"vehicle_id", "title"},
+			},
+			Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
+				var in struct {
+					VehicleID    string   `json:"vehicle_id"`
+					Title        string   `json:"title"`
+					Description  string   `json:"description"`
+					Assignee     string   `json:"assignee"`
+					Vendor       string   `json:"vendor"`
+					CostEstimate *float64 `json:"cost_estimate"`
+					ScheduleID   *string  `json:"schedule_id"`
+					DueAt        string   `json:"due_at"`
+				}
+				if err := json.Unmarshal(args, &in); err != nil {
+					return "", err
+				}
+				if strings.TrimSpace(in.VehicleID) == "" || strings.TrimSpace(in.Title) == "" {
+					return "", fmt.Errorf("vehicle_id and title are required")
+				}
+				wo := maintdomain.WorkOrder{
+					ID:           uuid.NewString(),
+					TenantID:     string(shared.TenantIDFromContext(ctx)),
+					VehicleID:    strings.TrimSpace(in.VehicleID),
+					ScheduleID:   in.ScheduleID,
+					Title:        strings.TrimSpace(in.Title),
+					Description:  in.Description,
+					Assignee:     in.Assignee,
+					Vendor:       in.Vendor,
+					CostEstimate: in.CostEstimate,
+					Status:       maintdomain.WorkOrderOpen,
+				}
+				if in.DueAt != "" {
+					due, err := time.Parse(time.RFC3339, in.DueAt)
+					if err != nil {
+						return "", fmt.Errorf("due_at must be RFC3339, got %q", in.DueAt)
+					}
+					dueUTC := due.UTC()
+					wo.DueAt = &dueUTC
+				}
+				repo, err := maintenanceRepo(env)
+				if err != nil {
+					return "", err
+				}
+				if err := repo.CreateWorkOrder(ctx, wo); err != nil {
+					return "", err
+				}
+				return jsonString(map[string]any{
+					"id":     wo.ID,
+					"title":  wo.Title,
+					"status": wo.Status,
+				})
+			},
+		},
+		{
+			Name:        "transition_work_order",
+			Description: "Move a job card along open → assigned → in_progress → done (on_hold loops back, cancelled closes). Closing as done also writes the service record. Requires admin approval.",
+			Resource:    "maintenance",
+			Action:      "update",
+			Parameters: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"id":       optStr("job card id"),
+					"status":   optStr("open, assigned, in_progress, on_hold, done or cancelled"),
+					"assignee": optStr("optional mechanic name to set first"),
+					"vendor":   optStr("optional garage / vendor to set first"),
+				},
+				"required": []string{"id", "status"},
+			},
+			Handler: func(ctx context.Context, args json.RawMessage) (string, error) {
+				var in struct {
+					ID       string `json:"id"`
+					Status   string `json:"status"`
+					Assignee string `json:"assignee"`
+					Vendor   string `json:"vendor"`
+				}
+				if err := json.Unmarshal(args, &in); err != nil {
+					return "", err
+				}
+				switch in.Status {
+				case maintdomain.WorkOrderOpen, maintdomain.WorkOrderAssigned, maintdomain.WorkOrderInProgress,
+					maintdomain.WorkOrderOnHold, maintdomain.WorkOrderDone, maintdomain.WorkOrderCancelled:
+				default:
+					return "", fmt.Errorf("unknown job card status %q", in.Status)
+				}
+				repo, err := maintenanceRepo(env)
+				if err != nil {
+					return "", err
+				}
+				tenant := string(shared.TenantIDFromContext(ctx))
+				if in.Assignee != "" || in.Vendor != "" {
+					if err := repo.AssignWorkOrder(ctx, tenant, in.ID, in.Assignee, in.Vendor); err != nil {
+						return "", err
+					}
+				}
+				if in.Status == maintdomain.WorkOrderDone {
+					actor := userIDFrom(ctx)
+					if actor == "" {
+						actor = env.UserID
+					}
+					done, err := repo.CompleteWorkOrder(ctx, tenant, in.ID, actor)
+					if err != nil {
+						return "", err
+					}
+					if db := env.Services.DB(); db != nil {
+						maintenance.NewWorker(db, nil, nil, 0, "").EvaluateResolution(ctx, done.VehicleID)
+					}
+					return fmt.Sprintf("Job card %s closed as done; service record written.", done.ID), nil
+				}
+				if err := repo.TransitionWorkOrder(ctx, tenant, in.ID, in.Status); err != nil {
+					return "", err
+				}
+				return fmt.Sprintf("Job card %s moved to %s.", in.ID, in.Status), nil
+			},
+		},
 	}
 }
 
@@ -876,6 +1097,45 @@ func derefStr(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+// maintenanceRepo binds the job-card repository to the service database.
+// Tools fail closed when the DB is unavailable.
+func maintenanceRepo(env *ToolEnv) (*maintsql.MaintenanceRepository, error) {
+	if env == nil || env.Services == nil || env.Services.DB() == nil {
+		return nil, fmt.Errorf("maintenance store unavailable")
+	}
+	return maintsql.NewMaintenanceRepository(env.Services.DB()), nil
+}
+
+// workOrderJSON renders one job card for the assistant.
+func workOrderJSON(w *maintdomain.WorkOrder) map[string]any {
+	out := map[string]any{
+		"id":       w.ID,
+		"title":    w.Title,
+		"vehicle":  w.VehicleID,
+		"assignee": w.Assignee,
+		"vendor":   w.Vendor,
+		"status":   w.Status,
+		"created":  w.CreatedAt.Format(time.RFC3339),
+		"terminal": w.Terminal(),
+	}
+	if w.Description != "" {
+		out["description"] = w.Description
+	}
+	if w.CostEstimate != nil {
+		out["cost_estimate"] = *w.CostEstimate
+	}
+	if w.CostActual != nil {
+		out["cost_actual"] = *w.CostActual
+	}
+	if w.DueAt != nil {
+		out["due_at"] = w.DueAt.Format(time.RFC3339)
+	}
+	if w.ClosedAt != nil {
+		out["closed_at"] = w.ClosedAt.Format(time.RFC3339)
+	}
+	return out
 }
 
 func bookingIDStr(id *domain.BookingID) string {

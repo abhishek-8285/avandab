@@ -144,6 +144,8 @@ func (o *Orchestrator) keywordRoute(query string) string {
 		return "ops"
 	case hasAll("driver", "expense"), hasAll("kharcha"), hasAll("expense", "approve"), hasAll("expense", "reject"), hasAll("diesel"), hasAll("toll"):
 		return "kharcha"
+	case hasAll("job card"), hasAll("jobcard"), hasAll("work order"), hasAll("maintenance"), hasAll("service due"), hasAll("garage"), hasAll("mechanic"), hasAll("repair"):
+		return "maintenance"
 	case hasAll("invoice"), hasAll("payment"), hasAll("unpaid"), hasAll("outstanding"), hasAll("upi"), hasAll("cheque"), hasAll("balance"):
 		return "payments"
 	case hasAll("policy"), hasAll("procedure"), hasAll("rule"), hasAll("document"), hasAll("how does"), hasAll("how do"), hasAll("what is the rule"):

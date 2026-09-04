@@ -69,18 +69,19 @@ func (r *bookingRepository) Save(ctx context.Context, b *aggregate.BookingAggreg
 		b.Version++
 	} else {
 		_, err = r.Q(ctx).CreateBooking(ctx, db.CreateBookingParams{
-			ID:            p.ID,
-			BookingNumber: p.BookingNumber,
-			CustomerID:    p.CustomerID,
-			PickupDate:    p.PickupDate,
-			RouteID:       p.RouteID,
-			VehicleType:   p.VehicleType,
-			Passengers:    p.Passengers,
-			CargoWeight:   p.CargoWeight,
-			Price:         p.Price,
-			Notes:         p.Notes,
-			Status:        p.Status,
-			TenantID:      p.TenantID,
+			ID:             p.ID,
+			BookingNumber:  p.BookingNumber,
+			CustomerID:     p.CustomerID,
+			PickupDate:     p.PickupDate,
+			RouteID:        p.RouteID,
+			VehicleType:    p.VehicleType,
+			Passengers:     p.Passengers,
+			CargoWeight:    p.CargoWeight,
+			Price:          p.Price,
+			Notes:          p.Notes,
+			Status:         p.Status,
+			TenantID:       p.TenantID,
+			IdempotencyKey: p.IdempotencyKey,
 		})
 		if err != nil {
 			return err
@@ -160,6 +161,42 @@ func (r *bookingRepository) FindByNumber(ctx context.Context, number string, ten
 	return MapToAggregate(m), nil
 }
 
+func (r *bookingRepository) FindByIdempotencyKey(ctx context.Context, key string, tenantID shared.TenantID) (*aggregate.BookingAggregate, error) {
+	if key == "" {
+		return nil, errors.New("booking not found")
+	}
+	row, err := r.Q(ctx).GetBookingByIdempotencyKey(ctx, db.GetBookingByIdempotencyKeyParams{
+		IdempotencyKey: sql.NullString{String: key, Valid: true},
+		TenantID:       string(tenantID),
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("booking not found")
+		}
+		return nil, err
+	}
+
+	m := SQLBookingModel{
+		ID:             row.ID,
+		BookingNumber:  row.BookingNumber,
+		CustomerID:     row.CustomerID,
+		PickupDate:     row.PickupDate,
+		RouteID:        row.RouteID,
+		VehicleType:    row.VehicleType,
+		Passengers:     row.Passengers,
+		CargoWeight:    row.CargoWeight,
+		Price:          row.Price,
+		Notes:          row.Notes,
+		Status:         row.Status,
+		TenantID:       row.TenantID,
+		Version:        row.Version,
+		CreatedAt:      row.CreatedAt,
+		UpdatedAt:      row.UpdatedAt,
+		IdempotencyKey: sql.NullString{String: key, Valid: true},
+	}
+	return MapToAggregate(m), nil
+}
+
 func (r *bookingRepository) Exists(ctx context.Context, id aggregate.BookingID, tenantID shared.TenantID) (bool, error) {
 	_, err := r.Q(ctx).GetBookingByID(ctx, db.GetBookingByIDParams{
 		ID:       string(id),
@@ -224,6 +261,11 @@ func (r *bookingRepository) GetReadModel(ctx context.Context, id aggregate.Booki
 }
 
 func (r *bookingRepository) SearchReadModels(ctx context.Context, tenantID shared.TenantID, query string, status string, limit int, offset int) ([]domain.BookingReadModel, int64, error) {
+	// "unassigned" spans two booking states plus a NOT EXISTS trip check;
+	// the sqlc exact-match query can't express it.
+	if status == StatusFilterUnassigned {
+		return r.searchUnassignedBookings(ctx, tenantID, query, "", "", limit, offset)
+	}
 	rows, err := r.Q(ctx).SearchBookings(ctx, db.SearchBookingsParams{
 		TenantID: string(tenantID),
 		Column2:  sql.NullString{String: query, Valid: true},

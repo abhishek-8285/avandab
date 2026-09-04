@@ -7,20 +7,12 @@
 */
 :root {
   /* Type System */
-  --text-page-title: 1.5rem;
-  --text-page-title-lh: 1.333;
-  --text-section: 1.25rem;
-  --text-section-lh: 1.3;
-  --text-subsection: 1.125rem;
-  --text-subsection-lh: 1.3;
   --text-body: 0.875rem;
   --text-body-lh: 1.5;
   --text-label: 0.875rem;
   --text-label-lh: 1.5;
   --text-caption: 0.75rem;
   --text-caption-lh: 1;
-  --text-stat: 1.75rem;
-  --text-stat-lh: 1.2;
 
   /* Font Weight Tokens */
   --weight-bold: 700;
@@ -54,11 +46,11 @@
 .border-border-subtle { border-color: var(--color-border-subtle); }
 .border-outline-variant { border-color: var(--color-outline-variant); }
 
-.font-display { font-size: 36px; line-height: 1.2; letter-spacing: -0.02em; font-weight: 700; }
-.font-headline-lg { font-family: 'Outfit', sans-serif; font-size: 24px; line-height: 32px; font-weight: 600; }
-.font-headline-md { font-family: 'Outfit', sans-serif; font-size: 20px; line-height: 28px; font-weight: 600; }
-.font-body-lg { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 16px; line-height: 24px; font-weight: 400; }
-.font-body-md { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; line-height: 20px; font-weight: 400; }
+.font-display { font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif; }
+.font-headline-lg { font-family: 'Outfit', sans-serif; }
+.font-headline-md { font-family: 'Outfit', sans-serif; }
+.font-body-lg { font-family: 'Plus Jakarta Sans', sans-serif; }
+.font-body-md { font-family: 'Plus Jakarta Sans', sans-serif; }
 /* Icon Alignment Rules */
 .material-symbols-outlined,
 .material-icons,
@@ -101,19 +93,18 @@ svg.h-full { height: 100% !important; }
   display: block;
 }
 
-.font-label-caps { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11px; line-height: 16px; letter-spacing: 0.05em; font-weight: 700; text-transform: uppercase; }
-.font-data-mono { font-family: 'Plus Jakarta Sans', ui-monospace, monospace; font-size: 14px; line-height: 20px; font-weight: 500; }
-
 /* Apply line-height and font-weight to typography utilities */
-.text-page-title { font-size: var(--text-page-title); line-height: var(--text-page-title-lh); font-weight: var(--weight-bold); }
-.text-section { font-size: var(--text-section); line-height: var(--text-section-lh); font-weight: var(--weight-bold); }
-.text-subsection { font-size: var(--text-subsection); line-height: var(--text-subsection-lh); font-weight: var(--weight-semibold); }
 .text-[var(--color-primary)] { color: var(--color-primary); }
 .bg-[var(--color-primary)] { background-color: var(--color-primary); }
 .border-[var(--color-border-subtle)], .border-[var(--color-border-subtle)] { border-color: var(--color-border-subtle); }
 
-/* Table headers — crisp, high contrast styling */
+/* Table headers — crisp, high contrast styling.
+   @layer base so Tailwind text-*/bg-* utilities on th/td win when present;
+   bare cells keep these density defaults. Unlayered author CSS would beat
+   Tailwind's layered utilities regardless of specificity. */
+@layer base {
 th { font-size: var(--text-caption); font-weight: 700; line-height: var(--text-caption-lh); color: var(--color-on-surface); background-color: var(--color-surface-container-low); }
+}
 
 /* Table cell tokens - High Density Operational Precision */
 .th-cell { padding: 0.875rem 1.5rem; font-size: 11px; font-weight: 700; line-height: 16px; color: var(--color-on-surface-variant); text-align: left; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid var(--color-border-subtle); background-color: var(--color-surface-container-low); }
@@ -476,17 +467,31 @@ button:disabled:hover {
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
             width: 100%;
         }
+        /* Standalone public pages pin the navbar: fixed beats sticky quirks
+           (overflow ancestors, mobile rubber-banding) — bar never scrolls away. */
+        body.has-public-nav { padding-top: 80px; }
+        body.has-public-nav .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+        }
         .navigation {
             display: flex;
             align-items: center;
             justify-content: space-between;
             width: 100%;
-            padding: 0 1.5rem;
+            padding: 0 1rem;
             height: 80px;
         }
-        @media (min-width: 768px) {
+        @media (min-width: 640px) {
             .navigation {
-                padding: 0 3rem;
+                padding: 0 1.5rem;
+            }
+        }
+        @media (min-width: 1280px) {
+            .navigation {
+                padding: 0 2.5rem;
             }
         }
         .navigation-button-container {
@@ -539,7 +544,12 @@ button:disabled:hover {
         .navigation-body-container {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.5rem;
+        }
+        @media (min-width: 1280px) {
+            .navigation-body-container {
+                gap: 1rem;
+            }
         }
         .navigation-top-menu {
             display: flex;
@@ -547,26 +557,40 @@ button:disabled:hover {
             list-style: none;
             margin: 0;
             padding: 0;
-            gap: 0.5rem;
+            gap: 0.15rem;
+        }
+        @media (min-width: 1280px) {
+            .navigation-top-menu {
+                gap: 0.5rem;
+            }
         }
         .navigation-top-menu-item {
             position: relative;
         }
         .navigation-top-menu-label,
         .navigation-top-menu-link {
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 600;
             color: var(--color-on-surface);
             text-decoration: none;
             cursor: pointer;
-            padding: 10px 14px;
+            padding: 8px 10px;
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 5px;
+            white-space: nowrap;
             transition: color 0.15s ease;
             background: transparent;
             border: 0;
             font-family: inherit;
+        }
+        @media (min-width: 1280px) {
+            .navigation-top-menu-label,
+            .navigation-top-menu-link {
+                font-size: 15px;
+                padding: 10px 14px;
+                gap: 6px;
+            }
         }
         button.navigation-top-menu-label:focus-visible,
         .navigation-top-menu-link:focus-visible {
@@ -906,11 +930,13 @@ button:disabled:hover {
     top: 0;
     z-index: 1;
 }
+@layer base {
 tbody tr:hover td {
     background-color: var(--color-surface-container-low);
 }
 td {
     font-size: 0.8125rem;
+}
 }
 
 /* Status dot pulse for live indicators */

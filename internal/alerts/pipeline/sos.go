@@ -11,6 +11,7 @@ import (
 	"transport-app/internal/alerts/channels"
 	"transport-app/internal/alerts/domain"
 	"transport-app/internal/events"
+	"transport-app/internal/shared"
 )
 
 // HandleSOS processes an emergency SOSEvent (Spec 05 §8).
@@ -38,8 +39,20 @@ func (e *Engine) HandleSOS(ctx context.Context, ev events.Event) error {
 	driverID := ""
 	if d, ok := payload["DriverID"].(string); ok && d != "" {
 		driverID = d
-	} else if d, ok := payload["driver_id"].(string); ok {
+	} else if d, ok := payload["driver_id"].(string); ok && d != "" {
 		driverID = d
+	}
+
+	// Route the emergency to the right org: context, then payload. Never the
+	// bootstrap tenant — a misrouted SOS both leaks location and misses
+	// response. Unroutable SOS fails loudly so it gets fixed, not filed away.
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		if t, ok := payload["TenantID"].(string); ok && t != "" {
+			tenantID = t
+		} else if t, ok := payload["tenant_id"].(string); ok && t != "" {
+			tenantID = t
+		}
 	}
 
 	var latPtr, lngPtr *float64
@@ -92,6 +105,12 @@ func (e *Engine) HandleSOS(ctx context.Context, ev events.Event) error {
 		LastSeenAt:     now,
 		Occurrences:    1,
 		CreatedAt:      now,
+		TenantID:       tenantID,
+	}
+
+	if tenantID == "" {
+		e.logger.Error("SOS alert unroutable (tenant unknown)", "vehicle_id", vehicleID)
+		return fmt.Errorf("sos: cannot persist alert without tenant")
 	}
 
 	// Escalation: 10 min schedule for SOS

@@ -5,16 +5,20 @@
 //
 // Resolution order for Enabled(org, key):
 //  1. feature_flags row for the org (explicit grant/revoke) — always wins
-//  2. env flag when set (true enables process-wide, false disables) — the
+//  2. lapsed subscription (expired trial, failed payment, closed account)
+//     switches add-ons off; core features are never gated by billing, and
+//     orgs with no subscription row keep legacy behaviour
+//  3. env flag when set (true enables process-wide, false disables) — the
 //     operator's monetization lever: unset-or-false + per-org grants
-//  3. EnvDefaultOn when the env flag is unset (mirrors internal/config
+//  4. EnvDefaultOn when the env flag is unset (mirrors internal/config
 //     defaults so existing deployments keep working)
-//  4. catalog tier default (core → on, addon → off)
+//  5. catalog tier default (core → on, addon → off)
 package features
 
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -126,6 +130,50 @@ type Registry struct {
 type cachedOrg struct {
 	flags   map[string]bool // feature → explicitly set value
 	fetched time.Time
+	sub     subscriptionGate // empty (HasRow=false) when no subscription row
+}
+
+// subscriptionGate carries the commercial state that can switch add-ons off.
+// Zero value means "no subscription row" → legacy behaviour (allowed).
+type subscriptionGate struct {
+	HasRow    bool
+	Status    string
+	TrialEnd  string
+	PeriodEnd string
+}
+
+// addonsBlocked reports whether this org currently loses add-on features:
+// hard terminal states, an elapsed trial, or a failed payment. Explicit
+// per-feature grants (flags map) still win — an admin's manual decision is
+// never overridden here. Orgs with no subscription row keep legacy behaviour
+// so bootstrap/legacy tenants are never locked out by billing checks.
+func (s subscriptionGate) addonsBlocked(now time.Time) bool {
+	if !s.HasRow {
+		return false
+	}
+	switch s.Status {
+	case "READ_ONLY", "ACCOUNT_CLOSED", "OPERATIONALLY_TERMINATED":
+		return true
+	case "PAST_DUE":
+		return true
+	case "TRIAL":
+		if s.TrialEnd == "" {
+			return false
+		}
+		if end, err := parseGateTime(s.TrialEnd); err == nil && !now.Before(end) {
+			return true
+		}
+	}
+	return false
+}
+
+func parseGateTime(s string) (time.Time, error) {
+	for _, layout := range []string{"2006-01-02 15:04:05", time.RFC3339, "2006-01-02"} {
+		if tm, err := time.Parse(layout, s); err == nil {
+			return tm, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unparseable gate time %q", s)
 }
 
 // NewRegistry builds a registry. envLookup defaults to os.Getenv.
@@ -139,14 +187,20 @@ func NewRegistry(db *sql.DB, envLookup func(string) string) *Registry {
 const cacheTTL = 60 * time.Second
 
 // Enabled resolves a feature for one org. Unknown keys are off.
+// Explicit per-feature grants win; otherwise an org whose subscription
+// lapsed (expired trial, failed payment, closed account) loses add-ons
+// while core features keep working.
 func (reg *Registry) Enabled(ctx context.Context, tenantID, key string) bool {
 	f, ok := ByKey(key)
 	if !ok {
 		return false
 	}
-	flags := reg.flagsFor(ctx, tenantID)
-	if v, explicit := flags[key]; explicit {
+	org := reg.orgFor(ctx, tenantID)
+	if v, explicit := org.flags[key]; explicit {
 		return v
+	}
+	if f.Tier == TierAddon && org.sub.addonsBlocked(time.Now()) {
+		return false
 	}
 	if v, decided := envState(reg.envLookup, f); decided {
 		return v
@@ -154,7 +208,54 @@ func (reg *Registry) Enabled(ctx context.Context, tenantID, key string) bool {
 	return f.Tier == TierCore
 }
 
-// envState resolves the process-wide switch for a feature: (value, decided).
+func (reg *Registry) flagsFor(ctx context.Context, tenantID string) map[string]bool {
+	return reg.orgFor(ctx, tenantID).flags
+}
+
+func (reg *Registry) orgFor(ctx context.Context, tenantID string) cachedOrg {
+	reg.mu.Lock()
+	c, ok := reg.cache[tenantID]
+	if ok && time.Since(c.fetched) < (cacheTTL) {
+		reg.mu.Unlock()
+		return c
+	}
+	reg.mu.Unlock()
+
+	flags := map[string]bool{}
+	sub := subscriptionGate{}
+	if reg.db != nil {
+		rows, err := reg.db.QueryContext(ctx,
+			`SELECT feature, enabled FROM feature_flags WHERE tenant_id = ?`, tenantID)
+		if err == nil {
+			func() {
+				defer func() { _ = rows.Close() }()
+				for rows.Next() {
+					var k string
+					var v bool
+					if rows.Scan(&k, &v) == nil {
+						flags[k] = v
+					}
+				}
+			}()
+		}
+		var status, trialEnd, periodEnd sql.NullString
+		if err := reg.db.QueryRowContext(ctx,
+			`SELECT status, trial_end, current_period_end FROM tenant_subscriptions WHERE tenant_id = ?`, tenantID).Scan(&status, &trialEnd, &periodEnd); err == nil && status.Valid {
+			sub = subscriptionGate{HasRow: true, Status: status.String}
+			if trialEnd.Valid {
+				sub.TrialEnd = trialEnd.String
+			}
+			if periodEnd.Valid {
+				sub.PeriodEnd = periodEnd.String
+			}
+		}
+	}
+
+	reg.mu.Lock()
+	reg.cache[tenantID] = cachedOrg{flags: flags, sub: sub, fetched: time.Now()}
+	reg.mu.Unlock()
+	return reg.cache[tenantID]
+}
 func envState(lookup func(string) string, f Feature) (bool, bool) {
 	if f.EnvFlag == "" {
 		return false, false
@@ -212,35 +313,4 @@ func (reg *Registry) invalidate(tenantID string) {
 	reg.mu.Lock()
 	delete(reg.cache, tenantID)
 	reg.mu.Unlock()
-}
-
-func (reg *Registry) flagsFor(ctx context.Context, tenantID string) map[string]bool {
-	reg.mu.Lock()
-	c, ok := reg.cache[tenantID]
-	if ok && time.Since(c.fetched) < (cacheTTL) {
-		reg.mu.Unlock()
-		return c.flags
-	}
-	reg.mu.Unlock()
-
-	flags := map[string]bool{}
-	if reg.db != nil {
-		rows, err := reg.db.QueryContext(ctx,
-			`SELECT feature, enabled FROM feature_flags WHERE tenant_id = ?`, tenantID)
-		if err == nil {
-			defer func() { _ = rows.Close() }()
-			for rows.Next() {
-				var k string
-				var v bool
-				if rows.Scan(&k, &v) == nil {
-					flags[k] = v
-				}
-			}
-		}
-	}
-
-	reg.mu.Lock()
-	reg.cache[tenantID] = cachedOrg{flags: flags, fetched: time.Now()}
-	reg.mu.Unlock()
-	return flags
 }

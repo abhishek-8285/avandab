@@ -4,7 +4,7 @@
   <div class="group flex items-center justify-between gap-3 border border-border-subtle rounded-xl px-3 py-2.5 bg-surface-container-low hover:bg-surface-container hover:border-primary/20 transition-all">
     <div class="min-w-0">
       <div class="flex items-center gap-2 flex-wrap">
-        <span class="font-mono text-xs font-bold text-on-surface tabular-nums">{{slice .ID 0 8}}…</span>
+        <span class="font-data-mono text-xs font-bold text-on-surface tabular-nums">{{slice .ID 0 8}}…</span>
         <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-bold {{statusBadge .Status}}">{{.Status}}</span>
       </div>
       <div class="text-[11px] text-text-muted mt-0.5 tabular-nums">{{.Provider}} · {{.CreatedAt}}</div>

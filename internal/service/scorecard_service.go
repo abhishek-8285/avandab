@@ -156,6 +156,11 @@ type ScorecardService struct {
 	baseService
 	config *fuel.ConfigReader
 	now    func() time.Time
+
+	// featureGate reports whether the scorecard feature is on for an org.
+	// Nil means ungated (tests, tooling). Production wires the features
+	// registry so one org disabling scorecard stops only its own recomputes.
+	featureGate func(tenantID string) bool
 }
 
 // NewScorecardService builds the service over the store's raw DB. It is only
@@ -171,6 +176,21 @@ func (s *ScorecardService) WithClock(now func() time.Time) *ScorecardService {
 		s.now = now
 	}
 	return s
+}
+
+// WithFeatureGate scopes recomputes to orgs with the feature on.
+// Chain after construction; safe to omit (ungated).
+func (s *ScorecardService) WithFeatureGate(gate func(tenantID string) bool) *ScorecardService {
+	s.featureGate = gate
+	return s
+}
+
+// driverTenant resolves a driver's org for per-org config and gating.
+// Empty when the driver is unknown.
+func (s *ScorecardService) driverTenant(ctx context.Context, driverID string) string {
+	var tenant string
+	_ = s.scoreDB().QueryRowContext(ctx, `SELECT tenant_id FROM drivers WHERE id = ?`, driverID).Scan(&tenant)
+	return tenant
 }
 
 // WriteBehaviourEvent inserts a driver_behaviour_events row with the weight
@@ -195,7 +215,7 @@ func (s *ScorecardService) WriteBehaviourEvent(ctx context.Context, evt Behaviou
 	}
 
 	weight := defaultBehaviourWeights[evt.EventType]
-	if w, err := s.config.GetFloat(ctx, string(shared.DefaultTenant), fuel.ConfigScorecardWeight+evt.EventType, weight); err == nil {
+	if w, err := s.config.GetFloat(ctx, s.driverTenant(ctx, evt.DriverID), fuel.ConfigScorecardWeight+evt.EventType, weight); err == nil {
 		weight = w
 	}
 
@@ -213,7 +233,12 @@ func (s *ScorecardService) WriteBehaviourEvent(ctx context.Context, evt Behaviou
 // persists it atomically: one driver_scores history row + the denormalized
 // drivers.score / drivers.tier (Spec 03 §4.2, §4.3).
 func (s *ScorecardService) RecomputeDriverScore(ctx context.Context, driverID string) (DriverScore, error) {
-	cfg := s.loadScorecardConfig(ctx)
+	tenant := s.driverTenant(ctx, driverID)
+	if s.featureGate != nil && !s.featureGate(tenant) {
+		// Gated-off org (or unknown driver): skip quietly, sweep continues.
+		return DriverScore{}, nil
+	}
+	cfg := s.loadScorecardConfigFor(ctx, tenant)
 	now := s.now()
 	periodStart := now.Add(-time.Duration(cfg.windowDays) * 24 * time.Hour)
 
@@ -358,7 +383,7 @@ func (s *ScorecardService) Leaderboard(ctx context.Context, tenantID string, lim
 	if limit > 200 {
 		limit = 200
 	}
-	cfg := s.loadScorecardConfig(ctx)
+	cfg := s.loadScorecardConfigFor(ctx, tenantID)
 	periodStart := s.now().Add(-time.Duration(cfg.windowDays) * 24 * time.Hour)
 	db := s.scoreDB()
 
@@ -469,7 +494,7 @@ func (s *ScorecardService) Leaderboard(ctx context.Context, tenantID string, lim
 // DriverDetail returns the score history + event breakdown for one driver
 // (Spec 03 §6.3 driver detail page).
 func (s *ScorecardService) DriverDetail(ctx context.Context, driverID string) (DriverDetail, error) {
-	cfg := s.loadScorecardConfig(ctx)
+	cfg := s.loadScorecardConfigFor(ctx, s.driverTenant(ctx, driverID))
 	now := s.now()
 	periodStart := now.Add(-time.Duration(cfg.windowDays) * 24 * time.Hour)
 	db := s.scoreDB()
@@ -578,7 +603,7 @@ func (s *ScorecardService) DriverDetail(ctx context.Context, driverID string) (D
 // fewer than scorecard.min_events events (cold start — no misleading reward).
 // The bonus is computed on the pre-clamp net payout (gotcha 3).
 func (s *ScorecardService) BonusForPayout(ctx context.Context, driverID string, netPayout float64) float64 {
-	cfg := s.loadScorecardConfig(ctx)
+	cfg := s.loadScorecardConfigFor(ctx, s.driverTenant(ctx, driverID))
 	db := s.scoreDB()
 
 	var score sql.NullFloat64
@@ -726,7 +751,13 @@ func (s *ScorecardService) eventResolved(ctx context.Context, eventID string) (b
 
 // loadScorecardConfig reads the scorecard thresholds from company_config.
 func (s *ScorecardService) loadScorecardConfig(ctx context.Context) scorecardConfig {
-	t := string(shared.DefaultTenant)
+	return s.loadScorecardConfigFor(ctx, string(shared.DefaultTenant))
+}
+
+// loadScorecardConfigFor reads thresholds for one org (empty tenant falls
+// back to compiled defaults via missed lookups).
+func (s *ScorecardService) loadScorecardConfigFor(ctx context.Context, tenant string) scorecardConfig {
+	t := tenant
 	cfg := scorecardConfig{
 		windowDays:      fuel.DefaultScorecardWindowDays,
 		tierA:           fuel.DefaultScorecardTierA,

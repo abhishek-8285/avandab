@@ -195,6 +195,42 @@ func TestSelectedTrips_List_SuccessAndPagination(t *testing.T) {
 	})
 }
 
+// TestSelectedTrips_List_ActiveStatusFilter proves ?status=active (dashboard
+// Active Trips drill-down) returns en-route trips and excludes terminal ones.
+func TestSelectedTrips_List_ActiveStatusFilter(t *testing.T) {
+	db := newTripsSelectedDB(t)
+	app := newTripsSelectedApp(t, db, &mockAuthSvc{})
+	route, _, _ := seedTripPrereqs(t, app)
+	ctx := shared.ContextWithTenantID(context.Background(), shared.DefaultTenant)
+
+	mk := func() string {
+		tr, err := app.Services.Trips.CreateTrip(ctx, service.CreateTripRequest{
+			RouteID: route.ID, DepartureTime: time.Now().AddDate(0, 0, 1).Format("2006-01-02T15:04:05"),
+		})
+		require.NoError(t, err)
+		return string(tr.ID)
+	}
+	activeID, doneID := mk(), mk()
+	_, err := db.Exec(`UPDATE trips SET status = 'in_transit' WHERE id = ?`, activeID)
+	require.NoError(t, err)
+	_, err = db.Exec(`UPDATE trips SET status = 'completed' WHERE id = ?`, doneID)
+	require.NoError(t, err)
+	var activeNum, doneNum string
+	require.NoError(t, db.QueryRow(`SELECT trip_number FROM trips WHERE id = ?`, activeID).Scan(&activeNum))
+	require.NoError(t, db.QueryRow(`SELECT trip_number FROM trips WHERE id = ?`, doneID).Scan(&doneNum))
+
+	r := chi.NewRouter()
+	r.Route("/trips", app.Trips.Routes)
+
+	req := withTripTenantSession(httptest.NewRequest(http.MethodGet, "/trips/?status=active", nil), "1", "user-1", "admin")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	body := w.Body.String()
+	assert.Contains(t, body, activeNum, "en-route trip listed under status=active")
+	assert.NotContains(t, body, doneNum, "completed trip excluded from status=active")
+}
+
 func TestSelectedTrips_List_Error(t *testing.T) {
 	db := newTripsSelectedDB(t)
 	app := newTripsSelectedApp(t, db, &mockAuthSvc{})

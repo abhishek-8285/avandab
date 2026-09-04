@@ -14,6 +14,7 @@ import (
 	"transport-app/internal/alerts/domain"
 	alertsqlite "transport-app/internal/alerts/repository/sqlite"
 	"transport-app/internal/events"
+	"transport-app/internal/shared"
 )
 
 type mockChannel struct {
@@ -134,7 +135,7 @@ func TestSOS_TriggerFanOutAndDedup(t *testing.T) {
 	db, engine, inApp, telegram, clk := setupSOSTestDB(t)
 	defer db.Close()
 
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "tenant-42")
 
 	// 1. Send SOSEvent
 	sosEv := events.Event{

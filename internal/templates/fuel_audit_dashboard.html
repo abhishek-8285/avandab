@@ -54,7 +54,7 @@
                 <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
                 </div>
-                <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/15">Flagged</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/15">Flagged</span>
             </div>
             <div class="mt-4">
                 <div id="fuel-kpi-needs-review" class="text-stat text-status-warning tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.AuditStats.NeedsReviewCount}}</div>
@@ -70,7 +70,7 @@
                 <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                 </div>
-                <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/15">Within tolerance</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/15">Within tolerance</span>
             </div>
             <div class="mt-4">
                 <div id="fuel-kpi-passed" class="text-stat text-status-success tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.AuditStats.PassedCount}}</div>
@@ -86,7 +86,7 @@
                 <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/15 grid place-items-center text-rose-600 group-hover:bg-rose-500 group-hover:text-white transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
                 </div>
-                <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-rose-500/10 text-rose-700 border border-rose-500/15">Admin verdict</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-rose-500/10 text-rose-700 border border-rose-500/15">Admin verdict</span>
             </div>
             <div class="mt-4">
                 <div id="fuel-kpi-failed" class="text-stat text-status-alert tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.AuditStats.FailedCount}}</div>
@@ -115,7 +115,7 @@
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between flex-wrap gap-3">
             <div class="flex items-center gap-3">
-                <h3 class="text-sm font-bold text-on-surface">Audit Queue</h3>
+                <h2 class="text-sm font-bold text-on-surface">Audit Queue</h2>
                 <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .AuditClaims}} claims</span>
             </div>
             <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold tracking-wide uppercase text-emerald-700 dark:text-emerald-300 cursor-default"

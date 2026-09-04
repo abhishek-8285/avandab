@@ -7,7 +7,7 @@
             </span>
             <div class="min-w-0">
                 <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display truncate m-0">
-                    {{if .Zone}}Edit Geofence: <span class="text-primary font-mono">{{.Zone.Name}}</span>{{else}}Create Geofence Boundary{{end}}
+                    {{if .Zone}}Edit Geofence: <span class="text-primary font-data-mono">{{.Zone.Name}}</span>{{else}}Create Geofence Boundary{{end}}
                 </h1>
                 <p class="text-sm text-secondary mt-0.5 mb-0">Configure virtual boundaries for automated fleet entry/exit events, dwell demurrage, and restricted area alerts.</p>
             </div>
@@ -32,7 +32,7 @@
             <div class="lg:col-span-5 bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm p-6 flex flex-col justify-between">
                 <div class="space-y-5">
                     <div>
-                        <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-2 m-0">Zone Configuration</h2>
+                        <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-2 m-0">Zone Configuration</h2>
                     </div>
 
                     <!-- Name -->
@@ -66,7 +66,7 @@
                     <div>
                         <label for="route_name" class="block text-xs font-bold text-on-surface mb-1.5">Route Scope (Optional)</label>
                         <input id="route_name" name="route_name" value="{{if .Zone}}{{.Zone.RouteName}}{{end}}"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-mono"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-data-mono"
                             placeholder="e.g. BLR-MUM-01">
                         <p class="text-[11px] text-text-muted mt-1 mb-0">Leave blank to apply globally to all fleet movements.</p>
                     </div>
@@ -76,7 +76,7 @@
                         <div>
                             <label for="priority" class="block text-xs font-bold text-on-surface mb-1.5">Priority Level</label>
                             <input id="priority" name="priority" type="number" min="0" value="{{if .Zone}}{{.Zone.Priority}}{{else}}0{{end}}"
-                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-mono tabular-nums">
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-data-mono tabular-nums">
                         </div>
                         <div class="flex items-center">
                             <p class="text-[11px] text-text-muted leading-tight m-0">Higher priority wins when vehicles overlap multiple boundaries.</p>
@@ -105,7 +105,7 @@
                     <div id="radius-control" class="{{if .Zone}}{{if eq .Zone.Shape "polygon"}}hidden{{end}}{{end}} space-y-2.5 pt-1">
                         <div class="flex items-center justify-between">
                             <label for="radius-slider" class="text-xs font-bold text-on-surface">Circle Radius</label>
-                            <span id="radius-value" class="text-xs font-mono font-bold tabular-nums px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15" data-numeric>
+                            <span id="radius-value" class="text-xs font-data-mono font-bold tabular-nums px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15" data-numeric>
                                 {{if .Zone}}{{.Zone.RadiusM}}{{else}}500{{end}} m
                             </span>
                         </div>
@@ -113,12 +113,12 @@
                             value="{{if .Zone}}{{.Zone.RadiusM}}{{else}}500{{end}}"
                             class="w-full h-2 bg-surface-container-high rounded-full appearance-none cursor-pointer accent-primary">
                         <div class="flex flex-wrap gap-1.5 pt-1" id="radius-presets">
-                            <button type="button" data-preset="100" class="text-[11px] font-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">100m</button>
-                            <button type="button" data-preset="250" class="text-[11px] font-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">250m</button>
-                            <button type="button" data-preset="500" class="text-[11px] font-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">500m</button>
-                            <button type="button" data-preset="1000" class="text-[11px] font-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">1km</button>
-                            <button type="button" data-preset="2500" class="text-[11px] font-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">2.5km</button>
-                            <button type="button" data-preset="5000" class="text-[11px] font-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">5km</button>
+                            <button type="button" data-preset="100" class="text-[11px] font-data-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">100m</button>
+                            <button type="button" data-preset="250" class="text-[11px] font-data-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">250m</button>
+                            <button type="button" data-preset="500" class="text-[11px] font-data-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">500m</button>
+                            <button type="button" data-preset="1000" class="text-[11px] font-data-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">1km</button>
+                            <button type="button" data-preset="2500" class="text-[11px] font-data-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">2.5km</button>
+                            <button type="button" data-preset="5000" class="text-[11px] font-data-mono font-semibold tabular-nums px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low cursor-pointer transition-colors">5km</button>
                         </div>
                     </div>
 
@@ -126,11 +126,11 @@
                     <div class="rounded-xl bg-surface-container-low border border-border-subtle px-3.5 py-3 space-y-1.5 text-xs">
                         <div class="flex items-center justify-between text-text-muted">
                             <span>Center / Origin:</span>
-                            <span id="metric-center" class="font-mono font-bold tabular-nums text-on-surface">-</span>
+                            <span id="metric-center" class="font-data-mono font-bold tabular-nums text-on-surface">-</span>
                         </div>
                         <div class="flex items-center justify-between text-text-muted">
                             <span>Estimated Area:</span>
-                            <span id="metric-area" class="font-mono font-bold tabular-nums text-on-surface">-</span>
+                            <span id="metric-area" class="font-data-mono font-bold tabular-nums text-on-surface">-</span>
                         </div>
                     </div>
                 </div>
@@ -165,10 +165,10 @@
                     <!-- Quick City Jump Chips -->
                     <div class="flex items-center gap-1 overflow-x-auto shrink-0">
                         <span class="text-[10px] uppercase font-bold tracking-wider text-text-muted mr-1">Jump:</span>
-                        <button type="button" class="quick-jump px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-[11px] font-mono text-secondary hover:bg-surface-container-low cursor-pointer transition-colors" data-lat="28.6139" data-lng="77.2090">Delhi</button>
-                        <button type="button" class="quick-jump px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-[11px] font-mono text-secondary hover:bg-surface-container-low cursor-pointer transition-colors" data-lat="19.0760" data-lng="72.8777">Mumbai</button>
-                        <button type="button" class="quick-jump px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-[11px] font-mono text-secondary hover:bg-surface-container-low cursor-pointer transition-colors" data-lat="12.9716" data-lng="77.5946">BLR</button>
-                        <button type="button" class="quick-jump px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-[11px] font-mono text-secondary hover:bg-surface-container-low cursor-pointer transition-colors" data-lat="13.0827" data-lng="80.2707">Chennai</button>
+                        <button type="button" class="quick-jump px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-[11px] font-data-mono text-secondary hover:bg-surface-container-low cursor-pointer transition-colors" data-lat="28.6139" data-lng="77.2090">Delhi</button>
+                        <button type="button" class="quick-jump px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-[11px] font-data-mono text-secondary hover:bg-surface-container-low cursor-pointer transition-colors" data-lat="19.0760" data-lng="72.8777">Mumbai</button>
+                        <button type="button" class="quick-jump px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-[11px] font-data-mono text-secondary hover:bg-surface-container-low cursor-pointer transition-colors" data-lat="12.9716" data-lng="77.5946">BLR</button>
+                        <button type="button" class="quick-jump px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-[11px] font-data-mono text-secondary hover:bg-surface-container-low cursor-pointer transition-colors" data-lat="13.0827" data-lng="80.2707">Chennai</button>
                     </div>
                 </div>
 
@@ -213,7 +213,7 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-primary shrink-0"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                         <span><strong>Circle Mode:</strong> Click map to place center. Drag center handle or use slider to adjust radius.</span>
                     </div>
-                    <div id="vertex-counter" class="hidden font-mono text-[11px] font-semibold tabular-nums text-secondary">
+                    <div id="vertex-counter" class="hidden font-data-mono text-[11px] font-semibold tabular-nums text-secondary">
                         0 vertices
                     </div>
                 </div>

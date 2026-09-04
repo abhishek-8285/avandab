@@ -37,10 +37,13 @@ func (h *SettingsHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "settings", "update")).Get("/onboard", h.OnboardPage)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "settings", "update")).Post("/onboard", h.SaveOnboard)
 
-	// Per-org feature flags (plugin-style toggles) — settings admins only.
+	// Per-org feature flags (plugin-style toggles) — platform admins only.
+	// Gated on features:update (admin-only): an org_admin must not enable or
+	// disable features, not even for their own org. Feature grants are a
+	// platform commercial decision; org admins see only the resulting product.
 	featuresAdmin := &FeaturesAdmin{App: h.App}
-	r.With(middleware.ResourcePermission(h.AuthSrv, "settings", "update")).Get("/features", featuresAdmin.Page)
-	r.With(middleware.ResourcePermission(h.AuthSrv, "settings", "update")).Post("/features/toggle", featuresAdmin.Toggle)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "features", "update")).Get("/features", featuresAdmin.Page)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "features", "update")).Post("/features/toggle", featuresAdmin.Toggle)
 }
 
 func (h *SettingsHandlers) OnboardPage(w http.ResponseWriter, r *http.Request) {

@@ -12,7 +12,7 @@
                 <div class="flex items-center gap-2">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-primary shrink-0"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/><path d="M9 20h12"/></svg>
                     <span class="text-[10px] font-semibold uppercase tracking-wider text-on-surface">Fleet</span>
-                    <span class="text-[10px] font-mono text-text-muted">(<span id="fleet-total-badge">0</span>)</span>
+                    <span class="text-[10px] font-data-mono text-text-muted">(<span id="fleet-total-badge">0</span>)</span>
                 </div>
                 <button type="button" id="drawer-collapse-btn" title="Hide panel"
                     class="h-7 w-7 flex items-center justify-center rounded-lg bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer">
@@ -31,7 +31,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 mx-auto"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
             </div>
-            <div id="search-hint" class="hidden text-[10px] font-mono text-text-muted px-0.5"></div>
+            <div id="search-hint" class="hidden text-[10px] font-data-mono text-text-muted px-0.5"></div>
 
             <!-- Sort segmented control -->
             <div class="flex items-center gap-2">
@@ -44,36 +44,36 @@
                 </div>
             </div>
 
-            <div id="fleet-summary" aria-live="polite" class="text-[10px] font-mono text-text-muted truncate">Syncing fleet&hellip;</div>
+            <div id="fleet-summary" aria-live="polite" class="text-[10px] font-data-mono text-text-muted truncate">Syncing fleet&hellip;</div>
         </div>
 
-        <!-- Status filter tabs (bound to the same state as the map strip) -->
-        <div class="px-2 py-2 border-b border-border-subtle grid grid-cols-4 gap-1" role="tablist" aria-label="Filter fleet by status">
+        <!-- Status filter tabs -->
+        <div class="px-2.5 py-2 border-b border-border-subtle grid grid-cols-4 gap-1.5 bg-surface-container-lowest/40" role="tablist" aria-label="Filter fleet by status">
             <button type="button" data-status="all"
-                class="flyfleet-filter-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg text-[9px] font-semibold uppercase tracking-wide transition-colors border cursor-pointer">
-                <span class="font-mono text-[11px]" id="panel-count-all">0</span>
+                class="flyfleet-filter-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all border cursor-pointer">
+                <span class="font-data-mono text-xs font-bold" id="panel-count-all">0</span>
                 <span>All</span>
             </button>
             <button type="button" data-status="running"
-                class="flyfleet-filter-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg text-[9px] font-semibold uppercase tracking-wide transition-colors border cursor-pointer">
-                <span class="font-mono text-[11px]" style="color:#22c55e" id="panel-count-running">0</span>
+                class="flyfleet-filter-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all border cursor-pointer">
+                <span class="font-data-mono text-xs font-bold text-emerald-600 dark:text-emerald-400" id="panel-count-running">0</span>
                 <span>Moving</span>
             </button>
             <button type="button" data-status="stopped"
-                class="flyfleet-filter-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg text-[9px] font-semibold uppercase tracking-wide transition-colors border cursor-pointer">
-                <span class="font-mono text-[11px]" style="color:#137fec" id="panel-count-stopped">0</span>
+                class="flyfleet-filter-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all border cursor-pointer">
+                <span class="font-data-mono text-xs font-bold text-sky-600 dark:text-sky-400" id="panel-count-stopped">0</span>
                 <span>Idle</span>
             </button>
             <button type="button" data-status="alert" title="No signal or maintenance due"
-                class="flyfleet-filter-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg text-[9px] font-semibold uppercase tracking-wide transition-colors border cursor-pointer">
-                <span class="font-mono text-[11px]" style="color:#ef4444" id="panel-count-alert">0</span>
-                <span>No Signal</span>
+                class="flyfleet-filter-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all border cursor-pointer">
+                <span class="font-data-mono text-xs font-bold text-rose-600 dark:text-rose-400" id="panel-count-alert">0</span>
+                <span>Alert</span>
             </button>
         </div>
 
         <div id="fleet-list" class="flex-1 overflow-y-auto overflow-x-hidden relative" role="listbox" aria-label="Vehicles"><div id="fleet-spacer" class="relative w-full"></div></div>
 
-        <div id="fleet-more-note" class="hidden px-3 py-2 text-[10px] font-mono text-text-muted border-t border-border-subtle"></div>
+        <div id="fleet-more-note" class="hidden px-3 py-2 text-[10px] font-data-mono text-text-muted border-t border-border-subtle"></div>
 
         <div class="p-3 space-y-2 border-t border-border-subtle">
             {{if can .User "vehicles" "create"}}
@@ -88,15 +88,17 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                 Export CSV
             </button>
-            <div class="text-[9px] font-mono text-text-muted/70 uppercase tracking-wide text-center">j/k nav · Enter pick · / search</div>
+            <div class="text-[9px] font-data-mono text-text-muted/70 uppercase tracking-wide text-center">j/k nav · Enter pick · / search</div>
         </div>
     </aside>
 
     <!-- Expand rail (shown when drawer collapsed) -->
     <button type="button" id="drawer-expand-rail" title="Show fleet registry"
-        class="hidden absolute left-2 top-1/2 -translate-y-1/2 z-30 h-16 w-8 flex-col items-center justify-center rounded-lg bg-surface-container-lowest/95 backdrop-blur border border-border-subtle text-primary hover:bg-primary hover:text-on-primary shadow-lg transition-colors cursor-pointer">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="m9 18 6-6-6-6"/></svg>
-        <span class="text-[8px] font-semibold uppercase tracking-wider mt-0.5">Fleet</span>
+        class="hidden absolute left-3 top-3 z-30 px-3 py-2 items-center gap-2 rounded-xl bg-surface-container-lowest/95 backdrop-blur-md border border-border-subtle text-on-surface hover:text-primary hover:border-primary/50 shadow-xl transition-all cursor-pointer select-none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-primary shrink-0"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/><path d="M9 20h12"/></svg>
+        <span class="text-xs font-bold uppercase tracking-wider">Fleet</span>
+        <span class="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-data-mono text-[10px] font-bold" id="expand-rail-count">0</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 text-secondary"><path d="m9 18 6-6-6-6"/></svg>
     </button>
 
     <!-- ── Map theater ── -->
@@ -112,87 +114,56 @@
         </div>
 
         <!-- ── Top overlay: status strip ── -->
-        <div class="absolute top-3 left-3 right-3 z-10 flex flex-col lg:flex-row gap-3 items-start justify-between pointer-events-none">
+        <!-- ── Top overlay: compact telemetry HUD controls ── -->
+        <div class="absolute top-3 right-3 z-10 flex items-center gap-2 pointer-events-auto">
+            <!-- Last-update clock + manual refresh + zones pill -->
+            <div class="bg-surface-container-lowest/90 backdrop-blur-md border border-border-subtle rounded-xl px-3 py-1.5 shadow-xl ring-1 ring-black/5 dark:ring-white/10 flex items-center gap-2.5">
+                <!-- Zones toggle -->
+                <label class="flex items-center gap-1.5 pr-2.5 border-r border-border-subtle text-[11px] font-medium uppercase tracking-wide cursor-pointer select-none text-secondary hover:text-primary transition-colors">
+                    <input type="checkbox" id="geofence-toggle" checked class="rounded border-border-subtle text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer">
+                    <span>Zones</span>
+                </label>
 
-            <!-- Filters + zones (single control panel) -->
-            <div class="w-full lg:max-w-xl pointer-events-auto flex flex-wrap items-center gap-2">
-                <div class="bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-xl p-1.5 shadow-xl ring-1 ring-black/5 dark:ring-white/10 flex flex-wrap items-center gap-1">
-
-                    <button type="button" data-status="all"
-                        class="flyfleet-filter-btn group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wide transition-colors border cursor-pointer">
-                        <span>All</span>
-                        <span class="px-1.5 py-0.5 rounded-full bg-primary/10 text-primary font-mono text-[9px]" id="count-all">0</span>
-                    </button>
-
-                    <button type="button" data-status="running"
-                        class="flyfleet-filter-btn group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wide transition-colors border cursor-pointer">
-                        <span class="relative flex items-center justify-center">
-                            <span class="w-2 h-2 rounded-full z-10" style="background:#22c55e"></span>
-                            <span class="absolute w-3.5 h-3.5 rounded-full animate-ping opacity-25" style="background:#22c55e"></span>
-                        </span>
-                        <span>Moving</span>
-                        <span class="font-mono text-[9px] opacity-70" id="count-running">0</span>
-                    </button>
-
-                    <button type="button" data-status="stopped"
-                        class="flyfleet-filter-btn group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wide transition-colors border cursor-pointer">
-                        <span class="w-2 h-2 rounded-full" style="background:#137fec"></span>
-                        <span>Idle</span>
-                        <span class="font-mono text-[9px] opacity-70" id="count-stopped">0</span>
-                    </button>
-
-                    <button type="button" data-status="alert" title="No signal or maintenance due"
-                        class="flyfleet-filter-btn group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wide transition-colors border cursor-pointer">
-                        <span class="w-2 h-2 rounded-full" style="background:#ef4444"></span>
-                        <span>No Signal</span>
-                        <span class="font-mono text-[9px] opacity-70" id="count-alert">0</span>
-                    </button>
-
-                    <!-- Zones toggle (tile provider is server-configured) -->
-                    <label class="flex items-center gap-1.5 pl-2.5 ml-1 border-l border-border-subtle px-2 py-1.5 rounded-lg text-[10px] font-medium uppercase tracking-wide cursor-pointer select-none transition-colors">
-                        <input type="checkbox" id="geofence-toggle" checked class="rounded border-border-subtle text-primary focus:ring-primary h-3 w-3 cursor-pointer">
-                        <span class="text-primary">Zones</span>
-                    </label>
+                <!-- Last update timestamp -->
+                <div class="flex items-center gap-1.5">
+                    <span class="text-[10px] font-medium text-text-muted whitespace-nowrap">Updated:</span>
+                    <span class="text-[11px] font-data-mono font-semibold text-on-surface whitespace-nowrap" id="live-clock">SYNCING...</span>
                 </div>
 
-                <!-- Last-update clock + manual refresh -->
-                <div class="bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-xl px-2 py-1.5 shadow-xl ring-1 ring-black/5 dark:ring-white/10 flex items-center gap-2">
-                    <span class="text-[10px] font-medium text-text-muted whitespace-nowrap">Last update</span>
-                    <span class="text-[11px] font-mono font-semibold text-on-surface whitespace-nowrap" id="live-clock">SYNCING...</span>
-                    <button type="button" id="refresh-feed-btn" title="Refresh telemetry now"
-                        class="h-7 w-7 flex items-center justify-center rounded-lg bg-surface-container-low border border-border-subtle text-secondary hover:text-primary hover:border-primary/50 transition-colors cursor-pointer">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
-                    </button>
-                </div>
+                <!-- Refresh button -->
+                <button type="button" id="refresh-feed-btn" title="Refresh telemetry now"
+                    class="h-7 w-7 flex items-center justify-center rounded-lg bg-surface-container-low border border-border-subtle text-secondary hover:text-primary hover:border-primary/50 transition-colors cursor-pointer">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>
+                </button>
             </div>
         </div>
 
         <!-- ── Status bar: stream health · density · fit (single bottom chrome) ── -->
         <div class="absolute bottom-3 left-3 z-10 pointer-events-auto max-w-[calc(100%-1.5rem)]">
-            <div class="bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-xl shadow-xl ring-1 ring-black/5 dark:ring-white/10 flex flex-wrap items-center gap-y-1 p-1.5">
-                <div class="flex items-center gap-2.5 pl-1.5 pr-2.5">
+            <div class="bg-surface-container-lowest/90 backdrop-blur-md border border-border-subtle rounded-xl shadow-xl ring-1 ring-black/5 dark:ring-white/10 flex flex-wrap items-center gap-y-1 p-1.5">
+                <div class="flex items-center gap-2 pl-2 pr-2.5">
                     <span class="relative flex items-center justify-center">
                         <span class="absolute w-2.5 h-2.5 rounded-full animate-ping opacity-40" id="conn-ping" style="background:#22c55e"></span>
-                        <span class="w-2.5 h-2.5 rounded-full block animate-pulse" id="conn-beacon" style="background:#22c55e"></span>
+                        <span class="w-2 h-2 rounded-full block animate-pulse" id="conn-beacon" style="background:#22c55e"></span>
                     </span>
-                    <span class="text-[10px] font-semibold uppercase tracking-wide text-on-surface leading-none whitespace-nowrap" id="conn-label">Live Stream</span>
+                    <span class="text-[10px] font-semibold uppercase tracking-wider text-on-surface leading-none whitespace-nowrap" id="conn-label">Live Stream</span>
                 </div>
-                <label class="cursor-pointer flex items-center gap-1 pl-2.5 pr-2 border-l border-border-subtle text-[10px] font-medium text-secondary hover:text-on-surface transition-colors">
-                    <input type="checkbox" id="sse-toggle" checked class="rounded text-primary focus:ring-primary h-3 w-3 cursor-pointer">
+                <label class="cursor-pointer flex items-center gap-1.5 pl-2.5 pr-2.5 border-l border-border-subtle text-[10px] font-medium text-secondary hover:text-on-surface transition-colors select-none">
+                    <input type="checkbox" id="sse-toggle" checked class="rounded border-border-subtle text-primary focus:ring-primary h-3.5 w-3.5 cursor-pointer">
                     <span>SSE</span>
                 </label>
-                <div class="flex items-center pl-2.5 pr-2 border-l border-border-subtle">
+                <div class="flex items-center pl-2.5 pr-2.5 border-l border-border-subtle">
                     <span class="text-[11px] font-medium text-on-surface whitespace-nowrap">
-                        <span class="text-primary font-mono text-xs" id="density-active">0</span> / <span class="opacity-60 font-mono" id="density-total">0</span> <span>vehicles</span>
+                        <span class="text-primary font-data-mono text-xs font-bold" id="density-active">0</span> / <span class="opacity-60 font-data-mono text-xs" id="density-total">0</span> <span class="text-secondary text-[10px] uppercase font-semibold">vehicles</span>
                     </span>
                 </div>
-                <div class="flex items-center pl-2.5 pr-2 border-l border-border-subtle">
-                    <span class="text-[10px] font-mono text-text-muted whitespace-nowrap">Last telemetry: <span class="text-on-surface" id="last-telemetry-ago">—</span></span>
+                <div class="hidden sm:flex items-center pl-2.5 pr-2 border-l border-border-subtle">
+                    <span class="text-[10px] font-data-mono text-text-muted whitespace-nowrap">Last telemetry: <span class="text-on-surface font-semibold" id="last-telemetry-ago">—</span></span>
                 </div>
                 <button type="button" id="fit-bounds-btn" title="Zoom map to fit the current fleet view"
-                    class="ml-1 bg-surface-container-low border border-border-subtle rounded-lg px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-primary hover:bg-primary hover:text-on-primary hover:border-primary transition-colors cursor-pointer flex items-center gap-1.5">
+                    class="ml-1.5 bg-surface-container-low hover:bg-primary hover:text-on-primary border border-border-subtle hover:border-primary rounded-lg px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-primary transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><circle cx="12" cy="12" r="3"/><path d="M12 2v4"/><path d="m19.07 4.93-2.83 2.83"/><path d="M22 12h-4"/><path d="m19.07 19.07-2.83-2.83"/><path d="M12 22v-4"/><path d="m4.93 19.07 2.83-2.83"/><path d="M2 12h4"/><path d="m4.93 4.93 2.83 2.83"/></svg>
-                    <span>Fit</span>
+                    <span>Fit Fleet</span>
                 </button>
             </div>
         </div>
@@ -205,10 +176,10 @@
                 <div class="flex justify-between items-start gap-2">
                     <div class="min-w-0">
                         <div class="flex items-center gap-2">
-                            <h2 class="text-base font-bold text-on-surface tracking-tight truncate m-0 font-mono" id="intel-vehicle-id">—</h2>
+                            <h2 class="text-title-md font-bold text-on-surface tracking-tight truncate m-0 font-data-mono" id="intel-vehicle-id">—</h2>
                             <span id="intel-status-pill" class="status-pill" style="color:#6b7280;background:#6b72801f;border:1px solid #6b728040">—</span>
                         </div>
-                        <div class="mt-0.5 font-mono text-[10px] text-text-muted leading-snug break-words min-h-[13px]" id="intel-address">—</div>
+                        <div class="mt-0.5 font-data-mono text-[10px] text-text-muted leading-snug break-words min-h-[13px]" id="intel-address">—</div>
                     </div>
                     <button type="button" id="close-intel-btn"
                         class="h-8 w-8 shrink-0 flex items-center justify-center rounded-lg bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container-high transition-colors active:scale-95 cursor-pointer">
@@ -231,26 +202,33 @@
 
                 <!-- ── Overview tab ── -->
                 <div id="sheet-tab-overview" class="space-y-3" role="tabpanel">
-                    <div class="grid grid-cols-2 gap-2 font-mono">
+                    <div class="grid grid-cols-2 gap-2 font-data-mono">
                         <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
                             <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted">Speed</div>
-                            <div class="text-sm font-bold mt-0.5" id="intel-speed">— km/h</div>
+                            <div class="text-sm font-bold mt-0.5 text-on-surface" id="intel-speed">— km/h</div>
                         </div>
                         <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
                             <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted">Fuel</div>
-                            <div class="text-sm font-bold mt-0.5" id="intel-fuel">—</div>
+                            <div class="text-sm font-bold mt-0.5 text-on-surface" id="intel-fuel">—</div>
                         </div>
                         <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
                             <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted">Odometer</div>
-                            <div class="text-xs font-medium mt-0.5" id="intel-odo">—</div>
+                            <div class="text-xs font-semibold mt-0.5 text-on-surface" id="intel-odo">—</div>
                         </div>
                         <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
                             <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted">Heading</div>
-                            <div class="text-xs font-medium mt-0.5" id="intel-heading">—</div>
+                            <div class="text-xs font-semibold mt-0.5 text-on-surface" id="intel-heading">—</div>
                         </div>
                         <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
                             <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted">Battery</div>
                             <div class="text-sm font-bold mt-0.5" id="intel-battery">—</div>
+                        </div>
+                        <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle">
+                            <div class="text-[9px] font-medium uppercase tracking-wide text-text-muted">Ignition</div>
+                            <div class="text-sm font-bold mt-0.5 flex items-center gap-1.5" id="intel-ignition">
+                                <span class="h-2 w-2 rounded-full bg-secondary"></span>
+                                <span class="text-xs font-semibold text-on-surface">—</span>
+                            </div>
                         </div>
                     </div>
 
@@ -259,27 +237,27 @@
                         <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle space-y-1.5 text-[11px]">
                             <div class="flex items-center justify-between text-secondary">
                                 <span>Trip ID:</span>
-                                <span class="font-mono font-semibold text-primary" id="intel-trip">Unassigned</span>
+                                <span class="font-data-mono font-semibold text-primary" id="intel-trip">Unassigned</span>
                             </div>
                             <div class="flex items-center justify-between text-secondary">
                                 <span>Remaining:</span>
-                                <span class="font-mono text-on-surface" id="intel-remaining">—</span>
+                                <span class="font-data-mono text-on-surface" id="intel-remaining">—</span>
                             </div>
                             <div class="flex items-center justify-between text-secondary">
                                 <span>ETA Horizon:</span>
-                                <span class="font-mono text-on-surface" id="intel-eta">—</span>
+                                <span class="font-data-mono text-on-surface" id="intel-eta">—</span>
                             </div>
                             <div class="flex items-center justify-between text-secondary">
                                 <span>Coordinates:</span>
-                                <span class="font-mono text-on-surface text-[10px]" id="intel-coords">—</span>
+                                <span class="font-data-mono text-on-surface text-[10px]" id="intel-coords">—</span>
                             </div>
                             <div class="flex items-center justify-between text-secondary">
                                 <span>Last GPS Update:</span>
-                                <span class="font-mono text-on-surface" id="intel-timestamp">—</span>
+                                <span class="font-data-mono text-on-surface" id="intel-timestamp">—</span>
                             </div>
                             <div class="flex items-center justify-between text-secondary">
                                 <span>Device:</span>
-                                <span class="font-mono text-on-surface" id="intel-device">—</span>
+                                <span class="font-data-mono text-on-surface" id="intel-device">—</span>
                             </div>
                         </div>
                     </div>
@@ -287,7 +265,7 @@
                     <div id="intel-progress-wrap" class="hidden">
                         <div class="flex items-center justify-between text-[9px] font-semibold uppercase tracking-wide text-text-muted mb-1.5">
                             <span>Trip Progress</span>
-                            <span class="font-mono text-primary" id="intel-progress-pct">—</span>
+                            <span class="font-data-mono text-primary" id="intel-progress-pct">—</span>
                         </div>
                         <div class="h-1.5 rounded-full bg-surface-container-high overflow-hidden">
                             <div id="intel-progress-bar" class="h-full rounded-full bg-primary transition-all duration-500 ease-out" style="width:0%"></div>
@@ -317,32 +295,32 @@
 
                 <!-- ── Trip tab (server summary: route, schedule, cargo) ── -->
                 <div id="sheet-tab-trip" class="hidden space-y-3" role="tabpanel">
-                    <div id="trip-summary-loading" class="hidden text-[10px] font-mono text-text-muted px-0.5">Loading trip…</div>
+                    <div id="trip-summary-loading" class="hidden text-[10px] font-data-mono text-text-muted px-0.5">Loading trip…</div>
                     <div id="trip-summary-empty" class="hidden p-4 text-center">
                         <div class="text-[10px] font-semibold uppercase tracking-wide text-secondary">No active trip</div>
-                        <div class="text-[10px] font-mono text-text-muted/60 mt-1">This vehicle is not assigned to a trip</div>
+                        <div class="text-[10px] font-data-mono text-text-muted/60 mt-1">This vehicle is not assigned to a trip</div>
                     </div>
                     <div id="trip-summary-body" class="hidden space-y-3">
                         <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle space-y-1.5 text-[11px]">
                             <div class="flex items-center justify-between text-secondary">
                                 <span>Trip ID:</span>
-                                <span class="font-mono font-semibold text-primary" id="trip-sum-number">—</span>
+                                <span class="font-data-mono font-semibold text-primary" id="trip-sum-number">—</span>
                             </div>
                             <div class="flex items-center justify-between text-secondary">
                                 <span>Status:</span>
-                                <span class="font-mono text-on-surface" id="trip-sum-status">—</span>
+                                <span class="font-data-mono text-on-surface" id="trip-sum-status">—</span>
                             </div>
                             <div class="flex items-center justify-between text-secondary">
                                 <span>Vehicle:</span>
-                                <span class="font-mono text-on-surface" id="trip-sum-vehicle">—</span>
+                                <span class="font-data-mono text-on-surface" id="trip-sum-vehicle">—</span>
                             </div>
                             <div class="flex items-center justify-between text-secondary">
                                 <span>Cargo:</span>
-                                <span class="font-mono text-on-surface" id="trip-sum-cargo">—</span>
+                                <span class="font-data-mono text-on-surface" id="trip-sum-cargo">—</span>
                             </div>
                             <div class="flex items-center justify-between text-secondary">
                                 <span>Distance:</span>
-                                <span class="font-mono text-on-surface" id="trip-sum-distance">—</span>
+                                <span class="font-data-mono text-on-surface" id="trip-sum-distance">—</span>
                             </div>
                         </div>
 
@@ -368,28 +346,28 @@
 
                 <!-- ── History tab (breadcrumbs, last 90 min) ── -->
                 <div id="sheet-tab-history" class="hidden space-y-3" role="tabpanel">
-                    <div id="history-loading" class="hidden text-[10px] font-mono text-text-muted px-0.5">Loading breadcrumbs…</div>
+                    <div id="history-loading" class="hidden text-[10px] font-data-mono text-text-muted px-0.5">Loading breadcrumbs…</div>
                     <div id="history-empty" class="hidden p-4 text-center">
                         <div class="text-[10px] font-semibold uppercase tracking-wide text-secondary">No breadcrumb data</div>
-                        <div class="text-[10px] font-mono text-text-muted/60 mt-1">Nothing recorded in the last 90 minutes</div>
+                        <div class="text-[10px] font-data-mono text-text-muted/60 mt-1">Nothing recorded in the last 90 minutes</div>
                     </div>
                     <div id="history-body" class="hidden space-y-3">
                         <div class="p-2.5 rounded-lg bg-surface-container-low border border-border-subtle space-y-1.5 text-[11px]">
                             <div class="flex items-center justify-between text-secondary">
                                 <span>Breadcrumbs:</span>
-                                <span class="font-mono text-on-surface" id="history-count">—</span>
+                                <span class="font-data-mono text-on-surface" id="history-count">—</span>
                             </div>
                             <div class="flex items-center justify-between text-secondary">
                                 <span>First seen:</span>
-                                <span class="font-mono text-on-surface" id="history-first">—</span>
+                                <span class="font-data-mono text-on-surface" id="history-first">—</span>
                             </div>
                             <div class="flex items-center justify-between text-secondary">
                                 <span>Latest:</span>
-                                <span class="font-mono text-on-surface" id="history-last">—</span>
+                                <span class="font-data-mono text-on-surface" id="history-last">—</span>
                             </div>
                             <div class="flex items-center justify-between text-secondary">
                                 <span>Trail distance:</span>
-                                <span class="font-mono text-on-surface" id="history-distance">—</span>
+                                <span class="font-data-mono text-on-surface" id="history-distance">—</span>
                             </div>
                         </div>
                         <button type="button" id="history-show-trail-btn"
@@ -454,12 +432,55 @@
 .dark #live-map .leaflet-tile-pane {
     filter: brightness(0.85) invert(100%) contrast(1.15) hue-rotate(195deg) saturate(0.4);
 }
+/* Leaflet Zoom control theme styling */
+.leaflet-bottom.leaflet-right .leaflet-control-zoom {
+    margin-bottom: 24px !important;
+    margin-right: 14px !important;
+}
+#live-map.sheet-open .leaflet-bottom.leaflet-right .leaflet-control-zoom {
+    margin-right: 334px !important;
+}
+.leaflet-control-zoom {
+    border: 1px solid var(--border-subtle, #cbd5e1) !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+}
+.leaflet-control-zoom a {
+    background-color: var(--surface-container-lowest, #ffffff) !important;
+    color: var(--on-surface, #0f172a) !important;
+    border-bottom: 1px solid var(--border-subtle, #e2e8f0) !important;
+    width: 32px !important;
+    height: 32px !important;
+    line-height: 32px !important;
+    transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+.leaflet-control-zoom a:hover {
+    background-color: var(--surface-container-high, #f1f5f9) !important;
+    color: var(--primary, #0284c7) !important;
+}
+.dark .leaflet-control-zoom {
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+.dark .leaflet-control-zoom a {
+    background-color: #0b1219 !important;
+    color: #f1f5f9 !important;
+    border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+}
+.dark .leaflet-control-zoom a:hover {
+    background-color: #1e293b !important;
+    color: #38bdf8 !important;
+}
 @keyframes flyfleet-ping {
     0% { transform: scale(0.8); opacity: 0.8; }
     80%, 100% { transform: scale(2.2); opacity: 0; }
 }
 .vehicle-marker-pulse {
     animation: flyfleet-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.fleet-marker-container {
+    background: transparent !important;
+    border: none !important;
 }
 #fleet-list::-webkit-scrollbar { width: 6px; }
 #fleet-list::-webkit-scrollbar-track { background: transparent; }
@@ -637,7 +658,7 @@
         var pollSec = (cfg.PollSec > 0 ? cfg.PollSec : 10) * 1000;
 
         var map = L.map('live-map', { zoomControl: false }).setView([28.6139, 77.2090], 10);
-        L.control.zoom({ position: 'topright' }).addTo(map);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
 
         function forceMapResize() {
             if (map && map.invalidateSize) {
@@ -781,31 +802,33 @@
             });
         }
 
-        // Directional marker icons
+        // Directional marker icons with dual-ring contrast for Day and Night modes
         function markerIcon(status, heading) {
             var color = iconColors[status] || '#6b7280';
             var rot = (heading != null && !Number.isNaN(heading)) ? heading : 0;
 
             if (status === 'running') {
                 return L.divIcon({
-                    className: '',
-                    html: '<div style="position:relative;width:36px;height:36px;display:flex;align-items:center;justify-content:center">' +
-                          '<div style="position:absolute;inset:-4px;border-radius:9999px;background:' + color + '40" class="vehicle-marker-pulse"></div>' +
-                          '<div style="position:relative;width:26px;height:26px;background:#0b1219;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,0.6);border:2px solid ' + color + ';display:flex;align-items:center;justify-content:center">' +
-                          '<svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:' + color + ';transform:rotate(' + rot + 'deg);transition:transform 0.4s ease"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>' +
+                    className: 'fleet-marker-container',
+                    html: '<div style="position:relative;width:38px;height:38px;display:flex;align-items:center;justify-content:center">' +
+                          '<div style="position:absolute;inset:-4px;border-radius:9999px;background:' + color + '33" class="vehicle-marker-pulse"></div>' +
+                          '<div style="position:relative;width:28px;height:28px;background:#0f172a;border-radius:9999px;box-shadow:0 4px 14px rgba(0,0,0,0.65), 0 0 0 2px #ffffff;border:2.5px solid ' + color + ';display:flex;align-items:center;justify-content:center">' +
+                          '<svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:' + color + ';transform:rotate(' + rot + 'deg);filter:drop-shadow(0 1px 2px rgba(0,0,0,0.7));transition:transform 0.35s ease"><path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z"/></svg>' +
                           '</div></div>',
-                    iconSize: [36, 36],
-                    iconAnchor: [18, 18]
+                    iconSize: [38, 38],
+                    iconAnchor: [19, 19]
                 });
             }
 
+            // Idle / Alert / Stopped markers: high-contrast target ring with core dot
             return L.divIcon({
-                className: '',
-                html: '<div style="position:relative;width:24px;height:24px;display:flex;align-items:center;justify-content:center">' +
-                      '<div style="width:16px;height:16px;background:' + color + ';border:2px solid #ffffff;border-radius:9999px;box-shadow:0 3px 10px rgba(0,0,0,0.5)"></div>' +
-                      '</div>',
-                iconSize: [24, 24],
-                iconAnchor: [12, 12]
+                className: 'fleet-marker-container',
+                html: '<div style="position:relative;width:26px;height:26px;display:flex;align-items:center;justify-content:center">' +
+                      '<div style="width:20px;height:20px;background:#0f172a;border-radius:9999px;box-shadow:0 3px 10px rgba(0,0,0,0.55), 0 0 0 1.5px #ffffff;border:2px solid ' + color + ';display:flex;align-items:center;justify-content:center">' +
+                      '<div style="width:8px;height:8px;background:' + color + ';border-radius:9999px"></div>' +
+                      '</div></div>',
+                iconSize: [26, 26],
+                iconAnchor: [13, 13]
             });
         }
 
@@ -825,6 +848,7 @@
         var intelFuel = document.getElementById('intel-fuel');
         var intelOdo = document.getElementById('intel-odo');
         var intelHeading = document.getElementById('intel-heading');
+        var intelIgnition = document.getElementById('intel-ignition');
         var intelTrip = document.getElementById('intel-trip');
         var intelEta = document.getElementById('intel-eta');
         var intelCoords = document.getElementById('intel-coords');
@@ -930,6 +954,15 @@
                         intelBattery.className = 'text-sm font-bold mt-0.5 ' + (b <= 20 ? 'text-status-error' : 'text-status-success');
                     } else {
                         intelBattery.textContent = '—';
+                    }
+                }
+                if (intelIgnition) {
+                    if (v.status === 'running') {
+                        intelIgnition.innerHTML = '<span class="h-2 w-2 rounded-full" style="background:#22c55e"></span><span class="text-xs font-semibold text-status-success">ON (Moving)</span>';
+                    } else if (v.status === 'stopped') {
+                        intelIgnition.innerHTML = '<span class="h-2 w-2 rounded-full" style="background:#137fec"></span><span class="text-xs font-semibold text-primary">IDLE</span>';
+                    } else {
+                        intelIgnition.innerHTML = '<span class="h-2 w-2 rounded-full" style="background:#6b7280"></span><span class="text-xs font-semibold text-text-muted">OFF</span>';
                     }
                 }
                 if (intelDevice) {
@@ -1203,7 +1236,7 @@
                       '<span class="text-xs font-semibold text-on-surface truncate">' + esc(n.label) + '</span>' +
                       (n.tag ? '<span class="text-[9px] font-semibold uppercase tracking-wide shrink-0" style="color:' + stateColor[n.state] + '">' + esc(n.tag) + '</span>' : '') +
                     '</div>' +
-                    (n.time ? '<div class="text-[10px] font-mono text-text-muted mt-0.5">' + esc(fmtTime(n.time)) + '</div>' : '') +
+                    (n.time ? '<div class="text-[10px] font-data-mono text-text-muted mt-0.5">' + esc(fmtTime(n.time)) + '</div>' : '') +
                   '</div>';
             });
             wrap.innerHTML = html;
@@ -1319,6 +1352,9 @@
                 var el = document.getElementById('panel-count-' + k);
                 if (el) el.textContent = panelCounts[k];
             });
+
+            var elRailCount = document.getElementById('expand-rail-count');
+            if (elRailCount) elRailCount.textContent = list.length;
 
             var elDensityActive = document.getElementById('density-active');
             var elDensityTotal = document.getElementById('density-total');
@@ -1570,7 +1606,7 @@
                     (v.status === 'running' ? '<span class="absolute h-3.5 w-3.5 rounded-full animate-ping opacity-25" style="background:' + color + '"></span>' : '') +
                   '</span>' +
                   '<span class="flex-1 min-w-0 text-xs font-bold text-on-surface truncate uppercase tracking-wide">' + num + '</span>' +
-                  '<span class="inline-flex items-center px-1.5 py-0.5 rounded-md font-mono text-[11px] font-bold leading-none shrink-0 transition-transform" style="color:' + (speeding ? '#ef4444' : color) + ';background:' + (speeding ? '#ef44441a' : color + '14') + '">' + (speeding ? '⚡' : '') + (v.speed || 0).toFixed(0) + '</span>' +
+                  '<span class="inline-flex items-center px-1.5 py-0.5 rounded-md font-data-mono text-[11px] font-bold leading-none shrink-0 transition-transform" style="color:' + (speeding ? '#ef4444' : color) + ';background:' + (speeding ? '#ef44441a' : color + '14') + '">' + (speeding ? '⚡' : '') + (v.speed || 0).toFixed(0) + '</span>' +
                 '</span>' +
                 '<span class="flex items-center gap-1.5 min-w-0 pl-4">' +
                   '<span class="flex-1 min-w-0 text-[10px] text-text-muted truncate">' + who + ' · <span class="opacity-70">' + esc(when) + '</span></span>' +
@@ -1609,7 +1645,7 @@
                     '<div class="p-8 text-center space-y-2">' +
                     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-8 h-8 mx-auto text-text-muted/30"><path d="M19.07 19.07a10 10 0 0 1-14.14 0"/><path d="M7.07 7.07a7 7 0 0 1 9.86 0"/><circle cx="12" cy="12" r="2"/><line x1="12" x2="12" y1="2" y2="5"/></svg>' +
                     '<div class="text-[10px] font-semibold uppercase tracking-wide text-secondary">No vehicles match</div>' +
-                    '<div class="text-[10px] font-mono text-text-muted/60">Adjust search or filters</div>' +
+                    '<div class="text-[10px] font-data-mono text-text-muted/60">Adjust search or filters</div>' +
                     '</div>';
                 if (fleetMoreNoteEl) { fleetMoreNoteEl.classList.add('hidden'); }
                 return;
@@ -1645,7 +1681,7 @@
             return '<button type="button" tabindex="-1" class="fleet-row w-full text-left px-4 py-2 flex flex-col justify-center gap-1 border-b border-border-subtle">' +
                 '<span class="flex items-center gap-2 min-w-0"><span class="relative flex items-center justify-center shrink-0"><span class="h-2 w-2 rounded-full" style="background:#334155"></span></span>' +
                 '<span class="flex-1 min-w-0 text-xs font-bold text-on-surface uppercase tracking-wide">XX-00-XX-0000</span>' +
-                '<span class="inline-flex items-center px-1.5 py-0.5 rounded-md font-mono text-[11px] font-bold leading-none shrink-0">000</span></span>' +
+                '<span class="inline-flex items-center px-1.5 py-0.5 rounded-md font-data-mono text-[11px] font-bold leading-none shrink-0">000</span></span>' +
                 '<span class="flex items-center gap-1.5 min-w-0 pl-4"><span class="flex-1 min-w-0 text-[10px] text-text-muted truncate">Driver Name · 99m ago</span>' +
                 '<span class="status-pill shrink-0" style="color:#334155;background:#33415514">Moving</span></span></button>';
         }
@@ -1696,15 +1732,15 @@
                 searchResultsEl.classList.add('flex');
                 return;
             }
-            var html = '<div class="px-3 py-2 border-b border-border-subtle flex items-center justify-between bg-surface-container-low"><span class="text-[10px] font-semibold uppercase tracking-wide text-secondary">' + fullFiltered.length + (fullFiltered.length > 20 ? ' (top 20)' : '') + ' matches</span><span class="text-[9px] font-mono text-text-muted/70">↵ select · ESC close</span></div>';
+            var html = '<div class="px-3 py-2 border-b border-border-subtle flex items-center justify-between bg-surface-container-low"><span class="text-[10px] font-semibold uppercase tracking-wide text-secondary">' + fullFiltered.length + (fullFiltered.length > 20 ? ' (top 20)' : '') + ' matches</span><span class="text-[9px] font-data-mono text-text-muted/70">↵ select · ESC close</span></div>';
             html += '<div class="overflow-y-auto max-h-[280px] divide-y divide-border-subtle">';
             filtered.forEach(function (v, idx) {
                 var dot = iconColors[v.status] || '#6b7280';
                 var selectedClass = (idx === selectedResultIndex) ? ' bg-primary/10 border-primary/30' : ' bg-transparent border-transparent';
                 html += '<button type="button" data-vid="' + esc(v.vehicle_id) + '" class="search-result-row w-full text-left px-3 py-2.5 flex items-center gap-3 hover:bg-surface-container-low transition-colors border-l-2' + selectedClass + '" style="border-left-color:' + (idx === selectedResultIndex ? dot : 'transparent') + '">'
                       + '<span class="h-2 w-2 rounded-full shrink-0" style="background:' + dot + '"></span>'
-                      + '<div class="flex-1 min-w-0"><div class="text-xs font-bold text-on-surface truncate">' + esc(v.vehicle_number || v.vehicle_id) + '</div><div class="text-[10px] font-mono text-text-muted truncate" title="' + esc(v.vehicle_id) + '">' + esc(shortRef(v.vehicle_id)) + (v.trip_id ? ' · ' + esc(v.trip_id) : '') + '</div></div>'
-                      + '<div class="text-right shrink-0"><div class="text-[10px] font-mono font-medium" style="color:' + dot + '">' + esc(statusLabels[v.status] || v.status || '?') + '</div><div class="text-[10px] font-mono text-text-muted">' + (v.speed || 0).toFixed(0) + ' km/h</div></div>'
+                      + '<div class="flex-1 min-w-0"><div class="text-xs font-bold text-on-surface truncate">' + esc(v.vehicle_number || v.vehicle_id) + '</div><div class="text-[10px] font-data-mono text-text-muted truncate" title="' + esc(v.vehicle_id) + '">' + esc(shortRef(v.vehicle_id)) + (v.trip_id ? ' · ' + esc(v.trip_id) : '') + '</div></div>'
+                      + '<div class="text-right shrink-0"><div class="text-[10px] font-data-mono font-medium" style="color:' + dot + '">' + esc(statusLabels[v.status] || v.status || '?') + '</div><div class="text-[10px] font-data-mono text-text-muted">' + (v.speed || 0).toFixed(0) + ' km/h</div></div>'
                       + '</button>';
             });
             html += '</div>';
@@ -1898,9 +1934,9 @@
 
         // Filter Pills
         var filterBtns = document.querySelectorAll('.flyfleet-filter-btn');
-        var FILTER_BTN_BASE = 'flyfleet-filter-btn group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wide transition-colors border cursor-pointer ';
-        var FILTER_BTN_ACTIVE = FILTER_BTN_BASE + 'bg-surface-container-low border-border-subtle text-on-surface shadow-sm';
-        var FILTER_BTN_IDLE = FILTER_BTN_BASE + 'bg-transparent border-transparent text-secondary opacity-70 hover:opacity-100 hover:bg-surface-container-high';
+        var FILTER_BTN_BASE = 'flyfleet-filter-btn flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-lg text-[10px] font-semibold uppercase tracking-wider transition-all border cursor-pointer ';
+        var FILTER_BTN_ACTIVE = FILTER_BTN_BASE + 'bg-surface-container-high border-primary/50 text-primary shadow-sm ring-1 ring-primary/20';
+        var FILTER_BTN_IDLE = FILTER_BTN_BASE + 'bg-surface-container-lowest/70 border-transparent text-secondary hover:text-on-surface hover:bg-surface-container-high/60';
         function paintFilterBtns() {
             filterBtns.forEach(function (b) {
                 b.className = b.getAttribute('data-status') === state.status ? FILTER_BTN_ACTIVE : FILTER_BTN_IDLE;
@@ -1959,20 +1995,24 @@
 
             function paintConn(mode) {
                 if (mode === 'live') {
-                    if (connBeacon) connBeacon.style.background = '#22c55e';
-                    if (connPing) connPing.style.background = '#22c55e';
+                    if (connBeacon) { connBeacon.style.background = '#22c55e'; connBeacon.className = 'w-2 h-2 rounded-full block animate-pulse'; }
+                    if (connPing) { connPing.style.background = '#22c55e'; connPing.className = 'absolute w-2.5 h-2.5 rounded-full animate-ping opacity-40'; }
                     if (connLabel) connLabel.textContent = 'Live Stream';
+                } else if (mode === 'poll_active') {
+                    if (connBeacon) { connBeacon.style.background = '#22c55e'; connBeacon.className = 'w-2 h-2 rounded-full block'; }
+                    if (connPing) { connPing.style.background = '#22c55e'; connPing.className = 'hidden'; }
+                    if (connLabel) connLabel.textContent = 'Live (10s Polling)';
                 } else if (mode === 'retry') {
-                    if (connBeacon) connBeacon.style.background = '#f59e0b';
-                    if (connPing) connPing.style.background = '#f59e0b';
+                    if (connBeacon) { connBeacon.style.background = '#f59e0b'; connBeacon.className = 'w-2 h-2 rounded-full block animate-pulse'; }
+                    if (connPing) { connPing.style.background = '#f59e0b'; connPing.className = 'absolute w-2.5 h-2.5 rounded-full animate-ping opacity-40'; }
                     if (connLabel) connLabel.textContent = 'Reconnecting…';
                 } else if (mode === 'connecting') {
-                    if (connBeacon) connBeacon.style.background = '#f59e0b';
-                    if (connPing) connPing.style.background = '#f59e0b';
+                    if (connBeacon) { connBeacon.style.background = '#f59e0b'; connBeacon.className = 'w-2 h-2 rounded-full block animate-pulse'; }
+                    if (connPing) { connPing.style.background = '#f59e0b'; connPing.className = 'absolute w-2.5 h-2.5 rounded-full animate-ping opacity-40'; }
                     if (connLabel) connLabel.textContent = 'Connecting…';
                 } else { // poll
-                    if (connBeacon) connBeacon.style.background = '#f59e0b';
-                    if (connPing) connPing.style.background = '#f59e0b';
+                    if (connBeacon) { connBeacon.style.background = '#137fec'; connBeacon.className = 'w-2 h-2 rounded-full block'; }
+                    if (connPing) { connPing.style.background = '#137fec'; connPing.className = 'hidden'; }
                     if (connLabel) connLabel.textContent = 'Polling (' + (cfg.PollSec || 10) + 's)';
                 }
             }
@@ -1987,14 +2027,15 @@
                     stopPolling(); // stream is authoritative; no duplicate traffic
                 };
                 es.onerror = function () {
-                    if (!sseHealthy) return; // initial connect still pending
                     sseHealthy = false;
-                    paintConn('retry');
+                    paintConn('poll_active');
                     startPolling(); // backup until EventSource reconnects
                 };
                 es.addEventListener('telemetry', function (e) {
                     try {
                         ingestTelemetry(JSON.parse(e.data));
+                        sseHealthy = true;
+                        paintConn('live');
                     } catch (err) {
                         console.debug('SSE parse error:', err);
                     }
@@ -2004,13 +2045,13 @@
             function updateSSE() {
                 if (toggle.checked) {
                     sseHealthy = false;
-                    paintConn('connecting'); // honest boot state; onopen flips to live, onerror to retry
+                    paintConn('connecting');
                     connect();
-                    startPolling(); // until first onopen proves the stream
+                    startPolling(); // fallback until first onopen proves the stream
                 } else {
                     if (es) { es.close(); es = null; }
                     sseHealthy = false;
-                    paintConn('poll');
+                    paintConn('poll_active');
                     startPolling();
                 }
             }

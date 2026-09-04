@@ -28,7 +28,14 @@ func (s *EWayBillService) SubscribeTripEvents(bus events.EventBus) {
 			tenantID = string(shared.TenantIDFromContext(ctx))
 		}
 		if tenantID == "" {
-			tenantID = string(shared.DefaultTenant)
+			// Resolve from the trip row: generating a government document
+			// under the wrong org (wrong GSTIN) is a legal defect, so never
+			// fall back to the bootstrap tenant here.
+			_ = s.db.QueryRowContext(ctx, `SELECT tenant_id FROM trips WHERE id = ?`, tripID).Scan(&tenantID)
+		}
+		if tenantID == "" {
+			s.logger.Warn("ewaybill auto-generate skipped (tenant unknown)", "trip_id", tripID)
+			return nil
 		}
 
 		// Check company_config for ewaybill_auto_generate per-tenant

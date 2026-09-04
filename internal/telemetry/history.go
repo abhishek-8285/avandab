@@ -94,7 +94,8 @@ func HistoryHandler(db *sql.DB) http.HandlerFunc {
 		}
 		tenantID := string(shared.TenantIDFromContext(r.Context()))
 		if tenantID == "" {
-			tenantID = string(shared.DefaultTenant)
+			http.Error(w, `{"error":"authentication required"}`, http.StatusUnauthorized)
+			return
 		}
 		// Dual-source: prefer telemetry_positions (per-frame history,
 		// tenant_id direct, indexed on vehicle_id/device_time) and fall back

@@ -12,7 +12,7 @@ import (
 // ingestOne runs one alert through the pipeline and returns the stored row.
 func ingestOne(t *testing.T, e *Engine, dedupKey string, payload map[string]any) *storedAlertRow {
 	t.Helper()
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), "tenant-42")
 	if err := e.ProcessEvent(ctx, events.Event{Type: "AlertEvent", Payload: payload}); err != nil {
 		t.Fatalf("ProcessEvent: %v", err)
 	}
@@ -92,7 +92,8 @@ func TestSeverityRankAssignment(t *testing.T) {
 }
 
 // TestIngestTenantFromContext — tenant comes from publisher context when
-// present; falls back to DefaultTenant otherwise.
+// present; unattributable events are skipped instead of filed under the
+// bootstrap tenant (fail-closed: alerts:read spans every org).
 func TestIngestTenantFromContext(t *testing.T) {
 	db := newAlertsTestDB(t)
 	repo := sqliterepo.NewAlertRepository(db)
@@ -116,7 +117,7 @@ func TestIngestTenantFromContext(t *testing.T) {
 		t.Fatalf("tenant from ctx = %q, want tenant-42", stored.TenantID)
 	}
 
-	// No tenant in ctx → bootstrap default.
+	// No tenant in ctx → skipped, never filed under the bootstrap tenant.
 	if err := engine.ProcessEvent(context.Background(), events.Event{Type: "AlertEvent", Payload: map[string]any{
 		"source":     "telemetry",
 		"alert_type": "speeding",
@@ -126,10 +127,10 @@ func TestIngestTenantFromContext(t *testing.T) {
 		t.Fatalf("ProcessEvent default: %v", err)
 	}
 	def, err := repo.FindOpenByDedupKey(context.Background(), "telemetry:speeding:veh-tenant-default")
-	if err != nil || def == nil {
-		t.Fatalf("default alert not found: %v", err)
+	if err != nil {
+		t.Fatalf("lookup: %v", err)
 	}
-	if def.TenantID != string(shared.DefaultTenant) {
-		t.Fatalf("fallback tenant = %q, want %q", def.TenantID, shared.DefaultTenant)
+	if def != nil {
+		t.Fatalf("unattributable alert stored under tenant %q, want skipped", def.TenantID)
 	}
 }

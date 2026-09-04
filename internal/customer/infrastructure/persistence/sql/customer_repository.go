@@ -177,6 +177,19 @@ func (r *SQLCustomerRepository) CancelCustomerBooking(ctx context.Context, tenan
 		WHERE tenant_id = ? AND booking_id = ? AND status = 'offered'`,
 		now, tenantID, bookingID)
 
+	// Cascade: cancel linked trips that never started (draft/scheduled/
+	// assigned). Active trips already block the cancel above; completed ones
+	// do too. Without this the board keeps showing an assigned trip for a
+	// cancelled booking.
+	_, err = tx.ExecContext(ctx, `
+		UPDATE trips SET status = 'cancelled', updated_at = ?
+		WHERE tenant_id = ? AND booking_id = ?
+		  AND status IN ('draft', 'scheduled', 'assigned')`,
+		now, tenantID, bookingID)
+	if err != nil {
+		return err
+	}
+
 	return tx.Commit()
 }
 

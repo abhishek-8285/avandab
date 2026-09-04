@@ -39,4 +39,5 @@ type AlertRepository interface {
 	InboxSnooze(ctx context.Context, alertID, userID string, until time.Time) (bool, error)
 	InboxSnoozeAll(ctx context.Context, ids []string, userID string, until time.Time) (int64, error)
 	ReopenExpiredSnoozes(ctx context.Context, now time.Time) (int64, error)
+	ReopenExpiredSnoozesForTenant(ctx context.Context, tenantID string, now time.Time) (int64, error)
 }

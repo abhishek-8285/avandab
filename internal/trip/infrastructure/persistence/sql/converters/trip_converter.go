@@ -28,6 +28,7 @@ type SQLTripModel struct {
 	InTransitAt     sql.NullTime   `json:"in_transit_at"`
 	DeliveredAt     sql.NullTime   `json:"delivered_at"`
 	CompletedAt     sql.NullTime   `json:"completed_at"`
+	IdempotencyKey  sql.NullString `json:"idempotency_key"`
 }
 
 func MapToAggregate(m SQLTripModel) *aggregate.TripAggregate {
@@ -110,6 +111,7 @@ func MapToAggregate(m SQLTripModel) *aggregate.TripAggregate {
 		CreatedAt:       m.CreatedAt,
 		UpdatedAt:       m.UpdatedAt,
 		Version:         m.Version,
+		IdempotencyKey:  m.IdempotencyKey.String,
 	}
 }
 
@@ -164,6 +166,11 @@ func MapToPersistence(agg *aggregate.TripAggregate) SQLTripModel {
 		completedAt = sql.NullTime{Time: *agg.CompletedAt, Valid: true}
 	}
 
+	var idempotencyKey sql.NullString
+	if agg.IdempotencyKey != "" {
+		idempotencyKey = sql.NullString{String: agg.IdempotencyKey, Valid: true}
+	}
+
 	return SQLTripModel{
 		ID:              string(agg.ID),
 		TripNumber:      agg.TripNumber,
@@ -184,5 +191,6 @@ func MapToPersistence(agg *aggregate.TripAggregate) SQLTripModel {
 		InTransitAt:     inTransitAt,
 		DeliveredAt:     deliveredAt,
 		CompletedAt:     completedAt,
+		IdempotencyKey:  idempotencyKey,
 	}
 }

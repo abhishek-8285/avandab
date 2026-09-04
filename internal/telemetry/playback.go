@@ -128,7 +128,8 @@ func PlaybackHandler(db *sql.DB) http.HandlerFunc {
 		}
 		tenantID := string(shared.TenantIDFromContext(r.Context()))
 		if tenantID == "" {
-			tenantID = string(shared.DefaultTenant)
+			http.Error(w, `{"error":"authentication required"}`, http.StatusUnauthorized)
+			return
 		}
 		points, truncated, nextFrom, nextID, err := fetchHistoryPointsWithCursor(r.Context(), db, tenantID, vehicleID, tripID, since, until, afterTime, afterID, limit)
 		if err != nil {

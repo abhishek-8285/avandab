@@ -28,7 +28,7 @@
         </div>
         {{if .Progression}}
         <div class="flex items-center gap-2">
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold font-mono {{if .Progression.AllStopsCompleted}}bg-status-success/10 text-status-success border border-status-success/20{{else}}bg-primary/10 text-primary border border-primary/20{{end}}" id="multistop-badge">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold font-data-mono {{if .Progression.AllStopsCompleted}}bg-status-success/10 text-status-success border border-status-success/20{{else}}bg-primary/10 text-primary border border-primary/20{{end}}" id="multistop-badge">
                 <span class="w-1.5 h-1.5 rounded-full bg-current {{if not .Progression.AllStopsCompleted}}animate-pulse{{end}}"></span>
                 {{if .Progression.AllStopsCompleted}}ALL STOPS COMPLETED{{else if .CurrentStop}}STOP {{.CurrentStop.StopSequence}}/{{.Progression.TotalStops}} ACTIVE{{else}}IN TRANSIT{{end}}
             </span>
@@ -61,7 +61,7 @@
             <!-- Stop Details -->
             <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2 flex-wrap">
-                    <span class="text-xs font-bold font-mono uppercase tracking-wider text-text-muted">
+                    <span class="text-xs font-bold font-data-mono uppercase tracking-wider text-text-muted">
                         Stop {{$stop.StopSequence}} · {{if eq $stop.StopType "pickup"}}Pickup{{else if eq $stop.StopType "drop"}}Drop{{else}}{{$stop.StopType}}{{end}}
                     </span>
                     <span class="status-badge text-[11px] px-2 py-0.5 rounded-full {{if eq $stop.Status "completed"}}bg-status-success/10 text-status-success{{else if eq $stop.Status "arrived"}}bg-primary/10 text-primary{{else}}bg-surface-container text-text-muted{{end}}">

@@ -27,6 +27,7 @@ import (
 	bookingaggregate "transport-app/internal/booking/domain/aggregate"
 	"transport-app/internal/config"
 	"transport-app/internal/domain"
+	entitlementApp "transport-app/internal/entitlement/application"
 	geofencerepo "transport-app/internal/geofence/infrastructure/persistence/sql"
 	invoiceApp "transport-app/internal/invoice/application"
 	invoiceaggregate "transport-app/internal/invoice/domain/aggregate"
@@ -76,7 +77,8 @@ func (h *TripHandlers) init() {
 		h.reachPickupUC = tripapp.NewReachPickupUseCase(uowImpl, clockImpl)
 		h.startTransitUC = tripapp.NewStartTransitUseCase(uowImpl, clockImpl)
 		h.deliverUC = tripapp.NewDeliverUseCase(uowImpl, clockImpl)
-		h.completeUC = tripapp.NewCompleteTripUseCase(uowImpl, clockImpl)
+		h.completeUC = tripapp.NewCompleteTripUseCase(uowImpl, clockImpl).
+			WithUsageMeter(entitlementApp.NewService(h.DB))
 		h.cancelUC = tripapp.NewCancelTripUseCase(uowImpl, clockImpl)
 		h.getUC = tripapp.NewGetTripUseCase(uowImpl)
 		h.listUC = tripapp.NewListTripsUseCase(uowImpl)
@@ -307,11 +309,12 @@ func (h *TripHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id, err := h.createUC.Execute(r.Context(), tripapp.CreateTripCommand{
-		TenantID:      shared.TenantIDFromContext(r.Context()),
-		BookingID:     bookingID,
-		RouteID:       r.PostFormValue("route_id"),
-		DepartureTime: departureTime,
-		Remarks:       r.PostFormValue("remarks"),
+		TenantID:       shared.TenantIDFromContext(r.Context()),
+		BookingID:      bookingID,
+		RouteID:        r.PostFormValue("route_id"),
+		DepartureTime:  departureTime,
+		Remarks:        r.PostFormValue("remarks"),
+		IdempotencyKey: strings.TrimSpace(r.Header.Get("Idempotency-Key")),
 	})
 	if err != nil {
 		session, _ := h.getUserFromContext(r)

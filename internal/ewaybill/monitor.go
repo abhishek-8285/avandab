@@ -66,7 +66,7 @@ func (m *Monitor) Tick(ctx context.Context) {
 
 func (m *Monitor) processExpiredEWBs(ctx context.Context) {
 	query := `
-		SELECT e.ewb_number, e.trip_id, COALESCE(t.tenant_id, '1')
+		SELECT e.ewb_number, e.trip_id, COALESCE(t.tenant_id, '')
 		FROM eway_bills e
 		LEFT JOIN trips t ON e.trip_id = t.id
 		WHERE e.status IN ('active', 'part_a')
@@ -108,7 +108,7 @@ func (m *Monitor) processExpiredEWBs(ctx context.Context) {
 				VALUES (?, ?, ?, 'EXPIRED', '{"reason":"validity_expired"}', 'system', datetime('now'))
 			`, eventID, it.ewbNumber, it.tripID)
 
-			if m.bus != nil {
+			if m.bus != nil && it.tenantID != "" {
 				m.bus.Publish(ctx, events.Event{
 					Type: "AlertEvent",
 					Payload: map[string]interface{}{
@@ -129,7 +129,7 @@ func (m *Monitor) processExpiredEWBs(ctx context.Context) {
 
 func (m *Monitor) processExpiringSoonEWBs(ctx context.Context) {
 	query := fmt.Sprintf(`
-		SELECT e.ewb_number, e.trip_id, t.status, COALESCE(t.tenant_id, '1')
+		SELECT e.ewb_number, e.trip_id, t.status, COALESCE(t.tenant_id, '')
 		FROM eway_bills e
 		LEFT JOIN trips t ON e.trip_id = t.id
 		WHERE e.status IN ('active', 'part_a')
@@ -163,8 +163,10 @@ func (m *Monitor) processExpiringSoonEWBs(ctx context.Context) {
 	}
 
 	for _, it := range items {
-		// Alert central alert engine if expiring soon
-		if m.bus != nil {
+		// Alert central alert engine if expiring soon. Orphan EWBs (trip
+		// deleted, tenant unknown) still get lifecycle handling below, but
+		// no cross-org alert is published for them.
+		if m.bus != nil && it.tenantID != "" {
 			m.bus.Publish(ctx, events.Event{
 				Type: "AlertEvent",
 				Payload: map[string]interface{}{

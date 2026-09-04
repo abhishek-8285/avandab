@@ -8,7 +8,7 @@
         <div class="flex items-start justify-between gap-4 flex-wrap">
             <div class="min-w-0">
                 <div class="flex items-center gap-3 flex-wrap">
-                    <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-on-surface font-display font-mono">{{$s.ID}}</h1>
+                    <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-on-surface font-display font-data-mono">{{$s.ID}}</h1>
                     <span class="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide {{if eq $s.Status "paid"}}bg-status-success/10 border border-status-success/15 text-status-success{{else if eq $s.Status "pending"}}bg-status-warning/10 border border-status-warning/15 text-status-warning{{else if eq $s.Status "disputed"}}bg-status-alert/10 border border-status-alert/15 text-status-alert{{else}}bg-status-info/10 border border-status-info/15 text-status-info{{end}}">
                         {{$s.Status}}
                     </span>
@@ -23,7 +23,7 @@
             </div>
             <!-- Amount gradient card -->
             <div class="w-full sm:max-w-xs bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white hover:shadow-lg transition-all shrink-0">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-white/80">Net Payout</p>
+                <p class="text-eyebrow text-white/80">Net Payout</p>
                 <p class="text-3xl font-black tracking-tight tabular-nums mt-1" data-numeric>₹{{printf "%.2f" $s.NetPayout}}</p>
                 <p class="text-xs font-medium text-white/80 mt-1">TDS {{printf "%.1f" $s.TDSRate}}% · Sec 194C</p>
             </div>
@@ -37,7 +37,7 @@
             <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
                 <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                     <div>
-                        <h3 class="text-sm font-bold text-on-surface">Financial Ledger Items</h3>
+                        <h2 class="text-sm font-bold text-on-surface">Financial Ledger Items</h2>
                         <p class="text-xs text-text-muted">Line-by-line payout calculation</p>
                     </div>
                     {{if .Lines}}
@@ -48,22 +48,22 @@
                     <table class="min-w-full divide-y divide-border-subtle">
                         <thead class="bg-surface-container-low">
                             <tr>
-                                <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Type</th>
-                                <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Description / Reference</th>
-                                <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Amount (INR)</th>
+                                <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Type</th>
+                                <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Description / Reference</th>
+                                <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Amount (INR)</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border-subtle">
                             {{range .Lines}}
                             <tr class="hover:bg-surface-container-low/50 transition-colors">
                                 <td class="px-3 py-2">
-                                    <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold uppercase tracking-wide {{if eq .LineType "gross_fare"}}bg-status-success/10 border border-status-success/15 text-status-success{{else if eq .LineType "advances"}}bg-status-warning/10 border border-status-warning/15 text-status-warning{{else if eq .LineType "deduction"}}bg-status-alert/10 border border-status-alert/15 text-status-alert{{else if eq .LineType "tds"}}bg-secondary-container border border-primary/15 text-primary{{else}}bg-surface-container border border-border-subtle text-secondary{{end}}">
+                                    <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-data-mono font-semibold uppercase tracking-wide {{if eq .LineType "gross_fare"}}bg-status-success/10 border border-status-success/15 text-status-success{{else if eq .LineType "advances"}}bg-status-warning/10 border border-status-warning/15 text-status-warning{{else if eq .LineType "deduction"}}bg-status-alert/10 border border-status-alert/15 text-status-alert{{else if eq .LineType "tds"}}bg-secondary-container border border-primary/15 text-primary{{else}}bg-surface-container border border-border-subtle text-secondary{{end}}">
                                         {{.LineType}}
                                     </span>
                                 </td>
                                 <td class="px-3 py-2 text-sm text-on-surface">
                                     {{.Label}}
-                                    {{if .RefID}}<span class="text-xs text-text-muted font-mono block">Ref: {{.RefID}}</span>{{end}}
+                                    {{if .RefID}}<span class="text-xs text-text-muted font-data-mono block">Ref: {{.RefID}}</span>{{end}}
                                 </td>
                                 <td class="px-3 py-2 text-sm text-right tabular-nums font-bold whitespace-nowrap {{if gt .Amount 0.0}}text-status-success{{else}}text-status-alert{{end}}" data-numeric>
                                     {{if gt .Amount 0.0}}+₹{{printf "%.2f" .Amount}}{{else}}₹{{printf "%.2f" .Amount}}{{end}}
@@ -83,25 +83,25 @@
             <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
                 <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                     <div>
-                        <h3 class="text-sm font-bold text-on-surface">Settlement Information</h3>
+                        <h2 class="text-sm font-bold text-on-surface">Settlement Information</h2>
                         <p class="text-xs text-text-muted">Calculation basis and lifecycle timestamps</p>
                     </div>
                 </div>
                 <dl class="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4 p-5 text-sm">
                     <div>
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Driver ID</dt>
+                        <dt class="text-eyebrow text-text-muted">Driver ID</dt>
                         <dd class="mt-0.5 font-semibold text-on-surface tabular-nums">{{$s.DriverID}}</dd>
                     </div>
                     <div>
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Trip ID</dt>
+                        <dt class="text-eyebrow text-text-muted">Trip ID</dt>
                         <dd class="mt-0.5"><a href="/trips/{{$s.TripID}}" class="font-semibold text-primary hover:underline tabular-nums">{{$s.TripID}}</a></dd>
                     </div>
                     <div>
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">TDS Rate</dt>
+                        <dt class="text-eyebrow text-text-muted">TDS Rate</dt>
                         <dd class="mt-0.5 font-semibold text-on-surface tabular-nums">{{printf "%.1f" $s.TDSRate}}% (Sec 194C)</dd>
                     </div>
                     <div>
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Created At</dt>
+                        <dt class="text-eyebrow text-text-muted">Created At</dt>
                         <dd class="mt-0.5 font-semibold text-on-surface tabular-nums">{{formatDateTime $s.CreatedAt}}</dd>
                     </div>
                 </dl>
@@ -109,11 +109,11 @@
                 {{if $s.PaymentRef}}
                 <div class="px-5 pb-5 grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
                     <div>
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Payment Reference</dt>
-                        <dd class="mt-0.5 font-mono font-semibold text-on-surface break-all">{{nullString $s.PaymentRef}}</dd>
+                        <dt class="text-eyebrow text-text-muted">Payment Reference</dt>
+                        <dd class="mt-0.5 font-data-mono font-semibold text-on-surface break-all">{{nullString $s.PaymentRef}}</dd>
                     </div>
                     <div>
-                        <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Paid Timestamp</dt>
+                        <dt class="text-eyebrow text-text-muted">Paid Timestamp</dt>
                         <dd class="mt-0.5 font-semibold text-on-surface tabular-nums">{{if $s.PaidAt}}{{formatDateTime $s.PaidAt}}{{else}}N/A{{end}}</dd>
                     </div>
                 </div>
@@ -134,7 +134,7 @@
             <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
                 <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                     <div>
-                        <h3 class="text-sm font-bold text-on-surface">Payout Summary</h3>
+                        <h2 class="text-sm font-bold text-on-surface">Payout Summary</h2>
                         <p class="text-xs text-text-muted">Gross to net waterfall</p>
                     </div>
                 </div>
@@ -166,7 +166,7 @@
             <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
                 <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                     <div>
-                        <h3 class="text-sm font-bold text-on-surface">Settlement Actions</h3>
+                        <h2 class="text-sm font-bold text-on-surface">Settlement Actions</h2>
                         <p class="text-xs text-text-muted">Lifecycle transitions</p>
                     </div>
                 </div>
@@ -176,11 +176,11 @@
                     {{if can .User "settlements" "approve"}}
                     <form method="POST" action="/settlements/{{$s.ID}}/mark-paid" class="space-y-3">
                         <div>
-                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Payment Reference / UTR #</label>
+                            <label class="block text-eyebrow text-text-muted mb-1.5">Payment Reference / UTR #</label>
                             <input type="text" name="payment_ref" placeholder="e.g. UTR-987654321" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" />
                         </div>
                         <div>
-                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Payment Mode</label>
+                            <label class="block text-eyebrow text-text-muted mb-1.5">Payment Mode</label>
                             <select name="mode" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                                 <option value="bank_transfer">Bank Transfer (NEFT/RTGS/IMPS)</option>
                                 <option value="upi">UPI</option>
@@ -208,7 +208,7 @@
                             </button>
                         </form>
                         <form method="POST" action="/settlements/{{$s.ID}}/dispute" class="pt-2 border-t border-border-subtle space-y-2">
-                            <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Dispute Payout</label>
+                            <label class="block text-eyebrow text-text-muted mb-1.5">Dispute Payout</label>
                             <input type="text" name="reason" placeholder="Reason for dispute" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" />
                             <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-full border border-status-alert/30 bg-status-alert/10 text-status-alert px-3 py-2 text-xs font-semibold hover:bg-status-alert/20 transition-all cursor-pointer">
                                 Raise Dispute

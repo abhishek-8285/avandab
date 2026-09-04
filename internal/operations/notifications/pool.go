@@ -118,8 +118,8 @@ func NewEmailPool(cfg PoolConfig, db *sql.DB, logger *slog.Logger) *EmailPool {
 		}
 		p.providers = append(p.providers, entry)
 		p.memCounters[spec.Name] = &memCounter{
-			currentDay:   time.Now().Format("2006-01-02"),
-			currentMonth: time.Now().Format("2006-01"),
+			currentDay:   time.Now().UTC().Format("2006-01-02"),
+			currentMonth: time.Now().UTC().Format("2006-01"),
 		}
 	}
 	p.sortProviders()
@@ -561,8 +561,11 @@ func (p *EmailPool) getQuotaUsed(provider string) (dailyUsed, monthlyUsed int) {
 		if err != nil {
 			return 0, 0
 		}
-		today := time.Now().Format("2006-01-02")
-		thisMonth := time.Now().Format("2006-01")
+		// SQLite date('now')/strftime('%Y-%m','now') are UTC — compare UTC
+		// dates only, otherwise the local-vs-UTC window (e.g. 00:00–05:30 IST)
+		// resets every counter to 0 and silently disables quota enforcement.
+		today := time.Now().UTC().Format("2006-01-02")
+		thisMonth := time.Now().UTC().Format("2006-01")
 		if curDay != today {
 			du = 0
 		}
@@ -578,8 +581,8 @@ func (p *EmailPool) getQuotaUsed(provider string) (dailyUsed, monthlyUsed int) {
 	if !ok {
 		return 0, 0
 	}
-	today := time.Now().Format("2006-01-02")
-	thisMonth := time.Now().Format("2006-01")
+	today := time.Now().UTC().Format("2006-01-02")
+	thisMonth := time.Now().UTC().Format("2006-01")
 	du, mu := mc.dailyUsed, mc.monthlyUsed
 	if mc.currentDay != today {
 		du = 0
@@ -614,11 +617,11 @@ func (p *EmailPool) recordUsage(provider string, msg EmailMessage) error {
 	defer p.mu.Unlock()
 	mc, ok := p.memCounters[provider]
 	if !ok {
-		mc = &memCounter{currentDay: time.Now().Format("2006-01-02"), currentMonth: time.Now().Format("2006-01")}
+		mc = &memCounter{currentDay: time.Now().UTC().Format("2006-01-02"), currentMonth: time.Now().UTC().Format("2006-01")}
 		p.memCounters[provider] = mc
 	}
-	today := time.Now().Format("2006-01-02")
-	thisMonth := time.Now().Format("2006-01")
+	today := time.Now().UTC().Format("2006-01-02")
+	thisMonth := time.Now().UTC().Format("2006-01")
 	if mc.currentDay != today {
 		mc.dailyUsed = 0
 		mc.currentDay = today
@@ -798,8 +801,8 @@ func (p *EmailPool) ResetUsage(name string) error {
 	if mc, ok := p.memCounters[name]; ok {
 		mc.dailyUsed = 0
 		mc.monthlyUsed = 0
-		mc.currentDay = time.Now().Format("2006-01-02")
-		mc.currentMonth = time.Now().Format("2006-01")
+		mc.currentDay = time.Now().UTC().Format("2006-01-02")
+		mc.currentMonth = time.Now().UTC().Format("2006-01")
 	}
 	return nil
 }

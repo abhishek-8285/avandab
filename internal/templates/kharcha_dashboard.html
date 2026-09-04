@@ -27,13 +27,13 @@
     <div id="new-expense-form" class="hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h3 class="text-sm font-bold text-on-surface">New Expense</h3>
+                <h2 class="text-sm font-bold text-on-surface">New Expense</h2>
                 <p class="text-xs text-text-muted">Logged against an active trip · audited automatically when fuel</p>
             </div>
         </div>
         <form method="POST" action="/kharcha/create" class="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div>
-                <label for="expense-trip-id" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Trip</label>
+                <label for="expense-trip-id" class="block text-eyebrow text-text-muted mb-1.5">Trip</label>
                 <select id="expense-trip-id" name="trip_id" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     <option value="">Select active trip</option>
                     {{range .ActiveTrips}}
@@ -42,7 +42,7 @@
                 </select>
             </div>
             <div>
-                <label for="expense-driver-id" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Driver</label>
+                <label for="expense-driver-id" class="block text-eyebrow text-text-muted mb-1.5">Driver</label>
                 <select id="expense-driver-id" name="driver_id" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     <option value="">Select driver</option>
                     {{range .Drivers}}
@@ -51,7 +51,7 @@
                 </select>
             </div>
             <div>
-                <label for="expense-category" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Category</label>
+                <label for="expense-category" class="block text-eyebrow text-text-muted mb-1.5">Category</label>
                 <select name="category" id="expense-category" onchange="toggleFuelLitres()"
                         class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     <option value="advance">Advance</option>
@@ -66,22 +66,22 @@
                 </select>
             </div>
             <div>
-                <label for="expense-amount" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Amount (₹)</label>
+                <label for="expense-amount" class="block text-eyebrow text-text-muted mb-1.5">Amount (₹)</label>
                 <input type="number" id="expense-amount" step="0.01" min="0" name="amount" required
                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
             <div>
-                <label for="expense-desc" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Description</label>
+                <label for="expense-desc" class="block text-eyebrow text-text-muted mb-1.5">Description</label>
                 <input type="text" id="expense-desc" name="description" placeholder="e.g. Diesel top-up at NH48"
                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
             <div>
-                <label for="expense-receipt" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Receipt URL</label>
+                <label for="expense-receipt" class="block text-eyebrow text-text-muted mb-1.5">Receipt URL</label>
                 <input type="text" id="expense-receipt" name="receipt_url" placeholder="/files/..."
                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
             <div id="fuel-litres-field" class="hidden md:col-span-3">
-                <label for="expense-fuel-litres" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Fuel Litres</label>
+                <label for="expense-fuel-litres" class="block text-eyebrow text-text-muted mb-1.5">Fuel Litres</label>
                 <input type="number" id="expense-fuel-litres" step="0.1" min="0" name="fuel_litres" placeholder="Litres purchased — used for fuel audit reconciliation"
                        class="w-full max-w-xs bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                 <p class="text-xs text-text-muted mt-1">Captured for the fuel audit flow (Spec 03). Audit runs automatically after submission.</p>
@@ -104,7 +104,7 @@
                 <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                 </div>
-                <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/15">Awaiting approval</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/15">Awaiting approval</span>
             </div>
             <div class="mt-4">
                 <div id="kpi-pending-count" class="text-stat text-status-warning tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.Stats.PendingCount}}</div>
@@ -120,7 +120,7 @@
                 <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                 </div>
-                <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/15">Cleared</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/15">Cleared</span>
             </div>
             <div class="mt-4">
                 <div class="text-stat text-status-success tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.Stats.ApprovedToday}}</div>
@@ -136,7 +136,7 @@
                 <div class="w-10 h-10 rounded-xl bg-white/15 border border-white/20 grid place-items-center text-white">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 </div>
-                <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-white/15 text-white border border-white/20">This month</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-white/15 text-white border border-white/20">This month</span>
             </div>
             <div class="mt-4">
                 <div class="text-stat tabular-nums text-3xl font-black tracking-tight" data-numeric>₹{{priceFormat .Stats.MonthTotal}}</div>
@@ -152,7 +152,7 @@
                 <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/15 grid place-items-center text-rose-600 group-hover:bg-rose-500 group-hover:text-white transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
                 </div>
-                <span class="text-[11px] font-bold tracking-wider uppercase px-2 py-1 rounded-full bg-rose-500/10 text-rose-700 border border-rose-500/15">Outstanding</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-rose-500/10 text-rose-700 border border-rose-500/15">Outstanding</span>
             </div>
             <div class="mt-4">
                 <div class="text-stat text-status-alert tabular-nums text-3xl font-black tracking-tight" data-numeric>₹{{priceFormat .Stats.UnsettledTotal}}</div>
@@ -167,7 +167,7 @@
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div class="flex items-center gap-2">
                 <span class="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></span>
-                <h3 class="text-sm font-bold text-on-surface">Active Trips</h3>
+                <h2 class="text-sm font-bold text-on-surface">Active Trips</h2>
             </div>
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .ActiveTrips}} in transit</span>
         </div>
@@ -200,7 +200,7 @@
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between flex-wrap gap-3">
             <div class="flex items-center gap-3">
-                <h3 class="text-sm font-bold text-on-surface">Pending Approvals</h3>
+                <h2 class="text-sm font-bold text-on-surface">Pending Approvals</h2>
                 <span id="kharcha-queue-count" class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .PendingExpenses}} waiting</span>
             </div>
             <p class="text-xs text-text-muted">Approve or reject driver expense requests</p>
@@ -214,7 +214,7 @@
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between flex-wrap gap-3">
             <div class="flex items-center gap-3">
-                <h3 class="text-sm font-bold text-on-surface">Kharcha Ledger</h3>
+                <h2 class="text-sm font-bold text-on-surface">Kharcha Ledger</h2>
                 <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .LedgerEntries}} entries</span>
             </div>
             <div class="flex items-center gap-2">
@@ -244,7 +244,7 @@
 <div id="reject-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
     <div id="reject-backdrop" class="absolute inset-0 bg-on-surface/50 backdrop-blur-sm" onclick="closeRejectModal()"></div>
     <div class="relative bg-surface-container-lowest rounded-2xl w-full max-w-md p-6 shadow-xl animate-fade-in border border-border-subtle">
-        <h3 class="text-lg font-extrabold text-on-surface">Reject Expense</h3>
+        <h2 class="text-lg font-extrabold text-on-surface">Reject Expense</h2>
         <p class="text-sm text-text-muted mt-1">
             Rejecting <strong id="reject-amount" class="text-on-surface tabular-nums"></strong> from <strong id="reject-driver" class="text-on-surface"></strong>
         </p>

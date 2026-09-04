@@ -49,6 +49,41 @@ type DtcEvent struct {
 	CreatedAt   time.Time  `json:"created_at"`
 }
 
+// Work order status lifecycle.
+const (
+	WorkOrderOpen       = "open"
+	WorkOrderAssigned   = "assigned"
+	WorkOrderInProgress = "in_progress"
+	WorkOrderOnHold     = "on_hold"
+	WorkOrderDone       = "done"
+	WorkOrderCancelled  = "cancelled"
+)
+
+// WorkOrder is a job card between detection (schedule/DTC) and completion
+// (service record). Terminal states are done/cancelled.
+type WorkOrder struct {
+	ID           string     `json:"id"`
+	TenantID     string     `json:"tenant_id"`
+	VehicleID    string     `json:"vehicle_id"`
+	ScheduleID   *string    `json:"schedule_id,omitempty"`
+	TripID       *string    `json:"trip_id,omitempty"`
+	Title        string     `json:"title"`
+	Description  string     `json:"description"`
+	Assignee     string     `json:"assignee"`
+	Vendor       string     `json:"vendor"`
+	CostEstimate *float64   `json:"cost_estimate,omitempty"`
+	CostActual   *float64   `json:"cost_actual,omitempty"`
+	Status       string     `json:"status"`
+	DueAt        *time.Time `json:"due_at,omitempty"`
+	ClosedAt     *time.Time `json:"closed_at,omitempty"`
+	CreatedAt    time.Time  `json:"created_at"`
+}
+
+// Terminal reports whether the job card is closed (done/cancelled).
+func (w WorkOrder) Terminal() bool {
+	return w.Status == WorkOrderDone || w.Status == WorkOrderCancelled
+}
+
 // ServiceTypes valid enum values
 var ServiceTypes = []string{
 	"oil_change",

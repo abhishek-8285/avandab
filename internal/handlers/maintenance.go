@@ -50,6 +50,12 @@ func (h *MaintenanceHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "maintenance", "read")).Get("/dtc", h.ListDTC)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "maintenance", "update")).Post("/dtc/{id}/resolve", h.ResolveDTC)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "maintenance", "update")).Post("/vehicles/{id}/override", h.OverrideBlock)
+	// Job cards (work orders) — HTML pages reusing the tenant-scoped repo.
+	r.With(middleware.ResourcePermission(h.AuthSrv, "maintenance", "create")).Get("/work-orders/new", h.NewWorkOrder)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "maintenance", "create")).Post("/work-orders", h.CreateWorkOrder)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "maintenance", "read")).Get("/work-orders/{id}", h.ViewWorkOrder)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "maintenance", "update")).Post("/work-orders/{id}/assign", h.AssignWorkOrder)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "maintenance", "update")).Post("/work-orders/{id}/transition", h.TransitionWorkOrder)
 }
 
 // Index renders the preventive maintenance dashboard (due vehicles, active schedules, DTCs, recent records).
@@ -62,39 +68,60 @@ func (h *MaintenanceHandlers) Index(w http.ResponseWriter, r *http.Request) {
 		dueVehicles = []map[string]interface{}{}
 	}
 
-	schedules, err := h.repo.ListActiveSchedules(r.Context(), "")
+	schedules, err := h.repo.ListActiveSchedulesForTenant(r.Context(), "", tenantID)
 	if err != nil {
 		schedules = []domain.Schedule{}
 	}
 
-	dtcs, err := h.repo.ListDtcEvents(r.Context(), "", 20)
+	dtcs, err := h.repo.ListDtcEventsForTenant(r.Context(), "", tenantID, 20)
 	if err != nil {
 		dtcs = []domain.DtcEvent{}
 	}
 
-	records, err := h.repo.ListRecords(r.Context(), "", 20)
+	records, err := h.repo.ListRecordsForTenant(r.Context(), "", tenantID, 20)
 	if err != nil {
 		records = []domain.Record{}
+	}
+
+	workOrders, err := h.repo.ListWorkOrders(r.Context(), tenantID, "", 50)
+	if err != nil {
+		workOrders = []domain.WorkOrder{}
+	}
+
+	// Registration numbers for the job-card panel (never raw UUIDs).
+	vehicleLabels := map[string]string{}
+	if rows, err := h.DB.QueryContext(r.Context(),
+		`SELECT id, COALESCE(NULLIF(registration_number,''), vehicle_number, id) FROM vehicles WHERE tenant_id = ?`, tenantID); err == nil {
+		defer func() { _ = rows.Close() }()
+		for rows.Next() {
+			var vid, label string
+			if rows.Scan(&vid, &label) == nil {
+				vehicleLabels[vid] = label
+			}
+		}
 	}
 
 	data := PageData{
 		Title: "Preventive Maintenance",
 		User:  user,
 		Extra: map[string]interface{}{
-			"DueVehicles": dueVehicles,
-			"Schedules":   schedules,
-			"DTCs":        dtcs,
-			"Records":     records,
+			"DueVehicles":   dueVehicles,
+			"Schedules":     schedules,
+			"DTCs":          dtcs,
+			"Records":       records,
+			"WorkOrders":    workOrders,
+			"VehicleLabels": vehicleLabels,
 		},
 	}
 
 	h.renderPage(w, r, "maintenance_index.html", data)
 }
 
-// ListSchedules lists schedules for a vehicle or fleetwide.
+// ListSchedules lists schedules for a vehicle or fleetwide (own org only).
 func (h *MaintenanceHandlers) ListSchedules(w http.ResponseWriter, r *http.Request) {
 	vehicleID := r.URL.Query().Get("vehicle_id")
-	schedules, err := h.repo.ListSchedules(r.Context(), vehicleID)
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	schedules, err := h.repo.ListSchedulesForTenant(r.Context(), vehicleID, tenantID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -104,7 +131,8 @@ func (h *MaintenanceHandlers) ListSchedules(w http.ResponseWriter, r *http.Reque
 		Title: "Maintenance Schedules",
 		User:  user,
 		Extra: map[string]interface{}{
-			"Schedules": schedules,
+			"Schedules":     schedules,
+			"VehicleLabels": map[string]string{},
 		},
 	})
 }
@@ -297,11 +325,12 @@ func (h *MaintenanceHandlers) CreateRecord(w http.ResponseWriter, r *http.Reques
 	http.Redirect(w, r, "/maintenance", http.StatusSeeOther)
 }
 
-// ListDTC lists DTC events.
+// ListDTC lists DTC events (own org only).
 func (h *MaintenanceHandlers) ListDTC(w http.ResponseWriter, r *http.Request) {
 	user, _ := h.getUserFromContext(r)
 	vehicleID := r.URL.Query().Get("vehicle_id")
-	events, err := h.repo.ListDtcEvents(r.Context(), vehicleID, 50)
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	events, err := h.repo.ListDtcEventsForTenant(r.Context(), vehicleID, tenantID, 50)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -311,7 +340,11 @@ func (h *MaintenanceHandlers) ListDTC(w http.ResponseWriter, r *http.Request) {
 		Title: "DTC Events",
 		User:  user,
 		Extra: map[string]interface{}{
-			"DTCs": events,
+			"DTCs":          events,
+			"DueVehicles":   []map[string]interface{}{},
+			"Schedules":     []domain.Schedule{},
+			"WorkOrders":    []domain.WorkOrder{},
+			"VehicleLabels": map[string]string{},
 		},
 	})
 }

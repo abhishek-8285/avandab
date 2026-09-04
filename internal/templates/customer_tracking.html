@@ -6,13 +6,13 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 bg-surface-container-lowest border border-border-subtle rounded-lg p-6 shadow-sm">
         <div class="flex items-center justify-between mb-4">
-            <h3 class="text-base font-semibold text-on-surface font-display">Trip {{.TripNumber}}</h3>
+            <h3 class="text-title-md font-semibold text-on-surface font-display">Trip {{.TripNumber}}</h3>
             <span class="status-badge {{statusBadge .Status}}">{{.Status}}</span>
         </div>
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
                 <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Trip ID</dt>
-                <dd class="font-mono font-medium text-on-surface mt-0.5" data-numeric>{{.TripID}}</dd>
+                <dd class="font-data-mono font-medium text-on-surface mt-0.5" data-numeric>{{.TripID}}</dd>
             </div>
             <div>
                 <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Vehicle</dt>
@@ -31,7 +31,7 @@
             {{if .Lat}}
             <div>
                 <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Location</dt>
-                <dd class="font-mono text-on-surface mt-0.5" data-numeric>{{.Lat}}, {{.Lng}}</dd>
+                <dd class="font-data-mono text-on-surface mt-0.5" data-numeric>{{.Lat}}, {{.Lng}}</dd>
             </div>
             {{end}}
             <div>
@@ -55,7 +55,7 @@
         <div class="mt-6 bg-surface-container-low rounded-lg p-4 border border-border-subtle">
             <h4 class="font-semibold text-sm text-on-surface font-display mb-2">Live Tracking (polls every 30s)</h4>
             <p class="text-xs text-text-muted">This page auto-refreshes via <code>GET /customer/tracking/{{.TripID}}</code> every 30s when open. Keep this tab open for live updates.</p>
-            <div id="tracking-live-data" class="mt-3 text-xs font-mono bg-surface-container-lowest border border-border-subtle rounded p-3">
+            <div id="tracking-live-data" class="mt-3 text-xs font-data-mono bg-surface-container-lowest border border-border-subtle rounded p-3">
                 <div>Trip: {{.TripNumber}} | Status: {{.Status}} | Vehicle: {{.VehicleLabel}}</div>
                 <div>ETA: {{if .EtaMin}}{{.EtaMin}} — {{.EtaMax}}{{else}}not available{{end}}</div>
                 <div>Last seen: {{if .LastSeen}}{{.LastSeen}}{{else}}—{{end}}</div>
@@ -64,7 +64,7 @@
     </div>
 
     <div class="bg-surface-container-lowest border border-border-subtle rounded-2xl p-6 shadow-sm" id="feedback">
-        <h3 class="text-base font-semibold text-on-surface font-display mb-2">Trip Feedback</h3>
+        <h3 class="text-title-md font-semibold text-on-surface font-display mb-2">Trip Feedback</h3>
         <p class="text-sm text-text-muted mb-4">Rate your experience for trip {{.TripNumber}}.</p>
         {{template "trip_feedback.html" .}}
     </div>

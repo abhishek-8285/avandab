@@ -1,0 +1,16 @@
+{{if .Stats.PendingInvoices}}
+{{range .Stats.PendingInvoices}}
+<a href="/invoices/{{.ID}}" data-drill="payment" class="group flex items-center gap-3 px-4 py-3 hover:bg-blue-500/[0.04] transition-colors">
+    <div class="w-8 h-8 rounded-lg bg-surface-container grid place-items-center text-secondary shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+    <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2"><span class="text-sm font-bold text-on-surface">{{.InvoiceNumber}}</span><span class="text-xs font-semibold px-1.5 py-0.5 rounded-full {{if eq (printf "%s" .PaymentStatus) "partially_paid"}}bg-amber-500/10 text-amber-700 border border-amber-500/15{{else}}bg-blue-500/10 text-blue-700 border border-blue-500/15{{end}}">{{.PaymentStatus}}</span><span class="text-sm font-bold tabular-nums text-on-surface ml-auto">{{printf "₹%.2f" .Total}}</span></div>
+        <p class="text-xs text-text-muted">{{.CustomerName}} • <span class="time-display" data-utc-time="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .CreatedAt}}</span></p>
+    </div>
+</a>
+{{end}}
+{{else}}
+<div class="px-4 py-10 text-center">
+    <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg></div>
+    <p class="text-sm font-medium text-on-surface mt-3">No pending invoices</p><p class="text-xs text-text-muted">All caught up</p>
+</div>
+{{end}}

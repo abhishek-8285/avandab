@@ -69,7 +69,7 @@ func (a *ApprovalService) GatedTool(t *RegisteredTool) *RegisteredTool {
 
 // MutatingTools lists the tools that get approval-gated.
 func MutatingTools() []string {
-	return []string{"create_booking", "assign_driver", "assign_vehicle", "record_payment", "approve_kharcha", "reject_kharcha", "extend_ewaybill"}
+	return []string{"create_booking", "assign_driver", "assign_vehicle", "record_payment", "approve_kharcha", "reject_kharcha", "extend_ewaybill", "create_work_order", "transition_work_order"}
 }
 
 // Approve claims a pending action atomically, then executes it under the
@@ -166,7 +166,7 @@ func summaryOf(toolName string, args json.RawMessage) string {
 	if err := json.Unmarshal(args, &m); err != nil {
 		return toolName
 	}
-	keys := []string{"customer_id", "route_id", "pickup_date", "vehicle_type", "price", "trip_id", "driver_id", "vehicle_id", "invoice_id", "amount", "method", "expense_id", "reason"}
+	keys := []string{"customer_id", "route_id", "pickup_date", "vehicle_type", "price", "trip_id", "driver_id", "vehicle_id", "invoice_id", "amount", "method", "expense_id", "reason", "id", "title", "status", "assignee", "vendor", "cost_estimate", "due_at"}
 	parts := []string{}
 	for _, k := range keys {
 		if v, ok := m[k]; ok && v != nil {

@@ -88,14 +88,18 @@ func (h *APITripHandler) Register(r chi.Router) {
 
 func (h *APITripHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		BookingID     *string `json:"booking_id"`
-		RouteID       string  `json:"route_id"`
-		DepartureTime string  `json:"departure_time"`
-		Remarks       string  `json:"remarks"`
+		BookingID      *string `json:"booking_id"`
+		RouteID        string  `json:"route_id"`
+		DepartureTime  string  `json:"departure_time"`
+		Remarks        string  `json:"remarks"`
+		IdempotencyKey string  `json:"idempotency_key"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+	if req.IdempotencyKey == "" {
+		req.IdempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	}
 
 	depTime, err := time.Parse(time.RFC3339, req.DepartureTime)
@@ -105,11 +109,12 @@ func (h *APITripHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id, err := h.createUC.Execute(r.Context(), application.CreateTripCommand{
-		TenantID:      shared.TenantIDFromContext(r.Context()),
-		BookingID:     req.BookingID,
-		RouteID:       req.RouteID,
-		DepartureTime: depTime,
-		Remarks:       req.Remarks,
+		TenantID:       shared.TenantIDFromContext(r.Context()),
+		BookingID:      req.BookingID,
+		RouteID:        req.RouteID,
+		DepartureTime:  depTime,
+		Remarks:        req.Remarks,
+		IdempotencyKey: req.IdempotencyKey,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

@@ -97,13 +97,13 @@
             <table class="min-w-full divide-y divide-border-subtle" id="geofences-table">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Zone Name &amp; Trigger</th>
-                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Kind</th>
-                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Shape &amp; Dimensions</th>
-                        <th class="px-3 py-2 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Route Scope</th>
-                        <th class="px-3 py-2 text-center text-[11px] font-bold tracking-wider uppercase text-text-muted">Priority</th>
-                        <th class="px-3 py-2 text-center text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
-                        <th class="px-3 py-2 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Zone Name &amp; Trigger</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Kind</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Shape &amp; Dimensions</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Route Scope</th>
+                        <th class="px-3 py-2 text-center text-eyebrow text-text-muted">Priority</th>
+                        <th class="px-3 py-2 text-center text-eyebrow text-text-muted">Status</th>
+                        <th class="px-3 py-2 text-right text-eyebrow text-text-muted">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="geofence-rows" class="divide-y divide-border-subtle text-sm">
@@ -131,9 +131,9 @@
                                     <div class="flex items-center gap-1.5">
                                         <span class="text-sm font-bold text-on-surface truncate">{{.Name}}</span>
                                         {{if eq .Kind "restricted"}}
-                                        <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">ALERT</span>
+                                        <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-data-mono font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">ALERT</span>
                                         {{else if eq .Kind "no_entry"}}
-                                        <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20">NO ENTRY</span>
+                                        <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-data-mono font-bold bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20">NO ENTRY</span>
                                         {{end}}
                                     </div>
                                     <div class="text-[11px] text-text-muted truncate">
@@ -181,11 +181,11 @@
                             <div class="flex items-center gap-2">
                                 <span class="capitalize text-xs font-medium text-on-surface">{{.Shape}}</span>
                                 {{if eq .Shape "circle"}}
-                                <span class="text-xs font-mono font-semibold tabular-nums px-2 py-0.5 rounded-md bg-surface-container text-secondary border border-border-subtle">
+                                <span class="text-xs font-data-mono font-semibold tabular-nums px-2 py-0.5 rounded-md bg-surface-container text-secondary border border-border-subtle">
                                     {{if ge .RadiusM 1000.0}}{{printf "%.1f km" (div .RadiusM 1000.0)}}{{else}}{{printf "%.0f m" .RadiusM}}{{end}}
                                 </span>
                                 {{else}}
-                                <span class="text-xs font-mono font-semibold tabular-nums px-2 py-0.5 rounded-md bg-surface-container text-secondary border border-border-subtle">
+                                <span class="text-xs font-data-mono font-semibold tabular-nums px-2 py-0.5 rounded-md bg-surface-container text-secondary border border-border-subtle">
                                     {{len .Polygon}} vertices
                                 </span>
                                 {{end}}
@@ -194,7 +194,7 @@
 
                         <td class="px-3 py-2 whitespace-nowrap">
                             {{if .RouteName}}
-                            <span class="inline-flex items-center gap-1 text-xs font-mono px-2 py-0.5 rounded-md bg-surface-container text-secondary border border-border-subtle">
+                            <span class="inline-flex items-center gap-1 text-xs font-data-mono px-2 py-0.5 rounded-md bg-surface-container text-secondary border border-border-subtle">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3 text-text-muted"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
                                 {{.RouteName}}
                             </span>
@@ -204,7 +204,7 @@
                         </td>
 
                         <td class="px-3 py-2 text-center whitespace-nowrap">
-                            <span class="text-xs font-mono font-bold tabular-nums px-2 py-0.5 rounded-md bg-surface-container text-on-surface border border-border-subtle" data-numeric>
+                            <span class="text-xs font-data-mono font-bold tabular-nums px-2 py-0.5 rounded-md bg-surface-container text-on-surface border border-border-subtle" data-numeric>
                                 P{{.Priority}}
                             </span>
                         </td>

@@ -31,7 +31,8 @@ func GeofencesHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		tenantID := string(shared.TenantIDFromContext(r.Context()))
 		if tenantID == "" {
-			tenantID = string(shared.DefaultTenant)
+			http.Error(w, `{"error":"authentication required"}`, http.StatusUnauthorized)
+			return
 		}
 		zones, err := repo.ListActiveByTenant(r.Context(), tenantID)
 		if err != nil {

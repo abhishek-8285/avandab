@@ -9,19 +9,19 @@
     <form method="POST" action="/maintenance/records" class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h3 class="text-sm font-bold text-on-surface">Work Details</h3>
+                <h2 class="text-sm font-bold text-on-surface">Work Details</h2>
                 <p class="text-xs text-text-muted mt-0.5">Vehicle, service and when it was performed</p>
             </div>
         </div>
         <div class="p-6 space-y-4">
             <div>
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Vehicle ID <span class="text-status-alert">*</span></label>
+                <label class="block text-eyebrow text-text-muted mb-1.5">Vehicle ID <span class="text-status-alert">*</span></label>
                 <input type="text" name="vehicle_id" value="{{.VehicleID}}" required placeholder="e.g. veh-123"
                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
 
             <div>
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Service Type <span class="text-status-alert">*</span></label>
+                <label class="block text-eyebrow text-text-muted mb-1.5">Service Type <span class="text-status-alert">*</span></label>
                 <select name="service_type" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     {{range .ServiceTypes}}
                     <option value="{{.}}">{{.}}</option>
@@ -31,27 +31,27 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Date Performed <span class="text-status-alert">*</span></label>
+                    <label class="block text-eyebrow text-text-muted mb-1.5">Date Performed <span class="text-status-alert">*</span></label>
                     <input type="date" name="performed_at" required
                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                 </div>
                 <div>
-                    <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Odometer (km)</label>
+                    <label class="block text-eyebrow text-text-muted mb-1.5">Odometer (km)</label>
                     <input type="number" step="any" name="odometer_km" placeholder="e.g. 45200"
                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                 </div>
             </div>
 
             <div class="pt-2">
-                <h4 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Cost &amp; Vendor</h4>
+                <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Cost &amp; Vendor</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Cost (₹)</label>
+                        <label class="block text-eyebrow text-text-muted mb-1.5">Cost (₹)</label>
                         <input type="number" step="any" name="cost" placeholder="e.g. 3500"
                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                     <div>
-                        <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Vendor / Workshop</label>
+                        <label class="block text-eyebrow text-text-muted mb-1.5">Vendor / Workshop</label>
                         <input type="text" name="vendor" placeholder="e.g. Tata Authorized Service"
                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
@@ -59,7 +59,7 @@
             </div>
 
             <div class="pt-1">
-                <label class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">Notes / Description</label>
+                <label class="block text-eyebrow text-text-muted mb-1.5">Notes / Description</label>
                 <textarea name="notes" rows="3" placeholder="Details of parts replaced, oil grade, warranty notes..."
                           class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-none"></textarea>
             </div>

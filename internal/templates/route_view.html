@@ -7,7 +7,7 @@
     <div class="p-5 pt-6">
         <div class="flex items-start justify-between gap-4 flex-wrap">
             <div class="min-w-0">
-                <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Route Lane</p>
+                <p class="text-eyebrow text-text-muted">Route Lane</p>
                 <h1 class="text-2xl font-bold tracking-tight text-on-surface font-display inline-flex items-center gap-2 flex-wrap mt-0.5">
                     {{.Route.Source}}
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-primary shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
@@ -24,15 +24,15 @@
 
         <dl class="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-5 pt-5 border-t border-border-subtle">
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Distance</dt>
+                <dt class="text-eyebrow text-text-muted">Distance</dt>
                 <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{.Route.Distance}} km</dd>
             </div>
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Est. Duration</dt>
+                <dt class="text-eyebrow text-text-muted">Est. Duration</dt>
                 <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{.Route.EstimatedHours}} h</dd>
             </div>
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Standard Fare</dt>
+                <dt class="text-eyebrow text-text-muted">Standard Fare</dt>
                 <dd class="text-sm font-black text-primary tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .Route.StandardFare}}</dd>
             </div>
         </dl>
@@ -43,20 +43,20 @@
     <div class="lg:col-span-2 space-y-4">
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle">
-                <h3 class="text-sm font-bold text-on-surface">Lane Details</h3>
+                <h2 class="text-sm font-bold text-on-surface">Lane Details</h2>
             </div>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 p-5">
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Origin</dt>
+                    <dt class="text-eyebrow text-text-muted">Origin</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">{{.Route.Source}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Destination</dt>
+                    <dt class="text-eyebrow text-text-muted">Destination</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">{{.Route.Destination}}</dd>
                 </div>
                 {{with nullString .Route.Remarks}}
                 <div class="sm:col-span-2">
-                    <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Remarks</dt>
+                    <dt class="text-eyebrow text-text-muted">Remarks</dt>
                     <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed">{{.}}</dd>
                 </div>
                 {{end}}
@@ -66,16 +66,16 @@
 
     <div class="bg-gradient-to-br from-primary to-violet-600 rounded-2xl shadow-md overflow-hidden text-white hover:shadow-lg transition-all">
         <div class="px-5 py-3 border-b border-white/15 flex items-center justify-between gap-3">
-            <h3 class="text-sm font-bold">Tariff Summary</h3>
+            <h2 class="text-sm font-bold">Tariff Summary</h2>
             <span class="inline-flex items-center px-2 py-1 rounded-full bg-white/15 border border-white/20 text-[10px] font-bold uppercase tracking-wide">INR</span>
         </div>
         <dl class="space-y-4 p-5">
             <div>
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-white/70">Lane</dt>
+                <dt class="text-eyebrow text-white/70">Lane</dt>
                 <dd class="text-sm font-semibold mt-1">{{.Route.Source}} → {{.Route.Destination}}</dd>
             </div>
             <div>
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-white/70">Standard Fare</dt>
+                <dt class="text-eyebrow text-white/70">Standard Fare</dt>
                 <dd class="text-2xl font-black tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .Route.StandardFare}}</dd>
             </div>
         </dl>

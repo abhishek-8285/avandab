@@ -14,7 +14,7 @@
             {{range .}}
             <tr class="hover:bg-surface-container-low/50 transition-colors">
                 <td class="px-3 py-2 text-xs text-text-muted tabular-nums whitespace-nowrap">{{.TxnTimeStr}}</td>
-                <td class="px-3 py-2 text-sm font-bold text-on-surface tabular-nums">{{.VehicleNumber}} <span class="text-xs font-normal text-text-muted font-mono">({{.TagID}})</span></td>
+                <td class="px-3 py-2 text-sm font-bold text-on-surface tabular-nums">{{.VehicleNumber}} <span class="text-xs font-normal text-text-muted font-data-mono">({{.TagID}})</span></td>
                 <td class="px-3 py-2 text-sm text-on-surface">{{.PlazaName}} <span class="text-xs text-text-muted">({{.PlazaID}})</span></td>
                 <td class="px-3 py-2 text-sm font-bold text-primary tabular-nums text-right" data-numeric>₹{{printf "%.2f" .Amount}}</td>
                 <td class="px-3 py-2 text-sm">

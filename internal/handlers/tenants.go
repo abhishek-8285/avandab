@@ -60,6 +60,8 @@ func (h *TenantsHandlers) Routes(r chi.Router) {
 	r.With(gate("manage")).Post("/new", h.Create)
 	r.With(gate("manage")).Post("/{id}/suspend", h.Suspend)
 	r.With(gate("manage")).Post("/{id}/activate", h.Activate)
+	r.With(gate("manage")).Get("/{id}/purge", h.PurgePreview)
+	r.With(gate("manage")).Post("/{id}/purge", h.Purge)
 	r.With(gate("manage")).Post("/{id}/plan", h.UpdatePlan)
 	r.With(gate("manage")).Post("/{id}/extend-trial", h.ExtendTrial)
 	r.With(gate("manage")).Post("/{id}/override", h.SetOverride)
@@ -203,25 +205,30 @@ func (h *TenantsHandlers) List(w http.ResponseWriter, r *http.Request) {
 }
 
 // UpdatePlan updates a tenant's subscription plan directly from Platform Admin.
+// provider_subscription_id (optional) links the org to its Razorpay
+// subscription so billing webhooks can find it — without this link,
+// paid events return ErrSubscriptionNotFound and upgrades never apply.
 func (h *TenantsHandlers) UpdatePlan(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	planID := r.PostFormValue("plan_id")
 	if planID == "" {
 		planID = "GROWTH"
 	}
+	providerSubID := r.PostFormValue("provider_subscription_id")
 	if h.DB != nil {
 		now := time.Now().UTC()
 		end := now.Add(30 * 24 * time.Hour)
 		_, _ = h.DB.ExecContext(r.Context(), `
-			INSERT INTO tenant_subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, created_at, updated_at)
-			VALUES (?, ?, ?, 'ACTIVE', ?, ?, ?, ?)
+			INSERT INTO tenant_subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, provider_subscription_id, created_at, updated_at)
+			VALUES (?, ?, ?, 'ACTIVE', ?, ?, ?, ?, ?)
 			ON CONFLICT(tenant_id) DO UPDATE SET
 				plan_id = excluded.plan_id,
 				status = 'ACTIVE',
 				current_period_start = excluded.current_period_start,
 				current_period_end = excluded.current_period_end,
+				provider_subscription_id = COALESCE(NULLIF(excluded.provider_subscription_id, ''), provider_subscription_id),
 				updated_at = CURRENT_TIMESTAMP
-		`, "sub_"+id, id, planID, now.Format(time.RFC3339), end.Format(time.RFC3339), now.Format(time.RFC3339), now.Format(time.RFC3339))
+		`, "sub_"+id, id, planID, now.Format(time.RFC3339), end.Format(time.RFC3339), providerSubID, now.Format(time.RFC3339), now.Format(time.RFC3339))
 	}
 	h.auditTenant(r, "tenant.plan_update", id, map[string]string{"plan_id": planID})
 	http.Redirect(w, r, "/tenants", http.StatusSeeOther)

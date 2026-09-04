@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"sync"
 	"time"
 
@@ -33,6 +34,11 @@ type Engine struct {
 
 	tenantID shared.TenantID
 	loc      *time.Location
+
+	// featureGate reports whether the scorecard/safety feature is on for an
+	// org. Nil means ungated (tests, tooling). Production wires the features
+	// registry so one org disabling it stops only its own sweep.
+	featureGate func(tenantID string) bool
 
 	mu    sync.Mutex
 	state map[string]*vehicleState
@@ -87,6 +93,41 @@ func (e *Engine) WithTenantID(tenantID shared.TenantID) *Engine {
 	return e
 }
 
+// WithFeatureGate scopes each sweep to orgs with the feature on.
+// Chain after construction; safe to omit (ungated).
+func (e *Engine) WithFeatureGate(gate func(tenantID string) bool) *Engine {
+	e.featureGate = gate
+	return e
+}
+
+// resolveVehicleTenants attributes vehicles to their orgs in one query.
+// Unknown vehicles resolve to "" and are skipped by Tick.
+func (e *Engine) resolveVehicleTenants(ctx context.Context, vids []string) map[string]string {
+	out := make(map[string]string, len(vids))
+	if len(vids) == 0 {
+		return out
+	}
+	placeholders := strings.Repeat("?,", len(vids))
+	placeholders = strings.TrimSuffix(placeholders, ",")
+	args := make([]any, len(vids))
+	for i, id := range vids {
+		args[i] = id
+	}
+	rows, err := e.db.QueryContext(ctx,
+		`SELECT id, tenant_id FROM vehicles WHERE id IN (`+placeholders+`)`, args...)
+	if err != nil {
+		return out
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var vehID, tenant string
+		if err := rows.Scan(&vehID, &tenant); err == nil {
+			out[vehID] = tenant
+		}
+	}
+	return out
+}
+
 func (e *Engine) Run(ctx context.Context) {
 	policy, err := LoadSafetyPolicy(ctx, string(e.tenantID), e.config)
 	interval := DefaultTickInterval
@@ -113,19 +154,35 @@ func (e *Engine) Run(ctx context.Context) {
 }
 
 func (e *Engine) Tick(ctx context.Context) (int, error) {
-	policy, err := LoadSafetyPolicy(ctx, string(e.tenantID), e.config)
-	if err != nil {
-		return 0, fmt.Errorf("safety: load policy: %w", err)
-	}
-
-	vehicles, err := e.activeVehicles(ctx, policy)
+	// Discovery uses the zero policy (24h fallback inside activeVehicles);
+	// per-org policies load below once the org is known.
+	vehicles, err := e.activeVehicles(ctx, SafetyPolicy{})
 	if err != nil {
 		return 0, fmt.Errorf("safety: active vehicles: %w", err)
 	}
+	tenantByVehicle := e.resolveVehicleTenants(ctx, vehicles)
+	policies := map[string]SafetyPolicy{}
 
 	total := 0
 	for _, vid := range vehicles {
-		n, err := e.processVehicle(ctx, vid, policy)
+		tenant := tenantByVehicle[vid]
+		if tenant == "" {
+			e.log.Warn("safety engine: vehicle skipped (unknown org)", "vehicle", vid)
+			continue
+		}
+		if e.featureGate != nil && !e.featureGate(tenant) {
+			continue
+		}
+		policy, ok := policies[tenant]
+		if !ok {
+			var err error
+			policy, err = LoadSafetyPolicy(ctx, tenant, e.config)
+			if err != nil {
+				return total, fmt.Errorf("safety: load policy: %w", err)
+			}
+			policies[tenant] = policy
+		}
+		n, err := e.processVehicle(ctx, vid, tenant, policy)
 		if err != nil {
 			return total, fmt.Errorf("safety: vehicle %s: %w", vid, err)
 		}
@@ -158,7 +215,7 @@ func (e *Engine) activeVehicles(ctx context.Context, policy SafetyPolicy) ([]str
 	return out, rows.Err()
 }
 
-func (e *Engine) processVehicle(ctx context.Context, vehicleID string, policy SafetyPolicy) (int, error) {
+func (e *Engine) processVehicle(ctx context.Context, vehicleID, tenant string, policy SafetyPolicy) (int, error) {
 	e.mu.Lock()
 	st, ok := e.state[vehicleID]
 	if !ok {
@@ -209,7 +266,7 @@ func (e *Engine) processVehicle(ctx context.Context, vehicleID string, policy Sa
 		if len(attributed) == 0 {
 			continue
 		}
-		persistedCount, err := e.persist(ctx, f, attributed)
+		persistedCount, err := e.persist(ctx, f, attributed, tenant)
 		if err != nil {
 			return emitted, err
 		}
@@ -223,6 +280,7 @@ func (e *Engine) processVehicle(ctx context.Context, vehicleID string, policy Sa
 
 // ProcessSnapshotsDirect allows direct in-memory / event-driven evaluation of snapshots.
 func (e *Engine) ProcessSnapshotsDirect(ctx context.Context, policy SafetyPolicy, vehicleID string, frames []snapshot) (int, error) {
+	tenant := e.resolveVehicleTenants(ctx, []string{vehicleID})[vehicleID]
 	e.mu.Lock()
 	st, ok := e.state[vehicleID]
 	if !ok {
@@ -250,7 +308,7 @@ func (e *Engine) ProcessSnapshotsDirect(ctx context.Context, policy SafetyPolicy
 		if len(attributed) == 0 {
 			continue
 		}
-		persistedCount, err := e.persist(ctx, f, attributed)
+		persistedCount, err := e.persist(ctx, f, attributed, tenant)
 		if err != nil {
 			return emitted, err
 		}
@@ -262,7 +320,7 @@ func (e *Engine) ProcessSnapshotsDirect(ctx context.Context, policy SafetyPolicy
 	return emitted, nil
 }
 
-func (e *Engine) persist(ctx context.Context, s snapshot, events []detectedEvent) (int, error) {
+func (e *Engine) persist(ctx context.Context, s snapshot, events []detectedEvent, tenant string) (int, error) {
 	persistedCount := 0
 	err := e.uow.Execute(ctx, func(txCtx ports.TxContext) error {
 		db := txOrDB(txCtx, e.db)
@@ -285,7 +343,7 @@ func (e *Engine) persist(ctx context.Context, s snapshot, events []detectedEvent
 			}
 			if rowsAffected > 0 {
 				persistedCount++
-				alerts = append(alerts, e.buildAlert(s, ev))
+				alerts = append(alerts, e.buildAlert(s, ev, tenant))
 			}
 		}
 		if len(alerts) > 0 {
@@ -296,7 +354,7 @@ func (e *Engine) persist(ctx context.Context, s snapshot, events []detectedEvent
 	return persistedCount, err
 }
 
-func (e *Engine) buildAlert(s snapshot, ev detectedEvent) founderalerts.AlertEvent {
+func (e *Engine) buildAlert(s snapshot, ev detectedEvent, tenant string) founderalerts.AlertEvent {
 	var meta map[string]interface{}
 	_ = json.Unmarshal([]byte(ev.metadata), &meta)
 	title := alertTitle(ev.eventType)
@@ -311,7 +369,7 @@ func (e *Engine) buildAlert(s snapshot, ev detectedEvent) founderalerts.AlertEve
 		Priority:  priorityFor(ev.severity),
 		Title:     title,
 		Summary:   summary,
-		CompanyID: string(e.tenantID),
+		CompanyID: tenant,
 		Metadata: map[string]interface{}{
 			"vehicle_id": s.vehicleID,
 			"trip_id":    s.tripID,

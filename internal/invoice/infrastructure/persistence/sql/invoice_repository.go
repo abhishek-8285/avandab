@@ -377,6 +377,10 @@ func (r *invoiceRepository) GetReadModel(ctx context.Context, id aggregate.Invoi
 }
 
 func (r *invoiceRepository) SearchReadModels(ctx context.Context, tenantID shared.TenantID, query string, status string, limit int, offset int) ([]domain.InvoiceReadModel, int64, error) {
+	// "open" spans two payment states; sqlc exact-match can't express it.
+	if status == StatusFilterOpen {
+		return r.searchOutstandingInvoices(ctx, tenantID, query, "", "", limit, offset)
+	}
 	rows, err := r.Q(ctx).SearchInvoices(ctx, db.SearchInvoicesParams{
 		TenantID:      string(tenantID),
 		Column2:       sql.NullString{String: query, Valid: true},

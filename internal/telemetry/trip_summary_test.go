@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"transport-app/internal/shared"
 )
 
 func TestTripSummaryHandler_FullJoin(t *testing.T) {
@@ -38,6 +39,7 @@ func TestTripSummaryHandler_FullJoin(t *testing.T) {
 	srv := chi.NewRouter()
 	srv.Get("/api/v1/trips/{id}/summary", TripSummaryHandler(db))
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/trips/t-sum/summary", nil)
+	req = req.WithContext(shared.ContextWithTenantID(req.Context(), "1"))
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 
@@ -75,6 +77,7 @@ func TestTripSummaryHandler_MinimalTrip(t *testing.T) {
 	srv := chi.NewRouter()
 	srv.Get("/api/v1/trips/{id}/summary", TripSummaryHandler(db))
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/trips/t-min/summary", nil)
+	req = req.WithContext(shared.ContextWithTenantID(req.Context(), "1"))
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 
@@ -98,6 +101,7 @@ func TestTripSummaryHandler_TenantScoped(t *testing.T) {
 	srv := chi.NewRouter()
 	srv.Get("/api/v1/trips/{id}/summary", TripSummaryHandler(db))
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/trips/t-ten/summary", nil)
+	req = req.WithContext(shared.ContextWithTenantID(req.Context(), "1"))
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 
@@ -110,6 +114,7 @@ func TestTripSummaryHandler_NotFound(t *testing.T) {
 	srv := chi.NewRouter()
 	srv.Get("/api/v1/trips/{id}/summary", TripSummaryHandler(db))
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/trips/nope/summary", nil)
+	req = req.WithContext(shared.ContextWithTenantID(req.Context(), "1"))
 	rec := httptest.NewRecorder()
 	srv.ServeHTTP(rec, req)
 

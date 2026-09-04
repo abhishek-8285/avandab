@@ -45,6 +45,10 @@ WHERE i.tenant_id = ?
   AND (? = '' OR i.payment_status = ?)`
 
 func (r *invoiceRepository) SearchReadModelsDateRange(ctx context.Context, tenantID shared.TenantID, query string, status string, from string, to string, limit int, offset int) ([]domain.InvoiceReadModel, int64, error) {
+	// "open" spans two payment states; the fixed consts below can't express it.
+	if status == StatusFilterOpen {
+		return r.searchOutstandingInvoices(ctx, tenantID, query, from, to, limit, offset)
+	}
 	rows, err := r.exec(ctx).QueryContext(ctx,
 		invoiceDateRangeSelect+invoiceDateClause+`
 ORDER BY i.created_at DESC

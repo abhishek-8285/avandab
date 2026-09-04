@@ -295,11 +295,42 @@ func parseTemplatesLang(authSrv auth.AuthorizationService, lang string) (*templa
 			}
 			return s[:max-3] + "..."
 		},
-		"fileExt":     filepath.Ext,
-		"add":         func(a, b int) int { return a + b },
-		"sub":         func(a, b int) int { return a - b },
-		"mul":         func(a, b int) int { return a * b },
-		"div":         func(a, b int) int { return a / b },
+		"fileExt": filepath.Ext,
+		// Template arithmetic coerces int/int64/float mixes: dashboards pass
+		// int64 counts, pagination passes ints, geofences pass float64 radii.
+		// Strict (int,int) signatures 500'd every page the moment real data
+		// flowed through a guarded branch (e.g. nonzero trip counts).
+		"add": func(a, b any) any {
+			x, y, f := tmplNums(a, b)
+			if f {
+				return x + y
+			}
+			return int64(x) + int64(y)
+		},
+		"sub": func(a, b any) any {
+			x, y, f := tmplNums(a, b)
+			if f {
+				return x - y
+			}
+			return int64(x) - int64(y)
+		},
+		"mul": func(a, b any) any {
+			x, y, f := tmplNums(a, b)
+			if f {
+				return x * y
+			}
+			return int64(x) * int64(y)
+		},
+		"div": func(a, b any) any {
+			x, y, f := tmplNums(a, b)
+			if y == 0 {
+				return int64(0)
+			}
+			if f {
+				return x / y
+			}
+			return int64(x) / int64(y)
+		},
 		"statusBadge": statusBadgeClass,
 		"inDate":      inDate,
 		"auditBadge":  auditResultBadge,
@@ -430,6 +461,44 @@ func statusBadgeClass(status interface{}) string {
 		return cls
 	}
 	return "bg-gray-100 text-gray-800"
+}
+
+// tmplNums coerces template arithmetic operands. Returns float values plus
+// whether either operand was floating-point (drives int64 vs float64 result).
+func tmplNums(a, b any) (x, y float64, isFloat bool) {
+	toF := func(v any) (float64, bool) {
+		switch n := v.(type) {
+		case int:
+			return float64(n), false
+		case int8:
+			return float64(n), false
+		case int16:
+			return float64(n), false
+		case int32:
+			return float64(n), false
+		case int64:
+			return float64(n), false
+		case uint:
+			return float64(n), false
+		case uint8:
+			return float64(n), false
+		case uint16:
+			return float64(n), false
+		case uint32:
+			return float64(n), false
+		case uint64:
+			return float64(n), false
+		case float32:
+			return float64(n), true
+		case float64:
+			return n, true
+		default:
+			return 0, false
+		}
+	}
+	x, fx := toF(a)
+	y, fy := toF(b)
+	return x, y, fx || fy
 }
 
 func (a *App) getUserFromContext(r *http.Request) (*auth.SessionData, bool) {

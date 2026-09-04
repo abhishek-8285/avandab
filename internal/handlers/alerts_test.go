@@ -78,6 +78,7 @@ func TestAlertHandlers_ListAndBadge(t *testing.T) {
 	// Seed 2 alerts (1 open, 1 resolved)
 	alert1 := &domain.Alert{
 		ID:          "alert-test-1",
+		TenantID:    "1",
 		Source:      "telemetry",
 		AlertType:   "speeding",
 		Severity:    "warning",
@@ -91,6 +92,7 @@ func TestAlertHandlers_ListAndBadge(t *testing.T) {
 	}
 	alert2 := &domain.Alert{
 		ID:          "alert-test-2",
+		TenantID:    "1",
 		Source:      "fuel",
 		AlertType:   "theft_suspicion",
 		Severity:    "critical",

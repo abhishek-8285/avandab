@@ -37,6 +37,7 @@ func TestHistoryHandler_Trail(t *testing.T) {
 
 	t.Run("requires vehicle_id", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/history", nil)
+		req = req.WithContext(shared.ContextWithTenantID(req.Context(), "1"))
 		w := httptest.NewRecorder()
 		handler(w, req)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
@@ -44,6 +45,7 @@ func TestHistoryHandler_Trail(t *testing.T) {
 
 	t.Run("returns ascending trail within window", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/history?vehicle_id=v1&minutes=25", nil)
+		req = req.WithContext(shared.ContextWithTenantID(req.Context(), "1"))
 		w := httptest.NewRecorder()
 		handler(w, req)
 		require.Equal(t, http.StatusOK, w.Code)
@@ -58,6 +60,7 @@ func TestHistoryHandler_Trail(t *testing.T) {
 
 		// Default window (90m) picks up everything except the NULL-coord row.
 		req2 := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/history?vehicle_id=v1", nil)
+		req2 = req2.WithContext(shared.ContextWithTenantID(req2.Context(), "1"))
 		w2 := httptest.NewRecorder()
 		handler(w2, req2)
 		require.Equal(t, http.StatusOK, w2.Code)
@@ -71,6 +74,7 @@ func TestHistoryHandler_Trail(t *testing.T) {
 		require.NoError(t, err)
 
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/history?vehicle_id=v1", nil)
+		req = req.WithContext(shared.ContextWithTenantID(req.Context(), "1"))
 		req = req.WithContext(shared.ContextWithTenantID(req.Context(), "7"))
 		w := httptest.NewRecorder()
 		handler(w, req)
@@ -97,6 +101,7 @@ func TestHistoryHandler_Playback(t *testing.T) {
 
 	t.Run("trip playback returns only that trip", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/history?trip_id=t1&limit=100", nil)
+		req = req.WithContext(shared.ContextWithTenantID(req.Context(), "1"))
 		w := httptest.NewRecorder()
 		handler(w, req)
 		require.Equal(t, http.StatusOK, w.Code)
@@ -112,6 +117,7 @@ func TestHistoryHandler_Playback(t *testing.T) {
 		from := now.Add(-40 * time.Minute).Format(time.RFC3339)
 		to := now.Add(-15 * time.Minute).Format(time.RFC3339)
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/history?trip_id=t1&from="+from+"&to="+to, nil)
+		req = req.WithContext(shared.ContextWithTenantID(req.Context(), "1"))
 		w := httptest.NewRecorder()
 		handler(w, req)
 		require.Equal(t, http.StatusOK, w.Code)
@@ -123,6 +129,7 @@ func TestHistoryHandler_Playback(t *testing.T) {
 
 	t.Run("requires trip_id or vehicle_id", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/history", nil)
+		req = req.WithContext(shared.ContextWithTenantID(req.Context(), "1"))
 		w := httptest.NewRecorder()
 		handler(w, req)
 		assert.Equal(t, http.StatusBadRequest, w.Code)

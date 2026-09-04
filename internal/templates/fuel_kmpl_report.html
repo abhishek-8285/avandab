@@ -7,12 +7,12 @@
         </div>
         <form method="get" class="flex items-end gap-2 flex-wrap shrink-0">
             <div>
-                <label for="kmpl-from" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">From</label>
+                <label for="kmpl-from" class="block text-eyebrow text-text-muted mb-1.5">From</label>
                 <input type="date" id="kmpl-from" name="from" value="{{.From}}"
                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
             <div>
-                <label for="kmpl-to" class="block text-[11px] font-bold uppercase tracking-wider text-text-muted mb-1.5">To</label>
+                <label for="kmpl-to" class="block text-eyebrow text-text-muted mb-1.5">To</label>
                 <input type="date" id="kmpl-to" name="to" value="{{.To}}"
                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
@@ -25,7 +25,7 @@
     {{if .KmplRows}}
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between flex-wrap gap-3">
-            <h3 class="text-sm font-bold text-on-surface">Per-Vehicle Efficiency</h3>
+            <h2 class="text-sm font-bold text-on-surface">Per-Vehicle Efficiency</h2>
             <span class="inline-flex items-center gap-2">
                 <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .KmplRows}} vehicles</span>
                 <span class="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/15 text-[10px] font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300 tabular-nums">{{.From}} → {{.To}}</span>

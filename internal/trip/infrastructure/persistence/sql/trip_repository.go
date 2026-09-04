@@ -93,6 +93,7 @@ func (r *tripRepository) Save(ctx context.Context, t *aggregate.TripAggregate) e
 			InTransitAt:     p.InTransitAt,
 			DeliveredAt:     p.DeliveredAt,
 			CompletedAt:     p.CompletedAt,
+			IdempotencyKey:  p.IdempotencyKey,
 		})
 		if err != nil {
 			return err
@@ -100,7 +101,9 @@ func (r *tripRepository) Save(ctx context.Context, t *aggregate.TripAggregate) e
 		t.Version = 1
 	}
 
-	_ = r.saveStops(ctx, t)
+	if err := r.saveStops(ctx, t); err != nil {
+		return err
+	}
 
 	err = r.outbox.SaveEvents(ctx, string(t.ID), "Trip", t.Events())
 	if err != nil {
@@ -144,7 +147,10 @@ func (r *tripRepository) Find(ctx context.Context, id aggregate.TripID, tenantID
 		CompletedAt:     row.CompletedAt,
 	}
 	agg := converters.MapToAggregate(m)
-	stops, _ := r.loadStops(ctx, string(id), string(tenantID))
+	stops, err := r.loadStops(ctx, string(id), string(tenantID))
+	if err != nil {
+		return nil, err
+	}
 	agg.Stops = stops
 	return agg, nil
 }
@@ -183,7 +189,98 @@ func (r *tripRepository) FindByNumber(ctx context.Context, number string, tenant
 		CompletedAt:     row.CompletedAt,
 	}
 	agg := converters.MapToAggregate(m)
-	stops, _ := r.loadStops(ctx, row.ID, string(tenantID))
+	stops, err := r.loadStops(ctx, row.ID, string(tenantID))
+	if err != nil {
+		return nil, err
+	}
+	agg.Stops = stops
+	return agg, nil
+}
+
+func (r *tripRepository) FindByBookingID(ctx context.Context, bookingID string, tenantID shared.TenantID) (*aggregate.TripAggregate, error) {
+	row, err := r.Q(ctx).GetTripByBookingID(ctx, db.GetTripByBookingIDParams{
+		BookingID: sql.NullString{String: bookingID, Valid: bookingID != ""},
+		TenantID:  string(tenantID),
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("trip not found")
+		}
+		return nil, err
+	}
+
+	m := converters.SQLTripModel{
+		ID:              row.ID,
+		TripNumber:      row.TripNumber,
+		BookingID:       row.BookingID,
+		DriverID:        row.DriverID,
+		VehicleID:       row.VehicleID,
+		RouteID:         row.RouteID,
+		DepartureTime:   row.DepartureTime,
+		ArrivalTime:     row.ArrivalTime,
+		Status:          row.Status,
+		Remarks:         row.Remarks,
+		TenantID:        row.TenantID,
+		Version:         row.Version,
+		CreatedAt:       row.CreatedAt,
+		UpdatedAt:       row.UpdatedAt,
+		StartedAt:       row.StartedAt,
+		ReachedPickupAt: row.ReachedPickupAt,
+		InTransitAt:     row.InTransitAt,
+		DeliveredAt:     row.DeliveredAt,
+		CompletedAt:     row.CompletedAt,
+	}
+	agg := converters.MapToAggregate(m)
+	stops, err := r.loadStops(ctx, row.ID, string(tenantID))
+	if err != nil {
+		return nil, err
+	}
+	agg.Stops = stops
+	return agg, nil
+}
+
+func (r *tripRepository) FindByIdempotencyKey(ctx context.Context, key string, tenantID shared.TenantID) (*aggregate.TripAggregate, error) {
+	if key == "" {
+		return nil, errors.New("trip not found")
+	}
+	row, err := r.Q(ctx).GetTripByIdempotencyKey(ctx, db.GetTripByIdempotencyKeyParams{
+		IdempotencyKey: sql.NullString{String: key, Valid: true},
+		TenantID:       string(tenantID),
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("trip not found")
+		}
+		return nil, err
+	}
+
+	m := converters.SQLTripModel{
+		ID:              row.ID,
+		TripNumber:      row.TripNumber,
+		BookingID:       row.BookingID,
+		DriverID:        row.DriverID,
+		VehicleID:       row.VehicleID,
+		RouteID:         row.RouteID,
+		DepartureTime:   row.DepartureTime,
+		ArrivalTime:     row.ArrivalTime,
+		Status:          row.Status,
+		Remarks:         row.Remarks,
+		TenantID:        row.TenantID,
+		Version:         row.Version,
+		CreatedAt:       row.CreatedAt,
+		UpdatedAt:       row.UpdatedAt,
+		StartedAt:       row.StartedAt,
+		ReachedPickupAt: row.ReachedPickupAt,
+		InTransitAt:     row.InTransitAt,
+		DeliveredAt:     row.DeliveredAt,
+		CompletedAt:     row.CompletedAt,
+		IdempotencyKey:  sql.NullString{String: key, Valid: true},
+	}
+	agg := converters.MapToAggregate(m)
+	stops, err := r.loadStops(ctx, row.ID, string(tenantID))
+	if err != nil {
+		return nil, err
+	}
 	agg.Stops = stops
 	return agg, nil
 }
@@ -202,58 +299,78 @@ func (r *tripRepository) Exists(ctx context.Context, id aggregate.TripID, tenant
 	return true, nil
 }
 
-func (r *tripRepository) CheckDriverConflict(ctx context.Context, driverID string, tenantID shared.TenantID, excludeTripID string) ([]domain.ConflictInfo, error) {
-	rows, err := r.Q(ctx).CheckDriverConflict(ctx, db.CheckDriverConflictParams{
-		DriverID: sql.NullString{String: driverID, Valid: driverID != ""},
-		TenantID: string(tenantID),
-		Column3:  excludeTripID,
-		ID:       excludeTripID,
-	})
-	if err != nil {
-		return nil, err
-	}
-	conflicts := make([]domain.ConflictInfo, 0, len(rows))
-	for _, row := range rows {
-		var arrival *time.Time
-		if row.ArrivalTime.Valid {
-			arrival = &row.ArrivalTime.Time
-		}
-		conflicts = append(conflicts, domain.ConflictInfo{
-			ID:            row.ID,
-			TripNumber:    row.TripNumber,
-			Status:        row.Status,
-			DepartureTime: row.DepartureTime,
-			ArrivalTime:   arrival,
-		})
-	}
-	return conflicts, nil
+// sqliteTime formats a bound for comparison against DATETIME columns stored
+// as "2006-01-02 15:04:05" (see live rows; driver writes UTC, no offset).
+func sqliteTime(t time.Time) string {
+	return t.UTC().Format("2006-01-02 15:04:05")
 }
 
-func (r *tripRepository) CheckVehicleConflict(ctx context.Context, vehicleID string, tenantID shared.TenantID, excludeTripID string) ([]domain.ConflictInfo, error) {
-	rows, err := r.Q(ctx).CheckVehicleConflict(ctx, db.CheckVehicleConflictParams{
-		VehicleID: sql.NullString{String: vehicleID, Valid: vehicleID != ""},
-		TenantID:  string(tenantID),
-		Column3:   excludeTripID,
-		ID:        excludeTripID,
-	})
+func parseSQLiteTime(s string) (time.Time, error) {
+	for _, layout := range []string{"2006-01-02 15:04:05", time.RFC3339, "2006-01-02T15:04:05Z07:00"} {
+		if tm, err := time.Parse(layout, s); err == nil {
+			return tm, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("unparseable sqlite time %q", s)
+}
+
+// checkResourceConflict finds active trips holding driver_id/vehicle_id whose
+// time window overlaps [windowStart, windowEnd]. NULL arrival_time (or nil
+// windowEnd) means open-ended. Shared by driver and vehicle checks.
+func (r *tripRepository) checkResourceConflict(ctx context.Context, column, resourceID string, tenantID shared.TenantID, excludeTripID string, windowStart time.Time, windowEnd *time.Time) ([]domain.ConflictInfo, error) {
+	if resourceID == "" {
+		return nil, nil
+	}
+	windowEndStr := "9999-12-31 23:59:59"
+	if windowEnd != nil {
+		windowEndStr = sqliteTime(*windowEnd)
+	}
+	query := fmt.Sprintf(`
+SELECT id, trip_number, status, departure_time, arrival_time
+FROM trips
+WHERE %s = ? AND tenant_id = ?
+  AND status IN ('scheduled', 'assigned', 'started', 'reached_pickup', 'in_transit', 'delivered')
+  AND (? = '' OR id != ?)
+  AND departure_time <= ?
+  AND COALESCE(arrival_time, '9999-12-31 23:59:59') >= ?`, column)
+	rows, err := r.getDBTx(ctx).QueryContext(ctx, query,
+		resourceID, string(tenantID), excludeTripID, excludeTripID,
+		windowEndStr, sqliteTime(windowStart),
+	)
 	if err != nil {
 		return nil, err
 	}
-	conflicts := make([]domain.ConflictInfo, 0, len(rows))
-	for _, row := range rows {
-		var arrival *time.Time
-		if row.ArrivalTime.Valid {
-			arrival = &row.ArrivalTime.Time
+	defer func() { _ = rows.Close() }()
+
+	conflicts := make([]domain.ConflictInfo, 0)
+	for rows.Next() {
+		var c domain.ConflictInfo
+		var depStr sql.NullString
+		var arrStr sql.NullString
+		if err := rows.Scan(&c.ID, &c.TripNumber, &c.Status, &depStr, &arrStr); err != nil {
+			return nil, err
 		}
-		conflicts = append(conflicts, domain.ConflictInfo{
-			ID:            row.ID,
-			TripNumber:    row.TripNumber,
-			Status:        row.Status,
-			DepartureTime: row.DepartureTime,
-			ArrivalTime:   arrival,
-		})
+		if depStr.Valid {
+			if dep, err := parseSQLiteTime(depStr.String); err == nil {
+				c.DepartureTime = dep
+			}
+		}
+		if arrStr.Valid && arrStr.String != "" {
+			if arr, err := parseSQLiteTime(arrStr.String); err == nil {
+				c.ArrivalTime = &arr
+			}
+		}
+		conflicts = append(conflicts, c)
 	}
-	return conflicts, nil
+	return conflicts, rows.Err()
+}
+
+func (r *tripRepository) CheckDriverConflict(ctx context.Context, driverID string, tenantID shared.TenantID, excludeTripID string, windowStart time.Time, windowEnd *time.Time) ([]domain.ConflictInfo, error) {
+	return r.checkResourceConflict(ctx, "driver_id", driverID, tenantID, excludeTripID, windowStart, windowEnd)
+}
+
+func (r *tripRepository) CheckVehicleConflict(ctx context.Context, vehicleID string, tenantID shared.TenantID, excludeTripID string, windowStart time.Time, windowEnd *time.Time) ([]domain.ConflictInfo, error) {
+	return r.checkResourceConflict(ctx, "vehicle_id", vehicleID, tenantID, excludeTripID, windowStart, windowEnd)
 }
 
 func (r *tripRepository) GetReadModel(ctx context.Context, id aggregate.TripID, tenantID shared.TenantID) (domain.TripReadModel, error) {
@@ -340,6 +457,7 @@ func (r *tripRepository) GetReadModel(ctx context.Context, id aggregate.TripID, 
 
 func (r *tripRepository) SearchReadModels(ctx context.Context, tenantID shared.TenantID, query string, status string, limit int, offset int) ([]domain.TripReadModel, int64, error) {
 	qPattern := "%" + query + "%"
+	statusPred, statusArgs := tripStatusPredicate(status)
 
 	querySQL := `
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
@@ -358,16 +476,16 @@ LEFT JOIN vehicles v ON t.vehicle_id = v.id
 LEFT JOIN routes r ON t.route_id = r.id
 WHERE t.tenant_id = ?
   AND (? = '' OR t.trip_number LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ? OR v.registration_number LIKE ? OR r.source LIKE ? OR r.destination LIKE ?)
-  AND (? = '' OR t.status = ?)
+  AND (` + statusPred + `)
 ORDER BY t.departure_time DESC
 LIMIT ? OFFSET ?`
 
-	rows, err := r.dbConn.QueryContext(ctx, querySQL,
-		string(tenantID),
-		query, qPattern, qPattern, qPattern, qPattern, qPattern, qPattern,
-		status, status,
-		limit, offset,
-	)
+	args := []any{string(tenantID),
+		query, qPattern, qPattern, qPattern, qPattern, qPattern, qPattern}
+	args = append(args, statusArgs...)
+	args = append(args, limit, offset)
+
+	rows, err := r.dbConn.QueryContext(ctx, querySQL, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -434,14 +552,14 @@ LEFT JOIN vehicles v ON t.vehicle_id = v.id
 LEFT JOIN routes r ON t.route_id = r.id
 WHERE t.tenant_id = ?
   AND (? = '' OR t.trip_number LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ? OR v.registration_number LIKE ? OR r.source LIKE ? OR r.destination LIKE ?)
-  AND (? = '' OR t.status = ?)`
+  AND (` + statusPred + `)`
+
+	countArgs := []any{string(tenantID),
+		query, qPattern, qPattern, qPattern, qPattern, qPattern, qPattern}
+	countArgs = append(countArgs, statusArgs...)
 
 	var count int64
-	err = r.dbConn.QueryRowContext(ctx, countSQL,
-		string(tenantID),
-		query, qPattern, qPattern, qPattern, qPattern, qPattern, qPattern,
-		status, status,
-	).Scan(&count)
+	err = r.dbConn.QueryRowContext(ctx, countSQL, countArgs...).Scan(&count)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -490,6 +608,7 @@ func (r *tripRepository) SearchReadModelsByDriver(ctx context.Context, tenantID 
 		placeholders[i] = "?"
 	}
 	driverClause := fmt.Sprintf("t.driver_id IN (%s)", strings.Join(placeholders, ","))
+	statusPred, statusArgs := tripStatusPredicate(status)
 
 	querySQL := fmt.Sprintf(`
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
@@ -509,7 +628,7 @@ LEFT JOIN routes r ON t.route_id = r.id
 WHERE t.tenant_id = ?
   AND %s
   AND (? = '' OR t.trip_number LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ? OR v.registration_number LIKE ? OR r.source LIKE ? OR r.destination LIKE ?)
-  AND (? = '' OR t.status = ?)
+  AND (`+statusPred+`)
 ORDER BY t.departure_time DESC
 LIMIT ? OFFSET ?`, driverClause)
 
@@ -517,7 +636,9 @@ LIMIT ? OFFSET ?`, driverClause)
 	for _, id := range resolvedIDs {
 		args = append(args, id)
 	}
-	args = append(args, query, qPattern, qPattern, qPattern, qPattern, qPattern, qPattern, status, status, limit, offset)
+	args = append(args, query, qPattern, qPattern, qPattern, qPattern, qPattern, qPattern)
+	args = append(args, statusArgs...)
+	args = append(args, limit, offset)
 
 	rows, err := r.dbConn.QueryContext(ctx, querySQL, args...)
 	if err != nil {
@@ -587,13 +708,14 @@ LEFT JOIN routes r ON t.route_id = r.id
 WHERE t.tenant_id = ?
   AND %s
   AND (? = '' OR t.trip_number LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ? OR v.registration_number LIKE ? OR r.source LIKE ? OR r.destination LIKE ?)
-  AND (? = '' OR t.status = ?)`, driverClause)
+  AND (`+statusPred+`)`, driverClause)
 
 	countArgs := []interface{}{string(tenantID)}
 	for _, id := range resolvedIDs {
 		countArgs = append(countArgs, id)
 	}
-	countArgs = append(countArgs, query, qPattern, qPattern, qPattern, qPattern, qPattern, qPattern, status, status)
+	countArgs = append(countArgs, query, qPattern, qPattern, qPattern, qPattern, qPattern, qPattern)
+	countArgs = append(countArgs, statusArgs...)
 
 	var count int64
 	err = r.dbConn.QueryRowContext(ctx, countSQL, countArgs...).Scan(&count)

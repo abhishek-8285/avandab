@@ -48,10 +48,15 @@ func (uc *AssignVehicleUseCase) Execute(ctx context.Context, cmd AssignVehicleCo
 		if err != nil {
 			return err
 		}
+		// Attribute any compliance-override audit to the trip's own tenant
+		// when the caller didn't specify one — never the bootstrap tenant.
+		if cmd.TenantID == "" {
+			cmd.TenantID = t.TenantID
+		}
 		if err := uc.checkVehicleCompliance(txCtx, cmd); err != nil {
 			return err
 		}
-		conflicts, err := repo.CheckVehicleConflict(txCtx, cmd.VehicleID, cmd.TenantID, string(cmd.TripID))
+		conflicts, err := repo.CheckVehicleConflict(txCtx, cmd.VehicleID, cmd.TenantID, string(cmd.TripID), t.DepartureTime, t.ArrivalTime)
 		if err != nil {
 			return err
 		}
@@ -100,7 +105,7 @@ func (uc *AssignVehicleUseCase) checkVehicleCompliance(ctx ports.TxContext, cmd 
 				if dbGetter, ok := ctx.Repositories().AuditLogs().(repository.DBGetter); ok && dbGetter.DB() != nil {
 					tenant := cmd.TenantID
 					if tenant == "" {
-						tenant = shared.DefaultTenant
+						return fmt.Errorf("cannot record dispatch override audit: tenant unknown")
 					}
 					overriddenBy := ""
 					if uid := getUserID(ctx); uid != nil {
@@ -132,7 +137,7 @@ func (uc *AssignVehicleUseCase) checkVehicleCompliance(ctx ports.TxContext, cmd 
 					if dbGetter, ok := ctx.Repositories().AuditLogs().(repository.DBGetter); ok && dbGetter.DB() != nil {
 						tenant := cmd.TenantID
 						if tenant == "" {
-							tenant = shared.DefaultTenant
+							return fmt.Errorf("cannot record dispatch override audit: tenant unknown")
 						}
 						_, _ = dbGetter.DB().ExecContext(ctx, `CREATE TABLE IF NOT EXISTS dispatch_overrides (
                             id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL DEFAULT '1', trip_id TEXT NOT NULL, vehicle_id TEXT, driver_id TEXT, blocked_by TEXT NOT NULL, reason TEXT NOT NULL, overridden_by TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now'))

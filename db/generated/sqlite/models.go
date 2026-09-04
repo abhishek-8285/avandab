@@ -131,21 +131,22 @@ type AuditLog struct {
 }
 
 type Booking struct {
-	ID            string          `json:"id"`
-	BookingNumber string          `json:"booking_number"`
-	CustomerID    string          `json:"customer_id"`
-	PickupDate    time.Time       `json:"pickup_date"`
-	RouteID       string          `json:"route_id"`
-	VehicleType   string          `json:"vehicle_type"`
-	Passengers    int64           `json:"passengers"`
-	CargoWeight   sql.NullFloat64 `json:"cargo_weight"`
-	Price         float64         `json:"price"`
-	Notes         sql.NullString  `json:"notes"`
-	Status        string          `json:"status"`
-	CreatedAt     time.Time       `json:"created_at"`
-	UpdatedAt     time.Time       `json:"updated_at"`
-	TenantID      string          `json:"tenant_id"`
-	Version       int64           `json:"version"`
+	ID             string          `json:"id"`
+	BookingNumber  string          `json:"booking_number"`
+	CustomerID     string          `json:"customer_id"`
+	PickupDate     time.Time       `json:"pickup_date"`
+	RouteID        string          `json:"route_id"`
+	VehicleType    string          `json:"vehicle_type"`
+	Passengers     int64           `json:"passengers"`
+	CargoWeight    sql.NullFloat64 `json:"cargo_weight"`
+	Price          float64         `json:"price"`
+	Notes          sql.NullString  `json:"notes"`
+	Status         string          `json:"status"`
+	CreatedAt      time.Time       `json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
+	TenantID       string          `json:"tenant_id"`
+	Version        int64           `json:"version"`
+	IdempotencyKey sql.NullString  `json:"idempotency_key"`
 }
 
 type CommOutbox struct {
@@ -1740,6 +1741,7 @@ type Trip struct {
 	PodScanValue          sql.NullString  `json:"pod_scan_value"`
 	PodOtp                sql.NullString  `json:"pod_otp"`
 	PodOtpExpiresAt       sql.NullString  `json:"pod_otp_expires_at"`
+	IdempotencyKey        sql.NullString  `json:"idempotency_key"`
 }
 
 type TripDetention struct {
@@ -1955,6 +1957,25 @@ type VerificationAttempt struct {
 	CompletedAt       sql.NullTime   `json:"completed_at"`
 	FailureCode       sql.NullString `json:"failure_code"`
 	FailureReason     sql.NullString `json:"failure_reason"`
+}
+
+type WorkOrder struct {
+	ID           string          `json:"id"`
+	TenantID     string          `json:"tenant_id"`
+	VehicleID    string          `json:"vehicle_id"`
+	ScheduleID   sql.NullString  `json:"schedule_id"`
+	TripID       sql.NullString  `json:"trip_id"`
+	Title        string          `json:"title"`
+	Description  string          `json:"description"`
+	Assignee     string          `json:"assignee"`
+	Vendor       string          `json:"vendor"`
+	CostEstimate sql.NullFloat64 `json:"cost_estimate"`
+	CostActual   sql.NullFloat64 `json:"cost_actual"`
+	Status       string          `json:"status"`
+	DueAt        sql.NullTime    `json:"due_at"`
+	ClosedAt     sql.NullTime    `json:"closed_at"`
+	CreatedAt    time.Time       `json:"created_at"`
+	UpdatedAt    time.Time       `json:"updated_at"`
 }
 
 type WorkerLease struct {

@@ -15,7 +15,7 @@
     <form method="POST" action="/vehicles{{if $vehicle}}/{{$vehicle.ID}}/edit{{else}}/new{{end}}" class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="p-6 space-y-6">
             <section>
-                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Identity</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Identity</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {{template "field.html" (dict "Label" "Registration Number" "Name" "registration_number" "Value" (and $vehicle $vehicle.RegistrationNumber) "Required" "true" "Pattern" `[A-Z]{2}\s?[0-9]{1,2}\s?[A-Z]{0,3}\s?[0-9]{4}` "Title" "Indian registration: MH01AB1234" "Placeholder" "MH01AB1234" "Hint" "Format: state code + RTO number + series, e.g. MH01AB1234")}}
                     {{template "field.html" (dict "Label" "Vehicle Number" "Name" "vehicle_number" "Value" (and $vehicle $vehicle.VehicleNumber) "Required" "true")}}
@@ -23,7 +23,7 @@
             </section>
 
             <section>
-                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Specifications</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Specifications</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {{template "field.html" (dict "Label" "Capacity (seats/kg)" "Name" "capacity" "Type" "number" "Value" (and $vehicle $vehicle.Capacity))}}
                     {{template "field.html" (dict "Label" "Current Mileage (km)" "Name" "current_mileage" "Type" "number" "Value" (and $vehicle $vehicle.CurrentMileage))}}
@@ -54,7 +54,7 @@
             </section>
 
             <section>
-                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Compliance</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Compliance</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {{template "field.html" (dict "Label" "Insurance Expiry" "Name" "insurance_expiry" "Type" "date" "Value" (and $vehicle (date_only $vehicle.InsuranceExpiry)) "Required" "true")}}
                     {{template "field.html" (dict "Label" "Fitness Expiry" "Name" "fitness_expiry" "Type" "date" "Value" (and $vehicle (date_only $vehicle.FitnessExpiry)) "Required" "true")}}
@@ -63,7 +63,7 @@
             </section>
 
             <section>
-                <h2 class="text-[11px] font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Status</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Status</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-none sm:max-w-md">
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Status</label>

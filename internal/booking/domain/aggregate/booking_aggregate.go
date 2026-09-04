@@ -36,6 +36,9 @@ type BookingAggregate struct {
 	UpdatedAt     time.Time
 	Version       int64
 
+	// IdempotencyKey dedupes retried creates (empty = no key).
+	IdempotencyKey string
+
 	events []any
 }
 
@@ -167,6 +170,11 @@ func (b *BookingAggregate) Update(
 		OccurredAt: now,
 	})
 	return nil
+}
+
+// SetIdempotencyKey attaches the client-supplied dedupe key before Save.
+func (b *BookingAggregate) SetIdempotencyKey(key string) {
+	b.IdempotencyKey = key
 }
 
 // Events returns collected domain events.

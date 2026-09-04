@@ -47,15 +47,15 @@
             <table class="min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Trip / ID</th>
-                        <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Driver</th>
-                        <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Gross Fare (₹)</th>
-                        <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Advances (₹)</th>
-                        <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Deductions (₹)</th>
-                        <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">TDS</th>
-                        <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Net Payout (₹)</th>
-                        <th class="px-4 py-2.5 text-center text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
-                        <th class="px-4 py-2.5 text-center text-[11px] font-bold tracking-wider uppercase text-text-muted">Actions</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Trip / ID</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Driver</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Gross Fare (₹)</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Advances (₹)</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Deductions (₹)</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">TDS</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Net Payout (₹)</th>
+                        <th class="px-4 py-2.5 text-center text-eyebrow text-text-muted">Status</th>
+                        <th class="px-4 py-2.5 text-center text-eyebrow text-text-muted">Actions</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
@@ -63,7 +63,7 @@
                     <tr class="hover:bg-surface-container-low/50 transition-colors group">
                         <td class="px-3 py-2 whitespace-nowrap">
                             <a href="/settlements/{{.ID}}" class="text-sm font-bold text-primary hover:underline tabular-nums">{{.TripID}}</a>
-                            <span class="block text-xs text-text-muted font-mono">{{.ID}}</span>
+                            <span class="block text-xs text-text-muted font-data-mono">{{.ID}}</span>
                         </td>
                         <td class="px-3 py-2 text-sm font-medium text-on-surface">{{.DriverID}}</td>
                         <td class="px-3 py-2 text-sm text-right tabular-nums text-on-surface whitespace-nowrap" data-numeric>₹{{printf "%.2f" .GrossFare}}</td>

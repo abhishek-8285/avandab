@@ -3,7 +3,6 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"transport-app/internal/domain"
 	"transport-app/internal/repository"
@@ -369,9 +368,11 @@ func (r *SQLRepository) CheckDriverConflict(ctx context.Context, driverID domain
 }
 
 func (r *SQLRepository) GetTripsByDate(ctx context.Context, date string) ([]repository.TripWithJoins, error) {
-	t, _ := time.Parse("2006-01-02", date)
+	// date is already YYYY-MM-DD; the query binds it as text so the
+	// comparison date(departure_time) = ? matches (a full timestamp never
+	// equals date(col) and would silently return zero rows).
 	rows, err := r.Q(ctx).GetTripsByDate(ctx, db.GetTripsByDateParams{
-		DepartureTime: t,
+		DepartureDate: date,
 		TenantID:      tenantIDFromCtx(ctx),
 	})
 	if err != nil {
@@ -392,9 +393,9 @@ func (r *SQLRepository) GetTripsByDate(ctx context.Context, date string) ([]repo
 }
 
 func (r *SQLRepository) CountTripsByStatusForDate(ctx context.Context, date string) (map[domain.TripStatus]int64, error) {
-	t, _ := time.Parse("2006-01-02", date)
+	// See GetTripsByDate: bind YYYY-MM-DD text, not time.Time.
 	rows, err := r.Q(ctx).CountTripsByStatus(ctx, db.CountTripsByStatusParams{
-		DepartureTime: t,
+		DepartureDate: date,
 		TenantID:      tenantIDFromCtx(ctx),
 	})
 	if err != nil {

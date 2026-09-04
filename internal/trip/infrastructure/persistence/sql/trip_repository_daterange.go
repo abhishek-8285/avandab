@@ -20,6 +20,7 @@ const tripDateClause = `
 
 func (r *tripRepository) SearchReadModelsDateRange(ctx context.Context, tenantID shared.TenantID, query string, status string, from string, to string, limit int, offset int) ([]tripdomain.TripReadModel, int64, error) {
 	qPattern := "%" + query + "%"
+	statusPred, statusArgs := tripStatusPredicate(status)
 
 	querySQL := `
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
@@ -38,17 +39,16 @@ LEFT JOIN vehicles v ON t.vehicle_id = v.id
 LEFT JOIN routes r ON t.route_id = r.id
 WHERE t.tenant_id = ?
   AND (? = '' OR t.trip_number LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ? OR v.registration_number LIKE ? OR r.source LIKE ? OR r.destination LIKE ?)
-  AND (? = '' OR t.status = ?)` + tripDateClause + `
+  AND (` + statusPred + `)` + tripDateClause + `
 ORDER BY t.departure_time DESC
 LIMIT ? OFFSET ?`
 
-	rows, err := r.dbConn.QueryContext(ctx, querySQL,
-		string(tenantID),
-		query, qPattern, qPattern, qPattern, qPattern, qPattern, qPattern,
-		status, status,
-		from, from, to, to,
-		limit, offset,
-	)
+	args := []any{string(tenantID),
+		query, qPattern, qPattern, qPattern, qPattern, qPattern, qPattern}
+	args = append(args, statusArgs...)
+	args = append(args, from, from, to, to, limit, offset)
+
+	rows, err := r.dbConn.QueryContext(ctx, querySQL, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -67,15 +67,15 @@ LEFT JOIN vehicles v ON t.vehicle_id = v.id
 LEFT JOIN routes r ON t.route_id = r.id
 WHERE t.tenant_id = ?
   AND (? = '' OR t.trip_number LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ? OR v.registration_number LIKE ? OR r.source LIKE ? OR r.destination LIKE ?)
-  AND (? = '' OR t.status = ?)` + tripDateClause
+  AND (` + statusPred + `)` + tripDateClause
+
+	countArgs := []any{string(tenantID),
+		query, qPattern, qPattern, qPattern, qPattern, qPattern, qPattern}
+	countArgs = append(countArgs, statusArgs...)
+	countArgs = append(countArgs, from, from, to, to)
 
 	var count int64
-	err = r.dbConn.QueryRowContext(ctx, countSQL,
-		string(tenantID),
-		query, qPattern, qPattern, qPattern, qPattern, qPattern, qPattern,
-		status, status,
-		from, from, to, to,
-	).Scan(&count)
+	err = r.dbConn.QueryRowContext(ctx, countSQL, countArgs...).Scan(&count)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -124,6 +124,7 @@ func (r *tripRepository) SearchReadModelsByDriverDateRange(ctx context.Context, 
 		placeholders[i] = "?"
 	}
 	driverClause := fmt.Sprintf("t.driver_id IN (%s)", strings.Join(placeholders, ","))
+	statusPred, statusArgs := tripStatusPredicate(status)
 
 	querySQL := fmt.Sprintf(`
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
@@ -143,7 +144,7 @@ LEFT JOIN routes r ON t.route_id = r.id
 WHERE t.tenant_id = ?
   AND %s
   AND (? = '' OR t.trip_number LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ? OR v.registration_number LIKE ? OR r.source LIKE ? OR r.destination LIKE ?)
-  AND (? = '' OR t.status = ?)`+tripDateClause+`
+  AND (`+statusPred+`)`+tripDateClause+`
 ORDER BY t.departure_time DESC
 LIMIT ? OFFSET ?`, driverClause)
 
@@ -151,7 +152,9 @@ LIMIT ? OFFSET ?`, driverClause)
 	for _, id := range resolvedIDs {
 		args = append(args, id)
 	}
-	args = append(args, query, qPattern, qPattern, qPattern, qPattern, qPattern, qPattern, status, status, from, from, to, to, limit, offset)
+	args = append(args, query, qPattern, qPattern, qPattern, qPattern, qPattern, qPattern)
+	args = append(args, statusArgs...)
+	args = append(args, from, from, to, to, limit, offset)
 
 	rows, err := r.dbConn.QueryContext(ctx, querySQL, args...)
 	if err != nil {
@@ -173,13 +176,15 @@ LEFT JOIN routes r ON t.route_id = r.id
 WHERE t.tenant_id = ?
   AND %s
   AND (? = '' OR t.trip_number LIKE ? OR d.first_name LIKE ? OR d.last_name LIKE ? OR v.registration_number LIKE ? OR r.source LIKE ? OR r.destination LIKE ?)
-  AND (? = '' OR t.status = ?)`+tripDateClause, driverClause)
+  AND (`+statusPred+`)`+tripDateClause, driverClause)
 
 	countArgs := []interface{}{string(tenantID)}
 	for _, id := range resolvedIDs {
 		countArgs = append(countArgs, id)
 	}
-	countArgs = append(countArgs, query, qPattern, qPattern, qPattern, qPattern, qPattern, qPattern, status, status, from, from, to, to)
+	countArgs = append(countArgs, query, qPattern, qPattern, qPattern, qPattern, qPattern, qPattern)
+	countArgs = append(countArgs, statusArgs...)
+	countArgs = append(countArgs, from, from, to, to)
 
 	var count int64
 	err = r.dbConn.QueryRowContext(ctx, countSQL, countArgs...).Scan(&count)

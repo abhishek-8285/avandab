@@ -19,7 +19,7 @@
                 <p class="text-sm text-text-muted mt-1.5 flex flex-wrap items-center gap-2">
                     <span class="font-bold text-on-surface">{{.Customer.Name}}</span>
                     {{if .Customer.Company}}<span>·</span><span class="font-medium text-secondary">{{nullString .Customer.Company}}</span>{{end}}
-                    <span>·</span><span class="font-mono tabular-nums text-primary font-semibold">{{.Customer.CustomerCode}}</span>
+                    <span>·</span><span class="font-data-mono tabular-nums text-primary font-semibold">{{.Customer.CustomerCode}}</span>
                     <span>·</span><span>As of <strong class="text-on-surface tabular-nums">{{date_only .Statement.StatementDate}}</strong></span>
                 </p>
             </div>
@@ -46,19 +46,19 @@
         <!-- Account Metadata Grid -->
         <dl class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5 pt-5 border-t border-border-subtle">
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">GSTIN</dt>
-                <dd class="text-sm font-semibold text-on-surface font-mono uppercase tabular-nums mt-0.5">{{nullString .Customer.GST}}</dd>
+                <dt class="text-eyebrow text-text-muted">GSTIN</dt>
+                <dd class="text-sm font-semibold text-on-surface font-data-mono uppercase tabular-nums mt-0.5">{{nullString .Customer.GST}}</dd>
             </div>
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Phone / Contact</dt>
+                <dt class="text-eyebrow text-text-muted">Phone / Contact</dt>
                 <dd class="text-sm font-semibold text-on-surface tabular-nums mt-0.5">{{.Customer.Phone}} {{if .Customer.ContactPerson}}<span class="text-xs text-text-muted">({{.Customer.ContactPerson}})</span>{{end}}</dd>
             </div>
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Credit Terms</dt>
+                <dt class="text-eyebrow text-text-muted">Credit Terms</dt>
                 <dd class="text-sm font-bold text-primary tabular-nums mt-0.5">{{if .Customer.PaymentTermsDays}}Net {{.Customer.PaymentTermsDays}} Days{{else}}Due immediately{{end}}</dd>
             </div>
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Billing Address</dt>
+                <dt class="text-eyebrow text-text-muted">Billing Address</dt>
                 <dd class="text-xs font-medium text-on-surface truncate mt-0.5" title="{{if .Customer.BillingAddress}}{{nullString .Customer.BillingAddress}}{{else}}{{nullString .Customer.Address}}{{end}}">
                     {{if .Customer.BillingAddress}}{{nullString .Customer.BillingAddress}}{{else}}{{nullString .Customer.Address}}{{end}}
                 </dd>
@@ -69,32 +69,32 @@
     <!-- Financial KPI Aura Cards -->
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle p-4 shadow-sm">
-            <span class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Total Invoiced</span>
-            <p class="text-xl sm:text-2xl font-black text-on-surface tabular-nums mt-1 font-mono" data-numeric>₹{{printf "%.2f" .Statement.TotalInvoiced}}</p>
+            <span class="text-eyebrow text-text-muted">Total Invoiced</span>
+            <p class="text-xl sm:text-2xl font-black text-on-surface tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.TotalInvoiced}}</p>
             <span class="text-[11px] text-text-muted mt-1 block">{{len .Statement.Invoices}} Invoices Issued</span>
         </div>
 
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle p-4 shadow-sm">
-            <span class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Total Received</span>
-            <p class="text-xl sm:text-2xl font-black text-status-success tabular-nums mt-1 font-mono" data-numeric>₹{{printf "%.2f" .Statement.TotalPaid}}</p>
+            <span class="text-eyebrow text-text-muted">Total Received</span>
+            <p class="text-xl sm:text-2xl font-black text-status-success tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.TotalPaid}}</p>
             <span class="text-[11px] text-text-muted mt-1 block">{{len .Statement.Payments}} Receipts Applied</span>
         </div>
 
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle p-4 shadow-sm">
-            <span class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Invoiced Balance</span>
-            <p class="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 tabular-nums mt-1 font-mono" data-numeric>₹{{printf "%.2f" .Statement.OutstandingInvoices}}</p>
+            <span class="text-eyebrow text-text-muted">Invoiced Balance</span>
+            <p class="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.OutstandingInvoices}}</p>
             <span class="text-[11px] text-text-muted mt-1 block">Unpaid Bills</span>
         </div>
 
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle p-4 shadow-sm">
-            <span class="text-[11px] font-bold uppercase tracking-wider text-text-muted">WIP Unbilled Freight</span>
-            <p class="text-xl sm:text-2xl font-black text-sky-600 dark:text-sky-400 tabular-nums mt-1 font-mono" data-numeric>₹{{printf "%.2f" .Statement.TotalUnbilledAmount}}</p>
+            <span class="text-eyebrow text-text-muted">WIP Unbilled Freight</span>
+            <p class="text-xl sm:text-2xl font-black text-sky-600 dark:text-sky-400 tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.TotalUnbilledAmount}}</p>
             <span class="text-[11px] text-text-muted mt-1 block">{{len .Statement.UnbilledTrips}} Completed Trips</span>
         </div>
 
         <div class="col-span-2 sm:col-span-1 lg:col-span-1 bg-gradient-to-br from-primary to-violet-700 text-white rounded-2xl p-4 shadow-md">
-            <span class="text-[11px] font-bold uppercase tracking-wider text-white/80">Net Balance Due</span>
-            <p class="text-2xl sm:text-3xl font-black tabular-nums mt-1 font-mono" data-numeric>₹{{printf "%.2f" .Statement.NetBalanceDue}}</p>
+            <span class="text-eyebrow text-white/80">Net Balance Due</span>
+            <p class="text-2xl sm:text-3xl font-black tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.NetBalanceDue}}</p>
             <span class="text-[11px] text-white/80 mt-1 block">Invoiced + Unbilled WIP</span>
         </div>
     </div>
@@ -121,24 +121,24 @@
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-border-subtle text-center">
             <div class="p-4">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-text-muted">0 - 15 Days (Current)</span>
-                <p class="text-lg font-black text-on-surface tabular-nums mt-1 font-mono" data-numeric>₹{{printf "%.2f" .Statement.Aging.CurrentOr15}}</p>
+                <span class="text-eyebrow text-text-muted">0 - 15 Days (Current)</span>
+                <p class="text-lg font-black text-on-surface tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.Aging.CurrentOr15}}</p>
             </div>
             <div class="p-4">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-text-muted">16 - 30 Days</span>
-                <p class="text-lg font-black {{if gt .Statement.Aging.Days16To30 0.0}}text-amber-600 dark:text-amber-400{{else}}text-on-surface{{end}} tabular-nums mt-1 font-mono" data-numeric>₹{{printf "%.2f" .Statement.Aging.Days16To30}}</p>
+                <span class="text-eyebrow text-text-muted">16 - 30 Days</span>
+                <p class="text-lg font-black {{if gt .Statement.Aging.Days16To30 0.0}}text-amber-600 dark:text-amber-400{{else}}text-on-surface{{end}} tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.Aging.Days16To30}}</p>
             </div>
             <div class="p-4">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-text-muted">31 - 60 Days</span>
-                <p class="text-lg font-black {{if gt .Statement.Aging.Days31To60 0.0}}text-orange-600 dark:text-orange-400{{else}}text-on-surface{{end}} tabular-nums mt-1 font-mono" data-numeric>₹{{printf "%.2f" .Statement.Aging.Days31To60}}</p>
+                <span class="text-eyebrow text-text-muted">31 - 60 Days</span>
+                <p class="text-lg font-black {{if gt .Statement.Aging.Days31To60 0.0}}text-orange-600 dark:text-orange-400{{else}}text-on-surface{{end}} tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.Aging.Days31To60}}</p>
             </div>
             <div class="p-4">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-text-muted">60+ Days Overdue</span>
-                <p class="text-lg font-black {{if gt .Statement.Aging.Days60Plus 0.0}}text-red-600 dark:text-red-400{{else}}text-on-surface{{end}} tabular-nums mt-1 font-mono" data-numeric>₹{{printf "%.2f" .Statement.Aging.Days60Plus}}</p>
+                <span class="text-eyebrow text-text-muted">60+ Days Overdue</span>
+                <p class="text-lg font-black {{if gt .Statement.Aging.Days60Plus 0.0}}text-red-600 dark:text-red-400{{else}}text-on-surface{{end}} tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.Aging.Days60Plus}}</p>
             </div>
             <div class="p-4 col-span-2 sm:col-span-1 bg-surface-container-low/50">
-                <span class="text-[11px] font-bold uppercase tracking-wider text-text-muted">Total Outstanding</span>
-                <p class="text-lg font-black text-primary tabular-nums mt-1 font-mono" data-numeric>₹{{printf "%.2f" .Statement.Aging.TotalOutstanding}}</p>
+                <span class="text-eyebrow text-text-muted">Total Outstanding</span>
+                <p class="text-lg font-black text-primary tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.Aging.TotalOutstanding}}</p>
             </div>
         </div>
     </section>
@@ -173,14 +173,14 @@
                                 <input type="checkbox" id="select-all-trips" checked onclick="toggleSelectAllTrips(this)"
                                        class="rounded border-border-subtle text-primary focus:ring-primary/20">
                             </th>
-                            <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Trip #</th>
-                            <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Booking / LR</th>
-                            <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Route</th>
-                            <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Delivered</th>
-                            <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Freight (₹)</th>
-                            <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Tolls (₹)</th>
-                            <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Detention (₹)</th>
-                            <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Total (₹)</th>
+                            <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Trip #</th>
+                            <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Booking / LR</th>
+                            <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Route</th>
+                            <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Delivered</th>
+                            <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Freight (₹)</th>
+                            <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Tolls (₹)</th>
+                            <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Detention (₹)</th>
+                            <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Total (₹)</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border-subtle">
@@ -189,10 +189,10 @@
                             <td class="px-4 py-2.5 print:hidden">
                                 <input type="checkbox" name="trip_ids" value="{{.ID}}" checked class="trip-checkbox rounded border-border-subtle text-primary focus:ring-primary/20">
                             </td>
-                            <td class="px-4 py-2.5 text-sm font-mono font-bold text-primary">
+                            <td class="px-4 py-2.5 text-sm font-data-mono font-bold text-primary">
                                 <a href="/trips/{{.ID}}" class="hover:underline text-decoration-none">{{.TripNumber}}</a>
                             </td>
-                            <td class="px-4 py-2.5 text-sm font-mono text-on-surface">{{.BookingNumber}}</td>
+                            <td class="px-4 py-2.5 text-sm font-data-mono text-on-surface">{{.BookingNumber}}</td>
                             <td class="px-4 py-2.5 text-sm text-on-surface">
                                 {{if .RouteSource}}<span class="font-medium">{{.RouteSource}}</span> → <span class="font-medium">{{.RouteDestination}}</span>{{else}}—{{end}}
                             </td>
@@ -237,13 +237,13 @@
             <table class="min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Date</th>
-                        <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Type</th>
-                        <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Ref #</th>
-                        <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Description</th>
-                        <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Debit / Invoiced (₹)</th>
-                        <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Credit / Paid (₹)</th>
-                        <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Running Balance (₹)</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Date</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Type</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Ref #</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Description</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Debit / Invoiced (₹)</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Credit / Paid (₹)</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Running Balance (₹)</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
@@ -259,7 +259,7 @@
                                 {{.Type}}
                             </span>
                         </td>
-                        <td class="px-4 py-2.5 text-sm font-mono font-semibold text-on-surface">{{.Reference}}</td>
+                        <td class="px-4 py-2.5 text-sm font-data-mono font-semibold text-on-surface">{{.Reference}}</td>
                         <td class="px-4 py-2.5 text-sm text-secondary">{{.Description}}</td>
                         <td class="px-4 py-2.5 text-sm text-right font-semibold text-on-surface tabular-nums" data-numeric>
                             {{if gt .Debit 0.0}}₹{{printf "%.2f" .Debit}}{{else}}—{{end}}
@@ -267,7 +267,7 @@
                         <td class="px-4 py-2.5 text-sm text-right font-semibold text-status-success tabular-nums" data-numeric>
                             {{if gt .Credit 0.0}}₹{{printf "%.2f" .Credit}}{{else}}—{{end}}
                         </td>
-                        <td class="px-4 py-2.5 text-sm text-right font-black tabular-nums font-mono {{if gt .Balance 0.0}}text-primary{{else}}text-status-success{{end}}" data-numeric>
+                        <td class="px-4 py-2.5 text-sm text-right font-black tabular-nums font-data-mono {{if gt .Balance 0.0}}text-primary{{else}}text-status-success{{end}}" data-numeric>
                             ₹{{printf "%.2f" .Balance}}
                         </td>
                     </tr>
@@ -276,9 +276,9 @@
                 <tfoot class="bg-surface-container-low font-bold">
                     <tr>
                         <td colspan="4" class="px-4 py-3 text-right text-xs uppercase tracking-wider text-text-muted">Net Outstanding Invoice Balance:</td>
-                        <td class="px-4 py-3 text-right text-xs font-mono tabular-nums text-on-surface">₹{{printf "%.2f" .Statement.TotalInvoiced}}</td>
-                        <td class="px-4 py-3 text-right text-xs font-mono tabular-nums text-status-success">₹{{printf "%.2f" .Statement.TotalPaid}}</td>
-                        <td class="px-4 py-3 text-right text-base font-black font-mono text-primary tabular-nums" data-numeric>₹{{printf "%.2f" .Statement.OutstandingInvoices}}</td>
+                        <td class="px-4 py-3 text-right text-xs font-data-mono tabular-nums text-on-surface">₹{{printf "%.2f" .Statement.TotalInvoiced}}</td>
+                        <td class="px-4 py-3 text-right text-xs font-data-mono tabular-nums text-status-success">₹{{printf "%.2f" .Statement.TotalPaid}}</td>
+                        <td class="px-4 py-3 text-right text-base font-black font-data-mono text-primary tabular-nums" data-numeric>₹{{printf "%.2f" .Statement.OutstandingInvoices}}</td>
                     </tr>
                 </tfoot>
             </table>
@@ -305,22 +305,22 @@
             <table class="min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Invoice #</th>
-                        <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Date</th>
-                        <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Due Date</th>
-                        <th class="px-4 py-2.5 text-left text-[11px] font-bold tracking-wider uppercase text-text-muted">Status</th>
-                        <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Subtotal (₹)</th>
-                        <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Tax (₹)</th>
-                        <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Total (₹)</th>
-                        <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Paid (₹)</th>
-                        <th class="px-4 py-2.5 text-right text-[11px] font-bold tracking-wider uppercase text-text-muted">Balance (₹)</th>
-                        <th class="px-4 py-2.5 text-center text-[11px] font-bold tracking-wider uppercase text-text-muted print:hidden">Action</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Invoice #</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Date</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Due Date</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Status</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Subtotal (₹)</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Tax (₹)</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Total (₹)</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Paid (₹)</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Balance (₹)</th>
+                        <th class="px-4 py-2.5 text-center text-eyebrow text-text-muted print:hidden">Action</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
                     {{range .Statement.Invoices}}
                     <tr class="hover:bg-surface-container-low/50 transition-colors">
-                        <td class="px-4 py-2.5 text-sm font-mono font-bold text-primary">
+                        <td class="px-4 py-2.5 text-sm font-data-mono font-bold text-primary">
                             <a href="/invoices/{{.ID}}" class="hover:underline text-decoration-none">{{.InvoiceNumber}}</a>
                         </td>
                         <td class="px-4 py-2.5 text-xs text-text-muted tabular-nums">{{date_only .CreatedAt}}</td>
@@ -358,7 +358,7 @@
                 Please email bank RTGS/NEFT transaction advice and Form 16A TDS certificates to <a href="mailto:accounts@avandab.com" class="font-semibold text-primary hover:underline">accounts@avandab.com</a> or <a href="mailto:billing@avandab.com" class="font-semibold text-primary hover:underline">billing@avandab.com</a>.
             </p>
         </div>
-        <div class="font-mono text-text-muted text-[11px] shrink-0">
+        <div class="font-data-mono text-text-muted text-[11px] shrink-0">
             Avandab Automated Ledger Khata
         </div>
     </div>

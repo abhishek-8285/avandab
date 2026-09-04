@@ -70,8 +70,9 @@ func (w *TripWorkflow) Cancel(ctx context.Context, tripID tripAggregate.TripID, 
 }
 
 // CanComplete returns whether the trip is eligible for completion.
+// Must match TripAggregate.Complete: only delivered trips can be completed.
 func (w *TripWorkflow) CanComplete(status tripAggregate.TripStatus) bool {
-	return status == tripAggregate.TripStarted
+	return status == tripAggregate.TripDelivered
 }
 
 // CanCancel returns whether the trip is eligible for cancellation.

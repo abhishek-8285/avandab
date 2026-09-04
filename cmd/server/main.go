@@ -97,6 +97,9 @@ import (
 	controlTowerApp "transport-app/internal/controltower/application"
 	controlTowerAPIHandlers "transport-app/internal/controltower/presentation/api"
 
+	entitlementApp "transport-app/internal/entitlement/application"
+	entitlementAPI "transport-app/internal/entitlement/presentation/api"
+
 	// Shared infrastructure
 	"transport-app/internal/comm"
 	"transport-app/internal/eta"
@@ -532,10 +535,14 @@ func main() {
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
 
+	// Commercial enforcement: READ_ONLY/CLOSED orgs cannot create bookings.
+	// Reused by the billing webhook mount below.
+	subscriptionSvc := entitlementApp.NewService(database)
+
 	// Sprint 1 – Booking use cases
-	createBookingUC := bookingApp.NewCreateBookingUseCase(sqlUoW, idGen, realClock)
+	createBookingUC := bookingApp.NewCreateBookingUseCase(sqlUoW, idGen, realClock).WithOperationGate(subscriptionSvc).WithUsageMeter(subscriptionSvc)
 	confirmBookingUC := bookingApp.NewConfirmBookingUseCase(sqlUoW, realClock)
-	cancelBookingUC := bookingApp.NewCancelBookingUseCase(sqlUoW, realClock)
+	cancelBookingUC := bookingApp.NewCancelBookingUseCase(sqlUoW, realClock).WithUsageMeter(subscriptionSvc)
 	updateBookingUC := bookingApp.NewUpdateBookingUseCase(sqlUoW)
 	completeBookingUC := bookingApp.NewCompleteBookingUseCase(sqlUoW, realClock)
 	deleteBookingUC := bookingApp.NewDeleteBookingUseCase(sqlUoW)
@@ -551,7 +558,7 @@ func main() {
 	reachPickup := tripApp.NewReachPickupUseCase(sqlUoW, realClock)
 	startTransit := tripApp.NewStartTransitUseCase(sqlUoW, realClock)
 	deliver := tripApp.NewDeliverUseCase(sqlUoW, realClock)
-	completeTrip := tripApp.NewCompleteTripUseCase(sqlUoW, realClock)
+	completeTrip := tripApp.NewCompleteTripUseCase(sqlUoW, realClock).WithUsageMeter(subscriptionSvc)
 	cancelTrip := tripApp.NewCancelTripUseCase(sqlUoW, realClock)
 	getTrip := tripApp.NewGetTripUseCase(sqlUoW)
 	listTrips := tripApp.NewListTripsUseCase(sqlUoW)
@@ -751,6 +758,12 @@ func main() {
 	var fuelEngine *fuel.FuelEngine
 	if cfg.Telemetry.Enabled {
 		fuelEngine = fuel.NewEngine(database, sqlUoW, fuel.NewConfigReader(database), logger)
+		// Per-tenant self-gating inside Tick (one org off stops only its
+		// vehicles — the old featureTick("fuel_audit") checked the bootstrap
+		// org and gated everyone).
+		fuelEngine.WithFeatureGate(func(tenantID string) bool {
+			return app.Features.Enabled(context.Background(), tenantID, "fuel_audit")
+		})
 	}
 
 	// ── Safety Event Engine (Spec 03 §4.1 producers, roadmap M2) ─────
@@ -760,6 +773,10 @@ func main() {
 	var safetyEngine *safety.Engine
 	if cfg.Telemetry.Enabled {
 		safetyEngine = safety.NewEngine(database, sqlUoW, fuel.NewConfigReader(database), logger)
+		// Per-tenant self-gating inside Tick (same reason as fuel/dwell).
+		safetyEngine.WithFeatureGate(func(tenantID string) bool {
+			return app.Features.Enabled(context.Background(), tenantID, "scorecard")
+		})
 	}
 
 	// ── RAG (codebase search) ────────────────────────────────────────────
@@ -819,6 +836,13 @@ func main() {
 
 	// Public: Razorpay webhook — signature-verified, rate-limited against flood attacks
 	r.With(middleware.RateLimitDistributed(appCache, 30)).Post("/api/v1/payments/razorpay-webhook", paymentAPIHandler.RazorpayWebhook)
+
+	// Public: Razorpay SUBSCRIPTION webhook — activates plan upgrades,
+	// downgrades on cancel/expiry, and PAST_DUE on payment failure. Dead
+	// route before P4: paid events never reached the entitlement service.
+	// Linkage: admin records provider_subscription_id via /tenants/{id}/plan.
+	subscriptionWebhook := entitlementAPI.NewWebhookHandler(subscriptionSvc, cfg.RazorpayWebhook)
+	r.With(middleware.RateLimitDistributed(appCache, 30)).Post("/api/v1/billing/webhooks/razorpay", subscriptionWebhook.ServeHTTP)
 
 	// Public: device GPS ingestion (own hardware + mobile app) — authenticated via
 	// X-Device-Token header (HMAC-SHA256), not session/Bearer token.
@@ -886,6 +910,8 @@ func main() {
 		customerAPIHandler.RegisterRoutes(r)
 		settlementAPIHandler.RegisterRoutes(r)
 		controlTowerAPIHandler.Register(r)
+		// Work orders (job cards) JSON API — tenant-scoped, maintenance RBAC.
+		app.Maintenance.RegisterAPIRoutes(r)
 		// Spec 18 Wave A — route optimization API (tenant-scoped, permission-gated)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "create")).Post("/api/v1/routes/optimize", app.Routes.Optimize)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "read")).Get("/api/v1/routes/optimize/jobs", app.Routes.OptimizeJobs)
@@ -1164,6 +1190,7 @@ func main() {
 			// Dashboard
 			r.Get("/dashboard", app.Dashboard.Index)
 			r.Get("/dashboard/stream", app.Dashboard.Stream)
+			r.Get("/dashboard/tables", app.Dashboard.Tables)
 			r.Post("/dashboard/event", app.Dashboard.Event)
 			r.Get("/files/{id}", app.DownloadFile)
 
@@ -1447,11 +1474,22 @@ func main() {
 	}
 
 	if dwellWorker != nil {
+		// Per-tenant self-gating inside Tick: one org disabling geofences
+		// stops only its own sweep (the old featureTick("geofences") checked
+		// the bootstrap org and gated everyone).
+		dwellWorker.WithFeatureGate(func(tenantID string) bool {
+			return app.Features.Enabled(context.Background(), tenantID, "geofences")
+		})
 		runLeadered("geofence_dwell", func(ctx context.Context) {
-			if !featureTick("geofences") {
-				return
-			}
 			dwellWorker.Run(ctx)
+		})
+	}
+
+	if services.Scorecard != nil {
+		// Per-driver self-gating inside RecomputeDriverScore: one org
+		// disabling scorecard stops only its own recomputes.
+		services.Scorecard.WithFeatureGate(func(tenantID string) bool {
+			return app.Features.Enabled(context.Background(), tenantID, "scorecard")
 		})
 	}
 	if fuelEngine != nil {
@@ -1481,9 +1519,6 @@ func main() {
 			})
 		}
 		runLeadered("fuel_engine", func(ctx context.Context) {
-			if !featureTick("fuel_audit") {
-				return
-			}
 			fuelEngine.Run(ctx)
 		})
 	}
@@ -1517,9 +1552,6 @@ func main() {
 			})
 		}
 		runLeadered("safety_engine", func(ctx context.Context) {
-			if !featureTick("scorecard") {
-				return
-			}
 			safetyEngine.Run(ctx)
 		})
 	}
@@ -1529,9 +1561,6 @@ func main() {
 	// no new engine events arrive.
 	if services.Scorecard != nil {
 		runLeadered("scorecard_sweep", func(ctx context.Context) {
-			if !featureTick("scorecard") {
-				return
-			}
 			ticker := time.NewTicker(24 * time.Hour)
 			defer ticker.Stop()
 			if err := services.Scorecard.RecomputeAllDrivers(ctx); err != nil && !errors.Is(err, context.Canceled) {
@@ -1555,9 +1584,6 @@ func main() {
 	// all active tenants. Idempotent — safe to re-run.
 	if services.PNL != nil {
 		runLeadered("pnl_snapshot", func(ctx context.Context) {
-			if !featureTick("pnl") {
-				return
-			}
 			// Fire once shortly after boot (catches a missed cron on restarts).
 			select {
 			case <-ctx.Done():
@@ -1572,6 +1598,11 @@ func main() {
 					return
 				}
 				for _, tid := range tenantIDs {
+					// Per-org gate (was: single featureTick on the bootstrap
+					// org gated every org's snapshot).
+					if !app.Features.Enabled(ctx, tid, "pnl") {
+						continue
+					}
 					if _, err := services.PNL.GenerateDailySnapshot(ctx, tid, yesterday); err != nil && !errors.Is(err, context.Canceled) {
 						logger.Error("PNL daily snapshot failed", "tenant", tid, "date", yesterday.Format("2006-01-02"), "error", err)
 					} else {
@@ -1598,22 +1629,32 @@ func main() {
 	// independent of the anomaly engine (and avoids an internal/fuel →
 	// internal/service import cycle).
 	runLeadered("fuel_audit_pass", func(ctx context.Context) {
-		if !featureTick("fuel_audit") {
-			return
+		auditOnce := func() {
+			tenantIDs, err := service.GetActiveTenantIDs(ctx, database)
+			if err != nil {
+				logger.Error("fuel audit: failed to list tenants", "error", err)
+				return
+			}
+			for _, tid := range tenantIDs {
+				// Per-org gate + tenant ctx (was: single DefaultTenant pass
+				// that silently skipped every other org's claims).
+				if !app.Features.Enabled(ctx, tid, "fuel_audit") {
+					continue
+				}
+				if _, err := services.FuelAudit.AuditPendingClaims(shared.ContextWithTenantID(ctx, shared.TenantID(tid))); err != nil && !errors.Is(err, context.Canceled) {
+					logger.Error("fuel audit pass failed", "tenant", tid, "error", err)
+				}
+			}
 		}
 		ticker := time.NewTicker(5 * time.Minute)
 		defer ticker.Stop()
-		if _, err := services.FuelAudit.AuditPendingClaims(ctx); err != nil && !errors.Is(err, context.Canceled) {
-			logger.Error("fuel audit pass failed", "error", err)
-		}
+		auditOnce()
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				if _, err := services.FuelAudit.AuditPendingClaims(ctx); err != nil && !errors.Is(err, context.Canceled) {
-					logger.Error("fuel audit pass failed", "error", err)
-				}
+				auditOnce()
 			}
 		}
 	})
@@ -1642,14 +1683,23 @@ func main() {
 				case <-c.Done():
 					return
 				case <-ticker.C:
-					if !featureTick("alert_inbox") {
+					// Per-org reopen (was: one global UPDATE that also
+					// reopened orgs which disabled the inbox).
+					tenantIDs, err := service.GetActiveTenantIDs(c, database)
+					if err != nil {
+						logger.Error("snooze sweep failed to list tenants", "error", err)
 						continue
 					}
-					n, err := inboxRepo.ReopenExpiredSnoozes(c, time.Now().UTC())
-					if err != nil {
-						logger.Error("snooze sweep failed", "error", err)
-					} else if n > 0 {
-						logger.Info("snooze sweep reopened alerts", "count", n)
+					for _, tid := range tenantIDs {
+						if !app.Features.Enabled(c, tid, "alert_inbox") {
+							continue
+						}
+						n, err := inboxRepo.ReopenExpiredSnoozesForTenant(c, tid, time.Now().UTC())
+						if err != nil {
+							logger.Error("snooze sweep failed", "tenant", tid, "error", err)
+						} else if n > 0 {
+							logger.Info("snooze sweep reopened alerts", "tenant", tid, "count", n)
+						}
 					}
 				}
 			}

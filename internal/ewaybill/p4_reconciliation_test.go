@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log/slog"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -323,16 +324,26 @@ func TestP4_EWBExpiryMonitorAndAlertEngine(t *testing.T) {
 	client := intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true})
 	svc := ewaybill.NewEWayBillService(db, bus, client, slog.Default(), ewaybill.Config{Enabled: true})
 
-	// Seed an already expired EWB (valid_until = 1 hour ago)
+	// Seed an already expired EWB (valid_until = 1 hour ago).
+	// trip_exp_1 is linked to a real trip so the alert carries its org.
+	_, _ = db.Exec(`INSERT INTO trips (id, trip_number, booking_id, route_id, status, tenant_id) VALUES ('trip_exp_1', 'TR-EXP-1', 'bk_exp_1', 'rt_exp_1', 'in_transit', 'tenant-9')`)
 	_, _ = db.Exec(`
 		INSERT INTO eway_bills (id, trip_id, ewb_number, status, generation_date, valid_until, goods_value, created_at)
 		VALUES ('ewb_exp_1', 'trip_exp_1', '999900001111', 'active', datetime('now', '-2 days'), datetime('now', '-1 hour'), 60000, datetime('now', '-2 days'))
 	`)
 
 	// Seed an expiring soon EWB (valid_until = 2 hours from now, within 8h lead)
+	_, _ = db.Exec(`INSERT INTO trips (id, trip_number, booking_id, route_id, status, tenant_id) VALUES ('trip_exp_2', 'TR-EXP-2', 'bk_exp_2', 'rt_exp_2', 'in_transit', 'tenant-9')`)
 	_, _ = db.Exec(`
 		INSERT INTO eway_bills (id, trip_id, ewb_number, status, generation_date, valid_until, goods_value, created_at)
 		VALUES ('ewb_exp_2', 'trip_exp_2', '999900002222', 'active', datetime('now', '-1 day'), datetime('now', '+2 hours'), 60000, datetime('now', '-1 day'))
+	`)
+
+	// Orphan EWB (trip deleted): status still transitions, but no alert may
+	// be published for it — there is no org to attribute it to.
+	_, _ = db.Exec(`
+		INSERT INTO eway_bills (id, trip_id, ewb_number, status, generation_date, valid_until, goods_value, created_at)
+		VALUES ('ewb_exp_3', 'trip_gone', '999900003333', 'active', datetime('now', '-2 days'), datetime('now', '-1 hour'), 60000, datetime('now', '-2 days'))
 	`)
 
 	monitor := ewaybill.NewMonitor(svc, ewaybill.Config{ExtensionLeadSeconds: 28800})
@@ -353,6 +364,9 @@ func TestP4_EWBExpiryMonitorAndAlertEngine(t *testing.T) {
 			if m, ok := e.Payload.(map[string]interface{}); ok {
 				if m["alert_type"] == "ewb_expired" {
 					hasExpiredAlert = true
+					if m["tenant_id"] != "tenant-9" {
+						t.Fatalf("expired alert attributed to %v, want tenant-9", m["tenant_id"])
+					}
 				}
 				if m["alert_type"] == "ewb_expiring_soon" {
 					hasExpiringSoonAlert = true
@@ -366,6 +380,22 @@ func TestP4_EWBExpiryMonitorAndAlertEngine(t *testing.T) {
 	}
 	if !hasExpiringSoonAlert {
 		t.Fatalf("expected ewb_expiring_soon AlertEvent to be dispatched")
+	}
+
+	// Orphan transitions but never alerts.
+	var status3 string
+	_ = db.QueryRow(`SELECT status FROM eway_bills WHERE ewb_number = '999900003333'`).Scan(&status3)
+	if status3 != "expired" {
+		t.Fatalf("expected orphan EWB to transition to 'expired', got '%s'", status3)
+	}
+	for _, e := range bus.events {
+		if e.Type == "AlertEvent" {
+			if m, ok := e.Payload.(map[string]interface{}); ok {
+				if details, _ := m["details"].(string); strings.Contains(details, "999900003333") {
+					t.Fatalf("orphan EWB must not publish alerts")
+				}
+			}
+		}
 	}
 }
 

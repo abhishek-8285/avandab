@@ -270,13 +270,13 @@ func (q *Queries) CountTrips(ctx context.Context, arg CountTripsParams) (int64, 
 const countTripsByStatus = `-- name: CountTripsByStatus :many
 SELECT status, COUNT(*) AS count
 FROM trips
-WHERE date(departure_time) = ? AND tenant_id = ?
+WHERE date(departure_time) = CAST(?1 AS TEXT) AND tenant_id = ?2
 GROUP BY status
 `
 
 type CountTripsByStatusParams struct {
-	DepartureTime time.Time `json:"departure_time"`
-	TenantID      string    `json:"tenant_id"`
+	DepartureDate string `json:"departure_date"`
+	TenantID      string `json:"tenant_id"`
 }
 
 type CountTripsByStatusRow struct {
@@ -285,7 +285,7 @@ type CountTripsByStatusRow struct {
 }
 
 func (q *Queries) CountTripsByStatus(ctx context.Context, arg CountTripsByStatusParams) ([]CountTripsByStatusRow, error) {
-	rows, err := q.db.QueryContext(ctx, countTripsByStatus, arg.DepartureTime, arg.TenantID)
+	rows, err := q.db.QueryContext(ctx, countTripsByStatus, arg.DepartureDate, arg.TenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -310,11 +310,11 @@ func (q *Queries) CountTripsByStatus(ctx context.Context, arg CountTripsByStatus
 const createTrip = `-- name: CreateTrip :one
 INSERT INTO trips (id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version,
-    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
+    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, idempotency_key)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
 RETURNING id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version, created_at, updated_at,
-    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at
+    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, idempotency_key
 `
 
 type CreateTripParams struct {
@@ -334,6 +334,7 @@ type CreateTripParams struct {
 	InTransitAt     sql.NullTime   `json:"in_transit_at"`
 	DeliveredAt     sql.NullTime   `json:"delivered_at"`
 	CompletedAt     sql.NullTime   `json:"completed_at"`
+	IdempotencyKey  sql.NullString `json:"idempotency_key"`
 }
 
 type CreateTripRow struct {
@@ -356,6 +357,7 @@ type CreateTripRow struct {
 	InTransitAt     sql.NullTime   `json:"in_transit_at"`
 	DeliveredAt     sql.NullTime   `json:"delivered_at"`
 	CompletedAt     sql.NullTime   `json:"completed_at"`
+	IdempotencyKey  sql.NullString `json:"idempotency_key"`
 }
 
 func (q *Queries) CreateTrip(ctx context.Context, arg CreateTripParams) (CreateTripRow, error) {
@@ -376,6 +378,7 @@ func (q *Queries) CreateTrip(ctx context.Context, arg CreateTripParams) (CreateT
 		arg.InTransitAt,
 		arg.DeliveredAt,
 		arg.CompletedAt,
+		arg.IdempotencyKey,
 	)
 	var i CreateTripRow
 	err := row.Scan(
@@ -398,6 +401,7 @@ func (q *Queries) CreateTrip(ctx context.Context, arg CreateTripParams) (CreateT
 		&i.InTransitAt,
 		&i.DeliveredAt,
 		&i.CompletedAt,
+		&i.IdempotencyKey,
 	)
 	return i, err
 }
@@ -664,6 +668,88 @@ func (q *Queries) GetTripByID(ctx context.Context, arg GetTripByIDParams) (GetTr
 	return i, err
 }
 
+const getTripByIdempotencyKey = `-- name: GetTripByIdempotencyKey :one
+SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
+    t.departure_time, t.arrival_time, t.status, t.remarks, t.tenant_id, t.version, t.created_at, t.updated_at,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at,
+    d.driver_id AS driver_display_id, d.first_name AS driver_first_name, d.last_name AS driver_last_name,
+    v.registration_number AS vehicle_registration_number, v.vehicle_number AS vehicle_number,
+    r.source AS route_source, r.destination AS route_destination
+FROM trips t
+LEFT JOIN drivers d ON t.driver_id = d.id
+LEFT JOIN vehicles v ON t.vehicle_id = v.id
+LEFT JOIN routes r ON t.route_id = r.id
+WHERE t.idempotency_key = ? AND t.tenant_id = ?
+`
+
+type GetTripByIdempotencyKeyParams struct {
+	IdempotencyKey sql.NullString `json:"idempotency_key"`
+	TenantID       string         `json:"tenant_id"`
+}
+
+type GetTripByIdempotencyKeyRow struct {
+	ID                        string         `json:"id"`
+	TripNumber                string         `json:"trip_number"`
+	BookingID                 sql.NullString `json:"booking_id"`
+	DriverID                  sql.NullString `json:"driver_id"`
+	VehicleID                 sql.NullString `json:"vehicle_id"`
+	RouteID                   string         `json:"route_id"`
+	DepartureTime             time.Time      `json:"departure_time"`
+	ArrivalTime               sql.NullTime   `json:"arrival_time"`
+	Status                    string         `json:"status"`
+	Remarks                   sql.NullString `json:"remarks"`
+	TenantID                  string         `json:"tenant_id"`
+	Version                   int64          `json:"version"`
+	CreatedAt                 time.Time      `json:"created_at"`
+	UpdatedAt                 time.Time      `json:"updated_at"`
+	StartedAt                 sql.NullTime   `json:"started_at"`
+	ReachedPickupAt           sql.NullTime   `json:"reached_pickup_at"`
+	InTransitAt               sql.NullTime   `json:"in_transit_at"`
+	DeliveredAt               sql.NullTime   `json:"delivered_at"`
+	CompletedAt               sql.NullTime   `json:"completed_at"`
+	DriverDisplayID           sql.NullString `json:"driver_display_id"`
+	DriverFirstName           sql.NullString `json:"driver_first_name"`
+	DriverLastName            sql.NullString `json:"driver_last_name"`
+	VehicleRegistrationNumber sql.NullString `json:"vehicle_registration_number"`
+	VehicleNumber             sql.NullString `json:"vehicle_number"`
+	RouteSource               sql.NullString `json:"route_source"`
+	RouteDestination          sql.NullString `json:"route_destination"`
+}
+
+func (q *Queries) GetTripByIdempotencyKey(ctx context.Context, arg GetTripByIdempotencyKeyParams) (GetTripByIdempotencyKeyRow, error) {
+	row := q.db.QueryRowContext(ctx, getTripByIdempotencyKey, arg.IdempotencyKey, arg.TenantID)
+	var i GetTripByIdempotencyKeyRow
+	err := row.Scan(
+		&i.ID,
+		&i.TripNumber,
+		&i.BookingID,
+		&i.DriverID,
+		&i.VehicleID,
+		&i.RouteID,
+		&i.DepartureTime,
+		&i.ArrivalTime,
+		&i.Status,
+		&i.Remarks,
+		&i.TenantID,
+		&i.Version,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.StartedAt,
+		&i.ReachedPickupAt,
+		&i.InTransitAt,
+		&i.DeliveredAt,
+		&i.CompletedAt,
+		&i.DriverDisplayID,
+		&i.DriverFirstName,
+		&i.DriverLastName,
+		&i.VehicleRegistrationNumber,
+		&i.VehicleNumber,
+		&i.RouteSource,
+		&i.RouteDestination,
+	)
+	return i, err
+}
+
 const getTripByNumber = `-- name: GetTripByNumber :one
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.tenant_id, t.version, t.created_at, t.updated_at,
@@ -756,13 +842,13 @@ FROM trips t
 LEFT JOIN drivers d ON t.driver_id = d.id
 LEFT JOIN vehicles v ON t.vehicle_id = v.id
 LEFT JOIN routes r ON t.route_id = r.id
-WHERE date(t.departure_time) = ? AND t.tenant_id = ?
+WHERE date(t.departure_time) = CAST(?1 AS TEXT) AND t.tenant_id = ?2
 ORDER BY t.departure_time ASC
 `
 
 type GetTripsByDateParams struct {
-	DepartureTime time.Time `json:"departure_time"`
-	TenantID      string    `json:"tenant_id"`
+	DepartureDate string `json:"departure_date"`
+	TenantID      string `json:"tenant_id"`
 }
 
 type GetTripsByDateRow struct {
@@ -789,7 +875,7 @@ type GetTripsByDateRow struct {
 }
 
 func (q *Queries) GetTripsByDate(ctx context.Context, arg GetTripsByDateParams) ([]GetTripsByDateRow, error) {
-	rows, err := q.db.QueryContext(ctx, getTripsByDate, arg.DepartureTime, arg.TenantID)
+	rows, err := q.db.QueryContext(ctx, getTripsByDate, arg.DepartureDate, arg.TenantID)
 	if err != nil {
 		return nil, err
 	}

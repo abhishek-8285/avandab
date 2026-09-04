@@ -1,6 +1,6 @@
 <div id="irn-block" class="bg-surface-container-lowest p-6 rounded-lg border border-border-subtle shadow-sm">
     <div class="flex items-center justify-between mb-4">
-        <h3 class="text-base font-semibold text-on-surface flex items-center gap-2">
+        <h3 class="text-title-md font-semibold text-on-surface flex items-center gap-2">
             <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
@@ -22,14 +22,14 @@
         <div class="md:col-span-2 space-y-2 text-sm">
             <div>
                 <span class="text-text-muted text-xs uppercase font-semibold">IRN:</span>
-                <div class="font-mono text-xs text-on-surface break-all bg-surface-container-low p-2 rounded border border-border-subtle select-all">
+                <div class="font-data-mono text-xs text-on-surface break-all bg-surface-container-low p-2 rounded border border-border-subtle select-all">
                     {{.Invoice.IRN}}
                 </div>
             </div>
             <div class="grid grid-cols-2 gap-2 text-xs">
                 <div>
                     <span class="text-text-muted uppercase font-semibold">Ack No:</span>
-                    <div class="font-mono text-on-surface font-medium">{{.Invoice.IRNAckNo}}</div>
+                    <div class="font-data-mono text-on-surface font-medium">{{.Invoice.IRNAckNo}}</div>
                 </div>
                 <div>
                     <span class="text-text-muted uppercase font-semibold">Ack Date:</span>

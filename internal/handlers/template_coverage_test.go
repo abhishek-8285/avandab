@@ -16,6 +16,11 @@ import (
 	"transport-app/internal/auth"
 	bookingapp "transport-app/internal/booking/application"
 	"transport-app/internal/domain"
+	domaindaudit "transport-app/internal/domain/audit"
+	domainbooking "transport-app/internal/domain/booking"
+	domaininvoice "transport-app/internal/domain/invoice"
+	domainpayment "transport-app/internal/domain/payment"
+	domaintrip "transport-app/internal/domain/trip"
 	driverapp "transport-app/internal/driver/application"
 	"transport-app/internal/fastag"
 	"transport-app/internal/features"
@@ -23,6 +28,7 @@ import (
 	invoiceapp "transport-app/internal/invoice/application"
 	maintenancedomain "transport-app/internal/maintenance/domain"
 	opserrors "transport-app/internal/operations/errors"
+	"transport-app/internal/repository"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 	"transport-app/internal/telemetry"
@@ -49,6 +55,27 @@ func TestAllTemplatesRender(t *testing.T) {
 	fPtr := func(f float64) *float64 { return &f }
 
 	user := &auth.SessionData{UserID: "u-1", Role: "admin", Name: "Admin User"}
+
+	// Shared fixtures for the dashboard row partials (production types —
+	// GET /dashboard/tables renders these with service.DashboardData).
+	dashSampleTrip := repository.TripWithJoins{
+		Trip: domaintrip.Trip{
+			ID: "trip-1", TripNumber: "TRIP-001",
+			DepartureTime: now, Status: domaintrip.TripScheduled,
+		},
+		DriverFirstName:     sPtr("John"),
+		DriverLastName:      sPtr("Doe"),
+		VehicleRegistration: sPtr("KA-01-HH-1234"),
+		RouteSource:         "Source City",
+		RouteDestination:    "Dest City",
+	}
+	dashSampleInvoice := repository.InvoiceWithJoins{
+		Invoice: domaininvoice.Invoice{
+			ID: "inv-1", InvoiceNumber: "INV-001", Total: 1180.00,
+			PaymentStatus: domaininvoice.PaymentStatusPending, CreatedAt: now,
+		},
+		CustomerName: "ACME Corp",
+	}
 
 	sampleClaim := service.FuelAuditClaim{
 		ExpenseID:       "exp-1",
@@ -264,7 +291,13 @@ func TestAllTemplatesRender(t *testing.T) {
 				ID: "d-1", VehicleID: "veh-1", DtcCode: "P0420", Severity: "warning",
 				Description: sPtr("Catalyst efficiency"), OccurredAt: now, CreatedAt: now,
 			}},
-			"User": user,
+			"WorkOrders": []maintenancedomain.WorkOrder{{
+				ID: "wo-1", TenantID: "1", VehicleID: "veh-1",
+				Title: "Brake pad replacement", Status: maintenancedomain.WorkOrderOpen,
+				CreatedAt: now,
+			}},
+			"VehicleLabels": map[string]string{"veh-1": "MH12AB1234"},
+			"User":          user,
 		}},
 		{"maintenance_schedule_form", "maintenance_schedule_form.html", map[string]interface{}{
 			"VehicleID":    "veh-1",
@@ -273,6 +306,54 @@ func TestAllTemplatesRender(t *testing.T) {
 		{"maintenance_record_form", "maintenance_record_form.html", map[string]interface{}{
 			"VehicleID":    "veh-1",
 			"ServiceTypes": maintenancedomain.ServiceTypes,
+		}},
+		{"maintenance_work_order", "maintenance_work_order.html", map[string]interface{}{
+			"WorkOrder": &maintenancedomain.WorkOrder{
+				ID: "wo-1", TenantID: "1", VehicleID: "veh-1",
+				Title: "Brake pad replacement", Assignee: "Ramesh", Vendor: "City Garage",
+				Status: maintenancedomain.WorkOrderAssigned, CreatedAt: now,
+			},
+			"User": user,
+		}},
+		{"maintenance_work_order_form", "maintenance_work_order_form.html", map[string]interface{}{
+			"VehicleID": "veh-1",
+		}},
+
+		// ---- Dashboard row partials (also served by GET /dashboard/tables) ----
+		{"dash_overdue_rows", "dash_overdue_rows.html", map[string]interface{}{
+			"Stats": service.DashboardData{OverdueTrips: []repository.TripWithJoins{dashSampleTrip}},
+		}},
+		{"dash_idle_rows", "dash_idle_rows.html", map[string]interface{}{
+			"Stats": service.DashboardData{IdleVehicles: []domain.Vehicle{{
+				RegistrationNumber: "KA-01-HH-1234", VehicleType: "truck", UpdatedAt: now,
+			}}},
+		}},
+		{"dash_pending_rows", "dash_pending_rows.html", map[string]interface{}{
+			"Stats": service.DashboardData{PendingInvoices: []repository.InvoiceWithJoins{dashSampleInvoice}},
+		}},
+		{"dash_upcoming_cards", "dash_upcoming_cards.html", map[string]interface{}{
+			"Stats": service.DashboardData{UpcomingTrips: []repository.TripWithJoins{dashSampleTrip}},
+		}},
+		{"dash_upcoming_rows", "dash_upcoming_rows.html", map[string]interface{}{
+			"Stats": service.DashboardData{UpcomingTrips: []repository.TripWithJoins{dashSampleTrip}},
+		}},
+		{"dash_booking_rows", "dash_booking_rows.html", map[string]interface{}{
+			"Stats": service.DashboardData{RecentBookings: []repository.BookingWithJoins{{
+				Booking:      domainbooking.Booking{BookingNumber: "BK-001", PickupDate: now, Price: 1000.00},
+				CustomerName: "ACME Corp",
+			}}},
+		}},
+		{"dash_payment_rows", "dash_payment_rows.html", map[string]interface{}{
+			"Stats": service.DashboardData{RecentPayments: []repository.PaymentWithInvoice{{
+				Payment:       domainpayment.Payment{Amount: 500.00, Method: domainpayment.PaymentMethodCash, PaymentDate: now},
+				InvoiceNumber: "INV-001",
+			}}},
+		}},
+		{"dash_activity_items", "dash_activity_items.html", map[string]interface{}{
+			"Stats": service.DashboardData{RecentActivity: []repository.AuditLogWithUser{{
+				AuditLog: domaindaudit.AuditLog{Action: "created trip TRIP-001", TableName: "trips", CreatedAt: now},
+				UserName: sPtr("Admin User"),
+			}}},
 		}},
 
 		// ---- Geofences ----

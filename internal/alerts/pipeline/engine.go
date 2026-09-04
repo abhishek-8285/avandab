@@ -230,6 +230,12 @@ func (e *Engine) Ingest(ctx context.Context, ev IngestEvent) error {
 		UpdatedAt:        now,
 	}
 
+	if alert.TenantID == "" {
+		e.logger.Warn("skipped unattributable alert (tenant unknown)",
+			"type", alert.AlertType, "source", alert.Source, "dedup_key", dedupKey)
+		return nil
+	}
+
 	if err := e.repo.CreateAlert(ctx, alert); err != nil {
 		e.logger.Error("failed to create canonical alert", "dedup_key", dedupKey, "error", err)
 		return err
@@ -466,7 +472,9 @@ func legacyAlertType(m map[string]interface{}) string {
 
 // resolveTenantID derives tenant for an alert: context first (bus is
 // synchronous, so publisher ctx propagates), then explicit payload key,
-// then the bootstrap default. Never hardcoded per-tenant in callers.
+// then metadata. Empty means unroutable — callers must skip, never fall
+// back to the bootstrap tenant (alerts:read is held by every org's
+// viewer/dispatcher, so a misattributed alert leaks across orgs).
 func (e *Engine) resolveTenantID(ctx context.Context, ev IngestEvent) string {
 	if id := shared.TenantIDFromContext(ctx); id != "" {
 		return string(id)
@@ -479,7 +487,7 @@ func (e *Engine) resolveTenantID(ctx context.Context, ev IngestEvent) string {
 			return t
 		}
 	}
-	return string(shared.DefaultTenant)
+	return ""
 }
 
 // resolveSeverityRank picks the inbox rank: explicit payload rank wins,

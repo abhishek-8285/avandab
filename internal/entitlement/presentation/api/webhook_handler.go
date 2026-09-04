@@ -69,13 +69,21 @@ func (h *WebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Extract subscription entity
-	var providerSubID string
+	var providerSubID, planRef string
 	var periodStart, periodEnd time.Time
 	if payloadMap, ok := raw["payload"].(map[string]interface{}); ok {
 		if subWrapper, ok := payloadMap["subscription"].(map[string]interface{}); ok {
 			if entity, ok := subWrapper["entity"].(map[string]interface{}); ok {
 				if id, ok := entity["id"].(string); ok {
 					providerSubID = id
+				}
+				// Plan reference travels in subscription notes (merchant sets
+				// notes[plan_id]=GROWTH at checkout). Validated against the
+				// local plans table before it touches anything.
+				if notes, ok := entity["notes"].(map[string]interface{}); ok {
+					if p, ok := notes["plan_id"].(string); ok {
+						planRef = p
+					}
 				}
 				if st, ok := entity["current_start"].(float64); ok && st > 0 {
 					periodStart = time.Unix(int64(st), 0).UTC()
@@ -112,6 +120,7 @@ func (h *WebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		EventType:              eventType,
 		Provider:               "RAZORPAY",
 		ProviderSubscriptionID: providerSubID,
+		PlanID:                 planRef,
 		PayloadJSON:            string(body),
 		EventTimestamp:         eventTS,
 		PeriodStart:            periodStart,

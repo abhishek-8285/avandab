@@ -134,6 +134,9 @@ func (m *mockBookingRepoApp) Find(_ context.Context, _ bookingagg.BookingID, _ s
 func (m *mockBookingRepoApp) FindByNumber(_ context.Context, _ string, _ shared.TenantID) (*bookingagg.BookingAggregate, error) {
 	return nil, sql.ErrNoRows
 }
+func (m *mockBookingRepoApp) FindByIdempotencyKey(_ context.Context, _ string, _ shared.TenantID) (*bookingagg.BookingAggregate, error) {
+	return nil, sql.ErrNoRows
+}
 func (m *mockBookingRepoApp) Exists(_ context.Context, _ bookingagg.BookingID, _ shared.TenantID) (bool, error) {
 	return false, nil
 }
