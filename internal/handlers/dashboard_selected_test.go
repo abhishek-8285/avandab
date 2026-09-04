@@ -122,6 +122,10 @@ func TestSelectedDashboard_Index_Success(t *testing.T) {
 	db := newDashboardSelectedDB(t)
 	// Seed company_settings with full compliance details so redirect does not trigger
 	_, _ = db.Exec(`INSERT OR REPLACE INTO company_settings (id, company_name, currency, timezone, address, phone, email) VALUES (1, 'TestCo', 'INR', 'Asia/Kolkata', '123 Logistics St', '+91 9876543210', 'ops@test.co')`)
+	// Per-tenant profiles (migration 00125): tenant-B reads its own row, not
+	// the global singleton — seed it so the isolation subtest still renders.
+	_, _ = db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('tenant-B', 'Tenant B', 'tenant-b')`)
+	_, _ = db.Exec(`INSERT OR REPLACE INTO tenant_company_profiles (tenant_id, company_name, currency, timezone, address, phone, email) VALUES ('tenant-B', 'TestCo B', 'INR', 'Asia/Kolkata', '123 Logistics St', '+91 9876543210', 'ops-b@test.co')`)
 	cfg := &config.Config{
 		AppEnv:       "testing",
 		CookieSecret: "test-secret-32",

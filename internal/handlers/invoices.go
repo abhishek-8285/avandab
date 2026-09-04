@@ -538,21 +538,20 @@ func (p companyProfile) LegalTitle() string {
 	}
 }
 
-// loadCompanyProfile reads company_settings for the seller block.
-// StateCode falls back to "27" (Maharashtra) matching the GST editor;
-// Name is empty when unset — the renderer prints a placeholder rather
-// than any hardcoded company name.
-func (h *InvoiceHandlers) loadCompanyProfile(ctx context.Context) companyProfile {
-	p := companyProfile{StateCode: "27"}
-	row := h.DB.QueryRowContext(ctx, `
-		SELECT COALESCE(company_name, ''), COALESCE(address, ''),
-		       COALESCE(gst_number, ''), COALESCE(pan_number, ''), COALESCE(state_code, '27'),
-		       COALESCE(phone, ''), COALESCE(email, '')
-		FROM company_settings WHERE id = 1`)
-	if err := row.Scan(&p.Name, &p.Address, &p.GSTNumber, &p.PanNumber, &p.StateCode,
-		&p.Phone, &p.Email); err != nil {
-		slog.Warn("company_settings unavailable for invoice PDF", "error", err)
-	}
+// tenantProfileColumns selects the seller-block columns shared by the
+// per-tenant profile table and the global singleton (same column order).
+const tenantProfileColumns = `COALESCE(company_name, ''), COALESCE(address, ''),
+       COALESCE(gst_number, ''), COALESCE(pan_number, ''), COALESCE(state_code, '27'),
+       COALESCE(phone, ''), COALESCE(email, '')`
+
+func (h *InvoiceHandlers) scanCompanyProfile(row *sql.Row) (companyProfile, error) {
+	var p companyProfile
+	err := row.Scan(&p.Name, &p.Address, &p.GSTNumber, &p.PanNumber, &p.StateCode,
+		&p.Phone, &p.Email)
+	return p, err
+}
+
+func finalizeCompanyProfile(p companyProfile) companyProfile {
 	if p.StateCode == "" {
 		p.StateCode = "27"
 	}
@@ -560,6 +559,33 @@ func (h *InvoiceHandlers) loadCompanyProfile(ctx context.Context) companyProfile
 		p.PanNumber = p.GSTNumber[2:12]
 	}
 	return p
+}
+
+// loadCompanyProfile reads the tenant's profile for the seller block. The
+// global singleton is the fallback for the bootstrap tenant and tenant-less
+// contexts only; rowless org tenants render blank (placeholder) instead of
+// another org's identity.
+// Name is empty when unset — the renderer prints a placeholder rather
+// than any hardcoded company name.
+func (h *InvoiceHandlers) loadCompanyProfile(ctx context.Context) companyProfile {
+	if tid := string(shared.TenantIDFromContext(ctx)); tid != "" && tid != string(shared.DefaultTenant) {
+		p, err := h.scanCompanyProfile(h.DB.QueryRowContext(ctx, `
+			SELECT `+tenantProfileColumns+`
+			FROM tenant_company_profiles WHERE tenant_id = ?`, tid))
+		if err == nil {
+			return finalizeCompanyProfile(p)
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			slog.Warn("tenant company profile unavailable for invoice PDF", "error", err)
+		}
+		return finalizeCompanyProfile(companyProfile{})
+	}
+	p, err := h.scanCompanyProfile(h.DB.QueryRowContext(ctx,
+		`SELECT `+tenantProfileColumns+` FROM company_settings WHERE id = 1`))
+	if err != nil {
+		slog.Warn("company_settings unavailable for invoice PDF", "error", err)
+	}
+	return finalizeCompanyProfile(p)
 }
 
 // loadCustomerBillTo reads the buyer identity for the Bill To block.
@@ -973,10 +999,12 @@ func (h *InvoiceHandlers) resolveLineGST(ctx context.Context, q dbtx, tenantID s
 	var custGST string
 	var compState sql.NullString
 	err = q.QueryRowContext(ctx, `
-		SELECT COALESCE(c.gst, ''), cs.state_code
+		SELECT COALESCE(c.gst, ''), COALESCE(
+			(SELECT state_code FROM tenant_company_profiles WHERE tenant_id = inv.tenant_id),
+			CASE WHEN inv.tenant_id IS NULL OR inv.tenant_id IN ('', '1')
+				THEN (SELECT state_code FROM company_settings WHERE id = 1) END, '27')
 		FROM invoices inv
 		JOIN customers c ON inv.customer_id = c.id
-		LEFT JOIN company_settings cs ON 1=1
 		WHERE inv.id = ? AND inv.tenant_id = ?
 	`, invoiceID, string(tenantID)).Scan(&custGST, &compState)
 	if err != nil {
@@ -1060,15 +1088,18 @@ func (h *InvoiceHandlers) GenerateIRN(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 4. Fetch customer & company GSTIN
+	// 4. Fetch customer & company GSTIN (tenant profile first; the global
+	// singleton is the fallback for the bootstrap tenant and tenant-less
+	// contexts only, never for rowless org tenants).
 	var custGST string
 	var compGST sql.NullString
 	_ = h.DB.QueryRowContext(r.Context(), `
-		SELECT COALESCE(c.gst, ''), cs.gst_number
+		SELECT COALESCE(c.gst, ''), COALESCE(
+			(SELECT gst_number FROM tenant_company_profiles WHERE tenant_id = ?),
+			CASE WHEN ? IN ('', '1') THEN (SELECT gst_number FROM company_settings WHERE id = 1) END)
 		FROM customers c
-		LEFT JOIN company_settings cs ON 1=1
 		WHERE c.id = ?
-	`, custID.String).Scan(&custGST, &compGST)
+	`, string(tenantID), string(tenantID), custID.String).Scan(&custGST, &compGST)
 
 	supplierGST := "27AABCU9603R1ZX"
 	if compGST.Valid && compGST.String != "" {

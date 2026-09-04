@@ -257,10 +257,12 @@ func (h *Handler) GenerateIRN(w http.ResponseWriter, r *http.Request) {
 
 		err := h.db.QueryRowContext(r.Context(), `
 			SELECT i.invoice_number, DATE(i.created_at), i.total, i.cgst, i.sgst, i.igst, i.irn,
-			       c.gst, cs.gst_number
+			       c.gst, COALESCE(
+				       (SELECT gst_number FROM tenant_company_profiles WHERE tenant_id = i.tenant_id),
+				       CASE WHEN i.tenant_id IS NULL OR i.tenant_id IN ('', '1')
+					       THEN (SELECT gst_number FROM company_settings WHERE id = 1) END)
 			FROM invoices i
 			LEFT JOIN customers c ON i.customer_id = c.id
-			LEFT JOIN company_settings cs ON 1=1
 			WHERE i.id = ? AND i.tenant_id = ?
 		`, req.InvoiceID, string(tenantID)).Scan(
 			&invNum, &invDate, &total, &cgst, &sgst, &igst, &existingIRN,

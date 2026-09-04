@@ -161,12 +161,20 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 
 	err = s.db.QueryRowContext(ctx, `
 		SELECT t.trip_number, r.source, r.destination, r.distance, r.standard_fare,
-		       b.price, c.gst, cs.gst_number, cs.state_code, v.registration_number
+		       b.price, c.gst,
+		       COALESCE(
+			       (SELECT gst_number FROM tenant_company_profiles WHERE tenant_id = t.tenant_id),
+			       CASE WHEN t.tenant_id IS NULL OR t.tenant_id IN ('', '1')
+				       THEN (SELECT gst_number FROM company_settings WHERE id = 1) END),
+		       COALESCE(
+			       (SELECT state_code FROM tenant_company_profiles WHERE tenant_id = t.tenant_id),
+			       CASE WHEN t.tenant_id IS NULL OR t.tenant_id IN ('', '1')
+				       THEN (SELECT state_code FROM company_settings WHERE id = 1) END, '27'),
+		       v.registration_number
 		FROM trips t
 		JOIN bookings b ON t.booking_id = b.id
 		JOIN routes r ON t.route_id = r.id
 		JOIN customers c ON b.customer_id = c.id
-		LEFT JOIN company_settings cs ON 1=1
 		LEFT JOIN vehicles v ON t.vehicle_id = v.id
 		WHERE t.id = ?
 	`, req.TripID).Scan(

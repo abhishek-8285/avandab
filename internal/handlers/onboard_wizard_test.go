@@ -497,6 +497,10 @@ func TestOperationalRoutes_ComplianceGate(t *testing.T) {
 
 func TestOperationalRoutes_ComplianceGate_NonGST_Unlocks(t *testing.T) {
 	app := newRegisterTestApp(t)
+	// Tenant-scoped settings (migration 00125) enforce the tenants FK on
+	// write — register the synthetic tenant like every other tenant-aware test.
+	_, err := app.DB.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('tenant-non-gst', 'Non GST Fleet', 'non-gst-fleet')`)
+	require.NoError(t, err)
 	sh := &SettingsHandlers{App: app}
 
 	r := chi.NewRouter()

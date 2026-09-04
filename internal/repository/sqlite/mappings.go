@@ -673,6 +673,29 @@ func toDomainCompanySetting(c db.CompanySetting) domain.CompanySettings {
 	}
 }
 
+func toDomainTenantCompanyProfile(p db.TenantCompanyProfile) domain.CompanySettings {
+	return domain.CompanySettings{
+		CompanyName:   p.CompanyName,
+		LogoPath:      fromNullString(p.LogoPath),
+		Currency:      p.Currency,
+		Timezone:      p.Timezone,
+		GSTEnabled:    p.GstEnabled,
+		GSTRate:       p.GstRate,
+		BookingPrefix: p.BookingPrefix,
+		TripPrefix:    p.TripPrefix,
+		InvoicePrefix: p.InvoicePrefix,
+		Address:       fromNullString(p.Address),
+		Phone:         fromNullString(p.Phone),
+		Email:         fromNullString(p.Email),
+		GSTNumber:     fromNullString(p.GstNumber),
+		PanNumber:     fromNullString(p.PanNumber),
+		StateCode:     p.StateCode,
+		FinancialYear: fromNullString(p.FinancialYear),
+		CreatedAt:     p.CreatedAt,
+		UpdatedAt:     p.UpdatedAt,
+	}
+}
+
 // Nullable ID conversion helpers
 
 func NullStringToTripID(ns sql.NullString) *domain.TripID {
