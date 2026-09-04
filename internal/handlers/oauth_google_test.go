@@ -241,7 +241,7 @@ func TestGoogleOAuth_NewUser_ProvisionsIsolatedTenantAndAdmin(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.True(t, strings.HasPrefix(tenantID, "tenant_"), "isolated tenant ID must start with tenant_")
-	assert.Equal(t, int64(1), roleID, "new user must have RoleAdmin (role_id = 1)")
+	assert.Equal(t, int64(6), roleID, "new user must have RoleOrgAdmin (role_id = 6), never platform RoleAdmin")
 	assert.Equal(t, "gid-fresh-1", googleSub)
 	assert.Equal(t, "google", authProvider)
 

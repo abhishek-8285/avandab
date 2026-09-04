@@ -180,15 +180,17 @@ func (h *AuthHandlers) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, isAdmin, err := h.Services.Users.RegisterSelfServiceAccount(r.Context(), email, name, phone, password, companyName)
+	user, isNewOwner, err := h.Services.Users.RegisterSelfServiceAccount(r.Context(), email, name, phone, password, companyName)
 	if err != nil {
 		h.renderRegisterError(w, r, err.Error(), email, name, phone, companyName)
 		return
 	}
 
+	// New tenant owners bind the org_admin role — never platform admin, which
+	// would expose /tenants, suspend, and global-admin minting to every signup.
 	roleName := string(domain.RoleViewer)
-	if isAdmin {
-		roleName = string(domain.RoleAdmin)
+	if isNewOwner {
+		roleName = string(domain.RoleOrgAdmin)
 	}
 	_ = h.AuthSrv.AddRoleForUser(user.ID.String(), roleName)
 
@@ -201,7 +203,7 @@ func (h *AuthHandlers) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	targetURL := "/dashboard"
-	if isAdmin {
+	if isNewOwner {
 		targetURL = "/company/onboard"
 	}
 
@@ -308,10 +310,11 @@ func (h *AuthHandlers) Login(w http.ResponseWriter, r *http.Request) {
 	})
 
 	targetURL := "/dashboard"
-	// Check if user has incomplete setup profile (or admin company onboarding needed)
+	// Check if user has incomplete setup profile (or org onboarding needed for
+	// tenant owners returning before finishing company setup).
 	if result.User.Phone == nil || *result.User.Phone == "" {
 		targetURL = "/user/onboard"
-	} else if result.User.Role.Name == "admin" {
+	} else if result.User.Role.Name == "admin" || result.User.Role.Name == domain.RoleOrgAdmin {
 		if company, err := h.Services.Settings.GetSettings(r.Context()); err == nil && company.CompanyName == "" {
 			targetURL = "/company/onboard"
 		}

@@ -55,10 +55,10 @@ func TestResolveGoogleUser_NewOperatorProvisionsIsolatedTenant(t *testing.T) {
 
 	u, isAdmin, err := svc.ResolveGoogleUser(context.Background(), "sub-A", "owner@fleetA.com", "Owner A")
 	require.NoError(t, err)
-	assert.True(t, isAdmin, "google signup must provision a tenant admin")
+	assert.True(t, isAdmin, "google signup must provision a tenant owner")
 	assert.NotEmpty(t, u.ID)
 	assert.NotEmpty(t, u.TenantID)
-	assert.Equal(t, domain.RoleAdmin, u.Role.Name)
+	assert.Equal(t, domain.RoleOrgAdmin, u.Role.Name, "google-provisioned owner must be org_admin, never platform admin")
 
 	// google_sub persisted with google auth_provider
 	var gotSub, provider string

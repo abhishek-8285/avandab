@@ -73,7 +73,7 @@ func TestRegister_SelfServiceAccountProvisionsIsolatedTenant(t *testing.T) {
 	var roleID int
 	var tenantID string
 	require.NoError(t, app.DB.QueryRow(`SELECT role_id, tenant_id FROM users WHERE email = 'owner@fleet.test'`).Scan(&roleID, &tenantID))
-	assert.Equal(t, 1, roleID, "self-registered account must hold the admin role")
+	assert.Equal(t, 6, roleID, "self-registered account must hold the org_admin role, never platform admin")
 	assert.NotEqual(t, "1", tenantID, "must not be assigned to default tenant 1")
 
 	var tenantName string
@@ -97,8 +97,8 @@ func TestRegister_MultipleRegistrationsGetIsolatedTenants(t *testing.T) {
 	require.NoError(t, app.DB.QueryRow(`SELECT role_id, tenant_id FROM users WHERE email = 'owner1@fleet.test'`).Scan(&roleID1, &tid1))
 	require.NoError(t, app.DB.QueryRow(`SELECT role_id, tenant_id FROM users WHERE email = 'owner2@fleet.test'`).Scan(&roleID2, &tid2))
 
-	assert.Equal(t, 1, roleID1)
-	assert.Equal(t, 1, roleID2)
+	assert.Equal(t, 6, roleID1)
+	assert.Equal(t, 6, roleID2)
 	assert.NotEqual(t, "1", tid1)
 	assert.NotEqual(t, "1", tid2)
 	assert.NotEqual(t, tid1, tid2, "two distinct self-registered users must get two different isolated tenant IDs")

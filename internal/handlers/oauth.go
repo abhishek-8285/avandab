@@ -140,7 +140,7 @@ func (h *GoogleOAuthHandlers) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, isNew, err := h.Services.Users.ResolveGoogleUser(r.Context(), info.GetID(), info.Email, info.Name)
+	user, isNewOwner, err := h.Services.Users.ResolveGoogleUser(r.Context(), info.GetID(), info.Email, info.Name)
 	if err != nil {
 		clearState()
 		if err == domain.ErrUnauthorized {
@@ -156,8 +156,10 @@ func (h *GoogleOAuthHandlers) Callback(w http.ResponseWriter, r *http.Request) {
 	if user.Role.Name != "" {
 		roleName = string(user.Role.Name)
 	}
-	if isNew {
-		roleName = string(domain.RoleAdmin)
+	if isNewOwner {
+		// New tenant owners bind org_admin — never platform admin, which
+		// would expose /tenants, suspend, and global-admin minting.
+		roleName = string(domain.RoleOrgAdmin)
 	}
 	if h.AuthSrv != nil {
 		_ = h.AuthSrv.AddRoleForUser(user.ID.String(), roleName)
@@ -175,13 +177,13 @@ func (h *GoogleOAuthHandlers) Callback(w http.ResponseWriter, r *http.Request) {
 	h.AuthStore.CreateSessionWithToken(w, user.ID.String(), roleName, user.Name, sess.SessionToken)
 	clearState()
 
-	slog.Info("google sign-in succeeded", "user_id", user.ID, "email", info.Email, "new_tenant", isNew)
+	slog.Info("google sign-in succeeded", "user_id", user.ID, "email", info.Email, "new_tenant", isNewOwner)
 
 	target := "/dashboard"
-	if isNew {
-		// New tenant admin lands in the mandatory onboarding wizard.
+	if isNewOwner {
+		// New tenant owner lands in the mandatory onboarding wizard.
 		target = "/company/onboard"
-	} else if user.Role.Name == "admin" || user.Role.ID == 1 {
+	} else if user.Role.Name == "admin" || user.Role.Name == domain.RoleOrgAdmin || user.Role.ID == 1 {
 		if h.Services.Settings != nil {
 			if company, err := h.Services.Settings.GetSettings(r.Context()); err == nil && company.CompanyName == "" {
 				target = "/company/onboard"

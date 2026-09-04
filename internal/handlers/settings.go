@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"transport-app/internal/auth"
 	"transport-app/internal/domain"
 	driverapp "transport-app/internal/driver/application"
 	"transport-app/internal/middleware"
@@ -29,6 +30,14 @@ import (
 // SettingsHandlers handles company settings management.
 type SettingsHandlers struct {
 	*App
+}
+
+// isOrgManager reports whether the session belongs to someone allowed to own
+// their org's profile: platform admins and tenant org admins. Narrower roles
+// (dispatcher, accountant, viewer, driver) never reach these pages — routes
+// already require settings:update, this is defense in depth.
+func isOrgManager(session *auth.SessionData) bool {
+	return session != nil && (session.Role == "admin" || session.Role == string(domain.RoleOrgAdmin))
 }
 
 func (h *SettingsHandlers) Routes(r chi.Router) {
@@ -48,7 +57,7 @@ func (h *SettingsHandlers) Routes(r chi.Router) {
 
 func (h *SettingsHandlers) OnboardPage(w http.ResponseWriter, r *http.Request) {
 	session, ok := h.getUserFromContext(r)
-	if !ok || session == nil || session.Role != "admin" {
+	if !ok || !isOrgManager(session) {
 		http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
 		return
 	}
@@ -66,7 +75,7 @@ func (h *SettingsHandlers) OnboardPage(w http.ResponseWriter, r *http.Request) {
 
 func (h *SettingsHandlers) SaveOnboard(w http.ResponseWriter, r *http.Request) {
 	session, ok := h.getUserFromContext(r)
-	if !ok || session == nil || session.Role != "admin" {
+	if !ok || !isOrgManager(session) {
 		http.Error(w, "Forbidden", http.StatusForbidden)
 		return
 	}
@@ -349,12 +358,13 @@ func (h *SettingsHandlers) Index(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SettingsHandlers) Update(w http.ResponseWriter, r *http.Request) {
-	// company_settings is the PLATFORM-global singleton (Spec 24 §4.7): under
-	// multi-tenant mode only the platform administrator may write it — tenant
-	// branding flows through the per-tenant overlay instead.
+	// Company settings are per-tenant (tenant_company_profiles, migration
+	// 00125): writes land in the caller's org only, so both platform admins
+	// and tenant org admins may save. Narrower roles are rejected here as
+	// defense in depth (routes already require settings:update).
 	if h.Config != nil && h.Config.MultiTenant.Enabled {
 		session, _ := h.getUserFromContext(r)
-		if session == nil || session.Role != string(domain.RoleAdmin) {
+		if !isOrgManager(session) {
 			http.Error(w, "platform settings are managed by the platform administrator", http.StatusForbidden)
 			return
 		}

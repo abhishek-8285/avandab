@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"fmt"
 	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -28,6 +30,7 @@ import (
 	"transport-app/internal/events"
 	repoSQLite "transport-app/internal/repository/sqlite"
 	"transport-app/internal/service"
+	"transport-app/internal/shared"
 )
 
 // recordingAuthSvc wraps mockAuthSvc and records RBAC role grants so the
@@ -457,28 +460,50 @@ func TestUsers_SameTenantManagementStillWorks(t *testing.T) {
 	assert.Equal(t, "Acme Renamed", u.Name)
 }
 
-// TestSettings_PlatformGlobalsLockedUnderMultiTenant proves the global
-// company_settings writer is platform-admin-only once MULTI_TENANT_ENABLED is
-// on — org admins cannot mutate branding/GST defaults of other orgs.
-func TestSettings_PlatformGlobalsLockedUnderMultiTenant(t *testing.T) {
+// TestSettings_TenantScopedUnderMultiTenant proves settings writes under
+// MULTI_TENANT_ENABLED land in the caller's org row only (migration 00125):
+// the global singleton and other tenants stay untouched, narrower roles
+// still 403, and org admins can brand their own org.
+func TestSettings_TenantScopedUnderMultiTenant(t *testing.T) {
 	db := newTenantsTestDB(t)
 	app := newTenantsTestApp(t, db, nil, true)
-
-	r := chi.NewRouter()
-	sh := &SettingsHandlers{App: app}
-	r.Post("/settings/update", sh.Update)
-
-	form := url.Values{"company_name": {"Evil Rebrand"}}
-	req := httptest.NewRequest(http.MethodPost, "/settings/update",
-		strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req = withTenantSession(req, "acme", "acme-admin-1", "org_admin")
-
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusForbidden, w.Code)
-
-	s, err := app.Services.Settings.GetSettings(context.Background())
+	_, err := db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('acme','Acme','acme'), ('other','Other','other')`)
 	require.NoError(t, err)
-	assert.NotEqual(t, "Evil Rebrand", s.CompanyName, "org admin must not rewrite platform globals")
+
+	sh := &SettingsHandlers{App: app}
+	postSettings := func(role, tenant, name string) *httptest.ResponseRecorder {
+		var body bytes.Buffer
+		mw := multipart.NewWriter(&body)
+		for k, v := range map[string]string{
+			"company_name": name, "currency": "INR", "timezone": "Asia/Kolkata",
+			"address": "Depot", "phone": "9000000001", "email": "ops@acme.test",
+		} {
+			require.NoError(t, mw.WriteField(k, v))
+		}
+		require.NoError(t, mw.Close())
+		req := httptest.NewRequest(http.MethodPost, "/settings/update", &body)
+		req.Header.Set("Content-Type", mw.FormDataContentType())
+		req = withTenantSession(req, tenant, "u-1", role)
+		w := httptest.NewRecorder()
+		sh.Update(w, req)
+		return w
+	}
+
+	w := postSettings("org_admin", "acme", "Acme Rebrand")
+	require.Equal(t, http.StatusSeeOther, w.Code)
+
+	acme, err := app.Services.Settings.GetSettings(shared.ContextWithTenantID(context.Background(), "acme"))
+	require.NoError(t, err)
+	assert.Equal(t, "Acme Rebrand", acme.CompanyName, "org admin brands own org")
+
+	global, err := app.Services.Settings.GetSettings(context.Background())
+	require.NoError(t, err)
+	assert.NotEqual(t, "Acme Rebrand", global.CompanyName, "org admin must not rewrite platform globals")
+
+	other, err := app.Services.Settings.GetSettings(shared.ContextWithTenantID(context.Background(), "other"))
+	require.NoError(t, err)
+	assert.NotEqual(t, "Acme Rebrand", other.CompanyName, "org admin must not rebrand other orgs")
+
+	w = postSettings("dispatcher", "acme", "Hacked")
+	assert.Equal(t, http.StatusForbidden, w.Code)
 }

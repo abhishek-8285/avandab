@@ -25,13 +25,13 @@ func TestRegisterSelfServiceAccount_TenantIsolation(t *testing.T) {
 	// 1. User A registers with explicit company name
 	userA, isAdminA, err := svc.Users.RegisterSelfServiceAccount(ctx, "owner-a@fleet.com", "Alice Owner", "9900112233", "strong-pass-1", "Apex Logistics")
 	require.NoError(t, err)
-	assert.True(t, isAdminA, "self-registered account must be admin of their tenant")
+	assert.True(t, isAdminA, "self-registered account must own their tenant")
 	assert.NotEmpty(t, userA.TenantID)
 	assert.NotEqual(t, string(shared.DefaultTenant), userA.TenantID, "new signup must not get default tenant 1")
 
 	var roleIDA int
 	require.NoError(t, db.QueryRow(`SELECT role_id FROM users WHERE id = ?`, string(userA.ID)).Scan(&roleIDA))
-	assert.Equal(t, int(userdomain.DefaultRoleID(userdomain.RoleAdmin)), roleIDA)
+	assert.Equal(t, int(userdomain.DefaultRoleID(userdomain.RoleOrgAdmin)), roleIDA, "self-registered owner must be org_admin, never platform admin")
 
 	var tenantNameA, slugA string
 	require.NoError(t, db.QueryRow(`SELECT name, slug FROM tenants WHERE id = ?`, userA.TenantID).Scan(&tenantNameA, &slugA))
@@ -41,14 +41,14 @@ func TestRegisterSelfServiceAccount_TenantIsolation(t *testing.T) {
 	// 2. User B registers with empty company name (defaults to "<User>'s Fleet")
 	userB, isAdminB, err := svc.Users.RegisterSelfServiceAccount(ctx, "owner-b@fleet.com", "Bob Trans", "9900112234", "strong-pass-2", "")
 	require.NoError(t, err)
-	assert.True(t, isAdminB, "second self-registered account must also be admin of their own isolated tenant")
+	assert.True(t, isAdminB, "second self-registered account must also own their own isolated tenant")
 	assert.NotEmpty(t, userB.TenantID)
 	assert.NotEqual(t, string(shared.DefaultTenant), userB.TenantID, "user B must not get default tenant 1")
 	assert.NotEqual(t, userA.TenantID, userB.TenantID, "user A and user B must have different isolated tenant IDs")
 
 	var roleIDB int
 	require.NoError(t, db.QueryRow(`SELECT role_id FROM users WHERE id = ?`, string(userB.ID)).Scan(&roleIDB))
-	assert.Equal(t, int(userdomain.DefaultRoleID(userdomain.RoleAdmin)), roleIDB)
+	assert.Equal(t, int(userdomain.DefaultRoleID(userdomain.RoleOrgAdmin)), roleIDB)
 
 	var tenantNameB, slugB string
 	require.NoError(t, db.QueryRow(`SELECT name, slug FROM tenants WHERE id = ?`, userB.TenantID).Scan(&tenantNameB, &slugB))

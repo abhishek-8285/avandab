@@ -25,8 +25,12 @@ type UserService struct {
 
 // RegisterSelfServiceAccount provisions an account created through public
 // self-registration with an isolated tenant organization. The registering
-// user becomes the admin (role_id = 1) of their newly provisioned tenant,
-// ensuring strict multi-tenant isolation and zero cross-tenant data leaks.
+// user becomes the ORG admin (role_id = 6, org_admin) of their newly
+// provisioned tenant — never the platform admin (role_id = 1). Platform
+// powers (tenants:manage, suspend, MRR, cross-tenant access) stay with
+// accounts provisioned as admin (bootstrap env, platform tenant creation).
+// Returns isNewOwner=true so callers route the owner into onboarding and
+// bind the org_admin session/Casbin role.
 func (s *UserService) RegisterSelfServiceAccount(ctx context.Context, email, name, phone, password, companyName string) (domain.User, bool, error) {
 	getter, ok := s.store.(repository.DBGetter)
 	if !ok || getter == nil || s.txManager == nil {
@@ -77,8 +81,11 @@ func (s *UserService) RegisterSelfServiceAccount(ctx context.Context, email, nam
 			return fmt.Errorf("failed to create tenant: %w", err)
 		}
 
-		// Create user with RoleAdmin (role_id = 1) in their new isolated tenant
-		roleID := domain.DefaultRoleID(domain.RoleAdmin)
+		// Create user with RoleOrgAdmin (role_id = 6) in their new isolated tenant.
+		// RoleAdmin (1) is the platform super-admin and must never be minted
+		// by public self-registration — otherwise every tenant owner could
+		// open /tenants, suspend other orgs, and mint global admins.
+		roleID := domain.DefaultRoleID(domain.RoleOrgAdmin)
 		u, err := s.CreateUserWithPassword(txCtx, email, name, phone, password, roleID, domain.UserStatusActive, tenantID)
 		if err != nil {
 			return err
@@ -107,7 +114,7 @@ func (s *UserService) RegisterSelfServiceAccount(ctx context.Context, email, nam
 		return domain.User{}, false, err
 	}
 	if s.log != nil {
-		s.log.Info("self-registered tenant and admin created", "tenant_id", created.TenantID, "user_id", created.ID, "email", created.Email)
+		s.log.Info("self-registered tenant and org admin created", "tenant_id", created.TenantID, "user_id", created.ID, "email", created.Email)
 	}
 	return created, true, nil
 }
@@ -159,9 +166,9 @@ func generateTemporaryPassword() (string, error) {
 //     identity (link-only UPDATE; an account already bound to a *different*
 //     sub is rejected — no silent identity takeover).
 //  3. No match → provision a new isolated tenant with the registrant as
-//     admin (same transactional path as password self-registration) and link.
+//     org admin (same transactional path as password self-registration) and link.
 //
-// Returns (user, isNewTenantAdmin, error). Suspended accounts are rejected
+// Returns (user, isNewTenantOwner, error). Suspended accounts are rejected
 // with domain.ErrUnauthorized in every branch.
 func (s *UserService) ResolveGoogleUser(ctx context.Context, googleSub, email, name string) (domain.User, bool, error) {
 	googleSub = strings.TrimSpace(googleSub)
@@ -197,12 +204,12 @@ func (s *UserService) ResolveGoogleUser(ctx context.Context, googleSub, email, n
 		return domain.User{}, false, err
 	}
 
-	// 3. New operator → provision isolated tenant + admin, then link.
+	// 3. New operator → provision isolated tenant + org admin, then link.
 	tempPassword, err := generateTemporaryPassword()
 	if err != nil {
 		return domain.User{}, false, err
 	}
-	u, isAdmin, err := s.RegisterSelfServiceAccount(ctx, email, sanitizeName(name), "", tempPassword, "")
+	u, isNewOwner, err := s.RegisterSelfServiceAccount(ctx, email, sanitizeName(name), "", tempPassword, "")
 	if err != nil {
 		return domain.User{}, false, err
 	}
@@ -211,7 +218,7 @@ func (s *UserService) ResolveGoogleUser(ctx context.Context, googleSub, email, n
 		// can still recover via password reset since email is real.
 		s.log.Warn("google_sub link after provisioning failed", "user_id", u.ID, "error", err)
 	}
-	return u, isAdmin, nil
+	return u, isNewOwner, nil
 }
 
 // getUserByGoogleSub looks up a Google-linked account. Raw SQL because the
