@@ -148,6 +148,107 @@ func TestUsers_Edit_OrgAdminCannotSeeAdminRole(t *testing.T) {
 }
 
 // Promoting an existing user to admin is blocked the same way.
+// A user must never change their own role — not even an admin demoting
+// themselves (last-admin lockout has no UI recovery). Other self fields stay
+// editable; the role change needs a different administrator.
+func TestUsers_Update_AdminCannotDemoteSelf(t *testing.T) {
+	db := newTenantsTestDB(t)
+	app := newTenantsTestApp(t, db, &mockAuthSvc{}, false)
+	h := &UserHandlers{App: app}
+
+	_, err := db.Exec(`INSERT INTO users (id, email, password_hash, name, role_id, status, tenant_id)
+		VALUES ('actor-1', 'actor@example.com', 'hash', 'Actor', 1, 'active', '1')`)
+	require.NoError(t, err)
+
+	form := url.Values{
+		"email":   {"actor@example.com"},
+		"name":    {"Actor"},
+		"phone":   {"9999999999"},
+		"role_id": {"6"},
+		"status":  {"active"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/users/actor-1/edit", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "actor-1")
+	req = req.WithContext(context.WithValue(actorContext("admin"), chi.RouteCtxKey, rctx))
+
+	rec := httptest.NewRecorder()
+	h.Update(rec, req)
+
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+	var roleID int64
+	require.NoError(t, db.QueryRow(`SELECT role_id FROM users WHERE id = 'actor-1'`).Scan(&roleID))
+	assert.Equal(t, int64(1), roleID, "self demotion must not land")
+}
+
+// Self edits that keep the same role stay allowed (name/phone changes).
+func TestUsers_Update_AdminCanEditSelfWithoutRoleChange(t *testing.T) {
+	db := newTenantsTestDB(t)
+	app := newTenantsTestApp(t, db, &mockAuthSvc{}, false)
+	h := &UserHandlers{App: app}
+
+	_, err := db.Exec(`INSERT INTO users (id, email, password_hash, name, role_id, status, tenant_id)
+		VALUES ('actor-1', 'actor@example.com', 'hash', 'Actor', 1, 'active', '1')`)
+	require.NoError(t, err)
+
+	form := url.Values{
+		"email":   {"actor@example.com"},
+		"name":    {"Actor Renamed"},
+		"phone":   {"9999999999"},
+		"role_id": {"1"},
+		"status":  {"active"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/users/actor-1/edit", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "actor-1")
+	req = req.WithContext(context.WithValue(actorContext("admin"), chi.RouteCtxKey, rctx))
+
+	rec := httptest.NewRecorder()
+	h.Update(rec, req)
+
+	assert.Equal(t, http.StatusSeeOther, rec.Code)
+	var name string
+	var roleID int64
+	require.NoError(t, db.QueryRow(`SELECT name, role_id FROM users WHERE id = 'actor-1'`).Scan(&name, &roleID))
+	assert.Equal(t, "Actor Renamed", name)
+	assert.Equal(t, int64(1), roleID)
+}
+
+// An org_admin must not promote themselves either (double-locked: self guard
+// plus the admin-grant guard).
+func TestUsers_Update_OrgAdminCannotPromoteSelf(t *testing.T) {
+	db := newTenantsTestDB(t)
+	app := newTenantsTestApp(t, db, &mockAuthSvc{}, false)
+	h := &UserHandlers{App: app}
+
+	_, err := db.Exec(`INSERT INTO users (id, email, password_hash, name, role_id, status, tenant_id)
+		VALUES ('actor-1', 'actor@example.com', 'hash', 'Actor', 6, 'active', '1')`)
+	require.NoError(t, err)
+
+	form := url.Values{
+		"email":   {"actor@example.com"},
+		"name":    {"Actor"},
+		"phone":   {"9999999999"},
+		"role_id": {"1"},
+		"status":  {"active"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/users/actor-1/edit", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rctx := chi.NewRouteContext()
+	rctx.URLParams.Add("id", "actor-1")
+	req = req.WithContext(context.WithValue(actorContext("org_admin"), chi.RouteCtxKey, rctx))
+
+	rec := httptest.NewRecorder()
+	h.Update(rec, req)
+
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+	var roleID int64
+	require.NoError(t, db.QueryRow(`SELECT role_id FROM users WHERE id = 'actor-1'`).Scan(&roleID))
+	assert.Equal(t, int64(6), roleID, "self promotion must not land")
+}
+
 func TestUsers_Update_OrgAdminCannotPromoteToAdmin(t *testing.T) {
 	db := newTenantsTestDB(t)
 	app := newTenantsTestApp(t, db, &mockAuthSvc{}, false)

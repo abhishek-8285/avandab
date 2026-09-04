@@ -89,6 +89,23 @@ func (h *UserHandlers) visibleRoles(r *http.Request, roles []domain.Role) []doma
 	return out
 }
 
+// ensureNotSelfRoleChange blocks self role edits: nobody may change their own
+// role — not a promotion, not even an admin demoting themselves (which would
+// silently lock the last platform admin out of /tenants with no recovery but
+// direct DB access). Other profile fields on self stay editable; a role change
+// always needs a different administrator.
+func (h *UserHandlers) ensureNotSelfRoleChange(w http.ResponseWriter, r *http.Request, target domain.User, roleID int64) bool {
+	session, ok := h.getUserFromContext(r)
+	if !ok || session == nil {
+		return true
+	}
+	if target.ID.String() == session.UserID && roleID != target.Role.ID {
+		http.Error(w, "You cannot change your own role; ask another administrator", http.StatusForbidden)
+		return false
+	}
+	return true
+}
+
 // ensureRoleAssignable blocks privilege escalation: the global admin role
 // (tenants:manage + cross-tenant access) can only be granted by an acting
 // administrator. Without this, any org_admin (a paying customer's own admin)
@@ -238,6 +255,9 @@ func (h *UserHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !h.ensureTenantUser(w, r, target) {
+		return
+	}
+	if !h.ensureNotSelfRoleChange(w, r, target, roleID) {
 		return
 	}
 
