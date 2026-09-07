@@ -160,6 +160,20 @@ func (h *VehicleHandlers) Create(w http.ResponseWriter, r *http.Request) {
 			currentMileage = &mil
 		}
 	}
+	rcExpiry, err := parseOptionalDate(r, "rc_expiry")
+	if err != nil {
+		h.failPage(w, r, err, http.StatusBadRequest, "Vehicle Create Failed")
+		return
+	}
+	pucExpiry, err := parseOptionalDate(r, "puc_expiry")
+	if err != nil {
+		h.failPage(w, r, err, http.StatusBadRequest, "Vehicle Create Failed")
+		return
+	}
+	var odometer float64
+	if s := r.PostFormValue("odometer"); s != "" {
+		odometer, _ = strconv.ParseFloat(s, 64)
+	}
 
 	_, err = h.createUC.Execute(r.Context(), vehicleapp.CreateVehicleCommand{
 		TenantID:           shared.TenantIDFromContext(r.Context()),
@@ -172,6 +186,9 @@ func (h *VehicleHandlers) Create(w http.ResponseWriter, r *http.Request) {
 		FitnessExpiry:      fitExp,
 		PermitExpiry:       perExp,
 		CurrentMileage:     currentMileage,
+		RCExpiry:           rcExpiry,
+		PUCExpiry:          pucExpiry,
+		Odometer:           odometer,
 		Profile:            profile,
 	})
 	if err != nil {
@@ -217,14 +234,11 @@ func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 		{"Fitness", vehicle.FitnessExpiry},
 		{"Permit", vehicle.PermitExpiry},
 	}
-	var rcExpiry, pucExpiry sql.NullTime
-	_ = h.DB.QueryRowContext(r.Context(),
-		`SELECT rc_expiry, puc_expiry FROM vehicles WHERE id = $1`, id).Scan(&rcExpiry, &pucExpiry)
-	if rcExpiry.Valid {
-		docs = append(docs, docStatus{"RC", rcExpiry.Time})
+	if vehicle.RCExpiry != nil && !vehicle.RCExpiry.IsZero() {
+		docs = append(docs, docStatus{"RC", *vehicle.RCExpiry})
 	}
-	if pucExpiry.Valid {
-		docs = append(docs, docStatus{"PUCC", pucExpiry.Time})
+	if vehicle.PUCExpiry != nil && !vehicle.PUCExpiry.IsZero() {
+		docs = append(docs, docStatus{"PUCC", *vehicle.PUCExpiry})
 	}
 	docCards := make([]map[string]interface{}, 0, len(docs))
 	for _, d := range docs {
@@ -380,6 +394,21 @@ func (h *VehicleHandlers) Update(w http.ResponseWriter, r *http.Request) {
 			currentMileage = &mil
 		}
 	}
+	rcExpiry, err := parseOptionalDate(r, "rc_expiry")
+	if err != nil {
+		h.failPage(w, r, err, http.StatusBadRequest, "Vehicle Update Failed")
+		return
+	}
+	pucExpiry, err := parseOptionalDate(r, "puc_expiry")
+	if err != nil {
+		h.failPage(w, r, err, http.StatusBadRequest, "Vehicle Update Failed")
+		return
+	}
+	var odometer float64
+	if s := r.PostFormValue("odometer"); s != "" {
+		odometer, _ = strconv.ParseFloat(s, 64)
+	}
+	blocked := r.PostFormValue("blocked") == "1" || r.PostFormValue("blocked") == "on" || status == vehicleagg.VehicleBlocked
 
 	err = h.updateUC.Execute(r.Context(), vehicleapp.UpdateVehicleCommand{
 		ID:                 vehicleagg.VehicleID(id),
@@ -394,6 +423,11 @@ func (h *VehicleHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		PermitExpiry:       perExp,
 		Status:             status,
 		CurrentMileage:     currentMileage,
+		Blocked:            blocked,
+		BlockedReason:      r.PostFormValue("blocked_reason"),
+		RCExpiry:           rcExpiry,
+		PUCExpiry:          pucExpiry,
+		Odometer:           odometer,
 		Profile:            profile,
 	})
 	if err != nil {
@@ -443,6 +477,11 @@ func (h *VehicleHandlers) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		PermitExpiry:       vehicle.PermitExpiry,
 		Status:             vehicleagg.VehicleStatus(status),
 		CurrentMileage:     vehicle.CurrentMileage,
+		Blocked:            vehicle.Blocked || vehicleagg.VehicleStatus(status) == vehicleagg.VehicleBlocked,
+		BlockedReason:      vehicle.BlockedReason,
+		RCExpiry:           vehicle.RCExpiry,
+		PUCExpiry:          vehicle.PUCExpiry,
+		Odometer:           vehicle.Odometer,
 		Profile:            vehicle.Profile,
 	})
 	if err != nil {

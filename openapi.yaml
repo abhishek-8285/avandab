@@ -1673,6 +1673,20 @@ components:
         current_mileage:
           type: number
           nullable: true
+        blocked:
+          type: boolean
+        blocked_reason:
+          type: string
+        rc_expiry:
+          type: string
+          format: date
+          nullable: true
+        puc_expiry:
+          type: string
+          format: date
+          nullable: true
+        odometer:
+          type: number
         profile:
           $ref: '#/components/schemas/VehicleProfile'
 
@@ -1712,6 +1726,18 @@ components:
           format: date
         current_mileage:
           type: number
+        rc_expiry:
+          type: string
+          format: date
+        puc_expiry:
+          type: string
+          format: date
+        odometer:
+          type: number
+        blocked:
+          type: boolean
+        blocked_reason:
+          type: string
         profile:
           $ref: '#/components/schemas/VehicleProfile'
 
@@ -1740,6 +1766,18 @@ components:
         status:
           type: string
         current_mileage:
+          type: number
+        blocked:
+          type: boolean
+        blocked_reason:
+          type: string
+        rc_expiry:
+          type: string
+          format: date
+        puc_expiry:
+          type: string
+          format: date
+        odometer:
           type: number
         profile:
           $ref: '#/components/schemas/VehicleProfile'

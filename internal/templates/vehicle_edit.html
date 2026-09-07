@@ -59,6 +59,9 @@
                     {{template "field.html" (dict "Label" "Insurance Expiry" "Name" "insurance_expiry" "Type" "date" "Value" (and $vehicle (date_only $vehicle.InsuranceExpiry)) "Required" "true")}}
                     {{template "field.html" (dict "Label" "Fitness Expiry" "Name" "fitness_expiry" "Type" "date" "Value" (and $vehicle (date_only $vehicle.FitnessExpiry)) "Required" "true")}}
                     {{template "field.html" (dict "Label" "Permit Expiry" "Name" "permit_expiry" "Type" "date" "Value" (and $vehicle (date_only $vehicle.PermitExpiry)) "Required" "true")}}
+                    {{template "field.html" (dict "Label" "RC Expiry" "Name" "rc_expiry" "Type" "date" "Value" (and $vehicle (date_only_opt $vehicle.RCExpiry)))}}
+                    {{template "field.html" (dict "Label" "PUC Expiry" "Name" "puc_expiry" "Type" "date" "Value" (and $vehicle (date_only_opt $vehicle.PUCExpiry)))}}
+                    {{template "field.html" (dict "Label" "Odometer (km)" "Name" "odometer" "Type" "number" "Value" (and $vehicle $vehicle.Odometer))}}
                 </div>
             </section>
 
@@ -147,8 +150,10 @@
                             <option value="running" {{if and $vehicle (eq $vehicle.Status "running")}}selected{{end}}>Running</option>
                             <option value="maintenance" {{if and $vehicle (eq $vehicle.Status "maintenance")}}selected{{end}}>Maintenance</option>
                             <option value="inactive" {{if and $vehicle (eq $vehicle.Status "inactive")}}selected{{end}}>Inactive</option>
+                            <option value="blocked" {{if and $vehicle (eq $vehicle.Status "blocked")}}selected{{end}}>Blocked (compliance)</option>
                         </select>
                     </div>
+                    {{template "field.html" (dict "Label" "Blocked Reason" "Name" "blocked_reason" "Value" (and $vehicle $vehicle.BlockedReason) "Placeholder" "e.g. RC expired")}}
                 </div>
             </section>
 

@@ -130,6 +130,64 @@ func TestAssignVehicle_MaintenanceBlock_And_Override(t *testing.T) {
 	assert.Equal(t, 1, auditCount)
 }
 
+func TestAssignVehicle_ComplianceBlocked_And_ExpiredRC(t *testing.T) {
+	db := newTripTestDB(t)
+	unitOfWork := uow.NewSQLUnitOfWork(db)
+	clk := clock.NewRealClock()
+
+	tripID := uuid.NewString()
+	vehID := "veh-compliance"
+	driverID := "drv-c-1"
+
+	seedTestDriver(t, db, driverID)
+	seedTestTrip(t, db, tripID)
+	seedTestVehicle(t, db, vehID, false)
+
+	assignDriverUC := NewAssignDriverUseCase(unitOfWork, clk)
+	err := assignDriverUC.Execute(context.Background(), AssignDriverCommand{
+		TripID:   aggregate.TripID(tripID),
+		DriverID: driverID,
+		TenantID: shared.TenantID("tenant-1"),
+	})
+	require.NoError(t, err)
+
+	uc := NewAssignVehicleUseCase(unitOfWork, clk)
+
+	// 1. Compliance-blocked vehicle must fail even with maintenance override.
+	_, err = db.Exec(`UPDATE vehicles SET blocked = 1, blocked_reason = 'RC expired' WHERE id = ?`, vehID)
+	require.NoError(t, err)
+	err = uc.Execute(context.Background(), AssignVehicleCommand{
+		TripID:              aggregate.TripID(tripID),
+		VehicleID:           vehID,
+		TenantID:            shared.TenantID("tenant-1"),
+		OverrideMaintenance: true,
+		OverrideReason:      "Urgent emergency dispatch",
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "Dispatch blocked")
+
+	// 2. Expired RC must fail.
+	_, err = db.Exec(`UPDATE vehicles SET blocked = 0, blocked_reason = NULL, rc_expiry = date('now','-1 day') WHERE id = ?`, vehID)
+	require.NoError(t, err)
+	err = uc.Execute(context.Background(), AssignVehicleCommand{
+		TripID:    aggregate.TripID(tripID),
+		VehicleID: vehID,
+		TenantID:  shared.TenantID("tenant-1"),
+	})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "RC expired")
+
+	// 3. Clear block + valid RC assigns cleanly.
+	_, err = db.Exec(`UPDATE vehicles SET rc_expiry = date('now','+1 year') WHERE id = ?`, vehID)
+	require.NoError(t, err)
+	err = uc.Execute(context.Background(), AssignVehicleCommand{
+		TripID:    aggregate.TripID(tripID),
+		VehicleID: vehID,
+		TenantID:  shared.TenantID("tenant-1"),
+	})
+	require.NoError(t, err)
+}
+
 func TestAssignDriver_TripVehicle_MaintenanceBlock_And_Override(t *testing.T) {
 	db := newTripTestDB(t)
 	unitOfWork := uow.NewSQLUnitOfWork(db)

@@ -29,6 +29,11 @@ CREATE TABLE vehicles (
     permit_expiry DATETIME NOT NULL,
     status TEXT NOT NULL CHECK (status IN ('available', 'running', 'maintenance', 'inactive', 'blocked')),
     current_mileage REAL,
+    blocked INTEGER NOT NULL DEFAULT 0,
+    blocked_reason TEXT,
+    rc_expiry DATETIME,
+    odometer REAL NOT NULL DEFAULT 0.0,
+    puc_expiry DATETIME,
     tenant_id TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -259,6 +264,47 @@ func TestVehicleRepository_Save_UpdateMileageNilToValueAndBack(t *testing.T) {
 	found3, err := repo.Find(ctx, "veh-1", "t1")
 	require.NoError(t, err)
 	assert.Nil(t, found3.CurrentMileage)
+}
+
+func TestVehicleRepository_Save_ComplianceRoundTrip(t *testing.T) {
+	dbConn := setupVehicleTestDB(t)
+	repo := NewVehicleRepository(dbConn)
+	ctx := context.Background()
+	now := time.Now().Truncate(time.Second)
+
+	agg := newTestVehicleAgg("veh-c", "t1", "REG-C", "VN-C", aggregate.VehicleTypeTruck, 10, aggregate.FuelTypeDiesel, aggregate.VehicleAvailable, nil, now)
+	rc := now.Add(30 * 24 * time.Hour)
+	puc := now.Add(60 * 24 * time.Hour)
+	agg.ApplyCompliance(true, "RC expired", &rc, &puc, 12345.5, now)
+	require.NoError(t, repo.Save(ctx, agg))
+
+	found, err := repo.Find(ctx, "veh-c", "t1")
+	require.NoError(t, err)
+	assert.True(t, found.Blocked)
+	assert.Equal(t, "RC expired", found.BlockedReason)
+	require.NotNil(t, found.RCExpiry)
+	assert.WithinDuration(t, rc, *found.RCExpiry, 2*time.Second)
+	require.NotNil(t, found.PUCExpiry)
+	assert.WithinDuration(t, puc, *found.PUCExpiry, 2*time.Second)
+	assert.InDelta(t, 12345.5, found.Odometer, 0.001)
+
+	rm, err := repo.GetReadModel(ctx, "veh-c", "t1")
+	require.NoError(t, err)
+	assert.True(t, rm.Blocked)
+	assert.Equal(t, "RC expired", rm.BlockedReason)
+	require.NotNil(t, rm.RCExpiry)
+	require.NotNil(t, rm.PUCExpiry)
+	assert.InDelta(t, 12345.5, rm.Odometer, 0.001)
+
+	// Clearing the block persists as unblocked.
+	found.ClearEvents()
+	found.ApplyCompliance(false, "", nil, nil, 0, now)
+	require.NoError(t, repo.Save(ctx, found))
+	found2, err := repo.Find(ctx, "veh-c", "t1")
+	require.NoError(t, err)
+	assert.False(t, found2.Blocked)
+	assert.Nil(t, found2.RCExpiry)
+	assert.Nil(t, found2.PUCExpiry)
 }
 
 func TestVehicleRepository_Save_ErrorClosedDB_Create(t *testing.T) {

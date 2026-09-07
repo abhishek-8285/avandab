@@ -28,6 +28,11 @@ func ToDomain(v db.Vehicle) *aggregate.VehicleAggregate {
 		v.CreatedAt,
 	)
 	agg.Profile = ProfileFromDB(v)
+	agg.Blocked = v.Blocked != 0
+	agg.BlockedReason = v.BlockedReason.String
+	agg.RCExpiry = getTimePointer(v.RcExpiry)
+	agg.PUCExpiry = getTimePointer(v.PucExpiry)
+	agg.Odometer = v.Odometer
 	return agg
 }
 
@@ -101,6 +106,11 @@ func ToReadModel(v db.Vehicle) domain.VehicleReadModel {
 		PermitExpiry:       v.PermitExpiry,
 		Status:             v.Status,
 		CurrentMileage:     getFloat64Pointer(v.CurrentMileage),
+		Blocked:            v.Blocked != 0,
+		BlockedReason:      v.BlockedReason.String,
+		RCExpiry:           getTimePointer(v.RcExpiry),
+		PUCExpiry:          getTimePointer(v.PucExpiry),
+		Odometer:           v.Odometer,
 		Profile:            ProfileFromDB(v),
 		CreatedAt:          v.CreatedAt,
 		UpdatedAt:          v.UpdatedAt,
@@ -159,4 +169,12 @@ func NullTime(t *time.Time) sql.NullTime {
 		return sql.NullTime{}
 	}
 	return sql.NullTime{Time: *t, Valid: true}
+}
+
+// BoolToInt64 maps compliance blocked flag to DB INTEGER 0/1.
+func BoolToInt64(b bool) int64 {
+	if b {
+		return 1
+	}
+	return 0
 }

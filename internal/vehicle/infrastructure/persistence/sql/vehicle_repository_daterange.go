@@ -21,6 +21,7 @@ const vehicleDateClause = `
 const vehicleFullColumns = `
 SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
     fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage,
+    blocked, blocked_reason, rc_expiry, odometer, puc_expiry,
     tenant_id, created_at, updated_at,
     fleet_class, ownership, fleet_number, description, manufacturer, manuf_country, model,
     constr_year_month, acquisition_value, acquisition_currency, acquisition_date, purchase_vendor,
@@ -106,6 +107,7 @@ func scanVehicleReadModels(rows *sql.Rows) ([]domain.VehicleReadModel, error) {
 		if err := rows.Scan(
 			&v.ID, &v.RegistrationNumber, &v.VehicleNumber, &v.VehicleType, &v.Capacity,
 			&v.FuelType, &v.InsuranceExpiry, &v.FitnessExpiry, &v.PermitExpiry, &v.Status, &v.CurrentMileage,
+			&v.Blocked, &v.BlockedReason, &v.RcExpiry, &v.Odometer, &v.PucExpiry,
 			&v.TenantID, &v.CreatedAt, &v.UpdatedAt,
 			&v.FleetClass, &v.Ownership, &v.FleetNumber, &v.Description, &v.Manufacturer,
 			&v.ManufCountry, &v.Model, &v.ConstrYearMonth, &v.AcquisitionValue, &v.AcquisitionCurrency,

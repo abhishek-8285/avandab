@@ -24,6 +24,11 @@ type UpdateVehicleCommand struct {
 	PermitExpiry       time.Time
 	Status             aggregate.VehicleStatus
 	CurrentMileage     *float64
+	Blocked            bool
+	BlockedReason      string
+	RCExpiry           *time.Time
+	PUCExpiry          *time.Time
+	Odometer           float64
 	Profile            aggregate.VehicleProfile
 }
 
@@ -68,6 +73,8 @@ func (uc *UpdateVehicleUseCase) Execute(ctx context.Context, cmd UpdateVehicleCo
 		if err := v.ApplyProfile(cmd.Profile, uc.clock.Now()); err != nil {
 			return err
 		}
+
+		v.ApplyCompliance(cmd.Blocked, cmd.BlockedReason, cmd.RCExpiry, cmd.PUCExpiry, cmd.Odometer, uc.clock.Now())
 
 		return repo.Save(txCtx, v)
 	})

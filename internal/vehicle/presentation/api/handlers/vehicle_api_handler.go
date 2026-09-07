@@ -94,7 +94,24 @@ type vehicleRequest struct {
 	PermitExpiry       string                    `json:"permit_expiry"`
 	Status             string                    `json:"status"`
 	CurrentMileage     *float64                  `json:"current_mileage"`
+	Blocked            *bool                     `json:"blocked"`
+	BlockedReason      string                    `json:"blocked_reason"`
+	RCExpiry           string                    `json:"rc_expiry"`
+	PUCExpiry          string                    `json:"puc_expiry"`
+	Odometer           *float64                  `json:"odometer"`
 	Profile            *aggregate.VehicleProfile `json:"profile"`
+}
+
+// parseAPIDateOpt parses an optional YYYY-MM-DD date; "" = not provided.
+func parseAPIDateOpt(s, field string) (*time.Time, error) {
+	if s == "" {
+		return nil, nil
+	}
+	t, err := time.Parse("2006-01-02", s)
+	if err != nil {
+		return nil, errors.New(field + " must be YYYY-MM-DD")
+	}
+	return &t, nil
 }
 
 func parseAPIDate(s, field string) (time.Time, error) {
@@ -138,6 +155,24 @@ func (h *APIVehicleHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if req.Capacity != nil {
 		capacity = *req.Capacity
 	}
+	rcExp, err := parseAPIDateOpt(req.RCExpiry, "rc_expiry")
+	if err != nil {
+		writeAPIError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	pucExp, err := parseAPIDateOpt(req.PUCExpiry, "puc_expiry")
+	if err != nil {
+		writeAPIError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	var odometer float64
+	if req.Odometer != nil {
+		odometer = *req.Odometer
+	}
+	var blocked bool
+	if req.Blocked != nil {
+		blocked = *req.Blocked
+	}
 	id, err := h.createUC.Execute(r.Context(), application.CreateVehicleCommand{
 		TenantID:           shared.TenantIDFromContext(r.Context()),
 		RegistrationNumber: req.RegistrationNumber,
@@ -149,6 +184,11 @@ func (h *APIVehicleHandler) Create(w http.ResponseWriter, r *http.Request) {
 		FitnessExpiry:      fitExp,
 		PermitExpiry:       perExp,
 		CurrentMileage:     req.CurrentMileage,
+		Blocked:            blocked,
+		BlockedReason:      req.BlockedReason,
+		RCExpiry:           rcExp,
+		PUCExpiry:          pucExp,
+		Odometer:           odometer,
 		Profile:            profile,
 	})
 	if err != nil {
@@ -257,6 +297,35 @@ func (h *APIVehicleHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if req.CurrentMileage != nil {
 		mileage = req.CurrentMileage
 	}
+	rcExp := stored.RCExpiry
+	if req.RCExpiry != "" {
+		if rcExp, err = parseAPIDateOpt(req.RCExpiry, "rc_expiry"); err != nil {
+			writeAPIError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
+	pucExp := stored.PUCExpiry
+	if req.PUCExpiry != "" {
+		if pucExp, err = parseAPIDateOpt(req.PUCExpiry, "puc_expiry"); err != nil {
+			writeAPIError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
+	odometer := stored.Odometer
+	if req.Odometer != nil {
+		odometer = *req.Odometer
+	}
+	blocked := stored.Blocked
+	if req.Blocked != nil {
+		blocked = *req.Blocked
+	}
+	blockedReason := stored.BlockedReason
+	if req.BlockedReason != "" {
+		blockedReason = req.BlockedReason
+	}
+	if aggregate.VehicleStatus(req.Status) == aggregate.VehicleBlocked {
+		blocked = true
+	}
 	capacity := stored.Capacity
 	if req.Capacity != nil {
 		capacity = *req.Capacity
@@ -283,6 +352,11 @@ func (h *APIVehicleHandler) Update(w http.ResponseWriter, r *http.Request) {
 		PermitExpiry:       perExp,
 		Status:             aggregate.VehicleStatus(status),
 		CurrentMileage:     mileage,
+		Blocked:            blocked,
+		BlockedReason:      blockedReason,
+		RCExpiry:           rcExp,
+		PUCExpiry:          pucExp,
+		Odometer:           odometer,
 		Profile:            profile,
 	})
 	if err != nil {

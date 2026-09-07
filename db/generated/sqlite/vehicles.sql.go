@@ -51,17 +51,17 @@ func (q *Queries) CountVehicles(ctx context.Context, arg CountVehiclesParams) (i
 
 const createVehicle = `-- name: CreateVehicle :one
 INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, capacity,
-    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage, tenant_id,
+    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage, blocked, blocked_reason, rc_expiry, odometer, puc_expiry, tenant_id,
     fleet_class, ownership, fleet_number, description, manufacturer, manuf_country, model,
     constr_year_month, acquisition_value, acquisition_currency, acquisition_date, purchase_vendor,
     valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
     cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
     engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
     volume_unit, secondary_fuel, usage_indicator)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id, registration_number, vehicle_number, vehicle_type, capacity,
-    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage,
+    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage, blocked, blocked_reason, rc_expiry, odometer, puc_expiry,
     tenant_id, created_at, updated_at,
     fleet_class, ownership, fleet_number, description, manufacturer, manuf_country, model,
     constr_year_month, acquisition_value, acquisition_currency, acquisition_date, purchase_vendor,
@@ -83,6 +83,11 @@ type CreateVehicleParams struct {
 	PermitExpiry        time.Time       `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	Blocked             int64           `json:"blocked"`
+	BlockedReason       sql.NullString  `json:"blocked_reason"`
+	RcExpiry            sql.NullTime    `json:"rc_expiry"`
+	Odometer            float64         `json:"odometer"`
+	PucExpiry           sql.NullTime    `json:"puc_expiry"`
 	TenantID            string          `json:"tenant_id"`
 	FleetClass          string          `json:"fleet_class"`
 	Ownership           string          `json:"ownership"`
@@ -133,6 +138,11 @@ type CreateVehicleRow struct {
 	PermitExpiry        time.Time       `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	Blocked             int64           `json:"blocked"`
+	BlockedReason       sql.NullString  `json:"blocked_reason"`
+	RcExpiry            sql.NullTime    `json:"rc_expiry"`
+	Odometer            float64         `json:"odometer"`
+	PucExpiry           sql.NullTime    `json:"puc_expiry"`
 	TenantID            string          `json:"tenant_id"`
 	CreatedAt           time.Time       `json:"created_at"`
 	UpdatedAt           time.Time       `json:"updated_at"`
@@ -186,6 +196,11 @@ func (q *Queries) CreateVehicle(ctx context.Context, arg CreateVehicleParams) (C
 		arg.PermitExpiry,
 		arg.Status,
 		arg.CurrentMileage,
+		arg.Blocked,
+		arg.BlockedReason,
+		arg.RcExpiry,
+		arg.Odometer,
+		arg.PucExpiry,
 		arg.TenantID,
 		arg.FleetClass,
 		arg.Ownership,
@@ -236,6 +251,11 @@ func (q *Queries) CreateVehicle(ctx context.Context, arg CreateVehicleParams) (C
 		&i.PermitExpiry,
 		&i.Status,
 		&i.CurrentMileage,
+		&i.Blocked,
+		&i.BlockedReason,
+		&i.RcExpiry,
+		&i.Odometer,
+		&i.PucExpiry,
 		&i.TenantID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -294,7 +314,7 @@ func (q *Queries) DeleteVehicle(ctx context.Context, arg DeleteVehicleParams) er
 
 const getAvailableVehicles = `-- name: GetAvailableVehicles :many
 SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
-    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage,
+    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage, blocked, blocked_reason, rc_expiry, odometer, puc_expiry,
     tenant_id, created_at, updated_at,
     fleet_class, ownership, fleet_number, description, manufacturer, manuf_country, model,
     constr_year_month, acquisition_value, acquisition_currency, acquisition_date, purchase_vendor,
@@ -319,6 +339,11 @@ type GetAvailableVehiclesRow struct {
 	PermitExpiry        time.Time       `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	Blocked             int64           `json:"blocked"`
+	BlockedReason       sql.NullString  `json:"blocked_reason"`
+	RcExpiry            sql.NullTime    `json:"rc_expiry"`
+	Odometer            float64         `json:"odometer"`
+	PucExpiry           sql.NullTime    `json:"puc_expiry"`
 	TenantID            string          `json:"tenant_id"`
 	CreatedAt           time.Time       `json:"created_at"`
 	UpdatedAt           time.Time       `json:"updated_at"`
@@ -380,6 +405,11 @@ func (q *Queries) GetAvailableVehicles(ctx context.Context, tenantID string) ([]
 			&i.PermitExpiry,
 			&i.Status,
 			&i.CurrentMileage,
+			&i.Blocked,
+			&i.BlockedReason,
+			&i.RcExpiry,
+			&i.Odometer,
+			&i.PucExpiry,
 			&i.TenantID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -434,7 +464,7 @@ func (q *Queries) GetAvailableVehicles(ctx context.Context, tenantID string) ([]
 
 const getIdleVehicles = `-- name: GetIdleVehicles :many
 SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
-    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage,
+    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage, blocked, blocked_reason, rc_expiry, odometer, puc_expiry,
     tenant_id, created_at, updated_at,
     fleet_class, ownership, fleet_number, description, manufacturer, manuf_country, model,
     constr_year_month, acquisition_value, acquisition_currency, acquisition_date, purchase_vendor,
@@ -465,6 +495,11 @@ type GetIdleVehiclesRow struct {
 	PermitExpiry        time.Time       `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	Blocked             int64           `json:"blocked"`
+	BlockedReason       sql.NullString  `json:"blocked_reason"`
+	RcExpiry            sql.NullTime    `json:"rc_expiry"`
+	Odometer            float64         `json:"odometer"`
+	PucExpiry           sql.NullTime    `json:"puc_expiry"`
 	TenantID            string          `json:"tenant_id"`
 	CreatedAt           time.Time       `json:"created_at"`
 	UpdatedAt           time.Time       `json:"updated_at"`
@@ -528,6 +563,11 @@ func (q *Queries) GetIdleVehicles(ctx context.Context, arg GetIdleVehiclesParams
 			&i.PermitExpiry,
 			&i.Status,
 			&i.CurrentMileage,
+			&i.Blocked,
+			&i.BlockedReason,
+			&i.RcExpiry,
+			&i.Odometer,
+			&i.PucExpiry,
 			&i.TenantID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -582,7 +622,7 @@ func (q *Queries) GetIdleVehicles(ctx context.Context, arg GetIdleVehiclesParams
 
 const getVehicleByID = `-- name: GetVehicleByID :one
 SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
-    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage,
+    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage, blocked, blocked_reason, rc_expiry, odometer, puc_expiry,
     tenant_id, created_at, updated_at,
     fleet_class, ownership, fleet_number, description, manufacturer, manuf_country, model,
     constr_year_month, acquisition_value, acquisition_currency, acquisition_date, purchase_vendor,
@@ -610,6 +650,11 @@ type GetVehicleByIDRow struct {
 	PermitExpiry        time.Time       `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	Blocked             int64           `json:"blocked"`
+	BlockedReason       sql.NullString  `json:"blocked_reason"`
+	RcExpiry            sql.NullTime    `json:"rc_expiry"`
+	Odometer            float64         `json:"odometer"`
+	PucExpiry           sql.NullTime    `json:"puc_expiry"`
 	TenantID            string          `json:"tenant_id"`
 	CreatedAt           time.Time       `json:"created_at"`
 	UpdatedAt           time.Time       `json:"updated_at"`
@@ -665,6 +710,11 @@ func (q *Queries) GetVehicleByID(ctx context.Context, arg GetVehicleByIDParams) 
 		&i.PermitExpiry,
 		&i.Status,
 		&i.CurrentMileage,
+		&i.Blocked,
+		&i.BlockedReason,
+		&i.RcExpiry,
+		&i.Odometer,
+		&i.PucExpiry,
 		&i.TenantID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -709,7 +759,7 @@ func (q *Queries) GetVehicleByID(ctx context.Context, arg GetVehicleByIDParams) 
 
 const getVehicleByRegistration = `-- name: GetVehicleByRegistration :one
 SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
-    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage,
+    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage, blocked, blocked_reason, rc_expiry, odometer, puc_expiry,
     tenant_id, created_at, updated_at,
     fleet_class, ownership, fleet_number, description, manufacturer, manuf_country, model,
     constr_year_month, acquisition_value, acquisition_currency, acquisition_date, purchase_vendor,
@@ -737,6 +787,11 @@ type GetVehicleByRegistrationRow struct {
 	PermitExpiry        time.Time       `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	Blocked             int64           `json:"blocked"`
+	BlockedReason       sql.NullString  `json:"blocked_reason"`
+	RcExpiry            sql.NullTime    `json:"rc_expiry"`
+	Odometer            float64         `json:"odometer"`
+	PucExpiry           sql.NullTime    `json:"puc_expiry"`
 	TenantID            string          `json:"tenant_id"`
 	CreatedAt           time.Time       `json:"created_at"`
 	UpdatedAt           time.Time       `json:"updated_at"`
@@ -792,6 +847,11 @@ func (q *Queries) GetVehicleByRegistration(ctx context.Context, arg GetVehicleBy
 		&i.PermitExpiry,
 		&i.Status,
 		&i.CurrentMileage,
+		&i.Blocked,
+		&i.BlockedReason,
+		&i.RcExpiry,
+		&i.Odometer,
+		&i.PucExpiry,
 		&i.TenantID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -836,7 +896,7 @@ func (q *Queries) GetVehicleByRegistration(ctx context.Context, arg GetVehicleBy
 
 const searchVehicles = `-- name: SearchVehicles :many
 SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
-    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage,
+    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage, blocked, blocked_reason, rc_expiry, odometer, puc_expiry,
     tenant_id, created_at, updated_at,
     fleet_class, ownership, fleet_number, description, manufacturer, manuf_country, model,
     constr_year_month, acquisition_value, acquisition_currency, acquisition_date, purchase_vendor,
@@ -880,6 +940,11 @@ type SearchVehiclesRow struct {
 	PermitExpiry        time.Time       `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	Blocked             int64           `json:"blocked"`
+	BlockedReason       sql.NullString  `json:"blocked_reason"`
+	RcExpiry            sql.NullTime    `json:"rc_expiry"`
+	Odometer            float64         `json:"odometer"`
+	PucExpiry           sql.NullTime    `json:"puc_expiry"`
 	TenantID            string          `json:"tenant_id"`
 	CreatedAt           time.Time       `json:"created_at"`
 	UpdatedAt           time.Time       `json:"updated_at"`
@@ -952,6 +1017,11 @@ func (q *Queries) SearchVehicles(ctx context.Context, arg SearchVehiclesParams) 
 			&i.PermitExpiry,
 			&i.Status,
 			&i.CurrentMileage,
+			&i.Blocked,
+			&i.BlockedReason,
+			&i.RcExpiry,
+			&i.Odometer,
+			&i.PucExpiry,
 			&i.TenantID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -1008,7 +1078,7 @@ const updateVehicle = `-- name: UpdateVehicle :one
 UPDATE vehicles
 SET registration_number = ?, vehicle_number = ?, vehicle_type = ?, capacity = ?,
     fuel_type = ?, insurance_expiry = ?, fitness_expiry = ?, permit_expiry = ?,
-    status = ?, current_mileage = ?,
+    status = ?, current_mileage = ?, blocked = ?, blocked_reason = ?, rc_expiry = ?, odometer = ?, puc_expiry = ?,
     fleet_class = ?, ownership = ?, fleet_number = ?, description = ?, manufacturer = ?,
     manuf_country = ?, model = ?, constr_year_month = ?, acquisition_value = ?,
     acquisition_currency = ?, acquisition_date = ?, purchase_vendor = ?, valid_from = ?,
@@ -1020,7 +1090,7 @@ SET registration_number = ?, vehicle_number = ?, vehicle_type = ?, capacity = ?,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ?
 RETURNING id, registration_number, vehicle_number, vehicle_type, capacity,
-    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage,
+    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage, blocked, blocked_reason, rc_expiry, odometer, puc_expiry,
     tenant_id, created_at, updated_at,
     fleet_class, ownership, fleet_number, description, manufacturer, manuf_country, model,
     constr_year_month, acquisition_value, acquisition_currency, acquisition_date, purchase_vendor,
@@ -1041,6 +1111,11 @@ type UpdateVehicleParams struct {
 	PermitExpiry        time.Time       `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	Blocked             int64           `json:"blocked"`
+	BlockedReason       sql.NullString  `json:"blocked_reason"`
+	RcExpiry            sql.NullTime    `json:"rc_expiry"`
+	Odometer            float64         `json:"odometer"`
+	PucExpiry           sql.NullTime    `json:"puc_expiry"`
 	FleetClass          string          `json:"fleet_class"`
 	Ownership           string          `json:"ownership"`
 	FleetNumber         sql.NullString  `json:"fleet_number"`
@@ -1092,6 +1167,11 @@ type UpdateVehicleRow struct {
 	PermitExpiry        time.Time       `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	Blocked             int64           `json:"blocked"`
+	BlockedReason       sql.NullString  `json:"blocked_reason"`
+	RcExpiry            sql.NullTime    `json:"rc_expiry"`
+	Odometer            float64         `json:"odometer"`
+	PucExpiry           sql.NullTime    `json:"puc_expiry"`
 	TenantID            string          `json:"tenant_id"`
 	CreatedAt           time.Time       `json:"created_at"`
 	UpdatedAt           time.Time       `json:"updated_at"`
@@ -1144,6 +1224,11 @@ func (q *Queries) UpdateVehicle(ctx context.Context, arg UpdateVehicleParams) (U
 		arg.PermitExpiry,
 		arg.Status,
 		arg.CurrentMileage,
+		arg.Blocked,
+		arg.BlockedReason,
+		arg.RcExpiry,
+		arg.Odometer,
+		arg.PucExpiry,
 		arg.FleetClass,
 		arg.Ownership,
 		arg.FleetNumber,
@@ -1195,6 +1280,11 @@ func (q *Queries) UpdateVehicle(ctx context.Context, arg UpdateVehicleParams) (U
 		&i.PermitExpiry,
 		&i.Status,
 		&i.CurrentMileage,
+		&i.Blocked,
+		&i.BlockedReason,
+		&i.RcExpiry,
+		&i.Odometer,
+		&i.PucExpiry,
 		&i.TenantID,
 		&i.CreatedAt,
 		&i.UpdatedAt,

@@ -185,6 +185,64 @@ func TestToReadModel_NilMileage(t *testing.T) {
 	assert.Equal(t, "v-nil2", rm.ID)
 }
 
+func TestToDomain_MapsComplianceFields(t *testing.T) {
+	now := time.Date(2026, 8, 20, 10, 0, 0, 0, time.UTC)
+	rc := now.Add(30 * 24 * time.Hour)
+	puc := now.Add(60 * 24 * time.Hour)
+	v := db.Vehicle{
+		ID:                 "veh-c",
+		TenantID:           "t1",
+		RegistrationNumber: "MH01AB1234",
+		VehicleNumber:      "VN-C",
+		VehicleType:        string(aggregate.VehicleTypeTruck),
+		Capacity:           10,
+		FuelType:           string(aggregate.FuelTypeDiesel),
+		InsuranceExpiry:    now,
+		FitnessExpiry:      now,
+		PermitExpiry:       now,
+		Status:             string(aggregate.VehicleAvailable),
+		CurrentMileage:     sql.NullFloat64{Valid: false},
+		Blocked:            1,
+		BlockedReason:      sql.NullString{String: "RC expired", Valid: true},
+		RcExpiry:           sql.NullTime{Time: rc, Valid: true},
+		Odometer:           12345.5,
+		PucExpiry:          sql.NullTime{Time: puc, Valid: true},
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}
+
+	agg := ToDomain(v)
+	assert.True(t, agg.Blocked)
+	assert.Equal(t, "RC expired", agg.BlockedReason)
+	require.NotNil(t, agg.RCExpiry)
+	assert.Equal(t, rc, *agg.RCExpiry)
+	require.NotNil(t, agg.PUCExpiry)
+	assert.Equal(t, puc, *agg.PUCExpiry)
+	assert.InDelta(t, 12345.5, agg.Odometer, 0.001)
+
+	rm := ToReadModel(v)
+	assert.True(t, rm.Blocked)
+	assert.Equal(t, "RC expired", rm.BlockedReason)
+	require.NotNil(t, rm.RCExpiry)
+	assert.Equal(t, rc, *rm.RCExpiry)
+	require.NotNil(t, rm.PUCExpiry)
+	assert.Equal(t, puc, *rm.PUCExpiry)
+	assert.InDelta(t, 12345.5, rm.Odometer, 0.001)
+
+	// Unset compliance reads as zero values (no block).
+	v.Blocked = 0
+	v.BlockedReason = sql.NullString{}
+	v.RcExpiry = sql.NullTime{}
+	v.PucExpiry = sql.NullTime{}
+	v.Odometer = 0
+	agg = ToDomain(v)
+	assert.False(t, agg.Blocked)
+	assert.Empty(t, agg.BlockedReason)
+	assert.Nil(t, agg.RCExpiry)
+	assert.Nil(t, agg.PUCExpiry)
+	assert.NoError(t, agg.CanAssign(now))
+}
+
 func TestToReadModel_ZeroMileageValid(t *testing.T) {
 	now := time.Now()
 	v := db.Vehicle{

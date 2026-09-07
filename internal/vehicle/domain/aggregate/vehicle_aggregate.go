@@ -158,6 +158,11 @@ type VehicleAggregate struct {
 	PermitExpiry       time.Time
 	Status             VehicleStatus
 	CurrentMileage     *float64
+	Blocked            bool
+	BlockedReason      string
+	RCExpiry           *time.Time
+	PUCExpiry          *time.Time
+	Odometer           float64
 	Profile            VehicleProfile
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
@@ -273,6 +278,45 @@ func (a *VehicleAggregate) ApplyProfile(p VehicleProfile, now time.Time) error {
 	a.Profile = normalizeProfile(p)
 	a.UpdatedAt = now
 
+	return nil
+}
+
+// ApplyCompliance sets compliance-blocking fields (RC/PUC/Blocked/Odometer).
+// Empty RC/PUC = not on record (no block). BlockedReason empty when not blocked.
+func (a *VehicleAggregate) ApplyCompliance(blocked bool, blockedReason string, rcExpiry, pucExpiry *time.Time, odometer float64, now time.Time) {
+	a.Blocked = blocked
+	a.BlockedReason = blockedReason
+	a.RCExpiry = rcExpiry
+	a.PUCExpiry = pucExpiry
+	a.Odometer = odometer
+	a.UpdatedAt = now
+}
+
+// CanAssign mirrors legacy domain/vehicle.CanAssign — single shared guard.
+// ponytail: O(1) check, no DB; callers must route through this before dispatch.
+func (a *VehicleAggregate) CanAssign(now time.Time) error {
+	if a.Blocked || a.Status == VehicleBlocked {
+		reason := "vehicle is compliance blocked"
+		if a.BlockedReason != "" {
+			reason = a.BlockedReason
+		}
+		return errors.New("Dispatch blocked: " + reason + " (compliance)")
+	}
+	if a.RCExpiry != nil && !a.RCExpiry.IsZero() && a.RCExpiry.Before(now) {
+		return errors.New("Dispatch blocked: vehicle RC expired (compliance)")
+	}
+	if !a.FitnessExpiry.IsZero() && a.FitnessExpiry.Before(now) {
+		return errors.New("Dispatch blocked: vehicle fitness expired (compliance)")
+	}
+	if !a.InsuranceExpiry.IsZero() && a.InsuranceExpiry.Before(now) {
+		return errors.New("Dispatch blocked: vehicle insurance expired (compliance)")
+	}
+	if a.PUCExpiry != nil && !a.PUCExpiry.IsZero() && a.PUCExpiry.Before(now) {
+		return errors.New("Dispatch blocked: vehicle PUC expired (compliance)")
+	}
+	if a.Status != VehicleAvailable {
+		return errors.New("vehicle must be available to be assigned; current status: " + string(a.Status))
+	}
 	return nil
 }
 

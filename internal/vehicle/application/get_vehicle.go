@@ -23,6 +23,11 @@ type VehicleResponseDTO struct {
 	PermitExpiry       time.Time                `json:"permit_expiry"`
 	Status             string                   `json:"status"`
 	CurrentMileage     *float64                 `json:"current_mileage"`
+	Blocked            bool                     `json:"blocked"`
+	BlockedReason      string                   `json:"blocked_reason"`
+	RCExpiry           *time.Time               `json:"rc_expiry"`
+	PUCExpiry          *time.Time               `json:"puc_expiry"`
+	Odometer           float64                  `json:"odometer"`
 	Profile            aggregate.VehicleProfile `json:"profile"`
 	CreatedAt          time.Time                `json:"created_at"`
 	UpdatedAt          time.Time                `json:"updated_at"`
@@ -66,6 +71,11 @@ func (uc *GetVehicleUseCase) Execute(ctx context.Context, q GetVehicleQuery) (Ve
 			PermitExpiry:       v.PermitExpiry,
 			Status:             v.Status,
 			CurrentMileage:     v.CurrentMileage,
+			Blocked:            v.Blocked,
+			BlockedReason:      v.BlockedReason,
+			RCExpiry:           v.RCExpiry,
+			PUCExpiry:          v.PUCExpiry,
+			Odometer:           v.Odometer,
 			Profile:            v.Profile,
 			CreatedAt:          v.CreatedAt,
 			UpdatedAt:          v.UpdatedAt,

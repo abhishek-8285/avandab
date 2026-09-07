@@ -26,6 +26,11 @@ func (r *SQLRepository) CreateVehicle(ctx context.Context, vehicle domain.Vehicl
 		PermitExpiry:       vehicle.PermitExpiry,
 		Status:             string(vehicle.Status),
 		CurrentMileage:     nullFloat(vehicle.CurrentMileage),
+		Blocked:            boolToInt64(vehicle.Blocked),
+		BlockedReason:      nullString(vehicle.BlockedReason),
+		RcExpiry:           sql.NullTime{Time: vehicle.RCExpiry, Valid: !vehicle.RCExpiry.IsZero()},
+		Odometer:           vehicle.Odometer,
+		PucExpiry:          nullTime(vehicle.PUCExpiry),
 		TenantID:           tenantIDFromCtx(ctx),
 		// SOP defaults (00126): the legacy domain carries no fleet-object
 		// profile, so persist the classification defaults explicitly —
@@ -50,14 +55,15 @@ func (r *SQLRepository) CreateVehicle(ctx context.Context, vehicle domain.Vehicl
 		PermitExpiry:       created.PermitExpiry,
 		Status:             created.Status,
 		CurrentMileage:     created.CurrentMileage,
+		Blocked:            created.Blocked,
+		BlockedReason:      created.BlockedReason,
+		RcExpiry:           created.RcExpiry,
+		Odometer:           created.Odometer,
+		PucExpiry:          created.PucExpiry,
 		CreatedAt:          created.CreatedAt,
 		UpdatedAt:          created.UpdatedAt,
 	}
-	if vehicle.PUCExpiry != nil {
-		_, _ = r.exec(ctx, `UPDATE vehicles SET puc_expiry = $1 WHERE id = $2`, vehicle.PUCExpiry.Format("2006-01-02"), string(vehicle.ID))
-	}
 	dom := toDomainVehicle(v)
-	dom.PUCExpiry = vehicle.PUCExpiry
 	return dom, nil
 }
 
@@ -81,20 +87,15 @@ func (r *SQLRepository) GetVehicleByID(ctx context.Context, id domain.VehicleID)
 		PermitExpiry:       row.PermitExpiry,
 		Status:             row.Status,
 		CurrentMileage:     row.CurrentMileage,
+		Blocked:            row.Blocked,
+		BlockedReason:      row.BlockedReason,
+		RcExpiry:           row.RcExpiry,
+		Odometer:           row.Odometer,
+		PucExpiry:          row.PucExpiry,
 		CreatedAt:          row.CreatedAt,
 		UpdatedAt:          row.UpdatedAt,
 	}
-	dom := toDomainVehicle(v)
-	var puc sql.NullString
-	_ = r.queryRow(ctx, `SELECT puc_expiry FROM vehicles WHERE id = $1`, string(id)).Scan(&puc)
-	if puc.Valid && puc.String != "" {
-		if t, err := time.Parse("2006-01-02", puc.String); err == nil {
-			dom.PUCExpiry = &t
-		} else if t, err := time.Parse(time.RFC3339, puc.String); err == nil {
-			dom.PUCExpiry = &t
-		}
-	}
-	return dom, nil
+	return toDomainVehicle(v), nil
 }
 
 func (r *SQLRepository) GetVehicleByRegistration(ctx context.Context, regNum string) (domain.Vehicle, error) {
@@ -117,20 +118,15 @@ func (r *SQLRepository) GetVehicleByRegistration(ctx context.Context, regNum str
 		PermitExpiry:       row.PermitExpiry,
 		Status:             row.Status,
 		CurrentMileage:     row.CurrentMileage,
+		Blocked:            row.Blocked,
+		BlockedReason:      row.BlockedReason,
+		RcExpiry:           row.RcExpiry,
+		Odometer:           row.Odometer,
+		PucExpiry:          row.PucExpiry,
 		CreatedAt:          row.CreatedAt,
 		UpdatedAt:          row.UpdatedAt,
 	}
-	dom := toDomainVehicle(v)
-	var puc sql.NullString
-	_ = r.queryRow(ctx, `SELECT puc_expiry FROM vehicles WHERE id = $1`, row.ID).Scan(&puc)
-	if puc.Valid && puc.String != "" {
-		if t, err := time.Parse("2006-01-02", puc.String); err == nil {
-			dom.PUCExpiry = &t
-		} else if t, err := time.Parse(time.RFC3339, puc.String); err == nil {
-			dom.PUCExpiry = &t
-		}
-	}
-	return dom, nil
+	return toDomainVehicle(v), nil
 }
 
 func (r *SQLRepository) UpdateVehicle(ctx context.Context, vehicle domain.Vehicle) (domain.Vehicle, error) {
@@ -140,11 +136,15 @@ func (r *SQLRepository) UpdateVehicle(ctx context.Context, vehicle domain.Vehicl
 	_, err := r.exec(ctx, `UPDATE vehicles SET registration_number = $1, vehicle_number = $2,
 		vehicle_type = $3, capacity = $4, fuel_type = $5, insurance_expiry = $6,
 		fitness_expiry = $7, permit_expiry = $8, status = $9, current_mileage = $10,
-		updated_at = CURRENT_TIMESTAMP WHERE id = $11 AND tenant_id = $12`,
+		blocked = $11, blocked_reason = $12, rc_expiry = $13, odometer = $14,
+		updated_at = CURRENT_TIMESTAMP WHERE id = $15 AND tenant_id = $16`,
 		vehicle.RegistrationNumber, vehicle.VehicleNumber, string(vehicle.VehicleType),
 		vehicle.Capacity, string(vehicle.FuelType), vehicle.InsuranceExpiry,
 		vehicle.FitnessExpiry, vehicle.PermitExpiry, string(vehicle.Status),
-		nullFloat(vehicle.CurrentMileage), string(vehicle.ID), tenantIDFromCtx(ctx),
+		nullFloat(vehicle.CurrentMileage), boolToInt64(vehicle.Blocked),
+		nullString(vehicle.BlockedReason),
+		sql.NullTime{Time: vehicle.RCExpiry, Valid: !vehicle.RCExpiry.IsZero()},
+		vehicle.Odometer, string(vehicle.ID), tenantIDFromCtx(ctx),
 	)
 	if err != nil {
 		return domain.Vehicle{}, err
@@ -197,6 +197,11 @@ func (r *SQLRepository) SearchVehicles(ctx context.Context, query string, status
 			PermitExpiry:       row.PermitExpiry,
 			Status:             row.Status,
 			CurrentMileage:     row.CurrentMileage,
+			Blocked:            row.Blocked,
+			BlockedReason:      row.BlockedReason,
+			RcExpiry:           row.RcExpiry,
+			Odometer:           row.Odometer,
+			PucExpiry:          row.PucExpiry,
 			CreatedAt:          row.CreatedAt,
 			UpdatedAt:          row.UpdatedAt,
 		}
@@ -241,6 +246,11 @@ func (r *SQLRepository) GetAvailableVehicles(ctx context.Context) ([]domain.Vehi
 			PermitExpiry:       row.PermitExpiry,
 			Status:             row.Status,
 			CurrentMileage:     row.CurrentMileage,
+			Blocked:            row.Blocked,
+			BlockedReason:      row.BlockedReason,
+			RcExpiry:           row.RcExpiry,
+			Odometer:           row.Odometer,
+			PucExpiry:          row.PucExpiry,
 			CreatedAt:          row.CreatedAt,
 			UpdatedAt:          row.UpdatedAt,
 		}
@@ -274,6 +284,11 @@ func (r *SQLRepository) GetIdleVehicles(ctx context.Context) ([]domain.Vehicle, 
 			PermitExpiry:       row.PermitExpiry,
 			Status:             row.Status,
 			CurrentMileage:     row.CurrentMileage,
+			Blocked:            row.Blocked,
+			BlockedReason:      row.BlockedReason,
+			RcExpiry:           row.RcExpiry,
+			Odometer:           row.Odometer,
+			PucExpiry:          row.PucExpiry,
 			CreatedAt:          row.CreatedAt,
 			UpdatedAt:          row.UpdatedAt,
 		}

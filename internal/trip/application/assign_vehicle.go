@@ -87,6 +87,16 @@ func (uc *AssignVehicleUseCase) checkVehicleCompliance(ctx ports.TxContext, cmd 
 		return fmt.Errorf("vehicle %s is not assignable (status: %s)", cmd.VehicleID, v.Status)
 	}
 	now := uc.clock.Now().Truncate(24 * time.Hour)
+	if v.Blocked || v.Status == vehicleAgg.VehicleBlocked {
+		reason := "vehicle is compliance blocked"
+		if v.BlockedReason != "" {
+			reason = v.BlockedReason
+		}
+		return fmt.Errorf("Dispatch blocked: %s (compliance)", reason)
+	}
+	if v.RCExpiry != nil && !v.RCExpiry.IsZero() && v.RCExpiry.Before(now) {
+		return fmt.Errorf("Dispatch blocked: vehicle RC expired (compliance)")
+	}
 	for _, expiry := range []struct {
 		name string
 		when time.Time
@@ -127,8 +137,13 @@ func (uc *AssignVehicleUseCase) checkVehicleCompliance(ctx ports.TxContext, cmd 
 		}
 	}
 
-	// PUC expiry check (Spec 05 §5)
-	if puc := getPUCExpiry(ctx, cmd.VehicleID); puc != nil && !puc.IsZero() {
+	// PUC expiry check (Spec 05 §5): prefer aggregate value, fall back to
+	// direct read for rows written outside the new stack.
+	puc := v.PUCExpiry
+	if puc == nil {
+		puc = getPUCExpiry(ctx, cmd.VehicleID)
+	}
+	if puc != nil && !puc.IsZero() {
 		if puc.Before(now) {
 			if !isExempt(ctx, "vehicle", cmd.VehicleID, "puc") {
 				if cmd.OverrideMaintenance && len(strings.TrimSpace(cmd.OverrideReason)) >= 10 {

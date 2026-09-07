@@ -21,6 +21,11 @@ type VehicleReadModel struct {
 	PermitExpiry       time.Time
 	Status             string
 	CurrentMileage     *float64
+	Blocked            bool
+	BlockedReason      string
+	RCExpiry           *time.Time
+	PUCExpiry          *time.Time
+	Odometer           float64
 	Profile            aggregate.VehicleProfile
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
