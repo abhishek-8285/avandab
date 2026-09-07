@@ -103,7 +103,7 @@ func TestSearchPage_GroupsAndMatches(t *testing.T) {
 	seedSearchFixtures(t, app)
 
 	r := chi.NewRouter()
-	r.Get("/search", app.SearchPage)
+	r.With(withUserAndTenant("u1", "1", nil)).Get("/search", app.SearchPage)
 
 	get := func(url string) *httptest.ResponseRecorder {
 		req := withSession(httptest.NewRequest(http.MethodGet, url, nil), "u1", "admin")
@@ -158,7 +158,7 @@ func TestSearchPage_PermissionGated(t *testing.T) {
 	app.AuthSrv = denyAllAuthSvc{}
 
 	r := chi.NewRouter()
-	r.Get("/search", app.SearchPage)
+	r.With(withUserAndTenant("u1", "1", nil)).Get("/search", app.SearchPage)
 
 	req := withSession(httptest.NewRequest(http.MethodGet, "/search?q=MH01", nil), "u1", "viewer")
 	w := httptest.NewRecorder()

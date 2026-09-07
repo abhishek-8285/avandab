@@ -25,12 +25,10 @@ func (h *ScorecardHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "scorecard", "update")).Post("/drivers/{id}/resolve", h.Resolve)
 }
 
+// tenantID resolves the acting org. Fail closed: scorecard routes sit behind
+// auth middleware which always sets tenant (panics surface as 500 via Recoverer).
 func (h *ScorecardHandlers) tenantID(r *http.Request) string {
-	tenantID := string(shared.TenantIDFromContext(r.Context()))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
-	return tenantID
+	return string(shared.MustTenantID(r.Context()))
 }
 
 // GET /scorecard — leaderboard page (Spec 03 §6.3).

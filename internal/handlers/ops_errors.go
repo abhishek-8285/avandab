@@ -135,12 +135,10 @@ func (h *OpsErrorsHandler) APIClientReport(w http.ResponseWriter, r *http.Reques
 	})
 }
 
+// tenantID resolves the acting org. Fail closed: ops-error routes sit behind
+// auth middleware which always sets tenant (panics surface as 500 via Recoverer).
 func (h *OpsErrorsHandler) tenantID(r *http.Request) string {
-	tenantID := string(shared.TenantIDFromContext(r.Context()))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
-	return tenantID
+	return string(shared.MustTenantID(r.Context()))
 }
 
 func (h *OpsErrorsHandler) Page(w http.ResponseWriter, r *http.Request) {

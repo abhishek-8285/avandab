@@ -88,7 +88,11 @@ func TestOpsErrorsPage_ListsErrorsAndIncidents(t *testing.T) {
 	require.NoError(t, err)
 
 	r := chi.NewRouter()
-	r.Get("/ops/errors", app.OpsErrors.Page)
+	r.With(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			next.ServeHTTP(w, req.WithContext(shared.ContextWithTenantID(req.Context(), "1")))
+		})
+	}).Get("/ops/errors", app.OpsErrors.Page)
 
 	req := withSession(httptest.NewRequest(http.MethodGet, "/ops/errors?severity=HIGH", nil), "u1", "admin")
 	w := httptest.NewRecorder()

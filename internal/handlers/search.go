@@ -55,10 +55,7 @@ func (a *App) SearchPage(w http.ResponseWriter, r *http.Request) {
 		}
 		// Spec 22 §2.5: every section is tenant-scoped from the request
 		// context (never the query string).
-		tenant := string(shared.TenantIDFromContext(r.Context()))
-		if tenant == "" {
-			tenant = string(shared.DefaultTenant)
-		}
+		tenant := string(shared.MustTenantID(r.Context()))
 
 		specs := a.buildSearchSpecs(tenant, like)
 		sections = a.runSearchSections(r, userID, specs)
@@ -311,10 +308,7 @@ func (a *App) SearchAPI(w http.ResponseWriter, r *http.Request) {
 	}
 
 	like := "%" + likeEscape(q) + "%"
-	tenant := string(shared.TenantIDFromContext(r.Context()))
-	if tenant == "" {
-		tenant = string(shared.DefaultTenant)
-	}
+	tenant := string(shared.MustTenantID(r.Context()))
 	specs := a.buildSearchSpecs(tenant, like)
 	sections := a.runSearchSections(r, userID, specs)
 	for _, s := range sections {

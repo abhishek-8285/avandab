@@ -56,12 +56,10 @@ func (h *ExperimentHandlers) RegisterRoutes(r chi.Router) {
 		Get("/api/v1/experiments/{id}/results", h.Results)
 }
 
+// tenantID resolves the acting org. Fail closed: experiment routes sit behind
+// auth middleware which always sets tenant (panics surface as 500 via Recoverer).
 func (h *ExperimentHandlers) tenantID(r *http.Request) string {
-	tenantID := string(shared.TenantIDFromContext(r.Context()))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
-	return tenantID
+	return string(shared.MustTenantID(r.Context()))
 }
 
 // Create handles POST /api/v1/experiments
