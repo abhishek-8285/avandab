@@ -51,16 +51,15 @@ func (h *DriverLifecycleAPIHandler) RegisterRoutes(r chi.Router) {
 
 func (h *DriverLifecycleAPIHandler) getContextData(r *http.Request) (string, string, bool) {
 	ctx := r.Context()
-	tenantID := string(shared.TenantIDFromContext(ctx))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
-
+	// Fail closed: these routes sit behind RequireAPIAuth (cmd/server/main.go)
+	// which always sets tenant, so a missing tenant is a programmer error
+	// (panics surface as 500 via Recoverer). Session checked first to
+	// preserve 401 for unauthenticated callers. Never silently default here.
 	session, ok := ctx.Value(auth.ContextUser).(*auth.SessionData)
 	if !ok || session == nil || session.UserID == "" {
 		return "", "", false
 	}
-	return tenantID, session.UserID, true
+	return string(shared.MustTenantID(ctx)), session.UserID, true
 }
 
 func (h *DriverLifecycleAPIHandler) GetOnboarding(w http.ResponseWriter, r *http.Request) {
