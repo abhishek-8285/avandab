@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	appdb "transport-app/internal/database"
 	"transport-app/internal/domain"
 	"transport-app/internal/fuel"
 	"transport-app/internal/repository"
@@ -189,7 +190,7 @@ func (s *ScorecardService) WithFeatureGate(gate func(tenantID string) bool) *Sco
 // Empty when the driver is unknown.
 func (s *ScorecardService) driverTenant(ctx context.Context, driverID string) string {
 	var tenant string
-	_ = s.scoreDB().QueryRowContext(ctx, `SELECT tenant_id FROM drivers WHERE id = ?`, driverID).Scan(&tenant)
+	_ = s.scoreDB().QueryRowContext(ctx, `SELECT tenant_id FROM drivers WHERE id = $1`, driverID).Scan(&tenant)
 	return tenant
 }
 
@@ -223,7 +224,7 @@ func (s *ScorecardService) WriteBehaviourEvent(ctx context.Context, evt Behaviou
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO driver_behaviour_events
 		    (id, driver_id, trip_id, vehicle_id, event_type, severity, weight, metadata, occurred_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		generateID(), evt.DriverID, orNull(evt.TripID), orNull(evt.VehicleID),
 		evt.EventType, evt.Severity, weight, evt.Metadata, fuelTimeStr(evt.OccurredAt))
 	return err
@@ -273,13 +274,13 @@ func (s *ScorecardService) RecomputeDriverScore(ctx context.Context, driverID st
 		if _, err := db.ExecContext(txCtx,
 			`INSERT INTO driver_scores
 			    (id, driver_id, score, tier, period_start, period_end, event_counts, computed_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 			generateID(), driverID, score, tier, fuelTimeStr(periodStart), fuelTimeStr(now),
 			string(countsJSON), fuelTimeStr(now)); err != nil {
 			return err
 		}
 		_, err := db.ExecContext(txCtx,
-			`UPDATE drivers SET score = ?, tier = ?, updated_at = ? WHERE id = ?`,
+			`UPDATE drivers SET score = $1, tier = $2, updated_at = $3 WHERE id = $4`,
 			score, tier, fuelTimeStr(now), driverID)
 		return err
 	})
@@ -303,7 +304,7 @@ func (s *ScorecardService) RecomputeAllDrivers(ctx context.Context) error {
 
 	rows, err := s.scoreDB().QueryContext(ctx,
 		`SELECT DISTINCT driver_id FROM driver_behaviour_events
-		 WHERE driver_id IS NOT NULL AND driver_id != '' AND datetime(occurred_at) >= datetime(?)`,
+		 WHERE driver_id IS NOT NULL AND driver_id != '' AND substr(CAST(occurred_at AS TEXT), 1, 19) >= substr(CAST($1 AS TEXT), 1, 19)`,
 		fuelTimeStr(periodStart))
 	if err != nil {
 		return err
@@ -341,7 +342,7 @@ func (s *ScorecardService) RecomputeAllDrivers(ctx context.Context) error {
 		 WHERE score IS NOT NULL
 		   AND id NOT IN (
 		       SELECT DISTINCT driver_id FROM driver_behaviour_events
-		       WHERE driver_id IS NOT NULL AND driver_id != '' AND datetime(occurred_at) >= datetime(?)
+		       WHERE driver_id IS NOT NULL AND driver_id != '' AND substr(CAST(occurred_at AS TEXT), 1, 19) >= substr(CAST($1 AS TEXT), 1, 19)
 		   )`, fuelTimeStr(periodStart))
 	if err != nil {
 		return err
@@ -391,9 +392,9 @@ func (s *ScorecardService) Leaderboard(ctx context.Context, tenantID string, lim
 		`SELECT d.id, d.driver_id, d.first_name || ' ' || d.last_name,
 		        COALESCE(d.score, 100), COALESCE(d.tier, 'A'), COALESCE(d.tenant_id, '')
 		 FROM drivers d
-		 WHERE d.tenant_id = ?
+		 WHERE d.tenant_id = $1
 		 ORDER BY COALESCE(d.score, 100) DESC, d.first_name ASC, d.last_name ASC
-		 LIMIT ?`, tenantID, limit)
+		 LIMIT $2`, tenantID, limit)
 	if err != nil {
 		return nil, ScorecardStats{}, err
 	}
@@ -417,10 +418,14 @@ func (s *ScorecardService) Leaderboard(ctx context.Context, tenantID string, lim
 	// Event counts in the window, one grouped query (cold start detection).
 	counts := map[string]int{}
 	if len(ids) > 0 {
-		crows, err := db.QueryContext(ctx,
-			`SELECT driver_id, COUNT(*) FROM driver_behaviour_events
-			 WHERE driver_id IN (`+placeholders(len(ids))+`) AND datetime(occurred_at) >= datetime(?)
-			 GROUP BY driver_id`,
+		countQ := `SELECT driver_id, COUNT(*) FROM driver_behaviour_events
+			 WHERE driver_id IN (` + placeholders(len(ids)) + `) AND substr(CAST(occurred_at AS TEXT), 1, 19) >= substr(CAST(? AS TEXT), 1, 19)
+			 GROUP BY driver_id`
+		reboundCount, rerr := appdb.Rebind(countQ)
+		if rerr != nil {
+			return nil, ScorecardStats{}, rerr
+		}
+		crows, err := db.QueryContext(ctx, reboundCount,
 			append(strsToAny(ids), fuelTimeStr(periodStart))...)
 		if err != nil {
 			return nil, ScorecardStats{}, err
@@ -442,11 +447,14 @@ func (s *ScorecardService) Leaderboard(ctx context.Context, tenantID string, lim
 	// Sparkline history: latest 14 scores per driver, oldest first.
 	history := map[string][]float64{}
 	if len(ids) > 0 {
-		hrows, err := db.QueryContext(ctx,
-			`SELECT driver_id, score FROM driver_scores
-			 WHERE driver_id IN (`+placeholders(len(ids))+`)
-			 ORDER BY driver_id ASC, period_end ASC`,
-			strsToAny(ids)...)
+		histQ := `SELECT driver_id, score FROM driver_scores
+			 WHERE driver_id IN (` + placeholders(len(ids)) + `)
+			 ORDER BY driver_id ASC, period_end ASC`
+		reboundHist, rerr := appdb.Rebind(histQ)
+		if rerr != nil {
+			return nil, ScorecardStats{}, rerr
+		}
+		hrows, err := db.QueryContext(ctx, reboundHist, strsToAny(ids)...)
 		if err != nil {
 			return nil, ScorecardStats{}, err
 		}
@@ -503,7 +511,7 @@ func (s *ScorecardService) DriverDetail(ctx context.Context, driverID string) (D
 	var driverCode string
 	err := db.QueryRowContext(ctx,
 		`SELECT COALESCE(driver_id, ''), first_name || ' ' || last_name
-		 FROM drivers WHERE id = ?`, driverID).Scan(&driverCode, &d.DriverName)
+		 FROM drivers WHERE id = $1`, driverID).Scan(&driverCode, &d.DriverName)
 	if err != nil {
 		return DriverDetail{}, fmt.Errorf("scorecard: driver %s: %w", driverID, err)
 	}
@@ -539,7 +547,7 @@ func (s *ScorecardService) DriverDetail(ctx context.Context, driverID string) (D
 	// delete old driver_scores rows).
 	hrows, err := db.QueryContext(ctx,
 		`SELECT score, tier, period_end, computed_at FROM driver_scores
-		 WHERE driver_id = ? ORDER BY period_end DESC LIMIT 30`, driverID)
+		 WHERE driver_id = $1 ORDER BY period_end DESC LIMIT 30`, driverID)
 	if err != nil {
 		return DriverDetail{}, err
 	}
@@ -565,8 +573,8 @@ func (s *ScorecardService) DriverDetail(ctx context.Context, driverID string) (D
 	// Unresolved fraud-cap events with admin resolve actions.
 	frows, err := db.QueryContext(ctx,
 		`SELECT id, event_type, occurred_at FROM driver_behaviour_events
-		 WHERE driver_id = ? AND event_type IN ('fuel_theft_suspicion', 'odometer_rollback')
-		   AND datetime(occurred_at) >= datetime(?)
+		 WHERE driver_id = $1 AND event_type IN ('fuel_theft_suspicion', 'odometer_rollback')
+		   AND substr(CAST(occurred_at AS TEXT), 1, 19) >= substr(CAST($2 AS TEXT), 1, 19)
 		 ORDER BY occurred_at DESC`, driverID, fuelTimeStr(periodStart))
 	if err != nil {
 		return DriverDetail{}, err
@@ -609,7 +617,7 @@ func (s *ScorecardService) BonusForPayout(ctx context.Context, driverID string, 
 	var score sql.NullFloat64
 	var tier sql.NullString
 	if err := db.QueryRowContext(ctx,
-		`SELECT score, tier FROM drivers WHERE id = ?`, driverID).Scan(&score, &tier); err != nil {
+		`SELECT score, tier FROM drivers WHERE id = $1`, driverID).Scan(&score, &tier); err != nil {
 		return 0
 	}
 	if !score.Valid {
@@ -624,7 +632,7 @@ func (s *ScorecardService) BonusForPayout(ctx context.Context, driverID string, 
 	periodStart := s.now().Add(-time.Duration(cfg.windowDays) * 24 * time.Hour)
 	if err := db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM driver_behaviour_events
-		 WHERE driver_id = ? AND datetime(occurred_at) >= datetime(?)`,
+		 WHERE driver_id = $1 AND substr(CAST(occurred_at AS TEXT), 1, 19) >= substr(CAST($2 AS TEXT), 1, 19)`,
 		driverID, fuelTimeStr(periodStart)).Scan(&n); err != nil {
 		return 0
 	}
@@ -653,7 +661,7 @@ func (s *ScorecardService) ResolveFraudEvent(ctx context.Context, eventID, admin
 
 	var driverID, eventType, metadata string
 	err := db.QueryRowContext(ctx,
-		`SELECT driver_id, event_type, metadata FROM driver_behaviour_events WHERE id = ?`,
+		`SELECT driver_id, event_type, metadata FROM driver_behaviour_events WHERE id = $1`,
 		eventID).Scan(&driverID, &eventType, &metadata)
 	if err != nil {
 		return fmt.Errorf("scorecard: behaviour event %s not found", eventID)
@@ -678,7 +686,7 @@ func (s *ScorecardService) ResolveFraudEvent(ctx context.Context, eventID, admin
 	err = s.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		tdb := txDB(txCtx, db)
 		if _, err := tdb.ExecContext(txCtx,
-			`UPDATE driver_behaviour_events SET metadata = ? WHERE id = ?`,
+			`UPDATE driver_behaviour_events SET metadata = $1 WHERE id = $2`,
 			string(updated), eventID); err != nil {
 			return err
 		}
@@ -708,7 +716,7 @@ func (s *ScorecardService) eventsInWindow(ctx context.Context, driverID string, 
 	rows, err := s.scoreDB().QueryContext(ctx,
 		`SELECT id, event_type, severity, weight, metadata, occurred_at
 		 FROM driver_behaviour_events
-		 WHERE driver_id = ? AND datetime(occurred_at) >= datetime(?)
+		 WHERE driver_id = $1 AND substr(CAST(occurred_at AS TEXT), 1, 19) >= substr(CAST($2 AS TEXT), 1, 19)
 		 ORDER BY occurred_at ASC`, driverID, fuelTimeStr(periodStart))
 	if err != nil {
 		return nil, err
@@ -739,7 +747,7 @@ func (s *ScorecardService) eventsInWindow(ctx context.Context, driverID string, 
 func (s *ScorecardService) eventResolved(ctx context.Context, eventID string) (bool, error) {
 	var meta string
 	if err := s.scoreDB().QueryRowContext(ctx,
-		`SELECT metadata FROM driver_behaviour_events WHERE id = ?`, eventID).Scan(&meta); err != nil {
+		`SELECT metadata FROM driver_behaviour_events WHERE id = $1`, eventID).Scan(&meta); err != nil {
 		return false, err
 	}
 	var m behaviourEventMeta
@@ -976,7 +984,7 @@ func (s *ScorecardService) PreferredDrivers(ctx context.Context, limit int) ([]P
 		FROM drivers
 		WHERE score IS NOT NULL AND tier IN ('A', 'B') AND status = 'available'
 		ORDER BY score DESC
-		LIMIT ?`, limit)
+		LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}

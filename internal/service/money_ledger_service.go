@@ -98,7 +98,7 @@ func (s *MoneyLedgerService) AppendEntry(ctx context.Context, e LedgerEntry) err
 	_, err = db.ExecContext(ctx,
 		`INSERT INTO money_ledger
 			(id, tenant_id, txn_type, ref_table, ref_id, direction, amount_minor, currency, memo, created_by)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		id, string(tenant), e.TxnType, e.RefTable, e.RefID,
 		e.Direction, e.AmountMinor, currency, e.Memo, e.CreatedBy)
 	if err != nil {

@@ -10,13 +10,22 @@ import (
 )
 
 type ListVehiclesQuery struct {
-	TenantID shared.TenantID
-	Page     int
-	Limit    int
-	Search   string
-	Status   string
-	DateFrom string // YYYY-MM-DD inclusive, empty = unbounded (created_at)
-	DateTo   string // YYYY-MM-DD inclusive, empty = unbounded (created_at)
+	TenantID   shared.TenantID
+	Page       int
+	Limit      int
+	Search     string
+	Status     string
+	FleetClass string // CV/PV/FS/OFS, empty = all (spec §6)
+	Ownership  string // O/C/F/M, empty = all (spec §6)
+	DateFrom   string // YYYY-MM-DD inclusive, empty = unbounded (created_at)
+	DateTo     string // YYYY-MM-DD inclusive, empty = unbounded (created_at)
+}
+
+// filteredVehicleRepo adds the SOP fleet_class / ownership filters (plus the
+// date window) to the search. Asserted optionally so existing repository
+// implementations/mocks keep compiling unchanged.
+type filteredVehicleRepo interface {
+	SearchReadModelsFiltered(ctx context.Context, tenantID shared.TenantID, query string, status string, fleetClass string, ownership string, from string, to string, limit int, offset int) ([]domain.VehicleReadModel, int64, error)
 }
 
 // dateRangeVehicleRepo is implemented by vehicle repositories that support
@@ -65,9 +74,17 @@ func (uc *ListVehiclesUseCase) Execute(ctx context.Context, q ListVehiclesQuery)
 		var err error
 
 		dateRepo, dateOK := repo.(dateRangeVehicleRepo)
+		filteredRepo, filteredOK := repo.(filteredVehicleRepo)
 		useDates := hasDateRange(q.DateFrom, q.DateTo) && dateOK
+		useFiltered := filteredOK && (q.FleetClass != "" || q.Ownership != "" || useDates)
 
-		if useDates {
+		if useFiltered {
+			from, to := q.DateFrom, q.DateTo
+			if !useDates {
+				from, to = "", ""
+			}
+			rows, total, err = filteredRepo.SearchReadModelsFiltered(txCtx, q.TenantID, q.Search, q.Status, q.FleetClass, q.Ownership, from, to, q.Limit, offset)
+		} else if useDates {
 			rows, total, err = dateRepo.SearchReadModelsDateRange(txCtx, q.TenantID, q.Search, q.Status, q.DateFrom, q.DateTo, q.Limit, offset)
 		} else {
 			rows, total, err = repo.SearchReadModels(txCtx, q.TenantID, q.Search, q.Status, q.Limit, offset)
@@ -90,6 +107,7 @@ func (uc *ListVehiclesUseCase) Execute(ctx context.Context, q ListVehiclesQuery)
 				PermitExpiry:       v.PermitExpiry,
 				Status:             v.Status,
 				CurrentMileage:     v.CurrentMileage,
+				Profile:            v.Profile,
 				CreatedAt:          v.CreatedAt,
 				UpdatedAt:          v.UpdatedAt,
 			}

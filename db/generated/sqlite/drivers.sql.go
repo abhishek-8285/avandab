@@ -14,29 +14,23 @@ import (
 const countDrivers = `-- name: CountDrivers :one
 SELECT COUNT(*) AS count
 FROM drivers
-WHERE tenant_id = ?
-  AND (first_name LIKE '%' || ? || '%' OR last_name LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR license_number LIKE '%' || ? || '%')
-  AND (? = '' OR status = ?)
+WHERE tenant_id = ?1
+  AND (lower(first_name) LIKE '%' || lower(?2) || '%' OR lower(last_name) LIKE '%' || lower(?2) || '%' OR lower(phone) LIKE '%' || lower(?2) || '%' OR lower(license_number) LIKE '%' || lower(?2) || '%')
+  AND (?3 = '' OR status = ?4)
 `
 
 type CountDriversParams struct {
-	TenantID string         `json:"tenant_id"`
-	Column2  sql.NullString `json:"column_2"`
-	Column3  sql.NullString `json:"column_3"`
-	Column4  sql.NullString `json:"column_4"`
-	Column5  sql.NullString `json:"column_5"`
-	Column6  interface{}    `json:"column_6"`
-	Status   string         `json:"status"`
+	TenantID  string      `json:"tenant_id"`
+	Search    string      `json:"search"`
+	StatusAll interface{} `json:"status_all"`
+	Status    string      `json:"status"`
 }
 
 func (q *Queries) CountDrivers(ctx context.Context, arg CountDriversParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, countDrivers,
 		arg.TenantID,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-		arg.Column5,
-		arg.Column6,
+		arg.Search,
+		arg.StatusAll,
 		arg.Status,
 	)
 	var count int64
@@ -393,23 +387,20 @@ SELECT id, driver_id, first_name, last_name, phone, email, address,
     license_number, license_expiry, experience_years, status, emergency_contact_name,
     emergency_contact_phone, notes, tenant_id, created_at, updated_at
 FROM drivers
-WHERE tenant_id = ?
-  AND (first_name LIKE '%' || ? || '%' OR last_name LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR license_number LIKE '%' || ? || '%')
-  AND (? = '' OR status = ?)
+WHERE tenant_id = ?1
+  AND (lower(first_name) LIKE '%' || lower(?2) || '%' OR lower(last_name) LIKE '%' || lower(?2) || '%' OR lower(phone) LIKE '%' || lower(?2) || '%' OR lower(license_number) LIKE '%' || lower(?2) || '%')
+  AND (?3 = '' OR status = ?4)
 ORDER BY created_at DESC
-LIMIT ? OFFSET ?
+LIMIT ?6 OFFSET ?5
 `
 
 type SearchDriversParams struct {
-	TenantID string         `json:"tenant_id"`
-	Column2  sql.NullString `json:"column_2"`
-	Column3  sql.NullString `json:"column_3"`
-	Column4  sql.NullString `json:"column_4"`
-	Column5  sql.NullString `json:"column_5"`
-	Column6  interface{}    `json:"column_6"`
-	Status   string         `json:"status"`
-	Limit    int64          `json:"limit"`
-	Offset   int64          `json:"offset"`
+	TenantID  string      `json:"tenant_id"`
+	Search    string      `json:"search"`
+	StatusAll interface{} `json:"status_all"`
+	Status    string      `json:"status"`
+	Offset    int64       `json:"offset"`
+	Limit     int64       `json:"limit"`
 }
 
 type SearchDriversRow struct {
@@ -435,14 +426,11 @@ type SearchDriversRow struct {
 func (q *Queries) SearchDrivers(ctx context.Context, arg SearchDriversParams) ([]SearchDriversRow, error) {
 	rows, err := q.db.QueryContext(ctx, searchDrivers,
 		arg.TenantID,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-		arg.Column5,
-		arg.Column6,
+		arg.Search,
+		arg.StatusAll,
 		arg.Status,
-		arg.Limit,
 		arg.Offset,
+		arg.Limit,
 	)
 	if err != nil {
 		return nil, err
@@ -488,7 +476,7 @@ UPDATE drivers
 SET driver_id = ?, first_name = ?, last_name = ?, phone = ?, email = ?, address = ?,
     license_number = ?, license_expiry = ?, experience_years = ?, status = ?,
     emergency_contact_name = ?, emergency_contact_phone = ?, notes = ?,
-    updated_at = datetime('now')
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ?
 RETURNING id, driver_id, first_name, last_name, phone, email, address,
     license_number, license_expiry, experience_years, status, emergency_contact_name,

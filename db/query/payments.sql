@@ -47,17 +47,18 @@ FROM payments
 WHERE tenant_id = ?;
 
 -- name: GetMonthlyRevenue :many
-SELECT CAST(strftime('%Y-%m', payment_date) AS TEXT) AS month, CAST(COALESCE(SUM(amount), 0) AS REAL) AS total
+SELECT substr(CAST(payment_date AS TEXT), 1, 7) AS month, CAST(COALESCE(SUM(amount), 0) AS REAL) AS total
 FROM payments
 WHERE tenant_id = ?
-GROUP BY strftime('%Y-%m', payment_date)
+GROUP BY substr(CAST(payment_date AS TEXT), 1, 7)
 ORDER BY month ASC;
 
 -- name: GetRevenueByDay :many
-SELECT CAST(date(payment_date) AS TEXT) AS day, CAST(COALESCE(SUM(amount), 0) AS REAL) AS total
+-- Lower bound is a Go-side param (impl passes UTC today-29d).
+SELECT substr(CAST(payment_date AS TEXT), 1, 10) AS day, CAST(COALESCE(SUM(amount), 0) AS REAL) AS total
 FROM payments
-WHERE tenant_id = ? AND date(payment_date) >= date('now', '-29 days')
-GROUP BY date(payment_date)
+WHERE tenant_id = ? AND substr(CAST(payment_date AS TEXT), 1, 10) >= CAST(sqlc.arg(start_day) AS TEXT)
+GROUP BY substr(CAST(payment_date AS TEXT), 1, 10)
 ORDER BY day ASC;
 
 -- name: GetPaymentsByCustomer :many

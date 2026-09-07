@@ -114,7 +114,7 @@ func (r *Relay) publish(ctx context.Context, e pendingEvent) error {
 		r.logger.Info("outbox relay: no event bus, marking event published", "id", e.id, "event_type", e.eventType)
 	}
 
-	res, err := r.db.ExecContext(ctx, `UPDATE outbox_events SET published_at = ? WHERE id = ? AND published_at IS NULL`, time.Now(), e.id)
+	res, err := r.db.ExecContext(ctx, `UPDATE outbox_events SET published_at = $1 WHERE id = $2 AND published_at IS NULL`, time.Now(), e.id)
 	if err != nil {
 		r.logger.Error("outbox relay: failed to mark event published", "id", e.id, "error", err)
 		return err

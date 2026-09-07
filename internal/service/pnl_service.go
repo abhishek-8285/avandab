@@ -58,7 +58,7 @@ func (s *PNLService) dailyTotals(ctx context.Context, tenantID, dateStr string) 
 	// Revenue: sum of paid invoices dated on this day.
 	_ = s.db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(total), 0) FROM invoices
-		 WHERE tenant_id = ? AND payment_status = 'paid' AND DATE(created_at) = ?`,
+		 WHERE tenant_id = $1 AND payment_status = 'paid' AND DATE(created_at) = $2`,
 		tenantID, dateStr).Scan(&revenue)
 
 	// Fuel costs: standalone fuel-category driver expenses only.
@@ -67,7 +67,7 @@ func (s *PNLService) dailyTotals(ctx context.Context, tenantID, dateStr string) 
 	// driverPayouts (net_payout) below; counting both would double-book.
 	_ = s.db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(de.amount), 0) FROM driver_expenses de
-		 WHERE de.tenant_id = ? AND de.category = 'fuel' AND DATE(de.created_at) = ?
+		 WHERE de.tenant_id = $1 AND de.category = 'fuel' AND DATE(de.created_at) = $2
 		   AND NOT EXISTS (
 		     SELECT 1 FROM settlement_lines sl
 		     WHERE sl.ref_id = de.id AND sl.line_type IN ('deduction', 'advances')
@@ -79,19 +79,19 @@ func (s *PNLService) dailyTotals(ctx context.Context, tenantID, dateStr string) 
 		`SELECT COALESCE(SUM(ds.net_payout), 0)
 		 FROM driver_settlements ds
 		 JOIN trips t ON ds.trip_id = t.id
-		 WHERE t.tenant_id = ? AND DATE(ds.created_at) = ?`,
+		 WHERE t.tenant_id = $1 AND DATE(ds.created_at) = $2`,
 		tenantID, dateStr).Scan(&driverPayouts)
 
 	// Maintenance costs.
 	_ = s.db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(cost), 0) FROM maintenance_records
-		 WHERE tenant_id = ? AND DATE(performed_at) = ?`,
+		 WHERE tenant_id = $1 AND DATE(performed_at) = $2`,
 		tenantID, dateStr).Scan(&maintenance)
 
 	// Toll costs from FASTag transactions.
 	_ = s.db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(amount), 0) FROM fastag_transactions
-		 WHERE tenant_id = ? AND DATE(txn_timestamp) = ?`,
+		 WHERE tenant_id = $1 AND DATE(txn_timestamp) = $2`,
 		tenantID, dateStr).Scan(&tollCosts)
 
 	return revenue, fuelCosts, driverPayouts, maintenance, tollCosts
@@ -108,19 +108,19 @@ func (s *PNLService) GenerateDailySnapshot(ctx context.Context, tenantID string,
 		`SELECT COALESCE(SUM(ds.tds_amount), 0)
 		 FROM driver_settlements ds
 		 JOIN trips t ON ds.trip_id = t.id
-		 WHERE t.tenant_id = ? AND DATE(ds.created_at) = ?`,
+		 WHERE t.tenant_id = $1 AND DATE(ds.created_at) = $2`,
 		tenantID, dateStr).Scan(&tdsDeducted)
 
 	// Trips departed on this day.
 	var tripCount int
 	_ = s.db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM trips WHERE tenant_id = ? AND DATE(departure_time) = ?`,
+		`SELECT COUNT(*) FROM trips WHERE tenant_id = $1 AND DATE(departure_time) = $2`,
 		tenantID, dateStr).Scan(&tripCount)
 
 	// Active vehicle count (point-in-time).
 	var vehicleCount int
 	_ = s.db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM vehicles WHERE tenant_id = ? AND status = 'active'`,
+		`SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND status = 'active'`,
 		tenantID).Scan(&vehicleCount)
 
 	expenses := fuelCosts + driverPayouts + maintenance + tollCosts
@@ -148,8 +148,8 @@ func (s *PNLService) GenerateDailySnapshot(ctx context.Context, tenantID string,
 		   (id, tenant_id, snapshot_date, revenue, expenses, fuel_costs,
 		    driver_payouts, maintenance, toll_costs, tds_deducted, net_profit,
 		    trip_count, vehicle_count)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		 ON CONFLICT(tenant_id, snapshot_date) DO UPDATE SET
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		 ON CONFLICT (tenant_id, snapshot_date) DO UPDATE SET
 		   revenue       = excluded.revenue,
 		   expenses      = excluded.expenses,
 		   fuel_costs    = excluded.fuel_costs,
@@ -203,12 +203,12 @@ func (s *PNLService) GetMoneyStrip(ctx context.Context, tenantID string, now tim
 	// floored at 0 (mirrors InvoiceService.GetBalance per-invoice logic).
 	var receivables float64
 	_ = s.db.QueryRowContext(ctx,
-		`SELECT COALESCE(SUM(MAX(i.total - COALESCE(p.paid, 0), 0)), 0)
+		`SELECT COALESCE(SUM(CASE WHEN i.total - COALESCE(p.paid, 0) > 0 THEN i.total - COALESCE(p.paid, 0) ELSE 0 END), 0)
 		 FROM invoices i
 		 LEFT JOIN (
 		   SELECT invoice_id, SUM(amount) AS paid FROM payments GROUP BY invoice_id
 		 ) p ON p.invoice_id = i.id
-		 WHERE i.tenant_id = ?`,
+		 WHERE i.tenant_id = $1`,
 		tenantID).Scan(&receivables)
 
 	return &MoneyStrip{
@@ -231,7 +231,7 @@ func (s *PNLService) GetLatest(ctx context.Context, tenantID string) (*PNLSnapsh
 		`SELECT id, tenant_id, snapshot_date, revenue, expenses, fuel_costs,
 		        driver_payouts, maintenance, toll_costs, tds_deducted, net_profit,
 		        trip_count, vehicle_count
-		 FROM pnl_daily WHERE tenant_id = ? ORDER BY snapshot_date DESC LIMIT 1`,
+		 FROM pnl_daily WHERE tenant_id = $1 ORDER BY snapshot_date DESC LIMIT 1`,
 		tenantID)
 	if err != nil {
 		return nil, err
@@ -257,7 +257,7 @@ func (s *PNLService) GetPNLRange(ctx context.Context, tenantID string, from, to 
 		        driver_payouts, maintenance, toll_costs, tds_deducted, net_profit,
 		        trip_count, vehicle_count
 		 FROM pnl_daily
-		 WHERE tenant_id = ? AND snapshot_date BETWEEN ? AND ?
+		 WHERE tenant_id = $1 AND snapshot_date BETWEEN $2 AND $3
 		 ORDER BY snapshot_date ASC`,
 		tenantID, from.Format("2006-01-02"), to.Format("2006-01-02"))
 	if err != nil {

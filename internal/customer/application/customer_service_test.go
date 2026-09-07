@@ -48,24 +48,24 @@ func setupCustomerTestDB(t *testing.T) *sql.DB {
 	CREATE TABLE vehicles (
 		id TEXT PRIMARY KEY,
 		tenant_id TEXT NOT NULL,
-		plate_number TEXT NOT NULL,
-		model TEXT,
-		type TEXT NOT NULL
+		registration_number TEXT NOT NULL,
+		vehicle_number TEXT NOT NULL,
+		vehicle_type TEXT NOT NULL
 	);
-	INSERT INTO vehicles (id, tenant_id, plate_number, model, type)
-	VALUES ('veh-1', 'tenant-1', 'MH12AB1234', 'Tata Ace Gold', 'TATA_ACE');
+	INSERT INTO vehicles (id, tenant_id, registration_number, vehicle_number, vehicle_type)
+	VALUES ('veh-1', 'tenant-1', 'MH12AB1234', 'MH12AB1234', 'truck');
 
-	CREATE TABLE driver_vehicle_latest_positions (
-		tenant_id TEXT NOT NULL,
-		vehicle_id TEXT NOT NULL PRIMARY KEY,
-		latitude REAL NOT NULL,
-		longitude REAL NOT NULL,
-		speed_kmph REAL,
+	CREATE TABLE telemetry_snapshots (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		vehicle_id TEXT NOT NULL,
+		latitude REAL,
+		longitude REAL,
+		speed REAL,
 		heading REAL,
-		recorded_at DATETIME NOT NULL
+		timestamp DATETIME NOT NULL
 	);
-	INSERT INTO driver_vehicle_latest_positions (tenant_id, vehicle_id, latitude, longitude, speed_kmph, heading, recorded_at)
-	VALUES ('tenant-1', 'veh-1', 19.0760, 72.8777, 45.5, 180.0, datetime('now'));
+	INSERT INTO telemetry_snapshots (vehicle_id, latitude, longitude, speed, heading, timestamp)
+	VALUES ('veh-1', 19.0760, 72.8777, 45.5, 180.0, datetime('now'));
 
 	CREATE TABLE bookings (
 		id TEXT PRIMARY KEY,
@@ -96,15 +96,15 @@ func setupCustomerTestDB(t *testing.T) *sql.DB {
 		updated_at DATETIME DEFAULT (datetime('now'))
 	);
 
-	CREATE TABLE driver_documents (
+	CREATE TABLE trip_stops (
 		id TEXT PRIMARY KEY,
+		trip_id TEXT NOT NULL,
 		tenant_id TEXT NOT NULL,
-		driver_id TEXT,
-		entity_type TEXT NOT NULL,
-		entity_id TEXT NOT NULL,
-		document_type TEXT NOT NULL,
-		verification_status TEXT DEFAULT 'pending',
-		file_path TEXT,
+		stop_sequence INTEGER NOT NULL DEFAULT 1,
+		stop_type TEXT NOT NULL DEFAULT 'drop',
+		pod_required INTEGER DEFAULT 0,
+		pod_url TEXT,
+		pod_verified_at DATETIME,
 		created_at DATETIME DEFAULT (datetime('now'))
 	);
 
@@ -296,7 +296,7 @@ func TestPhase7_CustomerBookingWorkflow(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, trackingAssigned.Vehicle)
 	assert.Equal(t, "MH12AB1234", trackingAssigned.Vehicle.PlateNumber)
-	assert.Equal(t, "Tata Ace Gold", trackingAssigned.Vehicle.Model)
+	assert.Equal(t, "", trackingAssigned.Vehicle.Model)
 
 	require.NotNil(t, trackingAssigned.Driver)
 	assert.Equal(t, "Rajesh", trackingAssigned.Driver.FirstName)
@@ -309,10 +309,7 @@ func TestPhase7_CustomerBookingWorkflow(t *testing.T) {
 	assert.Equal(t, 19.0760, trackingAssigned.Tracking.Latitude)
 	assert.Equal(t, 72.8777, trackingAssigned.Tracking.Longitude)
 
-	// 7. Trip Execution & Document Delivery (POD)
-	_, _ = db.Exec(`
-		INSERT INTO driver_documents (id, tenant_id, driver_id, entity_type, entity_id, document_type, verification_status, file_path)
-		VALUES ('doc-lr-1', 'tenant-1', 'drv-1', 'trip', ?, 'LR', 'verified', '/docs/lr_001.pdf')`, tripID)
+	// 7. Trip Execution & Document Delivery (POD proofs live on trip_stops)
 
 	// Start and complete trip
 	_, err = driverSvc.ProcessDriverCommand(ctx, tenantID, "drv-1", driverApp.DriverCommandRequest{
@@ -329,12 +326,19 @@ func TestPhase7_CustomerBookingWorkflow(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	// Add POD document
+	// Add POD documents (stop proof + uploaded file)
 	_, _ = db.Exec(`
-		INSERT INTO driver_documents (id, tenant_id, driver_id, entity_type, entity_id, document_type, verification_status, file_path)
-		VALUES ('doc-pod-1', 'tenant-1', 'drv-1', 'trip', ?, 'POD', 'verified', '/docs/pod_001.jpg')`, tripID)
+		INSERT INTO trip_stops (id, trip_id, tenant_id, stop_sequence, stop_type, pod_required, pod_url, pod_verified_at)
+		VALUES ('stop-pod-1', ?, 'tenant-1', 1, 'drop', 1, '/docs/pod_001.jpg', datetime('now'))`, tripID)
+	_, _ = db.Exec(`
+		CREATE TABLE IF NOT EXISTS files (
+			id TEXT PRIMARY KEY, path TEXT, uploadable_type TEXT NOT NULL,
+			uploadable_id TEXT, created_at DATETIME NOT NULL DEFAULT (datetime('now')))`)
+	_, _ = db.Exec(`
+		INSERT INTO files (id, path, uploadable_type, uploadable_id)
+		VALUES ('file-pod-1', '/docs/pod_upload.jpg', 'trip_pod', ?)`, tripID)
 
-	// Verify Customer Tracking includes LR and POD documents
+	// Verify Customer Tracking includes both POD documents
 	trackingCompleted, err := svc.GetBookingTracking(ctx, tenantID, customerID, bookResp1.BookingID)
 	require.NoError(t, err)
 	assert.Equal(t, 2, len(trackingCompleted.Documents))

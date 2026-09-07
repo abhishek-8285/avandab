@@ -46,7 +46,7 @@ func (s *service) GetSubscription(ctx context.Context, tenantID shared.TenantID)
 	row := s.db.QueryRowContext(ctx, `
 		SELECT id, tenant_id, plan_id, status, current_period_start, current_period_end, trial_end, COALESCE(provider_subscription_id, ''), created_at, updated_at
 		FROM tenant_subscriptions
-		WHERE tenant_id = ?
+		WHERE tenant_id = $1
 	`, string(tenantID))
 
 	var sub domain.TenantSubscription
@@ -77,7 +77,7 @@ func (s *service) HasFeature(ctx context.Context, tenantID shared.TenantID, feat
 	err := s.db.QueryRowContext(ctx, `
 		SELECT override_value, expires_at
 		FROM tenant_entitlement_overrides
-		WHERE tenant_id = ? AND entitlement_type = 'FEATURE' AND key_name = ?
+		WHERE tenant_id = $1 AND entitlement_type = 'FEATURE' AND key_name = $2
 	`, string(tenantID), string(featureKey)).Scan(&overrideVal, &expiresStr)
 	if err == nil {
 		if expiresStr.Valid && expiresStr.String != "" {
@@ -107,7 +107,7 @@ func (s *service) HasFeature(ctx context.Context, tenantID shared.TenantID, feat
 
 	// 3. Lookup plan features
 	var featuresJSON string
-	err = s.db.QueryRowContext(ctx, `SELECT features_json FROM subscription_plans WHERE id = ?`, string(sub.PlanID)).Scan(&featuresJSON)
+	err = s.db.QueryRowContext(ctx, `SELECT features_json FROM subscription_plans WHERE id = $1`, string(sub.PlanID)).Scan(&featuresJSON)
 	if err != nil {
 		return false, domain.ErrPlanNotFound
 	}
@@ -150,7 +150,7 @@ func (s *service) checkQuotaTx(ctx context.Context, tx *sql.Tx, tenantID shared.
 	err = queryRow(ctx, `
 		SELECT id, tenant_id, quota_key, period_start, period_end, used_quantity, reserved_quantity, max_quantity, updated_at
 		FROM tenant_usage_meters
-		WHERE tenant_id = ? AND quota_key = ? AND period_start <= ? AND period_end >= ?
+		WHERE tenant_id = $1 AND quota_key = $2 AND period_start <= $3 AND period_end >= $4
 	`, string(tenantID), string(quotaKey), now.Format(time.RFC3339), now.Format(time.RFC3339)).Scan(
 		&meter.ID, &meter.TenantID, &meter.QuotaKey, &stStr, &endStr, &meter.UsedQuantity, &meter.ReservedQuantity, &meter.MaxQuantity, &upStr,
 	)
@@ -174,7 +174,7 @@ func (s *service) checkQuotaTx(ctx context.Context, tx *sql.Tx, tenantID shared.
 		}
 		_, err = execCtx(ctx, `
 			INSERT INTO tenant_usage_meters (id, tenant_id, quota_key, period_start, period_end, used_quantity, reserved_quantity, max_quantity, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		`, meter.ID, string(tenantID), string(quotaKey), meter.PeriodStart.Format(time.RFC3339), meter.PeriodEnd.Format(time.RFC3339), 0, 0, maxQty, now.Format(time.RFC3339))
 		if err != nil {
 			return nil, err
@@ -203,7 +203,7 @@ func (s *service) resolveMaxQuota(ctx context.Context, tenantID shared.TenantID,
 	var overrideVal string
 	err := s.db.QueryRowContext(ctx, `
 		SELECT override_value FROM tenant_entitlement_overrides
-		WHERE tenant_id = ? AND entitlement_type = 'QUOTA' AND key_name = ?
+		WHERE tenant_id = $1 AND entitlement_type = 'QUOTA' AND key_name = $2
 	`, string(tenantID), string(quotaKey)).Scan(&overrideVal)
 	if err == nil {
 		var val int
@@ -214,7 +214,7 @@ func (s *service) resolveMaxQuota(ctx context.Context, tenantID shared.TenantID,
 
 	// 2. Check plan
 	var quotasJSON string
-	err = s.db.QueryRowContext(ctx, `SELECT quotas_json FROM subscription_plans WHERE id = ?`, string(planID)).Scan(&quotasJSON)
+	err = s.db.QueryRowContext(ctx, `SELECT quotas_json FROM subscription_plans WHERE id = $1`, string(planID)).Scan(&quotasJSON)
 	if err != nil {
 		return 0, domain.ErrPlanNotFound
 	}
@@ -240,7 +240,7 @@ func (s *service) ReserveQuota(ctx context.Context, tx *sql.Tx, tenantID shared.
 	}
 
 	err := queryRunner.QueryRowContext(ctx, `
-		SELECT id FROM tenant_usage_events WHERE tenant_id = ? AND idempotency_key = ?
+		SELECT id FROM tenant_usage_events WHERE tenant_id = $1 AND idempotency_key = $2
 	`, string(tenantID), idempotencyKey).Scan(&existingID)
 	if err == nil {
 		return nil // Already consumed
@@ -255,9 +255,9 @@ func (s *service) ReserveQuota(ctx context.Context, tx *sql.Tx, tenantID shared.
 	now := time.Now().UTC()
 	res, err := queryRunner.ExecContext(ctx, `
 		UPDATE tenant_usage_meters
-		SET reserved_quantity = reserved_quantity + ?, updated_at = CURRENT_TIMESTAMP
-		WHERE tenant_id = ? AND quota_key = ? AND period_start <= ? AND period_end >= ?
-		  AND (used_quantity + reserved_quantity + ?) <= max_quantity
+		SET reserved_quantity = reserved_quantity + $1, updated_at = CURRENT_TIMESTAMP
+		WHERE tenant_id = $2 AND quota_key = $3 AND period_start <= $4 AND period_end >= $5
+		  AND (used_quantity + reserved_quantity + $6) <= max_quantity
 	`, quantity, string(tenantID), string(quotaKey), now.Format(time.RFC3339), now.Format(time.RFC3339), quantity)
 	if err != nil {
 		return err
@@ -281,10 +281,10 @@ func (s *service) CommitQuota(ctx context.Context, tx *sql.Tx, tenantID shared.T
 	// Decrement reserved, increment used
 	_, err := queryRunner.ExecContext(ctx, `
 		UPDATE tenant_usage_meters
-		SET reserved_quantity = MAX(0, reserved_quantity - ?),
-		    used_quantity = used_quantity + ?,
+		SET reserved_quantity = CASE WHEN reserved_quantity - $1 > 0 THEN reserved_quantity - $1 ELSE 0 END,
+		    used_quantity = used_quantity + $2,
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE tenant_id = ? AND quota_key = ? AND period_start <= ? AND period_end >= ?
+		WHERE tenant_id = $3 AND quota_key = $4 AND period_start <= $5 AND period_end >= $6
 	`, quantity, quantity, string(tenantID), string(quotaKey), now.Format(time.RFC3339), now.Format(time.RFC3339))
 	if err != nil {
 		return err
@@ -293,8 +293,9 @@ func (s *service) CommitQuota(ctx context.Context, tx *sql.Tx, tenantID shared.T
 	// Record immutable audit usage event
 	eventID := uuid.NewString()
 	_, err = queryRunner.ExecContext(ctx, `
-		INSERT OR IGNORE INTO tenant_usage_events (id, tenant_id, quota_key, quantity, idempotency_key, source_entity_type, source_entity_id, timestamp)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		INSERT INTO tenant_usage_events (id, tenant_id, quota_key, quantity, idempotency_key, source_entity_type, source_entity_id, timestamp)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		ON CONFLICT DO NOTHING
 	`, eventID, string(tenantID), string(quotaKey), quantity, idempotencyKey, entityType, entityID, now.Format(time.RFC3339))
 	return err
 }
@@ -310,9 +311,9 @@ func (s *service) ReleaseQuota(ctx context.Context, tx *sql.Tx, tenantID shared.
 	now := time.Now().UTC()
 	_, err := queryRunner.ExecContext(ctx, `
 		UPDATE tenant_usage_meters
-		SET reserved_quantity = MAX(0, reserved_quantity - ?),
+		SET reserved_quantity = CASE WHEN reserved_quantity - $1 > 0 THEN reserved_quantity - $1 ELSE 0 END,
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE tenant_id = ? AND quota_key = ? AND period_start <= ? AND period_end >= ?
+		WHERE tenant_id = $2 AND quota_key = $3 AND period_start <= $4 AND period_end >= $5
 	`, quantity, string(tenantID), string(quotaKey), now.Format(time.RFC3339), now.Format(time.RFC3339))
 	return err
 }
@@ -364,12 +365,12 @@ func (s *service) CommitBooking(ctx context.Context, tx *sql.Tx, tenantID shared
 	var done string
 	qr := s.db
 	if tx != nil {
-		if err := tx.QueryRowContext(ctx, `SELECT id FROM tenant_usage_events WHERE tenant_id = ? AND idempotency_key = ?`,
+		if err := tx.QueryRowContext(ctx, `SELECT id FROM tenant_usage_events WHERE tenant_id = $1 AND idempotency_key = $2`,
 			string(tenantID), reserveKey(bookingID, "commit")).Scan(&done); err == nil {
 			return nil
 		}
 	} else {
-		if err := qr.QueryRowContext(ctx, `SELECT id FROM tenant_usage_events WHERE tenant_id = ? AND idempotency_key = ?`,
+		if err := qr.QueryRowContext(ctx, `SELECT id FROM tenant_usage_events WHERE tenant_id = $1 AND idempotency_key = $2`,
 			string(tenantID), reserveKey(bookingID, "commit")).Scan(&done); err == nil {
 			return nil
 		}
@@ -430,8 +431,8 @@ func (s *service) CreateSubscription(ctx context.Context, tenantID shared.Tenant
 
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO tenant_subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, trial_end, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(tenant_id) DO UPDATE SET
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		ON CONFLICT (tenant_id) DO UPDATE SET
 			plan_id = excluded.plan_id,
 			status = excluded.status,
 			current_period_start = excluded.current_period_start,
@@ -468,7 +469,7 @@ func (s *service) ProcessSubscriptionWebhook(ctx context.Context, p WebhookEvent
 	// 1. Replay Idempotency Check
 	var existingID string
 	err := s.db.QueryRowContext(ctx, `
-		SELECT id FROM subscription_webhook_events WHERE provider = ? AND event_id = ?
+		SELECT id FROM subscription_webhook_events WHERE provider = $1 AND event_id = $2
 	`, p.Provider, p.EventID).Scan(&existingID)
 	if err == nil {
 		return nil // Already processed idempotently
@@ -477,7 +478,7 @@ func (s *service) ProcessSubscriptionWebhook(ctx context.Context, p WebhookEvent
 	// 2. Lookup Tenant Subscription
 	var tenantIDStr, currentStatus string
 	err = s.db.QueryRowContext(ctx, `
-		SELECT tenant_id, status FROM tenant_subscriptions WHERE provider_subscription_id = ?
+		SELECT tenant_id, status FROM tenant_subscriptions WHERE provider_subscription_id = $1
 	`, p.ProviderSubscriptionID).Scan(&tenantIDStr, &currentStatus)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -489,7 +490,7 @@ func (s *service) ProcessSubscriptionWebhook(ctx context.Context, p WebhookEvent
 	// 3. Out-of-Order Protection: Prevent older events from downgrading newer active state
 	var latestTsStr sql.NullString
 	_ = s.db.QueryRowContext(ctx, `
-		SELECT MAX(event_timestamp) FROM subscription_webhook_events WHERE provider_subscription_id = ?
+		SELECT MAX(event_timestamp) FROM subscription_webhook_events WHERE provider_subscription_id = $1
 	`, p.ProviderSubscriptionID).Scan(&latestTsStr)
 	if latestTsStr.Valid && latestTsStr.String != "" {
 		if latestTS, err := parseTime(latestTsStr.String); err == nil {
@@ -498,7 +499,7 @@ func (s *service) ProcessSubscriptionWebhook(ctx context.Context, p WebhookEvent
 				recID := uuid.NewString()
 				_, _ = s.db.ExecContext(ctx, `
 					INSERT INTO subscription_webhook_events (id, tenant_id, provider, event_id, event_type, payload_json, provider_subscription_id, event_timestamp, processed_at, status)
-					VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 'IGNORED_OUT_OF_ORDER')
+					VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, 'IGNORED_OUT_OF_ORDER')
 				`, recID, tenantIDStr, p.Provider, p.EventID, p.EventType, p.PayloadJSON, p.ProviderSubscriptionID, p.EventTimestamp.Format(time.RFC3339))
 				return nil
 			}
@@ -534,7 +535,7 @@ func (s *service) ProcessSubscriptionWebhook(ctx context.Context, p WebhookEvent
 	planID := ""
 	if p.PlanID != "" {
 		var exists string
-		if err := s.db.QueryRowContext(ctx, `SELECT id FROM subscription_plans WHERE id = ? AND is_active = 1`, p.PlanID).Scan(&exists); err == nil {
+		if err := s.db.QueryRowContext(ctx, `SELECT id FROM subscription_plans WHERE id = $1 AND is_active = 1`, p.PlanID).Scan(&exists); err == nil {
 			planID = exists
 		}
 	}
@@ -548,27 +549,27 @@ func (s *service) ProcessSubscriptionWebhook(ctx context.Context, p WebhookEvent
 		if planID != "" {
 			_, err = tx.ExecContext(ctx, `
 				UPDATE tenant_subscriptions
-				SET status = ?, plan_id = ?, current_period_start = ?, current_period_end = ?, updated_at = ?
-				WHERE provider_subscription_id = ?
+				SET status = $1, plan_id = $2, current_period_start = $3, current_period_end = $4, updated_at = $5
+				WHERE provider_subscription_id = $6
 			`, string(newStatus), planID, p.PeriodStart.Format(time.RFC3339), p.PeriodEnd.Format(time.RFC3339), now.Format(time.RFC3339), p.ProviderSubscriptionID)
 		} else {
 			_, err = tx.ExecContext(ctx, `
 				UPDATE tenant_subscriptions
-				SET status = ?, current_period_start = ?, current_period_end = ?, updated_at = ?
-				WHERE provider_subscription_id = ?
+				SET status = $1, current_period_start = $2, current_period_end = $3, updated_at = $4
+				WHERE provider_subscription_id = $5
 			`, string(newStatus), p.PeriodStart.Format(time.RFC3339), p.PeriodEnd.Format(time.RFC3339), now.Format(time.RFC3339), p.ProviderSubscriptionID)
 		}
 	} else if planID != "" {
 		_, err = tx.ExecContext(ctx, `
 			UPDATE tenant_subscriptions
-			SET status = ?, plan_id = ?, updated_at = ?
-			WHERE provider_subscription_id = ?
+			SET status = $1, plan_id = $2, updated_at = $3
+			WHERE provider_subscription_id = $4
 		`, string(newStatus), planID, now.Format(time.RFC3339), p.ProviderSubscriptionID)
 	} else {
 		_, err = tx.ExecContext(ctx, `
 			UPDATE tenant_subscriptions
-			SET status = ?, updated_at = ?
-			WHERE provider_subscription_id = ?
+			SET status = $1, updated_at = $2
+			WHERE provider_subscription_id = $3
 		`, string(newStatus), now.Format(time.RFC3339), p.ProviderSubscriptionID)
 	}
 	if err != nil {
@@ -579,7 +580,7 @@ func (s *service) ProcessSubscriptionWebhook(ctx context.Context, p WebhookEvent
 	recID := uuid.NewString()
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO subscription_webhook_events (id, tenant_id, provider, event_id, event_type, payload_json, provider_subscription_id, event_timestamp, processed_at, status)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 'PROCESSED')
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP, 'PROCESSED')
 	`, recID, tenantIDStr, p.Provider, p.EventID, p.EventType, p.PayloadJSON, p.ProviderSubscriptionID, p.EventTimestamp.Format(time.RFC3339))
 	if err != nil {
 		return err
@@ -592,8 +593,8 @@ func (s *service) HandleSubscriptionWebhook(ctx context.Context, providerSubID s
 	now := time.Now().UTC()
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE tenant_subscriptions
-		SET status = ?, current_period_start = ?, current_period_end = ?, updated_at = ?
-		WHERE provider_subscription_id = ?
+		SET status = $1, current_period_start = $2, current_period_end = $3, updated_at = $4
+		WHERE provider_subscription_id = $5
 	`, string(status), periodStart.Format(time.RFC3339), periodEnd.Format(time.RFC3339), now.Format(time.RFC3339), providerSubID)
 	return err
 }
@@ -606,8 +607,8 @@ func (s *service) SetEntitlementOverride(ctx context.Context, tenantID shared.Te
 	}
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO tenant_entitlement_overrides (id, tenant_id, entitlement_type, key_name, override_value, reason, expires_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(tenant_id, entitlement_type, key_name) DO UPDATE SET
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (tenant_id, entitlement_type, key_name) DO UPDATE SET
 			override_value = excluded.override_value,
 			reason = excluded.reason,
 			expires_at = excluded.expires_at

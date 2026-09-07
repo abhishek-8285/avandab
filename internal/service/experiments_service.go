@@ -62,7 +62,7 @@ func (s *ExperimentsService) CountByStatus(ctx context.Context, tenantID, status
 	}
 	var n int
 	err := s.db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM experiments_spec16 WHERE tenant_id = ? AND status = ?`, tenantID, status).Scan(&n)
+		`SELECT COUNT(*) FROM experiments_spec16 WHERE tenant_id = $1 AND status = $2`, tenantID, status).Scan(&n)
 	return n, err
 }
 
@@ -143,7 +143,7 @@ func (s *ExperimentsService) CreateExperiment(ctx context.Context, exp Experimen
 		`INSERT INTO experiments_spec16
 		 (id, tenant_id, name, description, variant_a, variant_b, traffic_split,
 		  status, start_date, end_date, metric_name, created_by, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, 'draft', $8, $9, $10, $11, $12, $13)`,
 		id, exp.TenantID, exp.Name, exp.Description, exp.VariantA, exp.VariantB,
 		exp.TrafficSplit, exp.StartDate, exp.EndDate, exp.MetricName, exp.CreatedBy, now, now)
 	if err != nil {
@@ -159,8 +159,8 @@ func (s *ExperimentsService) StartExperiment(ctx context.Context, experimentID s
 		return fmt.Errorf("database unavailable")
 	}
 	result, err := s.db.ExecContext(ctx,
-		`UPDATE experiments_spec16 SET status = 'running', updated_at = ?
-		 WHERE id = ? AND status = 'draft'`,
+		`UPDATE experiments_spec16 SET status = 'running', updated_at = $1
+		 WHERE id = $2 AND status = 'draft'`,
 		time.Now().UTC(), experimentID)
 	if err != nil {
 		return err
@@ -179,8 +179,8 @@ func (s *ExperimentsService) PauseExperiment(ctx context.Context, experimentID s
 		return fmt.Errorf("database unavailable")
 	}
 	result, err := s.db.ExecContext(ctx,
-		`UPDATE experiments_spec16 SET status = 'paused', updated_at = ?
-		 WHERE id = ? AND status = 'running'`,
+		`UPDATE experiments_spec16 SET status = 'paused', updated_at = $1
+		 WHERE id = $2 AND status = 'running'`,
 		time.Now().UTC(), experimentID)
 	if err != nil {
 		return err
@@ -198,8 +198,8 @@ func (s *ExperimentsService) ResumeExperiment(ctx context.Context, experimentID 
 		return fmt.Errorf("database unavailable")
 	}
 	result, err := s.db.ExecContext(ctx,
-		`UPDATE experiments_spec16 SET status = 'running', updated_at = ?
-		 WHERE id = ? AND status = 'paused'`,
+		`UPDATE experiments_spec16 SET status = 'running', updated_at = $1
+		 WHERE id = $2 AND status = 'paused'`,
 		time.Now().UTC(), experimentID)
 	if err != nil {
 		return err
@@ -217,8 +217,8 @@ func (s *ExperimentsService) CompleteExperiment(ctx context.Context, experimentI
 		return fmt.Errorf("database unavailable")
 	}
 	result, err := s.db.ExecContext(ctx,
-		`UPDATE experiments_spec16 SET status = 'completed', updated_at = ?
-		 WHERE id = ? AND status IN ('running', 'paused')`,
+		`UPDATE experiments_spec16 SET status = 'completed', updated_at = $1
+		 WHERE id = $2 AND status IN ('running', 'paused')`,
 		time.Now().UTC(), experimentID)
 	if err != nil {
 		return err
@@ -237,8 +237,8 @@ func (s *ExperimentsService) ArchiveExperiment(ctx context.Context, experimentID
 		return fmt.Errorf("database unavailable")
 	}
 	result, err := s.db.ExecContext(ctx,
-		`UPDATE experiments_spec16 SET status = 'archived', updated_at = ?
-		 WHERE id = ? AND status = 'completed'`,
+		`UPDATE experiments_spec16 SET status = 'archived', updated_at = $1
+		 WHERE id = $2 AND status = 'completed'`,
 		time.Now().UTC(), experimentID)
 	if err != nil {
 		return err
@@ -260,7 +260,7 @@ func (s *ExperimentsService) GetExperiment(ctx context.Context, experimentID str
 	err := s.db.QueryRowContext(ctx,
 		`SELECT id, tenant_id, name, description, variant_a, variant_b, traffic_split,
 		        status, start_date, end_date, metric_name, created_by, created_at, updated_at
-		 FROM experiments_spec16 WHERE id = ?`, experimentID).
+		 FROM experiments_spec16 WHERE id = $1`, experimentID).
 		Scan(&exp.ID, &exp.TenantID, &exp.Name, &exp.Description, &exp.VariantA, &exp.VariantB,
 			&exp.TrafficSplit, &exp.Status, &startDate, &endDate, &exp.MetricName,
 			&exp.CreatedBy, &exp.CreatedAt, &exp.UpdatedAt)
@@ -289,7 +289,7 @@ func (s *ExperimentsService) GetExperimentByName(ctx context.Context, tenantID, 
 	err := s.db.QueryRowContext(ctx,
 		`SELECT id, tenant_id, name, description, variant_a, variant_b, traffic_split,
 		        status, start_date, end_date, metric_name, created_by, created_at, updated_at
-		 FROM experiments_spec16 WHERE tenant_id = ? AND name = ?`, tenantID, name).
+		 FROM experiments_spec16 WHERE tenant_id = $1 AND name = $2`, tenantID, name).
 		Scan(&exp.ID, &exp.TenantID, &exp.Name, &exp.Description, &exp.VariantA, &exp.VariantB,
 			&exp.TrafficSplit, &exp.Status, &startDate, &endDate, &exp.MetricName,
 			&exp.CreatedBy, &exp.CreatedAt, &exp.UpdatedAt)
@@ -318,7 +318,7 @@ func (s *ExperimentsService) ListExperiments(ctx context.Context, tenantID strin
 	}
 	query := `SELECT id, tenant_id, name, description, variant_a, variant_b, traffic_split,
 	          status, start_date, end_date, metric_name, created_by, created_at, updated_at
-	          FROM experiments_spec16 WHERE tenant_id = ?`
+	          FROM experiments_spec16 WHERE tenant_id = $1`
 	args := []interface{}{tenantID}
 
 	if status != "" {
@@ -368,7 +368,7 @@ func (s *ExperimentsService) AssignVariant(ctx context.Context, tenantID, experi
 	var existingVariant string
 	err := s.db.QueryRowContext(ctx,
 		`SELECT variant FROM experiment_assignments
-		 WHERE experiment_id = ? AND subject_type = ? AND subject_id = ?`,
+		 WHERE experiment_id = $1 AND subject_type = $2 AND subject_id = $3`,
 		experimentID, subjectType, subjectID).Scan(&existingVariant)
 	if err == nil {
 		return existingVariant, nil
@@ -402,12 +402,12 @@ func (s *ExperimentsService) AssignVariant(ctx context.Context, tenantID, experi
 	assignmentID := generateDisplayID("expa")
 	if _, err = s.db.ExecContext(ctx,
 		`INSERT INTO experiment_assignments (id, experiment_id, tenant_id, subject_type, subject_id, variant)
-		 VALUES (?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6)`,
 		assignmentID, experimentID, tenantID, subjectType, subjectID, variant); err != nil {
 		// Concurrent insert race: fall back to reading the winner.
 		if rerr := s.db.QueryRowContext(ctx,
 			`SELECT variant FROM experiment_assignments
-			 WHERE experiment_id = ? AND subject_type = ? AND subject_id = ?`,
+			 WHERE experiment_id = $1 AND subject_type = $2 AND subject_id = $3`,
 			experimentID, subjectType, subjectID).Scan(&existingVariant); rerr == nil {
 			return existingVariant, nil
 		}
@@ -442,7 +442,7 @@ func (s *ExperimentsService) GetAssignment(ctx context.Context, experimentID, su
 	var variant string
 	err := s.db.QueryRowContext(ctx,
 		`SELECT variant FROM experiment_assignments
-		 WHERE experiment_id = ? AND subject_type = ? AND subject_id = ?`,
+		 WHERE experiment_id = $1 AND subject_type = $2 AND subject_id = $3`,
 		experimentID, subjectType, subjectID).Scan(&variant)
 	if err == sql.ErrNoRows {
 		return "", nil
@@ -457,7 +457,7 @@ func (s *ExperimentsService) ListAssignments(ctx context.Context, experimentID s
 	}
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT id, experiment_id, tenant_id, subject_type, subject_id, variant, assigned_at
-		 FROM experiment_assignments WHERE experiment_id = ? ORDER BY assigned_at DESC`,
+		 FROM experiment_assignments WHERE experiment_id = $1 ORDER BY assigned_at DESC`,
 		experimentID)
 	if err != nil {
 		return nil, err
@@ -536,7 +536,7 @@ func (s *ExperimentsService) RecordMetric(ctx context.Context, tenantID, experim
 
 	_, err = s.db.ExecContext(ctx,
 		`INSERT INTO founder_audit (id, tenant_id, actor_id, actor_role, action, resource_type, resource_id, details)
-		 VALUES (?, ?, ?, 'system', 'experiment_metric', 'experiment', ?, ?)`,
+		 VALUES ($1, $2, $3, 'system', 'experiment_metric', 'experiment', $4, $5)`,
 		generateDisplayID("fa"), tenantID, subjectID, experimentID, string(payload))
 	if err != nil {
 		return fmt.Errorf("insert experiment metric: %w", err)
@@ -568,7 +568,7 @@ func (s *ExperimentsService) GetExperimentResults(ctx context.Context, experimen
 	}
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT details FROM founder_audit
-		 WHERE resource_type = 'experiment' AND resource_id = ? AND action = 'experiment_metric'
+		 WHERE resource_type = 'experiment' AND resource_id = $1 AND action = 'experiment_metric'
 		 ORDER BY created_at ASC`,
 		experimentID)
 	if err != nil {

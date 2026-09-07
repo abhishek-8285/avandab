@@ -43,7 +43,7 @@ func (r *SnapshotRepository) LoadNewFixes(ctx context.Context, limit int) ([]dom
 		 WHERE (e.last_fix_at IS NULL OR s.timestamp > e.last_fix_at)
 		   AND s.latitude IS NOT NULL AND s.longitude IS NOT NULL
 		 ORDER BY s.timestamp ASC
-		 LIMIT ?`,
+		 LIMIT $1`,
 		limit)
 	if err != nil {
 		return nil, fmt.Errorf("load new fixes: %w", err)

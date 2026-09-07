@@ -78,7 +78,7 @@ var featureRegistry = map[string]FeatureContent{
 		WhoFor: "Operations leads who run the day-to-day and need the whole fleet in their peripheral vision.",
 		FAQ: []FAQItem{
 			{Question: "Can I customize which tiles I see?", Answer: "The cockpit aggregates the live data from your modules today; role-based views are on the roadmap. Every tile already links straight to the detail you need."},
-			{Question: "Does it update in real time?", Answer: "Yes. Trips, payments, and vehicle status reflect the latest activity as your team works in Avandab."},
+			{Question: "Does it update in real time$1", Answer: "Yes. Trips, payments, and vehicle status reflect the latest activity as your team works in Avandab."},
 		},
 		Related: []string{"trips", "bookings", "vehicles"},
 	},
@@ -118,7 +118,7 @@ var featureRegistry = map[string]FeatureContent{
 		WhoFor: "Dispatchers coordinating the board and drivers executing on the road.",
 		FAQ: []FAQItem{
 			{Question: "What happens to a trip when a booking is cancelled?", Answer: "The linked trip can be cancelled too, and the status is recorded so your reports stay accurate."},
-			{Question: "Can drivers update status themselves?", Answer: "Yes — drivers use the mobile e-POD flow to mark started and completed and upload proof of delivery."},
+			{Question: "Can drivers update status themselves$1", Answer: "Yes — drivers use the mobile e-POD flow to mark started and completed and upload proof of delivery."},
 		},
 		Related: []string{"routes", "drivers", "vehicles", "kharcha"},
 	},
@@ -273,7 +273,7 @@ var featureRegistry = map[string]FeatureContent{
 		WhoFor: "HR and fleet managers who must prove drivers are licensed and available.",
 		FAQ: []FAQItem{
 			{Question: "What happens when a license expires?", Answer: "Avandab raises a compliance alert so you won't assign that driver to a trip until it's renewed."},
-			{Question: "Is driver availability shared with dispatch?", Answer: "Yes — availability feeds assignment so you only schedule drivers who are free."},
+			{Question: "Is driver availability shared with dispatch$1", Answer: "Yes — availability feeds assignment so you only schedule drivers who are free."},
 		},
 		Related: []string{"vehicles", "trips", "users"},
 	},
@@ -540,7 +540,7 @@ var featureRegistry = map[string]FeatureContent{
 		WhoFor: "Admins who own identity and access for the workspace.",
 		FAQ: []FAQItem{
 			{Question: "What's the difference between admin and operator?", Answer: "Operators run day-to-day ops; admins also configure settings, users, and company details per your RBAC."},
-			{Question: "Does deactivating delete their data?", Answer: "No — deactivation removes access while preserving their historical activity for audits."},
+			{Question: "Does deactivating delete their data$1", Answer: "No — deactivation removes access while preserving their historical activity for audits."},
 		},
 		Related: []string{"settings", "audit-logs"},
 	},

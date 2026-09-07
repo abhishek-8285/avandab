@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 	"time"
+	appdb "transport-app/internal/database"
 
 	"transport-app/internal/alerts/domain"
 	"transport-app/internal/alerts/repository"
@@ -160,12 +161,12 @@ func (r *sqlAlertRepository) CreateAlert(ctx context.Context, a *domain.Alert) e
 			latitude, longitude, metadata, acked_by, acked_at, resolved_by, resolved_at,
 			created_at, updated_at
 		) VALUES (
-			?, ?, ?, ?, ?, ?, ?,
-			?, ?, ?, ?, ?,
-			?, ?, ?, ?, ?, ?,
-			?, ?, ?, ?,
-			?, ?, ?, ?, ?, ?, ?,
-			?, ?
+			$1, $2, $3, $4, $5, $6, $7,
+			$8, $9, $10, $11, $12,
+			$13, $14, $15, $16, $17, $18,
+			$19, $20, $21, $22,
+			$23, $24, $25, $26, $27, $28, $29,
+			$30, $31
 		)`,
 		a.ID, a.RuleID, a.Source, a.AlertType, a.Severity, a.Status, a.DedupKey,
 		a.TenantID, a.AckStatus, a.SeverityRank, a.MoneyAtRisk, a.SnoozedUntil,
@@ -181,9 +182,9 @@ func (r *sqlAlertRepository) IncrementOccurrences(ctx context.Context, alertID s
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE alerts
 		SET occurrences = occurrences + 1,
-		    last_seen_at = ?,
+		    last_seen_at = $1,
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE id = ?`, lastSeen, alertID)
+		WHERE id = $2`, lastSeen, alertID)
 	return err
 }
 
@@ -193,7 +194,7 @@ func (r *sqlAlertRepository) ListRulesBySource(ctx context.Context, source strin
 		       dedup_key_expr, cooldown_seconds, storm_window_seconds, storm_batch_min,
 		       channel_routing, escalation_schedule, is_active, created_at, updated_at
 		FROM alert_rules
-		WHERE source = ? AND is_active = 1`, source)
+		WHERE source = $1 AND is_active = 1`, source)
 	if err != nil {
 		return nil, err
 	}
@@ -236,7 +237,7 @@ func (r *sqlAlertRepository) GetRule(ctx context.Context, ruleID string) (*domai
 		       dedup_key_expr, cooldown_seconds, storm_window_seconds, storm_batch_min,
 		       channel_routing, escalation_schedule, is_active, created_at, updated_at
 		FROM alert_rules
-		WHERE id = ?`, ruleID)
+		WHERE id = $1`, ruleID)
 
 	var rule domain.Rule
 	var threshold sql.NullFloat64
@@ -274,7 +275,7 @@ func (r *sqlAlertRepository) GetActiveRuleForType(ctx context.Context, source, a
 		       dedup_key_expr, cooldown_seconds, storm_window_seconds, storm_batch_min,
 		       channel_routing, escalation_schedule, is_active, created_at, updated_at
 		FROM alert_rules
-		WHERE source = ? AND alert_type = ? AND is_active = 1
+		WHERE source = $1 AND alert_type = $2 AND is_active = 1
 		LIMIT 1`, source, alertType)
 
 	var rule domain.Rule
@@ -317,7 +318,7 @@ func (r *sqlAlertRepository) GetOverrides(ctx context.Context, ruleID string, en
 	row := r.db.QueryRowContext(ctx, `
 		SELECT id, rule_id, entity_id, severity, threshold, cooldown_seconds, channels, is_active, created_at
 		FROM rule_overrides
-		WHERE rule_id = ? AND (entity_id = ? OR entity_id IS NULL) AND is_active = 1
+		WHERE rule_id = $1 AND (entity_id = $2 OR entity_id IS NULL) AND is_active = 1
 		ORDER BY entity_id DESC
 		LIMIT 1`, ruleID, entityID)
 
@@ -369,7 +370,11 @@ func (r *sqlAlertRepository) ListAlerts(ctx context.Context, status string, limi
 		args = append(args, limit, offset)
 	}
 
-	rows, err := r.db.QueryContext(ctx, query, args...)
+	rebound, rerr := appdb.Rebind(query)
+	if rerr != nil {
+		return nil, rerr
+	}
+	rows, err := r.db.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +389,7 @@ func (r *sqlAlertRepository) UnreadCount(ctx context.Context, userID string) (in
 		SELECT COUNT(*)
 		FROM alerts
 		WHERE status IN ('open', 'acknowledged', 'escalated')
-		  AND (user_id = ? OR user_id IS NULL)`, userID).Scan(&count)
+		  AND (user_id = $1 OR user_id IS NULL)`, userID).Scan(&count)
 	return count, err
 }
 
@@ -401,10 +406,10 @@ func (r *sqlAlertRepository) Ack(ctx context.Context, alertID string, userID str
 		UPDATE alerts
 		SET status = 'acknowledged',
 		    next_escalation_at = NULL,
-		    acked_by = ?,
-		    acked_at = ?,
+		    acked_by = $1,
+		    acked_at = $2,
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE id = ? AND status IN ('open', 'escalated')`, userID, now, alertID)
+		WHERE id = $3 AND status IN ('open', 'escalated')`, userID, now, alertID)
 	return err
 }
 
@@ -414,10 +419,10 @@ func (r *sqlAlertRepository) Resolve(ctx context.Context, alertID string, userID
 		UPDATE alerts
 		SET status = 'resolved',
 		    next_escalation_at = NULL,
-		    resolved_by = ?,
-		    resolved_at = ?,
+		    resolved_by = $1,
+		    resolved_at = $2,
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE id = ? AND status IN ('open', 'acknowledged', 'escalated')`, userID, now, alertID)
+		WHERE id = $3 AND status IN ('open', 'acknowledged', 'escalated')`, userID, now, alertID)
 	return err
 }
 
@@ -426,10 +431,10 @@ func (r *sqlAlertRepository) MarkAllRead(ctx context.Context, userID string) err
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE alerts
 		SET status = 'acknowledged',
-		    acked_by = ?,
-		    acked_at = ?,
+		    acked_by = $1,
+		    acked_at = $2,
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE status = 'open' AND (user_id = ? OR user_id IS NULL)`, userID, now, userID)
+		WHERE status = 'open' AND (user_id = $3 OR user_id IS NULL)`, userID, now, userID)
 	return err
 }
 
@@ -452,11 +457,11 @@ func (r *sqlAlertRepository) ListPendingEscalations(ctx context.Context, now tim
 func (r *sqlAlertRepository) UpdateEscalation(ctx context.Context, alertID string, nextStep int, nextAt *time.Time, status string) error {
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE alerts
-		SET escalation_step = ?,
-		    next_escalation_at = ?,
-		    status = ?,
+		SET escalation_step = $1,
+		    next_escalation_at = $2,
+		    status = $3,
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE id = ?`, nextStep, nextAt, status, alertID)
+		WHERE id = $4`, nextStep, nextAt, status, alertID)
 	return err
 }
 
@@ -480,9 +485,9 @@ func (r *sqlAlertRepository) ListUnflushedStormAlerts(ctx context.Context, windo
 func (r *sqlAlertRepository) UpdateMetadata(ctx context.Context, alertID string, metadata string) error {
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE alerts
-		SET metadata = ?,
+		SET metadata = $1,
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE id = ?`, metadata, alertID)
+		WHERE id = $2`, metadata, alertID)
 	return err
 }
 
@@ -527,7 +532,11 @@ func (r *sqlAlertRepository) ListInbox(ctx context.Context, tenantID, status str
 	}
 	query += ` ORDER BY severity_rank ASC, created_at DESC LIMIT ?`
 	args = append(args, limit)
-	rows, err := r.db.QueryContext(ctx, query, args...)
+	rebound, rerr := appdb.Rebind(query)
+	if rerr != nil {
+		return nil, rerr
+	}
+	rows, err := r.db.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -542,8 +551,8 @@ func (r *sqlAlertRepository) InboxCounts(ctx context.Context, tenantID string) (
 		SELECT COUNT(*),
 		       COALESCE(SUM(CASE WHEN severity_rank = 1 THEN 1 ELSE 0 END), 0)
 		FROM alerts
-		WHERE tenant_id = ?
-		  AND (ack_status = 'open' OR (ack_status = 'snoozed' AND snoozed_until <= ?))`,
+		WHERE tenant_id = $1
+		  AND (ack_status = 'open' OR (ack_status = 'snoozed' AND snoozed_until <= $2))`,
 		tenantID, now).Scan(&open, &critical)
 	if err != nil {
 		return 0, 0, err
@@ -561,10 +570,10 @@ func (r *sqlAlertRepository) InboxAck(ctx context.Context, alertID, userID strin
 		SET ack_status = 'acked',
 		    status = 'acknowledged',
 		    next_escalation_at = NULL,
-		    acked_by = ?,
-		    acked_at = ?,
+		    acked_by = $1,
+		    acked_at = $2,
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE id = ? AND ack_status = 'open'`, userID, now, alertID)
+		WHERE id = $3 AND ack_status = 'open'`, userID, now, alertID)
 	if err != nil {
 		return false, err
 	}
@@ -579,9 +588,9 @@ func (r *sqlAlertRepository) InboxSnooze(ctx context.Context, alertID, userID st
 	res, err := r.db.ExecContext(ctx, `
 		UPDATE alerts
 		SET ack_status = 'snoozed',
-		    snoozed_until = ?,
+		    snoozed_until = $1,
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE id = ? AND ack_status = 'open'`, until, alertID)
+		WHERE id = $2 AND ack_status = 'open'`, until, alertID)
 	if err != nil {
 		return false, err
 	}
@@ -602,12 +611,16 @@ func (r *sqlAlertRepository) InboxSnoozeAll(ctx context.Context, ids []string, u
 	for _, id := range ids {
 		args = append(args, id)
 	}
-	res, err := r.db.ExecContext(ctx, `
+	rebound, rerr := appdb.Rebind(`
 		UPDATE alerts
 		SET ack_status = 'snoozed',
-		    snoozed_until = ?,
+		    snoozed_until = $1,
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE ack_status = 'open' AND id IN (`+placeholders+`)`, args...)
+		WHERE ack_status = 'open' AND id IN (` + placeholders + `)`)
+	if rerr != nil {
+		return 0, rerr
+	}
+	res, err := r.db.ExecContext(ctx, rebound, args...)
 	if err != nil {
 		return 0, err
 	}
@@ -622,7 +635,7 @@ func (r *sqlAlertRepository) ReopenExpiredSnoozes(ctx context.Context, now time.
 		SET ack_status = 'open',
 		    snoozed_until = NULL,
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE ack_status = 'snoozed' AND snoozed_until IS NOT NULL AND snoozed_until <= ?`, now)
+		WHERE ack_status = 'snoozed' AND snoozed_until IS NOT NULL AND snoozed_until <= $1`, now)
 	if err != nil {
 		return 0, err
 	}
@@ -640,7 +653,7 @@ func (r *sqlAlertRepository) ReopenExpiredSnoozesForTenant(ctx context.Context, 
 		SET ack_status = 'open',
 		    snoozed_until = NULL,
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE tenant_id = ? AND ack_status = 'snoozed' AND snoozed_until IS NOT NULL AND snoozed_until <= ?`, tenantID, now)
+		WHERE tenant_id = $1 AND ack_status = 'snoozed' AND snoozed_until IS NOT NULL AND snoozed_until <= $2`, tenantID, now)
 	if err != nil {
 		return 0, err
 	}

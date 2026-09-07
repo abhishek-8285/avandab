@@ -49,15 +49,17 @@ func setupSettlementTestDB(t *testing.T) *sql.DB {
 		id TEXT PRIMARY KEY,
 		tenant_id TEXT NOT NULL,
 		driver_id TEXT NOT NULL,
-		account_type TEXT NOT NULL,
-		account_number TEXT NOT NULL,
-		ifsc TEXT NOT NULL,
-		status TEXT NOT NULL DEFAULT 'verified',
+		account_holder_name TEXT NOT NULL DEFAULT '',
+		account_number_encrypted TEXT NOT NULL DEFAULT '',
+		account_number_masked TEXT NOT NULL DEFAULT '',
+		ifsc_code TEXT NOT NULL DEFAULT '',
+		bank_name TEXT NOT NULL DEFAULT '',
 		is_primary INTEGER NOT NULL DEFAULT 1,
+		verification_status TEXT NOT NULL DEFAULT 'unverified',
 		created_at DATETIME DEFAULT (datetime('now'))
 	);
-	INSERT INTO driver_payout_accounts (id, tenant_id, driver_id, account_type, account_number, ifsc, status, is_primary)
-	VALUES ('acc-1', 'tenant-1', 'drv-settle-1', 'bank_account', '1122334455', 'HDFC0001234', 'verified', 1);
+	INSERT INTO driver_payout_accounts (id, tenant_id, driver_id, verification_status, is_primary)
+	VALUES ('acc-1', 'tenant-1', 'drv-settle-1', 'verified', 1);
 
 	CREATE TABLE driver_settlements (
 		id TEXT PRIMARY KEY,

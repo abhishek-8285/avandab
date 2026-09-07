@@ -11,6 +11,17 @@ import (
 type TripID string
 type TripStatus string
 
+// Mobile contract (gap 5): mobile collapses these 9 backend states to 4:
+//
+//	draft/scheduled/assigned                  → PENDING
+//	started/reached_pickup/in_transit         → IN_TRANSIT
+//	delivered/completed                       → COMPLETED
+//	cancelled                                 → CANCELLED
+//
+// Collapse is lossy by design — mobile maps inbound via BACKEND_TO_MOBILE in
+// mobile/src/domain/trip/tripMachine.ts and sends outbound commands
+// (start/reach-pickup/in-transit/deliver/complete/cancel endpoints), never raw
+// status values. Keep this table in sync with that file when adding states.
 const (
 	TripDraft         TripStatus = "draft"
 	TripScheduled     TripStatus = "scheduled"

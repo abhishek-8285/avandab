@@ -103,6 +103,10 @@ Single source of truth for `db/migrations/` version numbers. Repo head is
 | 00122 | `bookings.idempotency_key` + `trips.idempotency_key` (tenant-scoped unique partial indexes) — P6 retry safety | Multi-tenant perf |
 | 00123 | `work_orders` job cards + indexes — maintenance feature layer | Fleet maintenance |
 | 00124 | `work_orders` tenant FK triggers (00103 convention, late-applied; no new indexes) | Fleet maintenance |
+| 00125 | `tenant_company_profiles` — per-tenant company profiles (multi-tenant settings isolation) | Company settings isolation |
+| 00126 | fleet registry SOP parity — 35 SOP columns + `blocked` status CHECK rebuild + `vehicle_measuring_points`/`vehicle_measurements` | Fleet registry SOP parity spec |
+| 00127 | `eway_bill_events` CHECK gains `DELIVERED` (TripDeliveredEvent handler inserts it on every delivery) | E-Way Bill lifecycle |
+| 00128 | `eway_bills.status` CHECK gains `part_a` + `delivered` (autogenerate transitions active→part_a→delivered; old CHECK silently failed the delivery UPDATE) | E-Way Bill lifecycle |
 | 00121+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	appdb "transport-app/internal/database"
 
 	db "transport-app/db/generated/sqlite"
 	"transport-app/internal/repository"
@@ -328,11 +329,11 @@ func (r *tripRepository) checkResourceConflict(ctx context.Context, column, reso
 	query := fmt.Sprintf(`
 SELECT id, trip_number, status, departure_time, arrival_time
 FROM trips
-WHERE %s = ? AND tenant_id = ?
+WHERE %s = $1 AND tenant_id = $2
   AND status IN ('scheduled', 'assigned', 'started', 'reached_pickup', 'in_transit', 'delivered')
-  AND (? = '' OR id != ?)
-  AND departure_time <= ?
-  AND COALESCE(arrival_time, '9999-12-31 23:59:59') >= ?`, column)
+  AND ($3 = '' OR id != $4)
+  AND departure_time <= $5
+  AND COALESCE(arrival_time, '9999-12-31 23:59:59') >= $6`, column)
 	rows, err := r.getDBTx(ctx).QueryContext(ctx, query,
 		resourceID, string(tenantID), excludeTripID, excludeTripID,
 		windowEndStr, sqliteTime(windowStart),
@@ -485,7 +486,11 @@ LIMIT ? OFFSET ?`
 	args = append(args, statusArgs...)
 	args = append(args, limit, offset)
 
-	rows, err := r.dbConn.QueryContext(ctx, querySQL, args...)
+	rebound, rerr := appdb.Rebind(querySQL)
+	if rerr != nil {
+		return nil, 0, rerr
+	}
+	rows, err := r.dbConn.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -559,7 +564,11 @@ WHERE t.tenant_id = ?
 	countArgs = append(countArgs, statusArgs...)
 
 	var count int64
-	err = r.dbConn.QueryRowContext(ctx, countSQL, countArgs...).Scan(&count)
+	reboundCount, rerr := appdb.Rebind(countSQL)
+	if rerr != nil {
+		return nil, 0, rerr
+	}
+	err = r.dbConn.QueryRowContext(ctx, reboundCount, countArgs...).Scan(&count)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -580,7 +589,7 @@ func (r *tripRepository) SearchReadModelsByDriver(ctx context.Context, tenantID 
 		var dID, dCode string
 		err := r.dbConn.QueryRowContext(ctx, `
 			SELECT id, driver_id FROM drivers
-			WHERE tenant_id = ? AND (id = ? OR driver_id = ? OR email = (SELECT email FROM users WHERE id = ?))
+			WHERE tenant_id = $1 AND (id = $2 OR driver_id = $3 OR email = (SELECT email FROM users WHERE id = $4))
 			LIMIT 1
 		`, string(tenantID), id, id, id).Scan(&dID, &dCode)
 		if err == nil {
@@ -640,7 +649,11 @@ LIMIT ? OFFSET ?`, driverClause)
 	args = append(args, statusArgs...)
 	args = append(args, limit, offset)
 
-	rows, err := r.dbConn.QueryContext(ctx, querySQL, args...)
+	rebound, rerr := appdb.Rebind(querySQL)
+	if rerr != nil {
+		return nil, 0, rerr
+	}
+	rows, err := r.dbConn.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -718,7 +731,11 @@ WHERE t.tenant_id = ?
 	countArgs = append(countArgs, statusArgs...)
 
 	var count int64
-	err = r.dbConn.QueryRowContext(ctx, countSQL, countArgs...).Scan(&count)
+	reboundCount, rerr := appdb.Rebind(countSQL)
+	if rerr != nil {
+		return nil, 0, rerr
+	}
+	err = r.dbConn.QueryRowContext(ctx, reboundCount, countArgs...).Scan(&count)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -763,14 +780,14 @@ func (r *tripRepository) saveStops(ctx context.Context, t *aggregate.TripAggrega
 				pod_required, pod_url, pod_signature_url, pod_verified_at, pod_notes, failure_reason,
 				created_at, updated_at
 			) VALUES (
-				?, ?, ?, ?, ?, ?, ?,
-				?, ?, ?, ?, ?, ?,
-				?, ?, ?, ?,
-				?, ?, ?, ?,
-				?, ?, ?, ?, ?, ?,
-				?, ?
+				$1, $2, $3, $4, $5, $6, $7,
+				$8, $9, $10, $11, $12, $13,
+				$14, $15, $16, $17,
+				$18, $19, $20, $21,
+				$22, $23, $24, $25, $26, $27,
+				$28, $29
 			)
-			ON CONFLICT(trip_id, stop_sequence) DO UPDATE SET
+			ON CONFLICT (trip_id, stop_sequence) DO UPDATE SET
 				location_name = excluded.location_name,
 				address = excluded.address,
 				consignee_name = excluded.consignee_name,
@@ -814,7 +831,7 @@ func (r *tripRepository) loadStops(ctx context.Context, tripID, tenantID string)
 		       pod_required, pod_url, pod_signature_url, pod_verified_at, pod_notes, failure_reason,
 		       created_at, updated_at
 		FROM trip_stops
-		WHERE trip_id = ? AND tenant_id = ?
+		WHERE trip_id = $1 AND tenant_id = $2
 		ORDER BY stop_sequence ASC
 	`, tripID, tenantID)
 	if err != nil {

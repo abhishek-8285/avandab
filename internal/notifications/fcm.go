@@ -485,7 +485,7 @@ func (s *FCMService) GetActiveTokens(ctx context.Context, tenantID, driverID str
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT push_token
 		FROM driver_push_tokens
-		WHERE tenant_id = ? AND (driver_id = ? OR user_id = ?) AND is_active = 1
+		WHERE tenant_id = $1 AND (driver_id = $2 OR user_id = $3) AND is_active = 1
 		ORDER BY updated_at DESC
 	`, tenantID, driverID, driverID)
 	if err != nil {
@@ -512,7 +512,7 @@ func (s *FCMService) DeactivateToken(ctx context.Context, token string) error {
 	_, err := s.db.ExecContext(ctx, `
 		UPDATE driver_push_tokens
 		SET is_active = 0, updated_at = CURRENT_TIMESTAMP
-		WHERE push_token = ?
+		WHERE push_token = $1
 	`, token)
 	if err != nil {
 		s.logger.Warn("failed to deactivate invalid push token", "token", token, "error", err)
@@ -656,7 +656,7 @@ func (s *FCMService) handleTripAssigned(ctx context.Context, e events.Event) err
 			SELECT t.driver_id, t.trip_number, r.destination
 			FROM trips t
 			LEFT JOIN routes r ON t.route_id = r.id
-			WHERE t.id = ? OR t.trip_number = ?
+			WHERE t.id = $1 OR t.trip_number = $2
 			LIMIT 1
 		`, tripID, tripID).Scan(&dbDriverID, &dbTripNum, &dbDest)
 		if err == nil {
@@ -732,7 +732,7 @@ func (s *FCMService) handleTripCancelled(ctx context.Context, e events.Event) er
 		err := s.db.QueryRowContext(ctx, `
 			SELECT driver_id, trip_number
 			FROM trips
-			WHERE id = ? OR trip_number = ?
+			WHERE id = $1 OR trip_number = $2
 			LIMIT 1
 		`, tripID, tripID).Scan(&dbDriverID, &dbTripNum)
 		if err == nil {

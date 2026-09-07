@@ -136,8 +136,9 @@ func (e *Engine) ProcessTelemetry(ctx context.Context, pt TelemetryPoint) (Devia
 
 		// A. Persist into telemetry_alerts idempotently
 		resAlert, _ := e.db.ExecContext(ctx, `
-			INSERT OR IGNORE INTO telemetry_alerts (id, trip_id, vehicle_id, driver_id, alert_type, severity, details, latitude, longitude, resolved, created_at)
-			VALUES (?, ?, ?, ?, 'gps_deviation', 'critical', ?, ?, ?, 0, ?)
+			INSERT INTO telemetry_alerts (id, trip_id, vehicle_id, driver_id, alert_type, severity, details, latitude, longitude, resolved, created_at)
+			VALUES ($1, $2, $3, $4, 'gps_deviation', 'critical', $5, $6, $7, 0, $8)
+			ON CONFLICT (id) DO NOTHING
 		`, alertID, trip.ID, trip.VehicleID, trip.DriverID, details, pt.Latitude, pt.Longitude, pt.Timestamp.Format("2006-01-02 15:04:05"))
 
 		rowsAlert := int64(0)
@@ -167,8 +168,9 @@ func (e *Engine) ProcessTelemetry(ctx context.Context, pt TelemetryPoint) (Devia
 		payloadBytes, _ := json.Marshal(outboxPayload)
 
 		resOutbox, _ := e.db.ExecContext(ctx, `
-			INSERT OR IGNORE INTO outbox_events (id, aggregate_id, aggregate_type, event_type, payload, created_at)
-			VALUES (?, ?, 'trip', ?, ?, datetime('now'))
+			INSERT INTO outbox_events (id, aggregate_id, aggregate_type, event_type, payload, created_at)
+			VALUES ($1, $2, 'trip', $3, $4, CURRENT_TIMESTAMP)
+			ON CONFLICT (id) DO NOTHING
 		`, "ob_"+alertID, trip.ID, events.GPSDeviationAlert, string(payloadBytes))
 
 		rowsOutbox := int64(0)
@@ -210,7 +212,7 @@ func (e *Engine) resolveActiveTrip(ctx context.Context, tripID, vehicleID string
 	if tripID != "" {
 		err := e.db.QueryRowContext(ctx, `
 			SELECT id, tenant_id, route_id, vehicle_id, driver_id, status
-			FROM trips WHERE id = ? LIMIT 1`, tripID).
+			FROM trips WHERE id = $1 LIMIT 1`, tripID).
 			Scan(&t.ID, &t.TenantID, &t.RouteID, &t.VehicleID, &t.DriverID, &t.Status)
 		if err == nil {
 			return &t, nil
@@ -221,7 +223,7 @@ func (e *Engine) resolveActiveTrip(ctx context.Context, tripID, vehicleID string
 		err := e.db.QueryRowContext(ctx, `
 			SELECT id, tenant_id, route_id, vehicle_id, driver_id, status
 			FROM trips
-			WHERE vehicle_id = ? AND status IN ('assigned', 'started', 'reached_pickup', 'in_transit')
+			WHERE vehicle_id = $1 AND status IN ('assigned', 'started', 'reached_pickup', 'in_transit')
 			ORDER BY created_at DESC LIMIT 1`, vehicleID).
 			Scan(&t.ID, &t.TenantID, &t.RouteID, &t.VehicleID, &t.DriverID, &t.Status)
 		if err == nil {

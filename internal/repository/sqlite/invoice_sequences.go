@@ -16,8 +16,8 @@ import (
 // the invoice persistence layer ("plain SQL read, no sqlc regen").
 const nextInvoiceNumberSQL = `
 INSERT INTO invoice_sequences (financial_year, tenant_id, last_number, prefix)
-VALUES (?, ?, 1, ?)
-ON CONFLICT(financial_year, tenant_id)
+VALUES ($1, $2, 1, $3)
+ON CONFLICT (financial_year, tenant_id)
 DO UPDATE SET last_number = invoice_sequences.last_number + 1
 RETURNING last_number
 `

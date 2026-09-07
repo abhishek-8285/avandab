@@ -8,7 +8,7 @@ INSERT INTO tenant_company_profiles (
     financial_year, address, phone, email, gst_number, pan_number, state_code,
     updated_at
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
 ON CONFLICT(tenant_id) DO UPDATE SET
     company_name = excluded.company_name,
     logo_path = excluded.logo_path,
@@ -26,5 +26,5 @@ ON CONFLICT(tenant_id) DO UPDATE SET
     gst_number = excluded.gst_number,
     pan_number = excluded.pan_number,
     state_code = excluded.state_code,
-    updated_at = datetime('now')
+    updated_at = CURRENT_TIMESTAMP
 RETURNING *;

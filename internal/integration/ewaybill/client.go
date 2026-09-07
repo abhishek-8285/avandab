@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"transport-app/internal/shared"
 )
 
 // Config holds connection settings for the NIC E-way bill API.
@@ -75,6 +77,14 @@ type stubClient struct {
 	cfg Config
 }
 
+// mockWarn marks demo-mode fabrications at Warn with tenant context so mock
+// EWB numbers are never mistaken for real NIC data in logs. Every stub
+// method that synthesizes provider data must call it on the mock path.
+func mockWarn(ctx context.Context, msg string, args ...any) {
+	args = append(args, "mock", true, "tenant", string(shared.TenantIDFromContext(ctx)))
+	slog.Default().Warn(msg, args...)
+}
+
 func (c *stubClient) Generate(ctx context.Context, req GenerateRequest) (EWayBill, error) {
 	slog.Default().Info("[ewaybill] Generate called", "endpoint", c.cfg.Endpoint, "enabled", c.cfg.Enabled, "document", req.DocumentNumber)
 	if !c.cfg.Enabled {
@@ -84,8 +94,13 @@ func (c *stubClient) Generate(ctx context.Context, req GenerateRequest) (EWayBil
 		return EWayBill{}, fmt.Errorf("ewaybill: NIC credentials not configured; set INTEGRATION_EWAYBILL_API_KEY or INTEGRATION_EWAYBILL_USE_MOCK=true for demo mode")
 	}
 	now := time.Now()
+	uid := uuid.New().String()
+	if len(uid) > 8 {
+		uid = uid[:8]
+	}
+	mockWarn(ctx, "[ewaybill] mock Generate returning demo data", "document", req.DocumentNumber)
 	return EWayBill{
-		EwbNumber:   "EWB" + uuid.New().String()[:12],
+		EwbNumber:   "EWB-MOCK-" + uid,
 		Status:      "ACTIVE",
 		GeneratedAt: now,
 		ValidUpto:   now.Add(24 * time.Hour),
@@ -102,6 +117,7 @@ func (c *stubClient) Get(ctx context.Context, ewbNumber string) (EWayBill, error
 	if !c.cfg.UseMock {
 		return EWayBill{}, fmt.Errorf("ewaybill: NIC credentials not configured; set INTEGRATION_EWAYBILL_API_KEY or INTEGRATION_EWAYBILL_USE_MOCK=true for demo mode")
 	}
+	mockWarn(ctx, "[ewaybill] mock Get returning demo data", "ewb_number", ewbNumber)
 	return EWayBill{
 		EwbNumber:   ewbNumber,
 		Status:      "ACTIVE",
@@ -120,6 +136,7 @@ func (c *stubClient) Cancel(ctx context.Context, ewbNumber, reason string) (Canc
 	if !c.cfg.UseMock {
 		return Cancellation{}, fmt.Errorf("ewaybill: NIC credentials not configured; set INTEGRATION_EWAYBILL_API_KEY or INTEGRATION_EWAYBILL_USE_MOCK=true for demo mode")
 	}
+	mockWarn(ctx, "[ewaybill] mock Cancel returning demo data", "ewb_number", ewbNumber)
 	return Cancellation{
 		EwbNumber:   ewbNumber,
 		CancelledAt: time.Now(),
@@ -141,6 +158,7 @@ func (c *stubClient) GeneratePartA(ctx context.Context, req GenerateRequest) (EW
 	if len(uid) > 8 {
 		uid = uid[:8]
 	}
+	mockWarn(ctx, "[ewaybill] mock GeneratePartA returning demo data", "document", req.DocumentNumber)
 	return EWayBill{
 		EwbNumber:   "EWB-MOCK-" + uid,
 		Status:      "PART_A_GENERATED",
@@ -160,6 +178,7 @@ func (c *stubClient) AttachPartB(ctx context.Context, ewbNumber, vehicleNumber, 
 		return EWayBill{}, fmt.Errorf("ewaybill: NIC credentials not configured; set INTEGRATION_EWAYBILL_API_KEY or INTEGRATION_EWAYBILL_USE_MOCK=true for demo mode")
 	}
 	now := time.Now()
+	mockWarn(ctx, "[ewaybill] mock AttachPartB returning demo data", "ewb_number", ewbNumber)
 	return EWayBill{
 		EwbNumber:   ewbNumber,
 		Status:      "ACTIVE",
@@ -179,6 +198,7 @@ func (c *stubClient) Extend(ctx context.Context, ewbNumber string, req ExtendReq
 		return EWayBill{}, fmt.Errorf("ewaybill: NIC credentials not configured; set INTEGRATION_EWAYBILL_API_KEY or INTEGRATION_EWAYBILL_USE_MOCK=true for demo mode")
 	}
 	now := time.Now()
+	mockWarn(ctx, "[ewaybill] mock Extend returning demo data", "ewb_number", ewbNumber)
 	return EWayBill{
 		EwbNumber:   ewbNumber,
 		Status:      "EXTENDED",
@@ -202,8 +222,9 @@ func (c *stubClient) GetByTrip(ctx context.Context, tripID string) (EWayBill, er
 		return EWayBill{}, fmt.Errorf("ewaybill: NIC credentials not configured; set INTEGRATION_EWAYBILL_API_KEY or INTEGRATION_EWAYBILL_USE_MOCK=true for demo mode")
 	}
 	now := time.Now()
+	mockWarn(ctx, "[ewaybill] mock GetByTrip returning demo data", "trip_id", tripID)
 	return EWayBill{
-		EwbNumber:   "EWB-TRIP-" + tripID[:min(8, len(tripID))],
+		EwbNumber:   "EWB-MOCK-TRIP-" + tripID[:min(8, len(tripID))],
 		Status:      "ACTIVE",
 		GeneratedAt: now.Add(-2 * time.Hour),
 		ValidUpto:   now.Add(22 * time.Hour),

@@ -176,28 +176,22 @@ func (r *driverRepository) GetReadModel(ctx context.Context, id aggregate.Driver
 
 func (r *driverRepository) SearchReadModels(ctx context.Context, tenantID shared.TenantID, query string, status string, limit int, offset int) ([]domain.DriverReadModel, int64, error) {
 	rows, err := r.Q(ctx).SearchDrivers(ctx, db.SearchDriversParams{
-		TenantID: string(tenantID),
-		Column2:  sql.NullString{String: query, Valid: true},
-		Column3:  sql.NullString{String: query, Valid: true},
-		Column4:  sql.NullString{String: query, Valid: true},
-		Column5:  sql.NullString{String: query, Valid: true},
-		Column6:  status,
-		Status:   status,
-		Limit:    int64(limit),
-		Offset:   int64(offset),
+		TenantID:  string(tenantID),
+		Search:    query,
+		StatusAll: status,
+		Status:    status,
+		Limit:     int64(limit),
+		Offset:    int64(offset),
 	})
 	if err != nil {
 		return nil, 0, err
 	}
 
 	total, err := r.Q(ctx).CountDrivers(ctx, db.CountDriversParams{
-		TenantID: string(tenantID),
-		Column2:  sql.NullString{String: query, Valid: true},
-		Column3:  sql.NullString{String: query, Valid: true},
-		Column4:  sql.NullString{String: query, Valid: true},
-		Column5:  sql.NullString{String: query, Valid: true},
-		Column6:  status,
-		Status:   status,
+		TenantID:  string(tenantID),
+		Search:    query,
+		StatusAll: status,
+		Status:    status,
 	})
 	if err != nil {
 		return nil, 0, err

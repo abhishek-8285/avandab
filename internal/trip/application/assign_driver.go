@@ -77,8 +77,8 @@ func (uc *AssignDriverUseCase) Execute(ctx context.Context, cmd AssignDriverComm
 					if strings.Contains(strings.ToLower(err.Error()), "license") {
 						blockedBy = "license_expiry"
 					}
-					if _, ierr := dbGetter.DB().ExecContext(txCtx, `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-						fmt.Sprintf("ovr-%d", time.Now().UnixNano()), string(tenant), string(cmd.TripID), vehicleID, cmd.DriverID, blockedBy, cmd.OverrideReason, overriddenBy); ierr != nil {
+					if _, ierr := dbGetter.DB().ExecContext(txCtx, `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+						fmt.Sprintf("ovr-%d", time.Now().UnixNano()), string(tenant), string(cmd.TripID), vehicleID, cmd.DriverID, blockedBy, cmd.OverrideReason, overriddenBy, time.Now().UTC().Format("2006-01-02 15:04:05")); ierr != nil {
 						return fmt.Errorf("record dispatch override audit: %w", ierr)
 					}
 				}
@@ -151,7 +151,7 @@ func isExempt(ctx ports.TxContext, entityType, entityID, docType string) bool {
 	var id string
 	err := dbGetter.DB().QueryRowContext(ctx, `
 		SELECT id FROM compliance_exemptions
-		WHERE entity_type = ? AND entity_id = ? AND (doc_type = ? OR doc_type = 'all' OR (? = 'permit' AND doc_type = 'rc') OR (? = 'rc' AND doc_type = 'permit'))
+		WHERE entity_type = $1 AND entity_id = $2 AND (doc_type = $3 OR doc_type = 'all' OR ($4 = 'permit' AND doc_type = 'rc') OR ($5 = 'rc' AND doc_type = 'permit'))
 		  AND exempt_until > CURRENT_TIMESTAMP
 		LIMIT 1`, entityType, entityID, docType, docType, docType).Scan(&id)
 	return err == nil && id != ""
@@ -165,6 +165,6 @@ func recordComplianceCheck(ctx ports.TxContext, entityType, entityID, checkType,
 	id := fmt.Sprintf("chk-%d", time.Now().UnixNano())
 	_, _ = dbGetter.DB().ExecContext(ctx, `
 		INSERT INTO compliance_checks (id, entity_type, entity_id, check_type, status, details, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+		VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
 		id, entityType, entityID, checkType, status, details)
 }

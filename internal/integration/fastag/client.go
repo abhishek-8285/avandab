@@ -75,6 +75,14 @@ type clientImpl struct {
 	db  *sql.DB
 }
 
+// mockWarn marks demo-mode fabrications at Warn with tenant context so mock
+// balances/transactions are never mistaken for real NETC data in logs. Every
+// method that synthesizes provider data must call it on the mock path.
+func mockWarn(ctx context.Context, msg string, args ...any) {
+	args = append(args, "mock", true, "tenant", string(shared.TenantIDFromContext(ctx)))
+	slog.Default().Warn(msg, args...)
+}
+
 func (c *clientImpl) GetBalance(ctx context.Context, vehicleNumber, tagID string) (Balance, error) {
 	slog.Default().Info("[fastag] GetBalance called", "endpoint", c.cfg.Endpoint, "enabled", c.cfg.Enabled, "vehicle", vehicleNumber, "tag", tagID)
 	if !c.cfg.Enabled {
@@ -92,14 +100,14 @@ func (c *clientImpl) GetBalance(ctx context.Context, vehicleNumber, tagID string
 			err = c.db.QueryRowContext(ctx, `
 				SELECT tag_id, vehicle_number, balance, last_sync
 				FROM fastag_tags
-				WHERE vehicle_number = ? OR vehicle_id = ?
+				WHERE vehicle_number = $1 OR vehicle_id = $2
 				LIMIT 1
 			`, vehicleNumber, vehicleNumber).Scan(&tagIDDB, &vehNumDB, &balance, &lastSync)
 		} else if tagID != "" {
 			err = c.db.QueryRowContext(ctx, `
 				SELECT tag_id, vehicle_number, balance, last_sync
 				FROM fastag_tags
-				WHERE tag_id = ?
+				WHERE tag_id = $1
 				LIMIT 1
 			`, tagID).Scan(&tagIDDB, &vehNumDB, &balance, &lastSync)
 		} else {
@@ -129,6 +137,7 @@ func (c *clientImpl) GetBalance(ctx context.Context, vehicleNumber, tagID string
 		return Balance{}, fmt.Errorf("fastag: no tag record for vehicle %q / tag %q", vehicleNumber, tagID)
 	}
 
+	mockWarn(ctx, "[fastag] mock GetBalance returning demo data", "vehicle", vehicleNumber, "tag", tagID)
 	return Balance{
 		VehicleNumber: vehicleNumber,
 		TagID:         tagID,
@@ -147,6 +156,15 @@ func (c *clientImpl) DeductToll(ctx context.Context, req DeductTollRequest) (Tol
 	txnID := uuid.New().String()
 	now := time.Now()
 
+	// Without a DB there is no local ledger to record against; outside
+	// explicit demo mode refuse instead of fabricating a SUCCESS toll.
+	if c.db == nil && !c.cfg.UseMock {
+		return TollTransaction{}, fmt.Errorf("fastag: no provider configured and no local ledger; set INTEGRATION_FASTAG_USE_MOCK=true for demo mode")
+	}
+	if c.cfg.UseMock {
+		txnID = "MOCK-" + txnID
+	}
+
 	if c.db != nil {
 		source := req.Source
 		if source == "" {
@@ -155,10 +173,10 @@ func (c *clientImpl) DeductToll(ctx context.Context, req DeductTollRequest) (Tol
 		tenantID := string(shared.TenantIDFromContext(ctx))
 		if tenantID == "" && req.TripID != "" {
 			// Toll money must land in the trip owner's org.
-			_ = c.db.QueryRowContext(ctx, `SELECT tenant_id FROM trips WHERE id = ?`, req.TripID).Scan(&tenantID)
+			_ = c.db.QueryRowContext(ctx, `SELECT tenant_id FROM trips WHERE id = $1`, req.TripID).Scan(&tenantID)
 		}
 		if tenantID == "" && req.TagID != "" {
-			_ = c.db.QueryRowContext(ctx, `SELECT tenant_id FROM fastag_tags WHERE tag_id = ? OR id = ?`, req.TagID, req.TagID).Scan(&tenantID)
+			_ = c.db.QueryRowContext(ctx, `SELECT tenant_id FROM fastag_tags WHERE tag_id = $1 OR id = $2`, req.TagID, req.TagID).Scan(&tenantID)
 		}
 		if tenantID == "" {
 			return TollTransaction{}, fmt.Errorf("fastag: cannot record toll without tenant (trip %q tag %q)", req.TripID, req.TagID)
@@ -167,7 +185,7 @@ func (c *clientImpl) DeductToll(ctx context.Context, req DeductTollRequest) (Tol
 			INSERT INTO fastag_transactions (
 				id, tenant_id, tag_id, vehicle_number, trip_id, plaza_id, plaza_name,
 				amount, txn_timestamp, status, source, reconciled
-			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'SUCCESS', ?, 0)
+			) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'SUCCESS', $10, 0)
 		`, txnID, string(tenantID), req.TagID, req.VehicleNumber, req.TripID, req.PlazaID, req.PlazaName, req.Amount, now, source)
 		if err != nil {
 			slog.Default().Warn("fastag: could not persist deduction txn", "error", err)
@@ -175,12 +193,15 @@ func (c *clientImpl) DeductToll(ctx context.Context, req DeductTollRequest) (Tol
 			// Decrement balance in fastag_tags
 			_, _ = c.db.ExecContext(ctx, `
 				UPDATE fastag_tags
-				SET balance = balance - ?, last_sync = ?
-				WHERE tag_id = ? OR vehicle_number = ?
+				SET balance = balance - $1, last_sync = $2
+				WHERE tag_id = $3 OR vehicle_number = $4
 			`, req.Amount, now, req.TagID, req.VehicleNumber)
 		}
 	}
 
+	if c.cfg.UseMock {
+		mockWarn(ctx, "[fastag] mock DeductToll returning demo transaction", "txn", txnID, "vehicle", req.VehicleNumber)
+	}
 	return TollTransaction{
 		TransactionID: txnID,
 		VehicleNumber: req.VehicleNumber,
@@ -206,9 +227,9 @@ func (c *clientImpl) ListTransactions(ctx context.Context, vehicleNumber string,
 		rows, err := c.db.QueryContext(ctx, `
 			SELECT id, tag_id, vehicle_number, plaza_id, plaza_name, amount, txn_timestamp, status
 			FROM fastag_transactions
-			WHERE vehicle_number = ? OR ? = ''
+			WHERE vehicle_number = $1 OR $2 = ''
 			ORDER BY txn_timestamp DESC
-			LIMIT ?
+			LIMIT $3
 		`, vehicleNumber, vehicleNumber, limit)
 		if err == nil {
 			defer rows.Close()
@@ -239,10 +260,11 @@ func (c *clientImpl) ListTransactions(ctx context.Context, vehicleNumber string,
 	}
 
 	now := time.Now()
+	mockWarn(ctx, "[fastag] mock ListTransactions returning demo data", "vehicle", vehicleNumber, "limit", limit)
 	txs := make([]TollTransaction, limit)
 	for i := 0; i < limit; i++ {
 		txs[i] = TollTransaction{
-			TransactionID: uuid.New().String(),
+			TransactionID: "MOCK-" + uuid.New().String(),
 			VehicleNumber: vehicleNumber,
 			TagID:         "TAG" + vehicleNumber,
 			PlazaID:       fmt.Sprintf("PLZ%03d", i+1),
@@ -261,6 +283,9 @@ func (c *clientImpl) Reconcile(ctx context.Context, vehicleNumber string, from, 
 	// performs real matching against the transactions table; this
 	// client-level method only proxies a provider API. Never report fake
 	// pull/match counts.
+	if !c.cfg.Enabled {
+		return ReconcileResult{}, fmt.Errorf("fastag integration disabled")
+	}
 	if !c.cfg.UseMock {
 		return ReconcileResult{}, fmt.Errorf("fastag: client-level reconcile requires a provider integration; use the reconciliation service")
 	}

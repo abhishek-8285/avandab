@@ -87,9 +87,9 @@ func (s *DriverAppService) RegisterDriver(ctx context.Context, tenantID, driverI
 		ex := s.exec(txCtx)
 		_, err := ex.ExecContext(txCtx, `
 			INSERT INTO drivers (id, driver_id, first_name, last_name, phone, email, license_number, license_expiry, status, tenant_id)
-			VALUES (?, ?, ?, ?, ?, ?, 'DL-PENDING', date('now', '+5 years'), 'available', ?)
-			ON CONFLICT(driver_id) DO UPDATE SET updated_at = CURRENT_TIMESTAMP`,
-			driverID, driverID, firstName, lastName, phone, email, tenantID)
+			VALUES ($1, $2, $3, $4, $5, $6, 'DL-PENDING', $7, 'available', $8)
+			ON CONFLICT (driver_id) DO UPDATE SET updated_at = CURRENT_TIMESTAMP`,
+			driverID, driverID, firstName, lastName, phone, email, time.Now().UTC().AddDate(5, 0, 0).Format("2006-01-02"), tenantID)
 		if err != nil {
 			return err
 		}
@@ -211,7 +211,7 @@ func (s *DriverAppService) SubmitLicense(ctx context.Context, tenantID, driverID
 		_, err := ex.ExecContext(txCtx, `
 			UPDATE driver_onboarding
 			SET license_status = 'pending', current_step = 'kyc_documents'
-			WHERE tenant_id = ? AND driver_id = ?`, tenantID, driverID)
+			WHERE tenant_id = $1 AND driver_id = $2`, tenantID, driverID)
 		if err != nil {
 			return err
 		}
@@ -232,7 +232,7 @@ func (s *DriverAppService) SubmitDocument(ctx context.Context, tenantID, driverI
 		ex := s.exec(txCtx)
 		_, err := ex.ExecContext(txCtx, `
 			INSERT INTO driver_compliance_documents (id, tenant_id, driver_id, document_type, storage_key, mime_type, file_size_bytes, document_hash, status, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'submitted', CURRENT_TIMESTAMP)`,
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'submitted', CURRENT_TIMESTAMP)`,
 			docID, tenantID, driverID, docType, storageKey, mimeType, fileSize, docHash)
 		if err != nil {
 			return err
@@ -273,7 +273,7 @@ func (s *DriverAppService) ClaimVehicle(ctx context.Context, tenantID, driverID,
 		_, err := ex.ExecContext(txCtx, `
 			UPDATE driver_onboarding
 			SET vehicle_status = 'pending_claim_review'
-			WHERE tenant_id = ? AND driver_id = ?`, tenantID, driverID)
+			WHERE tenant_id = $1 AND driver_id = $2`, tenantID, driverID)
 		if err != nil {
 			return err
 		}
@@ -303,7 +303,7 @@ func (s *DriverAppService) SubmitPayoutAccount(ctx context.Context, tenantID, dr
 		_, err := ex.ExecContext(txCtx, `
 			UPDATE driver_payout_accounts
 			SET is_primary = 0, valid_until = CURRENT_TIMESTAMP
-			WHERE tenant_id = ? AND driver_id = ? AND is_primary = 1`,
+			WHERE tenant_id = $1 AND driver_id = $2 AND is_primary = 1`,
 			tenantID, driverID)
 		if err != nil {
 			return err
@@ -311,7 +311,7 @@ func (s *DriverAppService) SubmitPayoutAccount(ctx context.Context, tenantID, dr
 
 		_, err = ex.ExecContext(txCtx, `
 			INSERT INTO driver_payout_accounts (id, tenant_id, driver_id, account_holder_name, account_number_encrypted, account_number_masked, ifsc_code, bank_name, is_primary, verification_status, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 'penny_drop_pending', CURRENT_TIMESTAMP)`,
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1, 'penny_drop_pending', CURRENT_TIMESTAMP)`,
 			accID, tenantID, driverID, holder, accNum, masked, strings.ToUpper(strings.TrimSpace(ifsc)), bankName)
 		if err != nil {
 			return err
@@ -320,7 +320,7 @@ func (s *DriverAppService) SubmitPayoutAccount(ctx context.Context, tenantID, dr
 		_, err = ex.ExecContext(txCtx, `
 			UPDATE driver_onboarding
 			SET bank_status = 'pending'
-			WHERE tenant_id = ? AND driver_id = ?`, tenantID, driverID)
+			WHERE tenant_id = $1 AND driver_id = $2`, tenantID, driverID)
 		if err != nil {
 			return err
 		}
@@ -350,7 +350,7 @@ func (s *DriverAppService) SubmitForVerification(ctx context.Context, tenantID, 
 		_, err = ex.ExecContext(txCtx, `
 			UPDATE driver_onboarding
 			SET overall_status = 'submitted', current_step = 'pending_approval'
-			WHERE tenant_id = ? AND driver_id = ?`, tenantID, driverID)
+			WHERE tenant_id = $1 AND driver_id = $2`, tenantID, driverID)
 		if err != nil {
 			return err
 		}
@@ -408,19 +408,19 @@ func (s *DriverAppService) ReviewVehicleClaim(ctx context.Context, tenantID, cla
 		if approve {
 			ex := s.exec(txCtx)
 			var driverID, regNum string
-			err := ex.QueryRowContext(txCtx, `SELECT driver_id, registration_number FROM vehicle_claims WHERE tenant_id = ? AND id = ?`, tenantID, claimID).Scan(&driverID, &regNum)
+			err := ex.QueryRowContext(txCtx, `SELECT driver_id, registration_number FROM vehicle_claims WHERE tenant_id = $1 AND id = $2`, tenantID, claimID).Scan(&driverID, &regNum)
 			if err != nil {
 				return err
 			}
 
 			var vehicleID string
-			errV := ex.QueryRowContext(txCtx, `SELECT id FROM vehicles WHERE tenant_id = ? AND registration_number = ?`, tenantID, regNum).Scan(&vehicleID)
+			errV := ex.QueryRowContext(txCtx, `SELECT id FROM vehicles WHERE tenant_id = $1 AND registration_number = $2`, tenantID, regNum).Scan(&vehicleID)
 			if errV != nil {
 				vehicleID = uuid.NewString()
 				_, err = ex.ExecContext(txCtx, `
 					INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, capacity, fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, tenant_id)
-					VALUES (?, ?, ?, 'truck', 5000, 'diesel', date('now', '+1 year'), date('now', '+1 year'), date('now', '+1 year'), 'available', ?)`,
-					vehicleID, regNum, regNum, tenantID)
+					VALUES ($1, $2, $3, 'truck', 5000, 'diesel', $4, $5, $6, 'available', $7)`,
+					vehicleID, regNum, regNum, time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), tenantID)
 				if err != nil {
 					return err
 				}
@@ -429,7 +429,7 @@ func (s *DriverAppService) ReviewVehicleClaim(ctx context.Context, tenantID, cla
 			// Establish ownership
 			_, err = ex.ExecContext(txCtx, `
 				INSERT INTO vehicle_ownership (id, tenant_id, vehicle_id, owner_party_type, owner_party_id, valid_from, created_at)
-				VALUES (?, ?, ?, 'driver', ?, CURRENT_DATE, CURRENT_TIMESTAMP)`,
+				VALUES ($1, $2, $3, 'driver', $4, CURRENT_DATE, CURRENT_TIMESTAMP)`,
 				uuid.NewString(), tenantID, vehicleID, driverID)
 			if err != nil {
 				return err
@@ -532,7 +532,7 @@ func (s *DriverAppService) EvaluateDispatchEligibility(ctx context.Context, tena
 
 	var dStatus string
 	var dEmail, dPhone sql.NullString
-	err := ex.QueryRowContext(ctx, `SELECT status, email, phone FROM drivers WHERE tenant_id = ? AND id = ?`, tenantID, driverID).Scan(&dStatus, &dEmail, &dPhone)
+	err := ex.QueryRowContext(ctx, `SELECT status, email, phone FROM drivers WHERE tenant_id = $1 AND id = $2`, tenantID, driverID).Scan(&dStatus, &dEmail, &dPhone)
 	if err != nil {
 		return eligibility.DispatchEligibilityResult{IsEligible: false}, err
 	}
@@ -569,7 +569,7 @@ func (s *DriverAppService) EvaluateDispatchEligibility(ctx context.Context, tena
 		}
 
 		var vType, vPlate, vStatus string
-		errV := ex.QueryRowContext(ctx, `SELECT vehicle_type, registration_number, status FROM vehicles WHERE tenant_id = ? AND id = ?`, tenantID, asgRec.VehicleID).Scan(&vType, &vPlate, &vStatus)
+		errV := ex.QueryRowContext(ctx, `SELECT vehicle_type, registration_number, status FROM vehicles WHERE tenant_id = $1 AND id = $2`, tenantID, asgRec.VehicleID).Scan(&vType, &vPlate, &vStatus)
 		if errV == nil {
 			vehData = &eligibility.VehicleData{
 				ID:        asgRec.VehicleID,
@@ -627,7 +627,7 @@ func (s *DriverAppService) RegisterPushToken(ctx context.Context, tenantID, driv
 
 	query := `
 		INSERT INTO driver_push_tokens (id, tenant_id, driver_id, user_id, device_id, push_token, platform, is_active, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, 1, $8, $9)
 		ON CONFLICT (tenant_id, driver_id, device_id) DO UPDATE SET
 			push_token = excluded.push_token,
 			platform = excluded.platform,

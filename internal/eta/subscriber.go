@@ -107,7 +107,7 @@ func (s *EtaService) SubscribeTripEvents(bus events.EventBus, logger *slog.Logge
 
 func resolveTenant(ctx context.Context, s *EtaService, tripID string) string {
 	var tid string
-	_ = s.db.QueryRowContext(ctx, `SELECT tenant_id FROM trips WHERE id=?`, tripID).Scan(&tid)
+	_ = s.db.QueryRowContext(ctx, `SELECT tenant_id FROM trips WHERE id=$1`, tripID).Scan(&tid)
 	return tid
 }
 

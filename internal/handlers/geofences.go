@@ -47,12 +47,11 @@ func (h *GeofenceHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "geofences", "delete")).Post("/{id}/delete", h.Delete)
 }
 
+// tenant resolves the acting org. Fail closed: these routes sit behind auth
+// middleware which always sets tenant, so a missing tenant is a programmer
+// error (panics surface as 500 via Recoverer). Never silently default here.
 func (h *GeofenceHandlers) tenant(ctx context.Context) shared.TenantID {
-	t := shared.TenantIDFromContext(ctx)
-	if t == "" {
-		return shared.DefaultTenant
-	}
-	return t
+	return shared.MustTenantID(ctx)
 }
 
 // List renders the geofence table (full page or Datastar fragment).

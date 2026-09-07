@@ -49,14 +49,14 @@ WHERE i.booking_id = ? AND i.tenant_id = ?;
 UPDATE invoices
 SET invoice_number = ?, booking_id = ?, customer_id = ?, trip_id = ?,
     subtotal = ?, tax = ?, discount = ?, total = ?, payment_status = ?,
-    updated_at = datetime('now')
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ?
 RETURNING id, invoice_number, booking_id, customer_id, trip_id,
     subtotal, tax, discount, total, payment_status, tenant_id, created_at, updated_at;
 
 -- name: UpdateInvoicePaymentStatus :one
 UPDATE invoices
-SET payment_status = ?, updated_at = datetime('now')
+SET payment_status = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ?
 RETURNING id, invoice_number, booking_id, customer_id, trip_id,
     subtotal, tax, discount, total, payment_status, tenant_id, created_at, updated_at;
@@ -72,19 +72,19 @@ FROM invoices i
 JOIN customers c ON i.customer_id = c.id
 LEFT JOIN bookings b ON i.booking_id = b.id
 LEFT JOIN trips t ON i.trip_id = t.id
-WHERE i.tenant_id = ?
-  AND (i.invoice_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%')
-  AND (? = '' OR i.payment_status = ?)
+WHERE i.tenant_id = sqlc.arg(tenant_id)
+  AND (lower(i.invoice_number) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(c.name) LIKE '%' || lower(sqlc.arg(search)) || '%')
+  AND (sqlc.arg(payment_status_all) = '' OR i.payment_status = sqlc.arg(payment_status))
 ORDER BY i.created_at DESC
-LIMIT ? OFFSET ?;
+LIMIT sqlc.arg(limit) OFFSET sqlc.arg(offset);
 
 -- name: CountInvoices :one
 SELECT COUNT(*) AS count
 FROM invoices i
 JOIN customers c ON i.customer_id = c.id
-WHERE i.tenant_id = ?
-  AND (i.invoice_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%')
-  AND (? = '' OR i.payment_status = ?);
+WHERE i.tenant_id = sqlc.arg(tenant_id)
+  AND (lower(i.invoice_number) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(c.name) LIKE '%' || lower(sqlc.arg(search)) || '%')
+  AND (sqlc.arg(payment_status_all) = '' OR i.payment_status = sqlc.arg(payment_status));
 
 -- name: GetPendingInvoices :many
 SELECT i.id, i.invoice_number, i.booking_id, i.customer_id, i.trip_id,

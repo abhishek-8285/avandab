@@ -41,10 +41,9 @@ func (r *SQLRepository) CreateCustomer(ctx context.Context, customer domain.Cust
 	}
 	tenantID := customer.TenantID
 	if tenantID == "" {
+		// tenantIDFromCtx is fail-closed (never returns ""): ctx tenant,
+		// else bootstrap tenant under WithGlobalScope, else panic. No fallback here.
 		tenantID = tenantIDFromCtx(ctx)
-		if tenantID == "" {
-			tenantID = string(shared.DefaultTenant)
-		}
 	}
 	created, err := r.Q(ctx).CreateCustomer(ctx, db.CreateCustomerParams{
 		ID:               string(customer.ID),
@@ -112,10 +111,8 @@ func (r *SQLRepository) UpdateCustomer(ctx context.Context, customer domain.Cust
 	}
 	tenantID := customer.TenantID
 	if tenantID == "" {
+		// Same fail-closed resolution as CreateCustomer above.
 		tenantID = tenantIDFromCtx(ctx)
-		if tenantID == "" {
-			tenantID = string(shared.DefaultTenant)
-		}
 	}
 	updated, err := r.Q(ctx).UpdateCustomer(ctx, db.UpdateCustomerParams{
 		CustomerCode:     sql.NullString{String: customer.CustomerCode, Valid: customer.CustomerCode != ""},
@@ -156,13 +153,7 @@ func (r *SQLRepository) DeleteCustomer(ctx context.Context, id domain.CustomerID
 func (r *SQLRepository) SearchCustomers(ctx context.Context, query string, limit, offset int) ([]domain.Customer, error) {
 	rows, err := r.Q(ctx).SearchCustomers(ctx, db.SearchCustomersParams{
 		TenantID: tenantIDForReads(ctx),
-		Column2:  sql.NullString{String: query, Valid: true},
-		Column3:  sql.NullString{String: query, Valid: true},
-		Column4:  sql.NullString{String: query, Valid: true},
-		Column5:  sql.NullString{String: query, Valid: true},
-		Column6:  sql.NullString{String: query, Valid: true},
-		Column7:  sql.NullString{String: query, Valid: true},
-		Column8:  sql.NullString{String: query, Valid: true},
+		Search:   query,
 		Limit:    int64(limit),
 		Offset:   int64(offset),
 	})
@@ -179,13 +170,7 @@ func (r *SQLRepository) SearchCustomers(ctx context.Context, query string, limit
 func (r *SQLRepository) CountCustomers(ctx context.Context, query string) (int64, error) {
 	count, err := r.Q(ctx).CountCustomers(ctx, db.CountCustomersParams{
 		TenantID: tenantIDForReads(ctx),
-		Column2:  sql.NullString{String: query, Valid: true},
-		Column3:  sql.NullString{String: query, Valid: true},
-		Column4:  sql.NullString{String: query, Valid: true},
-		Column5:  sql.NullString{String: query, Valid: true},
-		Column6:  sql.NullString{String: query, Valid: true},
-		Column7:  sql.NullString{String: query, Valid: true},
-		Column8:  sql.NullString{String: query, Valid: true},
+		Search:   query,
 	})
 	if err != nil {
 		return 0, err

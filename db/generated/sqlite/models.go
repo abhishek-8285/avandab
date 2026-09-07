@@ -1878,6 +1878,41 @@ type Vehicle struct {
 	MaintenanceOverrideAt     sql.NullTime    `json:"maintenance_override_at"`
 	MaintenanceOverrideReason sql.NullString  `json:"maintenance_override_reason"`
 	PucExpiry                 sql.NullTime    `json:"puc_expiry"`
+	FleetClass                string          `json:"fleet_class"`
+	Ownership                 string          `json:"ownership"`
+	FleetNumber               sql.NullString  `json:"fleet_number"`
+	Description               sql.NullString  `json:"description"`
+	Manufacturer              sql.NullString  `json:"manufacturer"`
+	ManufCountry              sql.NullString  `json:"manuf_country"`
+	Model                     sql.NullString  `json:"model"`
+	ConstrYearMonth           sql.NullString  `json:"constr_year_month"`
+	AcquisitionValue          sql.NullFloat64 `json:"acquisition_value"`
+	AcquisitionCurrency       string          `json:"acquisition_currency"`
+	AcquisitionDate           sql.NullTime    `json:"acquisition_date"`
+	PurchaseVendor            sql.NullString  `json:"purchase_vendor"`
+	ValidFrom                 sql.NullTime    `json:"valid_from"`
+	ValidTo                   sql.NullTime    `json:"valid_to"`
+	FacilityID                sql.NullString  `json:"facility_id"`
+	MaintPlant                sql.NullString  `json:"maint_plant"`
+	PlanningPlant             sql.NullString  `json:"planning_plant"`
+	CompanyCode               sql.NullString  `json:"company_code"`
+	BusinessArea              sql.NullString  `json:"business_area"`
+	CostCenter                sql.NullString  `json:"cost_center"`
+	AssetNo                   sql.NullString  `json:"asset_no"`
+	FleetObjectNo             sql.NullString  `json:"fleet_object_no"`
+	ChassisNo                 sql.NullString  `json:"chassis_no"`
+	VehicleCategory           sql.NullString  `json:"vehicle_category"`
+	EngineNumber              sql.NullString  `json:"engine_number"`
+	EnginePower               sql.NullString  `json:"engine_power"`
+	EngineCapacity            sql.NullString  `json:"engine_capacity"`
+	CylinderCount             sql.NullInt64   `json:"cylinder_count"`
+	MaxSpeed                  sql.NullFloat64 `json:"max_speed"`
+	Weight                    sql.NullFloat64 `json:"weight"`
+	WeightUnit                string          `json:"weight_unit"`
+	LoadVolume                sql.NullFloat64 `json:"load_volume"`
+	VolumeUnit                sql.NullString  `json:"volume_unit"`
+	SecondaryFuel             sql.NullString  `json:"secondary_fuel"`
+	UsageIndicator            sql.NullString  `json:"usage_indicator"`
 }
 
 type VehicleClaim struct {
@@ -1954,6 +1989,37 @@ type VehicleLatestPosition struct {
 	GsmSignal       sql.NullInt64   `json:"gsm_signal"`
 	Motion          sql.NullInt64   `json:"motion"`
 	Valid           int64           `json:"valid"`
+}
+
+type VehicleMeasurement struct {
+	ID                  string          `json:"id"`
+	TenantID            string          `json:"tenant_id"`
+	PointID             string          `json:"point_id"`
+	DocNumber           sql.NullString  `json:"doc_number"`
+	CounterReading      float64         `json:"counter_reading"`
+	DifferenceReading   sql.NullFloat64 `json:"difference_reading"`
+	TotalCounterReading sql.NullFloat64 `json:"total_counter_reading"`
+	MeasuredAt          sql.NullTime    `json:"measured_at"`
+	ReadBy              sql.NullString  `json:"read_by"`
+	Remarks             sql.NullString  `json:"remarks"`
+	RecordedAt          time.Time       `json:"recorded_at"`
+	RecordedBy          sql.NullString  `json:"recorded_by"`
+}
+
+type VehicleMeasuringPoint struct {
+	ID             string          `json:"id"`
+	TenantID       string          `json:"tenant_id"`
+	VehicleID      string          `json:"vehicle_id"`
+	Category       string          `json:"category"`
+	Kind           string          `json:"kind"`
+	MeasPosition   string          `json:"meas_position"`
+	Unit           string          `json:"unit"`
+	DecimalPlaces  int64           `json:"decimal_places"`
+	AnnualEstimate sql.NullFloat64 `json:"annual_estimate"`
+	CountBackwards int64           `json:"count_backwards"`
+	IsCounter      int64           `json:"is_counter"`
+	Description    string          `json:"description"`
+	CreatedAt      time.Time       `json:"created_at"`
 }
 
 type VehicleOwnership struct {

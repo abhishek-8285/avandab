@@ -112,8 +112,8 @@ func (uc *AssignVehicleUseCase) checkVehicleCompliance(ctx ports.TxContext, cmd 
 						overriddenBy = string(*uid)
 					}
 					blockedBy := expiry.name + "_expiry"
-					if _, ierr := dbGetter.DB().ExecContext(ctx, `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-						fmt.Sprintf("ovr-%d", time.Now().UnixNano()), string(tenant), string(cmd.TripID), cmd.VehicleID, "", blockedBy, cmd.OverrideReason, overriddenBy); ierr != nil {
+					if _, ierr := dbGetter.DB().ExecContext(ctx, `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+						fmt.Sprintf("ovr-%d", time.Now().UnixNano()), string(tenant), string(cmd.TripID), cmd.VehicleID, "", blockedBy, cmd.OverrideReason, overriddenBy, time.Now().UTC().Format("2006-01-02 15:04:05")); ierr != nil {
 						return ierr
 					}
 				}
@@ -140,14 +140,14 @@ func (uc *AssignVehicleUseCase) checkVehicleCompliance(ctx ports.TxContext, cmd 
 							return fmt.Errorf("cannot record dispatch override audit: tenant unknown")
 						}
 						_, _ = dbGetter.DB().ExecContext(ctx, `CREATE TABLE IF NOT EXISTS dispatch_overrides (
-                            id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL DEFAULT '1', trip_id TEXT NOT NULL, vehicle_id TEXT, driver_id TEXT, blocked_by TEXT NOT NULL, reason TEXT NOT NULL, overridden_by TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (datetime('now'))
+                            id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL DEFAULT '1', trip_id TEXT NOT NULL, vehicle_id TEXT, driver_id TEXT, blocked_by TEXT NOT NULL, reason TEXT NOT NULL, overridden_by TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
                         )`)
 						overriddenBy := ""
 						if uid := getUserID(ctx); uid != nil {
 							overriddenBy = string(*uid)
 						}
-						_, _ = dbGetter.DB().ExecContext(ctx, `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-							fmt.Sprintf("ovr-%d", time.Now().UnixNano()), string(tenant), string(cmd.TripID), cmd.VehicleID, "", "puc_expiry", cmd.OverrideReason, overriddenBy)
+						_, _ = dbGetter.DB().ExecContext(ctx, `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+							fmt.Sprintf("ovr-%d", time.Now().UnixNano()), string(tenant), string(cmd.TripID), cmd.VehicleID, "", "puc_expiry", cmd.OverrideReason, overriddenBy, time.Now().UTC().Format("2006-01-02 15:04:05"))
 					}
 					recordComplianceCheck(ctx, "vehicle", cmd.VehicleID, "puc", "warning", "bypassed by override")
 				} else {
@@ -183,7 +183,7 @@ func getPUCExpiry(ctx ports.TxContext, vehicleID string) *time.Time {
 		return nil
 	}
 	var t sql.NullTime
-	_ = dbGetter.DB().QueryRowContext(ctx, `SELECT puc_expiry FROM vehicles WHERE id = ?`, vehicleID).Scan(&t)
+	_ = dbGetter.DB().QueryRowContext(ctx, `SELECT puc_expiry FROM vehicles WHERE id = $1`, vehicleID).Scan(&t)
 	if t.Valid && !t.Time.IsZero() {
 		return &t.Time
 	}

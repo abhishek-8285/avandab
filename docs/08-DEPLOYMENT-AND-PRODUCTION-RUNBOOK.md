@@ -93,3 +93,9 @@ For physical hardware GPS trackers:
 | `RAZORPAY_KEY_SECRET` | empty | Razorpay API Secret for HMAC signature verification. |
 | `AGENT_REQUIRE_APPROVAL` | `true` | Requires admin approval for mutating AI tools. |
 | `AGENT_API_KEY` | empty | OpenAI API Key for operations assistant. |
+| `INTEGRATION_EWAYBILL_USE_MOCK` | `true` | Demo mode for NIC e-waybills; live needs `INTEGRATION_EWAYBILL_API_KEY` + `INTEGRATION_EWAYBILL_ENDPOINT`. |
+| `INTEGRATION_GSTN_USE_MOCK` | `true` | Demo mode for GSP/GSTN; live needs `INTEGRATION_GSTN_API_KEY` (+ `USERNAME`/`PASSWORD`/`CLIENT_ID`/`CLIENT_SECRET`). |
+| `INTEGRATION_FASTAG_USE_MOCK` | `true` | Demo mode for NETC FASTag; live needs `INTEGRATION_FASTAG_API_KEY` + `INTEGRATION_FASTAG_ENDPOINT`. |
+| `INTEGRATION_ACCOUNTING_USE_MOCK` | `true` | Demo mode for accounting export; live needs `INTEGRATION_ACCOUNTING_ENDPOINT` + `API_KEY` + `PROVIDER`. |
+
+> **Mock honesty:** all four providers default to mock (`*_USE_MOCK=true`). Synthetic IDs carry a `MOCK-` prefix (`EWB-MOCK-`, `MOCK-`, `JE-MOCK-`) plus `(mock)` messages and warn logs — never real provider data. Set the flag to `false` with live creds for production.

@@ -41,7 +41,7 @@ func (r *EngineStateRepository) GetByVehicle(ctx context.Context, tenantID, vehi
 		`SELECT vehicle_id, tenant_id, state, trip_id, geofence_id, zone_kind,
 		        zone_entered_at, confirmed_at, exit_started_at,
 		        last_fix_at, last_lat, last_lng, updated_at
-		 FROM engine_state WHERE vehicle_id = ? AND tenant_id = ?`,
+		 FROM engine_state WHERE vehicle_id = $1 AND tenant_id = $2`,
 		vehicleID, tenantID)
 	var s domain.EngineState
 	var tripID, geofenceID, zoneKind sql.NullString
@@ -85,8 +85,8 @@ func (r *EngineStateRepository) Upsert(ctx context.Context, s domain.EngineState
 		 (vehicle_id, tenant_id, state, trip_id, geofence_id, zone_kind,
 		  zone_entered_at, confirmed_at, exit_started_at,
 		  last_fix_at, last_lat, last_lng, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-		 ON CONFLICT(vehicle_id) DO UPDATE SET
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP)
+		 ON CONFLICT (vehicle_id) DO UPDATE SET
 		   state = excluded.state,
 		   trip_id = excluded.trip_id,
 		   geofence_id = excluded.geofence_id,

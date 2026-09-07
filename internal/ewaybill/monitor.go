@@ -70,10 +70,10 @@ func (m *Monitor) processExpiredEWBs(ctx context.Context) {
 		FROM eway_bills e
 		LEFT JOIN trips t ON e.trip_id = t.id
 		WHERE e.status IN ('active', 'part_a')
-		  AND e.valid_until <= datetime('now')
+		  AND e.valid_until <= $1
 		LIMIT 50
 	`
-	rows, err := m.svc.db.QueryContext(ctx, query)
+	rows, err := m.svc.db.QueryContext(ctx, query, time.Now().UTC())
 	if err != nil {
 		m.logger.Warn("ewaybill expired scan failed", "error", err)
 		return
@@ -98,14 +98,14 @@ func (m *Monitor) processExpiredEWBs(ctx context.Context) {
 	for _, it := range expired {
 		_, err := m.svc.db.ExecContext(ctx, `
 			UPDATE eway_bills
-			SET status = 'expired', updated_at = datetime('now')
-			WHERE ewb_number = ? AND status IN ('active', 'part_a')
+			SET status = 'expired'
+			WHERE ewb_number = $1 AND status IN ('active', 'part_a')
 		`, it.ewbNumber)
 		if err == nil {
 			eventID := uuid.NewString()
 			_, _ = m.svc.db.ExecContext(ctx, `
 				INSERT INTO eway_bill_events (id, ewb_number, trip_id, event_type, payload, created_by, created_at)
-				VALUES (?, ?, ?, 'EXPIRED', '{"reason":"validity_expired"}', 'system', datetime('now'))
+				VALUES ($1, $2, $3, 'EXPIRED', '{"reason":"validity_expired"}', 'system', CURRENT_TIMESTAMP)
 			`, eventID, it.ewbNumber, it.tripID)
 
 			if m.bus != nil && it.tenantID != "" {
@@ -128,17 +128,17 @@ func (m *Monitor) processExpiredEWBs(ctx context.Context) {
 }
 
 func (m *Monitor) processExpiringSoonEWBs(ctx context.Context) {
-	query := fmt.Sprintf(`
+	query := `
 		SELECT e.ewb_number, e.trip_id, t.status, COALESCE(t.tenant_id, '')
 		FROM eway_bills e
 		LEFT JOIN trips t ON e.trip_id = t.id
 		WHERE e.status IN ('active', 'part_a')
-		  AND e.valid_until > datetime('now')
-		  AND e.valid_until <= datetime('now', '+%d seconds')
+		  AND e.valid_until > $1
+		  AND e.valid_until <= $2
 		LIMIT 50
-	`, m.leadSec)
-
-	rows, err := m.svc.db.QueryContext(ctx, query)
+	`
+	now := time.Now().UTC()
+	rows, err := m.svc.db.QueryContext(ctx, query, now, now.Add(time.Duration(m.leadSec)*time.Second))
 	if err != nil {
 		m.logger.Warn("ewaybill monitor query failed", "error", err)
 		return

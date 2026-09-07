@@ -51,6 +51,28 @@
     if (fetchPending === 0) { clearTimeout(delayTimer); delayTimer = null; render(); }
   }
 
+  // Background polls must never flash the fullscreen overlay — otherwise a
+  // 10s telemetry poll looks like a full page reload.
+  function isSilentFetch(target, opts) {
+    try {
+      if (opts && (opts.silent === true || opts.loader === false)) return true;
+      var h = opts && opts.headers;
+      if (h) {
+        if (typeof h.get === 'function') {
+          if (h.get('X-Silent') != null || h.get('X-Loader-Silent') != null) return true;
+        } else {
+          for (var k in h) { if (/^x-(silent|loader-silent)$/i.test(k)) return true; }
+        }
+      }
+    } catch (e) {}
+    var s = '';
+    try {
+      if (typeof target === 'string') s = target;
+      else if (target && target.url) s = target.url;
+    } catch (e) {}
+    return /\/api\/v1\/telemetry\/(live|history|geofences|stream)|\/alerts\/unread|\/api\/v1\/errors\/client|\/api\/v1\/users\/me\/preferences/.test(s);
+  }
+
   var Loader = {
     show: function () { manual++; render(); },
     hide: function () { manual = Math.max(0, manual - 1); render(); },
@@ -82,6 +104,10 @@
       if (!window.fetch) return;
       var orig = window.fetch.bind(window);
       window.fetch = function () {
+        if (isSilentFetch(arguments[0], arguments[1])) {
+          try { return orig.apply(window, arguments); }
+          catch (e) { throw e; }
+        }
         fetchStart();
         try { return orig.apply(window, arguments).finally(fetchEnd); }
         catch (e) { fetchEnd(); throw e; }

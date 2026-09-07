@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	appdb "transport-app/internal/database"
 
 	"transport-app/internal/shared"
 )
@@ -158,7 +159,7 @@ func truncatePointsWithCursor(pts []HistoryPoint, limit int) ([]HistoryPoint, bo
 func queryPositionsWithCursor(ctx context.Context, db *sql.DB, tenantID, vehicleID, tripID string, since, until, after *time.Time, afterID string, limit int) ([]HistoryPoint, error) {
 	query := `SELECT id, latitude, longitude, COALESCE(speed,0), device_time, heading, odometer, trip_id, vehicle_id, ignition
 	          FROM telemetry_positions
-	          WHERE tenant_id = ? AND latitude IS NOT NULL AND longitude IS NOT NULL`
+	          WHERE tenant_id = $1 AND latitude IS NOT NULL AND longitude IS NOT NULL`
 	args := []any{tenantID}
 	if vehicleID != "" {
 		query += ` AND vehicle_id = ?`
@@ -187,7 +188,11 @@ func queryPositionsWithCursor(ctx context.Context, db *sql.DB, tenantID, vehicle
 	}
 	query += ` ORDER BY device_time ASC, id ASC LIMIT ?`
 	args = append(args, limit)
-	rows, err := db.QueryContext(ctx, query, args...)
+	rebound, rerr := appdb.Rebind(query)
+	if rerr != nil {
+		return nil, rerr
+	}
+	rows, err := db.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +249,11 @@ func querySnapshotsWithCursor(ctx context.Context, db *sql.DB, tenantID, vehicle
 	}
 	query += ` ORDER BY s.timestamp ASC, s.id ASC LIMIT ?`
 	args = append(args, limit)
-	rows, err := db.QueryContext(ctx, query, args...)
+	rebound, rerr := appdb.Rebind(query)
+	if rerr != nil {
+		return nil, rerr
+	}
+	rows, err := db.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, err
 	}

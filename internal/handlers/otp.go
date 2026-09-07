@@ -108,7 +108,7 @@ func (h *OTPHandlers) VerifyOTP(w http.ResponseWriter, r *http.Request) {
 
 	// Possession proven: stamp for every user with this phone (typically one).
 	if _, err := h.App.DB.ExecContext(r.Context(),
-		`UPDATE users SET phone_verified_at = datetime('now') WHERE phone = ? AND phone_verified_at IS NULL`,
+		`UPDATE users SET phone_verified_at = CURRENT_TIMESTAMP WHERE phone = $1 AND phone_verified_at IS NULL`,
 		req.Phone); err != nil {
 		slog.Error("otp verify stamp failed", "phone_prefix", phonePrefix(req.Phone), "error", err)
 	}

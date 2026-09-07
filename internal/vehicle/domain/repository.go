@@ -21,6 +21,7 @@ type VehicleReadModel struct {
 	PermitExpiry       time.Time
 	Status             string
 	CurrentMileage     *float64
+	Profile            aggregate.VehicleProfile
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 }

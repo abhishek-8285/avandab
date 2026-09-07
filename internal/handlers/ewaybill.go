@@ -446,7 +446,7 @@ func (h *EWayBillHandlers) Detail(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.DB.QueryContext(r.Context(), `
 		SELECT id, ewb_number, COALESCE(trip_id, ''), event_type, COALESCE(payload, ''), COALESCE(created_by, 'system'), created_at
 		FROM eway_bill_events
-		WHERE ewb_number = ?
+		WHERE ewb_number = $1
 		ORDER BY created_at ASC
 	`, ewbNumber)
 	var events []EWBEventRecord

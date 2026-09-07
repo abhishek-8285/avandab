@@ -24,6 +24,7 @@ type UpdateVehicleCommand struct {
 	PermitExpiry       time.Time
 	Status             aggregate.VehicleStatus
 	CurrentMileage     *float64
+	Profile            aggregate.VehicleProfile
 }
 
 type UpdateVehicleUseCase struct {
@@ -61,6 +62,10 @@ func (uc *UpdateVehicleUseCase) Execute(ctx context.Context, cmd UpdateVehicleCo
 			uc.clock.Now(),
 		)
 		if err != nil {
+			return err
+		}
+
+		if err := v.ApplyProfile(cmd.Profile, uc.clock.Now()); err != nil {
 			return err
 		}
 

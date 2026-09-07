@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	appdb "transport-app/internal/database"
 
 	"github.com/go-chi/chi/v5"
 	"transport-app/internal/shared"
@@ -148,7 +149,7 @@ func PlaybackHandler(db *sql.DB) http.HandlerFunc {
 			// fallback: look up trip's current vehicle_id
 			if resolvedVehicleID == "" {
 				var vid sql.NullString
-				_ = db.QueryRowContext(r.Context(), `SELECT vehicle_id FROM trips WHERE id = ? AND tenant_id = ?`, tripID, tenantID).Scan(&vid)
+				_ = db.QueryRowContext(r.Context(), `SELECT vehicle_id FROM trips WHERE id = $1 AND tenant_id = $2`, tripID, tenantID).Scan(&vid)
 				if vid.Valid {
 					resolvedVehicleID = vid.String
 				}
@@ -308,7 +309,7 @@ func detectStops(points []HistoryPoint) []StopDTO {
 func fetchGeofenceEvents(ctx context.Context, db *sql.DB, tenantID, tripID string, since, until *time.Time) ([]GeofenceEventDTO, error) {
 	query := `SELECT id, geofence_id, zone_kind, event_type, latitude, longitude, created_at, details
 	          FROM geofence_events
-	          WHERE tenant_id = ? AND trip_id = ?`
+	          WHERE tenant_id = $1 AND trip_id = $2`
 	args := []any{tenantID, tripID}
 	if since != nil {
 		query += ` AND created_at >= ?`
@@ -319,7 +320,11 @@ func fetchGeofenceEvents(ctx context.Context, db *sql.DB, tenantID, tripID strin
 		args = append(args, until.UTC().Format("2006-01-02 15:04:05"))
 	}
 	query += ` ORDER BY created_at ASC LIMIT 200`
-	rows, err := db.QueryContext(ctx, query, args...)
+	rebound, rerr := appdb.Rebind(query)
+	if rerr != nil {
+		return nil, rerr
+	}
+	rows, err := db.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -362,7 +367,7 @@ func fetchDetentions(ctx context.Context, db *sql.DB, tenantID, tripID string) (
 		SELECT d.id, d.zone_kind, COALESCE(g.name,''), d.entered_at, d.exited_at, d.dwell_seconds, d.amount, d.status
 		FROM trip_detentions d
 		LEFT JOIN geofences g ON g.id = d.geofence_id
-		WHERE d.tenant_id = ? AND d.trip_id = ?
+		WHERE d.tenant_id = $1 AND d.trip_id = $2
 		ORDER BY d.entered_at ASC`, tenantID, tripID)
 	if err != nil {
 		return nil, err

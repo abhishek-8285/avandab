@@ -133,7 +133,7 @@ func (s *EventSubscriber) HandleInvoiceEvent(ctx context.Context, e events.Event
 			SELECT i.tenant_id, i.invoice_number, i.total, c.email, i.due_date
 			FROM invoices i
 			LEFT JOIN customers c ON i.customer_id = c.id
-			WHERE i.id = ?`, invoiceID).Scan(&dbTenant, &dbNum, &dbTotal, &dbEmail, &dbDueDate)
+			WHERE i.id = $1`, invoiceID).Scan(&dbTenant, &dbNum, &dbTotal, &dbEmail, &dbDueDate)
 		if err == nil {
 			if tenantID == "" && dbTenant.Valid {
 				tenantID = dbTenant.String
@@ -208,7 +208,7 @@ func (s *EventSubscriber) HandlePODEvent(ctx context.Context, e events.Event) er
 			FROM trips t
 			LEFT JOIN bookings b ON t.booking_id = b.id
 			LEFT JOIN customers c ON b.customer_id = c.id
-			WHERE t.id = ?`, tripID).Scan(&dbTenant, &dbNum, &dbEmail, &dbPhone, &dbPOD)
+			WHERE t.id = $1`, tripID).Scan(&dbTenant, &dbNum, &dbEmail, &dbPhone, &dbPOD)
 		if err == nil {
 			if tenantID == "" && dbTenant.Valid {
 				tenantID = dbTenant.String
@@ -294,7 +294,7 @@ func (s *EventSubscriber) HandleTripDispatchEvent(ctx context.Context, e events.
 			LEFT JOIN drivers d ON (t.driver_id = d.id OR t.driver_id = d.driver_id)
 			LEFT JOIN routes r ON t.route_id = r.id
 			LEFT JOIN vehicles v ON t.vehicle_id = v.id
-			WHERE t.id = ?`, tripID).Scan(&dbTenant, &dbDriverPhone, &dbOrigin, &dbDest, &dbVehID, &dbDriverID)
+			WHERE t.id = $1`, tripID).Scan(&dbTenant, &dbDriverPhone, &dbOrigin, &dbDest, &dbVehID, &dbDriverID)
 		if err == nil {
 			if tenantID == "" && dbTenant.Valid {
 				tenantID = dbTenant.String
@@ -321,7 +321,7 @@ func (s *EventSubscriber) HandleTripDispatchEvent(ctx context.Context, e events.
 	if s.db != nil && driverPhone == "" && driverID != "" {
 		var dbPhone sql.NullString
 		err := s.db.QueryRowContext(ctx, `
-			SELECT phone FROM drivers WHERE id = ? OR driver_id = ?`, driverID, driverID).Scan(&dbPhone)
+			SELECT phone FROM drivers WHERE id = $1 OR driver_id = $2`, driverID, driverID).Scan(&dbPhone)
 		if err == nil && dbPhone.Valid {
 			driverPhone = dbPhone.String
 		}
@@ -383,7 +383,7 @@ func (s *EventSubscriber) HandleTrackingEvent(ctx context.Context, e events.Even
 				FROM bookings b
 				LEFT JOIN customers c ON b.customer_id = c.id
 				LEFT JOIN routes r ON b.route_id = r.id
-				WHERE b.id = ?`, bookingID).Scan(&dbTenant, &dbBookingNum, &dbPhone, &dbOrigin, &dbDest)
+				WHERE b.id = $1`, bookingID).Scan(&dbTenant, &dbBookingNum, &dbPhone, &dbOrigin, &dbDest)
 			if err == nil {
 				if tenantID == "" && dbTenant.Valid {
 					tenantID = dbTenant.String
@@ -446,7 +446,7 @@ func (s *EventSubscriber) HandleTrackingEvent(ctx context.Context, e events.Even
 			LEFT JOIN customers c ON b.customer_id = c.id
 			LEFT JOIN routes r ON t.route_id = r.id
 			LEFT JOIN vehicles v ON t.vehicle_id = v.id
-			WHERE t.id = ?`, tripID).Scan(&dbTenant, &dbTripNum, &dbPhone, &dbOrigin, &dbDest, &dbVehID)
+			WHERE t.id = $1`, tripID).Scan(&dbTenant, &dbTripNum, &dbPhone, &dbOrigin, &dbDest, &dbVehID)
 		if err == nil {
 			if tenantID == "" && dbTenant.Valid {
 				tenantID = dbTenant.String
@@ -512,7 +512,7 @@ func (s *EventSubscriber) HandleAuthEvent(ctx context.Context, e events.Event) e
 		// Resolve the account's own tenant so password-reset and welcome
 		// emails are scoped correctly instead of landing in tenant "1".
 		var dbTenant sql.NullString
-		if err := s.db.QueryRowContext(ctx, `SELECT tenant_id FROM users WHERE email = ? LIMIT 1`, email).Scan(&dbTenant); err == nil && dbTenant.Valid && dbTenant.String != "" {
+		if err := s.db.QueryRowContext(ctx, `SELECT tenant_id FROM users WHERE email = $1 LIMIT 1`, email).Scan(&dbTenant); err == nil && dbTenant.Valid && dbTenant.String != "" {
 			tenantID = dbTenant.String
 		}
 	}

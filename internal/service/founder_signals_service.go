@@ -83,7 +83,7 @@ func (s *FounderSignalsService) EmitSignal(ctx context.Context, signal FounderSi
 	_, err := s.db.ExecContext(ctx,
 		`INSERT INTO founder_signals
 		 (id, tenant_id, signal_type, signal_value, threshold_value, direction, metadata, acknowledged, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8)`,
 		id, signal.TenantID, signal.SignalType, signal.SignalValue,
 		signal.ThresholdValue, signal.Direction, signal.Metadata, now)
 	if err != nil {
@@ -116,8 +116,8 @@ func (s *FounderSignalsService) EmitIfThreshold(ctx context.Context, tenantID, s
 	var existingCount int
 	if err := s.db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM founder_signals
-		 WHERE tenant_id = ? AND signal_type = ? AND direction = ? AND created_at > datetime('now', '-1 hour')`,
-		tenantID, signalType, direction).Scan(&existingCount); err != nil {
+		 WHERE tenant_id = $1 AND signal_type = $2 AND direction = $3 AND created_at > $4`,
+		tenantID, signalType, direction, time.Now().UTC().Add(-time.Hour)).Scan(&existingCount); err != nil {
 		return false, fmt.Errorf("dedup check: %w", err)
 	}
 	if existingCount > 0 {
@@ -149,8 +149,8 @@ func (s *FounderSignalsService) AcknowledgeSignal(ctx context.Context, signalID,
 	}
 	now := time.Now().UTC()
 	result, err := s.db.ExecContext(ctx,
-		`UPDATE founder_signals SET acknowledged = 1, acknowledged_by = ?, acknowledged_at = ?
-		 WHERE id = ? AND acknowledged = 0`,
+		`UPDATE founder_signals SET acknowledged = 1, acknowledged_by = $1, acknowledged_at = $2
+		 WHERE id = $3 AND acknowledged = 0`,
 		userID, now, signalID)
 	if err != nil {
 		return err
@@ -236,7 +236,7 @@ func (s *FounderSignalsService) CountUnacknowledged(ctx context.Context, tenantI
 	}
 	var n int
 	err := s.db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM founder_signals WHERE tenant_id = ? AND acknowledged = 0`, tenantID).Scan(&n)
+		`SELECT COUNT(*) FROM founder_signals WHERE tenant_id = $1 AND acknowledged = 0`, tenantID).Scan(&n)
 	return n, err
 }
 

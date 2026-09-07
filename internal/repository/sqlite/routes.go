@@ -2,7 +2,6 @@ package sqlite
 
 import (
 	"context"
-	"database/sql"
 
 	"transport-app/internal/domain"
 
@@ -93,8 +92,7 @@ func (r *SQLRepository) DeleteRoute(ctx context.Context, id domain.RouteID) erro
 
 func (r *SQLRepository) SearchRoutes(ctx context.Context, query string, limit, offset int) ([]domain.Route, error) {
 	rows, err := r.Q(ctx).SearchRoutes(ctx, db.SearchRoutesParams{
-		Column1:  sql.NullString{String: query, Valid: true},
-		Column2:  sql.NullString{String: query, Valid: true},
+		Search:   query,
 		TenantID: tenantIDFromCtx(ctx),
 		Limit:    int64(limit),
 		Offset:   int64(offset),
@@ -111,8 +109,7 @@ func (r *SQLRepository) SearchRoutes(ctx context.Context, query string, limit, o
 
 func (r *SQLRepository) CountRoutes(ctx context.Context, query string) (int64, error) {
 	return r.Q(ctx).CountRoutes(ctx, db.CountRoutesParams{
-		Column1:  sql.NullString{String: query, Valid: query != ""},
-		Column2:  sql.NullString{String: query, Valid: query != ""},
+		Search:   query,
 		TenantID: tenantIDFromCtx(ctx),
 	})
 }

@@ -121,7 +121,7 @@ func (h *ShareHandlers) CreateShare(w http.ResponseWriter, r *http.Request) {
 	// 1. Validate trip exists and belongs to tenant
 	var tripTenantID string
 	err := h.db.QueryRowContext(r.Context(),
-		`SELECT tenant_id FROM trips WHERE id = ?`, tripID).Scan(&tripTenantID)
+		`SELECT tenant_id FROM trips WHERE id = $1`, tripID).Scan(&tripTenantID)
 	if err != nil || tripTenantID != tenantID {
 		http.Error(w, `{"error":"trip not found"}`, http.StatusNotFound)
 		return
@@ -146,7 +146,7 @@ func (h *ShareHandlers) CreateShare(w http.ResponseWriter, r *http.Request) {
 	var activeCount int
 	err = h.db.QueryRowContext(r.Context(),
 		`SELECT COUNT(*) FROM share_links
-		 WHERE trip_id = ? AND revoked_at IS NULL AND expires_at > CURRENT_TIMESTAMP`,
+		 WHERE trip_id = $1 AND revoked_at IS NULL AND expires_at > CURRENT_TIMESTAMP`,
 		tripID).Scan(&activeCount)
 	if err != nil {
 		http.Error(w, `{"error":"database error"}`, http.StatusInternalServerError)
@@ -207,7 +207,7 @@ func (h *ShareHandlers) CreateShare(w http.ResponseWriter, r *http.Request) {
 	// 6. INSERT share_links
 	_, err = h.db.ExecContext(r.Context(), `
 		INSERT INTO share_links (id, trip_id, token_hash, pin_hash, pin_salt, created_by, created_at, expires_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		linkID, tripID, tokenHash, pinHash, pinSalt, createdBy, now, expiresAt,
 	)
 	if err != nil {
@@ -274,7 +274,7 @@ func (h *ShareHandlers) ViewShare(w http.ResponseWriter, r *http.Request) {
 		       t.trip_number, t.status, t.vehicle_id, t.arrival_time
 		FROM share_links s
 		JOIN trips t ON t.id = s.trip_id
-		WHERE s.token_hash = ?`, tokenHash).Scan(
+		WHERE s.token_hash = $1`, tokenHash).Scan(
 		&id, &tripID, &pinHash, &pinSalt, &createdAt, &expiresAt,
 		&lastViewedAt, &viewCount, &failedAttempts, &lockedUntil, &revokedAt,
 		&tripNumber, &status, &vehicleID, &arrivalTime,
@@ -361,8 +361,8 @@ func (h *ShareHandlers) ViewShare(w http.ResponseWriter, r *http.Request) {
 
 	_, _ = h.db.ExecContext(r.Context(), `
 		UPDATE share_links
-		SET expires_at = ?, view_count = view_count + 1, last_viewed_at = ?
-		WHERE id = ?`, newExpiry, now, id)
+		SET expires_at = $1, view_count = view_count + 1, last_viewed_at = $2
+		WHERE id = $3`, newExpiry, now, id)
 
 	// 4. Render share_public.html
 	cfg := h.Config
@@ -415,7 +415,7 @@ func (h *ShareHandlers) VerifyPIN(w http.ResponseWriter, r *http.Request) {
 		SELECT id, pin_hash, pin_salt, created_at, expires_at,
 		       failed_pin_attempts, locked_until, revoked_at
 		FROM share_links
-		WHERE token_hash = ?`, tokenHash).Scan(
+		WHERE token_hash = $1`, tokenHash).Scan(
 		&id, &pinHash, &pinSalt, &createdAt, &expiresAt,
 		&failedAttempts, &lockedUntil, &revokedAt,
 	)
@@ -482,8 +482,8 @@ func (h *ShareHandlers) VerifyPIN(w http.ResponseWriter, r *http.Request) {
 
 		_, _ = h.db.ExecContext(r.Context(), `
 			UPDATE share_links
-			SET failed_pin_attempts = 0, locked_until = NULL, expires_at = ?
-			WHERE id = ?`, newExpiry, id)
+			SET failed_pin_attempts = 0, locked_until = NULL, expires_at = $1
+			WHERE id = $2`, newExpiry, id)
 
 		isSecure := false
 		if h.Config != nil && h.Config.CookieSecure {
@@ -519,8 +519,8 @@ func (h *ShareHandlers) VerifyPIN(w http.ResponseWriter, r *http.Request) {
 
 	_, _ = h.db.ExecContext(r.Context(), `
 		UPDATE share_links
-		SET failed_pin_attempts = ?, locked_until = ?
-		WHERE id = ?`, newAttempts, newLock, id)
+		SET failed_pin_attempts = $1, locked_until = $2
+		WHERE id = $3`, newAttempts, newLock, id)
 
 	if newAttempts >= 5 {
 		w.Header().Set("Retry-After", "900")
@@ -552,7 +552,7 @@ func (h *ShareHandlers) ShareData(w http.ResponseWriter, r *http.Request) {
 		FROM share_links s
 		JOIN trips t ON t.id = s.trip_id
 		LEFT JOIN vehicles v ON v.id = t.vehicle_id
-		WHERE s.token_hash = ?`, tokenHash).Scan(
+		WHERE s.token_hash = $1`, tokenHash).Scan(
 		&id, &tripID, &pinHash, &expiresAt, &revokedAt,
 		&tripNumber, &status, &vehicleID, &arrivalTime,
 		&regNumber, &vehNumber,
@@ -594,7 +594,7 @@ func (h *ShareHandlers) ShareData(w http.ResponseWriter, r *http.Request) {
 		rowErr := h.db.QueryRowContext(r.Context(), `
 			SELECT latitude, longitude, speed, fuel_level, odometer, timestamp
 			FROM telemetry_snapshots
-			WHERE vehicle_id = ? AND latitude IS NOT NULL AND longitude IS NOT NULL
+			WHERE vehicle_id = $1 AND latitude IS NOT NULL AND longitude IS NOT NULL
 			ORDER BY timestamp DESC LIMIT 1`, vehicleID.String).Scan(
 			&sLat, &sLng, &sSpeed, &sFuel, &sOdo, &sTs,
 		)
@@ -623,7 +623,7 @@ func (h *ShareHandlers) ShareData(w http.ResponseWriter, r *http.Request) {
 	if vehicleID.Valid && vehicleID.String != "" {
 		var md sql.NullBool
 		_ = h.db.QueryRowContext(r.Context(),
-			`SELECT maintenance_due FROM vehicles WHERE id = ?`, vehicleID.String).Scan(&md)
+			`SELECT maintenance_due FROM vehicles WHERE id = $1`, vehicleID.String).Scan(&md)
 		if md.Valid && md.Bool {
 			maintDue = true
 		}
@@ -714,7 +714,7 @@ func (h *ShareHandlers) ListShares(w http.ResponseWriter, r *http.Request) {
 		FROM share_links s
 		JOIN trips t ON t.id = s.trip_id
 		LEFT JOIN users u ON u.id = s.created_by
-		WHERE t.tenant_id = ?
+		WHERE t.tenant_id = $1
 		ORDER BY s.created_at DESC`, tenantID)
 	if err != nil {
 		http.Error(w, "failed to load share links", http.StatusInternalServerError)
@@ -773,7 +773,7 @@ func (h *ShareHandlers) RevokeShare(w http.ResponseWriter, r *http.Request) {
 	_, err := h.db.ExecContext(r.Context(), `
 		UPDATE share_links
 		SET revoked_at = CURRENT_TIMESTAMP
-		WHERE id = ? AND trip_id IN (SELECT id FROM trips WHERE tenant_id = ?)`,
+		WHERE id = $1 AND trip_id IN (SELECT id FROM trips WHERE tenant_id = $2)`,
 		id, tenantID)
 	if err != nil {
 		http.Error(w, `{"error":"failed to revoke share link"}`, http.StatusInternalServerError)

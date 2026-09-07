@@ -63,9 +63,9 @@ func (s *UserService) RegisterSelfServiceAccount(ctx context.Context, email, nam
 		var slugCount int
 		var row *sql.Row
 		if tx := repository.TxFromContext(txCtx); tx != nil {
-			row = tx.QueryRowContext(txCtx, `SELECT COUNT(1) FROM tenants WHERE slug = ?`, baseSlug)
+			row = tx.QueryRowContext(txCtx, `SELECT COUNT(1) FROM tenants WHERE slug = $1`, baseSlug)
 		} else {
-			row = rawDB.QueryRowContext(txCtx, `SELECT COUNT(1) FROM tenants WHERE slug = ?`, baseSlug)
+			row = rawDB.QueryRowContext(txCtx, `SELECT COUNT(1) FROM tenants WHERE slug = $1`, baseSlug)
 		}
 		if err := row.Scan(&slugCount); err != nil {
 			return err
@@ -98,13 +98,15 @@ func (s *UserService) RegisterSelfServiceAccount(ctx context.Context, email, nam
 		subID := "sub_" + tenantID
 		if tx := repository.TxFromContext(txCtx); tx != nil {
 			_, _ = tx.ExecContext(txCtx, `
-				INSERT OR IGNORE INTO tenant_subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, trial_end, created_at, updated_at)
-				VALUES (?, ?, 'STARTER', 'TRIAL', ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+				INSERT INTO tenant_subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, trial_end, created_at, updated_at)
+				VALUES ($1, $2, 'STARTER', 'TRIAL', $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+			ON CONFLICT (id) DO NOTHING
 			`, subID, tenantID, now.Format(time.RFC3339), trialEnd.Format(time.RFC3339), trialEnd.Format(time.RFC3339))
 		} else {
 			_, _ = rawDB.ExecContext(txCtx, `
-				INSERT OR IGNORE INTO tenant_subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, trial_end, created_at, updated_at)
-				VALUES (?, ?, 'STARTER', 'TRIAL', ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+				INSERT INTO tenant_subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, trial_end, created_at, updated_at)
+				VALUES ($1, $2, 'STARTER', 'TRIAL', $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+			ON CONFLICT (id) DO NOTHING
 			`, subID, tenantID, now.Format(time.RFC3339), trialEnd.Format(time.RFC3339), trialEnd.Format(time.RFC3339))
 		}
 
@@ -230,7 +232,7 @@ func (s *UserService) getUserByGoogleSub(ctx context.Context, googleSub string) 
 		return domain.User{}, false, fmt.Errorf("google sign-in unavailable: storage does not support raw DB access")
 	}
 	row := getter.DB().QueryRowContext(ctx,
-		`SELECT id, email, name, role_id, tenant_id, status FROM users WHERE google_sub = ? LIMIT 1`, googleSub)
+		`SELECT id, email, name, role_id, tenant_id, status FROM users WHERE google_sub = $1 LIMIT 1`, googleSub)
 	var u domain.User
 	var roleID int64
 	var status string
@@ -254,8 +256,8 @@ func (s *UserService) linkGoogleSub(ctx context.Context, userID, googleSub strin
 		return fmt.Errorf("google link unavailable: storage does not support raw DB access")
 	}
 	res, err := getter.DB().ExecContext(ctx,
-		`UPDATE users SET google_sub = ?, auth_provider = 'google', updated_at = datetime('now')
-		 WHERE id = ? AND (google_sub IS NULL OR google_sub = ?)`,
+		`UPDATE users SET google_sub = $1, auth_provider = 'google', updated_at = CURRENT_TIMESTAMP
+		 WHERE id = $2 AND (google_sub IS NULL OR google_sub = $3)`,
 		googleSub, userID, googleSub)
 	if err != nil {
 		return err
@@ -641,9 +643,9 @@ func (s *UserService) CreateTenantWithAdmin(ctx context.Context, tenantID, name,
 		// tenant '1' excepted), so probing both columns catches every collision.
 		var row *sql.Row
 		if tx := repository.TxFromContext(txCtx); tx != nil {
-			row = tx.QueryRowContext(txCtx, `SELECT COUNT(1) FROM tenants WHERE id = ? OR slug = ?`, tenantID, slug)
+			row = tx.QueryRowContext(txCtx, `SELECT COUNT(1) FROM tenants WHERE id = $1 OR slug = $2`, tenantID, slug)
 		} else {
-			row = rawDB.QueryRowContext(txCtx, `SELECT COUNT(1) FROM tenants WHERE id = ? OR slug = ?`, tenantID, slug)
+			row = rawDB.QueryRowContext(txCtx, `SELECT COUNT(1) FROM tenants WHERE id = $1 OR slug = $2`, tenantID, slug)
 		}
 		var existing int
 		if err := row.Scan(&existing); err != nil {

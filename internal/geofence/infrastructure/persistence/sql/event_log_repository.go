@@ -39,7 +39,7 @@ func (r *EventLogRepository) InsertEvent(ctx context.Context, e domain.GeofenceE
 		`INSERT INTO geofence_events
 		 (id, tenant_id, vehicle_id, trip_id, geofence_id, zone_kind,
 		  event_type, alert_type, severity, latitude, longitude, details, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
 		e.ID, e.TenantID, ptrOrNil(e.VehicleID), ptrOrNil(e.TripID), ptrOrNil(e.GeofenceID),
 		ptrOrNil(e.ZoneKind), e.EventType, ptrOrNil(e.AlertType), ptrOrNil(e.Severity),
 		nullFloatPtr(e.Latitude), nullFloatPtr(e.Longitude), ptrOrNil(e.Details), e.CreatedAt)
@@ -56,7 +56,7 @@ func (r *EventLogRepository) OpenDetention(ctx context.Context, d domain.Detenti
 		`INSERT INTO trip_detentions
 		 (id, tenant_id, trip_id, vehicle_id, geofence_id, zone_kind,
 		  entered_at, dwell_seconds, status)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, 0, $8)`,
 		d.ID, d.TenantID, d.TripID, ptrOrNil(d.VehicleID), ptrOrNil(d.GeofenceID),
 		d.ZoneKind, d.EnteredAt, domain.DetentionOpen)
 	if err != nil {
@@ -71,7 +71,7 @@ func (r *EventLogRepository) FindOpenDetention(ctx context.Context, tenantID, tr
 		`SELECT id, tenant_id, trip_id, vehicle_id, geofence_id, zone_kind,
 		        entered_at, exited_at, dwell_seconds, status
 		 FROM trip_detentions
-		 WHERE tenant_id = ? AND trip_id = ? AND zone_kind = ? AND status = ?
+		 WHERE tenant_id = $1 AND trip_id = $2 AND zone_kind = $3 AND status = $4
 		 ORDER BY entered_at DESC LIMIT 1`,
 		tenantID, tripID, zoneKind, domain.DetentionOpen)
 	var d domain.Detention
@@ -105,9 +105,9 @@ func (r *EventLogRepository) CloseDetention(ctx context.Context, id string, exit
 	}
 	_, err := db.ExecContext(ctx,
 		`UPDATE trip_detentions
-		 SET status = ?, exited_at = ?, dwell_seconds = ?, free_seconds = ?,
-		     billable_seconds = ?, rate_per_hour = ?, amount = ?, updated_at = CURRENT_TIMESTAMP
-		 WHERE id = ? AND status = ?`,
+		 SET status = $1, exited_at = $2, dwell_seconds = $3, free_seconds = $4,
+		     billable_seconds = $5, rate_per_hour = $6, amount = $7, updated_at = CURRENT_TIMESTAMP
+		 WHERE id = $8 AND status = $9`,
 		domain.DetentionClosed, exitedAt, dwellSeconds, freeSeconds,
 		billable, ratePerHour, amount, id, domain.DetentionOpen)
 	if err != nil {
@@ -124,7 +124,7 @@ func (r *EventLogRepository) Find(ctx context.Context, tenantID, id string) (*do
 		        d.free_seconds, d.billable_seconds, d.rate_per_hour, d.amount, d.status
 		 FROM trip_detentions d
 		 LEFT JOIN geofences g ON g.id = d.geofence_id
-		 WHERE d.id = ? AND d.tenant_id = ?`,
+		 WHERE d.id = $1 AND d.tenant_id = $2`,
 		id, tenantID)
 	d, err := scanDetention(row)
 	if err != nil {
@@ -145,7 +145,7 @@ func (r *EventLogRepository) ListClosedForTrip(ctx context.Context, tenantID, tr
 		        d.free_seconds, d.billable_seconds, d.rate_per_hour, d.amount, d.status
 		 FROM trip_detentions d
 		 LEFT JOIN geofences g ON g.id = d.geofence_id
-		 WHERE d.tenant_id = ? AND d.trip_id = ? AND d.status = ?
+		 WHERE d.tenant_id = $1 AND d.trip_id = $2 AND d.status = $3
 		   AND d.amount > 0
 		   AND NOT EXISTS (
 		     SELECT 1 FROM invoice_line_items ili
@@ -175,7 +175,7 @@ func (r *EventLogRepository) ListClosedForTrip(ctx context.Context, tenantID, tr
 func (r *EventLogRepository) MarkAttached(ctx context.Context, id string) error {
 	db := r.dbFromContext(ctx)
 	_, err := db.ExecContext(ctx,
-		`UPDATE trip_detentions SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+		`UPDATE trip_detentions SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
 		domain.DetentionAttached, id)
 	if err != nil {
 		return fmt.Errorf("mark detention attached: %w", err)
@@ -187,7 +187,7 @@ func (r *EventLogRepository) MarkAttached(ctx context.Context, id string) error 
 func (r *EventLogRepository) Waive(ctx context.Context, id string) error {
 	db := r.dbFromContext(ctx)
 	_, err := db.ExecContext(ctx,
-		`UPDATE trip_detentions SET status = ?, amount = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+		`UPDATE trip_detentions SET status = $1, amount = 0, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
 		domain.DetentionWaived, id)
 	if err != nil {
 		return fmt.Errorf("waive detention: %w", err)

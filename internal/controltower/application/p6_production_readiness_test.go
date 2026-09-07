@@ -33,11 +33,10 @@ func setupProductionStressDB(t *testing.T) *sql.DB {
 		booking_id TEXT,
 		driver_id TEXT,
 		vehicle_id TEXT,
-		origin TEXT,
-		destination TEXT,
+		route_id TEXT,
 		status TEXT NOT NULL,
-		start_time TEXT,
-		end_time TEXT,
+		started_at TEXT,
+		completed_at TEXT,
 		arrival_time TEXT,
 		departure_time TEXT,
 		created_at TEXT DEFAULT (datetime('now')),
@@ -58,10 +57,10 @@ func setupProductionStressDB(t *testing.T) *sql.DB {
 		status TEXT NOT NULL DEFAULT 'pending',
 		actual_arrival TEXT,
 		actual_departure TEXT,
-		requires_pod INTEGER DEFAULT 0,
-		requires_otp INTEGER DEFAULT 0,
+		pod_required INTEGER DEFAULT 0,
+		otp_required INTEGER DEFAULT 0,
 		pod_url TEXT,
-		signature_url TEXT,
+		pod_signature_url TEXT,
 		consignee_name TEXT,
 		consignee_phone TEXT,
 		created_at TEXT DEFAULT (datetime('now')),
@@ -100,17 +99,24 @@ func setupProductionStressDB(t *testing.T) *sql.DB {
 		trip_id TEXT,
 		alert_type TEXT NOT NULL,
 		resolved INTEGER DEFAULT 0,
-		metadata TEXT,
+		details TEXT,
 		created_at TEXT DEFAULT (datetime('now'))
 	);
 
-	CREATE TABLE IF NOT EXISTS ewb_requests (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		trip_id TEXT NOT NULL,
+	CREATE TABLE IF NOT EXISTS routes (
+		id TEXT PRIMARY KEY,
 		tenant_id TEXT NOT NULL,
-		eway_bill_number TEXT NOT NULL,
-		status TEXT NOT NULL,
-		valid_until TEXT,
+		source TEXT,
+		destination TEXT
+	);
+
+	CREATE TABLE IF NOT EXISTS eway_bills (
+		id TEXT PRIMARY KEY,
+		ewb_number TEXT UNIQUE NOT NULL,
+		trip_id TEXT,
+		status TEXT DEFAULT 'active',
+		generation_date TEXT NOT NULL,
+		valid_until TEXT NOT NULL,
 		created_at TEXT DEFAULT (datetime('now'))
 	);
 
@@ -267,7 +273,7 @@ func TestP6_ProductionAudit_100ConcurrentControlTowerReads(t *testing.T) {
 		require.NoError(t, err)
 		_, err = db.Exec(`INSERT INTO vehicles (id, tenant_id, vehicle_number, registration_number) VALUES (?, ?, 'TRK-100', 'HR-55-AA-1111')`, vehID, tenantStr)
 		require.NoError(t, err)
-		_, err = db.Exec(`INSERT INTO trips (id, tenant_id, trip_number, driver_id, vehicle_id, status, start_time) VALUES (?, ?, ?, ?, ?, 'IN_TRANSIT', datetime('now'))`, tripID, tenantStr, tripNum, drvID, vehID)
+		_, err = db.Exec(`INSERT INTO trips (id, tenant_id, trip_number, driver_id, vehicle_id, status, started_at) VALUES (?, ?, ?, ?, ?, 'IN_TRANSIT', datetime('now'))`, tripID, tenantStr, tripNum, drvID, vehID)
 		require.NoError(t, err)
 
 		for s := 1; s <= 3; s++ {
@@ -342,15 +348,15 @@ func TestP6_ProductionAudit_EWayBillTerminalStateInvariant(t *testing.T) {
 
 	// 1. Initial active trip with ACTIVE E-Way Bill
 	_, err := db.Exec(`
-		INSERT INTO trips (id, tenant_id, trip_number, status, start_time)
+		INSERT INTO trips (id, tenant_id, trip_number, status, started_at)
 		VALUES ('trip_ewb_prod_888', 'tenant-ewb-prod', 'TRP-EWB-888', 'IN_TRANSIT', datetime('now'));
 
 		INSERT INTO trip_stops (id, trip_id, tenant_id, stop_sequence, stop_type, location_name, latitude, longitude, status)
 		VALUES ('stop_final_1', 'trip_ewb_prod_888', 'tenant-ewb-prod', 1, 'pickup', 'Origin', 28.5, 77.2, 'completed'),
 		       ('stop_final_2', 'trip_ewb_prod_888', 'tenant-ewb-prod', 2, 'drop', 'Destination', 26.8, 75.8, 'pending');
 
-		INSERT INTO ewb_requests (trip_id, tenant_id, eway_bill_number, status, valid_until)
-		VALUES ('trip_ewb_prod_888', 'tenant-ewb-prod', 'EWB-888-ACTIVE', 'ACTIVE', datetime('now', '+2 days'));
+		INSERT INTO eway_bills (id, ewb_number, trip_id, status, generation_date, valid_until)
+		VALUES ('ewb_p6_1', 'EWB-888-ACTIVE', 'trip_ewb_prod_888', 'active', datetime('now'), datetime('now', '+2 days'))
 	`)
 	require.NoError(t, err)
 
@@ -359,11 +365,11 @@ func TestP6_ProductionAudit_EWayBillTerminalStateInvariant(t *testing.T) {
 	_, err = db.Exec(`UPDATE trip_stops SET status='completed', actual_departure=?, pod_url='pod_final.jpg' WHERE id='stop_final_2'`, nowStr)
 	require.NoError(t, err)
 
-	_, err = db.Exec(`UPDATE trips SET status='COMPLETED', end_time=? WHERE id='trip_ewb_prod_888'`, nowStr)
+	_, err = db.Exec(`UPDATE trips SET status='COMPLETED', completed_at=? WHERE id='trip_ewb_prod_888'`, nowStr)
 	require.NoError(t, err)
 
 	// Invariant rule: On trip completion, EWB status must transition to 'COMPLETED' (transport leg delivered)
-	_, err = db.Exec(`UPDATE ewb_requests SET status='COMPLETED' WHERE trip_id='trip_ewb_prod_888' AND status='ACTIVE'`)
+	_, err = db.Exec(`UPDATE eway_bills SET status='delivered' WHERE trip_id='trip_ewb_prod_888' AND status='active'`)
 	require.NoError(t, err)
 
 	ctService := ctApp.NewService(db, nil, 15*time.Minute)
@@ -372,6 +378,6 @@ func TestP6_ProductionAudit_EWayBillTerminalStateInvariant(t *testing.T) {
 	require.NotNil(t, proj)
 
 	assert.Equal(t, "COMPLETED", proj.Status)
-	assert.Equal(t, "COMPLETED", proj.EWB.Status)
+	assert.Equal(t, "delivered", proj.EWB.Status)
 	assert.Equal(t, "EWB-888-ACTIVE", proj.EWB.EWBNumber)
 }

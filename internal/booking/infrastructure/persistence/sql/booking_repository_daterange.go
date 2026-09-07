@@ -13,8 +13,8 @@ import (
 // query set and existing mocks untouched.
 
 const bookingDateClause = `
-  AND (? = '' OR date(substr(b.pickup_date,1,10)) >= date(?))
-  AND (? = '' OR date(substr(b.pickup_date,1,10)) <= date(?))`
+  AND (? = '' OR substr(CAST(b.pickup_date AS TEXT), 1, 10) >= substr(CAST(? AS TEXT), 1, 10))
+  AND (? = '' OR substr(CAST(b.pickup_date AS TEXT), 1, 10) <= substr(CAST(? AS TEXT), 1, 10))`
 
 const bookingSearchSelect = `
 SELECT b.id, b.booking_number, b.customer_id, b.pickup_date, b.route_id, b.vehicle_type,
@@ -23,18 +23,18 @@ SELECT b.id, b.booking_number, b.customer_id, b.pickup_date, b.route_id, b.vehic
 FROM bookings b
 JOIN customers c ON b.customer_id = c.id
 JOIN routes r ON b.route_id = r.id
-WHERE b.tenant_id = ?
-  AND (b.booking_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%' OR c.company LIKE '%' || ? || '%')
-  AND (? = '' OR b.status = ?)`
+WHERE b.tenant_id = $1
+  AND (b.booking_number LIKE '%' || $2 || '%' OR c.name LIKE '%' || $3 || '%' OR c.company LIKE '%' || $4 || '%')
+  AND ($5 = '' OR b.status = $6)`
 
 const bookingSearchCount = `
 SELECT COUNT(*)
 FROM bookings b
 JOIN customers c ON b.customer_id = c.id
 JOIN routes r ON b.route_id = r.id
-WHERE b.tenant_id = ?
-  AND (b.booking_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%' OR c.company LIKE '%' || ? || '%')
-  AND (? = '' OR b.status = ?)`
+WHERE b.tenant_id = $1
+  AND (b.booking_number LIKE '%' || $2 || '%' OR c.name LIKE '%' || $3 || '%' OR c.company LIKE '%' || $4 || '%')
+  AND ($5 = '' OR b.status = $6)`
 
 func (r *bookingRepository) SearchReadModelsDateRange(ctx context.Context, tenantID shared.TenantID, query string, status string, from string, to string, limit int, offset int) ([]bookingdomain.BookingReadModel, int64, error) {
 	// "unassigned" can't be expressed by the fixed consts below.

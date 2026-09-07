@@ -13,7 +13,7 @@ import (
 
 const assignDriverToTrip = `-- name: AssignDriverToTrip :one
 UPDATE trips
-SET driver_id = ?, version = version + 1, updated_at = datetime('now')
+SET driver_id = ?, version = version + 1, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version, created_at, updated_at
@@ -72,7 +72,7 @@ func (q *Queries) AssignDriverToTrip(ctx context.Context, arg AssignDriverToTrip
 
 const assignVehicleToTrip = `-- name: AssignVehicleToTrip :one
 UPDATE trips
-SET vehicle_id = ?, version = version + 1, updated_at = datetime('now')
+SET vehicle_id = ?, version = version + 1, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version, created_at, updated_at
@@ -250,7 +250,7 @@ LEFT JOIN drivers d ON t.driver_id = d.id
 LEFT JOIN vehicles v ON t.vehicle_id = v.id
 LEFT JOIN routes r ON t.route_id = r.id
 WHERE t.tenant_id = ?1
-  AND (CAST(?2 AS text) = '' OR t.trip_number LIKE '%' || ?2 || '%' OR d.first_name LIKE '%' || ?2 || '%' OR d.last_name LIKE '%' || ?2 || '%' OR v.registration_number LIKE '%' || ?2 || '%' OR r.source LIKE '%' || ?2 || '%' OR r.destination LIKE '%' || ?2 || '%')
+  AND (CAST(?2 AS text) = '' OR lower(t.trip_number) LIKE '%' || lower(?2) || '%' OR lower(d.first_name) LIKE '%' || lower(?2) || '%' OR lower(d.last_name) LIKE '%' || lower(?2) || '%' OR lower(v.registration_number) LIKE '%' || lower(?2) || '%' OR lower(r.source) LIKE '%' || lower(?2) || '%' OR lower(r.destination) LIKE '%' || lower(?2) || '%')
   AND (CAST(?3 AS text) = '' OR t.status = ?3)
 `
 
@@ -270,7 +270,7 @@ func (q *Queries) CountTrips(ctx context.Context, arg CountTripsParams) (int64, 
 const countTripsByStatus = `-- name: CountTripsByStatus :many
 SELECT status, COUNT(*) AS count
 FROM trips
-WHERE date(departure_time) = CAST(?1 AS TEXT) AND tenant_id = ?2
+WHERE substr(CAST(departure_time AS TEXT), 1, 10) = CAST(?1 AS TEXT) AND tenant_id = ?2
 GROUP BY status
 `
 
@@ -432,7 +432,7 @@ LEFT JOIN vehicles v ON t.vehicle_id = v.id
 LEFT JOIN routes r ON t.route_id = r.id
 WHERE t.tenant_id = ?
   AND t.status IN ('scheduled', 'assigned', 'started', 'reached_pickup', 'in_transit', 'delivered')
-  AND t.departure_time < datetime('now')
+  AND t.departure_time < CURRENT_TIMESTAMP
 ORDER BY t.departure_time ASC
 LIMIT 10
 `
@@ -842,7 +842,7 @@ FROM trips t
 LEFT JOIN drivers d ON t.driver_id = d.id
 LEFT JOIN vehicles v ON t.vehicle_id = v.id
 LEFT JOIN routes r ON t.route_id = r.id
-WHERE date(t.departure_time) = CAST(?1 AS TEXT) AND t.tenant_id = ?2
+WHERE substr(CAST(t.departure_time AS TEXT), 1, 10) = CAST(?1 AS TEXT) AND t.tenant_id = ?2
 ORDER BY t.departure_time ASC
 `
 
@@ -930,7 +930,7 @@ LEFT JOIN drivers d ON t.driver_id = d.id
 LEFT JOIN vehicles v ON t.vehicle_id = v.id
 LEFT JOIN routes r ON t.route_id = r.id
 WHERE t.tenant_id = ?1
-  AND (CAST(?2 AS text) = '' OR t.trip_number LIKE '%' || ?2 || '%' OR d.first_name LIKE '%' || ?2 || '%' OR d.last_name LIKE '%' || ?2 || '%' OR v.registration_number LIKE '%' || ?2 || '%' OR r.source LIKE '%' || ?2 || '%' OR r.destination LIKE '%' || ?2 || '%')
+  AND (CAST(?2 AS text) = '' OR lower(t.trip_number) LIKE '%' || lower(?2) || '%' OR lower(d.first_name) LIKE '%' || lower(?2) || '%' OR lower(d.last_name) LIKE '%' || lower(?2) || '%' OR lower(v.registration_number) LIKE '%' || lower(?2) || '%' OR lower(r.source) LIKE '%' || lower(?2) || '%' OR lower(r.destination) LIKE '%' || lower(?2) || '%')
   AND (CAST(?3 AS text) = '' OR t.status = ?3)
 ORDER BY t.departure_time DESC
 LIMIT ?5 OFFSET ?4
@@ -1033,7 +1033,7 @@ SET trip_number = ?, booking_id = ?, driver_id = ?, vehicle_id = ?, route_id = ?
     departure_time = ?, arrival_time = ?, status = ?, remarks = ?,
     started_at = ?, reached_pickup_at = ?, in_transit_at = ?, delivered_at = ?, completed_at = ?,
     version = version + 1,
-    updated_at = datetime('now')
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks,
@@ -1130,7 +1130,7 @@ func (q *Queries) UpdateTrip(ctx context.Context, arg UpdateTripParams) (UpdateT
 
 const updateTripStatus = `-- name: UpdateTripStatus :one
 UPDATE trips
-SET status = ?, version = version + 1, updated_at = datetime('now')
+SET status = ?, version = version + 1, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version, created_at, updated_at
@@ -1190,7 +1190,7 @@ func (q *Queries) UpdateTripStatus(ctx context.Context, arg UpdateTripStatusPara
 const updateTripTimeline = `-- name: UpdateTripTimeline :one
 UPDATE trips
 SET started_at = ?, reached_pickup_at = ?, in_transit_at = ?, delivered_at = ?, completed_at = ?,
-    status = ?, version = version + 1, updated_at = datetime('now')
+    status = ?, version = version + 1, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version, created_at, updated_at,

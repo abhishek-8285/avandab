@@ -20,6 +20,7 @@ type CreateVehicleCommand struct {
 	FitnessExpiry      time.Time
 	PermitExpiry       time.Time
 	CurrentMileage     *float64
+	Profile            aggregate.VehicleProfile
 }
 
 // UpdateVehicleCommand contains parameters to update vehicle details.
@@ -36,6 +37,7 @@ type UpdateVehicleCommand struct {
 	PermitExpiry       time.Time
 	Status             aggregate.VehicleStatus
 	CurrentMileage     *float64
+	Profile            aggregate.VehicleProfile
 }
 
 // VehicleFacade defines public entries into the Vehicle module.

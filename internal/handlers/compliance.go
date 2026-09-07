@@ -179,7 +179,7 @@ func (h *ComplianceHandlers) getDashboardData(r *http.Request) (ComplianceDashbo
 	}
 
 	// Vehicles metrics
-	vRows, err := db.QueryContext(ctx, `SELECT id, insurance_expiry, fitness_expiry, permit_expiry, COALESCE(puc_expiry,''), status, blocked, COALESCE(blocked_reason,'') FROM vehicles`)
+	vRows, err := db.QueryContext(ctx, `SELECT id, insurance_expiry, fitness_expiry, permit_expiry, COALESCE(CAST(puc_expiry AS TEXT), ''), status, blocked, COALESCE(blocked_reason,'') FROM vehicles`)
 	if err == nil {
 		defer vRows.Close()
 		for vRows.Next() {

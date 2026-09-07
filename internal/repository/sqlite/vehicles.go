@@ -27,6 +27,13 @@ func (r *SQLRepository) CreateVehicle(ctx context.Context, vehicle domain.Vehicl
 		Status:             string(vehicle.Status),
 		CurrentMileage:     nullFloat(vehicle.CurrentMileage),
 		TenantID:           tenantIDFromCtx(ctx),
+		// SOP defaults (00126): the legacy domain carries no fleet-object
+		// profile, so persist the classification defaults explicitly —
+		// omitting them writes "" and trips the DB CHECKs.
+		FleetClass:          "CV",
+		Ownership:           "O",
+		AcquisitionCurrency: "INR",
+		WeightUnit:          "TO",
 	})
 	if err != nil {
 		return domain.Vehicle{}, err
@@ -47,7 +54,7 @@ func (r *SQLRepository) CreateVehicle(ctx context.Context, vehicle domain.Vehicl
 		UpdatedAt:          created.UpdatedAt,
 	}
 	if vehicle.PUCExpiry != nil {
-		_, _ = r.exec(ctx, `UPDATE vehicles SET puc_expiry = ? WHERE id = ?`, vehicle.PUCExpiry.Format("2006-01-02"), string(vehicle.ID))
+		_, _ = r.exec(ctx, `UPDATE vehicles SET puc_expiry = $1 WHERE id = $2`, vehicle.PUCExpiry.Format("2006-01-02"), string(vehicle.ID))
 	}
 	dom := toDomainVehicle(v)
 	dom.PUCExpiry = vehicle.PUCExpiry
@@ -79,7 +86,7 @@ func (r *SQLRepository) GetVehicleByID(ctx context.Context, id domain.VehicleID)
 	}
 	dom := toDomainVehicle(v)
 	var puc sql.NullString
-	_ = r.queryRow(ctx, `SELECT puc_expiry FROM vehicles WHERE id = ?`, string(id)).Scan(&puc)
+	_ = r.queryRow(ctx, `SELECT puc_expiry FROM vehicles WHERE id = $1`, string(id)).Scan(&puc)
 	if puc.Valid && puc.String != "" {
 		if t, err := time.Parse("2006-01-02", puc.String); err == nil {
 			dom.PUCExpiry = &t
@@ -115,7 +122,7 @@ func (r *SQLRepository) GetVehicleByRegistration(ctx context.Context, regNum str
 	}
 	dom := toDomainVehicle(v)
 	var puc sql.NullString
-	_ = r.queryRow(ctx, `SELECT puc_expiry FROM vehicles WHERE id = ?`, row.ID).Scan(&puc)
+	_ = r.queryRow(ctx, `SELECT puc_expiry FROM vehicles WHERE id = $1`, row.ID).Scan(&puc)
 	if puc.Valid && puc.String != "" {
 		if t, err := time.Parse("2006-01-02", puc.String); err == nil {
 			dom.PUCExpiry = &t
@@ -127,44 +134,30 @@ func (r *SQLRepository) GetVehicleByRegistration(ctx context.Context, regNum str
 }
 
 func (r *SQLRepository) UpdateVehicle(ctx context.Context, vehicle domain.Vehicle) (domain.Vehicle, error) {
-	updated, err := r.Q(ctx).UpdateVehicle(ctx, db.UpdateVehicleParams{
-		RegistrationNumber: vehicle.RegistrationNumber,
-		VehicleNumber:      vehicle.VehicleNumber,
-		VehicleType:        string(vehicle.VehicleType),
-		Capacity:           vehicle.Capacity,
-		FuelType:           string(vehicle.FuelType),
-		InsuranceExpiry:    vehicle.InsuranceExpiry,
-		FitnessExpiry:      vehicle.FitnessExpiry,
-		PermitExpiry:       vehicle.PermitExpiry,
-		Status:             string(vehicle.Status),
-		CurrentMileage:     nullFloat(vehicle.CurrentMileage),
-		ID:                 string(vehicle.ID),
-		TenantID:           tenantIDFromCtx(ctx),
-	})
+	// Raw SQL touching only legacy columns: the legacy domain carries no
+	// fleet-object profile, so a full-row sqlc UPDATE would clobber profile
+	// data written by the new stack (e.g. reset FS back to CV).
+	_, err := r.exec(ctx, `UPDATE vehicles SET registration_number = $1, vehicle_number = $2,
+		vehicle_type = $3, capacity = $4, fuel_type = $5, insurance_expiry = $6,
+		fitness_expiry = $7, permit_expiry = $8, status = $9, current_mileage = $10,
+		updated_at = CURRENT_TIMESTAMP WHERE id = $11 AND tenant_id = $12`,
+		vehicle.RegistrationNumber, vehicle.VehicleNumber, string(vehicle.VehicleType),
+		vehicle.Capacity, string(vehicle.FuelType), vehicle.InsuranceExpiry,
+		vehicle.FitnessExpiry, vehicle.PermitExpiry, string(vehicle.Status),
+		nullFloat(vehicle.CurrentMileage), string(vehicle.ID), tenantIDFromCtx(ctx),
+	)
 	if err != nil {
 		return domain.Vehicle{}, err
 	}
-	v := db.Vehicle{
-		ID:                 updated.ID,
-		RegistrationNumber: updated.RegistrationNumber,
-		VehicleNumber:      updated.VehicleNumber,
-		VehicleType:        updated.VehicleType,
-		Capacity:           updated.Capacity,
-		FuelType:           updated.FuelType,
-		InsuranceExpiry:    updated.InsuranceExpiry,
-		FitnessExpiry:      updated.FitnessExpiry,
-		PermitExpiry:       updated.PermitExpiry,
-		Status:             updated.Status,
-		CurrentMileage:     updated.CurrentMileage,
-		CreatedAt:          updated.CreatedAt,
-		UpdatedAt:          updated.UpdatedAt,
+	updated, err := r.GetVehicleByID(ctx, vehicle.ID)
+	if err != nil {
+		return domain.Vehicle{}, err
 	}
 	if vehicle.PUCExpiry != nil {
-		_, _ = r.exec(ctx, `UPDATE vehicles SET puc_expiry = ? WHERE id = ?`, vehicle.PUCExpiry.Format("2006-01-02"), string(vehicle.ID))
+		_, _ = r.exec(ctx, `UPDATE vehicles SET puc_expiry = $1 WHERE id = $2`, vehicle.PUCExpiry.Format("2006-01-02"), string(vehicle.ID))
+		updated.PUCExpiry = vehicle.PUCExpiry
 	}
-	dom := toDomainVehicle(v)
-	dom.PUCExpiry = vehicle.PUCExpiry
-	return dom, nil
+	return updated, nil
 }
 
 func (r *SQLRepository) DeleteVehicle(ctx context.Context, id domain.VehicleID) error {
@@ -176,14 +169,16 @@ func (r *SQLRepository) DeleteVehicle(ctx context.Context, id domain.VehicleID) 
 
 func (r *SQLRepository) SearchVehicles(ctx context.Context, query string, status string, limit, offset int) ([]domain.Vehicle, error) {
 	rows, err := r.Q(ctx).SearchVehicles(ctx, db.SearchVehiclesParams{
-		TenantID: tenantIDFromCtx(ctx),
-		Column2:  sql.NullString{String: query, Valid: true},
-		Column3:  sql.NullString{String: query, Valid: true},
-		Column4:  sql.NullString{String: query, Valid: true},
-		Column5:  status,
-		Status:   status,
-		Limit:    int64(limit),
-		Offset:   int64(offset),
+		TenantID:      tenantIDFromCtx(ctx),
+		Search:        query,
+		StatusAll:     status,
+		Status:        status,
+		FleetClassAll: "",
+		FleetClass:    "",
+		OwnershipAll:  "",
+		Ownership:     "",
+		Limit:         int64(limit),
+		Offset:        int64(offset),
 	})
 	if err != nil {
 		return nil, err
@@ -212,12 +207,14 @@ func (r *SQLRepository) SearchVehicles(ctx context.Context, query string, status
 
 func (r *SQLRepository) CountVehicles(ctx context.Context, query string, status string) (int64, error) {
 	count, err := r.Q(ctx).CountVehicles(ctx, db.CountVehiclesParams{
-		TenantID: tenantIDFromCtx(ctx),
-		Column2:  sql.NullString{String: query, Valid: true},
-		Column3:  sql.NullString{String: query, Valid: true},
-		Column4:  sql.NullString{String: query, Valid: true},
-		Column5:  status,
-		Status:   status,
+		TenantID:      tenantIDFromCtx(ctx),
+		Search:        query,
+		StatusAll:     status,
+		Status:        status,
+		FleetClassAll: "",
+		FleetClass:    "",
+		OwnershipAll:  "",
+		Ownership:     "",
 	})
 	if err != nil {
 		return 0, err
@@ -253,7 +250,13 @@ func (r *SQLRepository) GetAvailableVehicles(ctx context.Context) ([]domain.Vehi
 }
 
 func (r *SQLRepository) GetIdleVehicles(ctx context.Context) ([]domain.Vehicle, error) {
-	rows, err := r.Q(ctx).GetIdleVehicles(ctx, tenantIDFromCtx(ctx))
+	// Stale bound computed Go-side (UTC now-2h, matching the old
+	// datetime('now','-2 hours')); the param binds as a real timestamp on
+	// both engines so the comparison stays type-correct.
+	rows, err := r.Q(ctx).GetIdleVehicles(ctx, db.GetIdleVehiclesParams{
+		TenantID:    tenantIDFromCtx(ctx),
+		StaleBefore: time.Now().UTC().Add(-2 * time.Hour),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -288,7 +291,7 @@ func (r *SQLRepository) IsMaintenanceBlocked(ctx context.Context, vehicleID stri
 	err := r.db.QueryRowContext(ctx, `
 		SELECT maintenance_due, maintenance_override_by, maintenance_override_at, maintenance_override_reason
 		FROM vehicles
-		WHERE id = ?`, vehicleID).Scan(&due, &overrideBy, &overrideAt, &overrideReason)
+		WHERE id = $1`, vehicleID).Scan(&due, &overrideBy, &overrideAt, &overrideReason)
 	if err != nil {
 		return false, "", err
 	}
@@ -296,7 +299,7 @@ func (r *SQLRepository) IsMaintenanceBlocked(ctx context.Context, vehicleID stri
 	var dtcCode string
 	_ = r.db.QueryRowContext(ctx, `
 		SELECT dtc_code FROM dtc_events
-		WHERE vehicle_id = ? AND severity = 'critical' AND resolved_at IS NULL
+		WHERE vehicle_id = $1 AND severity = 'critical' AND resolved_at IS NULL
 		ORDER BY occurred_at DESC LIMIT 1`, vehicleID).Scan(&dtcCode)
 
 	isDue := due.Valid && due.String != ""

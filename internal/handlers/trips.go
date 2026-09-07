@@ -193,7 +193,7 @@ func (h *TripHandlers) SendPODOTPSMS(w http.ResponseWriter, r *http.Request) {
 	if h.App.DB != nil {
 		var p sql.NullString
 		if err := h.App.DB.QueryRowContext(r.Context(),
-			`SELECT COALESCE(pod_consignee_phone,'') FROM trips WHERE id = ?`, tripID).Scan(&p); err == nil {
+			`SELECT COALESCE(pod_consignee_phone,'') FROM trips WHERE id = $1`, tripID).Scan(&p); err == nil {
 			phone = p.String
 		}
 	}
@@ -439,13 +439,14 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 
 	if h.DB != nil {
 		rows, err := h.DB.QueryContext(r.Context(), `
-			SELECT id, stop_sequence, stop_type, COALESCE(location_name, ''), COALESCE(address, ''),
-			       status, actual_arrival, actual_departure, COALESCE(requires_pod, 0), COALESCE(pod_url, ''),
-			       COALESCE(requires_otp, 0), COALESCE(consignee_name, ''), COALESCE(consignee_phone, '')
-			FROM trip_stops
-			WHERE trip_id = ?
-			ORDER BY stop_sequence ASC
-		`, id)
+		SELECT id, stop_sequence, stop_type, COALESCE(location_name, ''), COALESCE(address, ''),
+		       status, substr(CAST(actual_arrival AS TEXT), 1, 19), substr(CAST(actual_departure AS TEXT), 1, 19),
+		       COALESCE(pod_required, 0), COALESCE(pod_url, ''),
+		       COALESCE(otp_required, 0), COALESCE(consignee_name, ''), COALESCE(consignee_phone, '')
+		FROM trip_stops
+		WHERE trip_id = $1
+		ORDER BY stop_sequence ASC
+	`, id)
 		if err == nil {
 			defer func() { _ = rows.Close() }()
 			completedCount := 0
@@ -456,13 +457,14 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 				if err := rows.Scan(&s.ID, &s.StopSequence, &s.StopType, &s.LocationName, &s.Address, &s.Status, &arrStr, &depStr, &reqPOD, &s.PODUrl, &reqOTP, &s.ConsigneeName, &s.ConsigneePhone); err == nil {
 					s.RequiresPOD = reqPOD == 1
 					s.RequiresOTP = reqOTP == 1
+					// Portable datetime text (YYYY-MM-DD HH:MM:SS) on both engines.
 					if arrStr.Valid && arrStr.String != "" {
-						if t, err := time.Parse(time.RFC3339, arrStr.String); err == nil {
+						if t, err := time.Parse("2006-01-02 15:04:05", arrStr.String); err == nil {
 							s.ActualArrival = &t
 						}
 					}
 					if depStr.Valid && depStr.String != "" {
-						if t, err := time.Parse(time.RFC3339, depStr.String); err == nil {
+						if t, err := time.Parse("2006-01-02 15:04:05", depStr.String); err == nil {
 							s.ActualDeparture = &t
 						}
 					}
@@ -724,11 +726,11 @@ func (h *TripHandlers) handleComplianceBlock(w http.ResponseWriter, r *http.Requ
             blocked_by TEXT NOT NULL,
             reason TEXT NOT NULL,
             overridden_by TEXT NOT NULL,
-            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
         )`)
 		id := uuid.NewString()
-		_, _ = h.DB.ExecContext(r.Context(), `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`,
-			id, string(tenant), tripID, vehicleID, driverID, code, reason, user.UserID)
+		_, _ = h.DB.ExecContext(r.Context(), `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			id, string(tenant), tripID, vehicleID, driverID, code, reason, user.UserID, time.Now().UTC().Format("2006-01-02 15:04:05"))
 	}
 	if h.Services != nil && h.Services.Audit != nil {
 		uid := domain.UserID(user.UserID)
@@ -736,7 +738,7 @@ func (h *TripHandlers) handleComplianceBlock(w http.ResponseWriter, r *http.Requ
 		_ = h.Services.Audit.LogAction(r.Context(), &uid, "dispatch_override", "trips", tripID, nil, &rc)
 	} else if h.DB != nil {
 		auditID := uuid.NewString()
-		_, _ = h.DB.ExecContext(r.Context(), `INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, created_at) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
+		_, _ = h.DB.ExecContext(r.Context(), `INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, created_at) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
 			auditID, user.UserID, "dispatch_override", "trips", tripID, reason)
 	}
 	return false
@@ -753,7 +755,7 @@ func (h *TripHandlers) AssignDriver(w http.ResponseWriter, r *http.Request) {
 		var vehicleID string
 		if h.DB != nil {
 			var v sql.NullString
-			_ = h.DB.QueryRowContext(ctx, `SELECT vehicle_id FROM trips WHERE id = ?`, tripID).Scan(&v)
+			_ = h.DB.QueryRowContext(ctx, `SELECT vehicle_id FROM trips WHERE id = $1`, tripID).Scan(&v)
 			if v.Valid {
 				vehicleID = v.String
 			}
@@ -823,7 +825,7 @@ func (h *TripHandlers) AssignVehicle(w http.ResponseWriter, r *http.Request) {
 		var driverID string
 		if h.DB != nil {
 			var d sql.NullString
-			_ = h.DB.QueryRowContext(ctx, `SELECT driver_id FROM trips WHERE id = ?`, tripID).Scan(&d)
+			_ = h.DB.QueryRowContext(ctx, `SELECT driver_id FROM trips WHERE id = $1`, tripID).Scan(&d)
 			if d.Valid {
 				driverID = d.String
 			}
@@ -1311,7 +1313,7 @@ func (h *TripHandlers) SubmitStopPOD(w http.ResponseWriter, r *http.Request) {
 	if stopID == "" && h.App != nil && h.App.DB != nil {
 		var sID string
 		_ = h.App.DB.QueryRowContext(r.Context(),
-			`SELECT id FROM trip_stops WHERE trip_id = ? ORDER BY stop_sequence DESC LIMIT 1`, tripID).Scan(&sID)
+			`SELECT id FROM trip_stops WHERE trip_id = $1 ORDER BY stop_sequence DESC LIMIT 1`, tripID).Scan(&sID)
 		if sID != "" {
 			stopID = sID
 		}
@@ -1335,25 +1337,25 @@ func (h *TripHandlers) SubmitStopPOD(w http.ResponseWriter, r *http.Request) {
 	if h.App != nil && h.App.DB != nil {
 		_, _ = h.App.DB.ExecContext(r.Context(), `
 			UPDATE trips
-			SET pod_url = COALESCE(NULLIF(?, ''), pod_url),
-			    pod_photo_url = COALESCE(NULLIF(?, ''), pod_photo_url),
-			    pod_signature_url = COALESCE(NULLIF(?, ''), pod_signature_url),
-			    pod_notes = COALESCE(NULLIF(?, ''), pod_notes),
+			SET pod_url = COALESCE(NULLIF($1, ''), pod_url),
+			    pod_photo_url = COALESCE(NULLIF($2, ''), pod_photo_url),
+			    pod_signature_url = COALESCE(NULLIF($3, ''), pod_signature_url),
+			    pod_notes = COALESCE(NULLIF($4, ''), pod_notes),
 			    pod_captured_at = CURRENT_TIMESTAMP
-			WHERE id = ? OR trip_number = ?`,
+			WHERE id = $5 OR trip_number = $6`,
 			podURL, podURL, signatureURL, notes, tripID, tripID,
 		)
 		if podURL != "" && stopID != "" {
 			_, _ = h.App.DB.ExecContext(r.Context(), `
 				INSERT INTO stop_pod_attachments (id, tenant_id, stop_id, trip_id, file_url, file_type, created_at)
-				VALUES (?, ?, ?, ?, ?, 'photo', CURRENT_TIMESTAMP)`,
+				VALUES ($1, $2, $3, $4, $5, 'photo', CURRENT_TIMESTAMP)`,
 				uuid.NewString(), string(tenantID), stopID, tripID, podURL,
 			)
 		}
 		if signatureURL != "" && stopID != "" {
 			_, _ = h.App.DB.ExecContext(r.Context(), `
 				INSERT INTO stop_pod_attachments (id, tenant_id, stop_id, trip_id, file_url, file_type, created_at)
-				VALUES (?, ?, ?, ?, ?, 'signature', CURRENT_TIMESTAMP)`,
+				VALUES ($1, $2, $3, $4, $5, 'signature', CURRENT_TIMESTAMP)`,
 				uuid.NewString(), string(tenantID), stopID, tripID, signatureURL,
 			)
 		}
@@ -1476,7 +1478,7 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 		       COALESCE(pod_consignee_name, ''), COALESCE(pod_consignee_phone, ''),
 		       COALESCE(pod_otp_verified, 0), pod_captured_at, COALESCE(pod_notes, '')
 		FROM trips
-		WHERE id = ? OR trip_number = ?
+		WHERE id = $1 OR trip_number = $2
 		LIMIT 1
 	`, tripID, tripID).Scan(
 		&resolvedTripID, &tenantID, &tripNumber, &status, &departureTime, &arrivalTime,
@@ -1500,7 +1502,7 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 	var vehicleReg string
 	if vehicleID.Valid && vehicleID.String != "" {
 		_ = h.App.DB.QueryRowContext(r.Context(), `
-			SELECT COALESCE(registration_number, vehicle_number, '') FROM vehicles WHERE id = ?
+			SELECT COALESCE(registration_number, vehicle_number, '') FROM vehicles WHERE id = $1
 		`, vehicleID.String).Scan(&vehicleReg)
 	}
 
@@ -1509,7 +1511,7 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 	if driverID.Valid && driverID.String != "" {
 		_ = h.App.DB.QueryRowContext(r.Context(), `
 			SELECT COALESCE(first_name || ' ' || last_name, ''), COALESCE(phone, '')
-			FROM drivers WHERE id = ? OR driver_id = ?
+			FROM drivers WHERE id = $1 OR driver_id = $2
 		`, driverID.String, driverID.String).Scan(&driverName, &driverPhone)
 	}
 
@@ -1518,7 +1520,7 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 	companyLogo := ""
 	var cName, cLogo sql.NullString
 	if err := h.App.DB.QueryRowContext(r.Context(), `
-		SELECT COALESCE(company_name, ''), COALESCE(logo_url, '') FROM company_settings WHERE id = 1 LIMIT 1
+		SELECT COALESCE(company_name, ''), COALESCE(logo_path, '') FROM company_settings WHERE id = 1 LIMIT 1
 	`).Scan(&cName, &cLogo); err == nil {
 		if cName.Valid && cName.String != "" {
 			companyName = cName.String
@@ -1529,7 +1531,7 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 	}
 	if companyName == "FlyFleet Logistics" && tenantID != "" {
 		var tName sql.NullString
-		if err := h.App.DB.QueryRowContext(r.Context(), `SELECT COALESCE(name, '') FROM tenants WHERE id = ?`, tenantID).Scan(&tName); err == nil && tName.Valid && tName.String != "" {
+		if err := h.App.DB.QueryRowContext(r.Context(), `SELECT COALESCE(name, '') FROM tenants WHERE id = $1`, tenantID).Scan(&tName); err == nil && tName.Valid && tName.String != "" {
 			companyName = tName.String
 		}
 	}
@@ -1543,7 +1545,7 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 		       pod_verified_at, COALESCE(pod_notes, ''),
 		       COALESCE(consignee_name, ''), COALESCE(consignee_phone, ''), COALESCE(consignee_email, '')
 		FROM trip_stops
-		WHERE trip_id = ?
+		WHERE trip_id = $1
 		ORDER BY stop_sequence ASC
 	`, resolvedTripID)
 

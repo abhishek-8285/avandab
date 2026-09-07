@@ -80,7 +80,7 @@ func (vs *VectorStore) AddChunk(chunk Chunk, embedding []float64) error {
 
 	_, err = vs.db.Exec(
 		`INSERT OR REPLACE INTO chunks (id, content, source, line_from, line_to, chunk_idx, embedding)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		chunk.ID, chunk.Content, chunk.Source, chunk.LineFrom, chunk.LineTo, chunk.ChunkIdx, embJSON,
 	)
 	return err
@@ -95,7 +95,7 @@ func (vs *VectorStore) AddChunks(chunks []Chunk, embeddings [][]float64) error {
 
 	stmt, err := tx.Prepare(
 		`INSERT OR REPLACE INTO chunks (id, content, source, line_from, line_to, chunk_idx, embedding)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 	)
 	if err != nil {
 		return fmt.Errorf("prepare statement: %w", err)

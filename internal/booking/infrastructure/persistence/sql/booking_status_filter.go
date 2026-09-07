@@ -24,8 +24,8 @@ SELECT b.id, b.booking_number, b.customer_id, b.pickup_date, b.route_id, b.vehic
 FROM bookings b
 JOIN customers c ON b.customer_id = c.id
 JOIN routes r ON b.route_id = r.id
-WHERE b.tenant_id = ?
-  AND (b.booking_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%' OR c.company LIKE '%' || ? || '%')
+WHERE b.tenant_id = $1
+  AND (b.booking_number LIKE '%' || $2 || '%' OR c.name LIKE '%' || $3 || '%' OR c.company LIKE '%' || $4 || '%')
   AND b.status IN ('pending', 'confirmed')
   AND NOT EXISTS (SELECT 1 FROM trips t WHERE t.booking_id = b.id)`
 
@@ -34,8 +34,8 @@ SELECT COUNT(*)
 FROM bookings b
 JOIN customers c ON b.customer_id = c.id
 JOIN routes r ON b.route_id = r.id
-WHERE b.tenant_id = ?
-  AND (b.booking_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%' OR c.company LIKE '%' || ? || '%')
+WHERE b.tenant_id = $1
+  AND (b.booking_number LIKE '%' || $2 || '%' OR c.name LIKE '%' || $3 || '%' OR c.company LIKE '%' || $4 || '%')
   AND b.status IN ('pending', 'confirmed')
   AND NOT EXISTS (SELECT 1 FROM trips t WHERE t.booking_id = b.id)`
 

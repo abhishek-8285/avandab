@@ -1,6 +1,9 @@
 package sqlite
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 // CountUnassignedBookings returns confirmed/pending bookings with no trip yet.
 func (r *SQLRepository) CountUnassignedBookings(ctx context.Context) (int64, error) {
@@ -8,7 +11,7 @@ func (r *SQLRepository) CountUnassignedBookings(ctx context.Context) (int64, err
 	err := r.queryRow(ctx, `
 SELECT COUNT(*)
 FROM bookings b
-WHERE b.tenant_id = ?
+WHERE b.tenant_id = $1
   AND b.status IN ('pending', 'confirmed')
   AND NOT EXISTS (SELECT 1 FROM trips t WHERE t.booking_id = b.id)`,
 		tenantIDFromCtx(ctx)).Scan(&n)
@@ -20,7 +23,7 @@ WHERE b.tenant_id = ?
 func (r *SQLRepository) CountMaintenanceDue(ctx context.Context) (int64, error) {
 	var n int64
 	err := r.queryRow(ctx, `
-SELECT COUNT(*) FROM vehicles WHERE tenant_id = ? AND maintenance_due IS NOT NULL`,
+SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND maintenance_due IS NOT NULL`,
 		tenantIDFromCtx(ctx)).Scan(&n)
 	return n, err
 }
@@ -30,7 +33,7 @@ func (r *SQLRepository) CountOpenWorkOrders(ctx context.Context) (int64, error) 
 	var n int64
 	err := r.queryRow(ctx, `
 SELECT COUNT(*) FROM work_orders
-WHERE tenant_id = ? AND status IN ('open', 'assigned', 'in_progress', 'on_hold')`,
+WHERE tenant_id = $1 AND status IN ('open', 'assigned', 'in_progress', 'on_hold')`,
 		tenantIDFromCtx(ctx)).Scan(&n)
 	return n, err
 }
@@ -39,7 +42,7 @@ WHERE tenant_id = ? AND status IN ('open', 'assigned', 'in_progress', 'on_hold')
 func (r *SQLRepository) CountGarageVehicles(ctx context.Context) (int64, error) {
 	var n int64
 	err := r.queryRow(ctx, `
-SELECT COUNT(*) FROM vehicles WHERE tenant_id = ? AND status = 'maintenance'`,
+SELECT COUNT(*) FROM vehicles WHERE tenant_id = $1 AND status = 'maintenance'`,
 		tenantIDFromCtx(ctx)).Scan(&n)
 	return n, err
 }
@@ -48,7 +51,7 @@ SELECT COUNT(*) FROM vehicles WHERE tenant_id = ? AND status = 'maintenance'`,
 func (r *SQLRepository) CountOpenAlerts(ctx context.Context) (int64, error) {
 	var n int64
 	err := r.queryRow(ctx, `
-SELECT COUNT(*) FROM alerts WHERE tenant_id = ? AND status IN ('open', 'escalated')`,
+SELECT COUNT(*) FROM alerts WHERE tenant_id = $1 AND status IN ('open', 'escalated')`,
 		tenantIDFromCtx(ctx)).Scan(&n)
 	return n, err
 }
@@ -60,7 +63,7 @@ func (r *SQLRepository) CountActiveDTCs(ctx context.Context) (int64, error) {
 SELECT COUNT(*)
 FROM dtc_events d
 WHERE d.resolved_at IS NULL
-  AND EXISTS (SELECT 1 FROM vehicles v WHERE v.id = d.vehicle_id AND v.tenant_id = ?)`,
+  AND EXISTS (SELECT 1 FROM vehicles v WHERE v.id = d.vehicle_id AND v.tenant_id = $1)`,
 		tenantIDFromCtx(ctx)).Scan(&n)
 	return n, err
 }
@@ -74,10 +77,10 @@ func (r *SQLRepository) CountExpiringEwaybills(ctx context.Context) (int64, erro
 SELECT COUNT(*)
 FROM eway_bills e
 WHERE e.status IN ('active', 'part_a')
-  AND e.valid_until > datetime('now')
-  AND e.valid_until <= datetime('now', '+8 hours')
-  AND EXISTS (SELECT 1 FROM trips t WHERE t.id = e.trip_id AND t.tenant_id = ?)`,
-		tenantIDFromCtx(ctx)).Scan(&n)
+  AND e.valid_until > $1
+  AND e.valid_until <= $2
+  AND EXISTS (SELECT 1 FROM trips t WHERE t.id = e.trip_id AND t.tenant_id = $3)`,
+		time.Now().UTC(), time.Now().UTC().Add(8*time.Hour), tenantIDFromCtx(ctx)).Scan(&n)
 	return n, err
 }
 
@@ -86,7 +89,7 @@ func (r *SQLRepository) CountPendingKharcha(ctx context.Context) (int64, error) 
 	var n int64
 	err := r.queryRow(ctx, `
 SELECT COUNT(*) FROM driver_expenses
-WHERE tenant_id = ? AND COALESCE(status, 'pending') = 'pending'`,
+WHERE tenant_id = $1 AND COALESCE(status, 'pending') = 'pending'`,
 		tenantIDFromCtx(ctx)).Scan(&n)
 	return n, err
 }
@@ -96,7 +99,7 @@ func (r *SQLRepository) CountLowFastag(ctx context.Context, threshold float64) (
 	var n int64
 	err := r.queryRow(ctx, `
 SELECT COUNT(*) FROM fastag_tags
-WHERE tenant_id = ? AND status = 'ACTIVE' AND balance < ?`,
+WHERE tenant_id = $1 AND status = 'ACTIVE' AND balance < $2`,
 		tenantIDFromCtx(ctx), threshold).Scan(&n)
 	return n, err
 }

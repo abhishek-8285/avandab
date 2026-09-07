@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	appdb "transport-app/internal/database"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -256,7 +257,7 @@ func (h *CustomerHandlers) ConsolidateInvoices(w http.ResponseWriter, r *http.Re
 			var defaultTerms sql.NullInt64
 			_ = h.DB.QueryRowContext(ctx, `
 				SELECT CAST(value AS INTEGER) FROM company_config
-				WHERE tenant_id = ? AND key = 'billing.default_payment_terms_days'
+				WHERE tenant_id = $1 AND key = 'billing.default_payment_terms_days'
 			`, string(tenantID)).Scan(&defaultTerms)
 			if defaultTerms.Valid && defaultTerms.Int64 > 0 {
 				termsDays = int(defaultTerms.Int64)
@@ -348,7 +349,7 @@ func (h *CustomerHandlers) ConsolidateInvoices(w http.ResponseWriter, r *http.Re
 			id, invoice_number, booking_id, customer_id, trip_id,
 			subtotal, tax, cgst, sgst, igst, discount, total,
 			payment_status, status, due_date, tenant_id, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, 0, 0, 0, 0, 0, 0, 0, 'pending', 'outstanding', ?, ?, ?, ?)
+		) VALUES ($1, $2, $3, $4, $5, 0, 0, 0, 0, 0, 0, 0, 'pending', 'outstanding', $6, $7, $8, $9)
 	`, invoiceUUID, invoiceNumber, primaryBookingID, customerID, primaryTripID,
 		dueDate.Format("2006-01-02 15:04:05"), string(tenantID), invoiceDate, invoiceDate)
 	if err != nil {
@@ -381,7 +382,7 @@ func (h *CustomerHandlers) ConsolidateInvoices(w http.ResponseWriter, r *http.Re
 					quantity, unit_price, amount, hsn_sac_code, unit, rate,
 					taxable_value, cgst_rate, sgst_rate, igst_rate,
 					cgst_amount, sgst_amount, igst_amount, total, created_at
-				) VALUES (?, ?, ?, ?, 'freight', ?, 1, ?, ?, '996511', 'TRIP', ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+				) VALUES ($1, $2, $3, $4, 'freight', $5, 1, $6, $7, '996511', 'TRIP', $8, $9, $10, $11, $12, $13, $14, $15, $16, CURRENT_TIMESTAMP)
 			`, lineID, string(tenantID), invoiceUUID, tr.ID, desc,
 				tr.Freight, tr.Freight, tr.Freight,
 				fTaxable, cgstRate, sgstRate, igstRate,
@@ -415,7 +416,7 @@ func (h *CustomerHandlers) ConsolidateInvoices(w http.ResponseWriter, r *http.Re
 					quantity, unit_price, amount, hsn_sac_code, unit, rate,
 					taxable_value, cgst_rate, sgst_rate, igst_rate,
 					cgst_amount, sgst_amount, igst_amount, total, created_at
-				) VALUES (?, ?, ?, ?, 'accessorial', ?, 1, ?, ?, '996511', 'NOS', ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+				) VALUES ($1, $2, $3, $4, 'accessorial', $5, 1, $6, $7, '996511', 'NOS', $8, $9, $10, $11, $12, $13, $14, $15, $16, CURRENT_TIMESTAMP)
 			`, lineID, string(tenantID), invoiceUUID, tr.ID, desc,
 				tr.Tolls, tr.Tolls, tr.Tolls,
 				tTaxable, cgstRate, sgstRate, igstRate,
@@ -456,7 +457,7 @@ func (h *CustomerHandlers) ConsolidateInvoices(w http.ResponseWriter, r *http.Re
 						quantity, unit_price, amount, ref_id, hsn_sac_code, unit, rate,
 						taxable_value, cgst_rate, sgst_rate, igst_rate,
 						cgst_amount, sgst_amount, igst_amount, total, created_at
-					) VALUES (?, ?, ?, ?, 'detention', ?, ?, ?, ?, ?, '996511', 'HRS', ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+					) VALUES ($1, $2, $3, $4, 'detention', $5, $6, $7, $8, $9, '996511', 'HRS', $10, $11, $12, $13, $14, $15, $16, $17, $18, CURRENT_TIMESTAMP)
 				`, lineID, string(tenantID), invoiceUUID, tr.ID, desc,
 					hrs, d.rate, d.amt, d.id, d.rate,
 					dTaxable, cgstRate, sgstRate, igstRate,
@@ -469,8 +470,8 @@ func (h *CustomerHandlers) ConsolidateInvoices(w http.ResponseWriter, r *http.Re
 
 				// Mark detention record as attached
 				_, _ = tx.ExecContext(ctx, `
-					UPDATE trip_detentions SET status = 'attached', updated_at = datetime('now')
-					WHERE id = ? AND tenant_id = ?
+					UPDATE trip_detentions SET status = 'attached', updated_at = CURRENT_TIMESTAMP
+					WHERE id = $1 AND tenant_id = $2
 				`, d.id, string(tenantID))
 
 				sumTaxable += dTaxable
@@ -494,7 +495,7 @@ func (h *CustomerHandlers) ConsolidateInvoices(w http.ResponseWriter, r *http.Re
 					quantity, unit_price, amount, hsn_sac_code, unit, rate,
 					taxable_value, cgst_rate, sgst_rate, igst_rate,
 					cgst_amount, sgst_amount, igst_amount, total, created_at
-				) VALUES (?, ?, ?, ?, 'detention', ?, 1, ?, ?, '996511', 'NOS', ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+				) VALUES ($1, $2, $3, $4, 'detention', $5, 1, $6, $7, '996511', 'NOS', $8, $9, $10, $11, $12, $13, $14, $15, $16, CURRENT_TIMESTAMP)
 			`, lineID, string(tenantID), invoiceUUID, tr.ID, desc,
 				tr.Detention, tr.Detention, tr.Detention,
 				dTaxable, cgstRate, sgstRate, igstRate,
@@ -514,8 +515,8 @@ func (h *CustomerHandlers) ConsolidateInvoices(w http.ResponseWriter, r *http.Re
 	// Update invoice header with reconciled totals
 	_, err = tx.ExecContext(ctx, `
 		UPDATE invoices
-		SET subtotal = ?, tax = ?, cgst = ?, sgst = ?, igst = ?, total = ?, updated_at = datetime('now')
-		WHERE id = ? AND tenant_id = ?
+		SET subtotal = $1, tax = $2, cgst = $3, sgst = $4, igst = $5, total = $6, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $7 AND tenant_id = $8
 	`, sumTaxable, totalTax, sumCGST, sumSGST, sumIGST, finalTotal, invoiceUUID, string(tenantID))
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to update consolidated invoice totals", "error", logging.Redact(err.Error()))
@@ -621,7 +622,7 @@ func (h *CustomerHandlers) computeCustomerStatement(ctx context.Context, tenantI
 		SELECT id, invoice_number, created_at, due_date, subtotal, tax, total,
 		       COALESCE(paid_amount, 0), payment_status, status
 		FROM invoices
-		WHERE customer_id = ? AND tenant_id = ? AND status != 'cancelled'
+		WHERE customer_id = $1 AND tenant_id = $2 AND status != 'cancelled'
 		ORDER BY created_at ASC
 	`, customerID, string(tenantID))
 	if err != nil {
@@ -707,7 +708,7 @@ func (h *CustomerHandlers) computeCustomerStatement(ctx context.Context, tenantI
 		       COALESCE(p.reference, ''), COALESCE(p.remarks, ''), i.invoice_number
 		FROM payments p
 		JOIN invoices i ON p.invoice_id = i.id
-		WHERE i.customer_id = ? AND p.tenant_id = ?
+		WHERE i.customer_id = $1 AND p.tenant_id = $2
 		ORDER BY p.payment_date ASC
 	`, customerID, string(tenantID))
 	if err != nil {
@@ -743,7 +744,7 @@ func (h *CustomerHandlers) computeCustomerStatement(ctx context.Context, tenantI
 		SELECT n.id, i.invoice_number, n.note_number, n.note_type, n.reason, n.total, n.created_at
 		FROM credit_debit_notes n
 		JOIN invoices i ON n.invoice_id = i.id
-		WHERE i.customer_id = ? AND n.tenant_id = ?
+		WHERE i.customer_id = $1 AND n.tenant_id = $2
 		ORDER BY n.created_at ASC
 	`, customerID, string(tenantID))
 	if errNotes == nil {
@@ -922,18 +923,18 @@ func (h *CustomerHandlers) fetchUnbilledTrips(
 		LEFT JOIN routes r ON t.route_id = r.id
 		LEFT JOIN vehicles v ON t.vehicle_id = v.id
 		LEFT JOIN drivers d ON t.driver_id = d.id
-		WHERE b.customer_id = ?
-		  AND t.tenant_id = ?
+		WHERE b.customer_id = $1
+		  AND t.tenant_id = $2
 		  AND t.status IN ('delivered', 'completed')
 		  AND t.id NOT IN (
 			  SELECT COALESCE(trip_id, '') FROM invoices
-			  WHERE tenant_id = ? AND status != 'cancelled' AND trip_id IS NOT NULL AND trip_id != ''
+			  WHERE tenant_id = $3 AND status != 'cancelled' AND trip_id IS NOT NULL AND trip_id != ''
 		  )
 		  AND t.id NOT IN (
 			  SELECT COALESCE(ili.trip_id, '')
 			  FROM invoice_line_items ili
 			  JOIN invoices inv ON ili.invoice_id = inv.id
-			  WHERE ili.tenant_id = ? AND inv.status != 'cancelled' AND ili.trip_id IS NOT NULL AND ili.trip_id != ''
+			  WHERE ili.tenant_id = $4 AND inv.status != 'cancelled' AND ili.trip_id IS NOT NULL AND ili.trip_id != ''
 		  )
 	`
 	var args []interface{}
@@ -949,17 +950,21 @@ func (h *CustomerHandlers) fetchUnbilledTrips(
 	}
 
 	if dateFrom != "" {
-		query += " AND date(COALESCE(t.delivered_at, t.completed_at, t.departure_time)) >= date(?)"
+		query += " AND substr(CAST(COALESCE(t.delivered_at, t.completed_at, t.departure_time) AS TEXT), 1, 10) >= substr(CAST(? AS TEXT), 1, 10)"
 		args = append(args, dateFrom)
 	}
 	if dateTo != "" {
-		query += " AND date(COALESCE(t.delivered_at, t.completed_at, t.departure_time)) <= date(?)"
+		query += " AND substr(CAST(COALESCE(t.delivered_at, t.completed_at, t.departure_time) AS TEXT), 1, 10) <= substr(CAST(? AS TEXT), 1, 10)"
 		args = append(args, dateTo)
 	}
 
 	query += " ORDER BY t.departure_time ASC"
 
-	rows, err := h.DB.QueryContext(ctx, query, args...)
+	rebound, rerr := appdb.Rebind(query)
+	if rerr != nil {
+		return nil, rerr
+	}
+	rows, err := h.DB.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -1042,7 +1047,7 @@ func fetchTripDetentions(ctx context.Context, tx *sql.Tx, tripID string, tenantI
 	rows, err := tx.QueryContext(ctx, `
 		SELECT id, zone_kind, billable_seconds, rate_per_hour, amount
 		FROM trip_detentions
-		WHERE trip_id = ? AND tenant_id = ? AND status != 'waived' AND amount > 0
+		WHERE trip_id = $1 AND tenant_id = $2 AND status != 'waived' AND amount > 0
 	`, tripID, tenantID)
 	if err != nil {
 		return nil, err

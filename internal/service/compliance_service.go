@@ -212,7 +212,7 @@ func (s *ComplianceService) ValidateVehicleCompliance(ctx context.Context, vehic
 		pucTime = *vehicle.PUCExpiry
 	} else if dbGetter, ok := s.store.(repository.DBGetter); ok {
 		var pucStr sql.NullString
-		_ = dbGetter.DB().QueryRowContext(ctx, `SELECT puc_expiry FROM vehicles WHERE id = ?`, string(vehicleID)).Scan(&pucStr)
+		_ = dbGetter.DB().QueryRowContext(ctx, `SELECT puc_expiry FROM vehicles WHERE id = $1`, string(vehicleID)).Scan(&pucStr)
 		if pucStr.Valid && pucStr.String != "" {
 			if t, err := time.Parse("2006-01-02", pucStr.String); err == nil {
 				pucTime = t
@@ -284,7 +284,7 @@ func (s *ComplianceService) RecordCheck(ctx context.Context, entityType, entityI
 	id := uuid.NewString()
 	_, err := dbGetter.DB().ExecContext(ctx, `
 		INSERT INTO compliance_checks (id, entity_type, entity_id, check_type, status, details, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+		VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
 		id, entityType, entityID, checkType, status, details)
 	return err
 }
@@ -305,7 +305,7 @@ func (s *ComplianceService) CreateExemption(ctx context.Context, ex ComplianceEx
 
 	_, err := dbGetter.DB().ExecContext(ctx, `
 		INSERT INTO compliance_exemptions (id, entity_type, entity_id, doc_type, reason, exempt_until, created_by, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		ex.ID, ex.EntityType, ex.EntityID, ex.DocType, ex.Reason, ex.ExemptUntil, ex.CreatedBy, ex.CreatedAt)
 	if err != nil {
 		return err
@@ -327,8 +327,8 @@ func (s *ComplianceService) IsExempt(ctx context.Context, entityType, entityID, 
 	row := dbGetter.DB().QueryRowContext(ctx, `
 		SELECT id, entity_type, entity_id, doc_type, reason, exempt_until, created_by, created_at
 		FROM compliance_exemptions
-		WHERE entity_type = ? AND entity_id = ? AND (doc_type = ? OR doc_type = 'all')
-		  AND exempt_until > ?
+		WHERE entity_type = $1 AND entity_id = $2 AND (doc_type = $3 OR doc_type = 'all')
+		  AND exempt_until > $4
 		ORDER BY exempt_until DESC
 		LIMIT 1`, entityType, entityID, docType, now)
 
@@ -354,7 +354,7 @@ func (s *ComplianceService) ListExemptions(ctx context.Context, entityType, enti
 	rows, err := dbGetter.DB().QueryContext(ctx, `
 		SELECT id, entity_type, entity_id, doc_type, reason, exempt_until, created_by, created_at
 		FROM compliance_exemptions
-		WHERE entity_type = ? AND entity_id = ?
+		WHERE entity_type = $1 AND entity_id = $2
 		ORDER BY created_at DESC`, entityType, entityID)
 	if err != nil {
 		return nil, err

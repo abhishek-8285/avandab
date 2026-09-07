@@ -22,6 +22,7 @@ type CreateVehicleCommand struct {
 	FitnessExpiry      time.Time
 	PermitExpiry       time.Time
 	CurrentMileage     *float64
+	Profile            aggregate.VehicleProfile
 }
 
 type CreateVehicleUseCase struct {
@@ -56,6 +57,10 @@ func (uc *CreateVehicleUseCase) Execute(ctx context.Context, cmd CreateVehicleCo
 		cmd.CurrentMileage,
 		uc.clock.Now(),
 	)
+
+	if err := v.ApplyProfile(cmd.Profile, uc.clock.Now()); err != nil {
+		return "", err
+	}
 
 	err := uc.uow.Execute(ctx, func(txCtx ports.TxContext) error {
 		repo, ok := txCtx.Repositories().Vehicles().(domain.VehicleRepository)

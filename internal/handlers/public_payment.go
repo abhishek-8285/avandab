@@ -169,7 +169,7 @@ func (h *PaymentHandlers) PublicRazorpayOrder(w http.ResponseWriter, r *http.Req
 	// Resolve canonical invoice ID and tenant ID
 	var canonicalID, tenantID string
 	err := h.DB.QueryRowContext(r.Context(), `
-		SELECT id, tenant_id FROM invoices WHERE id = ? OR invoice_number = ? LIMIT 1
+		SELECT id, tenant_id FROM invoices WHERE id = $1 OR invoice_number = $2 LIMIT 1
 	`, invoiceID, invoiceID).Scan(&canonicalID, &tenantID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -287,7 +287,7 @@ func (h *PaymentHandlers) PublicRazorpayVerify(w http.ResponseWriter, r *http.Re
 	// Resolve canonical invoice ID and tenant ID
 	var canonicalID, tenantID string
 	err := h.DB.QueryRowContext(r.Context(), `
-		SELECT id, tenant_id FROM invoices WHERE id = ? OR invoice_number = ? LIMIT 1
+		SELECT id, tenant_id FROM invoices WHERE id = $1 OR invoice_number = $2 LIMIT 1
 	`, req.InvoiceID, req.InvoiceID).Scan(&canonicalID, &tenantID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -377,7 +377,7 @@ func (h *PaymentHandlers) loadPublicPayData(ctx context.Context, invoiceID strin
 		LEFT JOIN bookings b ON b.id = i.booking_id
 		LEFT JOIN routes r ON r.id = b.route_id
 		LEFT JOIN trips t ON t.id = i.trip_id
-		WHERE i.id = ? OR i.invoice_number = ?
+		WHERE i.id = $1 OR i.invoice_number = $2
 		LIMIT 1
 	`, invoiceID, invoiceID).Scan(
 		&id, &invoiceNumber, &bookingID, &customerID, &tripIDNull,
@@ -451,7 +451,7 @@ func (h *PaymentHandlers) loadPublicPayData(ctx context.Context, invoiceID strin
 		       taxable_value, cgst_rate, cgst_amount, sgst_rate, sgst_amount,
 		       igst_rate, igst_amount, total
 		FROM invoice_line_items
-		WHERE invoice_id = ?
+		WHERE invoice_id = $1
 		ORDER BY created_at ASC
 	`, id)
 	if err == nil {
@@ -522,7 +522,7 @@ func (h *PaymentHandlers) loadPublicPayData(ctx context.Context, invoiceID strin
 
 	if tenantID != "" {
 		var tName sql.NullString
-		if err := h.DB.QueryRowContext(ctx, `SELECT name FROM tenants WHERE id = ?`, tenantID).Scan(&tName); err == nil && tName.Valid && tName.String != "" {
+		if err := h.DB.QueryRowContext(ctx, `SELECT name FROM tenants WHERE id = $1`, tenantID).Scan(&tName); err == nil && tName.Valid && tName.String != "" {
 			company.Name = tName.String
 		}
 	}
@@ -535,7 +535,7 @@ func (h *PaymentHandlers) loadPublicPayData(ctx context.Context, invoiceID strin
 		SELECT id, payment_date, amount, method, COALESCE(reference, ''),
 		       COALESCE(razorpay_payment_id, ''), COALESCE(razorpay_order_id, '')
 		FROM payments
-		WHERE invoice_id = ?
+		WHERE invoice_id = $1
 		ORDER BY payment_date DESC, created_at DESC
 	`, id)
 	if err == nil {

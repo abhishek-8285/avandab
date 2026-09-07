@@ -213,13 +213,12 @@ func (r *SQLRepository) ListInvoicesByCustomer(ctx context.Context, customerID d
 
 func (r *SQLRepository) SearchInvoices(ctx context.Context, query string, status string, limit, offset int) ([]repository.InvoiceWithJoins, error) {
 	rows, err := r.Q(ctx).SearchInvoices(ctx, db.SearchInvoicesParams{
-		TenantID:      tenantIDFromCtx(ctx),
-		Column2:       sql.NullString{String: query, Valid: true},
-		Column3:       sql.NullString{String: query, Valid: true},
-		Column4:       status,
-		PaymentStatus: status,
-		Limit:         int64(limit),
-		Offset:        int64(offset),
+		TenantID:         tenantIDFromCtx(ctx),
+		Search:           query,
+		PaymentStatusAll: status,
+		PaymentStatus:    status,
+		Limit:            int64(limit),
+		Offset:           int64(offset),
 	})
 	if err != nil {
 		return nil, err
@@ -238,11 +237,10 @@ func (r *SQLRepository) SearchInvoices(ctx context.Context, query string, status
 
 func (r *SQLRepository) CountInvoices(ctx context.Context, query string, status string) (int64, error) {
 	count, err := r.Q(ctx).CountInvoices(ctx, db.CountInvoicesParams{
-		TenantID:      tenantIDFromCtx(ctx),
-		Column2:       sql.NullString{String: query, Valid: true},
-		Column3:       sql.NullString{String: query, Valid: true},
-		Column4:       status,
-		PaymentStatus: status,
+		TenantID:         tenantIDFromCtx(ctx),
+		Search:           query,
+		PaymentStatusAll: status,
+		PaymentStatus:    status,
 	})
 	if err != nil {
 		return 0, err

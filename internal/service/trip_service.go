@@ -572,7 +572,7 @@ func (s *TripService) EnsurePODOTP(ctx context.Context, tripID string) (string, 
 	}
 	var otp, expires string
 	err := db.QueryRowContext(ctx,
-		`SELECT COALESCE(pod_otp,''), COALESCE(pod_otp_expires_at,'') FROM trips WHERE id = ?`, tripID).
+		`SELECT COALESCE(pod_otp,''), COALESCE(pod_otp_expires_at,'') FROM trips WHERE id = $1`, tripID).
 		Scan(&otp, &expires)
 	if err != nil {
 		return "", err
@@ -590,7 +590,7 @@ func (s *TripService) EnsurePODOTP(ctx context.Context, tripID string) (string, 
 	code := fmt.Sprintf("%06d", n.Int64())
 	expiresAt := time.Now().Add(podOTPTTL).UTC().Format(time.RFC3339)
 	if _, err := db.ExecContext(ctx,
-		`UPDATE trips SET pod_otp = ?, pod_otp_expires_at = ? WHERE id = ?`, code, expiresAt, tripID); err != nil {
+		`UPDATE trips SET pod_otp = $1, pod_otp_expires_at = $2 WHERE id = $3`, code, expiresAt, tripID); err != nil {
 		return "", err
 	}
 	s.logAudit(ctx, nil, "pod_otp_issued", "trips", tripID, nil, nil)
@@ -606,7 +606,7 @@ func (s *TripService) verifyPODOTP(ctx context.Context, tripID, code string, ver
 	}
 	var otp, expires string
 	err := db.QueryRowContext(ctx,
-		`SELECT COALESCE(pod_otp,''), COALESCE(pod_otp_expires_at,'') FROM trips WHERE id = ?`, tripID).
+		`SELECT COALESCE(pod_otp,''), COALESCE(pod_otp_expires_at,'') FROM trips WHERE id = $1`, tripID).
 		Scan(&otp, &expires)
 	if err != nil || otp == "" {
 		return nil // legacy trip, no gate
@@ -619,7 +619,7 @@ func (s *TripService) verifyPODOTP(ctx context.Context, tripID, code string, ver
 	}
 	*verified = true
 	if _, err := db.ExecContext(ctx,
-		`UPDATE trips SET pod_otp_verified = 1, pod_otp = '' WHERE id = ?`, tripID); err != nil {
+		`UPDATE trips SET pod_otp_verified = 1, pod_otp = '' WHERE id = $1`, tripID); err != nil {
 		return err
 	}
 	return nil

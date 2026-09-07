@@ -19,3 +19,27 @@
         {{template "vehicle_list_table.html" .}}
     </div>
 </div>
+
+<form method="GET" action="/vehicles" class="px-4 py-2.5 border-t border-border-subtle flex flex-wrap items-center gap-2 bg-surface-container-lowest">
+    <input type="hidden" name="q" value="{{if .Query}}{{.Query}}{{end}}">
+    {{if .StatusFilter}}<input type="hidden" name="status" value="{{.StatusFilter}}">{{end}}
+    {{if .DateFrom}}<input type="hidden" name="from" value="{{.DateFrom}}">{{end}}
+    {{if .DateTo}}<input type="hidden" name="to" value="{{.DateTo}}">{{end}}
+    <label class="text-xs font-semibold uppercase tracking-wider text-secondary">Fleet class</label>
+    <select name="fleet_class" onchange="this.form.submit()" class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary transition-all">
+        <option value="" {{if not .FleetClassFilter}}selected{{end}}>All classes</option>
+        <option value="CV" {{if eq .FleetClassFilter "CV"}}selected{{end}}>CV - Commercial</option>
+        <option value="PV" {{if eq .FleetClassFilter "PV"}}selected{{end}}>PV - Passenger</option>
+        <option value="FS" {{if eq .FleetClassFilter "FS"}}selected{{end}}>FS - Fuel Station</option>
+        <option value="OFS" {{if eq .FleetClassFilter "OFS"}}selected{{end}}>OFS - Outside Fuel Stn</option>
+    </select>
+    <label class="text-xs font-semibold uppercase tracking-wider text-secondary">Ownership</label>
+    <select name="ownership" onchange="this.form.submit()" class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary transition-all">
+        <option value="" {{if not .OwnershipFilter}}selected{{end}}>All ownership</option>
+        <option value="O" {{if eq .OwnershipFilter "O"}}selected{{end}}>O - Own</option>
+        <option value="C" {{if eq .OwnershipFilter "C"}}selected{{end}}>C - Contract</option>
+        <option value="F" {{if eq .OwnershipFilter "F"}}selected{{end}}>F - Fuel station</option>
+        <option value="M" {{if eq .OwnershipFilter "M"}}selected{{end}}>M - Machine</option>
+    </select>
+    {{if or .FleetClassFilter .OwnershipFilter}}<a href="/vehicles" class="text-xs font-semibold text-primary hover:underline">Clear</a>{{end}}
+</form>

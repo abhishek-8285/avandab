@@ -110,7 +110,7 @@ func (s *EtaService) loadTrip(ctx context.Context, tripID string) (*tripData, er
 		FROM trips t
 		LEFT JOIN routes r ON t.route_id = r.id
 		LEFT JOIN route_locations rl ON rl.route_id = r.id
-		WHERE t.id = ?`, tripID).Scan(
+		WHERE t.id = $1`, tripID).Scan(
 		&t.TripID, &t.Status, &vID, &rDist, &rHours,
 		&sAtT, &dTimeT, &aTimeT,
 		&sAtS, &dTimeS, &aTimeS,
@@ -150,7 +150,7 @@ func (s *EtaService) loadLatestSnapshot(ctx context.Context, tripID, vehicleID s
 	err := s.db.QueryRowContext(ctx, `
 		SELECT timestamp, speed, odometer, vehicle_id, timestamp
 		FROM telemetry_snapshots
-		WHERE (trip_id = ? OR (vehicle_id = ? AND vehicle_id != ''))
+		WHERE (trip_id = $1 OR (vehicle_id = $2 AND vehicle_id != ''))
 		  AND latitude IS NOT NULL AND longitude IS NOT NULL
 		ORDER BY timestamp DESC LIMIT 1`, tripID, vehicleID).Scan(
 		&tsT, &speed, &odo, &vID, &tsS,
@@ -180,8 +180,8 @@ func (s *EtaService) rollingAvgSpeed(ctx context.Context, tripID string, vehicle
 	windowStart := time.Now().UTC().Add(-time.Duration(s.windowMin) * time.Minute).Format("2006-01-02 15:04:05")
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT speed FROM telemetry_snapshots
-		WHERE (trip_id = ? OR (vehicle_id = ? AND vehicle_id != ''))
-		  AND timestamp >= ? AND speed > 0
+		WHERE (trip_id = $1 OR (vehicle_id = $2 AND vehicle_id != ''))
+		  AND timestamp >= $3 AND speed > 0
 		ORDER BY timestamp DESC`, tripID, vehicleID, windowStart)
 	if err != nil {
 		return 0, 0, err
@@ -218,13 +218,13 @@ func (s *EtaService) remainingDistance(ctx context.Context, trip *tripData, late
 			startStr := startRef.Format("2006-01-02 15:04:05")
 			err = s.db.QueryRowContext(ctx, `
 				SELECT odometer FROM telemetry_snapshots
-				WHERE (trip_id = ? OR (vehicle_id = ? AND vehicle_id != ''))
-				  AND timestamp >= ? AND odometer IS NOT NULL
+				WHERE (trip_id = $1 OR (vehicle_id = $2 AND vehicle_id != ''))
+				  AND timestamp >= $3 AND odometer IS NOT NULL
 				ORDER BY timestamp ASC LIMIT 1`, trip.TripID, trip.VehicleID, startStr).Scan(&odomStart)
 		} else {
 			err = s.db.QueryRowContext(ctx, `
 				SELECT odometer FROM telemetry_snapshots
-				WHERE (trip_id = ? OR (vehicle_id = ? AND vehicle_id != ''))
+				WHERE (trip_id = $1 OR (vehicle_id = $2 AND vehicle_id != ''))
 				  AND odometer IS NOT NULL
 				ORDER BY timestamp ASC LIMIT 1`, trip.TripID, trip.VehicleID).Scan(&odomStart)
 		}
@@ -311,7 +311,7 @@ func (s *EtaService) writeAuditLog(ctx context.Context, tripID string, action st
 	newValues := fmt.Sprintf(`{"reason":"%s"}`, reason)
 	_, _ = s.db.ExecContext(ctx, `
 		INSERT INTO audit_logs (id, action, table_name, record_id, new_values, created_at)
-		VALUES (?, ?, 'trips', ?, ?, CURRENT_TIMESTAMP)`,
+		VALUES ($1, $2, 'trips', $3, $4, CURRENT_TIMESTAMP)`,
 		auditID, action, tripID, newValues,
 	)
 }

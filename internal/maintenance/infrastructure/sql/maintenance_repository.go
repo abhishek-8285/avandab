@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
+	appdb "transport-app/internal/database"
 	"transport-app/internal/maintenance/domain"
 	"transport-app/internal/shared"
 )
@@ -55,7 +56,11 @@ func (r *MaintenanceRepository) listSchedules(ctx context.Context, vehicleID, te
 	}
 	query += " ORDER BY s.created_at DESC"
 
-	rows, err := r.db.QueryContext(ctx, query, args...)
+	rebound, rerr := appdb.Rebind(query)
+	if rerr != nil {
+		return nil, rerr
+	}
+	rows, err := r.db.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +130,7 @@ func (r *MaintenanceRepository) GetLatestOdometer(ctx context.Context, vehicleID
 	var snapOdo sql.NullFloat64
 	err := r.db.QueryRowContext(ctx, `
 		SELECT MAX(odometer) FROM telemetry_snapshots
-		WHERE vehicle_id = ? AND odometer IS NOT NULL`, vehicleID).Scan(&snapOdo)
+		WHERE vehicle_id = $1 AND odometer IS NOT NULL`, vehicleID).Scan(&snapOdo)
 	if err == nil && snapOdo.Valid && snapOdo.Float64 > 0 {
 		return snapOdo.Float64, nil
 	}
@@ -133,7 +138,7 @@ func (r *MaintenanceRepository) GetLatestOdometer(ctx context.Context, vehicleID
 	var vehOdo sql.NullFloat64
 	err = r.db.QueryRowContext(ctx, `
 		SELECT COALESCE(odometer, current_mileage, 0) FROM vehicles
-		WHERE id = ?`, vehicleID).Scan(&vehOdo)
+		WHERE id = $1`, vehicleID).Scan(&vehOdo)
 	if err == nil && vehOdo.Valid {
 		return vehOdo.Float64, nil
 	}
@@ -145,8 +150,8 @@ func (r *MaintenanceRepository) SetMaintenanceDue(ctx context.Context, vehicleID
 	dateStr := dueDate.UTC().Format("2006-01-02")
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE vehicles
-		SET maintenance_due = ?, updated_at = CURRENT_TIMESTAMP
-		WHERE id = ? AND maintenance_due IS NULL`, dateStr, vehicleID)
+		SET maintenance_due = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2 AND maintenance_due IS NULL`, dateStr, vehicleID)
 	return err
 }
 
@@ -159,7 +164,7 @@ func (r *MaintenanceRepository) ClearMaintenanceDue(ctx context.Context, vehicle
 		    maintenance_override_at = NULL,
 		    maintenance_override_reason = NULL,
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE id = ?`, vehicleID)
+		WHERE id = $1`, vehicleID)
 	return err
 }
 
@@ -174,7 +179,7 @@ func (r *MaintenanceRepository) IsMaintenanceBlocked(ctx context.Context, vehicl
 	err := r.db.QueryRowContext(ctx, `
 		SELECT maintenance_due, maintenance_override_by, maintenance_override_at, maintenance_override_reason
 		FROM vehicles
-		WHERE id = ?`, vehicleID).Scan(&due, &overrideBy, &overrideAt, &overrideReason)
+		WHERE id = $1`, vehicleID).Scan(&due, &overrideBy, &overrideAt, &overrideReason)
 	if err != nil {
 		return false, "", err
 	}
@@ -183,7 +188,7 @@ func (r *MaintenanceRepository) IsMaintenanceBlocked(ctx context.Context, vehicl
 	var dtcCode string
 	err = r.db.QueryRowContext(ctx, `
 		SELECT dtc_code FROM dtc_events
-		WHERE vehicle_id = ? AND severity = 'critical' AND resolved_at IS NULL
+		WHERE vehicle_id = $1 AND severity = 'critical' AND resolved_at IS NULL
 		ORDER BY occurred_at DESC LIMIT 1`, vehicleID).Scan(&dtcCode)
 	if err == nil && dtcCode != "" {
 		hasCriticalDTC = true
@@ -209,8 +214,9 @@ func (r *MaintenanceRepository) IsMaintenanceBlocked(ctx context.Context, vehicl
 func (r *MaintenanceRepository) InsertDtcEvent(ctx context.Context, evt domain.DtcEvent) (bool, error) {
 	truncated := evt.OccurredAt.UTC().Truncate(time.Minute).Format("2006-01-02 15:04:05")
 	res, err := r.db.ExecContext(ctx, `
-		INSERT OR IGNORE INTO dtc_events (id, vehicle_id, trip_id, dtc_code, severity, description, raw_payload, occurred_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		INSERT INTO dtc_events (id, vehicle_id, trip_id, dtc_code, severity, description, raw_payload, occurred_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		ON CONFLICT DO NOTHING`,
 		evt.ID, evt.VehicleID, evt.TripID, evt.DtcCode, evt.Severity, evt.Description, evt.RawPayload, truncated,
 	)
 	if err != nil {
@@ -225,7 +231,7 @@ func (r *MaintenanceRepository) ListUnresolvedCriticalDtc(ctx context.Context, v
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, vehicle_id, trip_id, dtc_code, severity, description, raw_payload, occurred_at
 		FROM dtc_events
-		WHERE vehicle_id = ? AND severity = 'critical' AND resolved_at IS NULL
+		WHERE vehicle_id = $1 AND severity = 'critical' AND resolved_at IS NULL
 		ORDER BY occurred_at DESC`, vehicleID)
 	if err != nil {
 		return nil, err
@@ -260,7 +266,7 @@ func (r *MaintenanceRepository) ResolveDtcEvent(ctx context.Context, id string) 
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE dtc_events
 		SET resolved_at = CURRENT_TIMESTAMP
-		WHERE id = ? AND resolved_at IS NULL`, id)
+		WHERE id = $1 AND resolved_at IS NULL`, id)
 	return err
 }
 
@@ -270,7 +276,7 @@ func (r *MaintenanceRepository) InsertRecord(ctx context.Context, rec domain.Rec
 	if tenantID == "" {
 		// Workshop records carry cost/vendor data: attribute to the
 		// vehicle's own org, never the bootstrap tenant.
-		_ = r.db.QueryRowContext(ctx, `SELECT tenant_id FROM vehicles WHERE id = ?`, rec.VehicleID).Scan(&tenantID)
+		_ = r.db.QueryRowContext(ctx, `SELECT tenant_id FROM vehicles WHERE id = $1`, rec.VehicleID).Scan(&tenantID)
 	}
 	if tenantID == "" {
 		return errors.New("maintenance: cannot record without tenant")
@@ -283,7 +289,7 @@ func (r *MaintenanceRepository) InsertRecord(ctx context.Context, rec domain.Rec
 
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO maintenance_records (id, vehicle_id, schedule_id, service_type, performed_at, odometer_km, cost, vendor, notes, recorded_by, tenant_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 		rec.ID, rec.VehicleID, rec.ScheduleID, rec.ServiceType, rec.PerformedAt.UTC().Format("2006-01-02 15:04:05"),
 		rec.OdometerKM, rec.Cost, rec.Vendor, rec.Notes, rec.RecordedBy, tenantID,
 	)
@@ -295,13 +301,13 @@ func (r *MaintenanceRepository) InsertRecord(ctx context.Context, rec domain.Rec
 	if rec.ScheduleID != nil && *rec.ScheduleID != "" {
 		_, _ = tx.ExecContext(ctx, `
 			UPDATE maintenance_schedules
-			SET last_done_km = ?, last_done_at = ?, updated_at = CURRENT_TIMESTAMP
-			WHERE id = ?`, rec.OdometerKM, rec.PerformedAt.UTC().Format("2006-01-02 15:04:05"), *rec.ScheduleID)
+			SET last_done_km = $1, last_done_at = $2, updated_at = CURRENT_TIMESTAMP
+			WHERE id = $3`, rec.OdometerKM, rec.PerformedAt.UTC().Format("2006-01-02 15:04:05"), *rec.ScheduleID)
 	} else {
 		_, _ = tx.ExecContext(ctx, `
 			UPDATE maintenance_schedules
-			SET last_done_km = ?, last_done_at = ?, updated_at = CURRENT_TIMESTAMP
-			WHERE vehicle_id = ? AND service_type = ? AND active = 1`,
+			SET last_done_km = $1, last_done_at = $2, updated_at = CURRENT_TIMESTAMP
+			WHERE vehicle_id = $3 AND service_type = $4 AND active = 1`,
 			rec.OdometerKM, rec.PerformedAt.UTC().Format("2006-01-02 15:04:05"), rec.VehicleID, rec.ServiceType)
 	}
 
@@ -323,8 +329,8 @@ func (r *MaintenanceRepository) SaveSchedule(ctx context.Context, s domain.Sched
 
 	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO maintenance_schedules (id, vehicle_id, service_type, interval_km, interval_days, last_done_km, last_done_at, due_km, due_at, active)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(id) DO UPDATE SET
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		ON CONFLICT (id) DO UPDATE SET
 			service_type = excluded.service_type,
 			interval_km = excluded.interval_km,
 			interval_days = excluded.interval_days,
@@ -344,11 +350,11 @@ func (r *MaintenanceRepository) SaveSchedule(ctx context.Context, s domain.Sched
 func (r *MaintenanceRepository) OverrideMaintenance(ctx context.Context, vehicleID, actorID, reason string) error {
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE vehicles
-		SET maintenance_override_by = ?,
+		SET maintenance_override_by = $1,
 		    maintenance_override_at = CURRENT_TIMESTAMP,
-		    maintenance_override_reason = ?,
+		    maintenance_override_reason = $2,
 		    updated_at = CURRENT_TIMESTAMP
-		WHERE id = ?`, actorID, reason, vehicleID)
+		WHERE id = $3`, actorID, reason, vehicleID)
 	return err
 }
 
@@ -381,7 +387,7 @@ func (r *MaintenanceRepository) ListDueVehicles(ctx context.Context, tenantID st
 		SELECT v.id, v.registration_number, v.vehicle_number, v.vehicle_type,
 		       v.maintenance_due, v.maintenance_override_by, v.maintenance_override_at, v.maintenance_override_reason
 		FROM vehicles v
-		WHERE v.tenant_id = ? AND v.maintenance_due IS NOT NULL
+		WHERE v.tenant_id = $1 AND v.maintenance_due IS NOT NULL
 		ORDER BY v.maintenance_due ASC`, tenantID)
 	if err != nil {
 		return nil, err
@@ -442,7 +448,11 @@ func (r *MaintenanceRepository) listRecords(ctx context.Context, vehicleID, tena
 	query += " ORDER BY performed_at DESC LIMIT ?"
 	args = append(args, limit)
 
-	rows, err := r.db.QueryContext(ctx, query, args...)
+	rebound, rerr := appdb.Rebind(query)
+	if rerr != nil {
+		return nil, rerr
+	}
+	rows, err := r.db.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -513,7 +523,11 @@ func (r *MaintenanceRepository) listDtcEvents(ctx context.Context, vehicleID, te
 	query += " ORDER BY d.occurred_at DESC LIMIT ?"
 	args = append(args, limit)
 
-	rows, err := r.db.QueryContext(ctx, query, args...)
+	rebound, rerr := appdb.Rebind(query)
+	if rerr != nil {
+		return nil, rerr
+	}
+	rows, err := r.db.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -561,7 +575,7 @@ func (r *MaintenanceRepository) CreateWorkOrder(ctx context.Context, w domain.Wo
 	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO work_orders (id, tenant_id, vehicle_id, schedule_id, trip_id, title, description,
 			assignee, vendor, cost_estimate, cost_actual, status, due_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
 		w.ID, w.TenantID, w.VehicleID, nullStr(w.ScheduleID), nullStr(w.TripID),
 		w.Title, w.Description, w.Assignee, w.Vendor,
 		nullFloat(w.CostEstimate), nullFloat(w.CostActual), w.Status, nullTime(w.DueAt))
@@ -574,7 +588,7 @@ func (r *MaintenanceRepository) FindWorkOrder(ctx context.Context, tenantID, id 
 		SELECT id, tenant_id, vehicle_id, schedule_id, trip_id, title, description,
 			assignee, vendor, cost_estimate, cost_actual, status, due_at, closed_at,
 			created_at, updated_at
-		FROM work_orders WHERE id = ? AND tenant_id = ?`, id, tenantID)
+		FROM work_orders WHERE id = $1 AND tenant_id = $2`, id, tenantID)
 	w, err := scanWorkOrder(row)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -604,7 +618,11 @@ func (r *MaintenanceRepository) ListWorkOrders(ctx context.Context, tenantID, st
 	}
 	query += " ORDER BY created_at DESC LIMIT ?"
 	args = append(args, limit)
-	rows, err := r.db.QueryContext(ctx, query, args...)
+	rebound, rerr := appdb.Rebind(query)
+	if rerr != nil {
+		return nil, rerr
+	}
+	rows, err := r.db.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -631,7 +649,7 @@ func (r *MaintenanceRepository) FindOpenWorkOrder(ctx context.Context, tenantID,
 			assignee, vendor, cost_estimate, cost_actual, status, due_at, closed_at,
 			created_at, updated_at
 		FROM work_orders
-		WHERE tenant_id = ? AND vehicle_id = ? AND status NOT IN ('done','cancelled')`
+		WHERE tenant_id = $1 AND vehicle_id = $2 AND status NOT IN ('done','cancelled')`
 	args := []interface{}{tenantID, vehicleID}
 	if scheduleID != "" {
 		query += " AND schedule_id = ?"
@@ -662,13 +680,13 @@ func (r *MaintenanceRepository) TransitionWorkOrder(ctx context.Context, tenantI
 	var err error
 	if toStatus == domain.WorkOrderDone || toStatus == domain.WorkOrderCancelled {
 		res, err = r.db.ExecContext(ctx, `
-			UPDATE work_orders SET status = ?, closed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-			WHERE id = ? AND tenant_id = ? AND status NOT IN ('done','cancelled')`,
+			UPDATE work_orders SET status = $1, closed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+			WHERE id = $2 AND tenant_id = $3 AND status NOT IN ('done','cancelled')`,
 			toStatus, id, tenantID)
 	} else {
 		res, err = r.db.ExecContext(ctx, `
-			UPDATE work_orders SET status = ?, updated_at = CURRENT_TIMESTAMP
-			WHERE id = ? AND tenant_id = ? AND status NOT IN ('done','cancelled')`,
+			UPDATE work_orders SET status = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = $2 AND tenant_id = $3 AND status NOT IN ('done','cancelled')`,
 			toStatus, id, tenantID)
 	}
 	if err != nil {
@@ -687,10 +705,10 @@ func (r *MaintenanceRepository) AssignWorkOrder(ctx context.Context, tenantID, i
 		return errors.New("maintenance: tenant and work order id required")
 	}
 	res, err := r.db.ExecContext(ctx, `
-		UPDATE work_orders SET assignee = ?, vendor = ?,
+		UPDATE work_orders SET assignee = $1, vendor = $2,
 			status = CASE WHEN status = 'open' THEN 'assigned' ELSE status END,
 			updated_at = CURRENT_TIMESTAMP
-		WHERE id = ? AND tenant_id = ? AND status NOT IN ('done','cancelled')`,
+		WHERE id = $3 AND tenant_id = $4 AND status NOT IN ('done','cancelled')`,
 		assignee, vendor, id, tenantID)
 	if err != nil {
 		return err
@@ -723,7 +741,7 @@ func (r *MaintenanceRepository) CompleteWorkOrder(ctx context.Context, tenantID,
 	}
 	res, err := r.db.ExecContext(ctx, `
 		UPDATE work_orders SET status = 'done', closed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-		WHERE id = ? AND tenant_id = ? AND status NOT IN ('done','cancelled')`,
+		WHERE id = $1 AND tenant_id = $2 AND status NOT IN ('done','cancelled')`,
 		id, tenantID)
 	if err != nil {
 		return nil, err

@@ -131,7 +131,7 @@ func (h *TenantsHandlers) List(w http.ResponseWriter, r *http.Request) {
 				SELECT ts.plan_id, ts.status, sp.monthly_price_inr, ts.current_period_end, ts.trial_end
 				FROM tenant_subscriptions ts
 				JOIN subscription_plans sp ON sp.id = ts.plan_id
-				WHERE ts.tenant_id = ?
+				WHERE ts.tenant_id = $1
 			`, t.ID).Scan(&planID, &subStatus, &price, &periodEndStr, &trialEndStr)
 
 			if subErr == nil {
@@ -162,7 +162,7 @@ func (h *TenantsHandlers) List(w http.ResponseWriter, r *http.Request) {
 			mErr := h.DB.QueryRowContext(r.Context(), `
 				SELECT used_quantity, max_quantity
 				FROM tenant_usage_meters
-				WHERE tenant_id = ? AND quota_key = 'max_trips_per_month'
+				WHERE tenant_id = $1 AND quota_key = 'max_trips_per_month'
 				ORDER BY updated_at DESC LIMIT 1
 			`, t.ID).Scan(&usedQty, &maxQty)
 
@@ -220,13 +220,13 @@ func (h *TenantsHandlers) UpdatePlan(w http.ResponseWriter, r *http.Request) {
 		end := now.Add(30 * 24 * time.Hour)
 		_, _ = h.DB.ExecContext(r.Context(), `
 			INSERT INTO tenant_subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, provider_subscription_id, created_at, updated_at)
-			VALUES (?, ?, ?, 'ACTIVE', ?, ?, ?, ?, ?)
-			ON CONFLICT(tenant_id) DO UPDATE SET
+			VALUES ($1, $2, $3, 'ACTIVE', $4, $5, $6, $7, $8)
+			ON CONFLICT (tenant_id) DO UPDATE SET
 				plan_id = excluded.plan_id,
 				status = 'ACTIVE',
 				current_period_start = excluded.current_period_start,
 				current_period_end = excluded.current_period_end,
-				provider_subscription_id = COALESCE(NULLIF(excluded.provider_subscription_id, ''), provider_subscription_id),
+				provider_subscription_id = COALESCE(NULLIF(excluded.provider_subscription_id, ''), tenant_subscriptions.provider_subscription_id),
 				updated_at = CURRENT_TIMESTAMP
 		`, "sub_"+id, id, planID, now.Format(time.RFC3339), end.Format(time.RFC3339), providerSubID, now.Format(time.RFC3339), now.Format(time.RFC3339))
 	}
@@ -242,8 +242,8 @@ func (h *TenantsHandlers) ExtendTrial(w http.ResponseWriter, r *http.Request) {
 		newTrial := now.Add(14 * 24 * time.Hour)
 		_, _ = h.DB.ExecContext(r.Context(), `
 			UPDATE tenant_subscriptions
-			SET trial_end = ?, status = 'TRIAL', updated_at = CURRENT_TIMESTAMP
-			WHERE tenant_id = ?
+			SET trial_end = $1, status = 'TRIAL', updated_at = CURRENT_TIMESTAMP
+			WHERE tenant_id = $2
 		`, newTrial.Format(time.RFC3339), id)
 	}
 	h.auditTenant(r, "tenant.extend_trial", id, map[string]string{"extended_days": "14"})
@@ -264,8 +264,8 @@ func (h *TenantsHandlers) SetOverride(w http.ResponseWriter, r *http.Request) {
 		recID := "ovr_" + id + "_" + keyName
 		_, _ = h.DB.ExecContext(r.Context(), `
 			INSERT INTO tenant_entitlement_overrides (id, tenant_id, entitlement_type, key_name, override_value, reason)
-			VALUES (?, ?, ?, ?, ?, ?)
-			ON CONFLICT(tenant_id, entitlement_type, key_name) DO UPDATE SET
+			VALUES ($1, $2, $3, $4, $5, $6)
+			ON CONFLICT (tenant_id, entitlement_type, key_name) DO UPDATE SET
 				override_value = excluded.override_value,
 				reason = excluded.reason
 		`, recID, id, entType, keyName, val, reason)
@@ -375,7 +375,7 @@ func (h *TenantsHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	// both the primary key and the UNIQUE(slug) index.
 	var existing int
 	if err := h.DB.QueryRowContext(r.Context(),
-		`SELECT COUNT(1) FROM tenants WHERE id = ? OR slug = ?`, form.Slug, form.Slug,
+		`SELECT COUNT(1) FROM tenants WHERE id = $1 OR slug = $2`, form.Slug, form.Slug,
 	).Scan(&existing); err != nil {
 		slog.ErrorContext(r.Context(), "tenant conflict probe failed", slog.Any("error", err))
 		http.Error(w, "Failed to create tenant", http.StatusInternalServerError)
@@ -444,7 +444,7 @@ func (h *TenantsHandlers) setStatus(w http.ResponseWriter, r *http.Request, stat
 
 	if status == "suspended" && h.DB != nil {
 		res, err := h.DB.ExecContext(r.Context(),
-			`DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE tenant_id = ?)`, id)
+			`DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE tenant_id = $1)`, id)
 		if err != nil {
 			slog.WarnContext(r.Context(), "tenant session purge failed",
 				slog.String("tenant_id", id), slog.Any("error", err))

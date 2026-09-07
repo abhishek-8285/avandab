@@ -27,25 +27,25 @@ RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, las
 
 -- name: UpdateUser :one
 UPDATE users
-SET email = ?, name = ?, phone = ?, role_id = ?, status = ?, updated_at = datetime('now')
+SET email = ?, name = ?, phone = ?, role_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ?
 RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at;
 
 -- name: UpdateUserThemePreference :one
 UPDATE users
-SET theme_preference = ?, updated_at = datetime('now')
+SET theme_preference = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ?
 RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at;
 
 -- name: UpdateUserPassword :one
 UPDATE users
-SET password_hash = ?, updated_at = datetime('now')
+SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ?
 RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at;
 
 -- name: UpdateUserLastLogin :one
 UPDATE users
-SET last_login_at = datetime('now')
+SET last_login_at = CURRENT_TIMESTAMP
 WHERE id = ?
 RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at;
 
@@ -57,15 +57,15 @@ SELECT u.id, u.email, u.tenant_id, u.name, u.phone, u.role_id, u.status, u.last_
        r.name AS role_name
 FROM users u
 JOIN roles r ON u.role_id = r.id
-WHERE u.tenant_id = ?
-  AND (u.name LIKE '%' || ? || '%' OR u.email LIKE '%' || ? || '%')
-  AND (? = '' OR u.status = ?)
+WHERE u.tenant_id = sqlc.arg(tenant_id)
+  AND (lower(u.name) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(u.email) LIKE '%' || lower(sqlc.arg(search)) || '%')
+  AND (sqlc.arg(status_all) = '' OR u.status = sqlc.arg(status))
 ORDER BY u.created_at DESC
-LIMIT ? OFFSET ?;
+LIMIT sqlc.arg(limit) OFFSET sqlc.arg(offset);
 
 -- name: CountUsers :one
 SELECT COUNT(*) AS count
 FROM users
-WHERE tenant_id = ?
-  AND (name LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%')
-  AND (? = '' OR status = ?);
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND (lower(name) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(email) LIKE '%' || lower(sqlc.arg(search)) || '%')
+  AND (sqlc.arg(status_all) = '' OR status = sqlc.arg(status));

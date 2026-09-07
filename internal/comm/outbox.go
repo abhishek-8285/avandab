@@ -101,7 +101,7 @@ func EnqueueRichEmail(ctx context.Context, db *sql.DB, tenantID, to, template st
 	idv := idpkg.NewUUIDGenerator().GenerateUUID()
 
 	const q = `INSERT INTO comm_outbox (id, tenant_id, channel, recipient, template, payload_json)
-	           VALUES (?, ?, 'email', ?, ?, ?)`
+	           VALUES ($1, $2, 'email', $3, $4, $5)`
 	if tx := repository.TxFromContext(ctx); tx != nil {
 		if _, err := tx.ExecContext(ctx, q, idv, tenantID, to, template, string(data)); err != nil {
 			return "", fmt.Errorf("comm: enqueue email (tx): %w", err)
@@ -143,7 +143,7 @@ func EnqueueRichWhatsApp(ctx context.Context, db *sql.DB, tenantID, phone, templ
 	idv := idpkg.NewUUIDGenerator().GenerateUUID()
 
 	const q = `INSERT INTO comm_outbox (id, tenant_id, channel, recipient, template, payload_json)
-	           VALUES (?, ?, 'whatsapp', ?, ?, ?)`
+	           VALUES ($1, $2, 'whatsapp', $3, $4, $5)`
 	if tx := repository.TxFromContext(ctx); tx != nil {
 		if _, err := tx.ExecContext(ctx, q, idv, tenantID, phone, template, string(data)); err != nil {
 			return "", fmt.Errorf("comm: enqueue whatsapp (tx): %w", err)
@@ -404,10 +404,10 @@ func (w *Worker) process(ctx context.Context) {
 	rows, err := w.db.QueryContext(ctx, `
 		SELECT id, channel FROM comm_outbox
 		WHERE status IN ('pending','failed')
-		  AND next_attempt_at <= datetime('now')
-		  AND attempts < ?
+		  AND next_attempt_at <= $1
+		  AND attempts < $2
 		ORDER BY created_at
-		LIMIT ?`, w.maxAttempts, batchSize)
+		LIMIT $3`, time.Now().UTC(), w.maxAttempts, batchSize)
 	if err != nil {
 		w.logger.Error("comm outbox worker: poll failed", "error", err)
 		return
@@ -481,8 +481,8 @@ func (w *Worker) reapStale(ctx context.Context) {
 		UPDATE comm_outbox SET status='failed',
 		       last_error='stale sending claim reaped by worker'
 		WHERE status='sending'
-		  AND next_attempt_at < datetime('now', ?)`,
-		fmt.Sprintf("-%d seconds", int(w.staleAfter.Seconds())))
+		  AND next_attempt_at < $1`,
+		time.Now().UTC().Add(-w.staleAfter))
 	if err != nil {
 		w.logger.Error("comm outbox worker: stale reaper failed", "error", err)
 		return
@@ -496,14 +496,14 @@ func (w *Worker) reapStale(ctx context.Context) {
 func (w *Worker) deliver(ctx context.Context, idv string) error {
 	var attempts int
 	if err := w.db.QueryRowContext(ctx,
-		`SELECT attempts FROM comm_outbox WHERE id = ?`, idv).Scan(&attempts); err != nil {
+		`SELECT attempts FROM comm_outbox WHERE id = $1`, idv).Scan(&attempts); err != nil {
 		return fmt.Errorf("load attempts: %w", err)
 	}
 
 	res, err := w.db.ExecContext(ctx, `
 		UPDATE comm_outbox SET status='sending', attempts = attempts + 1,
-		       next_attempt_at = datetime('now')
-		WHERE id = ? AND status IN ('pending','failed')`, idv)
+		       next_attempt_at = $1
+		WHERE id = $2 AND status IN ('pending','failed')`, time.Now().UTC(), idv)
 	if err != nil {
 		return fmt.Errorf("claim: %w", err)
 	}
@@ -513,7 +513,7 @@ func (w *Worker) deliver(ctx context.Context, idv string) error {
 
 	var channel, to, template, payload string
 	err = w.db.QueryRowContext(ctx,
-		`SELECT channel, recipient, template, payload_json FROM comm_outbox WHERE id = ?`, idv).
+		`SELECT channel, recipient, template, payload_json FROM comm_outbox WHERE id = $1`, idv).
 		Scan(&channel, &to, &template, &payload)
 	if err != nil {
 		return fmt.Errorf("load claimed row: %w", err)
@@ -525,8 +525,8 @@ func (w *Worker) deliver(ctx context.Context, idv string) error {
 
 	if sendErr == nil {
 		if _, uerr := w.db.ExecContext(ctx, `
-			UPDATE comm_outbox SET status='sent', sent_at=datetime('now'), last_error=NULL
-			WHERE id = ? AND status='sending'`, idv); uerr != nil {
+			UPDATE comm_outbox SET status='sent', sent_at=$1, last_error=NULL
+			WHERE id = $2 AND status='sending'`, time.Now().UTC(), idv); uerr != nil {
 			return fmt.Errorf("mark sent: %w", uerr)
 		}
 
@@ -540,12 +540,12 @@ func (w *Worker) deliver(ctx context.Context, idv string) error {
 				}
 				_, _ = w.db.ExecContext(ctx, `
 					UPDATE comm_outbox
-					SET next_attempt_at = datetime('now', ?)
+					SET next_attempt_at = $1
 					WHERE channel = 'whatsapp'
 					  AND status IN ('pending', 'failed')
-					  AND next_attempt_at <= datetime('now', ?)`,
-					fmt.Sprintf("+%d seconds", seconds),
-					fmt.Sprintf("+%d seconds", seconds))
+					  AND next_attempt_at <= $2`,
+					time.Now().UTC().Add(time.Duration(seconds)*time.Second),
+					time.Now().UTC())
 			}
 		}
 
@@ -565,12 +565,12 @@ func (w *Worker) deliver(ctx context.Context, idv string) error {
 	dead := attempts+1 >= w.maxAttempts
 	if _, uerr := w.db.ExecContext(ctx, `
 		UPDATE comm_outbox
-		SET status = CASE WHEN ? THEN 'dead' ELSE 'failed' END,
-		    next_attempt_at = CASE WHEN ? THEN next_attempt_at
-		                           ELSE datetime('now', ?) END,
-		    last_error = ?
-		WHERE id = ? AND status='sending'`,
-		dead, dead, fmt.Sprintf("+%d seconds", int(backoff.Seconds())), sendErr.Error(), idv); uerr != nil {
+		SET status = CASE WHEN $1 THEN 'dead' ELSE 'failed' END,
+		    next_attempt_at = CASE WHEN $2 THEN next_attempt_at
+		                           ELSE $3 END,
+		    last_error = $4
+		WHERE id = $5 AND status='sending'`,
+		dead, dead, time.Now().UTC().Add(backoff), sendErr.Error(), idv); uerr != nil {
 		return fmt.Errorf("mark failed: %w (send error: %v)", uerr, sendErr)
 	}
 	return sendErr

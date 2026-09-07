@@ -364,7 +364,7 @@ func (q *Queries) ListDriverExpensesByTrip(ctx context.Context, arg ListDriverEx
 
 const updateDriverExpenseStatus = `-- name: UpdateDriverExpenseStatus :one
 UPDATE driver_expenses
-SET status = ?, approved_by = ?, rejected_reason = ?, approved_at = datetime('now')
+SET status = ?, approved_by = ?, rejected_reason = ?, approved_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ?
 RETURNING id, trip_id, driver_id, expense_type, amount, description, receipt_url,
     status, category, requested_by, approved_by, rejected_reason, approved_at,

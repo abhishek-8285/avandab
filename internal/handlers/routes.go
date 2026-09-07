@@ -99,7 +99,7 @@ func (h *RouteHandlers) Optimize(w http.ResponseWriter, r *http.Request) {
 
 	// Insert pending job
 	_, err := h.DB.ExecContext(r.Context(),
-		`INSERT INTO route_optimization_jobs (id, tenant_id, input_json, status, provider, created_by) VALUES (?, ?, ?, 'pending', ?, ?)`,
+		`INSERT INTO route_optimization_jobs (id, tenant_id, input_json, status, provider, created_by) VALUES ($1, $2, $3, 'pending', $4, $5)`,
 		jobID, tenantID, string(inputJSON), prov, createdBy)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to create job"})
@@ -107,7 +107,7 @@ func (h *RouteHandlers) Optimize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Solve synchronously — providers are fast (mock <10ms, OSRM <2s with fallback). Mark processing first.
-	_, _ = h.DB.ExecContext(r.Context(), `UPDATE route_optimization_jobs SET status='processing' WHERE id=?`, jobID)
+	_, _ = h.DB.ExecContext(r.Context(), `UPDATE route_optimization_jobs SET status='processing' WHERE id=$1`, jobID)
 
 	opt := optimizer.Get(prov)
 	// If OSRM self-host URL configured, prefer it
@@ -117,14 +117,14 @@ func (h *RouteHandlers) Optimize(w http.ResponseWriter, r *http.Request) {
 	result, solveErr := opt.Solve(r.Context(), in)
 	if solveErr != nil {
 		_, _ = h.DB.ExecContext(r.Context(),
-			`UPDATE route_optimization_jobs SET status='failed', error_message=?, completed_at=datetime('now') WHERE id=?`,
+			`UPDATE route_optimization_jobs SET status='failed', error_message=$1, completed_at=CURRENT_TIMESTAMP WHERE id=$2`,
 			solveErr.Error(), jobID)
 		writeJSON(w, http.StatusUnprocessableEntity, map[string]string{"error": solveErr.Error(), "job_id": jobID})
 		return
 	}
 	resJSON, _ := json.Marshal(result)
 	_, _ = h.DB.ExecContext(r.Context(),
-		`UPDATE route_optimization_jobs SET status='completed', result_json=?, completed_at=datetime('now') WHERE id=?`,
+		`UPDATE route_optimization_jobs SET status='completed', result_json=$1, completed_at=CURRENT_TIMESTAMP WHERE id=$2`,
 		string(resJSON), jobID)
 
 	w.Header().Set("Content-Type", "application/json")
@@ -144,7 +144,7 @@ func (h *RouteHandlers) OptimizeJobs(w http.ResponseWriter, r *http.Request) {
 		tenantID = string(shared.DefaultTenant)
 	}
 	rows, err := h.DB.QueryContext(r.Context(),
-		`SELECT id, status, provider, created_at, completed_at FROM route_optimization_jobs WHERE tenant_id=? ORDER BY created_at DESC LIMIT 20`, tenantID)
+		`SELECT id, status, provider, created_at, completed_at FROM route_optimization_jobs WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT 20`, tenantID)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "query failed"})
 		return
@@ -186,7 +186,7 @@ func (h *RouteHandlers) OptimizeJobStatus(w http.ResponseWriter, r *http.Request
 	var errMsg sql.NullString
 	var createdAt, completedAt sql.NullString
 	err := h.DB.QueryRowContext(r.Context(),
-		`SELECT id, status, provider, input_json, result_json, error_message, created_at, completed_at FROM route_optimization_jobs WHERE id=? AND tenant_id=?`, jobID, tenantID).Scan(&id, &status, &provider, &inputJSON, &resultJSON, &errMsg, &createdAt, &completedAt)
+		`SELECT id, status, provider, input_json, result_json, error_message, created_at, completed_at FROM route_optimization_jobs WHERE id=$1 AND tenant_id=$2`, jobID, tenantID).Scan(&id, &status, &provider, &inputJSON, &resultJSON, &errMsg, &createdAt, &completedAt)
 	if err != nil {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "job not found"})
 		return

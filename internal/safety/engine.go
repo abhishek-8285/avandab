@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	appdb "transport-app/internal/database"
 
 	founderalerts "transport-app/internal/founder/alerts"
 	"transport-app/internal/fuel"
@@ -113,8 +114,11 @@ func (e *Engine) resolveVehicleTenants(ctx context.Context, vids []string) map[s
 	for i, id := range vids {
 		args[i] = id
 	}
-	rows, err := e.db.QueryContext(ctx,
-		`SELECT id, tenant_id FROM vehicles WHERE id IN (`+placeholders+`)`, args...)
+	reboundIn, rerrIn := appdb.Rebind(`SELECT id, tenant_id FROM vehicles WHERE id IN (` + placeholders + `)`)
+	if rerrIn != nil {
+		return out
+	}
+	rows, err := e.db.QueryContext(ctx, reboundIn, args...)
 	if err != nil {
 		return out
 	}
@@ -198,8 +202,8 @@ func (e *Engine) activeVehicles(ctx context.Context, policy SafetyPolicy) ([]str
 	}
 	rows, err := e.db.QueryContext(ctx,
 		`SELECT DISTINCT vehicle_id FROM telemetry_snapshots
-		 WHERE vehicle_id IS NOT NULL AND vehicle_id != '' AND timestamp > ?
-		 ORDER BY vehicle_id LIMIT ?`, timeStr(cutoff), defaultSnapshotsPerSweep)
+		 WHERE vehicle_id IS NOT NULL AND vehicle_id != '' AND timestamp > $1
+		 ORDER BY vehicle_id LIMIT $2`, timeStr(cutoff), defaultSnapshotsPerSweep)
 	if err != nil {
 		return nil, err
 	}
@@ -329,9 +333,10 @@ func (e *Engine) persist(ctx context.Context, s snapshot, events []detectedEvent
 			// Deterministic idempotency identity: tenant + vehicle + event_type + timestamp
 			eventID := fmt.Sprintf("dbe_%s_%s_%d", s.vehicleID, ev.eventType, ev.occurredAt.Unix())
 			res, err := db.ExecContext(txCtx,
-				`INSERT OR IGNORE INTO driver_behaviour_events
+				`INSERT INTO driver_behaviour_events
 				    (id, driver_id, trip_id, vehicle_id, event_type, severity, weight, metadata, occurred_at)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+				 ON CONFLICT DO NOTHING`,
 				eventID, s.driverID, strOrNull(s.tripID), s.vehicleID,
 				ev.eventType, ev.severity, ev.weight, ev.metadata, timeStr(ev.occurredAt))
 			if err != nil {
@@ -415,9 +420,9 @@ func (e *Engine) loadRecent(ctx context.Context, vehicleID string, n int) ([]sna
 		        s.timestamp, COALESCE(s.speed,0), COALESCE(s.latitude, 0), COALESCE(s.longitude, 0), s.ignition
 		 FROM telemetry_snapshots s
 		 LEFT JOIN trips t ON s.trip_id = t.id
-		 WHERE s.vehicle_id = ?
+		 WHERE s.vehicle_id = $1
 		 ORDER BY s.timestamp DESC
-		 LIMIT ?`, vehicleID, n)
+		 LIMIT $2`, vehicleID, n)
 	if err != nil {
 		return nil, err
 	}
@@ -438,9 +443,9 @@ func (e *Engine) loadAfter(ctx context.Context, vehicleID string, after time.Tim
 		        s.timestamp, COALESCE(s.speed,0), COALESCE(s.latitude, 0), COALESCE(s.longitude, 0), s.ignition
 		 FROM telemetry_snapshots s
 		 LEFT JOIN trips t ON s.trip_id = t.id
-		 WHERE s.vehicle_id = ? AND s.timestamp > ?
+		 WHERE s.vehicle_id = $1 AND s.timestamp > $2
 		 ORDER BY s.timestamp ASC
-		 LIMIT ?`, vehicleID, timeStr(after), defaultSnapshotsPerSweep)
+		 LIMIT $3`, vehicleID, timeStr(after), defaultSnapshotsPerSweep)
 	if err != nil {
 		return nil, err
 	}
@@ -474,7 +479,7 @@ func (e *Engine) resolveDriver(ctx context.Context, vehicleID, tripID string) st
 	}
 	var driverID string
 	if err := e.db.QueryRowContext(ctx,
-		`SELECT COALESCE(driver_id,'') FROM trips WHERE vehicle_id = ? AND status IN ('in_transit', 'dispatched', 'active', 'scheduled') ORDER BY departure_time DESC LIMIT 1`, vehicleID).Scan(&driverID); err == nil && driverID != "" {
+		`SELECT COALESCE(driver_id,'') FROM trips WHERE vehicle_id = $1 AND status IN ('in_transit', 'dispatched', 'active', 'scheduled') ORDER BY departure_time DESC LIMIT 1`, vehicleID).Scan(&driverID); err == nil && driverID != "" {
 		return driverID
 	}
 	return ""
@@ -486,7 +491,7 @@ func (e *Engine) tripDriver(ctx context.Context, tripID string) string {
 	}
 	var driverID string
 	if err := e.db.QueryRowContext(ctx,
-		`SELECT COALESCE(driver_id,'') FROM trips WHERE id = ?`, tripID).Scan(&driverID); err != nil {
+		`SELECT COALESCE(driver_id,'') FROM trips WHERE id = $1`, tripID).Scan(&driverID); err != nil {
 		return ""
 	}
 	return driverID

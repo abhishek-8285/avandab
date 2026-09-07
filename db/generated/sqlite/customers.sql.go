@@ -14,31 +14,16 @@ import (
 const countCustomers = `-- name: CountCustomers :one
 SELECT COUNT(*) AS count
 FROM customers
-WHERE tenant_id = ? AND (customer_code LIKE '%' || ? || '%' OR name LIKE '%' || ? || '%' OR company LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%' OR contact_person LIKE '%' || ? || '%' OR internal_id LIKE '%' || ? || '%')
+WHERE tenant_id = ?1 AND (lower(customer_code) LIKE '%' || lower(?2) || '%' OR lower(name) LIKE '%' || lower(?2) || '%' OR lower(company) LIKE '%' || lower(?2) || '%' OR lower(phone) LIKE '%' || lower(?2) || '%' OR lower(email) LIKE '%' || lower(?2) || '%' OR lower(contact_person) LIKE '%' || lower(?2) || '%' OR lower(internal_id) LIKE '%' || lower(?2) || '%')
 `
 
 type CountCustomersParams struct {
-	TenantID string         `json:"tenant_id"`
-	Column2  sql.NullString `json:"column_2"`
-	Column3  sql.NullString `json:"column_3"`
-	Column4  sql.NullString `json:"column_4"`
-	Column5  sql.NullString `json:"column_5"`
-	Column6  sql.NullString `json:"column_6"`
-	Column7  sql.NullString `json:"column_7"`
-	Column8  sql.NullString `json:"column_8"`
+	TenantID string `json:"tenant_id"`
+	Search   string `json:"search"`
 }
 
 func (q *Queries) CountCustomers(ctx context.Context, arg CountCustomersParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countCustomers,
-		arg.TenantID,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-		arg.Column5,
-		arg.Column6,
-		arg.Column7,
-		arg.Column8,
-	)
+	row := q.db.QueryRowContext(ctx, countCustomers, arg.TenantID, arg.Search)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -371,22 +356,16 @@ func (q *Queries) GetCustomerByPhone(ctx context.Context, arg GetCustomerByPhone
 const searchCustomers = `-- name: SearchCustomers :many
 SELECT id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes, created_at, updated_at
 FROM customers
-WHERE tenant_id = ? AND (customer_code LIKE '%' || ? || '%' OR name LIKE '%' || ? || '%' OR company LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%' OR contact_person LIKE '%' || ? || '%' OR internal_id LIKE '%' || ? || '%')
+WHERE tenant_id = ?1 AND (lower(customer_code) LIKE '%' || lower(?2) || '%' OR lower(name) LIKE '%' || lower(?2) || '%' OR lower(company) LIKE '%' || lower(?2) || '%' OR lower(phone) LIKE '%' || lower(?2) || '%' OR lower(email) LIKE '%' || lower(?2) || '%' OR lower(contact_person) LIKE '%' || lower(?2) || '%' OR lower(internal_id) LIKE '%' || lower(?2) || '%')
 ORDER BY created_at DESC
-LIMIT ? OFFSET ?
+LIMIT ?4 OFFSET ?3
 `
 
 type SearchCustomersParams struct {
-	TenantID string         `json:"tenant_id"`
-	Column2  sql.NullString `json:"column_2"`
-	Column3  sql.NullString `json:"column_3"`
-	Column4  sql.NullString `json:"column_4"`
-	Column5  sql.NullString `json:"column_5"`
-	Column6  sql.NullString `json:"column_6"`
-	Column7  sql.NullString `json:"column_7"`
-	Column8  sql.NullString `json:"column_8"`
-	Limit    int64          `json:"limit"`
-	Offset   int64          `json:"offset"`
+	TenantID string `json:"tenant_id"`
+	Search   string `json:"search"`
+	Offset   int64  `json:"offset"`
+	Limit    int64  `json:"limit"`
 }
 
 type SearchCustomersRow struct {
@@ -418,15 +397,9 @@ type SearchCustomersRow struct {
 func (q *Queries) SearchCustomers(ctx context.Context, arg SearchCustomersParams) ([]SearchCustomersRow, error) {
 	rows, err := q.db.QueryContext(ctx, searchCustomers,
 		arg.TenantID,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-		arg.Column5,
-		arg.Column6,
-		arg.Column7,
-		arg.Column8,
-		arg.Limit,
+		arg.Search,
 		arg.Offset,
+		arg.Limit,
 	)
 	if err != nil {
 		return nil, err
@@ -476,7 +449,7 @@ func (q *Queries) SearchCustomers(ctx context.Context, arg SearchCustomersParams
 const updateCustomer = `-- name: UpdateCustomer :one
 UPDATE customers
 SET customer_code = ?, name = ?, title = ?, company = ?, contact_person = ?, phone = ?, email = ?, gst = ?, address = ?, billing_address = ?, internal_id = ?, photo_url = ?, place_uuid = ?, meta = ?, type = ?, status = ?, payment_terms_days = ?, tenant_id = ?, state_code = ?, notes = ?,
-    updated_at = datetime('now')
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = ?
 RETURNING id, customer_code, name, title, company, contact_person, phone, email, gst, address, billing_address, internal_id, photo_url, place_uuid, meta, type, status, payment_terms_days, tenant_id, state_code, notes, created_at, updated_at
 `

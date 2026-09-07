@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"time"
 
+	appdb "transport-app/internal/database"
 	"transport-app/internal/events"
 	ocrint "transport-app/internal/integration/ocr"
 	"transport-app/internal/shared"
@@ -89,7 +91,7 @@ func (s *KharchaVerifyService) VerifyExpense(ctx context.Context, expenseID stri
 	err := s.db.QueryRowContext(ctx, `
 		SELECT COALESCE(tenant_id, ''), COALESCE(driver_id, ''), COALESCE(trip_id, ''),
 		       category, amount, latitude, longitude, receipt_url
-		FROM driver_expenses WHERE id = ?`,
+		FROM driver_expenses WHERE id = $1`,
 		expenseID).Scan(&e.TenantID, &e.DriverID, &e.TripID,
 		&e.Category, &e.Amount, &e.Lat, &e.Lng, &e.ReceiptURL)
 	if err != nil {
@@ -111,9 +113,9 @@ func (s *KharchaVerifyService) VerifyExpense(ctx context.Context, expenseID stri
 
 	_, uerr := s.db.ExecContext(ctx, `
 		UPDATE driver_expenses
-		SET verification_state = ?, flag_reason = ?,
-		    ocr_amount = NULLIF(?, 0), ocr_confidence = NULLIF(?, 0)
-		WHERE id = ?`,
+		SET verification_state = $1, flag_reason = $2,
+		    ocr_amount = NULLIF($3, 0), ocr_confidence = NULLIF($4, 0)
+		WHERE id = $5`,
 		state, reason, ocrAmt, ocrConf, expenseID)
 	if uerr != nil {
 		return "", fmt.Errorf("persist verification: %w", uerr)
@@ -161,7 +163,7 @@ func (s *KharchaVerifyService) distanceFromRouteKm(ctx context.Context, e *expen
 	err := s.db.QueryRowContext(ctx, `
 		SELECT rl.source_lat, rl.source_lng, rl.dest_lat, rl.dest_lng
 		FROM trips t JOIN route_locations rl ON rl.route_id = t.route_id
-		WHERE t.id = ?`, e.TripID).
+		WHERE t.id = $1`, e.TripID).
 		Scan(&srcLat, &srcLng, &dstLat, &dstLng)
 	if err != nil || !srcLat.Valid || !srcLng.Valid || !dstLat.Valid || !dstLng.Valid {
 		return -1
@@ -180,11 +182,18 @@ type dupHit struct {
 // ±30min of THIS expense (window anchored on the row's own created_at,
 // not wall-clock) and within 5km when both have GPS.
 func (s *KharchaVerifyService) duplicateWithinWindow(ctx context.Context, e *expenseRow) (dupHit, bool) {
+	// Epoch-second difference has no portable spelling: strftime on sqlite,
+	// EXTRACT(EPOCH) on postgres.
+	timeDiff := "ABS(strftime('%s', d.created_at) - strftime('%s', self.created_at)) <= $5"
+	if appdb.IsPostgres(s.db) {
+		timeDiff = "ABS(EXTRACT(EPOCH FROM (d.created_at - self.created_at))) <= $5"
+	}
 	query := `
 		SELECT d.id FROM driver_expenses d
-		JOIN driver_expenses self ON self.id = ?
-		WHERE d.driver_id = ? AND d.category = ? AND d.id <> ?
-		  AND ABS(strftime('%s', d.created_at) - strftime('%s', self.created_at)) <= ?`
+		JOIN driver_expenses self ON self.id = $1
+		WHERE d.driver_id = $2 AND d.category = $3 AND d.id <> $4
+		  AND ` + timeDiff + `
+	`
 	args := []any{e.expenseID(), e.DriverID, e.Category, e.expenseID(), duplicateWindowMin * 60}
 	if e.Lat != nil && e.Lng != nil {
 		query += `
@@ -217,9 +226,9 @@ func (s *KharchaVerifyService) categoryMedian(ctx context.Context, tenantID, cat
 	}
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT amount FROM driver_expenses
-		WHERE tenant_id = ? AND category = ?
-		  AND created_at >= datetime('now', '-`+fmt.Sprint(medianLookbackDays)+` days')
-		ORDER BY amount`, tenantID, category)
+		WHERE tenant_id = $1 AND category = $2
+		  AND created_at >= $3
+		ORDER BY amount`, tenantID, category, time.Now().UTC().AddDate(0, 0, -medianLookbackDays))
 	if err != nil {
 		return 0
 	}
@@ -254,11 +263,11 @@ func (s *KharchaVerifyService) ListFlaggedExpenses(ctx context.Context, tenantID
 		SELECT id, driver_id, category, amount, description,
 		       verification_state, flag_reason, created_at
 		FROM driver_expenses
-		WHERE tenant_id = ? AND status IN ('pending')
+		WHERE tenant_id = $1 AND status IN ('pending')
 		  AND verification_state IN ('flagged', 'manual')
 		ORDER BY CASE verification_state WHEN 'flagged' THEN 0 ELSE 1 END,
 		         created_at DESC
-		LIMIT ?`, tenantID, limit)
+		LIMIT $2`, tenantID, limit)
 	if err != nil {
 		return nil, err
 	}

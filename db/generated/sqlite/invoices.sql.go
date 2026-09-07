@@ -15,25 +15,23 @@ const countInvoices = `-- name: CountInvoices :one
 SELECT COUNT(*) AS count
 FROM invoices i
 JOIN customers c ON i.customer_id = c.id
-WHERE i.tenant_id = ?
-  AND (i.invoice_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%')
-  AND (? = '' OR i.payment_status = ?)
+WHERE i.tenant_id = ?1
+  AND (lower(i.invoice_number) LIKE '%' || lower(?2) || '%' OR lower(c.name) LIKE '%' || lower(?2) || '%')
+  AND (?3 = '' OR i.payment_status = ?4)
 `
 
 type CountInvoicesParams struct {
-	TenantID      string         `json:"tenant_id"`
-	Column2       sql.NullString `json:"column_2"`
-	Column3       sql.NullString `json:"column_3"`
-	Column4       interface{}    `json:"column_4"`
-	PaymentStatus string         `json:"payment_status"`
+	TenantID         string      `json:"tenant_id"`
+	Search           string      `json:"search"`
+	PaymentStatusAll interface{} `json:"payment_status_all"`
+	PaymentStatus    string      `json:"payment_status"`
 }
 
 func (q *Queries) CountInvoices(ctx context.Context, arg CountInvoicesParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, countInvoices,
 		arg.TenantID,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
+		arg.Search,
+		arg.PaymentStatusAll,
 		arg.PaymentStatus,
 	)
 	var count int64
@@ -531,21 +529,20 @@ FROM invoices i
 JOIN customers c ON i.customer_id = c.id
 LEFT JOIN bookings b ON i.booking_id = b.id
 LEFT JOIN trips t ON i.trip_id = t.id
-WHERE i.tenant_id = ?
-  AND (i.invoice_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%')
-  AND (? = '' OR i.payment_status = ?)
+WHERE i.tenant_id = ?1
+  AND (lower(i.invoice_number) LIKE '%' || lower(?2) || '%' OR lower(c.name) LIKE '%' || lower(?2) || '%')
+  AND (?3 = '' OR i.payment_status = ?4)
 ORDER BY i.created_at DESC
-LIMIT ? OFFSET ?
+LIMIT ?6 OFFSET ?5
 `
 
 type SearchInvoicesParams struct {
-	TenantID      string         `json:"tenant_id"`
-	Column2       sql.NullString `json:"column_2"`
-	Column3       sql.NullString `json:"column_3"`
-	Column4       interface{}    `json:"column_4"`
-	PaymentStatus string         `json:"payment_status"`
-	Limit         int64          `json:"limit"`
-	Offset        int64          `json:"offset"`
+	TenantID         string      `json:"tenant_id"`
+	Search           string      `json:"search"`
+	PaymentStatusAll interface{} `json:"payment_status_all"`
+	PaymentStatus    string      `json:"payment_status"`
+	Offset           int64       `json:"offset"`
+	Limit            int64       `json:"limit"`
 }
 
 type SearchInvoicesRow struct {
@@ -571,12 +568,11 @@ type SearchInvoicesRow struct {
 func (q *Queries) SearchInvoices(ctx context.Context, arg SearchInvoicesParams) ([]SearchInvoicesRow, error) {
 	rows, err := q.db.QueryContext(ctx, searchInvoices,
 		arg.TenantID,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
+		arg.Search,
+		arg.PaymentStatusAll,
 		arg.PaymentStatus,
-		arg.Limit,
 		arg.Offset,
+		arg.Limit,
 	)
 	if err != nil {
 		return nil, err
@@ -621,7 +617,7 @@ const updateInvoice = `-- name: UpdateInvoice :one
 UPDATE invoices
 SET invoice_number = ?, booking_id = ?, customer_id = ?, trip_id = ?,
     subtotal = ?, tax = ?, discount = ?, total = ?, payment_status = ?,
-    updated_at = datetime('now')
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ?
 RETURNING id, invoice_number, booking_id, customer_id, trip_id,
     subtotal, tax, discount, total, payment_status, tenant_id, created_at, updated_at
@@ -692,7 +688,7 @@ func (q *Queries) UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) (U
 
 const updateInvoicePaymentStatus = `-- name: UpdateInvoicePaymentStatus :one
 UPDATE invoices
-SET payment_status = ?, updated_at = datetime('now')
+SET payment_status = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ?
 RETURNING id, invoice_number, booking_id, customer_id, trip_id,
     subtotal, tax, discount, total, payment_status, tenant_id, created_at, updated_at

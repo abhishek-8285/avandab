@@ -19,7 +19,7 @@ SELECT id, name, slug, status, created_at, updated_at FROM tenants WHERE id = ?;
 SELECT id, name, slug, status, created_at, updated_at FROM tenants ORDER BY created_at DESC;
 
 -- name: SetTenantStatus :exec
-UPDATE tenants SET status = ?, updated_at = datetime('now') WHERE id = ?;
+UPDATE tenants SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;
 
 -- name: CountAdminsGlobal :one
 SELECT COUNT(*) FROM users WHERE tenant_id = ? AND role_id = 1;

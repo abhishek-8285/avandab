@@ -70,7 +70,7 @@ func (h *SOSHandlers) driverIDForUser(r *http.Request) (string, bool) {
 	var driverID string
 	err := h.db.QueryRowContext(r.Context(), `
 		SELECT id FROM drivers
-		WHERE id = ? OR email = (SELECT email FROM users WHERE id = ?)
+		WHERE id = $1 OR email = (SELECT email FROM users WHERE id = $2)
 		LIMIT 1`, session.UserID, session.UserID).Scan(&driverID)
 	if err != nil {
 		return session.UserID, true // Fallback to UserID as driver identifier
@@ -122,7 +122,7 @@ func (h *SOSHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 		var activeTripID, activeVehicleID sql.NullString
 		_ = h.db.QueryRowContext(r.Context(), `
 			SELECT id, vehicle_id FROM trips
-			WHERE driver_id = ? AND status IN ('assigned', 'started', 'reached_pickup', 'in_transit')
+			WHERE driver_id = $1 AND status IN ('assigned', 'started', 'reached_pickup', 'in_transit')
 			ORDER BY created_at DESC LIMIT 1`,
 			driverID).Scan(&activeTripID, &activeVehicleID)
 		if req.TripID == "" && activeTripID.Valid {
@@ -165,8 +165,9 @@ func (h *SOSHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 
 	payloadBytes, _ := json.Marshal(eventPayload)
 	res, err := h.db.ExecContext(r.Context(), `
-		INSERT OR IGNORE INTO outbox_events (id, aggregate_id, aggregate_type, event_type, payload, created_at)
-		VALUES (?, ?, 'sos', ?, ?, datetime('now'))
+		INSERT INTO outbox_events (id, aggregate_id, aggregate_type, event_type, payload, created_at)
+		VALUES ($1, $2, 'sos', $3, $4, CURRENT_TIMESTAMP)
+		ON CONFLICT DO NOTHING
 	`, "ob_"+sosID, sosID, events.SOSEvent, string(payloadBytes))
 
 	rowsAffected := int64(0)
@@ -213,8 +214,8 @@ func (a *App) logAuditDirect(ctx context.Context, userID, action, entityType, en
 		tenantID = string(shared.DefaultTenant)
 	}
 	_, err := a.DB.ExecContext(ctx, `
-		INSERT INTO audit_logs (id, tenant_id, user_id, action, entity_type, entity_id, new_values, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
-	`, "aud_"+uuid.NewString(), tenantID, userID, action, entityType, entityID, details)
+		INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
+	`, "aud_"+uuid.NewString(), userID, action, entityType, entityID, details)
 	return err
 }

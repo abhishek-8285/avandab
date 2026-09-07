@@ -143,7 +143,7 @@ func (e *RealtimeEvaluator) EvaluateFix(ctx context.Context, fix TelemetryFix) (
 			SELECT t.status, COALESCE(r.source, ''), COALESCE(r.destination, '')
 			FROM trips t
 			LEFT JOIN routes r ON r.id = t.route_id
-			WHERE t.id = ? AND t.tenant_id = ?`, *fix.TripID, tenantID).
+			WHERE t.id = $1 AND t.tenant_id = $2`, *fix.TripID, tenantID).
 			Scan(&status, &rSrc, &rDst)
 		if status.Valid {
 			tripStatus = status.String
@@ -234,8 +234,9 @@ func (e *RealtimeEvaluator) EvaluateFix(ctx context.Context, fix TelemetryFix) (
 
 		// A. Insert into geofence_events with INSERT OR IGNORE
 		resEvent, _ := e.db.ExecContext(ctx, `
-			INSERT OR IGNORE INTO geofence_events (id, tenant_id, vehicle_id, trip_id, geofence_id, zone_kind, event_type, alert_type, severity, latitude, longitude, details, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, 'geofence', ?, ?, ?, ?, ?)
+			INSERT INTO geofence_events (id, tenant_id, vehicle_id, trip_id, geofence_id, zone_kind, event_type, alert_type, severity, latitude, longitude, details, created_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, 'geofence', $8, $9, $10, $11, $12)
+			ON CONFLICT DO NOTHING
 		`, eventID, tenantID, fix.VehicleID, tripIDStr, zev.Zone.ID, zev.Zone.Kind, zev.EventType, sev, fix.Latitude, fix.Longitude, zev.Details, zev.At.Format("2006-01-02 15:04:05"))
 
 		rowsEvent := int64(0)
@@ -267,8 +268,9 @@ func (e *RealtimeEvaluator) EvaluateFix(ctx context.Context, fix TelemetryFix) (
 		}
 
 		resOutbox, _ := e.db.ExecContext(ctx, `
-			INSERT OR IGNORE INTO outbox_events (id, aggregate_id, aggregate_type, event_type, payload, created_at)
-			VALUES (?, ?, 'geofence', ?, ?, datetime('now'))
+			INSERT INTO outbox_events (id, aggregate_id, aggregate_type, event_type, payload, created_at)
+			VALUES ($1, $2, 'geofence', $3, $4, CURRENT_TIMESTAMP)
+			ON CONFLICT (id) DO NOTHING
 		`, "ob_"+eventID, zev.Zone.ID, canonicalEventType, string(payloadBytes))
 
 		rowsOutbox := int64(0)
@@ -308,9 +310,9 @@ func (e *RealtimeEvaluator) EvaluateFix(ctx context.Context, fix TelemetryFix) (
 			_, _ = e.db.ExecContext(ctx, `
 				UPDATE trip_stops
 				SET status = 'arrived',
-				    actual_arrival = COALESCE(actual_arrival, ?),
-				    updated_at = datetime('now')
-				WHERE id = ? AND tenant_id = ? AND status IN ('pending', 'en_route')
+				    actual_arrival = COALESCE(actual_arrival, $1),
+				    updated_at = CURRENT_TIMESTAMP
+				WHERE id = $2 AND tenant_id = $3 AND status IN ('pending', 'en_route')
 			`, zev.At.Format("2006-01-02 15:04:05"), stopID, tenantID)
 
 			if (rowsEvent > 0 || rowsOutbox > 0) && e.bus != nil {
@@ -336,7 +338,7 @@ func (e *RealtimeEvaluator) loadApplicableZones(ctx context.Context, tenantID, v
 	rows, err := e.db.QueryContext(ctx, `
 		SELECT id, tenant_id, name, kind, shape, center_lat, center_lng, radius_m, polygon, COALESCE(route_name, ''), priority, is_active
 		FROM geofences
-		WHERE tenant_id = ? AND is_active = 1
+		WHERE tenant_id = $1 AND is_active = 1
 		ORDER BY priority DESC`, tenantID)
 	if err != nil {
 		return nil, err
@@ -394,7 +396,7 @@ func (e *RealtimeEvaluator) loadApplicableZones(ctx context.Context, tenantID, v
 		err := e.db.QueryRowContext(ctx, `
 			SELECT id, stop_sequence, stop_type, location_name, latitude, longitude, geofence_radius_m, status
 			FROM trip_stops
-			WHERE trip_id = ? AND tenant_id = ? AND status IN ('pending', 'en_route', 'arrived', 'servicing')
+			WHERE trip_id = $1 AND tenant_id = $2 AND status IN ('pending', 'en_route', 'arrived', 'servicing')
 			ORDER BY stop_sequence ASC
 			LIMIT 1
 		`, *tripID, tenantID).Scan(&stopID, &seq, &stopType, &locName, &lat, &lng, &radius, &status)

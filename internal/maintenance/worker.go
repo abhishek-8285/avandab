@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"strings"
 	"time"
+	appdb "transport-app/internal/database"
 
 	"github.com/google/uuid"
 
@@ -151,7 +152,7 @@ func (w *Worker) EvaluateSchedules(ctx context.Context) {
 func (w *Worker) reminderWindowDays(ctx context.Context, tenant string) int {
 	var raw string
 	if err := w.db.QueryRowContext(ctx,
-		`SELECT value FROM company_config WHERE tenant_id = ? AND key = 'maintenance.reminder_days'`, tenant).Scan(&raw); err == nil {
+		`SELECT value FROM company_config WHERE tenant_id = $1 AND key = 'maintenance.reminder_days'`, tenant).Scan(&raw); err == nil {
 		var days int
 		if _, err := fmt.Sscanf(strings.TrimSpace(raw), "%d", &days); err == nil {
 			if days < 1 {
@@ -174,8 +175,8 @@ func (w *Worker) sendDueSoonReminder(ctx context.Context, tenant, vehicleID, ser
 	var recent int
 	_ = w.db.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM notifications
-		WHERE title = ? AND message LIKE '%' || ? || '%'
-		  AND created_at > datetime('now', '-7 days')`, title, vehicleID).Scan(&recent)
+		WHERE title = $1 AND lower(message) LIKE '%' || lower($2) || '%'
+		  AND created_at > $3`, title, vehicleID, time.Now().UTC().AddDate(0, 0, -7)).Scan(&recent)
 	if recent > 0 {
 		return
 	}
@@ -204,8 +205,11 @@ func (w *Worker) resolveVehicleTenants(ctx context.Context, schedules []domain.S
 	for i, id := range ids {
 		args[i] = id
 	}
-	rows, err := w.db.QueryContext(ctx,
-		`SELECT id, tenant_id FROM vehicles WHERE id IN (`+placeholders+`)`, args...)
+	reboundIn, rerrIn := appdb.Rebind(`SELECT id, tenant_id FROM vehicles WHERE id IN (` + placeholders + `)`)
+	if rerrIn != nil {
+		return out
+	}
+	rows, err := w.db.QueryContext(ctx, reboundIn, args...)
 	if err != nil {
 		return out
 	}
@@ -222,7 +226,7 @@ func (w *Worker) resolveVehicleTenants(ctx context.Context, schedules []domain.S
 // vehicleTenant resolves one vehicle's org ("" when unknown).
 func (w *Worker) vehicleTenant(ctx context.Context, vehicleID string) string {
 	var tenant string
-	_ = w.db.QueryRowContext(ctx, `SELECT tenant_id FROM vehicles WHERE id = ?`, vehicleID).Scan(&tenant)
+	_ = w.db.QueryRowContext(ctx, `SELECT tenant_id FROM vehicles WHERE id = $1`, vehicleID).Scan(&tenant)
 	return tenant
 }
 
@@ -231,7 +235,7 @@ func (w *Worker) vehicleTenant(ctx context.Context, vehicleID string) string {
 // 'system' recipient only when the org has no admin users at all.
 func (w *Worker) notifyOrgAdmins(ctx context.Context, tenant, title, msg string) {
 	rows, err := w.db.QueryContext(ctx,
-		`SELECT id FROM users WHERE tenant_id = ? AND status = 'active' AND role_id IN (1, 6)`, tenant)
+		`SELECT id FROM users WHERE tenant_id = $1 AND status = 'active' AND role_id IN (1, 6)`, tenant)
 	recipients := []string{}
 	if err == nil {
 		defer func() { _ = rows.Close() }()
@@ -248,7 +252,7 @@ func (w *Worker) notifyOrgAdmins(ctx context.Context, tenant, title, msg string)
 	for _, uid := range recipients {
 		_, _ = w.db.ExecContext(ctx, `
 			INSERT INTO notifications (id, user_id, title, message, channel, status, created_at)
-			VALUES (?, ?, ?, ?, 'in_app', 'unread', CURRENT_TIMESTAMP)`,
+			VALUES ($1, $2, $3, $4, 'in_app', 'unread', CURRENT_TIMESTAMP)`,
 			uuid.NewString(), uid, title, msg)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	appdb "transport-app/internal/database"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -117,21 +118,27 @@ func (h *CustomerPortalHandlers) ListMyBookings(w http.ResponseWriter, r *http.R
 
 	// Build dynamic WHERE clauses; base always includes tenant + customer_users scoping.
 	// SELECT ... WHERE tenant_id=? AND customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=?)
-	baseWhere := "WHERE b.tenant_id = ? AND b.customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=?)"
+	baseWhere := "WHERE b.tenant_id = $1 AND b.customer_id IN (SELECT customer_id FROM customer_users WHERE user_id = $2)"
 	args := []interface{}{tenantStr, session.UserID}
 	if status != "" {
 		baseWhere += " AND b.status = ?"
 		args = append(args, status)
 	}
 	if search != "" {
-		baseWhere += " AND (b.booking_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%' OR rc.source LIKE '%' || ? || '%' OR rc.destination LIKE '%' || ? || '%')"
+		baseWhere += " AND (lower(b.booking_number) LIKE '%' || lower(?) || '%' OR lower(c.name) LIKE '%' || lower(?) || '%' OR lower(rc.source) LIKE '%' || lower(?) || '%' OR lower(rc.destination) LIKE '%' || lower(?) || '%')"
 		args = append(args, search, search, search, search)
 	}
 
 	// Count query scoped via customer_users.
 	countSQL := "SELECT COUNT(*) FROM bookings b JOIN customers c ON c.id = b.customer_id JOIN routes rc ON rc.id = b.route_id " + baseWhere
 	var total int64
-	err := h.DB.QueryRowContext(r.Context(), countSQL, args...).Scan(&total)
+	reboundCount, rerr := appdb.Rebind(countSQL)
+	if rerr != nil {
+		slog.Error("customer_portal count rebind failed", "error", rerr)
+		http.Error(w, "Failed to load", http.StatusInternalServerError)
+		return
+	}
+	err := h.DB.QueryRowContext(r.Context(), reboundCount, args...).Scan(&total)
 	if err != nil {
 		if strings.Contains(err.Error(), "no such table") {
 			// Graceful fallback when customer_users or other table not migrated yet.
@@ -147,7 +154,13 @@ func (h *CustomerPortalHandlers) ListMyBookings(w http.ResponseWriter, r *http.R
 	// Data query — scoped via same WHERE tenant_id=? AND customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=?)
 	dataSQL := "SELECT b.id, b.booking_number, b.customer_id, c.name, COALESCE(c.company,''), b.route_id, COALESCE(rc.source,''), COALESCE(rc.destination,''), b.pickup_date, b.vehicle_type, b.passengers, b.cargo_weight, b.price, COALESCE(b.notes,''), b.status, b.created_at, b.updated_at FROM bookings b JOIN customers c ON c.id = b.customer_id JOIN routes rc ON rc.id = b.route_id " + baseWhere + " ORDER BY b.created_at DESC LIMIT ? OFFSET ?"
 	dataArgs := append(append([]interface{}{}, args...), pp.Limit, pp.Offset)
-	rows, err := h.DB.QueryContext(r.Context(), dataSQL, dataArgs...)
+	reboundData, rerr := appdb.Rebind(dataSQL)
+	if rerr != nil {
+		slog.Error("customer_portal data rebind failed", "error", rerr)
+		http.Error(w, "Failed to load", http.StatusInternalServerError)
+		return
+	}
+	rows, err := h.DB.QueryContext(r.Context(), reboundData, dataArgs...)
 	if err != nil {
 		if strings.Contains(err.Error(), "no such table") {
 			slog.Warn("customer_portal ListMyBookings data failed (missing table)", "error", err)
@@ -235,20 +248,26 @@ func (h *CustomerPortalHandlers) ListMyInvoices(w http.ResponseWriter, r *http.R
 	}
 
 	// Base WHERE with customer_users scoping: tenant_id=? AND customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=?)
-	baseWhere := "WHERE i.tenant_id = ? AND i.customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=?)"
+	baseWhere := "WHERE i.tenant_id = $1 AND i.customer_id IN (SELECT customer_id FROM customer_users WHERE user_id = $2)"
 	args := []interface{}{tenantStr, session.UserID}
 	if status != "" {
 		baseWhere += " AND i.payment_status = ?"
 		args = append(args, status)
 	}
 	if search != "" {
-		baseWhere += " AND (i.invoice_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%')"
+		baseWhere += " AND (lower(i.invoice_number) LIKE '%' || lower(?) || '%' OR lower(c.name) LIKE '%' || lower(?) || '%')"
 		args = append(args, search, search)
 	}
 
 	countSQL := "SELECT COUNT(*) FROM invoices i JOIN customers c ON c.id = i.customer_id " + baseWhere
 	var total int64
-	err := h.DB.QueryRowContext(r.Context(), countSQL, args...).Scan(&total)
+	reboundCount, rerr := appdb.Rebind(countSQL)
+	if rerr != nil {
+		slog.Error("customer_portal count rebind failed", "error", rerr)
+		http.Error(w, "Failed to load", http.StatusInternalServerError)
+		return
+	}
+	err := h.DB.QueryRowContext(r.Context(), reboundCount, args...).Scan(&total)
 	if err != nil {
 		if strings.Contains(err.Error(), "no such table") {
 			slog.Warn("customer_portal ListMyInvoices count missing table", "error", err)
@@ -263,7 +282,13 @@ func (h *CustomerPortalHandlers) ListMyInvoices(w http.ResponseWriter, r *http.R
 	// Scoped SELECT ... WHERE tenant_id=? AND customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=?)
 	dataSQL := "SELECT i.id, i.invoice_number, i.booking_id, i.customer_id, COALESCE(c.name,''), COALESCE(c.company,''), COALESCE(i.trip_id,''), COALESCE(t.trip_number,''), i.subtotal, i.tax, COALESCE(i.discount,0), i.total, i.payment_status, i.created_at, i.updated_at FROM invoices i JOIN customers c ON c.id = i.customer_id LEFT JOIN trips t ON t.id = i.trip_id " + baseWhere + " ORDER BY i.created_at DESC LIMIT ? OFFSET ?"
 	dataArgs := append(append([]interface{}{}, args...), pp.Limit, pp.Offset)
-	rows, err := h.DB.QueryContext(r.Context(), dataSQL, dataArgs...)
+	reboundData, rerr := appdb.Rebind(dataSQL)
+	if rerr != nil {
+		slog.Error("customer_portal data rebind failed", "error", rerr)
+		http.Error(w, "Failed to load", http.StatusInternalServerError)
+		return
+	}
+	rows, err := h.DB.QueryContext(r.Context(), reboundData, dataArgs...)
 	if err != nil {
 		if strings.Contains(err.Error(), "no such table") {
 			slog.Warn("customer_portal ListMyInvoices data missing table", "error", err)
@@ -347,20 +372,20 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 	var tripNumber, status, vehicleID, arrivalTimeStr, departureTimeStr, vehicleReg, vehicleNum string
 	var bookingID sql.NullString
 	err := h.DB.QueryRowContext(r.Context(), `
-		SELECT t.trip_number, t.status, COALESCE(t.vehicle_id,''), COALESCE(t.arrival_time,''), COALESCE(t.departure_time,''), COALESCE(v.registration_number,''), COALESCE(v.vehicle_number,''), t.booking_id
+		SELECT t.trip_number, t.status, COALESCE(t.vehicle_id,''), COALESCE(CAST(t.arrival_time AS TEXT), ''), COALESCE(CAST(t.departure_time AS TEXT), ''), COALESCE(v.registration_number,''), COALESCE(v.vehicle_number,''), t.booking_id
 		FROM trips t
 		LEFT JOIN bookings b ON b.id = t.booking_id
 		LEFT JOIN vehicles v ON v.id = t.vehicle_id
-		WHERE t.id = ? AND t.tenant_id = ? AND (b.customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=?) OR (t.booking_id IS NULL AND ? = ?))
+		WHERE t.id = $1 AND t.tenant_id = $2 AND (b.customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=$3) OR (t.booking_id IS NULL AND $4 = $5))
 	`, tripID, tenantStr, session.UserID, "", "").Scan(&tripNumber, &status, &vehicleID, &arrivalTimeStr, &departureTimeStr, &vehicleReg, &vehicleNum, &bookingID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// Try fallback without customer_users table check (graceful when table missing) — still enforce tenant.
 			err2 := h.DB.QueryRowContext(r.Context(), `
-				SELECT t.trip_number, t.status, COALESCE(t.vehicle_id,''), COALESCE(t.arrival_time,''), COALESCE(t.departure_time,''), COALESCE(v.registration_number,''), COALESCE(v.vehicle_number,''), t.booking_id
+				SELECT t.trip_number, t.status, COALESCE(t.vehicle_id,''), COALESCE(CAST(t.arrival_time AS TEXT), ''), COALESCE(CAST(t.departure_time AS TEXT), ''), COALESCE(v.registration_number,''), COALESCE(v.vehicle_number,''), t.booking_id
 				FROM trips t
 				LEFT JOIN vehicles v ON v.id = t.vehicle_id
-				WHERE t.id = ? AND t.tenant_id = ?
+				WHERE t.id = $1 AND t.tenant_id = $2
 			`, tripID, tenantStr).Scan(&tripNumber, &status, &vehicleID, &arrivalTimeStr, &departureTimeStr, &vehicleReg, &vehicleNum, &bookingID)
 			if err2 != nil {
 				if strings.Contains(err2.Error(), "no such table") {
@@ -375,10 +400,10 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 		} else if strings.Contains(err.Error(), "no such table") {
 			// Table missing — try tenant-only query.
 			err2 := h.DB.QueryRowContext(r.Context(), `
-				SELECT t.trip_number, t.status, COALESCE(t.vehicle_id,''), COALESCE(t.arrival_time,''), COALESCE(t.departure_time,''), COALESCE(v.registration_number,''), COALESCE(v.vehicle_number,''), t.booking_id
+				SELECT t.trip_number, t.status, COALESCE(t.vehicle_id,''), COALESCE(CAST(t.arrival_time AS TEXT), ''), COALESCE(CAST(t.departure_time AS TEXT), ''), COALESCE(v.registration_number,''), COALESCE(v.vehicle_number,''), t.booking_id
 				FROM trips t
 				LEFT JOIN vehicles v ON v.id = t.vehicle_id
-				WHERE t.id = ? AND t.tenant_id = ?
+				WHERE t.id = $1 AND t.tenant_id = $2
 			`, tripID, tenantStr).Scan(&tripNumber, &status, &vehicleID, &arrivalTimeStr, &departureTimeStr, &vehicleReg, &vehicleNum, &bookingID)
 			if err2 != nil {
 				http.Error(w, "Trip not found", http.StatusNotFound)
@@ -436,7 +461,7 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 		_ = h.DB.QueryRowContext(r.Context(), `
 			SELECT latitude, longitude, timestamp
 			FROM telemetry_snapshots
-			WHERE vehicle_id = ? AND latitude IS NOT NULL AND longitude IS NOT NULL
+			WHERE vehicle_id = $1 AND latitude IS NOT NULL AND longitude IS NOT NULL
 			ORDER BY timestamp DESC LIMIT 1`, vehicleID).Scan(&sLat, &sLng, &sTs)
 		if sLat.Valid && sLng.Valid {
 			vLat := sLat.Float64
@@ -477,7 +502,7 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 	sRows, sErr := h.DB.QueryContext(r.Context(), `
 		SELECT id, stop_sequence, stop_type, COALESCE(location_name, ''), status
 		FROM trip_stops
-		WHERE trip_id = ?
+		WHERE trip_id = $1
 		ORDER BY stop_sequence ASC
 	`, tripID)
 	if sErr == nil {
@@ -649,14 +674,14 @@ func (h *CustomerPortalHandlers) Feedback(w http.ResponseWriter, r *http.Request
 		SELECT b.customer_id
 		FROM trips t
 		JOIN bookings b ON b.id = t.booking_id
-		WHERE t.id = ? AND t.tenant_id = ? AND b.customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=?)
+		WHERE t.id = $1 AND t.tenant_id = $2 AND b.customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=$3)
 	`, tripID, tenantStr, session.UserID).Scan(&customerID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			// Provide clearer error for access denied vs not found
 			// Check if trip exists at all for tenant (without scoping) to differentiate 403 vs 404
 			var exists int
-			_ = h.DB.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM trips WHERE id = ? AND tenant_id = ?`, tripID, tenantStr).Scan(&exists)
+			_ = h.DB.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM trips WHERE id = $1 AND tenant_id = $2`, tripID, tenantStr).Scan(&exists)
 			if exists == 0 {
 				http.Error(w, `{"error":"trip not found"}`, http.StatusNotFound)
 			} else {
@@ -667,7 +692,7 @@ func (h *CustomerPortalHandlers) Feedback(w http.ResponseWriter, r *http.Request
 		if strings.Contains(err.Error(), "no such table") {
 			// Fallback: try to derive customer_id without scope when tables missing
 			_ = h.DB.QueryRowContext(r.Context(), `
-				SELECT b.customer_id FROM trips t JOIN bookings b ON b.id = t.booking_id WHERE t.id = ? AND t.tenant_id = ?
+				SELECT b.customer_id FROM trips t JOIN bookings b ON b.id = t.booking_id WHERE t.id = $1 AND t.tenant_id = $2
 			`, tripID, tenantStr).Scan(&customerID)
 			if customerID == "" {
 				http.Error(w, `{"error":"trip not found or customer not linked"}`, http.StatusNotFound)
@@ -684,8 +709,8 @@ func (h *CustomerPortalHandlers) Feedback(w http.ResponseWriter, r *http.Request
 	// Ensure trip_feedback table exists (lazy create if migration 00073 not yet applied)
 	_, insertErr := h.DB.ExecContext(r.Context(), `
 		INSERT INTO trip_feedback (id, tenant_id, trip_id, customer_id, rating, comment, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-	`, feedbackID, tenantStr, tripID, customerID, req.Rating, req.Comment)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	`, feedbackID, tenantStr, tripID, customerID, req.Rating, req.Comment, time.Now().UTC().Format("2006-01-02 15:04:05"))
 	if insertErr != nil {
 		if strings.Contains(insertErr.Error(), "no such table") {
 			// Auto-create minimal table for dev/test when migration not applied
@@ -697,13 +722,13 @@ func (h *CustomerPortalHandlers) Feedback(w http.ResponseWriter, r *http.Request
 					customer_id TEXT NOT NULL,
 					rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
 					comment TEXT NOT NULL DEFAULT '',
-					created_at TEXT NOT NULL DEFAULT (datetime('now'))
+					created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
 				)
 			`)
 			_, insertErr = h.DB.ExecContext(r.Context(), `
 				INSERT INTO trip_feedback (id, tenant_id, trip_id, customer_id, rating, comment, created_at)
-				VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
-			`, feedbackID, tenantStr, tripID, customerID, req.Rating, req.Comment)
+				VALUES ($1, $2, $3, $4, $5, $6, $7)
+			`, feedbackID, tenantStr, tripID, customerID, req.Rating, req.Comment, time.Now().UTC().Format("2006-01-02 15:04:05"))
 		}
 		if insertErr != nil {
 			slog.Error("customer_portal Feedback insert failed", "error", insertErr)

@@ -134,9 +134,9 @@ func (s *FASTagService) ListTransactions(ctx context.Context, vehicleNumber stri
 		SELECT id, tenant_id, tag_id, vehicle_id, vehicle_number, trip_id, plaza_id, plaza_name,
 		       amount, txn_timestamp, status, source, reconciled, kharcha_id
 		FROM fastag_transactions
-		WHERE (vehicle_number = ? OR ? = '')
+		WHERE (vehicle_number = $1 OR $2 = '')
 		ORDER BY txn_timestamp DESC
-		LIMIT ?
+		LIMIT $3
 	`
 	rows, err := s.db.QueryContext(ctx, query, vehicleNumber, vehicleNumber, limit)
 	if err != nil {

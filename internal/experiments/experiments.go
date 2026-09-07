@@ -75,7 +75,7 @@ func (r *Recorder) Record(ctx context.Context, tenantID, userID, experiment, var
 	}
 	_, err := r.db.ExecContext(ctx,
 		`INSERT INTO experiment_events (id, tenant_id, user_id, experiment, variant, event, meta, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		newID("evt"), tenantID, userID, experiment, variant, event, payload, time.Now().UTC().Format(time.RFC3339))
 	if err != nil {
 		slog.Warn("experiment: failed to record event", "experiment", experiment, "event", event, "error", err)

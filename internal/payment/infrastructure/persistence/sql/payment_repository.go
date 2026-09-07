@@ -106,11 +106,11 @@ func (r *paymentRepository) Save(ctx context.Context, p *aggregate.PaymentAggreg
 
 const insertPaymentSQL = `
 INSERT INTO payments (id, invoice_id, payment_date, amount, method, reference, remarks, tenant_id, idempotency_key)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 `
 
 const findPaymentIDByKeySQL = `
-SELECT id FROM payments WHERE tenant_id = ? AND idempotency_key = ? LIMIT 1
+SELECT id FROM payments WHERE tenant_id = $1 AND idempotency_key = $2 LIMIT 1
 `
 
 func (r *paymentRepository) insertPayment(ctx context.Context, p *aggregate.PaymentAggregate, key string) error {
@@ -325,8 +325,8 @@ func (r *paymentRepository) SearchReadModels(ctx context.Context, tenantID share
 
 const setRazorpayFieldsSQL = `
 UPDATE payments
-SET razorpay_order_id = ?, razorpay_payment_id = ?, razorpay_signature = ?, updated_at = datetime('now')
-WHERE id = ? AND tenant_id = ?
+SET razorpay_order_id = $1, razorpay_payment_id = $2, razorpay_signature = $3, updated_at = CURRENT_TIMESTAMP
+WHERE id = $4 AND tenant_id = $5
 `
 
 // SetRazorpayFields stores the Razorpay order/payment/signature identifiers on
@@ -337,7 +337,7 @@ func (r *paymentRepository) SetRazorpayFields(ctx context.Context, id aggregate.
 }
 
 const findRazorpayPaymentSQL = `
-SELECT id FROM payments WHERE tenant_id = ? AND razorpay_payment_id = ? LIMIT 1
+SELECT id FROM payments WHERE tenant_id = $1 AND razorpay_payment_id = $2 LIMIT 1
 `
 
 // ExistsRazorpayPayment returns the payment ID recorded against a Razorpay
@@ -352,7 +352,7 @@ func (r *paymentRepository) ExistsRazorpayPayment(ctx context.Context, tenantID 
 }
 
 const findWebhookEventSQL = `
-SELECT id FROM payments WHERE tenant_id = ? AND webhook_event_id = ? LIMIT 1
+SELECT id FROM payments WHERE tenant_id = $1 AND webhook_event_id = $2 LIMIT 1
 `
 
 // ExistsWebhookEvent returns the payment ID processed for a Razorpay webhook
@@ -367,8 +367,8 @@ func (r *paymentRepository) ExistsWebhookEvent(ctx context.Context, tenantID sha
 }
 
 const setWebhookEventIDSQL = `
-UPDATE payments SET webhook_event_id = ?, updated_at = datetime('now')
-WHERE id = ? AND tenant_id = ?
+UPDATE payments SET webhook_event_id = $1, updated_at = CURRENT_TIMESTAMP
+WHERE id = $2 AND tenant_id = $3
 `
 
 // SetWebhookEventID persists the Razorpay webhook event ID on the payment row
@@ -384,7 +384,7 @@ func (r *paymentRepository) SetWebhookEventID(ctx context.Context, id aggregate.
 func (r *paymentRepository) FindReferenceTenant(ctx context.Context, reference string) (shared.TenantID, error) {
 	var tenantID string
 	err := r.exec(ctx).QueryRowContext(ctx,
-		`SELECT p.tenant_id FROM payments p WHERE p.reference = ?
+		`SELECT p.tenant_id FROM payments p WHERE p.reference = $1
 		 ORDER BY p.created_at DESC LIMIT 1`, reference).Scan(&tenantID)
 	if err != nil {
 		return "", err

@@ -91,7 +91,7 @@ func (h *MaintenanceHandlers) Index(w http.ResponseWriter, r *http.Request) {
 	// Registration numbers for the job-card panel (never raw UUIDs).
 	vehicleLabels := map[string]string{}
 	if rows, err := h.DB.QueryContext(r.Context(),
-		`SELECT id, COALESCE(NULLIF(registration_number,''), vehicle_number, id) FROM vehicles WHERE tenant_id = ?`, tenantID); err == nil {
+		`SELECT id, COALESCE(NULLIF(registration_number,''), vehicle_number, id) FROM vehicles WHERE tenant_id = $1`, tenantID); err == nil {
 		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var vid, label string
@@ -402,7 +402,7 @@ func (h *MaintenanceHandlers) OverrideBlock(w http.ResponseWriter, r *http.Reque
 	// Audit log
 	_, _ = h.DB.ExecContext(r.Context(), `
 		INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, created_at)
-		VALUES (?, ?, 'maintenance_override', 'vehicles', ?, ?, CURRENT_TIMESTAMP)`,
+		VALUES ($1, $2, 'maintenance_override', 'vehicles', $3, $4, CURRENT_TIMESTAMP)`,
 		uuid.NewString(), actorID, vehicleID, fmt.Sprintf(`{"reason":%q,"override_by":%q}`, reason, actorID),
 	)
 

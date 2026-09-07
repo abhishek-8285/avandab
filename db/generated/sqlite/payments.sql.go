@@ -123,10 +123,10 @@ func (q *Queries) DeletePayment(ctx context.Context, arg DeletePaymentParams) er
 }
 
 const getMonthlyRevenue = `-- name: GetMonthlyRevenue :many
-SELECT CAST(strftime('%Y-%m', payment_date) AS TEXT) AS month, CAST(COALESCE(SUM(amount), 0) AS REAL) AS total
+SELECT substr(CAST(payment_date AS TEXT), 1, 7) AS month, CAST(COALESCE(SUM(amount), 0) AS REAL) AS total
 FROM payments
 WHERE tenant_id = ?
-GROUP BY strftime('%Y-%m', payment_date)
+GROUP BY substr(CAST(payment_date AS TEXT), 1, 7)
 ORDER BY month ASC
 `
 
@@ -346,20 +346,26 @@ func (q *Queries) GetPaymentsByInvoice(ctx context.Context, arg GetPaymentsByInv
 }
 
 const getRevenueByDay = `-- name: GetRevenueByDay :many
-SELECT CAST(date(payment_date) AS TEXT) AS day, CAST(COALESCE(SUM(amount), 0) AS REAL) AS total
+SELECT substr(CAST(payment_date AS TEXT), 1, 10) AS day, CAST(COALESCE(SUM(amount), 0) AS REAL) AS total
 FROM payments
-WHERE tenant_id = ? AND date(payment_date) >= date('now', '-29 days')
-GROUP BY date(payment_date)
+WHERE tenant_id = ? AND substr(CAST(payment_date AS TEXT), 1, 10) >= CAST(?2 AS TEXT)
+GROUP BY substr(CAST(payment_date AS TEXT), 1, 10)
 ORDER BY day ASC
 `
+
+type GetRevenueByDayParams struct {
+	TenantID string `json:"tenant_id"`
+	StartDay string `json:"start_day"`
+}
 
 type GetRevenueByDayRow struct {
 	Day   string  `json:"day"`
 	Total float64 `json:"total"`
 }
 
-func (q *Queries) GetRevenueByDay(ctx context.Context, tenantID string) ([]GetRevenueByDayRow, error) {
-	rows, err := q.db.QueryContext(ctx, getRevenueByDay, tenantID)
+// Lower bound is a Go-side param (impl passes UTC today-29d).
+func (q *Queries) GetRevenueByDay(ctx context.Context, arg GetRevenueByDayParams) ([]GetRevenueByDayRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRevenueByDay, arg.TenantID, arg.StartDay)
 	if err != nil {
 		return nil, err
 	}

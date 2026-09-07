@@ -37,7 +37,7 @@ func (s *FASTagService) Reconcile(ctx context.Context, vehicleNumber, fromDate, 
 	for _, p := range pulledTxs {
 		var exists bool
 		_ = s.db.QueryRowContext(ctx, `
-			SELECT EXISTS(SELECT 1 FROM fastag_transactions WHERE tag_id = ? AND txn_timestamp = ? AND amount = ?)
+			SELECT EXISTS(SELECT 1 FROM fastag_transactions WHERE tag_id = $1 AND txn_timestamp = $2 AND amount = $3)
 		`, p.TagID, p.Timestamp, p.Amount).Scan(&exists)
 
 		if !exists {
@@ -49,7 +49,7 @@ func (s *FASTagService) Reconcile(ctx context.Context, vehicleNumber, fromDate, 
 				INSERT INTO fastag_transactions (
 					id, tenant_id, tag_id, vehicle_number, plaza_id, plaza_name,
 					amount, txn_timestamp, status, source, reconciled
-				) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'SUCCESS', 'PROVIDER', 0)
+				) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'SUCCESS', 'PROVIDER', 0)
 			`, txnID, tenantID, p.TagID, p.VehicleNumber, p.PlazaID, p.PlazaName, p.Amount, p.Timestamp)
 		}
 	}
@@ -58,7 +58,7 @@ func (s *FASTagService) Reconcile(ctx context.Context, vehicleNumber, fromDate, 
 	query := `
 		SELECT id, tag_id, vehicle_number, plaza_id, plaza_name, amount, txn_timestamp
 		FROM fastag_transactions
-		WHERE (vehicle_number = ? OR ? = '') AND reconciled = 0
+		WHERE (vehicle_number = $1 OR $2 = '') AND reconciled = 0
 		ORDER BY txn_timestamp ASC
 	`
 	rows, err := s.db.QueryContext(ctx, query, vehicleNumber, vehicleNumber)
@@ -93,12 +93,12 @@ func (s *FASTagService) Reconcile(ctx context.Context, vehicleNumber, fromDate, 
 
 	// 4. Load candidate trips
 	tripQuery := `
-		SELECT t.id, t.driver_id, t.departure_time, COALESCE(t.arrival_time, datetime('now'))
+		SELECT t.id, t.driver_id, t.departure_time, COALESCE(t.arrival_time, CURRENT_TIMESTAMP)
 		FROM trips t
 		LEFT JOIN vehicles v ON t.vehicle_id = v.id
-		WHERE (v.registration_number = ? OR ? = '' OR t.vehicle_id = ?)
+		WHERE (v.registration_number = $1 OR $2 = '' OR t.vehicle_id = $3)
 		  AND t.status IN ('scheduled', 'assigned', 'started', 'reached_pickup', 'in_transit', 'delivered', 'completed')
-		  AND t.tenant_id = ?
+		  AND t.tenant_id = $4
 		ORDER BY t.departure_time ASC
 	`
 	tRows, err := s.db.QueryContext(ctx, tripQuery, vehicleNumber, vehicleNumber, vehicleNumber, tenantID)
@@ -165,7 +165,7 @@ func (s *FASTagService) Reconcile(ctx context.Context, vehicleNumber, fromDate, 
 				_, kErr := s.db.ExecContext(ctx, `
 					INSERT INTO driver_expenses (
 						id, trip_id, driver_id, expense_type, category, amount, description, approved, status, approved_at, tenant_id
-					) VALUES (?, ?, ?, 'toll', 'toll', ?, ?, 1, 'approved', datetime('now'), ?)
+					) VALUES ($1, $2, $3, 'toll', 'toll', $4, $5, 1, 'approved', CURRENT_TIMESTAMP, $6)
 				`, kID, bestTrip.ID, driverIDVal, txn.Amount, desc, tenantID)
 
 				if kErr == nil {
@@ -179,8 +179,8 @@ func (s *FASTagService) Reconcile(ctx context.Context, vehicleNumber, fromDate, 
 			// Mark transaction reconciled
 			_, _ = s.db.ExecContext(ctx, `
 				UPDATE fastag_transactions
-				SET trip_id = ?, reconciled = 1, kharcha_id = ?
-				WHERE id = ?
+				SET trip_id = $1, reconciled = 1, kharcha_id = $2
+				WHERE id = $3
 			`, bestTrip.ID, kharchaID, txn.ID)
 		} else {
 			unmatched++

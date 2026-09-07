@@ -145,7 +145,7 @@ func (a *auditLogAdapter) LogAction(ctx context.Context, action, tableName, reco
 	execDB := a.txOrDB(ctx)
 	_, err := execDB.ExecContext(ctx,
 		`INSERT INTO audit_logs (id, action, table_name, record_id, old_values, new_values, ip_address)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		uuid.NewString(), action, tableName, recordID, oldJSON, newJSON, "",
 	)
 	return err

@@ -31,7 +31,7 @@ func (s *EWayBillService) SubscribeTripEvents(bus events.EventBus) {
 			// Resolve from the trip row: generating a government document
 			// under the wrong org (wrong GSTIN) is a legal defect, so never
 			// fall back to the bootstrap tenant here.
-			_ = s.db.QueryRowContext(ctx, `SELECT tenant_id FROM trips WHERE id = ?`, tripID).Scan(&tenantID)
+			_ = s.db.QueryRowContext(ctx, `SELECT tenant_id FROM trips WHERE id = $1`, tripID).Scan(&tenantID)
 		}
 		if tenantID == "" {
 			s.logger.Warn("ewaybill auto-generate skipped (tenant unknown)", "trip_id", tripID)
@@ -49,7 +49,7 @@ func (s *EWayBillService) SubscribeTripEvents(bus events.EventBus) {
 		var existingEwb string
 		err := s.db.QueryRowContext(ctx, `
 			SELECT ewb_number FROM eway_bills
-			WHERE trip_id = ? AND status != 'cancelled' LIMIT 1
+			WHERE trip_id = $1 AND status != 'cancelled' LIMIT 1
 		`, tripID).Scan(&existingEwb)
 		if err == nil && existingEwb != "" {
 			s.logger.Debug("ewaybill auto-generate skipped (already exists)", "trip_id", tripID, "ewb_number", existingEwb)
@@ -62,7 +62,7 @@ func (s *EWayBillService) SubscribeTripEvents(bus events.EventBus) {
 			SELECT b.price
 			FROM trips t
 			JOIN bookings b ON t.booking_id = b.id
-			WHERE t.id = ?
+			WHERE t.id = $1
 		`, tripID).Scan(&goodsVal)
 		if err != nil {
 			s.logger.Warn("could not resolve goods value for trip auto-generate", "trip_id", tripID, "error", err)
@@ -95,13 +95,13 @@ func (s *EWayBillService) SubscribeTripEvents(bus events.EventBus) {
 		}
 
 		var regNum string
-		err := s.db.QueryRowContext(ctx, `SELECT registration_number FROM vehicles WHERE id = ?`, vehID).Scan(&regNum)
+		err := s.db.QueryRowContext(ctx, `SELECT registration_number FROM vehicles WHERE id = $1`, vehID).Scan(&regNum)
 		if err != nil || regNum == "" {
 			return nil
 		}
 
 		var ewbNum string
-		err = s.db.QueryRowContext(ctx, `SELECT ewb_number FROM eway_bills WHERE trip_id = ? AND (vehicle_number IS NULL OR vehicle_number = '') AND status != 'cancelled'`, tripID).Scan(&ewbNum)
+		err = s.db.QueryRowContext(ctx, `SELECT ewb_number FROM eway_bills WHERE trip_id = $1 AND (vehicle_number IS NULL OR vehicle_number = '') AND status != 'cancelled'`, tripID).Scan(&ewbNum)
 		if err == nil && ewbNum != "" {
 			_, _ = s.AttachPartB(ctx, ewbNum, regNum, "")
 		}
@@ -117,7 +117,7 @@ func (s *EWayBillService) SubscribeTripEvents(bus events.EventBus) {
 		var ewbNum string
 		err := s.db.QueryRowContext(ctx, `
 			SELECT ewb_number FROM eway_bills
-			WHERE trip_id = ? AND status IN ('active', 'part_a')
+			WHERE trip_id = $1 AND status IN ('active', 'part_a')
 			LIMIT 1`, tripID).Scan(&ewbNum)
 		if err != nil || ewbNum == "" {
 			return nil
@@ -127,13 +127,13 @@ func (s *EWayBillService) SubscribeTripEvents(bus events.EventBus) {
 		_, err = s.db.ExecContext(ctx, `
 			UPDATE eway_bills
 			SET status = 'delivered'
-			WHERE ewb_number = ? AND status IN ('active', 'part_a')
+			WHERE ewb_number = $1 AND status IN ('active', 'part_a')
 		`, ewbNum)
 		if err == nil {
 			eventID := uuid.NewString()
 			_, _ = s.db.ExecContext(ctx, `
 				INSERT INTO eway_bill_events (id, ewb_number, trip_id, event_type, payload, created_by, created_at)
-				VALUES (?, ?, ?, 'DELIVERED', '{"reason":"trip_delivered"}', 'system', datetime('now'))
+				VALUES ($1, $2, $3, 'DELIVERED', '{"reason":"trip_delivered"}', 'system', CURRENT_TIMESTAMP)
 			`, eventID, ewbNum, tripID)
 		}
 		return nil
@@ -151,7 +151,7 @@ func (s *EWayBillService) isAutoGenerateEnabled(ctx context.Context, tenantID st
 	var val string
 	err := s.db.QueryRowContext(ctx, `
 		SELECT value FROM company_config
-		WHERE tenant_id = ? AND key = 'ewaybill_auto_generate'
+		WHERE tenant_id = $1 AND key = 'ewaybill_auto_generate'
 		LIMIT 1`, tenantID).Scan(&val)
 	if err != nil {
 		if err == sql.ErrNoRows {

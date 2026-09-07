@@ -87,9 +87,9 @@ func (h *APIAuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		vID := uuid.New().String()
 		_, _ = h.db.ExecContext(r.Context(), `
 			INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, capacity, fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, tenant_id)
-			VALUES (?, ?, ?, 'truck', 5000, 'diesel', date('now', '+1 year'), date('now', '+1 year'), date('now', '+1 year'), 'available', ?)
-			ON CONFLICT(registration_number) DO UPDATE SET updated_at = CURRENT_TIMESTAMP`,
-			vID, vNum, vNum, userTenantID)
+			VALUES ($1, $2, $3, 'truck', 5000, 'diesel', $4, $5, $6, 'available', $7)
+			ON CONFLICT (registration_number) DO UPDATE SET updated_at = CURRENT_TIMESTAMP`,
+			vID, vNum, vNum, time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), userTenantID)
 
 		dID := uuid.New().String()
 		names := strings.SplitN(req.Name, " ", 2)
@@ -100,14 +100,14 @@ func (h *APIAuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		}
 		_, _ = h.db.ExecContext(r.Context(), `
 			INSERT INTO drivers (id, driver_id, first_name, last_name, phone, email, license_number, license_expiry, status, notes, tenant_id)
-			VALUES (?, ?, ?, ?, ?, ?, 'DL-PENDING', date('now', '+5 years'), 'available', ?, ?)
-			ON CONFLICT(driver_id) DO UPDATE SET notes = excluded.notes, updated_at = CURRENT_TIMESTAMP`,
-			dID, string(user.ID), firstName, lastName, req.Phone, req.Email, vNum, userTenantID)
+			VALUES ($1, $2, $3, $4, $5, $6, 'DL-PENDING', $7, 'available', $8, $9)
+			ON CONFLICT (driver_id) DO UPDATE SET notes = excluded.notes, updated_at = CURRENT_TIMESTAMP`,
+			dID, string(user.ID), firstName, lastName, req.Phone, req.Email, time.Now().UTC().AddDate(5, 0, 0).Format("2006-01-02"), vNum, userTenantID)
 
 		_, _ = h.db.ExecContext(r.Context(), `
 			INSERT INTO telemetry_devices (id, tenant_id, imei, device_type, status, vehicle_id, activated_at)
-			VALUES (?, ?, ?, 'mobile_app', 'active', (SELECT id FROM vehicles WHERE registration_number = ? LIMIT 1), CURRENT_TIMESTAMP)
-			ON CONFLICT(imei) DO UPDATE SET vehicle_id = (SELECT id FROM vehicles WHERE registration_number = ? LIMIT 1), status = 'active'`,
+			VALUES ($1, $2, $3, 'mobile_app', 'active', (SELECT id FROM vehicles WHERE registration_number = $4 LIMIT 1), CURRENT_TIMESTAMP)
+			ON CONFLICT (imei) DO UPDATE SET vehicle_id = (SELECT id FROM vehicles WHERE registration_number = $5 LIMIT 1), status = 'active'`,
 			uuid.New().String(), userTenantID, string(user.ID), vNum, vNum)
 	}
 

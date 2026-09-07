@@ -3,9 +3,12 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strings"
+	appdb "transport-app/internal/database"
 
 	"github.com/go-chi/chi/v5"
 
@@ -32,25 +35,25 @@ var purgeProtected = map[string]bool{
 // purgeGlobalPreds deletes from tables without their own tenant_id by
 // scoping through parent trips/drivers/vehicles/bookings/etc. Children first.
 var purgeGlobalPreds = []struct{ table, pred string }{
-	{"eway_bill_events", "trip_id IN (SELECT id FROM trips WHERE tenant_id = ?) OR ewb_number IN (SELECT ewb_number FROM eway_bills WHERE trip_id IN (SELECT id FROM trips WHERE tenant_id = ?))"},
-	{"settlement_lines", "trip_id IN (SELECT id FROM trips WHERE tenant_id = ?) OR settlement_id IN (SELECT id FROM driver_settlements WHERE tenant_id = ?)"},
-	{"share_links", "trip_id IN (SELECT id FROM trips WHERE tenant_id = ?)"},
-	{"telemetry_snapshots", "trip_id IN (SELECT id FROM trips WHERE tenant_id = ?) OR vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = ?)"},
-	{"fuel_claim_audits", "expense_id IN (SELECT id FROM driver_expenses WHERE tenant_id = ?) OR trip_id IN (SELECT id FROM trips WHERE tenant_id = ?) OR vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = ?) OR driver_id IN (SELECT id FROM drivers WHERE tenant_id = ?)"},
-	{"fuel_events", "trip_id IN (SELECT id FROM trips WHERE tenant_id = ?) OR vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = ?) OR driver_id IN (SELECT id FROM drivers WHERE tenant_id = ?)"},
-	{"driver_behaviour_events", "trip_id IN (SELECT id FROM trips WHERE tenant_id = ?) OR vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = ?) OR driver_id IN (SELECT id FROM drivers WHERE tenant_id = ?)"},
-	{"driver_scores", "driver_id IN (SELECT id FROM drivers WHERE tenant_id = ?)"},
-	{"driver_documents", "driver_id IN (SELECT id FROM drivers WHERE tenant_id = ?)"},
-	{"vehicle_documents", "vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = ?)"},
-	{"dtc_events", "trip_id IN (SELECT id FROM trips WHERE tenant_id = ?) OR vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = ?)"},
-	{"telemetry_alerts", "trip_id IN (SELECT id FROM trips WHERE tenant_id = ?) OR vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = ?) OR driver_id IN (SELECT id FROM drivers WHERE tenant_id = ?)"},
-	{"customer_users", "customer_id IN (SELECT id FROM customers WHERE tenant_id = ?)"},
-	{"route_locations", "route_id IN (SELECT id FROM routes WHERE tenant_id = ?)"},
-	{"route_constraints", "job_id IN (SELECT id FROM route_optimization_jobs WHERE tenant_id = ?)"},
-	{"files", "uploadable_type IN ('trip_pod','expense_receipt') AND (uploadable_id IN (SELECT id FROM trips WHERE tenant_id = ?) OR uploadable_id IN (SELECT id FROM driver_expenses WHERE tenant_id = ?))"},
-	{"dispatches", "tenant_id IS NULL AND booking_id IN (SELECT id FROM bookings WHERE tenant_id = ?)"},
-	{"eway_bills", "trip_id IN (SELECT id FROM trips WHERE tenant_id = ?)"},
-	{"maintenance_schedules", "vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = ?)"},
+	{"eway_bill_events", "trip_id IN (SELECT id FROM trips WHERE tenant_id = $1) OR ewb_number IN (SELECT ewb_number FROM eway_bills WHERE trip_id IN (SELECT id FROM trips WHERE tenant_id = $2))"},
+	{"settlement_lines", "trip_id IN (SELECT id FROM trips WHERE tenant_id = $1) OR settlement_id IN (SELECT id FROM driver_settlements WHERE tenant_id = $2)"},
+	{"share_links", "trip_id IN (SELECT id FROM trips WHERE tenant_id = $1)"},
+	{"telemetry_snapshots", "trip_id IN (SELECT id FROM trips WHERE tenant_id = $1) OR vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = $2)"},
+	{"fuel_claim_audits", "expense_id IN (SELECT id FROM driver_expenses WHERE tenant_id = $1) OR trip_id IN (SELECT id FROM trips WHERE tenant_id = $2) OR vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = $3) OR driver_id IN (SELECT id FROM drivers WHERE tenant_id = $4)"},
+	{"fuel_events", "trip_id IN (SELECT id FROM trips WHERE tenant_id = $1) OR vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = $2) OR driver_id IN (SELECT id FROM drivers WHERE tenant_id = $3)"},
+	{"driver_behaviour_events", "trip_id IN (SELECT id FROM trips WHERE tenant_id = $1) OR vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = $2) OR driver_id IN (SELECT id FROM drivers WHERE tenant_id = $3)"},
+	{"driver_scores", "driver_id IN (SELECT id FROM drivers WHERE tenant_id = $1)"},
+	{"driver_documents", "driver_id IN (SELECT id FROM drivers WHERE tenant_id = $1)"},
+	{"vehicle_documents", "vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = $1)"},
+	{"dtc_events", "trip_id IN (SELECT id FROM trips WHERE tenant_id = $1) OR vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = $2)"},
+	{"telemetry_alerts", "trip_id IN (SELECT id FROM trips WHERE tenant_id = $1) OR vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = $2) OR driver_id IN (SELECT id FROM drivers WHERE tenant_id = $3)"},
+	{"customer_users", "customer_id IN (SELECT id FROM customers WHERE tenant_id = $1)"},
+	{"route_locations", "route_id IN (SELECT id FROM routes WHERE tenant_id = $1)"},
+	{"route_constraints", "job_id IN (SELECT id FROM route_optimization_jobs WHERE tenant_id = $1)"},
+	{"files", "uploadable_type IN ('trip_pod','expense_receipt') AND (uploadable_id IN (SELECT id FROM trips WHERE tenant_id = $1) OR uploadable_id IN (SELECT id FROM driver_expenses WHERE tenant_id = $2))"},
+	{"dispatches", "tenant_id IS NULL AND booking_id IN (SELECT id FROM bookings WHERE tenant_id = $1)"},
+	{"eway_bills", "trip_id IN (SELECT id FROM trips WHERE tenant_id = $1)"},
+	{"maintenance_schedules", "vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = $1)"},
 }
 
 // purgeTenantTables deletes by direct tenant_id, children before parents.
@@ -84,16 +87,40 @@ var purgeTenantTables = []string{
 	"founder_audit", "founder_signals", "verification_attempts",
 }
 
-func purgeTableExists(ctx context.Context, tx *sql.Tx, table string) bool {
-	var n int
-	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?`, table).Scan(&n); err != nil {
+// purgeTableExists probes for a table portably (sqlite_master is
+// sqlite-only). Missing-table errors on either engine mean "absent".
+func purgeTableExists(ctx context.Context, q interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}, table string) bool {
+	var one int
+	if err := q.QueryRowContext(ctx, `SELECT 1 FROM `+table+` LIMIT 0`).Scan(&one); err != nil {
+		// LIMIT 0 yields zero rows on success (sql.ErrNoRows = table exists).
+		if errors.Is(err, sql.ErrNoRows) {
+			return true
+		}
+		msg := err.Error()
+		if strings.Contains(msg, "no such table") || strings.Contains(msg, "does not exist") {
+			return false
+		}
 		return false
 	}
-	return n == 1
+	return true
 }
 
 func purgeCountArgs(pred, tenantID string) []any {
-	n := strings.Count(pred, "?")
+	// Predicates use sequential $N markers (PG/sqlite portable); every
+	// marker binds the same tenant, so arg count = highest marker index.
+	n := 0
+	for _, m := range regexp.MustCompile(`\$(\d+)`).FindAllStringSubmatch(pred, -1) {
+		var v int
+		if _, err := fmt.Sscanf(m[1], "%d", &v); err == nil && v > n {
+			n = v
+		}
+	}
+	// Legacy bare-? predicates (none remain, kept for safety).
+	if n == 0 {
+		n = strings.Count(pred, "?")
+	}
 	args := make([]any, n)
 	for i := range args {
 		args[i] = tenantID
@@ -105,8 +132,12 @@ func purgeCountArgs(pred, tenantID string) []any {
 func purgeTenantPreview(ctx context.Context, db *sql.DB, tenantID string) (map[string]int64, error) {
 	out := map[string]int64{}
 	count := func(table, query string, args ...any) error {
+		rebound, rerr := appdb.Rebind(query)
+		if rerr != nil {
+			return rerr
+		}
 		var n int64
-		if err := db.QueryRowContext(ctx, query, args...).Scan(&n); err != nil {
+		if err := db.QueryRowContext(ctx, rebound, args...).Scan(&n); err != nil {
 			return err
 		}
 		if n > 0 {
@@ -114,13 +145,11 @@ func purgeTenantPreview(ctx context.Context, db *sql.DB, tenantID string) (map[s
 		}
 		return nil
 	}
-	var exists int
-	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?`, "tenants").Scan(&exists); err != nil || exists != 1 {
+	if !purgeTableExists(ctx, db, "tenants") {
 		return nil, fmt.Errorf("tenants table missing")
 	}
 	for _, g := range purgeGlobalPreds {
-		var has int
-		if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?`, g.table).Scan(&has); err != nil || has != 1 {
+		if !purgeTableExists(ctx, db, g.table) {
 			continue
 		}
 		if err := count(g.table, `SELECT COUNT(*) FROM `+g.table+` WHERE `+g.pred, purgeCountArgs(g.pred, tenantID)...); err != nil {
@@ -131,8 +160,7 @@ func purgeTenantPreview(ctx context.Context, db *sql.DB, tenantID string) (map[s
 		if purgeProtected[table] {
 			return nil, fmt.Errorf("refusing: %s is protected", table)
 		}
-		var has int
-		if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?`, table).Scan(&has); err != nil || has != 1 {
+		if !purgeTableExists(ctx, db, table) {
 			continue
 		}
 		if err := count(table, `SELECT COUNT(*) FROM `+table+` WHERE tenant_id = ?`, tenantID); err != nil {
@@ -152,7 +180,7 @@ func purgeTenantOps(ctx context.Context, db *sql.DB, tenantID string) (map[strin
 		return nil, fmt.Errorf("bootstrap tenant cannot be purged")
 	}
 	var found int
-	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM tenants WHERE id = ?`, tenantID).Scan(&found); err != nil || found != 1 {
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM tenants WHERE id = $1`, tenantID).Scan(&found); err != nil || found != 1 {
 		return nil, fmt.Errorf("tenant %q not found", tenantID)
 	}
 
@@ -161,8 +189,11 @@ func purgeTenantOps(ctx context.Context, db *sql.DB, tenantID string) (map[strin
 		return nil, err
 	}
 	defer func() { _ = tx.Rollback() }()
-	if _, err := tx.ExecContext(ctx, `PRAGMA foreign_keys = ON`); err != nil {
-		return nil, err
+	// Postgres enforces FKs unconditionally; the PRAGMA is sqlite-only.
+	if !appdb.IsPostgres(db) {
+		if _, err := tx.ExecContext(ctx, `PRAGMA foreign_keys = ON`); err != nil {
+			return nil, err
+		}
 	}
 
 	deleted := map[string]int64{}
@@ -173,7 +204,11 @@ func purgeTenantOps(ctx context.Context, db *sql.DB, tenantID string) (map[strin
 		if !purgeTableExists(ctx, tx, table) {
 			return nil
 		}
-		res, err := tx.ExecContext(ctx, query, args...)
+		rebound, rerr := appdb.Rebind(query)
+		if rerr != nil {
+			return fmt.Errorf("purge %s: %w", table, rerr)
+		}
+		res, err := tx.ExecContext(ctx, rebound, args...)
 		if err != nil {
 			return fmt.Errorf("purge %s: %w", table, err)
 		}
@@ -199,7 +234,11 @@ func purgeTenantOps(ctx context.Context, db *sql.DB, tenantID string) (map[strin
 			continue
 		}
 		var n int64
-		if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM `+table+` WHERE tenant_id = ?`, tenantID).Scan(&n); err != nil {
+		reboundLeft, rerr := appdb.Rebind(`SELECT COUNT(*) FROM ` + table + ` WHERE tenant_id = ?`)
+		if rerr != nil {
+			return nil, rerr
+		}
+		if err := tx.QueryRowContext(ctx, reboundLeft, tenantID).Scan(&n); err != nil {
 			return nil, err
 		}
 		if n > 0 {

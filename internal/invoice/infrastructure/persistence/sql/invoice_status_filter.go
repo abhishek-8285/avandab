@@ -25,16 +25,16 @@ FROM invoices i
 JOIN customers c ON i.customer_id = c.id
 LEFT JOIN bookings b ON i.booking_id = b.id
 LEFT JOIN trips t ON i.trip_id = t.id
-WHERE i.tenant_id = ?
-  AND (i.invoice_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%')
+WHERE i.tenant_id = $1
+  AND (i.invoice_number LIKE '%' || $2 || '%' OR c.name LIKE '%' || $3 || '%')
   AND i.payment_status IN ('pending', 'partially_paid')`
 
 const outstandingInvoiceCount = `
 SELECT COUNT(*)
 FROM invoices i
 JOIN customers c ON i.customer_id = c.id
-WHERE i.tenant_id = ?
-  AND (i.invoice_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%')
+WHERE i.tenant_id = $1
+  AND (i.invoice_number LIKE '%' || $2 || '%' OR c.name LIKE '%' || $3 || '%')
   AND i.payment_status IN ('pending', 'partially_paid')`
 
 // searchOutstandingInvoices lists unpaid invoices, optionally bounded by an

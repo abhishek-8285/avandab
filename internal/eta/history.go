@@ -24,7 +24,7 @@ func (s *EtaService) RecordHistory(ctx context.Context, tenantID, tripID, segmen
 	id := uuid.NewString()
 	_, err := s.db.ExecContext(ctx,
 		`INSERT INTO eta_history (id, tenant_id, trip_id, segment_start, segment_end, actual_minutes, traffic_tag, day_of_week, hour_of_day, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		id, tenantID, tripID, segmentStart, segmentEnd, actualMinutes, trafficTag, dayOfWeek, hourOfDay, now)
 	return err
 }
@@ -36,8 +36,8 @@ func (s *EtaService) PredictFromHistory(ctx context.Context, tenantID, segmentSt
 	var cnt int
 	err := s.db.QueryRowContext(ctx,
 		`SELECT AVG(actual_minutes), COUNT(*) FROM eta_history
-		 WHERE tenant_id=? AND segment_start=? AND segment_end=? AND created_at > datetime('now','-90 days')`,
-		tenantID, segmentStart, segmentEnd).Scan(&avg, &cnt)
+		 WHERE tenant_id=$1 AND segment_start=$2 AND segment_end=$3 AND created_at > $4`,
+		tenantID, segmentStart, segmentEnd, time.Now().UTC().AddDate(0, 0, -90)).Scan(&avg, &cnt)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -49,7 +49,7 @@ func (s *EtaService) PredictFromHistory(ctx context.Context, tenantID, segmentSt
 
 // CleanupOldHistory deletes raw rows older than 90 days. Run daily via cron.
 func (s *EtaService) CleanupOldHistory(ctx context.Context) (int64, error) {
-	res, err := s.db.ExecContext(ctx, `DELETE FROM eta_history WHERE created_at < datetime('now','-90 days')`)
+	res, err := s.db.ExecContext(ctx, `DELETE FROM eta_history WHERE created_at < $1`, time.Now().UTC().AddDate(0, 0, -90))
 	if err != nil {
 		return 0, err
 	}
@@ -59,13 +59,15 @@ func (s *EtaService) CleanupOldHistory(ctx context.Context) (int64, error) {
 // AggregateMonthly rolls up raw history into eta_history_monthly (call after cleanup).
 func (s *EtaService) AggregateMonthly(ctx context.Context) error {
 	_, err := s.db.ExecContext(ctx, `
-		INSERT OR REPLACE INTO eta_history_monthly (tenant_id, segment_start, segment_end, month, avg_minutes, sample_count)
+		INSERT INTO eta_history_monthly (tenant_id, segment_start, segment_end, month, avg_minutes, sample_count)
 		SELECT tenant_id, segment_start, segment_end,
-		       strftime('%Y-%m-01', created_at) as month,
+		       substr(CAST(created_at AS TEXT), 1, 7) || '-01' as month,
 		       AVG(actual_minutes), COUNT(*)
 		FROM eta_history
-		WHERE created_at < datetime('now','-90 days')
+		WHERE created_at < $1
 		GROUP BY tenant_id, segment_start, segment_end, month
-	`)
+		ON CONFLICT (tenant_id, segment_start, segment_end, month) DO UPDATE SET
+		       avg_minutes = excluded.avg_minutes, sample_count = excluded.sample_count
+	`, time.Now().UTC().AddDate(0, 0, -90))
 	return err
 }

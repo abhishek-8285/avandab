@@ -14,8 +14,8 @@ import (
 // and its mocks untouched.
 
 const userDateClause = `
-  AND (? = '' OR date(substr(u.created_at,1,10)) >= date(?))
-  AND (? = '' OR date(substr(u.created_at,1,10)) <= date(?))`
+  AND (? = '' OR substr(CAST(u.created_at AS TEXT), 1, 10) >= substr(CAST(? AS TEXT), 1, 10))
+  AND (? = '' OR substr(CAST(u.created_at AS TEXT), 1, 10) <= substr(CAST(? AS TEXT), 1, 10))`
 
 // query runs a raw multi-row query, picking up the active transaction from
 // context when present (mirrors exec/queryRow helpers).
@@ -34,9 +34,9 @@ SELECT u.id, u.email, u.name, u.phone, u.role_id, u.status,
        r.name AS role_name
 FROM users u
 JOIN roles r ON u.role_id = r.id
-WHERE u.tenant_id = ?
-  AND (? = '' OR u.name LIKE '%' || ? || '%' OR u.email LIKE '%' || ? || '%')
-  AND (? = '' OR u.status = ?)`+userDateClause+`
+WHERE u.tenant_id = $1
+  AND ($2 = '' OR u.name LIKE '%' || $3 || '%' OR u.email LIKE '%' || $4 || '%')
+  AND ($5 = '' OR u.status = $6)`+userDateClause+`
 ORDER BY u.created_at DESC
 LIMIT ? OFFSET ?`,
 		tenantID,
@@ -74,9 +74,9 @@ func (r *SQLRepository) CountUsersDateRange(ctx context.Context, query string, s
 	err := r.queryRow(ctx, `
 SELECT COUNT(*)
 FROM users u
-WHERE u.tenant_id = ?
-  AND (? = '' OR u.name LIKE '%' || ? || '%' OR u.email LIKE '%' || ? || '%')
-  AND (? = '' OR u.status = ?)`+userDateClause,
+WHERE u.tenant_id = $1
+  AND ($2 = '' OR u.name LIKE '%' || $3 || '%' OR u.email LIKE '%' || $4 || '%')
+  AND ($5 = '' OR u.status = $6)`+userDateClause,
 		tenantID,
 		query, query, query,
 		status, status,

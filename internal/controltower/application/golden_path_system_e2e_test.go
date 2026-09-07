@@ -98,6 +98,13 @@ func setupGoldenPathDB(t *testing.T) *sql.DB {
 		status TEXT DEFAULT 'available'
 	);
 
+	CREATE TABLE routes (
+		id TEXT PRIMARY KEY,
+		tenant_id TEXT NOT NULL,
+		source TEXT,
+		destination TEXT
+	);
+
 	CREATE TABLE trips (
 		id TEXT PRIMARY KEY,
 		tenant_id TEXT NOT NULL,
@@ -105,11 +112,10 @@ func setupGoldenPathDB(t *testing.T) *sql.DB {
 		booking_id TEXT,
 		driver_id TEXT,
 		vehicle_id TEXT,
-		origin TEXT,
-		destination TEXT,
+		route_id TEXT,
 		status TEXT NOT NULL,
-		start_time TEXT,
-		end_time TEXT,
+		started_at TEXT,
+		completed_at TEXT,
 		arrival_time TEXT,
 		departure_time TEXT,
 		created_at TEXT DEFAULT (datetime('now')),
@@ -130,10 +136,10 @@ func setupGoldenPathDB(t *testing.T) *sql.DB {
 		status TEXT NOT NULL DEFAULT 'pending',
 		actual_arrival TEXT,
 		actual_departure TEXT,
-		requires_pod INTEGER DEFAULT 0,
-		requires_otp INTEGER DEFAULT 0,
+		pod_required INTEGER DEFAULT 0,
+		otp_required INTEGER DEFAULT 0,
 		pod_url TEXT,
-		signature_url TEXT,
+		pod_signature_url TEXT,
 		consignee_name TEXT,
 		consignee_phone TEXT,
 		created_at TEXT DEFAULT (datetime('now')),
@@ -155,7 +161,7 @@ func setupGoldenPathDB(t *testing.T) *sql.DB {
 		trip_id TEXT,
 		alert_type TEXT NOT NULL,
 		resolved INTEGER DEFAULT 0,
-		metadata TEXT,
+		details TEXT,
 		created_at TEXT DEFAULT (datetime('now'))
 	);
 
@@ -171,13 +177,13 @@ func setupGoldenPathDB(t *testing.T) *sql.DB {
 		created_at TEXT DEFAULT (datetime('now'))
 	);
 
-	CREATE TABLE ewb_requests (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		trip_id TEXT NOT NULL,
-		tenant_id TEXT NOT NULL,
-		eway_bill_number TEXT NOT NULL,
-		status TEXT NOT NULL,
-		valid_until TEXT,
+	CREATE TABLE eway_bills (
+		id TEXT PRIMARY KEY,
+		ewb_number TEXT UNIQUE NOT NULL,
+		trip_id TEXT,
+		status TEXT DEFAULT 'active',
+		generation_date TEXT NOT NULL,
+		valid_until TEXT NOT NULL,
 		created_at TEXT DEFAULT (datetime('now'))
 	);
 
@@ -260,14 +266,16 @@ func TestGoldenPath_FullSystemOperationalConvergence_And_FailureMatrix(t *testin
 	require.NoError(t, err)
 	_, err = db.Exec(`INSERT INTO vehicles (id, tenant_id, vehicle_number, registration_number, status) VALUES (?, ?, 'TRK-9900', 'HR-55-XY-9900', 'on_trip')`, vehicleID, tenantStr)
 	require.NoError(t, err)
-	_, err = db.Exec(`INSERT INTO trips (id, tenant_id, trip_number, booking_id, driver_id, vehicle_id, origin, destination, status, start_time) VALUES (?, ?, ?, ?, ?, ?, 'Delhi Cargo Hub', 'Udaipur Logistics Park', 'IN_TRANSIT', datetime('now'))`, tripID, tenantStr, tripNumber, bookingID, driverID, vehicleID)
+	_, err = db.Exec(`INSERT INTO routes (id, tenant_id, source, destination) VALUES ('route-gold-1', ?, 'Delhi Cargo Hub', 'Udaipur Logistics Park')`, tenantStr)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO trips (id, tenant_id, trip_number, booking_id, driver_id, vehicle_id, route_id, status, started_at) VALUES (?, ?, ?, ?, ?, ?, 'route-gold-1', 'IN_TRANSIT', datetime('now'))`, tripID, tenantStr, tripNumber, bookingID, driverID, vehicleID)
 	require.NoError(t, err)
 
-	_, err = db.Exec(`INSERT INTO trip_stops (id, trip_id, tenant_id, stop_sequence, stop_type, location_name, address, latitude, longitude, status, requires_pod, requires_otp, consignee_name, consignee_phone) VALUES ('stop-delhi-p1', ?, ?, 1, 'pickup', 'Delhi Hub', 'Mayapuri Phase 1', 28.628, 77.112, 'pending', 1, 0, 'Delhi Hub Manager', '+919810011001')`, tripID, tenantStr)
+	_, err = db.Exec(`INSERT INTO trip_stops (id, trip_id, tenant_id, stop_sequence, stop_type, location_name, address, latitude, longitude, status, pod_required, otp_required, consignee_name, consignee_phone) VALUES ('stop-delhi-p1', ?, ?, 1, 'pickup', 'Delhi Hub', 'Mayapuri Phase 1', 28.628, 77.112, 'pending', 1, 0, 'Delhi Hub Manager', '+919810011001')`, tripID, tenantStr)
 	require.NoError(t, err)
-	_, err = db.Exec(`INSERT INTO trip_stops (id, trip_id, tenant_id, stop_sequence, stop_type, location_name, address, latitude, longitude, status, requires_pod, requires_otp, consignee_name, consignee_phone) VALUES ('stop-jaipur-d2', ?, ?, 2, 'drop', 'Jaipur Hub', 'Sitapura Phase 2', 26.772, 75.864, 'pending', 1, 1, 'Jaipur Consignee', '+919820022002')`, tripID, tenantStr)
+	_, err = db.Exec(`INSERT INTO trip_stops (id, trip_id, tenant_id, stop_sequence, stop_type, location_name, address, latitude, longitude, status, pod_required, otp_required, consignee_name, consignee_phone) VALUES ('stop-jaipur-d2', ?, ?, 2, 'drop', 'Jaipur Hub', 'Sitapura Phase 2', 26.772, 75.864, 'pending', 1, 1, 'Jaipur Consignee', '+919820022002')`, tripID, tenantStr)
 	require.NoError(t, err)
-	_, err = db.Exec(`INSERT INTO trip_stops (id, trip_id, tenant_id, stop_sequence, stop_type, location_name, address, latitude, longitude, status, requires_pod, requires_otp, consignee_name, consignee_phone) VALUES ('stop-udaipur-d3', ?, ?, 3, 'drop', 'Udaipur DC', 'Sukher Phase 3', 24.638, 73.712, 'pending', 1, 1, 'Udaipur Plant', '+919830033003')`, tripID, tenantStr)
+	_, err = db.Exec(`INSERT INTO trip_stops (id, trip_id, tenant_id, stop_sequence, stop_type, location_name, address, latitude, longitude, status, pod_required, otp_required, consignee_name, consignee_phone) VALUES ('stop-udaipur-d3', ?, ?, 3, 'drop', 'Udaipur DC', 'Sukher Phase 3', 24.638, 73.712, 'pending', 1, 1, 'Udaipur Plant', '+919830033003')`, tripID, tenantStr)
 	require.NoError(t, err)
 
 	// ── PHASE 3: Stop 1 Execution (Delhi Pickup) + 5x Duplicate Replay ────
@@ -295,7 +303,7 @@ func TestGoldenPath_FullSystemOperationalConvergence_And_FailureMatrix(t *testin
 	// ── PHASE 4: Stop 2 Execution (Jaipur Drop) with Failure Injection ────
 	// Failure 1: GPS Deviation & SOS Alert Injected
 	_, err = db.Exec(`
-		INSERT INTO telemetry_alerts (trip_id, alert_type, resolved, metadata)
+		INSERT INTO telemetry_alerts (trip_id, alert_type, resolved, details)
 		VALUES (?, 'route_deviation', 0, 'Deviated 600m from NH48'),
 		       (?, 'sos', 0, 'Panic button pressed');
 	`, tripID, tripID)
@@ -311,15 +319,15 @@ func TestGoldenPath_FullSystemOperationalConvergence_And_FailureMatrix(t *testin
 	// Failure 2: Offline Operation -> Driver completes Stop 2 offline -> reconnects
 	_, err = db.Exec(`
 		UPDATE trip_stops
-		SET status='completed', actual_arrival=?, actual_departure=?, pod_url='https://s3.aws/pod_jaipur.jpg', signature_url='data:image/png;base64,SIG2'
+		SET status='completed', actual_arrival=?, actual_departure=?, pod_url='https://s3.aws/pod_jaipur.jpg', pod_signature_url='data:image/png;base64,SIG2'
 		WHERE id='stop-jaipur-d2'
 	`, nowStr, nowStr)
 	require.NoError(t, err)
 
 	// ── PHASE 5: Stop 3 Execution (Udaipur Final Drop) & Trip Completion ─
-	_, err = db.Exec(`UPDATE trip_stops SET status='completed', actual_arrival=?, actual_departure=?, pod_url='https://s3.aws/pod_udaipur.jpg', signature_url='data:image/png;base64,SIG3' WHERE id='stop-udaipur-d3'`, nowStr, nowStr)
+	_, err = db.Exec(`UPDATE trip_stops SET status='completed', actual_arrival=?, actual_departure=?, pod_url='https://s3.aws/pod_udaipur.jpg', pod_signature_url='data:image/png;base64,SIG3' WHERE id='stop-udaipur-d3'`, nowStr, nowStr)
 	require.NoError(t, err)
-	_, err = db.Exec(`UPDATE trips SET status='COMPLETED', end_time=? WHERE id=?`, nowStr, tripID)
+	_, err = db.Exec(`UPDATE trips SET status='COMPLETED', completed_at=? WHERE id=?`, nowStr, tripID)
 	require.NoError(t, err)
 	_, err = db.Exec(`UPDATE drivers SET status='available' WHERE id=?`, driverID)
 	require.NoError(t, err)
@@ -337,7 +345,7 @@ func TestGoldenPath_FullSystemOperationalConvergence_And_FailureMatrix(t *testin
 	// 1. Invoice & EWB
 	_, err = db.Exec(`INSERT INTO invoices (id, tenant_id, trip_id, booking_id, invoice_number, amount, status, irn) VALUES (?, ?, ?, ?, ?, 75000.0, 'ISSUED', ?)`, invoiceID, tenantStr, tripID, bookingID, invoiceNum, irnHash)
 	require.NoError(t, err)
-	_, err = db.Exec(`INSERT INTO ewb_requests (trip_id, tenant_id, eway_bill_number, status, valid_until) VALUES (?, ?, ?, 'ACTIVE', datetime('now', '+3 days'))`, tripID, tenantStr, ewbNumber)
+	_, err = db.Exec(`INSERT INTO eway_bills (id, ewb_number, trip_id, status, generation_date, valid_until) VALUES ('ewb-gold-1', ?, ?, 'active', datetime('now'), datetime('now', '+3 days'))`, tripID, tenantStr, ewbNumber)
 	require.NoError(t, err)
 
 	// 2. Driver Settlement

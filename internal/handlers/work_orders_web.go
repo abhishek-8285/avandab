@@ -90,7 +90,7 @@ func (h *MaintenanceHandlers) ViewWorkOrder(w http.ResponseWriter, r *http.Reque
 	user, _ := h.getUserFromContext(r)
 	vehicleLabel := ""
 	_ = h.DB.QueryRowContext(r.Context(),
-		`SELECT COALESCE(NULLIF(registration_number,''), vehicle_number, id) FROM vehicles WHERE id = ?`,
+		`SELECT COALESCE(NULLIF(registration_number,''), vehicle_number, id) FROM vehicles WHERE id = $1`,
 		wo.VehicleID).Scan(&vehicleLabel)
 	h.renderPage(w, r, "maintenance_work_order.html", PageData{
 		Title: "Job Card",

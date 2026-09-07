@@ -161,7 +161,7 @@ func (s *TelemetryService) persistRawAlert(ctx context.Context, alert TelemetryA
 		}
 		_, _ = getter.DB().ExecContext(ctx, `
 			INSERT INTO telemetry_alerts (id, trip_id, vehicle_id, driver_id, alert_type, severity, details, latitude, longitude, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 			alert.ID, tripIDVal, alert.VehicleID, driverIDVal, alert.AlertType, alert.Severity, alert.Details, lat, lng, alert.CreatedAt)
 	}
 }

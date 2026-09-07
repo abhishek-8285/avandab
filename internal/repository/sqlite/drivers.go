@@ -51,7 +51,7 @@ func (r *SQLRepository) CreateDriver(ctx context.Context, driver domain.Driver) 
 		UpdatedAt:             created.UpdatedAt,
 	}
 	if driver.Aadhaar != nil || driver.PAN != nil || driver.BankDetails != nil {
-		_, _ = r.exec(ctx, `UPDATE drivers SET aadhaar = ?, pan = ?, bank_details = ? WHERE id = ?`,
+		_, _ = r.exec(ctx, `UPDATE drivers SET aadhaar = $1, pan = $2, bank_details = $3 WHERE id = $4`,
 			driver.Aadhaar, driver.PAN, driver.BankDetails, string(driver.ID))
 	}
 	dom := toDomainDriver(d)
@@ -89,7 +89,7 @@ func (r *SQLRepository) GetDriverByID(ctx context.Context, id domain.DriverID) (
 	}
 	dom := toDomainDriver(d)
 	var aadhaar, pan, bank sql.NullString
-	_ = r.queryRow(ctx, `SELECT aadhaar, pan, bank_details FROM drivers WHERE id = ?`, string(id)).Scan(&aadhaar, &pan, &bank)
+	_ = r.queryRow(ctx, `SELECT aadhaar, pan, bank_details FROM drivers WHERE id = $1`, string(id)).Scan(&aadhaar, &pan, &bank)
 	if aadhaar.Valid {
 		dom.Aadhaar = &aadhaar.String
 	}
@@ -130,7 +130,7 @@ func (r *SQLRepository) GetDriverByDriverID(ctx context.Context, driverID string
 	}
 	dom := toDomainDriver(d)
 	var aadhaar, pan, bank sql.NullString
-	_ = r.queryRow(ctx, `SELECT aadhaar, pan, bank_details FROM drivers WHERE id = ?`, row.ID).Scan(&aadhaar, &pan, &bank)
+	_ = r.queryRow(ctx, `SELECT aadhaar, pan, bank_details FROM drivers WHERE id = $1`, row.ID).Scan(&aadhaar, &pan, &bank)
 	if aadhaar.Valid {
 		dom.Aadhaar = &aadhaar.String
 	}
@@ -212,7 +212,7 @@ func (r *SQLRepository) UpdateDriver(ctx context.Context, driver domain.Driver) 
 		UpdatedAt:             updated.UpdatedAt,
 	}
 	if driver.Aadhaar != nil || driver.PAN != nil || driver.BankDetails != nil {
-		_, _ = r.exec(ctx, `UPDATE drivers SET aadhaar = ?, pan = ?, bank_details = ? WHERE id = ?`,
+		_, _ = r.exec(ctx, `UPDATE drivers SET aadhaar = $1, pan = $2, bank_details = $3 WHERE id = $4`,
 			driver.Aadhaar, driver.PAN, driver.BankDetails, string(driver.ID))
 	}
 	dom := toDomainDriver(d)
@@ -231,15 +231,12 @@ func (r *SQLRepository) DeleteDriver(ctx context.Context, id domain.DriverID) er
 
 func (r *SQLRepository) SearchDrivers(ctx context.Context, query string, status string, limit, offset int) ([]domain.Driver, error) {
 	rows, err := r.Q(ctx).SearchDrivers(ctx, db.SearchDriversParams{
-		TenantID: tenantIDFromCtx(ctx),
-		Column2:  sql.NullString{String: query, Valid: true},
-		Column3:  sql.NullString{String: query, Valid: true},
-		Column4:  sql.NullString{String: query, Valid: true},
-		Column5:  sql.NullString{String: query, Valid: true},
-		Column6:  status,
-		Status:   status,
-		Limit:    int64(limit),
-		Offset:   int64(offset),
+		TenantID:  tenantIDFromCtx(ctx),
+		Search:    query,
+		StatusAll: status,
+		Status:    status,
+		Limit:     int64(limit),
+		Offset:    int64(offset),
 	})
 	if err != nil {
 		return nil, err
@@ -271,13 +268,10 @@ func (r *SQLRepository) SearchDrivers(ctx context.Context, query string, status 
 
 func (r *SQLRepository) CountDrivers(ctx context.Context, query string, status string) (int64, error) {
 	count, err := r.Q(ctx).CountDrivers(ctx, db.CountDriversParams{
-		TenantID: tenantIDFromCtx(ctx),
-		Column2:  sql.NullString{String: query, Valid: true},
-		Column3:  sql.NullString{String: query, Valid: true},
-		Column4:  sql.NullString{String: query, Valid: true},
-		Column5:  sql.NullString{String: query, Valid: true},
-		Column6:  status,
-		Status:   status,
+		TenantID:  tenantIDFromCtx(ctx),
+		Search:    query,
+		StatusAll: status,
+		Status:    status,
 	})
 	if err != nil {
 		return 0, err

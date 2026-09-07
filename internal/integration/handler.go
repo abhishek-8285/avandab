@@ -256,14 +256,14 @@ func (h *Handler) GenerateIRN(w http.ResponseWriter, r *http.Request) {
 		var total, cgst, sgst, igst float64
 
 		err := h.db.QueryRowContext(r.Context(), `
-			SELECT i.invoice_number, DATE(i.created_at), i.total, i.cgst, i.sgst, i.igst, i.irn,
+			SELECT i.invoice_number, substr(CAST(i.created_at AS TEXT), 1, 10), i.total, i.cgst, i.sgst, i.igst, i.irn,
 			       c.gst, COALESCE(
 				       (SELECT gst_number FROM tenant_company_profiles WHERE tenant_id = i.tenant_id),
 				       CASE WHEN i.tenant_id IS NULL OR i.tenant_id IN ('', '1')
 					       THEN (SELECT gst_number FROM company_settings WHERE id = 1) END)
 			FROM invoices i
 			LEFT JOIN customers c ON i.customer_id = c.id
-			WHERE i.id = ? AND i.tenant_id = ?
+			WHERE i.id = $1 AND i.tenant_id = $2
 		`, req.InvoiceID, string(tenantID)).Scan(
 			&invNum, &invDate, &total, &cgst, &sgst, &igst, &existingIRN,
 			&custGST, &compGST,
@@ -295,7 +295,7 @@ func (h *Handler) GenerateIRN(w http.ResponseWriter, r *http.Request) {
 			SELECT hsn_sac_code, description, unit, quantity, rate, taxable_value,
 			       cgst_rate, sgst_rate, igst_rate, cgst_amount, sgst_amount, igst_amount, total
 			FROM invoice_line_items
-			WHERE invoice_id = ?
+			WHERE invoice_id = $1
 		`, req.InvoiceID)
 		if err == nil {
 			defer rows.Close()
@@ -327,8 +327,8 @@ func (h *Handler) GenerateIRN(w http.ResponseWriter, r *http.Request) {
 	if h.db != nil {
 		_, _ = h.db.ExecContext(r.Context(), `
 			UPDATE invoices
-			SET irn = ?, irn_ack_no = ?, irn_ack_date = ?, signed_qr = ?, updated_at = datetime('now')
-			WHERE id = ? AND tenant_id = ?
+			SET irn = $1, irn_ack_no = $2, irn_ack_date = $3, signed_qr = $4, updated_at = CURRENT_TIMESTAMP
+			WHERE id = $5 AND tenant_id = $6
 		`, res.IRN, res.AckNo, res.AckDate, res.SignedQR, req.InvoiceID, string(tenantID))
 	}
 
@@ -353,7 +353,7 @@ func (h *Handler) PushEInvoice(w http.ResponseWriter, r *http.Request) {
 	if h.db != nil {
 		var dbIRN sql.NullString
 		err := h.db.QueryRowContext(r.Context(), `
-			SELECT irn FROM invoices WHERE id = ? AND tenant_id = ?
+			SELECT irn FROM invoices WHERE id = $1 AND tenant_id = $2
 		`, req.InvoiceID, string(tenantID)).Scan(&dbIRN)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -382,8 +382,8 @@ func (h *Handler) PushEInvoice(w http.ResponseWriter, r *http.Request) {
 	if h.db != nil {
 		_, _ = h.db.ExecContext(r.Context(), `
 			UPDATE invoices
-			SET irn_ack_no = ?, irn_ack_date = ?, signed_qr = ?, updated_at = datetime('now')
-			WHERE id = ? AND tenant_id = ?
+			SET irn_ack_no = $1, irn_ack_date = $2, signed_qr = $3, updated_at = CURRENT_TIMESTAMP
+			WHERE id = $4 AND tenant_id = $5
 		`, res.AckNo, res.AckDate, res.SignedQR, req.InvoiceID, string(tenantID))
 	}
 
@@ -397,7 +397,7 @@ func (h *Handler) PushEInvoice(w http.ResponseWriter, r *http.Request) {
 const irnCancelWindow = 24 * time.Hour
 
 // parseGSTTimestamp parses the timestamp formats stored in invoices columns:
-// SQLite datetime('now') strings, the Go driver's RFC3339-with-offset form,
+// SQLite CURRENT_TIMESTAMP strings, the Go driver's RFC3339-with-offset form,
 // and bare dates. Parsed values are treated as UTC.
 func parseGSTTimestamp(s string) (time.Time, bool) {
 	s = strings.TrimSpace(s)
@@ -439,8 +439,8 @@ func (h *Handler) CancelIRN(w http.ResponseWriter, r *http.Request) {
 	var irn sql.NullString
 	var ackDate, cancelledAt, createdAt sql.NullString
 	err := h.db.QueryRowContext(r.Context(), `
-		SELECT irn, COALESCE(irn_ack_date, ''), COALESCE(irn_cancelled_at, ''), COALESCE(created_at, '')
-		FROM invoices WHERE id = ? AND tenant_id = ?
+		SELECT irn, COALESCE(irn_ack_date, ''), COALESCE(CAST(irn_cancelled_at AS TEXT), ''), COALESCE(CAST(created_at AS TEXT), '')
+		FROM invoices WHERE id = $1 AND tenant_id = $2
 	`, invoiceID, string(tenantID)).Scan(&irn, &ackDate, &cancelledAt, &createdAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -490,8 +490,8 @@ func (h *Handler) CancelIRN(w http.ResponseWriter, r *http.Request) {
 
 	if _, err := h.db.ExecContext(r.Context(), `
 		UPDATE invoices
-		SET irn_cancelled_at = datetime('now'), updated_at = datetime('now')
-		WHERE id = ? AND tenant_id = ?
+		SET irn_cancelled_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1 AND tenant_id = $2
 	`, invoiceID, string(tenantID)); err != nil {
 		http.Error(w, "Failed to record IRN cancellation", http.StatusInternalServerError)
 		return
@@ -500,7 +500,7 @@ func (h *Handler) CancelIRN(w http.ResponseWriter, r *http.Request) {
 	if sess, _ := r.Context().Value(auth.ContextUser).(*auth.SessionData); sess != nil {
 		_, _ = h.db.ExecContext(r.Context(), `
 			INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, created_at)
-			VALUES (?, ?, 'irn_cancelled', 'invoices', ?, ?, CURRENT_TIMESTAMP)
+			VALUES ($1, $2, 'irn_cancelled', 'invoices', $3, $4, CURRENT_TIMESTAMP)
 		`, uuid.NewString(), sess.UserID, invoiceID,
 			fmt.Sprintf(`{"irn":%q,"cancel_reason":%d,"cancel_remark":%q,"window_source":%q}`,
 				irn.String, req.CancelReason, req.CancelRemark, windowSource))

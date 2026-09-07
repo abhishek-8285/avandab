@@ -12,19 +12,20 @@ import (
 )
 
 type VehicleResponseDTO struct {
-	ID                 string    `json:"id"`
-	RegistrationNumber string    `json:"registration_number"`
-	VehicleNumber      string    `json:"vehicle_number"`
-	VehicleType        string    `json:"vehicle_type"`
-	Capacity           int64     `json:"capacity"`
-	FuelType           string    `json:"fuel_type"`
-	InsuranceExpiry    time.Time `json:"insurance_expiry"`
-	FitnessExpiry      time.Time `json:"fitness_expiry"`
-	PermitExpiry       time.Time `json:"permit_expiry"`
-	Status             string    `json:"status"`
-	CurrentMileage     *float64  `json:"current_mileage"`
-	CreatedAt          time.Time `json:"created_at"`
-	UpdatedAt          time.Time `json:"updated_at"`
+	ID                 string                   `json:"id"`
+	RegistrationNumber string                   `json:"registration_number"`
+	VehicleNumber      string                   `json:"vehicle_number"`
+	VehicleType        string                   `json:"vehicle_type"`
+	Capacity           int64                    `json:"capacity"`
+	FuelType           string                   `json:"fuel_type"`
+	InsuranceExpiry    time.Time                `json:"insurance_expiry"`
+	FitnessExpiry      time.Time                `json:"fitness_expiry"`
+	PermitExpiry       time.Time                `json:"permit_expiry"`
+	Status             string                   `json:"status"`
+	CurrentMileage     *float64                 `json:"current_mileage"`
+	Profile            aggregate.VehicleProfile `json:"profile"`
+	CreatedAt          time.Time                `json:"created_at"`
+	UpdatedAt          time.Time                `json:"updated_at"`
 }
 
 type GetVehicleQuery struct {
@@ -65,6 +66,7 @@ func (uc *GetVehicleUseCase) Execute(ctx context.Context, q GetVehicleQuery) (Ve
 			PermitExpiry:       v.PermitExpiry,
 			Status:             v.Status,
 			CurrentMileage:     v.CurrentMileage,
+			Profile:            v.Profile,
 			CreatedAt:          v.CreatedAt,
 			UpdatedAt:          v.UpdatedAt,
 		}

@@ -10,6 +10,7 @@ import (
 	"math"
 	"strings"
 	"time"
+	appdb "transport-app/internal/database"
 
 	"transport-app/internal/events"
 	"transport-app/internal/geofence/application"
@@ -109,8 +110,11 @@ func (w *DwellWorker) resolveFixTenants(ctx context.Context, fixes []domain.Fix)
 		for i, id := range ids {
 			args[i] = id
 		}
-		rows, err := w.db.QueryContext(ctx,
-			`SELECT id, tenant_id FROM vehicles WHERE id IN (`+placeholders+`)`, args...)
+		reboundIn, rerrIn := appdb.Rebind(`SELECT id, tenant_id FROM vehicles WHERE id IN (` + placeholders + `)`)
+		if rerrIn != nil {
+			return byVehicle
+		}
+		rows, err := w.db.QueryContext(ctx, reboundIn, args...)
 		if err == nil {
 			defer func() { _ = rows.Close() }()
 			for rows.Next() {
@@ -237,7 +241,7 @@ func (w *DwellWorker) tripContext(ctx context.Context, tripID, tenant string) (s
 		`SELECT t.status, COALESCE(r.source, ''), COALESCE(r.destination, '')
 		 FROM trips t
 		 LEFT JOIN routes r ON r.id = t.route_id
-		 WHERE t.id = ? AND t.tenant_id = ?`, tripID, tenant)
+		 WHERE t.id = $1 AND t.tenant_id = $2`, tripID, tenant)
 	if err := row.Scan(&status, &routeSource, &routeDest); err != nil {
 		return "", "", ""
 	}

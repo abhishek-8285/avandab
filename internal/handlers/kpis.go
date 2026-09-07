@@ -4,7 +4,15 @@ import (
 	"context"
 	"strconv"
 	"strings"
+	"time"
 )
+
+// monthStartDay is the server-local first of the current month (YYYY-MM-DD),
+// a portable replacement for the old sqlite month-start expression.
+func monthStartDay() string {
+	now := time.Now()
+	return time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
+}
 
 // KPI is one card in the list-page KPI strip (partials/kpi_grid.html).
 // Counts/sums are advisory dashboards, not ledger truth — each query is
@@ -72,7 +80,7 @@ func (a *App) bookingKPIs(ctx context.Context) []KPI {
 	if a.DB != nil {
 		_ = a.DB.QueryRowContext(ctx,
 			`SELECT COUNT(*), COALESCE(SUM(price),0) FROM bookings
-			 WHERE created_at >= date('now','localtime','start of month')`).
+			 WHERE substr(CAST(created_at AS TEXT), 1, 10) >= $1`, monthStartDay()).
 			Scan(&monthCount, &monthValue)
 	}
 	sub := i64(monthCount) + " new this month"
@@ -97,7 +105,7 @@ func (a *App) tripKPIs(ctx context.Context) []KPI {
 	if a.DB != nil {
 		_ = a.DB.QueryRowContext(ctx,
 			`SELECT COUNT(*) FROM trips
-			 WHERE created_at >= date('now','localtime','start of month')`).
+			 WHERE substr(CAST(created_at AS TEXT), 1, 10) >= $1`, monthStartDay()).
 			Scan(&monthCount)
 	}
 	sub := i64(monthCount) + " created this month"
@@ -145,7 +153,7 @@ func (a *App) paymentKPIs(ctx context.Context) []KPI {
 	if a.DB != nil {
 		_ = a.DB.QueryRowContext(ctx,
 			`SELECT COUNT(*), COALESCE(SUM(amount),0) FROM payments
-			 WHERE payment_date >= date('now','localtime','start of month')`).
+			 WHERE substr(CAST(payment_date AS TEXT), 1, 10) >= $1`, monthStartDay()).
 			Scan(&monthCount, &monthValue)
 		_ = a.DB.QueryRowContext(ctx,
 			`SELECT COUNT(*), COALESCE(SUM(amount),0) FROM payments`).

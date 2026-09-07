@@ -15,26 +15,26 @@ import (
 // tenant + method filter, newest first.
 //
 // SQLite gotcha: timestamps are stored RFC3339 ("2026-08-15T08:00:00Z") which
-// date() cannot parse — hence date(substr(p.payment_date,1,10)).
+// date() cannot parse — hence substr(CAST(p.payment_date AS TEXT), 1, 10).
 
 const paymentDateClause = `
-  AND (? = '' OR date(substr(p.payment_date,1,10)) >= date(?))
-  AND (? = '' OR date(substr(p.payment_date,1,10)) <= date(?))`
+  AND (? = '' OR substr(CAST(p.payment_date AS TEXT), 1, 10) >= substr(CAST(? AS TEXT), 1, 10))
+  AND (? = '' OR substr(CAST(p.payment_date AS TEXT), 1, 10) <= substr(CAST(? AS TEXT), 1, 10))`
 
 const paymentDateRangeSelect = `
 SELECT p.id, p.invoice_id, p.payment_date, p.amount, p.method, p.reference, p.remarks, p.tenant_id, p.created_at, p.updated_at,
        i.invoice_number
 FROM payments p
 JOIN invoices i ON p.invoice_id = i.id
-WHERE p.tenant_id = ?
-  AND (? = '' OR p.method = ?)`
+WHERE p.tenant_id = $1
+  AND ($2 = '' OR p.method = $3)`
 
 const paymentDateRangeCount = `
 SELECT COUNT(*)
 FROM payments p
 JOIN invoices i ON p.invoice_id = i.id
-WHERE p.tenant_id = ?
-  AND (? = '' OR p.method = ?)`
+WHERE p.tenant_id = $1
+  AND ($2 = '' OR p.method = $3)`
 
 func (r *paymentRepository) SearchReadModelsDateRange(ctx context.Context, tenantID shared.TenantID, method string, from string, to string, limit int, offset int) ([]domain.PaymentReadModel, int64, error) {
 	rows, err := r.dbConn.QueryContext(ctx,

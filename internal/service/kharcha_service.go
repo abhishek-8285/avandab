@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"time"
+	appdb "transport-app/internal/database"
 
 	"github.com/google/uuid"
 
@@ -92,7 +93,7 @@ func (s *KharchaService) ListPendingExpenses(ctx context.Context) ([]KharchaExpe
 		LEFT JOIN drivers d ON d.id = de.driver_id
 		LEFT JOIN fuel_claim_audits fca ON fca.expense_id = de.id
 		WHERE COALESCE(de.status, 'pending') = 'pending'
-		  AND de.tenant_id = ?
+		  AND de.tenant_id = $1
 		ORDER BY de.created_at ASC`, tenantIDFor(ctx))
 	if err != nil {
 		return nil, err
@@ -140,7 +141,11 @@ func (s *KharchaService) ListLedger(ctx context.Context, tripID string) ([]Kharc
 	}
 	query += " ORDER BY de.created_at DESC LIMIT 200"
 
-	rows, err := db.QueryContext(ctx, query, args...)
+	rebound, rerr := appdb.Rebind(query)
+	if rerr != nil {
+		return nil, rerr
+	}
+	rows, err := db.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +184,7 @@ func (s *KharchaService) GetExpenseByID(ctx context.Context, id string) (Kharcha
 		LEFT JOIN trips t ON t.id = de.trip_id
 		LEFT JOIN drivers d ON d.id = de.driver_id
 		LEFT JOIN fuel_claim_audits fca ON fca.expense_id = de.id
-		WHERE de.id = ? AND de.tenant_id = ?`, id, tenantIDFor(ctx))
+		WHERE de.id = $1 AND de.tenant_id = $2`, id, tenantIDFor(ctx))
 
 	var e KharchaExpense
 	var receiptURL, rejectedReason, approvedBy *string
@@ -221,7 +226,7 @@ func (s *KharchaService) ApproveExpense(ctx context.Context, expenseID, approved
 	if s.fuelAuditEnforce(ctx, db) {
 		var as string
 		if err := db.QueryRowContext(ctx,
-			`SELECT COALESCE(audit_status, 'pending') FROM driver_expenses WHERE id = ? AND tenant_id = ?`,
+			`SELECT COALESCE(audit_status, 'pending') FROM driver_expenses WHERE id = $1 AND tenant_id = $2`,
 			expenseID, tenantIDFor(ctx)).Scan(&as); err != nil {
 			return fmt.Errorf("expense not found")
 		}
@@ -233,8 +238,8 @@ func (s *KharchaService) ApproveExpense(ctx context.Context, expenseID, approved
 	// 1. Mark approved (only if currently pending)
 	res, err := tx.ExecContext(ctx,
 		`UPDATE driver_expenses
-		 SET status = 'approved', approved_by = ?, approved_at = ?
-		 WHERE id = ? AND tenant_id = ? AND COALESCE(status, 'pending') = 'pending'`,
+		 SET status = 'approved', approved_by = $1, approved_at = $2
+		 WHERE id = $3 AND tenant_id = $4 AND COALESCE(status, 'pending') = 'pending'`,
 		approvedByUserID, now, expenseID, tenantIDFor(ctx))
 	if err != nil {
 		return err
@@ -247,7 +252,7 @@ func (s *KharchaService) ApproveExpense(ctx context.Context, expenseID, approved
 	var tripID, driverID string
 	var amount float64
 	if err := tx.QueryRowContext(ctx,
-		`SELECT COALESCE(trip_id,''), COALESCE(driver_id,''), amount FROM driver_expenses WHERE id = ? AND tenant_id = ?`,
+		`SELECT COALESCE(trip_id,''), COALESCE(driver_id,''), amount FROM driver_expenses WHERE id = $1 AND tenant_id = $2`,
 		expenseID, tenantIDFor(ctx)).Scan(&tripID, &driverID, &amount); err != nil {
 		return err
 	}
@@ -256,22 +261,22 @@ func (s *KharchaService) ApproveExpense(ctx context.Context, expenseID, approved
 	if tripID != "" && driverID != "" {
 		var settlementID string
 		var category string
-		_ = tx.QueryRowContext(ctx, `SELECT COALESCE(category, 'kharcha') FROM driver_expenses WHERE id = ? AND tenant_id = ?`, expenseID, tenantIDFor(ctx)).Scan(&category)
+		_ = tx.QueryRowContext(ctx, `SELECT COALESCE(category, 'kharcha') FROM driver_expenses WHERE id = $1 AND tenant_id = $2`, expenseID, tenantIDFor(ctx)).Scan(&category)
 
-		err := tx.QueryRowContext(ctx, `SELECT id FROM driver_settlements WHERE trip_id = ? AND driver_id = ?`, tripID, driverID).Scan(&settlementID)
+		err := tx.QueryRowContext(ctx, `SELECT id FROM driver_settlements WHERE trip_id = $1 AND driver_id = $2`, tripID, driverID).Scan(&settlementID)
 		if err == nil && settlementID != "" {
 			_, _ = tx.ExecContext(ctx,
 				`UPDATE driver_settlements
-				 SET advances_kharcha = advances_kharcha + ?,
-				     net_payout = MAX(0.0, net_payout - ?)
-				 WHERE id = ?`,
+				 SET advances_kharcha = advances_kharcha + $1,
+				     net_payout = CASE WHEN net_payout - $2 > 0 THEN net_payout - $2 ELSE 0.0 END
+				 WHERE id = $3`,
 				amount, amount, settlementID)
 
 			lineID := "stl-ln-" + uuid.New().String()
 			label := fmt.Sprintf("Approved expense (%s) #%s", category, expenseID)
 			_, _ = tx.ExecContext(ctx,
 				`INSERT INTO settlement_lines (id, settlement_id, trip_id, line_type, label, amount, ref_id, created_at)
-				 VALUES (?, ?, ?, 'deduction', ?, ?, ?, datetime('now'))`,
+				 VALUES ($1, $2, $3, 'deduction', $4, $5, $6, CURRENT_TIMESTAMP)`,
 				lineID, settlementID, tripID, label, -amount, expenseID)
 		}
 	}
@@ -298,8 +303,8 @@ func (s *KharchaService) RejectExpense(ctx context.Context, expenseID, rejectedB
 
 	res, err := db.ExecContext(ctx,
 		`UPDATE driver_expenses
-		 SET status = 'rejected', approved_by = ?, rejected_reason = ?
-		 WHERE id = ? AND tenant_id = ? AND COALESCE(status, 'pending') = 'pending'`,
+		 SET status = 'rejected', approved_by = $1, rejected_reason = $2
+		 WHERE id = $3 AND tenant_id = $4 AND COALESCE(status, 'pending') = 'pending'`,
 		rejectedByUserID, reason, expenseID, tenantIDFor(ctx))
 	if err != nil {
 		return err
@@ -321,7 +326,7 @@ func (s *KharchaService) fuelAuditEnforce(ctx context.Context, db interface {
 }) bool {
 	var v string
 	err := db.QueryRowContext(ctx,
-		`SELECT value FROM company_config WHERE tenant_id = ? AND key = 'fuel.audit_enforce'`,
+		`SELECT value FROM company_config WHERE tenant_id = $1 AND key = 'fuel.audit_enforce'`,
 		tenantIDFor(ctx)).Scan(&v)
 	return err == nil && v == "true"
 }
@@ -404,7 +409,7 @@ func (s *KharchaService) CreateExpenseWithOpts(ctx context.Context, o CreateExpe
 		// Idempotency check: if key exists, return existing ID (offline retry safe).
 		// Tenant-scoped; the global unique index stays (documented limitation).
 		var existingID string
-		if err := db.QueryRowContext(ctx, `SELECT id FROM driver_expenses WHERE idempotency_key = ? AND tenant_id = ?`, idemKey, tenantIDFor(ctx)).Scan(&existingID); err == nil && existingID != "" {
+		if err := db.QueryRowContext(ctx, `SELECT id FROM driver_expenses WHERE idempotency_key = $1 AND tenant_id = $2`, idemKey, tenantIDFor(ctx)).Scan(&existingID); err == nil && existingID != "" {
 			return existingID, nil
 		}
 	}
@@ -412,13 +417,13 @@ func (s *KharchaService) CreateExpenseWithOpts(ctx context.Context, o CreateExpe
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO driver_expenses
 		 (id, trip_id, driver_id, expense_type, category, amount, description, receipt_url, fuel_litres, status, created_at, idempotency_key, latitude, longitude, tenant_id)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', $10, $11, $12, $13, $14)`,
 		expID, tID, dID, o.Category, o.Category, o.Amount, desc, recURL, litres, time.Now(), idemKey, o.Latitude, o.Longitude, tenantIDFor(ctx))
 	if err != nil {
 		// Handle race: unique index violation → return existing
 		if idemKey != nil {
 			var existingID string
-			if err2 := db.QueryRowContext(ctx, `SELECT id FROM driver_expenses WHERE idempotency_key = ? AND tenant_id = ?`, idemKey, tenantIDFor(ctx)).Scan(&existingID); err2 == nil && existingID != "" {
+			if err2 := db.QueryRowContext(ctx, `SELECT id FROM driver_expenses WHERE idempotency_key = $1 AND tenant_id = $2`, idemKey, tenantIDFor(ctx)).Scan(&existingID); err2 == nil && existingID != "" {
 				return existingID, nil
 			}
 		}
@@ -450,25 +455,25 @@ func (s *KharchaService) GetKharchaStats(ctx context.Context) (KharchaStats, err
 	var stats KharchaStats
 
 	_ = db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM driver_expenses WHERE COALESCE(status,'pending') = 'pending' AND tenant_id = ?`,
+		`SELECT COUNT(*) FROM driver_expenses WHERE COALESCE(status,'pending') = 'pending' AND tenant_id = $1`,
 		tenantIDFor(ctx)).
 		Scan(&stats.PendingCount)
 
 	today := time.Now().Format("2006-01-02")
 	_ = db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM driver_expenses WHERE status = 'approved' AND DATE(approved_at) = ? AND tenant_id = ?`,
+		`SELECT COUNT(*) FROM driver_expenses WHERE status = 'approved' AND DATE(approved_at) = $1 AND tenant_id = $2`,
 		today, tenantIDFor(ctx)).
 		Scan(&stats.ApprovedToday)
 
 	_ = db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(amount),0) FROM driver_expenses
-		 WHERE status = 'approved' AND strftime('%Y-%m', approved_at) = strftime('%Y-%m','now') AND tenant_id = ?`,
+		 WHERE status = 'approved' AND substr(CAST(approved_at AS TEXT), 1, 7) = substr(CAST(CURRENT_TIMESTAMP AS TEXT), 1, 7) AND tenant_id = $1`,
 		tenantIDFor(ctx)).
 		Scan(&stats.MonthTotal)
 
 	_ = db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(amount),0) FROM driver_expenses
-		 WHERE COALESCE(status,'pending') IN ('pending','approved') AND tenant_id = ?`,
+		 WHERE COALESCE(status,'pending') IN ('pending','approved') AND tenant_id = $1`,
 		tenantIDFor(ctx)).
 		Scan(&stats.UnsettledTotal)
 

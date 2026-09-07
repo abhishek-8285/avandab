@@ -43,7 +43,7 @@ func (s *Service) ensureIndexes(ctx context.Context) {
 			`CREATE INDEX IF NOT EXISTS idx_trip_stops_trip_seq ON trip_stops(trip_id, stop_sequence)`,
 			`CREATE INDEX IF NOT EXISTS idx_telemetry_vehicle_ts ON telemetry_snapshots(vehicle_id, timestamp DESC)`,
 			`CREATE INDEX IF NOT EXISTS idx_telemetry_alerts_trip ON telemetry_alerts(trip_id, resolved)`,
-			`CREATE INDEX IF NOT EXISTS idx_ewb_trip_created ON ewb_requests(trip_id, created_at DESC)`,
+			`CREATE INDEX IF NOT EXISTS idx_ewb_trip_created ON eway_bills(trip_id, created_at DESC)`,
 			`CREATE INDEX IF NOT EXISTS idx_trips_tenant ON trips(tenant_id)`,
 			`CREATE INDEX IF NOT EXISTS idx_trips_id_tenant ON trips(id, tenant_id)`,
 		}
@@ -90,14 +90,15 @@ func (s *Service) GetTrips(ctx context.Context, tenantID shared.TenantID, status
 
 	query := `
 		SELECT t.id, COALESCE(t.trip_number, ''), t.tenant_id, COALESCE(t.booking_id, ''),
-		       t.status, COALESCE(t.start_time, ''), COALESCE(t.end_time, ''),
-		       COALESCE(t.origin, ''), COALESCE(t.destination, ''),
+		       t.status, COALESCE(substr(CAST(t.started_at AS TEXT), 1, 19), ''), COALESCE(substr(CAST(t.completed_at AS TEXT), 1, 19), ''),
+		       COALESCE(r.source, ''), COALESCE(r.destination, ''),
 		       COALESCE(t.driver_id, ''), COALESCE(d.first_name || ' ' || d.last_name, ''), COALESCE(d.phone, ''),
 		       COALESCE(t.vehicle_id, ''), COALESCE(v.vehicle_number, ''), COALESCE(v.registration_number, '')
 		FROM trips t
 		LEFT JOIN drivers d ON d.id = t.driver_id
 		LEFT JOIN vehicles v ON v.id = t.vehicle_id
-		WHERE t.tenant_id = ?
+		LEFT JOIN routes r ON r.id = t.route_id
+		WHERE t.tenant_id = $1
 	`
 	args := []interface{}{tenantStr}
 	if statusFilter != "" {
@@ -184,14 +185,15 @@ func (s *Service) getTripUncached(ctx context.Context, tenantID shared.TenantID,
 
 	query := `
 		SELECT t.id, COALESCE(t.trip_number, ''), t.tenant_id, COALESCE(t.booking_id, ''),
-		       t.status, COALESCE(t.start_time, ''), COALESCE(t.end_time, ''),
-		       COALESCE(t.origin, ''), COALESCE(t.destination, ''),
+		       t.status, COALESCE(substr(CAST(t.started_at AS TEXT), 1, 19), ''), COALESCE(substr(CAST(t.completed_at AS TEXT), 1, 19), ''),
+		       COALESCE(r.source, ''), COALESCE(r.destination, ''),
 		       COALESCE(t.driver_id, ''), COALESCE(d.first_name || ' ' || d.last_name, ''), COALESCE(d.phone, ''),
 		       COALESCE(t.vehicle_id, ''), COALESCE(v.vehicle_number, ''), COALESCE(v.registration_number, '')
 		FROM trips t
 		LEFT JOIN drivers d ON d.id = t.driver_id
 		LEFT JOIN vehicles v ON v.id = t.vehicle_id
-		WHERE t.id = ? AND t.tenant_id = ?
+		LEFT JOIN routes r ON r.id = t.route_id
+		WHERE t.id = $1 AND t.tenant_id = $2
 	`
 	err := s.db.QueryRowContext(ctx, query, tripID, tenantStr).Scan(
 		&tTripID, &tripNumber, &tTenant, &bookingID, &status,
@@ -243,12 +245,12 @@ func (s *Service) buildProjection(
 		SELECT id, trip_id, stop_sequence, stop_type,
 		       COALESCE(location_name, ''), COALESCE(address, ''),
 		       latitude, longitude, COALESCE(geofence_radius_m, 200),
-		       status, COALESCE(actual_arrival, ''), COALESCE(actual_departure, ''),
-		       COALESCE(requires_pod, 0), COALESCE(requires_otp, 0),
-		       COALESCE(pod_url, ''), COALESCE(signature_url, ''),
+		       status, COALESCE(substr(CAST(actual_arrival AS TEXT), 1, 19), ''), COALESCE(substr(CAST(actual_departure AS TEXT), 1, 19), ''),
+		       COALESCE(pod_required, 0), COALESCE(otp_required, 0),
+		       COALESCE(pod_url, ''), COALESCE(pod_signature_url, ''),
 		       COALESCE(consignee_name, ''), COALESCE(consignee_phone, '')
 		FROM trip_stops
-		WHERE trip_id = ?
+		WHERE trip_id = $1
 		ORDER BY stop_sequence ASC
 	`, tripID)
 	if err == nil {
@@ -344,7 +346,7 @@ func (s *Service) buildProjection(
 		_ = s.db.QueryRowContext(ctx, `
 			SELECT latitude, longitude, speed, heading, timestamp
 			FROM telemetry_snapshots
-			WHERE vehicle_id = ?
+			WHERE vehicle_id = $1
 			ORDER BY timestamp DESC LIMIT 1
 		`, vehicleID).Scan(&sLat, &sLng, &sSpeed, &sHeading, &sTs)
 
@@ -398,9 +400,9 @@ func (s *Service) buildProjection(
 
 	// 3. Query Safety & Alerts
 	alertRows, err := s.db.QueryContext(ctx, `
-		SELECT alert_type, COALESCE(resolved, 0), COALESCE(metadata, '')
+		SELECT alert_type, COALESCE(resolved, 0), COALESCE(details, '')
 		FROM telemetry_alerts
-		WHERE trip_id = ? AND (resolved = 0 OR resolved IS NULL)
+		WHERE trip_id = $1 AND (resolved = 0 OR resolved IS NULL)
 		ORDER BY created_at DESC
 	`, tripID)
 	if err == nil {
@@ -436,12 +438,12 @@ func (s *Service) buildProjection(
 		}
 	}
 
-	// 4. Query EWB
+	// 4. Query EWB (canonical table is eway_bills)
 	var ewbNum, ewbStat, ewbValidStr sql.NullString
 	_ = s.db.QueryRowContext(ctx, `
-		SELECT eway_bill_number, status, valid_until
-		FROM ewb_requests
-		WHERE trip_id = ?
+		SELECT ewb_number, status, substr(CAST(valid_until AS TEXT), 1, 19)
+		FROM eway_bills
+		WHERE trip_id = $1
 		ORDER BY created_at DESC LIMIT 1
 	`, tripID).Scan(&ewbNum, &ewbStat, &ewbValidStr)
 

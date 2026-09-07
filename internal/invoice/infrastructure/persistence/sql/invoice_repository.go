@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"time"
+	appdb "transport-app/internal/database"
 
 	db "transport-app/db/generated/sqlite"
 	"transport-app/internal/invoice/domain"
@@ -20,12 +21,12 @@ import (
 // conflict instead of silently overwriting.
 const updateInvoiceFullSQL = `
 UPDATE invoices
-SET invoice_number = ?, booking_id = ?, customer_id = ?, trip_id = ?,
-    subtotal = ?, tax = ?, discount = ?, total = ?, payment_status = ?,
-    status = ?, paid_amount = ?, due_date = ?, cgst = ?, sgst = ?, igst = ?,
-    irn = ?, irn_ack_no = ?, irn_ack_date = ?, signed_qr = ?, ewb_number = ?,
-    version = version + 1, updated_at = datetime('now')
-WHERE id = ? AND tenant_id = ? AND version = ?
+SET invoice_number = $1, booking_id = $2, customer_id = $3, trip_id = $4,
+    subtotal = $5, tax = $6, discount = $7, total = $8, payment_status = $9,
+    status = $10, paid_amount = $11, due_date = $12, cgst = $13, sgst = $14, igst = $15,
+    irn = $16, irn_ack_no = $17, irn_ack_date = $18, signed_qr = $19, ewb_number = $20,
+    version = version + 1, updated_at = CURRENT_TIMESTAMP
+WHERE id = $21 AND tenant_id = $22 AND version = $23
 `
 
 // insertInvoiceExtendedSQL persists GST/e-invoice columns on first save.
@@ -33,10 +34,10 @@ WHERE id = ? AND tenant_id = ? AND version = ?
 // guard or bump applies — create pins version at 1.
 const insertInvoiceExtendedSQL = `
 UPDATE invoices
-SET status = ?, paid_amount = ?, due_date = ?, cgst = ?, sgst = ?, igst = ?,
-    irn = ?, irn_ack_no = ?, irn_ack_date = ?, signed_qr = ?, ewb_number = ?,
-    updated_at = datetime('now')
-WHERE id = ? AND tenant_id = ?
+SET status = $1, paid_amount = $2, due_date = $3, cgst = $4, sgst = $5, igst = $6,
+    irn = $7, irn_ack_no = $8, irn_ack_date = $9, signed_qr = $10, ewb_number = $11,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = $12 AND tenant_id = $13
 `
 
 var errInvoiceConcurrencyConflict = errors.New("concurrency conflict: invoice modified by another process")
@@ -48,7 +49,7 @@ SELECT id, invoice_number, booking_id, customer_id, trip_id,
     tenant_id, created_at, updated_at,
     cgst, sgst, igst, irn, irn_ack_no, irn_ack_date, signed_qr, ewb_number
 FROM invoices
-WHERE id = ? AND tenant_id = ?
+WHERE id = $1 AND tenant_id = $2
 `
 
 const findInvoiceByBookingSQL = `
@@ -58,7 +59,7 @@ SELECT id, invoice_number, booking_id, customer_id, trip_id,
     tenant_id, created_at, updated_at,
     cgst, sgst, igst, irn, irn_ack_no, irn_ack_date, signed_qr, ewb_number
 FROM invoices
-WHERE booking_id = ? AND tenant_id = ?
+WHERE booking_id = $1 AND tenant_id = $2
 `
 
 const findInvoiceByTripSQL = `
@@ -68,7 +69,7 @@ SELECT id, invoice_number, booking_id, customer_id, trip_id,
     tenant_id, created_at, updated_at,
     cgst, sgst, igst, irn, irn_ack_no, irn_ack_date, signed_qr, ewb_number
 FROM invoices
-WHERE trip_id = ? AND tenant_id = ?
+WHERE trip_id = $1 AND tenant_id = $2
 `
 
 type invoiceRepository struct {
@@ -111,7 +112,7 @@ func (r *invoiceRepository) Save(ctx context.Context, inv *aggregate.InvoiceAggr
 	}
 
 	var exists bool
-	err := r.exec(ctx).QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM invoices WHERE id = ? AND tenant_id = ?)", string(inv.ID), string(inv.TenantID)).Scan(&exists)
+	err := r.exec(ctx).QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM invoices WHERE id = $1 AND tenant_id = $2)", string(inv.ID), string(inv.TenantID)).Scan(&exists)
 	if err != nil {
 		return err
 	}
@@ -186,7 +187,7 @@ func (r *invoiceRepository) Save(ctx context.Context, inv *aggregate.InvoiceAggr
 func (r *invoiceRepository) persistLineItems(ctx context.Context, inv *aggregate.InvoiceAggregate) error {
 	db := r.exec(ctx)
 	if _, err := db.ExecContext(ctx,
-		`DELETE FROM invoice_line_items WHERE invoice_id = ?`, string(inv.ID)); err != nil {
+		`DELETE FROM invoice_line_items WHERE invoice_id = $1`, string(inv.ID)); err != nil {
 		return err
 	}
 	for _, li := range inv.LineItems {
@@ -195,7 +196,7 @@ func (r *invoiceRepository) persistLineItems(ctx context.Context, inv *aggregate
 			 (id, tenant_id, invoice_id, trip_id, line_type, hsn_sac_code, description, unit,
 			  quantity, unit_price, rate, taxable_value, cgst_rate, sgst_rate, igst_rate,
 			  cgst_amount, sgst_amount, igst_amount, amount, total, ref_id)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
 			li.ID, string(li.TenantID), string(li.InvoiceID),
 			nullStringPtr(li.TripID), li.LineType, nullStringPtr(li.HSNSACCode), li.Description, nullStringPtr(li.Unit),
 			li.Quantity, li.UnitPrice, li.Rate, li.TaxableValue, li.CgstRate, li.SgstRate, li.IgstRate,
@@ -214,8 +215,8 @@ func (r *invoiceRepository) loadLineItems(ctx context.Context, invoiceID string)
 		        quantity, unit_price, rate, taxable_value, cgst_rate, sgst_rate, igst_rate,
 		        cgst_amount, sgst_amount, igst_amount, amount, total, ref_id
 		 FROM invoice_line_items
-		 WHERE invoice_id = ?
-		 ORDER BY rowid ASC`, invoiceID)
+		 WHERE invoice_id = $1
+		 ORDER BY `+appdb.RowidOrder(r.dbConn, true), invoiceID)
 	if err != nil {
 		return nil, err
 	}
@@ -345,7 +346,7 @@ func (r *invoiceRepository) GetReadModel(ctx context.Context, id aggregate.Invoi
 	_ = r.exec(ctx).QueryRowContext(ctx, `
 		SELECT COALESCE(cgst,0), COALESCE(sgst,0), COALESCE(igst,0), irn, irn_ack_no, irn_ack_date, signed_qr, irn_cancelled_at
 		FROM invoices
-		WHERE id = ? AND tenant_id = ?
+		WHERE id = $1 AND tenant_id = $2
 	`, string(id), string(tenantID)).Scan(&cgst, &sgst, &igst, &irn, &irnAckNo, &irnAckDate, &signedQR, &irnCancelledAt)
 
 	return domain.InvoiceReadModel{
@@ -382,24 +383,22 @@ func (r *invoiceRepository) SearchReadModels(ctx context.Context, tenantID share
 		return r.searchOutstandingInvoices(ctx, tenantID, query, "", "", limit, offset)
 	}
 	rows, err := r.Q(ctx).SearchInvoices(ctx, db.SearchInvoicesParams{
-		TenantID:      string(tenantID),
-		Column2:       sql.NullString{String: query, Valid: true},
-		Column3:       sql.NullString{String: query, Valid: true},
-		Column4:       status,
-		PaymentStatus: status,
-		Limit:         int64(limit),
-		Offset:        int64(offset),
+		TenantID:         string(tenantID),
+		Search:           query,
+		PaymentStatusAll: status,
+		PaymentStatus:    status,
+		Limit:            int64(limit),
+		Offset:           int64(offset),
 	})
 	if err != nil {
 		return nil, 0, err
 	}
 
 	total, err := r.Q(ctx).CountInvoices(ctx, db.CountInvoicesParams{
-		TenantID:      string(tenantID),
-		Column2:       sql.NullString{String: query, Valid: true},
-		Column3:       sql.NullString{String: query, Valid: true},
-		Column4:       status,
-		PaymentStatus: status,
+		TenantID:         string(tenantID),
+		Search:           query,
+		PaymentStatusAll: status,
+		PaymentStatus:    status,
 	})
 	if err != nil {
 		return nil, 0, err
@@ -449,7 +448,7 @@ func (r *invoiceRepository) FindByTripID(ctx context.Context, tripID string, ten
 func (r *invoiceRepository) TenantForInvoice(ctx context.Context, invoiceID string) (shared.TenantID, error) {
 	var tenantID string
 	err := r.exec(ctx).QueryRowContext(ctx,
-		`SELECT tenant_id FROM invoices WHERE id = ?`, invoiceID).Scan(&tenantID)
+		`SELECT tenant_id FROM invoices WHERE id = $1`, invoiceID).Scan(&tenantID)
 	if err != nil {
 		return "", err
 	}

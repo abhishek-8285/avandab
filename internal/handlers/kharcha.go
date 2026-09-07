@@ -161,7 +161,7 @@ func (h *KharchaHandlers) CreateExpenseAPI(w http.ResponseWriter, r *http.Reques
 		var dID string
 		_ = h.DB.QueryRowContext(ctx, `
 			SELECT id FROM drivers
-			WHERE id = ? OR email = (SELECT email FROM users WHERE id = ?)
+			WHERE id = $1 OR email = (SELECT email FROM users WHERE id = $2)
 			LIMIT 1
 		`, session.UserID, session.UserID).Scan(&dID)
 		if dID != "" {
@@ -349,7 +349,7 @@ func (h *KharchaHandlers) DeliverWithPOD(w http.ResponseWriter, r *http.Request)
 		var dID, dCode string
 		_ = h.DB.QueryRowContext(ctx, `
 			SELECT id, driver_id FROM drivers
-			WHERE id = ? OR email = (SELECT email FROM users WHERE id = ?)
+			WHERE id = $1 OR email = (SELECT email FROM users WHERE id = $2)
 			LIMIT 1
 		`, session.UserID, session.UserID).Scan(&dID, &dCode)
 		if (dID != "" && assignedDriverID == dID) || (dCode != "" && assignedDriverID == dCode) {
@@ -404,14 +404,14 @@ func (h *KharchaHandlers) DeliverWithPOD(w http.ResponseWriter, r *http.Request)
 	scanValue := strings.TrimSpace(r.FormValue("pod_scan_value"))
 	if h.DB != nil && (signatureData != "" || quantityShort != 0 || damageQty != 0 || refusalReason != "" || scanValue != "") {
 		_, _ = h.DB.ExecContext(ctx,
-			`UPDATE trips SET pod_signature_data = COALESCE(NULLIF(?,''), pod_signature_data),
-			 pod_quantity_short = CASE WHEN ? != 0 THEN ? ELSE pod_quantity_short END,
-			 pod_damage_qty = CASE WHEN ? != 0 THEN ? ELSE pod_damage_qty END,
-			 pod_refusal_reason = COALESCE(NULLIF(?,''), pod_refusal_reason),
-			 pod_consignee_name = COALESCE(NULLIF(?,''), pod_consignee_name),
-			 pod_consignee_phone = COALESCE(NULLIF(?,''), pod_consignee_phone),
-			 pod_scan_value = CASE WHEN ? != '' THEN ? ELSE pod_scan_value END
-			 WHERE id = ?`,
+			`UPDATE trips SET pod_signature_data = COALESCE(NULLIF($1,''), pod_signature_data),
+			 pod_quantity_short = CASE WHEN $2 != 0 THEN $3 ELSE pod_quantity_short END,
+			 pod_damage_qty = CASE WHEN $4 != 0 THEN $5 ELSE pod_damage_qty END,
+			 pod_refusal_reason = COALESCE(NULLIF($6,''), pod_refusal_reason),
+			 pod_consignee_name = COALESCE(NULLIF($7,''), pod_consignee_name),
+			 pod_consignee_phone = COALESCE(NULLIF($8,''), pod_consignee_phone),
+			 pod_scan_value = CASE WHEN $9 != '' THEN $10 ELSE pod_scan_value END
+			 WHERE id = $11`,
 			signatureData, quantityShort, quantityShort, damageQty, damageQty, refusalReason, consigneeName, consigneePhone, scanValue, scanValue, tripID)
 	}
 

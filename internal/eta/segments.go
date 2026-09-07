@@ -43,7 +43,7 @@ func (s *EtaService) extractSegments(ctx context.Context, tripID string) ([]Segm
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT latitude, longitude, speed, device_time, device_time
 		 FROM telemetry_positions
-		 WHERE trip_id = ?
+		 WHERE trip_id = $1
 		 ORDER BY device_time ASC`, tripID)
 	if err != nil {
 		return nil, err

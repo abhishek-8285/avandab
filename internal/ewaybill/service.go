@@ -136,7 +136,7 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 		       goods_value, distance, doc_type, doc_no, doc_date,
 		       qr_code, gen_mode, vehicle_number, created_at
 		FROM eway_bills
-		WHERE trip_id = ? AND status != 'cancelled'
+		WHERE trip_id = $1 AND status != 'cancelled'
 		LIMIT 1
 	`, req.TripID).Scan(
 		&existingRec.ID, &existingRec.TripID, &existingRec.EwbNumber, &existingRec.Status,
@@ -176,7 +176,7 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 		JOIN routes r ON t.route_id = r.id
 		JOIN customers c ON b.customer_id = c.id
 		LEFT JOIN vehicles v ON t.vehicle_id = v.id
-		WHERE t.id = ?
+		WHERE t.id = $1
 	`, req.TripID).Scan(
 		&tripNumber, &routeSource, &routeDest, &routeDist, &standardFare,
 		&bookingPrice, &custGST, &compGST, &compState, &vehicleNumber,
@@ -202,7 +202,7 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 	var existingInvNum sql.NullString
 	_ = s.db.QueryRowContext(ctx, `
 		SELECT invoice_number FROM invoices
-		WHERE (trip_id = ? OR booking_id = (SELECT booking_id FROM trips WHERE id = ?))
+		WHERE (trip_id = $1 OR booking_id = (SELECT booking_id FROM trips WHERE id = $2))
 		  AND status != 'cancelled'
 		LIMIT 1
 	`, req.TripID, req.TripID).Scan(&existingInvNum)
@@ -292,13 +292,13 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 			transporter_id, transporter_doc_no, qr_code, gen_mode,
 			part_a_json, vehicle_number, created_at
 		) VALUES (
-			?, ?, ?, ?, ?, ?,
-			?, ?, ?, ?,
-			?, ?, ?, ?, ?,
-			?, ?, ?, ?,
-			?, ?, ?
+			$1, $2, $3, $4, $5, $6,
+			$7, $8, $9, $10,
+			$11, $12, $13, $14, $15,
+			$16, $17, $18, $19,
+			$20, $21, $22
 		)
-		ON CONFLICT(trip_id) DO UPDATE SET
+		ON CONFLICT (trip_id) DO UPDATE SET
 			ewb_number = excluded.ewb_number,
 			status = excluded.status,
 			valid_until = excluded.valid_until,
@@ -317,13 +317,13 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 	}
 
 	// 4. Update trip eway_bill_ref
-	_, _ = s.db.ExecContext(ctx, `UPDATE trips SET eway_bill_ref = ? WHERE id = ?`, clientResp.EwbNumber, req.TripID)
+	_, _ = s.db.ExecContext(ctx, `UPDATE trips SET eway_bill_ref = $1 WHERE id = $2`, clientResp.EwbNumber, req.TripID)
 
 	// 5. Update invoice ewb_number cross-link
 	_, _ = s.db.ExecContext(ctx, `
 		UPDATE invoices
-		SET ewb_number = ?, updated_at = datetime('now')
-		WHERE (trip_id = ? OR booking_id = (SELECT booking_id FROM trips WHERE id = ?))
+		SET ewb_number = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE (trip_id = $2 OR booking_id = (SELECT booking_id FROM trips WHERE id = $3))
 		  AND (ewb_number IS NULL OR ewb_number = '')
 	`, clientResp.EwbNumber, req.TripID, req.TripID)
 
@@ -360,7 +360,7 @@ func (s *EWayBillService) AttachPartB(ctx context.Context, ewbNumber, vehicleNum
 	}
 
 	var tripID sql.NullString
-	err := s.db.QueryRowContext(ctx, `SELECT trip_id FROM eway_bills WHERE ewb_number = ?`, ewbNumber).Scan(&tripID)
+	err := s.db.QueryRowContext(ctx, `SELECT trip_id FROM eway_bills WHERE ewb_number = $1`, ewbNumber).Scan(&tripID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrEWBNotFound
@@ -382,8 +382,8 @@ func (s *EWayBillService) AttachPartB(ctx context.Context, ewbNumber, vehicleNum
 
 	_, err = s.db.ExecContext(ctx, `
 		UPDATE eway_bills
-		SET vehicle_number = ?, transporter_id = ?, part_b_json = ?, status = 'active'
-		WHERE ewb_number = ?
+		SET vehicle_number = $1, transporter_id = $2, part_b_json = $3, status = 'active'
+		WHERE ewb_number = $4
 	`, vehicleNumber, transporterID, string(partBBytes), ewbNumber)
 	if err != nil {
 		return nil, err
@@ -406,7 +406,7 @@ func (s *EWayBillService) Extend(ctx context.Context, ewbNumber string, req Exte
 		SELECT e.trip_id, e.status, e.extension_count, e.valid_until, t.vehicle_id
 		FROM eway_bills e
 		LEFT JOIN trips t ON e.trip_id = t.id
-		WHERE e.ewb_number = ?
+		WHERE e.ewb_number = $1
 	`, ewbNumber).Scan(&tripID, &status, &extCount, &validUntil, &vehicleID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -455,8 +455,8 @@ func (s *EWayBillService) Extend(ctx context.Context, ewbNumber string, req Exte
 	extBytes, _ := json.Marshal(req)
 	_, err = s.db.ExecContext(ctx, `
 		UPDATE eway_bills
-		SET valid_until = ?, extension_count = extension_count + 1, status = 'active'
-		WHERE ewb_number = ?
+		SET valid_until = $1, extension_count = extension_count + 1, status = 'active'
+		WHERE ewb_number = $2
 	`, newValidUntil, ewbNumber)
 	if err != nil {
 		return nil, err
@@ -470,7 +470,7 @@ func (s *EWayBillService) Extend(ctx context.Context, ewbNumber string, req Exte
 // Cancel cancels an EWB.
 func (s *EWayBillService) Cancel(ctx context.Context, ewbNumber, reason string) (*EWayBillRecord, error) {
 	var tripID sql.NullString
-	err := s.db.QueryRowContext(ctx, `SELECT trip_id FROM eway_bills WHERE ewb_number = ?`, ewbNumber).Scan(&tripID)
+	err := s.db.QueryRowContext(ctx, `SELECT trip_id FROM eway_bills WHERE ewb_number = $1`, ewbNumber).Scan(&tripID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrEWBNotFound
@@ -486,8 +486,8 @@ func (s *EWayBillService) Cancel(ctx context.Context, ewbNumber, reason string) 
 	now := time.Now().UTC()
 	_, err = s.db.ExecContext(ctx, `
 		UPDATE eway_bills
-		SET status = 'cancelled', cancel_reason = ?, cancelled_at = ?
-		WHERE ewb_number = ?
+		SET status = 'cancelled', cancel_reason = $1, cancelled_at = $2
+		WHERE ewb_number = $3
 	`, reason, now, ewbNumber)
 	if err != nil {
 		return nil, err
@@ -500,12 +500,12 @@ func (s *EWayBillService) Cancel(ctx context.Context, ewbNumber, reason string) 
 
 // GetByTrip returns the latest active EWB record for a trip.
 func (s *EWayBillService) GetByTrip(ctx context.Context, tripID string) (*EWayBillRecord, error) {
-	return s.getByQuery(ctx, `SELECT id, trip_id, ewb_number, irn, status, generation_date, valid_until, vehicle_number, transporter_id, qr_code, from_place, from_state_code, to_place, to_state_code, goods_value, distance, doc_type, doc_no, doc_date, transporter_doc_no, extension_count, cancel_reason, cancelled_at, gen_mode, created_at FROM eway_bills WHERE trip_id = ? ORDER BY created_at DESC LIMIT 1`, tripID)
+	return s.getByQuery(ctx, `SELECT id, trip_id, ewb_number, irn, status, generation_date, valid_until, vehicle_number, transporter_id, qr_code, from_place, from_state_code, to_place, to_state_code, goods_value, distance, doc_type, doc_no, doc_date, transporter_doc_no, extension_count, cancel_reason, cancelled_at, gen_mode, created_at FROM eway_bills WHERE trip_id = $1 ORDER BY created_at DESC LIMIT 1`, tripID)
 }
 
 // GetByNumber returns the EWB record by ewb_number.
 func (s *EWayBillService) GetByNumber(ctx context.Context, ewbNumber string) (*EWayBillRecord, error) {
-	return s.getByQuery(ctx, `SELECT id, trip_id, ewb_number, irn, status, generation_date, valid_until, vehicle_number, transporter_id, qr_code, from_place, from_state_code, to_place, to_state_code, goods_value, distance, doc_type, doc_no, doc_date, transporter_doc_no, extension_count, cancel_reason, cancelled_at, gen_mode, created_at FROM eway_bills WHERE ewb_number = ? LIMIT 1`, ewbNumber)
+	return s.getByQuery(ctx, `SELECT id, trip_id, ewb_number, irn, status, generation_date, valid_until, vehicle_number, transporter_id, qr_code, from_place, from_state_code, to_place, to_state_code, goods_value, distance, doc_type, doc_no, doc_date, transporter_doc_no, extension_count, cancel_reason, cancelled_at, gen_mode, created_at FROM eway_bills WHERE ewb_number = $1 LIMIT 1`, ewbNumber)
 }
 
 func (s *EWayBillService) getByQuery(ctx context.Context, query string, arg string) (*EWayBillRecord, error) {
@@ -559,18 +559,18 @@ func (s *EWayBillService) verifyGeofenceEvidence(ctx context.Context, tripID, ve
 	err := s.db.QueryRowContext(ctx, `
 		SELECT latitude, longitude 
 		FROM vehicle_latest_position 
-		WHERE vehicle_id = ? LIMIT 1`, vehicleID).Scan(&lat, &lng)
+		WHERE vehicle_id = $1 LIMIT 1`, vehicleID).Scan(&lat, &lng)
 	if err != nil {
 		err = s.db.QueryRowContext(ctx, `
 			SELECT latitude, longitude 
 			FROM telemetry_positions 
-			WHERE vehicle_id = ? 
+			WHERE vehicle_id = $1 
 			ORDER BY device_time DESC LIMIT 1`, vehicleID).Scan(&lat, &lng)
 		if err != nil {
 			err = s.db.QueryRowContext(ctx, `
 				SELECT latitude, longitude 
 				FROM telemetry_snapshots 
-				WHERE vehicle_id = ? 
+				WHERE vehicle_id = $1 
 				ORDER BY timestamp DESC LIMIT 1`, vehicleID).Scan(&lat, &lng)
 			if err != nil {
 				return false
@@ -583,7 +583,7 @@ func (s *EWayBillService) verifyGeofenceEvidence(ctx context.Context, tripID, ve
 		SELECT g.center_lat, g.center_lng
 		FROM geofences g
 		JOIN trips t ON (g.route_name = t.route_id OR g.name LIKE '%' || t.trip_number || '%' OR g.id = t.route_id)
-		WHERE t.id = ? AND g.kind IN ('drop', 'destination') AND g.is_active = 1
+		WHERE t.id = $1 AND g.kind IN ('drop', 'destination') AND g.is_active = 1
 		LIMIT 1`, tripID).Scan(&destLat, &destLng)
 	if err != nil || !destLat.Valid || !destLng.Valid {
 		// Fallback: If no explicit drop geofence is defined, vehicle presence is evidence
@@ -598,7 +598,7 @@ func (s *EWayBillService) logEvent(ctx context.Context, ewbNumber, tripID, event
 	id := uuid.NewString()
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO eway_bill_events (id, ewb_number, trip_id, event_type, payload, created_by, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+		VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
 	`, id, ewbNumber, tripID, eventType, payload, createdBy)
 	if err != nil {
 		s.logger.Warn("failed to log eway bill event", "ewb", ewbNumber, "type", eventType, "error", err)

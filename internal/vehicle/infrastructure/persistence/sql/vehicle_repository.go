@@ -37,10 +37,7 @@ func (r *vehicleRepository) Q(ctx context.Context) *db.Queries {
 }
 
 func (r *vehicleRepository) Save(ctx context.Context, v *aggregate.VehicleAggregate) error {
-	var currentMileage sql.NullFloat64
-	if v.CurrentMileage != nil {
-		currentMileage = sql.NullFloat64{Float64: *v.CurrentMileage, Valid: true}
-	}
+	p := v.Profile.Normalized()
 
 	_, err := r.Q(ctx).GetVehicleByID(ctx, db.GetVehicleByIDParams{
 		ID:       string(v.ID),
@@ -49,18 +46,53 @@ func (r *vehicleRepository) Save(ctx context.Context, v *aggregate.VehicleAggreg
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			_, err = r.Q(ctx).CreateVehicle(ctx, db.CreateVehicleParams{
-				ID:                 string(v.ID),
-				RegistrationNumber: v.RegistrationNumber,
-				VehicleNumber:      v.VehicleNumber,
-				VehicleType:        string(v.VehicleType),
-				Capacity:           v.Capacity,
-				FuelType:           string(v.FuelType),
-				InsuranceExpiry:    v.InsuranceExpiry,
-				FitnessExpiry:      v.FitnessExpiry,
-				PermitExpiry:       v.PermitExpiry,
-				Status:             string(v.Status),
-				CurrentMileage:     currentMileage,
-				TenantID:           string(v.TenantID),
+				ID:                  string(v.ID),
+				RegistrationNumber:  v.RegistrationNumber,
+				VehicleNumber:       v.VehicleNumber,
+				VehicleType:         string(v.VehicleType),
+				Capacity:            v.Capacity,
+				FuelType:            string(v.FuelType),
+				InsuranceExpiry:     v.InsuranceExpiry,
+				FitnessExpiry:       v.FitnessExpiry,
+				PermitExpiry:        v.PermitExpiry,
+				Status:              string(v.Status),
+				CurrentMileage:      converters.NullFloat64(v.CurrentMileage),
+				TenantID:            string(v.TenantID),
+				FleetClass:          string(p.FleetClass),
+				Ownership:           string(p.Ownership),
+				FleetNumber:         converters.NullString(p.FleetNumber),
+				Description:         converters.NullString(p.Description),
+				Manufacturer:        converters.NullString(p.Manufacturer),
+				ManufCountry:        converters.NullString(p.ManufCountry),
+				Model:               converters.NullString(p.Model),
+				ConstrYearMonth:     converters.NullString(p.ConstrYearMonth),
+				AcquisitionValue:    converters.NullFloat64(p.AcquisitionValue),
+				AcquisitionCurrency: p.AcquisitionCurrency,
+				AcquisitionDate:     converters.NullTime(p.AcquisitionDate),
+				PurchaseVendor:      converters.NullString(p.PurchaseVendor),
+				ValidFrom:           converters.NullTime(p.ValidFrom),
+				ValidTo:             converters.NullTime(p.ValidTo),
+				FacilityID:          converters.NullString(p.FacilityID),
+				MaintPlant:          converters.NullString(p.MaintPlant),
+				PlanningPlant:       converters.NullString(p.PlanningPlant),
+				CompanyCode:         converters.NullString(p.CompanyCode),
+				BusinessArea:        converters.NullString(p.BusinessArea),
+				CostCenter:          converters.NullString(p.CostCenter),
+				AssetNo:             converters.NullString(p.AssetNo),
+				FleetObjectNo:       converters.NullString(p.FleetObjectNo),
+				ChassisNo:           converters.NullString(p.ChassisNo),
+				VehicleCategory:     converters.NullString(p.VehicleCategory),
+				EngineNumber:        converters.NullString(p.EngineNumber),
+				EnginePower:         converters.NullString(p.EnginePower),
+				EngineCapacity:      converters.NullString(p.EngineCapacity),
+				CylinderCount:       converters.NullInt64(p.CylinderCount),
+				MaxSpeed:            converters.NullFloat64(p.MaxSpeed),
+				Weight:              converters.NullFloat64(p.Weight),
+				WeightUnit:          p.WeightUnit,
+				LoadVolume:          converters.NullFloat64(p.LoadVolume),
+				VolumeUnit:          converters.NullString(p.VolumeUnit),
+				SecondaryFuel:       converters.NullString(p.SecondaryFuel),
+				UsageIndicator:      converters.NullString(p.UsageIndicator),
 			})
 			if err != nil {
 				return err
@@ -70,18 +102,53 @@ func (r *vehicleRepository) Save(ctx context.Context, v *aggregate.VehicleAggreg
 		}
 	} else {
 		_, err = r.Q(ctx).UpdateVehicle(ctx, db.UpdateVehicleParams{
-			RegistrationNumber: v.RegistrationNumber,
-			VehicleNumber:      v.VehicleNumber,
-			VehicleType:        string(v.VehicleType),
-			Capacity:           v.Capacity,
-			FuelType:           string(v.FuelType),
-			InsuranceExpiry:    v.InsuranceExpiry,
-			FitnessExpiry:      v.FitnessExpiry,
-			PermitExpiry:       v.PermitExpiry,
-			Status:             string(v.Status),
-			CurrentMileage:     currentMileage,
-			ID:                 string(v.ID),
-			TenantID:           string(v.TenantID),
+			RegistrationNumber:  v.RegistrationNumber,
+			VehicleNumber:       v.VehicleNumber,
+			VehicleType:         string(v.VehicleType),
+			Capacity:            v.Capacity,
+			FuelType:            string(v.FuelType),
+			InsuranceExpiry:     v.InsuranceExpiry,
+			FitnessExpiry:       v.FitnessExpiry,
+			PermitExpiry:        v.PermitExpiry,
+			Status:              string(v.Status),
+			CurrentMileage:      converters.NullFloat64(v.CurrentMileage),
+			FleetClass:          string(p.FleetClass),
+			Ownership:           string(p.Ownership),
+			FleetNumber:         converters.NullString(p.FleetNumber),
+			Description:         converters.NullString(p.Description),
+			Manufacturer:        converters.NullString(p.Manufacturer),
+			ManufCountry:        converters.NullString(p.ManufCountry),
+			Model:               converters.NullString(p.Model),
+			ConstrYearMonth:     converters.NullString(p.ConstrYearMonth),
+			AcquisitionValue:    converters.NullFloat64(p.AcquisitionValue),
+			AcquisitionCurrency: p.AcquisitionCurrency,
+			AcquisitionDate:     converters.NullTime(p.AcquisitionDate),
+			PurchaseVendor:      converters.NullString(p.PurchaseVendor),
+			ValidFrom:           converters.NullTime(p.ValidFrom),
+			ValidTo:             converters.NullTime(p.ValidTo),
+			FacilityID:          converters.NullString(p.FacilityID),
+			MaintPlant:          converters.NullString(p.MaintPlant),
+			PlanningPlant:       converters.NullString(p.PlanningPlant),
+			CompanyCode:         converters.NullString(p.CompanyCode),
+			BusinessArea:        converters.NullString(p.BusinessArea),
+			CostCenter:          converters.NullString(p.CostCenter),
+			AssetNo:             converters.NullString(p.AssetNo),
+			FleetObjectNo:       converters.NullString(p.FleetObjectNo),
+			ChassisNo:           converters.NullString(p.ChassisNo),
+			VehicleCategory:     converters.NullString(p.VehicleCategory),
+			EngineNumber:        converters.NullString(p.EngineNumber),
+			EnginePower:         converters.NullString(p.EnginePower),
+			EngineCapacity:      converters.NullString(p.EngineCapacity),
+			CylinderCount:       converters.NullInt64(p.CylinderCount),
+			MaxSpeed:            converters.NullFloat64(p.MaxSpeed),
+			Weight:              converters.NullFloat64(p.Weight),
+			WeightUnit:          p.WeightUnit,
+			LoadVolume:          converters.NullFloat64(p.LoadVolume),
+			VolumeUnit:          converters.NullString(p.VolumeUnit),
+			SecondaryFuel:       converters.NullString(p.SecondaryFuel),
+			UsageIndicator:      converters.NullString(p.UsageIndicator),
+			ID:                  string(v.ID),
+			TenantID:            string(v.TenantID),
 		})
 		if err != nil {
 			return err
@@ -104,23 +171,7 @@ func (r *vehicleRepository) Find(ctx context.Context, id aggregate.VehicleID, te
 	if err != nil {
 		return nil, err
 	}
-	v := db.Vehicle{
-		ID:                 row.ID,
-		RegistrationNumber: row.RegistrationNumber,
-		VehicleNumber:      row.VehicleNumber,
-		VehicleType:        row.VehicleType,
-		Capacity:           row.Capacity,
-		FuelType:           row.FuelType,
-		InsuranceExpiry:    row.InsuranceExpiry,
-		FitnessExpiry:      row.FitnessExpiry,
-		PermitExpiry:       row.PermitExpiry,
-		Status:             row.Status,
-		CurrentMileage:     row.CurrentMileage,
-		TenantID:           row.TenantID,
-		CreatedAt:          row.CreatedAt,
-		UpdatedAt:          row.UpdatedAt,
-	}
-	return converters.ToDomain(v), nil
+	return converters.ToDomain(dbVehicleFromGetRow(row)), nil
 }
 
 func (r *vehicleRepository) GetReadModel(ctx context.Context, id aggregate.VehicleID, tenantID shared.TenantID) (domain.VehicleReadModel, error) {
@@ -131,47 +182,41 @@ func (r *vehicleRepository) GetReadModel(ctx context.Context, id aggregate.Vehic
 	if err != nil {
 		return domain.VehicleReadModel{}, err
 	}
-	v := db.Vehicle{
-		ID:                 row.ID,
-		RegistrationNumber: row.RegistrationNumber,
-		VehicleNumber:      row.VehicleNumber,
-		VehicleType:        row.VehicleType,
-		Capacity:           row.Capacity,
-		FuelType:           row.FuelType,
-		InsuranceExpiry:    row.InsuranceExpiry,
-		FitnessExpiry:      row.FitnessExpiry,
-		PermitExpiry:       row.PermitExpiry,
-		Status:             row.Status,
-		CurrentMileage:     row.CurrentMileage,
-		TenantID:           row.TenantID,
-		CreatedAt:          row.CreatedAt,
-		UpdatedAt:          row.UpdatedAt,
-	}
-	return converters.ToReadModel(v), nil
+	return converters.ToReadModel(dbVehicleFromGetRow(row)), nil
 }
 
 func (r *vehicleRepository) SearchReadModels(ctx context.Context, tenantID shared.TenantID, query string, status string, limit int, offset int) ([]domain.VehicleReadModel, int64, error) {
+	return r.searchFiltered(ctx, tenantID, query, status, "", "", limit, offset)
+}
+
+// searchFiltered is the shared implementation behind SearchReadModels and
+// SearchReadModelsFiltered (SOP fleet_class / ownership filters, spec §6).
+func (r *vehicleRepository) searchFiltered(ctx context.Context, tenantID shared.TenantID, query string, status string, fleetClass string, ownership string, limit int, offset int) ([]domain.VehicleReadModel, int64, error) {
 	rows, err := r.Q(ctx).SearchVehicles(ctx, db.SearchVehiclesParams{
-		TenantID: string(tenantID),
-		Column2:  sql.NullString{String: query, Valid: true},
-		Column3:  sql.NullString{String: query, Valid: true},
-		Column4:  sql.NullString{String: query, Valid: true},
-		Column5:  status,
-		Status:   status,
-		Limit:    int64(limit),
-		Offset:   int64(offset),
+		TenantID:      string(tenantID),
+		Search:        query,
+		StatusAll:     status,
+		Status:        status,
+		FleetClassAll: fleetClass,
+		FleetClass:    fleetClass,
+		OwnershipAll:  ownership,
+		Ownership:     ownership,
+		Limit:         int64(limit),
+		Offset:        int64(offset),
 	})
 	if err != nil {
 		return nil, 0, err
 	}
 
 	total, err := r.Q(ctx).CountVehicles(ctx, db.CountVehiclesParams{
-		TenantID: string(tenantID),
-		Column2:  sql.NullString{String: query, Valid: true},
-		Column3:  sql.NullString{String: query, Valid: true},
-		Column4:  sql.NullString{String: query, Valid: true},
-		Column5:  status,
-		Status:   status,
+		TenantID:      string(tenantID),
+		Search:        query,
+		StatusAll:     status,
+		Status:        status,
+		FleetClassAll: fleetClass,
+		FleetClass:    fleetClass,
+		OwnershipAll:  ownership,
+		Ownership:     ownership,
 	})
 	if err != nil {
 		return nil, 0, err
@@ -179,24 +224,119 @@ func (r *vehicleRepository) SearchReadModels(ctx context.Context, tenantID share
 
 	readModels := make([]domain.VehicleReadModel, len(rows))
 	for i, row := range rows {
-		v := db.Vehicle{
-			ID:                 row.ID,
-			RegistrationNumber: row.RegistrationNumber,
-			VehicleNumber:      row.VehicleNumber,
-			VehicleType:        row.VehicleType,
-			Capacity:           row.Capacity,
-			FuelType:           row.FuelType,
-			InsuranceExpiry:    row.InsuranceExpiry,
-			FitnessExpiry:      row.FitnessExpiry,
-			PermitExpiry:       row.PermitExpiry,
-			Status:             row.Status,
-			CurrentMileage:     row.CurrentMileage,
-			TenantID:           row.TenantID,
-			CreatedAt:          row.CreatedAt,
-			UpdatedAt:          row.UpdatedAt,
-		}
-		readModels[i] = converters.ToReadModel(v)
+		readModels[i] = converters.ToReadModel(dbVehicleFromSearchRow(row))
 	}
 
 	return readModels, total, nil
+}
+
+// dbVehicleFromGetRow maps a GetVehicleByID row onto db.Vehicle for the
+// shared converters.
+func dbVehicleFromGetRow(row db.GetVehicleByIDRow) db.Vehicle {
+	return db.Vehicle{
+		ID:                  row.ID,
+		RegistrationNumber:  row.RegistrationNumber,
+		VehicleNumber:       row.VehicleNumber,
+		VehicleType:         row.VehicleType,
+		Capacity:            row.Capacity,
+		FuelType:            row.FuelType,
+		InsuranceExpiry:     row.InsuranceExpiry,
+		FitnessExpiry:       row.FitnessExpiry,
+		PermitExpiry:        row.PermitExpiry,
+		Status:              row.Status,
+		CurrentMileage:      row.CurrentMileage,
+		TenantID:            row.TenantID,
+		CreatedAt:           row.CreatedAt,
+		UpdatedAt:           row.UpdatedAt,
+		FleetClass:          row.FleetClass,
+		Ownership:           row.Ownership,
+		FleetNumber:         row.FleetNumber,
+		Description:         row.Description,
+		Manufacturer:        row.Manufacturer,
+		ManufCountry:        row.ManufCountry,
+		Model:               row.Model,
+		ConstrYearMonth:     row.ConstrYearMonth,
+		AcquisitionValue:    row.AcquisitionValue,
+		AcquisitionCurrency: row.AcquisitionCurrency,
+		AcquisitionDate:     row.AcquisitionDate,
+		PurchaseVendor:      row.PurchaseVendor,
+		ValidFrom:           row.ValidFrom,
+		ValidTo:             row.ValidTo,
+		FacilityID:          row.FacilityID,
+		MaintPlant:          row.MaintPlant,
+		PlanningPlant:       row.PlanningPlant,
+		CompanyCode:         row.CompanyCode,
+		BusinessArea:        row.BusinessArea,
+		CostCenter:          row.CostCenter,
+		AssetNo:             row.AssetNo,
+		FleetObjectNo:       row.FleetObjectNo,
+		ChassisNo:           row.ChassisNo,
+		VehicleCategory:     row.VehicleCategory,
+		EngineNumber:        row.EngineNumber,
+		EnginePower:         row.EnginePower,
+		EngineCapacity:      row.EngineCapacity,
+		CylinderCount:       row.CylinderCount,
+		MaxSpeed:            row.MaxSpeed,
+		Weight:              row.Weight,
+		WeightUnit:          row.WeightUnit,
+		LoadVolume:          row.LoadVolume,
+		VolumeUnit:          row.VolumeUnit,
+		SecondaryFuel:       row.SecondaryFuel,
+		UsageIndicator:      row.UsageIndicator,
+	}
+}
+
+// dbVehicleFromSearchRow maps a SearchVehicles row onto db.Vehicle.
+func dbVehicleFromSearchRow(row db.SearchVehiclesRow) db.Vehicle {
+	return db.Vehicle{
+		ID:                  row.ID,
+		RegistrationNumber:  row.RegistrationNumber,
+		VehicleNumber:       row.VehicleNumber,
+		VehicleType:         row.VehicleType,
+		Capacity:            row.Capacity,
+		FuelType:            row.FuelType,
+		InsuranceExpiry:     row.InsuranceExpiry,
+		FitnessExpiry:       row.FitnessExpiry,
+		PermitExpiry:        row.PermitExpiry,
+		Status:              row.Status,
+		CurrentMileage:      row.CurrentMileage,
+		TenantID:            row.TenantID,
+		CreatedAt:           row.CreatedAt,
+		UpdatedAt:           row.UpdatedAt,
+		FleetClass:          row.FleetClass,
+		Ownership:           row.Ownership,
+		FleetNumber:         row.FleetNumber,
+		Description:         row.Description,
+		Manufacturer:        row.Manufacturer,
+		ManufCountry:        row.ManufCountry,
+		Model:               row.Model,
+		ConstrYearMonth:     row.ConstrYearMonth,
+		AcquisitionValue:    row.AcquisitionValue,
+		AcquisitionCurrency: row.AcquisitionCurrency,
+		AcquisitionDate:     row.AcquisitionDate,
+		PurchaseVendor:      row.PurchaseVendor,
+		ValidFrom:           row.ValidFrom,
+		ValidTo:             row.ValidTo,
+		FacilityID:          row.FacilityID,
+		MaintPlant:          row.MaintPlant,
+		PlanningPlant:       row.PlanningPlant,
+		CompanyCode:         row.CompanyCode,
+		BusinessArea:        row.BusinessArea,
+		CostCenter:          row.CostCenter,
+		AssetNo:             row.AssetNo,
+		FleetObjectNo:       row.FleetObjectNo,
+		ChassisNo:           row.ChassisNo,
+		VehicleCategory:     row.VehicleCategory,
+		EngineNumber:        row.EngineNumber,
+		EnginePower:         row.EnginePower,
+		EngineCapacity:      row.EngineCapacity,
+		CylinderCount:       row.CylinderCount,
+		MaxSpeed:            row.MaxSpeed,
+		Weight:              row.Weight,
+		WeightUnit:          row.WeightUnit,
+		LoadVolume:          row.LoadVolume,
+		VolumeUnit:          row.VolumeUnit,
+		SecondaryFuel:       row.SecondaryFuel,
+		UsageIndicator:      row.UsageIndicator,
+	}
 }

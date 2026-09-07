@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -44,9 +45,21 @@ type CalculateSettlementRequest struct {
 }
 
 func (s *SettlementAppService) CalculateAndCreateSettlement(ctx context.Context, tenantID string, req CalculateSettlementRequest) (*domain.Settlement, error) {
+	// Ownership: wallet/payout rail. This flow owns driver wallet balances and
+	// payout_instructions (statuses pending/calculated/approved/payable/paid).
+	// The legacy trip-close accounting UI flow (internal/service
+	// DriverSettlementService.GenerateSettlement, statuses
+	// pending/processing/paid/disputed + settlement_lines breakdown) writes the
+	// SAME driver_settlements/driver_ledger_entries tables — tables are NOT
+	// merged (migration edits forbidden). See warnIfLegacySettlement guard below.
 	if tenantID == "" || req.TripID == "" || req.DriverID == "" {
 		return nil, errors.New("tenant_id, trip_id, and driver_id are required")
 	}
+
+	// Gap-2 dual-write guard (one-directional, soft): cross-check the
+	// legacy-only settlement_lines table. Warn-only, never fail hard — a missing
+	// table or query error must not break prod settlement creation.
+	s.warnIfLegacySettlement(ctx, req.TripID)
 
 	// 1. Idempotency / Concurrency Guard: Check if settlement already exists
 	existing, err := s.repo.GetSettlementByTripID(ctx, tenantID, req.TripID)
@@ -152,6 +165,27 @@ func (s *SettlementAppService) CalculateAndCreateSettlement(ctx context.Context,
 	}
 
 	return settlement, nil
+}
+
+// warnIfLegacySettlement performs the gap-2 dual-write cross-check: a single
+// SELECT against settlement_lines, which only the legacy trip-close flow
+// writes. On a hit it logs a warning (legacy owns this trip — the existing
+// idempotency guard above reuses the single driver_settlements row instead of
+// appending duplicate ledger entries). Fail-open by design: any query error
+// (e.g. table absent) is logged and settlement creation proceeds, so this guard
+// can never break prod. Tenant is intentionally not consulted here:
+// settlement_lines carries no tenant column and trip IDs are trip-scoped.
+func (s *SettlementAppService) warnIfLegacySettlement(ctx context.Context, tripID string) {
+	legacy, err := s.repo.HasLegacySettlementLines(ctx, tripID)
+	if err != nil {
+		slog.Default().Warn("settlement dual-write cross-check unavailable, proceeding",
+			"trip_id", tripID, "error", err)
+		return
+	}
+	if legacy {
+		slog.Default().Warn("settlement dual-write: legacy trip-close breakdown exists, reusing single settlement row",
+			"trip_id", tripID)
+	}
 }
 
 func (s *SettlementAppService) GetDriverWallet(ctx context.Context, tenantID, driverID string) (*domain.DriverWallet, error) {

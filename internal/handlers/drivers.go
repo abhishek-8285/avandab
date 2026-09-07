@@ -173,7 +173,7 @@ func (h *DriverHandlers) View(w http.ResponseWriter, r *http.Request) {
 	var score sql.NullFloat64
 	var tier sql.NullString
 	_ = h.DB.QueryRowContext(r.Context(),
-		`SELECT score, tier FROM drivers WHERE id = ?`, id).Scan(&score, &tier)
+		`SELECT score, tier FROM drivers WHERE id = $1`, id).Scan(&score, &tier)
 	type behavEvent struct {
 		EventType   string
 		Severity    string
@@ -183,13 +183,14 @@ func (h *DriverHandlers) View(w http.ResponseWriter, r *http.Request) {
 	}
 	events := []behavEvent{}
 	if rows, err := h.DB.QueryContext(r.Context(), `
-		SELECT event_type, severity, created_at, COALESCE(description,''), COALESCE(resolved,0)
-		FROM driver_behaviour_events WHERE driver_id = ?
+		SELECT event_type, severity, created_at, metadata
+		FROM driver_behaviour_events WHERE driver_id = $1
 		ORDER BY created_at DESC LIMIT 5`, id); err == nil {
 		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var e behavEvent
-			if rows.Scan(&e.EventType, &e.Severity, &e.CreatedAt, &e.Description, &e.Resolved) == nil {
+			e.Resolved = false
+			if rows.Scan(&e.EventType, &e.Severity, &e.CreatedAt, &e.Description) == nil {
 				events = append(events, e)
 			}
 		}
@@ -203,7 +204,7 @@ func (h *DriverHandlers) View(w http.ResponseWriter, r *http.Request) {
 	trips := []recentTrip{}
 	if rows, err := h.DB.QueryContext(r.Context(), `
 		SELECT id, trip_number, status, created_at FROM trips
-		WHERE driver_id = ? ORDER BY created_at DESC LIMIT 5`, id); err == nil {
+		WHERE driver_id = $1 ORDER BY created_at DESC LIMIT 5`, id); err == nil {
 		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var t recentTrip
@@ -394,12 +395,12 @@ func (h *DriverHandlers) GetMe(w http.ResponseWriter, r *http.Request) {
 	// resolves (Spec 13 §2.2).
 	err := h.DB.QueryRowContext(ctx, `
 		SELECT id, driver_id, first_name, last_name, phone, status,
-		       COALESCE(license_number, ''), COALESCE(license_expiry, ''),
+		       COALESCE(license_number, ''), COALESCE(CAST(license_expiry AS TEXT), ''),
 		       COALESCE(bank_details, ''), COALESCE(aadhaar, ''), COALESCE(pan, ''),
 		       COALESCE(notes, '')
 		FROM drivers
-		WHERE (id = ? OR email = (SELECT email FROM users WHERE id = ?))
-		  AND tenant_id = ?
+		WHERE (id = $1 OR email = (SELECT email FROM users WHERE id = $2))
+		  AND tenant_id = $3
 		LIMIT 1
 	`, session.UserID, session.UserID, tenantID).Scan(
 		&d.ID, &d.DriverID, &d.FirstName, &d.LastName, &d.Phone, &d.Status,
@@ -425,9 +426,9 @@ func (h *DriverHandlers) GetMe(w http.ResponseWriter, r *http.Request) {
 		SELECT COALESCE(v.registration_number, ''), COALESCE(t.vehicle_id, '')
 		FROM trips t
 		LEFT JOIN vehicles v ON t.vehicle_id = v.id
-		WHERE (t.driver_id = ? OR t.driver_id = ? OR t.driver_id = ?)
+		WHERE (t.driver_id = $1 OR t.driver_id = $2 OR t.driver_id = $3)
 		  AND t.status IN ('assigned', 'started', 'reached_pickup', 'in_transit')
-		  AND t.tenant_id = ?
+		  AND t.tenant_id = $4
 		ORDER BY t.departure_time DESC, t.created_at DESC
 		LIMIT 1
 	`, d.ID, d.DriverID, session.UserID, tenantID).Scan(&vehiclePlate, &vehicleID)
@@ -437,8 +438,8 @@ func (h *DriverHandlers) GetMe(w http.ResponseWriter, r *http.Request) {
 		if errV := h.DB.QueryRowContext(ctx, `
 			SELECT id, registration_number
 			FROM vehicles
-			WHERE (registration_number = ? OR vehicle_number = ?)
-			  AND tenant_id = ?
+			WHERE (registration_number = $1 OR vehicle_number = $2)
+			  AND tenant_id = $3
 			LIMIT 1`, d.Notes, d.Notes, tenantID).Scan(&vID, &vReg); errV == nil {
 			vehiclePlate = vReg
 			vehicleID = vID
@@ -456,7 +457,7 @@ func (h *DriverHandlers) GetMe(w http.ResponseWriter, r *http.Request) {
 		if errLoc := h.DB.QueryRowContext(ctx, `
 			SELECT latitude, longitude 
 			FROM vehicle_latest_position 
-			WHERE vehicle_id = ?
+			WHERE vehicle_id = $1
 		`, vehicleID).Scan(&lat, &lon); errLoc == nil {
 			curLoc = &Location{Latitude: lat, Longitude: lon}
 		}
@@ -466,7 +467,7 @@ func (h *DriverHandlers) GetMe(w http.ResponseWriter, r *http.Request) {
 		if errLoc := h.DB.QueryRowContext(ctx, `
 			SELECT latitude, longitude
 			FROM telemetry_snapshots
-			WHERE (vehicle_id = ? AND vehicle_id != '') OR driver_id = ? OR driver_id = ?
+			WHERE (vehicle_id = $1 AND vehicle_id != '') OR driver_id = $2 OR driver_id = $3
 			ORDER BY timestamp DESC
 			LIMIT 1
 		`, vehicleID, d.ID, d.DriverID).Scan(&lat, &lon); errLoc == nil {
@@ -526,8 +527,8 @@ func (h *DriverHandlers) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	var driverID string
 	err := h.DB.QueryRowContext(ctx, `
 		SELECT id FROM drivers
-		WHERE (id = ? OR email = (SELECT email FROM users WHERE id = ?))
-		  AND tenant_id = ?
+		WHERE (id = $1 OR email = (SELECT email FROM users WHERE id = $2))
+		  AND tenant_id = $3
 		LIMIT 1`, session.UserID, session.UserID, tenantID).Scan(&driverID)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "driver not found")
@@ -540,34 +541,34 @@ func (h *DriverHandlers) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	}
 	if vNum != "" {
 		var existingVID string
-		errV := h.DB.QueryRowContext(ctx, `SELECT id FROM vehicles WHERE registration_number = ? AND tenant_id = ?`, vNum, tenantID).Scan(&existingVID)
+		errV := h.DB.QueryRowContext(ctx, `SELECT id FROM vehicles WHERE registration_number = $1 AND tenant_id = $2`, vNum, tenantID).Scan(&existingVID)
 		if errV != nil {
 			existingVID = uuid.New().String()
 			_, _ = h.DB.ExecContext(ctx, `
 				INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, capacity, fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, tenant_id)
-				VALUES (?, ?, ?, 'truck', 5000, 'diesel', date('now', '+1 year'), date('now', '+1 year'), date('now', '+1 year'), 'available', ?)`,
-				existingVID, vNum, vNum, tenantID)
+				VALUES ($1, $2, $3, 'truck', 5000, 'diesel', $4, $5, $6, 'available', $7)`,
+				existingVID, vNum, vNum, time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), tenantID)
 		}
-		_, _ = h.DB.ExecContext(ctx, `UPDATE drivers SET notes = ? WHERE id = ? AND tenant_id = ?`, vNum, driverID, tenantID)
+		_, _ = h.DB.ExecContext(ctx, `UPDATE drivers SET notes = $1 WHERE id = $2 AND tenant_id = $3`, vNum, driverID, tenantID)
 
 		// Link telemetry synthetic device to this vehicle
 		_, _ = h.DB.ExecContext(ctx, `
 			UPDATE telemetry_devices
-			SET vehicle_id = ?, status = 'active', updated_at = CURRENT_TIMESTAMP
-			WHERE (imei = ? OR imei = ?) AND tenant_id = ?`,
+			SET vehicle_id = $1, status = 'active', updated_at = CURRENT_TIMESTAMP
+			WHERE (imei = $2 OR imei = $3) AND tenant_id = $4`,
 			existingVID, driverID, session.UserID, tenantID)
 	}
 
 	query := `
 		UPDATE drivers
 		SET updated_at = CURRENT_TIMESTAMP,
-		    license_number = CASE WHEN ? != '' THEN ? ELSE license_number END,
-		    license_expiry = CASE WHEN ? != '' THEN ? ELSE license_expiry END,
-		    bank_details = CASE WHEN ? != '' THEN ? ELSE bank_details END,
-		    aadhaar = CASE WHEN ? != '' THEN ? ELSE aadhaar END,
-		    pan = CASE WHEN ? != '' THEN ? ELSE pan END,
-		    status = CASE WHEN ? IN ('available', 'leave', 'inactive') THEN ? ELSE status END
-		WHERE id = ? AND tenant_id = ?`
+		    license_number = CASE WHEN $1 != '' THEN $2 ELSE license_number END,
+		    license_expiry = CASE WHEN $3 != '' THEN $4 ELSE license_expiry END,
+		    bank_details = CASE WHEN $5 != '' THEN $6 ELSE bank_details END,
+		    aadhaar = CASE WHEN $7 != '' THEN $8 ELSE aadhaar END,
+		    pan = CASE WHEN $9 != '' THEN $10 ELSE pan END,
+		    status = CASE WHEN $11 IN ('available', 'leave', 'inactive') THEN $12 ELSE status END
+		WHERE id = $13 AND tenant_id = $14`
 
 	res, err := h.DB.ExecContext(ctx, query,
 		req.LicenseNumber, req.LicenseNumber,
@@ -627,7 +628,7 @@ func (h *DriverHandlers) UpdateMyStatus(w http.ResponseWriter, r *http.Request) 
 	var driverID string
 	err := h.DB.QueryRowContext(ctx, `
 		SELECT id FROM drivers
-		WHERE id = ? OR email = (SELECT email FROM users WHERE id = ?)
+		WHERE id = $1 OR email = (SELECT email FROM users WHERE id = $2)
 		LIMIT 1`, session.UserID, session.UserID).Scan(&driverID)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "driver not found")
@@ -635,7 +636,7 @@ func (h *DriverHandlers) UpdateMyStatus(w http.ResponseWriter, r *http.Request) 
 	}
 
 	res, err := h.DB.ExecContext(ctx,
-		`UPDATE drivers SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+		`UPDATE drivers SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
 		req.Status, driverID)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "update failed")
@@ -689,7 +690,7 @@ func (h *DriverHandlers) ReportIssue(w http.ResponseWriter, r *http.Request) {
 	var driverID string
 	err := h.DB.QueryRowContext(ctx, `
 		SELECT id FROM drivers
-		WHERE id = ? OR email = (SELECT email FROM users WHERE id = ?)
+		WHERE id = $1 OR email = (SELECT email FROM users WHERE id = $2)
 		LIMIT 1`, session.UserID, session.UserID).Scan(&driverID)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "driver not found")
@@ -710,12 +711,12 @@ func (h *DriverHandlers) ReportIssue(w http.ResponseWriter, r *http.Request) {
 	if tripID != "" {
 		_, err = h.DB.ExecContext(ctx,
 			`INSERT INTO driver_issues (id, driver_id, trip_id, category, severity, message, photo_url)
-			 VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 			issueID, driverID, tripID, category, severity, message, nullIfEmpty(photoURL))
 	} else {
 		_, err = h.DB.ExecContext(ctx,
 			`INSERT INTO driver_issues (id, driver_id, category, severity, message, photo_url)
-			 VALUES (?, ?, ?, ?, ?, ?)`,
+			 VALUES ($1, $2, $3, $4, $5, $6)`,
 			issueID, driverID, category, severity, message, nullIfEmpty(photoURL))
 	}
 	if err != nil {
@@ -745,7 +746,7 @@ func (h *DriverHandlers) ListMyIssues(w http.ResponseWriter, r *http.Request) {
 	var driverID string
 	err := h.DB.QueryRowContext(ctx, `
 		SELECT id FROM drivers
-		WHERE id = ? OR email = (SELECT email FROM users WHERE id = ?)
+		WHERE id = $1 OR email = (SELECT email FROM users WHERE id = $2)
 		LIMIT 1`, session.UserID, session.UserID).Scan(&driverID)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "driver not found")
@@ -754,7 +755,7 @@ func (h *DriverHandlers) ListMyIssues(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := h.DB.QueryContext(ctx, `
 		SELECT id, COALESCE(trip_id,''), category, severity, message, COALESCE(photo_url,''), status, created_at
-		FROM driver_issues WHERE driver_id = ? ORDER BY created_at DESC LIMIT 20`, driverID)
+		FROM driver_issues WHERE driver_id = $1 ORDER BY created_at DESC LIMIT 20`, driverID)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "query failed")
 		return

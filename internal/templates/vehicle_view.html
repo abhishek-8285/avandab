@@ -101,6 +101,51 @@
 
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-sm font-semibold text-on-surface">Fleet Object</h2>
+                    <p class="text-xs text-text-muted">SOP registry master data (General / Organization / Details / Technology)</p>
+                </div>
+            </div>
+            <div class="p-5">
+                <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+                    <div>
+                        <dt class="text-eyebrow text-text-muted">Fleet Class / Ownership</dt>
+                        <dd class="text-sm font-semibold text-on-surface mt-1">{{.Vehicle.Profile.FleetClass}} / {{.Vehicle.Profile.Ownership}}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-eyebrow text-text-muted">Description</dt>
+                        <dd class="text-sm font-semibold text-on-surface mt-1">{{or .Vehicle.Profile.Description "—"}}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-eyebrow text-text-muted">Manufacturer / Model</dt>
+                        <dd class="text-sm font-semibold text-on-surface mt-1">{{or .Vehicle.Profile.Manufacturer "—"}} {{.Vehicle.Profile.Model}}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-eyebrow text-text-muted">Fleet Number</dt>
+                        <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1">{{or .Vehicle.Profile.FleetNumber "—"}}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-eyebrow text-text-muted">Facility ID</dt>
+                        <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1">{{or .Vehicle.Profile.FacilityID "—"}}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-eyebrow text-text-muted">Cost Center</dt>
+                        <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1">{{or .Vehicle.Profile.CostCenter "—"}}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-eyebrow text-text-muted">Chassis No.</dt>
+                        <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1">{{or .Vehicle.Profile.ChassisNo "—"}}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-eyebrow text-text-muted">Engine Serial No.</dt>
+                        <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1">{{or .Vehicle.Profile.EngineNumber "—"}}</dd>
+                    </div>
+                </dl>
+            </div>
+        </section>
+
+        <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                 <h2 class="text-sm font-bold text-on-surface">Recent Trips</h2>
                 {{if .RecentTrips}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .RecentTrips}}</span>{{end}}
             </div>
@@ -122,6 +167,72 @@
                 {{end}}
             </div>
         </section>
+
+        <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-sm font-semibold text-on-surface">Measuring Points</h2>
+                    <p class="text-xs text-text-muted">SOP IK01 counters (ODO / top-up / pump)</p>
+                </div>
+                {{if .MeasuringPoints}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-semibold tabular-nums border border-border-subtle">{{len .MeasuringPoints}}</span>{{end}}
+            </div>
+            <div class="p-2">
+                {{if .MeasuringPoints}}
+                <div class="divide-y divide-border-subtle">
+                    {{range .MeasuringPoints}}
+                    <div class="px-3 py-2.5">
+                        <div class="flex items-center justify-between gap-3">
+                            <span class="text-sm font-semibold text-on-surface tabular-nums">{{.ID}} · {{.Kind}}</span>
+                            <span class="text-xs text-text-muted tabular-nums">{{.MeasPosition}} ({{.Unit}})</span>
+                        </div>
+                        <p class="text-xs text-text-muted mt-0.5">{{.Description}}{{if .AnnualEstimate}} · annual est. {{.AnnualEstimate}} km{{end}}</p>
+                        <form method="POST" action="/vehicles/points/{{.ID}}/measurements" class="flex flex-wrap items-center gap-2 mt-2">
+                            <input type="hidden" name="vehicle_id" value="{{$.Vehicle.ID}}">
+                            <input type="number" step="any" min="0" name="counter_reading" placeholder="Counter reading" required
+                                class="w-36 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <input type="text" name="read_by" placeholder="Read by"
+                                class="w-28 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <button type="submit" class="inline-flex items-center justify-center rounded-full bg-primary text-on-primary px-3 py-1.5 text-xs font-semibold shadow-sm hover:bg-primary/90 transition-all cursor-pointer">Record IK11</button>
+                        </form>
+                    </div>
+                    {{end}}
+                </div>
+                {{else}}
+                <p class="text-sm text-text-muted px-3 py-4">No measuring points registered yet.</p>
+                {{end}}
+                <form method="POST" action="/vehicles/{{.Vehicle.ID}}/points" class="flex flex-wrap items-center gap-2 px-3 py-3 border-t border-border-subtle mt-1">
+                    <select name="kind" class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary transition-all">
+                        <option value="ODO">ODO</option>
+                        <option value="FUEL_TOPUP">Fuel top-up</option>
+                        <option value="PUMP">Pump</option>
+                    </select>
+                    <input type="number" step="any" min="0" name="annual_estimate" placeholder="Annual est. km"
+                        class="w-36 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary transition-all">
+                    <input type="text" name="description" placeholder="Description"
+                        class="flex-1 min-w-32 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary transition-all">
+                    <button type="submit" class="inline-flex items-center justify-center rounded-full bg-surface-container border border-border-subtle px-3 py-1.5 text-xs font-semibold text-on-surface hover:bg-surface-container-low transition-all cursor-pointer">Create IK01 point</button>
+                </form>
+            </div>
+        </section>
+
+        {{if .RecentMeasurements}}
+        <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+                <h2 class="text-sm font-semibold text-on-surface">Recent Measurements</h2>
+                <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-semibold tabular-nums border border-border-subtle">{{len .RecentMeasurements}}</span>
+            </div>
+            <div class="p-2">
+                <div class="divide-y divide-border-subtle">
+                    {{range .RecentMeasurements}}
+                    <div class="flex items-center justify-between gap-3 px-3 py-2">
+                        <span class="text-sm font-semibold text-on-surface tabular-nums">{{.Counter}} {{.Unit}}</span>
+                        <span class="text-xs text-text-muted tabular-nums">{{.Kind}} · {{.MeasPosition}}{{if .Difference}} · Δ {{.Difference}}{{end}}{{if .ReadBy}} · {{.ReadBy}}{{end}}</span>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+        </section>
+        {{end}}
     </div>
 
     <div class="space-y-4">

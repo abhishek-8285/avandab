@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	appdb "transport-app/internal/database"
 
 	"github.com/google/uuid"
 
@@ -90,6 +91,16 @@ const (
 )
 
 // GenerateSettlement computes and PERSISTS a driver settlement with its line items.
+//
+// Ownership: legacy trip-close accounting UI flow. This flow owns the
+// settlement_lines per-trip breakdown and the confirm/dispute lifecycle
+// (statuses pending/processing/paid/disputed). The wallet/payout rail
+// (internal/settlement CalculateAndCreateSettlement, statuses
+// pending/calculated/approved/payable/paid + payout_instructions) writes the
+// SAME driver_settlements/driver_ledger_entries tables — tables are NOT merged
+// (migration edits forbidden). Do not add new ledger-affecting writes here
+// without checking the rail-side HasLegacySettlementLines guard; prefer
+// force=false so the existing row is reused instead of double-counting.
 func (s *DriverSettlementService) GenerateSettlement(ctx context.Context, tripID string, force bool) (*DriverSettlementRecord, error) {
 	getter, ok := s.store.(repository.DBGetter)
 	if !ok || getter.DB() == nil {
@@ -99,7 +110,7 @@ func (s *DriverSettlementService) GenerateSettlement(ctx context.Context, tripID
 
 	// 1. Load Trip & Driver
 	var driverID, bookingID, routeID sql.NullString
-	err := db.QueryRowContext(ctx, `SELECT driver_id, booking_id, route_id FROM trips WHERE id = ?`, tripID).
+	err := db.QueryRowContext(ctx, `SELECT driver_id, booking_id, route_id FROM trips WHERE id = $1`, tripID).
 		Scan(&driverID, &bookingID, &routeID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -178,7 +189,7 @@ func (s *DriverSettlementService) GenerateSettlement(ctx context.Context, tripID
 			    (id, trip_id, driver_id, gross_fare, commission_amount, advances_kharcha,
 			     deductions, performance_bonus, tds_rate, tds_amount, net_payout,
 			     rate_model, rate_basis_json, status, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'), datetime('now'))
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'pending', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 		`, settlementID, tripID, driverID.String, rateResult.GrossFare, rateResult.Commission,
 			advances, deductions, bonus, tdsRate, tdsAmount, netPayout,
 			rateResult.RateModel, string(rateBasisJSON))
@@ -187,19 +198,19 @@ func (s *DriverSettlementService) GenerateSettlement(ctx context.Context, tripID
 
 	if force {
 		var oldID string
-		err = tx.QueryRowContext(ctx, `SELECT id FROM driver_settlements WHERE trip_id = ?`, tripID).Scan(&oldID)
+		err = tx.QueryRowContext(ctx, `SELECT id FROM driver_settlements WHERE trip_id = $1`, tripID).Scan(&oldID)
 		switch {
 		case err == nil && oldID != "":
 			settlementID = oldID
-			if _, err := tx.ExecContext(ctx, `DELETE FROM settlement_lines WHERE settlement_id = ?`, settlementID); err != nil {
+			if _, err := tx.ExecContext(ctx, `DELETE FROM settlement_lines WHERE settlement_id = $1`, settlementID); err != nil {
 				return nil, fmt.Errorf("clear old settlement lines: %w", err)
 			}
 			if _, err := tx.ExecContext(ctx, `
 				UPDATE driver_settlements
-				SET gross_fare = ?, commission_amount = ?, advances_kharcha = ?, deductions = ?,
-				    performance_bonus = ?, tds_rate = ?, tds_amount = ?, net_payout = ?,
-				    rate_model = ?, rate_basis_json = ?, updated_at = datetime('now')
-				WHERE id = ?
+				SET gross_fare = $1, commission_amount = $2, advances_kharcha = $3, deductions = $4,
+				    performance_bonus = $5, tds_rate = $6, tds_amount = $7, net_payout = $8,
+				    rate_model = $9, rate_basis_json = $10, updated_at = CURRENT_TIMESTAMP
+				WHERE id = $11
 			`, rateResult.GrossFare, rateResult.Commission, advances, deductions,
 				bonus, tdsRate, tdsAmount, netPayout, rateResult.RateModel, string(rateBasisJSON), settlementID); err != nil {
 				return nil, fmt.Errorf("update settlement: %w", err)
@@ -229,7 +240,7 @@ func (s *DriverSettlementService) GenerateSettlement(ctx context.Context, tripID
 		lineID := "stl-ln-" + uuid.New().String()
 		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO settlement_lines (id, settlement_id, trip_id, line_type, label, amount, ref_id, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+			VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
 		`, lineID, settlementID, tripID, l.LineType, l.Label, l.Amount, l.RefID); err != nil {
 			return nil, fmt.Errorf("insert settlement line: %w", err)
 		}
@@ -238,8 +249,8 @@ func (s *DriverSettlementService) GenerateSettlement(ctx context.Context, tripID
 	// Spec 22 §5.5 — claim the included advance requests so they cannot be
 	// double-counted by another trip's settlement.
 	if _, err := tx.ExecContext(ctx, `
-		UPDATE driver_advance_requests SET settlement_id = ?
-		WHERE trip_id = ? AND driver_id = ? AND status = 'approved' AND settlement_id IS NULL
+		UPDATE driver_advance_requests SET settlement_id = $1
+		WHERE trip_id = $2 AND driver_id = $3 AND status = 'approved' AND settlement_id IS NULL
 	`, settlementID, tripID, driverID.String); err != nil {
 		return nil, fmt.Errorf("attach advance requests: %w", err)
 	}
@@ -270,14 +281,15 @@ func (s *DriverSettlementService) GenerateSettlement(ctx context.Context, tripID
 }
 
 func (s *DriverSettlementService) recordLedgerForSettlement(ctx context.Context, db *sql.DB, tenantID, driverID, tripID, settlementID string, grossFare, commission, advances, deductions, tdsAmount, bonus float64) error {
-	var tableName string
-	_ = db.QueryRowContext(ctx, `SELECT name FROM sqlite_master WHERE type='table' AND name='driver_ledger_entries'`).Scan(&tableName)
-	if tableName == "" {
+	// Portable table probe (sqlite_master is sqlite-only). LIMIT 0 yields
+	// sql.ErrNoRows on success (= table exists); anything else skips.
+	var probe int
+	if err := db.QueryRowContext(ctx, `SELECT 1 FROM driver_ledger_entries LIMIT 0`).Scan(&probe); err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil
 	}
 
 	var count int
-	_ = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM driver_ledger_entries WHERE reference_type = 'settlement' AND reference_id = ?`, settlementID).Scan(&count)
+	_ = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM driver_ledger_entries WHERE reference_type = 'settlement' AND reference_id = $1`, settlementID).Scan(&count)
 	if count > 0 {
 		return nil
 	}
@@ -294,12 +306,12 @@ func (s *DriverSettlementService) recordLedgerForSettlement(ctx context.Context,
 			return
 		}
 		var currBal float64
-		_ = db.QueryRowContext(ctx, `SELECT balance_after FROM driver_ledger_entries WHERE tenant_id = ? AND driver_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1`, tenantID, driverID).Scan(&currBal)
+		_ = db.QueryRowContext(ctx, `SELECT balance_after FROM driver_ledger_entries WHERE tenant_id = $1 AND driver_id = $2 ORDER BY created_at DESC, `+appdb.RowidOrder(db, false)+` LIMIT 1`, tenantID, driverID).Scan(&currBal)
 		newBal := currBal + amt
 		entryID := "led_" + uuid.NewString()
 		_, _ = db.ExecContext(ctx, `
 			INSERT INTO driver_ledger_entries (id, tenant_id, driver_id, trip_id, entry_type, amount, currency, reference_type, reference_id, balance_after, description, created_at)
-			VALUES (?, ?, ?, ?, ?, ?, 'INR', 'settlement', ?, ?, ?, datetime('now'))
+			VALUES ($1, $2, $3, $4, $5, $6, 'INR', 'settlement', $7, $8, $9, CURRENT_TIMESTAMP)
 		`, entryID, tenantID, driverID, tripID, entryType, amt, settlementID, newBal, desc)
 	}
 
@@ -335,7 +347,7 @@ func (s *DriverSettlementService) calculateGrossFare(ctx context.Context, db *sq
 	case "per_km":
 		var km float64
 		if routeID != "" {
-			_ = db.QueryRowContext(ctx, `SELECT distance FROM routes WHERE id = ?`, routeID).Scan(&km)
+			_ = db.QueryRowContext(ctx, `SELECT distance FROM routes WHERE id = $1`, routeID).Scan(&km)
 		}
 		if km <= 0 {
 			km = 100.0 // Default fallback distance
@@ -361,7 +373,7 @@ func (s *DriverSettlementService) calculateGrossFare(ctx context.Context, db *sq
 	case "commission_pct":
 		var fare float64
 		if bookingID != "" {
-			_ = db.QueryRowContext(ctx, `SELECT price FROM bookings WHERE id = ?`, bookingID).Scan(&fare)
+			_ = db.QueryRowContext(ctx, `SELECT price FROM bookings WHERE id = $1`, bookingID).Scan(&fare)
 		}
 		if fare <= 0 {
 			return RateResult{}, ErrBookingPriceMissing
@@ -389,7 +401,7 @@ func (s *DriverSettlementService) calculateGrossFare(ctx context.Context, db *sq
 func (s *DriverSettlementService) getApprovedAdvances(ctx context.Context, db *sql.DB, tripID, driverID string) (float64, []SettlementLine, error) {
 	rows, err := db.QueryContext(ctx, `
 		SELECT id, category, amount FROM driver_expenses
-		WHERE trip_id = ? AND driver_id = ? AND status = 'approved' AND category IN ('kharcha', 'advance', 'fuel', 'toll')
+		WHERE trip_id = $1 AND driver_id = $2 AND status = 'approved' AND category IN ('kharcha', 'advance', 'fuel', 'toll')
 	`, tripID, driverID)
 	if err != nil {
 		return 0, nil, err
@@ -417,7 +429,7 @@ func (s *DriverSettlementService) getApprovedAdvances(ctx context.Context, db *s
 	// deducted here; pending ones never are (edge case 8).
 	advReqRows, aerr := db.QueryContext(ctx, `
 		SELECT id, amount FROM driver_advance_requests
-		WHERE trip_id = ? AND driver_id = ? AND status = 'approved' AND settlement_id IS NULL
+		WHERE trip_id = $1 AND driver_id = $2 AND status = 'approved' AND settlement_id IS NULL
 	`, tripID, driverID)
 	if aerr == nil {
 		defer func() { _ = advReqRows.Close() }()
@@ -441,7 +453,7 @@ func (s *DriverSettlementService) getApprovedAdvances(ctx context.Context, db *s
 func (s *DriverSettlementService) getApprovedDeductions(ctx context.Context, db *sql.DB, tripID, driverID string) (float64, []SettlementLine, error) {
 	rows, err := db.QueryContext(ctx, `
 		SELECT id, category, amount FROM driver_expenses
-		WHERE trip_id = ? AND driver_id = ? AND status = 'approved' AND category NOT IN ('kharcha', 'advance', 'fuel', 'toll')
+		WHERE trip_id = $1 AND driver_id = $2 AND status = 'approved' AND category NOT IN ('kharcha', 'advance', 'fuel', 'toll')
 	`, tripID, driverID)
 	if err != nil {
 		return 0, nil, err
@@ -468,7 +480,7 @@ func (s *DriverSettlementService) getApprovedDeductions(ctx context.Context, db 
 
 func (s *DriverSettlementService) calculateTDS(ctx context.Context, db *sql.DB, driverID string, tdsBase float64) (float64, float64, string, error) {
 	var pan sql.NullString
-	_ = db.QueryRowContext(ctx, `SELECT pan FROM drivers WHERE id = ?`, driverID).Scan(&pan)
+	_ = db.QueryRowContext(ctx, `SELECT pan FROM drivers WHERE id = $1`, driverID).Scan(&pan)
 
 	tdsSection := s.getConfig(ctx, db, "tds_section")
 	if tdsSection == "" {
@@ -570,7 +582,7 @@ func (s *DriverSettlementService) findByTripID(ctx context.Context, db *sql.DB, 
 		       deductions, performance_bonus, tds_rate, tds_amount, net_payout,
 		       rate_model, rate_basis_json, status, payment_ref, paid_at,
 		       confirmed_at, disputed_at, dispute_reason, created_at, updated_at
-		FROM driver_settlements WHERE trip_id = ?
+		FROM driver_settlements WHERE trip_id = $1
 	`, tripID).Scan(
 		&rec.ID, &rec.TripID, &rec.DriverID, &rec.GrossFare, &rec.CommissionAmount,
 		&rec.AdvancesKharcha, &rec.Deductions, &rec.PerformanceBonus, &rec.TDSRate,
@@ -618,7 +630,7 @@ func (s *DriverSettlementService) findByTripID(ctx context.Context, db *sql.DB, 
 	// Fetch settlement lines
 	rows, err := db.QueryContext(ctx, `
 		SELECT id, settlement_id, trip_id, line_type, label, amount, COALESCE(ref_id,''), created_at
-		FROM settlement_lines WHERE settlement_id = ? ORDER BY created_at ASC
+		FROM settlement_lines WHERE settlement_id = $1 ORDER BY created_at ASC
 	`, rec.ID)
 	if err == nil {
 		defer rows.Close()
@@ -646,7 +658,7 @@ func (s *DriverSettlementService) GetSettlement(ctx context.Context, id string) 
 	db := getter.DB()
 
 	var tripID string
-	err := db.QueryRowContext(ctx, `SELECT trip_id FROM driver_settlements WHERE id = ?`, id).Scan(&tripID)
+	err := db.QueryRowContext(ctx, `SELECT trip_id FROM driver_settlements WHERE id = $1`, id).Scan(&tripID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrSettlementNotFound
@@ -664,7 +676,7 @@ func (s *DriverSettlementService) ListSettlements(ctx context.Context, status, d
 
 // ListSettlementsDateRange retrieves settlements with optional status,
 // driver filtering and a created_at window (YYYY-MM-DD bounds, inclusive).
-// The window uses date(substr(created_at,1,10)) because SQLite stores
+// The window uses substr(CAST(created_at AS TEXT), 1, 10) because SQLite stores
 // timestamps as text in mixed formats (RFC3339 from Go, 'YYYY-MM-DD HH:MM:SS'
 // from CURRENT_TIMESTAMP) — only the prefix is stable.
 func (s *DriverSettlementService) ListSettlementsDateRange(ctx context.Context, status, driverID, from, to string, limit, offset int) ([]DriverSettlementRecord, error) {
@@ -693,9 +705,9 @@ func (s *DriverSettlementService) listSettlementsFiltered(ctx context.Context, s
 		args = append(args, driverID)
 	}
 	if from != "" || to != "" {
-		conditions = append(conditions, "(? = '' OR date(substr(created_at,1,10)) >= date(?))")
+		conditions = append(conditions, "(? = '' OR substr(CAST(created_at AS TEXT), 1, 10) >= substr(CAST(? AS TEXT), 1, 10))")
 		args = append(args, from, from)
-		conditions = append(conditions, "(? = '' OR date(substr(created_at,1,10)) <= date(?))")
+		conditions = append(conditions, "(? = '' OR substr(CAST(created_at AS TEXT), 1, 10) <= substr(CAST(? AS TEXT), 1, 10))")
 		args = append(args, to, to)
 	}
 
@@ -707,7 +719,11 @@ func (s *DriverSettlementService) listSettlementsFiltered(ctx context.Context, s
 	query := fmt.Sprintf(`SELECT trip_id FROM driver_settlements %s ORDER BY created_at DESC LIMIT ? OFFSET ?`, where)
 	args = append(args, limit, offset)
 
-	rows, err := db.QueryContext(ctx, query, args...)
+	rebound, rerr := appdb.Rebind(query)
+	if rerr != nil {
+		return nil, rerr
+	}
+	rows, err := db.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -736,7 +752,7 @@ func (s *DriverSettlementService) MarkPaid(ctx context.Context, settlementID, pa
 	var currentStatus string
 	var tripID, driverID string
 	var netPayout float64
-	err := db.QueryRowContext(ctx, `SELECT status, trip_id, driver_id, net_payout FROM driver_settlements WHERE id = ?`, settlementID).
+	err := db.QueryRowContext(ctx, `SELECT status, trip_id, driver_id, net_payout FROM driver_settlements WHERE id = $1`, settlementID).
 		Scan(&currentStatus, &tripID, &driverID, &netPayout)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -748,8 +764,8 @@ func (s *DriverSettlementService) MarkPaid(ctx context.Context, settlementID, pa
 	paidAtStr := paidAt.UTC().Format(time.RFC3339)
 	_, err = db.ExecContext(ctx, `
 		UPDATE driver_settlements
-		SET status = 'paid', payment_ref = ?, paid_at = ?, updated_at = datetime('now')
-		WHERE id = ?
+		SET status = 'paid', payment_ref = $1, paid_at = $2, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $3
 	`, paymentRef, paidAtStr, settlementID)
 	if err != nil {
 		return nil, err
@@ -759,7 +775,7 @@ func (s *DriverSettlementService) MarkPaid(ctx context.Context, settlementID, pa
 	// settlement so the §5.2 running balance stays consistent.
 	_, _ = db.ExecContext(ctx, `
 		UPDATE driver_advance_requests SET status = 'paid'
-		WHERE settlement_id = ? AND status = 'approved'
+		WHERE settlement_id = $1 AND status = 'approved'
 	`, settlementID)
 
 	if s.events != nil {
@@ -788,15 +804,15 @@ func (s *DriverSettlementService) ConfirmSettlement(ctx context.Context, settlem
 	db := getter.DB()
 
 	var tripID string
-	err := db.QueryRowContext(ctx, `SELECT trip_id FROM driver_settlements WHERE id = ?`, settlementID).Scan(&tripID)
+	err := db.QueryRowContext(ctx, `SELECT trip_id FROM driver_settlements WHERE id = $1`, settlementID).Scan(&tripID)
 	if err != nil {
 		return nil, ErrSettlementNotFound
 	}
 
 	_, err = db.ExecContext(ctx, `
 		UPDATE driver_settlements
-		SET confirmed_at = datetime('now'), updated_at = datetime('now')
-		WHERE id = ?
+		SET confirmed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $1
 	`, settlementID)
 	if err != nil {
 		return nil, err
@@ -814,15 +830,15 @@ func (s *DriverSettlementService) DisputeSettlement(ctx context.Context, settlem
 	db := getter.DB()
 
 	var tripID string
-	err := db.QueryRowContext(ctx, `SELECT trip_id FROM driver_settlements WHERE id = ?`, settlementID).Scan(&tripID)
+	err := db.QueryRowContext(ctx, `SELECT trip_id FROM driver_settlements WHERE id = $1`, settlementID).Scan(&tripID)
 	if err != nil {
 		return nil, ErrSettlementNotFound
 	}
 
 	_, err = db.ExecContext(ctx, `
 		UPDATE driver_settlements
-		SET status = 'disputed', disputed_at = datetime('now'), dispute_reason = ?, updated_at = datetime('now')
-		WHERE id = ?
+		SET status = 'disputed', disputed_at = CURRENT_TIMESTAMP, dispute_reason = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
 	`, reason, settlementID)
 	if err != nil {
 		return nil, err
@@ -849,7 +865,7 @@ func (s *DriverSettlementService) DisputeSettlement(ctx context.Context, settlem
 
 func (s *DriverSettlementService) getConfig(ctx context.Context, db *sql.DB, key string) string {
 	var val string
-	_ = db.QueryRowContext(ctx, `SELECT value FROM company_config WHERE key = ?`, key).Scan(&val)
+	_ = db.QueryRowContext(ctx, `SELECT value FROM company_config WHERE key = $1`, key).Scan(&val)
 	return val
 }
 
@@ -939,7 +955,7 @@ func (s *DriverSettlementService) ProcessFinancialSettlement(ctx context.Context
 		var sum float64
 		if err := getter.DB().QueryRowContext(ctx,
 			`SELECT COALESCE(SUM(amount), 0) FROM driver_expenses
-			 WHERE trip_id = ? AND status = 'approved'`, string(tripID)).Scan(&sum); err == nil {
+			 WHERE trip_id = $1 AND status = 'approved'`, string(tripID)).Scan(&sum); err == nil {
 			advances = sum
 		}
 	}
@@ -998,8 +1014,8 @@ func (s *DriverSettlementService) upsertPaidSettlement(ctx context.Context, db *
 		`INSERT INTO driver_settlements
 		    (id, trip_id, driver_id, gross_fare, advances_kharcha, deductions,
 		     performance_bonus, net_payout, status, payment_ref, paid_at, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?, ?, ?)
-		 ON CONFLICT(trip_id) DO UPDATE SET
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'paid', $9, $10, $11, $12)
+		 ON CONFLICT (trip_id) DO UPDATE SET
 		   gross_fare = excluded.gross_fare,
 		   advances_kharcha = excluded.advances_kharcha,
 		   deductions = excluded.deductions,
@@ -1020,8 +1036,8 @@ func (s *DriverSettlementService) persistSettlement(ctx context.Context, db *sql
 		`INSERT INTO driver_settlements
 		    (id, trip_id, driver_id, gross_fare, advances_kharcha, deductions,
 		     performance_bonus, net_payout, status, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)
-		 ON CONFLICT(trip_id) DO NOTHING`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending', $9, $10)
+		 ON CONFLICT (trip_id) DO NOTHING`,
 		rec.ID, string(rec.TripID), string(rec.DriverID), rec.GrossFare,
 		rec.AdvancesKharcha, rec.Deductions, rec.PerformanceBonus, rec.NetPayout,
 		fuelTimeStr(rec.CreatedAt), fuelTimeStr(rec.UpdatedAt))

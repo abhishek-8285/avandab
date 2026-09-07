@@ -48,7 +48,7 @@ func LoadRouteCorridor(ctx context.Context, db *sql.DB, routeID string) (*RouteC
 	var source, dest string
 	var distanceKM float64
 	err := db.QueryRowContext(ctx,
-		`SELECT source, destination, distance FROM routes WHERE id = ?`, routeID).
+		`SELECT source, destination, distance FROM routes WHERE id = $1`, routeID).
 		Scan(&source, &dest, &distanceKM)
 	if err != nil {
 		return nil, fmt.Errorf("load route %s: %w", routeID, err)
@@ -65,7 +65,7 @@ func LoadRouteCorridor(ctx context.Context, db *sql.DB, routeID string) (*RouteC
 	// 1. Check if geocoded coordinates exist in route_locations (Migration 00091)
 	var sLat, sLng, dLat, dLng float64
 	err = db.QueryRowContext(ctx,
-		`SELECT source_lat, source_lng, dest_lat, dest_lng FROM route_locations WHERE route_id = ?`,
+		`SELECT source_lat, source_lng, dest_lat, dest_lng FROM route_locations WHERE route_id = $1`,
 		routeID).Scan(&sLat, &sLng, &dLat, &dLng)
 
 	if err == nil && (sLat != 0 || sLng != 0 || dLat != 0 || dLng != 0) {

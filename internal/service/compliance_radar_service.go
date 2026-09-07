@@ -209,20 +209,21 @@ func (s *ComplianceRadarService) emitEwbAlert(ctx context.Context, e EwayBillHit
 // ── queries ──────────────────────────────────────────────────────────
 
 func (s *ComplianceRadarService) expiringDocs(ctx context.Context, tenantID string, withinDays int) ([]docHit, error) {
+	bound := time.Now().UTC().AddDate(0, 0, withinDays).Format("2006-01-02")
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT 'vehicle' AS kind, vd.vehicle_id AS entity_id, v.tenant_id,
 		       vd.doc_type, vd.expiry_date
 		FROM vehicle_documents vd JOIN vehicles v ON v.id = vd.vehicle_id
-		WHERE v.tenant_id = ? AND vd.status != 'rejected'
+		WHERE v.tenant_id = $1 AND vd.status != 'rejected'
 		  AND vd.expiry_date IS NOT NULL
-		  AND date(vd.expiry_date) <= date('now', '+' || ? || ' days')
+		  AND substr(CAST(vd.expiry_date AS TEXT), 1, 10) <= $2
 		UNION ALL
 		SELECT 'driver', dd.driver_id, d.tenant_id, dd.doc_type, dd.expiry_date
 		FROM driver_documents dd JOIN drivers d ON d.id = dd.driver_id
-		WHERE d.tenant_id = ? AND dd.status != 'rejected'
+		WHERE d.tenant_id = $3 AND dd.status != 'rejected'
 		  AND dd.expiry_date IS NOT NULL
-		  AND date(dd.expiry_date) <= date('now', '+' || ? || ' days')`,
-		tenantID, withinDays, tenantID, withinDays)
+		  AND substr(CAST(dd.expiry_date AS TEXT), 1, 10) <= $4`,
+		tenantID, bound, tenantID, bound)
 	if err != nil {
 		return nil, err
 	}
@@ -243,18 +244,19 @@ func (s *ComplianceRadarService) expiringDocs(ctx context.Context, tenantID stri
 }
 
 func (s *ComplianceRadarService) expiringDocsAllTenants(ctx context.Context, withinDays int) ([]docHit, error) {
+	bound := time.Now().UTC().AddDate(0, 0, withinDays).Format("2006-01-02")
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT 'vehicle', vd.vehicle_id, COALESCE(v.tenant_id, ''),
 		       vd.doc_type, vd.expiry_date
 		FROM vehicle_documents vd JOIN vehicles v ON v.id = vd.vehicle_id
 		WHERE vd.status != 'rejected' AND vd.expiry_date IS NOT NULL
-		  AND date(vd.expiry_date) <= date('now', '+' || ? || ' days')
+		  AND substr(CAST(vd.expiry_date AS TEXT), 1, 10) <= $1
 		UNION ALL
 		SELECT 'driver', dd.driver_id, COALESCE(d.tenant_id, ''), dd.doc_type, dd.expiry_date
 		FROM driver_documents dd JOIN drivers d ON d.id = dd.driver_id
 		WHERE dd.status != 'rejected' AND dd.expiry_date IS NOT NULL
-		  AND date(dd.expiry_date) <= date('now', '+' || ? || ' days')`,
-		withinDays, withinDays)
+		  AND substr(CAST(dd.expiry_date AS TEXT), 1, 10) <= $2`,
+		bound, bound)
 	if err != nil {
 		return nil, err
 	}
@@ -283,9 +285,9 @@ func (s *ComplianceRadarService) expiringEwbs(ctx context.Context, tenantID stri
 		       e.valid_until
 		FROM eway_bills e LEFT JOIN trips t ON t.id = e.trip_id
 		WHERE e.status = 'active'
-		  AND COALESCE(t.tenant_id, '') = ?
-		  AND julianday(e.valid_until) - julianday('now') <= ? / 24.0`,
-		tenantID, withinHours)
+		  AND COALESCE(t.tenant_id, '') = $1
+		  AND e.valid_until <= $2`,
+		tenantID, time.Now().UTC().Add(time.Duration(withinHours)*time.Hour))
 	if qerr != nil {
 		return nil, qerr
 	}
@@ -298,8 +300,8 @@ func (s *ComplianceRadarService) expiringEwbsAllTenants(ctx context.Context, wit
 		       e.valid_until
 		FROM eway_bills e LEFT JOIN trips t ON t.id = e.trip_id
 		WHERE e.status = 'active'
-		  AND julianday(e.valid_until) - julianday('now') <= ? / 24.0`,
-		withinHours)
+		  AND e.valid_until <= $1`,
+		time.Now().UTC().Add(time.Duration(withinHours)*time.Hour))
 	if qerr != nil {
 		return nil, qerr
 	}

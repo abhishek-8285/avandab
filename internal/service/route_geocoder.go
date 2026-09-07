@@ -106,9 +106,12 @@ func (s *RouteService) persistRouteLocations(ctx context.Context, loc routeLocat
 		exec = tx
 	}
 	_, err := exec.ExecContext(ctx,
-		`INSERT OR REPLACE INTO route_locations
+		`INSERT INTO route_locations
 		    (route_id, source_lat, source_lng, source_name, dest_lat, dest_lng, dest_name, geocoded_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+		 ON CONFLICT (route_id) DO UPDATE SET source_lat = excluded.source_lat, source_lng = excluded.source_lng,
+		    source_name = excluded.source_name, dest_lat = excluded.dest_lat, dest_lng = excluded.dest_lng,
+		    dest_name = excluded.dest_name, geocoded_at = excluded.geocoded_at`,
 		loc.RouteID, loc.SourceLat, loc.SourceLng, loc.SourceName,
 		loc.DestLat, loc.DestLng, loc.DestName)
 	return err

@@ -81,8 +81,8 @@ type CreditNoteRecord struct {
 // never observe the same last_number.
 const nextNoteNumberSQL = `
 INSERT INTO note_sequences (financial_year, tenant_id, note_type, last_number, prefix)
-VALUES (?, ?, ?, 1, ?)
-ON CONFLICT(financial_year, tenant_id, note_type)
+VALUES ($1, $2, $3, 1, $4)
+ON CONFLICT (financial_year, tenant_id, note_type)
 DO UPDATE SET last_number = note_sequences.last_number + 1
 RETURNING last_number
 `
@@ -115,7 +115,7 @@ func (s *CreditNoteService) GetNotesForInvoice(ctx context.Context, invoiceID st
 		       COALESCE(place_of_supply, ''), taxable_value, igst, cgst, sgst, total,
 		       COALESCE(irn, ''), COALESCE(created_by, ''), created_at
 		FROM credit_debit_notes
-		WHERE tenant_id = ? AND invoice_id = ?
+		WHERE tenant_id = $1 AND invoice_id = $2
 		ORDER BY created_at DESC, id DESC
 	`, string(tenant), invoiceID)
 	if err != nil {
@@ -173,7 +173,7 @@ func (s *CreditNoteService) create(ctx context.Context, noteType string, req Not
 	// not-found exactly like a bogus id.
 	var invoiceTotal float64
 	err = tx.QueryRowContext(ctx,
-		`SELECT total FROM invoices WHERE id = ? AND tenant_id = ?`,
+		`SELECT total FROM invoices WHERE id = $1 AND tenant_id = $2`,
 		req.InvoiceID, string(tenant)).Scan(&invoiceTotal)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, domain.ErrInvoiceNotFound
@@ -188,7 +188,7 @@ func (s *CreditNoteService) create(ctx context.Context, noteType string, req Not
 		var priorCredits float64
 		if err := tx.QueryRowContext(ctx, `
 			SELECT COALESCE(SUM(total), 0) FROM credit_debit_notes
-			WHERE tenant_id = ? AND invoice_id = ? AND note_type = 'credit'
+			WHERE tenant_id = $1 AND invoice_id = $2 AND note_type = 'credit'
 		`, string(tenant), req.InvoiceID).Scan(&priorCredits); err != nil {
 			return nil, fmt.Errorf("sum prior credit notes: %w", err)
 		}
@@ -213,7 +213,7 @@ func (s *CreditNoteService) create(ctx context.Context, noteType string, req Not
 		INSERT INTO credit_debit_notes (
 			id, tenant_id, note_number, note_type, invoice_id, reason,
 			place_of_supply, taxable_value, igst, cgst, sgst, total, created_by
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
 	`, id, string(tenant), noteNumber, noteType, req.InvoiceID,
 		strings.TrimSpace(req.Reason), strings.TrimSpace(req.PlaceOfSupply),
 		req.TaxableValue, req.IGST, req.CGST, req.SGST, total, req.CreatedBy)

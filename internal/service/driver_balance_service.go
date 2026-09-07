@@ -95,7 +95,7 @@ func (s *DriverBalanceService) GetBalance(ctx context.Context, driverID string) 
 	// Σ paid settlements.net_payout.
 	err := s.db.QueryRowContext(ctx,
 		`SELECT COALESCE(SUM(net_payout), 0) FROM driver_settlements
-		 WHERE driver_id = ? AND status = 'paid'`,
+		 WHERE driver_id = $1 AND status = 'paid'`,
 		driverID).Scan(&bal.RunningBalance)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
@@ -105,7 +105,7 @@ func (s *DriverBalanceService) GetBalance(ctx context.Context, driverID string) 
 	var lastID, lastAtStr sql.NullString
 	err = s.db.QueryRowContext(ctx, `
 		SELECT id, paid_at FROM driver_settlements
-		WHERE driver_id = ? AND status = 'paid'
+		WHERE driver_id = $1 AND status = 'paid'
 		ORDER BY paid_at DESC LIMIT 1`, driverID).Scan(&lastID, &lastAtStr)
 	if err == nil && lastID.Valid {
 		bal.LastSettlementID = lastID.String
@@ -120,7 +120,7 @@ func (s *DriverBalanceService) GetBalance(ctx context.Context, driverID string) 
 		SELECT
 		  COALESCE(SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END), 0),
 		  COALESCE(SUM(CASE WHEN status = 'approved' THEN amount ELSE 0 END), 0)
-		FROM driver_advance_requests WHERE driver_id = ? AND status IN ('paid','approved')
+		FROM driver_advance_requests WHERE driver_id = $1 AND status IN ('paid','approved')
 	`, driverID).Scan(&paidOut, &approved); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func (s *DriverBalanceService) GetBalance(ctx context.Context, driverID string) 
 
 	// Pending count.
 	if err := s.db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM driver_advance_requests WHERE driver_id = ? AND status = ?`,
+		`SELECT COUNT(*) FROM driver_advance_requests WHERE driver_id = $1 AND status = $2`,
 		driverID, AdvancePending).Scan(&bal.PendingAdvances); err != nil && err != sql.ErrNoRows {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func (s *DriverBalanceService) RequestAdvance(ctx context.Context, tenantID, dri
 	id := uuid.NewString()
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO driver_advance_requests (id, tenant_id, driver_id, trip_id, amount, reason, status)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		id, tenantID, driverID, nullIfEmpty(tripID), amount, reason, AdvancePending)
 	if err != nil {
 		return nil, err
@@ -166,7 +166,7 @@ func (s *DriverBalanceService) ListAdvances(ctx context.Context, driverID string
 		SELECT id, tenant_id, COALESCE(trip_id,''), amount, reason, status,
 		       requested_at, COALESCE(decided_by,''),
 		       decided_at, COALESCE(settlement_id,'')
-		FROM driver_advance_requests WHERE driver_id = ?
+		FROM driver_advance_requests WHERE driver_id = $1
 		ORDER BY requested_at DESC LIMIT 50`, driverID)
 	if err != nil {
 		return nil, err
@@ -200,9 +200,9 @@ func (s *DriverBalanceService) DecideAdvance(ctx context.Context, advanceID, dec
 	}
 	res, err := s.db.ExecContext(ctx, `
 		UPDATE driver_advance_requests
-		SET status = ?, decided_by = ?, decided_at = datetime('now'),
-		    reason = CASE WHEN ? != '' THEN reason || ' | note: ' || ? ELSE reason END
-		WHERE id = ? AND status = ?`,
+		SET status = $1, decided_by = $2, decided_at = CURRENT_TIMESTAMP,
+		    reason = CASE WHEN $3 != '' THEN reason || ' | note: ' || $4 ELSE reason END
+		WHERE id = $5 AND status = $6`,
 		decision, decidedBy, note, note, advanceID, AdvancePending)
 	if err != nil {
 		return err
@@ -217,7 +217,7 @@ func (s *DriverBalanceService) DecideAdvance(ctx context.Context, advanceID, dec
 
 	var driverID string
 	_ = s.db.QueryRowContext(ctx,
-		`SELECT driver_id FROM driver_advance_requests WHERE id = ?`, advanceID).Scan(&driverID)
+		`SELECT driver_id FROM driver_advance_requests WHERE id = $1`, advanceID).Scan(&driverID)
 	s.invalidate(driverID)
 	return nil
 }

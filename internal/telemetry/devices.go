@@ -71,7 +71,7 @@ func (s *DeviceStore) InsertDevice(ctx context.Context, d Device) error {
 		`INSERT INTO telemetry_devices
             (id, tenant_id, imei, serial_number, firmware_version, sim_number, iccid,
              warranty_until, device_type, status, vehicle_id, customer_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
 		d.ID, d.TenantID, d.IMEI, d.SerialNumber, d.FirmwareVersion, d.SimNumber, d.ICCID,
 		d.WarrantyUntil, d.DeviceType, d.Status, d.VehicleID, d.CustomerID)
 	if err != nil {
@@ -88,7 +88,7 @@ func (s *DeviceStore) CountByIMEI(ctx context.Context, tenantID, imei string) (i
 	db := s.dbFromContext(ctx)
 	var n int
 	err := db.QueryRowContext(ctx,
-		`SELECT count(*) FROM telemetry_devices WHERE tenant_id = ? AND imei = ?`,
+		`SELECT count(*) FROM telemetry_devices WHERE tenant_id = $1 AND imei = $2`,
 		tenantID, imei).Scan(&n)
 	return n, err
 }
@@ -99,8 +99,8 @@ func (s *DeviceStore) updateStatus(ctx context.Context, tenantID, imei, from, to
 	db := s.dbFromContext(ctx)
 	res, err := db.ExecContext(ctx,
 		`UPDATE telemetry_devices
-         SET status = ?, updated_at = CURRENT_TIMESTAMP
-         WHERE imei = ? AND tenant_id = ? AND status = ?`,
+         SET status = $1, updated_at = CURRENT_TIMESTAMP
+         WHERE imei = $2 AND tenant_id = $3 AND status = $4`,
 		to, imei, tenantID, from)
 	if err != nil {
 		return fmt.Errorf("status update: %w", err)
@@ -118,8 +118,8 @@ func (s *DeviceStore) SetVehicle(ctx context.Context, tenantID, imei, vehicleID 
 	db := s.dbFromContext(ctx)
 	_, err := db.ExecContext(ctx,
 		`UPDATE telemetry_devices
-         SET vehicle_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP
-         WHERE imei = ? AND tenant_id = ?`,
+         SET vehicle_id = $1, status = $2, updated_at = CURRENT_TIMESTAMP
+         WHERE imei = $3 AND tenant_id = $4`,
 		vehicleID, DeviceStatusAssigned, imei, tenantID)
 	if err != nil {
 		if isUniqueConstraint(err) {
@@ -135,8 +135,8 @@ func (s *DeviceStore) SetDeviceSecret(ctx context.Context, tenantID, imei, secre
 	db := s.dbFromContext(ctx)
 	res, err := db.ExecContext(ctx,
 		`UPDATE telemetry_devices
-         SET device_secret_hash = ?, status = ?, activated_at = COALESCE(activated_at, ?), updated_at = CURRENT_TIMESTAMP
-         WHERE imei = ? AND tenant_id = ? AND status = ?`,
+         SET device_secret_hash = $1, status = $2, activated_at = COALESCE(activated_at, $3), updated_at = CURRENT_TIMESTAMP
+         WHERE imei = $4 AND tenant_id = $5 AND status = $6`,
 		secretHash, DeviceStatusActive, activatedAt, imei, tenantID, DeviceStatusAssigned)
 	if err != nil {
 		return fmt.Errorf("set device secret: %w", err)
@@ -156,9 +156,9 @@ func (s *DeviceStore) ListByTenant(ctx context.Context, tenantID string, limit, 
 		        vehicle_id, customer_id, activated_at, last_seen_at,
 		        device_secret_hash, created_at, updated_at
 		 FROM telemetry_devices
-		 WHERE tenant_id = ?
+		 WHERE tenant_id = $1
 		 ORDER BY last_seen_at IS NULL, last_seen_at DESC, imei
-		 LIMIT ? OFFSET ?`,
+		 LIMIT $2 OFFSET $3`,
 		tenantID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("list devices: %w", err)
@@ -171,7 +171,7 @@ func (s *DeviceStore) ListByTenant(ctx context.Context, tenantID string, limit, 
 func (s *DeviceStore) CountByTenant(ctx context.Context, tenantID string) (int64, error) {
 	var n int64
 	err := s.db.QueryRowContext(ctx,
-		`SELECT count(*) FROM telemetry_devices WHERE tenant_id = ?`, tenantID).Scan(&n)
+		`SELECT count(*) FROM telemetry_devices WHERE tenant_id = $1`, tenantID).Scan(&n)
 	return n, err
 }
 
@@ -179,8 +179,8 @@ func (s *DeviceStore) CountByTenant(ctx context.Context, tenantID string) (int64
 // SQLite stores timestamps as text in mixed formats (RFC3339 from Go,
 // 'YYYY-MM-DD HH:MM:SS' from CURRENT_TIMESTAMP) — only the prefix is stable.
 const deviceDateClause = `
-		 AND (? = '' OR date(substr(created_at,1,10)) >= date(?))
-		 AND (? = '' OR date(substr(created_at,1,10)) <= date(?))`
+		 AND (? = '' OR substr(CAST(created_at AS TEXT), 1, 10) >= substr(CAST(? AS TEXT), 1, 10))
+		 AND (? = '' OR substr(CAST(created_at AS TEXT), 1, 10) <= substr(CAST(? AS TEXT), 1, 10))`
 
 // ListByTenantFiltered returns devices for a tenant filtered by free-text
 // query (imei/serial/vehicle), status and a created_at window, with
@@ -193,9 +193,9 @@ func (s *DeviceStore) ListByTenantFiltered(ctx context.Context, tenantID string,
 		        vehicle_id, customer_id, activated_at, last_seen_at,
 		        device_secret_hash, created_at, updated_at
 		 FROM telemetry_devices
-		 WHERE tenant_id = ?
-		   AND (? = '' OR imei LIKE ? OR serial_number LIKE ? OR vehicle_id LIKE ?)
-		   AND (? = '' OR status = ?)`+deviceDateClause+`
+		 WHERE tenant_id = $1
+		   AND ($2 = '' OR imei LIKE $3 OR serial_number LIKE $4 OR vehicle_id LIKE $5)
+		   AND ($6 = '' OR status = $7)`+deviceDateClause+`
 		 ORDER BY last_seen_at IS NULL, last_seen_at DESC, imei
 		 LIMIT ? OFFSET ?`,
 		tenantID,
@@ -217,9 +217,9 @@ func (s *DeviceStore) CountByTenantFiltered(ctx context.Context, tenantID string
 	var n int64
 	err := s.db.QueryRowContext(ctx,
 		`SELECT count(*) FROM telemetry_devices
-		 WHERE tenant_id = ?
-		   AND (? = '' OR imei LIKE ? OR serial_number LIKE ? OR vehicle_id LIKE ?)
-		   AND (? = '' OR status = ?)`+deviceDateClause,
+		 WHERE tenant_id = $1
+		   AND ($2 = '' OR imei LIKE $3 OR serial_number LIKE $4 OR vehicle_id LIKE $5)
+		   AND ($6 = '' OR status = $7)`+deviceDateClause,
 		tenantID,
 		query, qPattern, qPattern, qPattern,
 		status, status,
@@ -272,7 +272,7 @@ func (s *QuarantineStore) GetByID(ctx context.Context, id string) (*QuarantineEn
 	row := s.db.QueryRowContext(ctx,
 		`SELECT id, tenant_id, imei, source, raw_payload, reason, status,
 		        resolved_by, resolved_at, created_at
-		 FROM device_quarantine WHERE id = ?`, id)
+		 FROM device_quarantine WHERE id = $1`, id)
 	var e QuarantineEntry
 	if err := row.Scan(&e.ID, &e.TenantID, &e.IMEI, &e.Source,
 		&e.RawPayload, &e.Reason, &e.Status, &e.ResolvedBy, &e.ResolvedAt, &e.CreatedAt); err != nil {

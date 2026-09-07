@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 	"time"
+	appdb "transport-app/internal/database"
 
 	"transport-app/internal/settlement/domain"
 )
@@ -30,7 +31,7 @@ func (r *SQLSettlementRepository) CreateSettlement(ctx context.Context, tenantID
 	var count int
 	err = tx.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM driver_settlements
-		WHERE tenant_id = ? AND trip_id = ?`,
+		WHERE tenant_id = $1 AND trip_id = $2`,
 		tenantID, s.TripID).Scan(&count)
 	if err != nil {
 		return err
@@ -46,7 +47,7 @@ func (r *SQLSettlementRepository) CreateSettlement(ctx context.Context, tenantID
 			id, tenant_id, trip_id, driver_id, gross_fare, deductions, net_payout, status,
 			commission_rate, commission_amount, toll_adjustment, advance_deductions,
 			tds_rate, tds_amount, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
 		s.ID, tenantID, s.TripID, s.DriverID, s.GrossFare, deductions, s.NetPayout, s.Status,
 		s.CommissionRate, s.CommissionAmount, s.TollAdjustment, s.AdvanceDeductions,
 		s.TDSRate, s.TDSAmount, s.CreatedAt, s.UpdatedAt)
@@ -67,7 +68,7 @@ func (r *SQLSettlementRepository) GetSettlementByTripID(ctx context.Context, ten
 		       commission_rate, commission_amount, toll_adjustment, advance_deductions,
 		       tds_rate, tds_amount, created_at, updated_at
 		FROM driver_settlements
-		WHERE tenant_id = ? AND trip_id = ?`,
+		WHERE tenant_id = $1 AND trip_id = $2`,
 		tenantID, tripID).Scan(
 		&s.ID, &s.TenantID, &s.TripID, &s.DriverID, &s.GrossFare, &deductions, &s.NetPayout, &s.Status,
 		&commRate, &commAmt, &tollAdj, &advDed, &tdsRate, &tdsAmt, &s.CreatedAt, &s.UpdatedAt)
@@ -103,8 +104,8 @@ func (r *SQLSettlementRepository) GetSettlementByTripID(ctx context.Context, ten
 func (r *SQLSettlementRepository) ApproveSettlement(ctx context.Context, tenantID, settlementID string) error {
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE driver_settlements
-		SET status = 'approved', updated_at = ?
-		WHERE tenant_id = ? AND id = ?`,
+		SET status = 'approved', updated_at = $1
+		WHERE tenant_id = $2 AND id = $3`,
 		time.Now(), tenantID, settlementID)
 	return err
 }
@@ -120,8 +121,8 @@ func (r *SQLSettlementRepository) AppendLedgerEntry(ctx context.Context, tenantI
 	var currentBalance float64
 	err = tx.QueryRowContext(ctx, `
 		SELECT balance_after FROM driver_ledger_entries
-		WHERE tenant_id = ? AND driver_id = ?
-		ORDER BY created_at DESC, rowid DESC LIMIT 1`,
+		WHERE tenant_id = $1 AND driver_id = $2
+		ORDER BY created_at DESC, `+appdb.RowidOrder(r.db, false)+` LIMIT 1`,
 		tenantID, entry.DriverID).Scan(&currentBalance)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return err
@@ -136,7 +137,7 @@ func (r *SQLSettlementRepository) AppendLedgerEntry(ctx context.Context, tenantI
 		INSERT INTO driver_ledger_entries (
 			id, tenant_id, driver_id, trip_id, entry_type, amount, currency,
 			reference_type, reference_id, balance_after, description, created_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
 		entry.ID, tenantID, entry.DriverID, entry.TripID, string(entry.EntryType),
 		entry.Amount, entry.Currency, entry.ReferenceType, entry.ReferenceID,
 		entry.BalanceAfter, entry.Description, entry.CreatedAt)
@@ -151,7 +152,7 @@ func (r *SQLSettlementRepository) HasCompensatingLedgerEntry(ctx context.Context
 	var count int
 	err := r.db.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM driver_ledger_entries
-		WHERE tenant_id = ? AND reference_type = ? AND reference_id = ?`,
+		WHERE tenant_id = $1 AND reference_type = $2 AND reference_id = $3`,
 		tenantID, referenceType, referenceID).Scan(&count)
 	if err != nil {
 		return false, err
@@ -163,8 +164,8 @@ func (r *SQLSettlementRepository) GetDriverBalance(ctx context.Context, tenantID
 	var bal float64
 	err := r.db.QueryRowContext(ctx, `
 		SELECT balance_after FROM driver_ledger_entries
-		WHERE tenant_id = ? AND driver_id = ?
-		ORDER BY created_at DESC, rowid DESC LIMIT 1`,
+		WHERE tenant_id = $1 AND driver_id = $2
+		ORDER BY created_at DESC, `+appdb.RowidOrder(r.db, false)+` LIMIT 1`,
 		tenantID, driverID).Scan(&bal)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -186,21 +187,21 @@ func (r *SQLSettlementRepository) GetDriverWallet(ctx context.Context, tenantID,
 	var pending sql.NullFloat64
 	_ = r.db.QueryRowContext(ctx, `
 		SELECT SUM(net_payout) FROM driver_settlements
-		WHERE tenant_id = ? AND driver_id = ? AND status = 'calculated'`,
+		WHERE tenant_id = $1 AND driver_id = $2 AND status = 'calculated'`,
 		tenantID, driverID).Scan(&pending)
 
 	// 3. Paid balance (historical paid payouts)
 	var paid sql.NullFloat64
 	_ = r.db.QueryRowContext(ctx, `
 		SELECT SUM(amount) FROM payout_instructions
-		WHERE tenant_id = ? AND driver_id = ? AND status = 'paid'`,
+		WHERE tenant_id = $1 AND driver_id = $2 AND status = 'paid'`,
 		tenantID, driverID).Scan(&paid)
 
 	// 4. Held balance (payouts initiated or processing)
 	var held sql.NullFloat64
 	_ = r.db.QueryRowContext(ctx, `
 		SELECT SUM(amount) FROM payout_instructions
-		WHERE tenant_id = ? AND driver_id = ? AND status IN ('initiated', 'processing')`,
+		WHERE tenant_id = $1 AND driver_id = $2 AND status IN ('initiated', 'processing')`,
 		tenantID, driverID).Scan(&held)
 
 	// 5. Recent entries
@@ -226,8 +227,8 @@ func (r *SQLSettlementRepository) GetRecentLedgerEntries(ctx context.Context, te
 		SELECT id, tenant_id, driver_id, trip_id, entry_type, amount, currency,
 		       reference_type, reference_id, balance_after, description, created_at
 		FROM driver_ledger_entries
-		WHERE tenant_id = ? AND driver_id = ?
-		ORDER BY created_at DESC, rowid DESC LIMIT ?`,
+		WHERE tenant_id = $1 AND driver_id = $2
+		ORDER BY created_at DESC, `+appdb.RowidOrder(r.db, false)+` LIMIT $3`,
 		tenantID, driverID, limit)
 	if err != nil {
 		return nil, err
@@ -257,7 +258,7 @@ func (r *SQLSettlementRepository) CreatePayoutInstruction(ctx context.Context, t
 		INSERT INTO payout_instructions (
 			id, tenant_id, driver_id, payout_account_id, amount, currency, idempotency_key,
 			provider_payout_id, status, failure_reason, utr, initiated_at, completed_at, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
 		p.ID, tenantID, p.DriverID, p.PayoutAccountID, p.Amount, p.Currency, p.IdempotencyKey,
 		p.ProviderPayoutID, string(p.Status), p.FailureReason, p.UTR, p.InitiatedAt, p.CompletedAt, p.CreatedAt, p.UpdatedAt)
 	return err
@@ -272,7 +273,7 @@ func (r *SQLSettlementRepository) GetPayoutByIdempotencyKey(ctx context.Context,
 		SELECT id, tenant_id, driver_id, payout_account_id, amount, currency, idempotency_key,
 		       provider_payout_id, status, failure_reason, utr, initiated_at, completed_at, created_at, updated_at
 		FROM payout_instructions
-		WHERE tenant_id = ? AND idempotency_key = ?`,
+		WHERE tenant_id = $1 AND idempotency_key = $2`,
 		tenantID, idempotencyKey).Scan(
 		&p.ID, &p.TenantID, &p.DriverID, &p.PayoutAccountID, &p.Amount, &p.Currency, &p.IdempotencyKey,
 		&provID, &p.Status, &failReason, &utr, &p.InitiatedAt, &compAt, &p.CreatedAt, &p.UpdatedAt)
@@ -306,7 +307,7 @@ func (r *SQLSettlementRepository) GetPayoutByID(ctx context.Context, tenantID, p
 		SELECT id, tenant_id, driver_id, payout_account_id, amount, currency, idempotency_key,
 		       provider_payout_id, status, failure_reason, utr, initiated_at, completed_at, created_at, updated_at
 		FROM payout_instructions
-		WHERE tenant_id = ? AND id = ?`,
+		WHERE tenant_id = $1 AND id = $2`,
 		tenantID, payoutID).Scan(
 		&p.ID, &p.TenantID, &p.DriverID, &p.PayoutAccountID, &p.Amount, &p.Currency, &p.IdempotencyKey,
 		&provID, &p.Status, &failReason, &utr, &p.InitiatedAt, &compAt, &p.CreatedAt, &p.UpdatedAt)
@@ -340,7 +341,7 @@ func (r *SQLSettlementRepository) GetPayoutByIDGlobal(ctx context.Context, payou
 		SELECT id, tenant_id, driver_id, payout_account_id, amount, currency, idempotency_key,
 		       provider_payout_id, status, failure_reason, utr, initiated_at, completed_at, created_at, updated_at
 		FROM payout_instructions
-		WHERE id = ?`,
+		WHERE id = $1`,
 		payoutID).Scan(
 		&p.ID, &p.TenantID, &p.DriverID, &p.PayoutAccountID, &p.Amount, &p.Currency, &p.IdempotencyKey,
 		&provID, &p.Status, &failReason, &utr, &p.InitiatedAt, &compAt, &p.CreatedAt, &p.UpdatedAt)
@@ -374,10 +375,10 @@ func (r *SQLSettlementRepository) UpdatePayoutStatus(ctx context.Context, tenant
 
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE payout_instructions
-		SET status = ?, provider_payout_id = COALESCE(?, provider_payout_id),
-		    utr = COALESCE(?, utr), failure_reason = COALESCE(?, failure_reason),
-		    completed_at = COALESCE(?, completed_at), updated_at = ?
-		WHERE tenant_id = ? AND id = ?`,
+		SET status = $1, provider_payout_id = COALESCE($2, provider_payout_id),
+		    utr = COALESCE($3, utr), failure_reason = COALESCE($4, failure_reason),
+		    completed_at = COALESCE($5, completed_at), updated_at = $6
+		WHERE tenant_id = $7 AND id = $8`,
 		string(status), providerPayoutID, utr, failureReason, completedAt, now, tenantID, payoutID)
 	return err
 }
@@ -385,7 +386,7 @@ func (r *SQLSettlementRepository) UpdatePayoutStatus(ctx context.Context, tenant
 func (r *SQLSettlementRepository) RecordProviderEvent(ctx context.Context, tenantID, provider, eventID, eventType, payload string) error {
 	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO provider_events (id, tenant_id, provider, provider_event_id, event_type, payload, processed_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		"pe_"+eventID, tenantID, provider, eventID, eventType, payload, time.Now())
 	return err
 }
@@ -394,7 +395,7 @@ func (r *SQLSettlementRepository) IsProviderEventProcessed(ctx context.Context, 
 	var count int
 	err := r.db.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM provider_events
-		WHERE provider = ? AND provider_event_id = ?`,
+		WHERE provider = $1 AND provider_event_id = $2`,
 		provider, eventID).Scan(&count)
 	if err != nil {
 		return false, err
@@ -405,15 +406,15 @@ func (r *SQLSettlementRepository) IsProviderEventProcessed(ctx context.Context, 
 func (r *SQLSettlementRepository) IsDriverPayoutAccountVerified(ctx context.Context, tenantID, driverID string) (bool, string, error) {
 	var id, status string
 	err := r.db.QueryRowContext(ctx, `
-		SELECT id, status FROM driver_payout_accounts
-		WHERE tenant_id = ? AND driver_id = ? AND is_primary = 1
+		SELECT id, verification_status FROM driver_payout_accounts
+		WHERE tenant_id = $1 AND driver_id = $2 AND is_primary = 1
 		LIMIT 1`,
 		tenantID, driverID).Scan(&id, &status)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			// Fallback: check legacy drivers.bank_details if present
 			var bank sql.NullString
-			_ = r.db.QueryRowContext(ctx, `SELECT bank_details FROM drivers WHERE tenant_id = ? AND id = ?`, tenantID, driverID).Scan(&bank)
+			_ = r.db.QueryRowContext(ctx, `SELECT bank_details FROM drivers WHERE tenant_id = $1 AND id = $2`, tenantID, driverID).Scan(&bank)
 			if bank.Valid && len(bank.String) > 5 {
 				return true, "legacy_account", nil
 			}
@@ -422,4 +423,24 @@ func (r *SQLSettlementRepository) IsDriverPayoutAccountVerified(ctx context.Cont
 		return false, "", err
 	}
 	return status == "verified", id, nil
+}
+
+// HasLegacySettlementLines is the gap-2 dual-write cross-check: it SELECTs from
+// settlement_lines, a table only the legacy trip-close flow
+// (internal/service DriverSettlementService.GenerateSettlement) writes. The
+// wallet/payout rail shares driver_settlements/driver_ledger_entries with that
+// flow, so a true result means the trip is already accounted for. Callers must
+// fail open on error (e.g. table absent on older DBs): warn and continue, never
+// block settlement creation. settlement_lines carries no tenant column, so the
+// check is trip-scoped. No migration edits; read-only query.
+func (r *SQLSettlementRepository) HasLegacySettlementLines(ctx context.Context, tripID string) (bool, error) {
+	if tripID == "" {
+		return false, nil
+	}
+	var count int
+	if err := r.db.QueryRowContext(ctx,
+		`SELECT COUNT(*) FROM settlement_lines WHERE trip_id = $1`, tripID).Scan(&count); err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

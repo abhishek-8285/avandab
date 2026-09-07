@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	appdb "transport-app/internal/database"
 
 	_ "modernc.org/sqlite"
 )
@@ -69,9 +70,9 @@ INSERT INTO error_reports (
     severity, message, stack_trace, environment, app_version,
     request_id, metadata,
     occurrences, first_seen, last_seen, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
-ON CONFLICT(fingerprint, tenant_id) DO UPDATE SET
-    occurrences = occurrences + 1,
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 1, $15, $16, $17)
+ON CONFLICT (fingerprint, tenant_id) DO UPDATE SET
+    occurrences = error_reports.occurrences + 1,
     last_seen = excluded.last_seen,
     status_code = excluded.status_code,
     stack_trace = CASE WHEN excluded.stack_trace != '' THEN excluded.stack_trace ELSE error_reports.stack_trace END,
@@ -102,7 +103,7 @@ SELECT id, fingerprint, tenant_id, COALESCE(user_id,''), url, method, status_cod
        severity, message, COALESCE(stack_trace,''), environment, app_version,
        COALESCE(request_id,''), COALESCE(metadata,''),
        occurrences, first_seen, last_seen, created_at
-FROM error_reports WHERE fingerprint = ? AND tenant_id = ?`, fingerprint, r.TenantID)
+FROM error_reports WHERE fingerprint = $1 AND tenant_id = $2`, fingerprint, r.TenantID)
 
 	var merged ErrorReport
 	var severity, created, firstSeenStr, lastSeenStr, metaStr string
@@ -131,7 +132,7 @@ func (s *SQLiteStore) HasOpenIncident(ctx context.Context, fingerprint, tenantID
 	err := s.db.QueryRowContext(ctx, `
 SELECT COUNT(*) FROM incidents i
 JOIN error_reports e ON e.id = i.error_id
-WHERE e.fingerprint = ? AND e.tenant_id = ? AND i.status IN ('OPEN','ASSIGNED')`,
+WHERE e.fingerprint = $1 AND e.tenant_id = $2 AND i.status IN ('OPEN','ASSIGNED')`,
 		fingerprint, tenantID).Scan(&n)
 	return n > 0, err
 }
@@ -139,7 +140,7 @@ WHERE e.fingerprint = ? AND e.tenant_id = ? AND i.status IN ('OPEN','ASSIGNED')`
 func (s *SQLiteStore) CreateIncident(ctx context.Context, inc Incident) error {
 	_, err := s.db.ExecContext(ctx, `
 INSERT INTO incidents (id, error_id, tenant_id, status, severity, assigned_to, root_cause, created, resolved_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULL)`,
 		inc.ID, inc.ErrorID, inc.TenantID, inc.Status, string(inc.Severity),
 		inc.AssignedTo, inc.RootCause, inc.Created.UTC().Format(time.RFC3339))
 	return err
@@ -148,7 +149,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL)`,
 func (s *SQLiteStore) GetIncident(ctx context.Context, id string) (Incident, error) {
 	row := s.db.QueryRowContext(ctx, `
 SELECT id, error_id, tenant_id, status, severity, assigned_to, root_cause, created, resolved_at
-FROM incidents WHERE id = ?`, id)
+FROM incidents WHERE id = $1`, id)
 	return scanIncident(row.Scan)
 }
 
@@ -158,8 +159,8 @@ func (s *SQLiteStore) ResolveIncident(ctx context.Context, id, tenantID, status,
 		resolvedAt = time.Now().UTC().Format(time.RFC3339)
 	}
 	res, err := s.db.ExecContext(ctx, `
-UPDATE incidents SET status = ?, assigned_to = ?, root_cause = ?, resolved_at = ?
-WHERE id = ? AND tenant_id = ?`, status, assignedTo, rootCause, resolvedAt, id, tenantID)
+UPDATE incidents SET status = $1, assigned_to = $2, root_cause = $3, resolved_at = $4
+WHERE id = $5 AND tenant_id = $6`, status, assignedTo, rootCause, resolvedAt, id, tenantID)
 	if err != nil {
 		return err
 	}
@@ -194,7 +195,11 @@ func (s *SQLiteStore) ListErrors(ctx context.Context, f ErrorFilter) ([]ErrorRep
 ORDER BY last_seen DESC LIMIT ? OFFSET ?`
 	args = append(args, clampLimit(f.Limit), max(f.Offset, 0))
 
-	rows, err := s.db.QueryContext(ctx, q, args...)
+	rebound, rerr := appdb.Rebind(q)
+	if rerr != nil {
+		return nil, rerr
+	}
+	rows, err := s.db.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +270,11 @@ func (s *SQLiteStore) ListIncidents(ctx context.Context, f IncidentFilter) ([]In
 	q += ` ORDER BY created DESC LIMIT ? OFFSET ?`
 	args = append(args, clampLimit(f.Limit), max(f.Offset, 0))
 
-	rows, err := s.db.QueryContext(ctx, q, args...)
+	rebound, rerr := appdb.Rebind(q)
+	if rerr != nil {
+		return nil, rerr
+	}
+	rows, err := s.db.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, err
 	}

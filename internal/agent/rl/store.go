@@ -1,12 +1,14 @@
 package rl
 
 import (
+	"context"
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"time"
+	appdb "transport-app/internal/database"
 
 	_ "modernc.org/sqlite"
 )
@@ -176,8 +178,8 @@ func (s *Store) SaveEpisode(e *Episode) error {
 	if e.CreatedAt == "" {
 		e.CreatedAt = now()
 	}
-	_, err = s.db.Exec(`INSERT INTO agent_episodes (id, user_id, agent_name, query, answer, reward, status, turn_count, messages_json, traces_json, created_at)
-		VALUES (?, ?, ?, ?, ?, 0, 'pending', ?, ?, ?, ?)`,
+	_, err = s.db.ExecContext(context.Background(), `INSERT INTO agent_episodes (id, user_id, agent_name, query, answer, reward, status, turn_count, messages_json, traces_json, created_at)
+		VALUES ($1, $2, $3, $4, $5, 0, 'pending', $6, $7, $8, $9)`,
 		e.ID, e.UserID, e.AgentName, e.Query, e.Answer, e.TurnCount, e.Messages, traces, e.CreatedAt)
 	return err
 }
@@ -203,28 +205,28 @@ func (s *Store) RecordEpisodeTx(e *Episode, rewards []RewardSignal, toolCalls []
 	if e.CreatedAt == "" {
 		e.CreatedAt = now()
 	}
-	if _, err := tx.Exec(`INSERT INTO agent_episodes (id, user_id, agent_name, query, answer, reward, status, turn_count, messages_json, traces_json, created_at)
-		VALUES (?, ?, ?, ?, ?, 0, 'pending', ?, ?, ?, ?)`,
+	if _, err := tx.ExecContext(context.Background(), `INSERT INTO agent_episodes (id, user_id, agent_name, query, answer, reward, status, turn_count, messages_json, traces_json, created_at)
+		VALUES ($1, $2, $3, $4, $5, 0, 'pending', $6, $7, $8, $9)`,
 		e.ID, e.UserID, e.AgentName, e.Query, e.Answer, e.TurnCount, e.Messages, traces, e.CreatedAt); err != nil {
 		return err
 	}
 	for _, r := range rewards {
-		if _, err := tx.Exec(`INSERT INTO agent_rewards (id, episode_id, signal, value, note, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+		if _, err := tx.ExecContext(context.Background(), `INSERT INTO agent_rewards (id, episode_id, signal, value, note, created_at) VALUES ($1, $2, $3, $4, $5, $6)`,
 			newID("rw-"), e.ID, r.Signal, r.Value, r.Note, now()); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(`UPDATE agent_episodes SET reward = reward + ? WHERE id = ?`, r.Value, e.ID); err != nil {
+		if _, err := tx.ExecContext(context.Background(), `UPDATE agent_episodes SET reward = reward + $1 WHERE id = $2`, r.Value, e.ID); err != nil {
 			return err
 		}
 	}
 	for _, t := range toolCalls {
-		if _, err := tx.Exec(`INSERT INTO agent_tool_stats (agent_name, tool_name, calls, failures) VALUES (?, ?, 1, ?)
-			ON CONFLICT(agent_name, tool_name) DO UPDATE SET calls = calls + 1, failures = failures + ?`,
+		if _, err := tx.ExecContext(context.Background(), `INSERT INTO agent_tool_stats (agent_name, tool_name, calls, failures) VALUES ($1, $2, 1, $3)
+			ON CONFLICT (agent_name, tool_name) DO UPDATE SET calls = calls + 1, failures = failures + $4`,
 			e.AgentName, t.ToolName, boolToInt(!t.OK), boolToInt(!t.OK)); err != nil {
 			return err
 		}
 	}
-	if _, err := tx.Exec(`UPDATE agent_episodes SET status = 'rewarded' WHERE id = ? AND status = 'pending'`, e.ID); err != nil {
+	if _, err := tx.ExecContext(context.Background(), `UPDATE agent_episodes SET status = 'rewarded' WHERE id = $1 AND status = 'pending'`, e.ID); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -247,11 +249,11 @@ func (s *Store) AddReward(episodeID, signal, note string, value float64) error {
 	}
 	defer tx.Rollback()
 
-	if _, err := tx.Exec(`INSERT INTO agent_rewards (id, episode_id, signal, value, note, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+	if _, err := tx.ExecContext(context.Background(), `INSERT INTO agent_rewards (id, episode_id, signal, value, note, created_at) VALUES ($1, $2, $3, $4, $5, $6)`,
 		newID("rw-"), episodeID, signal, value, note, now()); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(`UPDATE agent_episodes SET reward = reward + ? WHERE id = ?`, value, episodeID); err != nil {
+	if _, err := tx.ExecContext(context.Background(), `UPDATE agent_episodes SET reward = reward + $1 WHERE id = $2`, value, episodeID); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -259,15 +261,15 @@ func (s *Store) AddReward(episodeID, signal, note string, value float64) error {
 
 // FinishEpisode marks the episode rewarded (finalize learning).
 func (s *Store) FinishEpisode(episodeID string) error {
-	_, err := s.db.Exec(`UPDATE agent_episodes SET status = 'rewarded' WHERE id = ? AND status = 'pending'`, episodeID)
+	_, err := s.db.ExecContext(context.Background(), `UPDATE agent_episodes SET status = 'rewarded' WHERE id = $1 AND status = 'pending'`, episodeID)
 	return err
 }
 
 // TopEpisodes returns the highest-reward episodes for an agent (for few-shot replay).
 func (s *Store) TopEpisodes(agentName string, minReward float64, limit int) ([]Episode, error) {
-	rows, err := s.db.Query(`SELECT id, user_id, agent_name, query, answer, reward, turn_count, messages_json, traces_json, created_at
-		FROM agent_episodes WHERE agent_name = ? AND reward >= ? AND status = 'rewarded'
-		ORDER BY reward DESC, created_at DESC LIMIT ?`, agentName, minReward, limit)
+	rows, err := s.db.QueryContext(context.Background(), `SELECT id, user_id, agent_name, query, answer, reward, turn_count, messages_json, traces_json, created_at
+		FROM agent_episodes WHERE agent_name = $1 AND reward >= $2 AND status = 'rewarded'
+		ORDER BY reward DESC, created_at DESC LIMIT $3`, agentName, minReward, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -293,8 +295,8 @@ func (s *Store) CreateAction(a *Action) error {
 	a.ID = newID("act-")
 	a.Status = ActionPending
 	a.CreatedAt = now()
-	_, err := s.db.Exec(`INSERT INTO agent_actions (id, episode_id, tool_name, args_json, summary, status, requested_by, created_at)
-		VALUES (?, ?, ?, ?, ?, 'pending', ?, ?)`,
+	_, err := s.db.ExecContext(context.Background(), `INSERT INTO agent_actions (id, episode_id, tool_name, args_json, summary, status, requested_by, created_at)
+		VALUES ($1, $2, $3, $4, $5, 'pending', $6, $7)`,
 		a.ID, a.EpisodeID, a.ToolName, a.ArgsJSON, a.Summary, a.RequestedBy, a.CreatedAt)
 	return err
 }
@@ -304,7 +306,7 @@ func (s *Store) GetAction(id string) (*Action, error) {
 	var a Action
 	err := s.db.QueryRow(`SELECT id, episode_id, tool_name, args_json, summary, status,
 		COALESCE(requested_by,''), COALESCE(decided_by,''), COALESCE(decided_at,''), COALESCE(result,''), COALESCE(error,''), created_at
-		FROM agent_actions WHERE id = ?`, id).
+		FROM agent_actions WHERE id = $1`, id).
 		Scan(&a.ID, &a.EpisodeID, &a.ToolName, &a.ArgsJSON, &a.Summary, &a.Status, &a.RequestedBy, &a.DecidedBy, &a.DecidedAt, &a.Result, &a.Error, &a.CreatedAt)
 	if err != nil {
 		return nil, err
@@ -325,7 +327,11 @@ func (s *Store) ListActions(status ActionStatus, limit int) ([]Action, error) {
 	q += ` ORDER BY created_at DESC LIMIT ?`
 	args = append(args, limit)
 
-	rows, err := s.db.Query(q, args...)
+	rebound, rerr := appdb.Rebind(q)
+	if rerr != nil {
+		return nil, rerr
+	}
+	rows, err := s.db.QueryContext(context.Background(), rebound, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -347,7 +353,7 @@ func (s *Store) ListActions(status ActionStatus, limit int) ([]Action, error) {
 // decided, or being decided concurrently) so a mutating tool can never run
 // twice from double-approval.
 func (s *Store) ClaimAction(id, decidedBy, decidedAt string) (bool, error) {
-	res, err := s.db.Exec(`UPDATE agent_actions SET status = 'approved', decided_by = ?, decided_at = ? WHERE id = ? AND status = 'pending'`,
+	res, err := s.db.ExecContext(context.Background(), `UPDATE agent_actions SET status = 'approved', decided_by = $1, decided_at = $2 WHERE id = $3 AND status = 'pending'`,
 		decidedBy, decidedAt, id)
 	if err != nil {
 		return false, err
@@ -364,7 +370,7 @@ func (s *Store) ClaimAction(id, decidedBy, decidedAt string) (bool, error) {
 // applies when the action is still in the claimed state, so concurrent
 // approve/reject can never double-execute or overwrite each other.
 func (s *Store) UpdateActionDecision(a *Action, expect ActionStatus) (bool, error) {
-	res, err := s.db.Exec(`UPDATE agent_actions SET status = ?, decided_by = ?, decided_at = ?, result = ?, error = ? WHERE id = ? AND status = ?`,
+	res, err := s.db.ExecContext(context.Background(), `UPDATE agent_actions SET status = $1, decided_by = $2, decided_at = $3, result = $4, error = $5 WHERE id = $6 AND status = $7`,
 		a.Status, a.DecidedBy, a.DecidedAt, a.Result, a.Error, a.ID, expect)
 	if err != nil {
 		return false, err
@@ -378,15 +384,15 @@ func (s *Store) UpdateActionDecision(a *Action, expect ActionStatus) (bool, erro
 
 // RecordToolCall updates per-agent tool usage stats.
 func (s *Store) RecordToolCall(agentName, toolName string, ok bool) error {
-	_, err := s.db.Exec(`INSERT INTO agent_tool_stats (agent_name, tool_name, calls, failures) VALUES (?, ?, 1, ?)
-		ON CONFLICT(agent_name, tool_name) DO UPDATE SET calls = calls + 1, failures = failures + ?`,
+	_, err := s.db.ExecContext(context.Background(), `INSERT INTO agent_tool_stats (agent_name, tool_name, calls, failures) VALUES ($1, $2, 1, $3)
+		ON CONFLICT (agent_name, tool_name) DO UPDATE SET calls = calls + 1, failures = failures + $4`,
 		agentName, toolName, boolToInt(!ok), boolToInt(!ok))
 	return err
 }
 
 // ToolStats returns per-agent tool failure rates.
 func (s *Store) ToolStats(agentName string) ([]ToolStat, error) {
-	rows, err := s.db.Query(`SELECT tool_name, calls, failures FROM agent_tool_stats WHERE agent_name = ? ORDER BY tool_name`, agentName)
+	rows, err := s.db.QueryContext(context.Background(), `SELECT tool_name, calls, failures FROM agent_tool_stats WHERE agent_name = $1 ORDER BY tool_name`, agentName)
 	if err != nil {
 		return nil, err
 	}

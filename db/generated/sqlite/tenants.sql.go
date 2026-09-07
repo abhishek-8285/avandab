@@ -132,7 +132,7 @@ func (q *Queries) ListTenants(ctx context.Context) ([]Tenant, error) {
 }
 
 const setTenantStatus = `-- name: SetTenantStatus :exec
-UPDATE tenants SET status = ?, updated_at = datetime('now') WHERE id = ?
+UPDATE tenants SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?
 `
 
 type SetTenantStatusParams struct {

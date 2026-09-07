@@ -36,7 +36,7 @@ func (h *DriverMoneyHandlers) driverIDForUser(r *http.Request) (string, bool) {
 	var id string
 	err := h.db.QueryRowContext(r.Context(), `
 		SELECT id FROM drivers
-		WHERE id = ? OR email = (SELECT email FROM users WHERE id = ?)
+		WHERE id = $1 OR email = (SELECT email FROM users WHERE id = $2)
 		LIMIT 1`, session.UserID, session.UserID).Scan(&id)
 	if err != nil {
 		return "", false
@@ -69,7 +69,7 @@ func (h *DriverMoneyHandlers) Settlements(w http.ResponseWriter, r *http.Request
 	rows, err := h.db.QueryContext(r.Context(), `
 		SELECT id, trip_id, gross_fare, deductions, net_payout,
 		       status, COALESCE(tds_amount,0), paid_at
-		FROM driver_settlements WHERE driver_id = ?
+		FROM driver_settlements WHERE driver_id = $1
 		ORDER BY created_at DESC LIMIT 50`, driverID)
 	if err != nil {
 		httpx.Error(w, r, err)

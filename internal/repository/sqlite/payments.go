@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"time"
 
 	"transport-app/internal/domain"
 	"transport-app/internal/repository"
@@ -152,7 +153,10 @@ func (r *SQLRepository) GetMonthlyRevenue(ctx context.Context) ([]repository.Mon
 }
 
 func (r *SQLRepository) GetRevenueByDay(ctx context.Context) ([]repository.RevenueByDay, error) {
-	rows, err := r.Q(ctx).GetRevenueByDay(ctx, tenantIDFromCtx(ctx))
+	rows, err := r.Q(ctx).GetRevenueByDay(ctx, db.GetRevenueByDayParams{
+		TenantID: tenantIDFromCtx(ctx),
+		StartDay: time.Now().UTC().AddDate(0, 0, -29).Format("2006-01-02"),
+	})
 	if err != nil {
 		return nil, err
 	}

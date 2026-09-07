@@ -16,11 +16,11 @@ import (
 // The invoices table has no dedicated invoice_date column; the invoice date is
 // created_at (the PDF and invoice view render CreatedAt as the invoice date).
 // Timestamps are stored RFC3339 ("2026-08-15T08:00:00Z"), which SQLite date()
-// cannot parse directly — hence date(substr(col,1,10)).
+// cannot parse directly — hence substr(CAST(col AS TEXT), 1, 10).
 
 const invoiceDateClause = `
-  AND (? = '' OR date(substr(i.created_at,1,10)) >= date(?))
-  AND (? = '' OR date(substr(i.created_at,1,10)) <= date(?))`
+  AND (? = '' OR substr(CAST(i.created_at AS TEXT), 1, 10) >= substr(CAST(? AS TEXT), 1, 10))
+  AND (? = '' OR substr(CAST(i.created_at AS TEXT), 1, 10) <= substr(CAST(? AS TEXT), 1, 10))`
 
 const invoiceDateRangeSelect = `
 SELECT i.id, i.invoice_number, i.booking_id, i.customer_id, i.trip_id,
@@ -30,9 +30,9 @@ FROM invoices i
 JOIN customers c ON i.customer_id = c.id
 LEFT JOIN bookings b ON i.booking_id = b.id
 LEFT JOIN trips t ON i.trip_id = t.id
-WHERE i.tenant_id = ?
-  AND (i.invoice_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%')
-  AND (? = '' OR i.payment_status = ?)`
+WHERE i.tenant_id = $1
+  AND (i.invoice_number LIKE '%' || $2 || '%' OR c.name LIKE '%' || $3 || '%')
+  AND ($4 = '' OR i.payment_status = $5)`
 
 const invoiceDateRangeCount = `
 SELECT COUNT(*)
@@ -40,9 +40,9 @@ FROM invoices i
 JOIN customers c ON i.customer_id = c.id
 LEFT JOIN bookings b ON i.booking_id = b.id
 LEFT JOIN trips t ON i.trip_id = t.id
-WHERE i.tenant_id = ?
-  AND (i.invoice_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%')
-  AND (? = '' OR i.payment_status = ?)`
+WHERE i.tenant_id = $1
+  AND (i.invoice_number LIKE '%' || $2 || '%' OR c.name LIKE '%' || $3 || '%')
+  AND ($4 = '' OR i.payment_status = $5)`
 
 func (r *invoiceRepository) SearchReadModelsDateRange(ctx context.Context, tenantID shared.TenantID, query string, status string, from string, to string, limit int, offset int) ([]domain.InvoiceReadModel, int64, error) {
 	// "open" spans two payment states; the fixed consts below can't express it.

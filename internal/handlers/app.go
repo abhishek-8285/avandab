@@ -272,6 +272,12 @@ func parseTemplatesLang(authSrv auth.AuthorizationService, lang string) (*templa
 		"date_only": func(t time.Time) string {
 			return t.Format("02-01-2006")
 		},
+		"date_only_opt": func(t *time.Time) string {
+			if t == nil || t.IsZero() {
+				return ""
+			}
+			return t.Format("2006-01-02")
+		},
 		"lower":         strings.ToLower,
 		"upper":         strings.ToUpper,
 		"replace":       func(s, old, new string, n int) string { return strings.Replace(s, old, new, n) },

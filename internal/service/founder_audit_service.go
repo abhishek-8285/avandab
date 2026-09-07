@@ -69,7 +69,7 @@ func (s *FounderAuditService) RecordAudit(ctx context.Context, entry AuditEntry)
 	_, err := s.db.ExecContext(ctx,
 		`INSERT INTO founder_audit
 		 (id, tenant_id, actor_id, actor_role, action, resource_type, resource_id, details, ip_address, user_agent, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 		id, entry.TenantID, entry.ActorID, entry.ActorRole, entry.Action,
 		entry.ResourceType, entry.ResourceID, entry.Details, entry.IPAddress, entry.UserAgent, now)
 	if err != nil {

@@ -443,11 +443,13 @@ func (p *EmailPool) ensureDBRows() {
 		return
 	}
 	for _, e := range p.providers {
-		_, _ = p.db.ExecContext(context.Background(), `INSERT OR IGNORE INTO email_providers (provider, enabled, priority, daily_quota, monthly_quota, cost_per_1k, host, port, from_addr)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		_, _ = p.db.ExecContext(context.Background(), `INSERT INTO email_providers (provider, enabled, priority, daily_quota, monthly_quota, cost_per_1k, host, port, from_addr)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			ON CONFLICT (provider) DO NOTHING`,
 			e.spec.Name, boolToInt(e.spec.isEnabled()), e.spec.Priority, e.spec.DailyQuota, e.spec.MonthlyQuota, e.spec.CostPer1k, e.spec.Host, e.spec.Port, e.spec.From)
-		_, _ = p.db.ExecContext(context.Background(), `INSERT OR IGNORE INTO email_provider_counters (provider, daily_used, monthly_used, current_day, current_month)
-			VALUES (?, 0, 0, date('now'), strftime('%Y-%m','now'))`, e.spec.Name)
+		_, _ = p.db.ExecContext(context.Background(), `INSERT INTO email_provider_counters (provider, daily_used, monthly_used, current_day, current_month)
+			VALUES ($1, 0, 0, substr(CAST(CURRENT_TIMESTAMP AS TEXT), 1, 10), substr(CAST(CURRENT_TIMESTAMP AS TEXT), 1, 7))
+			ON CONFLICT (provider) DO NOTHING`, e.spec.Name)
 	}
 }
 
@@ -557,11 +559,11 @@ func (p *EmailPool) getQuotaUsed(provider string) (dailyUsed, monthlyUsed int) {
 	if p.db != nil {
 		var du, mu int
 		var curDay, curMonth string
-		err := p.db.QueryRowContext(context.Background(), `SELECT daily_used, monthly_used, current_day, current_month FROM email_provider_counters WHERE provider = ?`, provider).Scan(&du, &mu, &curDay, &curMonth)
+		err := p.db.QueryRowContext(context.Background(), `SELECT daily_used, monthly_used, current_day, current_month FROM email_provider_counters WHERE provider = $1`, provider).Scan(&du, &mu, &curDay, &curMonth)
 		if err != nil {
 			return 0, 0
 		}
-		// SQLite date('now')/strftime('%Y-%m','now') are UTC — compare UTC
+		// SQLite substr(CAST(CURRENT_TIMESTAMP AS TEXT), 1, 10)/substr(CAST(CURRENT_TIMESTAMP AS TEXT), 1, 7) are UTC — compare UTC
 		// dates only, otherwise the local-vs-UTC window (e.g. 00:00–05:30 IST)
 		// resets every counter to 0 and silently disables quota enforcement.
 		today := time.Now().UTC().Format("2006-01-02")
@@ -598,18 +600,18 @@ func (p *EmailPool) recordUsage(provider string, msg EmailMessage) error {
 	if p.db != nil {
 		idv := idpkg.NewUUIDGenerator().GenerateUUID()
 		_, _ = p.db.ExecContext(context.Background(), `INSERT INTO email_send_log (id, provider, recipient, subject, status, created_at)
-			VALUES (?, ?, ?, ?, 'sent', datetime('now'))`, idv, provider, msg.To, msg.Subject)
+			VALUES ($1, $2, $3, $4, 'sent', CURRENT_TIMESTAMP)`, idv, provider, msg.To, msg.Subject)
 		// Upsert counter with day/month rollover
-		_, _ = p.db.ExecContext(context.Background(), `INSERT OR IGNORE INTO email_provider_counters (provider, daily_used, monthly_used, current_day, current_month)
-			VALUES (?, 0, 0, date('now'), strftime('%Y-%m','now'))`, provider)
+		_, _ = p.db.ExecContext(context.Background(), `INSERT INTO email_provider_counters (provider, daily_used, monthly_used, current_day, current_month)
+			VALUES ($1, 0, 0, substr(CAST(CURRENT_TIMESTAMP AS TEXT), 1, 10), substr(CAST(CURRENT_TIMESTAMP AS TEXT), 1, 7))`, provider)
 		_, err := p.db.ExecContext(context.Background(), `
 			UPDATE email_provider_counters SET
-				daily_used = CASE WHEN current_day != date('now') THEN 1 ELSE daily_used + 1 END,
-				monthly_used = CASE WHEN current_month != strftime('%Y-%m','now') THEN 1 ELSE monthly_used + 1 END,
-				current_day = date('now'),
-				current_month = strftime('%Y-%m','now'),
-				updated_at = datetime('now')
-			WHERE provider = ?`, provider)
+				daily_used = CASE WHEN current_day != substr(CAST(CURRENT_TIMESTAMP AS TEXT), 1, 10) THEN 1 ELSE daily_used + 1 END,
+				monthly_used = CASE WHEN current_month != substr(CAST(CURRENT_TIMESTAMP AS TEXT), 1, 7) THEN 1 ELSE monthly_used + 1 END,
+				current_day = substr(CAST(CURRENT_TIMESTAMP AS TEXT), 1, 10),
+				current_month = substr(CAST(CURRENT_TIMESTAMP AS TEXT), 1, 7),
+				updated_at = CURRENT_TIMESTAMP
+			WHERE provider = $1`, provider)
 		return err
 	}
 	// in-memory increment with rollover
@@ -641,7 +643,7 @@ func (p *EmailPool) recordFailure(provider string, msg EmailMessage, sendErr err
 	}
 	idv := idpkg.NewUUIDGenerator().GenerateUUID()
 	_, _ = p.db.ExecContext(context.Background(), `INSERT INTO email_send_log (id, provider, recipient, subject, status, error, created_at)
-		VALUES (?, ?, ?, ?, 'failed', ?, datetime('now'))`, idv, provider, msg.To, msg.Subject, sendErr.Error())
+		VALUES ($1, $2, $3, $4, 'failed', $5, CURRENT_TIMESTAMP)`, idv, provider, msg.To, msg.Subject, sendErr.Error())
 	return nil
 }
 
@@ -707,7 +709,7 @@ func (p *EmailPool) SetProviderEnabled(name string, enabled bool) error {
 		return fmt.Errorf("email pool: unknown provider %q", name)
 	}
 	if p.db != nil {
-		_, err := p.db.ExecContext(context.Background(), `UPDATE email_providers SET enabled = ?, updated_at = datetime('now') WHERE provider = ?`, boolToInt(enabled), name)
+		_, err := p.db.ExecContext(context.Background(), `UPDATE email_providers SET enabled = $1, updated_at = CURRENT_TIMESTAMP WHERE provider = $2`, boolToInt(enabled), name)
 		if err != nil {
 			return err
 		}
@@ -732,7 +734,7 @@ func (p *EmailPool) SetProviderPriority(name string, priority int) error {
 	}
 	p.sortProvidersLocked()
 	if p.db != nil {
-		_, err := p.db.ExecContext(context.Background(), `UPDATE email_providers SET priority = ?, updated_at = datetime('now') WHERE provider = ?`, priority, name)
+		_, err := p.db.ExecContext(context.Background(), `UPDATE email_providers SET priority = $1, updated_at = CURRENT_TIMESTAMP WHERE provider = $2`, priority, name)
 		return err
 	}
 	return nil
@@ -771,7 +773,7 @@ func (p *EmailPool) SetPrimary(name string) error {
 	for i, e := range reordered {
 		e.spec.Priority = i + 1
 		if p.db != nil {
-			_, _ = p.db.ExecContext(context.Background(), `UPDATE email_providers SET priority = ?, enabled = ?, updated_at = datetime('now') WHERE provider = ?`,
+			_, _ = p.db.ExecContext(context.Background(), `UPDATE email_providers SET priority = $1, enabled = $2, updated_at = CURRENT_TIMESTAMP WHERE provider = $3`,
 				e.spec.Priority, boolToInt(e.spec.isEnabled()), e.spec.Name)
 		}
 	}
@@ -793,7 +795,7 @@ func (p *EmailPool) ListProviders() []ProviderSpec {
 // ResetUsage clears counters for a provider (admin recovery).
 func (p *EmailPool) ResetUsage(name string) error {
 	if p.db != nil {
-		_, err := p.db.ExecContext(context.Background(), `UPDATE email_provider_counters SET daily_used = 0, monthly_used = 0, current_day = date('now'), current_month = strftime('%Y-%m','now'), updated_at = datetime('now') WHERE provider = ?`, name)
+		_, err := p.db.ExecContext(context.Background(), `UPDATE email_provider_counters SET daily_used = 0, monthly_used = 0, current_day = substr(CAST(CURRENT_TIMESTAMP AS TEXT), 1, 10), current_month = substr(CAST(CURRENT_TIMESTAMP AS TEXT), 1, 7), updated_at = CURRENT_TIMESTAMP WHERE provider = $1`, name)
 		return err
 	}
 	p.mu.Lock()

@@ -106,8 +106,8 @@ func (r *SQLRepository) CountAuditLogsSince(ctx context.Context, since time.Time
 // SQLite stores timestamps as text in mixed formats (RFC3339 from Go,
 // 'YYYY-MM-DD HH:MM:SS' from datetime('now')) — only the prefix is stable.
 const auditLogDateClause = `
-  AND (? = '' OR date(substr(a.created_at,1,10)) >= date(?))
-  AND (? = '' OR date(substr(a.created_at,1,10)) <= date(?))`
+  AND (? = '' OR substr(CAST(a.created_at AS TEXT), 1, 10) >= substr(CAST(? AS TEXT), 1, 10))
+  AND (? = '' OR substr(CAST(a.created_at AS TEXT), 1, 10) <= substr(CAST(? AS TEXT), 1, 10))`
 
 // ListAuditLogsDateRange mirrors ListAuditLogs and additionally filters by a
 // free-text query over action/table/record/user and a created_at window
@@ -119,7 +119,7 @@ SELECT a.id, a.user_id, a.action, a.table_name, a.record_id, a.old_values, a.new
        u.name AS user_name
 FROM audit_logs a
 LEFT JOIN users u ON a.user_id = u.id
-WHERE (? = '' OR a.action LIKE ? OR a.table_name LIKE ? OR a.record_id LIKE ? OR u.name LIKE ?)`+auditLogDateClause+`
+WHERE ($1 = '' OR a.action LIKE $2 OR a.table_name LIKE $3 OR a.record_id LIKE $4 OR u.name LIKE $5)`+auditLogDateClause+`
 ORDER BY a.created_at DESC
 LIMIT ? OFFSET ?`,
 		query, qPattern, qPattern, qPattern, qPattern,
@@ -155,7 +155,7 @@ LIMIT ? OFFSET ?`,
 SELECT COUNT(*)
 FROM audit_logs a
 LEFT JOIN users u ON a.user_id = u.id
-WHERE (? = '' OR a.action LIKE ? OR a.table_name LIKE ? OR a.record_id LIKE ? OR u.name LIKE ?)`+auditLogDateClause,
+WHERE ($1 = '' OR a.action LIKE $2 OR a.table_name LIKE $3 OR a.record_id LIKE $4 OR u.name LIKE $5)`+auditLogDateClause,
 		query, qPattern, qPattern, qPattern, qPattern,
 		from, from, to, to,
 	).Scan(&count)

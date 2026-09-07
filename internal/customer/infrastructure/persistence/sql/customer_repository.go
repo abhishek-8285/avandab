@@ -24,7 +24,7 @@ func (r *SQLCustomerRepository) SaveQuote(ctx context.Context, tenantID string, 
 			id, tenant_id, customer_id, origin, destination, cargo_type, vehicle_type,
 			weight_kg, distance_km, base_rate, per_km_rate, estimated_toll, subtotal,
 			gst_rate, gst_amount, discount_amount, total_price, status, expires_at, created_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
 		q.ID, tenantID, q.CustomerID, q.Origin, q.Destination, q.CargoType, q.VehicleType,
 		q.WeightKg, q.DistanceKm, q.BaseRate, q.PerKmRate, q.EstimatedToll, q.Subtotal,
 		q.GSTRate, q.GSTAmount, q.DiscountAmount, q.TotalPrice, q.Status, q.ExpiresAt, q.CreatedAt)
@@ -38,7 +38,7 @@ func (r *SQLCustomerRepository) GetQuote(ctx context.Context, tenantID, quoteID 
 		       weight_kg, distance_km, base_rate, per_km_rate, estimated_toll, subtotal,
 		       gst_rate, gst_amount, discount_amount, total_price, status, expires_at, created_at
 		FROM customer_quotes
-		WHERE tenant_id = ? AND id = ?`,
+		WHERE tenant_id = $1 AND id = $2`,
 		tenantID, quoteID).Scan(
 		&q.ID, &q.TenantID, &q.CustomerID, &q.Origin, &q.Destination, &q.CargoType, &q.VehicleType,
 		&q.WeightKg, &q.DistanceKm, &q.BaseRate, &q.PerKmRate, &q.EstimatedToll, &q.Subtotal,
@@ -56,7 +56,7 @@ func (r *SQLCustomerRepository) MarkQuoteConverted(ctx context.Context, tenantID
 	_, err := r.db.ExecContext(ctx, `
 		UPDATE customer_quotes
 		SET status = 'converted'
-		WHERE tenant_id = ? AND id = ?`,
+		WHERE tenant_id = $1 AND id = $2`,
 		tenantID, quoteID)
 	return err
 }
@@ -65,7 +65,7 @@ func (r *SQLCustomerRepository) GetBookingByIdempotencyKey(ctx context.Context, 
 	var bookingID string
 	err := r.db.QueryRowContext(ctx, `
 		SELECT booking_id FROM customer_booking_details
-		WHERE tenant_id = ? AND idempotency_key = ?`,
+		WHERE tenant_id = $1 AND idempotency_key = $2`,
 		tenantID, idempotencyKey).Scan(&bookingID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -87,7 +87,7 @@ func (r *SQLCustomerRepository) CreateBookingWithDetails(ctx context.Context, te
 	// 1. Insert core booking
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO bookings (id, tenant_id, booking_number, customer_id, pickup_date, route_id, vehicle_type, passengers, cargo_weight, price, notes, status, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
 		b["id"], tenantID, b["booking_number"], b["customer_id"], b["pickup_date"], b["route_id"],
 		b["vehicle_type"], b["passengers"], b["cargo_weight"], b["price"], b["notes"], b["status"], now, now)
 	if err != nil {
@@ -101,7 +101,7 @@ func (r *SQLCustomerRepository) CreateBookingWithDetails(ctx context.Context, te
 			pickup_contact_name, pickup_contact_phone, delivery_address, delivery_lat, delivery_lng,
 			delivery_contact_name, delivery_contact_phone, scheduled_at, cargo_description, special_instructions,
 			payment_status, payment_method, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)`,
 		d["booking_id"], tenantID, d["quote_id"], d["idempotency_key"], d["pickup_address"], d["pickup_lat"], d["pickup_lng"],
 		d["pickup_contact_name"], d["pickup_contact_phone"], d["delivery_address"], d["delivery_lat"], d["delivery_lng"],
 		d["delivery_contact_name"], d["delivery_contact_phone"], d["scheduled_at"], d["cargo_description"], d["special_instructions"],
@@ -123,7 +123,7 @@ func (r *SQLCustomerRepository) CancelCustomerBooking(ctx context.Context, tenan
 	var currentStatus string
 	err = tx.QueryRowContext(ctx, `
 		SELECT status FROM bookings
-		WHERE tenant_id = ? AND id = ? AND customer_id = ?`,
+		WHERE tenant_id = $1 AND id = $2 AND customer_id = $3`,
 		tenantID, bookingID, customerID).Scan(&currentStatus)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -146,7 +146,7 @@ func (r *SQLCustomerRepository) CancelCustomerBooking(ctx context.Context, tenan
 	var tripStatus string
 	err = tx.QueryRowContext(ctx, `
 		SELECT status FROM trips
-		WHERE tenant_id = ? AND booking_id = ?
+		WHERE tenant_id = $1 AND booking_id = $2
 		ORDER BY created_at DESC LIMIT 1`,
 		tenantID, bookingID).Scan(&tripStatus)
 	if err == nil {
@@ -159,22 +159,22 @@ func (r *SQLCustomerRepository) CancelCustomerBooking(ctx context.Context, tenan
 	}
 
 	now := time.Now()
-	_, err = tx.ExecContext(ctx, `UPDATE bookings SET status = 'cancelled', updated_at = ? WHERE tenant_id = ? AND id = ?`, now, tenantID, bookingID)
+	_, err = tx.ExecContext(ctx, `UPDATE bookings SET status = 'cancelled', updated_at = $1 WHERE tenant_id = $2 AND id = $3`, now, tenantID, bookingID)
 	if err != nil {
 		return err
 	}
 
 	_, _ = tx.ExecContext(ctx, `
 		UPDATE customer_booking_details
-		SET cancellation_reason = ?, cancelled_by = ?, cancelled_at = ?, updated_at = ?
-		WHERE tenant_id = ? AND booking_id = ?`,
+		SET cancellation_reason = $1, cancelled_by = $2, cancelled_at = $3, updated_at = $4
+		WHERE tenant_id = $5 AND booking_id = $6`,
 		reason, customerID, now, now, tenantID, bookingID)
 
 	// Cancel any active dispatch offers for this booking
 	_, _ = tx.ExecContext(ctx, `
 		UPDATE dispatch_offers
-		SET status = 'cancelled', responded_at = ?
-		WHERE tenant_id = ? AND booking_id = ? AND status = 'offered'`,
+		SET status = 'cancelled', responded_at = $1
+		WHERE tenant_id = $2 AND booking_id = $3 AND status = 'offered'`,
 		now, tenantID, bookingID)
 
 	// Cascade: cancel linked trips that never started (draft/scheduled/
@@ -182,8 +182,8 @@ func (r *SQLCustomerRepository) CancelCustomerBooking(ctx context.Context, tenan
 	// do too. Without this the board keeps showing an assigned trip for a
 	// cancelled booking.
 	_, err = tx.ExecContext(ctx, `
-		UPDATE trips SET status = 'cancelled', updated_at = ?
-		WHERE tenant_id = ? AND booking_id = ?
+		UPDATE trips SET status = 'cancelled', updated_at = $1
+		WHERE tenant_id = $2 AND booking_id = $3
 		  AND status IN ('draft', 'scheduled', 'assigned')`,
 		now, tenantID, bookingID)
 	if err != nil {
@@ -208,7 +208,7 @@ func (r *SQLCustomerRepository) GetCustomerTrackingProjection(ctx context.Contex
 		       d.special_instructions, d.payment_status, d.payment_method
 		FROM bookings b
 		LEFT JOIN customer_booking_details d ON b.id = d.booking_id AND b.tenant_id = d.tenant_id
-		WHERE b.tenant_id = ? AND b.id = ? AND b.customer_id = ?`,
+		WHERE b.tenant_id = $1 AND b.id = $2 AND b.customer_id = $3`,
 		tenantID, bookingID, customerID).Scan(
 		&p.BookingID, &p.BookingNumber, &p.Status, &rawPrice, &createdAt, &updatedAt,
 		&quoteID, &idempKey, &p.Pickup.Address, &pLat, &pLng,
@@ -263,7 +263,7 @@ func (r *SQLCustomerRepository) GetCustomerTrackingProjection(ctx context.Contex
 	err = r.db.QueryRowContext(ctx, `
 		SELECT id, driver_id, vehicle_id, status
 		FROM trips
-		WHERE tenant_id = ? AND booking_id = ?
+		WHERE tenant_id = $1 AND booking_id = $2
 		ORDER BY created_at DESC LIMIT 1`,
 		tenantID, bookingID).Scan(&tripID, &driverID, &vehicleID, &tripStatus)
 	if err == nil {
@@ -271,13 +271,20 @@ func (r *SQLCustomerRepository) GetCustomerTrackingProjection(ctx context.Contex
 			p.Status = tripStatus
 		}
 
-		// Vehicle details
+		// Vehicle details (manufacturer exists only post-00126; probe it
+		// separately so this stays runnable on older DB versions).
 		var v domain.VehicleView
 		var vModel, vPlate, vType sql.NullString
 		_ = r.db.QueryRowContext(ctx, `
-			SELECT id, plate_number, model, type
-			FROM vehicles WHERE tenant_id = ? AND id = ?`,
+			SELECT id, registration_number, '' AS model, vehicle_type
+			FROM vehicles WHERE tenant_id = $1 AND id = $2`,
 			tenantID, vehicleID).Scan(&v.VehicleID, &vPlate, &vModel, &vType)
+		var maker sql.NullString
+		if merr := r.db.QueryRowContext(ctx, `
+			SELECT manufacturer FROM vehicles WHERE tenant_id = $1 AND id = $2`,
+			tenantID, vehicleID).Scan(&maker); merr == nil && maker.Valid && maker.String != "" {
+			vModel = maker
+		}
 		v.PlateNumber = vPlate.String
 		v.Model = vModel.String
 		v.VehicleType = vType.String
@@ -289,7 +296,7 @@ func (r *SQLCustomerRepository) GetCustomerTrackingProjection(ctx context.Contex
 		var dScore sql.NullFloat64
 		_ = r.db.QueryRowContext(ctx, `
 			SELECT id, first_name, phone, score
-			FROM drivers WHERE tenant_id = ? AND id = ?`,
+			FROM drivers WHERE tenant_id = $1 AND id = $2`,
 			tenantID, driverID).Scan(&d.DriverID, &dFirst, &dPhone, &dScore)
 		d.FirstName = dFirst.String
 		d.PhoneMasked = domain.MaskPhoneNumber(dPhone.String)
@@ -298,14 +305,18 @@ func (r *SQLCustomerRepository) GetCustomerTrackingProjection(ctx context.Contex
 		}
 		p.Driver = &d
 
-		// Live GPS Tracking point from driver_vehicle_latest_positions
+		// Live GPS Tracking point (latest telemetry snapshot for the vehicle;
+		// driver_vehicle_latest_positions was dropped in 00108; snapshots
+		// carry no tenant, so scope through the tenant's vehicles row).
 		var pos domain.LiveTrackingPoint
 		var speed, heading sql.NullFloat64
 		var posTime time.Time
 		err = r.db.QueryRowContext(ctx, `
-			SELECT latitude, longitude, speed_kmph, heading, recorded_at
-			FROM driver_vehicle_latest_positions
-			WHERE tenant_id = ? AND vehicle_id = ?`,
+			SELECT s.latitude, s.longitude, s.speed, s.heading, s.timestamp
+			FROM telemetry_snapshots s
+			JOIN vehicles v ON v.id = s.vehicle_id
+			WHERE v.tenant_id = $1 AND s.vehicle_id = $2
+			ORDER BY s.timestamp DESC LIMIT 1`,
 			tenantID, vehicleID).Scan(&pos.Latitude, &pos.Longitude, &speed, &heading, &posTime)
 		if err == nil {
 			if speed.Valid {
@@ -319,19 +330,45 @@ func (r *SQLCustomerRepository) GetCustomerTrackingProjection(ctx context.Contex
 		}
 	}
 
-	// 3. Load Documents (LR, E-Way Bill, POD)
+	// 3. Load Documents (POD proofs live on trip_stops; driver_documents
+	// holds driver-level docs with a different shape).
 	docRows, err := r.db.QueryContext(ctx, `
-		SELECT id, document_type, verification_status, file_path, created_at
-		FROM driver_documents
-		WHERE tenant_id = ? AND entity_type = 'trip' AND entity_id = ?`,
+		SELECT id, 'POD' AS document_type, 'verified' AS verification_status, pod_url, pod_verified_at
+		FROM trip_stops
+		WHERE tenant_id = $1 AND trip_id = $2 AND pod_url IS NOT NULL AND pod_url != ''`,
 		tenantID, tripID)
 	if err == nil {
 		defer func() { _ = docRows.Close() }()
 		for docRows.Next() {
 			var doc domain.DocumentSummary
 			var path sql.NullString
-			if scanErr := docRows.Scan(&doc.DocumentID, &doc.DocumentType, &doc.Status, &path, &doc.CreatedAt); scanErr == nil {
+			var verifiedAt sql.NullTime
+			if scanErr := docRows.Scan(&doc.DocumentID, &doc.DocumentType, &doc.Status, &path, &verifiedAt); scanErr == nil {
 				doc.URL = path.String
+				if verifiedAt.Valid {
+					doc.CreatedAt = verifiedAt.Time
+				}
+				p.Documents = append(p.Documents, doc)
+			}
+		}
+	}
+	// 3b. Uploaded POD files (files API, trip_pod type; no tenant col on
+	// files, so scope through the trip).
+	fileRows, ferr := r.db.QueryContext(ctx, `
+		SELECT f.id, 'POD' AS document_type, 'verified' AS verification_status, f.path, f.created_at
+		FROM files f
+		JOIN trips t ON t.id = f.uploadable_id
+		WHERE t.tenant_id = $1 AND f.uploadable_type = 'trip_pod' AND f.uploadable_id = $2`,
+		tenantID, tripID)
+	if ferr == nil {
+		defer func() { _ = fileRows.Close() }()
+		for fileRows.Next() {
+			var doc domain.DocumentSummary
+			var path sql.NullString
+			var created time.Time
+			if scanErr := fileRows.Scan(&doc.DocumentID, &doc.DocumentType, &doc.Status, &path, &created); scanErr == nil {
+				doc.URL = path.String
+				doc.CreatedAt = created
 				p.Documents = append(p.Documents, doc)
 			}
 		}
@@ -349,8 +386,8 @@ func (r *SQLCustomerRepository) ListCustomerBookings(ctx context.Context, tenant
 	}
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id FROM bookings
-		WHERE tenant_id = ? AND customer_id = ?
-		ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+		WHERE tenant_id = $1 AND customer_id = $2
+		ORDER BY created_at DESC LIMIT $3 OFFSET $4`,
 		tenantID, customerID, limit, offset)
 	if err != nil {
 		return nil, err

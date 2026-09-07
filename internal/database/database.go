@@ -9,14 +9,22 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql" // registers "mysql" driver
-	_ "github.com/jackc/pgx/v5/stdlib" // registers "pgx" (postgres) driver
+	"github.com/jackc/pgx/v5/stdlib"
 
 	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite" // registers "sqlite" driver
 )
+
+func init() {
+	// "pgx-rebind" speaks postgres but rewrites ?/?N to $N first, so the
+	// entire sqlite-dialect query corpus (sqlc output + hand SQL) runs
+	// unchanged. See rebind_driver.go.
+	sql.Register("pgx-rebind", WrapRebind(stdlib.GetDefaultDriver()))
+}
 
 // Driver names accepted by DATABASE_DRIVER.
 const (
@@ -28,8 +36,22 @@ const (
 // sqlDrivers maps config driver names to database/sql registration names.
 var sqlDrivers = map[string]string{
 	DriverSQLite:   "sqlite",
-	DriverPostgres: "pgx",
+	DriverPostgres: "pgx-rebind",
 	DriverMySQL:    "mysql",
+}
+
+// drivers remembers which engine each opened handle speaks, so query code
+// can branch on dialect for the handful of expressions with no portable
+// spelling (datetime arithmetic, bucket truncation). Unknown handles
+// (tests, sidecars) report sqlite semantics.
+var drivers sync.Map // map[*sql.DB]string
+
+// IsPostgres reports whether db was opened for the postgres driver.
+func IsPostgres(db *sql.DB) bool {
+	if d, ok := drivers.Load(db); ok {
+		return d == DriverPostgres
+	}
+	return false
 }
 
 // sqlitePragmas mirror the tuned startup PRAGMAs previously inline in
@@ -74,6 +96,7 @@ func Open(ctx context.Context, cfg Settings, logger *slog.Logger) (*sql.DB, erro
 	if err != nil {
 		return nil, fmt.Errorf("database: open %s: %w", driver, err)
 	}
+	drivers.Store(db, driver)
 
 	// Pool sizing: sqlite defaults preserved from the previous hardcoded
 	// values; network engines fall back to database/sql defaults unless set.
@@ -101,10 +124,8 @@ func Open(ctx context.Context, cfg Settings, logger *slog.Logger) (*sql.DB, erro
 	}
 
 	if driver == DriverSQLite {
-		for _, p := range sqlitePragmas {
-			if _, err := db.ExecContext(ctx, p); err != nil && logger != nil {
-				logger.Warn("Failed to execute pragma", "pragma", p, "error", err)
-			}
+		if err := ApplySQLitePragmas(ctx, db, logger); err != nil {
+			return nil, err
 		}
 	}
 
@@ -121,6 +142,22 @@ func Open(ctx context.Context, cfg Settings, logger *slog.Logger) (*sql.DB, erro
 	return db, nil
 }
 
+// ApplySQLitePragmas (re-)establishes the tuned SQLite posture on one pooled
+// handle. Called at connect AND after migrations: NO TRANSACTION migrations
+// (e.g. 00126's parent-table rebuild, which must run with foreign_keys OFF)
+// mutate the pragma state of the handle they run on, so the posture is
+// re-asserted post-migration rather than trusted across it.
+func ApplySQLitePragmas(ctx context.Context, db *sql.DB, logger *slog.Logger) error {
+	for _, p := range sqlitePragmas {
+		if _, err := db.ExecContext(ctx, p); err != nil {
+			if logger != nil {
+				logger.Warn("Failed to execute pragma", "pragma", p, "error", err)
+			}
+		}
+	}
+	return nil
+}
+
 // GooseDialect maps a config driver name to the goose migration dialect.
 func GooseDialect(driver string) goose.Dialect {
 	switch normalizeDriver(driver) {
@@ -131,6 +168,16 @@ func GooseDialect(driver string) goose.Dialect {
 	default:
 		return goose.DialectSQLite3
 	}
+}
+
+// MigrationDir returns the embedded migrations subdirectory for a driver.
+// sqlite runs the original chain ("migrations", frozen); postgres runs the
+// version-locked PG port ("migrations_pg"). Same version numbers both sides.
+func MigrationDir(driver string) string {
+	if normalizeDriver(driver) == DriverPostgres {
+		return "migrations_pg"
+	}
+	return "migrations"
 }
 
 func normalizeDriver(d string) string {

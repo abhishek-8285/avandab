@@ -61,7 +61,7 @@ func (r *GeofenceRepository) ListBoundForVehicle(ctx context.Context, tenantID, 
 		        g.created_by, g.created_at, g.updated_at
 		 FROM geofences g
 		 JOIN vehicle_geofences vg ON vg.geofence_id = g.id
-		 WHERE vg.vehicle_id = ? AND g.tenant_id = ? AND g.is_active = 1
+		 WHERE vg.vehicle_id = $1 AND g.tenant_id = $2 AND g.is_active = 1
 		 ORDER BY g.priority DESC, g.name`,
 		vehicleID, tenantID)
 	if err != nil {
@@ -87,7 +87,7 @@ func (r *GeofenceRepository) Insert(ctx context.Context, g domain.Geofence) erro
 		`INSERT INTO geofences
 		 (id, tenant_id, name, kind, shape, center_lat, center_lng, radius_m,
 		  polygon, route_name, priority, is_active, created_by)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
 		g.ID, g.TenantID, g.Name, g.Kind, g.Shape,
 		nullIfZero(g.CenterLat), nullIfZero(g.CenterLng), nullIfZero(g.RadiusM),
 		polygonOrNull(polygon), g.RouteName, g.Priority, boolToInt(g.IsActive), g.CreatedBy)
@@ -115,10 +115,10 @@ func (r *GeofenceRepository) Update(ctx context.Context, g domain.Geofence) erro
 	}
 	_, err := db.ExecContext(ctx,
 		`UPDATE geofences
-		 SET name = ?, kind = ?, shape = ?, center_lat = ?, center_lng = ?,
-		     radius_m = ?, polygon = ?, route_name = ?, priority = ?,
-		     is_active = ?, updated_at = CURRENT_TIMESTAMP
-		 WHERE id = ? AND tenant_id = ?`,
+		 SET name = $1, kind = $2, shape = $3, center_lat = $4, center_lng = $5,
+		     radius_m = $6, polygon = $7, route_name = $8, priority = $9,
+		     is_active = $10, updated_at = CURRENT_TIMESTAMP
+		 WHERE id = $11 AND tenant_id = $12`,
 		g.Name, g.Kind, g.Shape,
 		nullIfZero(g.CenterLat), nullIfZero(g.CenterLng), nullIfZero(g.RadiusM),
 		polygonOrNull(polygon), g.RouteName, g.Priority,
@@ -134,7 +134,7 @@ func (r *GeofenceRepository) SoftDelete(ctx context.Context, tenantID, id string
 	db := r.dbFromContext(ctx)
 	_, err := db.ExecContext(ctx,
 		`UPDATE geofences SET is_active = 0, updated_at = CURRENT_TIMESTAMP
-		 WHERE id = ? AND tenant_id = ?`,
+		 WHERE id = $1 AND tenant_id = $2`,
 		id, tenantID)
 	if err != nil {
 		return fmt.Errorf("soft delete geofence: %w", err)

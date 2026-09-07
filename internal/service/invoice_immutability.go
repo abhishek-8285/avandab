@@ -27,7 +27,7 @@ func (s *InvoiceService) invoiceIRN(ctx context.Context, id domain.InvoiceID) st
 	}
 	var irn sql.NullString
 	err := dbGetter.DB().QueryRowContext(ctx,
-		`SELECT irn FROM invoices WHERE id = ? AND tenant_id = ?`,
+		`SELECT irn FROM invoices WHERE id = $1 AND tenant_id = $2`,
 		string(id), string(shared.TenantIDFromContext(ctx))).Scan(&irn)
 	if err != nil || !irn.Valid {
 		return ""

@@ -14,25 +14,23 @@ import (
 const countUsers = `-- name: CountUsers :one
 SELECT COUNT(*) AS count
 FROM users
-WHERE tenant_id = ?
-  AND (name LIKE '%' || ? || '%' OR email LIKE '%' || ? || '%')
-  AND (? = '' OR status = ?)
+WHERE tenant_id = ?1
+  AND (lower(name) LIKE '%' || lower(?2) || '%' OR lower(email) LIKE '%' || lower(?2) || '%')
+  AND (?3 = '' OR status = ?4)
 `
 
 type CountUsersParams struct {
-	TenantID string         `json:"tenant_id"`
-	Column2  sql.NullString `json:"column_2"`
-	Column3  sql.NullString `json:"column_3"`
-	Column4  interface{}    `json:"column_4"`
-	Status   string         `json:"status"`
+	TenantID  string      `json:"tenant_id"`
+	Search    string      `json:"search"`
+	StatusAll interface{} `json:"status_all"`
+	Status    string      `json:"status"`
 }
 
 func (q *Queries) CountUsers(ctx context.Context, arg CountUsersParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, countUsers,
 		arg.TenantID,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
+		arg.Search,
+		arg.StatusAll,
 		arg.Status,
 	)
 	var count int64
@@ -274,21 +272,20 @@ SELECT u.id, u.email, u.tenant_id, u.name, u.phone, u.role_id, u.status, u.last_
        r.name AS role_name
 FROM users u
 JOIN roles r ON u.role_id = r.id
-WHERE u.tenant_id = ?
-  AND (u.name LIKE '%' || ? || '%' OR u.email LIKE '%' || ? || '%')
-  AND (? = '' OR u.status = ?)
+WHERE u.tenant_id = ?1
+  AND (lower(u.name) LIKE '%' || lower(?2) || '%' OR lower(u.email) LIKE '%' || lower(?2) || '%')
+  AND (?3 = '' OR u.status = ?4)
 ORDER BY u.created_at DESC
-LIMIT ? OFFSET ?
+LIMIT ?6 OFFSET ?5
 `
 
 type SearchUsersParams struct {
-	TenantID string         `json:"tenant_id"`
-	Column2  sql.NullString `json:"column_2"`
-	Column3  sql.NullString `json:"column_3"`
-	Column4  interface{}    `json:"column_4"`
-	Status   string         `json:"status"`
-	Limit    int64          `json:"limit"`
-	Offset   int64          `json:"offset"`
+	TenantID  string      `json:"tenant_id"`
+	Search    string      `json:"search"`
+	StatusAll interface{} `json:"status_all"`
+	Status    string      `json:"status"`
+	Offset    int64       `json:"offset"`
+	Limit     int64       `json:"limit"`
 }
 
 type SearchUsersRow struct {
@@ -309,12 +306,11 @@ type SearchUsersRow struct {
 func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]SearchUsersRow, error) {
 	rows, err := q.db.QueryContext(ctx, searchUsers,
 		arg.TenantID,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
+		arg.Search,
+		arg.StatusAll,
 		arg.Status,
-		arg.Limit,
 		arg.Offset,
+		arg.Limit,
 	)
 	if err != nil {
 		return nil, err
@@ -352,7 +348,7 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Sea
 
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
-SET email = ?, name = ?, phone = ?, role_id = ?, status = ?, updated_at = datetime('now')
+SET email = ?, name = ?, phone = ?, role_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ?
 RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
 `
@@ -410,7 +406,7 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 
 const updateUserLastLogin = `-- name: UpdateUserLastLogin :one
 UPDATE users
-SET last_login_at = datetime('now')
+SET last_login_at = CURRENT_TIMESTAMP
 WHERE id = ?
 RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
 `
@@ -452,7 +448,7 @@ func (q *Queries) UpdateUserLastLogin(ctx context.Context, id string) (UpdateUse
 
 const updateUserPassword = `-- name: UpdateUserPassword :one
 UPDATE users
-SET password_hash = ?, updated_at = datetime('now')
+SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ?
 RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
 `
@@ -499,7 +495,7 @@ func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPassword
 
 const updateUserThemePreference = `-- name: UpdateUserThemePreference :one
 UPDATE users
-SET theme_preference = ?, updated_at = datetime('now')
+SET theme_preference = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ?
 RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
 `

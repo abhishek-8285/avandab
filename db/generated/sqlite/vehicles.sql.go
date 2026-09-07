@@ -14,28 +14,35 @@ import (
 const countVehicles = `-- name: CountVehicles :one
 SELECT COUNT(*) AS count
 FROM vehicles
-WHERE tenant_id = ?
-  AND (registration_number LIKE '%' || ? || '%' OR vehicle_number LIKE '%' || ? || '%' OR vehicle_type LIKE '%' || ? || '%')
-  AND (? = '' OR status = ?)
+WHERE tenant_id = ?1
+  AND (lower(registration_number) LIKE '%' || lower(?2) || '%' OR lower(vehicle_number) LIKE '%' || lower(?2) || '%' OR lower(vehicle_type) LIKE '%' || lower(?2) || '%'
+    OR lower(manufacturer) LIKE '%' || lower(?2) || '%' OR lower(model) LIKE '%' || lower(?2) || '%' OR lower(facility_id) LIKE '%' || lower(?2) || '%')
+  AND (?3 = '' OR status = ?4)
+  AND (?5 = '' OR fleet_class = ?6)
+  AND (?7 = '' OR ownership = ?8)
 `
 
 type CountVehiclesParams struct {
-	TenantID string         `json:"tenant_id"`
-	Column2  sql.NullString `json:"column_2"`
-	Column3  sql.NullString `json:"column_3"`
-	Column4  sql.NullString `json:"column_4"`
-	Column5  interface{}    `json:"column_5"`
-	Status   string         `json:"status"`
+	TenantID      string      `json:"tenant_id"`
+	Search        string      `json:"search"`
+	StatusAll     interface{} `json:"status_all"`
+	Status        string      `json:"status"`
+	FleetClassAll interface{} `json:"fleet_class_all"`
+	FleetClass    string      `json:"fleet_class"`
+	OwnershipAll  interface{} `json:"ownership_all"`
+	Ownership     string      `json:"ownership"`
 }
 
 func (q *Queries) CountVehicles(ctx context.Context, arg CountVehiclesParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, countVehicles,
 		arg.TenantID,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-		arg.Column5,
+		arg.Search,
+		arg.StatusAll,
 		arg.Status,
+		arg.FleetClassAll,
+		arg.FleetClass,
+		arg.OwnershipAll,
+		arg.Ownership,
 	)
 	var count int64
 	err := row.Scan(&count)
@@ -44,43 +51,126 @@ func (q *Queries) CountVehicles(ctx context.Context, arg CountVehiclesParams) (i
 
 const createVehicle = `-- name: CreateVehicle :one
 INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, capacity,
-    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage, tenant_id)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage, tenant_id,
+    fleet_class, ownership, fleet_number, description, manufacturer, manuf_country, model,
+    constr_year_month, acquisition_value, acquisition_currency, acquisition_date, purchase_vendor,
+    valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
+    cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
+    engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
+    volume_unit, secondary_fuel, usage_indicator)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id, registration_number, vehicle_number, vehicle_type, capacity,
     fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage,
-    tenant_id, created_at, updated_at
+    tenant_id, created_at, updated_at,
+    fleet_class, ownership, fleet_number, description, manufacturer, manuf_country, model,
+    constr_year_month, acquisition_value, acquisition_currency, acquisition_date, purchase_vendor,
+    valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
+    cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
+    engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
+    volume_unit, secondary_fuel, usage_indicator
 `
 
 type CreateVehicleParams struct {
-	ID                 string          `json:"id"`
-	RegistrationNumber string          `json:"registration_number"`
-	VehicleNumber      string          `json:"vehicle_number"`
-	VehicleType        string          `json:"vehicle_type"`
-	Capacity           int64           `json:"capacity"`
-	FuelType           string          `json:"fuel_type"`
-	InsuranceExpiry    time.Time       `json:"insurance_expiry"`
-	FitnessExpiry      time.Time       `json:"fitness_expiry"`
-	PermitExpiry       time.Time       `json:"permit_expiry"`
-	Status             string          `json:"status"`
-	CurrentMileage     sql.NullFloat64 `json:"current_mileage"`
-	TenantID           string          `json:"tenant_id"`
+	ID                  string          `json:"id"`
+	RegistrationNumber  string          `json:"registration_number"`
+	VehicleNumber       string          `json:"vehicle_number"`
+	VehicleType         string          `json:"vehicle_type"`
+	Capacity            int64           `json:"capacity"`
+	FuelType            string          `json:"fuel_type"`
+	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
+	FitnessExpiry       time.Time       `json:"fitness_expiry"`
+	PermitExpiry        time.Time       `json:"permit_expiry"`
+	Status              string          `json:"status"`
+	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	TenantID            string          `json:"tenant_id"`
+	FleetClass          string          `json:"fleet_class"`
+	Ownership           string          `json:"ownership"`
+	FleetNumber         sql.NullString  `json:"fleet_number"`
+	Description         sql.NullString  `json:"description"`
+	Manufacturer        sql.NullString  `json:"manufacturer"`
+	ManufCountry        sql.NullString  `json:"manuf_country"`
+	Model               sql.NullString  `json:"model"`
+	ConstrYearMonth     sql.NullString  `json:"constr_year_month"`
+	AcquisitionValue    sql.NullFloat64 `json:"acquisition_value"`
+	AcquisitionCurrency string          `json:"acquisition_currency"`
+	AcquisitionDate     sql.NullTime    `json:"acquisition_date"`
+	PurchaseVendor      sql.NullString  `json:"purchase_vendor"`
+	ValidFrom           sql.NullTime    `json:"valid_from"`
+	ValidTo             sql.NullTime    `json:"valid_to"`
+	FacilityID          sql.NullString  `json:"facility_id"`
+	MaintPlant          sql.NullString  `json:"maint_plant"`
+	PlanningPlant       sql.NullString  `json:"planning_plant"`
+	CompanyCode         sql.NullString  `json:"company_code"`
+	BusinessArea        sql.NullString  `json:"business_area"`
+	CostCenter          sql.NullString  `json:"cost_center"`
+	AssetNo             sql.NullString  `json:"asset_no"`
+	FleetObjectNo       sql.NullString  `json:"fleet_object_no"`
+	ChassisNo           sql.NullString  `json:"chassis_no"`
+	VehicleCategory     sql.NullString  `json:"vehicle_category"`
+	EngineNumber        sql.NullString  `json:"engine_number"`
+	EnginePower         sql.NullString  `json:"engine_power"`
+	EngineCapacity      sql.NullString  `json:"engine_capacity"`
+	CylinderCount       sql.NullInt64   `json:"cylinder_count"`
+	MaxSpeed            sql.NullFloat64 `json:"max_speed"`
+	Weight              sql.NullFloat64 `json:"weight"`
+	WeightUnit          string          `json:"weight_unit"`
+	LoadVolume          sql.NullFloat64 `json:"load_volume"`
+	VolumeUnit          sql.NullString  `json:"volume_unit"`
+	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
+	UsageIndicator      sql.NullString  `json:"usage_indicator"`
 }
 
 type CreateVehicleRow struct {
-	ID                 string          `json:"id"`
-	RegistrationNumber string          `json:"registration_number"`
-	VehicleNumber      string          `json:"vehicle_number"`
-	VehicleType        string          `json:"vehicle_type"`
-	Capacity           int64           `json:"capacity"`
-	FuelType           string          `json:"fuel_type"`
-	InsuranceExpiry    time.Time       `json:"insurance_expiry"`
-	FitnessExpiry      time.Time       `json:"fitness_expiry"`
-	PermitExpiry       time.Time       `json:"permit_expiry"`
-	Status             string          `json:"status"`
-	CurrentMileage     sql.NullFloat64 `json:"current_mileage"`
-	TenantID           string          `json:"tenant_id"`
-	CreatedAt          time.Time       `json:"created_at"`
-	UpdatedAt          time.Time       `json:"updated_at"`
+	ID                  string          `json:"id"`
+	RegistrationNumber  string          `json:"registration_number"`
+	VehicleNumber       string          `json:"vehicle_number"`
+	VehicleType         string          `json:"vehicle_type"`
+	Capacity            int64           `json:"capacity"`
+	FuelType            string          `json:"fuel_type"`
+	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
+	FitnessExpiry       time.Time       `json:"fitness_expiry"`
+	PermitExpiry        time.Time       `json:"permit_expiry"`
+	Status              string          `json:"status"`
+	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	TenantID            string          `json:"tenant_id"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+	FleetClass          string          `json:"fleet_class"`
+	Ownership           string          `json:"ownership"`
+	FleetNumber         sql.NullString  `json:"fleet_number"`
+	Description         sql.NullString  `json:"description"`
+	Manufacturer        sql.NullString  `json:"manufacturer"`
+	ManufCountry        sql.NullString  `json:"manuf_country"`
+	Model               sql.NullString  `json:"model"`
+	ConstrYearMonth     sql.NullString  `json:"constr_year_month"`
+	AcquisitionValue    sql.NullFloat64 `json:"acquisition_value"`
+	AcquisitionCurrency string          `json:"acquisition_currency"`
+	AcquisitionDate     sql.NullTime    `json:"acquisition_date"`
+	PurchaseVendor      sql.NullString  `json:"purchase_vendor"`
+	ValidFrom           sql.NullTime    `json:"valid_from"`
+	ValidTo             sql.NullTime    `json:"valid_to"`
+	FacilityID          sql.NullString  `json:"facility_id"`
+	MaintPlant          sql.NullString  `json:"maint_plant"`
+	PlanningPlant       sql.NullString  `json:"planning_plant"`
+	CompanyCode         sql.NullString  `json:"company_code"`
+	BusinessArea        sql.NullString  `json:"business_area"`
+	CostCenter          sql.NullString  `json:"cost_center"`
+	AssetNo             sql.NullString  `json:"asset_no"`
+	FleetObjectNo       sql.NullString  `json:"fleet_object_no"`
+	ChassisNo           sql.NullString  `json:"chassis_no"`
+	VehicleCategory     sql.NullString  `json:"vehicle_category"`
+	EngineNumber        sql.NullString  `json:"engine_number"`
+	EnginePower         sql.NullString  `json:"engine_power"`
+	EngineCapacity      sql.NullString  `json:"engine_capacity"`
+	CylinderCount       sql.NullInt64   `json:"cylinder_count"`
+	MaxSpeed            sql.NullFloat64 `json:"max_speed"`
+	Weight              sql.NullFloat64 `json:"weight"`
+	WeightUnit          string          `json:"weight_unit"`
+	LoadVolume          sql.NullFloat64 `json:"load_volume"`
+	VolumeUnit          sql.NullString  `json:"volume_unit"`
+	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
+	UsageIndicator      sql.NullString  `json:"usage_indicator"`
 }
 
 func (q *Queries) CreateVehicle(ctx context.Context, arg CreateVehicleParams) (CreateVehicleRow, error) {
@@ -97,6 +187,41 @@ func (q *Queries) CreateVehicle(ctx context.Context, arg CreateVehicleParams) (C
 		arg.Status,
 		arg.CurrentMileage,
 		arg.TenantID,
+		arg.FleetClass,
+		arg.Ownership,
+		arg.FleetNumber,
+		arg.Description,
+		arg.Manufacturer,
+		arg.ManufCountry,
+		arg.Model,
+		arg.ConstrYearMonth,
+		arg.AcquisitionValue,
+		arg.AcquisitionCurrency,
+		arg.AcquisitionDate,
+		arg.PurchaseVendor,
+		arg.ValidFrom,
+		arg.ValidTo,
+		arg.FacilityID,
+		arg.MaintPlant,
+		arg.PlanningPlant,
+		arg.CompanyCode,
+		arg.BusinessArea,
+		arg.CostCenter,
+		arg.AssetNo,
+		arg.FleetObjectNo,
+		arg.ChassisNo,
+		arg.VehicleCategory,
+		arg.EngineNumber,
+		arg.EnginePower,
+		arg.EngineCapacity,
+		arg.CylinderCount,
+		arg.MaxSpeed,
+		arg.Weight,
+		arg.WeightUnit,
+		arg.LoadVolume,
+		arg.VolumeUnit,
+		arg.SecondaryFuel,
+		arg.UsageIndicator,
 	)
 	var i CreateVehicleRow
 	err := row.Scan(
@@ -114,6 +239,41 @@ func (q *Queries) CreateVehicle(ctx context.Context, arg CreateVehicleParams) (C
 		&i.TenantID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.FleetClass,
+		&i.Ownership,
+		&i.FleetNumber,
+		&i.Description,
+		&i.Manufacturer,
+		&i.ManufCountry,
+		&i.Model,
+		&i.ConstrYearMonth,
+		&i.AcquisitionValue,
+		&i.AcquisitionCurrency,
+		&i.AcquisitionDate,
+		&i.PurchaseVendor,
+		&i.ValidFrom,
+		&i.ValidTo,
+		&i.FacilityID,
+		&i.MaintPlant,
+		&i.PlanningPlant,
+		&i.CompanyCode,
+		&i.BusinessArea,
+		&i.CostCenter,
+		&i.AssetNo,
+		&i.FleetObjectNo,
+		&i.ChassisNo,
+		&i.VehicleCategory,
+		&i.EngineNumber,
+		&i.EnginePower,
+		&i.EngineCapacity,
+		&i.CylinderCount,
+		&i.MaxSpeed,
+		&i.Weight,
+		&i.WeightUnit,
+		&i.LoadVolume,
+		&i.VolumeUnit,
+		&i.SecondaryFuel,
+		&i.UsageIndicator,
 	)
 	return i, err
 }
@@ -135,27 +295,68 @@ func (q *Queries) DeleteVehicle(ctx context.Context, arg DeleteVehicleParams) er
 const getAvailableVehicles = `-- name: GetAvailableVehicles :many
 SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
     fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage,
-    tenant_id, created_at, updated_at
+    tenant_id, created_at, updated_at,
+    fleet_class, ownership, fleet_number, description, manufacturer, manuf_country, model,
+    constr_year_month, acquisition_value, acquisition_currency, acquisition_date, purchase_vendor,
+    valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
+    cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
+    engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
+    volume_unit, secondary_fuel, usage_indicator
 FROM vehicles
 WHERE status = 'available' AND tenant_id = ?
 ORDER BY created_at ASC
 `
 
 type GetAvailableVehiclesRow struct {
-	ID                 string          `json:"id"`
-	RegistrationNumber string          `json:"registration_number"`
-	VehicleNumber      string          `json:"vehicle_number"`
-	VehicleType        string          `json:"vehicle_type"`
-	Capacity           int64           `json:"capacity"`
-	FuelType           string          `json:"fuel_type"`
-	InsuranceExpiry    time.Time       `json:"insurance_expiry"`
-	FitnessExpiry      time.Time       `json:"fitness_expiry"`
-	PermitExpiry       time.Time       `json:"permit_expiry"`
-	Status             string          `json:"status"`
-	CurrentMileage     sql.NullFloat64 `json:"current_mileage"`
-	TenantID           string          `json:"tenant_id"`
-	CreatedAt          time.Time       `json:"created_at"`
-	UpdatedAt          time.Time       `json:"updated_at"`
+	ID                  string          `json:"id"`
+	RegistrationNumber  string          `json:"registration_number"`
+	VehicleNumber       string          `json:"vehicle_number"`
+	VehicleType         string          `json:"vehicle_type"`
+	Capacity            int64           `json:"capacity"`
+	FuelType            string          `json:"fuel_type"`
+	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
+	FitnessExpiry       time.Time       `json:"fitness_expiry"`
+	PermitExpiry        time.Time       `json:"permit_expiry"`
+	Status              string          `json:"status"`
+	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	TenantID            string          `json:"tenant_id"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+	FleetClass          string          `json:"fleet_class"`
+	Ownership           string          `json:"ownership"`
+	FleetNumber         sql.NullString  `json:"fleet_number"`
+	Description         sql.NullString  `json:"description"`
+	Manufacturer        sql.NullString  `json:"manufacturer"`
+	ManufCountry        sql.NullString  `json:"manuf_country"`
+	Model               sql.NullString  `json:"model"`
+	ConstrYearMonth     sql.NullString  `json:"constr_year_month"`
+	AcquisitionValue    sql.NullFloat64 `json:"acquisition_value"`
+	AcquisitionCurrency string          `json:"acquisition_currency"`
+	AcquisitionDate     sql.NullTime    `json:"acquisition_date"`
+	PurchaseVendor      sql.NullString  `json:"purchase_vendor"`
+	ValidFrom           sql.NullTime    `json:"valid_from"`
+	ValidTo             sql.NullTime    `json:"valid_to"`
+	FacilityID          sql.NullString  `json:"facility_id"`
+	MaintPlant          sql.NullString  `json:"maint_plant"`
+	PlanningPlant       sql.NullString  `json:"planning_plant"`
+	CompanyCode         sql.NullString  `json:"company_code"`
+	BusinessArea        sql.NullString  `json:"business_area"`
+	CostCenter          sql.NullString  `json:"cost_center"`
+	AssetNo             sql.NullString  `json:"asset_no"`
+	FleetObjectNo       sql.NullString  `json:"fleet_object_no"`
+	ChassisNo           sql.NullString  `json:"chassis_no"`
+	VehicleCategory     sql.NullString  `json:"vehicle_category"`
+	EngineNumber        sql.NullString  `json:"engine_number"`
+	EnginePower         sql.NullString  `json:"engine_power"`
+	EngineCapacity      sql.NullString  `json:"engine_capacity"`
+	CylinderCount       sql.NullInt64   `json:"cylinder_count"`
+	MaxSpeed            sql.NullFloat64 `json:"max_speed"`
+	Weight              sql.NullFloat64 `json:"weight"`
+	WeightUnit          string          `json:"weight_unit"`
+	LoadVolume          sql.NullFloat64 `json:"load_volume"`
+	VolumeUnit          sql.NullString  `json:"volume_unit"`
+	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
+	UsageIndicator      sql.NullString  `json:"usage_indicator"`
 }
 
 func (q *Queries) GetAvailableVehicles(ctx context.Context, tenantID string) ([]GetAvailableVehiclesRow, error) {
@@ -182,6 +383,41 @@ func (q *Queries) GetAvailableVehicles(ctx context.Context, tenantID string) ([]
 			&i.TenantID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.FleetClass,
+			&i.Ownership,
+			&i.FleetNumber,
+			&i.Description,
+			&i.Manufacturer,
+			&i.ManufCountry,
+			&i.Model,
+			&i.ConstrYearMonth,
+			&i.AcquisitionValue,
+			&i.AcquisitionCurrency,
+			&i.AcquisitionDate,
+			&i.PurchaseVendor,
+			&i.ValidFrom,
+			&i.ValidTo,
+			&i.FacilityID,
+			&i.MaintPlant,
+			&i.PlanningPlant,
+			&i.CompanyCode,
+			&i.BusinessArea,
+			&i.CostCenter,
+			&i.AssetNo,
+			&i.FleetObjectNo,
+			&i.ChassisNo,
+			&i.VehicleCategory,
+			&i.EngineNumber,
+			&i.EnginePower,
+			&i.EngineCapacity,
+			&i.CylinderCount,
+			&i.MaxSpeed,
+			&i.Weight,
+			&i.WeightUnit,
+			&i.LoadVolume,
+			&i.VolumeUnit,
+			&i.SecondaryFuel,
+			&i.UsageIndicator,
 		); err != nil {
 			return nil, err
 		}
@@ -199,32 +435,80 @@ func (q *Queries) GetAvailableVehicles(ctx context.Context, tenantID string) ([]
 const getIdleVehicles = `-- name: GetIdleVehicles :many
 SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
     fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage,
-    tenant_id, created_at, updated_at
+    tenant_id, created_at, updated_at,
+    fleet_class, ownership, fleet_number, description, manufacturer, manuf_country, model,
+    constr_year_month, acquisition_value, acquisition_currency, acquisition_date, purchase_vendor,
+    valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
+    cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
+    engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
+    volume_unit, secondary_fuel, usage_indicator
 FROM vehicles
-WHERE status = 'available' AND tenant_id = ? AND updated_at < datetime('now', '-2 hours')
+WHERE status = 'available' AND tenant_id = ? AND updated_at < ?2
 ORDER BY created_at ASC
 LIMIT 10
 `
 
-type GetIdleVehiclesRow struct {
-	ID                 string          `json:"id"`
-	RegistrationNumber string          `json:"registration_number"`
-	VehicleNumber      string          `json:"vehicle_number"`
-	VehicleType        string          `json:"vehicle_type"`
-	Capacity           int64           `json:"capacity"`
-	FuelType           string          `json:"fuel_type"`
-	InsuranceExpiry    time.Time       `json:"insurance_expiry"`
-	FitnessExpiry      time.Time       `json:"fitness_expiry"`
-	PermitExpiry       time.Time       `json:"permit_expiry"`
-	Status             string          `json:"status"`
-	CurrentMileage     sql.NullFloat64 `json:"current_mileage"`
-	TenantID           string          `json:"tenant_id"`
-	CreatedAt          time.Time       `json:"created_at"`
-	UpdatedAt          time.Time       `json:"updated_at"`
+type GetIdleVehiclesParams struct {
+	TenantID    string    `json:"tenant_id"`
+	StaleBefore time.Time `json:"stale_before"`
 }
 
-func (q *Queries) GetIdleVehicles(ctx context.Context, tenantID string) ([]GetIdleVehiclesRow, error) {
-	rows, err := q.db.QueryContext(ctx, getIdleVehicles, tenantID)
+type GetIdleVehiclesRow struct {
+	ID                  string          `json:"id"`
+	RegistrationNumber  string          `json:"registration_number"`
+	VehicleNumber       string          `json:"vehicle_number"`
+	VehicleType         string          `json:"vehicle_type"`
+	Capacity            int64           `json:"capacity"`
+	FuelType            string          `json:"fuel_type"`
+	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
+	FitnessExpiry       time.Time       `json:"fitness_expiry"`
+	PermitExpiry        time.Time       `json:"permit_expiry"`
+	Status              string          `json:"status"`
+	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	TenantID            string          `json:"tenant_id"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+	FleetClass          string          `json:"fleet_class"`
+	Ownership           string          `json:"ownership"`
+	FleetNumber         sql.NullString  `json:"fleet_number"`
+	Description         sql.NullString  `json:"description"`
+	Manufacturer        sql.NullString  `json:"manufacturer"`
+	ManufCountry        sql.NullString  `json:"manuf_country"`
+	Model               sql.NullString  `json:"model"`
+	ConstrYearMonth     sql.NullString  `json:"constr_year_month"`
+	AcquisitionValue    sql.NullFloat64 `json:"acquisition_value"`
+	AcquisitionCurrency string          `json:"acquisition_currency"`
+	AcquisitionDate     sql.NullTime    `json:"acquisition_date"`
+	PurchaseVendor      sql.NullString  `json:"purchase_vendor"`
+	ValidFrom           sql.NullTime    `json:"valid_from"`
+	ValidTo             sql.NullTime    `json:"valid_to"`
+	FacilityID          sql.NullString  `json:"facility_id"`
+	MaintPlant          sql.NullString  `json:"maint_plant"`
+	PlanningPlant       sql.NullString  `json:"planning_plant"`
+	CompanyCode         sql.NullString  `json:"company_code"`
+	BusinessArea        sql.NullString  `json:"business_area"`
+	CostCenter          sql.NullString  `json:"cost_center"`
+	AssetNo             sql.NullString  `json:"asset_no"`
+	FleetObjectNo       sql.NullString  `json:"fleet_object_no"`
+	ChassisNo           sql.NullString  `json:"chassis_no"`
+	VehicleCategory     sql.NullString  `json:"vehicle_category"`
+	EngineNumber        sql.NullString  `json:"engine_number"`
+	EnginePower         sql.NullString  `json:"engine_power"`
+	EngineCapacity      sql.NullString  `json:"engine_capacity"`
+	CylinderCount       sql.NullInt64   `json:"cylinder_count"`
+	MaxSpeed            sql.NullFloat64 `json:"max_speed"`
+	Weight              sql.NullFloat64 `json:"weight"`
+	WeightUnit          string          `json:"weight_unit"`
+	LoadVolume          sql.NullFloat64 `json:"load_volume"`
+	VolumeUnit          sql.NullString  `json:"volume_unit"`
+	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
+	UsageIndicator      sql.NullString  `json:"usage_indicator"`
+}
+
+// Stale bound is a Go-side param (impl passes UTC now-2h, matching the old
+// datetime('now', '-2 hours')) so the query stays portable.
+func (q *Queries) GetIdleVehicles(ctx context.Context, arg GetIdleVehiclesParams) ([]GetIdleVehiclesRow, error) {
+	rows, err := q.db.QueryContext(ctx, getIdleVehicles, arg.TenantID, arg.StaleBefore)
 	if err != nil {
 		return nil, err
 	}
@@ -247,6 +531,41 @@ func (q *Queries) GetIdleVehicles(ctx context.Context, tenantID string) ([]GetId
 			&i.TenantID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.FleetClass,
+			&i.Ownership,
+			&i.FleetNumber,
+			&i.Description,
+			&i.Manufacturer,
+			&i.ManufCountry,
+			&i.Model,
+			&i.ConstrYearMonth,
+			&i.AcquisitionValue,
+			&i.AcquisitionCurrency,
+			&i.AcquisitionDate,
+			&i.PurchaseVendor,
+			&i.ValidFrom,
+			&i.ValidTo,
+			&i.FacilityID,
+			&i.MaintPlant,
+			&i.PlanningPlant,
+			&i.CompanyCode,
+			&i.BusinessArea,
+			&i.CostCenter,
+			&i.AssetNo,
+			&i.FleetObjectNo,
+			&i.ChassisNo,
+			&i.VehicleCategory,
+			&i.EngineNumber,
+			&i.EnginePower,
+			&i.EngineCapacity,
+			&i.CylinderCount,
+			&i.MaxSpeed,
+			&i.Weight,
+			&i.WeightUnit,
+			&i.LoadVolume,
+			&i.VolumeUnit,
+			&i.SecondaryFuel,
+			&i.UsageIndicator,
 		); err != nil {
 			return nil, err
 		}
@@ -264,7 +583,13 @@ func (q *Queries) GetIdleVehicles(ctx context.Context, tenantID string) ([]GetId
 const getVehicleByID = `-- name: GetVehicleByID :one
 SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
     fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage,
-    tenant_id, created_at, updated_at
+    tenant_id, created_at, updated_at,
+    fleet_class, ownership, fleet_number, description, manufacturer, manuf_country, model,
+    constr_year_month, acquisition_value, acquisition_currency, acquisition_date, purchase_vendor,
+    valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
+    cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
+    engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
+    volume_unit, secondary_fuel, usage_indicator
 FROM vehicles WHERE id = ? AND tenant_id = ?
 `
 
@@ -274,20 +599,55 @@ type GetVehicleByIDParams struct {
 }
 
 type GetVehicleByIDRow struct {
-	ID                 string          `json:"id"`
-	RegistrationNumber string          `json:"registration_number"`
-	VehicleNumber      string          `json:"vehicle_number"`
-	VehicleType        string          `json:"vehicle_type"`
-	Capacity           int64           `json:"capacity"`
-	FuelType           string          `json:"fuel_type"`
-	InsuranceExpiry    time.Time       `json:"insurance_expiry"`
-	FitnessExpiry      time.Time       `json:"fitness_expiry"`
-	PermitExpiry       time.Time       `json:"permit_expiry"`
-	Status             string          `json:"status"`
-	CurrentMileage     sql.NullFloat64 `json:"current_mileage"`
-	TenantID           string          `json:"tenant_id"`
-	CreatedAt          time.Time       `json:"created_at"`
-	UpdatedAt          time.Time       `json:"updated_at"`
+	ID                  string          `json:"id"`
+	RegistrationNumber  string          `json:"registration_number"`
+	VehicleNumber       string          `json:"vehicle_number"`
+	VehicleType         string          `json:"vehicle_type"`
+	Capacity            int64           `json:"capacity"`
+	FuelType            string          `json:"fuel_type"`
+	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
+	FitnessExpiry       time.Time       `json:"fitness_expiry"`
+	PermitExpiry        time.Time       `json:"permit_expiry"`
+	Status              string          `json:"status"`
+	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	TenantID            string          `json:"tenant_id"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+	FleetClass          string          `json:"fleet_class"`
+	Ownership           string          `json:"ownership"`
+	FleetNumber         sql.NullString  `json:"fleet_number"`
+	Description         sql.NullString  `json:"description"`
+	Manufacturer        sql.NullString  `json:"manufacturer"`
+	ManufCountry        sql.NullString  `json:"manuf_country"`
+	Model               sql.NullString  `json:"model"`
+	ConstrYearMonth     sql.NullString  `json:"constr_year_month"`
+	AcquisitionValue    sql.NullFloat64 `json:"acquisition_value"`
+	AcquisitionCurrency string          `json:"acquisition_currency"`
+	AcquisitionDate     sql.NullTime    `json:"acquisition_date"`
+	PurchaseVendor      sql.NullString  `json:"purchase_vendor"`
+	ValidFrom           sql.NullTime    `json:"valid_from"`
+	ValidTo             sql.NullTime    `json:"valid_to"`
+	FacilityID          sql.NullString  `json:"facility_id"`
+	MaintPlant          sql.NullString  `json:"maint_plant"`
+	PlanningPlant       sql.NullString  `json:"planning_plant"`
+	CompanyCode         sql.NullString  `json:"company_code"`
+	BusinessArea        sql.NullString  `json:"business_area"`
+	CostCenter          sql.NullString  `json:"cost_center"`
+	AssetNo             sql.NullString  `json:"asset_no"`
+	FleetObjectNo       sql.NullString  `json:"fleet_object_no"`
+	ChassisNo           sql.NullString  `json:"chassis_no"`
+	VehicleCategory     sql.NullString  `json:"vehicle_category"`
+	EngineNumber        sql.NullString  `json:"engine_number"`
+	EnginePower         sql.NullString  `json:"engine_power"`
+	EngineCapacity      sql.NullString  `json:"engine_capacity"`
+	CylinderCount       sql.NullInt64   `json:"cylinder_count"`
+	MaxSpeed            sql.NullFloat64 `json:"max_speed"`
+	Weight              sql.NullFloat64 `json:"weight"`
+	WeightUnit          string          `json:"weight_unit"`
+	LoadVolume          sql.NullFloat64 `json:"load_volume"`
+	VolumeUnit          sql.NullString  `json:"volume_unit"`
+	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
+	UsageIndicator      sql.NullString  `json:"usage_indicator"`
 }
 
 func (q *Queries) GetVehicleByID(ctx context.Context, arg GetVehicleByIDParams) (GetVehicleByIDRow, error) {
@@ -308,6 +668,41 @@ func (q *Queries) GetVehicleByID(ctx context.Context, arg GetVehicleByIDParams) 
 		&i.TenantID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.FleetClass,
+		&i.Ownership,
+		&i.FleetNumber,
+		&i.Description,
+		&i.Manufacturer,
+		&i.ManufCountry,
+		&i.Model,
+		&i.ConstrYearMonth,
+		&i.AcquisitionValue,
+		&i.AcquisitionCurrency,
+		&i.AcquisitionDate,
+		&i.PurchaseVendor,
+		&i.ValidFrom,
+		&i.ValidTo,
+		&i.FacilityID,
+		&i.MaintPlant,
+		&i.PlanningPlant,
+		&i.CompanyCode,
+		&i.BusinessArea,
+		&i.CostCenter,
+		&i.AssetNo,
+		&i.FleetObjectNo,
+		&i.ChassisNo,
+		&i.VehicleCategory,
+		&i.EngineNumber,
+		&i.EnginePower,
+		&i.EngineCapacity,
+		&i.CylinderCount,
+		&i.MaxSpeed,
+		&i.Weight,
+		&i.WeightUnit,
+		&i.LoadVolume,
+		&i.VolumeUnit,
+		&i.SecondaryFuel,
+		&i.UsageIndicator,
 	)
 	return i, err
 }
@@ -315,7 +710,13 @@ func (q *Queries) GetVehicleByID(ctx context.Context, arg GetVehicleByIDParams) 
 const getVehicleByRegistration = `-- name: GetVehicleByRegistration :one
 SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
     fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage,
-    tenant_id, created_at, updated_at
+    tenant_id, created_at, updated_at,
+    fleet_class, ownership, fleet_number, description, manufacturer, manuf_country, model,
+    constr_year_month, acquisition_value, acquisition_currency, acquisition_date, purchase_vendor,
+    valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
+    cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
+    engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
+    volume_unit, secondary_fuel, usage_indicator
 FROM vehicles WHERE registration_number = ? AND tenant_id = ?
 `
 
@@ -325,20 +726,55 @@ type GetVehicleByRegistrationParams struct {
 }
 
 type GetVehicleByRegistrationRow struct {
-	ID                 string          `json:"id"`
-	RegistrationNumber string          `json:"registration_number"`
-	VehicleNumber      string          `json:"vehicle_number"`
-	VehicleType        string          `json:"vehicle_type"`
-	Capacity           int64           `json:"capacity"`
-	FuelType           string          `json:"fuel_type"`
-	InsuranceExpiry    time.Time       `json:"insurance_expiry"`
-	FitnessExpiry      time.Time       `json:"fitness_expiry"`
-	PermitExpiry       time.Time       `json:"permit_expiry"`
-	Status             string          `json:"status"`
-	CurrentMileage     sql.NullFloat64 `json:"current_mileage"`
-	TenantID           string          `json:"tenant_id"`
-	CreatedAt          time.Time       `json:"created_at"`
-	UpdatedAt          time.Time       `json:"updated_at"`
+	ID                  string          `json:"id"`
+	RegistrationNumber  string          `json:"registration_number"`
+	VehicleNumber       string          `json:"vehicle_number"`
+	VehicleType         string          `json:"vehicle_type"`
+	Capacity            int64           `json:"capacity"`
+	FuelType            string          `json:"fuel_type"`
+	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
+	FitnessExpiry       time.Time       `json:"fitness_expiry"`
+	PermitExpiry        time.Time       `json:"permit_expiry"`
+	Status              string          `json:"status"`
+	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	TenantID            string          `json:"tenant_id"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+	FleetClass          string          `json:"fleet_class"`
+	Ownership           string          `json:"ownership"`
+	FleetNumber         sql.NullString  `json:"fleet_number"`
+	Description         sql.NullString  `json:"description"`
+	Manufacturer        sql.NullString  `json:"manufacturer"`
+	ManufCountry        sql.NullString  `json:"manuf_country"`
+	Model               sql.NullString  `json:"model"`
+	ConstrYearMonth     sql.NullString  `json:"constr_year_month"`
+	AcquisitionValue    sql.NullFloat64 `json:"acquisition_value"`
+	AcquisitionCurrency string          `json:"acquisition_currency"`
+	AcquisitionDate     sql.NullTime    `json:"acquisition_date"`
+	PurchaseVendor      sql.NullString  `json:"purchase_vendor"`
+	ValidFrom           sql.NullTime    `json:"valid_from"`
+	ValidTo             sql.NullTime    `json:"valid_to"`
+	FacilityID          sql.NullString  `json:"facility_id"`
+	MaintPlant          sql.NullString  `json:"maint_plant"`
+	PlanningPlant       sql.NullString  `json:"planning_plant"`
+	CompanyCode         sql.NullString  `json:"company_code"`
+	BusinessArea        sql.NullString  `json:"business_area"`
+	CostCenter          sql.NullString  `json:"cost_center"`
+	AssetNo             sql.NullString  `json:"asset_no"`
+	FleetObjectNo       sql.NullString  `json:"fleet_object_no"`
+	ChassisNo           sql.NullString  `json:"chassis_no"`
+	VehicleCategory     sql.NullString  `json:"vehicle_category"`
+	EngineNumber        sql.NullString  `json:"engine_number"`
+	EnginePower         sql.NullString  `json:"engine_power"`
+	EngineCapacity      sql.NullString  `json:"engine_capacity"`
+	CylinderCount       sql.NullInt64   `json:"cylinder_count"`
+	MaxSpeed            sql.NullFloat64 `json:"max_speed"`
+	Weight              sql.NullFloat64 `json:"weight"`
+	WeightUnit          string          `json:"weight_unit"`
+	LoadVolume          sql.NullFloat64 `json:"load_volume"`
+	VolumeUnit          sql.NullString  `json:"volume_unit"`
+	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
+	UsageIndicator      sql.NullString  `json:"usage_indicator"`
 }
 
 func (q *Queries) GetVehicleByRegistration(ctx context.Context, arg GetVehicleByRegistrationParams) (GetVehicleByRegistrationRow, error) {
@@ -359,6 +795,41 @@ func (q *Queries) GetVehicleByRegistration(ctx context.Context, arg GetVehicleBy
 		&i.TenantID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.FleetClass,
+		&i.Ownership,
+		&i.FleetNumber,
+		&i.Description,
+		&i.Manufacturer,
+		&i.ManufCountry,
+		&i.Model,
+		&i.ConstrYearMonth,
+		&i.AcquisitionValue,
+		&i.AcquisitionCurrency,
+		&i.AcquisitionDate,
+		&i.PurchaseVendor,
+		&i.ValidFrom,
+		&i.ValidTo,
+		&i.FacilityID,
+		&i.MaintPlant,
+		&i.PlanningPlant,
+		&i.CompanyCode,
+		&i.BusinessArea,
+		&i.CostCenter,
+		&i.AssetNo,
+		&i.FleetObjectNo,
+		&i.ChassisNo,
+		&i.VehicleCategory,
+		&i.EngineNumber,
+		&i.EnginePower,
+		&i.EngineCapacity,
+		&i.CylinderCount,
+		&i.MaxSpeed,
+		&i.Weight,
+		&i.WeightUnit,
+		&i.LoadVolume,
+		&i.VolumeUnit,
+		&i.SecondaryFuel,
+		&i.UsageIndicator,
 	)
 	return i, err
 }
@@ -366,53 +837,101 @@ func (q *Queries) GetVehicleByRegistration(ctx context.Context, arg GetVehicleBy
 const searchVehicles = `-- name: SearchVehicles :many
 SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
     fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage,
-    tenant_id, created_at, updated_at
+    tenant_id, created_at, updated_at,
+    fleet_class, ownership, fleet_number, description, manufacturer, manuf_country, model,
+    constr_year_month, acquisition_value, acquisition_currency, acquisition_date, purchase_vendor,
+    valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
+    cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
+    engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
+    volume_unit, secondary_fuel, usage_indicator
 FROM vehicles
-WHERE tenant_id = ?
-  AND (registration_number LIKE '%' || ? || '%' OR vehicle_number LIKE '%' || ? || '%' OR vehicle_type LIKE '%' || ? || '%')
-  AND (? = '' OR status = ?)
+WHERE tenant_id = ?1
+  AND (lower(registration_number) LIKE '%' || lower(?2) || '%' OR lower(vehicle_number) LIKE '%' || lower(?2) || '%' OR lower(vehicle_type) LIKE '%' || lower(?2) || '%'
+    OR lower(manufacturer) LIKE '%' || lower(?2) || '%' OR lower(model) LIKE '%' || lower(?2) || '%' OR lower(facility_id) LIKE '%' || lower(?2) || '%')
+  AND (?3 = '' OR status = ?4)
+  AND (?5 = '' OR fleet_class = ?6)
+  AND (?7 = '' OR ownership = ?8)
 ORDER BY created_at DESC
-LIMIT ? OFFSET ?
+LIMIT ?10 OFFSET ?9
 `
 
 type SearchVehiclesParams struct {
-	TenantID string         `json:"tenant_id"`
-	Column2  sql.NullString `json:"column_2"`
-	Column3  sql.NullString `json:"column_3"`
-	Column4  sql.NullString `json:"column_4"`
-	Column5  interface{}    `json:"column_5"`
-	Status   string         `json:"status"`
-	Limit    int64          `json:"limit"`
-	Offset   int64          `json:"offset"`
+	TenantID      string      `json:"tenant_id"`
+	Search        string      `json:"search"`
+	StatusAll     interface{} `json:"status_all"`
+	Status        string      `json:"status"`
+	FleetClassAll interface{} `json:"fleet_class_all"`
+	FleetClass    string      `json:"fleet_class"`
+	OwnershipAll  interface{} `json:"ownership_all"`
+	Ownership     string      `json:"ownership"`
+	Offset        int64       `json:"offset"`
+	Limit         int64       `json:"limit"`
 }
 
 type SearchVehiclesRow struct {
-	ID                 string          `json:"id"`
-	RegistrationNumber string          `json:"registration_number"`
-	VehicleNumber      string          `json:"vehicle_number"`
-	VehicleType        string          `json:"vehicle_type"`
-	Capacity           int64           `json:"capacity"`
-	FuelType           string          `json:"fuel_type"`
-	InsuranceExpiry    time.Time       `json:"insurance_expiry"`
-	FitnessExpiry      time.Time       `json:"fitness_expiry"`
-	PermitExpiry       time.Time       `json:"permit_expiry"`
-	Status             string          `json:"status"`
-	CurrentMileage     sql.NullFloat64 `json:"current_mileage"`
-	TenantID           string          `json:"tenant_id"`
-	CreatedAt          time.Time       `json:"created_at"`
-	UpdatedAt          time.Time       `json:"updated_at"`
+	ID                  string          `json:"id"`
+	RegistrationNumber  string          `json:"registration_number"`
+	VehicleNumber       string          `json:"vehicle_number"`
+	VehicleType         string          `json:"vehicle_type"`
+	Capacity            int64           `json:"capacity"`
+	FuelType            string          `json:"fuel_type"`
+	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
+	FitnessExpiry       time.Time       `json:"fitness_expiry"`
+	PermitExpiry        time.Time       `json:"permit_expiry"`
+	Status              string          `json:"status"`
+	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	TenantID            string          `json:"tenant_id"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+	FleetClass          string          `json:"fleet_class"`
+	Ownership           string          `json:"ownership"`
+	FleetNumber         sql.NullString  `json:"fleet_number"`
+	Description         sql.NullString  `json:"description"`
+	Manufacturer        sql.NullString  `json:"manufacturer"`
+	ManufCountry        sql.NullString  `json:"manuf_country"`
+	Model               sql.NullString  `json:"model"`
+	ConstrYearMonth     sql.NullString  `json:"constr_year_month"`
+	AcquisitionValue    sql.NullFloat64 `json:"acquisition_value"`
+	AcquisitionCurrency string          `json:"acquisition_currency"`
+	AcquisitionDate     sql.NullTime    `json:"acquisition_date"`
+	PurchaseVendor      sql.NullString  `json:"purchase_vendor"`
+	ValidFrom           sql.NullTime    `json:"valid_from"`
+	ValidTo             sql.NullTime    `json:"valid_to"`
+	FacilityID          sql.NullString  `json:"facility_id"`
+	MaintPlant          sql.NullString  `json:"maint_plant"`
+	PlanningPlant       sql.NullString  `json:"planning_plant"`
+	CompanyCode         sql.NullString  `json:"company_code"`
+	BusinessArea        sql.NullString  `json:"business_area"`
+	CostCenter          sql.NullString  `json:"cost_center"`
+	AssetNo             sql.NullString  `json:"asset_no"`
+	FleetObjectNo       sql.NullString  `json:"fleet_object_no"`
+	ChassisNo           sql.NullString  `json:"chassis_no"`
+	VehicleCategory     sql.NullString  `json:"vehicle_category"`
+	EngineNumber        sql.NullString  `json:"engine_number"`
+	EnginePower         sql.NullString  `json:"engine_power"`
+	EngineCapacity      sql.NullString  `json:"engine_capacity"`
+	CylinderCount       sql.NullInt64   `json:"cylinder_count"`
+	MaxSpeed            sql.NullFloat64 `json:"max_speed"`
+	Weight              sql.NullFloat64 `json:"weight"`
+	WeightUnit          string          `json:"weight_unit"`
+	LoadVolume          sql.NullFloat64 `json:"load_volume"`
+	VolumeUnit          sql.NullString  `json:"volume_unit"`
+	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
+	UsageIndicator      sql.NullString  `json:"usage_indicator"`
 }
 
 func (q *Queries) SearchVehicles(ctx context.Context, arg SearchVehiclesParams) ([]SearchVehiclesRow, error) {
 	rows, err := q.db.QueryContext(ctx, searchVehicles,
 		arg.TenantID,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-		arg.Column5,
+		arg.Search,
+		arg.StatusAll,
 		arg.Status,
-		arg.Limit,
+		arg.FleetClassAll,
+		arg.FleetClass,
+		arg.OwnershipAll,
+		arg.Ownership,
 		arg.Offset,
+		arg.Limit,
 	)
 	if err != nil {
 		return nil, err
@@ -436,6 +955,41 @@ func (q *Queries) SearchVehicles(ctx context.Context, arg SearchVehiclesParams) 
 			&i.TenantID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.FleetClass,
+			&i.Ownership,
+			&i.FleetNumber,
+			&i.Description,
+			&i.Manufacturer,
+			&i.ManufCountry,
+			&i.Model,
+			&i.ConstrYearMonth,
+			&i.AcquisitionValue,
+			&i.AcquisitionCurrency,
+			&i.AcquisitionDate,
+			&i.PurchaseVendor,
+			&i.ValidFrom,
+			&i.ValidTo,
+			&i.FacilityID,
+			&i.MaintPlant,
+			&i.PlanningPlant,
+			&i.CompanyCode,
+			&i.BusinessArea,
+			&i.CostCenter,
+			&i.AssetNo,
+			&i.FleetObjectNo,
+			&i.ChassisNo,
+			&i.VehicleCategory,
+			&i.EngineNumber,
+			&i.EnginePower,
+			&i.EngineCapacity,
+			&i.CylinderCount,
+			&i.MaxSpeed,
+			&i.Weight,
+			&i.WeightUnit,
+			&i.LoadVolume,
+			&i.VolumeUnit,
+			&i.SecondaryFuel,
+			&i.UsageIndicator,
 		); err != nil {
 			return nil, err
 		}
@@ -454,43 +1008,128 @@ const updateVehicle = `-- name: UpdateVehicle :one
 UPDATE vehicles
 SET registration_number = ?, vehicle_number = ?, vehicle_type = ?, capacity = ?,
     fuel_type = ?, insurance_expiry = ?, fitness_expiry = ?, permit_expiry = ?,
-    status = ?, current_mileage = ?, updated_at = datetime('now')
+    status = ?, current_mileage = ?,
+    fleet_class = ?, ownership = ?, fleet_number = ?, description = ?, manufacturer = ?,
+    manuf_country = ?, model = ?, constr_year_month = ?, acquisition_value = ?,
+    acquisition_currency = ?, acquisition_date = ?, purchase_vendor = ?, valid_from = ?,
+    valid_to = ?, facility_id = ?, maint_plant = ?, planning_plant = ?, company_code = ?,
+    business_area = ?, cost_center = ?, asset_no = ?, fleet_object_no = ?, chassis_no = ?,
+    vehicle_category = ?, engine_number = ?, engine_power = ?, engine_capacity = ?,
+    cylinder_count = ?, max_speed = ?, weight = ?, weight_unit = ?, load_volume = ?,
+    volume_unit = ?, secondary_fuel = ?, usage_indicator = ?,
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ?
 RETURNING id, registration_number, vehicle_number, vehicle_type, capacity,
     fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage,
-    tenant_id, created_at, updated_at
+    tenant_id, created_at, updated_at,
+    fleet_class, ownership, fleet_number, description, manufacturer, manuf_country, model,
+    constr_year_month, acquisition_value, acquisition_currency, acquisition_date, purchase_vendor,
+    valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
+    cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
+    engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
+    volume_unit, secondary_fuel, usage_indicator
 `
 
 type UpdateVehicleParams struct {
-	RegistrationNumber string          `json:"registration_number"`
-	VehicleNumber      string          `json:"vehicle_number"`
-	VehicleType        string          `json:"vehicle_type"`
-	Capacity           int64           `json:"capacity"`
-	FuelType           string          `json:"fuel_type"`
-	InsuranceExpiry    time.Time       `json:"insurance_expiry"`
-	FitnessExpiry      time.Time       `json:"fitness_expiry"`
-	PermitExpiry       time.Time       `json:"permit_expiry"`
-	Status             string          `json:"status"`
-	CurrentMileage     sql.NullFloat64 `json:"current_mileage"`
-	ID                 string          `json:"id"`
-	TenantID           string          `json:"tenant_id"`
+	RegistrationNumber  string          `json:"registration_number"`
+	VehicleNumber       string          `json:"vehicle_number"`
+	VehicleType         string          `json:"vehicle_type"`
+	Capacity            int64           `json:"capacity"`
+	FuelType            string          `json:"fuel_type"`
+	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
+	FitnessExpiry       time.Time       `json:"fitness_expiry"`
+	PermitExpiry        time.Time       `json:"permit_expiry"`
+	Status              string          `json:"status"`
+	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	FleetClass          string          `json:"fleet_class"`
+	Ownership           string          `json:"ownership"`
+	FleetNumber         sql.NullString  `json:"fleet_number"`
+	Description         sql.NullString  `json:"description"`
+	Manufacturer        sql.NullString  `json:"manufacturer"`
+	ManufCountry        sql.NullString  `json:"manuf_country"`
+	Model               sql.NullString  `json:"model"`
+	ConstrYearMonth     sql.NullString  `json:"constr_year_month"`
+	AcquisitionValue    sql.NullFloat64 `json:"acquisition_value"`
+	AcquisitionCurrency string          `json:"acquisition_currency"`
+	AcquisitionDate     sql.NullTime    `json:"acquisition_date"`
+	PurchaseVendor      sql.NullString  `json:"purchase_vendor"`
+	ValidFrom           sql.NullTime    `json:"valid_from"`
+	ValidTo             sql.NullTime    `json:"valid_to"`
+	FacilityID          sql.NullString  `json:"facility_id"`
+	MaintPlant          sql.NullString  `json:"maint_plant"`
+	PlanningPlant       sql.NullString  `json:"planning_plant"`
+	CompanyCode         sql.NullString  `json:"company_code"`
+	BusinessArea        sql.NullString  `json:"business_area"`
+	CostCenter          sql.NullString  `json:"cost_center"`
+	AssetNo             sql.NullString  `json:"asset_no"`
+	FleetObjectNo       sql.NullString  `json:"fleet_object_no"`
+	ChassisNo           sql.NullString  `json:"chassis_no"`
+	VehicleCategory     sql.NullString  `json:"vehicle_category"`
+	EngineNumber        sql.NullString  `json:"engine_number"`
+	EnginePower         sql.NullString  `json:"engine_power"`
+	EngineCapacity      sql.NullString  `json:"engine_capacity"`
+	CylinderCount       sql.NullInt64   `json:"cylinder_count"`
+	MaxSpeed            sql.NullFloat64 `json:"max_speed"`
+	Weight              sql.NullFloat64 `json:"weight"`
+	WeightUnit          string          `json:"weight_unit"`
+	LoadVolume          sql.NullFloat64 `json:"load_volume"`
+	VolumeUnit          sql.NullString  `json:"volume_unit"`
+	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
+	UsageIndicator      sql.NullString  `json:"usage_indicator"`
+	ID                  string          `json:"id"`
+	TenantID            string          `json:"tenant_id"`
 }
 
 type UpdateVehicleRow struct {
-	ID                 string          `json:"id"`
-	RegistrationNumber string          `json:"registration_number"`
-	VehicleNumber      string          `json:"vehicle_number"`
-	VehicleType        string          `json:"vehicle_type"`
-	Capacity           int64           `json:"capacity"`
-	FuelType           string          `json:"fuel_type"`
-	InsuranceExpiry    time.Time       `json:"insurance_expiry"`
-	FitnessExpiry      time.Time       `json:"fitness_expiry"`
-	PermitExpiry       time.Time       `json:"permit_expiry"`
-	Status             string          `json:"status"`
-	CurrentMileage     sql.NullFloat64 `json:"current_mileage"`
-	TenantID           string          `json:"tenant_id"`
-	CreatedAt          time.Time       `json:"created_at"`
-	UpdatedAt          time.Time       `json:"updated_at"`
+	ID                  string          `json:"id"`
+	RegistrationNumber  string          `json:"registration_number"`
+	VehicleNumber       string          `json:"vehicle_number"`
+	VehicleType         string          `json:"vehicle_type"`
+	Capacity            int64           `json:"capacity"`
+	FuelType            string          `json:"fuel_type"`
+	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
+	FitnessExpiry       time.Time       `json:"fitness_expiry"`
+	PermitExpiry        time.Time       `json:"permit_expiry"`
+	Status              string          `json:"status"`
+	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
+	TenantID            string          `json:"tenant_id"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+	FleetClass          string          `json:"fleet_class"`
+	Ownership           string          `json:"ownership"`
+	FleetNumber         sql.NullString  `json:"fleet_number"`
+	Description         sql.NullString  `json:"description"`
+	Manufacturer        sql.NullString  `json:"manufacturer"`
+	ManufCountry        sql.NullString  `json:"manuf_country"`
+	Model               sql.NullString  `json:"model"`
+	ConstrYearMonth     sql.NullString  `json:"constr_year_month"`
+	AcquisitionValue    sql.NullFloat64 `json:"acquisition_value"`
+	AcquisitionCurrency string          `json:"acquisition_currency"`
+	AcquisitionDate     sql.NullTime    `json:"acquisition_date"`
+	PurchaseVendor      sql.NullString  `json:"purchase_vendor"`
+	ValidFrom           sql.NullTime    `json:"valid_from"`
+	ValidTo             sql.NullTime    `json:"valid_to"`
+	FacilityID          sql.NullString  `json:"facility_id"`
+	MaintPlant          sql.NullString  `json:"maint_plant"`
+	PlanningPlant       sql.NullString  `json:"planning_plant"`
+	CompanyCode         sql.NullString  `json:"company_code"`
+	BusinessArea        sql.NullString  `json:"business_area"`
+	CostCenter          sql.NullString  `json:"cost_center"`
+	AssetNo             sql.NullString  `json:"asset_no"`
+	FleetObjectNo       sql.NullString  `json:"fleet_object_no"`
+	ChassisNo           sql.NullString  `json:"chassis_no"`
+	VehicleCategory     sql.NullString  `json:"vehicle_category"`
+	EngineNumber        sql.NullString  `json:"engine_number"`
+	EnginePower         sql.NullString  `json:"engine_power"`
+	EngineCapacity      sql.NullString  `json:"engine_capacity"`
+	CylinderCount       sql.NullInt64   `json:"cylinder_count"`
+	MaxSpeed            sql.NullFloat64 `json:"max_speed"`
+	Weight              sql.NullFloat64 `json:"weight"`
+	WeightUnit          string          `json:"weight_unit"`
+	LoadVolume          sql.NullFloat64 `json:"load_volume"`
+	VolumeUnit          sql.NullString  `json:"volume_unit"`
+	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
+	UsageIndicator      sql.NullString  `json:"usage_indicator"`
 }
 
 func (q *Queries) UpdateVehicle(ctx context.Context, arg UpdateVehicleParams) (UpdateVehicleRow, error) {
@@ -505,6 +1144,41 @@ func (q *Queries) UpdateVehicle(ctx context.Context, arg UpdateVehicleParams) (U
 		arg.PermitExpiry,
 		arg.Status,
 		arg.CurrentMileage,
+		arg.FleetClass,
+		arg.Ownership,
+		arg.FleetNumber,
+		arg.Description,
+		arg.Manufacturer,
+		arg.ManufCountry,
+		arg.Model,
+		arg.ConstrYearMonth,
+		arg.AcquisitionValue,
+		arg.AcquisitionCurrency,
+		arg.AcquisitionDate,
+		arg.PurchaseVendor,
+		arg.ValidFrom,
+		arg.ValidTo,
+		arg.FacilityID,
+		arg.MaintPlant,
+		arg.PlanningPlant,
+		arg.CompanyCode,
+		arg.BusinessArea,
+		arg.CostCenter,
+		arg.AssetNo,
+		arg.FleetObjectNo,
+		arg.ChassisNo,
+		arg.VehicleCategory,
+		arg.EngineNumber,
+		arg.EnginePower,
+		arg.EngineCapacity,
+		arg.CylinderCount,
+		arg.MaxSpeed,
+		arg.Weight,
+		arg.WeightUnit,
+		arg.LoadVolume,
+		arg.VolumeUnit,
+		arg.SecondaryFuel,
+		arg.UsageIndicator,
 		arg.ID,
 		arg.TenantID,
 	)
@@ -524,6 +1198,41 @@ func (q *Queries) UpdateVehicle(ctx context.Context, arg UpdateVehicleParams) (U
 		&i.TenantID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.FleetClass,
+		&i.Ownership,
+		&i.FleetNumber,
+		&i.Description,
+		&i.Manufacturer,
+		&i.ManufCountry,
+		&i.Model,
+		&i.ConstrYearMonth,
+		&i.AcquisitionValue,
+		&i.AcquisitionCurrency,
+		&i.AcquisitionDate,
+		&i.PurchaseVendor,
+		&i.ValidFrom,
+		&i.ValidTo,
+		&i.FacilityID,
+		&i.MaintPlant,
+		&i.PlanningPlant,
+		&i.CompanyCode,
+		&i.BusinessArea,
+		&i.CostCenter,
+		&i.AssetNo,
+		&i.FleetObjectNo,
+		&i.ChassisNo,
+		&i.VehicleCategory,
+		&i.EngineNumber,
+		&i.EnginePower,
+		&i.EngineCapacity,
+		&i.CylinderCount,
+		&i.MaxSpeed,
+		&i.Weight,
+		&i.WeightUnit,
+		&i.LoadVolume,
+		&i.VolumeUnit,
+		&i.SecondaryFuel,
+		&i.UsageIndicator,
 	)
 	return i, err
 }

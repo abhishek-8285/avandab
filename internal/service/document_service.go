@@ -117,7 +117,7 @@ func (s *DocumentService) UploadDriverDoc(ctx context.Context, driverID, docType
 
 	_, err := db.ExecContext(ctx, `
 		INSERT INTO driver_documents (id, driver_id, doc_type, file_url, expiry_date, status, created_at)
-		VALUES (?, ?, ?, ?, ?, 'pending_review', ?)
+		VALUES ($1, $2, $3, $4, $5, 'pending_review', $6)
 	`, docID, driverID, docType, fileURL, expStr, now)
 	if err != nil {
 		return DriverDocument{}, fmt.Errorf("persist driver document: %w", err)
@@ -189,7 +189,7 @@ func (s *DocumentService) UploadVehicleDoc(ctx context.Context, vehicleID, docTy
 
 	_, err := db.ExecContext(ctx, `
 		INSERT INTO vehicle_documents (id, vehicle_id, doc_type, file_url, expiry_date, status, created_at)
-		VALUES (?, ?, ?, ?, ?, 'pending_review', ?)
+		VALUES ($1, $2, $3, $4, $5, 'pending_review', $6)
 	`, docID, vehicleID, docType, fileURL, expStr, now)
 	if err != nil {
 		return VehicleDocument{}, fmt.Errorf("persist vehicle document: %w", err)
@@ -219,7 +219,7 @@ func (s *DocumentService) ListDriverDocs(ctx context.Context, driverID string) (
 	rows, err := db.QueryContext(ctx, `
 		SELECT id, driver_id, doc_type, file_url, expiry_date, status, verified_by, verified_at, created_at
 		FROM driver_documents
-		WHERE driver_id = ?
+		WHERE driver_id = $1
 		ORDER BY created_at DESC
 	`, driverID)
 	if err != nil {
@@ -267,7 +267,7 @@ func (s *DocumentService) ListVehicleDocs(ctx context.Context, vehicleID string)
 	rows, err := db.QueryContext(ctx, `
 		SELECT id, vehicle_id, doc_type, file_url, expiry_date, status, verified_by, verified_at, created_at
 		FROM vehicle_documents
-		WHERE vehicle_id = ?
+		WHERE vehicle_id = $1
 		ORDER BY created_at DESC
 	`, vehicleID)
 	if err != nil {
@@ -319,8 +319,8 @@ func (s *DocumentService) VerifyDocument(ctx context.Context, entityType, entity
 
 	query := fmt.Sprintf(`
 		UPDATE %s
-		SET status = 'verified', verified_by = ?, verified_at = datetime('now')
-		WHERE id = ?
+		SET status = 'verified', verified_by = $1, verified_at = CURRENT_TIMESTAMP
+		WHERE id = $2
 	`, table)
 
 	res, err := db.ExecContext(ctx, query, verifiedBy, documentID)

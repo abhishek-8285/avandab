@@ -267,26 +267,22 @@ func (r *bookingRepository) SearchReadModels(ctx context.Context, tenantID share
 		return r.searchUnassignedBookings(ctx, tenantID, query, "", "", limit, offset)
 	}
 	rows, err := r.Q(ctx).SearchBookings(ctx, db.SearchBookingsParams{
-		TenantID: string(tenantID),
-		Column2:  sql.NullString{String: query, Valid: true},
-		Column3:  sql.NullString{String: query, Valid: true},
-		Column4:  sql.NullString{String: query, Valid: true},
-		Column5:  status,
-		Status:   status,
-		Limit:    int64(limit),
-		Offset:   int64(offset),
+		TenantID:  string(tenantID),
+		Search:    query,
+		StatusAll: status,
+		Status:    status,
+		Limit:     int64(limit),
+		Offset:    int64(offset),
 	})
 	if err != nil {
 		return nil, 0, err
 	}
 
 	count, err := r.Q(ctx).CountBookings(ctx, db.CountBookingsParams{
-		TenantID: string(tenantID),
-		Column2:  sql.NullString{String: query, Valid: true},
-		Column3:  sql.NullString{String: query, Valid: true},
-		Column4:  sql.NullString{String: query, Valid: true},
-		Column5:  status,
-		Status:   status,
+		TenantID:  string(tenantID),
+		Search:    query,
+		StatusAll: status,
+		Status:    status,
 	})
 	if err != nil {
 		return nil, 0, err

@@ -412,7 +412,7 @@ func (h *BookingHandlers) Board(w http.ResponseWriter, r *http.Request) {
 		     AND t.status IN ('assigned','started','reached_pickup','in_transit')
 		LEFT JOIN vehicles v ON v.id = t.vehicle_id
 		LEFT JOIN drivers d ON d.id = t.driver_id
-		WHERE b.tenant_id = ?
+		WHERE b.tenant_id = $1
 		ORDER BY b.created_at DESC LIMIT 200`, tenantID)
 	if err != nil {
 		httpx.Error(w, r, err)

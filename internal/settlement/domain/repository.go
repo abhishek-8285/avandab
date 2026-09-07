@@ -30,4 +30,13 @@ type SettlementRepository interface {
 
 	// Bank Account Verification lookup
 	IsDriverPayoutAccountVerified(ctx context.Context, tenantID, driverID string) (bool, string, error)
+
+	// Dual-write guard (gap 2): reports whether the legacy trip-close accounting
+	// flow (internal/service DriverSettlementService.GenerateSettlement) already
+	// produced a per-trip breakdown in settlement_lines — a table the
+	// wallet/payout rail never writes. Both flows share driver_settlements and
+	// driver_ledger_entries, so callers must treat a true result as "legacy owns
+	// this trip": log a warning and reuse the single row, never append duplicate
+	// ledger entries. Fail open on error (missing table on older DBs).
+	HasLegacySettlementLines(ctx context.Context, tripID string) (bool, error)
 }

@@ -67,7 +67,7 @@ func TripSummaryHandler(db *sql.DB) http.HandlerFunc {
 			LEFT JOIN bookings b ON b.id = t.booking_id
 			LEFT JOIN vehicles v ON v.id = t.vehicle_id
 			LEFT JOIN drivers d ON d.id = t.driver_id
-			WHERE t.id = ? AND t.tenant_id = ?`
+			WHERE t.id = $1 AND t.tenant_id = $2`
 		var s TripSummary
 		var tripNumber, status, origin, dest, vehNum, driverName, driverPhone sql.NullString
 		var departure sql.NullTime

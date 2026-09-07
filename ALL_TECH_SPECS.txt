@@ -1,0 +1,49 @@
+AVANDAB / MVTMS — SPEC INDEX (pointer file, not a full spec dump)
+================================================================
+File: ALL_TECH_SPECS.txt (repo root)
+Generated: 2026-09-06 (manual stub, commit aafc72be). No generator script exists.
+Reason: AGENTS.md "Knowledge base / The Bible" cites this path, but the file
+never existed in git history (verified: `git log -S ALL_TECH_SPECS --all`
+shows only AGENTS.md additions, `git ls-files | grep ALL_TECH` empty,
+`.gitignore` does not mention it, no script under scripts//bin//Makefile
+references it). This stub closes the dangling reference without inventing
+spec content.
+
+AUTHORITY NOTE (read first)
+---------------------------
+docs/*.md are the source of truth and SUPERSEDE this file on any conflict.
+This file contains NO normative spec text — only pointers. If code
+contradicts a doc below, follow the doc and note the override explicitly
+(per AGENTS.md "The Bible" rule, with "Bible" = the docs listed here).
+Do NOT append full spec bodies here; keep this file small and update only
+the list when a canonical doc is added/renamed.
+
+CANONICAL DOCS (verified present 2026-09-06)
+--------------------------------------------
+docs/README.md — Avandab Fleet Platform Documentation (master index).
+docs/01-ARCHITECTURE-AND-STACK.md — 01. Platform Architecture & Technology Stack.
+docs/02-HARDWARE-GPS-TELEMETRY.md — 02. Hardware GPS Telematics, Decoders & Ingestion Pipeline.
+docs/03-TRIP-AND-GEOFENCE-ENGINE.md — 03. Booking, Trip Execution & Geofence Engine.
+docs/04-MOBILE-DRIVER-APP.md — 04. Mobile Driver Application (React Native / Expo).
+docs/05-BILLING-GST-AND-SETTLEMENTS.md — 05. Billing, GST Invoicing & Driver Settlements.
+docs/06-AUTH-RBAC-AND-MULTI-TENANCY.md — 06. Authentication, RBAC & Multi-Tenancy.
+docs/07-AI-OPERATIONS-ASSISTANT.md — 07. AI Operations Assistant (Autonomous Multi-Agent System).
+docs/08-DEPLOYMENT-AND-PRODUCTION-RUNBOOK.md — 08. Deployment, Infrastructure & Production Runbook.
+docs/AVANDAB_ZERO_COST_ARCHITECTURE.md — Avandab Multi-Tenant Logistics Platform, 100% Zero-Cost architecture manual.
+docs/CONTRIBUTING.md — FlyFleet Developer Guidelines & Coding Standards.
+docs/tech-specs/00-migration-ownership-index.md — Migration Ownership Index (authoritative db/migrations numbering; consult before any new migration).
+docs/tech-specs/fleet-registry-sop-parity.md — Fleet Registry, TMS SOP Parity tech spec (2026-09-05).
+openapi.yaml — MVTMS REST API v1 OpenAPI specification.
+AGENTS.md — Agent Master Directive, Prove-It Protocol, Security Gate, critical path (Phase 0 -> 1 -> 2 -> 3).
+
+HOW TO USE
+----------
+1. Start at docs/README.md (master numbered guide).
+2. For DB work, read docs/tech-specs/00-migration-ownership-index.md first; never edit existing migrations, only append.
+3. For API contracts, read openapi.yaml.
+4. Quote the exact doc section your change fulfills (e.g. "docs/03-... §2").
+
+MAINTENANCE
+-----------
+Manually maintained. When adding a canonical doc, add one line above. Never
+duplicate full doc bodies here.

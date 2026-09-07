@@ -170,14 +170,14 @@ func (s *FuelAuditService) pendingFuelClaims(ctx context.Context, db *sql.DB) ([
 	rows, err := db.QueryContext(ctx, `
 		SELECT de.id, COALESCE(de.trip_id,''), COALESCE(de.driver_id,''), de.amount,
 		       de.created_at, de.fuel_litres,
-		       COALESCE(t.vehicle_id,''), COALESCE(t.departure_time, ''),
+		       COALESCE(t.vehicle_id,''), COALESCE(CAST(t.departure_time AS TEXT), ''),
 		       COALESCE(de.status,'pending')
 		FROM driver_expenses de
 		LEFT JOIN trips t ON t.id = de.trip_id
 		WHERE de.category = 'fuel'
 		  AND COALESCE(de.audit_status,'pending') = 'pending'
 		  AND COALESCE(de.status,'pending') = 'pending'
-		  AND de.tenant_id = ?
+		  AND de.tenant_id = $1
 		ORDER BY de.created_at ASC`, tenantIDFor(ctx))
 	if err != nil {
 		return nil, err
@@ -297,8 +297,8 @@ func (s *FuelAuditService) auditOne(ctx context.Context, db *sql.DB, cfg fuelAud
 			  litres_expected_level, litres_expected_odo, level_delta_pct,
 			  odometer_delta_km, tank_capacity_litres, kmpl_used,
 			  variance_litres, variance_pct, result, checks, created_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-			 ON CONFLICT(expense_id) DO UPDATE SET
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+			 ON CONFLICT (expense_id) DO UPDATE SET
 			  litres_claimed = excluded.litres_claimed,
 			  litres_expected_level = excluded.litres_expected_level,
 			  litres_expected_odo = excluded.litres_expected_odo,
@@ -320,7 +320,7 @@ func (s *FuelAuditService) auditOne(ctx context.Context, db *sql.DB, cfg fuelAud
 		}
 
 		_, err = db.ExecContext(txCtx,
-			`UPDATE driver_expenses SET audit_status = ? WHERE id = ? AND tenant_id = ?`, result, expenseID, tenantIDFor(txCtx))
+			`UPDATE driver_expenses SET audit_status = $1 WHERE id = $2 AND tenant_id = $3`, result, expenseID, tenantIDFor(txCtx))
 		return err
 	})
 }
@@ -336,7 +336,7 @@ func (s *FuelAuditService) claimWindowStart(ctx context.Context, db *sql.DB, c a
 	var prev string
 	err := db.QueryRowContext(ctx,
 		`SELECT MAX(created_at) FROM driver_expenses
-		 WHERE trip_id = ? AND category = 'fuel' AND id != ? AND datetime(created_at) < datetime(?)`,
+		 WHERE trip_id = $1 AND category = 'fuel' AND id != $2 AND substr(CAST(created_at AS TEXT), 1, 19) < substr(CAST($3 AS TEXT), 1, 19)`,
 		c.tripID, c.expenseID, fuelTimeStr(c.createdAt)).Scan(&prev)
 	if err == nil && prev != "" {
 		if t, ok := parseDBTime(prev); ok && t.After(start) {
@@ -358,8 +358,8 @@ func (s *FuelAuditService) refillsInWindow(ctx context.Context, db *sql.DB, vehi
 		SELECT id, COALESCE(estimated_litres,0), COALESCE(confidence,0),
 		       occurred_at, COALESCE(odometer_before,0), COALESCE(odometer_after,0)
 		FROM fuel_events
-		WHERE vehicle_id = ? AND event_type = 'refill_detected'
-		  AND datetime(occurred_at) > datetime(?) AND datetime(occurred_at) <= datetime(?)
+		WHERE vehicle_id = $1 AND event_type = 'refill_detected'
+		  AND substr(CAST(occurred_at AS TEXT), 1, 19) > substr(CAST($2 AS TEXT), 1, 19) AND substr(CAST(occurred_at AS TEXT), 1, 19) <= substr(CAST($3 AS TEXT), 1, 19)
 		ORDER BY occurred_at ASC`,
 		vehicleID, fuelTimeStr(from), fuelTimeStr(to))
 	if err != nil {
@@ -387,7 +387,7 @@ func (s *FuelAuditService) odometerDelta(ctx context.Context, db *sql.DB, c audi
 	err := db.QueryRowContext(ctx, `
 		SELECT MIN(odometer), MAX(odometer)
 		FROM telemetry_snapshots
-		WHERE vehicle_id = ? AND datetime(timestamp) > datetime(?) AND datetime(timestamp) <= datetime(?)
+		WHERE vehicle_id = $1 AND substr(CAST(timestamp AS TEXT), 1, 19) > substr(CAST($2 AS TEXT), 1, 19) AND substr(CAST(timestamp AS TEXT), 1, 19) <= substr(CAST($3 AS TEXT), 1, 19)
 		  AND odometer > 0`,
 		c.vehicleID, fuelTimeStr(windowStart), fuelTimeStr(c.createdAt)).Scan(&lo, &hi)
 	if err != nil {
@@ -407,7 +407,7 @@ func (s *FuelAuditService) odometerDelta(ctx context.Context, db *sql.DB, c audi
 		if err := db.QueryRowContext(ctx, `
 			SELECT r.distance FROM trips t
 			JOIN routes r ON r.id = t.route_id
-			WHERE t.id = ?`, c.tripID).Scan(&dist); err == nil && dist.Valid && dist.Float64 > 0 {
+			WHERE t.id = $1`, c.tripID).Scan(&dist); err == nil && dist.Valid && dist.Float64 > 0 {
 			return dist.Float64, nil
 		}
 	}
@@ -422,7 +422,7 @@ func (s *FuelAuditService) vehicleMeta(ctx context.Context, db *sql.DB, vehicleI
 	err := db.QueryRowContext(ctx,
 		`SELECT COALESCE(fuel_sensor_fitted,0), tank_capacity_litres,
 		        current_mileage, registration_number
-		 FROM vehicles WHERE id = ?`, vehicleID).Scan(&sensor, &cap, &kmpl, &m.regNumber)
+		 FROM vehicles WHERE id = $1`, vehicleID).Scan(&sensor, &cap, &kmpl, &m.regNumber)
 	if err != nil {
 		return m, fmt.Errorf("fuel audit: vehicle %s: %w", vehicleID, err)
 	}
@@ -471,8 +471,8 @@ func (s *FuelAuditService) ReviewClaim(ctx context.Context, expenseID, verdict, 
 		db := txDB(txCtx, db)
 		res, err := db.ExecContext(txCtx, `
 			UPDATE fuel_claim_audits
-			SET result = ?, reviewed_by = ?, reviewed_at = ?, review_note = ?
-			WHERE expense_id = ?`,
+			SET result = $1, reviewed_by = $2, reviewed_at = $3, review_note = $4
+			WHERE expense_id = $5`,
 			verdict, orNull(userID), now, orNull(note), expenseID)
 		if err != nil {
 			return err
@@ -481,7 +481,7 @@ func (s *FuelAuditService) ReviewClaim(ctx context.Context, expenseID, verdict, 
 			return fmt.Errorf("claim audit row not found")
 		}
 		_, err = db.ExecContext(txCtx,
-			`UPDATE driver_expenses SET audit_status = ? WHERE id = ? AND tenant_id = ?`, verdict, expenseID, tenantIDFor(txCtx))
+			`UPDATE driver_expenses SET audit_status = $1 WHERE id = $2 AND tenant_id = $3`, verdict, expenseID, tenantIDFor(txCtx))
 		return err
 	})
 }
@@ -512,7 +512,7 @@ func (s *FuelAuditService) ListAuditClaims(ctx context.Context) ([]FuelAuditClai
 		LEFT JOIN drivers d ON d.id = de.driver_id
 		LEFT JOIN vehicles v ON v.id = t.vehicle_id
 		LEFT JOIN fuel_claim_audits fca ON fca.expense_id = de.id
-		WHERE de.category = 'fuel' AND de.tenant_id = ?
+		WHERE de.category = 'fuel' AND de.tenant_id = $1
 		ORDER BY de.created_at DESC LIMIT 200`, tenantIDFor(ctx))
 	if err != nil {
 		return nil, err
@@ -546,7 +546,7 @@ func (s *FuelAuditService) GetAuditDetail(ctx context.Context, expenseID string)
 		LEFT JOIN drivers d ON d.id = de.driver_id
 		LEFT JOIN vehicles v ON v.id = t.vehicle_id
 		LEFT JOIN fuel_claim_audits fca ON fca.expense_id = de.id
-		WHERE de.id = ? AND de.tenant_id = ?`, expenseID, tenantIDFor(ctx))
+		WHERE de.id = $1 AND de.tenant_id = $2`, expenseID, tenantIDFor(ctx))
 	c, err := scanAuditClaim(row)
 	if err != nil {
 		return FuelAuditClaim{}, fmt.Errorf("claim not found: %w", err)
@@ -563,7 +563,7 @@ func (s *FuelAuditService) GetAuditDetail(ctx context.Context, expenseID string)
 		if c.TripID != "" {
 			var dep string
 			if err := db.QueryRowContext(ctx,
-				`SELECT COALESCE(departure_time, '') FROM trips WHERE id = ?`, c.TripID).Scan(&dep); err == nil && dep != "" {
+				`SELECT COALESCE(CAST(departure_time AS TEXT), '') FROM trips WHERE id = $1`, c.TripID).Scan(&dep); err == nil && dep != "" {
 				if ts, err := time.Parse("2006-01-02 15:04:05", dep); err == nil {
 					row.tripStart = ts
 					row.tripStartValid = true
@@ -589,22 +589,22 @@ func (s *FuelAuditService) GetAuditStats(ctx context.Context) (FuelAuditStats, e
 	var st FuelAuditStats
 	_ = db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM driver_expenses
-		 WHERE category = 'fuel' AND COALESCE(audit_status,'pending') = 'pending' AND tenant_id = ?`,
+		 WHERE category = 'fuel' AND COALESCE(audit_status,'pending') = 'pending' AND tenant_id = $1`,
 		tenantIDFor(ctx)).
 		Scan(&st.PendingCount)
 	_ = db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM driver_expenses
-		 WHERE category = 'fuel' AND audit_status = 'needs_review' AND tenant_id = ?`,
+		 WHERE category = 'fuel' AND audit_status = 'needs_review' AND tenant_id = $1`,
 		tenantIDFor(ctx)).
 		Scan(&st.NeedsReviewCount)
 	_ = db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM driver_expenses
-		 WHERE category = 'fuel' AND audit_status = 'passed' AND tenant_id = ?`,
+		 WHERE category = 'fuel' AND audit_status = 'passed' AND tenant_id = $1`,
 		tenantIDFor(ctx)).
 		Scan(&st.PassedCount)
 	_ = db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM driver_expenses
-		 WHERE category = 'fuel' AND audit_status = 'failed' AND tenant_id = ?`,
+		 WHERE category = 'fuel' AND audit_status = 'failed' AND tenant_id = $1`,
 		tenantIDFor(ctx)).
 		Scan(&st.FailedCount)
 	_ = db.QueryRowContext(ctx,
@@ -812,8 +812,8 @@ func (s *FuelAuditService) KmplReport(ctx context.Context, from, to time.Time) (
 		SELECT fe.vehicle_id, COALESCE(SUM(fe.estimated_litres),0) AS refill_litres, COUNT(*) AS refills
 		FROM fuel_events fe
 		WHERE fe.event_type = 'refill_detected'
-		  AND datetime(fe.occurred_at) >= datetime(?)
-		  AND datetime(fe.occurred_at) <= datetime(?)
+		  AND substr(CAST(fe.occurred_at AS TEXT), 1, 19) >= substr(CAST($1 AS TEXT), 1, 19)
+		  AND substr(CAST(fe.occurred_at AS TEXT), 1, 19) <= substr(CAST($2 AS TEXT), 1, 19)
 		GROUP BY fe.vehicle_id`,
 		fuelTimeStr(from), fuelTimeStr(to))
 	if err != nil {
@@ -845,8 +845,8 @@ func (s *FuelAuditService) KmplReport(ctx context.Context, from, to time.Time) (
 		_ = db.QueryRowContext(ctx, `
 			SELECT MIN(odometer), MAX(odometer)
 			FROM telemetry_snapshots
-			WHERE vehicle_id = ?
-			  AND datetime(timestamp) >= datetime(?) AND datetime(timestamp) <= datetime(?)
+			WHERE vehicle_id = $1
+			  AND substr(CAST(timestamp AS TEXT), 1, 19) >= substr(CAST($2 AS TEXT), 1, 19) AND substr(CAST(timestamp AS TEXT), 1, 19) <= substr(CAST($3 AS TEXT), 1, 19)
 			  AND odometer > 0`,
 			vr.vehicleID, fuelTimeStr(from), fuelTimeStr(to)).Scan(&lo, &hi)
 
@@ -860,10 +860,10 @@ func (s *FuelAuditService) KmplReport(ctx context.Context, from, to time.Time) (
 		var configKmpl sql.NullFloat64
 		var tripCount int
 		_ = db.QueryRowContext(ctx,
-			`SELECT registration_number, current_mileage FROM vehicles WHERE id = ?`,
+			`SELECT registration_number, current_mileage FROM vehicles WHERE id = $1`,
 			vr.vehicleID).Scan(&reg, &configKmpl)
 		_ = db.QueryRowContext(ctx,
-			`SELECT COUNT(*) FROM trips WHERE vehicle_id = ? AND datetime(departure_time) >= datetime(?) AND datetime(departure_time) <= datetime(?)`,
+			`SELECT COUNT(*) FROM trips WHERE vehicle_id = $1 AND substr(CAST(departure_time AS TEXT), 1, 19) >= substr(CAST($2 AS TEXT), 1, 19) AND substr(CAST(departure_time AS TEXT), 1, 19) <= substr(CAST($3 AS TEXT), 1, 19)`,
 			vr.vehicleID, fuelTimeStr(from), fuelTimeStr(to)).Scan(&tripCount)
 
 		configuredKmpl := cfg.kmplDefault

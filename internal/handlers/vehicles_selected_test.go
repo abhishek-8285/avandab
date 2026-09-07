@@ -224,7 +224,7 @@ func TestSelectedVehicles_CRUD(t *testing.T) {
 		require.NotEmpty(t, createdID)
 	})
 
-	t.Run("Create success invalid dates fallback", func(t *testing.T) {
+	t.Run("Create invalid dates rejected", func(t *testing.T) {
 		form := url.Values{
 			"registration_number": {"MH09ZZ9999"},
 			"vehicle_number":      {"V-099"},
@@ -239,7 +239,9 @@ func TestSelectedVehicles_CRUD(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusSeeOther, w.Code)
+		// 00126 behavior change: compliance dates are strict, the old
+		// silent now+1yr fallback fabricated expiries.
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 
 	t.Run("Create success with empty mileage", func(t *testing.T) {
@@ -417,7 +419,7 @@ func TestSelectedVehicles_CRUD(t *testing.T) {
 		assert.Equal(t, http.StatusSeeOther, w.Code)
 	})
 
-	t.Run("Update invalid dates fallback still succeeds", func(t *testing.T) {
+	t.Run("Update invalid dates rejected", func(t *testing.T) {
 		form := url.Values{
 			"registration_number": {"MH03CC3333"},
 			"vehicle_number":      {"V-003"},
@@ -432,7 +434,9 @@ func TestSelectedVehicles_CRUD(t *testing.T) {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		w := httptest.NewRecorder()
 		r.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusSeeOther, w.Code)
+		// 00126 behavior change: compliance dates are strict, the old
+		// silent now+1yr fallback fabricated expiries.
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 
 	t.Run("Update validation error missing registration", func(t *testing.T) {

@@ -65,7 +65,7 @@ SET trip_number = ?, booking_id = ?, driver_id = ?, vehicle_id = ?, route_id = ?
     departure_time = ?, arrival_time = ?, status = ?, remarks = ?,
     started_at = ?, reached_pickup_at = ?, in_transit_at = ?, delivered_at = ?, completed_at = ?,
     version = version + 1,
-    updated_at = datetime('now')
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks,
@@ -77,21 +77,21 @@ RETURNING trip_number, booking_id, driver_id, vehicle_id, route_id,
 
 -- name: UpdateTripStatus :one
 UPDATE trips
-SET status = ?, version = version + 1, updated_at = datetime('now')
+SET status = ?, version = version + 1, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version, created_at, updated_at;
 
 -- name: AssignDriverToTrip :one
 UPDATE trips
-SET driver_id = ?, version = version + 1, updated_at = datetime('now')
+SET driver_id = ?, version = version + 1, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version, created_at, updated_at;
 
 -- name: AssignVehicleToTrip :one
 UPDATE trips
-SET vehicle_id = ?, version = version + 1, updated_at = datetime('now')
+SET vehicle_id = ?, version = version + 1, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version, created_at, updated_at;
@@ -111,7 +111,7 @@ LEFT JOIN drivers d ON t.driver_id = d.id
 LEFT JOIN vehicles v ON t.vehicle_id = v.id
 LEFT JOIN routes r ON t.route_id = r.id
 WHERE t.tenant_id = sqlc.arg(tenant_id)
-  AND (CAST(sqlc.arg(query) AS text) = '' OR t.trip_number LIKE '%' || sqlc.arg(query) || '%' OR d.first_name LIKE '%' || sqlc.arg(query) || '%' OR d.last_name LIKE '%' || sqlc.arg(query) || '%' OR v.registration_number LIKE '%' || sqlc.arg(query) || '%' OR r.source LIKE '%' || sqlc.arg(query) || '%' OR r.destination LIKE '%' || sqlc.arg(query) || '%')
+  AND (CAST(sqlc.arg(query) AS text) = '' OR lower(t.trip_number) LIKE '%' || lower(sqlc.arg(query)) || '%' OR lower(d.first_name) LIKE '%' || lower(sqlc.arg(query)) || '%' OR lower(d.last_name) LIKE '%' || lower(sqlc.arg(query)) || '%' OR lower(v.registration_number) LIKE '%' || lower(sqlc.arg(query)) || '%' OR lower(r.source) LIKE '%' || lower(sqlc.arg(query)) || '%' OR lower(r.destination) LIKE '%' || lower(sqlc.arg(query)) || '%')
   AND (CAST(sqlc.arg(status) AS text) = '' OR t.status = sqlc.arg(status))
 ORDER BY t.departure_time DESC
 LIMIT sqlc.arg('limit') OFFSET sqlc.arg('offset');
@@ -123,7 +123,7 @@ LEFT JOIN drivers d ON t.driver_id = d.id
 LEFT JOIN vehicles v ON t.vehicle_id = v.id
 LEFT JOIN routes r ON t.route_id = r.id
 WHERE t.tenant_id = sqlc.arg(tenant_id)
-  AND (CAST(sqlc.arg(query) AS text) = '' OR t.trip_number LIKE '%' || sqlc.arg(query) || '%' OR d.first_name LIKE '%' || sqlc.arg(query) || '%' OR d.last_name LIKE '%' || sqlc.arg(query) || '%' OR v.registration_number LIKE '%' || sqlc.arg(query) || '%' OR r.source LIKE '%' || sqlc.arg(query) || '%' OR r.destination LIKE '%' || sqlc.arg(query) || '%')
+  AND (CAST(sqlc.arg(query) AS text) = '' OR lower(t.trip_number) LIKE '%' || lower(sqlc.arg(query)) || '%' OR lower(d.first_name) LIKE '%' || lower(sqlc.arg(query)) || '%' OR lower(d.last_name) LIKE '%' || lower(sqlc.arg(query)) || '%' OR lower(v.registration_number) LIKE '%' || lower(sqlc.arg(query)) || '%' OR lower(r.source) LIKE '%' || lower(sqlc.arg(query)) || '%' OR lower(r.destination) LIKE '%' || lower(sqlc.arg(query)) || '%')
   AND (CAST(sqlc.arg(status) AS text) = '' OR t.status = sqlc.arg(status));
 
 -- name: CheckVehicleConflict :many
@@ -150,13 +150,13 @@ FROM trips t
 LEFT JOIN drivers d ON t.driver_id = d.id
 LEFT JOIN vehicles v ON t.vehicle_id = v.id
 LEFT JOIN routes r ON t.route_id = r.id
-WHERE date(t.departure_time) = CAST(sqlc.arg(departure_date) AS TEXT) AND t.tenant_id = sqlc.arg(tenant_id)
+WHERE substr(CAST(t.departure_time AS TEXT), 1, 10) = CAST(sqlc.arg(departure_date) AS TEXT) AND t.tenant_id = sqlc.arg(tenant_id)
 ORDER BY t.departure_time ASC;
 
 -- name: CountTripsByStatus :many
 SELECT status, COUNT(*) AS count
 FROM trips
-WHERE date(departure_time) = CAST(sqlc.arg(departure_date) AS TEXT) AND tenant_id = sqlc.arg(tenant_id)
+WHERE substr(CAST(departure_time AS TEXT), 1, 10) = CAST(sqlc.arg(departure_date) AS TEXT) AND tenant_id = sqlc.arg(tenant_id)
 GROUP BY status;
 
 -- name: GetOverdueTrips :many
@@ -171,14 +171,14 @@ LEFT JOIN vehicles v ON t.vehicle_id = v.id
 LEFT JOIN routes r ON t.route_id = r.id
 WHERE t.tenant_id = ?
   AND t.status IN ('scheduled', 'assigned', 'started', 'reached_pickup', 'in_transit', 'delivered')
-  AND t.departure_time < datetime('now')
+  AND t.departure_time < CURRENT_TIMESTAMP
 ORDER BY t.departure_time ASC
 LIMIT 10;
 
 -- name: UpdateTripTimeline :one
 UPDATE trips
 SET started_at = ?, reached_pickup_at = ?, in_transit_at = ?, delivered_at = ?, completed_at = ?,
-    status = ?, version = version + 1, updated_at = datetime('now')
+    status = ?, version = version + 1, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version, created_at, updated_at,

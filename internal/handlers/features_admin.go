@@ -20,11 +20,10 @@ type FeaturesAdmin struct {
 	*App
 }
 
+// tenantID resolves the acting org. Fail closed: admin routes sit behind auth
+// middleware which always sets tenant (panics surface as 500 via Recoverer).
 func (h *FeaturesAdmin) tenantID(r *http.Request) string {
-	if id := shared.TenantIDFromContext(r.Context()); id != "" {
-		return string(id)
-	}
-	return string(shared.DefaultTenant)
+	return string(shared.MustTenantID(r.Context()))
 }
 
 func (h *FeaturesAdmin) Page(w http.ResponseWriter, r *http.Request) {

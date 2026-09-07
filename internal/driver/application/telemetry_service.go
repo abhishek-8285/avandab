@@ -114,7 +114,7 @@ func (s *DriverAppService) IngestTelemetryEvent(ctx context.Context, tenantID, d
 	ex := s.exec(ctx)
 	err = ex.QueryRowContext(ctx, `
 		SELECT COALESCE(vehicle_id, '') FROM telemetry_sessions
-		WHERE tenant_id = ? AND id = ? AND driver_id = ? AND status = 'active'`,
+		WHERE tenant_id = $1 AND id = $2 AND driver_id = $3 AND status = 'active'`,
 		tenantID, req.SessionID, driverID).Scan(&vehicleID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

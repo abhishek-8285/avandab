@@ -2,7 +2,7 @@ package sqlite
 
 import (
 	"context"
-	"database/sql"
+	"time"
 
 	"transport-app/internal/domain"
 	"transport-app/internal/repository"
@@ -201,14 +201,12 @@ func (r *SQLRepository) DeleteBooking(ctx context.Context, id domain.BookingID) 
 
 func (r *SQLRepository) SearchBookings(ctx context.Context, query string, status string, limit, offset int) ([]repository.BookingWithJoins, error) {
 	rows, err := r.Q(ctx).SearchBookings(ctx, db.SearchBookingsParams{
-		TenantID: tenantIDFromCtx(ctx),
-		Column2:  sql.NullString{String: query, Valid: true},
-		Column3:  sql.NullString{String: query, Valid: true},
-		Column4:  sql.NullString{String: query, Valid: true},
-		Column5:  status,
-		Status:   status,
-		Limit:    int64(limit),
-		Offset:   int64(offset),
+		TenantID:  tenantIDFromCtx(ctx),
+		Search:    query,
+		StatusAll: status,
+		Status:    status,
+		Limit:     int64(limit),
+		Offset:    int64(offset),
 	})
 	if err != nil {
 		return nil, err
@@ -280,12 +278,10 @@ func (r *SQLRepository) ListBookingsByCustomer(ctx context.Context, customerID d
 
 func (r *SQLRepository) CountBookings(ctx context.Context, query string, status string) (int64, error) {
 	count, err := r.Q(ctx).CountBookings(ctx, db.CountBookingsParams{
-		TenantID: tenantIDFromCtx(ctx),
-		Column2:  sql.NullString{String: query, Valid: true},
-		Column3:  sql.NullString{String: query, Valid: true},
-		Column4:  sql.NullString{String: query, Valid: true},
-		Column5:  status,
-		Status:   status,
+		TenantID:  tenantIDFromCtx(ctx),
+		Search:    query,
+		StatusAll: status,
+		Status:    status,
 	})
 	if err != nil {
 		return 0, err
@@ -294,7 +290,12 @@ func (r *SQLRepository) CountBookings(ctx context.Context, query string, status 
 }
 
 func (r *SQLRepository) CountBookingsByDay(ctx context.Context) ([]repository.BookingsByDay, error) {
-	rows, err := r.Q(ctx).CountBookingsByDay(ctx, tenantIDFromCtx(ctx))
+	// Rolling 30-day window bound computed Go-side (UTC, matching the old
+	// date('now','-29 days')); keeps the query portable across engines.
+	rows, err := r.Q(ctx).CountBookingsByDay(ctx, db.CountBookingsByDayParams{
+		TenantID: tenantIDFromCtx(ctx),
+		StartDay: time.Now().UTC().AddDate(0, 0, -29).Format("2006-01-02"),
+	})
 	if err != nil {
 		return nil, err
 	}

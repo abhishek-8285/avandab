@@ -698,6 +698,217 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/v1/vehicles:
+    get:
+      tags: [Vehicles]
+      summary: List vehicles
+      description: Requires `vehicles:read` permission. Supports SOP fleet_class (CV/PV/FS/OFS) and ownership (O/C/F/M) filters.
+      parameters:
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/StatusParam'
+        - name: fleet_class
+          in: query
+          schema:
+            type: string
+            enum: [CV, PV, FS, OFS]
+        - name: ownership
+          in: query
+          schema:
+            type: string
+            enum: [O, C, F, M]
+      responses:
+        '200':
+          description: Paginated list of vehicles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VehicleList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Vehicles]
+      summary: Register a vehicle (SOP IE31)
+      description: Requires `vehicles:create` permission.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateVehicleRequest'
+      responses:
+        '201':
+          description: Vehicle registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IDResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/vehicles/{id}:
+    get:
+      tags: [Vehicles]
+      summary: Get a vehicle
+      description: Requires `vehicles:read` permission.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Vehicle details with SOP fleet-object profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Vehicle'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Vehicles]
+      summary: Update a vehicle (SOP IE32)
+      description: Requires `vehicles:update` permission.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateVehicleRequest'
+      responses:
+        '200':
+          description: Vehicle updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Vehicles]
+      summary: Delete a vehicle
+      description: Requires `vehicles:delete` permission.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Vehicle deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatusResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/vehicles/{id}/points:
+    post:
+      tags: [Vehicles]
+      summary: Create a measuring point (SOP IK01)
+      description: Requires `vehicles:update` permission.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind]
+              properties:
+                kind:
+                  type: string
+                  enum: [ODO, FUEL_TOPUP, PUMP]
+                meas_position:
+                  type: string
+                unit:
+                  type: string
+                annual_estimate:
+                  type: number
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Measuring point created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeasuringPoint'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/vehicles/{id}/measurements:
+    get:
+      tags: [Vehicles]
+      summary: List measuring documents for a vehicle
+      description: Requires `vehicles:read` permission. Latest IK11 documents across the vehicle's IK01 points.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+        - $ref: '#/components/parameters/LimitParam'
+      responses:
+        '200':
+          description: Measuring documents.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Measurement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Vehicles]
+      summary: Record a measuring document (SOP IK11)
+      description: Requires `vehicles:update` permission.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordMeasurementRequest'
+      responses:
+        '201':
+          description: Measuring document recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Measurement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /api/v1/invoices:
     get:
       tags: [Invoices]
@@ -1350,6 +1561,245 @@ components:
       required: [vehicle_id]
       properties:
         vehicle_id:
+          type: string
+
+    VehicleProfile:
+      type: object
+      description: SOP fleet-object master data (IE31 tabs + Vehicle Master).
+      properties:
+        fleet_class:
+          type: string
+          enum: [CV, PV, FS, OFS]
+        ownership:
+          type: string
+          enum: [O, C, F, M]
+        fleet_number:
+          type: string
+        description:
+          type: string
+        manufacturer:
+          type: string
+        manuf_country:
+          type: string
+        model:
+          type: string
+        constr_year_month:
+          type: string
+        acquisition_value:
+          type: number
+        acquisition_currency:
+          type: string
+        acquisition_date:
+          type: string
+          format: date
+        purchase_vendor:
+          type: string
+        valid_from:
+          type: string
+          format: date
+        valid_to:
+          type: string
+          format: date
+        facility_id:
+          type: string
+        maint_plant:
+          type: string
+        planning_plant:
+          type: string
+        company_code:
+          type: string
+        business_area:
+          type: string
+        cost_center:
+          type: string
+        asset_no:
+          type: string
+        fleet_object_no:
+          type: string
+        chassis_no:
+          type: string
+        vehicle_category:
+          type: string
+        engine_number:
+          type: string
+        engine_power:
+          type: string
+        engine_capacity:
+          type: string
+        cylinder_count:
+          type: integer
+        max_speed:
+          type: number
+        weight:
+          type: number
+        weight_unit:
+          type: string
+          enum: [TO, KG]
+        load_volume:
+          type: number
+        volume_unit:
+          type: string
+        secondary_fuel:
+          type: string
+        usage_indicator:
+          type: string
+
+    Vehicle:
+      type: object
+      properties:
+        id:
+          type: string
+        registration_number:
+          type: string
+        vehicle_number:
+          type: string
+        vehicle_type:
+          type: string
+        capacity:
+          type: integer
+        fuel_type:
+          type: string
+        insurance_expiry:
+          type: string
+          format: date
+        fitness_expiry:
+          type: string
+          format: date
+        permit_expiry:
+          type: string
+          format: date
+        status:
+          type: string
+        current_mileage:
+          type: number
+          nullable: true
+        profile:
+          $ref: '#/components/schemas/VehicleProfile'
+
+    VehicleList:
+      type: object
+      properties:
+        vehicles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Vehicle'
+        total:
+          type: integer
+          format: int64
+
+    CreateVehicleRequest:
+      type: object
+      required: [registration_number, vehicle_number, insurance_expiry, fitness_expiry, permit_expiry]
+      properties:
+        registration_number:
+          type: string
+        vehicle_number:
+          type: string
+        vehicle_type:
+          type: string
+        capacity:
+          type: integer
+        fuel_type:
+          type: string
+        insurance_expiry:
+          type: string
+          format: date
+        fitness_expiry:
+          type: string
+          format: date
+        permit_expiry:
+          type: string
+          format: date
+        current_mileage:
+          type: number
+        profile:
+          $ref: '#/components/schemas/VehicleProfile'
+
+    UpdateVehicleRequest:
+      type: object
+      properties:
+        registration_number:
+          type: string
+        vehicle_number:
+          type: string
+        vehicle_type:
+          type: string
+        capacity:
+          type: integer
+        fuel_type:
+          type: string
+        insurance_expiry:
+          type: string
+          format: date
+        fitness_expiry:
+          type: string
+          format: date
+        permit_expiry:
+          type: string
+          format: date
+        status:
+          type: string
+        current_mileage:
+          type: number
+        profile:
+          $ref: '#/components/schemas/VehicleProfile'
+
+    MeasuringPoint:
+      type: object
+      properties:
+        id:
+          type: string
+        vehicle_id:
+          type: string
+        category:
+          type: string
+        kind:
+          type: string
+          enum: [ODO, FUEL_TOPUP, PUMP]
+        meas_position:
+          type: string
+        unit:
+          type: string
+        annual_estimate:
+          type: number
+        description:
+          type: string
+
+    Measurement:
+      type: object
+      properties:
+        id:
+          type: string
+        point_id:
+          type: string
+        counter_reading:
+          type: number
+        difference_reading:
+          type: number
+        total_counter_reading:
+          type: number
+        measured_at:
+          type: string
+          format: date-time
+        read_by:
+          type: string
+        remarks:
+          type: string
+
+    RecordMeasurementRequest:
+      type: object
+      required: [point_id, counter_reading]
+      properties:
+        point_id:
+          type: string
+        counter_reading:
+          type: number
+        measured_at:
+          type: string
+          format: date
+        read_by:
+          type: string
+        remarks:
           type: string
 
     GenerateInvoiceRequest:

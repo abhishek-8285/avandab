@@ -24,7 +24,7 @@ UPDATE drivers
 SET driver_id = ?, first_name = ?, last_name = ?, phone = ?, email = ?, address = ?,
     license_number = ?, license_expiry = ?, experience_years = ?, status = ?,
     emergency_contact_name = ?, emergency_contact_phone = ?, notes = ?,
-    updated_at = datetime('now')
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ?
 RETURNING id, driver_id, first_name, last_name, phone, email, address,
     license_number, license_expiry, experience_years, status, emergency_contact_name,
@@ -38,18 +38,18 @@ SELECT id, driver_id, first_name, last_name, phone, email, address,
     license_number, license_expiry, experience_years, status, emergency_contact_name,
     emergency_contact_phone, notes, tenant_id, created_at, updated_at
 FROM drivers
-WHERE tenant_id = ?
-  AND (first_name LIKE '%' || ? || '%' OR last_name LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR license_number LIKE '%' || ? || '%')
-  AND (? = '' OR status = ?)
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND (lower(first_name) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(last_name) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(phone) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(license_number) LIKE '%' || lower(sqlc.arg(search)) || '%')
+  AND (sqlc.arg(status_all) = '' OR status = sqlc.arg(status))
 ORDER BY created_at DESC
-LIMIT ? OFFSET ?;
+LIMIT sqlc.arg(limit) OFFSET sqlc.arg(offset);
 
 -- name: CountDrivers :one
 SELECT COUNT(*) AS count
 FROM drivers
-WHERE tenant_id = ?
-  AND (first_name LIKE '%' || ? || '%' OR last_name LIKE '%' || ? || '%' OR phone LIKE '%' || ? || '%' OR license_number LIKE '%' || ? || '%')
-  AND (? = '' OR status = ?);
+WHERE tenant_id = sqlc.arg(tenant_id)
+  AND (lower(first_name) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(last_name) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(phone) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(license_number) LIKE '%' || lower(sqlc.arg(search)) || '%')
+  AND (sqlc.arg(status_all) = '' OR status = sqlc.arg(status));
 
 -- name: GetAvailableDrivers :many
 SELECT id, driver_id, first_name, last_name, phone, email, address,

@@ -102,10 +102,11 @@ func (c *Consumer) ProcessEvent(ctx context.Context, evt events.Event) (bool, er
 
 	// 1. Insert into accounting_sync_log (UNIQUE idempotency_key prevents duplicate processing)
 	res, err := c.db.ExecContext(ctx, `
-		INSERT OR IGNORE INTO accounting_sync_log (
+		INSERT INTO accounting_sync_log (
 			id, idempotency_key, direction, entity_type, entity_id, adapter,
 			payload_json, status, attempts, created_at, updated_at
-		) VALUES (?, ?, 'out', ?, ?, ?, ?, 'pending', 0, datetime('now'), datetime('now'))
+		) VALUES ($1, $2, 'out', $3, $4, $5, $6, 'pending', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		ON CONFLICT (idempotency_key) DO NOTHING
 	`, logID, idempotencyKey, entityType, aggID, adapterName, string(payloadBytes))
 	if err != nil {
 		return false, fmt.Errorf("insert accounting_sync_log failed: %w", err)
@@ -120,7 +121,7 @@ func (c *Consumer) ProcessEvent(ctx context.Context, evt events.Event) (bool, er
 	var debitAcc, creditAcc string
 	_ = c.db.QueryRowContext(ctx, `
 		SELECT debit_account, credit_account FROM accounting_gl_rule
-		WHERE event_type = ? ORDER BY priority DESC LIMIT 1
+		WHERE event_type = $1 ORDER BY priority DESC LIMIT 1
 	`, evt.Type).Scan(&debitAcc, &creditAcc)
 
 	if debitAcc == "" {
@@ -167,24 +168,24 @@ func (c *Consumer) ProcessEvent(ctx context.Context, evt events.Event) (bool, er
 	if dispatchErr != nil {
 		_, _ = c.db.ExecContext(ctx, `
 			UPDATE accounting_sync_log
-			SET status = 'failed', attempts = attempts + 1, last_error = ?, updated_at = datetime('now')
-			WHERE id = ?
+			SET status = 'failed', attempts = attempts + 1, last_error = $1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = $2
 		`, dispatchErr.Error(), logID)
 		return true, dispatchErr
 	}
 
 	_, _ = c.db.ExecContext(ctx, `
 		UPDATE accounting_sync_log
-		SET status = 'acked', external_id = ?, updated_at = datetime('now')
-		WHERE id = ?
+		SET status = 'acked', external_id = $1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
 	`, extID, logID)
 
 	if extID != "" {
 		mapID := "map-" + uuid.New().String()
 		_, _ = c.db.ExecContext(ctx, `
 			INSERT INTO accounting_mapping (id, entity_type, entity_id, adapter, external_id, created_at)
-			VALUES (?, ?, ?, ?, ?, datetime('now'))
-			ON CONFLICT(entity_type, entity_id, adapter) DO UPDATE SET external_id = excluded.external_id
+			VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+			ON CONFLICT (entity_type, entity_id, adapter) DO UPDATE SET external_id = excluded.external_id
 		`, mapID, entityType, aggID, adapterName, extID)
 	}
 
@@ -199,8 +200,10 @@ func (c *Consumer) TriggerSync(ctx context.Context, sinceMinutes int) (TriggerRe
 	}
 
 	timeClause := ""
+	var timeArgs []any
 	if sinceMinutes > 0 {
-		timeClause = fmt.Sprintf("AND created_at >= datetime('now', '-%d minutes')", sinceMinutes)
+		timeClause = "AND created_at >= $1"
+		timeArgs = append(timeArgs, time.Now().UTC().Add(-time.Duration(sinceMinutes)*time.Minute))
 	}
 
 	query := fmt.Sprintf(`
@@ -210,7 +213,7 @@ func (c *Consumer) TriggerSync(ctx context.Context, sinceMinutes int) (TriggerRe
 		ORDER BY created_at ASC
 	`, timeClause)
 
-	rows, err := c.db.QueryContext(ctx, query)
+	rows, err := c.db.QueryContext(ctx, query, timeArgs...)
 	if err != nil {
 		return res, fmt.Errorf("query sync log failed: %w", err)
 	}
@@ -269,15 +272,15 @@ func (c *Consumer) TriggerSync(ctx context.Context, sinceMinutes int) (TriggerRe
 			res.Failed++
 			_, _ = c.db.ExecContext(ctx, `
 				UPDATE accounting_sync_log
-				SET attempts = attempts + 1, last_error = ?, updated_at = datetime('now')
-				WHERE id = ?
+				SET attempts = attempts + 1, last_error = $1, updated_at = CURRENT_TIMESTAMP
+				WHERE id = $2
 			`, dispatchErr.Error(), it.id)
 		} else {
 			res.Dispatched++
 			_, _ = c.db.ExecContext(ctx, `
 				UPDATE accounting_sync_log
-				SET status = 'acked', external_id = ?, updated_at = datetime('now')
-				WHERE id = ?
+				SET status = 'acked', external_id = $1, updated_at = CURRENT_TIMESTAMP
+				WHERE id = $2
 			`, extID, it.id)
 
 			if extID != "" {
@@ -288,8 +291,8 @@ func (c *Consumer) TriggerSync(ctx context.Context, sinceMinutes int) (TriggerRe
 				mapID := "map-" + uuid.New().String()
 				_, _ = c.db.ExecContext(ctx, `
 					INSERT INTO accounting_mapping (id, entity_type, entity_id, adapter, external_id, created_at)
-					VALUES (?, ?, ?, ?, ?, datetime('now'))
-					ON CONFLICT(entity_type, entity_id, adapter) DO UPDATE SET external_id = excluded.external_id
+					VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+					ON CONFLICT (entity_type, entity_id, adapter) DO UPDATE SET external_id = excluded.external_id
 				`, mapID, it.entityType, it.entityID, adapterName, extID)
 			}
 		}
@@ -356,8 +359,8 @@ func (c *Consumer) SyncContacts(ctx context.Context) (SyncResult, error) {
 		mapID := "map-" + uuid.New().String()
 		_, _ = c.db.ExecContext(ctx, `
 			INSERT INTO accounting_mapping (id, entity_type, entity_id, adapter, external_id, created_at)
-			VALUES (?, ?, ?, ?, ?, datetime('now'))
-			ON CONFLICT(entity_type, entity_id, adapter) DO UPDATE SET external_id = excluded.external_id
+			VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+			ON CONFLICT (entity_type, entity_id, adapter) DO UPDATE SET external_id = excluded.external_id
 		`, mapID, ct.ContactType, ct.ExternalID, adapterName, "EXT-"+ct.ExternalID)
 	}
 

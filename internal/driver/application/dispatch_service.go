@@ -53,7 +53,7 @@ func (s *DriverAppService) CreateDispatchOffer(ctx context.Context, tenantID, bo
 	ex := s.exec(ctx)
 	_, err := ex.ExecContext(ctx, `
 		INSERT INTO dispatch_offers (id, tenant_id, booking_id, driver_id, vehicle_id, status, offered_at, expires_at)
-		VALUES (?, ?, ?, ?, ?, 'offered', ?, ?)`,
+		VALUES ($1, $2, $3, $4, $5, 'offered', $6, $7)`,
 		offerID, tenantID, bookingID, driverID, vehicleID, now, expiresAt)
 	if err != nil {
 		return nil, fmt.Errorf("failed creating dispatch offer: %w", err)
@@ -75,7 +75,7 @@ func (s *DriverAppService) GetPendingOffersForDriver(ctx context.Context, tenant
 	rows, err := ex.QueryContext(ctx, `
 		SELECT id, booking_id, driver_id, vehicle_id, status, offered_at, expires_at
 		FROM dispatch_offers
-		WHERE tenant_id = ? AND driver_id = ? AND status = 'offered' AND expires_at > ?
+		WHERE tenant_id = $1 AND driver_id = $2 AND status = 'offered' AND expires_at > $3
 		ORDER BY offered_at DESC`,
 		tenantID, driverID, time.Now())
 	if err != nil {
@@ -104,7 +104,7 @@ func (s *DriverAppService) ProcessDriverCommand(ctx context.Context, tenantID, d
 	var existingStatus, existingPayload string
 	err := ex.QueryRowContext(ctx, `
 		SELECT status, response_payload FROM driver_commands
-		WHERE tenant_id = ? AND command_id = ?`,
+		WHERE tenant_id = $1 AND command_id = $2`,
 		tenantID, req.CommandID).Scan(&existingStatus, &existingPayload)
 	if err == nil {
 		var resp DriverCommandResponse
@@ -140,7 +140,7 @@ func (s *DriverAppService) ProcessDriverCommand(ctx context.Context, tenantID, d
 	payloadBytes, _ := json.Marshal(resp)
 	_, _ = ex.ExecContext(ctx, `
 		INSERT INTO driver_commands (command_id, tenant_id, driver_id, command_type, status, response_payload)
-		VALUES (?, ?, ?, ?, 'processed', ?)`,
+		VALUES ($1, $2, $3, $4, 'processed', $5)`,
 		req.CommandID, tenantID, driverID, req.Type, string(payloadBytes))
 
 	return resp, nil
@@ -163,7 +163,7 @@ func (s *DriverAppService) executeAcceptOffer(ctx context.Context, tenantID, dri
 	err = tx.QueryRowContext(ctx, `
 		SELECT booking_id, vehicle_id, status, expires_at
 		FROM dispatch_offers
-		WHERE tenant_id = ? AND id = ? AND driver_id = ?`,
+		WHERE tenant_id = $1 AND id = $2 AND driver_id = $3`,
 		tenantID, offerID, driverID).Scan(&bookingID, &vehicleID, &status, &expiresAt)
 	if err != nil {
 		return DriverCommandResponse{}, fmt.Errorf("offer not found: %w", err)
@@ -173,7 +173,7 @@ func (s *DriverAppService) executeAcceptOffer(ctx context.Context, tenantID, dri
 		return DriverCommandResponse{}, fmt.Errorf("offer is already %s", status)
 	}
 	if time.Now().After(expiresAt) {
-		_, _ = tx.ExecContext(ctx, `UPDATE dispatch_offers SET status = 'expired' WHERE id = ?`, offerID)
+		_, _ = tx.ExecContext(ctx, `UPDATE dispatch_offers SET status = 'expired' WHERE id = $1`, offerID)
 		return DriverCommandResponse{}, errors.New("offer has expired")
 	}
 
@@ -181,13 +181,13 @@ func (s *DriverAppService) executeAcceptOffer(ctx context.Context, tenantID, dri
 	var acceptedCount int
 	err = tx.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM dispatch_offers
-		WHERE tenant_id = ? AND booking_id = ? AND status = 'accepted'`,
+		WHERE tenant_id = $1 AND booking_id = $2 AND status = 'accepted'`,
 		tenantID, bookingID).Scan(&acceptedCount)
 	if err != nil {
 		return DriverCommandResponse{}, err
 	}
 	if acceptedCount > 0 {
-		_, _ = tx.ExecContext(ctx, `UPDATE dispatch_offers SET status = 'cancelled' WHERE id = ?`, offerID)
+		_, _ = tx.ExecContext(ctx, `UPDATE dispatch_offers SET status = 'cancelled' WHERE id = $1`, offerID)
 		return DriverCommandResponse{}, errors.New("offer already taken by another driver")
 	}
 
@@ -195,8 +195,8 @@ func (s *DriverAppService) executeAcceptOffer(ctx context.Context, tenantID, dri
 	now := time.Now()
 	_, err = tx.ExecContext(ctx, `
 		UPDATE dispatch_offers
-		SET status = 'accepted', responded_at = ?
-		WHERE id = ?`, now, offerID)
+		SET status = 'accepted', responded_at = $1
+		WHERE id = $2`, now, offerID)
 	if err != nil {
 		return DriverCommandResponse{}, err
 	}
@@ -204,15 +204,15 @@ func (s *DriverAppService) executeAcceptOffer(ctx context.Context, tenantID, dri
 	// 2. Cancel competing offers for this booking
 	_, _ = tx.ExecContext(ctx, `
 		UPDATE dispatch_offers
-		SET status = 'cancelled', responded_at = ?
-		WHERE tenant_id = ? AND booking_id = ? AND id != ? AND status = 'offered'`,
+		SET status = 'cancelled', responded_at = $1
+		WHERE tenant_id = $2 AND booking_id = $3 AND id != $4 AND status = 'offered'`,
 		now, tenantID, bookingID, offerID)
 
 	// 3. Create / assign Trip
 	tripID := "trip_" + uuid.NewString()
 	_, _ = tx.ExecContext(ctx, `
 		INSERT INTO trips (id, tenant_id, booking_id, driver_id, vehicle_id, status, started_at, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, 'assigned', ?, ?, ?)`,
+		VALUES ($1, $2, $3, $4, $5, 'assigned', $6, $7, $8)`,
 		tripID, tenantID, bookingID, driverID, vehicleID, now, now, now)
 
 	if commitErr := tx.Commit(); commitErr != nil {
@@ -237,8 +237,8 @@ func (s *DriverAppService) executeRejectOffer(ctx context.Context, tenantID, dri
 	ex := s.exec(ctx)
 	res, err := ex.ExecContext(ctx, `
 		UPDATE dispatch_offers
-		SET status = 'rejected', responded_at = ?
-		WHERE tenant_id = ? AND id = ? AND driver_id = ? AND status = 'offered'`,
+		SET status = 'rejected', responded_at = $1
+		WHERE tenant_id = $2 AND id = $3 AND driver_id = $4 AND status = 'offered'`,
 		time.Now(), tenantID, offerID, driverID)
 	if err != nil {
 		return DriverCommandResponse{}, err
@@ -265,7 +265,7 @@ func (s *DriverAppService) executeTripTransition(ctx context.Context, tenantID, 
 	var currentStatus string
 	err := ex.QueryRowContext(ctx, `
 		SELECT status FROM trips
-		WHERE tenant_id = ? AND id = ? AND driver_id = ?`,
+		WHERE tenant_id = $1 AND id = $2 AND driver_id = $3`,
 		tenantID, tripID, driverID).Scan(&currentStatus)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -294,14 +294,17 @@ func (s *DriverAppService) executeTripTransition(ctx context.Context, tenantID, 
 	case "START_UNLOADING":
 		nextStatus = "unloading"
 	case "COMPLETE_TRIP":
-		// Document verification check: if pod_required is set, verify POD is present
+		// Document verification check: if pod_required is set, verify a POD
+		// exists. POD proofs live on trip_stops (driver_documents holds
+		// driver-level docs). Fail-closed: any lookup failure blocks.
 		podRequired, _ := payload["pod_required"].(bool)
 		podDocID, _ := payload["pod_document_id"].(string)
 		if podRequired && podDocID == "" {
 			var count int
 			_ = ex.QueryRowContext(ctx, `
-				SELECT COUNT(*) FROM driver_documents
-				WHERE tenant_id = ? AND entity_type = 'trip' AND entity_id = ? AND document_type = 'POD'`,
+				SELECT COUNT(*) FROM trip_stops
+				WHERE tenant_id = $1 AND trip_id = $2
+				AND pod_url IS NOT NULL AND pod_url != ''`,
 				tenantID, tripID).Scan(&count)
 			if count == 0 {
 				return DriverCommandResponse{}, errors.New("proof of delivery (POD) document is required to complete trip")
@@ -319,8 +322,8 @@ func (s *DriverAppService) executeTripTransition(ctx context.Context, tenantID, 
 	now := time.Now()
 	_, err = ex.ExecContext(ctx, `
 		UPDATE trips
-		SET status = ?, updated_at = ?
-		WHERE tenant_id = ? AND id = ?`,
+		SET status = $1, updated_at = $2
+		WHERE tenant_id = $3 AND id = $4`,
 		nextStatus, now, tenantID, tripID)
 	if err != nil {
 		return DriverCommandResponse{}, fmt.Errorf("failed updating trip state: %w", err)

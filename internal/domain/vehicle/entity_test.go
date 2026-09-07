@@ -91,6 +91,7 @@ func TestVehicle_CanAssign_ExpiredInsurance(t *testing.T) {
 }
 
 func TestVehicle_CanAssign_RunningStatus(t *testing.T) {
+
 	vh := vehicle.Vehicle{
 		ID:                 types.VehicleID("vh-6"),
 		RegistrationNumber: "MH-12-AB-1239",
@@ -103,5 +104,40 @@ func TestVehicle_CanAssign_RunningStatus(t *testing.T) {
 	err := vh.CanAssign()
 	if err == nil {
 		t.Fatalf("expected error for running vehicle, got nil")
+	}
+}
+
+func TestVehicle_CanAssign_ExpiredPUC(t *testing.T) {
+	puc := time.Now().Add(-24 * time.Hour)
+	vh := vehicle.Vehicle{
+		ID:                 types.VehicleID("vh-7"),
+		RegistrationNumber: "MH-12-AB-1240",
+		RCExpiry:           time.Now().Add(100 * 24 * time.Hour),
+		FitnessExpiry:      time.Now().Add(100 * 24 * time.Hour),
+		InsuranceExpiry:    time.Now().Add(100 * 24 * time.Hour),
+		PUCExpiry:          &puc,
+		Status:             vehicle.VehicleAvailable,
+	}
+
+	err := vh.CanAssign()
+	if err == nil {
+		t.Fatalf("expected compliance hard-block error for expired PUC, got nil")
+	}
+}
+
+func TestVehicle_CanAssign_ValidPUC(t *testing.T) {
+	puc := time.Now().Add(100 * 24 * time.Hour)
+	vh := vehicle.Vehicle{
+		ID:                 types.VehicleID("vh-8"),
+		RegistrationNumber: "MH-12-AB-1241",
+		RCExpiry:           time.Now().Add(100 * 24 * time.Hour),
+		FitnessExpiry:      time.Now().Add(100 * 24 * time.Hour),
+		InsuranceExpiry:    time.Now().Add(100 * 24 * time.Hour),
+		PUCExpiry:          &puc,
+		Status:             vehicle.VehicleAvailable,
+	}
+
+	if err := vh.CanAssign(); err != nil {
+		t.Fatalf("expected no error for valid PUC, got %v", err)
 	}
 }

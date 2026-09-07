@@ -45,7 +45,7 @@ func (h *OutboxBatchHandler) HandleBatch(w http.ResponseWriter, r *http.Request)
 			http.Error(w, "outbox unavailable; retry", http.StatusServiceUnavailable)
 			return
 		}
-		stmt, err := tx.PrepareContext(r.Context(), `INSERT OR IGNORE INTO outbox_events (id, aggregate_id, aggregate_type, event_type, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)`)
+		stmt, err := tx.PrepareContext(r.Context(), `INSERT INTO outbox_events (id, aggregate_id, aggregate_type, event_type, payload, created_at) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT DO NOTHING`)
 		if err != nil {
 			_ = tx.Rollback()
 			http.Error(w, "outbox unavailable; retry", http.StatusServiceUnavailable)

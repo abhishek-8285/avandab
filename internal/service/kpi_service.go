@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/google/uuid"
+	"time"
 
+	appdb "transport-app/internal/database"
 	"transport-app/internal/shared"
 )
 
@@ -46,16 +49,22 @@ func (s *KPIService) PilotKPIs(ctx context.Context, tenantID string, days int) (
 		days = 14
 	}
 	out := &PilotKPIs{WindowDays: days}
-	cutoff := fmt.Sprintf("datetime('now', '-%d days')", days)
+	cutoff := time.Now().UTC().AddDate(0, 0, -days)
 
 	// 1. Settlement cycle: mean(created_at → paid_at) for paid settlements.
+	// Duration arithmetic has no portable spelling: julianday on sqlite,
+	// EXTRACT(EPOCH) on postgres.
+	cycleExpr := "AVG((julianday(paid_at) - julianday(created_at)) * 24 * 60)"
+	if appdb.IsPostgres(s.db) {
+		cycleExpr = "AVG(EXTRACT(EPOCH FROM (paid_at - created_at)) / 60)"
+	}
 	var cycle sql.NullFloat64
 	err := s.db.QueryRowContext(ctx, `
-		SELECT AVG((julianday(paid_at) - julianday(created_at)) * 24 * 60)
+		SELECT `+cycleExpr+`
 		FROM driver_settlements
 		WHERE status = 'paid' AND paid_at IS NOT NULL
-		  AND created_at >= `+cutoff+`
-		  AND trip_id IN (SELECT id FROM trips WHERE tenant_id = ?)`, tenantID).Scan(&cycle)
+		  AND created_at >= $1
+		  AND trip_id IN (SELECT id FROM trips WHERE tenant_id = $2)`, cutoff, tenantID).Scan(&cycle)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, fmt.Errorf("settlement cycle: %w", err)
 	}
@@ -70,7 +79,7 @@ func (s *KPIService) PilotKPIs(ctx context.Context, tenantID string, days int) (
 	err = s.db.QueryRowContext(ctx, `
 		SELECT COALESCE(SUM(CASE WHEN idempotency_key IS NOT NULL THEN 1 ELSE 0 END), 0), COUNT(*)
 		FROM driver_expenses
-		WHERE created_at >= `+cutoff+` AND COALESCE(tenant_id,'') = ?`, tenantID).
+		WHERE created_at >= $1 AND COALESCE(tenant_id,'') = $2`, cutoff, tenantID).
 		Scan(&appSub, &totalExp)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, fmt.Errorf("kharcha submitted: %w", err)
@@ -86,7 +95,7 @@ func (s *KPIService) PilotKPIs(ctx context.Context, tenantID string, days int) (
 		SELECT COALESCE(SUM(CASE WHEN ds.status = 'disputed' THEN 1 ELSE 0 END), 0), COUNT(*)
 		FROM driver_settlements ds
 		JOIN trips t ON t.id = ds.trip_id
-		WHERE ds.created_at >= `+cutoff+` AND t.tenant_id = ?`, tenantID).
+		WHERE ds.created_at >= $1 AND t.tenant_id = $2`, cutoff, tenantID).
 		Scan(&disputed, &settledTotal)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, fmt.Errorf("disputed share: %w", err)
@@ -99,18 +108,19 @@ func (s *KPIService) PilotKPIs(ctx context.Context, tenantID string, days int) (
 	// 4. Driver weekly activity: distinct drivers with any expense claim
 	// or trip departure in the last 7 days, over all known drivers.
 	var activeDrivers, allDrivers int
+	weekAgo := time.Now().UTC().AddDate(0, 0, -7)
 	err = s.db.QueryRowContext(ctx, `
 		SELECT
 		  (SELECT COUNT(DISTINCT driver_id) FROM (
 		     SELECT driver_id FROM driver_expenses
-		       WHERE created_at >= datetime('now', '-7 days') AND COALESCE(tenant_id,'') = ?
+		       WHERE created_at >= $1 AND COALESCE(tenant_id,'') = $2
 		     UNION
 		     SELECT ds.driver_id FROM driver_settlements ds
 		       JOIN trips t ON t.id = ds.trip_id
-		       WHERE t.tenant_id = ? AND t.departure_time >= datetime('now', '-7 days')
+		       WHERE t.tenant_id = $3 AND t.departure_time >= $4
 		   ) act),
-		  (SELECT COUNT(*) FROM drivers WHERE COALESCE(tenant_id,'') = ?)`,
-		tenantID, tenantID, tenantID).Scan(&activeDrivers, &allDrivers)
+		  (SELECT COUNT(*) FROM drivers WHERE COALESCE(tenant_id,'') = $5)`,
+		weekAgo, tenantID, tenantID, weekAgo, tenantID).Scan(&activeDrivers, &allDrivers)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, fmt.Errorf("driver wau: %w", err)
 	}
@@ -122,18 +132,19 @@ func (s *KPIService) PilotKPIs(ctx context.Context, tenantID string, days int) (
 	// 5. EWB expiry caught: expired bills that produced at least one
 	// radar ewb_expiry_* alert before expiry.
 	var caught, expired int
+	now := time.Now().UTC()
 	err = s.db.QueryRowContext(ctx, `
 		SELECT
 		  (SELECT COUNT(*) FROM eway_bills e
 		    JOIN alerts a ON a.entity_type = 'ewaybill'
 		      AND (a.entity_id = e.id OR a.entity_id = e.ewb_number)
 		      AND a.alert_type LIKE 'ewb_expiry_%'
-		    WHERE e.valid_until < datetime('now')
-		      AND e.trip_id IN (SELECT id FROM trips WHERE tenant_id = ?)),
+		    WHERE e.valid_until < $1
+		      AND e.trip_id IN (SELECT id FROM trips WHERE tenant_id = $2)),
 		  (SELECT COUNT(*) FROM eway_bills e
-		    WHERE e.valid_until < datetime('now')
-		      AND e.trip_id IN (SELECT id FROM trips WHERE tenant_id = ?))`,
-		tenantID, tenantID).Scan(&caught, &expired)
+		    WHERE e.valid_until < $1
+		      AND e.trip_id IN (SELECT id FROM trips WHERE tenant_id = $3))`,
+		now, tenantID, tenantID).Scan(&caught, &expired)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, fmt.Errorf("ewb caught: %w", err)
 	}
@@ -146,11 +157,11 @@ func (s *KPIService) PilotKPIs(ctx context.Context, tenantID string, days int) (
 	_ = s.db.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM experiment_events
 		WHERE experiment = 'command_center' AND event = 'console_open'
-		  AND created_at >= `+cutoff+` AND tenant_id = ?`, tenantID).Scan(&out.ConsoleOpens)
+		  AND created_at >= $1 AND tenant_id = $2`, cutoff.Format("2006-01-02T15:04:05.000Z"), tenantID).Scan(&out.ConsoleOpens)
 	_ = s.db.QueryRowContext(ctx, `
 		SELECT COUNT(*) FROM experiment_events
 		WHERE experiment = 'command_center' AND event = 'panel_action'
-		  AND created_at >= `+cutoff+` AND tenant_id = ?`, tenantID).Scan(&out.PanelActions)
+		  AND created_at >= $1 AND tenant_id = $2`, cutoff.Format("2006-01-02T15:04:05.000Z"), tenantID).Scan(&out.PanelActions)
 
 	if storage, serr := s.StorageStats(ctx); serr == nil {
 		out.Storage = storage
@@ -194,9 +205,8 @@ func (s *KPIService) RecordConsoleUsage(ctx context.Context, tenantID, userID, e
 	_, _ = s.db.ExecContext(ctx, `
 		INSERT INTO experiment_events
 		  (id, tenant_id, user_id, experiment, variant, event, meta, created_at)
-		VALUES ('cce-' || lower(hex(randomblob(8))), ?, ?, 'command_center', 'console', ?, '{}',
-		        strftime('%Y-%m-%dT%H:%M:%fZ','now'))`,
-		tenantID, userID, event)
+		VALUES ($1, $2, $3, 'command_center', 'console', $4, '{}', $5)`,
+		"cce-"+uuid.NewString(), tenantID, userID, event, time.Now().UTC().Format("2006-01-02T15:04:05.000Z"))
 }
 
 // StorageTable is one watched table's row count (Spec 23 §10 R0).

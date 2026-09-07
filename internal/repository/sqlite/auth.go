@@ -2,7 +2,6 @@ package sqlite
 
 import (
 	"context"
-	"database/sql"
 
 	"transport-app/internal/domain"
 	"transport-app/internal/repository"
@@ -142,13 +141,12 @@ func (r *SQLRepository) DeleteUser(ctx context.Context, userID domain.UserID) er
 
 func (r *SQLRepository) SearchUsers(ctx context.Context, query string, status string, limit, offset int, tenantID string) ([]repository.UserWithRole, error) {
 	rows, err := r.Q(ctx).SearchUsers(ctx, db.SearchUsersParams{
-		TenantID: tenantID,
-		Column2:  sql.NullString{String: query, Valid: true},
-		Column3:  sql.NullString{String: query, Valid: true},
-		Column4:  status,
-		Status:   status,
-		Limit:    int64(limit),
-		Offset:   int64(offset),
+		TenantID:  tenantID,
+		Search:    query,
+		StatusAll: status,
+		Status:    status,
+		Limit:     int64(limit),
+		Offset:    int64(offset),
 	})
 	if err != nil {
 		return nil, err
@@ -174,11 +172,10 @@ func (r *SQLRepository) SearchUsers(ctx context.Context, query string, status st
 
 func (r *SQLRepository) CountUsers(ctx context.Context, query string, status string, tenantID string) (int64, error) {
 	count, err := r.Q(ctx).CountUsers(ctx, db.CountUsersParams{
-		TenantID: tenantID,
-		Column2:  sql.NullString{String: query, Valid: true},
-		Column3:  sql.NullString{String: query, Valid: true},
-		Column4:  status,
-		Status:   status,
+		TenantID:  tenantID,
+		Search:    query,
+		StatusAll: status,
+		Status:    status,
 	})
 	if err != nil {
 		return 0, err

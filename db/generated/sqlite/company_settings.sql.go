@@ -11,11 +11,14 @@ import (
 )
 
 const ensureCompanySettings = `-- name: EnsureCompanySettings :one
-INSERT OR IGNORE INTO company_settings (id, company_name, currency, timezone, gst_enabled, gst_rate, booking_prefix, trip_prefix, invoice_prefix, financial_year)
-VALUES (1, 'Transport Company', 'INR', 'Asia/Kolkata', 0, 0.0, 'BK', 'TR', 'INV', NULL)
+INSERT INTO company_settings (id, company_name, currency, timezone, gst_enabled, gst_rate, booking_prefix, trip_prefix, invoice_prefix, financial_year)
+VALUES (1, 'Transport Company', 'INR', 'Asia/Kolkata', FALSE, 0.0, 'BK', 'TR', 'INV', NULL)
+ON CONFLICT (id) DO NOTHING
 RETURNING id, company_name, logo_path, currency, timezone, gst_enabled, gst_rate, booking_prefix, trip_prefix, invoice_prefix, created_at, updated_at, address, phone, email, gst_number, financial_year, maintenance_default_interval_km, maintenance_default_interval_days, maintenance_critical_dtcs, state_code, pan_number
 `
 
+// ON CONFLICT DO NOTHING + RETURNING matches the old INSERT OR IGNORE
+// semantics exactly (zero rows when the id=1 row already exists).
 func (q *Queries) EnsureCompanySettings(ctx context.Context) (CompanySetting, error) {
 	row := q.db.QueryRowContext(ctx, ensureCompanySettings)
 	var i CompanySetting
@@ -86,7 +89,7 @@ SET company_name = ?, logo_path = ?, currency = ?, timezone = ?,
     gst_enabled = ?, gst_rate = ?, booking_prefix = ?, trip_prefix = ?, invoice_prefix = ?,
     financial_year = ?,
     address = ?, phone = ?, email = ?, gst_number = ?, pan_number = ?,
-    updated_at = datetime('now')
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = 1
 RETURNING id, company_name, logo_path, currency, timezone, gst_enabled, gst_rate, booking_prefix, trip_prefix, invoice_prefix, created_at, updated_at, address, phone, email, gst_number, financial_year, maintenance_default_interval_km, maintenance_default_interval_days, maintenance_critical_dtcs, state_code, pan_number
 `

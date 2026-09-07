@@ -25,6 +25,28 @@ import (
 	appdb "transport-app/internal/database"
 )
 
+// TestMain migrates the scratch PG once before any gate runs. File order
+// does not guarantee TestPostgresMigrations runs first, so every gate
+// test would otherwise race an empty DB on fresh databases.
+func TestMain(m *testing.M) {
+	url := os.Getenv("DATABASE_URL")
+	if url != "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
+		s := &testSettings{driver: "postgres", url: url, maxOpen: 4, maxIdle: 2}
+		db, err := appdb.Open(ctx, s, slog.Default())
+		if err == nil {
+			defer func() { _ = db.Close() }()
+			if migrations, ferr := fsSub(); ferr == nil {
+				if provider, perr := goose.NewProvider(appdb.GooseDialect("postgres"), db, migrations); perr == nil {
+					_, _ = provider.Up(ctx)
+				}
+			}
+		}
+	}
+	os.Exit(m.Run())
+}
+
 func TestPostgresMigrations(t *testing.T) {
 	url := os.Getenv("DATABASE_URL")
 	if url == "" {
@@ -75,11 +97,15 @@ func TestPostgresMigrations(t *testing.T) {
 
 	var version int
 	if err := db.QueryRowContext(pingCtx,
-		`SELECT max(version_id) FROM goose_db_version`).Scan(&version); err == nil && version < 80 {
-		t.Logf("postgres migrated to version %d", version)
+		`SELECT max(version_id) FROM goose_db_version`).Scan(&version); err != nil {
+		t.Fatalf("goose version check: %v", err)
+	}
+	t.Logf("postgres migrated to version %d", version)
+	if version != 128 {
+		t.Errorf("postgres version = %d, want 128 (full chain)", version)
 	}
 }
 
 func fsSub() (fs.FS, error) {
-	return fs.Sub(dbmigr.Migrations, "migrations")
+	return fs.Sub(dbmigr.MigrationsPG, appdb.MigrationDir("postgres"))
 }

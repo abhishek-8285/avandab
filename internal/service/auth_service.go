@@ -28,7 +28,7 @@ func (s *AuthService) tenantActive(ctx context.Context, userID string) error {
 		SELECT t.status
 		FROM tenants t
 		JOIN users u ON u.tenant_id = t.id
-		WHERE u.id = ?`, userID)
+		WHERE u.id = $1`, userID)
 	var status string
 	if err := row.Scan(&status); err != nil {
 		if err == sql.ErrNoRows {

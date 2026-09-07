@@ -78,7 +78,7 @@ func (s *DeviceStore) GetByIMEI(ctx context.Context, imei string) (*Device, erro
 		        sim_number, iccid, warranty_until, device_type, status,
 		        vehicle_id, customer_id, activated_at, last_seen_at,
 		        device_secret_hash, created_at, updated_at
-		 FROM telemetry_devices WHERE imei = ?`, imei)
+		 FROM telemetry_devices WHERE imei = $1`, imei)
 
 	var d Device
 	var serial, firmware, sim, iccid, secretHash sql.NullString
@@ -117,7 +117,7 @@ func (s *DeviceStore) UpdateLastSeen(ctx context.Context, imei string) error {
 	db := s.dbFromContext(ctx)
 	_, err := db.ExecContext(ctx,
 		`UPDATE telemetry_devices SET last_seen_at = CURRENT_TIMESTAMP,
-		        updated_at = CURRENT_TIMESTAMP WHERE imei = ?`, imei)
+		        updated_at = CURRENT_TIMESTAMP WHERE imei = $1`, imei)
 	return err
 }
 
@@ -127,7 +127,7 @@ func (s *DeviceStore) GetLastOdometer(ctx context.Context, imei string) (float64
 	var odometer float64
 	err := s.db.QueryRowContext(ctx,
 		`SELECT odometer FROM telemetry_positions
-		 WHERE imei = ? AND odometer IS NOT NULL
+		 WHERE imei = $1 AND odometer IS NOT NULL
 		 ORDER BY device_time DESC LIMIT 1`, imei).Scan(&odometer)
 	if err == sql.ErrNoRows {
 		return 0, false, nil
@@ -144,7 +144,7 @@ func (s *DeviceStore) GetLastFuelLevel(ctx context.Context, imei string) (float6
 	var fuelLevel float64
 	err := s.db.QueryRowContext(ctx,
 		`SELECT fuel_level FROM telemetry_positions
-		 WHERE imei = ? AND fuel_level IS NOT NULL
+		 WHERE imei = $1 AND fuel_level IS NOT NULL
 		 ORDER BY device_time DESC LIMIT 1`, imei).Scan(&fuelLevel)
 	if err == sql.ErrNoRows {
 		return 0, false, nil
@@ -161,7 +161,7 @@ func (s *DeviceStore) GetLastPositionTime(ctx context.Context, imei string) (*ti
 	var t time.Time
 	err := s.db.QueryRowContext(ctx,
 		`SELECT device_time FROM telemetry_positions
-		 WHERE imei = ? ORDER BY device_time DESC LIMIT 1`, imei).Scan(&t)
+		 WHERE imei = $1 ORDER BY device_time DESC LIMIT 1`, imei).Scan(&t)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -179,7 +179,7 @@ func (s *DeviceStore) GetByVehicleID(ctx context.Context, vehicleID string) (*De
 		        sim_number, iccid, warranty_until, device_type, status,
 		        vehicle_id, customer_id, activated_at, last_seen_at,
 		        device_secret_hash, created_at, updated_at
-		 FROM telemetry_devices WHERE vehicle_id = ? LIMIT 1`, vehicleID)
+		 FROM telemetry_devices WHERE vehicle_id = $1 LIMIT 1`, vehicleID)
 
 	var d Device
 	var serial, firmware, sim, iccid, secretHash sql.NullString

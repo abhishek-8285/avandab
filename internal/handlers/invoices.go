@@ -210,7 +210,7 @@ func (h *InvoiceHandlers) invoiceViewExtra(r *http.Request, invoiceID string, in
 
 	dueDateStr := ""
 	var d sql.NullString
-	if err := h.DB.QueryRowContext(r.Context(), `SELECT COALESCE(due_date, '') FROM invoices WHERE id = ?`, invoiceID).Scan(&d); err == nil && d.String != "" {
+	if err := h.DB.QueryRowContext(r.Context(), `SELECT COALESCE(CAST(due_date AS TEXT), '') FROM invoices WHERE id = $1`, invoiceID).Scan(&d); err == nil && d.String != "" {
 		if t, err := time.Parse("2006-01-02 15:04:05", d.String); err == nil {
 			dueDateStr = t.Format("02 Jan 2006")
 		} else if len(d.String) >= 10 {
@@ -492,8 +492,8 @@ func (h *InvoiceHandlers) loadInvoiceExtras(ctx context.Context, invoiceID strin
 	var d sql.NullString
 	var e sql.NullString
 	if err := h.DB.QueryRowContext(ctx,
-		`SELECT COALESCE(due_date, ''), COALESCE(ewb_number, '')
-		 FROM invoices WHERE id = ?`, invoiceID).Scan(&d, &e); err != nil {
+		`SELECT COALESCE(CAST(due_date AS TEXT), ''), COALESCE(ewb_number, '')
+		 FROM invoices WHERE id = $1`, invoiceID).Scan(&d, &e); err != nil {
 		slog.Warn("invoice extras lookup failed", "invoice_id", invoiceID, "error", err)
 		return "", ""
 	}
@@ -592,7 +592,7 @@ func (h *InvoiceHandlers) loadCompanyProfile(ctx context.Context) companyProfile
 func (h *InvoiceHandlers) loadCustomerBillTo(ctx context.Context, customerID string) (name, gstin, address string) {
 	err := h.DB.QueryRowContext(ctx, `
 		SELECT name, COALESCE(gst, ''), COALESCE(address, '')
-		FROM customers WHERE id = ?`, customerID).
+		FROM customers WHERE id = $1`, customerID).
 		Scan(&name, &gstin, &address)
 	if err != nil {
 		slog.Warn("customer lookup failed for invoice PDF", "customer_id", customerID, "error", err)
@@ -609,7 +609,7 @@ func (h *InvoiceHandlers) loadLineItems(ctx context.Context, invoiceID string) [
 		       COALESCE(cgst_amount, 0), COALESCE(sgst_amount, 0), COALESCE(igst_amount, 0),
 		       COALESCE(total, amount)
 		FROM invoice_line_items
-		WHERE invoice_id = ?
+		WHERE invoice_id = $1
 		ORDER BY created_at ASC
 	`, invoiceID)
 	if err != nil {
@@ -838,7 +838,7 @@ func (h *InvoiceHandlers) AddLineItem(w http.ResponseWriter, r *http.Request) {
 			id, tenant_id, invoice_id, line_type, description, quantity, unit_price, amount,
 			hsn_sac_code, unit, rate, taxable_value, cgst_rate, sgst_rate, igst_rate,
 			cgst_amount, sgst_amount, igst_amount, total, created_at
-		) VALUES (?, ?, ?, 'freight', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+		) VALUES ($1, $2, $3, 'freight', $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, CURRENT_TIMESTAMP)
 	`, lineID, string(tenantID), invoiceID, description, qty, rate, taxable,
 		hsnCode, unit, rate, taxable, cgstRate, sgstRate, igstRate,
 		cgstAmt, sgstAmt, igstAmt, lineTotal)
@@ -911,10 +911,10 @@ func (h *InvoiceHandlers) EditLineItem(w http.ResponseWriter, r *http.Request) {
 
 	_, err = tx.ExecContext(r.Context(), `
 		UPDATE invoice_line_items
-		SET hsn_sac_code = ?, description = ?, unit = ?, quantity = ?, rate = ?, unit_price = ?,
-		    taxable_value = ?, amount = ?, cgst_rate = ?, sgst_rate = ?, igst_rate = ?,
-		    cgst_amount = ?, sgst_amount = ?, igst_amount = ?, total = ?
-		WHERE id = ? AND invoice_id = ? AND tenant_id = ?
+		SET hsn_sac_code = $1, description = $2, unit = $3, quantity = $4, rate = $5, unit_price = $6,
+		    taxable_value = $7, amount = $8, cgst_rate = $9, sgst_rate = $10, igst_rate = $11,
+		    cgst_amount = $12, sgst_amount = $13, igst_amount = $14, total = $15
+		WHERE id = $16 AND invoice_id = $17 AND tenant_id = $18
 	`, hsnCode, description, unit, qty, rate, rate, taxable, taxable,
 		cgstRate, sgstRate, igstRate, cgstAmt, sgstAmt, igstAmt, lineTotal,
 		lineID, invoiceID, string(tenantID))
@@ -956,7 +956,7 @@ func (h *InvoiceHandlers) DeleteLineItem(w http.ResponseWriter, r *http.Request)
 	}
 	defer tx.Rollback() //nolint:errcheck // no-op after commit
 
-	_, err = tx.ExecContext(r.Context(), `DELETE FROM invoice_line_items WHERE id = ? AND invoice_id = ? AND tenant_id = ?`, lineID, invoiceID, string(tenantID))
+	_, err = tx.ExecContext(r.Context(), `DELETE FROM invoice_line_items WHERE id = $1 AND invoice_id = $2 AND tenant_id = $3`, lineID, invoiceID, string(tenantID))
 	if err != nil {
 		http.Error(w, "Failed to delete line item", http.StatusInternalServerError)
 		return
@@ -988,7 +988,7 @@ var errUnknownHSN = errors.New("unknown HSN/SAC code")
 func (h *InvoiceHandlers) resolveLineGST(ctx context.Context, q dbtx, tenantID shared.TenantID, invoiceID, hsnCode string) (gstRate, cgstRate, sgstRate, igstRate float64, err error) {
 	gstRate = 18.0 // default only when no HSN code supplied
 	if hsnCode != "" {
-		switch err := q.QueryRowContext(ctx, `SELECT rate FROM hsn_sac_master WHERE code = ?`, hsnCode).Scan(&gstRate); {
+		switch err := q.QueryRowContext(ctx, `SELECT rate FROM hsn_sac_master WHERE code = $1`, hsnCode).Scan(&gstRate); {
 		case errors.Is(err, sql.ErrNoRows):
 			return 0, 0, 0, 0, fmt.Errorf("%w %q", errUnknownHSN, hsnCode)
 		case err != nil:
@@ -1005,7 +1005,7 @@ func (h *InvoiceHandlers) resolveLineGST(ctx context.Context, q dbtx, tenantID s
 				THEN (SELECT state_code FROM company_settings WHERE id = 1) END, '27')
 		FROM invoices inv
 		JOIN customers c ON inv.customer_id = c.id
-		WHERE inv.id = ? AND inv.tenant_id = ?
+		WHERE inv.id = $1 AND inv.tenant_id = $2
 	`, invoiceID, string(tenantID)).Scan(&custGST, &compState)
 	if err != nil {
 		return 0, 0, 0, 0, fmt.Errorf("lookup invoice tax context: %w", err)
@@ -1038,7 +1038,7 @@ func (h *InvoiceHandlers) recalculateInvoiceTotalsTx(ctx context.Context, q dbtx
 		       COALESCE(SUM(sgst_amount), 0), COALESCE(SUM(igst_amount), 0),
 		       COALESCE(SUM(total), 0)
 		FROM invoice_line_items
-		WHERE invoice_id = ? AND tenant_id = ?
+		WHERE invoice_id = $1 AND tenant_id = $2
 	`, invoiceID, string(tenantID)).Scan(&sumTaxable, &sumCGST, &sumSGST, &sumIGST, &sumTotal)
 	if err != nil {
 		return false
@@ -1047,8 +1047,8 @@ func (h *InvoiceHandlers) recalculateInvoiceTotalsTx(ctx context.Context, q dbtx
 	totalTax := sumCGST + sumSGST + sumIGST
 	_, err = q.ExecContext(ctx, `
 		UPDATE invoices
-		SET subtotal = ?, tax = ?, cgst = ?, sgst = ?, igst = ?, total = ?, updated_at = datetime('now')
-		WHERE id = ? AND tenant_id = ?
+		SET subtotal = $1, tax = $2, cgst = $3, sgst = $4, igst = $5, total = $6, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $7 AND tenant_id = $8
 	`, sumTaxable, totalTax, sumCGST, sumSGST, sumIGST, sumTotal, invoiceID, string(tenantID))
 	return err == nil
 }
@@ -1062,9 +1062,9 @@ func (h *InvoiceHandlers) GenerateIRN(w http.ResponseWriter, r *http.Request) {
 	var invNum, custID, invStatus, existingIRN, invDate sql.NullString
 	var totalVal, cgstVal, sgstVal, igstVal float64
 	err := h.DB.QueryRowContext(r.Context(), `
-		SELECT invoice_number, customer_id, status, irn, date(created_at), total, cgst, sgst, igst
+		SELECT invoice_number, customer_id, status, irn, substr(CAST(created_at AS TEXT), 1, 10), total, cgst, sgst, igst
 		FROM invoices
-		WHERE id = ?
+		WHERE id = $1
 	`, invoiceID).Scan(&invNum, &custID, &invStatus, &existingIRN, &invDate, &totalVal, &cgstVal, &sgstVal, &igstVal)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -1095,10 +1095,10 @@ func (h *InvoiceHandlers) GenerateIRN(w http.ResponseWriter, r *http.Request) {
 	var compGST sql.NullString
 	_ = h.DB.QueryRowContext(r.Context(), `
 		SELECT COALESCE(c.gst, ''), COALESCE(
-			(SELECT gst_number FROM tenant_company_profiles WHERE tenant_id = ?),
-			CASE WHEN ? IN ('', '1') THEN (SELECT gst_number FROM company_settings WHERE id = 1) END)
+			(SELECT gst_number FROM tenant_company_profiles WHERE tenant_id = $1),
+			CASE WHEN $2 IN ('', '1') THEN (SELECT gst_number FROM company_settings WHERE id = 1) END)
 		FROM customers c
-		WHERE c.id = ?
+		WHERE c.id = $3
 	`, string(tenantID), string(tenantID), custID.String).Scan(&custGST, &compGST)
 
 	supplierGST := "27AABCU9603R1ZX"
@@ -1114,7 +1114,7 @@ func (h *InvoiceHandlers) GenerateIRN(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(cgst_amount, 0), COALESCE(sgst_amount, 0), COALESCE(igst_amount, 0),
 		       COALESCE(total, amount)
 		FROM invoice_line_items
-		WHERE invoice_id = ?
+		WHERE invoice_id = $1
 	`, invoiceID)
 	var lineViews []gstn.LineItemView
 	if err == nil {
@@ -1172,8 +1172,8 @@ func (h *InvoiceHandlers) GenerateIRN(w http.ResponseWriter, r *http.Request) {
 	// 6. Update invoices row
 	_, err = h.DB.ExecContext(r.Context(), `
 		UPDATE invoices
-		SET irn = ?, irn_ack_no = ?, irn_ack_date = ?, signed_qr = ?, updated_at = datetime('now')
-		WHERE id = ? AND tenant_id = ?
+		SET irn = $1, irn_ack_no = $2, irn_ack_date = $3, signed_qr = $4, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $5 AND tenant_id = $6
 	`, res.IRN, res.AckNo, res.AckDate, res.SignedQR, invoiceID, string(tenantID))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed to save IRN: %v", err), http.StatusInternalServerError)
@@ -1230,7 +1230,7 @@ func (h *InvoiceHandlers) SearchHSNSAC(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.DB.QueryContext(r.Context(), `
 		SELECT code, description, type, rate
 		FROM hsn_sac_master
-		WHERE active = 1 AND (code LIKE ? OR description LIKE ?)
+		WHERE active = 1 AND (code LIKE $1 OR description LIKE $2)
 		ORDER BY code ASC LIMIT 10
 	`, pattern, pattern)
 	if err != nil {

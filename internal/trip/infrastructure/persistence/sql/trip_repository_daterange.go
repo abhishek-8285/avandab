@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	appdb "transport-app/internal/database"
 
 	"transport-app/internal/shared"
 	tripdomain "transport-app/internal/trip/domain"
@@ -15,8 +16,8 @@ import (
 // and its mocks untouched.
 
 const tripDateClause = `
-  AND (? = '' OR date(substr(t.departure_time,1,10)) >= date(?))
-  AND (? = '' OR date(substr(t.departure_time,1,10)) <= date(?))`
+  AND (? = '' OR substr(CAST(t.departure_time AS TEXT), 1, 10) >= substr(CAST(? AS TEXT), 1, 10))
+  AND (? = '' OR substr(CAST(t.departure_time AS TEXT), 1, 10) <= substr(CAST(? AS TEXT), 1, 10))`
 
 func (r *tripRepository) SearchReadModelsDateRange(ctx context.Context, tenantID shared.TenantID, query string, status string, from string, to string, limit int, offset int) ([]tripdomain.TripReadModel, int64, error) {
 	qPattern := "%" + query + "%"
@@ -48,7 +49,11 @@ LIMIT ? OFFSET ?`
 	args = append(args, statusArgs...)
 	args = append(args, from, from, to, to, limit, offset)
 
-	rows, err := r.dbConn.QueryContext(ctx, querySQL, args...)
+	rebound, rerr := appdb.Rebind(querySQL)
+	if rerr != nil {
+		return nil, 0, rerr
+	}
+	rows, err := r.dbConn.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -75,7 +80,11 @@ WHERE t.tenant_id = ?
 	countArgs = append(countArgs, from, from, to, to)
 
 	var count int64
-	err = r.dbConn.QueryRowContext(ctx, countSQL, countArgs...).Scan(&count)
+	reboundCount, rerr := appdb.Rebind(countSQL)
+	if rerr != nil {
+		return nil, 0, rerr
+	}
+	err = r.dbConn.QueryRowContext(ctx, reboundCount, countArgs...).Scan(&count)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -96,7 +105,7 @@ func (r *tripRepository) SearchReadModelsByDriverDateRange(ctx context.Context, 
 		var dID, dCode string
 		err := r.dbConn.QueryRowContext(ctx, `
 			SELECT id, driver_id FROM drivers
-			WHERE tenant_id = ? AND (id = ? OR driver_id = ? OR email = (SELECT email FROM users WHERE id = ?))
+			WHERE tenant_id = $1 AND (id = $2 OR driver_id = $3 OR email = (SELECT email FROM users WHERE id = $4))
 			LIMIT 1
 		`, string(tenantID), id, id, id).Scan(&dID, &dCode)
 		if err == nil {
@@ -156,7 +165,11 @@ LIMIT ? OFFSET ?`, driverClause)
 	args = append(args, statusArgs...)
 	args = append(args, from, from, to, to, limit, offset)
 
-	rows, err := r.dbConn.QueryContext(ctx, querySQL, args...)
+	rebound, rerr := appdb.Rebind(querySQL)
+	if rerr != nil {
+		return nil, 0, rerr
+	}
+	rows, err := r.dbConn.QueryContext(ctx, rebound, args...)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -187,7 +200,11 @@ WHERE t.tenant_id = ?
 	countArgs = append(countArgs, from, from, to, to)
 
 	var count int64
-	err = r.dbConn.QueryRowContext(ctx, countSQL, countArgs...).Scan(&count)
+	reboundCount, rerr := appdb.Rebind(countSQL)
+	if rerr != nil {
+		return nil, 0, rerr
+	}
+	err = r.dbConn.QueryRowContext(ctx, reboundCount, countArgs...).Scan(&count)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -186,10 +186,10 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 		    SELECT vehicle_id, MAX(timestamp) AS ts
 		    FROM telemetry_snapshots
 		    WHERE latitude IS NOT NULL AND longitude IS NOT NULL
-		      AND (? = '' OR trip_id = ?)
+		      AND ($1 = '' OR trip_id = $2)
 		    GROUP BY vehicle_id
 		) latest ON latest.vehicle_id = s.vehicle_id AND latest.ts = s.timestamp
-		JOIN vehicles v ON v.id = s.vehicle_id AND v.tenant_id = ?
+		JOIN vehicles v ON v.id = s.vehicle_id AND v.tenant_id = $3
 		` + vlpJoin + `
 		LEFT JOIN trips t ON t.id = s.trip_id
 		LEFT JOIN drivers d ON d.id = t.driver_id
@@ -295,7 +295,7 @@ func (s *LiveStore) maintenanceDueSet(ctx context.Context, tenantID string) map[
 		return nil
 	}
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id FROM vehicles WHERE (tenant_id = ? OR tenant_id = '1') AND maintenance_due IS NOT NULL`, tenantID)
+		`SELECT id FROM vehicles WHERE (tenant_id = $1 OR tenant_id = '1') AND maintenance_due IS NOT NULL`, tenantID)
 	if err != nil {
 		return nil
 	}

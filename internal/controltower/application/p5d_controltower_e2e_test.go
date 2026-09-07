@@ -36,6 +36,13 @@ func setupP5DTestDB(t *testing.T) *sql.DB {
 	require.NoError(t, err)
 
 	schema := `
+	CREATE TABLE routes (
+		id TEXT PRIMARY KEY,
+		tenant_id TEXT NOT NULL,
+		source TEXT,
+		destination TEXT
+	);
+
 	CREATE TABLE trips (
 		id TEXT PRIMARY KEY,
 		tenant_id TEXT NOT NULL,
@@ -43,11 +50,10 @@ func setupP5DTestDB(t *testing.T) *sql.DB {
 		booking_id TEXT,
 		driver_id TEXT,
 		vehicle_id TEXT,
-		origin TEXT,
-		destination TEXT,
+		route_id TEXT,
 		status TEXT NOT NULL,
-		start_time TEXT,
-		end_time TEXT,
+		started_at TEXT,
+		completed_at TEXT,
 		arrival_time TEXT,
 		departure_time TEXT,
 		created_at TEXT DEFAULT (datetime('now')),
@@ -68,10 +74,10 @@ func setupP5DTestDB(t *testing.T) *sql.DB {
 		status TEXT NOT NULL DEFAULT 'pending',
 		actual_arrival TEXT,
 		actual_departure TEXT,
-		requires_pod INTEGER DEFAULT 0,
-		requires_otp INTEGER DEFAULT 0,
+		pod_required INTEGER DEFAULT 0,
+		otp_required INTEGER DEFAULT 0,
 		pod_url TEXT,
-		signature_url TEXT,
+		pod_signature_url TEXT,
 		consignee_name TEXT,
 		consignee_phone TEXT,
 		created_at TEXT DEFAULT (datetime('now')),
@@ -111,17 +117,17 @@ func setupP5DTestDB(t *testing.T) *sql.DB {
 		trip_id TEXT,
 		alert_type TEXT NOT NULL,
 		resolved INTEGER DEFAULT 0,
-		metadata TEXT,
+		details TEXT,
 		created_at TEXT DEFAULT (datetime('now'))
 	);
 
-	CREATE TABLE ewb_requests (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		trip_id TEXT NOT NULL,
-		tenant_id TEXT NOT NULL,
-		eway_bill_number TEXT NOT NULL,
-		status TEXT NOT NULL,
-		valid_until TEXT,
+	CREATE TABLE eway_bills (
+		id TEXT PRIMARY KEY,
+		ewb_number TEXT UNIQUE NOT NULL,
+		trip_id TEXT,
+		status TEXT DEFAULT 'active',
+		generation_date TEXT NOT NULL,
+		valid_until TEXT NOT NULL,
 		created_at TEXT DEFAULT (datetime('now'))
 	);
 
@@ -168,10 +174,13 @@ func TestP5D_ControlTower_ProjectionAndRealtimeMatrix(t *testing.T) {
 		INSERT INTO vehicles (id, tenant_id, vehicle_number, registration_number)
 		VALUES ('veh_1', 'tenant-alpha', 'TRK-900', 'HR-55-XY-9876');
 
-		INSERT INTO trips (id, tenant_id, trip_number, booking_id, driver_id, vehicle_id, origin, destination, status, start_time)
-		VALUES ('trip_p5d_100', 'tenant-alpha', 'TRP-P5D-100', 'bk_100', 'drv_1', 'veh_1', 'Delhi Hub', 'Udaipur DC', 'IN_TRANSIT', '2026-08-30T08:00:00Z');
+		INSERT INTO routes (id, tenant_id, source, destination)
+		VALUES ('route_p5d_1', 'tenant-alpha', 'Delhi Hub', 'Udaipur DC');
 
-		INSERT INTO trip_stops (id, trip_id, tenant_id, stop_sequence, stop_type, location_name, address, latitude, longitude, status, requires_pod, requires_otp, consignee_name, consignee_phone)
+		INSERT INTO trips (id, tenant_id, trip_number, booking_id, driver_id, vehicle_id, route_id, status, started_at)
+		VALUES ('trip_p5d_100', 'tenant-alpha', 'TRP-P5D-100', 'bk_100', 'drv_1', 'veh_1', 'route_p5d_1', 'IN_TRANSIT', '2026-08-30T08:00:00Z');
+
+		INSERT INTO trip_stops (id, trip_id, tenant_id, stop_sequence, stop_type, location_name, address, latitude, longitude, status, pod_required, otp_required, consignee_name, consignee_phone)
 		VALUES
 		('stop_1_delhi', 'trip_p5d_100', 'tenant-alpha', 1, 'pickup', 'Delhi Hub', 'Mayapuri Delhi', 28.628, 77.112, 'pending', 1, 0, 'Delhi Shipper', '+919810011001'),
 		('stop_2_jaipur', 'trip_p5d_100', 'tenant-alpha', 2, 'drop', 'Jaipur Hub', 'Sitapura Jaipur', 26.772, 75.864, 'pending', 1, 1, 'Jaipur Receiver', '+919820022002'),
@@ -180,8 +189,8 @@ func TestP5D_ControlTower_ProjectionAndRealtimeMatrix(t *testing.T) {
 		INSERT INTO telemetry_snapshots (vehicle_id, latitude, longitude, speed, heading, timestamp)
 		VALUES ('veh_1', 28.620, 77.110, 42.5, 180.0, datetime('now'));
 
-		INSERT INTO ewb_requests (trip_id, tenant_id, eway_bill_number, status, valid_until)
-		VALUES ('trip_p5d_100', 'tenant-alpha', 'EWB-8889990001', 'ACTIVE', datetime('now', '+2 days'));
+		INSERT INTO eway_bills (id, ewb_number, trip_id, status, generation_date, valid_until)
+		VALUES ('ewb_p5d_1', 'EWB-8889990001', 'trip_p5d_100', 'active', datetime('now'), datetime('now', '+2 days'));
 	`)
 	require.NoError(t, err)
 
@@ -225,7 +234,7 @@ func TestP5D_ControlTower_ProjectionAndRealtimeMatrix(t *testing.T) {
 
 		require.NotNil(t, proj.EWB)
 		assert.Equal(t, "EWB-8889990001", proj.EWB.EWBNumber)
-		assert.Equal(t, "ACTIVE", proj.EWB.Status)
+		assert.Equal(t, "active", proj.EWB.Status)
 	})
 
 	// Step 2: Driver reaches Stop 1 -> Control Tower Projection updates
@@ -285,7 +294,7 @@ func TestP5D_ControlTower_ProjectionAndRealtimeMatrix(t *testing.T) {
 	// Step 4: Safety alert & SOS emission -> Control Tower captures alerts
 	t.Run("4. Active SOS / Deviation alert appears in Control Tower projection", func(t *testing.T) {
 		_, err := db.Exec(`
-			INSERT INTO telemetry_alerts (trip_id, alert_type, resolved, metadata)
+			INSERT INTO telemetry_alerts (trip_id, alert_type, resolved, details)
 			VALUES ('trip_p5d_100', 'sos', 0, 'Driver emergency button pressed'),
 			       ('trip_p5d_100', 'route_deviation', 0, 'Deviated 850m from planned route');
 		`)
@@ -331,7 +340,7 @@ func TestP5D_ControlTower_ProjectionAndRealtimeMatrix(t *testing.T) {
 		// Advance Stop 2 to completed
 		_, err := db.Exec(`
 			UPDATE trip_stops
-			SET status = 'completed', actual_departure = ?, pod_url = 'https://s3.aws/pod2.jpg', signature_url = 'data:image/png;base64,AAA'
+			SET status = 'completed', actual_departure = ?, pod_url = 'https://s3.aws/pod2.jpg', pod_signature_url = 'data:image/png;base64,AAA'
 			WHERE id = 'stop_2_jaipur'
 		`, nowStr)
 		require.NoError(t, err)
@@ -400,7 +409,7 @@ func TestP5D_ControlTower_ProjectionAndRealtimeMatrix(t *testing.T) {
 			WHERE id = 'stop_3_udaipur';
 
 			UPDATE trips
-			SET status = 'COMPLETED', end_time = ?
+			SET status = 'COMPLETED', completed_at = ?
 			WHERE id = 'trip_p5d_100';
 		`, nowStr, nowStr)
 		require.NoError(t, err)
@@ -490,10 +499,13 @@ func TestP5D_FullAvandabOperationalLifecycle_E2E(t *testing.T) {
 		INSERT INTO bookings (id, tenant_id, customer_id, status)
 		VALUES ('bk_op_1', 'tenant-corp-1', 'cust_corp_1', 'CONFIRMED');
 
-		INSERT INTO trips (id, tenant_id, trip_number, booking_id, driver_id, vehicle_id, origin, destination, status, start_time)
-		VALUES ('trip_operational_999', 'tenant-corp-1', 'TRP-OP-999', 'bk_op_1', 'drv_op_1', 'veh_op_1', 'Delhi', 'Udaipur', 'IN_TRANSIT', '2026-08-30T09:00:00Z');
+		INSERT INTO routes (id, tenant_id, source, destination)
+		VALUES ('route_op_1', 'tenant-corp-1', 'Delhi', 'Udaipur');
 
-		INSERT INTO trip_stops (id, trip_id, tenant_id, stop_sequence, stop_type, location_name, address, latitude, longitude, status, requires_pod, requires_otp)
+		INSERT INTO trips (id, tenant_id, trip_number, booking_id, driver_id, vehicle_id, route_id, status, started_at)
+		VALUES ('trip_operational_999', 'tenant-corp-1', 'TRP-OP-999', 'bk_op_1', 'drv_op_1', 'veh_op_1', 'route_op_1', 'IN_TRANSIT', '2026-08-30T09:00:00Z');
+
+		INSERT INTO trip_stops (id, trip_id, tenant_id, stop_sequence, stop_type, location_name, address, latitude, longitude, status, pod_required, otp_required)
 		VALUES
 		('stop_op_1', 'trip_operational_999', 'tenant-corp-1', 1, 'pickup', 'Delhi Depot', 'Mayapuri', 28.628, 77.112, 'pending', 1, 0),
 		('stop_op_2', 'trip_operational_999', 'tenant-corp-1', 2, 'drop', 'Jaipur Hub', 'Sitapura', 26.772, 75.864, 'pending', 1, 1),
@@ -510,15 +522,15 @@ func TestP5D_FullAvandabOperationalLifecycle_E2E(t *testing.T) {
 	require.NoError(t, err)
 
 	// Stop 2 Reach & Complete
-	_, err = db.Exec(`UPDATE trip_stops SET status='completed', actual_arrival=?, actual_departure=?, pod_url='pod2.jpg', signature_url='sig2.png' WHERE id='stop_op_2'`, nowStr, nowStr)
+	_, err = db.Exec(`UPDATE trip_stops SET status='completed', actual_arrival=?, actual_departure=?, pod_url='pod2.jpg', pod_signature_url='sig2.png' WHERE id='stop_op_2'`, nowStr, nowStr)
 	require.NoError(t, err)
 
 	// Stop 3 Reach & Complete
-	_, err = db.Exec(`UPDATE trip_stops SET status='completed', actual_arrival=?, actual_departure=?, pod_url='pod3.jpg', signature_url='sig3.png' WHERE id='stop_op_3'`, nowStr, nowStr)
+	_, err = db.Exec(`UPDATE trip_stops SET status='completed', actual_arrival=?, actual_departure=?, pod_url='pod3.jpg', pod_signature_url='sig3.png' WHERE id='stop_op_3'`, nowStr, nowStr)
 	require.NoError(t, err)
 
 	// Complete Trip
-	_, err = db.Exec(`UPDATE trips SET status='COMPLETED', end_time=? WHERE id='trip_operational_999'`, nowStr)
+	_, err = db.Exec(`UPDATE trips SET status='COMPLETED', completed_at=? WHERE id='trip_operational_999'`, nowStr)
 	require.NoError(t, err)
 
 	// Step 2: Invoice & E-Way Bill Reconciliation
@@ -526,8 +538,8 @@ func TestP5D_FullAvandabOperationalLifecycle_E2E(t *testing.T) {
 		INSERT INTO invoices (id, tenant_id, trip_id, booking_id, invoice_number, amount, status, irn)
 		VALUES ('inv_op_1', 'tenant-corp-1', 'trip_operational_999', 'bk_op_1', 'INV-2026-001', 45000.0, 'ISSUED', 'IRN-HASH-123456');
 
-		INSERT INTO ewb_requests (trip_id, tenant_id, eway_bill_number, status, valid_until)
-		VALUES ('trip_operational_999', 'tenant-corp-1', 'EWB-2026-99999', 'ACTIVE', datetime('now', '+3 days'));
+		INSERT INTO eway_bills (id, ewb_number, trip_id, status, generation_date, valid_until)
+		VALUES ('ewb_op_1', 'EWB-2026-99999', 'trip_operational_999', 'active', datetime('now'), datetime('now', '+3 days'));
 	`)
 	require.NoError(t, err)
 

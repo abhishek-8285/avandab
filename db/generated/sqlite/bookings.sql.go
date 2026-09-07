@@ -15,27 +15,23 @@ const countBookings = `-- name: CountBookings :one
 SELECT COUNT(*) AS count
 FROM bookings b
 JOIN customers c ON b.customer_id = c.id
-WHERE b.tenant_id = ?
-  AND (b.booking_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%' OR c.company LIKE '%' || ? || '%')
-  AND (? = '' OR b.status = ?)
+WHERE b.tenant_id = ?1
+  AND (lower(b.booking_number) LIKE '%' || lower(?2) || '%' OR lower(c.name) LIKE '%' || lower(?2) || '%' OR lower(c.company) LIKE '%' || lower(?2) || '%')
+  AND (?3 = '' OR b.status = ?4)
 `
 
 type CountBookingsParams struct {
-	TenantID string         `json:"tenant_id"`
-	Column2  sql.NullString `json:"column_2"`
-	Column3  sql.NullString `json:"column_3"`
-	Column4  sql.NullString `json:"column_4"`
-	Column5  interface{}    `json:"column_5"`
-	Status   string         `json:"status"`
+	TenantID  string      `json:"tenant_id"`
+	Search    string      `json:"search"`
+	StatusAll interface{} `json:"status_all"`
+	Status    string      `json:"status"`
 }
 
 func (q *Queries) CountBookings(ctx context.Context, arg CountBookingsParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, countBookings,
 		arg.TenantID,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-		arg.Column5,
+		arg.Search,
+		arg.StatusAll,
 		arg.Status,
 	)
 	var count int64
@@ -44,20 +40,28 @@ func (q *Queries) CountBookings(ctx context.Context, arg CountBookingsParams) (i
 }
 
 const countBookingsByDay = `-- name: CountBookingsByDay :many
-SELECT CAST(date(pickup_date) AS TEXT) AS day, COUNT(*) AS count
+SELECT substr(CAST(pickup_date AS TEXT), 1, 10) AS day, COUNT(*) AS count
 FROM bookings
-WHERE tenant_id = ? AND date(pickup_date) >= date('now', '-29 days')
-GROUP BY date(pickup_date)
+WHERE tenant_id = ? AND substr(CAST(pickup_date AS TEXT), 1, 10) >= CAST(?2 AS TEXT)
+GROUP BY substr(CAST(pickup_date AS TEXT), 1, 10)
 ORDER BY day ASC
 `
+
+type CountBookingsByDayParams struct {
+	TenantID string `json:"tenant_id"`
+	StartDay string `json:"start_day"`
+}
 
 type CountBookingsByDayRow struct {
 	Day   string `json:"day"`
 	Count int64  `json:"count"`
 }
 
-func (q *Queries) CountBookingsByDay(ctx context.Context, tenantID string) ([]CountBookingsByDayRow, error) {
-	rows, err := q.db.QueryContext(ctx, countBookingsByDay, tenantID)
+// Portable day truncation: substr(CAST(x AS TEXT),1,10) == YYYY-MM-DD on both
+// sqlite (UTC text) and PG (timestamptz text). Lower bound is a Go-side param
+// (impl passes UTC today-29d, matching the old date('now','-29 days')).
+func (q *Queries) CountBookingsByDay(ctx context.Context, arg CountBookingsByDayParams) ([]CountBookingsByDayRow, error) {
+	rows, err := q.db.QueryContext(ctx, countBookingsByDay, arg.TenantID, arg.StartDay)
 	if err != nil {
 		return nil, err
 	}
@@ -454,22 +458,20 @@ SELECT b.id, b.booking_number, b.customer_id, b.pickup_date, b.route_id, b.vehic
 FROM bookings b
 JOIN customers c ON b.customer_id = c.id
 JOIN routes r ON b.route_id = r.id
-WHERE b.tenant_id = ?
-  AND (b.booking_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%' OR c.company LIKE '%' || ? || '%')
-  AND (? = '' OR b.status = ?)
+WHERE b.tenant_id = ?1
+  AND (lower(b.booking_number) LIKE '%' || lower(?2) || '%' OR lower(c.name) LIKE '%' || lower(?2) || '%' OR lower(c.company) LIKE '%' || lower(?2) || '%')
+  AND (?3 = '' OR b.status = ?4)
 ORDER BY b.pickup_date DESC
-LIMIT ? OFFSET ?
+LIMIT ?6 OFFSET ?5
 `
 
 type SearchBookingsParams struct {
-	TenantID string         `json:"tenant_id"`
-	Column2  sql.NullString `json:"column_2"`
-	Column3  sql.NullString `json:"column_3"`
-	Column4  sql.NullString `json:"column_4"`
-	Column5  interface{}    `json:"column_5"`
-	Status   string         `json:"status"`
-	Limit    int64          `json:"limit"`
-	Offset   int64          `json:"offset"`
+	TenantID  string      `json:"tenant_id"`
+	Search    string      `json:"search"`
+	StatusAll interface{} `json:"status_all"`
+	Status    string      `json:"status"`
+	Offset    int64       `json:"offset"`
+	Limit     int64       `json:"limit"`
 }
 
 type SearchBookingsRow struct {
@@ -496,13 +498,11 @@ type SearchBookingsRow struct {
 func (q *Queries) SearchBookings(ctx context.Context, arg SearchBookingsParams) ([]SearchBookingsRow, error) {
 	rows, err := q.db.QueryContext(ctx, searchBookings,
 		arg.TenantID,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-		arg.Column5,
+		arg.Search,
+		arg.StatusAll,
 		arg.Status,
-		arg.Limit,
 		arg.Offset,
+		arg.Limit,
 	)
 	if err != nil {
 		return nil, err
@@ -549,7 +549,7 @@ UPDATE bookings
 SET booking_number = ?, customer_id = ?, pickup_date = ?, route_id = ?, vehicle_type = ?,
     passengers = ?, cargo_weight = ?, price = ?, notes = ?, status = ?,
     version = version + 1,
-    updated_at = datetime('now')
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING id, booking_number, customer_id, pickup_date, route_id, vehicle_type,
     passengers, cargo_weight, price, notes, status, tenant_id, version, created_at, updated_at
@@ -628,7 +628,7 @@ func (q *Queries) UpdateBooking(ctx context.Context, arg UpdateBookingParams) (U
 
 const updateBookingStatus = `-- name: UpdateBookingStatus :one
 UPDATE bookings
-SET status = ?, version = version + 1, updated_at = datetime('now')
+SET status = ?, version = version + 1, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING id, booking_number, customer_id, pickup_date, route_id, vehicle_type,
     passengers, cargo_weight, price, notes, status, tenant_id, version, created_at, updated_at

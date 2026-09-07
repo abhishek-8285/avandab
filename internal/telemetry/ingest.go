@@ -205,7 +205,7 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 				FROM drivers d
 				LEFT JOIN trips t ON (t.driver_id = d.id OR t.driver_id = d.driver_id) AND t.status IN ('assigned', 'started', 'reached_pickup', 'in_transit')
 				LEFT JOIN vehicles v ON (v.registration_number = d.notes OR v.vehicle_number = d.notes) AND v.tenant_id = d.tenant_id
-				WHERE d.id = ? OR d.driver_id = ?
+				WHERE d.id = $1 OR d.driver_id = $2
 				LIMIT 1`, frame.IMEI, frame.IMEI).Scan(&vid); errV == nil && vid != "" {
 				vehicleID = vid
 			}
@@ -370,7 +370,7 @@ func (ing *Ingestor) parkedDuplicate(ctx context.Context, frame RawFrame) bool {
 	var motion sql.NullInt64
 	err := db.QueryRowContext(ctx, `
 		SELECT device_time, latitude, longitude, motion
-		FROM telemetry_positions WHERE imei = ?
+		FROM telemetry_positions WHERE imei = $1
 		ORDER BY device_time DESC LIMIT 1`, frame.IMEI).Scan(&lastTime, &lat, &lng, &motion)
 	if err != nil || !motion.Valid || motion.Int64 != 0 || !lat.Valid || !lng.Valid {
 		return false
@@ -412,7 +412,7 @@ func (ing *Ingestor) deviceHealthGuard(ctx context.Context, excludePositionID st
 	err := db.QueryRowContext(ctx, `
 		SELECT battery_level, external_voltage, gsm_signal
 		FROM telemetry_positions
-		WHERE imei = ? AND id <> ?
+		WHERE imei = $1 AND id <> $2
 		ORDER BY device_time DESC LIMIT 1`, frame.IMEI, excludePositionID).
 		Scan(&prevBatt, &prevVolt, &prevGsm)
 	if err != nil && err != sql.ErrNoRows {
@@ -494,9 +494,10 @@ func (ing *Ingestor) insertRawEvent(ctx context.Context, id, tenantID string, fr
 		providerMsgID = frame.ProviderMsgID
 	}
 	res, err := db.ExecContext(ctx,
-		`INSERT OR IGNORE INTO telemetry_raw_events
+		`INSERT INTO telemetry_raw_events
             (id, tenant_id, imei, device_time, provider, provider_msg_id, payload)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT DO NOTHING`,
 		id, tenantID, frame.IMEI, frame.DeviceTime, frame.Provider, providerMsgID, payload,
 	)
 	if err != nil {
@@ -516,7 +517,7 @@ func (ing *Ingestor) insertPosition(ctx context.Context, id, tenantID, vehicleID
              satellites, battery_level, external_voltage, gsm_signal, motion,
              valid, fix_time,
              driver_id, trip_id, vehicle_id, provider, raw_event_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)`,
 		id, tenantID, frame.IMEI, frame.DeviceTime, receivedAt,
 		frame.Latitude, frame.Longitude, frame.Speed, frame.Heading,
 		frame.Ignition, frame.EngineHours, frame.Accuracy, fuel, odometer,
@@ -559,8 +560,8 @@ func (ing *Ingestor) upsertLatestPosition(ctx context.Context, vehicleID, tenant
              speed, heading, ignition, engine_hours, accuracy, fuel_level, odometer,
              satellites, battery_level, external_voltage, gsm_signal, motion, valid,
              driver_id, trip_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(vehicle_id) DO UPDATE SET
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+         ON CONFLICT (vehicle_id) DO UPDATE SET
             tenant_id     = excluded.tenant_id,
             imei          = excluded.imei,
             device_time   = excluded.device_time,
@@ -602,10 +603,15 @@ func (ing *Ingestor) insertSnapshot(ctx context.Context, frame RawFrame, device 
 		vehicleID = *device.VehicleID
 	}
 	_, err := db.ExecContext(ctx,
-		`INSERT OR REPLACE INTO telemetry_snapshots
+		`INSERT INTO telemetry_snapshots
             (id, trip_id, vehicle_id, timestamp, latitude, longitude, speed,
              fuel_level, odometer, heading, ignition, engine_hours, accuracy, driver_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+         ON CONFLICT (id) DO UPDATE SET trip_id = excluded.trip_id, vehicle_id = excluded.vehicle_id,
+             timestamp = excluded.timestamp, latitude = excluded.latitude, longitude = excluded.longitude,
+             speed = excluded.speed, fuel_level = excluded.fuel_level, odometer = excluded.odometer,
+             heading = excluded.heading, ignition = excluded.ignition, engine_hours = excluded.engine_hours,
+             accuracy = excluded.accuracy, driver_id = excluded.driver_id`,
 		snapshotID, frame.TripID, vehicleID, frame.DeviceTime,
 		frame.Latitude, frame.Longitude, frame.Speed,
 		fuel, odometer,

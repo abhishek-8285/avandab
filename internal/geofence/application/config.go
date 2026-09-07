@@ -127,7 +127,7 @@ func (c *ConfigReader) refreshIfStale(ctx context.Context, tenantID string) erro
 	}
 
 	rows, err := c.db.QueryContext(ctx,
-		`SELECT key, value FROM company_config WHERE tenant_id = ?`, tenantID)
+		`SELECT key, value FROM company_config WHERE tenant_id = $1`, tenantID)
 	if err != nil {
 		return err
 	}

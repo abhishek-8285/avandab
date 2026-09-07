@@ -52,11 +52,11 @@ func (m *Manager) tryAcquire(ctx context.Context, name string) (bool, error) {
 	expiry := now + m.ttl.Milliseconds()
 	const q = `
 INSERT INTO worker_leases (name, holder, expires_at)
-VALUES (?, ?, ?)
-ON CONFLICT(name) DO UPDATE SET
+VALUES ($1, $2, $3)
+ON CONFLICT (name) DO UPDATE SET
     holder = excluded.holder,
     expires_at = excluded.expires_at
-WHERE worker_leases.expires_at < ? OR worker_leases.holder = excluded.holder`
+WHERE worker_leases.expires_at < $4 OR worker_leases.holder = excluded.holder`
 	res, err := m.db.ExecContext(ctx, q, name, m.holder, expiry, now)
 	if err != nil {
 		return false, fmt.Errorf("leader: acquire %q: %w", name, err)
@@ -71,7 +71,7 @@ WHERE worker_leases.expires_at < ? OR worker_leases.holder = excluded.holder`
 // Release drops the lease if we hold it. Safe to call multiple times.
 func (m *Manager) Release(ctx context.Context, name string) {
 	_, err := m.db.ExecContext(ctx,
-		`DELETE FROM worker_leases WHERE name = ? AND holder = ?`, name, m.holder)
+		`DELETE FROM worker_leases WHERE name = $1 AND holder = $2`, name, m.holder)
 	if err != nil && !errors.Is(err, context.Canceled) {
 		m.log.Warn("leader: release failed", "lease", name, "error", err)
 	}

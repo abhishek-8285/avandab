@@ -66,7 +66,7 @@ func (s *QuarantineStore) Quarantine(ctx context.Context, entry QuarantineEntry)
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO device_quarantine
         (id, tenant_id, imei, source, raw_payload, reason, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		entry.ID, entry.TenantID, entry.IMEI, entry.Source,
 		entry.RawPayload, entry.Reason, entry.Status, entry.CreatedAt,
 	)
@@ -82,8 +82,8 @@ func (s *QuarantineStore) ListOpen(ctx context.Context, tenantID string, limit i
 		`SELECT id, tenant_id, imei, source, raw_payload, reason, status,
 		        resolved_by, resolved_at, created_at
 		 FROM device_quarantine
-		 WHERE tenant_id = ? AND status = ?
-		 ORDER BY created_at DESC LIMIT ?`,
+		 WHERE tenant_id = $1 AND status = $2
+		 ORDER BY created_at DESC LIMIT $3`,
 		tenantID, QuarantineStatusOpen, limit)
 	if err != nil {
 		return nil, err
@@ -109,8 +109,8 @@ func (s *QuarantineStore) Resolve(ctx context.Context, id, status, resolvedBy st
 	db := s.dbFromContext(ctx)
 	_, err := db.ExecContext(ctx,
 		`UPDATE device_quarantine
-		 SET status = ?, resolved_by = ?, resolved_at = CURRENT_TIMESTAMP
-		 WHERE id = ? AND status = ?`,
+		 SET status = $1, resolved_by = $2, resolved_at = CURRENT_TIMESTAMP
+		 WHERE id = $3 AND status = $4`,
 		status, resolvedBy, id, QuarantineStatusOpen)
 	return err
 }

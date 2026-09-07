@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	appdb "transport-app/internal/database"
 
 	"transport-app/internal/domain/trip"
 	"transport-app/internal/founder/alerts"
@@ -178,8 +179,11 @@ func (e *FuelEngine) resolveVehicleTenants(ctx context.Context, vids []string) m
 	for i, id := range vids {
 		args[i] = id
 	}
-	rows, err := e.db.QueryContext(ctx,
-		`SELECT id, tenant_id FROM vehicles WHERE id IN (`+placeholders+`)`, args...)
+	reboundIn, rerrIn := appdb.Rebind(`SELECT id, tenant_id FROM vehicles WHERE id IN (` + placeholders + `)`)
+	if rerrIn != nil {
+		return out
+	}
+	rows, err := e.db.QueryContext(ctx, reboundIn, args...)
 	if err != nil {
 		return out
 	}
@@ -362,7 +366,7 @@ func (e *FuelEngine) activeVehicles(ctx context.Context, cfg engineConfig) ([]st
 		`SELECT DISTINCT s.vehicle_id
 		 FROM telemetry_snapshots s
 		 WHERE s.vehicle_id IS NOT NULL AND s.vehicle_id != ''
-		   AND s.timestamp > ?
+		   AND s.timestamp > $1
 		 ORDER BY s.vehicle_id`,
 		timeStr(e.now().Add(-cfg.gapTolerance)))
 	if err != nil {
@@ -445,7 +449,7 @@ func (e *FuelEngine) vehicleMeta(ctx context.Context, vehicleID string) (vehicle
 	var cap sql.NullFloat64
 	err := e.db.QueryRowContext(ctx,
 		`SELECT COALESCE(fuel_sensor_fitted, 0), tank_capacity_litres
-		 FROM vehicles WHERE id = ?`, vehicleID).Scan(&sensor, &cap)
+		 FROM vehicles WHERE id = $1`, vehicleID).Scan(&sensor, &cap)
 	if err != nil {
 		return m, fmt.Errorf("fuel: vehicle %s: %w", vehicleID, err)
 	}
@@ -467,9 +471,9 @@ func (e *FuelEngine) loadRecent(ctx context.Context, vehicleID string, n int) ([
 		`SELECT id, COALESCE(trip_id,''), vehicle_id, COALESCE(driver_id,''),
 		        timestamp, COALESCE(speed,0), COALESCE(fuel_level,0), COALESCE(odometer,0)
 		 FROM telemetry_snapshots
-		 WHERE vehicle_id = ?
+		 WHERE vehicle_id = $1
 		 ORDER BY timestamp DESC
-		 LIMIT ?`, vehicleID, n)
+		 LIMIT $2`, vehicleID, n)
 	if err != nil {
 		return nil, err
 	}
@@ -504,9 +508,9 @@ func (e *FuelEngine) loadAfter(ctx context.Context, vehicleID string, after time
 		`SELECT id, COALESCE(trip_id,''), vehicle_id, COALESCE(driver_id,''),
 		        timestamp, COALESCE(speed,0), COALESCE(fuel_level,0), COALESCE(odometer,0)
 		 FROM telemetry_snapshots
-		 WHERE vehicle_id = ? AND timestamp > ?
+		 WHERE vehicle_id = $1 AND timestamp > $2
 		 ORDER BY timestamp ASC
-		 LIMIT ?`, vehicleID, timeStr(after), maxSnapshotsPerSweep)
+		 LIMIT $3`, vehicleID, timeStr(after), maxSnapshotsPerSweep)
 	if err != nil {
 		return nil, err
 	}
@@ -801,7 +805,7 @@ func (e *FuelEngine) tripStatus(ctx context.Context, tripID string) (status, dri
 		return "", ""
 	}
 	row := e.db.QueryRowContext(ctx,
-		`SELECT status, COALESCE(driver_id, '') FROM trips WHERE id = ?`, tripID)
+		`SELECT status, COALESCE(driver_id, '') FROM trips WHERE id = $1`, tripID)
 	if err := row.Scan(&status, &driverID); err != nil {
 		return "", ""
 	}
@@ -827,7 +831,7 @@ func (e *FuelEngine) insertFuelEvent(ctx context.Context, st *vehicleFuelState, 
 		    (id, vehicle_id, trip_id, driver_id, event_type,
 		     fuel_level_before, fuel_level_after, odometer_before, odometer_after,
 		     estimated_litres, confidence, details, occurred_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
 		e.idGen.GenerateUUID(), s.vehicleID, strOrEmpty(s.tripID), strOrEmpty(st.driverID),
 		ev.eventType, ev.before, ev.after, ev.odoBefore, s.odometer,
 		ev.estimated, ev.confidence, ev.details(), timeStr(s.ts))
@@ -850,7 +854,7 @@ func (e *FuelEngine) insertBehaviour(ctx context.Context, st *vehicleFuelState, 
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO driver_behaviour_events
 		    (id, driver_id, trip_id, vehicle_id, event_type, severity, weight, metadata, occurred_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		e.idGen.GenerateUUID(), b.driverID, strOrEmpty(s.tripID), s.vehicleID,
 		b.eventType, b.severity, b.weight, "{}", timeStr(s.ts))
 	return err

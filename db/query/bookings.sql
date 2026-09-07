@@ -37,14 +37,14 @@ UPDATE bookings
 SET booking_number = ?, customer_id = ?, pickup_date = ?, route_id = ?, vehicle_type = ?,
     passengers = ?, cargo_weight = ?, price = ?, notes = ?, status = ?,
     version = version + 1,
-    updated_at = datetime('now')
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING id, booking_number, customer_id, pickup_date, route_id, vehicle_type,
     passengers, cargo_weight, price, notes, status, tenant_id, version, created_at, updated_at;
 
 -- name: UpdateBookingStatus :one
 UPDATE bookings
-SET status = ?, version = version + 1, updated_at = datetime('now')
+SET status = ?, version = version + 1, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING id, booking_number, customer_id, pickup_date, route_id, vehicle_type,
     passengers, cargo_weight, price, notes, status, tenant_id, version, created_at, updated_at;
@@ -59,25 +59,28 @@ SELECT b.id, b.booking_number, b.customer_id, b.pickup_date, b.route_id, b.vehic
 FROM bookings b
 JOIN customers c ON b.customer_id = c.id
 JOIN routes r ON b.route_id = r.id
-WHERE b.tenant_id = ?
-  AND (b.booking_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%' OR c.company LIKE '%' || ? || '%')
-  AND (? = '' OR b.status = ?)
+WHERE b.tenant_id = sqlc.arg(tenant_id)
+  AND (lower(b.booking_number) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(c.name) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(c.company) LIKE '%' || lower(sqlc.arg(search)) || '%')
+  AND (sqlc.arg(status_all) = '' OR b.status = sqlc.arg(status))
 ORDER BY b.pickup_date DESC
-LIMIT ? OFFSET ?;
+LIMIT sqlc.arg(limit) OFFSET sqlc.arg(offset);
 
 -- name: CountBookings :one
 SELECT COUNT(*) AS count
 FROM bookings b
 JOIN customers c ON b.customer_id = c.id
-WHERE b.tenant_id = ?
-  AND (b.booking_number LIKE '%' || ? || '%' OR c.name LIKE '%' || ? || '%' OR c.company LIKE '%' || ? || '%')
-  AND (? = '' OR b.status = ?);
+WHERE b.tenant_id = sqlc.arg(tenant_id)
+  AND (lower(b.booking_number) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(c.name) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(c.company) LIKE '%' || lower(sqlc.arg(search)) || '%')
+  AND (sqlc.arg(status_all) = '' OR b.status = sqlc.arg(status));
 
 -- name: CountBookingsByDay :many
-SELECT CAST(date(pickup_date) AS TEXT) AS day, COUNT(*) AS count
+-- Portable day truncation: substr(CAST(x AS TEXT),1,10) == YYYY-MM-DD on both
+-- sqlite (UTC text) and PG (timestamptz text). Lower bound is a Go-side param
+-- (impl passes UTC today-29d, matching the old date('now','-29 days')).
+SELECT substr(CAST(pickup_date AS TEXT), 1, 10) AS day, COUNT(*) AS count
 FROM bookings
-WHERE tenant_id = ? AND date(pickup_date) >= date('now', '-29 days')
-GROUP BY date(pickup_date)
+WHERE tenant_id = ? AND substr(CAST(pickup_date AS TEXT), 1, 10) >= CAST(sqlc.arg(start_day) AS TEXT)
+GROUP BY substr(CAST(pickup_date AS TEXT), 1, 10)
 ORDER BY day ASC;
 
 -- name: ListBookingsByCustomer :many

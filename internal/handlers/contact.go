@@ -134,7 +134,7 @@ func (h *ContactHandlers) Submit(w http.ResponseWriter, r *http.Request) {
 
 	_, err := h.DB.Exec(`
 		INSERT INTO contact_submissions (id, ticket_number, name, email, phone, company_name, subject, category, message, status)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
 	`, id, ticketNo, name, email, phone, company, subject, category, message)
 
 	if err != nil {
@@ -174,7 +174,7 @@ func (h *ContactHandlers) fetchTicketByNumber(ticketNo, email string) (*ContactT
 	err := h.DB.QueryRow(`
 		SELECT id, ticket_number, name, email, COALESCE(phone, ''), COALESCE(company_name, ''), subject, category, message, status, created_at, updated_at
 		FROM contact_submissions
-		WHERE ticket_number = ? AND email = ?
+		WHERE ticket_number = $1 AND email = $2
 		ORDER BY created_at DESC LIMIT 1
 	`, ticketNo, email).Scan(
 		&t.ID, &t.TicketNumber, &t.Name, &t.Email, &t.Phone, &t.CompanyName, &t.Subject, &t.Category, &t.Message, &t.Status, &t.CreatedAt, &t.UpdatedAt,

@@ -23,7 +23,7 @@ SET source = ?, destination = ?, source_normalized = ?, dest_normalized = ?,
     distance = ?, estimated_hours = ?, standard_fare = ?,
     reverse_distance = ?, reverse_standard_fare = ?,
     direction = ?, is_active = ?, remarks = ?,
-    updated_at = datetime('now')
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ?
 RETURNING id, tenant_id, source, destination, source_normalized, dest_normalized,
           distance, estimated_hours, standard_fare, reverse_distance, reverse_standard_fare,
@@ -37,16 +37,16 @@ SELECT id, tenant_id, source, destination, source_normalized, dest_normalized,
        distance, estimated_hours, standard_fare, reverse_distance, reverse_standard_fare,
        direction, is_active, remarks, created_at, updated_at
 FROM routes
-WHERE (source LIKE '%' || ? || '%' OR destination LIKE '%' || ? || '%')
-  AND tenant_id = ?
+WHERE (lower(source) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(destination) LIKE '%' || lower(sqlc.arg(search)) || '%')
+  AND tenant_id = sqlc.arg(tenant_id)
 ORDER BY created_at DESC
-LIMIT ? OFFSET ?;
+LIMIT sqlc.arg(limit) OFFSET sqlc.arg(offset);
 
 -- name: CountRoutes :one
 SELECT COUNT(*) AS count
 FROM routes
-WHERE (source LIKE '%' || ? || '%' OR destination LIKE '%' || ? || '%')
-  AND tenant_id = ?;
+WHERE (lower(source) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(destination) LIKE '%' || lower(sqlc.arg(search)) || '%')
+  AND tenant_id = sqlc.arg(tenant_id);
 
 -- name: GetRouteBySourceAndDestination :one
 SELECT id, tenant_id, source, destination, source_normalized, dest_normalized,

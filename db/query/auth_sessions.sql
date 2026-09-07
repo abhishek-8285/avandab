@@ -19,4 +19,4 @@ DELETE FROM sessions WHERE token_hash = ?;
 DELETE FROM sessions WHERE user_id = ?;
 
 -- name: DeleteExpiredSessions :exec
-DELETE FROM sessions WHERE expires_at < datetime('now');
+DELETE FROM sessions WHERE expires_at < CURRENT_TIMESTAMP;

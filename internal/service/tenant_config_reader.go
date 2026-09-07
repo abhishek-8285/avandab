@@ -38,7 +38,7 @@ type tenantConfigSnapshot struct {
 // tenant row → caller-supplied global default (from company_settings).
 //
 // Reads are served from a whole-tenant snapshot refreshed on miss/stale with a
-// single `SELECT key,value FROM company_config WHERE tenant_id=?` (migration
+// single `SELECT key,value FROM company_config WHERE tenant_id=$1` (migration
 // 00042 owns the table; seeds elsewhere are tenant '1' only, so every other
 // tenant legitimately falls back). Plain SQL, no sqlc regen — matches the
 // geofence/fuel ConfigReader precedent.
@@ -176,7 +176,7 @@ func (r *TenantConfigReader) refresh(ctx context.Context, tenantID string) (tena
 	}
 
 	rows, err := r.db.QueryContext(ctx,
-		`SELECT key, value FROM company_config WHERE tenant_id = ?`, tenantID)
+		`SELECT key, value FROM company_config WHERE tenant_id = $1`, tenantID)
 	if err != nil {
 		return tenantConfigSnapshot{}, err
 	}

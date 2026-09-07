@@ -208,7 +208,10 @@ func tenantOf(tenantID string) string {
 func (h *UserHandlers) ensureTenantUser(w http.ResponseWriter, r *http.Request, u domain.User) bool {
 	ctxTenant := string(shared.TenantIDFromContext(r.Context()))
 	if ctxTenant == "" {
-		ctxTenant = string(shared.DefaultTenant)
+		// Fail closed like Create above: never compare against tenant "1"
+		// when the request carries no resolved tenant.
+		http.Error(w, "Tenant not set in request context", http.StatusBadRequest)
+		return false
 	}
 	if tenantOf(u.TenantID) != ctxTenant {
 		http.Error(w, "User not found", http.StatusNotFound)

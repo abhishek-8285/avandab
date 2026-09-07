@@ -92,7 +92,7 @@ func (h *CustomerHandlers) GrantPortalAccess(w http.ResponseWriter, r *http.Requ
 
 	if h.DB != nil {
 		_, _ = h.DB.ExecContext(ctx,
-			`INSERT OR IGNORE INTO customer_users (id, customer_id, user_id) VALUES (?, ?, ?)`,
+			`INSERT INTO customer_users (id, customer_id, user_id) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
 			uuid.NewString(), customerID, user.ID.String())
 	}
 

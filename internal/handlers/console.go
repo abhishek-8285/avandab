@@ -153,7 +153,7 @@ func (h *ConsoleHandlers) Fleet(w http.ResponseWriter, r *http.Request) {
 		       p.latitude, p.longitude, p.speed, p.device_time
 		FROM vehicles v
 		LEFT JOIN vehicle_latest_position p ON p.vehicle_id = v.id
-		WHERE v.tenant_id = ?
+		WHERE v.tenant_id = $1
 		ORDER BY v.vehicle_number
 		LIMIT 500`, tenantID)
 	if err != nil {
@@ -268,7 +268,7 @@ func (h *ConsoleHandlers) VehicleContext(w http.ResponseWriter, r *http.Request)
 
 	// 1. Vehicle (existence + tenancy gate for everything below).
 	err := h.db.QueryRowContext(ctx, `
-		SELECT id, vehicle_number, status FROM vehicles WHERE id = ? AND tenant_id = ?`,
+		SELECT id, vehicle_number, status FROM vehicles WHERE id = $1 AND tenant_id = $2`,
 		vehicleID, tenantID).Scan(&resp.Vehicle.ID, &resp.Vehicle.Number, &resp.Vehicle.Status)
 	if err == sql.ErrNoRows {
 		httpx.Error(w, r, apperr.New(apperr.CodeNotFound))
@@ -284,7 +284,7 @@ func (h *ConsoleHandlers) VehicleContext(w http.ResponseWriter, r *http.Request)
 	var deviceTime sql.NullTime
 	posErr := h.db.QueryRowContext(ctx, `
 		SELECT latitude, longitude, speed, device_time
-		FROM vehicle_latest_position WHERE vehicle_id = ? AND tenant_id = ?`,
+		FROM vehicle_latest_position WHERE vehicle_id = $1 AND tenant_id = $2`,
 		vehicleID, tenantID).Scan(&lat, &lng, &speed, &deviceTime)
 	if posErr == nil && lat.Valid && lng.Valid {
 		p := &positionCtx{Lat: lat.Float64, Lng: lng.Float64}
@@ -304,7 +304,7 @@ func (h *ConsoleHandlers) VehicleContext(w http.ResponseWriter, r *http.Request)
 	tripErr := h.db.QueryRowContext(ctx, `
 		SELECT t.id, t.driver_id, COALESCE(r.source,'') || '→' || COALESCE(r.destination,''), COALESCE(r.distance,0)
 		FROM trips t JOIN routes r ON r.id = t.route_id
-		WHERE t.vehicle_id = ? AND t.tenant_id = ?
+		WHERE t.vehicle_id = $1 AND t.tenant_id = $2
 		  AND t.status IN ('assigned','started','reached_pickup','in_transit')
 		ORDER BY t.departure_time DESC LIMIT 1`,
 		vehicleID, tenantID).Scan(&tripID, &driverID, &routeLabel, &distance)
@@ -328,7 +328,7 @@ func (h *ConsoleHandlers) VehicleContext(w http.ResponseWriter, r *http.Request)
 			SELECT id,
 			       COALESCE(first_name,'') || ' ' || COALESCE(last_name,''),
 			       phone
-			FROM drivers WHERE id = ?`, driverID.String).Scan(&d.ID, &d.Name, &phone)
+			FROM drivers WHERE id = $1`, driverID.String).Scan(&d.ID, &d.Name, &phone)
 		if dErr == nil {
 			if phone.Valid && phone.String != "" {
 				d.Phone = &phone.String
@@ -341,7 +341,7 @@ func (h *ConsoleHandlers) VehicleContext(w http.ResponseWriter, r *http.Request)
 	if hasTrip && distance > 0 {
 		var margin float64
 		if mErr := h.db.QueryRowContext(ctx,
-			`SELECT estimated_margin FROM trips WHERE id = ?`, tripID.String).Scan(&margin); mErr == nil {
+			`SELECT estimated_margin FROM trips WHERE id = $1`, tripID.String).Scan(&margin); mErr == nil {
 			resp.PnlKmToday = margin / distance
 		}
 	}
@@ -350,7 +350,7 @@ func (h *ConsoleHandlers) VehicleContext(w http.ResponseWriter, r *http.Request)
 	kRows, kErr := h.db.QueryContext(ctx, `
 		SELECT de.id, de.amount, COALESCE(de.category, de.expense_type, '')
 		FROM driver_expenses de JOIN trips t ON de.trip_id = t.id
-		WHERE t.vehicle_id = ? AND t.tenant_id = ? AND de.status = 'pending'
+		WHERE t.vehicle_id = $1 AND t.tenant_id = $2 AND de.status = 'pending'
 		ORDER BY de.created_at DESC LIMIT 10`, vehicleID, tenantID)
 	if kErr == nil {
 		defer func() { _ = kRows.Close() }()
@@ -368,7 +368,7 @@ func (h *ConsoleHandlers) VehicleContext(w http.ResponseWriter, r *http.Request)
 		var validUntil time.Time
 		eErr := h.db.QueryRowContext(ctx, `
 			SELECT eb.id, eb.valid_until FROM eway_bills eb
-			WHERE eb.trip_id = ? AND eb.status = 'active'
+			WHERE eb.trip_id = $1 AND eb.status = 'active'
 			ORDER BY eb.valid_until ASC LIMIT 1`, tripID.String).
 			Scan(&e.ID, &validUntil)
 		if eErr == nil {
@@ -381,7 +381,7 @@ func (h *ConsoleHandlers) VehicleContext(w http.ResponseWriter, r *http.Request)
 	var balance float64
 	bErr := h.db.QueryRowContext(ctx, `
 		SELECT COALESCE(SUM(balance),0) FROM fastag_tags
-		WHERE vehicle_id = ? AND tenant_id = ?`, vehicleID, tenantID).Scan(&balance)
+		WHERE vehicle_id = $1 AND tenant_id = $2`, vehicleID, tenantID).Scan(&balance)
 	if bErr == nil {
 		resp.FastagBalance = &balance
 	}
@@ -389,9 +389,9 @@ func (h *ConsoleHandlers) VehicleContext(w http.ResponseWriter, r *http.Request)
 	// 9. Documents expiring within 30 days.
 	dRows, dErr := h.db.QueryContext(ctx, `
 		SELECT doc_type, expiry_date FROM vehicle_documents
-		WHERE vehicle_id = ? AND expiry_date IS NOT NULL
-		  AND expiry_date <= DATE('now', '+30 days')
-		ORDER BY expiry_date ASC LIMIT 5`, vehicleID)
+		WHERE vehicle_id = $1 AND expiry_date IS NOT NULL
+		  AND substr(CAST(expiry_date AS TEXT), 1, 10) <= $2
+		ORDER BY expiry_date ASC LIMIT 5`, vehicleID, time.Now().UTC().AddDate(0, 0, 30).Format("2006-01-02"))
 	if dErr == nil {
 		defer func() { _ = dRows.Close() }()
 		for dRows.Next() {
@@ -447,7 +447,7 @@ func (h *ConsoleHandlers) ExtendEwayBill(w http.ResponseWriter, r *http.Request)
 	err := h.db.QueryRowContext(ctx, `
 		SELECT e.trip_id, e.valid_until
 		FROM eway_bills e JOIN trips t ON e.trip_id = t.id
-		WHERE e.id = ? AND t.tenant_id = ?`, ewbID, tenantID).
+		WHERE e.id = $1 AND t.tenant_id = $2`, ewbID, tenantID).
 		Scan(&tripID, &validUntil)
 	if err == sql.ErrNoRows {
 		httpx.Error(w, r, apperr.New(apperr.CodeNotFound))
@@ -462,7 +462,7 @@ func (h *ConsoleHandlers) ExtendEwayBill(w http.ResponseWriter, r *http.Request)
 	if h.ewbExtend && h.ewbClient != nil {
 		var ewbNumber string
 		if nErr := h.db.QueryRowContext(ctx,
-			`SELECT ewb_number FROM eway_bills WHERE id = ?`, ewbID).Scan(&ewbNumber); nErr == nil {
+			`SELECT ewb_number FROM eway_bills WHERE id = $1`, ewbID).Scan(&ewbNumber); nErr == nil {
 			if resp, extErr := h.ewbClient.Extend(ctx, ewbNumber, intEWB.ExtendRequest{
 				EwbNumber: ewbNumber,
 				Reason:    "console_inline_extend",
@@ -473,14 +473,14 @@ func (h *ConsoleHandlers) ExtendEwayBill(w http.ResponseWriter, r *http.Request)
 	}
 
 	if _, uErr := h.db.ExecContext(ctx,
-		`UPDATE eway_bills SET valid_until = ? WHERE id = ?`,
+		`UPDATE eway_bills SET valid_until = $1 WHERE id = $2`,
 		newExpiry, ewbID); uErr != nil {
 		httpx.Error(w, r, uErr)
 		return
 	}
 	if _, eErr := h.db.ExecContext(ctx, `
 		INSERT INTO eway_bill_events (id, ewb_number, trip_id, event_type, payload, created_by)
-		SELECT ?, ewb_number, trip_id, 'EXTENDED', ?, ? FROM eway_bills WHERE id = ?`,
+		SELECT $1, ewb_number, trip_id, 'EXTENDED', $2, $3 FROM eway_bills WHERE id = $4`,
 		uuid.NewString(), fmt.Sprintf(`{"hours":%d}`, body.ValidUptoHours), contextUserID(r), ewbID); eErr != nil {
 		slog.Warn("eway_bill_events insert failed", "ewb", ewbID, "error", eErr)
 	}
@@ -505,6 +505,6 @@ func writeAuditLog(r *http.Request, db *sql.DB, action, table, recordID string, 
 	}
 	_, _ = db.ExecContext(r.Context(), `
 		INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
+		VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
 		uuid.NewString(), contextUserID(r), action, table, recordID, string(blob))
 }

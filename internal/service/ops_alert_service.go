@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	appdb "transport-app/internal/database"
 
 	"transport-app/internal/events"
 	"transport-app/internal/shared"
@@ -131,7 +132,7 @@ func (s *OpsAlertService) CreateAlert(ctx context.Context, alert OpsAlert) (stri
 		`INSERT INTO ops_alerts
 		 (id, tenant_id, alert_type, severity, title, description,
 		  entity_type, entity_id, status, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open', ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'open', $9)`,
 		id, tenantID, alert.AlertType, severity,
 		alert.Title, alert.Description, alert.EntityType, alert.EntityID, now)
 	if err != nil {
@@ -178,8 +179,8 @@ func (s *OpsAlertService) CountAlertsSince(ctx context.Context, tenantID, alertT
 	var n int
 	err := s.db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM ops_alerts
-		 WHERE tenant_id = ? AND alert_type = ? AND created_at > datetime('now', ?)`,
-		tenantID, alertType, fmt.Sprintf("-%d hour", int(since.Hours()))).Scan(&n)
+		 WHERE tenant_id = $1 AND alert_type = $2 AND created_at > $3`,
+		tenantID, alertType, time.Now().UTC().Add(-since)).Scan(&n)
 	if err != nil {
 		return 0, err
 	}
@@ -196,7 +197,7 @@ func (s *OpsAlertService) CountByStatus(ctx context.Context, tenantID, status st
 	}
 	var n int
 	err := s.db.QueryRowContext(ctx,
-		`SELECT COUNT(*) FROM ops_alerts WHERE tenant_id = ? AND status = ?`, tenantID, status).Scan(&n)
+		`SELECT COUNT(*) FROM ops_alerts WHERE tenant_id = $1 AND status = $2`, tenantID, status).Scan(&n)
 	if err != nil {
 		return 0, err
 	}
@@ -211,8 +212,8 @@ func (s *OpsAlertService) AcknowledgeAlert(ctx context.Context, alertID, userID 
 	now := time.Now().UTC()
 	result, err := s.db.ExecContext(ctx,
 		`UPDATE ops_alerts
-		 SET status = 'acknowledged', acknowledged_by = ?, acknowledged_at = ?
-		 WHERE id = ? AND status = 'open'`,
+		 SET status = 'acknowledged', acknowledged_by = $1, acknowledged_at = $2
+		 WHERE id = $3 AND status = 'open'`,
 		userID, now, alertID)
 	if err != nil {
 		return err
@@ -235,8 +236,8 @@ func (s *OpsAlertService) ResolveAlert(ctx context.Context, alertID, userID, not
 	now := time.Now().UTC()
 	result, err := s.db.ExecContext(ctx,
 		`UPDATE ops_alerts
-		 SET status = 'resolved', resolved_by = ?, resolved_at = ?, resolution_note = ?
-		 WHERE id = ? AND status IN ('open', 'acknowledged')`,
+		 SET status = 'resolved', resolved_by = $1, resolved_at = $2, resolution_note = $3
+		 WHERE id = $4 AND status IN ('open', 'acknowledged')`,
 		userID, now, note, alertID)
 	if err != nil {
 		return err
@@ -259,8 +260,8 @@ func (s *OpsAlertService) DismissAlert(ctx context.Context, alertID, userID, rea
 	now := time.Now().UTC()
 	result, err := s.db.ExecContext(ctx,
 		`UPDATE ops_alerts
-		 SET status = 'dismissed', resolved_by = ?, resolved_at = ?, resolution_note = ?
-		 WHERE id = ? AND status IN ('open', 'acknowledged')`,
+		 SET status = 'dismissed', resolved_by = $1, resolved_at = $2, resolution_note = $3
+		 WHERE id = $4 AND status IN ('open', 'acknowledged')`,
 		userID, now, reason, alertID)
 	if err != nil {
 		return err
@@ -290,7 +291,7 @@ func (s *OpsAlertService) GetAlert(ctx context.Context, alertID string) (*OpsAle
 		        entity_type, entity_id, status, acknowledged_by, acknowledged_at,
 		        resolved_by, resolved_at, resolution_note, created_at
 		 FROM ops_alerts
-		 WHERE id = ?`, alertID).Scan(
+		 WHERE id = $1`, alertID).Scan(
 		&alert.ID, &alert.TenantID, &alert.AlertType, &alert.Severity, &alert.Title, &alert.Description,
 		&entType, &entID, &alert.Status, &ackBy, &ackAt, &resBy, &resAt, &resNote, &alert.CreatedAt,
 	)
@@ -362,8 +363,12 @@ func (s *OpsAlertService) ListAlerts(ctx context.Context, tenantID string, filte
 
 	// 1. Get total count
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM ops_alerts WHERE %s", whereSQL)
+	reboundCount, rerr := appdb.Rebind(countQuery)
+	if rerr != nil {
+		return nil, 0, fmt.Errorf("count ops alerts: %w", rerr)
+	}
 	var total int
-	if err := s.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+	if err := s.db.QueryRowContext(ctx, reboundCount, args...).Scan(&total); err != nil {
 		return nil, 0, fmt.Errorf("count ops alerts: %w", err)
 	}
 
@@ -394,7 +399,11 @@ func (s *OpsAlertService) ListAlerts(ctx context.Context, tenantID string, filte
 	queryArgs := make([]interface{}, len(args), len(args)+2)
 	copy(queryArgs, args)
 	queryArgs = append(queryArgs, limit, offset)
-	rows, err := s.db.QueryContext(ctx, query, queryArgs...)
+	rebound, rerr := appdb.Rebind(query)
+	if rerr != nil {
+		return nil, 0, fmt.Errorf("query ops alerts: %w", rerr)
+	}
+	rows, err := s.db.QueryContext(ctx, rebound, queryArgs...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("query ops alerts: %w", err)
 	}

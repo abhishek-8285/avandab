@@ -15,8 +15,8 @@ import (
 // and its mocks untouched.
 
 const driverDateClause = `
-  AND (? = '' OR date(substr(created_at,1,10)) >= date(?))
-  AND (? = '' OR date(substr(created_at,1,10)) <= date(?))`
+  AND (? = '' OR substr(CAST(created_at AS TEXT), 1, 10) >= substr(CAST(? AS TEXT), 1, 10))
+  AND (? = '' OR substr(CAST(created_at AS TEXT), 1, 10) <= substr(CAST(? AS TEXT), 1, 10))`
 
 func (r *driverRepository) SearchReadModelsDateRange(ctx context.Context, tenantID shared.TenantID, query string, status string, from string, to string, limit int, offset int) ([]domain.DriverReadModel, int64, error) {
 	qPattern := "%" + query + "%"
@@ -26,9 +26,9 @@ SELECT id, driver_id, first_name, last_name, phone, email, address,
     license_number, license_expiry, experience_years, status, emergency_contact_name,
     emergency_contact_phone, notes, tenant_id, created_at, updated_at
 FROM drivers
-WHERE tenant_id = ?
-  AND (? = '' OR first_name LIKE ? OR last_name LIKE ? OR phone LIKE ? OR license_number LIKE ?)
-  AND (? = '' OR status = ?)` + driverDateClause + `
+WHERE tenant_id = $1
+  AND ($2 = '' OR first_name LIKE $3 OR last_name LIKE $4 OR phone LIKE $5 OR license_number LIKE $6)
+  AND ($7 = '' OR status = $8)` + driverDateClause + `
 ORDER BY created_at DESC
 LIMIT ? OFFSET ?`
 
@@ -52,9 +52,9 @@ LIMIT ? OFFSET ?`
 	countSQL := `
 SELECT COUNT(*)
 FROM drivers
-WHERE tenant_id = ?
-  AND (? = '' OR first_name LIKE ? OR last_name LIKE ? OR phone LIKE ? OR license_number LIKE ?)
-  AND (? = '' OR status = ?)` + driverDateClause
+WHERE tenant_id = $1
+  AND ($2 = '' OR first_name LIKE $3 OR last_name LIKE $4 OR phone LIKE $5 OR license_number LIKE $6)
+  AND ($7 = '' OR status = $8)` + driverDateClause
 
 	var count int64
 	err = r.dbConn.QueryRowContext(ctx, countSQL,

@@ -14,18 +14,17 @@ import (
 const countRoutes = `-- name: CountRoutes :one
 SELECT COUNT(*) AS count
 FROM routes
-WHERE (source LIKE '%' || ? || '%' OR destination LIKE '%' || ? || '%')
-  AND tenant_id = ?
+WHERE (lower(source) LIKE '%' || lower(?1) || '%' OR lower(destination) LIKE '%' || lower(?1) || '%')
+  AND tenant_id = ?2
 `
 
 type CountRoutesParams struct {
-	Column1  sql.NullString `json:"column_1"`
-	Column2  sql.NullString `json:"column_2"`
-	TenantID string         `json:"tenant_id"`
+	Search   string `json:"search"`
+	TenantID string `json:"tenant_id"`
 }
 
 func (q *Queries) CountRoutes(ctx context.Context, arg CountRoutesParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countRoutes, arg.Column1, arg.Column2, arg.TenantID)
+	row := q.db.QueryRowContext(ctx, countRoutes, arg.Search, arg.TenantID)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -252,18 +251,17 @@ SELECT id, tenant_id, source, destination, source_normalized, dest_normalized,
        distance, estimated_hours, standard_fare, reverse_distance, reverse_standard_fare,
        direction, is_active, remarks, created_at, updated_at
 FROM routes
-WHERE (source LIKE '%' || ? || '%' OR destination LIKE '%' || ? || '%')
-  AND tenant_id = ?
+WHERE (lower(source) LIKE '%' || lower(?1) || '%' OR lower(destination) LIKE '%' || lower(?1) || '%')
+  AND tenant_id = ?2
 ORDER BY created_at DESC
-LIMIT ? OFFSET ?
+LIMIT ?4 OFFSET ?3
 `
 
 type SearchRoutesParams struct {
-	Column1  sql.NullString `json:"column_1"`
-	Column2  sql.NullString `json:"column_2"`
-	TenantID string         `json:"tenant_id"`
-	Limit    int64          `json:"limit"`
-	Offset   int64          `json:"offset"`
+	Search   string `json:"search"`
+	TenantID string `json:"tenant_id"`
+	Offset   int64  `json:"offset"`
+	Limit    int64  `json:"limit"`
 }
 
 type SearchRoutesRow struct {
@@ -287,11 +285,10 @@ type SearchRoutesRow struct {
 
 func (q *Queries) SearchRoutes(ctx context.Context, arg SearchRoutesParams) ([]SearchRoutesRow, error) {
 	rows, err := q.db.QueryContext(ctx, searchRoutes,
-		arg.Column1,
-		arg.Column2,
+		arg.Search,
 		arg.TenantID,
-		arg.Limit,
 		arg.Offset,
+		arg.Limit,
 	)
 	if err != nil {
 		return nil, err
@@ -337,7 +334,7 @@ SET source = ?, destination = ?, source_normalized = ?, dest_normalized = ?,
     distance = ?, estimated_hours = ?, standard_fare = ?,
     reverse_distance = ?, reverse_standard_fare = ?,
     direction = ?, is_active = ?, remarks = ?,
-    updated_at = datetime('now')
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ?
 RETURNING id, tenant_id, source, destination, source_normalized, dest_normalized,
           distance, estimated_hours, standard_fare, reverse_distance, reverse_standard_fare,

@@ -225,7 +225,7 @@ func (reg *Registry) orgFor(ctx context.Context, tenantID string) cachedOrg {
 	sub := subscriptionGate{}
 	if reg.db != nil {
 		rows, err := reg.db.QueryContext(ctx,
-			`SELECT feature, enabled FROM feature_flags WHERE tenant_id = ?`, tenantID)
+			`SELECT feature, enabled FROM feature_flags WHERE tenant_id = $1`, tenantID)
 		if err == nil {
 			func() {
 				defer func() { _ = rows.Close() }()
@@ -240,7 +240,7 @@ func (reg *Registry) orgFor(ctx context.Context, tenantID string) cachedOrg {
 		}
 		var status, trialEnd, periodEnd sql.NullString
 		if err := reg.db.QueryRowContext(ctx,
-			`SELECT status, trial_end, current_period_end FROM tenant_subscriptions WHERE tenant_id = ?`, tenantID).Scan(&status, &trialEnd, &periodEnd); err == nil && status.Valid {
+			`SELECT status, trial_end, current_period_end FROM tenant_subscriptions WHERE tenant_id = $1`, tenantID).Scan(&status, &trialEnd, &periodEnd); err == nil && status.Valid {
 			sub = subscriptionGate{HasRow: true, Status: status.String}
 			if trialEnd.Valid {
 				sub.TrialEnd = trialEnd.String
@@ -298,8 +298,8 @@ func (reg *Registry) Set(ctx context.Context, tenantID, key string, enabled bool
 	}
 	_, err := reg.db.ExecContext(ctx, `
 INSERT INTO feature_flags (tenant_id, feature, enabled, updated_by, updated_at)
-VALUES (?, ?, ?, ?, ?)
-ON CONFLICT(tenant_id, feature) DO UPDATE SET
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (tenant_id, feature) DO UPDATE SET
 	enabled = excluded.enabled, updated_by = excluded.updated_by, updated_at = excluded.updated_at`,
 		tenantID, key, enabled, updatedBy, time.Now().UTC().Format(time.RFC3339))
 	if err != nil {

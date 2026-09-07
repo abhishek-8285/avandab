@@ -83,6 +83,9 @@ import (
 	tripApp "transport-app/internal/trip/application"
 	tripHandlers "transport-app/internal/trip/presentation/api/handlers"
 
+	vehicleApp "transport-app/internal/vehicle/application"
+	vehicleAPIHandlers "transport-app/internal/vehicle/presentation/api/handlers"
+
 	driverApp "transport-app/internal/driver/application"
 	driverAPIHandlers "transport-app/internal/driver/presentation/api/handlers"
 
@@ -273,8 +276,16 @@ func main() {
 	}
 	defer func() { _ = database.Close() }()
 
-	// Run migrations from embedded filesystem using the engine's dialect
-	migrations, err := fs.Sub(dbmigr.Migrations, "migrations")
+	// Run migrations from embedded filesystem using the engine's dialect.
+	// Postgres uses the version-locked PG port (migrations_pg); sqlite uses
+	// the frozen original chain. Same version numbers both sides.
+	migrationFS := dbmigr.Migrations
+	migrationDir := "migrations"
+	if appdb.MigrationDir(cfg.Database.Driver) == "migrations_pg" {
+		migrationFS = dbmigr.MigrationsPG
+		migrationDir = "migrations_pg"
+	}
+	migrations, err := fs.Sub(migrationFS, migrationDir)
 	if err != nil {
 		logger.Error("Failed to read embedded migrations", "error", err)
 		os.Exit(1)
@@ -292,6 +303,16 @@ func main() {
 	}
 
 	logger.Info("Database migrated successfully")
+
+	// Re-establish the SQLite posture post-migration: NO TRANSACTION
+	// migrations (00126) necessarily mutate pragma state on the handle they
+	// run on, so re-assert rather than trust it. No-op on other engines.
+	if appdb.GooseDialect(cfg.Database.Driver) == goose.DialectSQLite3 {
+		if err := appdb.ApplySQLitePragmas(ctx, database, logger); err != nil {
+			logger.Error("Failed to re-apply SQLite pragmas", "error", err)
+			os.Exit(1)
+		}
+	}
 
 	// Initialize repository
 	repo := sqlite.NewRepository(database)
@@ -563,6 +584,16 @@ func main() {
 	getTrip := tripApp.NewGetTripUseCase(sqlUoW)
 	listTrips := tripApp.NewListTripsUseCase(sqlUoW)
 
+	// Fleet registry — vehicle use cases (TMS SOP parity, 00126)
+	createVehicle := vehicleApp.NewCreateVehicleUseCase(sqlUoW, idGen, realClock)
+	updateVehicle := vehicleApp.NewUpdateVehicleUseCase(sqlUoW, realClock)
+	deleteVehicle := vehicleApp.NewDeleteVehicleUseCase(sqlUoW, realClock)
+	getVehicle := vehicleApp.NewGetVehicleUseCase(sqlUoW)
+	listVehicles := vehicleApp.NewListVehiclesUseCase(sqlUoW)
+	createMeasPoint := vehicleApp.NewCreateMeasuringPointUseCase(sqlUoW, idGen)
+	recordMeasurement := vehicleApp.NewRecordMeasurementUseCase(sqlUoW, idGen, realClock)
+	listMeasurements := vehicleApp.NewListVehicleMeasurements(sqlUoW)
+
 	// Sprint 3 – Invoice use cases
 	generateInvoice := invoiceApp.NewGenerateInvoiceUseCase(sqlUoW, idGen, realClock)
 	getInvoice := invoiceApp.NewGetInvoiceUseCase(sqlUoW)
@@ -583,6 +614,11 @@ func main() {
 	)
 	tripAPIHandler := tripHandlers.NewAPITripHandler(
 		createTrip, assignDriver, assignVehicle, scheduleTrip, startTrip, reachPickup, startTransit, deliver, completeTrip, cancelTrip, getTrip, listTrips,
+		authSvc,
+	)
+	vehicleAPIHandler := vehicleAPIHandlers.NewAPIVehicleHandler(
+		createVehicle, updateVehicle, deleteVehicle, getVehicle, listVehicles,
+		createMeasPoint, recordMeasurement, listMeasurements,
 		authSvc,
 	)
 	invoiceAPIHandler := invoiceHandlers.NewAPIInvoiceHandler(generateInvoice, getInvoice, listInvoices, voidInvoice, authSvc)
@@ -618,6 +654,14 @@ func main() {
 	r.MethodNotAllowed(app.MethodNotAllowedHandler)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.SecurityHeaders)
+	// Gzip every compressible response (HTML/JSON/CSS/JS). SSE streams
+	// exempted — compression buffers Flush and breaks realtime push.
+	r.Use(middleware.SkipForPaths(
+		chiMiddleware.Compress(5),
+		"/dashboard/stream",
+		"/map/stream",
+		"/api/v1/telemetry/stream",
+	))
 	r.Use(apiversion.Middleware)
 	// Golden-signal request metrics (count, latency, status per route) for
 	// the Prometheus exposition mounted at GET /metrics below.
@@ -689,7 +733,7 @@ func main() {
 		logger.Info("multi-tenant mode enabled: per-user tenant resolution active")
 		tenantResolver = middleware.TenantForUserResolver(func(ctx context.Context, userID string) (string, string, error) {
 			var tenantID, status string
-			row := database.QueryRowContext(ctx, `SELECT u.tenant_id, COALESCE(t.status,'active') FROM users u LEFT JOIN tenants t ON t.id = u.tenant_id WHERE u.id = ?`, userID)
+			row := database.QueryRowContext(ctx, `SELECT u.tenant_id, COALESCE(t.status,'active') FROM users u LEFT JOIN tenants t ON t.id = u.tenant_id WHERE u.id = $1`, userID)
 			if err := row.Scan(&tenantID, &status); err != nil {
 				return "", "", err
 			}
@@ -902,6 +946,7 @@ func main() {
 		r.Post("/api/v1/errors/client", app.OpsErrors.APIClientReport)
 		bookingAPIHandler.Register(r)
 		tripAPIHandler.Register(r)
+		vehicleAPIHandler.Register(r)
 		invoiceAPIHandler.Register(r)
 		paymentAPIHandler.Register(r)
 		integrationHandler.Register(r)
@@ -1835,14 +1880,14 @@ func runDailyDigest(ctx context.Context, svc *founder.FounderService, logger *sl
 // by the Migration Ownership Index — so this runs at startup instead.
 func seedScorecardUpdatePermission(ctx context.Context, db *sql.DB, authSvc auth.AuthorizationService) error {
 	if _, err := db.ExecContext(ctx,
-		`INSERT OR IGNORE INTO permissions (name, description)
-		 VALUES ('scorecard:update', 'Resolve scorecard fraud-cap events')`); err != nil {
+		`INSERT INTO permissions (name, description)
+		 VALUES ('scorecard:update', 'Resolve scorecard fraud-cap events') ON CONFLICT DO NOTHING`); err != nil {
 		return err
 	}
 	if _, err := db.ExecContext(ctx,
-		`INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+		`INSERT INTO role_permissions (role_id, permission_id)
 		 SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
-		 WHERE r.name = 'admin' AND p.name = 'scorecard:update'`); err != nil {
+		 WHERE r.name = 'admin' AND p.name = 'scorecard:update' ON CONFLICT DO NOTHING`); err != nil {
 		return err
 	}
 	return authSvc.Reload()
@@ -1853,14 +1898,14 @@ func seedScorecardUpdatePermission(ctx context.Context, db *sql.DB, authSvc auth
 // idempotently at startup; admins are granted by default.
 func seedDashboardReadPermission(ctx context.Context, db *sql.DB, authSvc auth.AuthorizationService) error {
 	if _, err := db.ExecContext(ctx,
-		`INSERT OR IGNORE INTO permissions (name, description)
-		 VALUES ('dashboard:read', 'View console money strip and dashboard metrics')`); err != nil {
+		`INSERT INTO permissions (name, description)
+		 VALUES ('dashboard:read', 'View console money strip and dashboard metrics') ON CONFLICT DO NOTHING`); err != nil {
 		return err
 	}
 	if _, err := db.ExecContext(ctx,
-		`INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+		`INSERT INTO role_permissions (role_id, permission_id)
 		 SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
-		 WHERE r.name = 'admin' AND p.name = 'dashboard:read'`); err != nil {
+		 WHERE r.name = 'admin' AND p.name = 'dashboard:read' ON CONFLICT DO NOTHING`); err != nil {
 		return err
 	}
 	return authSvc.Reload()
@@ -1871,14 +1916,14 @@ func seedDashboardReadPermission(ctx context.Context, db *sql.DB, authSvc auth.A
 // are granted by default.
 func seedEwaybillWritePermission(ctx context.Context, db *sql.DB, authSvc auth.AuthorizationService) error {
 	if _, err := db.ExecContext(ctx,
-		`INSERT OR IGNORE INTO permissions (name, description)
-		 VALUES ('ewaybill:write', 'Extend and manage e-way bills from the console')`); err != nil {
+		`INSERT INTO permissions (name, description)
+		 VALUES ('ewaybill:write', 'Extend and manage e-way bills from the console') ON CONFLICT DO NOTHING`); err != nil {
 		return err
 	}
 	if _, err := db.ExecContext(ctx,
-		`INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+		`INSERT INTO role_permissions (role_id, permission_id)
 		 SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
-		 WHERE r.name = 'admin' AND p.name = 'ewaybill:write'`); err != nil {
+		 WHERE r.name = 'admin' AND p.name = 'ewaybill:write' ON CONFLICT DO NOTHING`); err != nil {
 		return err
 	}
 	return authSvc.Reload()
