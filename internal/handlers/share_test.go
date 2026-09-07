@@ -113,7 +113,7 @@ func TestShare_Create_And_MaxActiveCap(t *testing.T) {
 	setupTestTrip(t, db, "trip-1", "veh-1")
 
 	r := chi.NewRouter()
-	r.Post("/trips/{id}/share", app.Share.CreateShare)
+	r.With(withUserAndTenant("user-1", "1", nil)).Post("/trips/{id}/share", app.Share.CreateShare)
 
 	// 1. Create first share link (with PIN)
 	body1 := `{"pin":"1234","ttl_hours":12}`
@@ -365,8 +365,8 @@ func TestShare_ListShares_And_Revoke(t *testing.T) {
 	require.NoError(t, err)
 
 	r := chi.NewRouter()
-	r.Get("/shares", app.Share.ListShares)
-	r.Post("/shares/{id}/revoke", app.Share.RevokeShare)
+	r.With(withUserAndTenant("user-1", "1", nil)).Get("/shares", app.Share.ListShares)
+	r.With(withUserAndTenant("user-1", "1", nil)).Post("/shares/{id}/revoke", app.Share.RevokeShare)
 
 	// List
 	reqList := withSession(httptest.NewRequest("GET", "/shares", nil), "user-1", "admin")

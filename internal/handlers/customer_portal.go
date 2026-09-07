@@ -104,11 +104,7 @@ func (h *CustomerPortalHandlers) ListMyBookings(w http.ResponseWriter, r *http.R
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	tenantID := shared.TenantIDFromContext(r.Context())
-	tenantStr := string(tenantID)
-	if tenantStr == "" {
-		tenantStr = string(shared.DefaultTenant)
-	}
+	tenantStr := string(shared.MustTenantID(r.Context()))
 	pp := parsePaginationParams(r)
 	search := strings.TrimSpace(r.URL.Query().Get("q"))
 	status := strings.TrimSpace(r.URL.Query().Get("status"))
@@ -235,11 +231,7 @@ func (h *CustomerPortalHandlers) ListMyInvoices(w http.ResponseWriter, r *http.R
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	tenantID := shared.TenantIDFromContext(r.Context())
-	tenantStr := string(tenantID)
-	if tenantStr == "" {
-		tenantStr = string(shared.DefaultTenant)
-	}
+	tenantStr := string(shared.MustTenantID(r.Context()))
 	pp := parsePaginationParams(r)
 	search := strings.TrimSpace(r.URL.Query().Get("q"))
 	status := strings.TrimSpace(r.URL.Query().Get("status"))
@@ -361,11 +353,7 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 		http.Error(w, "trip_id required", http.StatusBadRequest)
 		return
 	}
-	tenantID := shared.TenantIDFromContext(r.Context())
-	tenantStr := string(tenantID)
-	if tenantStr == "" {
-		tenantStr = string(shared.DefaultTenant)
-	}
+	tenantStr := string(shared.MustTenantID(r.Context()))
 
 	// Scoped ownership check: trip must belong to a booking whose customer_id is in allowed set.
 	// SELECT ... WHERE tenant_id=? AND customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=?)
@@ -588,11 +576,7 @@ func (h *CustomerPortalHandlers) Feedback(w http.ResponseWriter, r *http.Request
 		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
-	tenantID := shared.TenantIDFromContext(r.Context())
-	tenantStr := string(tenantID)
-	if tenantStr == "" {
-		tenantStr = string(shared.DefaultTenant)
-	}
+	tenantStr := string(shared.MustTenantID(r.Context()))
 
 	var req struct {
 		TripID  string `json:"trip_id"`

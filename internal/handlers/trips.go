@@ -712,10 +712,7 @@ func (h *TripHandlers) handleComplianceBlock(w http.ResponseWriter, r *http.Requ
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "reason is required (≥10 chars)"})
 		return true
 	}
-	tenant := shared.TenantIDFromContext(r.Context())
-	if tenant == "" {
-		tenant = shared.DefaultTenant
-	}
+	tenant := shared.MustTenantID(r.Context())
 	if h.DB != nil {
 		_, _ = h.DB.ExecContext(r.Context(), `CREATE TABLE IF NOT EXISTS dispatch_overrides (
             id TEXT PRIMARY KEY,
@@ -1188,10 +1185,7 @@ func (h *TripHandlers) SubmitStopPOD(w http.ResponseWriter, r *http.Request) {
 	if stopID == "" {
 		stopID = chi.URLParam(r, "stop_id")
 	}
-	tenantID := shared.TenantIDFromContext(r.Context())
-	if tenantID == "" {
-		tenantID = shared.DefaultTenant
-	}
+	tenantID := shared.MustTenantID(r.Context())
 
 	uploadBaseDir := "./uploads"
 	if h.Config != nil && h.Config.UploadDir != "" {

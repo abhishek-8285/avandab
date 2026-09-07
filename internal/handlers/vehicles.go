@@ -240,10 +240,7 @@ func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 	lastPos := map[string]interface{}{"Has": false}
 	var lat, lng, speed float64
 	var at sql.NullString
-	posTenantID := string(shared.TenantIDFromContext(r.Context()))
-	if posTenantID == "" {
-		posTenantID = string(shared.DefaultTenant)
-	}
+	posTenantID := string(shared.MustTenantID(r.Context()))
 	if err := h.DB.QueryRowContext(r.Context(), `
 		SELECT latitude, longitude, speed, device_time
 		FROM vehicle_latest_position WHERE vehicle_id = $1 AND tenant_id = $2`, id, posTenantID).

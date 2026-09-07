@@ -113,10 +113,7 @@ func (h *ShareHandlers) CreateShare(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user, _ := h.getUserFromContext(r)
-	tenantID := string(shared.TenantIDFromContext(r.Context()))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
+	tenantID := string(shared.MustTenantID(r.Context()))
 
 	// 1. Validate trip exists and belongs to tenant
 	var tripTenantID string
@@ -702,10 +699,7 @@ func (h *ShareHandlers) ShareData(w http.ResponseWriter, r *http.Request) {
 // ListShares renders the administrative share link management page (Spec 04 §4).
 func (h *ShareHandlers) ListShares(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
-	tenantID := string(shared.TenantIDFromContext(r.Context()))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
+	tenantID := string(shared.MustTenantID(r.Context()))
 
 	rows, err := h.db.QueryContext(r.Context(), `
 		SELECT s.id, s.trip_id, t.trip_number, s.created_by, COALESCE(u.name, s.created_by),
@@ -765,10 +759,7 @@ func (h *ShareHandlers) ListShares(w http.ResponseWriter, r *http.Request) {
 // RevokeShare revokes a share link, rendering it immediately unusable (Spec 04 §4).
 func (h *ShareHandlers) RevokeShare(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	tenantID := string(shared.TenantIDFromContext(r.Context()))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
+	tenantID := string(shared.MustTenantID(r.Context()))
 
 	_, err := h.db.ExecContext(r.Context(), `
 		UPDATE share_links
