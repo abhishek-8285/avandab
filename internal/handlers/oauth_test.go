@@ -27,6 +27,7 @@ func newGoogleDB(t *testing.T) *sql.DB {
 	if cwd, _ := os.Getwd(); filepath.Base(cwd) == "handlers" {
 		t.Chdir("../..")
 	}
+	require.NoError(t, os.MkdirAll("tmp", 0o755)) // fresh clones lack tmp/
 	db, err := sql.Open("sqlite", "file:tmp/google_oauth_test.db")
 	require.NoError(t, err)
 	require.NoError(t, db.Ping())
