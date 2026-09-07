@@ -42,9 +42,11 @@ func (s *KPIService) PilotKPIs(ctx context.Context, tenantID string, days int) (
 	if s.db == nil {
 		return nil, fmt.Errorf("database unavailable")
 	}
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return nil, err
 	}
+	tenantID = string(tid)
 	if days <= 0 || days > 90 {
 		days = 14
 	}
@@ -59,7 +61,7 @@ func (s *KPIService) PilotKPIs(ctx context.Context, tenantID string, days int) (
 		cycleExpr = "AVG(EXTRACT(EPOCH FROM (paid_at - created_at)) / 60)"
 	}
 	var cycle sql.NullFloat64
-	err := s.db.QueryRowContext(ctx, `
+	err = s.db.QueryRowContext(ctx, `
 		SELECT `+cycleExpr+`
 		FROM driver_settlements
 		WHERE status = 'paid' AND paid_at IS NOT NULL
@@ -200,7 +202,10 @@ func (s *KPIService) RecordConsoleUsage(ctx context.Context, tenantID, userID, e
 		return
 	}
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		tenantID = string(shared.TenantIDFromContext(ctx))
+	}
+	if tenantID == "" {
+		return // best-effort analytics: never attribute to a tenant we don't know
 	}
 	_, _ = s.db.ExecContext(ctx, `
 		INSERT INTO experiment_events

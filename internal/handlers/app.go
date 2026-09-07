@@ -740,13 +740,13 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 
 	// Per-org feature snapshot for nav visibility + upsell locks.
 	if a.Features != nil {
-		tid := string(shared.TenantIDFromContext(r.Context()))
-		if tid == "" {
-			tid = string(shared.DefaultTenant)
-		}
 		on := map[string]bool{}
-		for _, e := range a.Features.Snapshot(r.Context(), tid) {
-			on[e.Key] = e.Enabled
+		// Unresolved viewers (public pages) get no snapshot — never the
+		// bootstrap org's flags.
+		if tid := string(shared.TenantIDFromContext(r.Context())); tid != "" {
+			for _, e := range a.Features.Snapshot(r.Context(), tid) {
+				on[e.Key] = e.Enabled
+			}
 		}
 		templateData["Features"] = on
 	}

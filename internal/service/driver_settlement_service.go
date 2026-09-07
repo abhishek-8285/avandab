@@ -294,12 +294,11 @@ func (s *DriverSettlementService) recordLedgerForSettlement(ctx context.Context,
 		return nil
 	}
 
-	if tenantID == "" {
-		tenantID = string(shared.TenantIDFromContext(ctx))
-		if tenantID == "" {
-			tenantID = string(shared.DefaultTenant)
-		}
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return err
 	}
+	tenantID = string(tid)
 
 	appendEntry := func(entryType, desc string, amt float64) {
 		if amt == 0 {
@@ -845,19 +844,18 @@ func (s *DriverSettlementService) DisputeSettlement(ctx context.Context, settlem
 	}
 
 	if s.opsAlerts != nil {
-		tenantID := string(shared.TenantIDFromContext(ctx))
-		if tenantID == "" {
-			tenantID = string(shared.DefaultTenant)
+		// Fail closed: never file another org's dispute under tenant 1.
+		if tenantID := string(shared.TenantIDFromContext(ctx)); tenantID != "" {
+			_, _ = s.opsAlerts.CreateAlert(ctx, OpsAlert{
+				TenantID:    tenantID,
+				AlertType:   OpsAlertSettlementDispute,
+				Severity:    OpsAlertSeverityHigh,
+				Title:       "Settlement disputed by driver",
+				Description: fmt.Sprintf("Trip %s settlement %s disputed: %s", tripID, settlementID, reason),
+				EntityType:  strPtr("trip"),
+				EntityID:    &tripID,
+			})
 		}
-		_, _ = s.opsAlerts.CreateAlert(ctx, OpsAlert{
-			TenantID:    tenantID,
-			AlertType:   OpsAlertSettlementDispute,
-			Severity:    OpsAlertSeverityHigh,
-			Title:       "Settlement disputed by driver",
-			Description: fmt.Sprintf("Trip %s settlement %s disputed: %s", tripID, settlementID, reason),
-			EntityType:  strPtr("trip"),
-			EntityID:    &tripID,
-		})
 	}
 
 	return s.findByTripID(ctx, db, tripID)

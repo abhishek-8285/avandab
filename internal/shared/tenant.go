@@ -59,6 +59,19 @@ func RequireTenantID(ctx context.Context) (TenantID, error) {
 	return TenantRequired(ctx)
 }
 
+// RequireTenantOr prefers an explicit tenantID, falls back to the context
+// tenant, and fails closed instead of silently scoping to DefaultTenant.
+// Use at service seams that historically defaulted empty tenants to "1".
+func RequireTenantOr(ctx context.Context, tenantID string) (TenantID, error) {
+	if tenantID == "" {
+		tenantID = string(TenantIDFromContext(ctx))
+	}
+	if tenantID == "" {
+		return "", fmt.Errorf("tenant required: no tenant in context")
+	}
+	return TenantID(tenantID), nil
+}
+
 // MustTenantID panics if tenant is missing. Use only where panic is appropriate
 // (e.g., background jobs where missing tenant is a programmer error).
 func MustTenantID(ctx context.Context) TenantID {

@@ -193,9 +193,11 @@ func (s *PNLService) GetMoneyStrip(ctx context.Context, tenantID string, now tim
 	if s.db == nil {
 		return nil, fmt.Errorf("database unavailable")
 	}
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return nil, err
 	}
+	tenantID = string(tid)
 	dateStr := now.Format("2006-01-02")
 	revenue, fuelCosts, driverPayouts, maintenance, tollCosts := s.dailyTotals(ctx, tenantID, dateStr)
 
@@ -224,9 +226,11 @@ func (s *PNLService) GetLatest(ctx context.Context, tenantID string) (*PNLSnapsh
 	if s.db == nil {
 		return nil, fmt.Errorf("database unavailable")
 	}
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return nil, err
 	}
+	tenantID = string(tid)
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT id, tenant_id, snapshot_date, revenue, expenses, fuel_costs,
 		        driver_payouts, maintenance, toll_costs, tds_deducted, net_profit,
@@ -296,8 +300,9 @@ func GetActiveTenantIDs(ctx context.Context, db *sql.DB) ([]string, error) {
 		ids = append(ids, id)
 	}
 	if len(ids) == 0 {
-		// Fallback: default single-tenant deployment.
-		ids = []string{string(shared.DefaultTenant)}
+		// Fallback: default single-tenant deployment with zero tenants yet —
+		// nightly cron seeds tenant 1's first snapshot when no org exists.
+		ids = []string{string(shared.DefaultTenant)} //nolint:tenant-default
 	}
 	return ids, rows.Err()
 }

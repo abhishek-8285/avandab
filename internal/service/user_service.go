@@ -371,12 +371,13 @@ func (s *UserService) GetUserByEmail(ctx context.Context, email string) (domain.
 }
 
 // ListUsers retrieves users with search and pagination, scoped to the tenant
-// in context (falling back to the bootstrap tenant when unset).
+// in context. Fails closed when unset — bootstrap callers scope explicitly.
 func (s *UserService) ListUsers(ctx context.Context, query, status string, limit, offset int) ([]repository.UserWithRole, int64, error) {
-	tenantID := string(shared.TenantIDFromContext(ctx))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+	tid, err := shared.RequireTenantOr(ctx, "")
+	if err != nil {
+		return nil, 0, err
 	}
+	tenantID := string(tid)
 	users, err := s.store.SearchUsers(ctx, query, status, limit, offset, tenantID)
 	if err != nil {
 		return nil, 0, err
@@ -404,10 +405,11 @@ func (s *UserService) ListUsersDateRange(ctx context.Context, query, status, fro
 	if !ok || (from == "" && to == "") {
 		return s.ListUsers(ctx, query, status, limit, offset)
 	}
-	tenantID := string(shared.TenantIDFromContext(ctx))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+	tid, err := shared.RequireTenantOr(ctx, "")
+	if err != nil {
+		return nil, 0, err
 	}
+	tenantID := string(tid)
 	users, err := dateRepo.SearchUsersDateRange(ctx, query, status, from, to, limit, offset, tenantID)
 	if err != nil {
 		return nil, 0, err

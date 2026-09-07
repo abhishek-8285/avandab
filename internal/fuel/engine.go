@@ -128,7 +128,7 @@ type FuelEngine struct {
 	// incremental trigger) is wired here from main.go — the engine stays
 	// free of the service import (would be a cycle).
 	behaviourHook func(ctx context.Context, driverID string)
-	siphonHook    func(ctx context.Context, vehicleID, tripID, driverID string, drop float64, stopMinutes int)
+	siphonHook    func(ctx context.Context, tenantID, vehicleID, tripID, driverID string, drop float64, stopMinutes int)
 }
 
 // maxSnapshotsPerSweep caps the number of snapshots processed in one tick.
@@ -144,7 +144,7 @@ func NewEngine(db *sql.DB, uow ports.UnitOfWork, cfg *ConfigReader, log *slog.Lo
 		alerts:   outbox.NewOutboxWriter(db),
 		idGen:    id.NewUUIDGenerator(),
 		log:      log,
-		tenantID: shared.DefaultTenant,
+		tenantID: shared.DefaultTenant, //nolint:tenant-default // single-instance global loop reads bootstrap org tunables; per-tenant cfgs load per vehicle below
 		state:    make(map[string]*vehicleFuelState),
 		now:      time.Now,
 	}
@@ -208,7 +208,7 @@ func (e *FuelEngine) WithBehaviourHook(hook func(ctx context.Context, driverID s
 }
 
 // WithSiphonHook registers a hook invoked when a siphon_confirmed event is detected (Spec 16 §4).
-func (e *FuelEngine) WithSiphonHook(hook func(ctx context.Context, vehicleID, tripID, driverID string, drop float64, stopMinutes int)) *FuelEngine {
+func (e *FuelEngine) WithSiphonHook(hook func(ctx context.Context, tenantID, vehicleID, tripID, driverID string, drop float64, stopMinutes int)) *FuelEngine {
 	if hook != nil {
 		e.siphonHook = hook
 	}
@@ -662,7 +662,7 @@ func (e *FuelEngine) pipeline(ctx context.Context, st *vehicleFuelState, s snaps
 	for _, ev := range events {
 		if ev.eventType == "siphon_confirmed" && e.siphonHook != nil {
 			stopMinutes := int(cfg.siphonStop.Minutes())
-			e.siphonHook(ctx, s.vehicleID, s.tripID, st.driverID, ev.estimated, stopMinutes)
+			e.siphonHook(ctx, st.tenantID, s.vehicleID, s.tripID, st.driverID, ev.estimated, stopMinutes)
 		}
 	}
 	return nil

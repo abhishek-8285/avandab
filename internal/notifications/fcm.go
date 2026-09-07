@@ -640,12 +640,11 @@ func (s *FCMService) handleTripAssigned(ctx context.Context, e events.Event) err
 	driverID := extractString(m, "driver_id", "DriverID", "driverId")
 	tenantID := extractString(m, "tenant_id", "TenantID", "tenantId")
 
-	if tenantID == "" {
-		tenantID = string(shared.TenantIDFromContext(ctx))
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return err
 	}
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
+	tenantID = string(tid)
 
 	var destination, tripNumber string
 
@@ -706,7 +705,7 @@ func (s *FCMService) handleTripAssigned(ctx context.Context, e events.Event) err
 		"status":      "assigned",
 	}
 
-	_, err := s.SendToDriver(ctx, tenantID, driverID, title, body, data)
+	_, err = s.SendToDriver(ctx, tenantID, driverID, title, body, data)
 	return err
 }
 
@@ -717,12 +716,11 @@ func (s *FCMService) handleTripCancelled(ctx context.Context, e events.Event) er
 	driverID := extractString(m, "driver_id", "DriverID", "driverId")
 	tenantID := extractString(m, "tenant_id", "TenantID", "tenantId")
 
-	if tenantID == "" {
-		tenantID = string(shared.TenantIDFromContext(ctx))
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return err
 	}
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
+	tenantID = string(tid)
 
 	var tripNumber string
 
@@ -766,7 +764,7 @@ func (s *FCMService) handleTripCancelled(ctx context.Context, e events.Event) er
 		"status":      "cancelled",
 	}
 
-	_, err := s.SendToDriver(ctx, tenantID, driverID, title, body, data)
+	_, err = s.SendToDriver(ctx, tenantID, driverID, title, body, data)
 	return err
 }
 
@@ -779,12 +777,11 @@ func (s *FCMService) handleSOSAlert(ctx context.Context, e events.Event) error {
 	sosID := extractString(m, "sos_id", "SOSID", "sosId", "id")
 	reason := extractString(m, "reason", "Reason")
 
-	if tenantID == "" {
-		tenantID = string(shared.TenantIDFromContext(ctx))
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return err
 	}
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
+	tenantID = string(tid)
 
 	if reason == "" {
 		reason = "Emergency Safety Alert Triggered"
@@ -803,7 +800,7 @@ func (s *FCMService) handleSOSAlert(ctx context.Context, e events.Event) error {
 	}
 
 	if driverID != "" {
-		_, err := s.SendToDriver(ctx, tenantID, driverID, title, body, data)
+		_, err = s.SendToDriver(ctx, tenantID, driverID, title, body, data)
 		return err
 	}
 	return nil

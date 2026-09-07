@@ -28,10 +28,11 @@ func (s *FASTagService) Reconcile(ctx context.Context, vehicleNumber, fromDate, 
 	}
 
 	pulledCount := len(pulledTxs)
-	tenantID := string(shared.TenantIDFromContext(ctx))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+	tid, err := shared.RequireTenantOr(ctx, "")
+	if err != nil {
+		return nil, err
 	}
+	tenantID := string(tid)
 
 	// 2. Persist new transactions into fastag_transactions (source='PROVIDER')
 	for _, p := range pulledTxs {

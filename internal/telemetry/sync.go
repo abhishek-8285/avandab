@@ -104,9 +104,15 @@ func (ing *Ingestor) ensureSyntheticDevice(ctx context.Context, imei string) {
 		return
 	}
 	now := time.Now()
+	// Fail closed: never auto-provision a device into the bootstrap org when
+	// the caller is unresolved (sync route is authed, so ctx carries tenant).
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		return
+	}
 	_ = ing.deviceStore.InsertDevice(ctx, Device{
 		ID:          uuid.NewString(),
-		TenantID:    string(shared.DefaultTenant),
+		TenantID:    tenantID,
 		IMEI:        imei,
 		DeviceType:  "mobile_app",
 		Status:      "active",

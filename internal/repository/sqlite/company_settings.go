@@ -21,7 +21,7 @@ import (
 // keeps the legacy global behavior for background jobs and tests.
 
 func (r *SQLRepository) GetCompanySettings(ctx context.Context) (domain.CompanySettings, error) {
-	if tid := shared.TenantIDFromContext(ctx); tid != "" && tid != shared.DefaultTenant {
+	if tid := shared.TenantIDFromContext(ctx); tid != "" && tid != shared.DefaultTenant { //nolint:tenant-default // bootstrap-vs-org settings branching, not a data fallback
 		if p, err := r.Q(ctx).GetTenantCompanyProfile(ctx, string(tid)); err == nil {
 			return toDomainTenantCompanyProfile(p), nil
 		} else if !errors.Is(err, sql.ErrNoRows) {
@@ -45,7 +45,7 @@ func (r *SQLRepository) GetCompanySettings(ctx context.Context) (domain.CompanyS
 func (r *SQLRepository) UpdateCompanySettings(ctx context.Context, settings domain.CompanySettings) (domain.CompanySettings, error) {
 	// Bootstrap tenant and tenant-less contexts own the global singleton;
 	// every other tenant writes its isolated profile row.
-	if tid := shared.TenantIDFromContext(ctx); tid != "" && tid != shared.DefaultTenant {
+	if tid := shared.TenantIDFromContext(ctx); tid != "" && tid != shared.DefaultTenant { //nolint:tenant-default // bootstrap-vs-org settings branching, not a data fallback
 		stateCode := settings.StateCode
 		if stateCode == "" {
 			stateCode = "27"

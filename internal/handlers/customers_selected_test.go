@@ -111,9 +111,9 @@ func TestSelectedCustomers_List_SuccessAndPagination(t *testing.T) {
 	app := newCustomersSelectedApp(t, db, &mockAuthSvc{})
 
 	// Seed two customers via service (ensures validation passes)
-	_, err := app.Services.Customers.CreateCustomer(context.Background(), "Alice Smith", "Acme Corp", "9000000001", "alice@example.com", "27AAACP0000M1Z9", "Mumbai", "notes")
+	_, err := app.Services.Customers.CreateCustomer(shared.ContextWithTenantID(context.Background(), shared.DefaultTenant), "Alice Smith", "Acme Corp", "9000000001", "alice@example.com", "27AAACP0000M1Z9", "Mumbai", "notes")
 	require.NoError(t, err)
-	_, err = app.Services.Customers.CreateCustomer(context.Background(), "Bob Johnson", "Beta Ltd", "9000000002", "bob@example.com", "", "Pune", "")
+	_, err = app.Services.Customers.CreateCustomer(shared.ContextWithTenantID(context.Background(), shared.DefaultTenant), "Bob Johnson", "Beta Ltd", "9000000002", "bob@example.com", "", "Pune", "")
 	require.NoError(t, err)
 
 	r := chi.NewRouter()
@@ -228,7 +228,7 @@ func TestSelectedCustomers_CRUD(t *testing.T) {
 		assert.Equal(t, http.StatusSeeOther, w.Code)
 		assert.Equal(t, "/customers", w.Header().Get("Location"))
 		// Fetch created customer ID via service
-		list, _, _ := app.Services.Customers.ListCustomers(context.Background(), "Charlie", 10, 0)
+		list, _, _ := app.Services.Customers.ListCustomers(shared.ContextWithTenantID(context.Background(), shared.DefaultTenant), "Charlie", 10, 0)
 		require.Len(t, list, 1)
 		createdID = string(list[0].ID)
 		require.NotEmpty(t, createdID)
@@ -328,7 +328,7 @@ func TestSelectedCustomers_CRUD(t *testing.T) {
 		assert.Equal(t, http.StatusSeeOther, w.Code)
 		assert.Equal(t, "/customers/"+createdID, w.Header().Get("Location"))
 		// Verify updated
-		c, err := app.Services.Customers.GetCustomer(context.Background(), domain.CustomerID(createdID))
+		c, err := app.Services.Customers.GetCustomer(shared.ContextWithTenantID(context.Background(), shared.DefaultTenant), domain.CustomerID(createdID))
 		require.NoError(t, err)
 		assert.Equal(t, "Charlie Updated", c.Name)
 	})
@@ -336,7 +336,7 @@ func TestSelectedCustomers_CRUD(t *testing.T) {
 	// Update error - duplicate phone with datastar user
 	t.Run("Update duplicate phone error", func(t *testing.T) {
 		// Create another customer to conflict phone
-		_, err := app.Services.Customers.CreateCustomer(context.Background(), "Other", "", "9000000099", "", "", "", "")
+		_, err := app.Services.Customers.CreateCustomer(shared.ContextWithTenantID(context.Background(), shared.DefaultTenant), "Other", "", "9000000099", "", "", "", "")
 		require.NoError(t, err)
 		form := url.Values{
 			"name":  {"Charlie"},
@@ -365,7 +365,7 @@ func TestSelectedCustomers_CRUD(t *testing.T) {
 		db2 := newCustomersSelectedDB(t)
 		app2 := newCustomersSelectedApp(t, db2, &mockAuthSvc{})
 		// create then close
-		c, err := app2.Services.Customers.CreateCustomer(context.Background(), "ToDelete", "", "9000000020", "", "", "", "")
+		c, err := app2.Services.Customers.CreateCustomer(shared.ContextWithTenantID(context.Background(), shared.DefaultTenant), "ToDelete", "", "9000000020", "", "", "", "")
 		require.NoError(t, err)
 		_ = db2.Close()
 		r2 := chi.NewRouter()
@@ -416,8 +416,10 @@ func TestSelectedCustomers_AuthChecks(t *testing.T) {
 		w := httptest.NewRecorder()
 		rDeny.ServeHTTP(w, req)
 		// middleware.ResourcePermission with deny should still return 403 or redirect? For denyAuthSvc, it will be 403 even without session, but production uses RequireAuth.
-		// We check that allow path still works for authenticated
-		reqAllow := withSession(httptest.NewRequest(http.MethodGet, "/customers/", nil), "admin-1", "admin")
+		// We check that allow path still works for authenticated.
+		// Tenant set explicitly: prod RequireAuth always resolves tenant, and
+		// repo reads fail closed without one.
+		reqAllow := withTenantSession(httptest.NewRequest(http.MethodGet, "/customers/", nil), "1", "admin-1", "admin")
 		rAllow := chi.NewRouter()
 		rAllow.Route("/customers", appAllow.Customers.Routes)
 		wAllow := httptest.NewRecorder()
@@ -503,7 +505,7 @@ func TestSelectedCustomers_PaginationEdge(t *testing.T) {
 
 	// Seed 3 customers
 	for i := 0; i < 3; i++ {
-		_, err := app.Services.Customers.CreateCustomer(context.Background(), fmt.Sprintf("PagUser%d", i), "", fmt.Sprintf("90000001%02d", i), "", "", "", "")
+		_, err := app.Services.Customers.CreateCustomer(shared.ContextWithTenantID(context.Background(), shared.DefaultTenant), fmt.Sprintf("PagUser%d", i), "", fmt.Sprintf("90000001%02d", i), "", "", "", "")
 		require.NoError(t, err)
 		time.Sleep(10 * time.Millisecond)
 	}

@@ -101,12 +101,19 @@ func RoleFromID(store Store, ctx context.Context, roleID int64) (domain.Role, er
 	return store.GetRoleByID(ctx, roleID)
 }
 
-// tenantIDFor derives the acting tenant from the request context, falling
-// back to the bootstrap default for system-initiated writes. Never hardcode
+// tenantIDFor derives the acting tenant from the request context. Fail
+// closed like the repository seam: global-scope system jobs resolve to the
+// bootstrap tenant, anything else without a tenant panics (500 via Recoverer
+// on request paths) instead of silently writing to tenant 1. Never hardcode
 // a tenant literal at call sites (AGENTS.md Prohibition #4).
 func tenantIDFor(ctx context.Context) string {
 	if id := shared.TenantIDFromContext(ctx); id != "" {
 		return string(id)
 	}
-	return string(shared.DefaultTenant)
+	if shared.IsGlobalScope(ctx) {
+		return string(shared.DefaultTenant) //nolint:tenant-default
+	}
+	panic("tenant: no tenant in context and no global scope marker — " +
+		"request paths get tenant from auth middleware; system jobs must " +
+		"use shared.WithGlobalScope(ctx) explicitly")
 }

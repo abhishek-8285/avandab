@@ -478,7 +478,7 @@ func main() {
 	// Worker-tick gate: skip a background sweep when its feature is off for
 	// the default org (workers are single-tenant today). Cached → cheap.
 	featureTick := func(key string) bool {
-		return app.Features.Enabled(context.Background(), string(shared.DefaultTenant), key)
+		return app.Features.Enabled(context.Background(), string(shared.DefaultTenant), key) //nolint:tenant-default // workers are single-tenant today; gate on default org
 	}
 	app.Cache = appCache
 	app.Notify = notifSvc
@@ -1548,9 +1548,13 @@ func main() {
 			})
 		}
 		if services.OpsAlerts != nil {
-			fuelEngine.WithSiphonHook(func(ctx context.Context, vehicleID, tripID, driverID string, drop float64, stopMinutes int) {
+			fuelEngine.WithSiphonHook(func(ctx context.Context, tenantID, vehicleID, tripID, driverID string, drop float64, stopMinutes int) {
+				if tenantID == "" {
+					logger.Error("fuel siphon alert skipped: unknown tenant", "vehicle_id", vehicleID)
+					return
+				}
 				_, err := services.OpsAlerts.CreateAlert(ctx, service.OpsAlert{
-					TenantID:    string(shared.DefaultTenant),
+					TenantID:    tenantID,
 					AlertType:   service.OpsAlertFuelTheftConfirmed,
 					Severity:    service.OpsAlertSeverityCritical,
 					Title:       "Fuel siphoning confirmed",
@@ -1790,7 +1794,8 @@ func bootstrapAdmin(ctx context.Context, services *service.Services, authSvc aut
 		return
 	}
 
-	users, _, err := services.Users.ListUsers(ctx, "", "", 100, 0)
+	// Bootstrap-only: pre-tenant seed check runs before any org exists.
+	users, _, err := services.Users.ListUsers(shared.ContextWithTenantID(ctx, shared.DefaultTenant), "", "", 100, 0) //nolint:tenant-default
 	if err != nil {
 		logger.Error("bootstrap admin failed: cannot list users", "error", err)
 		return
@@ -1802,7 +1807,7 @@ func bootstrapAdmin(ctx context.Context, services *service.Services, authSvc aut
 		}
 	}
 
-	user, err := services.Users.CreateUserWithPassword(ctx, ba.Email, ba.Name, "", ba.Password, 1, domain.UserStatusActive, string(shared.DefaultTenant))
+	user, err := services.Users.CreateUserWithPassword(ctx, ba.Email, ba.Name, "", ba.Password, 1, domain.UserStatusActive, string(shared.DefaultTenant)) //nolint:tenant-default // bootstrap seed: first admin belongs to tenant 1 by definition
 	if err != nil {
 		logger.Error("bootstrap admin failed", "error", err)
 		return

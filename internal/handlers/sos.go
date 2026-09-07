@@ -112,9 +112,12 @@ func (h *SOSHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Emergency path accepts header-auth drivers without a resolved tenant:
+	// attribute via the driver's own org. Never another org, never dropped.
 	tenantID := string(shared.TenantIDFromContext(r.Context()))
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		_ = h.db.QueryRowContext(r.Context(),
+			`SELECT tenant_id FROM drivers WHERE id = $1`, driverID).Scan(&tenantID)
 	}
 
 	// Resolve active trip and vehicle if omitted in mobile request
@@ -208,10 +211,6 @@ func (h *SOSHandlers) TriggerSOS(w http.ResponseWriter, r *http.Request) {
 func (a *App) logAuditDirect(ctx context.Context, userID, action, entityType, entityID, details string) error {
 	if a.DB == nil {
 		return nil
-	}
-	tenantID := string(shared.TenantIDFromContext(ctx))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
 	}
 	_, err := a.DB.ExecContext(ctx, `
 		INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, created_at)

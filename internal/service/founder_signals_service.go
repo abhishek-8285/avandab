@@ -75,8 +75,10 @@ func (s *FounderSignalsService) EmitSignal(ctx context.Context, signal FounderSi
 	if s.db == nil {
 		return "", fmt.Errorf("database unavailable")
 	}
-	if signal.TenantID == "" {
-		signal.TenantID = string(shared.DefaultTenant)
+	if tid, err := shared.RequireTenantOr(ctx, signal.TenantID); err != nil {
+		return "", err
+	} else {
+		signal.TenantID = string(tid)
 	}
 	id := generateDisplayID("fsig")
 	now := time.Now().UTC()
@@ -98,9 +100,11 @@ func (s *FounderSignalsService) EmitIfThreshold(ctx context.Context, tenantID, s
 	if s.db == nil {
 		return false, fmt.Errorf("database unavailable")
 	}
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return false, err
 	}
+	tenantID = string(tid)
 
 	var direction string
 	switch {
@@ -162,7 +166,7 @@ func (s *FounderSignalsService) AcknowledgeSignal(ctx context.Context, signalID,
 
 	if s.audit != nil {
 		_ = s.audit.RecordAudit(ctx, AuditEntry{
-			TenantID:     string(shared.DefaultTenant),
+			TenantID:     string(shared.TenantIDFromContext(ctx)),
 			ActorID:      userID,
 			ActorRole:    role,
 			Action:       AuditActionSignalAcknowledge,
@@ -179,9 +183,11 @@ func (s *FounderSignalsService) ListSignals(ctx context.Context, tenantID string
 	if s.db == nil {
 		return nil, 0, fmt.Errorf("database unavailable")
 	}
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return nil, 0, err
 	}
+	tenantID = string(tid)
 
 	where := "WHERE tenant_id = ?"
 	args := []interface{}{tenantID}
@@ -231,11 +237,13 @@ func (s *FounderSignalsService) CountUnacknowledged(ctx context.Context, tenantI
 	if s.db == nil {
 		return 0, fmt.Errorf("database unavailable")
 	}
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return 0, err
 	}
+	tenantID = string(tid)
 	var n int
-	err := s.db.QueryRowContext(ctx,
+	err = s.db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM founder_signals WHERE tenant_id = $1 AND acknowledged = 0`, tenantID).Scan(&n)
 	return n, err
 }

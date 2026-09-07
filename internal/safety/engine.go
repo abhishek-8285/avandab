@@ -59,7 +59,7 @@ func NewEngine(db *sql.DB, uow ports.UnitOfWork, cfg *fuel.ConfigReader, log *sl
 		alerts:   outbox.NewOutboxWriter(db),
 		idGen:    id.NewUUIDGenerator(),
 		log:      log,
-		tenantID: shared.DefaultTenant,
+		tenantID: shared.DefaultTenant, //nolint:tenant-default // single-instance global loop reads bootstrap policy; override per-org via WithTenantID
 		loc:      time.Local,
 		state:    make(map[string]*vehicleState),
 		now:      time.Now,

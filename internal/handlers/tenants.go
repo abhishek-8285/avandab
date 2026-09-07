@@ -28,7 +28,7 @@ const maxTenantSlugLen = 40
 
 // bootstrapTenantID is the seeded single-org tenant; suspending it would lock
 // every legacy account out once the resolver is on.
-const bootstrapTenantID = string(shared.DefaultTenant)
+const bootstrapTenantID = string(shared.DefaultTenant) //nolint:tenant-default // seed-org guard: suspending it locks out every legacy account
 
 // TenantsHandlers powers /tenants — super-admin provisioning of customer
 // organizations and their first org admins (Spec 24 §Tenants management).

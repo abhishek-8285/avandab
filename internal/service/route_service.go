@@ -29,7 +29,7 @@ func tenantIDFromContext(ctx context.Context) string {
 		return string(t)
 	}
 	if shared.IsGlobalScope(ctx) {
-		return string(shared.DefaultTenant)
+		return string(shared.DefaultTenant) //nolint:tenant-default
 	}
 	panic("tenant: no tenant in context and no global scope marker — " +
 		"request paths get tenant from auth middleware; system jobs must " +

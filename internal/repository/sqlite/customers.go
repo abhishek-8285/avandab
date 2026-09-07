@@ -5,20 +5,9 @@ import (
 	"database/sql"
 
 	"transport-app/internal/domain"
-	"transport-app/internal/shared"
 
 	db "transport-app/db/generated/sqlite"
 )
-
-// tenantIDForReads derives the acting tenant for customer reads, falling back
-// to the bootstrap default so read visibility matches write-side fallback
-// semantics (AGENTS.md Prohibition #4: no tenant literals at call sites).
-func tenantIDForReads(ctx context.Context) string {
-	if id := shared.TenantIDFromContext(ctx); id != "" {
-		return string(id)
-	}
-	return string(shared.DefaultTenant)
-}
 
 // CustomerRepository implementation
 
@@ -77,7 +66,7 @@ func (r *SQLRepository) CreateCustomer(ctx context.Context, customer domain.Cust
 func (r *SQLRepository) GetCustomerByID(ctx context.Context, id domain.CustomerID) (domain.Customer, error) {
 	c, err := r.Q(ctx).GetCustomerByID(ctx, db.GetCustomerByIDParams{
 		ID:       string(id),
-		TenantID: tenantIDForReads(ctx),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Customer{}, err
@@ -88,7 +77,7 @@ func (r *SQLRepository) GetCustomerByID(ctx context.Context, id domain.CustomerI
 func (r *SQLRepository) GetCustomerByPhone(ctx context.Context, phone string) (domain.Customer, error) {
 	c, err := r.Q(ctx).GetCustomerByPhone(ctx, db.GetCustomerByPhoneParams{
 		Phone:    phone,
-		TenantID: tenantIDForReads(ctx),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.Customer{}, err
@@ -146,13 +135,13 @@ func (r *SQLRepository) UpdateCustomer(ctx context.Context, customer domain.Cust
 func (r *SQLRepository) DeleteCustomer(ctx context.Context, id domain.CustomerID) error {
 	return r.Q(ctx).DeleteCustomer(ctx, db.DeleteCustomerParams{
 		ID:       string(id),
-		TenantID: tenantIDForReads(ctx),
+		TenantID: tenantIDFromCtx(ctx),
 	})
 }
 
 func (r *SQLRepository) SearchCustomers(ctx context.Context, query string, limit, offset int) ([]domain.Customer, error) {
 	rows, err := r.Q(ctx).SearchCustomers(ctx, db.SearchCustomersParams{
-		TenantID: tenantIDForReads(ctx),
+		TenantID: tenantIDFromCtx(ctx),
 		Search:   query,
 		Limit:    int64(limit),
 		Offset:   int64(offset),
@@ -169,7 +158,7 @@ func (r *SQLRepository) SearchCustomers(ctx context.Context, query string, limit
 
 func (r *SQLRepository) CountCustomers(ctx context.Context, query string) (int64, error) {
 	count, err := r.Q(ctx).CountCustomers(ctx, db.CountCustomersParams{
-		TenantID: tenantIDForReads(ctx),
+		TenantID: tenantIDFromCtx(ctx),
 		Search:   query,
 	})
 	if err != nil {

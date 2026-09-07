@@ -759,7 +759,9 @@ func (s *ScorecardService) eventResolved(ctx context.Context, eventID string) (b
 
 // loadScorecardConfig reads the scorecard thresholds from company_config.
 func (s *ScorecardService) loadScorecardConfig(ctx context.Context) scorecardConfig {
-	return s.loadScorecardConfigFor(ctx, string(shared.DefaultTenant))
+	// Missed lookups fall back to compiled defaults, so an unknown tenant is
+	// safe — but never silently read another org's thresholds.
+	return s.loadScorecardConfigFor(ctx, string(shared.TenantIDFromContext(ctx)))
 }
 
 // loadScorecardConfigFor reads thresholds for one org (empty tenant falls
@@ -796,7 +798,7 @@ func (s *ScorecardService) loadScorecardConfigFor(ctx context.Context, tenant st
 }
 
 func (s *ScorecardService) pct(ctx context.Context, key string, def float64) float64 {
-	v, err := s.config.GetFloat(ctx, string(shared.DefaultTenant), key, def)
+	v, err := s.config.GetFloat(ctx, string(shared.TenantIDFromContext(ctx)), key, def)
 	if err != nil {
 		return def
 	}

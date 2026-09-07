@@ -88,7 +88,7 @@ func (r *Reporter) Report(ctx context.Context, report ErrorReport) (ErrorReport,
 		report.TenantID = string(shared.TenantIDFromContext(ctx))
 	}
 	if report.TenantID == "" {
-		report.TenantID = string(shared.DefaultTenant)
+		report.TenantID = string(shared.DefaultTenant) //nolint:tenant-default // ops triage bucket for tenant-less system errors; ctx-derived above when present
 	}
 	if r.store == nil {
 		return report, nil

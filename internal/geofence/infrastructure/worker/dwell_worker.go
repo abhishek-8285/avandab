@@ -65,7 +65,7 @@ func NewDwellWorker(db *sql.DB, uow ports.UnitOfWork, cfg *application.ConfigRea
 		outbox:    outbox.NewOutboxWriter(db),
 		idGen:     id.NewUUIDGenerator(),
 		log:       log,
-		tenantID:  string(shared.DefaultTenant),
+		tenantID:  string(shared.DefaultTenant), //nolint:tenant-default // single-instance global loop interval/defaults; per-fix tenant flows via ctx
 		db:        db,
 		fixes:     sqlrepo.NewSnapshotRepository(db),
 		geofences: sqlrepo.NewGeofenceRepository(db),

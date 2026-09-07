@@ -118,7 +118,9 @@ func (e *RealtimeEvaluator) EvaluateFix(ctx context.Context, fix TelemetryFix) (
 		tenantID = string(shared.TenantIDFromContext(ctx))
 	}
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		// Fail closed: evaluating against the bootstrap org's geofences
+		// could auto-transition another tenant's trips.
+		return nil, nil
 	}
 
 	cfg := LoadEvaluatorConfig(ctx, tenantID, e.configReader)

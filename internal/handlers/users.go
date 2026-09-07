@@ -197,7 +197,7 @@ func (h *UserHandlers) Create(w http.ResponseWriter, r *http.Request) {
 // with an empty column as the bootstrap tenant.
 func tenantOf(tenantID string) string {
 	if tenantID == "" {
-		return string(shared.DefaultTenant)
+		return string(shared.DefaultTenant) //nolint:tenant-default // legacy-row normalization for equality check only; never used to scope reads/writes
 	}
 	return tenantID
 }

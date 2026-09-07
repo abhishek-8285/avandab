@@ -361,7 +361,12 @@ func LiveHandler(db *sql.DB, staleMin time.Duration, etaSvc ...*eta.EtaService) 
 	return func(w http.ResponseWriter, r *http.Request) {
 		tenantID := string(shared.TenantIDFromContext(r.Context()))
 		if tenantID == "" {
-			tenantID = string(shared.DefaultTenant)
+			// Fail closed: never stream the bootstrap org's fleet to an
+			// unresolved caller (middleware guarantees tenant on this route).
+			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Cache-Control", "no-store")
+			_, _ = w.Write([]byte("[]"))
+			return
 		}
 		tripID := r.URL.Query().Get("trip_id")
 		vehicles, err := store.Live(r.Context(), tenantID, tripID, time.Now())

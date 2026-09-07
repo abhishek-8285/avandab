@@ -61,8 +61,10 @@ func (s *FounderAuditService) RecordAudit(ctx context.Context, entry AuditEntry)
 	if s.db == nil {
 		return fmt.Errorf("database unavailable")
 	}
-	if entry.TenantID == "" {
-		entry.TenantID = string(shared.DefaultTenant)
+	if tid, err := shared.RequireTenantOr(ctx, entry.TenantID); err != nil {
+		return err
+	} else {
+		entry.TenantID = string(tid)
 	}
 	id := generateDisplayID("fa")
 	now := time.Now().UTC()
@@ -83,9 +85,11 @@ func (s *FounderAuditService) ListAudit(ctx context.Context, tenantID string, fi
 	if s.db == nil {
 		return nil, 0, fmt.Errorf("database unavailable")
 	}
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return nil, 0, err
 	}
+	tenantID = string(tid)
 
 	where := "WHERE tenant_id = ?"
 	args := []interface{}{tenantID}

@@ -274,7 +274,7 @@ func fallbackTenant(ctx context.Context) shared.TenantID {
 	if tid := shared.TenantIDFromContext(ctx); tid != "" {
 		return tid
 	}
-	return shared.DefaultTenant
+	return shared.DefaultTenant //nolint:tenant-default // single Razorpay merchant account: event-id dedup is platform-global by design
 }
 
 // resolveInvoiceTenant attributes a webhook payload to the invoice's owning

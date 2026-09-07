@@ -11,7 +11,14 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"transport-app/internal/shared"
 )
+
+// testTenantCtx mirrors prod request ctx: tenant 1 resolved by middleware.
+func testTenantCtx() context.Context {
+	return shared.ContextWithTenantID(context.Background(), shared.DefaultTenant)
+}
 
 // TestCustomerGstinValidation covers server-side GSTIN enforcement on the
 // customer create/update paths — the entry point that let the malformed
@@ -23,14 +30,14 @@ func TestCustomerGstinValidation(t *testing.T) {
 	r.Route("/customers", app.Customers.Routes)
 
 	t.Run("service rejects invalid gstin on create", func(t *testing.T) {
-		_, err := app.Services.Customers.CreateCustomer(context.Background(),
+		_, err := app.Services.Customers.CreateCustomer(testTenantCtx(),
 			"Bad GST", "Bad Co", "9100000001", "bad@example.com", "07KUKPS5477RDAF", "Delhi", "")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid GSTIN")
 	})
 
 	t.Run("service accepts valid gstin and normalizes case", func(t *testing.T) {
-		c, err := app.Services.Customers.CreateCustomer(context.Background(),
+		c, err := app.Services.Customers.CreateCustomer(testTenantCtx(),
 			"Good GST", "Good Co", "9100000002", "good@example.com", " 27aabcu9603r1zx ", "Delhi", "")
 		require.NoError(t, err)
 		require.NotNil(t, c.GST)
@@ -38,16 +45,16 @@ func TestCustomerGstinValidation(t *testing.T) {
 	})
 
 	t.Run("service allows empty gstin (b2c)", func(t *testing.T) {
-		_, err := app.Services.Customers.CreateCustomer(context.Background(),
+		_, err := app.Services.Customers.CreateCustomer(testTenantCtx(),
 			"No GST", "Retail Co", "9100000003", "", "", "Delhi", "")
 		require.NoError(t, err)
 	})
 
 	t.Run("service rejects invalid gstin on update", func(t *testing.T) {
-		c, err := app.Services.Customers.CreateCustomer(context.Background(),
+		c, err := app.Services.Customers.CreateCustomer(testTenantCtx(),
 			"Upd Me", "Upd Co", "9100000004", "", "", "Delhi", "")
 		require.NoError(t, err)
-		_, err = app.Services.Customers.UpdateCustomer(context.Background(), c.ID,
+		_, err = app.Services.Customers.UpdateCustomer(testTenantCtx(), c.ID,
 			"Upd Me", "Upd Co", "9100000004", "", "27PQRSX5678K1Z2", "Delhi", "")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid GSTIN")
@@ -73,7 +80,7 @@ func TestCustomerGstinValidation(t *testing.T) {
 	})
 
 	t.Run("update handler re-renders form with flash on invalid gstin", func(t *testing.T) {
-		c, err := app.Services.Customers.CreateCustomer(context.Background(),
+		c, err := app.Services.Customers.CreateCustomer(testTenantCtx(),
 			"Form Upd", "F Co", "9100000006", "", "", "Delhi", "")
 		require.NoError(t, err)
 		w := postForm(t, "/customers/"+c.ID.String()+"/edit", url.Values{
@@ -86,7 +93,7 @@ func TestCustomerGstinValidation(t *testing.T) {
 	})
 
 	t.Run("update handler succeeds with valid gstin", func(t *testing.T) {
-		c, err := app.Services.Customers.CreateCustomer(context.Background(),
+		c, err := app.Services.Customers.CreateCustomer(testTenantCtx(),
 			"Form Ok", "F Co", "9100000007", "", "", "Delhi", "")
 		require.NoError(t, err)
 		w := postForm(t, "/customers/"+c.ID.String()+"/edit", url.Values{

@@ -42,7 +42,7 @@ func (s *ExperimentsService) recordAudit(ctx context.Context, action, experiment
 		return
 	}
 	_ = s.audit.RecordAudit(ctx, AuditEntry{
-		TenantID:     string(shared.DefaultTenant),
+		TenantID:     string(shared.TenantIDFromContext(ctx)),
 		ActorID:      "system",
 		ActorRole:    "admin",
 		Action:       action,
@@ -57,11 +57,13 @@ func (s *ExperimentsService) CountByStatus(ctx context.Context, tenantID, status
 	if s.db == nil {
 		return 0, fmt.Errorf("database unavailable")
 	}
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return 0, err
 	}
+	tenantID = string(tid)
 	var n int
-	err := s.db.QueryRowContext(ctx,
+	err = s.db.QueryRowContext(ctx,
 		`SELECT COUNT(*) FROM experiments_spec16 WHERE tenant_id = $1 AND status = $2`, tenantID, status).Scan(&n)
 	return n, err
 }
@@ -125,8 +127,10 @@ func (s *ExperimentsService) CreateExperiment(ctx context.Context, exp Experimen
 	}
 	now := time.Now().UTC()
 
-	if exp.TenantID == "" {
-		exp.TenantID = string(shared.DefaultTenant)
+	if tid, err := shared.RequireTenantOr(ctx, exp.TenantID); err != nil {
+		return "", err
+	} else {
+		exp.TenantID = string(tid)
 	}
 	if exp.TrafficSplit < 0 || exp.TrafficSplit > 100 {
 		return "", fmt.Errorf("traffic_split must be between 0 and 100, got %f", exp.TrafficSplit)
@@ -313,9 +317,11 @@ func (s *ExperimentsService) ListExperiments(ctx context.Context, tenantID strin
 	if s.db == nil {
 		return nil, fmt.Errorf("database unavailable")
 	}
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return nil, err
 	}
+	tenantID = string(tid)
 	query := `SELECT id, tenant_id, name, description, variant_a, variant_b, traffic_split,
 	          status, start_date, end_date, metric_name, created_by, created_at, updated_at
 	          FROM experiments_spec16 WHERE tenant_id = $1`
@@ -481,7 +487,11 @@ func (s *ExperimentsService) ListAssignments(ctx context.Context, experimentID s
 // when the experiment is missing, not running, or assignment fails.
 func (s *ExperimentsService) EvaluateFeatureFlag(ctx context.Context, tenantID, experimentName, subjectType, subjectID string) string {
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		// Safe default with no data leak: unknown tenant gets control.
+		tenantID = string(shared.TenantIDFromContext(ctx))
+	}
+	if tenantID == "" {
+		return VariantA
 	}
 	exp, err := s.GetExperimentByName(ctx, tenantID, experimentName)
 	if err != nil || exp == nil {

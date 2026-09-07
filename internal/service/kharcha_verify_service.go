@@ -222,7 +222,9 @@ func (s *KharchaVerifyService) duplicateWithinWindow(ctx context.Context, e *exp
 // the lookback window; 0 when no history (bands cannot fire without one).
 func (s *KharchaVerifyService) categoryMedian(ctx context.Context, tenantID, category string) float64 {
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		// Empty tenant matches no rows → 0, same as no history. No fallback:
+		// medians must never blend another tenant's amounts.
+		tenantID = string(shared.TenantIDFromContext(ctx))
 	}
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT amount FROM driver_expenses
@@ -256,9 +258,11 @@ func (s *KharchaVerifyService) ListFlaggedExpenses(ctx context.Context, tenantID
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+	tid, err := shared.RequireTenantOr(ctx, tenantID)
+	if err != nil {
+		return nil, err
 	}
+	tenantID = string(tid)
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT id, driver_id, category, amount, description,
 		       verification_state, flag_reason, created_at

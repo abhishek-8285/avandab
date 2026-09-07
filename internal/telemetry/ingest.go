@@ -465,7 +465,7 @@ func (ing *Ingestor) deviceHealthGuard(ctx context.Context, excludePositionID st
 // processed. For unknown devices, the default tenant is used (Decision D6).
 func (ing *Ingestor) quarantineFrame(ctx context.Context, frame RawFrame, reason string) error {
 	rawPayload, _ := json.Marshal(frame)
-	tenantID := shared.DefaultTenant
+	tenantID := shared.DefaultTenant //nolint:tenant-default // Decision D6: unattributable frames triage under bootstrap; known devices resolve below
 	if dev, _ := ing.deviceStore.GetByIMEI(ctx, frame.IMEI); dev != nil {
 		tenantID = shared.TenantID(dev.TenantID)
 	}
@@ -626,7 +626,7 @@ func (ing *Ingestor) insertSnapshot(ctx context.Context, frame RawFrame, device 
 // device tokens.
 func (ing *Ingestor) quarantineUnknown(ctx context.Context, imei string, frame RawFrame) error {
 	rawPayload, _ := json.Marshal(frame)
-	tenantID := string(shared.DefaultTenant)
+	tenantID := string(shared.DefaultTenant) //nolint:tenant-default // Decision D6: unknown-device triage bucket; device has no org by definition
 	entry := QuarantineEntry{
 		ID:         ing.idGen.GenerateUUID(),
 		TenantID:   tenantID,

@@ -176,7 +176,7 @@ func purgeTenantOps(ctx context.Context, db *sql.DB, tenantID string) (map[strin
 	if tenantID == "" {
 		return nil, fmt.Errorf("tenant id required")
 	}
-	if tenantID == string(shared.DefaultTenant) {
+	if tenantID == string(shared.DefaultTenant) { //nolint:tenant-default // safety guard: bootstrap org must never be purgeable
 		return nil, fmt.Errorf("bootstrap tenant cannot be purged")
 	}
 	var found int

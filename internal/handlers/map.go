@@ -61,9 +61,11 @@ func (h *MapHandlers) Stream(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MapHandlers) writeMapFrame(w http.ResponseWriter, f http.Flusher, ctx context.Context) {
+	// Fail closed: never stream the bootstrap org's fleet to an unresolved
+	// viewer (route sits behind auth which always sets tenant).
 	tenantID := string(shared.TenantIDFromContext(ctx))
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		return
 	}
 
 	var vehicles []telemetry.LiveVehicle

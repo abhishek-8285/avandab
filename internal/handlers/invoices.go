@@ -568,7 +568,7 @@ func finalizeCompanyProfile(p companyProfile) companyProfile {
 // Name is empty when unset — the renderer prints a placeholder rather
 // than any hardcoded company name.
 func (h *InvoiceHandlers) loadCompanyProfile(ctx context.Context) companyProfile {
-	if tid := string(shared.TenantIDFromContext(ctx)); tid != "" && tid != string(shared.DefaultTenant) {
+	if tid := string(shared.TenantIDFromContext(ctx)); tid != "" && tid != string(shared.DefaultTenant) { //nolint:tenant-default // bootstrap-vs-org identity branching, not a data fallback
 		p, err := h.scanCompanyProfile(h.DB.QueryRowContext(ctx, `
 			SELECT `+tenantProfileColumns+`
 			FROM tenant_company_profiles WHERE tenant_id = ?`, tid))

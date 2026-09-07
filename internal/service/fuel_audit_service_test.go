@@ -19,6 +19,7 @@ import (
 	"transport-app/internal/events"
 	"transport-app/internal/repository/sqlite"
 	"transport-app/internal/service"
+	"transport-app/internal/shared"
 )
 
 // auditTestDB opens an in-memory SQLite DB with all migrations applied.
@@ -155,7 +156,7 @@ func auditStatusOf(t *testing.T, db *sql.DB, expenseID string) string {
 func TestFuelAudit_CheckA_LevelBased(t *testing.T) {
 	db := auditTestDB(t)
 	svcs := auditTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), shared.DefaultTenant)
 	seedAuditBase(t, db, true, 100, 4.0)
 
 	// Trip departs 08:00; two refills at 09:00 and 09:10 (20L each).
@@ -186,7 +187,7 @@ func TestFuelAudit_CheckA_LevelBased(t *testing.T) {
 func TestFuelAudit_CheckB_OdometerBased(t *testing.T) {
 	db := auditTestDB(t)
 	svcs := auditTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), shared.DefaultTenant)
 	// No fuel sensor and no fuel events → Check A unavailable, B decides.
 	seedAuditBase(t, db, false, 0, 4.0)
 
@@ -215,7 +216,7 @@ func TestFuelAudit_CheckB_OdometerBased(t *testing.T) {
 func TestFuelAudit_Windowing_ExcludesRefillsOutsideWindow(t *testing.T) {
 	db := auditTestDB(t)
 	svcs := auditTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), shared.DefaultTenant)
 	seedAuditBase(t, db, true, 100, 4.0)
 
 	seedRefill(t, db, "fe-before", time.Date(2026, 8, 19, 7, 0, 0, 0, time.UTC), 20, 50, 50)   // before trip start
@@ -254,7 +255,7 @@ func setupNeedsReviewClaim(t *testing.T, db *sql.DB, svcs *service.Services, ctx
 func TestFuelAudit_EnforceGate_BlocksNeedsReview(t *testing.T) {
 	db := auditTestDB(t)
 	svcs := auditTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), shared.DefaultTenant)
 	expenseID := setupNeedsReviewClaim(t, db, svcs, ctx)
 
 	_, err := db.Exec(`UPDATE company_config SET value = 'true' WHERE key = 'fuel.audit_enforce'`)
@@ -282,7 +283,7 @@ func TestFuelAudit_EnforceGate_BlocksNeedsReview(t *testing.T) {
 func TestFuelAudit_AnnotateMode_AllowsApproval(t *testing.T) {
 	db := auditTestDB(t)
 	svcs := auditTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), shared.DefaultTenant)
 	expenseID := setupNeedsReviewClaim(t, db, svcs, ctx)
 
 	// fuel.audit_enforce defaults to 'false' from the migration seed.
@@ -301,7 +302,7 @@ func TestFuelAudit_AnnotateMode_AllowsApproval(t *testing.T) {
 func TestFuelAudit_ManualReview(t *testing.T) {
 	db := auditTestDB(t)
 	svcs := auditTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), shared.DefaultTenant)
 	expenseID := setupNeedsReviewClaim(t, db, svcs, ctx)
 
 	err := svcs.FuelAudit.ReviewClaim(ctx, expenseID, "failed", "driver receipt shows 45L", "user-1")
@@ -329,7 +330,7 @@ func TestFuelAudit_ManualReview(t *testing.T) {
 func TestFuelAudit_CreateExpense_PersistsLitresOnlyForFuel(t *testing.T) {
 	db := auditTestDB(t)
 	svcs := auditTestServices(t, db)
-	ctx := context.Background()
+	ctx := shared.ContextWithTenantID(context.Background(), shared.DefaultTenant)
 	seedAuditBase(t, db, false, 0, 4.0)
 
 	fuelID, err := svcs.Kharcha.CreateExpense(ctx, "t1", "d1", "fuel", 1500, "diesel", "", 40)

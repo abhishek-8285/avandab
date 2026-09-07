@@ -25,7 +25,7 @@ type TenantResolver func(ctx context.Context, userID string) (shared.TenantID, e
 // DefaultTenantResolver is the single-tenant bootstrap resolver used when
 // MULTI_TENANT_ENABLED=false.
 func DefaultTenantResolver(_ context.Context, _ string) (shared.TenantID, error) {
-	return shared.DefaultTenant, nil
+	return shared.DefaultTenant, nil //nolint:tenant-default // single-tenant bootstrap; per-user resolver when MULTI_TENANT_ENABLED=true
 }
 
 // RequireAPIAuth protects REST API routes by accepting either: ...

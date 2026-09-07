@@ -398,18 +398,17 @@ func (s *ComplianceService) publishBlockedEvent(ctx context.Context, entityType,
 	})
 
 	if s.opsAlerts != nil {
-		tenantID := string(shared.TenantIDFromContext(ctx))
-		if tenantID == "" {
-			tenantID = string(shared.DefaultTenant)
+		// Fail closed: never file another org's block under tenant 1.
+		if tenantID := string(shared.TenantIDFromContext(ctx)); tenantID != "" {
+			_, _ = s.opsAlerts.CreateAlert(ctx, OpsAlert{
+				TenantID:    tenantID,
+				AlertType:   OpsAlertComplianceBreach,
+				Severity:    OpsAlertSeverityCritical,
+				Title:       "Dispatch blocked by compliance",
+				Description: fmt.Sprintf("%s %s blocked: %s", entityType, entityID, reason),
+				EntityType:  strPtr(entityType),
+				EntityID:    &entityID,
+			})
 		}
-		_, _ = s.opsAlerts.CreateAlert(ctx, OpsAlert{
-			TenantID:    tenantID,
-			AlertType:   OpsAlertComplianceBreach,
-			Severity:    OpsAlertSeverityCritical,
-			Title:       "Dispatch blocked by compliance",
-			Description: fmt.Sprintf("%s %s blocked: %s", entityType, entityID, reason),
-			EntityType:  strPtr(entityType),
-			EntityID:    &entityID,
-		})
 	}
 }
