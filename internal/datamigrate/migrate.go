@@ -270,6 +270,22 @@ func copyTable(ctx context.Context, src *sql.DB, ex execer, qx queryer, table st
 	if err != nil {
 		return tc
 	}
+	if len(types) == 0 {
+		// Table exists in sqlite but no PG migration owns it (legacy /
+		// runtime table, e.g. vehicle_latest_positions): quarantine every
+		// row loudly with an actionable reason — never silently drop.
+		reason := fmt.Sprintf("table %q absent on PG (no PG migration owns it) — row preserved here, migrate manually", table)
+		for rows.Next() {
+			vals := scanRow(rows, len(cols))
+			quar(ctx, ex, sum, savepoints, table, cols, vals, reason)
+			tc.Skip++
+		}
+		// Count PG directly: finishCount's SELECT would error on the
+		// missing table and poison the dry-run transaction (25P02).
+		_ = src.QueryRowContext(ctx, fmt.Sprintf(`SELECT count(*) FROM "%s"`, table)).Scan(&tc.SQLite)
+		tc.PG = -1 // no PG counterpart to count
+		return tc
+	}
 	ph := placeholders(len(cols))
 	stmt := fmt.Sprintf(`INSERT INTO "%s" ("%s") VALUES (%s) ON CONFLICT DO NOTHING`,
 		table, strings.Join(cols, `","`), strings.Join(ph, ","))
@@ -354,6 +370,44 @@ func execInsert(ctx context.Context, ex execer, qx queryer, savepoints bool, stm
 
 // resetSequences advances every owned integer sequence to its column max.
 func resetSequences(ctx context.Context, ex execer, q queryer) ([]string, error) {
+	// Discovery and apply are split: on a dry-run tx the handle holds a
+	// single connection, so a nested query while discovery rows are open
+	// fails with "driver: bad connection". discoverSequences returns
+	// (running its deferred Close) before any nested query runs.
+	refs, err := discoverSequences(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	var reset []string
+	for _, r := range refs {
+		seq, tbl, col := r.seq, r.tbl, r.col
+		var typ string
+		if err := scanOne(ctx, q, &typ,
+			`SELECT data_type FROM information_schema.columns WHERE table_name=$1 AND column_name=$2`, tbl, col); err != nil || !isIntType(typ) {
+			continue
+		}
+		if _, err := ex.ExecContext(ctx, fmt.Sprintf(
+			// +1/false form: next value is max+1, and empty tables start at
+			// 1 instead of erroring (setval(x, 0) violates MINVALUE 1).
+			`SELECT setval('%s', COALESCE((SELECT max("%s") FROM "%s"), 0) + 1, false)`, seq, col, tbl)); err != nil {
+			return nil, fmt.Errorf("setval %s: %w", seq, err)
+		}
+		reset = append(reset, seq)
+	}
+	return reset, nil
+}
+
+func isIntType(t string) bool {
+	switch t {
+	case "integer", "bigint", "smallint":
+		return true
+	}
+	return false
+}
+
+type seqRef struct{ seq, tbl, col string }
+
+func discoverSequences(ctx context.Context, q queryer) ([]seqRef, error) {
 	rows, err := q.QueryContext(ctx, `SELECT seq.relname, tbl.relname, attr.attname
 		FROM pg_class seq
 		JOIN pg_depend d ON d.objid = seq.oid AND d.deptype IN ('a', 'i')
@@ -364,32 +418,18 @@ func resetSequences(ctx context.Context, ex execer, q queryer) ([]string, error)
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
-	var reset []string
+	var refs []seqRef
 	for rows.Next() {
-		var seq, tbl, col string
-		if err := rows.Scan(&seq, &tbl, &col); err != nil {
+		var r seqRef
+		if err := rows.Scan(&r.seq, &r.tbl, &r.col); err != nil {
 			return nil, err
 		}
-		var typ string
-		if err := scanOne(ctx, q, &typ,
-			`SELECT data_type FROM information_schema.columns WHERE table_name=$1 AND column_name=$2`, tbl, col); err != nil || !isIntType(typ) {
-			continue
-		}
-		if _, err := ex.ExecContext(ctx, fmt.Sprintf(
-			`SELECT setval('%s', COALESCE((SELECT max("%s") FROM "%s"), 0))`, seq, col, tbl)); err != nil {
-			return nil, fmt.Errorf("setval %s: %w", seq, err)
-		}
-		reset = append(reset, seq)
+		refs = append(refs, r)
 	}
-	return reset, rows.Err()
-}
-
-func isIntType(t string) bool {
-	switch t {
-	case "integer", "bigint", "smallint":
-		return true
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
-	return false
+	return refs, nil
 }
 
 // --- small helpers ---
