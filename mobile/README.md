@@ -13,8 +13,7 @@ platform: trip dispatch, GPS telemetry, ePOD capture, offline-first expense
   `fixAvailable: false` or major-only fixes (`expo 57.0.20`, `react-native 0.86.3`).
 - Blocked without breaking upgrade: SDK 52→57 means RN 0.76→0.86, React 18→19,
   Node 20→22. Do NOT run `expo install --fix` / upgrade until migration approved.
-- `expo-doctor`: 15/18 pass; known fails: `expo-battery@57.0.2` (expects ~9.0.2),
-  missing `react-native-svg` peer, prebuild-vs-android/ios folders warning.
+- `expo-doctor`: 16/18 pass; known fails left as-is: CNG sync warning (`android/` folder present — do NOT prebuild/delete), `react-native-svg@15.11.2` (expects 15.8.0 — do NOT `expo install --fix` until SDK 52→57 migration approved).
 
 ## Architecture — autonomous loop
 
