@@ -50,10 +50,7 @@ func (h *OpsAlertHandlers) RegisterRoutes(r chi.Router) {
 // GET /api/v1/ops-alerts?status=open&type=vehicle_breakdown&severity=critical&page=1&limit=50
 func (h *OpsAlertHandlers) List(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tenantID := string(shared.TenantIDFromContext(ctx))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
+	tenantID := string(shared.MustTenantID(ctx))
 
 	q := r.URL.Query()
 	page, _ := strconv.Atoi(q.Get("page"))
@@ -218,10 +215,7 @@ func (h *OpsAlertHandlers) Dismiss(w http.ResponseWriter, r *http.Request) {
 // POST /api/v1/ops-alerts/generate
 func (h *OpsAlertHandlers) GenerateManual(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tenantID := string(shared.TenantIDFromContext(ctx))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
+	tenantID := string(shared.MustTenantID(ctx))
 
 	var req struct {
 		AlertType   string  `json:"alert_type"`

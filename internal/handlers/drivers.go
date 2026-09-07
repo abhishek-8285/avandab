@@ -371,10 +371,7 @@ func (h *DriverHandlers) GetMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	tenantID := string(shared.TenantIDFromContext(ctx))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
+	tenantID := string(shared.MustTenantID(ctx))
 	var d struct {
 		ID            string
 		DriverID      string
@@ -519,10 +516,7 @@ func (h *DriverHandlers) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	tenantID := string(shared.TenantIDFromContext(ctx))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
+	tenantID := string(shared.MustTenantID(ctx))
 
 	var driverID string
 	err := h.DB.QueryRowContext(ctx, `

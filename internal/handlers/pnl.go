@@ -42,10 +42,7 @@ func (h *PNLHandlers) RegisterRoutes(r chi.Router) {
 // GET /api/v1/pnl?from=2025-01-01&to=2025-01-31
 func (h *PNLHandlers) GetPNLRange(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tenantID := string(shared.TenantIDFromContext(ctx))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
+	tenantID := string(shared.MustTenantID(ctx))
 
 	fromStr := r.URL.Query().Get("from")
 	toStr := r.URL.Query().Get("to")
@@ -92,10 +89,7 @@ func (h *PNLHandlers) GetPNLRange(w http.ResponseWriter, r *http.Request) {
 // Body: {"date": "2025-01-15"}   (optional — defaults to yesterday)
 func (h *PNLHandlers) GenerateSnapshot(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	tenantID := string(shared.TenantIDFromContext(ctx))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
+	tenantID := string(shared.MustTenantID(ctx))
 
 	var req struct {
 		Date string `json:"date"`

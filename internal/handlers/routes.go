@@ -77,10 +77,7 @@ func (h *RouteHandlers) Optimize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenantID := string(shared.TenantIDFromContext(r.Context()))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
+	tenantID := string(shared.MustTenantID(r.Context()))
 	user, _ := h.getUserFromContext(r)
 	createdBy := ""
 	if user != nil {
@@ -139,10 +136,7 @@ func (h *RouteHandlers) Optimize(w http.ResponseWriter, r *http.Request) {
 
 // OptimizeJobs lists recent jobs for current tenant (web fragment + JSON).
 func (h *RouteHandlers) OptimizeJobs(w http.ResponseWriter, r *http.Request) {
-	tenantID := string(shared.TenantIDFromContext(r.Context()))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
+	tenantID := string(shared.MustTenantID(r.Context()))
 	rows, err := h.DB.QueryContext(r.Context(),
 		`SELECT id, status, provider, created_at, completed_at FROM route_optimization_jobs WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT 20`, tenantID)
 	if err != nil {
@@ -178,10 +172,7 @@ func (h *RouteHandlers) OptimizeJobs(w http.ResponseWriter, r *http.Request) {
 // OptimizeJobStatus returns a single job (polling).
 func (h *RouteHandlers) OptimizeJobStatus(w http.ResponseWriter, r *http.Request) {
 	jobID := chi.URLParam(r, "jobID")
-	tenantID := string(shared.TenantIDFromContext(r.Context()))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
+	tenantID := string(shared.MustTenantID(r.Context()))
 	var id, status, provider, inputJSON, resultJSON sql.NullString
 	var errMsg sql.NullString
 	var createdAt, completedAt sql.NullString

@@ -85,12 +85,10 @@ func (h *FounderHandlers) PilotKPIs(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, kpis)
 }
 
+// tenantID resolves the acting org. Fail closed: founder routes sit behind
+// auth middleware which always sets tenant (panics surface as 500 via Recoverer).
 func (h *FounderHandlers) tenantID(r *http.Request) string {
-	tenantID := string(shared.TenantIDFromContext(r.Context()))
-	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
-	}
-	return tenantID
+	return string(shared.MustTenantID(r.Context()))
 }
 
 // ListSignals handles GET /api/v1/founder/signals
