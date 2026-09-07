@@ -144,9 +144,15 @@ func (s *FounderSignalsService) EmitIfThreshold(ctx context.Context, tenantID, s
 }
 
 // AcknowledgeSignal marks a signal acknowledged and writes an audit entry.
+// The UPDATE is tenant-scoped: without it, guessing a signal ID would let one
+// org acknowledge (and hide) another org's signals.
 func (s *FounderSignalsService) AcknowledgeSignal(ctx context.Context, signalID, userID, role string) error {
 	if s.db == nil {
 		return fmt.Errorf("database unavailable")
+	}
+	tid, err := shared.RequireTenantOr(ctx, "")
+	if err != nil {
+		return err
 	}
 	if role == "" {
 		role = "admin"
@@ -154,8 +160,8 @@ func (s *FounderSignalsService) AcknowledgeSignal(ctx context.Context, signalID,
 	now := time.Now().UTC()
 	result, err := s.db.ExecContext(ctx,
 		`UPDATE founder_signals SET acknowledged = 1, acknowledged_by = $1, acknowledged_at = $2
-		 WHERE id = $3 AND acknowledged = 0`,
-		userID, now, signalID)
+		 WHERE id = $3 AND tenant_id = $4 AND acknowledged = 0`,
+		userID, now, signalID, string(tid))
 	if err != nil {
 		return err
 	}

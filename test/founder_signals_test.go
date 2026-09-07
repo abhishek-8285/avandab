@@ -121,6 +121,30 @@ func TestFounderSignal_ListFilters(t *testing.T) {
 	assert.Len(t, unack, 1)
 }
 
+func TestFounderSignal_Acknowledge_CrossTenant(t *testing.T) {
+	sig, _ := founderServices(t)
+	ctx1 := shared.ContextWithTenantID(context.Background(), "1")
+	ctx2 := shared.ContextWithTenantID(context.Background(), "2")
+
+	id, err := sig.EmitSignal(ctx1, service.FounderSignal{
+		TenantID:    "1",
+		SignalType:  service.SignalDriverChurnRisk,
+		SignalValue: 5,
+		Direction:   service.DirectionAbove,
+	})
+	require.NoError(t, err)
+
+	// Another org guessing the ID must not acknowledge (or hide) it.
+	err = sig.AcknowledgeSignal(ctx2, id, "admin-2", "admin")
+	require.Error(t, err)
+
+	// Still unacknowledged under its own org; owner ack works.
+	unack, _, err := sig.ListSignals(ctx1, "1", service.SignalFilters{UnacknowledgedOnly: true})
+	require.NoError(t, err)
+	require.Len(t, unack, 1)
+	require.NoError(t, sig.AcknowledgeSignal(ctx1, id, "admin-1", "admin"))
+}
+
 func TestFounderAudit_Record(t *testing.T) {
 	sig, audit := founderServices(t)
 	ctx := shared.ContextWithTenantID(context.Background(), "1")
