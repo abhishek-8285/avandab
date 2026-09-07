@@ -363,3 +363,16 @@ func TestOpsAlert_GetNotFound(t *testing.T) {
 		t.Fatalf("expected ErrAlertNotFound, got %v", err)
 	}
 }
+
+func TestOpsAlert_CountsRequireTenant(t *testing.T) {
+	db := openOpsAlertTestDB(t)
+	svc := service.NewOpsAlertServiceForTest(db, nil)
+	ctx := context.Background()
+
+	if _, err := svc.CountAlertsSince(ctx, "", service.OpsAlertSettlementDispute, time.Hour); err == nil {
+		t.Error("expected error for empty tenant in CountAlertsSince, got nil")
+	}
+	if _, err := svc.CountByStatus(ctx, "", service.OpsAlertStatusOpen); err == nil {
+		t.Error("expected error for empty tenant in CountByStatus, got nil")
+	}
+}

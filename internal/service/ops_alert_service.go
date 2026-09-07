@@ -174,7 +174,7 @@ func (s *OpsAlertService) CountAlertsSince(ctx context.Context, tenantID, alertT
 		return 0, fmt.Errorf("database unavailable")
 	}
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		return 0, fmt.Errorf("opsalert: tenant required")
 	}
 	var n int
 	err := s.db.QueryRowContext(ctx,
@@ -193,7 +193,7 @@ func (s *OpsAlertService) CountByStatus(ctx context.Context, tenantID, status st
 		return 0, fmt.Errorf("database unavailable")
 	}
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		return 0, fmt.Errorf("opsalert: tenant required")
 	}
 	var n int
 	err := s.db.QueryRowContext(ctx,
