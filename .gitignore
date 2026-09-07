@@ -22,6 +22,8 @@ c2.txt
 *.db-wal
 *.db-shm
 *.db-journal
+# Local DB dumps (dated names like mvtms.db.2026-08-31 escape *.db)
+backups/
 
 # IDE
 .idea/
