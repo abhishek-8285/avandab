@@ -528,7 +528,7 @@ func (s *FCMService) SendToDriver(ctx context.Context, tenantID, driverID, title
 		tenantID = string(shared.TenantIDFromContext(ctx))
 	}
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		return 0, fmt.Errorf("fcm: tenant required")
 	}
 
 	tokens, err := s.GetActiveTokens(ctx, tenantID, driverID)
@@ -559,7 +559,7 @@ func (s *FCMService) SendPush(ctx context.Context, msg ports.NotificationMessage
 		tenantID = string(shared.TenantIDFromContext(ctx))
 	}
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		return fmt.Errorf("fcm: tenant required")
 	}
 
 	data := make(map[string]string)

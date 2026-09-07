@@ -4,6 +4,18 @@ Expo SDK 52 / React Native 0.76 driver-facing app for the Avandab/MVTMS fleet
 platform: trip dispatch, GPS telemetry, ePOD capture, offline-first expense
 (kharcha) entry, document vault, and DPDP-style consent tracking.
 
+## SDK pin + upgrade status (2026-09-07, read-only audit)
+
+- Pinned: `expo ~52.0.0`, `react-native 0.76.9`, `react 18.3.1`, Node 20.
+- `npm audit --omit=dev`: 16 vulns (9 moderate, 7 high). Chains
+  `decode-uri-component` (via query-string/react-navigation),
+  `postcss` (via @expo/metro-config), `image-size` (via metro) have
+  `fixAvailable: false` or major-only fixes (`expo 57.0.20`, `react-native 0.86.3`).
+- Blocked without breaking upgrade: SDK 52→57 means RN 0.76→0.86, React 18→19,
+  Node 20→22. Do NOT run `expo install --fix` / upgrade until migration approved.
+- `expo-doctor`: 15/18 pass; known fails: `expo-battery@57.0.2` (expects ~9.0.2),
+  missing `react-native-svg` peer, prebuild-vs-android/ios folders warning.
+
 ## Architecture — autonomous loop
 
 ```

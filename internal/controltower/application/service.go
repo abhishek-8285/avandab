@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -85,7 +86,10 @@ func (s *Service) GetTrips(ctx context.Context, tenantID shared.TenantID, status
 	s.ensureIndexes(ctx)
 	tenantStr := string(tenantID)
 	if tenantStr == "" {
-		tenantStr = string(shared.DefaultTenant)
+		tenantStr = string(shared.TenantIDFromContext(ctx))
+	}
+	if tenantStr == "" {
+		return nil, fmt.Errorf("controltower: tenant required")
 	}
 
 	query := `
@@ -150,7 +154,10 @@ func (s *Service) GetTrip(ctx context.Context, tenantID shared.TenantID, tripID 
 	s.ensureIndexes(ctx)
 	tenantStr := string(tenantID)
 	if tenantStr == "" {
-		tenantStr = string(shared.DefaultTenant)
+		tenantStr = string(shared.TenantIDFromContext(ctx))
+	}
+	if tenantStr == "" {
+		return nil, fmt.Errorf("controltower: tenant required")
 	}
 	key := tenantStr + ":" + tripID
 	v, err, _ := s.sfGroup.Do(key, func() (interface{}, error) {
@@ -174,7 +181,10 @@ func (s *Service) GetTrip(ctx context.Context, tenantID shared.TenantID, tripID 
 func (s *Service) getTripUncached(ctx context.Context, tenantID shared.TenantID, tripID string) (*domain.ControlTowerTrip, error) {
 	tenantStr := string(tenantID)
 	if tenantStr == "" {
-		tenantStr = string(shared.DefaultTenant)
+		tenantStr = string(shared.TenantIDFromContext(ctx))
+	}
+	if tenantStr == "" {
+		return nil, fmt.Errorf("controltower: tenant required")
 	}
 
 	var (

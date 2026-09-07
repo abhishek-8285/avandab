@@ -96,7 +96,7 @@ func (e *Engine) ProcessTelemetry(ctx context.Context, pt TelemetryPoint) (Devia
 		tenantID = string(shared.TenantIDFromContext(ctx))
 	}
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		return StateOnRoute, 0, fmt.Errorf("deviation: tenant required")
 	}
 
 	// 3. Load tenant-specific policy
