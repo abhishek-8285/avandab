@@ -117,7 +117,7 @@ func (s *OpsAlertService) CreateAlert(ctx context.Context, alert OpsAlert) (stri
 		tenantID = string(shared.TenantIDFromContext(ctx))
 	}
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		return "", fmt.Errorf("opsalert: tenant required")
 	}
 
 	severity := alert.Severity
@@ -337,7 +337,7 @@ func (s *OpsAlertService) ListAlerts(ctx context.Context, tenantID string, filte
 		tenantID = string(shared.TenantIDFromContext(ctx))
 	}
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		return nil, 0, fmt.Errorf("opsalert: tenant required")
 	}
 
 	var whereClauses []string
