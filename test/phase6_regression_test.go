@@ -358,7 +358,7 @@ func TestPhase6_6_FASTag_Reconciliation_Greedy_And_AutoKharcha(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 	seedPhase6Base(t, db)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(context.Background())
 
 	// Seed Driver
 	_, _ = db.Exec(`INSERT INTO drivers (id, tenant_id, first_name, last_name, phone, license_number, status) VALUES ('drv-p6-1', '1', 'Ramesh', 'Kumar', '9988776655', 'DL-MH-12345', 'active')`)
@@ -432,7 +432,7 @@ func TestPhase6_8_FASTag_Reconciliation_Idempotency(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 	seedPhase6Base(t, db)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(context.Background())
 
 	now := time.Now().UTC()
 	depTime := now.Add(-3 * time.Hour)

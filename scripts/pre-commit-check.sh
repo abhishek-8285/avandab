@@ -72,7 +72,9 @@ echo -e "${GREEN}✅ sqlc files up to date.${NC}"
 
 # 5. Unit Tests
 echo -e "\n${CYAN}[7/7] Executing Go unit tests...${NC}"
-go test -v ./...
+# 30m (not the 10m default): the ./test integration package alone needs
+# ~12m on weak devices (122-migration setup per test); hangs still fail.
+go test -timeout 30m -v ./...
 echo -e "${GREEN}✅ All unit tests passed.${NC}"
 
 echo -e "\n${GREEN}==============================================================================${NC}"

@@ -242,7 +242,7 @@ func TestFASTag_DB_Balance_And_Deduct(t *testing.T) {
 func TestFASTag_Reconciliation_Greedy_And_AutoKharcha(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(context.Background())
 
 	// Seed driver, vehicle, trip
 	_, err := db.Exec(`INSERT INTO drivers (id, driver_id, first_name, last_name, phone, license_number, license_expiry, status) VALUES ('drv-recon', 'DRV-RECON-1', 'Ramesh', 'Kumar', '9876543210', 'DL-MH-12345', '2028-12-31', 'available')`)

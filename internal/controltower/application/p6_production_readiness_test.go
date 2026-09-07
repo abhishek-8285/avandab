@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"math/rand"
+	"os"
 	"sort"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -17,6 +19,15 @@ import (
 	ctApp "transport-app/internal/controltower/application"
 	"transport-app/internal/shared"
 )
+
+func controlTowerP95Budget() float64 {
+	if v := os.Getenv("CONTROLTOWER_P95_MS"); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil && f > 0 {
+			return f
+		}
+	}
+	return 50.0
+}
 
 func setupProductionStressDB(t *testing.T) *sql.DB {
 	// Enable WAL mode and memory journal for high concurrent throughput testing
@@ -335,7 +346,8 @@ func TestP6_ProductionAudit_100ConcurrentControlTowerReads(t *testing.T) {
 	t.Logf("P95 Latency : %.2f ms", p95)
 	t.Logf("P99 Latency : %.2f ms", p99)
 
-	assert.Less(t, p95, 50.0, "Control Tower query p95 should be sub-50ms under 100 concurrent readers")
+	budget := controlTowerP95Budget()
+	assert.Less(t, p95, budget, "Control Tower query p95 should be sub-%.0fms under 100 concurrent readers (override: CONTROLTOWER_P95_MS)", budget)
 }
 
 // Test 4: E-Way Bill Terminal State Transition Invariant

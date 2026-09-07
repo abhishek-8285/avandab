@@ -238,7 +238,7 @@ func TestSettlement_NetPayout_Floor(t *testing.T) {
 func TestSettlement_KharchaApproval_Wiring(t *testing.T) {
 	dbConn, svcs, _, _, _ := setupComplianceTestEnv(t)
 	seedSettlementTestData(t, dbConn)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(context.Background())
 
 	_, _ = dbConn.Exec(`UPDATE company_config SET value = 'fixed' WHERE key = 'settlement_rate_model'`)
 	_, _ = dbConn.Exec(`UPDATE company_config SET value = '5000.00' WHERE key = 'settlement_fixed_fare'`)
@@ -271,7 +271,7 @@ func TestSettlement_KharchaApproval_Wiring(t *testing.T) {
 func TestSettlement_Status_Machine_And_Dispute(t *testing.T) {
 	dbConn, svcs, _, _, _ := setupComplianceTestEnv(t)
 	seedSettlementTestData(t, dbConn)
-	ctx := context.Background()
+	ctx := ContextWithTestTenant(context.Background())
 
 	rec, err := svcs.Settlements.GenerateSettlement(ctx, "trip-stl-1", true)
 	require.NoError(t, err)
