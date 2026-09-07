@@ -147,3 +147,10 @@ func TestComplianceRadar_SweepEmitsThroughPipeline(t *testing.T) {
 	assert.Equal(t, 1, rank, "≤4h EWB must be rank-1 critical")
 	assert.Contains(t, dedupKey, "compliance:ewb_expiry_4h:")
 }
+
+func TestComplianceRadar_TenantRequired(t *testing.T) {
+	svc, _ := newRadarFixture(t)
+	_, err := svc.Radar(context.Background(), "")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "compliance_radar: tenant required")
+}

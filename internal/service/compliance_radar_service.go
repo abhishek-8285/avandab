@@ -10,7 +10,6 @@ import (
 
 	"transport-app/internal/alerts/domain"
 	"transport-app/internal/alerts/pipeline"
-	"transport-app/internal/shared"
 )
 
 // Radar thresholds (Spec 22 §5.4): document expiry alerts at 30/7/1 days,
@@ -75,7 +74,7 @@ type Radar struct {
 // Radar returns everything inside the warning windows for one tenant.
 func (s *ComplianceRadarService) Radar(ctx context.Context, tenantID string) (*Radar, error) {
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		return nil, fmt.Errorf("compliance_radar: tenant required")
 	}
 	out := &Radar{ExpiringSoon: []map[string]any{}, EwaybillExpiring: []map[string]any{}}
 
@@ -278,7 +277,7 @@ func (s *ComplianceRadarService) expiringDocsAllTenants(ctx context.Context, wit
 
 func (s *ComplianceRadarService) expiringEwbs(ctx context.Context, tenantID string, withinHours int) ([]EwayBillHit, error) {
 	if tenantID == "" {
-		tenantID = string(shared.DefaultTenant)
+		return nil, fmt.Errorf("compliance_radar: tenant required")
 	}
 	rows, qerr := s.db.QueryContext(ctx, `
 		SELECT e.id, e.ewb_number, COALESCE(e.trip_id, ''), COALESCE(t.tenant_id, ''),
