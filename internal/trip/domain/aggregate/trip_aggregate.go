@@ -109,6 +109,10 @@ type TripAggregate struct {
 	DeliveredAt     *time.Time
 	CompletedAt     *time.Time
 
+	// CloseOdometer is the SOP trip-close odometer reading (ZMOTM_MMS p.8):
+	// written by the close dialog alongside CompletedAt. Nil = not recorded.
+	CloseOdometer *float64
+
 	// Multi-Stop legs
 	Stops []TripStop
 
@@ -457,6 +461,22 @@ func (t *TripAggregate) Complete(now time.Time) error {
 		TenantID:   t.TenantID,
 		OccurredAt: now,
 	})
+	return nil
+}
+
+// RecordCloseReading stores the SOP trip-close odometer reading. Only valid
+// on completed trips (the close dialog submits with completion); a
+// non-positive reading means "not recorded" — callers pass nil instead.
+// ponytail: O(1) guard; callers route complete→reading in one UoW tx.
+func (t *TripAggregate) RecordCloseReading(odometer float64, now time.Time) error {
+	if t.Status != TripCompleted {
+		return errors.New("close reading requires a completed trip")
+	}
+	if odometer <= 0 {
+		return errors.New("close odometer reading must be positive")
+	}
+	t.CloseOdometer = &odometer
+	t.UpdatedAt = now
 	return nil
 }
 

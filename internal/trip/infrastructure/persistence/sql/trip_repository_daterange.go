@@ -26,7 +26,7 @@ func (r *tripRepository) SearchReadModelsDateRange(ctx context.Context, tenantID
 	querySQL := `
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
     COALESCE(d.driver_id, '') AS driver_display_id,
     COALESCE(d.first_name, '') AS driver_first_name,
     COALESCE(d.last_name, '') AS driver_last_name,
@@ -138,7 +138,7 @@ func (r *tripRepository) SearchReadModelsByDriverDateRange(ctx context.Context, 
 	querySQL := fmt.Sprintf(`
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
     COALESCE(d.driver_id, '') AS driver_display_id,
     COALESCE(d.first_name, '') AS driver_first_name,
     COALESCE(d.last_name, '') AS driver_last_name,
@@ -218,12 +218,13 @@ func scanTripReadModels(rows *sql.Rows) ([]tripdomain.TripReadModel, error) {
 		var m tripdomain.TripReadModel
 		var bookingID, driverID, vehicleID sql.NullString
 		var arrivalTime, startedAt, reachedPickupAt, inTransitAt, deliveredAt, completedAt sql.NullTime
+		var closeOdometer sql.NullFloat64
 		var remarks sql.NullString
 
 		if err := rows.Scan(
 			&m.ID, &m.TripNumber, &bookingID, &driverID, &vehicleID, &m.RouteID,
 			&m.DepartureTime, &arrivalTime, &m.Status, &remarks, &m.CreatedAt, &m.UpdatedAt,
-			&startedAt, &reachedPickupAt, &inTransitAt, &deliveredAt, &completedAt,
+			&startedAt, &reachedPickupAt, &inTransitAt, &deliveredAt, &completedAt, &closeOdometer,
 			&m.DriverDisplayID, &m.DriverFirstName, &m.DriverLastName,
 			&m.VehicleRegistrationNumber, &m.VehicleNumber,
 			&m.RouteSource, &m.RouteDestination,
@@ -260,6 +261,9 @@ func scanTripReadModels(rows *sql.Rows) ([]tripdomain.TripReadModel, error) {
 		}
 		if completedAt.Valid {
 			m.CompletedAt = &completedAt.Time
+		}
+		if closeOdometer.Valid {
+			m.CloseOdometer = &closeOdometer.Float64
 		}
 
 		readModels = append(readModels, m)

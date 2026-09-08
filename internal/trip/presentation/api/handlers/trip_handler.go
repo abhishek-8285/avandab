@@ -13,6 +13,7 @@ import (
 
 	"transport-app/internal/auth"
 	"transport-app/internal/middleware"
+	"transport-app/internal/service"
 	"transport-app/internal/shared"
 	"transport-app/internal/trip/application"
 	"transport-app/internal/trip/domain/aggregate"
@@ -32,6 +33,7 @@ type APITripHandler struct {
 	cancelUC        *application.CancelTripUseCase
 	getUC           *application.GetTripUseCase
 	listUC          *application.ListTripsUseCase
+	opsAlerts       *service.OpsAlertService
 	authSrv         auth.AuthorizationService
 }
 
@@ -49,6 +51,7 @@ func NewAPITripHandler(
 	cancelUC *application.CancelTripUseCase,
 	getUC *application.GetTripUseCase,
 	listUC *application.ListTripsUseCase,
+	opsAlerts *service.OpsAlertService,
 	authSrv auth.AuthorizationService,
 ) *APITripHandler {
 	return &APITripHandler{
@@ -64,6 +67,7 @@ func NewAPITripHandler(
 		cancelUC:        cancelUC,
 		getUC:           getUC,
 		listUC:          listUC,
+		opsAlerts:       opsAlerts,
 		authSrv:         authSrv,
 	}
 }
@@ -368,12 +372,37 @@ func (h *APITripHandler) Deliver(w http.ResponseWriter, r *http.Request) {
 
 func (h *APITripHandler) Complete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	// Optional SOP close body; empty body preserves the legacy behavior.
+	var req struct {
+		CloseOdometer *float64 `json:"close_odometer"`
+		Breakdown     bool     `json:"breakdown"`
+		BreakdownNote string   `json:"breakdown_note"`
+	}
+	if r.Body != nil {
+		_ = json.NewDecoder(r.Body).Decode(&req)
+	}
 	if err := h.completeUC.Execute(r.Context(), application.CompleteTripCommand{
-		TripID:   aggregate.TripID(id),
-		TenantID: shared.TenantIDFromContext(r.Context()),
+		TripID:        aggregate.TripID(id),
+		TenantID:      shared.TenantIDFromContext(r.Context()),
+		CloseOdometer: req.CloseOdometer,
 	}); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+	if req.Breakdown && h.opsAlerts != nil {
+		desc := "Breakdown reported at trip close"
+		if req.BreakdownNote != "" {
+			desc += ": " + req.BreakdownNote
+		}
+		_, _ = h.opsAlerts.CreateAlert(r.Context(), service.OpsAlert{
+			TenantID:    string(shared.TenantIDFromContext(r.Context())),
+			AlertType:   service.OpsAlertVehicleBreakdown,
+			Severity:    service.OpsAlertSeverityHigh,
+			Title:       "Vehicle breakdown at trip close",
+			Description: desc,
+			EntityType:  service.StrPtr("trip"),
+			EntityID:    &id,
+		})
 	}
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(map[string]string{"status": "completed"})

@@ -15,6 +15,10 @@ import (
 type CompleteTripCommand struct {
 	TripID   aggregate.TripID
 	TenantID shared.TenantID
+	// CloseOdometer is the SOP trip-close odometer reading (ZMOTM_MMS p.8).
+	// Nil = closed without a reading (reading triple = CloseOdometer +
+	// CompletedAt). Breakdown alerts are filed by callers, not here.
+	CloseOdometer *float64
 	// OnCompleted runs inside the same UnitOfWork transaction after the trip
 	// is saved, letting callers attach detentions/invoices atomically with
 	// the completion (Spec 02 §6 — no torn states).
@@ -53,6 +57,11 @@ func (uc *CompleteTripUseCase) Execute(ctx context.Context, cmd CompleteTripComm
 		}
 		if err := t.Complete(uc.clock.Now()); err != nil {
 			return err
+		}
+		if cmd.CloseOdometer != nil {
+			if err := t.RecordCloseReading(*cmd.CloseOdometer, uc.clock.Now()); err != nil {
+				return err
+			}
 		}
 		if err := repo.Save(txCtx, t); err != nil {
 			return err

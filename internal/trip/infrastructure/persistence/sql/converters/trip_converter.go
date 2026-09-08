@@ -9,26 +9,27 @@ import (
 )
 
 type SQLTripModel struct {
-	ID              string         `json:"id"`
-	TripNumber      string         `json:"trip_number"`
-	BookingID       sql.NullString `json:"booking_id"`
-	DriverID        sql.NullString `json:"driver_id"`
-	VehicleID       sql.NullString `json:"vehicle_id"`
-	RouteID         string         `json:"route_id"`
-	DepartureTime   time.Time      `json:"departure_time"`
-	ArrivalTime     sql.NullTime   `json:"arrival_time"`
-	Status          string         `json:"status"`
-	Remarks         sql.NullString `json:"remarks"`
-	TenantID        string         `json:"tenant_id"`
-	Version         int64          `json:"version"`
-	CreatedAt       time.Time      `json:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at"`
-	StartedAt       sql.NullTime   `json:"started_at"`
-	ReachedPickupAt sql.NullTime   `json:"reached_pickup_at"`
-	InTransitAt     sql.NullTime   `json:"in_transit_at"`
-	DeliveredAt     sql.NullTime   `json:"delivered_at"`
-	CompletedAt     sql.NullTime   `json:"completed_at"`
-	IdempotencyKey  sql.NullString `json:"idempotency_key"`
+	ID              string          `json:"id"`
+	TripNumber      string          `json:"trip_number"`
+	BookingID       sql.NullString  `json:"booking_id"`
+	DriverID        sql.NullString  `json:"driver_id"`
+	VehicleID       sql.NullString  `json:"vehicle_id"`
+	RouteID         string          `json:"route_id"`
+	DepartureTime   time.Time       `json:"departure_time"`
+	ArrivalTime     sql.NullTime    `json:"arrival_time"`
+	Status          string          `json:"status"`
+	Remarks         sql.NullString  `json:"remarks"`
+	TenantID        string          `json:"tenant_id"`
+	Version         int64           `json:"version"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+	StartedAt       sql.NullTime    `json:"started_at"`
+	ReachedPickupAt sql.NullTime    `json:"reached_pickup_at"`
+	InTransitAt     sql.NullTime    `json:"in_transit_at"`
+	DeliveredAt     sql.NullTime    `json:"delivered_at"`
+	CompletedAt     sql.NullTime    `json:"completed_at"`
+	CloseOdometer   sql.NullFloat64 `json:"close_odometer"`
+	IdempotencyKey  sql.NullString  `json:"idempotency_key"`
 }
 
 func MapToAggregate(m SQLTripModel) *aggregate.TripAggregate {
@@ -91,6 +92,12 @@ func MapToAggregate(m SQLTripModel) *aggregate.TripAggregate {
 		completedAt = &val
 	}
 
+	var closeOdometer *float64
+	if m.CloseOdometer.Valid {
+		val := m.CloseOdometer.Float64
+		closeOdometer = &val
+	}
+
 	return &aggregate.TripAggregate{
 		ID:              aggregate.TripID(m.ID),
 		TenantID:        shared.TenantID(m.TenantID),
@@ -108,6 +115,7 @@ func MapToAggregate(m SQLTripModel) *aggregate.TripAggregate {
 		InTransitAt:     inTransitAt,
 		DeliveredAt:     deliveredAt,
 		CompletedAt:     completedAt,
+		CloseOdometer:   closeOdometer,
 		CreatedAt:       m.CreatedAt,
 		UpdatedAt:       m.UpdatedAt,
 		Version:         m.Version,
@@ -166,6 +174,11 @@ func MapToPersistence(agg *aggregate.TripAggregate) SQLTripModel {
 		completedAt = sql.NullTime{Time: *agg.CompletedAt, Valid: true}
 	}
 
+	var closeOdometer sql.NullFloat64
+	if agg.CloseOdometer != nil {
+		closeOdometer = sql.NullFloat64{Float64: *agg.CloseOdometer, Valid: true}
+	}
+
 	var idempotencyKey sql.NullString
 	if agg.IdempotencyKey != "" {
 		idempotencyKey = sql.NullString{String: agg.IdempotencyKey, Valid: true}
@@ -191,6 +204,7 @@ func MapToPersistence(agg *aggregate.TripAggregate) SQLTripModel {
 		InTransitAt:     inTransitAt,
 		DeliveredAt:     deliveredAt,
 		CompletedAt:     completedAt,
+		CloseOdometer:   closeOdometer,
 		IdempotencyKey:  idempotencyKey,
 	}
 }

@@ -22,7 +22,7 @@
 - **A2. Tenant-hardening tail sweep** (`docs/06` §1). Re-run tenant lint; wire `scripts/tenant-lint.sh` into CI. No migration. *(2026-09-07: lint at 0 warnings.)*
 - **A3. FK-health triage (61 pre-existing violations)** (SOP spec §10 notes). Read-only enumerate + disposition per table. No migration.
 - **A4. Ops auto-checks green** (`FAILURE_ANALYSIS` auto-checks). Cron backup + ensure scripts, DNS forwarder, opencode `HOME=/` guard, `/tmp` trap. *(2026-09-07: crontab set, hooks on.)* No migration.
-- **A5. Migration-index doc repair** (index `:1-5,110`). Fix header (head `00128`, range `1–128`), reconcile `00121+ reserved` vs allocated. Docs-only.
+- **A5. Migration-index doc repair** (index `:1-5,110`). Fix header (head `00128`), add missing `00112` row, reconcile `00121+ reserved` vs allocated. Docs-only. *(Done 2026-09-08.)*
 - **A6. OpenAPI↔router parity audit.** Diff every `/api/v1/*` mount against `paths:`. Docs/tests-only.
 - **A7. PG-parity tail proof.** Confirm CI gate green on head + `sqlite2pg` dry-run clean. No migration.
 - **A8. Vehicle legacy-delegation ADR** (SOP spec §10 Deferred). One paragraph: keep split vs finish delegation. No behavior change.

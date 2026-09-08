@@ -109,7 +109,7 @@ func setupMobileAPITestEnv(t *testing.T) (*sql.DB, *App, *tripapihandlers.APITri
 	tripAPIHandler := tripapihandlers.NewAPITripHandler(
 		createTrip, assignDriver, assignVehicle, scheduleTrip, startTrip,
 		reachPickup, startTransit, deliver, completeTrip, cancelTrip,
-		getTrip, listTrips, authSvc,
+		getTrip, listTrips, nil, authSvc,
 	)
 
 	return dbConn, app, tripAPIHandler

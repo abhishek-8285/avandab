@@ -1764,6 +1764,7 @@ type Trip struct {
 	PodOtp                sql.NullString  `json:"pod_otp"`
 	PodOtpExpiresAt       sql.NullString  `json:"pod_otp_expires_at"`
 	IdempotencyKey        sql.NullString  `json:"idempotency_key"`
+	CloseOdometer         sql.NullFloat64 `json:"close_odometer"`
 }
 
 type TripDetention struct {

@@ -320,9 +320,22 @@
                 {{end}}
 
                 {{if eq .Trip.Status "delivered"}}
-                <form method="POST" action="/trips/{{.Trip.ID}}/complete">
+                <form method="POST" action="/trips/{{.Trip.ID}}/complete" class="space-y-3 rounded-xl border border-border-subtle bg-surface-container-low p-3">
+                    <p class="text-eyebrow text-text-muted">Trip Close (SOP ZMOTM_MMS)</p>
+                    {{template "field.html" (dict "Label" "Close Odometer (km)" "Name" "close_odometer" "Type" "number" "Placeholder" "e.g. 125400" "Hint" "Counter reading at close")}}
+                    <label class="flex items-center gap-2 text-sm font-semibold text-on-surface">
+                        <input type="checkbox" name="breakdown" value="1" class="w-4 h-4 accent-[var(--color-status-alert)]">
+                        Breakdown — file outstanding notification
+                    </label>
+                    {{template "field.html" (dict "Label" "Breakdown Note" "Name" "breakdown_note" "Placeholder" "What failed, where")}}
                     {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Complete Trip" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 w-full")}}
                 </form>
+                {{end}}
+                {{if and (eq .Trip.Status "completed") .Trip.CloseOdometer}}
+                <div class="rounded-xl border border-border-subtle bg-surface-container-low p-3">
+                    <p class="text-eyebrow text-text-muted">Close Reading</p>
+                    <p class="text-sm font-semibold text-on-surface tabular-nums" data-numeric>{{print .Trip.CloseOdometer}} km</p>
+                </div>
                 {{end}}
 
                 {{if or (eq .Trip.Status "scheduled") (eq .Trip.Status "assigned") (eq .Trip.Status "started") (eq .Trip.Status "reached_pickup") (eq .Trip.Status "in_transit") (eq .Trip.Status "delivered")}}

@@ -639,9 +639,18 @@ paths:
     post:
       tags: [Trips]
       summary: Complete a trip
-      description: Requires `trips:update` permission.
+      description: Requires `trips:update` permission. Optional SOP close body
+        with close odometer reading plus breakdown flag (ZMOTM_MMS p.8); a
+        breakdown files an outstanding `vehicle_breakdown` ops alert. Empty
+        body preserves the legacy behavior.
       parameters:
         - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteTripRequest'
       responses:
         '200':
           description: Trip completed.
@@ -1537,6 +1546,9 @@ components:
           type: string
           format: date-time
           nullable: true
+        close_odometer:
+          type: number
+          nullable: true
 
     TripList:
       type: object
@@ -1548,6 +1560,16 @@ components:
         total:
           type: integer
           format: int64
+
+    CompleteTripRequest:
+      type: object
+      properties:
+        close_odometer:
+          type: number
+        breakdown:
+          type: boolean
+        breakdown_note:
+          type: string
 
     AssignDriverRequest:
       type: object

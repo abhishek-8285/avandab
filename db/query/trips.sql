@@ -1,16 +1,16 @@
 -- name: CreateTrip :one
 INSERT INTO trips (id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version,
-    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, idempotency_key)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
+    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, idempotency_key, close_odometer)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version, created_at, updated_at,
-    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, idempotency_key;
+    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, idempotency_key, close_odometer;
 
 -- name: GetTripByID :one
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.tenant_id, t.version, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
     d.driver_id AS driver_display_id, d.first_name AS driver_first_name, d.last_name AS driver_last_name,
     v.registration_number AS vehicle_registration_number, v.vehicle_number AS vehicle_number,
     r.source AS route_source, r.destination AS route_destination
@@ -23,7 +23,7 @@ WHERE t.id = ? AND t.tenant_id = ?;
 -- name: GetTripByNumber :one
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.tenant_id, t.version, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
     d.driver_id AS driver_display_id, d.first_name AS driver_first_name, d.last_name AS driver_last_name,
     v.registration_number AS vehicle_registration_number, v.vehicle_number AS vehicle_number,
     r.source AS route_source, r.destination AS route_destination
@@ -36,7 +36,7 @@ WHERE t.trip_number = ? AND t.tenant_id = ?;
 -- name: GetTripByBookingID :one
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.tenant_id, t.version, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
     d.driver_id AS driver_display_id, d.first_name AS driver_first_name, d.last_name AS driver_last_name,
     v.registration_number AS vehicle_registration_number, v.vehicle_number AS vehicle_number,
     r.source AS route_source, r.destination AS route_destination
@@ -49,7 +49,7 @@ WHERE t.booking_id = ? AND t.tenant_id = ?;
 -- name: GetTripByIdempotencyKey :one
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.tenant_id, t.version, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
     d.driver_id AS driver_display_id, d.first_name AS driver_first_name, d.last_name AS driver_last_name,
     v.registration_number AS vehicle_registration_number, v.vehicle_number AS vehicle_number,
     r.source AS route_source, r.destination AS route_destination
@@ -63,13 +63,13 @@ WHERE t.idempotency_key = ? AND t.tenant_id = ?;
 UPDATE trips
 SET trip_number = ?, booking_id = ?, driver_id = ?, vehicle_id = ?, route_id = ?,
     departure_time = ?, arrival_time = ?, status = ?, remarks = ?,
-    started_at = ?, reached_pickup_at = ?, in_transit_at = ?, delivered_at = ?, completed_at = ?,
+    started_at = ?, reached_pickup_at = ?, in_transit_at = ?, delivered_at = ?, completed_at = ?, close_odometer = ?,
     version = version + 1,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks,
-    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at,
+    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, close_odometer,
     id, tenant_id, version, created_at, updated_at;
 
 
@@ -102,7 +102,7 @@ DELETE FROM trips WHERE id = ? AND tenant_id = ?;
 -- name: SearchTrips :many
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.tenant_id, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
     d.driver_id AS driver_display_id, d.first_name AS driver_first_name, d.last_name AS driver_last_name,
     v.registration_number AS vehicle_registration_number, v.vehicle_number AS vehicle_number,
     r.source AS route_source, r.destination AS route_destination
@@ -177,9 +177,9 @@ LIMIT 10;
 
 -- name: UpdateTripTimeline :one
 UPDATE trips
-SET started_at = ?, reached_pickup_at = ?, in_transit_at = ?, delivered_at = ?, completed_at = ?,
+SET started_at = ?, reached_pickup_at = ?, in_transit_at = ?, delivered_at = ?, completed_at = ?, close_odometer = ?,
     status = ?, version = version + 1, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version, created_at, updated_at,
-    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at;
+    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, close_odometer;

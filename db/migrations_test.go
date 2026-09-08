@@ -128,3 +128,45 @@ CREATE TABLE role_permissions (
 	).Scan(&perms))
 	require.Zero(t, perms, "seeded permissions should be removed on down")
 }
+
+func TestMigration00129TripCloseReadingUpAndDown(t *testing.T) {
+	content, err := Migrations.ReadFile("migrations/00129_trip_close_reading.sql")
+	require.NoError(t, err)
+
+	mapFS := fstest.MapFS{
+		"00129_trip_close_reading.sql": &fstest.MapFile{Data: content},
+	}
+	var fsys fs.FS = mapFS
+
+	database, err := sql.Open("sqlite", filepath.Join(t.TempDir(), "mig.db"))
+	require.NoError(t, err)
+	defer database.Close()
+
+	// Minimal pre-existing schema the migration ALTERs.
+	_, err = database.Exec(`
+CREATE TABLE trips (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL DEFAULT '1',
+    status TEXT NOT NULL
+);`)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	provider, err := goose.NewProvider(goose.DialectSQLite3, database, fsys)
+	require.NoError(t, err)
+
+	_, err = provider.Up(ctx)
+	require.NoError(t, err)
+
+	var n int
+	require.NoError(t, database.QueryRow(
+		`SELECT COUNT(*) FROM pragma_table_info('trips') WHERE name = 'close_odometer'`).Scan(&n))
+	require.Equal(t, 1, n, "trips missing column close_odometer")
+
+	_, err = provider.DownTo(ctx, 0)
+	require.NoError(t, err)
+
+	require.NoError(t, database.QueryRow(
+		`SELECT COUNT(*) FROM pragma_table_info('trips') WHERE name = 'close_odometer'`).Scan(&n))
+	require.Equal(t, 0, n, "close_odometer should be dropped on down")
+}

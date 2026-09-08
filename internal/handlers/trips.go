@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -940,17 +941,41 @@ func (h *TripHandlers) Deliver(w http.ResponseWriter, r *http.Request) {
 
 func (h *TripHandlers) CompleteTrip(w http.ResponseWriter, r *http.Request) {
 	h.init()
+	if err := r.ParseForm(); err != nil {
+		h.failPage(w, r, err, http.StatusBadRequest, "Trip Close Failed")
+		return
+	}
 	id := chi.URLParam(r, "id")
 	tenant := shared.TenantIDFromContext(r.Context())
 	tripID := tripagg.TripID(id)
 
+	// SOP close dialog (ZMOTM_MMS p.8): close odometer reading + optional
+	// breakdown flag. Reading is validated by the aggregate; breakdown files
+	// an outstanding vehicle_breakdown ops alert after a successful close.
+	var closeOdometer *float64
+	if s := r.PostFormValue("close_odometer"); s != "" {
+		odo, err := strconv.ParseFloat(s, 64)
+		if err != nil {
+			h.failPage(w, r, fmt.Errorf("close_odometer must be a number"), http.StatusBadRequest, "Trip Close Failed")
+			return
+		}
+		closeOdometer = &odo
+	}
+	breakdown := r.PostFormValue("breakdown") == "1" || r.PostFormValue("breakdown") == "on"
+	breakdownNote := r.PostFormValue("breakdown_note")
+
 	// The trip completion, closed-detention query, invoice generation and
 	// detention status flip run in ONE UnitOfWork transaction so no torn
 	// state can separate a completed trip from its invoice lines (Spec 02 §6).
+	closedVehicleID := ""
 	err := h.completeUC.Execute(r.Context(), tripapp.CompleteTripCommand{
-		TripID:   tripID,
-		TenantID: tenant,
+		TripID:        tripID,
+		TenantID:      tenant,
+		CloseOdometer: closeOdometer,
 		OnCompleted: func(txCtx ports.TxContext, trip *tripagg.TripAggregate) error {
+			if trip.VehicleID != nil {
+				closedVehicleID = *trip.VehicleID
+			}
 			if trip.BookingID == nil {
 				return nil
 			}
@@ -1023,6 +1048,27 @@ func (h *TripHandlers) CompleteTrip(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	if breakdown {
+		desc := "Breakdown reported at trip close"
+		if breakdownNote != "" {
+			desc += ": " + breakdownNote
+		}
+		if closedVehicleID != "" {
+			desc += " (vehicle " + closedVehicleID + ")"
+		}
+		if h.Services != nil && h.Services.OpsAlerts != nil {
+			_, _ = h.Services.OpsAlerts.CreateAlert(r.Context(), service.OpsAlert{
+				TenantID:    string(tenant),
+				AlertType:   service.OpsAlertVehicleBreakdown,
+				Severity:    service.OpsAlertSeverityHigh,
+				Title:       "Vehicle breakdown at trip close",
+				Description: desc,
+				EntityType:  strPtr("trip"),
+				EntityID:    &id,
+			})
+		}
 	}
 
 	http.Redirect(w, r, "/trips/"+id, http.StatusSeeOther)

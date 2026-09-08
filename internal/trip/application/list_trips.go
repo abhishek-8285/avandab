@@ -140,6 +140,7 @@ func (uc *ListTripsUseCase) Execute(ctx context.Context, q ListTripsQuery) (List
 				InTransitAt:               t.InTransitAt,
 				DeliveredAt:               t.DeliveredAt,
 				CompletedAt:               t.CompletedAt,
+				CloseOdometer:             t.CloseOdometer,
 			}
 		}
 

@@ -34,6 +34,7 @@ type TripReadModel struct {
 	InTransitAt               *time.Time
 	DeliveredAt               *time.Time
 	CompletedAt               *time.Time
+	CloseOdometer             *float64
 }
 
 // ConflictInfo describes a trip that conflicts with a proposed assignment.

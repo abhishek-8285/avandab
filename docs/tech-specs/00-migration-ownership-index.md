@@ -1,8 +1,10 @@
 # Migration Ownership Index
 
 Single source of truth for `db/migrations/` version numbers. Repo head is
-`00039_experiments.sql` (TAKEN — never edit). Every new migration appends
-`00040` and up. **This table is authoritative; spec §3 numbers MUST match it.**
+`00129_trip_close_reading.sql`; next free slot is `00130`.
+(`00039_experiments.sql` remains TAKEN — never edit.) Every new migration
+appends the next free number. **This table is authoritative; spec §3 numbers
+MUST match it.**
 
 ## Rules
 - ONE feature owns ONE migration number. Never reuse, never renumber an
@@ -91,6 +93,7 @@ Single source of truth for `db/migrations/` version numbers. Repo head is
 | 00109 | dispatch offers & driver command idempotency (dispatch_offers, driver_commands) | Spec 09 / Phase 6 |
 | 00110 | customer quotes & booking pipeline (customer_quotes, customer_booking_details) | Phase 7 |
 | 00111 | driver settlement ledger & payout orchestration (driver_ledger_entries, payout_instructions, provider_events) | Phase 8 |
+| 00112 | `trip_stops` multi-leg execution (stop sequence, OTP/POD per stop) | Phase 8 Priority 5A |
 | 00113 | `driver_settlements.tenant_id` — Multi-tenant driver settlements & multi-stop EWB stage tracking | Priority 5B |
 | 00114 | `commercial_entitlements_and_subscriptions` — Plan catalog, tenant subscriptions, quotas, meters & usage events | Spec 25 Commercialization |
 | 00115 | `subscription_webhook_events` — Razorpay subscription webhooks idempotency & out-of-order protection | Spec 25A Lifecycle |
@@ -107,7 +110,8 @@ Single source of truth for `db/migrations/` version numbers. Repo head is
 | 00126 | fleet registry SOP parity — 35 SOP columns + `blocked` status CHECK rebuild + `vehicle_measuring_points`/`vehicle_measurements` | Fleet registry SOP parity spec |
 | 00127 | `eway_bill_events` CHECK gains `DELIVERED` (TripDeliveredEvent handler inserts it on every delivery) | E-Way Bill lifecycle |
 | 00128 | `eway_bills.status` CHECK gains `part_a` + `delivered` (autogenerate transitions active→part_a→delivered; old CHECK silently failed the delivery UPDATE) | E-Way Bill lifecycle |
-| 00121+ | future specs | reserved |
+| 00129 | `trips.close_odometer` — TMS SOP trip close reading (close dialog writes reading; CompletedAt is close date/time; breakdown reuses ops_alerts.vehicle_breakdown, no DDL) | Fleet registry SOP parity spec §1 follow-up (ZMOTM_MMS pp.6-8) |
+| 00130+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

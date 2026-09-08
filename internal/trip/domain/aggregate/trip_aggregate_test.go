@@ -8,6 +8,31 @@ import (
 	"transport-app/internal/shared"
 )
 
+func TestTripAggregate_RecordCloseReading(t *testing.T) {
+	now := time.Now()
+	agg := NewTripAggregate("tr-c", shared.TenantID("1"), "TR-C", nil, "route-1", now.Add(2*time.Hour), "", now)
+	assert.NoError(t, agg.Schedule(now))
+	assert.NoError(t, agg.AssignDriver("driver-1", now))
+	assert.NoError(t, agg.Start(now))
+	assert.NoError(t, agg.ReachPickup(now))
+	assert.NoError(t, agg.StartTransit(now))
+	assert.NoError(t, agg.Deliver(now))
+
+	// Reading before completion is rejected.
+	assert.Error(t, agg.RecordCloseReading(125400, now))
+
+	assert.NoError(t, agg.Complete(now))
+	assert.NoError(t, agg.RecordCloseReading(125400, now.Add(time.Minute)))
+	if agg.CloseOdometer == nil {
+		t.Fatal("CloseOdometer nil after record")
+	}
+	assert.InDelta(t, 125400.0, *agg.CloseOdometer, 0.001)
+
+	// Non-positive readings mean "not recorded".
+	assert.Error(t, agg.RecordCloseReading(0, now))
+	assert.Error(t, agg.RecordCloseReading(-5, now))
+}
+
 func TestNewTripAggregate(t *testing.T) {
 	now := time.Now()
 	tenantID := shared.TenantID("1")

@@ -310,54 +310,56 @@ func (q *Queries) CountTripsByStatus(ctx context.Context, arg CountTripsByStatus
 const createTrip = `-- name: CreateTrip :one
 INSERT INTO trips (id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version,
-    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, idempotency_key)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)
+    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, idempotency_key, close_odometer)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version, created_at, updated_at,
-    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, idempotency_key
+    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, idempotency_key, close_odometer
 `
 
 type CreateTripParams struct {
-	ID              string         `json:"id"`
-	TripNumber      string         `json:"trip_number"`
-	BookingID       sql.NullString `json:"booking_id"`
-	DriverID        sql.NullString `json:"driver_id"`
-	VehicleID       sql.NullString `json:"vehicle_id"`
-	RouteID         string         `json:"route_id"`
-	DepartureTime   time.Time      `json:"departure_time"`
-	ArrivalTime     sql.NullTime   `json:"arrival_time"`
-	Status          string         `json:"status"`
-	Remarks         sql.NullString `json:"remarks"`
-	TenantID        string         `json:"tenant_id"`
-	StartedAt       sql.NullTime   `json:"started_at"`
-	ReachedPickupAt sql.NullTime   `json:"reached_pickup_at"`
-	InTransitAt     sql.NullTime   `json:"in_transit_at"`
-	DeliveredAt     sql.NullTime   `json:"delivered_at"`
-	CompletedAt     sql.NullTime   `json:"completed_at"`
-	IdempotencyKey  sql.NullString `json:"idempotency_key"`
+	ID              string          `json:"id"`
+	TripNumber      string          `json:"trip_number"`
+	BookingID       sql.NullString  `json:"booking_id"`
+	DriverID        sql.NullString  `json:"driver_id"`
+	VehicleID       sql.NullString  `json:"vehicle_id"`
+	RouteID         string          `json:"route_id"`
+	DepartureTime   time.Time       `json:"departure_time"`
+	ArrivalTime     sql.NullTime    `json:"arrival_time"`
+	Status          string          `json:"status"`
+	Remarks         sql.NullString  `json:"remarks"`
+	TenantID        string          `json:"tenant_id"`
+	StartedAt       sql.NullTime    `json:"started_at"`
+	ReachedPickupAt sql.NullTime    `json:"reached_pickup_at"`
+	InTransitAt     sql.NullTime    `json:"in_transit_at"`
+	DeliveredAt     sql.NullTime    `json:"delivered_at"`
+	CompletedAt     sql.NullTime    `json:"completed_at"`
+	IdempotencyKey  sql.NullString  `json:"idempotency_key"`
+	CloseOdometer   sql.NullFloat64 `json:"close_odometer"`
 }
 
 type CreateTripRow struct {
-	ID              string         `json:"id"`
-	TripNumber      string         `json:"trip_number"`
-	BookingID       sql.NullString `json:"booking_id"`
-	DriverID        sql.NullString `json:"driver_id"`
-	VehicleID       sql.NullString `json:"vehicle_id"`
-	RouteID         string         `json:"route_id"`
-	DepartureTime   time.Time      `json:"departure_time"`
-	ArrivalTime     sql.NullTime   `json:"arrival_time"`
-	Status          string         `json:"status"`
-	Remarks         sql.NullString `json:"remarks"`
-	TenantID        string         `json:"tenant_id"`
-	Version         int64          `json:"version"`
-	CreatedAt       time.Time      `json:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at"`
-	StartedAt       sql.NullTime   `json:"started_at"`
-	ReachedPickupAt sql.NullTime   `json:"reached_pickup_at"`
-	InTransitAt     sql.NullTime   `json:"in_transit_at"`
-	DeliveredAt     sql.NullTime   `json:"delivered_at"`
-	CompletedAt     sql.NullTime   `json:"completed_at"`
-	IdempotencyKey  sql.NullString `json:"idempotency_key"`
+	ID              string          `json:"id"`
+	TripNumber      string          `json:"trip_number"`
+	BookingID       sql.NullString  `json:"booking_id"`
+	DriverID        sql.NullString  `json:"driver_id"`
+	VehicleID       sql.NullString  `json:"vehicle_id"`
+	RouteID         string          `json:"route_id"`
+	DepartureTime   time.Time       `json:"departure_time"`
+	ArrivalTime     sql.NullTime    `json:"arrival_time"`
+	Status          string          `json:"status"`
+	Remarks         sql.NullString  `json:"remarks"`
+	TenantID        string          `json:"tenant_id"`
+	Version         int64           `json:"version"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+	StartedAt       sql.NullTime    `json:"started_at"`
+	ReachedPickupAt sql.NullTime    `json:"reached_pickup_at"`
+	InTransitAt     sql.NullTime    `json:"in_transit_at"`
+	DeliveredAt     sql.NullTime    `json:"delivered_at"`
+	CompletedAt     sql.NullTime    `json:"completed_at"`
+	IdempotencyKey  sql.NullString  `json:"idempotency_key"`
+	CloseOdometer   sql.NullFloat64 `json:"close_odometer"`
 }
 
 func (q *Queries) CreateTrip(ctx context.Context, arg CreateTripParams) (CreateTripRow, error) {
@@ -379,6 +381,7 @@ func (q *Queries) CreateTrip(ctx context.Context, arg CreateTripParams) (CreateT
 		arg.DeliveredAt,
 		arg.CompletedAt,
 		arg.IdempotencyKey,
+		arg.CloseOdometer,
 	)
 	var i CreateTripRow
 	err := row.Scan(
@@ -402,6 +405,7 @@ func (q *Queries) CreateTrip(ctx context.Context, arg CreateTripParams) (CreateT
 		&i.DeliveredAt,
 		&i.CompletedAt,
 		&i.IdempotencyKey,
+		&i.CloseOdometer,
 	)
 	return i, err
 }
@@ -507,7 +511,7 @@ func (q *Queries) GetOverdueTrips(ctx context.Context, tenantID string) ([]GetOv
 const getTripByBookingID = `-- name: GetTripByBookingID :one
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.tenant_id, t.version, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
     d.driver_id AS driver_display_id, d.first_name AS driver_first_name, d.last_name AS driver_last_name,
     v.registration_number AS vehicle_registration_number, v.vehicle_number AS vehicle_number,
     r.source AS route_source, r.destination AS route_destination
@@ -524,32 +528,33 @@ type GetTripByBookingIDParams struct {
 }
 
 type GetTripByBookingIDRow struct {
-	ID                        string         `json:"id"`
-	TripNumber                string         `json:"trip_number"`
-	BookingID                 sql.NullString `json:"booking_id"`
-	DriverID                  sql.NullString `json:"driver_id"`
-	VehicleID                 sql.NullString `json:"vehicle_id"`
-	RouteID                   string         `json:"route_id"`
-	DepartureTime             time.Time      `json:"departure_time"`
-	ArrivalTime               sql.NullTime   `json:"arrival_time"`
-	Status                    string         `json:"status"`
-	Remarks                   sql.NullString `json:"remarks"`
-	TenantID                  string         `json:"tenant_id"`
-	Version                   int64          `json:"version"`
-	CreatedAt                 time.Time      `json:"created_at"`
-	UpdatedAt                 time.Time      `json:"updated_at"`
-	StartedAt                 sql.NullTime   `json:"started_at"`
-	ReachedPickupAt           sql.NullTime   `json:"reached_pickup_at"`
-	InTransitAt               sql.NullTime   `json:"in_transit_at"`
-	DeliveredAt               sql.NullTime   `json:"delivered_at"`
-	CompletedAt               sql.NullTime   `json:"completed_at"`
-	DriverDisplayID           sql.NullString `json:"driver_display_id"`
-	DriverFirstName           sql.NullString `json:"driver_first_name"`
-	DriverLastName            sql.NullString `json:"driver_last_name"`
-	VehicleRegistrationNumber sql.NullString `json:"vehicle_registration_number"`
-	VehicleNumber             sql.NullString `json:"vehicle_number"`
-	RouteSource               sql.NullString `json:"route_source"`
-	RouteDestination          sql.NullString `json:"route_destination"`
+	ID                        string          `json:"id"`
+	TripNumber                string          `json:"trip_number"`
+	BookingID                 sql.NullString  `json:"booking_id"`
+	DriverID                  sql.NullString  `json:"driver_id"`
+	VehicleID                 sql.NullString  `json:"vehicle_id"`
+	RouteID                   string          `json:"route_id"`
+	DepartureTime             time.Time       `json:"departure_time"`
+	ArrivalTime               sql.NullTime    `json:"arrival_time"`
+	Status                    string          `json:"status"`
+	Remarks                   sql.NullString  `json:"remarks"`
+	TenantID                  string          `json:"tenant_id"`
+	Version                   int64           `json:"version"`
+	CreatedAt                 time.Time       `json:"created_at"`
+	UpdatedAt                 time.Time       `json:"updated_at"`
+	StartedAt                 sql.NullTime    `json:"started_at"`
+	ReachedPickupAt           sql.NullTime    `json:"reached_pickup_at"`
+	InTransitAt               sql.NullTime    `json:"in_transit_at"`
+	DeliveredAt               sql.NullTime    `json:"delivered_at"`
+	CompletedAt               sql.NullTime    `json:"completed_at"`
+	CloseOdometer             sql.NullFloat64 `json:"close_odometer"`
+	DriverDisplayID           sql.NullString  `json:"driver_display_id"`
+	DriverFirstName           sql.NullString  `json:"driver_first_name"`
+	DriverLastName            sql.NullString  `json:"driver_last_name"`
+	VehicleRegistrationNumber sql.NullString  `json:"vehicle_registration_number"`
+	VehicleNumber             sql.NullString  `json:"vehicle_number"`
+	RouteSource               sql.NullString  `json:"route_source"`
+	RouteDestination          sql.NullString  `json:"route_destination"`
 }
 
 func (q *Queries) GetTripByBookingID(ctx context.Context, arg GetTripByBookingIDParams) (GetTripByBookingIDRow, error) {
@@ -575,6 +580,7 @@ func (q *Queries) GetTripByBookingID(ctx context.Context, arg GetTripByBookingID
 		&i.InTransitAt,
 		&i.DeliveredAt,
 		&i.CompletedAt,
+		&i.CloseOdometer,
 		&i.DriverDisplayID,
 		&i.DriverFirstName,
 		&i.DriverLastName,
@@ -589,7 +595,7 @@ func (q *Queries) GetTripByBookingID(ctx context.Context, arg GetTripByBookingID
 const getTripByID = `-- name: GetTripByID :one
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.tenant_id, t.version, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
     d.driver_id AS driver_display_id, d.first_name AS driver_first_name, d.last_name AS driver_last_name,
     v.registration_number AS vehicle_registration_number, v.vehicle_number AS vehicle_number,
     r.source AS route_source, r.destination AS route_destination
@@ -606,32 +612,33 @@ type GetTripByIDParams struct {
 }
 
 type GetTripByIDRow struct {
-	ID                        string         `json:"id"`
-	TripNumber                string         `json:"trip_number"`
-	BookingID                 sql.NullString `json:"booking_id"`
-	DriverID                  sql.NullString `json:"driver_id"`
-	VehicleID                 sql.NullString `json:"vehicle_id"`
-	RouteID                   string         `json:"route_id"`
-	DepartureTime             time.Time      `json:"departure_time"`
-	ArrivalTime               sql.NullTime   `json:"arrival_time"`
-	Status                    string         `json:"status"`
-	Remarks                   sql.NullString `json:"remarks"`
-	TenantID                  string         `json:"tenant_id"`
-	Version                   int64          `json:"version"`
-	CreatedAt                 time.Time      `json:"created_at"`
-	UpdatedAt                 time.Time      `json:"updated_at"`
-	StartedAt                 sql.NullTime   `json:"started_at"`
-	ReachedPickupAt           sql.NullTime   `json:"reached_pickup_at"`
-	InTransitAt               sql.NullTime   `json:"in_transit_at"`
-	DeliveredAt               sql.NullTime   `json:"delivered_at"`
-	CompletedAt               sql.NullTime   `json:"completed_at"`
-	DriverDisplayID           sql.NullString `json:"driver_display_id"`
-	DriverFirstName           sql.NullString `json:"driver_first_name"`
-	DriverLastName            sql.NullString `json:"driver_last_name"`
-	VehicleRegistrationNumber sql.NullString `json:"vehicle_registration_number"`
-	VehicleNumber             sql.NullString `json:"vehicle_number"`
-	RouteSource               sql.NullString `json:"route_source"`
-	RouteDestination          sql.NullString `json:"route_destination"`
+	ID                        string          `json:"id"`
+	TripNumber                string          `json:"trip_number"`
+	BookingID                 sql.NullString  `json:"booking_id"`
+	DriverID                  sql.NullString  `json:"driver_id"`
+	VehicleID                 sql.NullString  `json:"vehicle_id"`
+	RouteID                   string          `json:"route_id"`
+	DepartureTime             time.Time       `json:"departure_time"`
+	ArrivalTime               sql.NullTime    `json:"arrival_time"`
+	Status                    string          `json:"status"`
+	Remarks                   sql.NullString  `json:"remarks"`
+	TenantID                  string          `json:"tenant_id"`
+	Version                   int64           `json:"version"`
+	CreatedAt                 time.Time       `json:"created_at"`
+	UpdatedAt                 time.Time       `json:"updated_at"`
+	StartedAt                 sql.NullTime    `json:"started_at"`
+	ReachedPickupAt           sql.NullTime    `json:"reached_pickup_at"`
+	InTransitAt               sql.NullTime    `json:"in_transit_at"`
+	DeliveredAt               sql.NullTime    `json:"delivered_at"`
+	CompletedAt               sql.NullTime    `json:"completed_at"`
+	CloseOdometer             sql.NullFloat64 `json:"close_odometer"`
+	DriverDisplayID           sql.NullString  `json:"driver_display_id"`
+	DriverFirstName           sql.NullString  `json:"driver_first_name"`
+	DriverLastName            sql.NullString  `json:"driver_last_name"`
+	VehicleRegistrationNumber sql.NullString  `json:"vehicle_registration_number"`
+	VehicleNumber             sql.NullString  `json:"vehicle_number"`
+	RouteSource               sql.NullString  `json:"route_source"`
+	RouteDestination          sql.NullString  `json:"route_destination"`
 }
 
 func (q *Queries) GetTripByID(ctx context.Context, arg GetTripByIDParams) (GetTripByIDRow, error) {
@@ -657,6 +664,7 @@ func (q *Queries) GetTripByID(ctx context.Context, arg GetTripByIDParams) (GetTr
 		&i.InTransitAt,
 		&i.DeliveredAt,
 		&i.CompletedAt,
+		&i.CloseOdometer,
 		&i.DriverDisplayID,
 		&i.DriverFirstName,
 		&i.DriverLastName,
@@ -671,7 +679,7 @@ func (q *Queries) GetTripByID(ctx context.Context, arg GetTripByIDParams) (GetTr
 const getTripByIdempotencyKey = `-- name: GetTripByIdempotencyKey :one
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.tenant_id, t.version, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
     d.driver_id AS driver_display_id, d.first_name AS driver_first_name, d.last_name AS driver_last_name,
     v.registration_number AS vehicle_registration_number, v.vehicle_number AS vehicle_number,
     r.source AS route_source, r.destination AS route_destination
@@ -688,32 +696,33 @@ type GetTripByIdempotencyKeyParams struct {
 }
 
 type GetTripByIdempotencyKeyRow struct {
-	ID                        string         `json:"id"`
-	TripNumber                string         `json:"trip_number"`
-	BookingID                 sql.NullString `json:"booking_id"`
-	DriverID                  sql.NullString `json:"driver_id"`
-	VehicleID                 sql.NullString `json:"vehicle_id"`
-	RouteID                   string         `json:"route_id"`
-	DepartureTime             time.Time      `json:"departure_time"`
-	ArrivalTime               sql.NullTime   `json:"arrival_time"`
-	Status                    string         `json:"status"`
-	Remarks                   sql.NullString `json:"remarks"`
-	TenantID                  string         `json:"tenant_id"`
-	Version                   int64          `json:"version"`
-	CreatedAt                 time.Time      `json:"created_at"`
-	UpdatedAt                 time.Time      `json:"updated_at"`
-	StartedAt                 sql.NullTime   `json:"started_at"`
-	ReachedPickupAt           sql.NullTime   `json:"reached_pickup_at"`
-	InTransitAt               sql.NullTime   `json:"in_transit_at"`
-	DeliveredAt               sql.NullTime   `json:"delivered_at"`
-	CompletedAt               sql.NullTime   `json:"completed_at"`
-	DriverDisplayID           sql.NullString `json:"driver_display_id"`
-	DriverFirstName           sql.NullString `json:"driver_first_name"`
-	DriverLastName            sql.NullString `json:"driver_last_name"`
-	VehicleRegistrationNumber sql.NullString `json:"vehicle_registration_number"`
-	VehicleNumber             sql.NullString `json:"vehicle_number"`
-	RouteSource               sql.NullString `json:"route_source"`
-	RouteDestination          sql.NullString `json:"route_destination"`
+	ID                        string          `json:"id"`
+	TripNumber                string          `json:"trip_number"`
+	BookingID                 sql.NullString  `json:"booking_id"`
+	DriverID                  sql.NullString  `json:"driver_id"`
+	VehicleID                 sql.NullString  `json:"vehicle_id"`
+	RouteID                   string          `json:"route_id"`
+	DepartureTime             time.Time       `json:"departure_time"`
+	ArrivalTime               sql.NullTime    `json:"arrival_time"`
+	Status                    string          `json:"status"`
+	Remarks                   sql.NullString  `json:"remarks"`
+	TenantID                  string          `json:"tenant_id"`
+	Version                   int64           `json:"version"`
+	CreatedAt                 time.Time       `json:"created_at"`
+	UpdatedAt                 time.Time       `json:"updated_at"`
+	StartedAt                 sql.NullTime    `json:"started_at"`
+	ReachedPickupAt           sql.NullTime    `json:"reached_pickup_at"`
+	InTransitAt               sql.NullTime    `json:"in_transit_at"`
+	DeliveredAt               sql.NullTime    `json:"delivered_at"`
+	CompletedAt               sql.NullTime    `json:"completed_at"`
+	CloseOdometer             sql.NullFloat64 `json:"close_odometer"`
+	DriverDisplayID           sql.NullString  `json:"driver_display_id"`
+	DriverFirstName           sql.NullString  `json:"driver_first_name"`
+	DriverLastName            sql.NullString  `json:"driver_last_name"`
+	VehicleRegistrationNumber sql.NullString  `json:"vehicle_registration_number"`
+	VehicleNumber             sql.NullString  `json:"vehicle_number"`
+	RouteSource               sql.NullString  `json:"route_source"`
+	RouteDestination          sql.NullString  `json:"route_destination"`
 }
 
 func (q *Queries) GetTripByIdempotencyKey(ctx context.Context, arg GetTripByIdempotencyKeyParams) (GetTripByIdempotencyKeyRow, error) {
@@ -739,6 +748,7 @@ func (q *Queries) GetTripByIdempotencyKey(ctx context.Context, arg GetTripByIdem
 		&i.InTransitAt,
 		&i.DeliveredAt,
 		&i.CompletedAt,
+		&i.CloseOdometer,
 		&i.DriverDisplayID,
 		&i.DriverFirstName,
 		&i.DriverLastName,
@@ -753,7 +763,7 @@ func (q *Queries) GetTripByIdempotencyKey(ctx context.Context, arg GetTripByIdem
 const getTripByNumber = `-- name: GetTripByNumber :one
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.tenant_id, t.version, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
     d.driver_id AS driver_display_id, d.first_name AS driver_first_name, d.last_name AS driver_last_name,
     v.registration_number AS vehicle_registration_number, v.vehicle_number AS vehicle_number,
     r.source AS route_source, r.destination AS route_destination
@@ -770,32 +780,33 @@ type GetTripByNumberParams struct {
 }
 
 type GetTripByNumberRow struct {
-	ID                        string         `json:"id"`
-	TripNumber                string         `json:"trip_number"`
-	BookingID                 sql.NullString `json:"booking_id"`
-	DriverID                  sql.NullString `json:"driver_id"`
-	VehicleID                 sql.NullString `json:"vehicle_id"`
-	RouteID                   string         `json:"route_id"`
-	DepartureTime             time.Time      `json:"departure_time"`
-	ArrivalTime               sql.NullTime   `json:"arrival_time"`
-	Status                    string         `json:"status"`
-	Remarks                   sql.NullString `json:"remarks"`
-	TenantID                  string         `json:"tenant_id"`
-	Version                   int64          `json:"version"`
-	CreatedAt                 time.Time      `json:"created_at"`
-	UpdatedAt                 time.Time      `json:"updated_at"`
-	StartedAt                 sql.NullTime   `json:"started_at"`
-	ReachedPickupAt           sql.NullTime   `json:"reached_pickup_at"`
-	InTransitAt               sql.NullTime   `json:"in_transit_at"`
-	DeliveredAt               sql.NullTime   `json:"delivered_at"`
-	CompletedAt               sql.NullTime   `json:"completed_at"`
-	DriverDisplayID           sql.NullString `json:"driver_display_id"`
-	DriverFirstName           sql.NullString `json:"driver_first_name"`
-	DriverLastName            sql.NullString `json:"driver_last_name"`
-	VehicleRegistrationNumber sql.NullString `json:"vehicle_registration_number"`
-	VehicleNumber             sql.NullString `json:"vehicle_number"`
-	RouteSource               sql.NullString `json:"route_source"`
-	RouteDestination          sql.NullString `json:"route_destination"`
+	ID                        string          `json:"id"`
+	TripNumber                string          `json:"trip_number"`
+	BookingID                 sql.NullString  `json:"booking_id"`
+	DriverID                  sql.NullString  `json:"driver_id"`
+	VehicleID                 sql.NullString  `json:"vehicle_id"`
+	RouteID                   string          `json:"route_id"`
+	DepartureTime             time.Time       `json:"departure_time"`
+	ArrivalTime               sql.NullTime    `json:"arrival_time"`
+	Status                    string          `json:"status"`
+	Remarks                   sql.NullString  `json:"remarks"`
+	TenantID                  string          `json:"tenant_id"`
+	Version                   int64           `json:"version"`
+	CreatedAt                 time.Time       `json:"created_at"`
+	UpdatedAt                 time.Time       `json:"updated_at"`
+	StartedAt                 sql.NullTime    `json:"started_at"`
+	ReachedPickupAt           sql.NullTime    `json:"reached_pickup_at"`
+	InTransitAt               sql.NullTime    `json:"in_transit_at"`
+	DeliveredAt               sql.NullTime    `json:"delivered_at"`
+	CompletedAt               sql.NullTime    `json:"completed_at"`
+	CloseOdometer             sql.NullFloat64 `json:"close_odometer"`
+	DriverDisplayID           sql.NullString  `json:"driver_display_id"`
+	DriverFirstName           sql.NullString  `json:"driver_first_name"`
+	DriverLastName            sql.NullString  `json:"driver_last_name"`
+	VehicleRegistrationNumber sql.NullString  `json:"vehicle_registration_number"`
+	VehicleNumber             sql.NullString  `json:"vehicle_number"`
+	RouteSource               sql.NullString  `json:"route_source"`
+	RouteDestination          sql.NullString  `json:"route_destination"`
 }
 
 func (q *Queries) GetTripByNumber(ctx context.Context, arg GetTripByNumberParams) (GetTripByNumberRow, error) {
@@ -821,6 +832,7 @@ func (q *Queries) GetTripByNumber(ctx context.Context, arg GetTripByNumberParams
 		&i.InTransitAt,
 		&i.DeliveredAt,
 		&i.CompletedAt,
+		&i.CloseOdometer,
 		&i.DriverDisplayID,
 		&i.DriverFirstName,
 		&i.DriverLastName,
@@ -921,7 +933,7 @@ func (q *Queries) GetTripsByDate(ctx context.Context, arg GetTripsByDateParams) 
 const searchTrips = `-- name: SearchTrips :many
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.tenant_id, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
     d.driver_id AS driver_display_id, d.first_name AS driver_first_name, d.last_name AS driver_last_name,
     v.registration_number AS vehicle_registration_number, v.vehicle_number AS vehicle_number,
     r.source AS route_source, r.destination AS route_destination
@@ -945,31 +957,32 @@ type SearchTripsParams struct {
 }
 
 type SearchTripsRow struct {
-	ID                        string         `json:"id"`
-	TripNumber                string         `json:"trip_number"`
-	BookingID                 sql.NullString `json:"booking_id"`
-	DriverID                  sql.NullString `json:"driver_id"`
-	VehicleID                 sql.NullString `json:"vehicle_id"`
-	RouteID                   string         `json:"route_id"`
-	DepartureTime             time.Time      `json:"departure_time"`
-	ArrivalTime               sql.NullTime   `json:"arrival_time"`
-	Status                    string         `json:"status"`
-	Remarks                   sql.NullString `json:"remarks"`
-	TenantID                  string         `json:"tenant_id"`
-	CreatedAt                 time.Time      `json:"created_at"`
-	UpdatedAt                 time.Time      `json:"updated_at"`
-	StartedAt                 sql.NullTime   `json:"started_at"`
-	ReachedPickupAt           sql.NullTime   `json:"reached_pickup_at"`
-	InTransitAt               sql.NullTime   `json:"in_transit_at"`
-	DeliveredAt               sql.NullTime   `json:"delivered_at"`
-	CompletedAt               sql.NullTime   `json:"completed_at"`
-	DriverDisplayID           sql.NullString `json:"driver_display_id"`
-	DriverFirstName           sql.NullString `json:"driver_first_name"`
-	DriverLastName            sql.NullString `json:"driver_last_name"`
-	VehicleRegistrationNumber sql.NullString `json:"vehicle_registration_number"`
-	VehicleNumber             sql.NullString `json:"vehicle_number"`
-	RouteSource               sql.NullString `json:"route_source"`
-	RouteDestination          sql.NullString `json:"route_destination"`
+	ID                        string          `json:"id"`
+	TripNumber                string          `json:"trip_number"`
+	BookingID                 sql.NullString  `json:"booking_id"`
+	DriverID                  sql.NullString  `json:"driver_id"`
+	VehicleID                 sql.NullString  `json:"vehicle_id"`
+	RouteID                   string          `json:"route_id"`
+	DepartureTime             time.Time       `json:"departure_time"`
+	ArrivalTime               sql.NullTime    `json:"arrival_time"`
+	Status                    string          `json:"status"`
+	Remarks                   sql.NullString  `json:"remarks"`
+	TenantID                  string          `json:"tenant_id"`
+	CreatedAt                 time.Time       `json:"created_at"`
+	UpdatedAt                 time.Time       `json:"updated_at"`
+	StartedAt                 sql.NullTime    `json:"started_at"`
+	ReachedPickupAt           sql.NullTime    `json:"reached_pickup_at"`
+	InTransitAt               sql.NullTime    `json:"in_transit_at"`
+	DeliveredAt               sql.NullTime    `json:"delivered_at"`
+	CompletedAt               sql.NullTime    `json:"completed_at"`
+	CloseOdometer             sql.NullFloat64 `json:"close_odometer"`
+	DriverDisplayID           sql.NullString  `json:"driver_display_id"`
+	DriverFirstName           sql.NullString  `json:"driver_first_name"`
+	DriverLastName            sql.NullString  `json:"driver_last_name"`
+	VehicleRegistrationNumber sql.NullString  `json:"vehicle_registration_number"`
+	VehicleNumber             sql.NullString  `json:"vehicle_number"`
+	RouteSource               sql.NullString  `json:"route_source"`
+	RouteDestination          sql.NullString  `json:"route_destination"`
 }
 
 func (q *Queries) SearchTrips(ctx context.Context, arg SearchTripsParams) ([]SearchTripsRow, error) {
@@ -1006,6 +1019,7 @@ func (q *Queries) SearchTrips(ctx context.Context, arg SearchTripsParams) ([]Sea
 			&i.InTransitAt,
 			&i.DeliveredAt,
 			&i.CompletedAt,
+			&i.CloseOdometer,
 			&i.DriverDisplayID,
 			&i.DriverFirstName,
 			&i.DriverLastName,
@@ -1031,56 +1045,58 @@ const updateTrip = `-- name: UpdateTrip :one
 UPDATE trips
 SET trip_number = ?, booking_id = ?, driver_id = ?, vehicle_id = ?, route_id = ?,
     departure_time = ?, arrival_time = ?, status = ?, remarks = ?,
-    started_at = ?, reached_pickup_at = ?, in_transit_at = ?, delivered_at = ?, completed_at = ?,
+    started_at = ?, reached_pickup_at = ?, in_transit_at = ?, delivered_at = ?, completed_at = ?, close_odometer = ?,
     version = version + 1,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks,
-    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at,
+    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, close_odometer,
     id, tenant_id, version, created_at, updated_at
 `
 
 type UpdateTripParams struct {
-	TripNumber      string         `json:"trip_number"`
-	BookingID       sql.NullString `json:"booking_id"`
-	DriverID        sql.NullString `json:"driver_id"`
-	VehicleID       sql.NullString `json:"vehicle_id"`
-	RouteID         string         `json:"route_id"`
-	DepartureTime   time.Time      `json:"departure_time"`
-	ArrivalTime     sql.NullTime   `json:"arrival_time"`
-	Status          string         `json:"status"`
-	Remarks         sql.NullString `json:"remarks"`
-	StartedAt       sql.NullTime   `json:"started_at"`
-	ReachedPickupAt sql.NullTime   `json:"reached_pickup_at"`
-	InTransitAt     sql.NullTime   `json:"in_transit_at"`
-	DeliveredAt     sql.NullTime   `json:"delivered_at"`
-	CompletedAt     sql.NullTime   `json:"completed_at"`
-	ID              string         `json:"id"`
-	TenantID        string         `json:"tenant_id"`
-	Version         int64          `json:"version"`
+	TripNumber      string          `json:"trip_number"`
+	BookingID       sql.NullString  `json:"booking_id"`
+	DriverID        sql.NullString  `json:"driver_id"`
+	VehicleID       sql.NullString  `json:"vehicle_id"`
+	RouteID         string          `json:"route_id"`
+	DepartureTime   time.Time       `json:"departure_time"`
+	ArrivalTime     sql.NullTime    `json:"arrival_time"`
+	Status          string          `json:"status"`
+	Remarks         sql.NullString  `json:"remarks"`
+	StartedAt       sql.NullTime    `json:"started_at"`
+	ReachedPickupAt sql.NullTime    `json:"reached_pickup_at"`
+	InTransitAt     sql.NullTime    `json:"in_transit_at"`
+	DeliveredAt     sql.NullTime    `json:"delivered_at"`
+	CompletedAt     sql.NullTime    `json:"completed_at"`
+	CloseOdometer   sql.NullFloat64 `json:"close_odometer"`
+	ID              string          `json:"id"`
+	TenantID        string          `json:"tenant_id"`
+	Version         int64           `json:"version"`
 }
 
 type UpdateTripRow struct {
-	TripNumber      string         `json:"trip_number"`
-	BookingID       sql.NullString `json:"booking_id"`
-	DriverID        sql.NullString `json:"driver_id"`
-	VehicleID       sql.NullString `json:"vehicle_id"`
-	RouteID         string         `json:"route_id"`
-	DepartureTime   time.Time      `json:"departure_time"`
-	ArrivalTime     sql.NullTime   `json:"arrival_time"`
-	Status          string         `json:"status"`
-	Remarks         sql.NullString `json:"remarks"`
-	StartedAt       sql.NullTime   `json:"started_at"`
-	ReachedPickupAt sql.NullTime   `json:"reached_pickup_at"`
-	InTransitAt     sql.NullTime   `json:"in_transit_at"`
-	DeliveredAt     sql.NullTime   `json:"delivered_at"`
-	CompletedAt     sql.NullTime   `json:"completed_at"`
-	ID              string         `json:"id"`
-	TenantID        string         `json:"tenant_id"`
-	Version         int64          `json:"version"`
-	CreatedAt       time.Time      `json:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at"`
+	TripNumber      string          `json:"trip_number"`
+	BookingID       sql.NullString  `json:"booking_id"`
+	DriverID        sql.NullString  `json:"driver_id"`
+	VehicleID       sql.NullString  `json:"vehicle_id"`
+	RouteID         string          `json:"route_id"`
+	DepartureTime   time.Time       `json:"departure_time"`
+	ArrivalTime     sql.NullTime    `json:"arrival_time"`
+	Status          string          `json:"status"`
+	Remarks         sql.NullString  `json:"remarks"`
+	StartedAt       sql.NullTime    `json:"started_at"`
+	ReachedPickupAt sql.NullTime    `json:"reached_pickup_at"`
+	InTransitAt     sql.NullTime    `json:"in_transit_at"`
+	DeliveredAt     sql.NullTime    `json:"delivered_at"`
+	CompletedAt     sql.NullTime    `json:"completed_at"`
+	CloseOdometer   sql.NullFloat64 `json:"close_odometer"`
+	ID              string          `json:"id"`
+	TenantID        string          `json:"tenant_id"`
+	Version         int64           `json:"version"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 func (q *Queries) UpdateTrip(ctx context.Context, arg UpdateTripParams) (UpdateTripRow, error) {
@@ -1099,6 +1115,7 @@ func (q *Queries) UpdateTrip(ctx context.Context, arg UpdateTripParams) (UpdateT
 		arg.InTransitAt,
 		arg.DeliveredAt,
 		arg.CompletedAt,
+		arg.CloseOdometer,
 		arg.ID,
 		arg.TenantID,
 		arg.Version,
@@ -1119,6 +1136,7 @@ func (q *Queries) UpdateTrip(ctx context.Context, arg UpdateTripParams) (UpdateT
 		&i.InTransitAt,
 		&i.DeliveredAt,
 		&i.CompletedAt,
+		&i.CloseOdometer,
 		&i.ID,
 		&i.TenantID,
 		&i.Version,
@@ -1189,46 +1207,48 @@ func (q *Queries) UpdateTripStatus(ctx context.Context, arg UpdateTripStatusPara
 
 const updateTripTimeline = `-- name: UpdateTripTimeline :one
 UPDATE trips
-SET started_at = ?, reached_pickup_at = ?, in_transit_at = ?, delivered_at = ?, completed_at = ?,
+SET started_at = ?, reached_pickup_at = ?, in_transit_at = ?, delivered_at = ?, completed_at = ?, close_odometer = ?,
     status = ?, version = version + 1, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version, created_at, updated_at,
-    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at
+    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, close_odometer
 `
 
 type UpdateTripTimelineParams struct {
-	StartedAt       sql.NullTime `json:"started_at"`
-	ReachedPickupAt sql.NullTime `json:"reached_pickup_at"`
-	InTransitAt     sql.NullTime `json:"in_transit_at"`
-	DeliveredAt     sql.NullTime `json:"delivered_at"`
-	CompletedAt     sql.NullTime `json:"completed_at"`
-	Status          string       `json:"status"`
-	ID              string       `json:"id"`
-	TenantID        string       `json:"tenant_id"`
-	Version         int64        `json:"version"`
+	StartedAt       sql.NullTime    `json:"started_at"`
+	ReachedPickupAt sql.NullTime    `json:"reached_pickup_at"`
+	InTransitAt     sql.NullTime    `json:"in_transit_at"`
+	DeliveredAt     sql.NullTime    `json:"delivered_at"`
+	CompletedAt     sql.NullTime    `json:"completed_at"`
+	CloseOdometer   sql.NullFloat64 `json:"close_odometer"`
+	Status          string          `json:"status"`
+	ID              string          `json:"id"`
+	TenantID        string          `json:"tenant_id"`
+	Version         int64           `json:"version"`
 }
 
 type UpdateTripTimelineRow struct {
-	ID              string         `json:"id"`
-	TripNumber      string         `json:"trip_number"`
-	BookingID       sql.NullString `json:"booking_id"`
-	DriverID        sql.NullString `json:"driver_id"`
-	VehicleID       sql.NullString `json:"vehicle_id"`
-	RouteID         string         `json:"route_id"`
-	DepartureTime   time.Time      `json:"departure_time"`
-	ArrivalTime     sql.NullTime   `json:"arrival_time"`
-	Status          string         `json:"status"`
-	Remarks         sql.NullString `json:"remarks"`
-	TenantID        string         `json:"tenant_id"`
-	Version         int64          `json:"version"`
-	CreatedAt       time.Time      `json:"created_at"`
-	UpdatedAt       time.Time      `json:"updated_at"`
-	StartedAt       sql.NullTime   `json:"started_at"`
-	ReachedPickupAt sql.NullTime   `json:"reached_pickup_at"`
-	InTransitAt     sql.NullTime   `json:"in_transit_at"`
-	DeliveredAt     sql.NullTime   `json:"delivered_at"`
-	CompletedAt     sql.NullTime   `json:"completed_at"`
+	ID              string          `json:"id"`
+	TripNumber      string          `json:"trip_number"`
+	BookingID       sql.NullString  `json:"booking_id"`
+	DriverID        sql.NullString  `json:"driver_id"`
+	VehicleID       sql.NullString  `json:"vehicle_id"`
+	RouteID         string          `json:"route_id"`
+	DepartureTime   time.Time       `json:"departure_time"`
+	ArrivalTime     sql.NullTime    `json:"arrival_time"`
+	Status          string          `json:"status"`
+	Remarks         sql.NullString  `json:"remarks"`
+	TenantID        string          `json:"tenant_id"`
+	Version         int64           `json:"version"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+	StartedAt       sql.NullTime    `json:"started_at"`
+	ReachedPickupAt sql.NullTime    `json:"reached_pickup_at"`
+	InTransitAt     sql.NullTime    `json:"in_transit_at"`
+	DeliveredAt     sql.NullTime    `json:"delivered_at"`
+	CompletedAt     sql.NullTime    `json:"completed_at"`
+	CloseOdometer   sql.NullFloat64 `json:"close_odometer"`
 }
 
 func (q *Queries) UpdateTripTimeline(ctx context.Context, arg UpdateTripTimelineParams) (UpdateTripTimelineRow, error) {
@@ -1238,6 +1258,7 @@ func (q *Queries) UpdateTripTimeline(ctx context.Context, arg UpdateTripTimeline
 		arg.InTransitAt,
 		arg.DeliveredAt,
 		arg.CompletedAt,
+		arg.CloseOdometer,
 		arg.Status,
 		arg.ID,
 		arg.TenantID,
@@ -1264,6 +1285,7 @@ func (q *Queries) UpdateTripTimeline(ctx context.Context, arg UpdateTripTimeline
 		&i.InTransitAt,
 		&i.DeliveredAt,
 		&i.CompletedAt,
+		&i.CloseOdometer,
 	)
 	return i, err
 }

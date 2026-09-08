@@ -63,7 +63,8 @@ CREATE TABLE trips (
     in_transit_at DATETIME,
     delivered_at DATETIME,
     completed_at DATETIME,
-    idempotency_key TEXT
+    idempotency_key TEXT,
+    close_odometer REAL
 );
 CREATE TABLE outbox_events (
     id TEXT PRIMARY KEY,
@@ -236,6 +237,42 @@ func TestTripRepository_Save_WithTimelineFields(t *testing.T) {
 	require.NotNil(t, rm.InTransitAt)
 	require.NotNil(t, rm.DeliveredAt)
 	require.NotNil(t, rm.CompletedAt)
+}
+
+func TestTripRepository_Save_CloseOdometerRoundTrip(t *testing.T) {
+	dbConn := setupTripTestDB(t)
+	seedRoute(t, dbConn, "route-1", "A", "B")
+	repo := NewTripRepository(dbConn)
+	ctx := context.Background()
+	now := time.Date(2026, 8, 6, 12, 0, 0, 0, time.UTC)
+	agg := newTestTripAgg("tr-close", "1", "TR-CLOSE-01", nil, "route-1", now.Add(2*time.Hour), "", now)
+	require.NoError(t, agg.Schedule(now))
+	require.NoError(t, agg.AssignDriver("drv-1", now))
+	require.NoError(t, agg.Start(now.Add(time.Hour)))
+	require.NoError(t, agg.ReachPickup(now.Add(2*time.Hour)))
+	require.NoError(t, agg.StartTransit(now.Add(3*time.Hour)))
+	require.NoError(t, agg.Deliver(now.Add(4*time.Hour)))
+	require.NoError(t, agg.Complete(now.Add(5*time.Hour)))
+	require.NoError(t, agg.RecordCloseReading(125400.5, now.Add(5*time.Hour)))
+	require.NoError(t, repo.Save(ctx, agg))
+
+	found, err := repo.Find(ctx, "tr-close", "1")
+	require.NoError(t, err)
+	require.NotNil(t, found.CloseOdometer)
+	assert.InDelta(t, 125400.5, *found.CloseOdometer, 0.001)
+
+	rm, err := repo.GetReadModel(ctx, "tr-close", "1")
+	require.NoError(t, err)
+	require.NotNil(t, rm.CloseOdometer)
+	assert.InDelta(t, 125400.5, *rm.CloseOdometer, 0.001)
+
+	// Trips closed without a reading stay NULL.
+	agg2 := newTestTripAgg("tr-noread", "1", "TR-NOREAD-01", nil, "route-1", now.Add(2*time.Hour), "", now)
+	require.NoError(t, agg2.Schedule(now))
+	require.NoError(t, repo.Save(ctx, agg2))
+	found2, err := repo.Find(ctx, "tr-noread", "1")
+	require.NoError(t, err)
+	assert.Nil(t, found2.CloseOdometer)
 }
 
 func TestTripRepository_Save_ConcurrencyConflict(t *testing.T) {

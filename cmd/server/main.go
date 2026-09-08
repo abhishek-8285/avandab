@@ -614,6 +614,7 @@ func main() {
 	)
 	tripAPIHandler := tripHandlers.NewAPITripHandler(
 		createTrip, assignDriver, assignVehicle, scheduleTrip, startTrip, reachPickup, startTransit, deliver, completeTrip, cancelTrip, getTrip, listTrips,
+		services.OpsAlerts,
 		authSvc,
 	)
 	vehicleAPIHandler := vehicleAPIHandlers.NewAPIVehicleHandler(
