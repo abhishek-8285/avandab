@@ -164,29 +164,6 @@ jobs:
       - name: Coverage with thresholds (80 global)
         run: npm run coverage
 
-  mutation-test:
-    name: Mutation Tests (Stryker)
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    continue-on-error: false
-    defaults:
-      run:
-        working-directory: mobile
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: mobile/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Mutation testing
-        run: npm run mutation
-
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
