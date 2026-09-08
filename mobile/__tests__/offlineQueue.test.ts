@@ -307,4 +307,29 @@ describe('OfflineQueue', () => {
     expect(remaining).toHaveLength(1);
     expect(remaining[0].latitude).toBe(3);
   });
+
+  test('GPS flush sends per-log ids and falls back to success-clear on legacy ack', async () => {
+    await OfflineQueue.enqueueGPS({
+      driver_id: 'drv_1',
+      latitude: 18.5204,
+      longitude: 73.8567,
+      timestamp: new Date().toISOString(),
+    });
+
+    let sentBody: any = null;
+    global.fetch = jest.fn().mockImplementation(async (url: string, opts: any) => {
+      if (url.includes('/telemetry/sync')) {
+        sentBody = JSON.parse(opts.body);
+        // Legacy server: success without synced_ids.
+        return { ok: true, json: async () => ({ success: true }) };
+      }
+      return { ok: true, json: async () => ({}) };
+    }) as any;
+
+    const result = await OfflineQueue.flush();
+    expect(result.gpsFlushed).toBe(1);
+    expect(sentBody.logs).toHaveLength(1);
+    expect(sentBody.logs[0].id).toBeDefined();
+    expect(await OfflineQueue.pendingGPS()).toHaveLength(0);
+  });
 });

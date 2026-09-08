@@ -16,6 +16,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -101,11 +102,41 @@ func TestPostgresMigrations(t *testing.T) {
 		t.Fatalf("goose version check: %v", err)
 	}
 	t.Logf("postgres migrated to version %d", version)
-	if version != 128 {
-		t.Errorf("postgres version = %d, want 128 (full chain)", version)
+	// Expected version derives from the migration files themselves, never a
+	// hardcoded literal — hardcoding rotted this gate on every migration
+	// (want-128 vs actual-134 after 00129–00134 landed).
+	want := maxMigrationVersion(t, migrations)
+	if version != want {
+		t.Errorf("postgres version = %d, want %d (full chain)", version, want)
 	}
 }
 
 func fsSub() (fs.FS, error) {
 	return fs.Sub(dbmigr.MigrationsPG, appdb.MigrationDir("postgres"))
+}
+
+// maxMigrationVersion returns the highest numeric prefix among the embedded
+// .sql migration files (e.g. 00134_... → 134). Numbering has gaps from
+// historical renumbers, so file count is not a substitute.
+func maxMigrationVersion(t *testing.T, migFS fs.FS) int {
+	t.Helper()
+	entries, err := fs.ReadDir(migFS, ".")
+	if err != nil {
+		t.Fatalf("read migrations dir: %v", err)
+	}
+	max := 0
+	for _, e := range entries {
+		name := e.Name()
+		if len(name) < 5 || name[len(name)-4:] != ".sql" {
+			continue
+		}
+		var v int
+		if v, err = strconv.Atoi(name[:5]); err == nil && v > max {
+			max = v
+		}
+	}
+	if max == 0 {
+		t.Fatal("no versioned migrations found")
+	}
+	return max
 }
