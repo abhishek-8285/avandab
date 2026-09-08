@@ -18,7 +18,7 @@ export class CommandProcessor {
       for (const cmd of pending) {
         await commandQueue.updateCommandState(cmd.commandId, 'SYNCING');
         try {
-          let url = `${getApiBaseURL()}/api/v1/drivers/me/commands`;
+          let url = '';
           let bodyPayload: any = {
             command_id: cmd.commandId,
             type: cmd.type,
@@ -30,13 +30,13 @@ export class CommandProcessor {
             url = `${getApiBaseURL()}/api/v1/sos`;
             bodyPayload = cmd.payload;
           } else if (cmd.type === 'REACH_STOP') {
-            url = `${getApiBaseURL()}/trips/${cmd.payload.trip_id}/stops/${cmd.payload.stop_id}/reach`;
+            url = `${getApiBaseURL()}/api/v1/trips/${cmd.payload.trip_id}/stops/${cmd.payload.stop_id}/reach`;
             bodyPayload = cmd.payload;
           } else if (cmd.type === 'SUBMIT_STOP_POD') {
-            url = `${getApiBaseURL()}/trips/${cmd.payload.trip_id}/stops/${cmd.payload.stop_id}/pod`;
+            url = `${getApiBaseURL()}/api/v1/trips/${cmd.payload.trip_id}/stops/${cmd.payload.stop_id}/pod`;
             bodyPayload = cmd.payload;
           } else if (cmd.type === 'COMPLETE_STOP') {
-            url = `${getApiBaseURL()}/trips/${cmd.payload.trip_id}/stops/${cmd.payload.stop_id}/complete`;
+            url = `${getApiBaseURL()}/api/v1/trips/${cmd.payload.trip_id}/stops/${cmd.payload.stop_id}/complete`;
             bodyPayload = cmd.payload;
           } else if (cmd.type === 'START_TRIP') {
             url = `${getApiBaseURL()}/api/v1/trips/${cmd.payload.trip_id}/start`;
@@ -44,6 +44,15 @@ export class CommandProcessor {
           } else if (cmd.type === 'COMPLETE_TRIP') {
             url = `${getApiBaseURL()}/api/v1/trips/${cmd.payload.trip_id}/complete`;
             bodyPayload = cmd.payload;
+          } else {
+            // No generic /drivers/me/commands endpoint exists server-side:
+            // unknown types fail loud instead of POSTing to a 404 and
+            // stalling the queue behind a hopeless retry.
+            await commandQueue.updateCommandState(cmd.commandId, 'FAILED', {
+              errorMessage: `Unknown command type: ${cmd.type}`,
+            });
+            failed++;
+            continue;
           }
 
           const res = await fetch(url, {

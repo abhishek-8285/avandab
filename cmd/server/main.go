@@ -465,6 +465,9 @@ func main() {
 	resetTokens := auth.NewResetTokenStore(0)
 	app := handlers.NewApp(services, cfg, authStore, database, authSvc, resetTokens)
 	app.OTPStore = auth.NewOTPStore(0)
+	// Email-verification tokens live apart from password-reset tokens (a
+	// verify link must never redeem as a reset). 24h window: inbox delays.
+	app.VerifyTokens = auth.NewResetTokenStore(24 * time.Hour)
 	// Spec 22 S9 — compliance radar (docs 30/7/1d + EWB 12/4h) fed by the
 	// existing pipeline; sweep is leader-elected hourly below.
 	complianceRadar := service.NewComplianceRadarService(database, alertEngine, logger)
@@ -972,6 +975,12 @@ func main() {
 		r.Post("/api/v1/trips/{id}/deliver-pod", app.Kharcha.DeliverWithPOD)
 		r.With(middleware.ResourcePermission(authSvc, "trips", "update")).Post("/api/v1/driver/trips/{id}/stops/{stopId}/pod", app.Trips.SubmitStopPOD)
 		r.With(middleware.ResourcePermission(authSvc, "trips", "update")).Post("/api/v1/trips/{id}/stops/{stopId}/pod", app.Trips.SubmitStopPOD)
+		// Multistop reach/complete over the Bearer API: the mobile app posts
+		// here (offline queue + POD screen). The /trips/... twins are
+		// session-cookie web routes — Bearer calls there 303 to /login,
+		// which fetch follows into a false-success 200 (POD silently lost).
+		r.With(middleware.ResourcePermission(authSvc, "trips", "update")).Post("/api/v1/trips/{id}/stops/{stopId}/reach", app.Trips.ReachStop)
+		r.With(middleware.ResourcePermission(authSvc, "trips", "update")).Post("/api/v1/trips/{id}/stops/{stopId}/complete", app.Trips.CompleteStop)
 		r.Post("/api/v1/sos", app.SOS.TriggerSOS)
 		r.Post("/api/sos", app.SOS.TriggerSOS)
 		// Driver expense claims from mobile (Spec 13) — same trips:update
@@ -1174,6 +1183,7 @@ func main() {
 		r.With(middleware.RateLimitDistributed(appCache, 10)).Post("/forgot-password", app.Auth.SubmitForgotPassword)
 		r.Get("/reset-password", app.Auth.ResetPasswordPage)
 		r.With(middleware.RateLimitDistributed(appCache, 10)).Post("/reset-password", app.Auth.SubmitResetPassword)
+		r.With(middleware.RateLimitDistributed(appCache, 10)).Get("/verify-email", app.Auth.VerifyEmailPage)
 		r.Post("/logout", app.Auth.Logout)
 
 		// Public Contact & Status Tracking
@@ -1227,6 +1237,7 @@ func main() {
 			// User Setup & Onboarding
 			r.Get("/user/onboard", app.Auth.UserOnboardingPage)
 			r.Post("/user/onboard", app.Auth.SaveUserOnboard)
+			r.Post("/user/send-verification", app.Auth.SendVerificationEmail)
 
 			// Global cross-entity search (topbar)
 			r.Get("/search", app.SearchPage)

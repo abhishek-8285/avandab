@@ -48,6 +48,8 @@
 - **Transport**: ASCII strings over TCP on port `:5023`.
 - **Packet Structure**: `$PVT,IMEI,Date(DDMMYYYY),Time(HHMMSS),Lat,LatDir,Lng,LngDir,Speed,Heading,Satellites,Ignition,Emergency*Checksum`.
 - **Coordinate Transformation**: Converts raw NMEA `DDMM.MMMM` format into signed standard decimal degrees.
+- **Checksum**: NMEA-style XOR over the body is verified when `*XX` is present (corrupted frames rejected); absent checksum tolerated for devices that omit it.
+- **Note**: Teltonika Codec 8/8E/16 binary (plus OBD badge) is also decoded on the same TCP port (`teltonika.go`, wired in `tcp_ingest.go`) though not covered by this section.
 
 ### C. Mobile App & REST Ingest (`internal/telemetry/http_ingest.go`)
 - **Endpoint**: `POST /api/v1/telemetry/devices/{imei}/gps` and `POST /api/v1/telemetry/sync`.
@@ -61,8 +63,8 @@
 | :--- | :--- | :--- |
 | **Async Ring-Buffer** | `async_queue.go` | Non-blocking 10,000 capacity queue. Enqueues frames in `< 0.1ms` for immediate tracker ACKs. |
 | **Out-of-Order Guard** | `ingest.go` | When a tracker reconnects after a 2-3 hour network drop and dumps 1,000 offline points, the live map (`vehicle_latest_position`) only accepts the newest timestamp. Older breadcrumbs go cleanly to history without causing the truck on the map to jump backwards. |
-| **Parked Dedup Guard** | `ingest.go` | When speed is 0 km/h and distance moved is < 50 meters within 10 minutes, duplicate stationary rows are dropped, saving ~70% database storage. |
-| **Quarantine Isolation**| `quarantine.go` | Unknown IMEIs are isolated into `telemetry_quarantine` table with raw payloads, preventing unauthorized devices from affecting live operations. |
+| **Parked Dedup Guard** | `ingest.go` | When the motion flag is 0 and distance moved is < 50 meters within 10 minutes, duplicate stationary rows are dropped, saving ~70% database storage. |
+| **Quarantine Isolation**| `quarantine.go` | Unknown IMEIs are isolated into the `device_quarantine` table with raw payloads, preventing unauthorized devices from affecting live operations. |
 | **Socket Timeout** | `tcp_ingest.go` | Strict 5-minute read deadlines disconnect idle sockets to prevent Slowloris resource exhaustion. |
 
 ---

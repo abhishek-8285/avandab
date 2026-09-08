@@ -1,7 +1,7 @@
 # Migration Ownership Index
 
 Single source of truth for `db/migrations/` version numbers. Repo head is
-`00129_trip_close_reading.sql`; next free slot is `00130`.
+`00134_snapshot_ts_unix.sql`; next free slot is `00135`.
 (`00039_experiments.sql` remains TAKEN — never edit.) Every new migration
 appends the next free number. **This table is authoritative; spec §3 numbers
 MUST match it.**
@@ -115,7 +115,11 @@ which always allocate head-ward from the maximum above.
 | 00128 | `eway_bills.status` CHECK gains `part_a` + `delivered` (autogenerate transitions active→part_a→delivered; old CHECK silently failed the delivery UPDATE) | E-Way Bill lifecycle |
 | 00129 | `trips.close_odometer` — TMS SOP trip close reading (close dialog writes reading; CompletedAt is close date/time; breakdown reuses ops_alerts.vehicle_breakdown, no DDL) | Fleet registry SOP parity spec §1 follow-up (ZMOTM_MMS pp.6-8) |
 | 00130 | `tenant_company_profiles.gstin_verify_status` + `gstin_verified_at` — GSTIN live-verification seam (UNVERIFIED default; provider worker flips PENDING→VERIFIED/FAILED later; checksum stays the entry gate) | Onboarding tax verification |
-| 00131+ | future specs | reserved |
+| 00131 | `drivers.license_number` + `license_expiry` go nullable (rebuild per 00126; `DL-PENDING` backfilled to NULL/NULL) — unknown license is NULL, never a fabricated placeholder | Driver onboarding |
+| 00132 | `vehicles.insurance_expiry` + `fitness_expiry` + `permit_expiry` go nullable (rebuild per 00126; NO backfill — fabricated +1y indistinguishable from real) — unknown doc date is NULL | Driver onboarding |
+| 00133 | `users.email_verified_at` (NULL = unverified) — email verification badge; set on link consume or Google OAuth | User onboarding |
+| 00134 | `telemetry_snapshots.ts_unix` (epoch seconds, NULL when unparseable) — machine-readable clock; pipeline writes on insert, backfill covers strftime-parseable rows only (Go-String rows stay NULL, never silently wrong) | GPS tracking timestamp-seam hardening |
+| 00135+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

@@ -9,7 +9,9 @@ import (
 	"testing"
 	"time"
 
+	tripevents "transport-app/internal/domain/trip"
 	"transport-app/internal/events"
+	"transport-app/internal/shared"
 )
 
 type flushRecorder struct {
@@ -179,4 +181,114 @@ func TestStreamHandler_QueryFilters(t *testing.T) {
 
 	cancel()
 	<-done
+}
+
+func TestStreamHandler_TenantIsolation(t *testing.T) {
+	hub := NewHub(15, nil)
+	handler := StreamHandler(hub, true)
+
+	ctx, cancel := context.WithCancel(shared.ContextWithTenantID(context.Background(), "1"))
+	defer cancel()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/stream", nil).WithContext(ctx)
+	rec := newFlushRecorder()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		handler(rec, req)
+	}()
+	time.Sleep(20 * time.Millisecond)
+
+	// Cross-tenant stamped event must never reach this stream.
+	hub.Publish(context.Background(), events.Event{
+		Type:    "telemetry.snapshot",
+		Payload: map[string]interface{}{"tenant_id": "2", "vehicle_id": "v-other"},
+	})
+	// Same-tenant stamped event must arrive.
+	hub.Publish(context.Background(), events.Event{
+		Type:    "telemetry.snapshot",
+		Payload: map[string]interface{}{"tenant_id": "1", "vehicle_id": "v-mine"},
+	})
+
+	select {
+	case frame := <-rec.writes:
+		if !strings.Contains(frame, "v-mine") {
+			t.Fatalf("expected same-tenant frame, got %s", frame)
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatal("timed out waiting for same-tenant event")
+	}
+	select {
+	case frame := <-rec.writes:
+		t.Fatalf("cross-tenant event leaked: %s", frame)
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	// Struct payloads (SOS) carry tenant_id via json tags — same rule.
+	hub.Publish(context.Background(), events.Event{
+		Type:    "SOSEvent",
+		Payload: map[string]interface{}{"tenant_id": "2", "vehicle_id": "v-sos-other"},
+	})
+	select {
+	case frame := <-rec.writes:
+		t.Fatalf("cross-tenant SOS leaked: %s", frame)
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(1 * time.Second):
+		t.Fatal("handler did not exit on client context cancellation")
+	}
+}
+
+func TestStreamHandler_TenantIsolationStructPayload(t *testing.T) {
+	hub := NewHub(15, nil)
+	handler := StreamHandler(hub, true)
+
+	ctx, cancel := context.WithCancel(shared.ContextWithTenantID(context.Background(), "1"))
+	defer cancel()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/stream", nil).WithContext(ctx)
+	rec := newFlushRecorder()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		handler(rec, req)
+	}()
+	time.Sleep(20 * time.Millisecond)
+
+	// Struct payloads marshal TenantID (capital key) — same rule applies.
+	hub.Publish(context.Background(), events.Event{
+		Type:    "trip.completed",
+		Payload: tripevents.TripCompletedEvent{TripID: "t-1", TenantID: "2"},
+	})
+	hub.Publish(context.Background(), events.Event{
+		Type:    "trip.completed",
+		Payload: tripevents.TripCompletedEvent{TripID: "t-2", TenantID: "1"},
+	})
+
+	select {
+	case frame := <-rec.writes:
+		if !strings.Contains(frame, "t-2") {
+			t.Fatalf("expected same-tenant trip frame, got %s", frame)
+		}
+	case <-time.After(1 * time.Second):
+		t.Fatal("timed out waiting for same-tenant trip event")
+	}
+	select {
+	case frame := <-rec.writes:
+		t.Fatalf("cross-tenant trip event leaked: %s", frame)
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(1 * time.Second):
+		t.Fatal("handler did not exit on client context cancellation")
+	}
 }

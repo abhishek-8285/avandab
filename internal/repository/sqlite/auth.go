@@ -85,12 +85,14 @@ func (r *SQLRepository) GetUserByEmail(ctx context.Context, email string) (domai
 
 func (r *SQLRepository) UpdateUser(ctx context.Context, user domain.User) (domain.User, error) {
 	updated, err := r.Q(ctx).UpdateUser(ctx, db.UpdateUserParams{
-		Email:  user.Email,
-		Name:   user.Name,
-		Phone:  nullString(user.Phone),
-		RoleID: user.Role.ID,
-		Status: string(user.Status),
-		ID:     string(user.ID),
+		Email:           user.Email,
+		Name:            user.Name,
+		Phone:           nullString(user.Phone),
+		RoleID:          user.Role.ID,
+		Status:          string(user.Status),
+		Timezone:        user.Timezone,
+		EmailVerifiedAt: nullTime(user.EmailVerifiedAt),
+		ID:              string(user.ID),
 	})
 	if err != nil {
 		return domain.User{}, err

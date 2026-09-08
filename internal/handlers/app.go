@@ -49,6 +49,12 @@ type App struct {
 	// ResetTokens issues and verifies single-use password-reset tokens.
 	ResetTokens *auth.ResetTokenStore
 
+	// VerifyTokens issues single-use email-verification tokens. Separate
+	// namespace from ResetTokens on purpose: a verify link must never redeem
+	// as a password reset and vice versa. Nil disables /verify-email with a
+	// clear error (same convention as OTPStore).
+	VerifyTokens *auth.ResetTokenStore
+
 	// OTPStore issues and verifies one-time SMS passcodes (Phase 4 phone
 	// verification). Nil disables /api/v1/auth/otp/* with a generic 500.
 	OTPStore *auth.OTPStore

@@ -181,6 +181,17 @@ Every task response MUST end with:
 - **Build Status:** [Pass/Fail + output]
 - **Test Status:** [Pass/Fail + output]
 - **Security Check:** [Pass/Fail — `./scripts/security-check.sh` summary: gosec/govulncheck/tenant/secret scans]
+- **Quality Rating:** [X/10 — nothing ships below 9; evidence-backed, see Quality Bar rule]
 - **Known Limitations / TODOs:** [brutally honest]
 - **Next Recommended Step:** [what the human/agent does next]
 ```
+
+### Quality Bar (standing user rule — minimum 9/10 on all work)
+1. Every deliverable is self-scored out of 10 in the verification report,
+   backed by evidence (tests, A/B proofs, probe outputs) — never vibes.
+2. Below 9, the work is NOT done: keep working, or state plainly what is
+   missing and what it would take. No silent 8s.
+3. A failed first attempt gets named with its score and why (e.g., "SQL
+   predicate fix: 6/10 — passed fixtures, died on production timestamp
+   formats"). Fixtures must match production formats; any test touching
+   timestamps includes at least one row written through the real write path.

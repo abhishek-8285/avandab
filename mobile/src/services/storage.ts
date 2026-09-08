@@ -61,6 +61,10 @@ export const initDatabase = async (): Promise<void> => {
       longitude REAL NOT NULL,
       timestamp TEXT NOT NULL,
       accuracy REAL,
+      speed REAL,
+      heading REAL,
+      motion INTEGER,
+      battery_level REAL,
       synced INTEGER DEFAULT 0
     );
 
@@ -82,6 +86,21 @@ export const initDatabase = async (): Promise<void> => {
     await db.execAsync(`ALTER TABLE offline_gps_logs ADD COLUMN accuracy REAL;`);
   } catch {
     // Column already present — expected on every run after first upgrade.
+  }
+  // Upgrade path for installs predating the parity columns written by
+  // logGPSLocation (speed/heading/motion/battery_level). Without these,
+  // every GPS log throws "no such column" at runtime.
+  for (const ddl of [
+    `ALTER TABLE offline_gps_logs ADD COLUMN speed REAL;`,
+    `ALTER TABLE offline_gps_logs ADD COLUMN heading REAL;`,
+    `ALTER TABLE offline_gps_logs ADD COLUMN motion INTEGER;`,
+    `ALTER TABLE offline_gps_logs ADD COLUMN battery_level REAL;`,
+  ]) {
+    try {
+      await db.execAsync(ddl);
+    } catch {
+      // Column already present — expected on every run after first upgrade.
+    }
   }
 };
 

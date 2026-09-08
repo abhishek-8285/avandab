@@ -2,11 +2,13 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -16,6 +18,7 @@ import (
 	"transport-app/internal/domain"
 	"transport-app/internal/experiments"
 	"transport-app/internal/middleware"
+	"transport-app/internal/operations/notifications"
 	"transport-app/internal/shared"
 	vehicleagg "transport-app/internal/vehicle/domain/aggregate"
 )
@@ -143,11 +146,68 @@ func TestSaveOnboard_WithFirstVehicleAndDriver_ProvisionsAndRedirectsToTracking(
 	require.NoError(t, err)
 	assert.Equal(t, 1, vehicleCount, "vehicle DL01AB9999 should be provisioned")
 
+	// Unknown doc dates stay NULL — no invented +1y placeholders.
+	var insExp, fitExp, perExp sql.NullString
+	err = app.DB.QueryRow(`SELECT insurance_expiry, fitness_expiry, permit_expiry FROM vehicles WHERE registration_number = 'DL01AB9999'`).Scan(&insExp, &fitExp, &perExp)
+	require.NoError(t, err)
+	assert.False(t, insExp.Valid, "insurance_expiry must be NULL until real docs are filed")
+	assert.False(t, fitExp.Valid, "fitness_expiry must be NULL until real docs are filed")
+	assert.False(t, perExp.Valid, "permit_expiry must be NULL until real docs are filed")
+
 	// Verify driver exists in database
 	var driverCount int
 	err = app.DB.QueryRow(`SELECT count(*) FROM drivers WHERE phone = '+91 99887 76655'`).Scan(&driverCount)
 	require.NoError(t, err)
 	assert.Equal(t, 1, driverCount, "driver Suresh Sharma should be provisioned")
+}
+
+func TestSaveOnboard_FirstDriverWithoutLicense_StoresNulls(t *testing.T) {
+	app := newRegisterTestApp(t)
+	sh := &SettingsHandlers{App: app}
+
+	form := url.Values{}
+	form.Set("company_name", "Null License Transport")
+	form.Set("email", "ops@nullicense.test")
+	form.Set("phone", "+91 90000 11111")
+	form.Set("address", "1 Draft Street")
+	// Step 3: First Driver with NO license — must not fabricate DL-<phone>.
+	form.Set("driver_name", "Licenseless Lal")
+	form.Set("driver_phone", "+91 90000 22222")
+
+	req := httptest.NewRequest(http.MethodPost, "/company/onboard", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	sessionAdmin := &auth.SessionData{UserID: "admin-3", Role: "admin"}
+	ctx := context.WithValue(req.Context(), auth.ContextUser, sessionAdmin)
+	ctx = shared.ContextWithTenantID(ctx, shared.TenantID("tenant-1"))
+	req = req.WithContext(ctx)
+
+	rr := httptest.NewRecorder()
+	sh.SaveOnboard(rr, req)
+
+	assert.Equal(t, http.StatusSeeOther, rr.Code)
+
+	var licNum, licExp sql.NullString
+	err := app.DB.QueryRow(`SELECT license_number, license_expiry FROM drivers WHERE phone = '+91 90000 22222'`).Scan(&licNum, &licExp)
+	require.NoError(t, err)
+	assert.False(t, licNum.Valid, "no DL-<phone> fabrication: license_number must be NULL")
+	assert.False(t, licExp.Valid, "no +5y fabrication: license_expiry must be NULL")
+}
+
+func TestOnboardPage_DraftPersistenceWiring(t *testing.T) {
+	app := newRegisterTestApp(t)
+	sh := &SettingsHandlers{App: app}
+
+	req := httptest.NewRequest(http.MethodGet, "/company/onboard", nil)
+	sessionAdmin := &auth.SessionData{UserID: "admin-1", Role: "admin"}
+	ctx := context.WithValue(req.Context(), auth.ContextUser, sessionAdmin)
+	req = req.WithContext(ctx)
+	rr := httptest.NewRecorder()
+	sh.OnboardPage(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	body := rr.Body.String()
+	assert.Contains(t, body, "avandab-company-onboard-draft", "draft persistence script must be present")
+	assert.Contains(t, body, "Finish later", "exit affordance must be present")
 }
 
 func TestSaveOnboard_MandatoryFieldValidations(t *testing.T) {
@@ -616,6 +676,117 @@ func TestSaveOnboard_ExperienceAndTenantNameSync(t *testing.T) {
 	require.NoError(t, app.DB.QueryRow(
 		`SELECT name FROM tenants WHERE id = 'tenant-1'`).Scan(&tenantName))
 	assert.Equal(t, "Sync Fleet Pvt Ltd", tenantName, "tenants.name must mirror wizard company_name")
+}
+
+func TestUserOnboardingPage_DynamicSteps(t *testing.T) {
+	app := newRegisterTestApp(t)
+	ah := NewAuthHandlers(app)
+	seedCtx := shared.ContextWithTenantID(context.Background(), shared.TenantID("tenant-1"))
+
+	owner, err := app.Services.Users.CreateUserWithPassword(
+		seedCtx, "owner-steps@test.com", "", "", "Str0ng!Passw0rd123",
+		domain.DefaultRoleID(domain.RoleOrgAdmin), domain.UserStatusActive, "tenant-1")
+	require.NoError(t, err)
+
+	render := func() string {
+		req := httptest.NewRequest(http.MethodGet, "/user/onboarding", nil)
+		ctx := context.WithValue(req.Context(), auth.ContextUser, &auth.SessionData{UserID: owner.ID.String(), Role: "org_admin"})
+		ctx = shared.ContextWithTenantID(ctx, shared.TenantID("tenant-1"))
+		rr := httptest.NewRecorder()
+		ah.UserOnboardingPage(rr, req.WithContext(ctx))
+		require.Equal(t, http.StatusOK, rr.Code)
+		return rr.Body.String()
+	}
+
+	// Fresh user: phone + name pending; timezone Completed is honest —
+	// registration defaults it to Asia/Kolkata. No fiction badges anywhere.
+	body := render()
+	assert.Contains(t, body, "Your Details")
+	assert.NotContains(t, body, "Government ID", "static Submitted badge must be gone")
+	assert.NotContains(t, body, "Profile Picture", "uncompletable steps must be gone")
+	assert.NotContains(t, body, "Bank Account Details")
+	assert.NotContains(t, body, "Driving Details")
+	assert.Equal(t, 2, strings.Count(body, `font-semibold text-amber-700 shrink-0">Pending`), "phone + name pending")
+	assert.Equal(t, 1, strings.Count(body, `font-semibold text-emerald-700 dark:text-emerald-300 shrink-0">Completed`), "defaulted timezone completed")
+	// Shared timezone partial: wide list, default-selected Kolkata.
+	assert.Contains(t, body, `value="Asia/Tokyo"`)
+	assert.Contains(t, body, `value="Asia/Kolkata" selected`)
+
+	// After saving phone + name + timezone, all three rows flip to Completed.
+	_, err = app.Services.Auth.UpdateProfile(seedCtx, owner.ID, "Step Owner", "+91 93333 00003", "Asia/Tokyo")
+	require.NoError(t, err)
+	body = render()
+	assert.Equal(t, 3, strings.Count(body, `font-semibold text-emerald-700 dark:text-emerald-300 shrink-0">Completed`))
+	assert.Contains(t, body, "93333 00003", "saved phone must surface (+ renders as &#43;)")
+	assert.Contains(t, body, `value="Asia/Tokyo" selected`)
+}
+
+func TestEmailVerificationFlow(t *testing.T) {
+	app := newRegisterTestApp(t)
+	ah := NewAuthHandlers(app)
+	seedCtx := shared.ContextWithTenantID(context.Background(), shared.TenantID("tenant-1"))
+	app.VerifyTokens = auth.NewResetTokenStore(time.Hour)
+	app.Notify = notifications.NewServiceWithChannels(
+		notifications.NewSMTPEmailSender(notifications.SMTPConfig{
+			Host: "smtp.test", From: "noreply@test",
+		}),
+		nil,
+	)
+
+	owner, err := app.Services.Users.CreateUserWithPassword(
+		seedCtx, "owner-verify@test.com", "Verify Owner", "", "Str0ng!Passw0rd123",
+		domain.DefaultRoleID(domain.RoleOrgAdmin), domain.UserStatusActive, "tenant-1")
+	require.NoError(t, err)
+
+	page := func() string {
+		req := httptest.NewRequest(http.MethodGet, "/user/onboarding", nil)
+		ctx := context.WithValue(req.Context(), auth.ContextUser, &auth.SessionData{UserID: owner.ID.String(), Role: "org_admin"})
+		ctx = shared.ContextWithTenantID(ctx, shared.TenantID("tenant-1"))
+		rr := httptest.NewRecorder()
+		ah.UserOnboardingPage(rr, req.WithContext(ctx))
+		require.Equal(t, http.StatusOK, rr.Code)
+		return rr.Body.String()
+	}
+
+	// Unverified: send-link affordance, no badge.
+	assert.Contains(t, page(), `action="/user/send-verification"`)
+	assert.NotContains(t, page(), ">Verified<")
+
+	// Send link → back to onboard.
+	sendReq := httptest.NewRequest(http.MethodPost, "/user/send-verification", nil)
+	sendCtx := context.WithValue(sendReq.Context(), auth.ContextUser, &auth.SessionData{UserID: owner.ID.String(), Role: "org_admin"})
+	sendCtx = shared.ContextWithTenantID(sendCtx, shared.TenantID("tenant-1"))
+	sendRR := httptest.NewRecorder()
+	ah.SendVerificationEmail(sendRR, sendReq.WithContext(sendCtx))
+	require.Equal(t, http.StatusSeeOther, sendRR.Code)
+	assert.Equal(t, "/user/onboard", sendRR.Header().Get("Location"))
+
+	// Consume → dashboard + flag stamped.
+	token, err := app.VerifyTokens.Create("owner-verify@test.com")
+	require.NoError(t, err)
+	verifyRR := httptest.NewRecorder()
+	ah.VerifyEmailPage(verifyRR, httptest.NewRequest(http.MethodGet, "/verify-email?token="+token, nil))
+	require.Equal(t, http.StatusSeeOther, verifyRR.Code)
+	assert.Equal(t, "/dashboard", verifyRR.Header().Get("Location"))
+
+	profile, err := app.Services.Auth.GetProfile(seedCtx, owner.ID)
+	require.NoError(t, err)
+	require.NotNil(t, profile.EmailVerifiedAt, "consumed link must stamp the flag")
+
+	// Single-use: replay bounces to login.
+	replayRR := httptest.NewRecorder()
+	ah.VerifyEmailPage(replayRR, httptest.NewRequest(http.MethodGet, "/verify-email?token="+token, nil))
+	assert.Equal(t, "/login", replayRR.Header().Get("Location"))
+
+	// Bogus token bounces to login, flag untouched.
+	bogusRR := httptest.NewRecorder()
+	ah.VerifyEmailPage(bogusRR, httptest.NewRequest(http.MethodGet, "/verify-email?token=nope", nil))
+	assert.Equal(t, "/login", bogusRR.Header().Get("Location"))
+
+	// Verified: badge replaces the button; re-marking is a no-op.
+	assert.Contains(t, page(), ">Verified<")
+	assert.NotContains(t, page(), `action="/user/send-verification"`)
+	require.NoError(t, app.Services.Users.MarkEmailVerified(seedCtx, "owner-verify@test.com"))
 }
 
 func TestSaveUserOnboard_SavesPhoneAndRoutes(t *testing.T) {

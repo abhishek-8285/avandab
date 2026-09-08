@@ -85,11 +85,15 @@ func (s *DriverAppService) RegisterDriver(ctx context.Context, tenantID, driverI
 		}
 
 		ex := s.exec(txCtx)
+		// Unknown license stays NULL (00131) — never a 'DL-PENDING' + invented
+		// expiry placeholder. NULL scans to zero values downstream, which the
+		// compliance checks already treat as "not expired" (same outcome the
+		// far-future fabrication produced, minus the lie in prod records).
 		_, err := ex.ExecContext(txCtx, `
 			INSERT INTO drivers (id, driver_id, first_name, last_name, phone, email, license_number, license_expiry, status, tenant_id)
-			VALUES ($1, $2, $3, $4, $5, $6, 'DL-PENDING', $7, 'available', $8)
+			VALUES ($1, $2, $3, $4, $5, $6, NULL, NULL, 'available', $7)
 			ON CONFLICT (driver_id) DO UPDATE SET updated_at = CURRENT_TIMESTAMP`,
-			driverID, driverID, firstName, lastName, phone, email, time.Now().UTC().AddDate(5, 0, 0).Format("2006-01-02"), tenantID)
+			driverID, driverID, firstName, lastName, phone, email, tenantID)
 		if err != nil {
 			return err
 		}
@@ -182,6 +186,61 @@ func (s *DriverAppService) GetOnboardingState(ctx context.Context, tenantID, dri
 	}, nil
 }
 
+// OnboardingFunnelDTO is the drop-off snapshot: where in-progress drivers are
+// stuck right now, plus terminal counts. Derived from driver_onboarding alone
+// (no new event writes); per-step history lives in audit_events if durations
+// are ever needed.
+type OnboardingFunnelDTO struct {
+	TenantID    string         `json:"tenant_id"`
+	Started     int            `json:"started"`
+	InProgress  int            `json:"in_progress"`
+	Submitted   int            `json:"submitted"`
+	Approved    int            `json:"approved"`
+	Rejected    int            `json:"rejected"`
+	StuckByStep map[string]int `json:"stuck_by_step"`
+}
+
+// OnboardingFunnelSteps is the canonical step order (matches the
+// driver_onboarding.current_step CHECK); zero-filled so charts get a stable shape.
+var OnboardingFunnelSteps = []string{"profile", "ownership_choice", "vehicle_binding", "kyc_documents", "bank_details", "pending_approval", "completed"}
+
+func (s *DriverAppService) GetOnboardingFunnel(ctx context.Context, tenantID string) (*OnboardingFunnelDTO, error) {
+	rows, err := s.exec(ctx).QueryContext(ctx, `
+		SELECT overall_status, current_step, COUNT(*)
+		FROM driver_onboarding
+		WHERE tenant_id = $1
+		GROUP BY overall_status, current_step`, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	funnel := &OnboardingFunnelDTO{TenantID: tenantID, StuckByStep: map[string]int{}}
+	for _, step := range OnboardingFunnelSteps {
+		funnel.StuckByStep[step] = 0
+	}
+	for rows.Next() {
+		var status, step string
+		var n int
+		if err := rows.Scan(&status, &step, &n); err != nil {
+			return nil, err
+		}
+		funnel.Started += n
+		switch status {
+		case "in_progress":
+			funnel.InProgress += n
+			funnel.StuckByStep[step] += n
+		case "submitted":
+			funnel.Submitted += n
+		case "approved":
+			funnel.Approved += n
+		case "rejected":
+			funnel.Rejected += n
+		}
+	}
+	return funnel, rows.Err()
+}
+
 func (s *DriverAppService) SubmitLicense(ctx context.Context, tenantID, driverID, licenseNumber, issuingAuth string, issuedOn, expiresOn time.Time, classes []string) error {
 	if strings.TrimSpace(licenseNumber) == "" {
 		return errors.New("license number cannot be empty")
@@ -208,7 +267,18 @@ func (s *DriverAppService) SubmitLicense(ctx context.Context, tenantID, driverID
 		}
 
 		ex := s.exec(txCtx)
+		// Mirror the submitted license onto the drivers row: before this the
+		// row carried NULLs from registration and nothing ever updated them.
 		_, err := ex.ExecContext(txCtx, `
+			UPDATE drivers
+			SET license_number = $1, license_expiry = $2, updated_at = CURRENT_TIMESTAMP
+			WHERE tenant_id = $3 AND driver_id = $4`,
+			strings.ToUpper(strings.TrimSpace(licenseNumber)), expiresOn.Format("2006-01-02"), tenantID, driverID)
+		if err != nil {
+			return err
+		}
+
+		_, err = ex.ExecContext(txCtx, `
 			UPDATE driver_onboarding
 			SET license_status = 'pending', current_step = 'kyc_documents'
 			WHERE tenant_id = $1 AND driver_id = $2`, tenantID, driverID)
@@ -417,10 +487,11 @@ func (s *DriverAppService) ReviewVehicleClaim(ctx context.Context, tenantID, cla
 			errV := ex.QueryRowContext(txCtx, `SELECT id FROM vehicles WHERE tenant_id = $1 AND registration_number = $2`, tenantID, regNum).Scan(&vehicleID)
 			if errV != nil {
 				vehicleID = uuid.NewString()
+				// Unknown doc dates stay NULL (00132), never invented +1y.
 				_, err = ex.ExecContext(txCtx, `
 					INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, capacity, fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, tenant_id)
-					VALUES ($1, $2, $3, 'truck', 5000, 'diesel', $4, $5, $6, 'available', $7)`,
-					vehicleID, regNum, regNum, time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), tenantID)
+					VALUES ($1, $2, $3, 'truck', 5000, 'diesel', NULL, NULL, NULL, 'available', $4)`,
+					vehicleID, regNum, regNum, tenantID)
 				if err != nil {
 					return err
 				}

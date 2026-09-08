@@ -21,7 +21,6 @@ import { BookingScheduleScreen } from './src/components/BookingScheduleScreen';
 import { LoginScreen } from './src/components/LoginScreen';
 import { RegisterScreen } from './src/components/RegisterScreen';
 import { ForgotPasswordScreen } from './src/components/ForgotPasswordScreen';
-import { FirstTimeSetupScreen } from './src/components/FirstTimeSetupScreen';
 import { DeliveryVerificationScreen } from './src/components/DeliveryVerificationScreen';
 import { ActiveNavigationScreen } from './src/components/ActiveNavigationScreen';
 import { ExpenseScreen } from './src/components/ExpenseScreen';

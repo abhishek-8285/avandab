@@ -15,6 +15,7 @@ type User struct {
 	Name            string
 	Phone           *string
 	Timezone        string
+	EmailVerifiedAt *time.Time
 	ThemePreference string
 	Role            Role
 	Status          UserStatus

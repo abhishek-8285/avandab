@@ -23,8 +23,8 @@ describe('Priority 6 — Mobile Operational Reliability & Fault-Tolerance', () =
   });
 
   test('1. Rapid Network Flapping (Offline -> Online -> Offline) retains queue integrity', async () => {
-    // 1. Enqueue dispatch accept while offline
-    const cmd1 = await commandQueue.enqueueCommand('ACCEPT_DISPATCH', { trip_id: 'trip-prod-101' }, 'idemp-disp-101');
+    // 1. Enqueue trip start while offline (START_TRIP is a real routed type)
+    const cmd1 = await commandQueue.enqueueCommand('START_TRIP', { trip_id: 'trip-prod-101' }, 'idemp-disp-101');
     expect(cmd1).toBeDefined();
 
     // 2. Simulate offline network failure on flush
@@ -123,5 +123,32 @@ describe('Priority 6 — Mobile Operational Reliability & Fault-Tolerance', () =
 
     const pending2 = await commandQueue.getPendingCommands();
     expect(pending2.length).toBe(0);
+  });
+});
+
+describe('Command routing safety', () => {
+  beforeEach(async () => {
+    resetSQLiteMockState();
+    await commandQueue.saveCommands([]);
+    useAuthStore.setState({ token: 'mock-valid-driver-token', user: { id: 'drv-prod-1' } as any });
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true }),
+    });
+  });
+
+  afterEach(() => {
+    global.fetch = globalFetch;
+  });
+
+  test('unknown command types fail loud without any network call', async () => {
+    await commandQueue.enqueueCommand('ACCEPT_DISPATCH', { trip_id: 'trip-x' }, 'idemp-unknown-1');
+    const res = await commandProcessor.flush('mock-valid-driver-token');
+    expect(res.failed).toBe(1);
+    expect(res.synced).toBe(0);
+    expect(global.fetch).not.toHaveBeenCalled();
+    const pending = await commandQueue.getPendingCommands();
+    expect(pending).toHaveLength(0);
   });
 });

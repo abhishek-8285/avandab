@@ -36,10 +36,8 @@
                     <label class="block text-xs font-semibold text-secondary mb-1">Timezone</label>
                     <select name="timezone"
                         class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
-                        <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
-                        <option value="UTC">UTC</option>
-                        <option value="Asia/Dubai">Asia/Dubai (GST)</option>
-                        <option value="America/New_York">America/New_York (ET)</option>
+                        {{$tz := ""}}{{if .UserDetail}}{{$tz = .UserDetail.Timezone}}{{end}}
+                        {{template "timezone_options.html" $tz}}
                     </select>
                 </div>
                 <button type="submit" class="w-full py-2.5 px-6 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 transition-all cursor-pointer">
@@ -47,63 +45,46 @@
                 </button>
             </form>
 
-            <!-- Required Steps -->
+            <!-- Your Details: badges below reflect the saved profile row, never
+                 placeholders. Fill the Contact Details form above to flip them. -->
+            {{$uname := ""}}{{$uphone := ""}}{{$utz := ""}}{{$uemail := ""}}{{$everified := false}}
+            {{if .UserDetail}}
+                {{$uname = .UserDetail.Name}}
+                {{$uphone = nullString .UserDetail.Phone}}
+                {{$utz = .UserDetail.Timezone}}
+                {{$uemail = .UserDetail.Email}}
+                {{if .UserDetail.EmailVerifiedAt}}{{$everified = true}}{{end}}
+            {{end}}
             <div class="mb-8">
-                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Required Steps</h2>
-                <div class="space-y-2.5">
-                    <a href="/profile" class="group flex items-center justify-between p-4 bg-surface-container-lowest border border-border-subtle rounded-xl transition-all shadow-xs hover:shadow-sm hover:border-primary/30 hover:-translate-y-px text-decoration-none">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <span class="w-9 h-9 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0 group-hover:bg-primary group-hover:text-on-primary transition-colors">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M7 18c1.5-1 3.5-1.5 5-1.5s3.5.5 5 1.5"/></svg>
-                            </span>
-                            <span class="text-sm font-semibold text-on-surface">Profile Picture</span>
-                        </div>
-                        <span class="flex items-center gap-2 shrink-0">
-                            <span class="hidden sm:inline-flex px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/15 text-[11px] font-bold text-amber-700">Pending</span>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted"><path d="m9 18 6-6-6-6"/></svg>
-                        </span>
-                    </a>
-
-                    <a href="/profile" class="group flex items-center justify-between p-4 bg-surface-container-lowest border border-border-subtle rounded-xl transition-all shadow-xs hover:shadow-sm hover:border-primary/30 hover:-translate-y-px text-decoration-none">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <span class="w-9 h-9 rounded-lg bg-violet-500/10 border border-violet-500/15 grid place-items-center text-violet-600 shrink-0 group-hover:bg-violet-500 group-hover:text-white transition-colors">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M3 21h18"/><path d="M3 10h18"/><path d="M5 6l7-3 7 3"/><path d="M4 10v11"/><path d="M20 10v11"/><path d="M8 14v4"/><path d="M12 14v4"/><path d="M16 14v4"/></svg>
-                            </span>
-                            <span class="text-sm font-semibold text-on-surface">Bank Account Details</span>
-                        </div>
-                        <span class="flex items-center gap-2 shrink-0">
-                            <span class="hidden sm:inline-flex px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/15 text-[11px] font-bold text-amber-700">Pending</span>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted"><path d="m9 18 6-6-6-6"/></svg>
-                        </span>
-                    </a>
-
-                    <a href="/profile" class="group flex items-center justify-between p-4 bg-surface-container-lowest border border-border-subtle rounded-xl transition-all shadow-xs hover:shadow-sm hover:border-primary/30 hover:-translate-y-px text-decoration-none">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <span class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600 shrink-0 group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"/><path d="M9 12h6"/></svg>
-                            </span>
-                            <span class="text-sm font-semibold text-on-surface">Driving Details</span>
-                        </div>
-                        <span class="flex items-center gap-2 shrink-0">
-                            <span class="hidden sm:inline-flex px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/15 text-[11px] font-bold text-amber-700">Pending</span>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted"><path d="m9 18 6-6-6-6"/></svg>
-                        </span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- Submitted Steps -->
-            <div class="mb-8">
-                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Submitted Steps</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Your Details</h2>
                 <div class="space-y-2.5">
                     <div class="flex items-center justify-between p-4 bg-surface-container-low/70 border border-border-subtle rounded-xl">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <span class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 shrink-0">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
-                            </span>
-                            <span class="text-sm font-semibold text-on-surface">Government ID</span>
+                        <div class="min-w-0">
+                            <div class="text-sm font-semibold text-on-surface">Mobile Phone Number</div>
+                            <div class="text-xs text-secondary truncate">{{if $uphone}}{{$uphone}}{{else}}Not provided — add it above{{end}}</div>
                         </div>
-                        <span class="inline-flex px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">Submitted</span>
+                        {{if $uphone}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 shrink-0">Completed</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/15 text-[11px] font-semibold text-amber-700 shrink-0">Pending</span>{{end}}
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-surface-container-low/70 border border-border-subtle rounded-xl">
+                        <div class="min-w-0">
+                            <div class="text-sm font-semibold text-on-surface">Full Name</div>
+                            <div class="text-xs text-secondary truncate">{{if $uname}}{{$uname}}{{else}}Not provided{{end}}</div>
+                        </div>
+                        {{if $uname}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 shrink-0">Completed</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/15 text-[11px] font-semibold text-amber-700 shrink-0">Pending</span>{{end}}
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-surface-container-low/70 border border-border-subtle rounded-xl">
+                        <div class="min-w-0">
+                            <div class="text-sm font-semibold text-on-surface">Timezone</div>
+                            <div class="text-xs text-secondary truncate">{{if $utz}}{{$utz}}{{else}}Not set{{end}}</div>
+                        </div>
+                        {{if $utz}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 shrink-0">Completed</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/15 text-[11px] font-semibold text-amber-700 shrink-0">Pending</span>{{end}}
+                    </div>
+                    <div class="flex items-center justify-between p-4 bg-surface-container-low/70 border border-border-subtle rounded-xl">
+                        <div class="min-w-0">
+                            <div class="text-sm font-semibold text-on-surface">Email Address</div>
+                            <div class="text-xs text-secondary truncate">{{if $uemail}}{{$uemail}}{{else}}Not available{{end}}</div>
+                        </div>
+                        {{if $everified}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 shrink-0">Verified</span>{{else if $uemail}}<form method="POST" action="/user/send-verification"><button type="submit" class="inline-flex px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/15 text-[11px] font-semibold text-amber-700 hover:bg-amber-500/20 transition-colors shrink-0 cursor-pointer">Verify email</button></form>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/15 text-[11px] font-semibold text-amber-700 shrink-0">Pending</span>{{end}}
                     </div>
                 </div>
             </div>

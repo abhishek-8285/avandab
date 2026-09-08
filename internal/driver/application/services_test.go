@@ -29,8 +29,8 @@ CREATE TABLE IF NOT EXISTS drivers (
     last_name TEXT NOT NULL,
     phone TEXT NOT NULL,
     email TEXT,
-    license_number TEXT NOT NULL,
-    license_expiry DATE NOT NULL,
+    license_number TEXT,
+    license_expiry DATE,
     status TEXT NOT NULL DEFAULT 'available',
     notes TEXT,
     tenant_id TEXT NOT NULL,
@@ -45,9 +45,9 @@ CREATE TABLE IF NOT EXISTS vehicles (
     vehicle_type TEXT NOT NULL DEFAULT 'truck',
     capacity REAL NOT NULL DEFAULT 5000,
     fuel_type TEXT NOT NULL DEFAULT 'diesel',
-    insurance_expiry DATE NOT NULL,
-    fitness_expiry DATE NOT NULL,
-    permit_expiry DATE NOT NULL,
+    insurance_expiry DATE,
+    fitness_expiry DATE,
+    permit_expiry DATE,
     status TEXT NOT NULL DEFAULT 'available',
     tenant_id TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -142,6 +142,14 @@ func TestDriverAppService_LifecycleE2E(t *testing.T) {
 	err := svc.RegisterDriver(ctx, tenantID, driverID, "Rajesh Kumar", "rajesh@example.com", "9876543210")
 	require.NoError(t, err)
 
+	// Unknown license stays NULL — no DL-PENDING / invented-expiry placeholder.
+	var licNum, licExp sql.NullString
+	require.NoError(t, db.QueryRow(
+		`SELECT license_number, license_expiry FROM drivers WHERE driver_id = ?`, driverID,
+	).Scan(&licNum, &licExp))
+	require.False(t, licNum.Valid, "license_number must be NULL until the driver submits a license")
+	require.False(t, licExp.Valid, "license_expiry must be NULL until the driver submits a license")
+
 	onb, err := svc.GetOnboardingState(ctx, tenantID, driverID)
 	require.NoError(t, err)
 	assert.Equal(t, "profile", onb.CurrentStep)
@@ -150,6 +158,12 @@ func TestDriverAppService_LifecycleE2E(t *testing.T) {
 	// 2. Submit License -> Verification pending
 	err = svc.SubmitLicense(ctx, tenantID, driverID, "DL-DELHI-9988", "Delhi RTO", time.Now().Add(-365*24*time.Hour), time.Now().Add(365*24*time.Hour), []string{"HMV", "TRANS"})
 	require.NoError(t, err)
+
+	// The drivers row mirrors the submitted license (it is never stale again).
+	require.NoError(t, db.QueryRow(
+		`SELECT license_number FROM drivers WHERE driver_id = ?`, driverID,
+	).Scan(&licNum))
+	require.Equal(t, "DL-DELHI-9988", licNum.String)
 
 	// 3. Submit Document
 	docID, err := svc.SubmitDocument(ctx, tenantID, driverID, "dl_front", "s3://docs/dl.pdf", "application/pdf", 1024, "hash123")
@@ -185,6 +199,15 @@ func TestDriverAppService_LifecycleE2E(t *testing.T) {
 
 	err = svc.ReviewVehicleClaim(ctx, tenantID, claimID, reviewerID, true, "RC Matches Owner Name")
 	require.NoError(t, err)
+
+	// Claim auto-created vehicle carries NULL doc dates, not invented +1y.
+	var vIns, vFit, vPer sql.NullString
+	require.NoError(t, db.QueryRow(
+		`SELECT insurance_expiry, fitness_expiry, permit_expiry FROM vehicles WHERE tenant_id = ? AND registration_number = 'DL1LN9999'`,
+		tenantID).Scan(&vIns, &vFit, &vPer))
+	assert.False(t, vIns.Valid, "auto-created vehicle insurance_expiry must be NULL")
+	assert.False(t, vFit.Valid, "auto-created vehicle fitness_expiry must be NULL")
+	assert.False(t, vPer.Valid, "auto-created vehicle permit_expiry must be NULL")
 
 	// 8. Add verified compliance documents for vehicle
 	var vehID string
@@ -245,6 +268,48 @@ func TestDriverAppService_VehicleReassignment(t *testing.T) {
 	err = db.QueryRow("SELECT status FROM driver_vehicle_assignments WHERE id = ?", asg2).Scan(&status2)
 	require.NoError(t, err)
 	assert.Equal(t, "active", status2)
+}
+
+func TestDriverAppService_OnboardingFunnel(t *testing.T) {
+	db := setupAppServiceTestDB(t)
+	svc := application.NewDriverAppService(db)
+	ctx := context.Background()
+
+	tenantID := "tenant-funnel"
+
+	// Empty funnel: stable shape, all zeros.
+	empty, err := svc.GetOnboardingFunnel(ctx, tenantID)
+	require.NoError(t, err)
+	assert.Equal(t, 0, empty.Started)
+	assert.Len(t, empty.StuckByStep, 7)
+
+	// Three drivers: one stuck at profile, one advanced to KYC, one submitted.
+	require.NoError(t, svc.RegisterDriver(ctx, tenantID, "drv-f1", "Stuck Driver", "f1@test.com", "9000000101"))
+	require.NoError(t, svc.RegisterDriver(ctx, tenantID, "drv-f2", "Kyc Driver", "f2@test.com", "9000000102"))
+	require.NoError(t, svc.RegisterDriver(ctx, tenantID, "drv-f3", "Submitted Driver", "f3@test.com", "9000000103"))
+
+	future := time.Now().Add(365 * 24 * time.Hour)
+	past := time.Now().Add(-24 * time.Hour)
+	require.NoError(t, svc.SubmitLicense(ctx, tenantID, "drv-f2", "DL-F2", "RTO", past, future, nil))
+	require.NoError(t, svc.SubmitLicense(ctx, tenantID, "drv-f3", "DL-F3", "RTO", past, future, nil))
+	require.NoError(t, svc.SubmitForVerification(ctx, tenantID, "drv-f3"))
+
+	funnel, err := svc.GetOnboardingFunnel(ctx, tenantID)
+	require.NoError(t, err)
+	assert.Equal(t, 3, funnel.Started)
+	assert.Equal(t, 2, funnel.InProgress)
+	assert.Equal(t, 1, funnel.Submitted)
+	assert.Equal(t, 0, funnel.Approved)
+	assert.Equal(t, 0, funnel.Rejected)
+	assert.Equal(t, 1, funnel.StuckByStep["profile"])
+	assert.Equal(t, 1, funnel.StuckByStep["kyc_documents"])
+	assert.Equal(t, 0, funnel.StuckByStep["bank_details"])
+
+	// Another tenant's drivers must not leak in.
+	require.NoError(t, svc.RegisterDriver(ctx, "tenant-other", "drv-x", "Other Driver", "x@test.com", "9000000199"))
+	funnel, err = svc.GetOnboardingFunnel(ctx, tenantID)
+	require.NoError(t, err)
+	assert.Equal(t, 3, funnel.Started)
 }
 
 func TestDriverAppService_TenantIsolation(t *testing.T) {

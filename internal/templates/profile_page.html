@@ -84,19 +84,7 @@
                         </label>
                         <select name="timezone" id="profile-timezone"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
-                            <option value="UTC">UTC (Coordinated Universal Time)</option>
-                            <option value="Asia/Kolkata">Asia/Kolkata (IST - UTC+05:30)</option>
-                            <option value="America/New_York">America/New_York (EDT/EST - UTC-05:00)</option>
-                            <option value="America/Chicago">America/Chicago (CDT/CST - UTC-06:00)</option>
-                            <option value="America/Denver">America/Denver (MDT/MST - UTC-07:00)</option>
-                            <option value="America/Los_Angeles">America/Los_Angeles (PDT/PST - UTC-08:00)</option>
-                            <option value="Europe/London">Europe/London (GMT/BST - UTC+00:00)</option>
-                            <option value="Europe/Paris">Europe/Paris (CEST/CET - UTC+01:00)</option>
-                            <option value="Europe/Berlin">Europe/Berlin (CEST/CET - UTC+01:00)</option>
-                            <option value="Asia/Dubai">Asia/Dubai (GST - UTC+04:00)</option>
-                            <option value="Asia/Singapore">Asia/Singapore (SGT - UTC+08:00)</option>
-                            <option value="Asia/Tokyo">Asia/Tokyo (JST - UTC+09:00)</option>
-                            <option value="Australia/Sydney">Australia/Sydney (AEST - UTC+10:00)</option>
+                            {{template "timezone_options.html" $u.Timezone}}
                         </select>
                         <span class="text-[11px] text-text-muted mt-0.5">Select your local operational timezone to align schedules, trip departure times, and logs.</span>
                     </div>

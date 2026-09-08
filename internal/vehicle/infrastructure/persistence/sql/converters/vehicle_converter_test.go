@@ -35,9 +35,9 @@ func TestGetFloat64Pointer_NilAndValid(t *testing.T) {
 		VehicleType:        string(aggregate.VehicleTypeTruck),
 		Capacity:           1000,
 		FuelType:           string(aggregate.FuelTypeDiesel),
-		InsuranceExpiry:    now,
-		FitnessExpiry:      now,
-		PermitExpiry:       now,
+		InsuranceExpiry:    sql.NullTime{Time: now, Valid: true},
+		FitnessExpiry:      sql.NullTime{Time: now, Valid: true},
+		PermitExpiry:       sql.NullTime{Time: now, Valid: true},
 		Status:             string(aggregate.VehicleAvailable),
 		CurrentMileage:     valid,
 		CreatedAt:          now,
@@ -65,9 +65,9 @@ func TestToDomain_MapsAllFields(t *testing.T) {
 		VehicleType:        string(aggregate.VehicleTypeBus),
 		Capacity:           42,
 		FuelType:           string(aggregate.FuelTypeCNG),
-		InsuranceExpiry:    now.Add(10 * 24 * time.Hour),
-		FitnessExpiry:      now.Add(20 * 24 * time.Hour),
-		PermitExpiry:       now.Add(30 * 24 * time.Hour),
+		InsuranceExpiry:    sql.NullTime{Time: now.Add(10 * 24 * time.Hour), Valid: true},
+		FitnessExpiry:      sql.NullTime{Time: now.Add(20 * 24 * time.Hour), Valid: true},
+		PermitExpiry:       sql.NullTime{Time: now.Add(30 * 24 * time.Hour), Valid: true},
 		Status:             string(aggregate.VehicleRunning),
 		CurrentMileage:     mileage,
 		CreatedAt:          now,
@@ -83,9 +83,9 @@ func TestToDomain_MapsAllFields(t *testing.T) {
 	assert.Equal(t, aggregate.VehicleTypeBus, agg.VehicleType)
 	assert.Equal(t, int64(42), agg.Capacity)
 	assert.Equal(t, aggregate.FuelTypeCNG, agg.FuelType)
-	assert.Equal(t, v.InsuranceExpiry, agg.InsuranceExpiry)
-	assert.Equal(t, v.FitnessExpiry, agg.FitnessExpiry)
-	assert.Equal(t, v.PermitExpiry, agg.PermitExpiry)
+	assert.Equal(t, v.InsuranceExpiry.Time, agg.InsuranceExpiry)
+	assert.Equal(t, v.FitnessExpiry.Time, agg.FitnessExpiry)
+	assert.Equal(t, v.PermitExpiry.Time, agg.PermitExpiry)
 	assert.Equal(t, aggregate.VehicleRunning, agg.Status)
 	require.NotNil(t, agg.CurrentMileage)
 	assert.InDelta(t, 9876.5, *agg.CurrentMileage, 0.001)
@@ -112,9 +112,9 @@ func TestToDomain_NilMileage(t *testing.T) {
 		VehicleType:        "van",
 		Capacity:           5,
 		FuelType:           "petrol",
-		InsuranceExpiry:    now,
-		FitnessExpiry:      now,
-		PermitExpiry:       now,
+		InsuranceExpiry:    sql.NullTime{Time: now, Valid: true},
+		FitnessExpiry:      sql.NullTime{Time: now, Valid: true},
+		PermitExpiry:       sql.NullTime{Time: now, Valid: true},
 		Status:             "available",
 		CurrentMileage:     sql.NullFloat64{Valid: false},
 		CreatedAt:          now,
@@ -135,9 +135,9 @@ func TestToReadModel_MapsAllFields(t *testing.T) {
 		VehicleType:        "tempo",
 		Capacity:           7500,
 		FuelType:           "diesel",
-		InsuranceExpiry:    now.Add(100 * 24 * time.Hour),
-		FitnessExpiry:      now.Add(200 * 24 * time.Hour),
-		PermitExpiry:       now.Add(300 * 24 * time.Hour),
+		InsuranceExpiry:    sql.NullTime{Time: now.Add(100 * 24 * time.Hour), Valid: true},
+		FitnessExpiry:      sql.NullTime{Time: now.Add(200 * 24 * time.Hour), Valid: true},
+		PermitExpiry:       sql.NullTime{Time: now.Add(300 * 24 * time.Hour), Valid: true},
 		Status:             "maintenance",
 		CurrentMileage:     mileage,
 		TenantID:           "t5",
@@ -153,9 +153,9 @@ func TestToReadModel_MapsAllFields(t *testing.T) {
 	assert.Equal(t, "tempo", rm.VehicleType)
 	assert.Equal(t, int64(7500), rm.Capacity)
 	assert.Equal(t, "diesel", rm.FuelType)
-	assert.Equal(t, v.InsuranceExpiry, rm.InsuranceExpiry)
-	assert.Equal(t, v.FitnessExpiry, rm.FitnessExpiry)
-	assert.Equal(t, v.PermitExpiry, rm.PermitExpiry)
+	assert.Equal(t, v.InsuranceExpiry.Time, rm.InsuranceExpiry)
+	assert.Equal(t, v.FitnessExpiry.Time, rm.FitnessExpiry)
+	assert.Equal(t, v.PermitExpiry.Time, rm.PermitExpiry)
 	assert.Equal(t, "maintenance", rm.Status)
 	require.NotNil(t, rm.CurrentMileage)
 	assert.InDelta(t, 555.0, *rm.CurrentMileage, 0.001)
@@ -172,9 +172,9 @@ func TestToReadModel_NilMileage(t *testing.T) {
 		VehicleType:        "truck",
 		Capacity:           10,
 		FuelType:           "diesel",
-		InsuranceExpiry:    now,
-		FitnessExpiry:      now,
-		PermitExpiry:       now,
+		InsuranceExpiry:    sql.NullTime{Time: now, Valid: true},
+		FitnessExpiry:      sql.NullTime{Time: now, Valid: true},
+		PermitExpiry:       sql.NullTime{Time: now, Valid: true},
 		Status:             "available",
 		CurrentMileage:     sql.NullFloat64{Valid: false},
 		CreatedAt:          now,
@@ -197,9 +197,9 @@ func TestToDomain_MapsComplianceFields(t *testing.T) {
 		VehicleType:        string(aggregate.VehicleTypeTruck),
 		Capacity:           10,
 		FuelType:           string(aggregate.FuelTypeDiesel),
-		InsuranceExpiry:    now,
-		FitnessExpiry:      now,
-		PermitExpiry:       now,
+		InsuranceExpiry:    sql.NullTime{Time: now, Valid: true},
+		FitnessExpiry:      sql.NullTime{Time: now, Valid: true},
+		PermitExpiry:       sql.NullTime{Time: now, Valid: true},
 		Status:             string(aggregate.VehicleAvailable),
 		CurrentMileage:     sql.NullFloat64{Valid: false},
 		Blocked:            1,
@@ -241,6 +241,20 @@ func TestToDomain_MapsComplianceFields(t *testing.T) {
 	assert.Nil(t, agg.RCExpiry)
 	assert.Nil(t, agg.PUCExpiry)
 	assert.NoError(t, agg.CanAssign(now))
+
+	// Unset doc dates (00132 side-effect registrations) read as zero values.
+	v.InsuranceExpiry = sql.NullTime{}
+	v.FitnessExpiry = sql.NullTime{}
+	v.PermitExpiry = sql.NullTime{}
+	agg = ToDomain(v)
+	assert.True(t, agg.InsuranceExpiry.IsZero())
+	assert.True(t, agg.FitnessExpiry.IsZero())
+	assert.True(t, agg.PermitExpiry.IsZero())
+	assert.NoError(t, agg.CanAssign(now))
+	rm = ToReadModel(v)
+	assert.True(t, rm.InsuranceExpiry.IsZero())
+	assert.True(t, rm.FitnessExpiry.IsZero())
+	assert.True(t, rm.PermitExpiry.IsZero())
 }
 
 func TestToReadModel_ZeroMileageValid(t *testing.T) {
@@ -252,9 +266,9 @@ func TestToReadModel_ZeroMileageValid(t *testing.T) {
 		VehicleType:        "pickup",
 		Capacity:           1,
 		FuelType:           "electric",
-		InsuranceExpiry:    now,
-		FitnessExpiry:      now,
-		PermitExpiry:       now,
+		InsuranceExpiry:    sql.NullTime{Time: now, Valid: true},
+		FitnessExpiry:      sql.NullTime{Time: now, Valid: true},
+		PermitExpiry:       sql.NullTime{Time: now, Valid: true},
 		Status:             "inactive",
 		CurrentMileage:     sql.NullFloat64{Float64: 0, Valid: true},
 		CreatedAt:          now,

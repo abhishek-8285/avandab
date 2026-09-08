@@ -185,12 +185,8 @@
                                 <div>
                                     <label class="block text-xs font-bold text-secondary mb-1.5">Company Timezone</label>
                                     <select name="timezone" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
-                                        <option value="Asia/Kolkata" {{if .Settings}}{{if eq .Settings.Timezone "Asia/Kolkata"}}selected{{end}}{{else}}selected{{end}}>Asia/Kolkata (IST +05:30)</option>
-                                        <option value="UTC" {{if .Settings}}{{if eq .Settings.Timezone "UTC"}}selected{{end}}{{end}}>UTC (GMT +00:00)</option>
-                                        <option value="Asia/Dubai" {{if .Settings}}{{if eq .Settings.Timezone "Asia/Dubai"}}selected{{end}}{{end}}>Asia/Dubai (GST +04:00)</option>
-                                        <option value="Asia/Singapore" {{if .Settings}}{{if eq .Settings.Timezone "Asia/Singapore"}}selected{{end}}{{end}}>Asia/Singapore (SGT +08:00)</option>
-                                        <option value="America/New_York" {{if .Settings}}{{if eq .Settings.Timezone "America/New_York"}}selected{{end}}{{end}}>America/New_York (EST -05:00)</option>
-                                        <option value="Europe/London" {{if .Settings}}{{if eq .Settings.Timezone "Europe/London"}}selected{{end}}{{end}}>Europe/London (GMT +00:00)</option>
+                                        {{$ctz := ""}}{{if .Settings}}{{$ctz = .Settings.Timezone}}{{end}}
+                                        {{template "timezone_options.html" $ctz}}
                                     </select>
                                 </div>
                                 <div>
@@ -338,6 +334,10 @@
                         <span>Save &amp; Finish</span>
                     </button>
 
+                    <a href="/dashboard" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg text-secondary hover:text-on-surface hover:underline transition-all cursor-pointer">
+                        <span>Finish later →</span>
+                    </a>
+
                     <button type="button" id="next-btn" onclick="nextStep()" class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold rounded-lg bg-primary text-on-primary shadow-sm hover:bg-primary/90 transition-all cursor-pointer">
                         <span>Continue to Vehicle Setup (Optional) →</span>
                     </button>
@@ -433,6 +433,7 @@
 
     function setStep(step) {
         currentStep = step;
+        saveDraft();
 
         // Hide all step contents
         for (let i = 1; i <= totalSteps; i++) {
@@ -558,6 +559,56 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        restoreDraft();
         syncTaxTierUI();
+    });
+
+    // Draft persistence: typed-but-unsent wizard input survives interruption,
+    // a crash, or a validation-error round-trip (the error page drops the
+    // form). Server-saved values always win: a stored draft only fills fields
+    // the server rendered empty, and the saved step is restored only for a
+    // fresh onboard (empty company_name). File inputs (logo) cannot persist
+    // and must be re-picked. Same-device only.
+    const DRAFT_KEY = 'avandab-company-onboard-draft';
+
+    function collectDraft() {
+        const fields = {};
+        document.querySelectorAll('#onboarding-form input, #onboarding-form select, #onboarding-form textarea').forEach(function(el) {
+            if (!el.name || el.type === 'file' || el.type === 'submit' || el.type === 'button') return;
+            fields[el.name] = el.type === 'checkbox' ? el.checked : el.value;
+        });
+        return { step: currentStep, fields: fields };
+    }
+
+    function saveDraft() {
+        try {
+            localStorage.setItem(DRAFT_KEY, JSON.stringify(collectDraft()));
+        } catch (e) { /* private mode / quota: onboard still works, just unsaved */ }
+    }
+
+    function restoreDraft() {
+        let draft = null;
+        try {
+            draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+        } catch (e) { return; }
+        if (!draft || !draft.fields) return;
+        Object.keys(draft.fields).forEach(function(name) {
+            const el = document.querySelector('#onboarding-form [name="' + name + '"]');
+            if (!el || el.type === 'file') return;
+            if (el.type === 'checkbox') {
+                if (!el.checked) el.checked = !!draft.fields[name];
+                return;
+            }
+            // Never clobber server-saved truth with a stale draft.
+            if (!el.value && draft.fields[name]) el.value = draft.fields[name];
+        });
+        const nameEl = document.getElementById('company_name');
+        if ((!nameEl || !nameEl.value) && draft.step >= 1 && draft.step <= totalSteps) {
+            setStep(draft.step);
+        }
+    }
+
+    document.getElementById('onboarding-form').addEventListener('input', function() {
+        saveDraft();
     });
 </script>

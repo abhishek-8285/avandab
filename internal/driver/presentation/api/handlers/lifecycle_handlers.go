@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"transport-app/internal/auth"
+	"transport-app/internal/domain"
 	"transport-app/internal/driver/application"
 	"transport-app/internal/shared"
 )
@@ -23,10 +24,12 @@ func NewDriverLifecycleAPIHandler(appService *application.DriverAppService) *Dri
 func (h *DriverLifecycleAPIHandler) RegisterRoutes(r chi.Router) {
 	r.Route("/api/v1/drivers", func(r chi.Router) {
 		r.Get("/me/onboarding", h.GetOnboarding)
+		r.Get("/onboarding/funnel", h.GetOnboardingFunnel)
 		r.Post("/me/license", h.SubmitLicense)
 		r.Post("/me/documents", h.SubmitDocument)
 		r.Post("/me/vehicle-claims", h.ClaimVehicle)
 		r.Post("/me/payout-account", h.SubmitPayoutAccount)
+		r.Post("/me/verification/submit", h.SubmitForVerification)
 		r.Post("/me/push-token", h.RegisterPushToken)
 		r.Post("/push-token", h.RegisterPushToken)
 		r.Get("/me/offers", h.GetPendingOffers)
@@ -62,6 +65,17 @@ func (h *DriverLifecycleAPIHandler) getContextData(r *http.Request) (string, str
 	return string(shared.MustTenantID(ctx)), session.UserID, true
 }
 
+// isReviewer reports whether the caller may decide reviewer mutations
+// (license/claim verification, vehicle assignment). Driver sessions are
+// authenticated but must never self-approve: without this gate any driver
+// could approve their own license with a single call. Mirrors the
+// managers-only compliance gate (middleware.RequireCompanyCompliance).
+func isReviewer(r *http.Request) bool {
+	session, ok := r.Context().Value(auth.ContextUser).(*auth.SessionData)
+	return ok && session != nil &&
+		(session.Role == "admin" || session.Role == string(domain.RoleOrgAdmin))
+}
+
 func (h *DriverLifecycleAPIHandler) GetOnboarding(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	tenantID, userID, ok := h.getContextData(r)
@@ -77,6 +91,26 @@ func (h *DriverLifecycleAPIHandler) GetOnboarding(w http.ResponseWriter, r *http
 	}
 
 	_ = json.NewEncoder(w).Encode(state)
+}
+
+// GetOnboardingFunnel serves GET /api/v1/drivers/onboarding/funnel —
+// tenant-wide drop-off snapshot for managers (same auth posture as the
+// {id}/verify endpoints in this group).
+func (h *DriverLifecycleAPIHandler) GetOnboardingFunnel(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	tenantID, _, ok := h.getContextData(r)
+	if !ok {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+
+	funnel, err := h.appService.GetOnboardingFunnel(r.Context(), tenantID)
+	if err != nil {
+		http.Error(w, `{"error":"`+err.Error()+`"}`, http.StatusInternalServerError)
+		return
+	}
+
+	_ = json.NewEncoder(w).Encode(funnel)
 }
 
 func (h *DriverLifecycleAPIHandler) SubmitLicense(w http.ResponseWriter, r *http.Request) {
@@ -101,7 +135,10 @@ func (h *DriverLifecycleAPIHandler) SubmitLicense(w http.ResponseWriter, r *http
 
 	exp, err := time.Parse("2006-01-02", req.ExpiresOn)
 	if err != nil {
-		exp = time.Now().Add(5 * 365 * 24 * time.Hour)
+		// Never fabricate an expiry (no +5y fallback): an unknown date stays
+		// a client error, not a plausible-looking license record.
+		http.Error(w, `{"error":"invalid expires_on (want YYYY-MM-DD)"}`, http.StatusBadRequest)
+		return
 	}
 
 	issued := time.Now().Add(-365 * 24 * time.Hour)
@@ -251,6 +288,10 @@ func (h *DriverLifecycleAPIHandler) VerifyDriverLicense(w http.ResponseWriter, r
 		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
+	if !isReviewer(r) {
+		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
+		return
+	}
 
 	var req struct {
 		LicenseID string `json:"license_id"`
@@ -278,6 +319,10 @@ func (h *DriverLifecycleAPIHandler) VerifyVehicleClaim(w http.ResponseWriter, r 
 		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
+	if !isReviewer(r) {
+		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
+		return
+	}
 
 	claimID := chi.URLParam(r, "claimId")
 	var req struct {
@@ -303,6 +348,10 @@ func (h *DriverLifecycleAPIHandler) AssignVehicle(w http.ResponseWriter, r *http
 	tenantID, assignerID, ok := h.getContextData(r)
 	if !ok {
 		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+	if !isReviewer(r) {
+		http.Error(w, `{"error":"forbidden"}`, http.StatusForbidden)
 		return
 	}
 

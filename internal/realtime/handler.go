@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"transport-app/internal/events"
+	"transport-app/internal/shared"
 )
 
 // StreamHandler returns an http.HandlerFunc for SSE streaming (Spec 04 §1.2, §7).
@@ -33,39 +34,41 @@ func StreamHandler(h *Hub, sseEnabled ...bool) http.HandlerFunc {
 		tripID := r.URL.Query().Get("trip_id")
 		vehicleID := r.URL.Query().Get("vehicle_id")
 
-		var f filter
-		if tripID != "" || vehicleID != "" {
-			f = func(e events.Event) bool {
-				if e.Payload == nil {
+		// Tenant isolation: the caller tenant comes from the auth layer
+		// (RequireAPIAuth stamps it on the context). Events carrying a
+		// tenant_id are delivered only to that tenant — without this, any
+		// authenticated user sees every org's live positions and SOS
+		// locations. Events without a tenant stamp (trip bus events —
+		// TODO: stamp tenant at publish) pass through as before.
+		// No caller tenant (tests, mounts outside the auth group):
+		// legacy passthrough, trip/vehicle filters still apply.
+		callerTenant := string(shared.TenantIDFromContext(r.Context()))
+		f := func(e events.Event) bool {
+			if callerTenant != "" {
+				if tid, ok := eventTenant(e); ok && tid != callerTenant {
 					return false
 				}
-				var m map[string]interface{}
-				switch p := e.Payload.(type) {
-				case map[string]interface{}:
-					m = p
-				default:
-					b, err := json.Marshal(e.Payload)
-					if err != nil {
-						return false
-					}
-					if err := json.Unmarshal(b, &m); err != nil {
-						return false
-					}
-				}
-				if tripID != "" {
-					tid, ok := m["trip_id"].(string)
-					if !ok || tid != tripID {
-						return false
-					}
-				}
-				if vehicleID != "" {
-					vid, ok := m["vehicle_id"].(string)
-					if !ok || vid != vehicleID {
-						return false
-					}
-				}
+			}
+			if tripID == "" && vehicleID == "" {
 				return true
 			}
+			m := eventPayloadMap(e)
+			if m == nil {
+				return false
+			}
+			if tripID != "" {
+				tid, ok := m["trip_id"].(string)
+				if !ok || tid != tripID {
+					return false
+				}
+			}
+			if vehicleID != "" {
+				vid, ok := m["vehicle_id"].(string)
+				if !ok || vid != vehicleID {
+					return false
+				}
+			}
+			return true
 		}
 
 		ch, unsub := h.Subscribe(r.Context(), f)
@@ -89,4 +92,41 @@ func StreamHandler(h *Hub, sseEnabled ...bool) http.HandlerFunc {
 			}
 		}
 	}
+}
+
+// eventPayloadMap normalizes an event payload to a string map for filter
+// matching. Struct payloads (SOSEvent, AlertEvent) marshal via their json
+// tags; map payloads pass through.
+func eventPayloadMap(e events.Event) map[string]interface{} {
+	if e.Payload == nil {
+		return nil
+	}
+	if m, ok := e.Payload.(map[string]interface{}); ok {
+		return m
+	}
+	b, err := json.Marshal(e.Payload)
+	if err != nil {
+		return nil
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal(b, &m); err != nil {
+		return nil
+	}
+	return m
+}
+
+// eventTenant extracts the tenant stamp. Struct tags use "tenant_id";
+// unstamped payloads (trip bus events) report ok=false.
+func eventTenant(e events.Event) (string, bool) {
+	m := eventPayloadMap(e)
+	if m == nil {
+		return "", false
+	}
+	if tid, ok := m["tenant_id"].(string); ok && tid != "" {
+		return tid, true
+	}
+	if tid, ok := m["TenantID"].(string); ok && tid != "" {
+		return tid, true
+	}
+	return "", false
 }

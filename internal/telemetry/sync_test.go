@@ -170,3 +170,38 @@ func TestHandleTelemetrySync_ProviderParityFields(t *testing.T) {
 		WHERE e.provider_msg_id = 'sync:11' AND p.battery_level IS NULL AND p.speed = 0`).Scan(&nNull))
 	assert.Equal(t, 1, nNull)
 }
+
+func TestHandleTelemetrySync_DistinctIDsNoCollapse(t *testing.T) {
+	db := newTestIngestorDB(t)
+	ing := newTestIngestor(t, db, nil)
+	vID := "vh-sync-collapse"
+	insertTestVehicle(t, db, vID)
+	imei := "IMEI-SYNC-COLLAPSE"
+	insertTestDevice(t, db, imei, DeviceStatusActive, &vID)
+	r := chi.NewRouter()
+	RegisterTelemetryRoutes(r, ing, db, 15*time.Minute)
+
+	// Regression: the mobile client once omitted per-log ids, so every frame
+	// shared provider_msg_id "sync:0" and N distinct fixes collapsed to one
+	// stored position. Distinct ids must yield distinct positions and an
+	// exact synced_ids ack for client-side reconciliation.
+	logs := []GPSLogPayload{
+		{ID: 11, Latitude: 19.076, Longitude: 72.877, Timestamp: "2026-08-13T00:00:00Z"},
+		{ID: 12, Latitude: 19.080, Longitude: 72.880, Timestamp: "2026-08-13T00:01:00Z"},
+		{ID: 13, Latitude: 19.084, Longitude: 72.883, Timestamp: "2026-08-13T00:02:00Z"},
+	}
+	body, _ := json.Marshal(SyncBatchRequest{DeviceID: imei, Logs: logs})
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/telemetry/sync", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var resp SyncBatchResponse
+	require.NoError(t, json.NewDecoder(rec.Body).Decode(&resp))
+	assert.True(t, resp.Success)
+	assert.ElementsMatch(t, []int64{11, 12, 13}, resp.SyncedIDs)
+
+	var positions int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM telemetry_positions WHERE imei = ?`, imei).Scan(&positions))
+	assert.Equal(t, 3, positions, "distinct log ids must not dedup-collapse into one position")
+}

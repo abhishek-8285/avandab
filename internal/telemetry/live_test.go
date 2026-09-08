@@ -282,3 +282,67 @@ func TestLiveStore_WithEtaService(t *testing.T) {
 	assert.NotNil(t, vehicles[0].EtaMin)
 	assert.NotNil(t, vehicles[0].EtaMax)
 }
+
+func TestLiveStore_MaintenanceDueBeatsStale(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicleReg(t, db, "v1", "REG-1")
+	_, err := db.Exec(`UPDATE vehicles SET maintenance_due = 1 WHERE id = 'v1'`)
+	require.NoError(t, err)
+
+	now := time.Now().UTC()
+	// Stale snapshot (older than staleMin) on a maintenance-due vehicle:
+	// the priority chain puts maintenance_due above no_signal.
+	insertLiveSnapshot(t, db, "s1", "", "v1", now.Add(-20*time.Minute), 40.0)
+
+	store := NewLiveStore(db, 15*time.Minute)
+	vehicles, err := store.Live(context.Background(), "1", "", now)
+	require.NoError(t, err)
+	require.Len(t, vehicles, 1)
+	assert.Equal(t, MarkerStateMaintenanceDue, vehicles[0].Status)
+}
+
+func TestLiveStore_BeyondVisibilityWindowExcluded(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicleReg(t, db, "v1", "REG-1")
+	insertTestVehicleReg(t, db, "v2", "REG-2")
+
+	now := time.Now().UTC()
+	// staleMin=15m → visibility window 30m. v1 inside, v2 outside.
+	insertLiveSnapshot(t, db, "s1", "", "v1", now.Add(-20*time.Minute), 0.0)
+	insertLiveSnapshot(t, db, "s2", "", "v2", now.Add(-40*time.Minute), 0.0)
+
+	store := NewLiveStore(db, 15*time.Minute)
+	vehicles, err := store.Live(context.Background(), "1", "", now)
+	require.NoError(t, err)
+	require.Len(t, vehicles, 1)
+	assert.Equal(t, "v1", vehicles[0].VehicleID)
+}
+
+func TestLiveStore_MixedTimestampLayouts(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicleReg(t, db, "v1", "REG-1")
+	insertTestVehicleReg(t, db, "v2", "REG-2")
+
+	now := time.Now().UTC()
+	// Foreign layouts (backfills, manual inserts, older writers) must not
+	// break the window filter: the Go-side comparison parses any layout
+	// database/sql understands. RFC3339Nano stands in for non-pipeline
+	// writers here; the pipeline itself stores Go-String text.
+	insertRawSnapshot := func(id, vehicleID string, ts time.Time) {
+		t.Helper()
+		_, err := db.Exec(`INSERT INTO telemetry_snapshots
+			(id, trip_id, vehicle_id, timestamp, latitude, longitude, speed, fuel_level, odometer)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			id, "", vehicleID, ts.Format(time.RFC3339Nano), 19.07, 72.87, 0.0, 60.0, 10000.0)
+		require.NoError(t, err)
+	}
+	insertRawSnapshot("r1", "v1", now.Add(-20*time.Minute)) // inside 30m window
+	insertRawSnapshot("r2", "v2", now.Add(-40*time.Minute)) // outside
+
+	store := NewLiveStore(db, 15*time.Minute)
+	vehicles, err := store.Live(context.Background(), "1", "", now)
+	require.NoError(t, err)
+	require.Len(t, vehicles, 1)
+	assert.Equal(t, "v1", vehicles[0].VehicleID)
+	assert.Equal(t, MarkerStateNoSignal, vehicles[0].Status)
+}

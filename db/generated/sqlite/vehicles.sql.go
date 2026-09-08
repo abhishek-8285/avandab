@@ -78,9 +78,9 @@ type CreateVehicleParams struct {
 	VehicleType         string          `json:"vehicle_type"`
 	Capacity            int64           `json:"capacity"`
 	FuelType            string          `json:"fuel_type"`
-	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
-	FitnessExpiry       time.Time       `json:"fitness_expiry"`
-	PermitExpiry        time.Time       `json:"permit_expiry"`
+	InsuranceExpiry     sql.NullTime    `json:"insurance_expiry"`
+	FitnessExpiry       sql.NullTime    `json:"fitness_expiry"`
+	PermitExpiry        sql.NullTime    `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
 	Blocked             int64           `json:"blocked"`
@@ -133,9 +133,9 @@ type CreateVehicleRow struct {
 	VehicleType         string          `json:"vehicle_type"`
 	Capacity            int64           `json:"capacity"`
 	FuelType            string          `json:"fuel_type"`
-	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
-	FitnessExpiry       time.Time       `json:"fitness_expiry"`
-	PermitExpiry        time.Time       `json:"permit_expiry"`
+	InsuranceExpiry     sql.NullTime    `json:"insurance_expiry"`
+	FitnessExpiry       sql.NullTime    `json:"fitness_expiry"`
+	PermitExpiry        sql.NullTime    `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
 	Blocked             int64           `json:"blocked"`
@@ -334,9 +334,9 @@ type GetAvailableVehiclesRow struct {
 	VehicleType         string          `json:"vehicle_type"`
 	Capacity            int64           `json:"capacity"`
 	FuelType            string          `json:"fuel_type"`
-	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
-	FitnessExpiry       time.Time       `json:"fitness_expiry"`
-	PermitExpiry        time.Time       `json:"permit_expiry"`
+	InsuranceExpiry     sql.NullTime    `json:"insurance_expiry"`
+	FitnessExpiry       sql.NullTime    `json:"fitness_expiry"`
+	PermitExpiry        sql.NullTime    `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
 	Blocked             int64           `json:"blocked"`
@@ -490,9 +490,9 @@ type GetIdleVehiclesRow struct {
 	VehicleType         string          `json:"vehicle_type"`
 	Capacity            int64           `json:"capacity"`
 	FuelType            string          `json:"fuel_type"`
-	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
-	FitnessExpiry       time.Time       `json:"fitness_expiry"`
-	PermitExpiry        time.Time       `json:"permit_expiry"`
+	InsuranceExpiry     sql.NullTime    `json:"insurance_expiry"`
+	FitnessExpiry       sql.NullTime    `json:"fitness_expiry"`
+	PermitExpiry        sql.NullTime    `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
 	Blocked             int64           `json:"blocked"`
@@ -645,9 +645,9 @@ type GetVehicleByIDRow struct {
 	VehicleType         string          `json:"vehicle_type"`
 	Capacity            int64           `json:"capacity"`
 	FuelType            string          `json:"fuel_type"`
-	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
-	FitnessExpiry       time.Time       `json:"fitness_expiry"`
-	PermitExpiry        time.Time       `json:"permit_expiry"`
+	InsuranceExpiry     sql.NullTime    `json:"insurance_expiry"`
+	FitnessExpiry       sql.NullTime    `json:"fitness_expiry"`
+	PermitExpiry        sql.NullTime    `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
 	Blocked             int64           `json:"blocked"`
@@ -782,9 +782,9 @@ type GetVehicleByRegistrationRow struct {
 	VehicleType         string          `json:"vehicle_type"`
 	Capacity            int64           `json:"capacity"`
 	FuelType            string          `json:"fuel_type"`
-	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
-	FitnessExpiry       time.Time       `json:"fitness_expiry"`
-	PermitExpiry        time.Time       `json:"permit_expiry"`
+	InsuranceExpiry     sql.NullTime    `json:"insurance_expiry"`
+	FitnessExpiry       sql.NullTime    `json:"fitness_expiry"`
+	PermitExpiry        sql.NullTime    `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
 	Blocked             int64           `json:"blocked"`
@@ -935,9 +935,9 @@ type SearchVehiclesRow struct {
 	VehicleType         string          `json:"vehicle_type"`
 	Capacity            int64           `json:"capacity"`
 	FuelType            string          `json:"fuel_type"`
-	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
-	FitnessExpiry       time.Time       `json:"fitness_expiry"`
-	PermitExpiry        time.Time       `json:"permit_expiry"`
+	InsuranceExpiry     sql.NullTime    `json:"insurance_expiry"`
+	FitnessExpiry       sql.NullTime    `json:"fitness_expiry"`
+	PermitExpiry        sql.NullTime    `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
 	Blocked             int64           `json:"blocked"`
@@ -1106,9 +1106,9 @@ type UpdateVehicleParams struct {
 	VehicleType         string          `json:"vehicle_type"`
 	Capacity            int64           `json:"capacity"`
 	FuelType            string          `json:"fuel_type"`
-	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
-	FitnessExpiry       time.Time       `json:"fitness_expiry"`
-	PermitExpiry        time.Time       `json:"permit_expiry"`
+	InsuranceExpiry     sql.NullTime    `json:"insurance_expiry"`
+	FitnessExpiry       sql.NullTime    `json:"fitness_expiry"`
+	PermitExpiry        sql.NullTime    `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
 	Blocked             int64           `json:"blocked"`
@@ -1162,9 +1162,9 @@ type UpdateVehicleRow struct {
 	VehicleType         string          `json:"vehicle_type"`
 	Capacity            int64           `json:"capacity"`
 	FuelType            string          `json:"fuel_type"`
-	InsuranceExpiry     time.Time       `json:"insurance_expiry"`
-	FitnessExpiry       time.Time       `json:"fitness_expiry"`
-	PermitExpiry        time.Time       `json:"permit_expiry"`
+	InsuranceExpiry     sql.NullTime    `json:"insurance_expiry"`
+	FitnessExpiry       sql.NullTime    `json:"fitness_expiry"`
+	PermitExpiry        sql.NullTime    `json:"permit_expiry"`
 	Status              string          `json:"status"`
 	CurrentMileage      sql.NullFloat64 `json:"current_mileage"`
 	Blocked             int64           `json:"blocked"`

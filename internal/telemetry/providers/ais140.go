@@ -3,6 +3,7 @@ package providers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -50,9 +51,23 @@ func DecodeAIS140Packet(raw string) (*RawFrame, error) {
 		return nil, errors.New("ais140: missing leading $ delimiter")
 	}
 
-	// Strip checksum if present (*XX)
+	// Checksum: NMEA-style XOR over the body (between $ and *). Verified
+	// when present — guards line corruption on serial/TCP links. Absent
+	// checksum is tolerated (some devices omit it); a present-but-wrong
+	// checksum rejects the frame.
 	body := raw[1:]
 	if idx := strings.Index(body, "*"); idx != -1 {
+		want, err := strconv.ParseUint(strings.TrimSpace(body[idx+1:]), 16, 8)
+		if err != nil {
+			return nil, errors.New("ais140: malformed checksum suffix")
+		}
+		var got byte
+		for i := 0; i < idx; i++ {
+			got ^= body[i]
+		}
+		if byte(want) != got {
+			return nil, fmt.Errorf("ais140: checksum mismatch: want %02X, got %02X", byte(want), got)
+		}
 		body = body[:idx]
 	}
 

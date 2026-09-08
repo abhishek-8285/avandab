@@ -9,9 +9,11 @@
 
 ```text
 Draft → Pending → Confirmed → Completed
-           ↓
-       Cancelled
+            ↓         ↓
+            └────► Cancelled
 ```
+
+(Cancel is allowed from Pending or Confirmed — `Cancel` in `booking_aggregate.go` rejects only Completed. Confirmed bookings are live: only they can be completed.)
 
 - **Creation**: Requires valid `CustomerID`, `RouteID`, `VehicleType`, `Passengers >= 1`, and `Price >= 0`.
 - **Confirmation**: Only `Pending` bookings can be confirmed; moves to `Confirmed`.
@@ -22,30 +24,32 @@ Draft → Pending → Confirmed → Completed
 
 ## 2. Trip Execution State Machine
 
-Trips follow a strict, domain-guarded state machine (`internal/trip/domain/aggregate/trip.go`):
+Trips follow a strict, domain-guarded state machine (`internal/trip/domain/aggregate/trip_aggregate.go:26-35`):
 
 ```text
-DRAFT → SCHEDULED → CONFIRMED → AT_PICKUP → IN_TRANSIT → AT_DELIVERY → COMPLETED
-  │          │          │           │            │            │
-  └──────────┴──────────┴───────────┴────────────┴────────────┴──► CANCELLED
+DRAFT → SCHEDULED → ASSIGNED → STARTED → REACHED_PICKUP → IN_TRANSIT → DELIVERED → COMPLETED
+  │          │          │          │            │              │             │
+  └──────────┴──────────┴──────────┴────────────┴──────────────┴─────────────┴──► CANCELLED
 ```
 
+(Mobile mirrors these via `BACKEND_TO_MOBILE` in `mobile/src/domain/trip/tripMachine.ts`; clients send commands, never raw statuses.)
+
 ### State Progression Rules:
-1. **DRAFT $\to$ SCHEDULED**: Assigning both a Driver and Vehicle advances the trip. The system checks for scheduling time-window conflicts (a driver/vehicle cannot be assigned to overlapping trips).
-2. **SCHEDULED $\to$ CONFIRMED**: Dispatcher confirms the trip, making it visible on the driver's mobile app.
-3. **CONFIRMED $\to$ AT_PICKUP**: Triggered automatically when vehicle enters the 500m geofence buffer of the origin pickup zone.
-4. **AT_PICKUP $\to$ IN_TRANSIT**: Triggered automatically when vehicle departs pickup geofence and enters the highway corridor.
-5. **IN_TRANSIT $\to$ AT_DELIVERY**: Triggered automatically upon entering destination customer geofence.
-6. **AT_DELIVERY $\to$ COMPLETED**: Delivery completed upon successful electronic consignee signature and 4-digit OTP approval. Tolls, FASTag, and driver kharcha are finalized.
+1. **DRAFT $\to$ SCHEDULED**: Scheduling a draft advances the trip. Driver/vehicle overlap conflict checks run on the separate assign paths (`assign_driver.go`, `assign_vehicle.go`).
+2. **SCHEDULED $\to$ ASSIGNED $\to$ STARTED**: Dispatcher assigns driver/vehicle, then starts the trip. There is no CONFIRMED state; driver-app visibility is governed by assignment, not a confirm step.
+3. **STARTED $\to$ REACHED_PICKUP**: Manual `ReachPickup`, or automatic on origin-zone entry only when the per-tenant `auto_reach_pickup` flag is on (default OFF).
+4. **REACHED_PICKUP $\to$ IN_TRANSIT**: Manual `StartTransit`, or automatic on pickup-exit/drop-entry only when `auto_start_transit` is on (default OFF). No "highway corridor" check exists.
+5. **IN_TRANSIT $\to$ DELIVERED**: Manual `Deliver` only — no automatic destination-geofence completion exists.
+6. **DELIVERED $\to$ COMPLETED**: `Complete` requires `delivered` and records odometer. Per-stop ePOD enforces OTP+signature, but no 4-digit OTP length check exists and tolls/FASTag are not auto-finalized.
 
 ---
 
 ## 3. Dynamic Geofence Polygon Engine (`internal/geofence/`)
 
 ### Spatial Math & Ray-Casting
-- Geofences use **Well-Known Text (WKT)** polygon boundaries with dynamic circular buffers (`buffer_metres`, default 500m).
+- Geofences persist polygons as JSON `[[lat,lng],...]` (`PolygonFromJSON` in `internal/geofence/domain/geofence.go`); no WKT parser exists. Circular buffers use `buffer_metres` (default 20m, `DefaultBufferMetres`).
 - The background `DwellWorker` checks incoming GPS telemetry against active geofences using the **Ray-Casting Algorithm**.
-- **Debounce Window**: Requires 2 minutes sustained dwell inside the buffer to prevent GPS jitter near boundary edges.
+- **Debounce Window**: Requires 60s sustained dwell (`DefaultDwellDebounce`) inside the buffer to prevent GPS jitter near boundary edges, with single-miss revert.
 - **Automated Actions**:
-  - Automatically advances trip status on entry/exit.
-  - Generates detention charge line items if vehicle dwells past free waiting time (e.g. > 2 hours).
+  - Advances trip status on entry/exit only for ReachPickup/StartTransit and only when the per-tenant auto flags are on (default OFF); no auto Deliver/Complete.
+  - Generates detention charge line items past the free wait (default 30min, `DefaultDetentionFree`) at the configured hourly rate (default 0 = never bills).

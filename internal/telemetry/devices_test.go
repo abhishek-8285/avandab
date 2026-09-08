@@ -192,3 +192,37 @@ func TestDeviceService_ResolveQuarantine_Reject(t *testing.T) {
 	require.NotNil(t, e)
 	assert.Equal(t, QuarantineStatusRejected, e.Status)
 }
+
+func TestDeviceService_ResolveQuarantine_AssignExisting(t *testing.T) {
+	db := newTestIngestorDB(t)
+	svc := newTestDeviceService(t, db)
+	ctx := tenantCtx()
+
+	_, err := svc.RegisterDevice(ctx, RegisterDeviceCommand{IMEI: "AE1"})
+	require.NoError(t, err)
+	insertTestVehicleReg(t, db, "v-ae", "REG-AE")
+
+	// Inventory device frames → quarantined (non-active).
+	ing := newTestIngestor(t, db, nil)
+	_, _ = ing.IngestRawFrame(ctx, providers.RawFrame{
+		IMEI: "AE1", Latitude: 12.97, Longitude: 77.59, Provider: "own",
+		ProviderMsgID: "ae-1", RawPayload: []byte(`{"imei":"AE1"}`), DeviceTime: time.Now(),
+	})
+	entries, _ := NewQuarantineStore(db).ListOpen(ctx, "1", 10)
+	require.Len(t, entries, 1)
+
+	vid := "v-ae"
+	require.NoError(t, svc.ResolveQuarantine(ctx, ResolveQuarantineCommand{
+		EntryID: entries[0].ID, Action: "assign_existing", VehicleID: &vid, UserID: "admin-1",
+	}))
+
+	d, _ := NewDeviceStore(db).GetByIMEI(ctx, "AE1")
+	require.NotNil(t, d)
+	assert.Equal(t, DeviceStatusAssigned, d.Status)
+	require.NotNil(t, d.VehicleID)
+	assert.Equal(t, "v-ae", *d.VehicleID)
+
+	e, _ := NewQuarantineStore(db).GetByID(ctx, entries[0].ID)
+	require.NotNil(t, e)
+	assert.Equal(t, QuarantineStatusResolved, e.Status)
+}

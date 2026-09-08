@@ -53,7 +53,7 @@ The mobile app maintains two local SQLite databases on the device (`expo-sqlite`
 
 **Sync Engine Lifecycle**:
 - Listens to `@react-native-community/netinfo` network connection state.
-- When network reconnects, drains queued tables sequentially via `POST /api/v1/telemetry/sync` and `POST /api/v1/trips/{id}/epod`.
+- When network reconnects, drains queued tables sequentially via `POST /api/v1/telemetry/sync` and the per-stop POD endpoints (`POST /api/v1/trips/{id}/stops/{stopId}/pod`, plus deliver-pod). No `/epod` route exists.
 
 ---
 

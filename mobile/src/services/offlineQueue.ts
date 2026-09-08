@@ -346,7 +346,7 @@ class OfflineQueueService {
         }
 
         const url = pod.stop_id
-          ? `${getApiBaseURL()}/trips/${pod.trip_id}/stops/${pod.stop_id}/pod`
+          ? `${getApiBaseURL()}/api/v1/trips/${pod.trip_id}/stops/${pod.stop_id}/pod`
           : `${getApiBaseURL()}/api/v1/trips/${pod.trip_id}/deliver-pod`;
 
         const res = await fetch(url, {
@@ -431,6 +431,7 @@ class OfflineQueueService {
             body: JSON.stringify({
               driver_id: driverId,
               logs: gpsBatch.map((g) => ({
+                id: g.id,
                 latitude: g.latitude,
                 longitude: g.longitude,
                 timestamp: g.timestamp,
@@ -444,12 +445,14 @@ class OfflineQueueService {
           });
           if (res.ok) {
             const json = await res.json();
-            if (json.success) {
-              await this.clearGPS(gpsBatch.map((g) => g.id));
-              gpsFlushed = gpsBatch.length;
-            } else if (Array.isArray(json.synced_ids)) {
+            if (Array.isArray(json.synced_ids)) {
+              // Exact reconciliation: only wipe what the server accepted.
+              // Safe to retry the rest — server dedups on sync:<id>.
               await this.clearGPS(json.synced_ids);
               gpsFlushed = json.synced_ids.length;
+            } else if (json.success) {
+              await this.clearGPS(gpsBatch.map((g) => g.id));
+              gpsFlushed = gpsBatch.length;
             }
           }
         }

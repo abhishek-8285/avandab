@@ -204,6 +204,13 @@ func TestGoogleOAuth_Callback_HappyPathNewTenant(t *testing.T) {
 		"fresh-op@google-test.local").Scan(&count))
 	assert.Equal(t, 1, count)
 
+	// google only hands over verified emails: the badge is stamped at sign-in.
+	var verifiedAt sql.NullString
+	require.NoError(t, db.QueryRow(
+		`SELECT email_verified_at FROM users WHERE email = ?`,
+		"fresh-op@google-test.local").Scan(&verifiedAt))
+	assert.True(t, verifiedAt.Valid, "oauth-provisioned user must be marked verified")
+
 	// state cookie cleared
 	var cleared bool
 	for _, c := range w.Result().Cookies() {

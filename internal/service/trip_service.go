@@ -14,6 +14,7 @@ import (
 	tripevents "transport-app/internal/domain/trip"
 	"transport-app/internal/events"
 	"transport-app/internal/repository"
+	"transport-app/internal/shared"
 )
 
 // TripService handles trip management with business rule enforcement.
@@ -104,6 +105,7 @@ func (s *TripService) CreateTrip(ctx context.Context, req CreateTripRequest) (do
 		Type: events.TripCreated,
 		Payload: tripevents.TripCreatedEvent{
 			TripID:        created.ID,
+			TenantID:      shared.TenantIDFromContext(ctx),
 			TripNumber:    created.TripNumber,
 			RouteID:       created.RouteID,
 			DriverID:      created.DriverID,
@@ -393,6 +395,7 @@ func (s *TripService) StartTrip(ctx context.Context, id domain.TripID) (domain.T
 		Type: events.TripStarted,
 		Payload: tripevents.TripStartedEvent{
 			TripID:     id,
+			TenantID:   shared.TenantIDFromContext(ctx),
 			StartedAt:  time.Now(),
 			OccurredAt: time.Now(),
 		},
@@ -447,6 +450,7 @@ func (s *TripService) CompleteTrip(ctx context.Context, id domain.TripID) (domai
 		Type: events.TripCompleted,
 		Payload: tripevents.TripCompletedEvent{
 			TripID:      id,
+			TenantID:    shared.TenantIDFromContext(ctx),
 			CompletedAt: time.Now(),
 			OccurredAt:  time.Now(),
 		},
@@ -491,6 +495,7 @@ func (s *TripService) DeliverTripWithPOD(ctx context.Context, id domain.TripID, 
 		Type: events.TripDelivered,
 		Payload: map[string]interface{}{
 			"trip_id":      id,
+			"tenant_id":    string(shared.TenantIDFromContext(ctx)),
 			"booking_id":   delivered.BookingID,
 			"driver_id":    delivered.DriverID,
 			"pod_url":      podURL,

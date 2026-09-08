@@ -179,6 +179,11 @@ func (h *GoogleOAuthHandlers) Callback(w http.ResponseWriter, r *http.Request) {
 
 	slog.Info("google sign-in succeeded", "user_id", user.ID, "email", info.Email, "new_tenant", isNewOwner)
 
+	// Google only hands over verified emails (rejected above otherwise), so
+	// every account passing this gate is verified by provenance. Best-effort:
+	// the badge must never block sign-in.
+	_ = h.Services.Users.MarkEmailVerified(r.Context(), info.Email)
+
 	target := "/dashboard"
 	if isNewOwner {
 		// New tenant owner lands in the mandatory onboarding wizard.

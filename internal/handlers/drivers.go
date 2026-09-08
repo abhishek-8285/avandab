@@ -540,8 +540,8 @@ func (h *DriverHandlers) UpdateMe(w http.ResponseWriter, r *http.Request) {
 			existingVID = uuid.New().String()
 			_, _ = h.DB.ExecContext(ctx, `
 				INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, capacity, fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, tenant_id)
-				VALUES ($1, $2, $3, 'truck', 5000, 'diesel', $4, $5, $6, 'available', $7)`,
-				existingVID, vNum, vNum, time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), tenantID)
+				VALUES ($1, $2, $3, 'truck', 5000, 'diesel', NULL, NULL, NULL, 'available', $4)`,
+				existingVID, vNum, vNum, tenantID)
 		}
 		_, _ = h.DB.ExecContext(ctx, `UPDATE drivers SET notes = $1 WHERE id = $2 AND tenant_id = $3`, vNum, driverID, tenantID)
 

@@ -632,6 +632,96 @@ func (h *AuthHandlers) SaveUserOnboard(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, targetURL, http.StatusSeeOther)
 }
 
+// SendVerificationEmail issues a single-use verification link for the
+// signed-in user's address (POST /user/send-verification). Badge only:
+// unverified users lose nothing, and already-verified users short-circuit.
+// Delivery mirrors the password-reset path (outbox enqueue; dev fallback
+// flashes the link when no mailer is configured).
+func (h *AuthHandlers) SendVerificationEmail(w http.ResponseWriter, r *http.Request) {
+	session, ok := h.getUserFromContext(r)
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	flash := func(msg string) {
+		http.SetCookie(w, flashCookie("flash_success", msg))
+		http.Redirect(w, r, "/user/onboard", http.StatusSeeOther)
+	}
+
+	user, err := h.Services.Auth.GetProfile(r.Context(), domain.UserID(session.UserID))
+	if err != nil {
+		h.failPage(w, r, err, http.StatusBadRequest, "Could Not Load Profile")
+		return
+	}
+	if user.EmailVerifiedAt != nil {
+		flash("Email already verified.")
+		return
+	}
+	if h.App == nil || h.App.VerifyTokens == nil {
+		h.failPage(w, r, fmt.Errorf("email verification is not configured"), http.StatusInternalServerError, "Verification Unavailable")
+		return
+	}
+
+	token, err := h.App.VerifyTokens.Create(user.Email)
+	if err != nil {
+		h.failPage(w, r, err, http.StatusInternalServerError, "Could Not Issue Link")
+		return
+	}
+	link := fmt.Sprintf("%s://%s/verify-email?token=%s", requestScheme(r), r.Host, token)
+	if h.enqueueVerifyEmail(r, user, link) {
+		flash("Verification link sent to " + user.Email + ".")
+		return
+	}
+	if h.Config.IsDevelopment() {
+		// No mailer configured: dev convenience flashes the link.
+		flash("No mailer configured (dev link): " + link)
+		return
+	}
+	h.failPage(w, r, fmt.Errorf("email delivery is not configured"), http.StatusInternalServerError, "Verification Unavailable")
+}
+
+// VerifyEmailPage consumes ?token= (GET /verify-email, public): a valid
+// token stamps email_verified_at and lands on /dashboard; anything else
+// bounces to /login with a flash error. Rate-limited at the route.
+func (h *AuthHandlers) VerifyEmailPage(w http.ResponseWriter, r *http.Request) {
+	derr := func(msg string) {
+		http.SetCookie(w, flashCookie("flash_error", msg))
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+	}
+
+	token := r.URL.Query().Get("token")
+	if token == "" || h.App == nil || h.App.VerifyTokens == nil {
+		derr("This verification link is invalid or has expired.")
+		return
+	}
+	email, ok := h.App.VerifyTokens.Consume(token)
+	if !ok {
+		derr("This verification link is invalid or has expired.")
+		return
+	}
+	if err := h.Services.Users.MarkEmailVerified(r.Context(), email); err != nil {
+		slog.Error("email verification marking failed", slog.String("email", email), slog.Any("error", err))
+		derr("Could not verify this address. Request a fresh link.")
+		return
+	}
+	http.SetCookie(w, flashCookie("flash_success", "Email verified."))
+	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+}
+
+func (h *AuthHandlers) enqueueVerifyEmail(r *http.Request, user domain.User, link string) bool {
+	if h.App == nil || h.App.DB == nil || h.App.Notify == nil || !h.App.Notify.EmailConfigured() {
+		return false
+	}
+	body := "Confirm your email address for your account.\n\n" +
+		"Verify using this single-use link (valid 24 hours):\n" + link + "\n\n" +
+		"If you did not request this, ignore this email."
+	if _, err := comm.EnqueueEmail(r.Context(), h.App.DB, user.TenantID, user.Email, "email_verification", "Verify your email", body); err != nil {
+		slog.Error("verification email enqueue failed", "email", user.Email, "error", err)
+	}
+	return true
+}
+
 // UpdateProfile handles profile updates.
 func (h *AuthHandlers) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	session, ok := h.getUserFromContext(r)

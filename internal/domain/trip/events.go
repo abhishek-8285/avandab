@@ -4,11 +4,13 @@ import (
 	"time"
 
 	"transport-app/internal/domain/types"
+	"transport-app/internal/shared"
 )
 
 // TripCreatedEvent is emitted when a new trip is created.
 type TripCreatedEvent struct {
 	TripID        types.TripID
+	TenantID      shared.TenantID
 	TripNumber    string
 	RouteID       types.RouteID
 	DriverID      *types.DriverID
@@ -35,6 +37,7 @@ type TripAssignedEvent struct {
 // TripStartedEvent is emitted when a trip is started.
 type TripStartedEvent struct {
 	TripID     types.TripID
+	TenantID   shared.TenantID
 	StartedAt  time.Time
 	OccurredAt time.Time
 }
@@ -42,6 +45,7 @@ type TripStartedEvent struct {
 // TripCompletedEvent is emitted when a trip is completed.
 type TripCompletedEvent struct {
 	TripID      types.TripID
+	TenantID    shared.TenantID
 	CompletedAt time.Time
 	OccurredAt  time.Time
 }

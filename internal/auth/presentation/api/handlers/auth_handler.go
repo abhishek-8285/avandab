@@ -87,9 +87,9 @@ func (h *APIAuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		vID := uuid.New().String()
 		_, _ = h.db.ExecContext(r.Context(), `
 			INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, capacity, fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, tenant_id)
-			VALUES ($1, $2, $3, 'truck', 5000, 'diesel', $4, $5, $6, 'available', $7)
+			VALUES ($1, $2, $3, 'truck', 5000, 'diesel', NULL, NULL, NULL, 'available', $4)
 			ON CONFLICT (registration_number) DO UPDATE SET updated_at = CURRENT_TIMESTAMP`,
-			vID, vNum, vNum, time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02"), userTenantID)
+			vID, vNum, vNum, userTenantID)
 
 		dID := uuid.New().String()
 		names := strings.SplitN(req.Name, " ", 2)
@@ -98,11 +98,12 @@ func (h *APIAuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		if len(names) > 1 {
 			lastName = names[1]
 		}
+		// Unknown license stays NULL (00131) — same rule as RegisterDriver.
 		_, _ = h.db.ExecContext(r.Context(), `
 			INSERT INTO drivers (id, driver_id, first_name, last_name, phone, email, license_number, license_expiry, status, notes, tenant_id)
-			VALUES ($1, $2, $3, $4, $5, $6, 'DL-PENDING', $7, 'available', $8, $9)
+			VALUES ($1, $2, $3, $4, $5, $6, NULL, NULL, 'available', $7, $8)
 			ON CONFLICT (driver_id) DO UPDATE SET notes = excluded.notes, updated_at = CURRENT_TIMESTAMP`,
-			dID, string(user.ID), firstName, lastName, req.Phone, req.Email, time.Now().UTC().AddDate(5, 0, 0).Format("2006-01-02"), vNum, userTenantID)
+			dID, string(user.ID), firstName, lastName, req.Phone, req.Email, vNum, userTenantID)
 
 		_, _ = h.db.ExecContext(r.Context(), `
 			INSERT INTO telemetry_devices (id, tenant_id, imei, device_type, status, vehicle_id, activated_at)

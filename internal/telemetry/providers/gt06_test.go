@@ -140,3 +140,39 @@ func TestGT06_CRC(t *testing.T) {
 		t.Errorf("expected non-zero CRC")
 	}
 }
+
+func TestGT06_SouthWestInvalidFix(t *testing.T) {
+	// Same layout as TestGT06_LocationPacket but course/status = 0x00 0x00:
+	// course 0, South (bit10=0), West (bit11=0), Invalid (bit12=0).
+	data := []byte{
+		0x78, 0x78,
+		0x16,                               // Length: 22 bytes
+		0x12,                               // Location
+		0x1A, 0x08, 0x1F, 0x08, 0x1E, 0x00, // 2026-08-31 08:30:00 UTC
+		0xCF,                   // Satellites
+		0x02, 0x0D, 0xAE, 0x60, // Lat magnitude: 34451040 / 1800000
+		0x07, 0xDB, 0xC4, 0x80, // Lng magnitude: 131843200 / 1800000
+		0x30,       // Speed: 48 km/h
+		0x00, 0x00, // Course: 0, South + West + Invalid
+		0x00, 0x02, // Serial
+		0x12, 0x34, // CRC
+		0x0D, 0x0A, // Stop
+	}
+
+	frame, _, err := DecodeGT06Packet(data, "864209048123456")
+	if err != nil {
+		t.Fatalf("location decode failed: %v", err)
+	}
+	if frame == nil {
+		t.Fatal("expected location frame, got nil")
+	}
+	if frame.Latitude >= 0 {
+		t.Errorf("expected negative latitude (South), got %f", frame.Latitude)
+	}
+	if frame.Longitude >= 0 {
+		t.Errorf("expected negative longitude (West), got %f", frame.Longitude)
+	}
+	if frame.Valid == nil || *frame.Valid {
+		t.Errorf("expected invalid GPS fix (bit12=0)")
+	}
+}

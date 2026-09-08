@@ -264,6 +264,18 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 			lv.Valid = &v
 		}
 		lv.Ts = ts.UTC()
+		// Visibility window (2× staleMin): vehicles silent longer than this
+		// drop off the live map instead of lingering as permanent
+		// no_signal ghosts. Filtered here in Go, not SQL: snapshot
+		// timestamps are stored as Go-String text ("...+0000 UTC" suffix),
+		// which SQLite datetime() parses to NULL — a SQL predicate would
+		// silently exclude every real row. database/sql parses the layout
+		// into time.Time on read, so lv.Ts is the comparison both sides
+		// survive. Cost is unchanged: the query already returns one row
+		// per vehicle.
+		if now.Sub(lv.Ts) > s.visibilityWindow {
+			continue
+		}
 		out = append(out, lv)
 	}
 	if err := rows.Err(); err != nil {

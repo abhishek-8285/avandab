@@ -328,6 +328,7 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 	// bus publish fails the outbox relay catches up within 5s.
 	if result.Accepted && !result.Deduped && positionEvent != nil {
 		snapshotPayload := map[string]interface{}{
+			"tenant_id":  positionEvent.TenantID,
 			"vehicle_id": positionEvent.VehicleID,
 			"trip_id":    positionEvent.TripID,
 			"lat":        positionEvent.Latitude,
@@ -604,15 +605,15 @@ func (ing *Ingestor) insertSnapshot(ctx context.Context, frame RawFrame, device 
 	}
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO telemetry_snapshots
-            (id, trip_id, vehicle_id, timestamp, latitude, longitude, speed,
+            (id, trip_id, vehicle_id, timestamp, ts_unix, latitude, longitude, speed,
              fuel_level, odometer, heading, ignition, engine_hours, accuracy, driver_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          ON CONFLICT (id) DO UPDATE SET trip_id = excluded.trip_id, vehicle_id = excluded.vehicle_id,
-             timestamp = excluded.timestamp, latitude = excluded.latitude, longitude = excluded.longitude,
+             timestamp = excluded.timestamp, ts_unix = excluded.ts_unix, latitude = excluded.latitude, longitude = excluded.longitude,
              speed = excluded.speed, fuel_level = excluded.fuel_level, odometer = excluded.odometer,
              heading = excluded.heading, ignition = excluded.ignition, engine_hours = excluded.engine_hours,
              accuracy = excluded.accuracy, driver_id = excluded.driver_id`,
-		snapshotID, frame.TripID, vehicleID, frame.DeviceTime,
+		snapshotID, frame.TripID, vehicleID, frame.DeviceTime, frame.DeviceTime.Unix(),
 		frame.Latitude, frame.Longitude, frame.Speed,
 		fuel, odometer,
 		frame.Heading, frame.Ignition, frame.EngineHours, frame.Accuracy, frame.DriverID,

@@ -6,8 +6,8 @@ import (
 
 func TestAIS140_StandardPacket(t *testing.T) {
 	// Sample Indian AIS-140 Packet:
-	// $PVT,1.0.0,SET,PVT,1,A,864209048123456,DL01AB1234,A,31082026,083000,1904.5620,N,07252.6620,E,48.5,120.0,12,50,1.2,0.9,AIRTEL,1,14.2,4.1,0*5A
-	raw := "$PVT,1.0.0,SET,PVT,1,A,864209048123456,DL01AB1234,A,31082026,083000,1904.5620,N,07252.6620,E,48.5,120.0,12,50,1.2,0.9,AIRTEL,1,14.2,4.1,0*5A"
+	// $PVT,1.0.0,SET,PVT,1,A,864209048123456,DL01AB1234,A,31082026,083000,1904.5620,N,07252.6620,E,48.5,120.0,12,50,1.2,0.9,AIRTEL,1,14.2,4.1,0*69
+	raw := "$PVT,1.0.0,SET,PVT,1,A,864209048123456,DL01AB1234,A,31082026,083000,1904.5620,N,07252.6620,E,48.5,120.0,12,50,1.2,0.9,AIRTEL,1,14.2,4.1,0*69"
 
 	frame, err := DecodeAIS140Packet(raw)
 	if err != nil {
@@ -36,8 +36,8 @@ func TestAIS140_StandardPacket(t *testing.T) {
 
 func TestAIS140_CompactPacket(t *testing.T) {
 	// Compact AIS-140 Packet:
-	// $PVT,864209048123456,31082026,083000,1831.2240,N,07351.3780,E,55.0,180.0,10,1,0*3B
-	raw := "$PVT,864209048123456,31082026,083000,1831.2240,N,07351.3780,E,55.0,180.0,10,1,0*3B"
+	// $PVT,864209048123456,31082026,083000,1831.2240,N,07351.3780,E,55.0,180.0,10,1,0*6E
+	raw := "$PVT,864209048123456,31082026,083000,1831.2240,N,07351.3780,E,55.0,180.0,10,1,0*6E"
 
 	frame, err := DecodeAIS140Packet(raw)
 	if err != nil {
@@ -52,5 +52,26 @@ func TestAIS140_CompactPacket(t *testing.T) {
 	}
 	if frame.Heading != 180.0 {
 		t.Errorf("expected heading 180.0, got %f", frame.Heading)
+	}
+}
+
+func TestAIS140_ChecksumMismatchRejected(t *testing.T) {
+	// Valid body (*6E) with one corrupted digit: speed 55.0 → 95.0.
+	raw := "$PVT,864209048123456,31082026,083000,1831.2240,N,07351.3780,E,95.0,180.0,10,1,0*6E"
+	if _, err := DecodeAIS140Packet(raw); err == nil {
+		t.Fatal("expected checksum mismatch error for corrupted body")
+	}
+}
+
+func TestAIS140_MissingChecksumTolerated(t *testing.T) {
+	// Devices that omit *XX keep working; checksum guards corruption,
+	// not authentication.
+	raw := "$PVT,864209048123456,31082026,083000,1831.2240,N,07351.3780,E,55.0,180.0,10,1,0"
+	frame, err := DecodeAIS140Packet(raw)
+	if err != nil {
+		t.Fatalf("missing checksum must be tolerated: %v", err)
+	}
+	if frame.Speed != 55.0 {
+		t.Errorf("expected speed 55.0, got %f", frame.Speed)
 	}
 }

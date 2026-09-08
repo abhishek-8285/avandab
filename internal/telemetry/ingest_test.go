@@ -857,3 +857,46 @@ func TestIngestor_ParkedDedupEdges(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 3, countRows(), "~200 m movement must never be deduped")
 }
+
+func TestIngestor_LatestPositionTieKeepsFirst(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicle(t, db, "v-tie")
+	insertTestDevice(t, db, "IMEI-TIE", DeviceStatusActive, strPtr("v-tie"))
+	ing := newTestIngestor(t, db, nil)
+
+	ts := time.Now().UTC()
+	for _, tc := range []struct {
+		lat float64
+		msg string
+	}{{20.0, "tie-1"}, {18.0, "tie-2"}} {
+		_, err := ing.IngestRawFrame(context.Background(), providers.RawFrame{
+			IMEI: "IMEI-TIE", DeviceTime: ts,
+			Latitude: tc.lat, Longitude: 73.0,
+			Provider: "own", ProviderMsgID: tc.msg,
+		})
+		require.NoError(t, err)
+	}
+
+	var latestLat float64
+	require.NoError(t, db.QueryRow(`SELECT latitude FROM vehicle_latest_position WHERE vehicle_id = ?`, "v-tie").Scan(&latestLat))
+	assert.Equal(t, 20.0, latestLat, "strict newer-wins: equal device_time must not overwrite")
+}
+
+func TestIngestor_SnapshotWritesTsUnix(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicle(t, db, "v-tsunix")
+	insertTestDevice(t, db, "IMEI-TSUNIX", DeviceStatusActive, strPtr("v-tsunix"))
+	ing := newTestIngestor(t, db, nil)
+
+	deviceTime := time.Now().UTC().Add(-2 * time.Second)
+	_, err := ing.IngestRawFrame(context.Background(), providers.RawFrame{
+		IMEI: "IMEI-TSUNIX", DeviceTime: deviceTime,
+		Latitude: 19.07, Longitude: 72.83,
+		Provider: "own", ProviderMsgID: "tsunix-1",
+	})
+	require.NoError(t, err)
+
+	var tsUnix int64
+	require.NoError(t, db.QueryRow(`SELECT ts_unix FROM telemetry_snapshots`).Scan(&tsUnix))
+	assert.Equal(t, deviceTime.Unix(), tsUnix, "pipeline must stamp the machine-readable clock (00134)")
+}

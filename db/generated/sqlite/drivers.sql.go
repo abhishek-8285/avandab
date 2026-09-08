@@ -56,8 +56,8 @@ type CreateDriverParams struct {
 	Phone                 string         `json:"phone"`
 	Email                 sql.NullString `json:"email"`
 	Address               sql.NullString `json:"address"`
-	LicenseNumber         string         `json:"license_number"`
-	LicenseExpiry         time.Time      `json:"license_expiry"`
+	LicenseNumber         sql.NullString `json:"license_number"`
+	LicenseExpiry         sql.NullTime   `json:"license_expiry"`
 	ExperienceYears       int64          `json:"experience_years"`
 	Status                string         `json:"status"`
 	EmergencyContactName  sql.NullString `json:"emergency_contact_name"`
@@ -74,8 +74,8 @@ type CreateDriverRow struct {
 	Phone                 string         `json:"phone"`
 	Email                 sql.NullString `json:"email"`
 	Address               sql.NullString `json:"address"`
-	LicenseNumber         string         `json:"license_number"`
-	LicenseExpiry         time.Time      `json:"license_expiry"`
+	LicenseNumber         sql.NullString `json:"license_number"`
+	LicenseExpiry         sql.NullTime   `json:"license_expiry"`
 	ExperienceYears       int64          `json:"experience_years"`
 	Status                string         `json:"status"`
 	EmergencyContactName  sql.NullString `json:"emergency_contact_name"`
@@ -158,8 +158,8 @@ type GetAvailableDriversRow struct {
 	Phone                 string         `json:"phone"`
 	Email                 sql.NullString `json:"email"`
 	Address               sql.NullString `json:"address"`
-	LicenseNumber         string         `json:"license_number"`
-	LicenseExpiry         time.Time      `json:"license_expiry"`
+	LicenseNumber         sql.NullString `json:"license_number"`
+	LicenseExpiry         sql.NullTime   `json:"license_expiry"`
 	ExperienceYears       int64          `json:"experience_years"`
 	Status                string         `json:"status"`
 	EmergencyContactName  sql.NullString `json:"emergency_contact_name"`
@@ -231,8 +231,8 @@ type GetDriverByDriverIDRow struct {
 	Phone                 string         `json:"phone"`
 	Email                 sql.NullString `json:"email"`
 	Address               sql.NullString `json:"address"`
-	LicenseNumber         string         `json:"license_number"`
-	LicenseExpiry         time.Time      `json:"license_expiry"`
+	LicenseNumber         sql.NullString `json:"license_number"`
+	LicenseExpiry         sql.NullTime   `json:"license_expiry"`
 	ExperienceYears       int64          `json:"experience_years"`
 	Status                string         `json:"status"`
 	EmergencyContactName  sql.NullString `json:"emergency_contact_name"`
@@ -288,8 +288,8 @@ type GetDriverByIDRow struct {
 	Phone                 string         `json:"phone"`
 	Email                 sql.NullString `json:"email"`
 	Address               sql.NullString `json:"address"`
-	LicenseNumber         string         `json:"license_number"`
-	LicenseExpiry         time.Time      `json:"license_expiry"`
+	LicenseNumber         sql.NullString `json:"license_number"`
+	LicenseExpiry         sql.NullTime   `json:"license_expiry"`
 	ExperienceYears       int64          `json:"experience_years"`
 	Status                string         `json:"status"`
 	EmergencyContactName  sql.NullString `json:"emergency_contact_name"`
@@ -345,8 +345,8 @@ type GetDriverByPhoneRow struct {
 	Phone                 string         `json:"phone"`
 	Email                 sql.NullString `json:"email"`
 	Address               sql.NullString `json:"address"`
-	LicenseNumber         string         `json:"license_number"`
-	LicenseExpiry         time.Time      `json:"license_expiry"`
+	LicenseNumber         sql.NullString `json:"license_number"`
+	LicenseExpiry         sql.NullTime   `json:"license_expiry"`
 	ExperienceYears       int64          `json:"experience_years"`
 	Status                string         `json:"status"`
 	EmergencyContactName  sql.NullString `json:"emergency_contact_name"`
@@ -411,8 +411,8 @@ type SearchDriversRow struct {
 	Phone                 string         `json:"phone"`
 	Email                 sql.NullString `json:"email"`
 	Address               sql.NullString `json:"address"`
-	LicenseNumber         string         `json:"license_number"`
-	LicenseExpiry         time.Time      `json:"license_expiry"`
+	LicenseNumber         sql.NullString `json:"license_number"`
+	LicenseExpiry         sql.NullTime   `json:"license_expiry"`
 	ExperienceYears       int64          `json:"experience_years"`
 	Status                string         `json:"status"`
 	EmergencyContactName  sql.NullString `json:"emergency_contact_name"`
@@ -490,8 +490,8 @@ type UpdateDriverParams struct {
 	Phone                 string         `json:"phone"`
 	Email                 sql.NullString `json:"email"`
 	Address               sql.NullString `json:"address"`
-	LicenseNumber         string         `json:"license_number"`
-	LicenseExpiry         time.Time      `json:"license_expiry"`
+	LicenseNumber         sql.NullString `json:"license_number"`
+	LicenseExpiry         sql.NullTime   `json:"license_expiry"`
 	ExperienceYears       int64          `json:"experience_years"`
 	Status                string         `json:"status"`
 	EmergencyContactName  sql.NullString `json:"emergency_contact_name"`
@@ -509,8 +509,8 @@ type UpdateDriverRow struct {
 	Phone                 string         `json:"phone"`
 	Email                 sql.NullString `json:"email"`
 	Address               sql.NullString `json:"address"`
-	LicenseNumber         string         `json:"license_number"`
-	LicenseExpiry         time.Time      `json:"license_expiry"`
+	LicenseNumber         sql.NullString `json:"license_number"`
+	LicenseExpiry         sql.NullTime   `json:"license_expiry"`
 	ExperienceYears       int64          `json:"experience_years"`
 	Status                string         `json:"status"`
 	EmergencyContactName  sql.NullString `json:"emergency_contact_name"`

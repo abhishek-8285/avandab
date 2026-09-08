@@ -15,7 +15,6 @@ import (
 	"transport-app/internal/founder"
 	"transport-app/internal/founder/alerts"
 	fuel "transport-app/internal/fuel"
-	geofenceapp "transport-app/internal/geofence/application"
 	invoiceapp "transport-app/internal/invoice/application"
 	"transport-app/internal/repository"
 )
@@ -58,38 +57,37 @@ type Store interface {
 
 // Services holds all service instances and shared dependencies.
 type Services struct {
-	Auth              *AuthService
-	Users             *UserService
-	Drivers           *DriverService
-	Vehicles          *VehicleService
-	Customers         *CustomerService
-	Routes            *RouteService
-	Bookings          *BookingService
-	Trips             *TripService
-	Invoices          *InvoiceService
-	Payments          *PaymentService
-	Notes             *CreditNoteService
-	Settings          *CompanySettingsService
-	Dashboard         *DashboardService
-	Files             *FileService
-	Audit             *AuditLogService
-	Founder           *founder.FounderService
-	Compliance        *ComplianceService
-	Settlements       *DriverSettlementService
-	Telemetry         *TelemetryService
-	Kharcha           *KharchaService
-	FuelAudit         *FuelAuditService
-	Scorecard         *ScorecardService
-	Documents         *DocumentService
-	PNL               *PNLService
-	OpsAlerts         *OpsAlertService
-	Experiments       *ExperimentsService
-	FounderSignals    *FounderSignalsService
-	FounderAudit      *FounderAuditService
-	EWayBill          *ewaybill.EWayBillService
-	Deviation         *deviation.Engine
-	GeofenceEvaluator *geofenceapp.RealtimeEvaluator
-	Events            events.EventBus
+	Auth           *AuthService
+	Users          *UserService
+	Drivers        *DriverService
+	Vehicles       *VehicleService
+	Customers      *CustomerService
+	Routes         *RouteService
+	Bookings       *BookingService
+	Trips          *TripService
+	Invoices       *InvoiceService
+	Payments       *PaymentService
+	Notes          *CreditNoteService
+	Settings       *CompanySettingsService
+	Dashboard      *DashboardService
+	Files          *FileService
+	Audit          *AuditLogService
+	Founder        *founder.FounderService
+	Compliance     *ComplianceService
+	Settlements    *DriverSettlementService
+	Telemetry      *TelemetryService
+	Kharcha        *KharchaService
+	FuelAudit      *FuelAuditService
+	Scorecard      *ScorecardService
+	Documents      *DocumentService
+	PNL            *PNLService
+	OpsAlerts      *OpsAlertService
+	Experiments    *ExperimentsService
+	FounderSignals *FounderSignalsService
+	FounderAudit   *FounderAuditService
+	EWayBill       *ewaybill.EWayBillService
+	Deviation      *deviation.Engine
+	Events         events.EventBus
 
 	// TenantConfigs reads per-tenant settings overrides from company_config
 	// (Spec 24 §Business logic overlay). Nil when the store exposes no raw DB
@@ -211,8 +209,10 @@ func NewServices(store Store, cfg *config.Config, log *slog.Logger, eventBus eve
 		// GPS Route Deviation Engine (Spec 03 §P3C).
 		s.Deviation = deviation.NewEngine(dbGetter.DB(), s.Events, fuel.NewConfigReader(dbGetter.DB()), log)
 
-		// Realtime Geofence Evaluator (Spec 02 §P3D).
-		s.GeofenceEvaluator = geofenceapp.NewRealtimeEvaluator(dbGetter.DB(), s.Events, geofenceapp.NewConfigReader(dbGetter.DB()), log)
+		// NOTE: no RealtimeEvaluator here — per-fix geofence evaluation runs
+		// in the DwellWorker (wired in cmd/server/main.go); the evaluator
+		// type stays as a tested library (evaluator_test, e2e_matrix_test)
+		// but is never constructed in prod (zero callers by grep).
 	}
 
 	// Instantiate Telegram Bot Notifier if token configured, otherwise graceful fallback

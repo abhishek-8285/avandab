@@ -41,7 +41,7 @@ func (q *Queries) CountUsers(ctx context.Context, arg CountUsersParams) (int64, 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (id, email, password_hash, name, phone, role_id, status, tenant_id, theme_preference)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
+RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, timezone, email_verified_at, last_login_at, theme_preference, created_at, updated_at
 `
 
 type CreateUserParams struct {
@@ -65,6 +65,8 @@ type CreateUserRow struct {
 	Phone           sql.NullString `json:"phone"`
 	RoleID          int64          `json:"role_id"`
 	Status          string         `json:"status"`
+	Timezone        string         `json:"timezone"`
+	EmailVerifiedAt sql.NullTime   `json:"email_verified_at"`
 	LastLoginAt     sql.NullTime   `json:"last_login_at"`
 	ThemePreference string         `json:"theme_preference"`
 	CreatedAt       time.Time      `json:"created_at"`
@@ -93,6 +95,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateU
 		&i.Phone,
 		&i.RoleID,
 		&i.Status,
+		&i.Timezone,
+		&i.EmailVerifiedAt,
 		&i.LastLoginAt,
 		&i.ThemePreference,
 		&i.CreatedAt,
@@ -153,7 +157,7 @@ func (q *Queries) GetRoleByName(ctx context.Context, name string) (Role, error) 
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
+SELECT id, email, password_hash, tenant_id, name, phone, role_id, status, timezone, email_verified_at, last_login_at, theme_preference, created_at, updated_at
 FROM users WHERE email = ?
 `
 
@@ -166,6 +170,8 @@ type GetUserByEmailRow struct {
 	Phone           sql.NullString `json:"phone"`
 	RoleID          int64          `json:"role_id"`
 	Status          string         `json:"status"`
+	Timezone        string         `json:"timezone"`
+	EmailVerifiedAt sql.NullTime   `json:"email_verified_at"`
 	LastLoginAt     sql.NullTime   `json:"last_login_at"`
 	ThemePreference string         `json:"theme_preference"`
 	CreatedAt       time.Time      `json:"created_at"`
@@ -184,6 +190,8 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 		&i.Phone,
 		&i.RoleID,
 		&i.Status,
+		&i.Timezone,
+		&i.EmailVerifiedAt,
 		&i.LastLoginAt,
 		&i.ThemePreference,
 		&i.CreatedAt,
@@ -193,7 +201,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEm
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
+SELECT id, email, password_hash, tenant_id, name, phone, role_id, status, timezone, email_verified_at, last_login_at, theme_preference, created_at, updated_at
 FROM users WHERE id = ?
 `
 
@@ -206,6 +214,8 @@ type GetUserByIDRow struct {
 	Phone           sql.NullString `json:"phone"`
 	RoleID          int64          `json:"role_id"`
 	Status          string         `json:"status"`
+	Timezone        string         `json:"timezone"`
+	EmailVerifiedAt sql.NullTime   `json:"email_verified_at"`
 	LastLoginAt     sql.NullTime   `json:"last_login_at"`
 	ThemePreference string         `json:"theme_preference"`
 	CreatedAt       time.Time      `json:"created_at"`
@@ -225,6 +235,8 @@ func (q *Queries) GetUserByID(ctx context.Context, id string) (GetUserByIDRow, e
 		&i.Phone,
 		&i.RoleID,
 		&i.Status,
+		&i.Timezone,
+		&i.EmailVerifiedAt,
 		&i.LastLoginAt,
 		&i.ThemePreference,
 		&i.CreatedAt,
@@ -268,7 +280,7 @@ func (q *Queries) ListRoles(ctx context.Context) ([]Role, error) {
 }
 
 const searchUsers = `-- name: SearchUsers :many
-SELECT u.id, u.email, u.tenant_id, u.name, u.phone, u.role_id, u.status, u.last_login_at, u.theme_preference, u.created_at, u.updated_at,
+SELECT u.id, u.email, u.tenant_id, u.name, u.phone, u.role_id, u.status, u.timezone, u.last_login_at, u.theme_preference, u.created_at, u.updated_at,
        r.name AS role_name
 FROM users u
 JOIN roles r ON u.role_id = r.id
@@ -296,6 +308,7 @@ type SearchUsersRow struct {
 	Phone           sql.NullString `json:"phone"`
 	RoleID          int64          `json:"role_id"`
 	Status          string         `json:"status"`
+	Timezone        string         `json:"timezone"`
 	LastLoginAt     sql.NullTime   `json:"last_login_at"`
 	ThemePreference string         `json:"theme_preference"`
 	CreatedAt       time.Time      `json:"created_at"`
@@ -327,6 +340,7 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Sea
 			&i.Phone,
 			&i.RoleID,
 			&i.Status,
+			&i.Timezone,
 			&i.LastLoginAt,
 			&i.ThemePreference,
 			&i.CreatedAt,
@@ -348,18 +362,20 @@ func (q *Queries) SearchUsers(ctx context.Context, arg SearchUsersParams) ([]Sea
 
 const updateUser = `-- name: UpdateUser :one
 UPDATE users
-SET email = ?, name = ?, phone = ?, role_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+SET email = ?, name = ?, phone = ?, role_id = ?, status = ?, timezone = ?, email_verified_at = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ?
-RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
+RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, timezone, email_verified_at, last_login_at, theme_preference, created_at, updated_at
 `
 
 type UpdateUserParams struct {
-	Email  string         `json:"email"`
-	Name   string         `json:"name"`
-	Phone  sql.NullString `json:"phone"`
-	RoleID int64          `json:"role_id"`
-	Status string         `json:"status"`
-	ID     string         `json:"id"`
+	Email           string         `json:"email"`
+	Name            string         `json:"name"`
+	Phone           sql.NullString `json:"phone"`
+	RoleID          int64          `json:"role_id"`
+	Status          string         `json:"status"`
+	Timezone        string         `json:"timezone"`
+	EmailVerifiedAt sql.NullTime   `json:"email_verified_at"`
+	ID              string         `json:"id"`
 }
 
 type UpdateUserRow struct {
@@ -371,6 +387,8 @@ type UpdateUserRow struct {
 	Phone           sql.NullString `json:"phone"`
 	RoleID          int64          `json:"role_id"`
 	Status          string         `json:"status"`
+	Timezone        string         `json:"timezone"`
+	EmailVerifiedAt sql.NullTime   `json:"email_verified_at"`
 	LastLoginAt     sql.NullTime   `json:"last_login_at"`
 	ThemePreference string         `json:"theme_preference"`
 	CreatedAt       time.Time      `json:"created_at"`
@@ -384,6 +402,8 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 		arg.Phone,
 		arg.RoleID,
 		arg.Status,
+		arg.Timezone,
+		arg.EmailVerifiedAt,
 		arg.ID,
 	)
 	var i UpdateUserRow
@@ -396,6 +416,8 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 		&i.Phone,
 		&i.RoleID,
 		&i.Status,
+		&i.Timezone,
+		&i.EmailVerifiedAt,
 		&i.LastLoginAt,
 		&i.ThemePreference,
 		&i.CreatedAt,
@@ -408,7 +430,7 @@ const updateUserLastLogin = `-- name: UpdateUserLastLogin :one
 UPDATE users
 SET last_login_at = CURRENT_TIMESTAMP
 WHERE id = ?
-RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
+RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, timezone, email_verified_at, last_login_at, theme_preference, created_at, updated_at
 `
 
 type UpdateUserLastLoginRow struct {
@@ -420,6 +442,8 @@ type UpdateUserLastLoginRow struct {
 	Phone           sql.NullString `json:"phone"`
 	RoleID          int64          `json:"role_id"`
 	Status          string         `json:"status"`
+	Timezone        string         `json:"timezone"`
+	EmailVerifiedAt sql.NullTime   `json:"email_verified_at"`
 	LastLoginAt     sql.NullTime   `json:"last_login_at"`
 	ThemePreference string         `json:"theme_preference"`
 	CreatedAt       time.Time      `json:"created_at"`
@@ -438,6 +462,8 @@ func (q *Queries) UpdateUserLastLogin(ctx context.Context, id string) (UpdateUse
 		&i.Phone,
 		&i.RoleID,
 		&i.Status,
+		&i.Timezone,
+		&i.EmailVerifiedAt,
 		&i.LastLoginAt,
 		&i.ThemePreference,
 		&i.CreatedAt,
@@ -450,7 +476,7 @@ const updateUserPassword = `-- name: UpdateUserPassword :one
 UPDATE users
 SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ?
-RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
+RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, timezone, email_verified_at, last_login_at, theme_preference, created_at, updated_at
 `
 
 type UpdateUserPasswordParams struct {
@@ -467,6 +493,8 @@ type UpdateUserPasswordRow struct {
 	Phone           sql.NullString `json:"phone"`
 	RoleID          int64          `json:"role_id"`
 	Status          string         `json:"status"`
+	Timezone        string         `json:"timezone"`
+	EmailVerifiedAt sql.NullTime   `json:"email_verified_at"`
 	LastLoginAt     sql.NullTime   `json:"last_login_at"`
 	ThemePreference string         `json:"theme_preference"`
 	CreatedAt       time.Time      `json:"created_at"`
@@ -485,6 +513,8 @@ func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPassword
 		&i.Phone,
 		&i.RoleID,
 		&i.Status,
+		&i.Timezone,
+		&i.EmailVerifiedAt,
 		&i.LastLoginAt,
 		&i.ThemePreference,
 		&i.CreatedAt,
@@ -497,7 +527,7 @@ const updateUserThemePreference = `-- name: UpdateUserThemePreference :one
 UPDATE users
 SET theme_preference = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ?
-RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, last_login_at, theme_preference, created_at, updated_at
+RETURNING id, email, password_hash, tenant_id, name, phone, role_id, status, timezone, email_verified_at, last_login_at, theme_preference, created_at, updated_at
 `
 
 type UpdateUserThemePreferenceParams struct {
@@ -514,6 +544,8 @@ type UpdateUserThemePreferenceRow struct {
 	Phone           sql.NullString `json:"phone"`
 	RoleID          int64          `json:"role_id"`
 	Status          string         `json:"status"`
+	Timezone        string         `json:"timezone"`
+	EmailVerifiedAt sql.NullTime   `json:"email_verified_at"`
 	LastLoginAt     sql.NullTime   `json:"last_login_at"`
 	ThemePreference string         `json:"theme_preference"`
 	CreatedAt       time.Time      `json:"created_at"`
@@ -532,6 +564,8 @@ func (q *Queries) UpdateUserThemePreference(ctx context.Context, arg UpdateUserT
 		&i.Phone,
 		&i.RoleID,
 		&i.Status,
+		&i.Timezone,
+		&i.EmailVerifiedAt,
 		&i.LastLoginAt,
 		&i.ThemePreference,
 		&i.CreatedAt,

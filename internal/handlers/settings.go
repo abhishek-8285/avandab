@@ -294,9 +294,12 @@ func (h *SettingsHandlers) SaveOnboard(w http.ResponseWriter, r *http.Request) {
 			VehicleType:        vehicleagg.VehicleType(vType),
 			Capacity:           capacity,
 			FuelType:           vehicleagg.FuelType(fuelType),
-			InsuranceExpiry:    time.Now().AddDate(1, 0, 0),
-			FitnessExpiry:      time.Now().AddDate(1, 0, 0),
-			PermitExpiry:       time.Now().AddDate(1, 0, 0),
+			// Unknown doc dates stay zero (NULL via repo guards, 00132) —
+			// never invented +1y placeholders. Web/mobile vehicle forms keep
+			// requiring real dates; the owner fills them in Fleet afterwards.
+			InsuranceExpiry: time.Time{},
+			FitnessExpiry:   time.Time{},
+			PermitExpiry:    time.Time{},
 		})
 		if vErr == nil {
 			vehicleAdded = true
@@ -332,9 +335,9 @@ func (h *SettingsHandlers) SaveOnboard(w http.ResponseWriter, r *http.Request) {
 		if lastName == "" {
 			lastName = "Driver"
 		}
-		if driverLicense == "" {
-			driverLicense = "DL-" + driverPhone
-		}
+		// No license fallback (no "DL-"+phone fabrication): unknown stays
+		// empty/zero and lands as NULL via the repo guards (00131). The real
+		// number/expiry sync onto this row at KYC SubmitLicense time.
 		experienceYears := int64(1)
 		if rawExp := strings.TrimSpace(r.PostFormValue("experience")); rawExp != "" {
 			if n, err := strconv.Atoi(rawExp); err == nil {
@@ -352,7 +355,7 @@ func (h *SettingsHandlers) SaveOnboard(w http.ResponseWriter, r *http.Request) {
 			LastName:        lastName,
 			Phone:           driverPhone,
 			LicenseNumber:   driverLicense,
-			LicenseExpiry:   time.Now().AddDate(5, 0, 0),
+			LicenseExpiry:   time.Time{},
 			ExperienceYears: experienceYears,
 		}); dErr != nil {
 			// ponytail: warn-only, driver optional — onboard still completes

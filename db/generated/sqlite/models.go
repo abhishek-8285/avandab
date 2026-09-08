@@ -398,8 +398,8 @@ type Driver struct {
 	Phone                 string          `json:"phone"`
 	Email                 sql.NullString  `json:"email"`
 	Address               sql.NullString  `json:"address"`
-	LicenseNumber         string          `json:"license_number"`
-	LicenseExpiry         time.Time       `json:"license_expiry"`
+	LicenseNumber         sql.NullString  `json:"license_number"`
+	LicenseExpiry         sql.NullTime    `json:"license_expiry"`
 	ExperienceYears       int64           `json:"experience_years"`
 	Status                string          `json:"status"`
 	EmergencyContactName  sql.NullString  `json:"emergency_contact_name"`
@@ -1633,6 +1633,7 @@ type TelemetrySnapshot struct {
 	EngineHours sql.NullFloat64 `json:"engine_hours"`
 	Accuracy    sql.NullFloat64 `json:"accuracy"`
 	DriverID    sql.NullString  `json:"driver_id"`
+	TsUnix      sql.NullInt64   `json:"ts_unix"`
 }
 
 type Tenant struct {
@@ -1847,6 +1848,7 @@ type User struct {
 	AuthProvider    string         `json:"auth_provider"`
 	GoogleSub       sql.NullString `json:"google_sub"`
 	PhoneVerifiedAt sql.NullTime   `json:"phone_verified_at"`
+	EmailVerifiedAt sql.NullTime   `json:"email_verified_at"`
 }
 
 type UserRole struct {
@@ -1861,9 +1863,9 @@ type Vehicle struct {
 	VehicleType               string          `json:"vehicle_type"`
 	Capacity                  int64           `json:"capacity"`
 	FuelType                  string          `json:"fuel_type"`
-	InsuranceExpiry           time.Time       `json:"insurance_expiry"`
-	FitnessExpiry             time.Time       `json:"fitness_expiry"`
-	PermitExpiry              time.Time       `json:"permit_expiry"`
+	InsuranceExpiry           sql.NullTime    `json:"insurance_expiry"`
+	FitnessExpiry             sql.NullTime    `json:"fitness_expiry"`
+	PermitExpiry              sql.NullTime    `json:"permit_expiry"`
 	Status                    string          `json:"status"`
 	CurrentMileage            sql.NullFloat64 `json:"current_mileage"`
 	CreatedAt                 time.Time       `json:"created_at"`

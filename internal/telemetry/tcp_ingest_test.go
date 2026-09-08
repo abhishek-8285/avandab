@@ -65,7 +65,7 @@ func TestTCPIngestServer_LifecycleAndPacketHandshake(t *testing.T) {
 	}
 
 	// Send Indian AIS-140 packet over same TCP connection
-	ais140Msg := "$PVT,864209048123456,31082026,083000,1831.2240,N,07351.3780,E,55.0,180.0,10,1,0*3B\r\n"
+	ais140Msg := "$PVT,864209048123456,31082026,083000,1831.2240,N,07351.3780,E,55.0,180.0,10,1,0*6E\r\n"
 	if _, err := conn.Write([]byte(ais140Msg)); err != nil {
 		t.Fatalf("failed to write AIS-140 message: %v", err)
 	}

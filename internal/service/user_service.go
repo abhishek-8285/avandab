@@ -498,6 +498,26 @@ func (s *UserService) SetPasswordByEmail(ctx context.Context, email, newPassword
 	return nil
 }
 
+// MarkEmailVerified stamps email_verified_at for an already-proven address
+// (consumed verification link, or Google OAuth which only hands over verified
+// emails). Badge only — nothing gates on it.
+func (s *UserService) MarkEmailVerified(ctx context.Context, email string) error {
+	user, err := s.store.GetUserByEmail(ctx, email)
+	if err != nil {
+		return domain.ErrUserNotFound
+	}
+	if user.EmailVerifiedAt != nil {
+		return nil
+	}
+	now := time.Now().UTC()
+	user.EmailVerifiedAt = &now
+	if _, err := s.store.UpdateUser(ctx, user); err != nil {
+		return err
+	}
+	s.log.Info("email verified", "user_id", user.ID, "email", user.Email)
+	return nil
+}
+
 // ResetPassword resets a user's password to a randomly generated temporary value.
 func (s *UserService) ResetPassword(ctx context.Context, id domain.UserID) error {
 	tempPassword, err := generateTemporaryPassword()

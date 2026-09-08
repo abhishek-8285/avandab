@@ -200,7 +200,7 @@ export function DeliveryVerificationScreen({
     try {
       const token = useAuthStore.getState().token;
       const targetUrl = stopId
-        ? `${getApiBaseURL()}/trips/${tripId}/stops/${stopId}/pod`
+        ? `${getApiBaseURL()}/api/v1/trips/${tripId}/stops/${stopId}/pod`
         : `${getApiBaseURL()}/api/v1/trips/${tripId}/deliver-pod`;
 
       const res = await fetch(targetUrl, {
