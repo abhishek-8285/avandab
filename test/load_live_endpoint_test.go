@@ -115,7 +115,7 @@ func TestLiveEndpoint_500Vehicles(t *testing.T) {
 	}
 	require.NoError(t, tx.Commit())
 
-	liveHandler := telemetry.LiveHandler(db, 15*time.Minute)
+	liveHandler := telemetry.LiveHandler(db, 15*time.Minute, 60*time.Minute)
 
 	// Measure response time
 	start := time.Now()

@@ -20,12 +20,12 @@
 
 - **A1. Secrets + mock-honesty audit** (`docs/08` §5). Rotate `COOKIE_SECRET`/`API_SECRET` off dev defaults; assert mock flags carpet `MOCK-` prefixes in non-prod. No migration.
 - **A2. Tenant-hardening tail sweep** (`docs/06` §1). Re-run tenant lint; wire `scripts/tenant-lint.sh` into CI. No migration. *(2026-09-07: lint at 0 warnings.)*
-- **A3. FK-health triage (61 pre-existing violations)** (SOP spec §10 notes). Read-only enumerate + disposition per table. No migration.
+- **A3. FK-health triage (61 pre-existing violations)** (SOP spec §10 notes). Read-only enumerate + disposition per table. No migration. *(Done 2026-09-08: `foreign_key_check` 0 rows on dev copy at v128 and after migrating copy to head v134 — 125 REFERENCES clauses, so non-vacuous. Original 61 disposed by `scripts/cutover-data-cleanup.sql`: 9 role-id maps + 52 orphans.)*
 - **A4. Ops auto-checks green** (`FAILURE_ANALYSIS` auto-checks). Cron backup + ensure scripts, DNS forwarder, opencode `HOME=/` guard, `/tmp` trap. *(2026-09-07: crontab set, hooks on.)* No migration.
 - **A5. Migration-index doc repair** (index `:1-5,110`). Fix header (head `00128`), add missing `00112` row, reconcile `00121+ reserved` vs allocated. Docs-only. *(Done 2026-09-08.)*
-- **A6. OpenAPI↔router parity audit.** Diff every `/api/v1/*` mount against `paths:`. Docs/tests-only.
+- **A6. OpenAPI↔router parity audit.** Diff every `/api/v1/*` mount against `paths:`. Docs/tests-only. *(Done 2026-09-08: `docs/tech-specs/openapi-router-parity-a6.md` — 128 router vs 38 spec paths, 0 dead spec entries, 90-path B12 backlog grouped by domain. Rule: new routes ship with spec entries.)*
 - **A7. PG-parity tail proof.** Confirm CI gate green on head + `sqlite2pg` dry-run clean. No migration.
-- **A8. Vehicle legacy-delegation ADR** (SOP spec §10 Deferred). One paragraph: keep split vs finish delegation. No behavior change.
+- **A8. Vehicle legacy-delegation ADR** (SOP spec §10 Deferred). One paragraph: keep split vs finish delegation. No behavior change. *(Done 2026-09-08: `docs/tech-specs/legacy-delegation-adr.md` — freeze + opportunistic delegation, `bookings.go` as template, aggregate wins on conflict. Scope widened to `handlers/` god-files + `agent/tools.go`.)*
 - **A9. EWB delivered-lifecycle staging proof** (`00127/00128`). Drive one trip to `DELIVERED`, assert events. No migration.
 - **A10. Mobile stub inventory** (`docs/04`). Classify each screen stub vs wired with API binding per row. No migration.
 
