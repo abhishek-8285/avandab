@@ -921,7 +921,7 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RequireAPIAuth(authStore, apiSecret, tenantResolver))
 		r.With(featureGate("telemetry")).Group(func(r chi.Router) {
-			telemetry.RegisterTelemetryRoutes(r, ingestor, database, time.Duration(cfg.LiveMap.TelemetryStaleMin)*time.Minute, etaService)
+			telemetry.RegisterTelemetryRoutes(r, ingestor, database, time.Duration(cfg.LiveMap.TelemetryStaleMin)*time.Minute, time.Duration(cfg.LiveMap.TelemetryStaleMinMobile)*time.Minute, etaService)
 			telemetry.RegisterGeocodeRoute(r, cfg.LiveMap.NominatimURL)
 		})
 		r.Get("/api/v1/telemetry/stream", realtime.StreamHandler(sseHub, cfg.LiveMap.SSEEnabled))

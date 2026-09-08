@@ -12,7 +12,7 @@ import (
 // Sets SSE headers, flushes headers immediately, and exits on client disconnect
 // or slow consumer drop. Optional ?trip_id= / ?vehicle_id= query filters.
 // If sseEnabled is provided and false, returns HTTP 503 Service Unavailable.
-func StreamHandler(h *Hub, sseEnabled ...bool) http.HandlerFunc {
+func StreamHandler(h Broadcaster, sseEnabled ...bool) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if len(sseEnabled) > 0 && !sseEnabled[0] {
 			http.Error(w, `{"error":"SSE streaming is disabled"}`, http.StatusServiceUnavailable)

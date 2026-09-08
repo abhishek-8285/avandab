@@ -12,7 +12,7 @@ import (
 // vs "trip.started" fracture that left trip updates off SSE). Dropped from
 // an earlier revision: "PositionEvent" and "trip.status_changed" — zero
 // producers by grep; re-add if a producer lands.
-func AttachToBus(bus events.EventBus, h *Hub) {
+func AttachToBus(bus events.EventBus, h Broadcaster) {
 	if bus == nil || h == nil {
 		return
 	}

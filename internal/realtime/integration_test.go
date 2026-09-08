@@ -97,7 +97,7 @@ func TestBusIntegration_SnapshotToSSE(t *testing.T) {
 	ingestor := telemetry.NewIngestor(db, sqlUoW, eventBus, idGen, nil, ingestCfg)
 
 	r := chi.NewRouter()
-	telemetry.RegisterTelemetryRoutes(r, ingestor, db, 15*time.Minute)
+	telemetry.RegisterTelemetryRoutes(r, ingestor, db, 15*time.Minute, 60*time.Minute)
 	r.Get("/api/v1/telemetry/stream", realtime.StreamHandler(sseHub, true))
 
 	// 4. Start SSE subscriber on /api/v1/telemetry/stream

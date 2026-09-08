@@ -20,7 +20,7 @@ func newTestRouter(t *testing.T) (chi.Router, *Ingestor) {
 	db := newTestIngestorDB(t)
 	ing := newTestIngestor(t, db, nil)
 	r := chi.NewRouter()
-	RegisterTelemetryRoutes(r, ing, db, 15*time.Minute)
+	RegisterTelemetryRoutes(r, ing, db, 15*time.Minute, 60*time.Minute)
 	return r, ing
 }
 
@@ -35,7 +35,7 @@ func newTestRouterWithDevice(t *testing.T) (chi.Router, string, string) {
 	imei := "IMEI-SYNC-1"
 	insertTestDevice(t, db, imei, DeviceStatusActive, &vID)
 	r := chi.NewRouter()
-	RegisterTelemetryRoutes(r, ing, db, 15*time.Minute)
+	RegisterTelemetryRoutes(r, ing, db, 15*time.Minute, 60*time.Minute)
 	return r, imei, vID
 }
 
@@ -127,7 +127,7 @@ func TestHandleTelemetrySync_ProviderParityFields(t *testing.T) {
 	imei := "IMEI-SYNC-PAR"
 	insertTestDevice(t, db, imei, DeviceStatusActive, &vID)
 	r := chi.NewRouter()
-	RegisterTelemetryRoutes(r, ing, db, 15*time.Minute)
+	RegisterTelemetryRoutes(r, ing, db, 15*time.Minute, 60*time.Minute)
 
 	batt := 64.0
 	sats := 11
@@ -179,7 +179,7 @@ func TestHandleTelemetrySync_DistinctIDsNoCollapse(t *testing.T) {
 	imei := "IMEI-SYNC-COLLAPSE"
 	insertTestDevice(t, db, imei, DeviceStatusActive, &vID)
 	r := chi.NewRouter()
-	RegisterTelemetryRoutes(r, ing, db, 15*time.Minute)
+	RegisterTelemetryRoutes(r, ing, db, 15*time.Minute, 60*time.Minute)
 
 	// Regression: the mobile client once omitted per-log ids, so every frame
 	// shared provider_msg_id "sync:0" and N distinct fixes collapsed to one

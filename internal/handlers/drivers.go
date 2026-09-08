@@ -430,18 +430,10 @@ func (h *DriverHandlers) GetMe(w http.ResponseWriter, r *http.Request) {
 		LIMIT 1
 	`, d.ID, d.DriverID, session.UserID, tenantID).Scan(&vehiclePlate, &vehicleID)
 
-	if vehiclePlate == "" && d.Notes != "" {
-		var vID, vReg string
-		if errV := h.DB.QueryRowContext(ctx, `
-			SELECT id, registration_number
-			FROM vehicles
-			WHERE (registration_number = $1 OR vehicle_number = $2)
-			  AND tenant_id = $3
-			LIMIT 1`, d.Notes, d.Notes, tenantID).Scan(&vID, &vReg); errV == nil {
-			vehiclePlate = vReg
-			vehicleID = vID
-		}
-	}
+	// No notes→plate fallback here: the drivers.notes string convention was
+	// removed pipeline-wide (ingest fallbackVehicleID) — any note becomes a
+	// vehicle lookup, and binding is owned by the onboarding vehicle_binding
+	// step. Empty plate simply renders as unassigned below.
 
 	// Check current location from latest snapshot or vehicle latest position
 	type Location struct {

@@ -4,6 +4,8 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"transport-app/internal/telemetry/providers"
 )
 
 func TestAsyncIngestQueue_PushAndDrain(t *testing.T) {
@@ -62,5 +64,37 @@ func TestAsyncIngestQueue_SaturationDrop(t *testing.T) {
 
 	if queue.droppedCount.Load() != 1 {
 		t.Errorf("expected dropped count 1, got %d", queue.droppedCount.Load())
+	}
+}
+
+// Saturated queue must NOT lose hardware-acked frames: IngestAsync falls back
+// to the synchronous pipeline (backpressure) instead of dropping.
+func TestIngestAsync_SaturatedQueuePersists(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicle(t, db, "v-1")
+	insertTestDevice(t, db, "IMEI-SAT", DeviceStatusActive, strPtr("v-1"))
+	ing := newTestIngestor(t, db, nil)
+
+	q := NewAsyncIngestQueue(1, 0, nil, nil) // unstarted: nobody drains
+	ing.SetQueue(q)
+	if !q.Push(RawFrame{IMEI: "FILLER"}) {
+		t.Fatal("setup: filler push must succeed")
+	}
+
+	frame := providers.RawFrame{
+		IMEI:          "IMEI-SAT",
+		DeviceTime:    time.Now().UTC().Add(-2 * time.Second),
+		Latitude:      19.07,
+		Longitude:     72.83,
+		Speed:         45.0,
+		Provider:      "own",
+		ProviderMsgID: "msg-sat-001",
+	}
+	if err := ing.IngestAsync(context.Background(), frame); err != nil {
+		t.Fatalf("IngestAsync on saturated queue = %v, want nil (sync fallback)", err)
+	}
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM telemetry_positions WHERE imei = 'IMEI-SAT'`).Scan(&n); err != nil || n != 1 {
+		t.Fatalf("positions for IMEI-SAT = %d, want 1 (frame lost despite ACK)", n)
 	}
 }

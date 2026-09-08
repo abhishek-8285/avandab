@@ -25,6 +25,22 @@ const defaultBufferCap = 64
 // A nil filter accepts everything.
 type filter func(e events.Event) bool
 
+// Filter is the exported alias so external Broadcaster implementations (a
+// future Redis/NATS fan-out) can name the predicate type.
+type Filter = filter
+
+// Broadcaster is the fan-out seam: Hub is the single-process implementation.
+// A future Redis/NATS implementation satisfies this interface without
+// touching AttachToBus, StreamHandler, or any call site — multi-instance
+// fan-out then becomes a wiring change in main.go, not a refactor.
+type Broadcaster interface {
+	Subscribe(ctx context.Context, f Filter) (<-chan []byte, func())
+	Publish(ctx context.Context, e events.Event)
+	Run(ctx context.Context)
+}
+
+var _ Broadcaster = (*Hub)(nil)
+
 // Hub broadcasts published events to SSE subscribers. It is safe for
 // concurrent use.
 type Hub struct {

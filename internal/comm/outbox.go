@@ -180,17 +180,17 @@ func EnqueueTripDispatchWhatsApp(ctx context.Context, db *sql.DB, tenantID, phon
 }
 
 // EnqueueTripTrackingWhatsApp queues a trip tracking notification for the customer.
-func EnqueueTripTrackingWhatsApp(ctx context.Context, db *sql.DB, tenantID, phone, tripNum, origin, destination, vehicleID string) (string, error) {
-	msg := FormatTripTrackingMessage(tripNum, origin, destination, vehicleID)
+func EnqueueTripTrackingWhatsApp(ctx context.Context, db *sql.DB, tenantID, phone, tripID, tripNum, origin, destination string) (string, error) {
+	msg := FormatTripTrackingMessage(tripID, tripNum, origin, destination)
 	return EnqueueRichWhatsApp(ctx, db, tenantID, phone, "trip_tracking", WhatsAppPayload{
 		Text:     msg,
 		Body:     msg,
 		Template: "trip_tracking",
 		Params: map[string]string{
+			"trip_id":     tripID,
 			"trip_number": tripNum,
 			"origin":      origin,
 			"destination": destination,
-			"vehicle_id":  vehicleID,
 		},
 	})
 }

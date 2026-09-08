@@ -270,11 +270,15 @@ type LiveMapConfig struct {
 	EtaWindowMin          int
 	EtaGuardMaxRegressMin int
 	TelemetryStaleMin     int
-	SSEEnabled            bool
-	SSEKeepaliveSec       int
-	PMEnabled             bool
-	PMCheckIntervalMin    int
-	PMCriticalDTCs        string
+	// TelemetryStaleMinMobile overrides the no_signal clock for mobile_app
+	// devices (driver phones, OEM-killed). Defaults to 4x StaleMin; 0/negative
+	// falls back the same way. See LiveStore.WithMobileStaleMin.
+	TelemetryStaleMinMobile int
+	SSEEnabled              bool
+	SSEKeepaliveSec         int
+	PMEnabled               bool
+	PMCheckIntervalMin      int
+	PMCriticalDTCs          string
 }
 
 // BootstrapAdminConfig configures the initial admin account created at
@@ -432,25 +436,26 @@ func Load() *Config {
 
 	// Spec 04 §9 — live map + share links + ETA + preventive maintenance.
 	cfg.LiveMap = LiveMapConfig{
-		MapTileProvider:       getEnv("MAP_TILE_PROVIDER", "auto"),
-		MapGoogleStyle:        getEnv("MAP_GOOGLE_STYLE", "m"),
-		MapGL:                 getEnv("MAP_GL", "IN"),
-		MapOSMURL:             getEnv("MAP_OSM_URL", "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"),
-		NominatimURL:          getEnv("NOMINATIM_URL", "https://nominatim.openstreetmap.org"),
-		MapPollSec:            getEnvInt("MAP_POLL_SEC", 10),
-		CSPEnabled:            getEnv("CSP_ENABLED", "false") == "true",
-		ShareLinkTTLHours:     getEnvInt("SHARE_LINK_TTL_HOURS", 24),
-		ShareLinkMaxTTLHours:  getEnvInt("SHARE_LINK_MAX_TTL_HOURS", 168),
-		ShareLinkMaxActive:    getEnvInt("SHARE_LINK_MAX_ACTIVE", 20),
-		EtaStaleMin:           getEnvInt("ETA_STALE_MIN", 15),
-		EtaWindowMin:          getEnvInt("ETA_WINDOW_MIN", 30),
-		EtaGuardMaxRegressMin: getEnvInt("ETA_GUARD_MAX_REGRESS_MIN", 5),
-		TelemetryStaleMin:     getEnvInt("TELEMETRY_STALE_MIN", 15),
-		SSEEnabled:            getEnv("SSE_ENABLED", "true") == "true",
-		SSEKeepaliveSec:       getEnvInt("SSE_KEEPALIVE_SEC", 15),
-		PMEnabled:             getEnv("PM_ENABLED", "true") == "true",
-		PMCheckIntervalMin:    getEnvInt("PM_CHECK_INTERVAL_MIN", 15),
-		PMCriticalDTCs:        getEnv("PM_CRITICAL_DTCS", "P0A0F,P1602"),
+		MapTileProvider:         getEnv("MAP_TILE_PROVIDER", "auto"),
+		MapGoogleStyle:          getEnv("MAP_GOOGLE_STYLE", "m"),
+		MapGL:                   getEnv("MAP_GL", "IN"),
+		MapOSMURL:               getEnv("MAP_OSM_URL", "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"),
+		NominatimURL:            getEnv("NOMINATIM_URL", "https://nominatim.openstreetmap.org"),
+		MapPollSec:              getEnvInt("MAP_POLL_SEC", 10),
+		CSPEnabled:              getEnv("CSP_ENABLED", "false") == "true",
+		ShareLinkTTLHours:       getEnvInt("SHARE_LINK_TTL_HOURS", 24),
+		ShareLinkMaxTTLHours:    getEnvInt("SHARE_LINK_MAX_TTL_HOURS", 168),
+		ShareLinkMaxActive:      getEnvInt("SHARE_LINK_MAX_ACTIVE", 20),
+		EtaStaleMin:             getEnvInt("ETA_STALE_MIN", 15),
+		EtaWindowMin:            getEnvInt("ETA_WINDOW_MIN", 30),
+		EtaGuardMaxRegressMin:   getEnvInt("ETA_GUARD_MAX_REGRESS_MIN", 5),
+		TelemetryStaleMin:       getEnvInt("TELEMETRY_STALE_MIN", 15),
+		TelemetryStaleMinMobile: getEnvInt("TELEMETRY_STALE_MIN_MOBILE", 60),
+		SSEEnabled:              getEnv("SSE_ENABLED", "true") == "true",
+		SSEKeepaliveSec:         getEnvInt("SSE_KEEPALIVE_SEC", 15),
+		PMEnabled:               getEnv("PM_ENABLED", "true") == "true",
+		PMCheckIntervalMin:      getEnvInt("PM_CHECK_INTERVAL_MIN", 15),
+		PMCriticalDTCs:          getEnv("PM_CRITICAL_DTCS", "P0A0F,P1602"),
 	}
 
 	// Spec 05 §14 — Operational alerts Telegram configuration.

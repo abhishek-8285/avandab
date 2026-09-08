@@ -65,6 +65,15 @@ type LiveStore struct {
 	// 15-minute WHERE would make the no_signal state unobservable.
 	visibilityWindow time.Duration
 
+	// mobileStaleMin / mobileVisibilityWindow are the same pair for
+	// mobile_app devices (driver phones). Phones are killed by OEM task
+	// managers and report sporadically; judging them by the hardware clock
+	// parks the whole phone fleet in permanent no_signal (or tempts the
+	// operator to loosen the global threshold and hide real hardware
+	// outages). Defaults to 4 × staleMin; override via WithMobileStaleMin.
+	mobileStaleMin         time.Duration
+	mobileVisibilityWindow time.Duration
+
 	// hasMaintenanceDue caches whether vehicles.maintenance_due exists
 	// (column comes from migration 00042, which precedes 00044). If the
 	// column is missing (stale DB in tests), status falls back to the
@@ -145,10 +154,22 @@ func NewLiveStore(db *sql.DB, staleMin time.Duration) *LiveStore {
 		staleMin = 15 * time.Minute
 	}
 	return &LiveStore{
-		db:               db,
-		staleMin:         staleMin,
-		visibilityWindow: 2 * staleMin,
+		db:                     db,
+		staleMin:               staleMin,
+		visibilityWindow:       2 * staleMin,
+		mobileStaleMin:         4 * staleMin,
+		mobileVisibilityWindow: 8 * staleMin,
 	}
+}
+
+// WithMobileStaleMin overrides the no_signal / visibility clocks for
+// mobile_app devices (driver phones). Chainable like WithEtaService.
+func (s *LiveStore) WithMobileStaleMin(d time.Duration) *LiveStore {
+	if d > 0 {
+		s.mobileStaleMin = d
+		s.mobileVisibilityWindow = 2 * d
+	}
+	return s
 }
 
 // Live queries the latest snapshot per vehicle visible in the window.
@@ -180,7 +201,8 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 		       COALESCE(v.vehicle_number, v.registration_number, '') as vehicle_num,
 		       COALESCE(NULLIF(TRIM(COALESCE(d.first_name, '') || ' ' || COALESCE(d.last_name, '')), ''), '') as driver_name,
 		       COALESCE(d.phone, '') as driver_phone,
-		       rt.distance as route_km
+		       rt.distance as route_km,
+		       td.device_type as device_type
 		FROM telemetry_snapshots s
 		JOIN (
 		    SELECT vehicle_id, MAX(timestamp) AS ts
@@ -191,6 +213,7 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 		) latest ON latest.vehicle_id = s.vehicle_id AND latest.ts = s.timestamp
 		JOIN vehicles v ON v.id = s.vehicle_id AND v.tenant_id = $3
 		` + vlpJoin + `
+		LEFT JOIN telemetry_devices td ON td.vehicle_id = v.id AND td.tenant_id = v.tenant_id
 		LEFT JOIN trips t ON t.id = s.trip_id
 		LEFT JOIN drivers d ON d.id = t.driver_id
 		LEFT JOIN routes rt ON rt.id = t.route_id
@@ -203,14 +226,16 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 	defer rows.Close()
 
 	var out []LiveVehicle
+	var stales []time.Duration
 	for rows.Next() {
 		var lv LiveVehicle
 		var tripID, vehicleID, vehNum, driverName, driverPhone sql.NullString
+		var devType sql.NullString
 		var lat, lng, speed sql.NullFloat64
 		var fuel, odo, heading, routeKM, battery sql.NullFloat64
 		var motion, valid sql.NullInt64
 		var ts time.Time
-		if err := rows.Scan(&tripID, &vehicleID, &lat, &lng, &speed, &fuel, &odo, &heading, &ts, &battery, &motion, &valid, &vehNum, &driverName, &driverPhone, &routeKM); err != nil {
+		if err := rows.Scan(&tripID, &vehicleID, &lat, &lng, &speed, &fuel, &odo, &heading, &ts, &battery, &motion, &valid, &vehNum, &driverName, &driverPhone, &routeKM, &devType); err != nil {
 			return nil, err
 		}
 		if !vehicleID.Valid {
@@ -264,6 +289,11 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 			lv.Valid = &v
 		}
 		lv.Ts = ts.UTC()
+		// Per-device-type clocks (H8): phones get the mobile windows.
+		stale, window := s.staleMin, s.visibilityWindow
+		if devType.Valid && devType.String == DeviceTypeMobileApp {
+			stale, window = s.mobileStaleMin, s.mobileVisibilityWindow
+		}
 		// Visibility window (2× staleMin): vehicles silent longer than this
 		// drop off the live map instead of lingering as permanent
 		// no_signal ghosts. Filtered here in Go, not SQL: snapshot
@@ -273,10 +303,11 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 		// into time.Time on read, so lv.Ts is the comparison both sides
 		// survive. Cost is unchanged: the query already returns one row
 		// per vehicle.
-		if now.Sub(lv.Ts) > s.visibilityWindow {
+		if now.Sub(lv.Ts) > window {
 			continue
 		}
 		out = append(out, lv)
+		stales = append(stales, stale)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -286,7 +317,7 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 	// state: maintenance_due overrides running/stopped/no_signal.
 	due := s.maintenanceDueSet(ctx, tenantID)
 	for i := range out {
-		out[i].Status = markerState(out[i], due, s.staleMin, now)
+		out[i].Status = markerState(out[i], due, stales[i], now)
 		if out[i].TripID != "" && s.etaService != nil {
 			if etaRes, ok := s.cachedEta(ctx, out[i].TripID); ok {
 				out[i].EtaMin = &etaRes.EtaMin
@@ -365,8 +396,8 @@ func columnExists(db *sql.DB, table, column string) bool {
 // Extended: ?q= / ?search= filters by vehicle_number / vehicle_id / trip_id
 // substring (case-insensitive). This keeps the /tracking search snappy at
 // 200+ vehicles when callers prefer server-side filtering over client-side.
-func LiveHandler(db *sql.DB, staleMin time.Duration, etaSvc ...*eta.EtaService) http.HandlerFunc {
-	store := NewLiveStore(db, staleMin)
+func LiveHandler(db *sql.DB, staleMin, mobileStaleMin time.Duration, etaSvc ...*eta.EtaService) http.HandlerFunc {
+	store := NewLiveStore(db, staleMin).WithMobileStaleMin(mobileStaleMin)
 	if len(etaSvc) > 0 && etaSvc[0] != nil {
 		store.WithEtaService(etaSvc[0])
 	}

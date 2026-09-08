@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -95,6 +94,57 @@ func NewIngestor(
 	}
 }
 
+// fixTrusted is the per-provider GNSS trust policy (H4). Providers that set
+// Valid (ais140/gt06/teltonika) are judged by the flag. Providers that never
+// set it (mobile "own" sync/snapshot frames) are judged by derived fix
+// quality: a (0,0) null-island fix is never trusted, and fewer than 3
+// satellites distrusts (same floor teltonika applies). Anything else keeps
+// the old default-trust so snapshot frames without satellite data still
+// move the live map.
+func fixTrusted(frame RawFrame) bool {
+	if frame.Valid != nil {
+		return *frame.Valid
+	}
+	if frame.Latitude == 0 && frame.Longitude == 0 {
+		return false
+	}
+	if frame.Satellites != nil && *frame.Satellites < 3 {
+		return false
+	}
+	return true
+}
+
+// fallbackVehicleID resolves the vehicle for a frame from an unbound device.
+// The mobile device "IMEI" doubles as the driver identity (device IMEI =
+// user ID = drivers.driver_id), so the trip's vehicle_id is authoritative.
+//
+// Two tenant-scoped indexed probes (drivers.id PK, then drivers.driver_id
+// UNIQUE) replace the old OR-join full scan; each probe rides
+// idx_trips_driver_tenant_departure and picks deterministically (latest
+// departure first). The old drivers.notes→plate convention is gone: it was
+// an undocumented cross-module string coupling (any note became a vehicle
+// lookup) and vehicle binding is owned by the onboarding vehicle_binding step.
+// Reads via txOrDB so the lookup joins the ingest snapshot like every step.
+func (ing *Ingestor) fallbackVehicleID(ctx context.Context, tenantID, imei string) string {
+	db := txOrDB(ctx, ing.deviceStore.db)
+	for _, driverCol := range []string{"d.id", "d.driver_id"} {
+		var vid sql.NullString
+		err := db.QueryRowContext(ctx, `
+			SELECT t.vehicle_id
+			FROM drivers d
+			JOIN trips t ON t.driver_id = `+driverCol+`
+				AND t.tenant_id = d.tenant_id
+				AND t.status IN ('assigned', 'started', 'reached_pickup', 'in_transit')
+			WHERE `+driverCol+` = $1 AND d.tenant_id = $2
+			ORDER BY t.departure_time DESC
+			LIMIT 1`, imei, tenantID).Scan(&vid)
+		if err == nil && vid.Valid && vid.String != "" {
+			return vid.String
+		}
+	}
+	return ""
+}
+
 // txOrDB returns the active transaction from context, or the fallback DB.
 // Both implement ExecContext/QueryRowContext/QueryContext.
 func txOrDB(ctx context.Context, fallback *sql.DB) interface {
@@ -113,14 +163,18 @@ func (ing *Ingestor) SetQueue(q *AsyncIngestQueue) {
 }
 
 // IngestAsync pushes a frame into the in-memory ring-buffer for asynchronous processing.
-// Returns nil if accepted, or error if queue is saturated.
+// Returns nil if accepted. If the queue is saturated the frame is processed
+// synchronously instead of dropped: the TCP server ACKs hardware on receipt,
+// so a drop would be silent data loss the device never retries. The sync
+// fallback slows the reader (backpressure) rather than losing acked frames.
 func (ing *Ingestor) IngestAsync(ctx context.Context, frame RawFrame) error {
 	if ing.queue == nil {
 		_, err := ing.IngestRawFrame(ctx, frame)
 		return err
 	}
 	if !ing.queue.Push(frame) {
-		return errors.New("telemetry async buffer full")
+		_, err := ing.IngestRawFrame(ctx, frame)
+		return err
 	}
 	return nil
 }
@@ -199,16 +253,7 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 			vehicleID = *device.VehicleID
 		}
 		if vehicleID == "" {
-			var vid string
-			if errV := ing.deviceStore.db.QueryRowContext(txCtx, `
-				SELECT COALESCE(t.vehicle_id, v.id, '')
-				FROM drivers d
-				LEFT JOIN trips t ON (t.driver_id = d.id OR t.driver_id = d.driver_id) AND t.status IN ('assigned', 'started', 'reached_pickup', 'in_transit')
-				LEFT JOIN vehicles v ON (v.registration_number = d.notes OR v.vehicle_number = d.notes) AND v.tenant_id = d.tenant_id
-				WHERE d.id = $1 OR d.driver_id = $2
-				LIMIT 1`, frame.IMEI, frame.IMEI).Scan(&vid); errV == nil && vid != "" {
-				vehicleID = vid
-			}
+			vehicleID = ing.fallbackVehicleID(txCtx, device.TenantID, frame.IMEI)
 		}
 
 		// Step 7: Parked-dedup check (migration 00117): a motion=0 frame that
@@ -231,9 +276,10 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 		// Invalid-fix gate (migration 00117): a frame the device flagged as an
 		// invalid GNSS fix (or with too few satellites) is stored in history for
 		// audit but must never overwrite the live-map row — this is the parking-
-		// drift corruption guard. Frames without an explicit Valid pointer are
-		// trusted (back-compat: legacy providers never set it).
-		if vehicleID != "" && !parked && (frame.Valid == nil || *frame.Valid) {
+		// drift corruption guard. Frames from providers that speak Valid are
+		// judged by the flag; providers that never set it (mobile "own") are
+		// judged by derived fix quality (H4 trust policy).
+		if vehicleID != "" && !parked && fixTrusted(frame) {
 			if err := ing.upsertLatestPosition(txCtx, vehicleID, device.TenantID, frame, adjustedOdometer, adjustedFuel, receivedAt); err != nil {
 				return fmt.Errorf("latest position upsert: %w", err)
 			}
@@ -511,6 +557,13 @@ func (ing *Ingestor) insertRawEvent(ctx context.Context, id, tenantID string, fr
 // insertPosition inserts a position row into telemetry_positions.
 func (ing *Ingestor) insertPosition(ctx context.Context, id, tenantID, vehicleID string, frame RawFrame, odometer, fuel *float64, rawEventID string, receivedAt time.Time) error {
 	db := txOrDB(ctx, ing.deviceStore.db)
+	// L9: unbound-device frames store NULL, never the '' sentinel — every
+	// reader already filters `IS NOT NULL AND != ''`, so NULL is excluded
+	// identically without the identity-ambiguous junk rows.
+	var vehicle sql.NullString
+	if vehicleID != "" {
+		vehicle = sql.NullString{String: vehicleID, Valid: true}
+	}
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO telemetry_positions
             (id, tenant_id, imei, device_time, received_at, latitude, longitude,
@@ -524,7 +577,7 @@ func (ing *Ingestor) insertPosition(ctx context.Context, id, tenantID, vehicleID
 		frame.Ignition, frame.EngineHours, frame.Accuracy, fuel, odometer,
 		frame.Satellites, frame.BatteryLevel, frame.ExternalVoltage, frame.GSMSignal,
 		boolPtr(frame.Motion), validInt(frame.Valid), frame.FixTime,
-		frame.DriverID, frame.TripID, vehicleID,
+		frame.DriverID, frame.TripID, vehicle,
 		frame.Provider, rawEventID,
 	)
 	return err

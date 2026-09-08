@@ -73,10 +73,10 @@ type TelemetrySnapshotPayload struct {
 // tracking feed (Spec 04 §7). These live inside the RequireAPIAuth group
 // (mobile app sends a Bearer token) and use absolute paths to preserve the
 // /api/v1/telemetry/ prefix.
-func RegisterTelemetryRoutes(r chi.Router, ing *Ingestor, db *sql.DB, staleMin time.Duration, etaSvc ...*eta.EtaService) {
+func RegisterTelemetryRoutes(r chi.Router, ing *Ingestor, db *sql.DB, staleMin, mobileStaleMin time.Duration, etaSvc ...*eta.EtaService) {
 	r.Post("/api/v1/telemetry/sync", HandleTelemetrySync(ing))
 	r.Post("/api/v1/telemetry/snapshots", HandleTelemetrySnapshots(ing))
-	r.Get("/api/v1/telemetry/live", LiveHandler(db, staleMin, etaSvc...))
+	r.Get("/api/v1/telemetry/live", LiveHandler(db, staleMin, mobileStaleMin, etaSvc...))
 	r.Get("/api/v1/telemetry/geofences", GeofencesHandler(db))
 	r.Get("/api/v1/telemetry/history", HistoryHandler(db))
 	r.Get("/api/v1/telemetry/playback", PlaybackHandler(db))

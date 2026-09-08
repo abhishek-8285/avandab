@@ -423,9 +423,9 @@ func TestWhatsAppTemplates_Formatting(t *testing.T) {
 	dispatchMsg := FormatTripDispatchMessage("Mumbai JNPT", "Pune Chakan", "MH12AB1234")
 	assert.Equal(t, "🚚 Avandab Trip Dispatched: Mumbai JNPT ➔ Pune Chakan | Live Tracking: https://avandab.com/tracking#v=MH12AB1234", dispatchMsg)
 
-	// 2. Trip tracking message
-	trackMsg := FormatTripTrackingMessage("TRP-9001", "Delhi", "Jaipur", "DL01XY9999")
-	assert.Equal(t, "🚚 Avandab Shipment On The Way: Trip #TRP-9001 (Delhi ➔ Jaipur) has departed. Live Tracking: https://avandab.com/tracking#v=DL01XY9999", trackMsg)
+	// 2. Trip tracking message (customer portal link, never staff /tracking)
+	trackMsg := FormatTripTrackingMessage("trp-9001", "TRP-9001", "Delhi", "Jaipur")
+	assert.Equal(t, "🚚 Avandab Shipment On The Way: Trip #TRP-9001 (Delhi ➔ Jaipur) has departed. Live Tracking: https://avandab.com/customer/tracking/trp-9001", trackMsg)
 
 	// 3. Booking confirmed message
 	bookingMsg := FormatBookingConfirmedMessage("BK-500", "Chennai", "Bengaluru", "https://avandab.com/tracking#b=BK-500")
@@ -540,7 +540,7 @@ func TestEventSubscriber_HandlesAllDomainEvents(t *testing.T) {
 	}
 	require.NoError(t, db.QueryRow(`SELECT recipient, payload_json FROM comm_outbox WHERE channel = 'whatsapp' AND template = 'trip_tracking'`).Scan(&tripTrackRow.Recipient, &tripTrackRow.Payload))
 	assert.Equal(t, "+919811122233", tripTrackRow.Recipient)
-	assert.Contains(t, tripTrackRow.Payload, "🚚 Avandab Shipment On The Way: Trip #TRP-101 (Mumbai ➔ Pune) has departed. Live Tracking: https://avandab.com/tracking#v=MH12AB1234")
+	assert.Contains(t, tripTrackRow.Payload, "🚚 Avandab Shipment On The Way: Trip #TRP-101 (Mumbai ➔ Pune) has departed. Live Tracking: https://avandab.com/customer/tracking/trp-1")
 
 	// 5. Test POD / Delivery completed event (Email + WhatsApp to customer)
 	err = sub.HandlePODEvent(ctx, events.Event{

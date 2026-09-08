@@ -346,3 +346,73 @@ func TestLiveStore_MixedTimestampLayouts(t *testing.T) {
 	assert.Equal(t, "v1", vehicles[0].VehicleID)
 	assert.Equal(t, MarkerStateNoSignal, vehicles[0].Status)
 }
+
+// Per-device-type clocks (H8): a 30-minute-old phone frame is still fresh
+// (mobile 60m stale clock); the same-age hardware frame is no_signal; a
+// 40-minute-old hardware frame drops off the map entirely.
+func TestLive_PerDeviceTypeStaleness(t *testing.T) {
+	db := newTestIngestorDB(t)
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	mkVehicle := func(vid, reg string) {
+		_, err := db.Exec(`INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, capacity, tenant_id)
+			VALUES (?, ?, ?, 'truck', 15, '1')`, vid, reg, reg)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	mkDevice := func(imei, dtype, vehicleID string) {
+		_, err := db.Exec(`INSERT INTO telemetry_devices (id, tenant_id, imei, device_type, status, vehicle_id)
+			VALUES (?, '1', ?, ?, 'active', ?)`, "dev-"+imei, imei, dtype, vehicleID)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	mkSnap := func(sid, vehicleID string, ts time.Time) {
+		_, err := db.Exec(`INSERT INTO telemetry_snapshots (id, vehicle_id, timestamp, latitude, longitude, speed)
+			VALUES (?, ?, ?, 19.07, 72.87, 0)`, sid, vehicleID, ts.UTC().Format("2006-01-02 15:04:05"))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	mkVehicle("v-ph", "REG-PHONE")
+	mkDevice("imei-phone", DeviceTypeMobileApp, "v-ph")
+	mkSnap("s-ph", "v-ph", now.Add(-25*time.Minute))
+
+	mkVehicle("v-hw", "REG-HW")
+	mkDevice("imei-hw", DeviceTypeHardware, "v-hw")
+	mkSnap("s-hw", "v-hw", now.Add(-25*time.Minute))
+
+	mkVehicle("v-old", "REG-OLD")
+	mkDevice("imei-old", DeviceTypeHardware, "v-old")
+	mkSnap("s-old", "v-old", now.Add(-40*time.Minute))
+
+	store := NewLiveStore(db, 15*time.Minute).WithMobileStaleMin(60 * time.Minute)
+	got, err := store.Live(ctx, "1", "", now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byID := map[string]LiveVehicle{}
+	for _, lv := range got {
+		byID[lv.VehicleID] = lv
+	}
+	ph, ok := byID["v-ph"]
+	if !ok {
+		t.Fatal("phone vehicle missing from live map")
+	}
+	if ph.Status == MarkerStateNoSignal {
+		t.Fatalf("phone status = no_signal at 25m, want fresh (mobile 60m clock)")
+	}
+	hw, ok := byID["v-hw"]
+	if !ok {
+		t.Fatal("hardware vehicle missing from live map (25m < 2x15m window)")
+	}
+	if hw.Status != MarkerStateNoSignal {
+		t.Fatalf("hardware status = %q at 25m, want no_signal", hw.Status)
+	}
+	if _, ok := byID["v-old"]; ok {
+		t.Fatal("40m-silent hardware vehicle must drop off the map")
+	}
+}

@@ -1,7 +1,7 @@
 # Migration Ownership Index
 
 Single source of truth for `db/migrations/` version numbers. Repo head is
-`00134_snapshot_ts_unix.sql`; next free slot is `00135`.
+`00135_vehicle_plate_per_tenant.sql`; next free slot is `00136`.
 (`00039_experiments.sql` remains TAKEN — never edit.) Every new migration
 appends the next free number. **This table is authoritative; spec §3 numbers
 MUST match it.**
@@ -119,7 +119,8 @@ which always allocate head-ward from the maximum above.
 | 00132 | `vehicles.insurance_expiry` + `fitness_expiry` + `permit_expiry` go nullable (rebuild per 00126; NO backfill — fabricated +1y indistinguishable from real) — unknown doc date is NULL | Driver onboarding |
 | 00133 | `users.email_verified_at` (NULL = unverified) — email verification badge; set on link consume or Google OAuth | User onboarding |
 | 00134 | `telemetry_snapshots.ts_unix` (epoch seconds, NULL when unparseable) — machine-readable clock; pipeline writes on insert, backfill covers strftime-parseable rows only (Go-String rows stay NULL, never silently wrong) | GPS tracking timestamp-seam hardening |
-| 00135+ | future specs | reserved |
+| 00135 | `vehicles.registration_number` UNIQUE → UNIQUE(`tenant_id`, `registration_number`) (rebuild per 00131; DDL generated from 00134 state) + `vehicle_latest_position` UNIQUE(`tenant_id`, `vehicle_id`) index — plates are per-tenant, live-map cache tenant-scoped | Telemetry findings H3+L10 |
+| 00136+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

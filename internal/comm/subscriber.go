@@ -484,7 +484,7 @@ func (s *EventSubscriber) HandleTrackingEvent(ctx context.Context, e events.Even
 		return nil
 	}
 
-	_, err := EnqueueTripTrackingWhatsApp(ctx, s.db, tenantID, customerPhone, tripNumber, origin, destination, vehicleID)
+	_, err := EnqueueTripTrackingWhatsApp(ctx, s.db, tenantID, customerPhone, tripID, tripNumber, origin, destination)
 	if err != nil {
 		s.logger.Error("comm event subscriber: failed to enqueue trip tracking WhatsApp",
 			"trip_id", tripID, "recipient", customerPhone, "error", err)
