@@ -61,7 +61,7 @@ func TestSaveOnboard_CompanyOnly_RedirectsToDashboard(t *testing.T) {
 	form.Set("company_name", "Apex Speed Cargo")
 	form.Set("email", "ops@apexspeed.test")
 	form.Set("phone", "+91 98765 00000")
-	form.Set("gst_number", "27ABCDE1234F1Z5")
+	form.Set("gst_number", "27ABCDE1234F1Z0")
 	form.Set("currency", "INR")
 	form.Set("timezone", "Asia/Kolkata")
 	form.Set("address", "100 Highway Logistics Park")
@@ -94,7 +94,7 @@ func TestSaveOnboard_CompanyOnly_RedirectsToDashboard(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Apex Speed Cargo", settings.CompanyName)
 	assert.Equal(t, "INR", settings.Currency)
-	assert.Equal(t, "27ABCDE1234F1Z5", *settings.GSTNumber)
+	assert.Equal(t, "27ABCDE1234F1Z0", *settings.GSTNumber)
 }
 
 func TestSaveOnboard_WithFirstVehicleAndDriver_ProvisionsAndRedirectsToTracking(t *testing.T) {
@@ -107,7 +107,7 @@ func TestSaveOnboard_WithFirstVehicleAndDriver_ProvisionsAndRedirectsToTracking(
 	form.Set("email", "contact@globalmovers.test")
 	form.Set("phone", "+91 98111 22334")
 	form.Set("address", "Plot 42, Transport Nagar")
-	form.Set("gst_number", "07AAAAA0000A1Z5")
+	form.Set("gst_number", "07AAAAA0000A1Z4")
 	form.Set("currency", "INR")
 
 	// Step 2: First Vehicle
@@ -206,6 +206,15 @@ func TestSaveOnboard_MandatoryFieldValidations(t *testing.T) {
 			expectedTitle: "Invalid GST Number",
 		},
 		{
+			name:          "invalid GST check digit",
+			companyName:   "Acme Logistics",
+			email:         "ops@test.com",
+			phone:         "+91 98765 43210",
+			address:       "123 Main St",
+			gst:           "27ABCDE1234F1Z5",
+			expectedTitle: "Invalid GST Number",
+		},
+		{
 			name:          "invalid PAN format",
 			companyName:   "Acme Logistics",
 			email:         "ops@test.com",
@@ -269,7 +278,7 @@ func TestSaveOnboard_3TierClassification(t *testing.T) {
 		form.Set("email", "admin@nationallogistics.test")
 		form.Set("phone", "+91 98765 11111")
 		form.Set("address", "Expressway Hub, Sector 10")
-		form.Set("gst_number", "27ABCDE1234F1Z5") // PAN is ABCDE1234F
+		form.Set("gst_number", "27ABCDE1234F1Z0") // PAN is ABCDE1234F
 
 		req := httptest.NewRequest(http.MethodPost, "/company/onboard", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -282,7 +291,7 @@ func TestSaveOnboard_3TierClassification(t *testing.T) {
 		settings, err := app.Services.Settings.GetSettings(ctx)
 		require.NoError(t, err)
 		assert.Equal(t, "National Logistics Ltd", settings.CompanyName)
-		assert.Equal(t, "27ABCDE1234F1Z5", *settings.GSTNumber)
+		assert.Equal(t, "27ABCDE1234F1Z0", *settings.GSTNumber)
 		require.NotNil(t, settings.PanNumber)
 		assert.Equal(t, "ABCDE1234F", *settings.PanNumber, "PAN should be automatically extracted from GSTIN")
 		assert.Equal(t, 1, settings.TaxTier(), "Should classify as Tier 1")
@@ -382,7 +391,7 @@ func TestDashboard_ComplianceRouteGuarding(t *testing.T) {
 	form.Set("email", "ops@fleetmasters.test")
 	form.Set("phone", "+91 98765 11223")
 	form.Set("address", "Sector 18, Transport Hub")
-	form.Set("gst_number", "27ABCDE1234F1Z5")
+	form.Set("gst_number", "27ABCDE1234F1Z0")
 
 	saveReq := httptest.NewRequest(http.MethodPost, "/company/onboard", strings.NewReader(form.Encode()))
 	saveReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -473,7 +482,7 @@ func TestOperationalRoutes_ComplianceGate(t *testing.T) {
 	form.Set("email", "ops@avandabfleet.com")
 	form.Set("phone", "+91 98765 43210")
 	form.Set("address", "Plot 101, Cargo Complex, Sector 20")
-	form.Set("gst_number", "27ABCDE1234F1Z5")
+	form.Set("gst_number", "27ABCDE1234F1Z0")
 
 	saveReq := httptest.NewRequest(http.MethodPost, "/company/onboard", strings.NewReader(form.Encode()))
 	saveReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")

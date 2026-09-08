@@ -92,8 +92,11 @@ func (s *UserService) RegisterSelfServiceAccount(ctx context.Context, email, nam
 		}
 		created = u
 
-		// Seed initial trial subscription if subscription table exists
-		seedTrialSubscription(txCtx, rawDB, tenantID)
+		// Seed initial trial subscription; a seed failure aborts
+		// provisioning so no tenant ever lands subscription-less.
+		if err := seedTrialSubscription(txCtx, rawDB, tenantID); err != nil {
+			return fmt.Errorf("failed to seed trial subscription: %w", err)
+		}
 
 		return nil
 	})
@@ -107,10 +110,10 @@ func (s *UserService) RegisterSelfServiceAccount(ctx context.Context, email, nam
 }
 
 // seedTrialSubscription inserts the STARTER/TRIAL row for a new tenant.
-// Best-effort: missing table or duplicate keeps provisioning green —
-// UpdatePlan/CreateSubscription heal it later via ON CONFLICT(tenant_id).
-// ponytail: single shared helper, tenant_id-keyed insert
-func seedTrialSubscription(txCtx context.Context, rawDB *sql.DB, tenantID string) {
+// It fails loudly: a tenant without a subscription silently degrades to
+// legacy behavior (paid features off, nothing metered), so a seed error
+// aborts provisioning and the transaction rolls back — never half-provision.
+func seedTrialSubscription(txCtx context.Context, rawDB *sql.DB, tenantID string) error {
 	now := time.Now().UTC()
 	trialEnd := now.Add(14 * 24 * time.Hour)
 	subID := "sub_" + tenantID
@@ -119,11 +122,13 @@ func seedTrialSubscription(txCtx context.Context, rawDB *sql.DB, tenantID string
 		VALUES ($1, $2, 'STARTER', 'TRIAL', $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 		ON CONFLICT (tenant_id) DO NOTHING
 	`
+	args := []any{subID, tenantID, now.Format(time.RFC3339), trialEnd.Format(time.RFC3339), trialEnd.Format(time.RFC3339)}
 	if tx := repository.TxFromContext(txCtx); tx != nil {
-		_, _ = tx.ExecContext(txCtx, q, subID, tenantID, now.Format(time.RFC3339), trialEnd.Format(time.RFC3339), trialEnd.Format(time.RFC3339))
-		return
+		_, err := tx.ExecContext(txCtx, q, args...)
+		return err
 	}
-	_, _ = rawDB.ExecContext(txCtx, q, subID, tenantID, now.Format(time.RFC3339), trialEnd.Format(time.RFC3339), trialEnd.Format(time.RFC3339))
+	_, err := rawDB.ExecContext(txCtx, q, args...)
+	return err
 }
 
 // suggestTenantSlug normalizes free text into a slug candidate: lowercase,
@@ -670,8 +675,11 @@ func (s *UserService) CreateTenantWithAdmin(ctx context.Context, tenantID, name,
 			return err
 		}
 		created = u
-		// Manual orgs bill/meter like self-serve ones from day one.
-		seedTrialSubscription(txCtx, rawDB, tenantID)
+		// Manual orgs bill/meter like self-serve ones from day one; a
+		// seed failure aborts provisioning instead of landing half-done.
+		if err := seedTrialSubscription(txCtx, rawDB, tenantID); err != nil {
+			return fmt.Errorf("failed to seed trial subscription: %w", err)
+		}
 		return nil
 	})
 	if err != nil {

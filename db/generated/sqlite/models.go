@@ -1645,25 +1645,27 @@ type Tenant struct {
 }
 
 type TenantCompanyProfile struct {
-	TenantID      string         `json:"tenant_id"`
-	CompanyName   string         `json:"company_name"`
-	LogoPath      sql.NullString `json:"logo_path"`
-	Currency      string         `json:"currency"`
-	Timezone      string         `json:"timezone"`
-	GstEnabled    bool           `json:"gst_enabled"`
-	GstRate       float64        `json:"gst_rate"`
-	BookingPrefix string         `json:"booking_prefix"`
-	TripPrefix    string         `json:"trip_prefix"`
-	InvoicePrefix string         `json:"invoice_prefix"`
-	FinancialYear sql.NullString `json:"financial_year"`
-	Address       sql.NullString `json:"address"`
-	Phone         sql.NullString `json:"phone"`
-	Email         sql.NullString `json:"email"`
-	GstNumber     sql.NullString `json:"gst_number"`
-	PanNumber     sql.NullString `json:"pan_number"`
-	StateCode     string         `json:"state_code"`
-	CreatedAt     time.Time      `json:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at"`
+	TenantID          string         `json:"tenant_id"`
+	CompanyName       string         `json:"company_name"`
+	LogoPath          sql.NullString `json:"logo_path"`
+	Currency          string         `json:"currency"`
+	Timezone          string         `json:"timezone"`
+	GstEnabled        bool           `json:"gst_enabled"`
+	GstRate           float64        `json:"gst_rate"`
+	BookingPrefix     string         `json:"booking_prefix"`
+	TripPrefix        string         `json:"trip_prefix"`
+	InvoicePrefix     string         `json:"invoice_prefix"`
+	FinancialYear     sql.NullString `json:"financial_year"`
+	Address           sql.NullString `json:"address"`
+	Phone             sql.NullString `json:"phone"`
+	Email             sql.NullString `json:"email"`
+	GstNumber         sql.NullString `json:"gst_number"`
+	PanNumber         sql.NullString `json:"pan_number"`
+	StateCode         string         `json:"state_code"`
+	CreatedAt         time.Time      `json:"created_at"`
+	UpdatedAt         time.Time      `json:"updated_at"`
+	GstinVerifyStatus string         `json:"gstin_verify_status"`
+	GstinVerifiedAt   sql.NullTime   `json:"gstin_verified_at"`
 }
 
 type TenantEntitlementOverride struct {

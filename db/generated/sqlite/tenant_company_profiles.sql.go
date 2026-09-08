@@ -11,7 +11,7 @@ import (
 )
 
 const getTenantCompanyProfile = `-- name: GetTenantCompanyProfile :one
-SELECT tenant_id, company_name, logo_path, currency, timezone, gst_enabled, gst_rate, booking_prefix, trip_prefix, invoice_prefix, financial_year, address, phone, email, gst_number, pan_number, state_code, created_at, updated_at FROM tenant_company_profiles WHERE tenant_id = ?
+SELECT tenant_id, company_name, logo_path, currency, timezone, gst_enabled, gst_rate, booking_prefix, trip_prefix, invoice_prefix, financial_year, address, phone, email, gst_number, pan_number, state_code, created_at, updated_at, gstin_verify_status, gstin_verified_at FROM tenant_company_profiles WHERE tenant_id = ?
 `
 
 func (q *Queries) GetTenantCompanyProfile(ctx context.Context, tenantID string) (TenantCompanyProfile, error) {
@@ -37,6 +37,8 @@ func (q *Queries) GetTenantCompanyProfile(ctx context.Context, tenantID string) 
 		&i.StateCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.GstinVerifyStatus,
+		&i.GstinVerifiedAt,
 	)
 	return i, err
 }
@@ -67,7 +69,7 @@ ON CONFLICT(tenant_id) DO UPDATE SET
     pan_number = excluded.pan_number,
     state_code = excluded.state_code,
     updated_at = CURRENT_TIMESTAMP
-RETURNING tenant_id, company_name, logo_path, currency, timezone, gst_enabled, gst_rate, booking_prefix, trip_prefix, invoice_prefix, financial_year, address, phone, email, gst_number, pan_number, state_code, created_at, updated_at
+RETURNING tenant_id, company_name, logo_path, currency, timezone, gst_enabled, gst_rate, booking_prefix, trip_prefix, invoice_prefix, financial_year, address, phone, email, gst_number, pan_number, state_code, created_at, updated_at, gstin_verify_status, gstin_verified_at
 `
 
 type UpsertTenantCompanyProfileParams struct {
@@ -131,6 +133,8 @@ func (q *Queries) UpsertTenantCompanyProfile(ctx context.Context, arg UpsertTena
 		&i.StateCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.GstinVerifyStatus,
+		&i.GstinVerifiedAt,
 	)
 	return i, err
 }

@@ -57,3 +57,25 @@ func TestVehicleReg(t *testing.T) {
 		}
 	}
 }
+
+func TestGSTINChecksum(t *testing.T) {
+	// Confirmed against independently published worked examples, incl. a
+	// hand-verified currently-registered GSTIN (33AAACC1206D1ZN).
+	valid := []string{"27AAPFU0939F1ZV", "33AAACC1206D1ZN", "27ABCDE1234F1Z0", "07AAAAA0000A1Z4"}
+	for _, s := range valid {
+		if !ValidGSTINChecksum(s) {
+			t.Errorf("ValidGSTINChecksum(%q) = false, want true", s)
+		}
+	}
+	// Same numbers with one check digit off, bad length, lowercase, and
+	// the repo's old checksum-fake fixtures.
+	invalid := []string{
+		"27AAPFU0939F1ZX", "33AAACC1206D1ZM", "27ABCDE1234F1Z5",
+		"07AAAAA0000A1Z5", "27AAPFU0939F1Z", "27aapfu0939f1zv", "",
+	}
+	for _, s := range invalid {
+		if ValidGSTINChecksum(s) {
+			t.Errorf("ValidGSTINChecksum(%q) = true, want false", s)
+		}
+	}
+}

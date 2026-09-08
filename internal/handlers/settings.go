@@ -137,7 +137,11 @@ func (h *SettingsHandlers) SaveOnboard(w http.ResponseWriter, r *http.Request) {
 	if gstNumber != "" {
 		gstNumber = strings.ToUpper(gstNumber)
 		if !validate.ValidGSTIN(gstNumber) {
-			h.failPage(w, r, fmt.Errorf("invalid GSTIN format: must be 15-character alphanumeric (e.g. 27ABCDE1234F1Z5)"), http.StatusBadRequest, "Invalid GST Number")
+			h.failPage(w, r, fmt.Errorf("invalid GSTIN format: must be 15-character alphanumeric (e.g. 27ABCDE1234F1Z0)"), http.StatusBadRequest, "Invalid GST Number")
+			return
+		}
+		if !validate.ValidGSTINChecksum(gstNumber) {
+			h.failPage(w, r, fmt.Errorf("invalid GSTIN check digit: %q fails the GSTN mod-36 checksum, likely a typo", gstNumber), http.StatusBadRequest, "Invalid GST Number")
 			return
 		}
 	}
@@ -425,7 +429,11 @@ func (h *SettingsHandlers) Update(w http.ResponseWriter, r *http.Request) {
 	if gstNumber != "" {
 		gstNumber = strings.ToUpper(gstNumber)
 		if !validate.ValidGSTIN(gstNumber) {
-			h.failPage(w, r, fmt.Errorf("invalid GSTIN format: must be 15-character alphanumeric (e.g. 27ABCDE1234F1Z5)"), http.StatusBadRequest, "Invalid GST Number")
+			h.failPage(w, r, fmt.Errorf("invalid GSTIN format: must be 15-character alphanumeric (e.g. 27ABCDE1234F1Z0)"), http.StatusBadRequest, "Invalid GST Number")
+			return
+		}
+		if !validate.ValidGSTINChecksum(gstNumber) {
+			h.failPage(w, r, fmt.Errorf("invalid GSTIN check digit: %q fails the GSTN mod-36 checksum, likely a typo", gstNumber), http.StatusBadRequest, "Invalid GST Number")
 			return
 		}
 	}

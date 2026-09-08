@@ -114,7 +114,8 @@ which always allocate head-ward from the maximum above.
 | 00127 | `eway_bill_events` CHECK gains `DELIVERED` (TripDeliveredEvent handler inserts it on every delivery) | E-Way Bill lifecycle |
 | 00128 | `eway_bills.status` CHECK gains `part_a` + `delivered` (autogenerate transitions active→part_a→delivered; old CHECK silently failed the delivery UPDATE) | E-Way Bill lifecycle |
 | 00129 | `trips.close_odometer` — TMS SOP trip close reading (close dialog writes reading; CompletedAt is close date/time; breakdown reuses ops_alerts.vehicle_breakdown, no DDL) | Fleet registry SOP parity spec §1 follow-up (ZMOTM_MMS pp.6-8) |
-| 00130+ | future specs | reserved |
+| 00130 | `tenant_company_profiles.gstin_verify_status` + `gstin_verified_at` — GSTIN live-verification seam (UNVERIFIED default; provider worker flips PENDING→VERIFIED/FAILED later; checksum stays the entry gate) | Onboarding tax verification |
+| 00131+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

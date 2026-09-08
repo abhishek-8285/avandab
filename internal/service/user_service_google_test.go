@@ -140,6 +140,28 @@ func TestCreateTenantWithAdmin_SeedsTrial(t *testing.T) {
 	assert.Equal(t, "TRIAL", status)
 }
 
+// TestCreateTenantWithAdmin_SeedFailureAborts — a trial-seed error must fail
+// provisioning loudly (no silent subscription-less tenant) and roll the
+// whole transaction back: no tenant row, no admin user left behind.
+func TestCreateTenantWithAdmin_SeedFailureAborts(t *testing.T) {
+	svc := newGoogleTestService(t)
+	ctx := context.Background()
+	db := svc.store.(interface{ DB() *sql.DB }).DB()
+
+	_, err := db.Exec(`DROP TABLE tenant_subscriptions`)
+	require.NoError(t, err)
+
+	_, err = svc.CreateTenantWithAdmin(ctx, "broken", "Broken Ltd", "broken", "admin@broken.test", "Admin", "Str0ng!Passw0rd123")
+	require.Error(t, err, "seed failure must abort provisioning, not land half-done")
+	assert.Contains(t, err.Error(), "trial subscription")
+
+	var n int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(1) FROM tenants WHERE id = 'broken'`).Scan(&n))
+	assert.Equal(t, 0, n, "tenant row must roll back")
+	require.NoError(t, db.QueryRow(`SELECT COUNT(1) FROM users WHERE email = 'admin@broken.test'`).Scan(&n))
+	assert.Equal(t, 0, n, "admin user must roll back")
+}
+
 // TestResolveGoogleUser_SuspendedRejected — suspended accounts are refused in
 // both the sub-lookup and email-link branches.
 func TestResolveGoogleUser_SuspendedRejected(t *testing.T) {
