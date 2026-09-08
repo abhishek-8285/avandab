@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -65,7 +67,11 @@ func (h *APIAuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 	}
 	roleName := string(domain.RoleViewer)
 	if isAdmin {
-		roleName = string(domain.RoleAdmin)
+		// isAdmin is isNewOwner: self-registration always mints org_admin
+		// (role 6), never platform admin (role 1). Matches the web path
+		// (auth.go SaveRegister) — a token claiming "admin" would over-grant
+		// wherever the live-role override has no validator attached.
+		roleName = string(domain.RoleOrgAdmin)
 	}
 
 	userTenantID := user.TenantID
@@ -78,38 +84,16 @@ func (h *APIAuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Link vehicle & driver profile if vehicle registration number provided or role is driver
+	// Link vehicle & driver profile if vehicle registration number provided or role is driver.
+	// Best-effort and atomic (single tx): the user + tenant already committed
+	// above, so a failure here must never fail registration — it logs loudly
+	// and the driver completes provisioning via onboarding/wizard instead.
 	if h.db != nil && (req.VehicleNumber != "" || req.Role == "driver") {
-		vNum := strings.ToUpper(strings.TrimSpace(req.VehicleNumber))
-		if vNum == "" {
-			vNum = "DL1LN9999"
+		if err := h.linkDriverProfile(r.Context(), user, req.Name, req.Phone, req.Email,
+			strings.ToUpper(strings.TrimSpace(req.VehicleNumber)), userTenantID); err != nil {
+			slog.Error("registration driver-profile provisioning failed",
+				"user_id", string(user.ID), "tenant_id", userTenantID, "error", err)
 		}
-		vID := uuid.New().String()
-		_, _ = h.db.ExecContext(r.Context(), `
-			INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, capacity, fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, tenant_id)
-			VALUES ($1, $2, $3, 'truck', 5000, 'diesel', NULL, NULL, NULL, 'available', $4)
-			ON CONFLICT (registration_number) DO UPDATE SET updated_at = CURRENT_TIMESTAMP`,
-			vID, vNum, vNum, userTenantID)
-
-		dID := uuid.New().String()
-		names := strings.SplitN(req.Name, " ", 2)
-		firstName := names[0]
-		lastName := ""
-		if len(names) > 1 {
-			lastName = names[1]
-		}
-		// Unknown license stays NULL (00131) — same rule as RegisterDriver.
-		_, _ = h.db.ExecContext(r.Context(), `
-			INSERT INTO drivers (id, driver_id, first_name, last_name, phone, email, license_number, license_expiry, status, notes, tenant_id)
-			VALUES ($1, $2, $3, $4, $5, $6, NULL, NULL, 'available', $7, $8)
-			ON CONFLICT (driver_id) DO UPDATE SET notes = excluded.notes, updated_at = CURRENT_TIMESTAMP`,
-			dID, string(user.ID), firstName, lastName, req.Phone, req.Email, vNum, userTenantID)
-
-		_, _ = h.db.ExecContext(r.Context(), `
-			INSERT INTO telemetry_devices (id, tenant_id, imei, device_type, status, vehicle_id, activated_at)
-			VALUES ($1, $2, $3, 'mobile_app', 'active', (SELECT id FROM vehicles WHERE registration_number = $4 LIMIT 1), CURRENT_TIMESTAMP)
-			ON CONFLICT (imei) DO UPDATE SET vehicle_id = (SELECT id FROM vehicles WHERE registration_number = $5 LIMIT 1), status = 'active'`,
-			uuid.New().String(), userTenantID, string(user.ID), vNum, vNum)
 	}
 
 	expiresAt := time.Now().Add(24 * time.Hour)
@@ -207,4 +191,63 @@ func apiError(w http.ResponseWriter, status int, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(map[string]string{"error": msg})
+}
+
+// linkDriverProfile provisions the driver-side rows for a self-registered
+// user in one transaction: vehicle (only when an explicit number was given —
+// never a fabricated placeholder), driver row (license NULL per 00131), and
+// the mobile_app device bound to the new tenant's own vehicle row.
+//
+// The vehicle/device lookups are tenant-scoped: registration_number is
+// globally UNIQUE, so an unscoped SELECT or ON CONFLICT touch could latch
+// onto another tenant's vehicle.
+func (h *APIAuthHandler) linkDriverProfile(ctx context.Context, user domain.User, name, phone, email, vNum, tenantID string) error {
+	tx, err := h.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	var vehicleID sql.NullString
+	if vNum != "" {
+		vID := uuid.New().String()
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, capacity, fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, tenant_id)
+			VALUES ($1, $2, $3, 'truck', 5000, 'diesel', NULL, NULL, NULL, 'available', $4)
+			ON CONFLICT (registration_number) DO NOTHING`,
+			vID, vNum, vNum, tenantID); err != nil {
+			return err
+		}
+		var got string
+		if err := tx.QueryRowContext(ctx,
+			`SELECT id FROM vehicles WHERE registration_number = $1 AND tenant_id = $2`, vNum, tenantID).Scan(&got); err != nil {
+			return err
+		}
+		vehicleID = sql.NullString{String: got, Valid: true}
+	}
+
+	names := strings.SplitN(name, " ", 2)
+	firstName := names[0]
+	lastName := ""
+	if len(names) > 1 {
+		lastName = names[1]
+	}
+	// Unknown license stays NULL (00131) — same rule as RegisterDriver.
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO drivers (id, driver_id, first_name, last_name, phone, email, license_number, license_expiry, status, notes, tenant_id)
+		VALUES ($1, $2, $3, $4, $5, $6, NULL, NULL, 'available', $7, $8)
+		ON CONFLICT (driver_id) DO UPDATE SET notes = excluded.notes, updated_at = CURRENT_TIMESTAMP`,
+		uuid.New().String(), string(user.ID), firstName, lastName, phone, email, vNum, tenantID); err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO telemetry_devices (id, tenant_id, imei, device_type, status, vehicle_id, activated_at)
+		VALUES ($1, $2, $3, 'mobile_app', 'active', $4, CURRENT_TIMESTAMP)
+		ON CONFLICT (imei) DO UPDATE SET vehicle_id = excluded.vehicle_id, status = 'active'`,
+		uuid.New().String(), tenantID, string(user.ID), vehicleID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
