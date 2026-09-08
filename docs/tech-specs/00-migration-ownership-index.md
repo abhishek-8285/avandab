@@ -5,6 +5,9 @@ Single source of truth for `db/migrations/` version numbers. Repo head is
 (`00039_experiments.sql` remains TAKEN — never edit.) Every new migration
 appends the next free number. **This table is authoritative; spec §3 numbers
 MUST match it.**
+Scope note: rows `00001`–`00038` predate this index and are intentionally
+untracked here — they exist on disk and can never collide with new numbers,
+which always allocate head-ward from the maximum above.
 
 ## Rules
 - ONE feature owns ONE migration number. Never reuse, never renumber an
