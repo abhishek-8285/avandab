@@ -121,6 +121,25 @@ func TestResolveGoogleUser_LinksExistingPasswordAccount(t *testing.T) {
 	assert.Equal(t, "sub-pw", gotSub)
 }
 
+// TestCreateTenantWithAdmin_SeedsTrial — manual orgs must bill/meter from day
+// one like self-serve ones (no ErrSubscriptionNotFound on first booking).
+func TestCreateTenantWithAdmin_SeedsTrial(t *testing.T) {
+	svc := newGoogleTestService(t)
+	ctx := context.Background()
+
+	u, err := svc.CreateTenantWithAdmin(ctx, "acme", "Acme Ltd", "acme", "admin@acme.test", "Acme Admin", "Str0ng!Passw0rd123")
+	require.NoError(t, err)
+	assert.Equal(t, "acme", u.TenantID)
+
+	db := svc.store.(interface{ DB() *sql.DB }).DB()
+	var planID, status string
+	require.NoError(t, db.QueryRow(
+		`SELECT plan_id, status FROM tenant_subscriptions WHERE tenant_id = 'acme'`,
+	).Scan(&planID, &status))
+	assert.Equal(t, "STARTER", planID)
+	assert.Equal(t, "TRIAL", status)
+}
+
 // TestResolveGoogleUser_SuspendedRejected — suspended accounts are refused in
 // both the sub-lookup and email-link branches.
 func TestResolveGoogleUser_SuspendedRejected(t *testing.T) {

@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"transport-app/internal/auth"
 	"transport-app/internal/domain"
 )
 
@@ -263,5 +264,44 @@ func TestRequireCompanyCompliance(t *testing.T) {
 				assert.Contains(t, flashCookie.Value, "Please complete mandatory company compliance details to unlock fleet operations.")
 			}
 		})
+	}
+}
+
+func TestRequireCompanyCompliance_OnboardingSelfHealExempt(t *testing.T) {
+	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	incomplete := &mockCompanySettingsReader{settings: domain.CompanySettings{}}
+	for _, path := range []string{"/user/onboard", "/profile", "/settings/onboard", "/change-password"} {
+		mw := RequireCompanyCompliance(incomplete)
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		rr := httptest.NewRecorder()
+		mw(nextHandler).ServeHTTP(rr, req)
+		assert.Equal(t, http.StatusOK, rr.Code, path+" must pass through while incomplete")
+	}
+}
+
+func TestRequireCompanyCompliance_NonManagerBypass(t *testing.T) {
+	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	incomplete := &mockCompanySettingsReader{settings: domain.CompanySettings{}}
+	withRole := func(role string) *http.Request {
+		req := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
+		ctx := context.WithValue(req.Context(), auth.ContextUser, &auth.SessionData{UserID: "u1", Role: role})
+		return req.WithContext(ctx)
+	}
+	// Drivers/viewers pass through — they cannot fix company profile.
+	for _, role := range []string{"driver", "viewer", "dispatcher", "accountant"} {
+		rr := httptest.NewRecorder()
+		RequireCompanyCompliance(incomplete)(nextHandler).ServeHTTP(rr, withRole(role))
+		assert.Equal(t, http.StatusOK, rr.Code, role+" must bypass company gate")
+	}
+	// Managers stay gated.
+	for _, role := range []string{"admin", "org_admin"} {
+		rr := httptest.NewRecorder()
+		RequireCompanyCompliance(incomplete)(nextHandler).ServeHTTP(rr, withRole(role))
+		assert.Equal(t, http.StatusSeeOther, rr.Code, role+" must stay gated")
+		assert.Equal(t, "/company/onboard", rr.Header().Get("Location"))
 	}
 }

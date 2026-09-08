@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"transport-app/internal/auth"
+	"transport-app/internal/domain"
 	"transport-app/internal/experiments"
 	"transport-app/internal/middleware"
 	"transport-app/internal/shared"
@@ -570,4 +571,92 @@ func TestOperationalRoutes_ComplianceGate_NonGST_Unlocks(t *testing.T) {
 			assert.Equal(t, "unlocked: "+route, rr.Body.String())
 		})
 	}
+}
+
+func TestSaveOnboard_ExperienceAndTenantNameSync(t *testing.T) {
+	app := newRegisterTestApp(t)
+	sh := &SettingsHandlers{App: app}
+
+	form := url.Values{}
+	form.Set("company_name", "Sync Fleet Pvt Ltd")
+	form.Set("email", "ops@syncfleet.test")
+	form.Set("phone", "+91 98765 44444")
+	form.Set("address", "Plot 7, Sync Nagar")
+	form.Set("driver_name", "Mohan Das")
+	form.Set("driver_phone", "+91 90000 44444")
+	form.Set("driver_license", "DL-0420220044444")
+	form.Set("experience", "7")
+
+	req := httptest.NewRequest(http.MethodPost, "/company/onboard", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	sessionAdmin := &auth.SessionData{UserID: "admin-1", Role: "admin"}
+	ctx := context.WithValue(req.Context(), auth.ContextUser, sessionAdmin)
+	ctx = shared.ContextWithTenantID(ctx, shared.TenantID("tenant-1"))
+	req = req.WithContext(ctx)
+
+	rr := httptest.NewRecorder()
+	sh.SaveOnboard(rr, req)
+	require.Equal(t, http.StatusSeeOther, rr.Code)
+
+	var expYears int
+	require.NoError(t, app.DB.QueryRow(
+		`SELECT experience_years FROM drivers WHERE phone = '+91 90000 44444'`).Scan(&expYears))
+	assert.Equal(t, 7, expYears, "wizard experience input must reach driver record")
+
+	var tenantName string
+	require.NoError(t, app.DB.QueryRow(
+		`SELECT name FROM tenants WHERE id = 'tenant-1'`).Scan(&tenantName))
+	assert.Equal(t, "Sync Fleet Pvt Ltd", tenantName, "tenants.name must mirror wizard company_name")
+}
+
+func TestSaveUserOnboard_SavesPhoneAndRoutes(t *testing.T) {
+	app := newRegisterTestApp(t)
+	ah := NewAuthHandlers(app)
+	seedCtx := shared.ContextWithTenantID(context.Background(), shared.TenantID("tenant-1"))
+
+	owner, err := app.Services.Users.CreateUserWithPassword(
+		seedCtx, "owner-nouserphone@test.com", "No Phone Owner", "", "Str0ng!Passw0rd123",
+		domain.DefaultRoleID(domain.RoleOrgAdmin), domain.UserStatusActive, "tenant-1")
+	require.NoError(t, err)
+
+	postOnboard := func(userID, role string, form url.Values) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/user/onboard", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		ctx := context.WithValue(req.Context(), auth.ContextUser, &auth.SessionData{UserID: userID, Role: role})
+		ctx = shared.ContextWithTenantID(ctx, shared.TenantID("tenant-1"))
+		rr := httptest.NewRecorder()
+		ah.SaveUserOnboard(rr, req.WithContext(ctx))
+		return rr
+	}
+
+	// 1. Owner with empty phone saves → company incomplete → /company/onboard.
+	form := url.Values{}
+	form.Set("name", "No Phone Owner")
+	form.Set("phone", "+91 91111 00001")
+	form.Set("timezone", "Asia/Kolkata")
+	rr := postOnboard(owner.ID.String(), "org_admin", form)
+	require.Equal(t, http.StatusSeeOther, rr.Code)
+	assert.Equal(t, "/company/onboard", rr.Header().Get("Location"))
+
+	profile, err := app.Services.Auth.GetProfile(seedCtx, owner.ID)
+	require.NoError(t, err)
+	require.NotNil(t, profile.Phone)
+	assert.Equal(t, "+91 91111 00001", *profile.Phone)
+
+	// 2. Missing phone → 400, nothing wiped.
+	bad := url.Values{}
+	bad.Set("name", "No Phone Owner")
+	rr = postOnboard(owner.ID.String(), "org_admin", bad)
+	assert.Equal(t, http.StatusBadRequest, rr.Code)
+
+	// 3. Non-manager with incomplete company → /dashboard (no loop).
+	driver, err := app.Services.Users.CreateUserWithPassword(
+		seedCtx, "driver-nouserphone@test.com", "Loop Driver", "", "Str0ng!Passw0rd123",
+		domain.DefaultRoleID(domain.RoleDriver), domain.UserStatusActive, "tenant-1")
+	require.NoError(t, err)
+	dform := url.Values{}
+	dform.Set("phone", "+91 92222 00002")
+	rr = postOnboard(driver.ID.String(), "driver", dform)
+	require.Equal(t, http.StatusSeeOther, rr.Code)
+	assert.Equal(t, "/dashboard", rr.Header().Get("Location"))
 }

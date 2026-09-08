@@ -93,22 +93,7 @@ func (s *UserService) RegisterSelfServiceAccount(ctx context.Context, email, nam
 		created = u
 
 		// Seed initial trial subscription if subscription table exists
-		now := time.Now().UTC()
-		trialEnd := now.Add(14 * 24 * time.Hour)
-		subID := "sub_" + tenantID
-		if tx := repository.TxFromContext(txCtx); tx != nil {
-			_, _ = tx.ExecContext(txCtx, `
-				INSERT INTO tenant_subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, trial_end, created_at, updated_at)
-				VALUES ($1, $2, 'STARTER', 'TRIAL', $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-			ON CONFLICT (id) DO NOTHING
-			`, subID, tenantID, now.Format(time.RFC3339), trialEnd.Format(time.RFC3339), trialEnd.Format(time.RFC3339))
-		} else {
-			_, _ = rawDB.ExecContext(txCtx, `
-				INSERT INTO tenant_subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, trial_end, created_at, updated_at)
-				VALUES ($1, $2, 'STARTER', 'TRIAL', $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-			ON CONFLICT (id) DO NOTHING
-			`, subID, tenantID, now.Format(time.RFC3339), trialEnd.Format(time.RFC3339), trialEnd.Format(time.RFC3339))
-		}
+		seedTrialSubscription(txCtx, rawDB, tenantID)
 
 		return nil
 	})
@@ -119,6 +104,26 @@ func (s *UserService) RegisterSelfServiceAccount(ctx context.Context, email, nam
 		s.log.Info("self-registered tenant and org admin created", "tenant_id", created.TenantID, "user_id", created.ID, "email", created.Email)
 	}
 	return created, true, nil
+}
+
+// seedTrialSubscription inserts the STARTER/TRIAL row for a new tenant.
+// Best-effort: missing table or duplicate keeps provisioning green —
+// UpdatePlan/CreateSubscription heal it later via ON CONFLICT(tenant_id).
+// ponytail: single shared helper, tenant_id-keyed insert
+func seedTrialSubscription(txCtx context.Context, rawDB *sql.DB, tenantID string) {
+	now := time.Now().UTC()
+	trialEnd := now.Add(14 * 24 * time.Hour)
+	subID := "sub_" + tenantID
+	const q = `
+		INSERT INTO tenant_subscriptions (id, tenant_id, plan_id, status, current_period_start, current_period_end, trial_end, created_at, updated_at)
+		VALUES ($1, $2, 'STARTER', 'TRIAL', $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		ON CONFLICT (tenant_id) DO NOTHING
+	`
+	if tx := repository.TxFromContext(txCtx); tx != nil {
+		_, _ = tx.ExecContext(txCtx, q, subID, tenantID, now.Format(time.RFC3339), trialEnd.Format(time.RFC3339), trialEnd.Format(time.RFC3339))
+		return
+	}
+	_, _ = rawDB.ExecContext(txCtx, q, subID, tenantID, now.Format(time.RFC3339), trialEnd.Format(time.RFC3339), trialEnd.Format(time.RFC3339))
 }
 
 // suggestTenantSlug normalizes free text into a slug candidate: lowercase,
@@ -665,6 +670,8 @@ func (s *UserService) CreateTenantWithAdmin(ctx context.Context, tenantID, name,
 			return err
 		}
 		created = u
+		// Manual orgs bill/meter like self-serve ones from day one.
+		seedTrialSubscription(txCtx, rawDB, tenantID)
 		return nil
 	})
 	if err != nil {

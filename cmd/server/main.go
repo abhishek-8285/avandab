@@ -1226,6 +1226,7 @@ func main() {
 
 			// User Setup & Onboarding
 			r.Get("/user/onboard", app.Auth.UserOnboardingPage)
+			r.Post("/user/onboard", app.Auth.SaveUserOnboard)
 
 			// Global cross-entity search (topbar)
 			r.Get("/search", app.SearchPage)

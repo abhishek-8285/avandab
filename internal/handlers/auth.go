@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"transport-app/internal/comm"
 	"transport-app/internal/domain"
@@ -572,6 +573,63 @@ func (h *AuthHandlers) UserOnboardingPage(w http.ResponseWriter, r *http.Request
 	}
 
 	h.renderPage(w, r, "user_onboarding.html", pd)
+}
+
+// SaveUserOnboard persists the post-login setup form (name/phone/timezone)
+// and routes onward: tenant owners with incomplete company profile go to
+// /company/onboard, everyone else to /dashboard. Mirrors the Login routing
+// so the phone gate actually clears instead of bouncing back here.
+func (h *AuthHandlers) SaveUserOnboard(w http.ResponseWriter, r *http.Request) {
+	session, ok := h.getUserFromContext(r)
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	if err := r.ParseForm(); err != nil {
+		h.failPage(w, r, err, http.StatusBadRequest, "Invalid Form Submission")
+		return
+	}
+
+	phone := strings.TrimSpace(r.PostFormValue("phone"))
+	if phone == "" {
+		h.failPage(w, r, fmt.Errorf("official phone number is required"), http.StatusBadRequest, "Phone Number Required")
+		return
+	}
+	name := strings.TrimSpace(r.PostFormValue("name"))
+	if name == "" {
+		if user, err := h.Services.Auth.GetProfile(r.Context(), domain.UserID(session.UserID)); err == nil {
+			name = user.Name
+		}
+	}
+	timezone := strings.TrimSpace(r.PostFormValue("timezone"))
+
+	if _, err := h.Services.Auth.UpdateProfile(r.Context(), domain.UserID(session.UserID), name, phone, timezone); err != nil {
+		h.failPage(w, r, err, http.StatusBadRequest, "Could Not Save Profile")
+		return
+	}
+
+	targetURL := "/dashboard"
+	if session.Role == "admin" || session.Role == string(domain.RoleOrgAdmin) {
+		if company, err := h.Services.Settings.GetSettings(r.Context()); err == nil && company.CompanyName == "" {
+			targetURL = "/company/onboard"
+		}
+	}
+
+	if isDatastarRequest(r) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte("<script>window.location.href='" + targetURL + "'</script>"))
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "flash_success",
+		Value:    "Profile setup completed.",
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   10,
+	})
+	http.Redirect(w, r, targetURL, http.StatusSeeOther)
 }
 
 // UpdateProfile handles profile updates.

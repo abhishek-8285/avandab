@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -193,7 +194,7 @@ func (h *SettingsHandlers) SaveOnboard(w http.ResponseWriter, r *http.Request) {
 		if current.TripPrefix != "" {
 			tripPrefix = current.TripPrefix
 		} else {
-			tripPrefix = "TRIP"
+			tripPrefix = "TR"
 		}
 	}
 	invoicePrefix := strings.TrimSpace(r.PostFormValue("invoice_prefix"))
@@ -209,7 +210,7 @@ func (h *SettingsHandlers) SaveOnboard(w http.ResponseWriter, r *http.Request) {
 		if current.FinancialYear != nil && *current.FinancialYear != "" {
 			financialYear = *current.FinancialYear
 		} else {
-			financialYear = "2026-27"
+			financialYear = currentIndianFinancialYear()
 		}
 	}
 
@@ -237,6 +238,15 @@ func (h *SettingsHandlers) SaveOnboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tenantID := shared.TenantIDFromContext(r.Context())
+	// Keep /tenants list label in sync with wizard — profile table holds
+	// truth, tenants.name is display only. Best-effort, never blocks onboard.
+	if h.DB != nil && tenantID != "" {
+		if _, err := h.DB.ExecContext(r.Context(),
+			`UPDATE tenants SET name = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`, companyName, string(tenantID)); err != nil {
+			slog.WarnContext(r.Context(), "onboard tenant name sync failed",
+				slog.String("tenant_id", string(tenantID)), slog.Any("error", err))
+		}
+	}
 	vehicleAdded := false
 
 	// Optional Step 2: First Vehicle
@@ -286,6 +296,10 @@ func (h *SettingsHandlers) SaveOnboard(w http.ResponseWriter, r *http.Request) {
 		})
 		if vErr == nil {
 			vehicleAdded = true
+		} else {
+			// ponytail: warn-only, vehicle optional — onboard still completes
+			slog.WarnContext(r.Context(), "onboard first vehicle skipped",
+				slog.String("tenant_id", string(tenantID)), slog.Any("error", vErr))
 		}
 	}
 
@@ -317,20 +331,30 @@ func (h *SettingsHandlers) SaveOnboard(w http.ResponseWriter, r *http.Request) {
 		if driverLicense == "" {
 			driverLicense = "DL-" + driverPhone
 		}
+		experienceYears := int64(1)
+		if rawExp := strings.TrimSpace(r.PostFormValue("experience")); rawExp != "" {
+			if n, err := strconv.Atoi(rawExp); err == nil {
+				experienceYears = int64(min(max(n, 0), 50))
+			}
+		}
 		uowImpl := uow.NewSQLUnitOfWork(h.DB)
 		clockImpl := clock.NewRealClock()
 		idGenImpl := id.NewUUIDGenerator()
 		createDriverUC := driverapp.NewCreateDriverUseCase(uowImpl, idGenImpl, clockImpl)
 
-		_, _ = createDriverUC.Execute(r.Context(), driverapp.CreateDriverCommand{
+		if _, dErr := createDriverUC.Execute(r.Context(), driverapp.CreateDriverCommand{
 			TenantID:        tenantID,
 			FirstName:       firstName,
 			LastName:        lastName,
 			Phone:           driverPhone,
 			LicenseNumber:   driverLicense,
 			LicenseExpiry:   time.Now().AddDate(5, 0, 0),
-			ExperienceYears: 1,
-		})
+			ExperienceYears: experienceYears,
+		}); dErr != nil {
+			// ponytail: warn-only, driver optional — onboard still completes
+			slog.WarnContext(r.Context(), "onboard first driver skipped",
+				slog.String("tenant_id", string(tenantID)), slog.Any("error", dErr))
+		}
 	}
 
 	redirectURL := "/dashboard"
@@ -500,6 +524,16 @@ func parseDecimal(s string) (float64, error) {
 	var f float64
 	_, err := fmt.Sscanf(s, "%f", &f)
 	return f, err
+}
+
+// currentIndianFinancialYear returns FY as YYYY-YY (Apr-Mar) for today.
+func currentIndianFinancialYear() string {
+	now := time.Now()
+	y, m, _ := now.Date()
+	if int(m) >= 4 {
+		return fmt.Sprintf("%d-%02d", y, (y+1)%100)
+	}
+	return fmt.Sprintf("%d-%02d", y-1, y%100)
 }
 
 // isCompanyIncomplete reports whether a company's mandatory Step 1 compliance profile is incomplete.

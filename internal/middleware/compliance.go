@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"transport-app/internal/auth"
 	"transport-app/internal/domain"
 )
 
@@ -23,6 +24,15 @@ func RequireCompanyCompliance(settings CompanySettingsReader) func(http.Handler)
 			path := r.URL.Path
 
 			if isComplianceExempt(path) {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			// Non-managers can never complete company onboarding (OnboardPage
+			// bounces them to /dashboard), so enforcing the gate on them loops
+			// dashboard<->onboard forever. Managers-only gate mirrors
+			// Dashboard.Index; everyone else passes through.
+			if !isComplianceManager(r) {
 				next.ServeHTTP(w, r)
 				return
 			}
@@ -71,6 +81,23 @@ func isComplianceExempt(path string) bool {
 	if path == "/company/onboard" || strings.HasPrefix(path, "/company/onboard/") {
 		return true
 	}
+	// Shadow mount: /settings and /company share Routes (main.go), so the
+	// same wizard is reachable as /settings/onboard — exempt it identically.
+	if path == "/settings/onboard" || strings.HasPrefix(path, "/settings/onboard/") {
+		return true
+	}
+	// Phone self-heal: login routes users with empty phone to /user/onboard,
+	// whose fix lives at POST /user/onboard and POST /profile. Gating any
+	// of them strands the user.
+	if path == "/user/onboard" || strings.HasPrefix(path, "/user/onboard/") {
+		return true
+	}
+	if path == "/profile" || strings.HasPrefix(path, "/profile/") {
+		return true
+	}
+	if path == "/change-password" || strings.HasPrefix(path, "/change-password/") {
+		return true
+	}
 	if path == "/logout" || strings.HasPrefix(path, "/logout/") {
 		return true
 	}
@@ -93,4 +120,15 @@ func isComplianceExempt(path string) bool {
 		return true
 	}
 	return false
+}
+
+// isComplianceManager reports whether the caller can own company onboarding.
+// Fail-closed on missing session: RequireAuth normally guarantees one, and
+// enforcing without it is the safe default.
+func isComplianceManager(r *http.Request) bool {
+	sess, ok := r.Context().Value(auth.ContextUser).(*auth.SessionData)
+	if !ok || sess == nil {
+		return true
+	}
+	return sess.Role == string(domain.RoleAdmin) || sess.Role == string(domain.RoleOrgAdmin)
 }
