@@ -18,10 +18,10 @@ describe('chat providers', () => {
 
   test('NoOp provider is inert', async () => {
     const p = new NoOpChatProvider();
-    expect(() => p.connect('t1')).not.toThrow();
+    expect(() => p.connect()).not.toThrow();
     expect(() => p.disconnect()).not.toThrow();
-    await expect(p.send('t1', 'hi')).rejects.toThrow('CHAT_PROVIDER_UNAVAILABLE');
-    const off = p.onMessage(() => {});
+    await expect(p.send()).rejects.toThrow('CHAT_PROVIDER_UNAVAILABLE');
+    const off = p.onMessage();
     expect(() => off()).not.toThrow();
   });
 
