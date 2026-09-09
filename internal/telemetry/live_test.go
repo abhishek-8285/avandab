@@ -3,12 +3,16 @@ package telemetry
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"transport-app/internal/eta"
+	"transport-app/internal/shared"
 	"transport-app/internal/telemetry/providers"
 )
 
@@ -415,4 +419,117 @@ func TestLive_PerDeviceTypeStaleness(t *testing.T) {
 	if _, ok := byID["v-old"]; ok {
 		t.Fatal("40m-silent hardware vehicle must drop off the map")
 	}
+}
+
+func TestLiveHandler_ETagAnd304(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicleReg(t, db, "v1", "REG-ETAG-1")
+	now := time.Now().UTC()
+	insertLiveSnapshot(t, db, "s-etag", "", "v1", now.Add(-1*time.Minute), 50.0)
+
+	handler := LiveHandler(db, 15*time.Minute, 60*time.Minute)
+
+	// 1. Initial request without ETag -> returns 200 and ETag header
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/live", nil)
+	req = req.WithContext(shared.ContextWithTenantID(req.Context(), "1"))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	etag := rec.Header().Get("ETag")
+	assert.NotEmpty(t, etag)
+	assert.Equal(t, "1", rec.Header().Get("X-Fleet-Total"))
+	assert.Equal(t, "1", rec.Header().Get("X-Fleet-Matched"))
+
+	// 2. Subsequent request with matching If-None-Match -> returns 304 Not Modified and empty body
+	req304 := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/live", nil)
+	req304 = req304.WithContext(shared.ContextWithTenantID(req304.Context(), "1"))
+	req304.Header.Set("If-None-Match", etag)
+	rec304 := httptest.NewRecorder()
+	handler.ServeHTTP(rec304, req304)
+
+	assert.Equal(t, http.StatusNotModified, rec304.Code)
+	assert.Empty(t, rec304.Body.String())
+}
+
+func TestLiveHandler_Envelope(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicleReg(t, db, "v1", "REG-ENV-1")
+	now := time.Now().UTC()
+	insertLiveSnapshot(t, db, "s-env", "", "v1", now.Add(-1*time.Minute), 50.0)
+
+	handler := LiveHandler(db, 15*time.Minute, 60*time.Minute)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/live?envelope=true", nil)
+	req = req.WithContext(shared.ContextWithTenantID(req.Context(), "1"))
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	var env LiveFleetEnvelope
+	err := json.Unmarshal(rec.Body.Bytes(), &env)
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, env.Meta.TotalInFleet)
+	assert.Equal(t, 1, env.Meta.MatchedCount)
+	assert.Equal(t, 1, env.Meta.ActiveCount)
+	assert.NotEmpty(t, env.Meta.ETag)
+	assert.NotEmpty(t, env.Meta.ServerTime)
+	require.Len(t, env.Vehicles, 1)
+	assert.Equal(t, "v1", env.Vehicles[0].VehicleID)
+}
+
+func TestLiveHandler_BBoxAndSinceFilters(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicleReg(t, db, "v-in", "REG-IN")
+	insertTestVehicleReg(t, db, "v-out", "REG-OUT")
+
+	now := time.Now().UTC()
+	// v-in: lat 19.07, lng 72.87 (inside 18.0,72.0,20.0,73.0)
+	insertLiveSnapshot(t, db, "s-in", "", "v-in", now.Add(-1*time.Minute), 30.0)
+	// v-out: lat 28.61, lng 77.20 (outside Mumbai bbox)
+	_, err := db.Exec(`INSERT INTO telemetry_snapshots
+		(id, vehicle_id, timestamp, latitude, longitude, speed)
+		VALUES ('s-out', 'v-out', ?, 28.61, 77.20, 40.0)`,
+		now.Add(-10*time.Minute).UTC().Format("2006-01-02 15:04:05"))
+	require.NoError(t, err)
+
+	handler := LiveHandler(db, 15*time.Minute, 60*time.Minute)
+
+	// BBox filter
+	reqBBox := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/live?bbox=18.0,72.0,20.0,73.0", nil)
+	reqBBox = reqBBox.WithContext(shared.ContextWithTenantID(reqBBox.Context(), "1"))
+	recBBox := httptest.NewRecorder()
+	handler.ServeHTTP(recBBox, reqBBox)
+
+	assert.Equal(t, http.StatusOK, recBBox.Code)
+	var bboxVehicles []LiveVehicle
+	require.NoError(t, json.Unmarshal(recBBox.Body.Bytes(), &bboxVehicles))
+	assert.Len(t, bboxVehicles, 1)
+	assert.Equal(t, "v-in", bboxVehicles[0].VehicleID)
+
+	// Delta filter: since 5 minutes ago
+	sinceStr := now.Add(-5 * time.Minute).Format(time.RFC3339)
+	reqSince := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/live?since="+sinceStr, nil)
+	reqSince = reqSince.WithContext(shared.ContextWithTenantID(reqSince.Context(), "1"))
+	recSince := httptest.NewRecorder()
+	handler.ServeHTTP(recSince, reqSince)
+
+	assert.Equal(t, http.StatusOK, recSince.Code)
+	var sinceVehicles []LiveVehicle
+	require.NoError(t, json.Unmarshal(recSince.Body.Bytes(), &sinceVehicles))
+	assert.Len(t, sinceVehicles, 1)
+	assert.Equal(t, "v-in", sinceVehicles[0].VehicleID)
+}
+
+func TestLiveHandler_UnauthorizedWithoutTenant(t *testing.T) {
+	db := newTestIngestorDB(t)
+	handler := LiveHandler(db, 15*time.Minute, 60*time.Minute)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/live", nil)
+	// Do NOT set tenant in context
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
 }

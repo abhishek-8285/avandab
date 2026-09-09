@@ -4,7 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"hash/fnv"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -390,12 +393,29 @@ func columnExists(db *sql.DB, table, column string) bool {
 	return false
 }
 
-// LiveHandler serves GET /api/v1/telemetry/live — JSON array of live markers
-// (Spec 04 §7). Optional ?trip_id= filter. Mounted inside RequireAPIAuth
-// (tenant is read from the request context set by that middleware).
-// Extended: ?q= / ?search= filters by vehicle_number / vehicle_id / trip_id
-// substring (case-insensitive). This keeps the /tracking search snappy at
-// 200+ vehicles when callers prefer server-side filtering over client-side.
+// LiveFleetEnvelope wraps the vehicle array with telemetry metadata for scalable clients.
+type LiveFleetEnvelope struct {
+	Meta     LiveFleetMeta `json:"meta"`
+	Vehicles []LiveVehicle `json:"vehicles"`
+}
+
+// LiveFleetMeta provides telematics synchronization and state headers.
+type LiveFleetMeta struct {
+	ServerTime   string `json:"server_time"`
+	TotalInFleet int    `json:"total_in_fleet"`
+	MatchedCount int    `json:"matched_count"`
+	ETag         string `json:"etag"`
+	ActiveCount  int    `json:"active_count"`
+}
+
+// LiveHandler serves GET /api/v1/telemetry/live — high-performance fleet markers endpoint (Spec 04 §7).
+// Supports:
+// - ETag / If-None-Match with 304 Not Modified to eliminate bandwidth on unchanged fleet states
+// - ?envelope=true for metadata envelope (server_time, total, matched, etag, active_count)
+// - ?bbox=minLat,minLng,maxLat,maxLng spatial bounding box viewport filtering
+// - ?since=RFC3339 or ?since_unix=int64 delta incremental sync
+// - ?q= or ?search= server-side search
+// - Fallback to bare array [...] for legacy compatibility
 func LiveHandler(db *sql.DB, staleMin, mobileStaleMin time.Duration, etaSvc ...*eta.EtaService) http.HandlerFunc {
 	store := NewLiveStore(db, staleMin).WithMobileStaleMin(mobileStaleMin)
 	if len(etaSvc) > 0 && etaSvc[0] != nil {
@@ -404,11 +424,10 @@ func LiveHandler(db *sql.DB, staleMin, mobileStaleMin time.Duration, etaSvc ...*
 	return func(w http.ResponseWriter, r *http.Request) {
 		tenantID := string(shared.TenantIDFromContext(r.Context()))
 		if tenantID == "" {
-			// Fail closed: never stream the bootstrap org's fleet to an
-			// unresolved caller (middleware guarantees tenant on this route).
 			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Cache-Control", "no-store")
-			_, _ = w.Write([]byte("[]"))
+			w.WriteHeader(http.StatusUnauthorized)
+			_, _ = w.Write([]byte(`{"error":"unauthorized","message":"tenant context required"}`))
 			return
 		}
 		tripID := r.URL.Query().Get("trip_id")
@@ -420,16 +439,114 @@ func LiveHandler(db *sql.DB, staleMin, mobileStaleMin time.Duration, etaSvc ...*
 		if vehicles == nil {
 			vehicles = []LiveVehicle{}
 		}
-		// Server-side search (for large fleets / programmatic callers).
+		totalInFleet := len(vehicles)
+
+		// 1. Spatial bounding box filter (?bbox=minLat,minLng,maxLat,maxLng)
+		if bbox := r.URL.Query().Get("bbox"); bbox != "" {
+			vehicles = filterByBBox(vehicles, bbox)
+		}
+
+		// 2. Incremental delta sync filter (?since=RFC3339 or ?since_unix=int64)
+		if sinceStr := r.URL.Query().Get("since"); sinceStr != "" {
+			if t, err := time.Parse(time.RFC3339, sinceStr); err == nil {
+				vehicles = filterSince(vehicles, t)
+			}
+		} else if sinceUnix := r.URL.Query().Get("since_unix"); sinceUnix != "" {
+			if sec, err := strconv.ParseInt(sinceUnix, 10, 64); err == nil {
+				vehicles = filterSince(vehicles, time.Unix(sec, 0))
+			}
+		}
+
+		// 3. Server-side search (?q= or ?search=)
 		if q := r.URL.Query().Get("q"); q != "" {
 			vehicles = filterLiveVehicles(vehicles, q)
 		} else if s := r.URL.Query().Get("search"); s != "" {
 			vehicles = filterLiveVehicles(vehicles, s)
 		}
+
+		// 4. Deterministic snapshot ETag
+		etag := computeFleetETag(vehicles)
+		serverTime := time.Now().UTC()
+
+		w.Header().Set("ETag", etag)
+		w.Header().Set("Cache-Control", "private, no-cache")
+		w.Header().Set("X-Fleet-Total", strconv.Itoa(totalInFleet))
+		w.Header().Set("X-Fleet-Matched", strconv.Itoa(len(vehicles)))
+		w.Header().Set("X-Server-Time", serverTime.Format(time.RFC3339))
+
+		// 5. Check If-None-Match for 304 Not Modified
+		if match := r.Header.Get("If-None-Match"); match != "" && (match == etag || match == "*" || strings.TrimPrefix(match, "W/") == strings.TrimPrefix(etag, "W/")) {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+
 		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Cache-Control", "no-store")
+
+		// 6. Optional envelope format (?envelope=true or Accept: application/vnd.avandab.telemetry+json)
+		acceptHdr := r.Header.Get("Accept")
+		if r.URL.Query().Get("envelope") == "true" || strings.Contains(acceptHdr, "vnd.avandab.telemetry") {
+			activeCount := 0
+			for _, v := range vehicles {
+				if v.Status == MarkerStateRunning || v.Status == MarkerStateStopped {
+					activeCount++
+				}
+			}
+			env := LiveFleetEnvelope{
+				Vehicles: vehicles,
+			}
+			env.Meta.ServerTime = serverTime.Format(time.RFC3339)
+			env.Meta.TotalInFleet = totalInFleet
+			env.Meta.MatchedCount = len(vehicles)
+			env.Meta.ETag = etag
+			env.Meta.ActiveCount = activeCount
+			_ = json.NewEncoder(w).Encode(env)
+			return
+		}
+
+		// Bare array default for full backward compatibility
 		_ = json.NewEncoder(w).Encode(vehicles)
 	}
+}
+
+func computeFleetETag(vehicles []LiveVehicle) string {
+	h := fnv.New64a()
+	for _, v := range vehicles {
+		h.Write([]byte(v.VehicleID))
+		h.Write([]byte(v.Status))
+		_, _ = fmt.Fprintf(h, ":%.5f,%.5f,%.1f,%d;", v.Lat, v.Lng, v.Speed, v.Ts.Unix())
+	}
+	return fmt.Sprintf("\"w/%016x-%d\"", h.Sum64(), len(vehicles))
+}
+
+func filterByBBox(vehicles []LiveVehicle, bboxStr string) []LiveVehicle {
+	parts := strings.Split(bboxStr, ",")
+	if len(parts) != 4 {
+		return vehicles
+	}
+	minLat, err1 := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
+	minLng, err2 := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+	maxLat, err3 := strconv.ParseFloat(strings.TrimSpace(parts[2]), 64)
+	maxLng, err4 := strconv.ParseFloat(strings.TrimSpace(parts[3]), 64)
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
+		return vehicles
+	}
+	out := make([]LiveVehicle, 0, len(vehicles))
+	for _, v := range vehicles {
+		if v.Lat >= minLat && v.Lat <= maxLat && v.Lng >= minLng && v.Lng <= maxLng {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+func filterSince(vehicles []LiveVehicle, since time.Time) []LiveVehicle {
+	out := make([]LiveVehicle, 0, len(vehicles))
+	for _, v := range vehicles {
+		if v.Ts.After(since) || v.Ts.Equal(since) {
+			out = append(out, v)
+		}
+	}
+	return out
 }
 
 func filterLiveVehicles(in []LiveVehicle, q string) []LiveVehicle {

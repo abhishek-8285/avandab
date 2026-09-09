@@ -57,11 +57,20 @@ export function useTelemetryFeed(cfg: { live: string; stream: string; pollSec: n
     });
   }, []);
 
+  const lastEtagRef = useRef<string>('');
+
   const ingest = useCallback((payload: unknown, mode: ConnMode) => {
     const m = mapRef.current;
+    let list: LiveVehicle[] | null = null;
     if (Array.isArray(payload)) {
+      list = payload as LiveVehicle[];
+    } else if (payload && typeof payload === 'object' && Array.isArray((payload as { vehicles?: LiveVehicle[] }).vehicles)) {
+      list = (payload as { vehicles: LiveVehicle[] }).vehicles;
+    }
+
+    if (list) {
       const seen = new Set<string>();
-      for (const v of payload as LiveVehicle[]) {
+      for (const v of list) {
         if (!v || typeof v.vehicle_id !== 'string') continue;
         seen.add(v.vehicle_id);
         m.set(v.vehicle_id, v);
@@ -75,14 +84,28 @@ export function useTelemetryFeed(cfg: { live: string; stream: string; pollSec: n
     scheduleRerender(mode);
   }, [scheduleRerender]);
 
-  // REST poll backup.
+  // REST poll backup with ETag 304 conditional queries to eliminate egress when fleet state is unchanged.
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | null = null;
     let stopped = false;
     const refresh = () => {
-      fetch(cfg.live, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
-        .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-        .then((list) => { if (!stopped) ingest(list, esRef.current ? 'live' : 'poll'); })
+      const headers: Record<string, string> = { Accept: 'application/json' };
+      if (lastEtagRef.current) {
+        headers['If-None-Match'] = lastEtagRef.current;
+      }
+      fetch(cfg.live, { headers, credentials: 'same-origin' })
+        .then((r) => {
+          if (r.status === 304) {
+            // Fleet state unchanged: zero byte payload, update sync clock only
+            if (!stopped) setState((s) => ({ ...s, conn: esRef.current ? 'live' : 'poll', lastSync: Date.now() }));
+            return null;
+          }
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const etag = r.headers.get('ETag');
+          if (etag) lastEtagRef.current = etag;
+          return r.json();
+        })
+        .then((payload) => { if (payload && !stopped) ingest(payload, esRef.current ? 'live' : 'poll'); })
         .catch(() => { if (!stopped) setState((s) => ({ ...s, conn: 'offline' })); });
     };
     const startPolling = () => { if (!timer) { refresh(); timer = setInterval(refresh, Math.max(2, cfg.pollSec) * 1000); } };
