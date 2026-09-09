@@ -5,6 +5,7 @@ import type { GeofenceZone, LiveVehicle } from '../types';
 import { bearingDeg, hasPos } from '../hooks';
 import {
   INDIA_BOUNDS,
+  INDIA_PAN_BOUNDS,
   INDIA_CENTER,
   INDIA_DEFAULT_ZOOM,
   INDIA_MIN_ZOOM,
@@ -115,6 +116,8 @@ export default function MapViewport(p: Props) {
       attributionControl: true,
       minZoom: INDIA_MIN_ZOOM,
       maxZoom: INDIA_MAX_ZOOM,
+      maxBounds: INDIA_PAN_BOUNDS,
+      maxBoundsViscosity: 1.0,
     }).setView(INDIA_CENTER, INDIA_DEFAULT_ZOOM);
 
     const tileUrl = propsRef.current.osmUrl && !propsRef.current.osmUrl.includes('openstreetmap.org')
@@ -131,7 +134,10 @@ export default function MapViewport(p: Props) {
     geoLayerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
-    setTimeout(() => { map.invalidateSize(); }, 100);
+    setTimeout(() => {
+      map.invalidateSize();
+      map.fitBounds(INDIA_BOUNDS, { padding: [15, 15] });
+    }, 100);
     let ro: ResizeObserver | null = null;
     if (window.ResizeObserver && divRef.current) {
       ro = new ResizeObserver(() => { map.invalidateSize(); });

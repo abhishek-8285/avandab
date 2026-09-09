@@ -93,9 +93,14 @@
         var dataEndpoint = pageData.dataEndpoint || '';
         var pollInterval = (cfg.PollSec > 0 ? cfg.PollSec : 30) * 1000;
 
+        var INDIA_BOUNDS = [[6.5, 68.0], [37.5, 97.5]];
+        var INDIA_PAN_BOUNDS = [[4.0, 65.0], [38.5, 100.0]];
+
         var map = L.map('share-map', {
             minZoom: 4,
-            maxZoom: 22
+            maxZoom: 22,
+            maxBounds: INDIA_PAN_BOUNDS,
+            maxBoundsViscosity: 1.0
         }).setView([20.5937, 78.9629], 5);
 
         var tileUrl = 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&gl=IN';

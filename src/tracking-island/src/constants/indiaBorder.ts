@@ -9,6 +9,15 @@ export const INDIA_BOUNDS: L.LatLngBoundsLiteral = [
   [37.5, 97.5],  // Northeast India
 ];
 
+/**
+ * Camera panning bounds: clamps the user's viewport so they cannot pan away to other
+ * countries/continents, keeping focus exclusively on India and its territorial waters.
+ */
+export const INDIA_PAN_BOUNDS: L.LatLngBoundsLiteral = [
+  [4.0, 65.0],   // Southwest boundary (covers Lakshadweep, Arabian Sea, Kutch)
+  [38.5, 100.0], // Northeast boundary (covers Ladakh, Arunachal Pradesh, Andaman & Nicobar)
+];
+
 export const INDIA_CENTER: [number, number] = [20.5937, 78.9629]; // Geographic center of India
 export const INDIA_DEFAULT_ZOOM = 5;
 export const INDIA_MIN_ZOOM = 4;
