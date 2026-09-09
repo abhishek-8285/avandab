@@ -64,12 +64,16 @@ func (c *StorageConfig) GetLocalDir() string { return c.LocalDir }
 
 // Config holds all application configuration.
 type Config struct {
-	AppEnv               string
-	Port                 string
-	DatabaseURL          string // effective DSN; mirrors Database.URL for callers that only need the string
-	Database             DatabaseConfig
-	CookieSecret         string
-	APITokenSecret       string
+	AppEnv         string
+	Port           string
+	DatabaseURL    string // effective DSN; mirrors Database.URL for callers that only need the string
+	Database       DatabaseConfig
+	CookieSecret   string
+	APITokenSecret string
+	// PublicBaseURL is the customer-facing origin for links sent out of band
+	// (WhatsApp tracking URLs). APP_PUBLIC_URL must be set in production;
+	// the avandab.com default is a deployment smell, not a fallback.
+	PublicBaseURL        string
 	SessionMaxAge        time.Duration
 	CookieSecure         bool
 	LogLevel             string
@@ -360,6 +364,7 @@ func Load() *Config {
 		},
 		CookieSecret:         getEnv("COOKIE_SECRET", "dev-secret-key-change-in-production-32b!"),
 		APITokenSecret:       getEnv("API_SECRET", ""),
+		PublicBaseURL:        strings.TrimRight(getEnv("APP_PUBLIC_URL", "https://avandab.com"), "/"),
 		SessionMaxAge:        sessionMaxAge,
 		CookieSecure:         cookieSecure,
 		LogLevel:             getEnv("LOG_LEVEL", "info"),

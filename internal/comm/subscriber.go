@@ -18,6 +18,9 @@ import (
 type EventSubscriber struct {
 	db     *sql.DB
 	logger *slog.Logger
+	// publicBaseURL is the customer-facing origin for tracking links.
+	// Threaded from config (APP_PUBLIC_URL); never hardcoded per-template.
+	publicBaseURL string
 }
 
 // NewEventSubscriber creates a new EventSubscriber instance.
@@ -26,9 +29,18 @@ func NewEventSubscriber(db *sql.DB, logger *slog.Logger) *EventSubscriber {
 		logger = slog.Default()
 	}
 	return &EventSubscriber{
-		db:     db,
-		logger: logger,
+		db:            db,
+		logger:        logger,
+		publicBaseURL: "https://avandab.com",
 	}
+}
+
+// WithPublicBaseURL overrides the tracking-link origin (chainable).
+func (s *EventSubscriber) WithPublicBaseURL(base string) *EventSubscriber {
+	if strings.TrimSpace(base) != "" {
+		s.publicBaseURL = strings.TrimRight(strings.TrimSpace(base), "/")
+	}
+	return s
 }
 
 // SubscribeEvents registers all transactional communication event listeners on the event bus.
@@ -343,7 +355,7 @@ func (s *EventSubscriber) HandleTripDispatchEvent(ctx context.Context, e events.
 		vehicleID = "unassigned"
 	}
 
-	_, err := EnqueueTripDispatchWhatsApp(ctx, s.db, tenantID, driverPhone, origin, destination, vehicleID)
+	_, err := EnqueueTripDispatchWhatsApp(ctx, s.db, tenantID, driverPhone, s.publicBaseURL, origin, destination, vehicleID)
 	if err != nil {
 		s.logger.Error("comm event subscriber: failed to enqueue trip dispatch WhatsApp",
 			"trip_id", tripID, "driver_phone", driverPhone, "error", err)
@@ -418,12 +430,12 @@ func (s *EventSubscriber) HandleTrackingEvent(ctx context.Context, e events.Even
 			return nil
 		}
 
-		trackingURL := fmt.Sprintf("https://avandab.com/tracking#b=%s", bookingNumber)
+		trackingURL := fmt.Sprintf("%s/tracking#b=%s", s.publicBaseURL, bookingNumber)
 		if vehicleID != "" {
-			trackingURL = fmt.Sprintf("https://avandab.com/tracking#v=%s", vehicleID)
+			trackingURL = fmt.Sprintf("%s/tracking#v=%s", s.publicBaseURL, vehicleID)
 		}
 
-		_, err := EnqueueBookingTrackingWhatsApp(ctx, s.db, tenantID, customerPhone, bookingNumber, origin, destination, trackingURL)
+		_, err := EnqueueBookingTrackingWhatsApp(ctx, s.db, tenantID, customerPhone, s.publicBaseURL, bookingNumber, origin, destination, trackingURL)
 		if err != nil {
 			s.logger.Error("comm event subscriber: failed to enqueue booking tracking WhatsApp",
 				"booking_id", bookingID, "recipient", customerPhone, "error", err)
@@ -484,7 +496,7 @@ func (s *EventSubscriber) HandleTrackingEvent(ctx context.Context, e events.Even
 		return nil
 	}
 
-	_, err := EnqueueTripTrackingWhatsApp(ctx, s.db, tenantID, customerPhone, tripID, tripNumber, origin, destination)
+	_, err := EnqueueTripTrackingWhatsApp(ctx, s.db, tenantID, customerPhone, s.publicBaseURL, tripID, tripNumber, origin, destination)
 	if err != nil {
 		s.logger.Error("comm event subscriber: failed to enqueue trip tracking WhatsApp",
 			"trip_id", tripID, "recipient", customerPhone, "error", err)

@@ -165,8 +165,8 @@ func EnqueueWhatsApp(ctx context.Context, db *sql.DB, tenantID, phone, template,
 }
 
 // EnqueueTripDispatchWhatsApp queues a trip dispatch notification for the driver.
-func EnqueueTripDispatchWhatsApp(ctx context.Context, db *sql.DB, tenantID, phone, origin, destination, vehicleID string) (string, error) {
-	msg := FormatTripDispatchMessage(origin, destination, vehicleID)
+func EnqueueTripDispatchWhatsApp(ctx context.Context, db *sql.DB, tenantID, phone, baseURL, origin, destination, vehicleID string) (string, error) {
+	msg := FormatTripDispatchMessage(baseURL, origin, destination, vehicleID)
 	return EnqueueRichWhatsApp(ctx, db, tenantID, phone, "trip_dispatched", WhatsAppPayload{
 		Text:     msg,
 		Body:     msg,
@@ -180,8 +180,8 @@ func EnqueueTripDispatchWhatsApp(ctx context.Context, db *sql.DB, tenantID, phon
 }
 
 // EnqueueTripTrackingWhatsApp queues a trip tracking notification for the customer.
-func EnqueueTripTrackingWhatsApp(ctx context.Context, db *sql.DB, tenantID, phone, tripID, tripNum, origin, destination string) (string, error) {
-	msg := FormatTripTrackingMessage(tripID, tripNum, origin, destination)
+func EnqueueTripTrackingWhatsApp(ctx context.Context, db *sql.DB, tenantID, phone, baseURL, tripID, tripNum, origin, destination string) (string, error) {
+	msg := FormatTripTrackingMessage(baseURL, tripID, tripNum, origin, destination)
 	return EnqueueRichWhatsApp(ctx, db, tenantID, phone, "trip_tracking", WhatsAppPayload{
 		Text:     msg,
 		Body:     msg,
@@ -196,8 +196,8 @@ func EnqueueTripTrackingWhatsApp(ctx context.Context, db *sql.DB, tenantID, phon
 }
 
 // EnqueueBookingTrackingWhatsApp queues a booking confirmed notification for the customer.
-func EnqueueBookingTrackingWhatsApp(ctx context.Context, db *sql.DB, tenantID, phone, bookingNum, origin, destination, trackingURL string) (string, error) {
-	msg := FormatBookingConfirmedMessage(bookingNum, origin, destination, trackingURL)
+func EnqueueBookingTrackingWhatsApp(ctx context.Context, db *sql.DB, tenantID, phone, baseURL, bookingNum, origin, destination, trackingURL string) (string, error) {
+	msg := FormatBookingConfirmedMessage(baseURL, bookingNum, origin, destination, trackingURL)
 	return EnqueueRichWhatsApp(ctx, db, tenantID, phone, "booking_confirmed", WhatsAppPayload{
 		Text:     msg,
 		Body:     msg,

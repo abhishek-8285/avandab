@@ -541,7 +541,7 @@ func main() {
 	fcmService.SubscribeEvents(eventBus)
 
 	// Comm Event Subscriber: automatically queues transactional emails (invoices, POD receipts, auth)
-	commSubscriber := comm.NewEventSubscriber(database, logger)
+	commSubscriber := comm.NewEventSubscriber(database, logger).WithPublicBaseURL(cfg.PublicBaseURL)
 	commSubscriber.SubscribeEvents(eventBus)
 
 	// ── Ops: error reporting, login audit, dashboard ─────────────────────

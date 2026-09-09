@@ -420,15 +420,19 @@ func TestEnqueuePODEmail_DeliveryReceipt(t *testing.T) {
 
 func TestWhatsAppTemplates_Formatting(t *testing.T) {
 	// 1. Trip dispatch message
-	dispatchMsg := FormatTripDispatchMessage("Mumbai JNPT", "Pune Chakan", "MH12AB1234")
+	dispatchMsg := FormatTripDispatchMessage("https://avandab.com", "Mumbai JNPT", "Pune Chakan", "MH12AB1234")
 	assert.Equal(t, "🚚 Avandab Trip Dispatched: Mumbai JNPT ➔ Pune Chakan | Live Tracking: https://avandab.com/tracking#v=MH12AB1234", dispatchMsg)
 
 	// 2. Trip tracking message (customer portal link, never staff /tracking)
-	trackMsg := FormatTripTrackingMessage("trp-9001", "TRP-9001", "Delhi", "Jaipur")
+	trackMsg := FormatTripTrackingMessage("https://avandab.com", "trp-9001", "TRP-9001", "Delhi", "Jaipur")
 	assert.Equal(t, "🚚 Avandab Shipment On The Way: Trip #TRP-9001 (Delhi ➔ Jaipur) has departed. Live Tracking: https://avandab.com/customer/tracking/trp-9001", trackMsg)
 
+	// 2b. Custom deployment base URL threads through (APP_PUBLIC_URL).
+	customMsg := FormatTripTrackingMessage("https://fleet.example.com", "trp-9001", "TRP-9001", "Delhi", "Jaipur")
+	assert.Contains(t, customMsg, "https://fleet.example.com/customer/tracking/trp-9001")
+
 	// 3. Booking confirmed message
-	bookingMsg := FormatBookingConfirmedMessage("BK-500", "Chennai", "Bengaluru", "https://avandab.com/tracking#b=BK-500")
+	bookingMsg := FormatBookingConfirmedMessage("https://avandab.com", "BK-500", "Chennai", "Bengaluru", "https://avandab.com/tracking#b=BK-500")
 	assert.Equal(t, "📦 Avandab Booking Confirmed: #BK-500 (Chennai ➔ Bengaluru). Track your shipment live: https://avandab.com/tracking#b=BK-500", bookingMsg)
 
 	// 4. POD receipt message
