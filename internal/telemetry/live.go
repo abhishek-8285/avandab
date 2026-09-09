@@ -22,6 +22,7 @@ type LiveVehicle struct {
 	TripID        string     `json:"trip_id,omitempty"`
 	VehicleID     string     `json:"vehicle_id"`
 	VehicleNumber string     `json:"vehicle_number,omitempty"`
+	VehicleType   string     `json:"vehicle_type,omitempty"`
 	Lat           float64    `json:"lat"`
 	Lng           float64    `json:"lng"`
 	Speed         float64    `json:"speed"`
@@ -205,7 +206,8 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 		       COALESCE(NULLIF(TRIM(COALESCE(d.first_name, '') || ' ' || COALESCE(d.last_name, '')), ''), '') as driver_name,
 		       COALESCE(d.phone, '') as driver_phone,
 		       rt.distance as route_km,
-		       td.device_type as device_type
+		       td.device_type as device_type,
+		       COALESCE(v.vehicle_type, 'truck') as vehicle_type
 		FROM telemetry_snapshots s
 		JOIN (
 		    SELECT vehicle_id, MAX(timestamp) AS ts
@@ -232,19 +234,24 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 	var stales []time.Duration
 	for rows.Next() {
 		var lv LiveVehicle
-		var tripID, vehicleID, vehNum, driverName, driverPhone sql.NullString
+		var tripID, vehicleID, vehNum, driverName, driverPhone, vehType sql.NullString
 		var devType sql.NullString
 		var lat, lng, speed sql.NullFloat64
 		var fuel, odo, heading, routeKM, battery sql.NullFloat64
 		var motion, valid sql.NullInt64
 		var ts time.Time
-		if err := rows.Scan(&tripID, &vehicleID, &lat, &lng, &speed, &fuel, &odo, &heading, &ts, &battery, &motion, &valid, &vehNum, &driverName, &driverPhone, &routeKM, &devType); err != nil {
+		if err := rows.Scan(&tripID, &vehicleID, &lat, &lng, &speed, &fuel, &odo, &heading, &ts, &battery, &motion, &valid, &vehNum, &driverName, &driverPhone, &routeKM, &devType, &vehType); err != nil {
 			return nil, err
 		}
 		if !vehicleID.Valid {
 			continue
 		}
 		lv.VehicleID = vehicleID.String
+		if vehType.Valid && vehType.String != "" {
+			lv.VehicleType = vehType.String
+		} else {
+			lv.VehicleType = "truck"
+		}
 		if vehNum.Valid && vehNum.String != "" {
 			lv.VehicleNumber = vehNum.String
 		}

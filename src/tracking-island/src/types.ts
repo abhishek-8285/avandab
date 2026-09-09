@@ -6,6 +6,7 @@ export type MarkerState = 'running' | 'stopped' | 'no_signal' | 'maintenance_due
 export interface LiveVehicle {
   vehicle_id: string;
   vehicle_number?: string;
+  vehicle_type?: string;
   trip_id?: string;
   lat: number;
   lng: number;

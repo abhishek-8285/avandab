@@ -1,7 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LiveVehicle, SortKey, StatusFilter } from '../types';
 import { bucketOf, useFleetFilter } from '../hooks';
-import { ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlusIcon, SearchIcon, TruckIcon, ZapIcon } from './icons';
+import {
+  ArrowRightIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CloseIcon,
+  PlusIcon,
+  SearchIcon,
+  TelemetryEmptyIllustration,
+  TruckIcon,
+  VehicleTypeIcon,
+  ZapIcon,
+} from './icons';
 
 interface Props {
   vehicles: Map<string, LiveVehicle>;
@@ -126,16 +137,16 @@ export default function FleetSidebar({ vehicles, selectedId, onSelect }: Props) 
       <div id="fleet-list" className="ti-list" ref={listRef} onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)}>
         {list.length === 0 ? (
           <div className="ti-empty-state">
-            <span className="ti-empty-icon-wrap">
-              <TruckIcon className="ti-svg-icon" />
-            </span>
+            <div className="ti-empty-illu-wrap">
+              <TelemetryEmptyIllustration className="ti-empty-illu" />
+            </div>
             <div className="ti-empty-title">
-              {query || status !== 'all' ? 'No matching vehicles' : 'No vehicles found'}
+              {query || status !== 'all' ? 'No Matching Fleet Units' : 'No Vehicles Reporting Telemetry'}
             </div>
             <div className="ti-empty-msg">
               {query || status !== 'all' 
-                ? 'Try adjusting your search query or filter.' 
-                : 'No vehicles reporting telemetry. Register a unit or pair a tracker to start live tracking.'}
+                ? 'No vehicles match your search or status filter. Reset filters to view all units.' 
+                : 'No active AIS-140 GPS, OBD-II or driver mobile telemetry feeds detected for this tenant.'}
             </div>
             {!query && status === 'all' && (
               <div className="ti-empty-btns">
@@ -158,6 +169,9 @@ export default function FleetSidebar({ vehicles, selectedId, onSelect }: Props) 
                   className={'ti-row fleet-row' + (v.vehicle_id === selectedId ? ' sel' : '')}
                   onClick={() => pick(v.vehicle_id)}>
                   <span className="ti-dot" style={{ background: DOT[b] }} />
+                  <span className="ti-row-type-badge" title={v.vehicle_type || 'truck'}>
+                    <VehicleTypeIcon type={v.vehicle_type} className="ti-row-type-icon" />
+                  </span>
                   <span className="ti-row-main">
                     <span className="ti-row-name">
                       {v.vehicle_number || v.vehicle_id}

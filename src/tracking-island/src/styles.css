@@ -189,4 +189,67 @@
   margin-left: 3px;
 }
 
+/* Vehicle Type Glyph Badge in Fleet List */
+.ti-row-type-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: var(--color-surface-container-high, #e9eef5);
+  color: var(--color-text-muted, #64748b);
+  flex-shrink: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.ti-row.sel .ti-row-type-badge {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.ti-row-type-icon {
+  width: 15px;
+  height: 15px;
+}
+
+/* Industry Standard Telemetry Empty State */
+.ti-empty-illu-wrap {
+  width: 100%;
+  max-width: 220px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+.ti-empty-illu {
+  width: 100%;
+  max-width: 200px;
+  height: auto;
+  color: var(--color-text-muted, #475569);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ti-row-type-badge {
+    background: #1e293b;
+    color: #94a3b8;
+  }
+  :root:not([data-theme="light"]) .ti-row.sel .ti-row-type-badge {
+    background: #1e3a8a;
+    color: #93c5fd;
+  }
+  :root:not([data-theme="light"]) .ti-empty-illu {
+    color: #cbd5e1;
+  }
+}
+:root[data-theme="dark"] .ti-row-type-badge {
+  background: #1e293b;
+  color: #94a3b8;
+}
+:root[data-theme="dark"] .ti-row.sel .ti-row-type-badge {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+:root[data-theme="dark"] .ti-empty-illu {
+  color: #cbd5e1;
+}
+
+
 

@@ -8,7 +8,52 @@ const STATUS_COLOR: Record<string, string> = {
   running: '#059669', stopped: '#d97706', no_signal: '#dc2626', maintenance_due: '#7c3aed',
 };
 
-function truckIcon(color: string, rotation: number, dim: boolean): L.DivIcon {
+function getVehicleIconPath(type?: string): string {
+  switch (type?.toLowerCase()) {
+    case 'mini_truck':
+      return `<path d="M15 17h5a1 1 0 0 0 1-1v-4.5a1 1 0 0 0-.3-.7L18.2 8.3A1 1 0 0 0 17.5 8H14v9"/>` +
+        `<path d="M14 9.5h3.2l1.3 2.5H14V9.5z"/>` +
+        `<path d="M2 11h12v6H2z"/>` +
+        `<circle cx="6" cy="18" r="2" fill="#ffffff"/>` +
+        `<circle cx="16.5" cy="18" r="2" fill="#ffffff"/>`;
+    case 'bus':
+      return `<rect x="2" y="5" width="20" height="12" rx="2"/>` +
+        `<line x1="2" y1="9" x2="22" y2="9"/>` +
+        `<line x1="7" y1="5" x2="7" y2="9"/>` +
+        `<line x1="12" y1="5" x2="12" y2="9"/>` +
+        `<line x1="17" y1="5" x2="17" y2="9"/>` +
+        `<circle cx="6.5" cy="18" r="2" fill="#ffffff"/>` +
+        `<circle cx="17.5" cy="18" r="2" fill="#ffffff"/>`;
+    case 'van':
+      return `<path d="M2 17h3m4 0h6m4 0h2a1 1 0 0 0 1-1v-4.5a1 1 0 0 0-.25-.66l-2.5-3A1 1 0 0 0 17 7H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1"/>` +
+        `<path d="M14 7v10"/>` +
+        `<path d="M14 8.5h2.8l2.2 3.5H14V8.5z"/>` +
+        `<circle cx="7" cy="18" r="2" fill="#ffffff"/>` +
+        `<circle cx="17" cy="18" r="2" fill="#ffffff"/>`;
+    case 'pickup':
+      return `<path d="M2 17h3m4 0h6m4 0h3a1 1 0 0 0 1-1v-3.5a1 1 0 0 0-.3-.7L20.2 9.3A1 1 0 0 0 19.5 9H13v8"/>` +
+        `<path d="M13 10.5h6l1.3 2.5H13V10.5z"/>` +
+        `<path d="M2 12h11v5H2z"/>` +
+        `<circle cx="7" cy="18" r="2" fill="#ffffff"/>` +
+        `<circle cx="17" cy="18" r="2" fill="#ffffff"/>`;
+    case 'tempo':
+      return `<path d="M12 17h3m4 0h2a1 1 0 0 0 1-1v-3l-2.5-4.5A1 1 0 0 0 15.6 8H12v9"/>` +
+        `<path d="M12 9.5h3.2l1.6 3H12V9.5z"/>` +
+        `<path d="M3 11h9v6H3z"/>` +
+        `<circle cx="6.5" cy="18" r="2" fill="#ffffff"/>` +
+        `<circle cx="18" cy="18" r="2" fill="#ffffff"/>`;
+    case 'truck':
+    default:
+      return `<path d="M1 17h2"/><path d="M7 17h7"/><path d="M18 17h3a1 1 0 0 0 1-1v-4a1 1 0 0 0-.25-.66l-2.5-3A1 1 0 0 0 16.5 8H14v9"/>` +
+        `<path d="M14 9h2.5l2 3H14V9z"/>` +
+        `<rect x="1" y="6" width="12" height="11" rx="1"/>` +
+        `<circle cx="5" cy="18" r="2" fill="#ffffff"/>` +
+        `<circle cx="16.5" cy="18" r="2" fill="#ffffff"/>`;
+  }
+}
+
+function truckIcon(color: string, rotation: number, dim: boolean, vehicleType?: string): L.DivIcon {
+  const innerPaths = getVehicleIconPath(vehicleType);
   return L.divIcon({
     className: 'ti-marker',
     html: `<div class="ti-truck" style="--ti-c:${color};--ti-r:${rotation}deg;opacity:${dim ? 0.45 : 1}">` +
@@ -16,11 +61,7 @@ function truckIcon(color: string, rotation: number, dim: boolean): L.DivIcon {
       `<polygon points="16,1 21,7 11,7" fill="${color}" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>` +
       `<circle cx="16" cy="17" r="12" fill="${color}" stroke="#ffffff" stroke-width="2"/>` +
       `<g transform="translate(8, 9) scale(0.667)" stroke="#ffffff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">` +
-      `<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>` +
-      `<path d="M15 18H9"/>` +
-      `<path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/>` +
-      `<circle cx="17" cy="18" r="2" fill="#ffffff"/>` +
-      `<circle cx="7" cy="18" r="2" fill="#ffffff"/>` +
+      innerPaths +
       `</g></svg></div>`,
     iconSize: [32, 32],
     iconAnchor: [16, 17],
@@ -119,7 +160,7 @@ export default function MapViewport(p: Props) {
       const stale = v.status === 'no_signal';
       if (!mk) {
         mk = L.marker([v.lat, v.lng], {
-          icon: truckIcon(STATUS_COLOR[v.status] ?? '#64748b', v.heading ?? 0, stale),
+          icon: truckIcon(STATUS_COLOR[v.status] ?? '#64748b', v.heading ?? 0, stale, v.vehicle_type),
           title: v.vehicle_number || v.vehicle_id,
         }).addTo(map);
         mk.on('click', (e) => { L.DomEvent.stopPropagation(e); propsRef.current.onSelect(v.vehicle_id); });
@@ -128,10 +169,10 @@ export default function MapViewport(p: Props) {
         const cur = mk.getLatLng();
         if (cur.lat !== v.lat || cur.lng !== v.lng) {
           const rot = bearingDeg(cur.lat, cur.lng, v.lat, v.lng);
-          mk.setIcon(truckIcon(STATUS_COLOR[v.status] ?? '#64748b', v.heading ?? rot, stale));
+          mk.setIcon(truckIcon(STATUS_COLOR[v.status] ?? '#64748b', v.heading ?? rot, stale, v.vehicle_type));
           anims.set(v.vehicle_id, { fromLat: cur.lat, fromLng: cur.lng, toLat: v.lat, toLng: v.lng, start: now, marker: mk, last: v });
         } else {
-          mk.setIcon(truckIcon(STATUS_COLOR[v.status] ?? '#64748b', v.heading ?? 0, stale));
+          mk.setIcon(truckIcon(STATUS_COLOR[v.status] ?? '#64748b', v.heading ?? 0, stale, v.vehicle_type));
         }
       }
       const el = mk.getElement();

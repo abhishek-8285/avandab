@@ -13,6 +13,7 @@ import {
   SpeedIcon,
   TruckIcon,
   UserIcon,
+  VehicleTypeIcon,
 } from './icons';
 
 interface TripSummary {
@@ -59,7 +60,7 @@ export default function VehicleDetailDrawer({ vehicle, onClose, onFollow, follow
   return (
     <section id="intel-detail-panel" className="ti-drawer" aria-label="Vehicle details">
       <div className="ti-drawer-head">
-        <TruckIcon className="ti-title-icon text-primary" />
+        <VehicleTypeIcon type={vehicle.vehicle_type} className="ti-title-icon text-primary" />
         <b id="intel-vehicle-id">{vehicle.vehicle_number || vehicle.vehicle_id}</b>
         <span className="ti-pill">{vehicle.status.replace('_', ' ')}</span>
         <span className="ti-sp" />
@@ -77,6 +78,7 @@ export default function VehicleDetailDrawer({ vehicle, onClose, onFollow, follow
         </button>
       </div>
       <div className="ti-drawer-body">
+        {row(<VehicleTypeIcon type={vehicle.vehicle_type} className="ti-row-icon" />, 'Class', (vehicle.vehicle_type || 'truck').replace('_', ' ').toUpperCase())}
         {row(<SpeedIcon className="ti-row-icon" />, 'Speed', `${Math.round(vehicle.speed)} km/h`)}
         {row(<OdometerIcon className="ti-row-icon" />, 'Odometer', vehicle.odometer !== undefined ? `${Math.round(vehicle.odometer)} km` : undefined)}
         {row(<FuelIcon className="ti-row-icon" />, 'Fuel', vehicle.fuel_level !== undefined ? `${vehicle.fuel_level}%` : undefined)}
