@@ -4,6 +4,7 @@ import { useTelemetryFeed } from '../hooks';
 import MapViewport, { type MapHandle } from './MapViewport';
 import FleetSidebar from './FleetSidebar';
 import VehicleDetailDrawer from './VehicleDetailDrawer';
+import { LayersIcon, MaximizeIcon, RadioIcon, RefreshIcon } from './icons';
 
 async function loadGeofences(url: string): Promise<GeofenceZone[]> {
   const r = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
@@ -75,14 +76,21 @@ export default function TrackingApp({ config }: { config: TrackingMapConfig }) {
           <span className="ti-density ti-mono">
             <b id="density-active">{activeCount}</b>/<span id="density-total">{vehicles.size}</span> live
           </span>
-          <button type="button" id="refresh-feed-btn" className="ti-icon-btn" onClick={refreshNow} title="Refresh now">⟳</button>
+          <button type="button" id="refresh-feed-btn" className="ti-icon-btn" onClick={refreshNow} title="Refresh now">
+            <RefreshIcon className="ti-btn-svg" />
+          </button>
+          <button type="button" id="fit-fleet-btn" className="ti-icon-btn" onClick={() => handle?.fitAll()} title="Fit all vehicles in view" disabled={vehicles.size === 0}>
+            <MaximizeIcon className="ti-btn-svg" />
+          </button>
           <span className="ti-sp" />
           <label className="ti-toggle">
             <input id="sse-toggle" type="checkbox" checked={sseOn} onChange={(e) => setSseOn(e.target.checked)} />
+            <RadioIcon className="ti-toggle-svg" />
             Stream{sseAttempts > 0 && !sseOn ? '' : sseAttempts > 0 ? ` (retry ${sseAttempts})` : ''}
           </label>
           <label className="ti-toggle">
             <input type="checkbox" checked={showGeofences} onChange={(e) => setShowGeofences(e.target.checked)} />
+            <LayersIcon className="ti-toggle-svg" />
             Geofences
           </label>
         </div>

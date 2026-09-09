@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { LiveVehicle, SortKey, StatusFilter } from '../types';
 import { bucketOf, useFleetFilter } from '../hooks';
+import { ArrowRightIcon, ChevronLeftIcon, ChevronRightIcon, CloseIcon, PlusIcon, SearchIcon, TruckIcon, ZapIcon } from './icons';
 
 interface Props {
   vehicles: Map<string, LiveVehicle>;
@@ -72,6 +73,7 @@ export default function FleetSidebar({ vehicles, selectedId, onSelect }: Props) 
   if (collapsed) {
     return (
       <button type="button" id="drawer-expand-rail" className="ti-rail" onClick={() => { setCollapsed(false); setMobileOpen(true); }} aria-label="Show fleet panel">
+        <ChevronRightIcon className="ti-rail-icon" />
         <span className="ti-rail-count">{counts.all}</span>
       </button>
     );
@@ -81,18 +83,29 @@ export default function FleetSidebar({ vehicles, selectedId, onSelect }: Props) 
     <>
     {!mobileOpen && (
       <button type="button" id="drawer-expand-rail" className="ti-rail ti-rail-mobile" onClick={() => setMobileOpen(true)} aria-label="Show fleet panel">
+        <ChevronRightIcon className="ti-rail-icon" />
         <span className="ti-rail-count">{counts.all}</span>
       </button>
     )}
     <aside id="fleet-drawer" className={'ti-sidebar' + (mobileOpen ? ' open' : '')}>
       <div className="ti-side-head">
-        <span className="ti-side-title">Fleet <span className="ti-mono">(<span id="count-all">{counts.all}</span>)</span></span>
-        <button type="button" className="ti-icon-btn" onClick={() => setCollapsed(true)} aria-label="Hide panel">‹</button>
+        <span className="ti-side-title">
+          <TruckIcon className="ti-title-icon" />
+          Fleet <span className="ti-mono">(<span id="count-all">{counts.all}</span>)</span>
+        </span>
+        <button type="button" className="ti-icon-btn" onClick={() => setCollapsed(true)} aria-label="Hide panel">
+          <ChevronLeftIcon className="ti-btn-svg" />
+        </button>
       </div>
       <div className="ti-search-wrap">
+        <SearchIcon className="ti-search-icon" />
         <input ref={searchRef} id="vehicle-search" className="ti-search" value={query} placeholder="Search vehicle…  ( / )"
           aria-label="Search Vehicles" autoComplete="off" onChange={(e) => setQuery(e.target.value)} />
-        {query && <button type="button" className="ti-clear" onClick={() => setQuery('')} aria-label="Clear search">×</button>}
+        {query && (
+          <button type="button" className="ti-clear" onClick={() => setQuery('')} aria-label="Clear search">
+            <CloseIcon className="ti-btn-svg-xs" />
+          </button>
+        )}
       </div>
       <div className="ti-sort-row" role="tablist" aria-label="Sort fleet list">
         <span className="ti-sort-label">Sort</span>
@@ -105,7 +118,8 @@ export default function FleetSidebar({ vehicles, selectedId, onSelect }: Props) 
         {TABS.map((t) => (
           <button key={t.key} type="button" role="tab" aria-selected={status === t.key}
             className={'ti-tab' + (status === t.key ? ' on' : '')} onClick={() => setStatus(t.key)}>
-            <span className="ti-tab-count" id={`panel-count-${t.key}`}>{counts[t.key]}</span><span>{t.label}</span>
+            <span className="ti-tab-count" id={`panel-count-${t.key}`}>{counts[t.key]}</span>
+            <span className="ti-tab-lbl">{t.label}</span>
           </button>
         ))}
       </div>
@@ -113,13 +127,7 @@ export default function FleetSidebar({ vehicles, selectedId, onSelect }: Props) 
         {list.length === 0 ? (
           <div className="ti-empty-state">
             <span className="ti-empty-icon-wrap">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ti-svg-icon">
-                <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
-                <path d="M15 18H9"/>
-                <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/>
-                <circle cx="17" cy="18" r="2"/>
-                <circle cx="7" cy="18" r="2"/>
-              </svg>
+              <TruckIcon className="ti-svg-icon" />
             </span>
             <div className="ti-empty-title">
               {query || status !== 'all' ? 'No matching vehicles' : 'No vehicles found'}
@@ -132,14 +140,11 @@ export default function FleetSidebar({ vehicles, selectedId, onSelect }: Props) 
             {!query && status === 'all' && (
               <div className="ti-empty-btns">
                 <a href="/vehicles/new" className="ti-empty-btn-primary">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ti-btn-svg">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                  </svg>
+                  <PlusIcon className="ti-btn-svg" />
                   New Vehicle
                 </a>
                 <a href="/telemetry/devices" className="ti-empty-btn-link">
-                  Pair GPS Tracker →
+                  Pair GPS Tracker <ArrowRightIcon className="ti-btn-svg-inline" />
                 </a>
               </div>
             )}
@@ -154,7 +159,10 @@ export default function FleetSidebar({ vehicles, selectedId, onSelect }: Props) 
                   onClick={() => pick(v.vehicle_id)}>
                   <span className="ti-dot" style={{ background: DOT[b] }} />
                   <span className="ti-row-main">
-                    <span className="ti-row-name">{v.vehicle_number || v.vehicle_id}{v.speed > SPEED_LIMIT_KMH ? ' ⚡' : ''}</span>
+                    <span className="ti-row-name">
+                      {v.vehicle_number || v.vehicle_id}
+                      {v.speed > SPEED_LIMIT_KMH && <ZapIcon className="ti-zap-icon" title="Overspeed warning" />}
+                    </span>
                     <span className="ti-row-sub ti-mono">{Math.round(v.speed)} km/h · {STATUS_LABEL[v.status] ?? v.status}</span>
                   </span>
                 </button>

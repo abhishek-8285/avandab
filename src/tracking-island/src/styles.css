@@ -9,13 +9,16 @@
   background: #fff; border-right: 1px solid #e3e8ef; z-index: 20; }
 .ti-side-head { display: flex; align-items: center; justify-content: space-between;
   padding: 10px 12px; border-bottom: 1px solid #eef1f5; }
-.ti-side-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.ti-side-title { display: flex; align-items: center; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.ti-title-icon { width: 15px; height: 15px; margin-right: 6px; flex-shrink: 0; }
 .ti-search-wrap { position: relative; padding: 10px 12px 4px; }
-.ti-search { width: 100%; box-sizing: border-box; padding: 7px 28px 7px 10px; font-size: 12px;
+.ti-search-icon { position: absolute; left: 20px; top: 18px; width: 14px; height: 14px; color: #94a3b8; pointer-events: none; }
+.ti-search { width: 100%; box-sizing: border-box; padding: 7px 28px 7px 28px; font-size: 12px;
   border: 1px solid #dfe5ec; border-radius: 8px; }
 .ti-search:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
-.ti-clear { position: absolute; right: 18px; top: 15px; border: 0; background: none;
-  font-size: 16px; cursor: pointer; color: #64748b; }
+.ti-clear { position: absolute; right: 18px; top: 16px; border: 0; background: none;
+  cursor: pointer; color: #64748b; padding: 2px; display: flex; align-items: center; justify-content: center; }
+.ti-clear:hover { color: #1e293b; }
 .ti-sort-row { display: flex; gap: 4px; align-items: center; padding: 8px 12px 0; }
 .ti-sort-label { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #94a3b8; }
 .ti-sort-btn { flex: 1; border: 1px solid transparent; background: #eef2f6; border-radius: 6px;
@@ -28,6 +31,7 @@
   font-weight: 600; text-transform: uppercase; cursor: pointer; color: #475569; }
 .ti-tab.on { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
 .ti-tab-count { font-size: 13px; font-weight: 800; }
+.ti-tab-lbl { font-size: 10px; }
 .ti-list { flex: 1; overflow-y: auto; }
 .ti-row { position: absolute; left: 0; right: 0; height: 56px; display: flex; align-items: center;
   gap: 8px; padding: 0 12px; border: 0; border-bottom: 1px solid #f1f5f9; background: #fff;
@@ -36,13 +40,21 @@
 .ti-row.sel { background: #eff6ff; }
 .ti-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
 .ti-row-main { display: flex; flex-direction: column; min-width: 0; }
-.ti-row-name { font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ti-row-name { display: flex; align-items: center; font-weight: 600; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ti-row-sub { font-size: 10px; color: #64748b; }
+.ti-zap-icon { width: 12px; height: 12px; margin-left: 4px; color: #f59e0b; fill: #fef3c7; flex-shrink: 0; }
 .ti-empty { padding: 24px 16px; color: #64748b; font-size: 12px; text-align: center; line-height: 1.6; }
 .ti-rail { width: 40px; border: 0; border-right: 1px solid #e3e8ef; background: #fff;
-  cursor: pointer; font-weight: 800; color: #2563eb; }
+  cursor: pointer; font-weight: 800; color: #2563eb; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.ti-rail-icon { width: 16px; height: 16px; margin-bottom: 4px; }
 .ti-icon-btn { height: 28px; min-width: 28px; display: inline-flex; align-items: center; justify-content: center;
-  border-radius: 8px; background: #eef2f6; border: 1px solid #e3e8ef; cursor: pointer; font-size: 15px; color: #334155; }
+  border-radius: 8px; background: #eef2f6; border: 1px solid #e3e8ef; cursor: pointer; color: #334155; }
+.ti-icon-btn:hover { background: #e2e8f0; color: #0f172a; }
+.ti-icon-btn.on { background: #2563eb; color: #ffffff; border-color: #2563eb; }
+.ti-icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.ti-icon-btn svg { width: 14px; height: 14px; }
+.ti-btn-svg { width: 14px; height: 14px; flex-shrink: 0; }
+.ti-btn-svg-xs { width: 12px; height: 12px; flex-shrink: 0; }
 
 /* Main + topbar */
 .ti-main { flex: 1; display: flex; flex-direction: column; min-width: 0; position: relative; }
@@ -58,6 +70,7 @@
 @keyframes ti-pulse { 50% { opacity: .35; } }
 .ti-sync { font-size: 10px; color: #94a3b8; }
 .ti-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: #475569; }
+.ti-toggle-svg { width: 13px; height: 13px; color: #64748b; margin-right: 2px; flex-shrink: 0; }
 .ti-map { flex: 1; min-height: 0; z-index: 0; }
 
 /* Markers */
@@ -75,8 +88,9 @@
 .ti-pill { font-size: 10px; font-weight: 700; text-transform: uppercase; background: #eef2f6;
   border-radius: 999px; padding: 2px 8px; color: #475569; }
 .ti-drawer-body { padding: 10px 12px 14px; }
-.ti-kv { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; font-size: 12px; }
-.ti-kv span { color: #64748b; }
+.ti-kv { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; }
+.ti-kv-left { display: inline-flex; align-items: center; color: #64748b; font-size: 12px; }
+.ti-row-icon { width: 14px; height: 14px; color: #94a3b8; flex-shrink: 0; margin-right: 6px; }
 .ti-kv b { font-weight: 600; text-align: right; }
 .ti-sep { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
   color: #94a3b8; margin: 10px 0 4px; }
@@ -166,6 +180,13 @@
 }
 .ti-empty-btn-link:hover {
   text-decoration: underline;
+}
+.ti-btn-svg-inline {
+  width: 13px;
+  height: 13px;
+  display: inline-block;
+  vertical-align: -2px;
+  margin-left: 3px;
 }
 
 

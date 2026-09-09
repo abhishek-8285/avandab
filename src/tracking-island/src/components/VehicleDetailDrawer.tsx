@@ -1,5 +1,19 @@
 import { useEffect, useState } from 'react';
 import type { LiveVehicle } from '../types';
+import {
+  ActivityIcon,
+  ClockIcon,
+  CloseIcon,
+  FuelIcon,
+  LocateIcon,
+  OdometerIcon,
+  PhoneIcon,
+  RouteIcon,
+  ShieldIcon,
+  SpeedIcon,
+  TruckIcon,
+  UserIcon,
+} from './icons';
 
 interface TripSummary {
   trip_number?: string;
@@ -31,39 +45,59 @@ export default function VehicleDetailDrawer({ vehicle, onClose, onFollow, follow
   }, [vehicle?.trip_id]);
 
   if (!vehicle) return null;
-  const row = (k: string, v: string | undefined) =>
-    v ? <div className="ti-kv"><span>{k}</span><b>{v}</b></div> : null;
+  const row = (icon: React.ReactNode, k: string, v: string | undefined) =>
+    v ? (
+      <div className="ti-kv">
+        <span className="ti-kv-left">
+          {icon}
+          <span>{k}</span>
+        </span>
+        <b>{v}</b>
+      </div>
+    ) : null;
 
   return (
     <section id="intel-detail-panel" className="ti-drawer" aria-label="Vehicle details">
       <div className="ti-drawer-head">
+        <TruckIcon className="ti-title-icon text-primary" />
         <b id="intel-vehicle-id">{vehicle.vehicle_number || vehicle.vehicle_id}</b>
         <span className="ti-pill">{vehicle.status.replace('_', ' ')}</span>
         <span className="ti-sp" />
-        <button type="button" className="ti-icon-btn" onClick={onFollow} aria-pressed={following} title="Follow vehicle">
-          {following ? '◉' : '◎'}
+        <button
+          type="button"
+          className={'ti-icon-btn' + (following ? ' on' : '')}
+          onClick={onFollow}
+          aria-pressed={following}
+          title={following ? 'Stop following vehicle' : 'Follow vehicle on map'}
+        >
+          <LocateIcon className="ti-btn-svg" />
         </button>
-        <button type="button" id="close-intel-btn" className="ti-icon-btn" onClick={onClose} aria-label="Close details">×</button>
+        <button type="button" id="close-intel-btn" className="ti-icon-btn" onClick={onClose} aria-label="Close details">
+          <CloseIcon className="ti-btn-svg" />
+        </button>
       </div>
       <div className="ti-drawer-body">
-        <div id="intel-speed" className="ti-kv"><span>Speed</span><b>{Math.round(vehicle.speed)} km/h</b></div>
-        {row('Odometer', vehicle.odometer !== undefined ? Math.round(vehicle.odometer) + ' km' : undefined)}
-        {vehicle.fuel_level !== undefined
-          ? <div id="intel-fuel" className="ti-kv"><span>Fuel</span><b>{vehicle.fuel_level}%</b></div>
-          : null}
-        {row('Driver', vehicle.driver_name)}
-        {row('Driver phone', vehicle.driver_phone)}
-        {row('ETA window', vehicle.eta_min && vehicle.eta_max
-          ? new Date(vehicle.eta_min).toLocaleString() + ' → ' + new Date(vehicle.eta_max).toLocaleString() : undefined)}
-        {row('Remaining', vehicle.remaining_km !== undefined ? vehicle.remaining_km + ' km' : undefined)}
-        {row('Provider', vehicle.provider)}
-        {row('Fix time', new Date(vehicle.ts).toLocaleString())}
+        {row(<SpeedIcon className="ti-row-icon" />, 'Speed', `${Math.round(vehicle.speed)} km/h`)}
+        {row(<OdometerIcon className="ti-row-icon" />, 'Odometer', vehicle.odometer !== undefined ? `${Math.round(vehicle.odometer)} km` : undefined)}
+        {row(<FuelIcon className="ti-row-icon" />, 'Fuel', vehicle.fuel_level !== undefined ? `${vehicle.fuel_level}%` : undefined)}
+        {row(<UserIcon className="ti-row-icon" />, 'Driver', vehicle.driver_name)}
+        {row(<PhoneIcon className="ti-row-icon" />, 'Driver phone', vehicle.driver_phone)}
+        {row(
+          <ClockIcon className="ti-row-icon" />,
+          'ETA window',
+          vehicle.eta_min && vehicle.eta_max
+            ? `${new Date(vehicle.eta_min).toLocaleTimeString()} – ${new Date(vehicle.eta_max).toLocaleTimeString()}`
+            : undefined
+        )}
+        {row(<RouteIcon className="ti-row-icon" />, 'Remaining', vehicle.remaining_km !== undefined ? `${vehicle.remaining_km} km` : undefined)}
+        {row(<ShieldIcon className="ti-row-icon" />, 'Provider', vehicle.provider)}
+        {row(<ClockIcon className="ti-row-icon" />, 'Fix time', new Date(vehicle.ts).toLocaleTimeString())}
         {trip && (
           <>
-            <div className="ti-sep">Trip</div>
-            {row('Trip', trip.trip_number)}
-            {row('Route', trip.origin && trip.destination ? trip.origin + ' → ' + trip.destination : undefined)}
-            {row('Status', trip.status)}
+            <div className="ti-sep">Active Trip</div>
+            {row(<TruckIcon className="ti-row-icon" />, 'Trip', trip.trip_number)}
+            {row(<RouteIcon className="ti-row-icon" />, 'Route', trip.origin && trip.destination ? `${trip.origin} → ${trip.destination}` : undefined)}
+            {row(<ActivityIcon className="ti-row-icon" />, 'Status', trip.status)}
           </>
         )}
       </div>

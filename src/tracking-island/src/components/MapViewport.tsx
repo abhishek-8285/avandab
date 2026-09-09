@@ -12,10 +12,18 @@ function truckIcon(color: string, rotation: number, dim: boolean): L.DivIcon {
   return L.divIcon({
     className: 'ti-marker',
     html: `<div class="ti-truck" style="--ti-c:${color};--ti-r:${rotation}deg;opacity:${dim ? 0.45 : 1}">` +
-      `<svg viewBox="0 0 24 24" width="30" height="30" fill="var(--ti-c)" stroke="#fff" stroke-width="1">` +
-      `<path d="M1 8h13v8H1zM14 11h4l3 3v2h-7z"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></div>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
+      `<svg viewBox="0 0 32 32" width="32" height="32" class="ti-truck-svg">` +
+      `<polygon points="16,1 21,7 11,7" fill="${color}" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"/>` +
+      `<circle cx="16" cy="17" r="12" fill="${color}" stroke="#ffffff" stroke-width="2"/>` +
+      `<g transform="translate(8, 9) scale(0.667)" stroke="#ffffff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round">` +
+      `<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>` +
+      `<path d="M15 18H9"/>` +
+      `<path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/>` +
+      `<circle cx="17" cy="18" r="2" fill="#ffffff"/>` +
+      `<circle cx="7" cy="18" r="2" fill="#ffffff"/>` +
+      `</g></svg></div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 17],
   });
 }
 

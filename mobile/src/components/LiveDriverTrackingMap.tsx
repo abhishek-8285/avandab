@@ -138,7 +138,7 @@ export function LiveDriverTrackingMap({
     // Pickup Marker
     var pickupIcon = L.divIcon({
       className: 'custom-div-icon',
-      html: '<div class="pin-badge pin-pickup">📦 ORIGIN</div>',
+      html: '<div class="pin-badge pin-pickup"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg> ORIGIN</div>',
       iconSize: [60, 20],
       iconAnchor: [30, 25]
     });
@@ -147,7 +147,7 @@ export function LiveDriverTrackingMap({
     // Destination Marker
     var destIcon = L.divIcon({
       className: 'custom-div-icon',
-      html: '<div class="pin-badge pin-dest">🏭 DESTINATION</div>',
+      html: '<div class="pin-badge pin-dest"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg> DESTINATION</div>',
       iconSize: [80, 20],
       iconAnchor: [40, 25]
     });
@@ -156,7 +156,7 @@ export function LiveDriverTrackingMap({
     // Live Truck Marker
     var truckIcon = L.divIcon({
       className: 'custom-div-icon',
-      html: '<div class="truck-pulse"></div><div class="truck-marker"><span style="font-size:16px;">🚛</span></div>',
+      html: '<div class="truck-pulse"></div><div class="truck-marker"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2" fill="#ffffff"/><circle cx="7" cy="18" r="2" fill="#ffffff"/></svg></div>',
       iconSize: [36, 36],
       iconAnchor: [18, 18]
     });
