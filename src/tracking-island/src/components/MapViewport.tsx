@@ -3,6 +3,14 @@ import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { GeofenceZone, LiveVehicle } from '../types';
 import { bearingDeg, hasPos } from '../hooks';
+import {
+  INDIA_BOUNDS,
+  INDIA_CENTER,
+  INDIA_DEFAULT_ZOOM,
+  INDIA_MIN_ZOOM,
+  INDIA_MAX_ZOOM,
+  addIndiaBoundaryMask,
+} from '../constants/indiaBorder';
 
 const STATUS_COLOR: Record<string, string> = {
   running: '#059669', stopped: '#d97706', no_signal: '#dc2626', maintenance_due: '#7c3aed',
@@ -102,12 +110,25 @@ export default function MapViewport(p: Props) {
   propsRef.current = p;
 
   useEffect(() => {
-    const map = L.map(divRef.current!, { zoomControl: true, attributionControl: true })
-      .setView([22.5, 78.9], 5);
+    const map = L.map(divRef.current!, {
+      zoomControl: true,
+      attributionControl: true,
+      maxBounds: INDIA_BOUNDS,
+      maxBoundsViscosity: 1.0, // Hard limit: camera cannot pan outside Indian territory
+      minZoom: INDIA_MIN_ZOOM,
+      maxZoom: INDIA_MAX_ZOOM,
+    }).setView(INDIA_CENTER, INDIA_DEFAULT_ZOOM);
+
     L.tileLayer(propsRef.current.osmUrl, {
-      maxZoom: 19,
+      minZoom: INDIA_MIN_ZOOM,
+      maxZoom: INDIA_MAX_ZOOM,
+      bounds: INDIA_BOUNDS, // Only load tiles within Indian territory
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(map);
+
+    // Apply inverse territory mask to dim foreign countries and outline India's border
+    addIndiaBoundaryMask(map);
+
     geoLayerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 
@@ -130,7 +151,11 @@ export default function MapViewport(p: Props) {
       focus: (v) => map.setView([v.lat, v.lng], Math.max(map.getZoom(), 14), { animate: true }),
       fitAll: () => {
         const pts = [...markersRef.current.values()].map((m) => m.getLatLng());
-        if (pts.length > 0) map.fitBounds(L.latLngBounds(pts).pad(0.15));
+        if (pts.length > 0) {
+          map.fitBounds(L.latLngBounds(pts).pad(0.15), { maxZoom: 16 });
+        } else {
+          map.fitBounds(INDIA_BOUNDS, { padding: [20, 20] });
+        }
       },
     });
     map.on('click', () => propsRef.current.onSelect(null));

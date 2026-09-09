@@ -112,12 +112,18 @@ export function LiveDriverTrackingMap({
 <body>
   <div id="map"></div>
   <script>
+    var INDIA_BOUNDS = [[6.5, 67.5], [37.5, 97.5]];
     var map = L.map('map', {
       zoomControl: false,
-      attributionControl: false
+      attributionControl: false,
+      maxBounds: INDIA_BOUNDS,
+      maxBoundsViscosity: 1.0,
+      minZoom: 4.5
     }).setView([${driverLatitude}, ${driverLongitude}], 11);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      bounds: INDIA_BOUNDS,
+      minZoom: 4.5,
       maxZoom: 18,
     }).addTo(map);
 

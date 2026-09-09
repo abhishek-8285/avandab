@@ -93,13 +93,20 @@
         var dataEndpoint = pageData.dataEndpoint || '';
         var pollInterval = (cfg.PollSec > 0 ? cfg.PollSec : 30) * 1000;
 
-        var map = L.map('share-map').setView([20.5937, 78.9629], 5);
+        var INDIA_BOUNDS = [[6.5, 67.5], [37.5, 97.5]];
+        var map = L.map('share-map', {
+            maxBounds: INDIA_BOUNDS,
+            maxBoundsViscosity: 1.0,
+            minZoom: 4.5
+        }).setView([20.5937, 78.9629], 5);
 
         // Tile policy: OpenStreetMap only, attribution mandatory (ODbL).
         // Direct scraping of Google tile servers violates Google Maps
         // Platform ToS — licensed providers would slot in behind cfg.Provider.
         var osmUrl = cfg.OSMUrl || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
         L.tileLayer(osmUrl, {
+            bounds: INDIA_BOUNDS,
+            minZoom: 4.5,
             maxZoom: 19,
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
         }).addTo(map);
