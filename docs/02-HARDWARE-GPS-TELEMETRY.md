@@ -86,3 +86,27 @@ When viewing trucks on the web command center (`/tracking`), marker tooltips dyn
 - **Battery Health**: Live device battery percentage with `⚠` low power indicator.
 - **GSM Signal**: Signal strength bars (`●●●●`, `●●●○`, `●○○○`).
 - **Engine Status**: `Running (Speed km/h)` vs `PARKED` vs `No GPS fix`.
+
+---
+
+## 6. Deferred: ignition-derived trip boundaries (#11)
+
+**Status:** data captured, action deferred to Phase 2 (cross-spec with booking).
+**Evidence (2026-09-08):** ignition flows today from AIS-140 (`providers/ais140.go:161`)
+and GT06 (`providers/gt06.go:271`) into `telemetry_positions.ignition` via the
+ingest pipeline — the signal is persisted per frame, just never acted on.
+Teltonika/mobile frames carry no ignition. No `TripStartEvent`/`TripStopEvent`
+types or consumers exist in `internal/booking/` or `internal/trip/`.
+
+**Phase-2 design (accepted shape, not yet built):**
+1. Ingest detects 0→1 / 1→0 ignition transitions per device (debounced: N
+   consecutive frames or T seconds, to survive wire bounce at fuel stops).
+2. Transitions publish `ignition.on` / `ignition.off` bus events with
+   device/vehicle/trip context — telemetry owns detection, booking owns meaning.
+3. Booking decides the trip-state mapping (start? resume? geofence-gated?) in
+   its own spec; telemetry↔trip attribution stays client-honored until then.
+4. Teltonika/mobile fleets stay on explicit trip lifecycle (no ignition
+   available) — the design must not make ignition the only attribution path.
+
+**Do not:** emit booking state changes from the telemetry package, or infer
+trips from ignition alone (ignition without dispatch is not a trip).
