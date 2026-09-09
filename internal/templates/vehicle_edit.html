@@ -17,15 +17,15 @@
             <section>
                 <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Identity</h2>
                 <div class="grid grid-cols-1 gap-4">
-                    {{template "field.html" (dict "Label" "Vehicle Registration Number" "Name" "registration_number" "Value" (and $vehicle $vehicle.RegistrationNumber) "Required" "true" "Pattern" `[A-Z]{2}\s?[0-9]{1,2}\s?[A-Z]{0,3}\s?[0-9]{4}` "Title" "Indian registration: DL01AB1234 or MH01AB1234" "Placeholder" "e.g. DL1LAH8783" "Hint" "Official Indian RTO registration number (e.g. DL1LAH8783, MH12AB1234)")}}
+                    {{template "field.html" (dict "Label" "Vehicle Registration Number" "Name" "registration_number" "Value" (and $vehicle $vehicle.RegistrationNumber) "Required" "true" "Pattern" `[A-Za-z0-9\s-]{4,15}` "Title" "e.g. DL1LAH8783, MH12AB1234, or 22BH1234AA" "Placeholder" "e.g. DL1LAH8783" "Hint" "Official vehicle registration plate (e.g. DL1LAH8783, MH12AB1234, 22BH1234AA)")}}
                 </div>
             </section>
 
             <section>
                 <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Specifications</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {{template "field.html" (dict "Label" "Capacity (seats/kg)" "Name" "capacity" "Type" "number" "Value" (and $vehicle $vehicle.Capacity) "Placeholder" "e.g. 5000")}}
-                    {{template "field.html" (dict "Label" "Odometer Reading (km)" "Name" "odometer" "Type" "number" "Value" (and $vehicle (or $vehicle.Odometer $vehicle.CurrentMileage)) "Placeholder" "e.g. 15000" "Hint" "Current odometer / mileage")}}
+                    {{template "field.html" (dict "Label" "Capacity (seats/kg)" "Name" "capacity" "Type" "number" "Value" (and $vehicle $vehicle.Capacity) "Placeholder" "e.g. 5000" "Hint" "Payload capacity (kg) or seat count")}}
+                    {{template "field.html" (dict "Label" "Odometer Reading (km)" "Name" "odometer" "Type" "number" "Value" (and $vehicle (or $vehicle.Odometer $vehicle.CurrentMileage)) "Placeholder" "e.g. 15000" "Hint" "Current odometer / mileage in km")}}
 
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Vehicle Type</label>
@@ -97,7 +97,7 @@
                             {{template "field.html" (dict "Label" "Fleet Number / Internal Code" "Name" "fleet_number" "Value" (and $vehicle $vehicle.Profile.FleetNumber) "Hint" "Vehicle internal code or serial, e.g. TRK-01")}}
                             {{template "field.html" (dict "Label" "Fleet Object No." "Name" "fleet_object_no" "Value" (and $vehicle $vehicle.Profile.FleetObjectNo))}}
                             {{template "field.html" (dict "Label" "Manufacturer" "Name" "manufacturer" "Value" (and $vehicle $vehicle.Profile.Manufacturer) "Placeholder" "e.g. Tata Motors / Ashok Leyland")}}
-                            {{template "field.html" (dict "Label" "Manufacturer Country" "Name" "manuf_country" "Value" (and $vehicle $vehicle.Profile.ManufCountry) "Placeholder" "IN")}}
+                            {{template "field.html" (dict "Label" "Manufacturer Country" "Name" "manuf_country" "Value" (and $vehicle (or $vehicle.Profile.ManufCountry "IN")) "Placeholder" "IN")}}
                             {{template "field.html" (dict "Label" "Model Number" "Name" "model" "Value" (and $vehicle $vehicle.Profile.Model) "Placeholder" "e.g. Prima 2830.K")}}
                             {{template "field.html" (dict "Label" "Constr. Yr/Mth" "Name" "constr_year_month" "Value" (and $vehicle $vehicle.Profile.ConstrYearMonth) "Placeholder" "YYYY / MM")}}
                             {{template "field.html" (dict "Label" "Acquisition Value" "Name" "acquisition_value" "Type" "number" "Value" (and $vehicle $vehicle.Profile.AcquisitionValue))}}
@@ -138,12 +138,18 @@
                     <div>
                         <h3 class="text-xs font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Vehicle Technology & Dimensions</h3>
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {{template "field.html" (dict "Label" "Weight" "Name" "weight" "Type" "number" "Value" (and $vehicle $vehicle.Profile.Weight))}}
-                            {{template "field.html" (dict "Label" "Unit of Weight" "Name" "weight_unit" "Value" (and $vehicle (or $vehicle.Profile.WeightUnit "TO")) "Placeholder" "TO")}}
-                            {{template "field.html" (dict "Label" "Load Volume" "Name" "load_volume" "Type" "number" "Value" (and $vehicle $vehicle.Profile.LoadVolume))}}
-                            {{template "field.html" (dict "Label" "Volume Unit" "Name" "volume_unit" "Value" (and $vehicle $vehicle.Profile.VolumeUnit))}}
-                            {{template "field.html" (dict "Label" "Secondary Fuel" "Name" "secondary_fuel" "Value" (and $vehicle $vehicle.Profile.SecondaryFuel))}}
-                            {{template "field.html" (dict "Label" "Usage Indicator" "Name" "usage_indicator" "Value" (and $vehicle $vehicle.Profile.UsageIndicator))}}
+                            {{template "field.html" (dict "Label" "Weight" "Name" "weight" "Type" "number" "Value" (and $vehicle $vehicle.Profile.Weight) "Placeholder" "e.g. 16")}}
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-secondary mb-1.5">Unit of Weight</label>
+                                <select name="weight_unit" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                    <option value="TO" {{if or (not $vehicle) (eq $vehicle.Profile.WeightUnit "TO")}}selected{{end}}>TO (Metric Tonnes)</option>
+                                    <option value="KG" {{if and $vehicle (eq $vehicle.Profile.WeightUnit "KG")}}selected{{end}}>KG (Kilograms)</option>
+                                </select>
+                            </div>
+                            {{template "field.html" (dict "Label" "Load Volume" "Name" "load_volume" "Type" "number" "Value" (and $vehicle $vehicle.Profile.LoadVolume) "Placeholder" "e.g. 25")}}
+                            {{template "field.html" (dict "Label" "Volume Unit" "Name" "volume_unit" "Value" (and $vehicle $vehicle.Profile.VolumeUnit) "Placeholder" "e.g. M3, CFT, L")}}
+                            {{template "field.html" (dict "Label" "Secondary Fuel" "Name" "secondary_fuel" "Value" (and $vehicle $vehicle.Profile.SecondaryFuel) "Placeholder" "e.g. None / AdBlue")}}
+                            {{template "field.html" (dict "Label" "Usage Indicator" "Name" "usage_indicator" "Value" (and $vehicle $vehicle.Profile.UsageIndicator) "Placeholder" "e.g. Long-haul / Regional")}}
                         </div>
                     </div>
                 </div>

@@ -13,7 +13,9 @@
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full {{statusBadge .Vehicle.Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Vehicle.Status}}</span>
                 </div>
                 <div class="flex items-center gap-2 mt-2 flex-wrap text-xs">
+                    {{if and .Vehicle.VehicleNumber (ne .Vehicle.VehicleNumber .Vehicle.RegistrationNumber)}}
                     <span class="inline-flex px-2 py-1 rounded-full bg-surface-container border border-border-subtle font-semibold text-secondary tabular-nums">{{.Vehicle.VehicleNumber}}</span>
+                    {{end}}
                     <span class="inline-flex px-2 py-1 rounded-full bg-surface-container border border-border-subtle font-medium text-secondary capitalize">{{.Vehicle.VehicleType}}</span>
                     <span class="inline-flex px-2 py-1 rounded-full bg-surface-container border border-border-subtle font-medium text-secondary uppercase tracking-wide">{{.Vehicle.FuelType}}</span>
                 </div>
@@ -41,7 +43,7 @@
             </div>
             <div class="rounded-xl bg-surface-container-low p-3">
                 <dt class="text-eyebrow text-text-muted">Odometer</dt>
-                <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{print .Vehicle.CurrentMileage}} km</dd>
+                <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{if .Vehicle.CurrentMileage}}{{printf "%.0f" .Vehicle.CurrentMileage}}{{else if .Vehicle.Odometer}}{{printf "%.0f" .Vehicle.Odometer}}{{else}}0{{end}} km</dd>
             </div>
         </dl>
     </div>

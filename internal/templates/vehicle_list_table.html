@@ -19,7 +19,7 @@
                         <div class="w-7 h-7 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
                         </div>
-                        <span class="font-semibold text-on-surface">{{.VehicleType}} <span class="text-text-muted font-normal">({{.VehicleNumber}})</span></span>
+                        <span class="font-semibold text-on-surface capitalize">{{.VehicleType}}{{if and .VehicleNumber (ne .VehicleNumber .RegistrationNumber)}} <span class="text-text-muted font-normal">({{.VehicleNumber}})</span>{{end}}</span>
                     </div>
                 </td>
                 <td class="px-3 py-2 text-secondary"><span class="font-semibold text-on-surface tabular-nums">{{.Capacity}}</span> • <span class="text-xs uppercase tracking-wide">{{.FuelType}}</span></td>
