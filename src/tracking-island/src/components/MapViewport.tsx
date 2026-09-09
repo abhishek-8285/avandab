@@ -9,7 +9,7 @@ import {
   INDIA_DEFAULT_ZOOM,
   INDIA_MIN_ZOOM,
   INDIA_MAX_ZOOM,
-  addIndiaBoundaryMask,
+  GOOGLE_INDIA_TILE_URL,
 } from '../constants/indiaBorder';
 
 const STATUS_COLOR: Record<string, string> = {
@@ -119,15 +119,16 @@ export default function MapViewport(p: Props) {
       maxZoom: INDIA_MAX_ZOOM,
     }).setView(INDIA_CENTER, INDIA_DEFAULT_ZOOM);
 
-    L.tileLayer(propsRef.current.osmUrl, {
+    const tileUrl = propsRef.current.osmUrl && !propsRef.current.osmUrl.includes('openstreetmap.org')
+      ? propsRef.current.osmUrl
+      : GOOGLE_INDIA_TILE_URL;
+
+    L.tileLayer(tileUrl, {
       minZoom: INDIA_MIN_ZOOM,
       maxZoom: INDIA_MAX_ZOOM,
-      bounds: INDIA_BOUNDS, // Only load tiles within Indian territory
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      bounds: INDIA_BOUNDS,
+      attribution: '&copy; Google Maps',
     }).addTo(map);
-
-    // Apply inverse territory mask to dim foreign countries and outline India's border
-    addIndiaBoundaryMask(map);
 
     geoLayerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;

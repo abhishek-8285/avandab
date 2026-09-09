@@ -176,20 +176,20 @@
         var cfg={}, tripId='', vehicleId='', historyAPI='/api/v1/telemetry/history', playbackAPI='';
         try{ var d=JSON.parse(dataEl.textContent||'{}'); cfg=d.mapConfig||{}; tripId=d.tripId||''; vehicleId=d.vehicleId||''; historyAPI=d.historyAPI||historyAPI; playbackAPI=d.playbackAPI||('/api/v1/trips/'+encodeURIComponent(tripId)+'/playback'); }catch(e){}
 
-        var INDIA_BOUNDS=[[6.5,67.5],[37.5,97.5]];
+        var INDIA_BOUNDS=[[6.5,68.0],[37.5,97.5]];
         var map=L.map('playback-map', {
             zoomControl:false,
             maxBounds:INDIA_BOUNDS,
             maxBoundsViscosity:1.0,
-            minZoom:4.5
-        }).setView([22.9734,78.6569],5);
+            minZoom:4
+        }).setView([20.5937,78.9629],5);
         L.control.zoom({position:'topright'}).addTo(map);
-        var osmUrl=cfg.OSMUrl||'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-        L.tileLayer(osmUrl,{
+        var tileUrl='https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&gl=IN';
+        L.tileLayer(tileUrl,{
             bounds:INDIA_BOUNDS,
-            minZoom:4.5,
-            maxZoom:19,
-            attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors'
+            minZoom:4,
+            maxZoom:22,
+            attribution:'&copy; Google Maps'
         }).addTo(map);
         setTimeout(function(){ map.invalidateSize(); },150);
         if(window.ResizeObserver){ var ro=new ResizeObserver(function(){map.invalidateSize();}); ro.observe(map.getContainer()); }

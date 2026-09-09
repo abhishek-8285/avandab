@@ -121,10 +121,10 @@ export function LiveDriverTrackingMap({
       minZoom: 4.5
     }).setView([${driverLatitude}, ${driverLongitude}], 11);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&gl=IN', {
       bounds: INDIA_BOUNDS,
-      minZoom: 4.5,
-      maxZoom: 18,
+      minZoom: 4,
+      maxZoom: 20,
     }).addTo(map);
 
     // Route coordinates
