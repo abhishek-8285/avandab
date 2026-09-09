@@ -11,6 +11,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"transport-app/internal/shared"
 )
 
 // newTestRouter builds a chi router with the telemetry routes wired to a
@@ -51,13 +53,13 @@ func TestHandleTelemetrySync_Success(t *testing.T) {
 	}
 
 	body, _ := json.Marshal(reqPayload)
-	req := httptest.NewRequest("POST", "/api/v1/telemetry/sync", bytes.NewReader(body))
+	req := syncReqWithTenant("POST", "/api/v1/telemetry/sync", body)
 	w := httptest.NewRecorder()
 
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Fatalf("expected status 200, got %d", w.Code)
+		t.Fatalf("expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
 	var resp SyncBatchResponse
@@ -98,7 +100,7 @@ func TestHandleTelemetrySnapshots_SuccessAndInvalid(t *testing.T) {
 		Odometer:  1000.0,
 	}
 	body, _ := json.Marshal(snap)
-	req := httptest.NewRequest("POST", "/api/v1/telemetry/snapshots", bytes.NewReader(body))
+	req := syncReqWithTenant("POST", "/api/v1/telemetry/snapshots", body)
 	w := httptest.NewRecorder()
 
 	r.ServeHTTP(w, req)
@@ -142,7 +144,7 @@ func TestHandleTelemetrySync_ProviderParityFields(t *testing.T) {
 	}
 	body, _ := json.Marshal(reqPayload)
 	w := httptest.NewRecorder()
-	r.ServeHTTP(w, httptest.NewRequest("POST", "/api/v1/telemetry/sync", bytes.NewReader(body)))
+	r.ServeHTTP(w, syncReqWithTenant("POST", "/api/v1/telemetry/sync", body))
 	if w.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}
@@ -191,7 +193,7 @@ func TestHandleTelemetrySync_DistinctIDsNoCollapse(t *testing.T) {
 		{ID: 13, Latitude: 19.084, Longitude: 72.883, Timestamp: "2026-08-13T00:02:00Z"},
 	}
 	body, _ := json.Marshal(SyncBatchRequest{DeviceID: imei, Logs: logs})
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/telemetry/sync", bytes.NewReader(body))
+	req := syncReqWithTenant(http.MethodPost, "/api/v1/telemetry/sync", body)
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusOK, rec.Code)
@@ -204,4 +206,90 @@ func TestHandleTelemetrySync_DistinctIDsNoCollapse(t *testing.T) {
 	var positions int
 	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM telemetry_positions WHERE imei = ?`, imei).Scan(&positions))
 	assert.Equal(t, 3, positions, "distinct log ids must not dedup-collapse into one position")
+}
+
+// syncReqWithTenant mirrors prod middleware: the sync/snapshot routes are
+// authed, so the tenant is always in context. Requests without it exercise
+// a state production never produces (and the W1 guard fails closed on it).
+func syncReqWithTenant(method, url string, body []byte) *http.Request {
+	req := httptest.NewRequest(method, url, bytes.NewReader(body))
+	return req.WithContext(shared.ContextWithTenantID(req.Context(), "1"))
+}
+
+// W1 spoof guard: a batch claiming another tenant's device is rejected with
+// 403 and writes nothing — the pipeline trusts device.TenantID, so the
+// boundary must hold at the HTTP edge.
+func TestHandleTelemetrySync_CrossTenantDeviceRejected(t *testing.T) {
+	db := newTestIngestorDB(t)
+	ing := newTestIngestor(t, db, nil)
+	r := chi.NewRouter()
+	RegisterTelemetryRoutes(r, ing, db, 15*time.Minute, 60*time.Minute)
+
+	// Victim device lives in tenant "2" (seeded by the harness).
+	_, err := db.Exec(`INSERT INTO telemetry_devices (id, tenant_id, imei, device_type, status)
+		VALUES ('dev-victim','2','IMEI-VICTIM','mobile_app','active')`)
+	require.NoError(t, err)
+
+	body, _ := json.Marshal(SyncBatchRequest{DeviceID: "IMEI-VICTIM", Logs: []GPSLogPayload{
+		{ID: 1, Latitude: 19.07, Longitude: 72.87, Timestamp: "2026-09-01T10:00:00Z"},
+	}})
+	// Caller authed as tenant "1".
+	req := syncReqWithTenant("POST", "/api/v1/telemetry/sync", body)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusForbidden, w.Code)
+
+	var n int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM telemetry_positions WHERE imei = 'IMEI-VICTIM'`).Scan(&n))
+	require.Equal(t, 0, n, "cross-tenant frame must write nothing")
+}
+
+// W1: snapshot for another tenant's vehicle is rejected the same way.
+func TestHandleTelemetrySnapshots_CrossTenantVehicleRejected(t *testing.T) {
+	db := newTestIngestorDB(t)
+	ing := newTestIngestor(t, db, nil)
+	r := chi.NewRouter()
+	RegisterTelemetryRoutes(r, ing, db, 15*time.Minute, 60*time.Minute)
+
+	_, err := db.Exec(`INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, capacity, tenant_id)
+		VALUES ('v-foreign','REG-F','REG-F','truck',15,'2')`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO telemetry_devices (id, tenant_id, imei, device_type, status, vehicle_id)
+		VALUES ('dev-f','2','IMEI-F','mobile_app','active','v-foreign')`)
+	require.NoError(t, err)
+
+	snap := TelemetrySnapshotPayload{
+		VehicleID: "v-foreign", Timestamp: "2026-09-01T10:00:00Z",
+		Latitude: 19.07, Longitude: 72.87, Speed: 10,
+	}
+	body, _ := json.Marshal(snap)
+	req := syncReqWithTenant("POST", "/api/v1/telemetry/snapshots", body)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusForbidden, w.Code)
+}
+
+// W1: DriverID fallback claiming a driver owned by another tenant is
+// rejected before any synthetic device is provisioned.
+func TestHandleTelemetrySync_ForeignDriverRejected(t *testing.T) {
+	db := newTestIngestorDB(t)
+	ing := newTestIngestor(t, db, nil)
+	r := chi.NewRouter()
+	RegisterTelemetryRoutes(r, ing, db, 15*time.Minute, 60*time.Minute)
+
+	_, err := db.Exec(`INSERT INTO drivers (id, driver_id, first_name, last_name, phone, status, tenant_id)
+		VALUES ('d-foreign','user-foreign','F','L','000','available','2')`)
+	require.NoError(t, err)
+
+	body, _ := json.Marshal(SyncBatchRequest{DriverID: "user-foreign", Logs: []GPSLogPayload{
+		{ID: 1, Latitude: 19.07, Longitude: 72.87, Timestamp: "2026-09-01T10:00:00Z"},
+	}})
+	req := syncReqWithTenant("POST", "/api/v1/telemetry/sync", body)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	require.Equal(t, http.StatusForbidden, w.Code)
+
+	var n int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM telemetry_devices WHERE imei = 'user-foreign'`).Scan(&n))
+	require.Equal(t, 0, n, "no device may be provisioned for a foreign driver")
 }

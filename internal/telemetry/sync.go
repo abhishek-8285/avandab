@@ -91,6 +91,14 @@ func RegisterGeocodeRoute(r chi.Router, nominatimURL string) {
 	r.Get("/api/v1/telemetry/reverse_geocode", ReverseGeocodeHandler(nominatimURL))
 }
 
+// deviceBelongsToCaller ensures the frame's device is registered in the
+// caller's own tenant. The ingest pipeline trusts device.TenantID, so a
+// caller-supplied device_id must never cross tenant lines (W1 spoof guard).
+func deviceBelongsToCaller(ctx context.Context, d *Device) bool {
+	callerTenant := string(shared.TenantIDFromContext(ctx))
+	return d != nil && callerTenant != "" && d.TenantID == callerTenant
+}
+
 // ensureSyntheticDevice completes Decision D3: driver phones have no IMEI, so
 // the driver_id itself becomes the device identity. The ingest pipeline
 // quarantines unknown IMEIs, so a sync from an unregistered driver would be
@@ -134,6 +142,32 @@ func HandleTelemetrySync(ing *Ingestor) http.HandlerFunc {
 			return
 		}
 
+		// W1 spoof guard (hoisted: one lookup per batch, not N in-pipeline).
+		// The pipeline writes under the device row's tenant, so resolve and
+		// pin the device identity here, in the caller's tenant, before any
+		// frame is built.
+		callerTenant := string(shared.TenantIDFromContext(r.Context()))
+		imei := req.DeviceID
+		if imei == "" {
+			imei = req.DriverID
+			if imei != "" {
+				// DriverID fallback (Decision D3): the claimed driver must
+				// not belong to another tenant — else this batch would
+				// provision or ride a foreign identity. Unknown drivers
+				// still auto-provision into the CALLER's tenant only.
+				var owner string
+				if err := ing.deviceStore.dbFromContext(r.Context()).QueryRowContext(r.Context(),
+					`SELECT tenant_id FROM drivers WHERE driver_id = $1`, imei).Scan(&owner); err == nil && owner != callerTenant {
+					writeJSON(w, http.StatusForbidden, map[string]string{"success": "false", "error": "driver does not belong to caller"})
+					return
+				}
+				ing.ensureSyntheticDevice(r.Context(), imei)
+			}
+		} else if dev, err := ing.deviceStore.GetByIMEI(r.Context(), imei); err == nil && dev != nil && !deviceBelongsToCaller(r.Context(), dev) {
+			writeJSON(w, http.StatusForbidden, map[string]string{"success": "false", "error": "device does not belong to caller"})
+			return
+		}
+
 		syncedIDs := make([]int64, 0, len(req.Logs))
 		for _, logItem := range req.Logs {
 			ts, err := time.Parse(time.RFC3339, logItem.Timestamp)
@@ -141,14 +175,8 @@ func HandleTelemetrySync(ing *Ingestor) http.HandlerFunc {
 				continue // skip unparseable timestamps
 			}
 
-			// If no DeviceID was provided, fall back to DriverID-derived
-			// synthetic device (Decision D3), or just ack without device.
-			imei := req.DeviceID
-			if imei == "" {
-				imei = req.DriverID
-				ing.ensureSyntheticDevice(r.Context(), imei)
-			}
-
+			// Identity resolved + tenant-pinned above; empty imei means no
+			// device was claimed at all (pipeline quarantine handles it).
 			frame := providers.RawFrame{
 				IMEI:          imei,
 				Latitude:      logItem.Latitude,
@@ -197,8 +225,22 @@ func HandleTelemetrySnapshots(ing *Ingestor) http.HandlerFunc {
 		}
 
 		// Resolve the device by vehicle_id so the pipeline can look it up.
+		// W1 spoof guard: GetByVehicleID is globally unscoped, so verify
+		// BOTH the device and the vehicle row live in the caller's tenant —
+		// otherwise a tenant-A caller injects into tenant-B's vehicle via
+		// B's device. Unresolvable vehicles fall through to quarantine.
 		var imei string
 		if d, err := ing.deviceStore.GetByVehicleID(r.Context(), snap.VehicleID); err == nil && d != nil {
+			if !deviceBelongsToCaller(r.Context(), d) {
+				writeJSON(w, http.StatusForbidden, map[string]string{"success": "false", "error": "vehicle does not belong to caller"})
+				return
+			}
+			var vehicleTenant string
+			if err := ing.deviceStore.dbFromContext(r.Context()).QueryRowContext(r.Context(),
+				`SELECT tenant_id FROM vehicles WHERE id = $1`, snap.VehicleID).Scan(&vehicleTenant); err != nil || vehicleTenant != d.TenantID {
+				writeJSON(w, http.StatusForbidden, map[string]string{"success": "false", "error": "vehicle does not belong to caller"})
+				return
+			}
 			imei = d.IMEI
 		}
 
