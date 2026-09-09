@@ -1934,6 +1934,20 @@ type VehicleClaim struct {
 	UpdatedAt          time.Time      `json:"updated_at"`
 }
 
+type VehicleCommand struct {
+	ID             string         `json:"id"`
+	TenantID       string         `json:"tenant_id"`
+	VehicleID      string         `json:"vehicle_id"`
+	CommandType    string         `json:"command_type"`
+	ParametersJson string         `json:"parameters_json"`
+	Status         string         `json:"status"`
+	IssuedBy       string         `json:"issued_by"`
+	CreatedAt      time.Time      `json:"created_at"`
+	AcknowledgedAt sql.NullTime   `json:"acknowledged_at"`
+	ExecutedAt     sql.NullTime   `json:"executed_at"`
+	ErrorMessage   sql.NullString `json:"error_message"`
+}
+
 type VehicleComplianceDocument struct {
 	ID                 string         `json:"id"`
 	TenantID           string         `json:"tenant_id"`

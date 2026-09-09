@@ -317,6 +317,62 @@
         </div>
 
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-2 bg-gradient-to-r from-red-500/[0.08] via-amber-500/[0.05] to-transparent">
+                <div class="flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg bg-red-500/10 border border-red-500/20 grid place-items-center text-red-600">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 16 12 12 8"/></svg>
+                    </span>
+                    <h2 class="text-sm font-bold text-on-surface">AV Teleoperation Deck</h2>
+                </div>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container text-[11px] font-bold text-secondary">
+                    Drive-by-Wire
+                </span>
+            </div>
+            <div class="p-5 space-y-4">
+                <div class="grid grid-cols-3 gap-2">
+                    <form method="POST" action="/vehicles/{{.Vehicle.ID}}/command" class="w-full">
+                        <input type="hidden" name="command_type" value="E_STOP">
+                        <button type="submit" data-confirm="EMERGENCY STOP: Immediately halt this autonomous vehicle?" class="w-full py-2.5 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs tracking-wider shadow-sm transition-all flex flex-col items-center justify-center gap-1 cursor-pointer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6"/></svg>
+                            E-STOP
+                        </button>
+                    </form>
+                    <form method="POST" action="/vehicles/{{.Vehicle.ID}}/command" class="w-full">
+                        <input type="hidden" name="command_type" value="HOLD_POSITION">
+                        <button type="submit" class="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs tracking-wider shadow-sm transition-all flex flex-col items-center justify-center gap-1 cursor-pointer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                            HOLD
+                        </button>
+                    </form>
+                    <form method="POST" action="/vehicles/{{.Vehicle.ID}}/command" class="w-full">
+                        <input type="hidden" name="command_type" value="RESUME_MISSION">
+                        <button type="submit" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs tracking-wider shadow-sm transition-all flex flex-col items-center justify-center gap-1 cursor-pointer">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            RESUME
+                        </button>
+                    </form>
+                </div>
+
+                {{if .RecentCommands}}
+                <div class="pt-2 border-t border-border-subtle">
+                    <p class="text-[11px] font-bold uppercase tracking-wider text-text-muted mb-2">Command Execution Log</p>
+                    <div class="space-y-1.5 divide-y divide-border-subtle">
+                        {{range .RecentCommands}}
+                        <div class="pt-1.5 first:pt-0 flex items-center justify-between text-xs">
+                            <div class="flex items-center gap-1.5">
+                                <span class="font-data-mono font-bold {{if eq .CommandType "E_STOP"}}text-red-600{{else if eq .CommandType "RESUME_MISSION"}}text-emerald-600{{else}}text-amber-600{{end}}">{{.CommandType}}</span>
+                                <span class="text-[11px] text-text-muted">by {{.IssuedBy}}</span>
+                            </div>
+                            <span class="inline-flex px-1.5 py-0.5 rounded text-[10px] font-semibold bg-surface-container font-data-mono">{{.Status}}</span>
+                        </div>
+                        {{end}}
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2 bg-gradient-to-r from-blue-500/[0.06] to-transparent">
                 <span class="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
                 <h2 class="text-sm font-bold text-on-surface">Last Telemetry</h2>

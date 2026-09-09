@@ -38,11 +38,33 @@ func (h *RouteHandlers) Routes(r chi.Router) {
 // OptimizePage renders the route optimization UI (Spec 18).
 func (h *RouteHandlers) OptimizePage(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+
+	type optVehicle struct {
+		ID, RegistrationNumber, VehicleNumber, Model string
+		Capacity                                     int64
+	}
+	vehs := []optVehicle{}
+	if rows, err := h.DB.QueryContext(r.Context(), `
+		SELECT id, registration_number, vehicle_number, COALESCE(model, ''), capacity
+		FROM vehicles
+		WHERE tenant_id = $1 AND status != 'blocked'
+		ORDER BY registration_number ASC LIMIT 50`, tenantID); err == nil {
+		defer func() { _ = rows.Close() }()
+		for rows.Next() {
+			var v optVehicle
+			if rows.Scan(&v.ID, &v.RegistrationNumber, &v.VehicleNumber, &v.Model, &v.Capacity) == nil {
+				vehs = append(vehs, v)
+			}
+		}
+	}
+
 	h.renderPage(w, r, "route_optimize.html", PageData{
 		Title: "Route Optimization",
 		User:  session,
 		Extra: map[string]interface{}{
 			"RoutingProvider": h.Config.Routing.Provider,
+			"Vehicles":        vehs,
 		},
 	})
 }

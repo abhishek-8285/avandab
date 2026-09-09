@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 
 	"transport-app/internal/domain"
 	"transport-app/internal/middleware"
@@ -59,6 +60,7 @@ func (h *VehicleHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "vehicles", "update")).Post("/{id}/status", h.UpdateStatus)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "vehicles", "update")).Post("/{id}/points", h.CreatePoint)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "vehicles", "update")).Post("/points/{pointID}/measurements", h.RecordMeasurement)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "vehicles", "update")).Post("/{id}/command", h.SendCommand)
 }
 
 func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
@@ -328,6 +330,7 @@ func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 		"OpenWorkOrders":            workOrders,
 		"MeasuringPoints":           h.measuringPoints(r.Context(), id),
 		"RecentMeasurements":        h.recentMeasurements(r.Context(), id),
+		"RecentCommands":            h.recentCommands(r.Context(), id),
 	}
 
 	session, _ := h.getUserFromContext(r)
@@ -774,6 +777,78 @@ func (h *VehicleHandlers) recentMeasurements(ctx context.Context, vehicleID stri
 			}
 			if mAt.Valid {
 				m["MeasuredAt"] = mAt.Time
+			}
+			out = append(out, m)
+		}
+	}
+	return out
+}
+
+func (h *VehicleHandlers) SendCommand(w http.ResponseWriter, r *http.Request) {
+	h.init()
+	vehID := chi.URLParam(r, "id")
+	cmdType := strings.ToUpper(strings.TrimSpace(r.PostFormValue("command_type")))
+	switch cmdType {
+	case "E_STOP", "HOLD_POSITION", "RESUME_MISSION", "SET_SPEED_LIMIT", "REROUTE", "RETURN_TO_BASE":
+	default:
+		h.failPage(w, r, errors.New("invalid command type"), http.StatusBadRequest, "AV Command Failed")
+		return
+	}
+
+	session, _ := h.getUserFromContext(r)
+	issuedBy := "operator"
+	if session != nil {
+		if session.Name != "" {
+			issuedBy = session.Name
+		} else if session.UserID != "" {
+			issuedBy = session.UserID
+		}
+	}
+
+	cmdID := "cmd-" + uuid.NewString()
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+
+	_, err := h.DB.ExecContext(r.Context(), `
+		INSERT INTO vehicle_commands (id, tenant_id, vehicle_id, command_type, status, issued_by)
+		VALUES ($1, $2, $3, $4, 'acknowledged', $5)`,
+		cmdID, tenantID, vehID, cmdType, issuedBy)
+	if err != nil {
+		h.failPage(w, r, err, http.StatusInternalServerError, "Command Failed")
+		return
+	}
+
+	// Update vehicle status in accordance with actuation
+	if cmdType == "E_STOP" {
+		_, _ = h.DB.ExecContext(r.Context(), `UPDATE vehicles SET status = 'blocked', blocked_reason = 'AV E-STOP Triggered' WHERE id = $1 AND tenant_id = $2`, vehID, tenantID)
+	} else if cmdType == "RESUME_MISSION" {
+		_, _ = h.DB.ExecContext(r.Context(), `UPDATE vehicles SET status = 'running', blocked_reason = NULL WHERE id = $1 AND tenant_id = $2`, vehID, tenantID)
+	} else if cmdType == "HOLD_POSITION" {
+		_, _ = h.DB.ExecContext(r.Context(), `UPDATE vehicles SET status = 'available' WHERE id = $1 AND tenant_id = $2`, vehID, tenantID)
+	}
+
+	http.Redirect(w, r, "/vehicles/"+vehID, http.StatusSeeOther)
+}
+
+func (h *VehicleHandlers) recentCommands(ctx context.Context, vehicleID string) []map[string]interface{} {
+	out := []map[string]interface{}{}
+	rows, err := h.DB.QueryContext(ctx, `
+		SELECT id, command_type, status, issued_by, created_at
+		FROM vehicle_commands
+		WHERE vehicle_id = $1 AND tenant_id = $2
+		ORDER BY created_at DESC LIMIT 5`, vehicleID, string(shared.TenantIDFromContext(ctx)))
+	if err != nil {
+		return out
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var cID, cmd, status, issuedBy string
+		var at sql.NullTime
+		if rows.Scan(&cID, &cmd, &status, &issuedBy, &at) == nil {
+			m := map[string]interface{}{
+				"ID": cID, "CommandType": cmd, "Status": status, "IssuedBy": issuedBy,
+			}
+			if at.Valid {
+				m["CreatedAt"] = at.Time.Format("15:04:05 02-01-2006")
 			}
 			out = append(out, m)
 		}

@@ -577,6 +577,47 @@ func TestSelectedVehicles_CRUD(t *testing.T) {
 		// Should still attempt update; may succeed or fail depending on validation but handler will try
 		assert.True(t, w.Code == http.StatusSeeOther || w.Code == http.StatusBadRequest || w.Code == http.StatusOK)
 	})
+
+	t.Run("SendCommand E_STOP blocks vehicle and logs command", func(t *testing.T) {
+		form := url.Values{"command_type": {"E_STOP"}}
+		req := withVehicleTenantSession(httptest.NewRequest(http.MethodPost, "/vehicles/"+createdID+"/command", strings.NewReader(form.Encode())), "1", "user-1", "admin")
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusSeeOther, w.Code)
+		assert.Equal(t, "/vehicles/"+createdID, w.Header().Get("Location"))
+
+		var status, reason string
+		require.NoError(t, db.QueryRow(`SELECT status, COALESCE(blocked_reason, '') FROM vehicles WHERE id = ?`, createdID).Scan(&status, &reason))
+		assert.Equal(t, "blocked", status)
+		assert.Contains(t, reason, "E-STOP")
+
+		var count int
+		require.NoError(t, db.QueryRow(`SELECT count(*) FROM vehicle_commands WHERE vehicle_id = ? AND command_type = 'E_STOP'`, createdID).Scan(&count))
+		assert.Equal(t, 1, count)
+	})
+
+	t.Run("SendCommand RESUME_MISSION unblocks vehicle", func(t *testing.T) {
+		form := url.Values{"command_type": {"RESUME_MISSION"}}
+		req := withVehicleTenantSession(httptest.NewRequest(http.MethodPost, "/vehicles/"+createdID+"/command", strings.NewReader(form.Encode())), "1", "user-1", "admin")
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusSeeOther, w.Code)
+
+		var status string
+		require.NoError(t, db.QueryRow(`SELECT status FROM vehicles WHERE id = ?`, createdID).Scan(&status))
+		assert.Equal(t, "running", status)
+	})
+
+	t.Run("SendCommand invalid rejected", func(t *testing.T) {
+		form := url.Values{"command_type": {"INVALID_CMD"}}
+		req := withVehicleTenantSession(httptest.NewRequest(http.MethodPost, "/vehicles/"+createdID+"/command", strings.NewReader(form.Encode())), "1", "user-1", "admin")
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
 }
 
 func TestSelectedVehicles_AuthChecks(t *testing.T) {
