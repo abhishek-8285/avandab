@@ -2,9 +2,12 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"strconv"
 	"strings"
 	"time"
+
+	"transport-app/internal/shared"
 )
 
 // monthStartDay is the server-local first of the current month (YYYY-MM-DD),
@@ -31,7 +34,14 @@ func (a *App) countByStatus(ctx context.Context, table, column string) map[strin
 	if a.DB == nil {
 		return out
 	}
-	rows, err := a.DB.QueryContext(ctx, "SELECT "+column+", COUNT(*) FROM "+table+" GROUP BY "+column)
+	tenantID := shared.TenantIDFromContext(ctx)
+	var rows *sql.Rows
+	var err error
+	if tenantID != "" {
+		rows, err = a.DB.QueryContext(ctx, "SELECT "+column+", COUNT(*) FROM "+table+" WHERE tenant_id = ? GROUP BY "+column, tenantID)
+	} else {
+		rows, err = a.DB.QueryContext(ctx, "SELECT "+column+", COUNT(*) FROM "+table+" GROUP BY "+column)
+	}
 	if err != nil {
 		return out
 	}
@@ -77,11 +87,19 @@ func (a *App) bookingKPIs(ctx context.Context) []KPI {
 	}
 	var monthCount int
 	var monthValue float64
+	tenantID := shared.TenantIDFromContext(ctx)
 	if a.DB != nil {
-		_ = a.DB.QueryRowContext(ctx,
-			`SELECT COUNT(*), COALESCE(SUM(price),0) FROM bookings
-			 WHERE substr(CAST(created_at AS TEXT), 1, 10) >= $1`, monthStartDay()).
-			Scan(&monthCount, &monthValue)
+		if tenantID != "" {
+			_ = a.DB.QueryRowContext(ctx,
+				`SELECT COUNT(*), COALESCE(SUM(price),0) FROM bookings
+				 WHERE substr(CAST(created_at AS TEXT), 1, 10) >= ? AND tenant_id = ?`, monthStartDay(), tenantID).
+				Scan(&monthCount, &monthValue)
+		} else {
+			_ = a.DB.QueryRowContext(ctx,
+				`SELECT COUNT(*), COALESCE(SUM(price),0) FROM bookings
+				 WHERE substr(CAST(created_at AS TEXT), 1, 10) >= ?`, monthStartDay()).
+				Scan(&monthCount, &monthValue)
+		}
 	}
 	sub := i64(monthCount) + " new this month"
 	if monthValue > 0 {
@@ -102,11 +120,19 @@ func (a *App) tripKPIs(ctx context.Context) []KPI {
 		total += n
 	}
 	var monthCount int
+	tenantID := shared.TenantIDFromContext(ctx)
 	if a.DB != nil {
-		_ = a.DB.QueryRowContext(ctx,
-			`SELECT COUNT(*) FROM trips
-			 WHERE substr(CAST(created_at AS TEXT), 1, 10) >= $1`, monthStartDay()).
-			Scan(&monthCount)
+		if tenantID != "" {
+			_ = a.DB.QueryRowContext(ctx,
+				`SELECT COUNT(*) FROM trips
+				 WHERE substr(CAST(created_at AS TEXT), 1, 10) >= ? AND tenant_id = ?`, monthStartDay(), tenantID).
+				Scan(&monthCount)
+		} else {
+			_ = a.DB.QueryRowContext(ctx,
+				`SELECT COUNT(*) FROM trips
+				 WHERE substr(CAST(created_at AS TEXT), 1, 10) >= ?`, monthStartDay()).
+				Scan(&monthCount)
+		}
 	}
 	sub := i64(monthCount) + " created this month"
 	active := byStatus["assigned"] + byStatus["started"] + byStatus["in_transit"]
@@ -150,14 +176,25 @@ func (a *App) driverKPIs(ctx context.Context) []KPI {
 func (a *App) paymentKPIs(ctx context.Context) []KPI {
 	var monthCount, totalCount int
 	var monthValue, totalValue float64
+	tenantID := shared.TenantIDFromContext(ctx)
 	if a.DB != nil {
-		_ = a.DB.QueryRowContext(ctx,
-			`SELECT COUNT(*), COALESCE(SUM(amount),0) FROM payments
-			 WHERE substr(CAST(payment_date AS TEXT), 1, 10) >= $1`, monthStartDay()).
-			Scan(&monthCount, &monthValue)
-		_ = a.DB.QueryRowContext(ctx,
-			`SELECT COUNT(*), COALESCE(SUM(amount),0) FROM payments`).
-			Scan(&totalCount, &totalValue)
+		if tenantID != "" {
+			_ = a.DB.QueryRowContext(ctx,
+				`SELECT COUNT(*), COALESCE(SUM(amount),0) FROM payments
+				 WHERE substr(CAST(payment_date AS TEXT), 1, 10) >= ? AND tenant_id = ?`, monthStartDay(), tenantID).
+				Scan(&monthCount, &monthValue)
+			_ = a.DB.QueryRowContext(ctx,
+				`SELECT COUNT(*), COALESCE(SUM(amount),0) FROM payments WHERE tenant_id = ?`, tenantID).
+				Scan(&totalCount, &totalValue)
+		} else {
+			_ = a.DB.QueryRowContext(ctx,
+				`SELECT COUNT(*), COALESCE(SUM(amount),0) FROM payments
+				 WHERE substr(CAST(payment_date AS TEXT), 1, 10) >= ?`, monthStartDay()).
+				Scan(&monthCount, &monthValue)
+			_ = a.DB.QueryRowContext(ctx,
+				`SELECT COUNT(*), COALESCE(SUM(amount),0) FROM payments`).
+				Scan(&totalCount, &totalValue)
+		}
 	}
 	return []KPI{
 		{Label: "Received This Month", Key: "kpi.payments.month", Value: "₹" + inr(monthValue), Accent: "text-status-success", Sub: i64(monthCount) + " payments"},
@@ -172,14 +209,25 @@ func (a *App) invoiceKPIs(ctx context.Context) []KPI {
 	for _, n := range byStatus {
 		count += n
 	}
+	tenantID := shared.TenantIDFromContext(ctx)
 	if a.DB != nil {
-		_ = a.DB.QueryRowContext(ctx, `SELECT COALESCE(SUM(total),0) FROM invoices`).Scan(&raisedValue)
+		if tenantID != "" {
+			_ = a.DB.QueryRowContext(ctx, `SELECT COALESCE(SUM(total),0) FROM invoices WHERE tenant_id = ?`, tenantID).Scan(&raisedValue)
+		} else {
+			_ = a.DB.QueryRowContext(ctx, `SELECT COALESCE(SUM(total),0) FROM invoices`).Scan(&raisedValue)
+		}
 	}
 	var outstanding float64
 	if a.DB != nil {
-		_ = a.DB.QueryRowContext(ctx,
-			`SELECT COALESCE(SUM(total - paid_amount),0) FROM invoices WHERE payment_status != 'paid'`).
-			Scan(&outstanding)
+		if tenantID != "" {
+			_ = a.DB.QueryRowContext(ctx,
+				`SELECT COALESCE(SUM(total - paid_amount),0) FROM invoices WHERE payment_status != 'paid' AND tenant_id = ?`, tenantID).
+				Scan(&outstanding)
+		} else {
+			_ = a.DB.QueryRowContext(ctx,
+				`SELECT COALESCE(SUM(total - paid_amount),0) FROM invoices WHERE payment_status != 'paid'`).
+				Scan(&outstanding)
+		}
 	}
 	return []KPI{
 		{Label: "Invoices Raised", Key: "kpi.invoices.raised", Value: i64(count), Sub: "₹" + inr(raisedValue) + " billed"},
