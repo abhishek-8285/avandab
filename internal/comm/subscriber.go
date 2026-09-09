@@ -448,17 +448,15 @@ func (s *EventSubscriber) HandleTrackingEvent(ctx context.Context, e events.Even
 	}
 
 	// Trip tracking event (trip.started, trip.in_transit, etc.)
-	if s.db != nil && tripID != "" && (customerPhone == "" || tripNumber == "" || origin == "" || destination == "" || vehicleID == "") {
-		var dbTenant, dbTripNum, dbPhone, dbOrigin, dbDest, dbVehID sql.NullString
+	if s.db != nil && tripID != "" && (customerPhone == "" || tripNumber == "" || origin == "" || destination == "") {
+		var dbTenant, dbTripNum, dbPhone, dbOrigin, dbDest sql.NullString
 		err := s.db.QueryRowContext(ctx, `
-			SELECT t.tenant_id, t.trip_number, c.phone, r.source, r.destination,
-			       COALESCE(NULLIF(v.registration_number, ''), NULLIF(v.vehicle_number, ''), t.vehicle_id, '')
+			SELECT t.tenant_id, t.trip_number, c.phone, r.source, r.destination
 			FROM trips t
 			LEFT JOIN bookings b ON t.booking_id = b.id
 			LEFT JOIN customers c ON b.customer_id = c.id
 			LEFT JOIN routes r ON t.route_id = r.id
-			LEFT JOIN vehicles v ON t.vehicle_id = v.id
-			WHERE t.id = $1`, tripID).Scan(&dbTenant, &dbTripNum, &dbPhone, &dbOrigin, &dbDest, &dbVehID)
+			WHERE t.id = $1`, tripID).Scan(&dbTenant, &dbTripNum, &dbPhone, &dbOrigin, &dbDest)
 		if err == nil {
 			if tenantID == "" && dbTenant.Valid {
 				tenantID = dbTenant.String
@@ -474,9 +472,6 @@ func (s *EventSubscriber) HandleTrackingEvent(ctx context.Context, e events.Even
 			}
 			if destination == "" && dbDest.Valid {
 				destination = dbDest.String
-			}
-			if vehicleID == "" && dbVehID.Valid {
-				vehicleID = dbVehID.String
 			}
 		}
 	}

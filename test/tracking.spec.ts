@@ -55,6 +55,24 @@ test.describe('tracking page', () => {
     });
     expect([200, 303]).toContain(resp.status());
 
+    // Fresh registrants are org_admins without company settings, and the
+    // compliance gate redirects them to /company/onboard. Complete the
+    // minimum viable onboarding so /tracking actually renders.
+    // (Strict CSRF requires Origin/Referer on session-cookie POSTs.)
+    await page.goto('/login');
+    const origin = new URL(page.url()).origin;
+    const onboard = await page.request.post('/company/onboard', {
+      headers: { Origin: origin, Referer: `${origin}/company/onboard` },
+      form: {
+        company_name: 'Playwright Fleet Pvt Ltd',
+        address: 'MIDC Bhosari, Pune 411026',
+        phone: '9999999999',
+        email,
+      },
+      maxRedirects: 0,
+    });
+    expect([200, 303]).toContain(onboard.status());
+
     // Deterministic SSE: replace EventSource with a controllable stub so the
     // test decides exactly when the stream opens, emits, and dies. This
     // exercises the app's wiring (onopen/onerror/telemetry handlers,
@@ -193,16 +211,10 @@ test.describe('tracking page', () => {
     await expect(page.locator('#intel-speed')).toContainText('0');
     await expect(page.locator('#intel-fuel')).toContainText('41');
 
-    // Trip tab renders the server summary — route names from the API only.
-    await page.locator('[data-sheet-tab="trip"]').click();
-    await expect(page.locator('#trip-summary-body')).toBeVisible();
-    await expect(page.locator('#trip-sum-number')).toHaveText('TRIP-9001');
-    await expect(page.locator('#trip-route-timeline')).toContainText('Delhi');
-    await expect(page.locator('#trip-route-timeline')).toContainText('Gurgaon');
-
-    // History tab: empty payload → honest empty state, no fabrication.
-    await page.locator('[data-sheet-tab="history"]').click();
-    await expect(page.locator('#history-empty')).toBeVisible();
+    // Drawer renders the server trip summary — route names from the API only.
+    await expect(page.locator('#intel-detail-panel')).toContainText('TRIP-9001');
+    await expect(page.locator('#intel-detail-panel')).toContainText('Delhi');
+    await expect(page.locator('#intel-detail-panel')).toContainText('Gurgaon');
 
     await page.locator('#close-intel-btn').click();
     await expect(page.locator('#intel-detail-panel')).toBeHidden();

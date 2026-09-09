@@ -4,7 +4,7 @@ const STATIC_CACHE = 'avandab-static-v1';
 // Assets to pre-cache on install (shell)
 const PRECACHE_ASSETS = [
   '/static/css/tailwind.css',
-  '/static/js/datastar.js',
+  '/static/js/htmx.min.js',
   '/static/js/router.js',
   '/static/js/toast.js',
   '/static/js/console.js',

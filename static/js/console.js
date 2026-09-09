@@ -421,6 +421,13 @@
     initMap();
     loadFleet();
     startStream();
+    document.addEventListener("visibilitychange", function () {
+      if (document.hidden) {
+        stopStream();
+      } else {
+        startStream();
+      }
+    });
   }
 
   if (document.readyState === "loading") {

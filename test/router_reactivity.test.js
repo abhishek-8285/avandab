@@ -8,8 +8,8 @@ test.describe('Router Reactivity & Datastar Integration Tests', () => {
     await page.goto('/');
     await expect(page).toHaveTitle(/Avandab/);
 
-    // Verify router and datastar scripts are loaded
-    await expect(page.locator('script[src*="datastar.js"]')).toBeAttached();
+    // Verify router script is loaded
+    await expect(page.locator('script[src*="router.js"]')).toBeAttached();
 
     // Verify no uncaught exceptions
     expect(errors).toHaveLength(0);

@@ -7,8 +7,8 @@ test.describe('HTMX & Datastar UI Tests', () => {
     await page.goto('/');
     await expect(page).toHaveTitle(/Avandab/);
     await expect(page.locator('h1')).toContainText('Fleet operations managed with clarity and control');
-    // Verify datastar script is loaded
-    await expect(page.locator('script[src*="datastar.js"]')).toBeVisible();
+    // Verify htmx script is loaded
+    await expect(page.locator('script[src*="htmx"]')).toBeAttached();
   });
 
   test('kharcha dashboard has htmx polling endpoints', async ({ page }) => {

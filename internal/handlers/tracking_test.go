@@ -44,9 +44,11 @@ func TestTrackingPage_RedirectWithoutSession(t *testing.T) {
 	assert.Equal(t, "/login", w.Header().Get("Location"))
 }
 
-// TestTrackingPage_TemplateRenders verifies the tracking page content renders
-// with the map config injected (Spec 04 §1.3): map container, tile URLs,
-// poll endpoint, marker states.
+// TestTrackingPage_TemplateRenders verifies the tracking island container
+// renders with the map config injected (Spec 04 §1.3): mount point,
+// tile config, poll + stream endpoints, bundle assets. Feed semantics
+// (SSE-primary/poll-backup, null-safe positions, coalesced rerenders) now
+// live in src/tracking-island and are covered by Playwright (test/*.spec.ts).
 func TestTrackingPage_TemplateRenders(t *testing.T) {
 	app := newTelemetryTestApp(t, denyAuthSvc{})
 	tmpl := app.Templates.Lookup("tracking.html")
@@ -63,24 +65,21 @@ func TestTrackingPage_TemplateRenders(t *testing.T) {
 	var buf strings.Builder
 	require.NoError(t, tmpl.Execute(&buf, data))
 	body := buf.String()
-	assert.Contains(t, body, `id="live-map"`)
+	assert.Contains(t, body, `id="tracking-root"`)
 	assert.Contains(t, body, "/api/v1/telemetry/live")
+	assert.Contains(t, body, "/api/v1/telemetry/stream")
+	assert.Contains(t, body, "/api/v1/telemetry/geofences")
 	assert.Contains(t, body, "tile.openstreetmap.org")
-	assert.Contains(t, body, "maintenance_due")
+	assert.Contains(t, body, "tracking.bundle.js")
+	assert.Contains(t, body, "tracking.bundle.css")
 
-	// Tile policy regression guards (Spec 04 §2): OSM-only, attribution
-	// mandatory, no Google tile scraping in any code path.
+	// Tile policy regression guards (Spec 04 §2): OSM-only, no Google tile
+	// scraping in any code path. (ODbL attribution is rendered at runtime by
+	// the island's Leaflet layer and guarded by Playwright, not here.)
 	assert.NotContains(t, body, "mt1.google.com", "Google tile scraping must not return")
-	assert.Contains(t, body, "openstreetmap.org/copyright", "OSM attribution is required by ODbL")
 
-	// Live-feed correctness regressions:
-	// - polling must pause while SSE healthy (no duplicate traffic)
-	assert.Contains(t, body, "stopPolling()")
-	// - coordinates of 0 are valid (null-safe, not truthiness)
-	assert.Contains(t, body, "hasPos(")
-	assert.NotContains(t, body, "!v.lat || !v.lng")
-	// - telemetry bursts coalesce into one repaint
-	assert.Contains(t, body, "scheduleRerender()")
+	// Session auth rides on cookies — no tokens baked into markup.
+	assert.NotContains(t, body, "bearer", "no bearer tokens in server-rendered markup")
 
 	// No fabricated data / off-system icon fonts on this page.
 	assert.NotContains(t, body, "Smart Allocation")
@@ -133,8 +132,9 @@ func TestTrackingLayout_MapAssetsConditional(t *testing.T) {
 }
 
 // TestTrackingPage_AuthenticatedRoundTrip exercises the full handler path
-// (not just template lookup) and re-checks the tile-policy guards on the
-// rendered response body.
+// (not just template lookup) and re-checks the island container + tile-policy
+// guards on the rendered response body. (ODbL attribution is rendered at
+// runtime by the island's Leaflet layer and guarded by Playwright.)
 func TestTrackingPage_AuthenticatedRoundTrip(t *testing.T) {
 	app := newTelemetryTestApp(t, denyAuthSvc{})
 	tr := &TrackingHandlers{App: app}
@@ -153,8 +153,9 @@ func TestTrackingPage_AuthenticatedRoundTrip(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code)
 	body := w.Body.String()
-	assert.Contains(t, body, `id="live-map"`)
+	assert.Contains(t, body, `id="tracking-root"`)
 	assert.Contains(t, body, "/api/v1/telemetry/live")
+	assert.Contains(t, body, "tracking.bundle.js")
 	assert.NotContains(t, body, "mt1.google.com")
-	assert.Contains(t, body, "openstreetmap.org/copyright")
+	assert.Contains(t, body, "tile.openstreetmap.org")
 }

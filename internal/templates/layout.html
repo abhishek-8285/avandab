@@ -12,7 +12,6 @@
     <link rel="stylesheet" href="/static/css/material-symbols.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link href="https://api.fontshare.com/v2/css?f[]=satoshi@700,500,400&display=swap" rel="stylesheet">
     <script src="/static/js/loader.js?v=20260818" defer></script>
-    <script type="module" src="/static/js/datastar.js?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}" defer></script>
     <script src="/static/js/htmx.min.js?v={{if .Version}}{{.Version}}{{else}}20260822{{end}}" defer></script>
     <link rel="stylesheet" href="/static/css/tailwind.css?v={{if .Version}}{{.Version}}{{else}}20260821{{end}}">
     <link rel="stylesheet" href="/static/css/app.css?v={{if .Version}}{{.Version}}{{else}}20260821{{end}}">
@@ -774,11 +773,21 @@
                 });
             }
 
-            // Periodic auto-refresh for notification badge (Datastar poll every 30s)
-            setInterval(function() {
-                fetch('/alerts/unread')
-                    .then(function(res) { return res.text(); })
+            // Periodic auto-refresh for notification badge (pause on hidden tab, stop on unauth/redirect)
+            var notifPollTimer = null;
+            function pollUnread() {
+                if (document.hidden) return;
+                fetch('/alerts/unread', { credentials: 'same-origin' })
+                    .then(function(res) {
+                        if (!res.ok || res.redirected) {
+                            // Session expired or unauthorized: cancel interval to eliminate egress loop
+                            if (notifPollTimer) { clearInterval(notifPollTimer); notifPollTimer = null; }
+                            return null;
+                        }
+                        return res.text();
+                    })
                     .then(function(html) {
+                        if (!html) return;
                         var parser = new DOMParser();
                         var doc = parser.parseFromString(html, 'text/html');
                         var newBadge = doc.getElementById('notif-badge');
@@ -790,7 +799,13 @@
                         }
                     })
                     .catch(function() {});
-            }, 30000);
+            }
+            notifPollTimer = setInterval(pollUnread, 60000);
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden && notifPollTimer) {
+                    pollUnread();
+                }
+            });
         });
         // Fallback: replace any remaining material-symbols spans (dynamic .Icon etc.) with inline SVG if font fails
         document.addEventListener('DOMContentLoaded', function() {

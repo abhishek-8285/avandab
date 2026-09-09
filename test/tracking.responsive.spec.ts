@@ -4,8 +4,8 @@ import { test, expect } from '@playwright/test';
 // ("database is deadlocked") — run these viewport sweeps one at a time.
 test.describe.configure({ mode: 'serial' });
 
-// Throwaway responsive verification for the tracking page restyle.
-// Mobile (390x844): drawer off-canvas, sheet docks to bottom, no overflow.
+// Responsive verification for the tracking React island.
+// Mobile (390x844): registry off-canvas, detail drawer docks to bottom, no overflow.
 // Tablet (820x1180): same off-canvas behavior below lg.
 
 const VEHICLES = [
@@ -48,6 +48,23 @@ async function register(page: import('@playwright/test').Page) {
     maxRedirects: 0,
   });
   expect([200, 303]).toContain(resp.status());
+
+  // Fresh registrants are org_admins without company settings; the
+  // compliance gate would redirect /tracking to /company/onboard.
+  // (Strict CSRF requires Origin/Referer on session-cookie POSTs.)
+  await page.goto('/login');
+  const origin = new URL(page.url()).origin;
+  const onboard = await page.request.post('/company/onboard', {
+    headers: { Origin: origin, Referer: `${origin}/company/onboard` },
+    form: {
+      company_name: 'Playwright Resp Fleet',
+      address: 'MIDC Bhosari, Pune 411026',
+      phone: '9999999999',
+      email,
+    },
+    maxRedirects: 0,
+  });
+  expect([200, 303]).toContain(onboard.status());
 }
 
 for (const vp of [{ w: 390, h: 844, label: 'mobile' }, { w: 820, h: 1180, label: 'tablet' }]) {
@@ -57,72 +74,47 @@ for (const vp of [{ w: 390, h: 844, label: 'mobile' }, { w: 820, h: 1180, label:
 
     await page.route('**/api/v1/telemetry/live', (route) => route.fulfill({ json: VEHICLES }));
     await page.route('**/api/v1/telemetry/geofences**', (route) => route.fulfill({ json: [] }));
-    await page.route('**/api/v1/telemetry/history**', (route) => route.fulfill({ json: [] }));
-    await page.route('**/api/v1/telemetry/reverse_geocode**', (route) => route.fulfill({ json: { display_name: 'Test Addr' } }));
     await page.route('**/api/v1/trips/*/summary', (route) => route.fulfill({ status: 404, json: { error: 'trip not found' } }));
 
     page.on('pageerror', (err) => console.log('PAGEERROR:', err.message));
     page.on('console', (msg) => { if (msg.type() === 'error') { console.log('CONSOLE:', msg.text()); } });
+
     await page.goto('/tracking');
-    await expect(page.locator('#fleet-list .fleet-row')).toHaveCount(2, { timeout: 15000 });
-
-    // No horizontal overflow.
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    expect(overflow, 'no horizontal page overflow').toBeLessThanOrEqual(0);
-
-    // Drawer is off-canvas below lg; expand rail visible.
+    // Registry stowed off-canvas below lg; expand rail visible instead.
+    await expect(page.locator('#drawer-expand-rail')).toBeVisible({ timeout: 15000 });
     const drawerState = await page.evaluate(() => {
       const d = document.getElementById('fleet-drawer');
       const r = d!.getBoundingClientRect();
       return { left: r.left, width: r.width, vw: window.innerWidth };
     });
-    if (vp.w < 1024) {
-      expect(drawerState.left, 'drawer starts off-canvas').toBeLessThanOrEqual(0);
-      await expect(page.locator('#drawer-expand-rail')).toBeVisible();
-    }
+    expect(drawerState.left, 'drawer starts off-canvas').toBeLessThanOrEqual(0);
 
-    // Top strip fits viewport width (.z-10 skips the hidden stale banner).
-    const strip = await page.locator('#map-theater > div.absolute.top-3.z-10').first().boundingBox();
-    expect(strip).not.toBeNull();
-    expect(strip!.x).toBeGreaterThanOrEqual(0);
-    expect(strip!.x + strip!.width).toBeLessThanOrEqual(vp.w + 1);
+    // No horizontal overflow.
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow, 'no horizontal page overflow').toBeLessThanOrEqual(0);
 
-    // Open drawer, pick vehicle → sheet docks bottom (mobile) / right (desktop).
-    if (vp.w < 1024) {
-      await page.locator('#drawer-expand-rail').click();
-    }
+    // Top bar fits viewport width.
+    const bar = await page.locator('#map-theater .ti-topbar').boundingBox();
+    expect(bar).not.toBeNull();
+    expect(bar!.x).toBeGreaterThanOrEqual(0);
+    expect(bar!.x + bar!.width).toBeLessThanOrEqual(vp.w + 1);
+
+    // Open registry, pick vehicle → drawer docks to the theater bottom edge.
+    await page.locator('#drawer-expand-rail').click();
+    await expect(page.locator('#fleet-list .fleet-row')).toHaveCount(2, { timeout: 15000 });
     await page.locator('.fleet-row', { hasText: 'MH01AB1111' }).click();
     await expect(page.locator('#intel-detail-panel')).toBeVisible();
     await expect(page.locator('#intel-vehicle-id')).toHaveText('MH01AB1111');
-    // Let the 0.16s panel-pop animation finish before geometry assertions.
-    await page.waitForTimeout(250);
 
     const sheet = await page.locator('#intel-detail-panel').boundingBox();
     const theater = await page.locator('#map-theater').boundingBox();
     expect(sheet).not.toBeNull();
     expect(theater).not.toBeNull();
-    if (vp.w < 1024) {
-      // Sheet is flush with the map theater's bottom edge (not the raw
-      // viewport — layout chrome can shave a few px).
-      expect(sheet!.y + sheet!.height, 'sheet flush with theater bottom').toBeCloseTo(theater!.y + theater!.height, 1);
-      expect(sheet!.width, 'sheet is full-width on mobile').toBe(theater!.width);
-      // Drawer must have stowed after the pick (0.22s transform transition).
-      await expect
-        .poll(() => page.evaluate(() => document.getElementById('fleet-drawer')!.getBoundingClientRect().left), { timeout: 3000 })
-        .toBeLessThanOrEqual(0);
-    } else {
-      expect(sheet!.x + sheet!.width, 'sheet docks to right edge on desktop').toBe(theater!.x + theater!.width);
-    }
-
-    // Tabs usable at this width.
-    await page.locator('[data-sheet-tab="trip"]').click();
-    await expect(page.locator('#trip-summary-empty')).toBeVisible();
-    await page.locator('[data-sheet-tab="history"]').click();
-    await expect(page.locator('#history-empty')).toBeVisible();
-
-    // Bottom status bar stays inside viewport.
-    const bar = await page.locator('#map-theater > div.absolute.bottom-3').first().boundingBox();
-    expect(bar).not.toBeNull();
-    expect(bar!.x + bar!.width).toBeLessThanOrEqual(vp.w + 1);
+    expect(sheet!.y + sheet!.height, 'sheet flush with theater bottom').toBeCloseTo(theater!.y + theater!.height, 1);
+    expect(sheet!.width, 'sheet is full-width on small screens').toBe(theater!.width);
+    // Registry stowed after the pick (0.22s transform transition).
+    await expect
+      .poll(() => page.evaluate(() => document.getElementById('fleet-drawer')!.getBoundingClientRect().left), { timeout: 3000 })
+      .toBeLessThanOrEqual(0);
   });
 }

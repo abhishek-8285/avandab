@@ -1,11 +1,15 @@
-.PHONY: build run test test-race lint fmt vet generate migrate-up migrate-down clean docker dev build-css check check-fast check-fmt staticcheck check-security build-rag
+.PHONY: build run test test-race lint fmt vet generate migrate-up migrate-down clean docker dev build-css build-tracking check check-fast check-fmt staticcheck check-security build-rag
 
 ## Build CSS from Tailwind source
 build-css:
 	npx @tailwindcss/cli -i src/input.css -o internal/static/css/tailwind.css --minify
 
+## Build the tracking React island into internal/static/tracking-island
+build-tracking:
+	cd src/tracking-island && npm ci --no-audit --no-fund && npm run build
+
 ## Build the server binary
-build:
+build: build-tracking
 	go build -o bin/mvtms ./cmd/server/
 
 ## Build the RAG CLI

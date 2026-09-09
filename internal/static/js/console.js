@@ -222,6 +222,7 @@
 
     // ── money strip refresh ─────────────────────────────────────────
     function refreshMoneyStrip() {
+        if (document.hidden) return;
         api("/api/dashboard/money-strip").then(function (m) {
             var cells = {
                 revenue: document.querySelector("[data-strip='revenue']"),

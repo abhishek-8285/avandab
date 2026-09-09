@@ -1132,12 +1132,25 @@ func main() {
 	// Static files with Cache-Control headers
 	fileServer := http.FileServer(http.Dir(cfg.StaticDir))
 	r.Handle("/static/*", http.StripPrefix("/static/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// If request has a version query param (?v=...), cache immutably since URL changes on deploy.
-		// Otherwise, use short max-age with revalidation so updates take effect immediately.
-		if r.URL.Query().Get("v") != "" {
+		p := r.URL.Path
+		// Immutable assets: versioned queries, fonts, images, icons, tracking-island bundles, and binary media.
+		if r.URL.Query().Get("v") != "" ||
+			strings.HasPrefix(p, "fonts/") ||
+			strings.HasPrefix(p, "img/") ||
+			strings.HasPrefix(p, "icons/") ||
+			strings.HasPrefix(p, "tracking-island/") ||
+			strings.HasSuffix(p, ".woff2") ||
+			strings.HasSuffix(p, ".woff") ||
+			strings.HasSuffix(p, ".ttf") ||
+			strings.HasSuffix(p, ".png") ||
+			strings.HasSuffix(p, ".jpg") ||
+			strings.HasSuffix(p, ".jpeg") ||
+			strings.HasSuffix(p, ".svg") ||
+			strings.HasSuffix(p, ".ico") ||
+			strings.HasSuffix(p, ".webp") {
 			w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
 		} else {
-			w.Header().Set("Cache-Control", "public, max-age=3600, must-revalidate")
+			w.Header().Set("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800")
 		}
 		fileServer.ServeHTTP(w, r)
 	})))
@@ -1414,8 +1427,9 @@ func main() {
 		})
 	})
 
-	// Start server with graceful shutdown
-	addr := fmt.Sprintf(":%s", port)
+	// Start server with graceful shutdown (supports HOST env to bind to loopback behind reverse proxy)
+	host := os.Getenv("HOST")
+	addr := fmt.Sprintf("%s:%s", host, port)
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           r,

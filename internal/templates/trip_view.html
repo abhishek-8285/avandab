@@ -55,7 +55,7 @@
         {{template "multistop_timeline.html" (dict "Mode" "dispatcher" "Stops" .Stops "CurrentStop" .CurrentStop "Progression" .Progression)}}
         {{end}}
 
-        <div id="trip-compliance-status" data-on-load="@get('/trips/{{.Trip.ID}}/compliance')"></div>
+        <div id="trip-compliance-status" hx-get="/trips/{{.Trip.ID}}/compliance" hx-trigger="load" hx-swap="outerHTML"></div>
 
         <!-- Details: linked entities -->
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">

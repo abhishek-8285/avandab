@@ -587,15 +587,16 @@
             }
             // Exposed for automated browser tests.
             window.__dashboardTables = { refresh: refreshTables, sig: tableSig };
-            if(window.EventSource){
-                try{
-                    const es = new EventSource('/dashboard/stream');
-                    es.addEventListener('datastar-merge-signals', (e)=>{
+            var dashES = null;
+            function startDashStream() {
+                if (!window.EventSource || dashES || document.hidden) return;
+                try {
+                    dashES = new EventSource('/dashboard/stream');
+                    dashES.addEventListener('datastar-merge-signals', (e)=>{
                         sec = 0;
                         if(stamp) stamp.textContent = ' updated just now • SSE active';
                         try{
                             const parsed = JSON.parse(e.data);
-                            if(window.Datastar && typeof window.Datastar.mergeSignals==='function') window.Datastar.mergeSignals(parsed);
                             const snap = parsed.dashboard || parsed;
                             updateKpis(snap);
                             if(typeof window.__updateDashboardCharts==='function') window.__updateDashboardCharts(snap);
@@ -610,9 +611,25 @@
                             });
                         }catch(err){}
                     });
-                    es.onerror = ()=>{};
+                    dashES.onerror = ()=>{ stopDashStream(); };
                 }catch(_){}
             }
+            function stopDashStream() {
+                if (dashES) {
+                    dashES.close();
+                    dashES = null;
+                    if(stamp) stamp.textContent = ' live paused (tab hidden)';
+                }
+            }
+            startDashStream();
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) {
+                    stopDashStream();
+                } else {
+                    refreshTables();
+                    startDashStream();
+                }
+            });
         })();
     </script>
 </div>{{else}}
@@ -786,15 +803,21 @@
 
 <script>
     if (window.EventSource && !document.getElementById('dash-live-stamp')) {
-        const es = new EventSource('/dashboard/stream');
-        es.addEventListener('datastar-merge-signals', (e) => {
+        let fallbackES = null;
+        function startFallback() {
+            if (fallbackES || document.hidden) return;
             try {
-                const parsed = JSON.parse(e.data);
-                if (window.Datastar && typeof window.Datastar.mergeSignals === 'function') {
-                    window.Datastar.mergeSignals(parsed);
-                }
-            } catch (err) { console.error("Dashboard SSE parse error", err); }
+                fallbackES = new EventSource('/dashboard/stream');
+                fallbackES.onerror = () => { if (fallbackES) { fallbackES.close(); fallbackES = null; } };
+            } catch (_) {}
+        }
+        function stopFallback() {
+            if (fallbackES) { fallbackES.close(); fallbackES = null; }
+        }
+        startFallback();
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) stopFallback();
+            else startFallback();
         });
-        es.onerror = () => { /* Browser auto-reconnects */ };
     }
 </script>
