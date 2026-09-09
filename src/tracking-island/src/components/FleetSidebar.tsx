@@ -111,9 +111,38 @@ export default function FleetSidebar({ vehicles, selectedId, onSelect }: Props) 
       </div>
       <div id="fleet-list" className="ti-list" ref={listRef} onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)}>
         {list.length === 0 ? (
-          <div className="ti-empty">
-            <div>No vehicles reporting telemetry.</div>
-            <a href="/vehicles/new" className="ti-empty-link">+ Add Vehicle</a>
+          <div className="ti-empty-state">
+            <span className="ti-empty-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="ti-svg-icon">
+                <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/>
+                <path d="M15 18H9"/>
+                <path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/>
+                <circle cx="17" cy="18" r="2"/>
+                <circle cx="7" cy="18" r="2"/>
+              </svg>
+            </span>
+            <div className="ti-empty-title">
+              {query || status !== 'all' ? 'No matching vehicles' : 'No vehicles found'}
+            </div>
+            <div className="ti-empty-msg">
+              {query || status !== 'all' 
+                ? 'Try adjusting your search query or filter.' 
+                : 'No vehicles reporting telemetry. Register a unit or pair a tracker to start live tracking.'}
+            </div>
+            {!query && status === 'all' && (
+              <div className="ti-empty-btns">
+                <a href="/vehicles/new" className="ti-empty-btn-primary">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="ti-btn-svg">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                  New Vehicle
+                </a>
+                <a href="/telemetry/devices" className="ti-empty-btn-link">
+                  Pair GPS Tracker →
+                </a>
+              </div>
+            )}
           </div>
         ) : (
           <div style={{ height: list.length * ROW, position: 'relative' }}>

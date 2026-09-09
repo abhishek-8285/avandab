@@ -90,53 +90,82 @@
     border-radius: 12px 12px 0 0; max-height: 55%; }
 }
 
-/* Empty State Overlay */
-.ti-empty-overlay {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 25;
-  pointer-events: none;
-}
-.ti-empty-card {
-  pointer-events: auto;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(8px);
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  padding: 24px 28px;
-  max-width: 420px;
-  text-align: center;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-}
-.ti-empty-icon { font-size: 36px; margin-bottom: 12px; }
-.ti-empty-card h3 { margin: 0 0 8px; font-size: 16px; font-weight: 700; color: #0f172a; }
-.ti-empty-card p { margin: 0 0 20px; font-size: 13px; color: #64748b; line-height: 1.5; }
-.ti-empty-actions { display: flex; gap: 10px; justify-content: center; }
-.ti-btn {
-  display: inline-flex;
+/* Empty State in Sidebar (exact empty_state.html pattern) */
+.ti-empty-state {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 12px;
+  padding: 40px 16px;
+  text-align: center;
+}
+.ti-empty-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: var(--color-surface-container, #e9eef5);
+  display: grid;
+  place-items: center;
+  color: var(--color-text-muted, #64748b);
+  margin-bottom: 12px;
+}
+.ti-svg-icon {
+  width: 24px;
+  height: 24px;
+}
+.ti-empty-title {
+  font-size: 14px;
   font-weight: 600;
+  color: var(--color-on-surface, #0f172a);
+}
+.ti-empty-msg {
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+  margin-top: 4px;
+  max-width: 240px;
+  line-height: 1.5;
+}
+.ti-empty-btns {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+.ti-empty-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 9999px;
+  background: var(--color-primary, #2563eb);
+  color: var(--color-on-primary, #ffffff);
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 700;
   text-decoration: none;
+  box-shadow: 0 1px 3px 0 rgba(16,24,40,0.08);
   transition: all 0.15s ease;
-  cursor: pointer;
 }
-.ti-btn-primary { background: #2563eb; color: #fff; }
-.ti-btn-primary:hover { background: #1d4ed8; color: #fff; }
-.ti-btn-secondary { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
-.ti-btn-secondary:hover { background: #e2e8f0; color: #1e293b; }
-.ti-empty-link {
-  display: inline-block;
-  margin-top: 8px;
+.ti-empty-btn-primary:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+.ti-empty-btn-primary:active {
+  transform: scale(0.98);
+}
+.ti-btn-svg {
+  width: 14px;
+  height: 14px;
+}
+.ti-empty-btn-link {
   font-size: 12px;
   font-weight: 600;
-  color: #2563eb;
+  color: var(--color-primary, #2563eb);
   text-decoration: none;
+  transition: color 0.15s ease;
 }
-.ti-empty-link:hover { text-decoration: underline; }
+.ti-empty-btn-link:hover {
+  text-decoration: underline;
+}
+
 
