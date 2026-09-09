@@ -262,6 +262,34 @@ func TestSelectedVehicles_CRUD(t *testing.T) {
 		assert.Equal(t, http.StatusSeeOther, w.Code)
 	})
 
+	t.Run("Create success without vehicle_number falls back to registration_number and syncs odometer", func(t *testing.T) {
+		form := url.Values{
+			"registration_number": {"DL1LAH8783"},
+			// vehicle_number intentionally omitted from form
+			"vehicle_type":     {"truck"},
+			"capacity":         {"5000"},
+			"fuel_type":        {"diesel"},
+			"insurance_expiry": {futureDate},
+			"fitness_expiry":   {futureDate},
+			"permit_expiry":    {futureDate},
+			"odometer":         {"15400"},
+		}
+		req := withVehicleTenantSession(httptest.NewRequest(http.MethodPost, "/vehicles/new", strings.NewReader(form.Encode())), "1", "user-1", "admin")
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusSeeOther, w.Code)
+
+		vs, _, err := app.Services.Vehicles.ListVehicles(shared.ContextWithTenantID(context.Background(), shared.DefaultTenant), "DL1LAH8783", "", 10, 0)
+		require.NoError(t, err)
+		require.Len(t, vs, 1)
+		assert.Equal(t, "DL1LAH8783", vs[0].RegistrationNumber)
+		assert.Equal(t, "DL1LAH8783", vs[0].VehicleNumber)
+		assert.Equal(t, 15400.0, vs[0].Odometer)
+		require.NotNil(t, vs[0].CurrentMileage)
+		assert.Equal(t, 15400.0, *vs[0].CurrentMileage)
+	})
+
 	t.Run("Create invalid mileage string still succeeds", func(t *testing.T) {
 		form := url.Values{
 			"registration_number": {"MH05EE5555"},

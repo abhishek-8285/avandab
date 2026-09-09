@@ -3,9 +3,11 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -123,10 +125,18 @@ func (h *VehicleHandlers) Create(w http.ResponseWriter, r *http.Request) {
 
 	capacity, _ := strconv.ParseInt(r.PostFormValue("capacity"), 10, 64)
 
-	// Identity errors re-render the form (200) with a message, as before.
-	if r.PostFormValue("registration_number") == "" || r.PostFormValue("vehicle_number") == "" {
+	// Identity: registration number is canonical; vehicle number defaults to it if omitted.
+	regNum := strings.ToUpper(strings.TrimSpace(r.PostFormValue("registration_number")))
+	vehNum := strings.TrimSpace(r.PostFormValue("vehicle_number"))
+	if regNum == "" && vehNum != "" {
+		regNum = strings.ToUpper(vehNum)
+	}
+	if vehNum == "" {
+		vehNum = regNum
+	}
+	if regNum == "" {
 		session, _ := h.getUserFromContext(r)
-		h.renderForm(w, r, "vehicle_edit.html", PageData{Title: "New Vehicle", User: session, FlashError: "registration number and vehicle number are required"})
+		h.renderForm(w, r, "vehicle_edit.html", PageData{Title: "New Vehicle", User: session, FlashError: "registration number is required"})
 		return
 	}
 
@@ -174,11 +184,16 @@ func (h *VehicleHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	if s := r.PostFormValue("odometer"); s != "" {
 		odometer, _ = strconv.ParseFloat(s, 64)
 	}
+	if odometer == 0 && currentMileage != nil {
+		odometer = *currentMileage
+	} else if currentMileage == nil && odometer > 0 {
+		currentMileage = &odometer
+	}
 
 	_, err = h.createUC.Execute(r.Context(), vehicleapp.CreateVehicleCommand{
 		TenantID:           shared.TenantIDFromContext(r.Context()),
-		RegistrationNumber: r.PostFormValue("registration_number"),
-		VehicleNumber:      r.PostFormValue("vehicle_number"),
+		RegistrationNumber: regNum,
+		VehicleNumber:      vehNum,
 		VehicleType:        vehicleagg.VehicleType(r.PostFormValue("vehicle_type")),
 		Capacity:           capacity,
 		FuelType:           vehicleagg.FuelType(r.PostFormValue("fuel_type")),
@@ -408,13 +423,31 @@ func (h *VehicleHandlers) Update(w http.ResponseWriter, r *http.Request) {
 	if s := r.PostFormValue("odometer"); s != "" {
 		odometer, _ = strconv.ParseFloat(s, 64)
 	}
+	if odometer == 0 && currentMileage != nil {
+		odometer = *currentMileage
+	} else if currentMileage == nil && odometer > 0 {
+		currentMileage = &odometer
+	}
 	blocked := r.PostFormValue("blocked") == "1" || r.PostFormValue("blocked") == "on" || status == vehicleagg.VehicleBlocked
+
+	regNum := strings.ToUpper(strings.TrimSpace(r.PostFormValue("registration_number")))
+	vehNum := strings.TrimSpace(r.PostFormValue("vehicle_number"))
+	if regNum == "" && vehNum != "" {
+		regNum = strings.ToUpper(vehNum)
+	}
+	if vehNum == "" {
+		vehNum = regNum
+	}
+	if regNum == "" {
+		h.failPage(w, r, errors.New("registration number is required"), http.StatusBadRequest, "Vehicle Update Failed")
+		return
+	}
 
 	err = h.updateUC.Execute(r.Context(), vehicleapp.UpdateVehicleCommand{
 		ID:                 vehicleagg.VehicleID(id),
 		TenantID:           shared.TenantIDFromContext(r.Context()),
-		RegistrationNumber: r.PostFormValue("registration_number"),
-		VehicleNumber:      r.PostFormValue("vehicle_number"),
+		RegistrationNumber: regNum,
+		VehicleNumber:      vehNum,
 		VehicleType:        vehicleagg.VehicleType(r.PostFormValue("vehicle_type")),
 		Capacity:           capacity,
 		FuelType:           vehicleagg.FuelType(r.PostFormValue("fuel_type")),

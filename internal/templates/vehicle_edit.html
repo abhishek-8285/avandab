@@ -16,17 +16,16 @@
         <div class="p-6 space-y-6">
             <section>
                 <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Identity</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {{template "field.html" (dict "Label" "Registration Number" "Name" "registration_number" "Value" (and $vehicle $vehicle.RegistrationNumber) "Required" "true" "Pattern" `[A-Z]{2}\s?[0-9]{1,2}\s?[A-Z]{0,3}\s?[0-9]{4}` "Title" "Indian registration: MH01AB1234" "Placeholder" "MH01AB1234" "Hint" "Format: state code + RTO number + series, e.g. MH01AB1234")}}
-                    {{template "field.html" (dict "Label" "Vehicle Number" "Name" "vehicle_number" "Value" (and $vehicle $vehicle.VehicleNumber) "Required" "true")}}
+                <div class="grid grid-cols-1 gap-4">
+                    {{template "field.html" (dict "Label" "Vehicle Registration Number" "Name" "registration_number" "Value" (and $vehicle $vehicle.RegistrationNumber) "Required" "true" "Pattern" `[A-Z]{2}\s?[0-9]{1,2}\s?[A-Z]{0,3}\s?[0-9]{4}` "Title" "Indian registration: DL01AB1234 or MH01AB1234" "Placeholder" "e.g. DL1LAH8783" "Hint" "Official Indian RTO registration number (e.g. DL1LAH8783, MH12AB1234)")}}
                 </div>
             </section>
 
             <section>
                 <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Specifications</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {{template "field.html" (dict "Label" "Capacity (seats/kg)" "Name" "capacity" "Type" "number" "Value" (and $vehicle $vehicle.Capacity))}}
-                    {{template "field.html" (dict "Label" "Current Mileage (km)" "Name" "current_mileage" "Type" "number" "Value" (and $vehicle $vehicle.CurrentMileage))}}
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {{template "field.html" (dict "Label" "Capacity (seats/kg)" "Name" "capacity" "Type" "number" "Value" (and $vehicle $vehicle.Capacity) "Placeholder" "e.g. 5000")}}
+                    {{template "field.html" (dict "Label" "Odometer Reading (km)" "Name" "odometer" "Type" "number" "Value" (and $vehicle (or $vehicle.Odometer $vehicle.CurrentMileage)) "Placeholder" "e.g. 15000" "Hint" "Current odometer / mileage")}}
 
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Vehicle Type</label>
@@ -61,84 +60,94 @@
                     {{template "field.html" (dict "Label" "Permit Expiry" "Name" "permit_expiry" "Type" "date" "Value" (and $vehicle (date_only $vehicle.PermitExpiry)) "Required" "true")}}
                     {{template "field.html" (dict "Label" "RC Expiry" "Name" "rc_expiry" "Type" "date" "Value" (and $vehicle (date_only_opt $vehicle.RCExpiry)))}}
                     {{template "field.html" (dict "Label" "PUC Expiry" "Name" "puc_expiry" "Type" "date" "Value" (and $vehicle (date_only_opt $vehicle.PUCExpiry)))}}
-                    {{template "field.html" (dict "Label" "Odometer (km)" "Name" "odometer" "Type" "number" "Value" (and $vehicle $vehicle.Odometer))}}
                 </div>
             </section>
 
-            <section>
-                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Fleet Object (General)</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <details class="group rounded-2xl border border-border-subtle bg-surface-container-low/20 overflow-hidden" {{if and $vehicle (or $vehicle.Profile.FleetNumber $vehicle.Profile.ChassisNo $vehicle.Profile.FacilityID $vehicle.Profile.CompanyCode)}}open{{end}}>
+                <summary class="flex items-center justify-between p-4 cursor-pointer select-none hover:bg-surface-container-low/50 transition-colors">
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-secondary mb-1.5">Fleet Class</label>
-                        <select name="fleet_class" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
-                            <option value="CV" {{if or (not $vehicle) (eq $vehicle.Profile.FleetClass "CV")}}selected{{end}}>CV - Commercial Vehicle</option>
-                            <option value="PV" {{if and $vehicle (eq $vehicle.Profile.FleetClass "PV")}}selected{{end}}>PV - Passenger Vehicle</option>
-                            <option value="FS" {{if and $vehicle (eq $vehicle.Profile.FleetClass "FS")}}selected{{end}}>FS - Fuel Station</option>
-                            <option value="OFS" {{if and $vehicle (eq $vehicle.Profile.FleetClass "OFS")}}selected{{end}}>OFS - Outside Fuel Station</option>
-                        </select>
+                        <span class="text-sm font-semibold text-on-surface">Advanced Fleet Master Data & ERP</span>
+                        <span class="text-xs text-text-muted block mt-0.5">Asset codes, technical specs (chassis, engine), and ERP organization mapping (Optional)</span>
                     </div>
+                    <svg class="w-5 h-5 text-text-muted transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                </summary>
+                <div class="p-4 pt-2 space-y-6 border-t border-border-subtle/50">
                     <div>
-                        <label class="block text-xs font-semibold uppercase tracking-wider text-secondary mb-1.5">Ownership</label>
-                        <select name="ownership" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
-                            <option value="O" {{if or (not $vehicle) (eq $vehicle.Profile.Ownership "O")}}selected{{end}}>O - Own Vehicle</option>
-                            <option value="C" {{if and $vehicle (eq $vehicle.Profile.Ownership "C")}}selected{{end}}>C - Contract Vehicle</option>
-                            <option value="F" {{if and $vehicle (eq $vehicle.Profile.Ownership "F")}}selected{{end}}>F - Fuel Station</option>
-                            <option value="M" {{if and $vehicle (eq $vehicle.Profile.Ownership "M")}}selected{{end}}>M - Machine</option>
-                        </select>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Fleet Object (General)</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-secondary mb-1.5">Fleet Class</label>
+                                <select name="fleet_class" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                    <option value="CV" {{if or (not $vehicle) (eq $vehicle.Profile.FleetClass "CV")}}selected{{end}}>CV - Commercial Vehicle</option>
+                                    <option value="PV" {{if and $vehicle (eq $vehicle.Profile.FleetClass "PV")}}selected{{end}}>PV - Passenger Vehicle</option>
+                                    {{if and $vehicle (eq $vehicle.Profile.FleetClass "FS")}}<option value="FS" selected>FS - Fuel Station</option>{{end}}
+                                    {{if and $vehicle (eq $vehicle.Profile.FleetClass "OFS")}}<option value="OFS" selected>OFS - Outside Fuel Station</option>{{end}}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-secondary mb-1.5">Ownership</label>
+                                <select name="ownership" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                    <option value="O" {{if or (not $vehicle) (eq $vehicle.Profile.Ownership "O")}}selected{{end}}>O - Own Vehicle</option>
+                                    <option value="C" {{if and $vehicle (eq $vehicle.Profile.Ownership "C")}}selected{{end}}>C - Contract / Leased Vehicle</option>
+                                    {{if and $vehicle (eq $vehicle.Profile.Ownership "F")}}<option value="F" selected>F - Fuel Station</option>{{end}}
+                                    {{if and $vehicle (eq $vehicle.Profile.Ownership "M")}}<option value="M" selected>M - Machine</option>{{end}}
+                                </select>
+                            </div>
+                            {{template "field.html" (dict "Label" "Description" "Name" "description" "Value" (and $vehicle $vehicle.Profile.Description) "Placeholder" "e.g. 16-Wheeler Long Haul")}}
+                            {{template "field.html" (dict "Label" "Fleet Number / Internal Code" "Name" "fleet_number" "Value" (and $vehicle $vehicle.Profile.FleetNumber) "Hint" "Vehicle internal code or serial, e.g. TRK-01")}}
+                            {{template "field.html" (dict "Label" "Fleet Object No." "Name" "fleet_object_no" "Value" (and $vehicle $vehicle.Profile.FleetObjectNo))}}
+                            {{template "field.html" (dict "Label" "Manufacturer" "Name" "manufacturer" "Value" (and $vehicle $vehicle.Profile.Manufacturer) "Placeholder" "e.g. Tata Motors / Ashok Leyland")}}
+                            {{template "field.html" (dict "Label" "Manufacturer Country" "Name" "manuf_country" "Value" (and $vehicle $vehicle.Profile.ManufCountry) "Placeholder" "IN")}}
+                            {{template "field.html" (dict "Label" "Model Number" "Name" "model" "Value" (and $vehicle $vehicle.Profile.Model) "Placeholder" "e.g. Prima 2830.K")}}
+                            {{template "field.html" (dict "Label" "Constr. Yr/Mth" "Name" "constr_year_month" "Value" (and $vehicle $vehicle.Profile.ConstrYearMonth) "Placeholder" "YYYY / MM")}}
+                            {{template "field.html" (dict "Label" "Acquisition Value" "Name" "acquisition_value" "Type" "number" "Value" (and $vehicle $vehicle.Profile.AcquisitionValue))}}
+                            {{template "field.html" (dict "Label" "Acquisition Currency" "Name" "acquisition_currency" "Value" (and $vehicle (or $vehicle.Profile.AcquisitionCurrency "INR")) "Placeholder" "INR")}}
+                            {{template "field.html" (dict "Label" "Acquisition Date" "Name" "acquisition_date" "Type" "date" "Value" (and $vehicle (date_only_opt $vehicle.Profile.AcquisitionDate)))}}
+                            {{template "field.html" (dict "Label" "Purchase Vendor" "Name" "purchase_vendor" "Value" (and $vehicle $vehicle.Profile.PurchaseVendor))}}
+                            {{template "field.html" (dict "Label" "Valid From" "Name" "valid_from" "Type" "date" "Value" (and $vehicle (date_only_opt $vehicle.Profile.ValidFrom)))}}
+                            {{template "field.html" (dict "Label" "Valid To" "Name" "valid_to" "Type" "date" "Value" (and $vehicle (date_only_opt $vehicle.Profile.ValidTo)))}}
+                        </div>
                     </div>
-                    {{template "field.html" (dict "Label" "Description" "Name" "description" "Value" (and $vehicle $vehicle.Profile.Description) "Placeholder" "TATA TRUCK")}}
-                    {{template "field.html" (dict "Label" "Fleet Number" "Name" "fleet_number" "Value" (and $vehicle $vehicle.Profile.FleetNumber) "Hint" "Vehicle Master serial, e.g. 35")}}
-                    {{template "field.html" (dict "Label" "Fleet Object No." "Name" "fleet_object_no" "Value" (and $vehicle $vehicle.Profile.FleetObjectNo))}}
-                    {{template "field.html" (dict "Label" "Manufacturer" "Name" "manufacturer" "Value" (and $vehicle $vehicle.Profile.Manufacturer) "Placeholder" "TATA")}}
-                    {{template "field.html" (dict "Label" "Manufacturer Country" "Name" "manuf_country" "Value" (and $vehicle $vehicle.Profile.ManufCountry) "Placeholder" "IN")}}
-                    {{template "field.html" (dict "Label" "Model Number" "Name" "model" "Value" (and $vehicle $vehicle.Profile.Model) "Placeholder" "TRUCK")}}
-                    {{template "field.html" (dict "Label" "Constr. Yr/Mth" "Name" "constr_year_month" "Value" (and $vehicle $vehicle.Profile.ConstrYearMonth) "Placeholder" "2015 / 07")}}
-                    {{template "field.html" (dict "Label" "Acquisition Value" "Name" "acquisition_value" "Type" "number" "Value" (and $vehicle $vehicle.Profile.AcquisitionValue))}}
-                    {{template "field.html" (dict "Label" "Acquisition Currency" "Name" "acquisition_currency" "Value" (and $vehicle (or $vehicle.Profile.AcquisitionCurrency "INR")) "Placeholder" "INR")}}
-                    {{template "field.html" (dict "Label" "Acquisition Date" "Name" "acquisition_date" "Type" "date" "Value" (and $vehicle (date_only_opt $vehicle.Profile.AcquisitionDate)))}}
-                    {{template "field.html" (dict "Label" "Purchase Vendor" "Name" "purchase_vendor" "Value" (and $vehicle $vehicle.Profile.PurchaseVendor))}}
-                    {{template "field.html" (dict "Label" "Valid From" "Name" "valid_from" "Type" "date" "Value" (and $vehicle (date_only_opt $vehicle.Profile.ValidFrom)))}}
-                    {{template "field.html" (dict "Label" "Valid To" "Name" "valid_to" "Type" "date" "Value" (and $vehicle (date_only_opt $vehicle.Profile.ValidTo)))}}
-                </div>
-            </section>
 
-            <section>
-                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Organization (dept. vehicles)</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {{template "field.html" (dict "Label" "Facility ID (Office ID)" "Name" "facility_id" "Value" (and $vehicle $vehicle.Profile.FacilityID) "Placeholder" "MM21000000757" "Hint" "MMS Office ID; blank for contractual")}}
-                    {{template "field.html" (dict "Label" "Maintenance Plant" "Name" "maint_plant" "Value" (and $vehicle $vehicle.Profile.MaintPlant) "Placeholder" "KMM1 - MMS Office")}}
-                    {{template "field.html" (dict "Label" "Planning Plant" "Name" "planning_plant" "Value" (and $vehicle $vehicle.Profile.PlanningPlant))}}
-                    {{template "field.html" (dict "Label" "Company Code" "Name" "company_code" "Value" (and $vehicle $vehicle.Profile.CompanyCode) "Placeholder" "DOPI")}}
-                    {{template "field.html" (dict "Label" "Business Area" "Name" "business_area" "Value" (and $vehicle $vehicle.Profile.BusinessArea) "Placeholder" "1013 Karnataka Circle")}}
-                    {{template "field.html" (dict "Label" "Cost Center" "Name" "cost_center" "Value" (and $vehicle $vehicle.Profile.CostCenter) "Placeholder" "2111000000")}}
-                    {{template "field.html" (dict "Label" "Asset No." "Name" "asset_no" "Value" (and $vehicle $vehicle.Profile.AssetNo))}}
-                </div>
-            </section>
+                    <div>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Organization & Facility</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {{template "field.html" (dict "Label" "Facility ID" "Name" "facility_id" "Value" (and $vehicle $vehicle.Profile.FacilityID) "Placeholder" "e.g. FAC-001" "Hint" "Branch or Depot Facility ID")}}
+                            {{template "field.html" (dict "Label" "Maintenance Plant" "Name" "maint_plant" "Value" (and $vehicle $vehicle.Profile.MaintPlant) "Placeholder" "e.g. Main Workshop")}}
+                            {{template "field.html" (dict "Label" "Planning Plant" "Name" "planning_plant" "Value" (and $vehicle $vehicle.Profile.PlanningPlant) "Placeholder" "e.g. Central Depot")}}
+                            {{template "field.html" (dict "Label" "Company Code" "Name" "company_code" "Value" (and $vehicle $vehicle.Profile.CompanyCode) "Placeholder" "e.g. CORP-01")}}
+                            {{template "field.html" (dict "Label" "Business Area" "Name" "business_area" "Value" (and $vehicle $vehicle.Profile.BusinessArea) "Placeholder" "e.g. North Zone")}}
+                            {{template "field.html" (dict "Label" "Cost Center" "Name" "cost_center" "Value" (and $vehicle $vehicle.Profile.CostCenter) "Placeholder" "e.g. CC-LOG-01")}}
+                            {{template "field.html" (dict "Label" "Asset No." "Name" "asset_no" "Value" (and $vehicle $vehicle.Profile.AssetNo))}}
+                        </div>
+                    </div>
 
-            <section>
-                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Vehicle Details</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {{template "field.html" (dict "Label" "Chassis No." "Name" "chassis_no" "Value" (and $vehicle $vehicle.Profile.ChassisNo))}}
-                    {{template "field.html" (dict "Label" "Vehicle Category" "Name" "vehicle_category" "Value" (and $vehicle $vehicle.Profile.VehicleCategory))}}
-                    {{template "field.html" (dict "Label" "Engine Serial No." "Name" "engine_number" "Value" (and $vehicle $vehicle.Profile.EngineNumber))}}
-                    {{template "field.html" (dict "Label" "Engine Power" "Name" "engine_power" "Value" (and $vehicle $vehicle.Profile.EnginePower))}}
-                    {{template "field.html" (dict "Label" "Engine Capacity" "Name" "engine_capacity" "Value" (and $vehicle $vehicle.Profile.EngineCapacity))}}
-                    {{template "field.html" (dict "Label" "No. of Cylinders" "Name" "cylinder_count" "Type" "number" "Value" (and $vehicle $vehicle.Profile.CylinderCount))}}
-                    {{template "field.html" (dict "Label" "Maximum Speed (km/h)" "Name" "max_speed" "Type" "number" "Value" (and $vehicle $vehicle.Profile.MaxSpeed))}}
-                </div>
-            </section>
+                    <div>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Vehicle Details & Specs</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {{template "field.html" (dict "Label" "Chassis No." "Name" "chassis_no" "Value" (and $vehicle $vehicle.Profile.ChassisNo))}}
+                            {{template "field.html" (dict "Label" "Vehicle Category" "Name" "vehicle_category" "Value" (and $vehicle $vehicle.Profile.VehicleCategory))}}
+                            {{template "field.html" (dict "Label" "Engine Serial No." "Name" "engine_number" "Value" (and $vehicle $vehicle.Profile.EngineNumber))}}
+                            {{template "field.html" (dict "Label" "Engine Power" "Name" "engine_power" "Value" (and $vehicle $vehicle.Profile.EnginePower))}}
+                            {{template "field.html" (dict "Label" "Engine Capacity" "Name" "engine_capacity" "Value" (and $vehicle $vehicle.Profile.EngineCapacity))}}
+                            {{template "field.html" (dict "Label" "No. of Cylinders" "Name" "cylinder_count" "Type" "number" "Value" (and $vehicle $vehicle.Profile.CylinderCount))}}
+                            {{template "field.html" (dict "Label" "Maximum Speed (km/h)" "Name" "max_speed" "Type" "number" "Value" (and $vehicle $vehicle.Profile.MaxSpeed))}}
+                        </div>
+                    </div>
 
-            <section>
-                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Vehicle Technology</h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {{template "field.html" (dict "Label" "Weight" "Name" "weight" "Type" "number" "Value" (and $vehicle $vehicle.Profile.Weight))}}
-                    {{template "field.html" (dict "Label" "Unit of Weight" "Name" "weight_unit" "Value" (and $vehicle (or $vehicle.Profile.WeightUnit "TO")) "Placeholder" "TO")}}
-                    {{template "field.html" (dict "Label" "Load Volume" "Name" "load_volume" "Type" "number" "Value" (and $vehicle $vehicle.Profile.LoadVolume))}}
-                    {{template "field.html" (dict "Label" "Volume Unit" "Name" "volume_unit" "Value" (and $vehicle $vehicle.Profile.VolumeUnit))}}
-                    {{template "field.html" (dict "Label" "Secondary Fuel" "Name" "secondary_fuel" "Value" (and $vehicle $vehicle.Profile.SecondaryFuel))}}
-                    {{template "field.html" (dict "Label" "Usage Indicator" "Name" "usage_indicator" "Value" (and $vehicle $vehicle.Profile.UsageIndicator))}}
+                    <div>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-text-muted border-b border-border-subtle pb-1 mb-3">Vehicle Technology & Dimensions</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {{template "field.html" (dict "Label" "Weight" "Name" "weight" "Type" "number" "Value" (and $vehicle $vehicle.Profile.Weight))}}
+                            {{template "field.html" (dict "Label" "Unit of Weight" "Name" "weight_unit" "Value" (and $vehicle (or $vehicle.Profile.WeightUnit "TO")) "Placeholder" "TO")}}
+                            {{template "field.html" (dict "Label" "Load Volume" "Name" "load_volume" "Type" "number" "Value" (and $vehicle $vehicle.Profile.LoadVolume))}}
+                            {{template "field.html" (dict "Label" "Volume Unit" "Name" "volume_unit" "Value" (and $vehicle $vehicle.Profile.VolumeUnit))}}
+                            {{template "field.html" (dict "Label" "Secondary Fuel" "Name" "secondary_fuel" "Value" (and $vehicle $vehicle.Profile.SecondaryFuel))}}
+                            {{template "field.html" (dict "Label" "Usage Indicator" "Name" "usage_indicator" "Value" (and $vehicle $vehicle.Profile.UsageIndicator))}}
+                        </div>
+                    </div>
                 </div>
-            </section>
+            </details>
 
             <section>
                 <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Status</h2>
