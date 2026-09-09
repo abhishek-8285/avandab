@@ -113,8 +113,6 @@ export default function MapViewport(p: Props) {
     const map = L.map(divRef.current!, {
       zoomControl: true,
       attributionControl: true,
-      maxBounds: INDIA_BOUNDS,
-      maxBoundsViscosity: 1.0, // Hard limit: camera cannot pan outside Indian territory
       minZoom: INDIA_MIN_ZOOM,
       maxZoom: INDIA_MAX_ZOOM,
     }).setView(INDIA_CENTER, INDIA_DEFAULT_ZOOM);
@@ -126,12 +124,19 @@ export default function MapViewport(p: Props) {
     L.tileLayer(tileUrl, {
       minZoom: INDIA_MIN_ZOOM,
       maxZoom: INDIA_MAX_ZOOM,
-      bounds: INDIA_BOUNDS,
+      maxNativeZoom: 20,
       attribution: '&copy; Google Maps',
     }).addTo(map);
 
     geoLayerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
+
+    setTimeout(() => { map.invalidateSize(); }, 100);
+    let ro: ResizeObserver | null = null;
+    if (window.ResizeObserver && divRef.current) {
+      ro = new ResizeObserver(() => { map.invalidateSize(); });
+      ro.observe(divRef.current);
+    }
 
     let raf = 0;
     const tick = (now: number) => {
@@ -161,6 +166,7 @@ export default function MapViewport(p: Props) {
     });
     map.on('click', () => propsRef.current.onSelect(null));
     return () => {
+      if (ro) ro.disconnect();
       propsRef.current.handleRef(null);
       map.remove();
       mapRef.current = null;

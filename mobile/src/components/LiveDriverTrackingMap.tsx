@@ -112,17 +112,14 @@ export function LiveDriverTrackingMap({
 <body>
   <div id="map"></div>
   <script>
-    var INDIA_BOUNDS = [[6.5, 67.5], [37.5, 97.5]];
     var map = L.map('map', {
       zoomControl: false,
       attributionControl: false,
-      maxBounds: INDIA_BOUNDS,
-      maxBoundsViscosity: 1.0,
-      minZoom: 4.5
+      minZoom: 4,
+      maxZoom: 20
     }).setView([${driverLatitude}, ${driverLongitude}], 11);
 
     L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&gl=IN', {
-      bounds: INDIA_BOUNDS,
       minZoom: 4,
       maxZoom: 20,
     }).addTo(map);

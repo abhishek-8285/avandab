@@ -176,17 +176,14 @@
         var cfg={}, tripId='', vehicleId='', historyAPI='/api/v1/telemetry/history', playbackAPI='';
         try{ var d=JSON.parse(dataEl.textContent||'{}'); cfg=d.mapConfig||{}; tripId=d.tripId||''; vehicleId=d.vehicleId||''; historyAPI=d.historyAPI||historyAPI; playbackAPI=d.playbackAPI||('/api/v1/trips/'+encodeURIComponent(tripId)+'/playback'); }catch(e){}
 
-        var INDIA_BOUNDS=[[6.5,68.0],[37.5,97.5]];
         var map=L.map('playback-map', {
             zoomControl:false,
-            maxBounds:INDIA_BOUNDS,
-            maxBoundsViscosity:1.0,
-            minZoom:4
+            minZoom:4,
+            maxZoom:22
         }).setView([20.5937,78.9629],5);
         L.control.zoom({position:'topright'}).addTo(map);
         var tileUrl='https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&gl=IN';
         L.tileLayer(tileUrl,{
-            bounds:INDIA_BOUNDS,
             minZoom:4,
             maxZoom:22,
             attribution:'&copy; Google Maps'
