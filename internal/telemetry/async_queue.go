@@ -20,7 +20,14 @@ type AsyncIngestQueue struct {
 	quit         chan struct{}
 	closed       atomic.Bool
 	droppedCount atomic.Uint64
+	failedCount  atomic.Uint64
 }
+
+// FailedCount reports frames the workers accepted from the queue but could
+// not persist (W2 visibility: saturation drops are IngestAsync's domain and
+// now fall back to sync persist; worker failures are the remaining loss
+// vector and must be countable in monitoring).
+func (q *AsyncIngestQueue) FailedCount() uint64 { return q.failedCount.Load() }
 
 // NewAsyncIngestQueue constructs an AsyncIngestQueue with the specified capacity.
 func NewAsyncIngestQueue(capacity int, workers int, ingestor *Ingestor, logger *slog.Logger) *AsyncIngestQueue {
@@ -89,7 +96,9 @@ func (q *AsyncIngestQueue) workerLoop(ctx context.Context, id int) {
 			if q.ingestor != nil {
 				_, err := q.ingestor.IngestRawFrame(ctx, frame)
 				if err != nil && !errors.Is(err, context.Canceled) {
-					q.logger.Debug("async ingest frame processing failed", "imei", frame.IMEI, "error", err)
+					failed := q.failedCount.Add(1)
+					q.logger.Warn("async ingest frame processing failed",
+						"imei", frame.IMEI, "error", err, "failed_total", failed)
 				}
 			}
 		}

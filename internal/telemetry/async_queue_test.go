@@ -98,3 +98,27 @@ func TestIngestAsync_SaturatedQueuePersists(t *testing.T) {
 		t.Fatalf("positions for IMEI-SAT = %d, want 1 (frame lost despite ACK)", n)
 	}
 }
+
+// W2 visibility: worker persist failures are counted, not just Debug-logged.
+func TestAsyncIngestQueue_FailedCount(t *testing.T) {
+	db := newTestIngestorDB(t)
+	ing := newTestIngestor(t, db, nil)
+	_ = db.Close() // every pipeline query fails
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	q := NewAsyncIngestQueue(10, 1, ing, nil)
+	q.Start(ctx)
+	defer q.Drain(2 * time.Second)
+
+	if !q.Push(RawFrame{IMEI: "FAIL-1", Latitude: 1, Longitude: 1, DeviceTime: time.Now().UTC()}) {
+		t.Fatal("push must succeed (failure happens at persist, not enqueue)")
+	}
+	deadline := time.Now().Add(5 * time.Second)
+	for q.FailedCount() == 0 && time.Now().Before(deadline) {
+		time.Sleep(20 * time.Millisecond)
+	}
+	if q.FailedCount() != 1 {
+		t.Fatalf("failedCount = %d, want 1", q.FailedCount())
+	}
+}

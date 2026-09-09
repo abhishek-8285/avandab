@@ -138,3 +138,61 @@ func TestTCPIngestServer_TeltonikaProtocol(t *testing.T) {
 		t.Errorf("expected 0x01 data ACK record count, got %x", dataAck)
 	}
 }
+
+// W2: a location packet whose ingest is rejected must NOT be ACKed — the
+// device retransmits per protocol. Login handshake ACK stays immediate.
+func TestTCPIngestServer_DataACKWithheldOnReject(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	db := newTestIngestorDB(t)
+	ing := newTestIngestor(t, db, nil)
+	_ = db.Close() // every pipeline query now fails → ingest rejects
+
+	q := NewAsyncIngestQueue(1, 0, nil, nil) // unstarted
+	q.Drain(time.Second)                     // closed: Push refuses, sync fallback runs and fails
+	ing.SetQueue(q)
+
+	server := NewTCPIngestServer("127.0.0.1:0", ing, nil, nil)
+	if err := server.Start(ctx); err != nil {
+		t.Fatalf("failed to start tcp server: %v", err)
+	}
+	defer server.Stop()
+
+	conn, err := net.DialTimeout("tcp", server.listener.Addr().String(), 2*time.Second)
+	if err != nil {
+		t.Fatalf("failed to dial tcp server: %v", err)
+	}
+	defer conn.Close()
+
+	// Login first: location packets carry no IMEI; the session binds it.
+	// Login handshake ACK stays immediate even while ingest rejects.
+	loginHex2 := "78780d010864209048123456000184080d0a"
+	loginBytes2, _ := hex.DecodeString(loginHex2)
+	if _, err := conn.Write(loginBytes2); err != nil {
+		t.Fatalf("failed to write login bytes: %v", err)
+	}
+	_ = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	loginAck := make([]byte, 10)
+	if n, err := conn.Read(loginAck); err != nil || n != 10 {
+		t.Fatalf("login ACK = %d bytes, err %v — handshake ACK must stay immediate", n, err)
+	}
+
+	// GT06 location packet (0x12) — must get NO ack while ingest rejects.
+	location := []byte{
+		0x78, 0x78, 0x16, 0x12,
+		0x1A, 0x08, 0x1F, 0x08, 0x1E, 0x00,
+		0xCF,
+		0x02, 0x0D, 0xAE, 0x60,
+		0x07, 0xDB, 0xC4, 0x80,
+		0x30, 0x1C, 0x00, 0x00, 0x02,
+		0x12, 0x34, 0x0D, 0x0A,
+	}
+	if _, err := conn.Write(location); err != nil {
+		t.Fatalf("failed to write location bytes: %v", err)
+	}
+	_ = conn.SetReadDeadline(time.Now().Add(1500 * time.Millisecond))
+	if n, err := conn.Read(make([]byte, 10)); err == nil {
+		t.Fatalf("got %d-byte ACK for rejected frame, want none (device must retransmit)", n)
+	}
+}

@@ -172,17 +172,38 @@ func (s *TCPIngestServer) handleConnection(ctx context.Context, conn net.Conn) {
 				if telRes.IMEI != "" {
 					sessionIMEI = telRes.IMEI
 				}
-				if len(telRes.ACKResponse) > 0 {
-					_ = conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
-					if _, writeErr := conn.Write(telRes.ACKResponse); writeErr != nil {
-						s.logger.Warn("failed to send Teltonika ACK to device", "imei", sessionIMEI, "error", writeErr)
+				if telRes.IsHandshake {
+					// Handshake ACK is transport, not data: accept immediately.
+					if len(telRes.ACKResponse) > 0 {
+						_ = conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+						if _, writeErr := conn.Write(telRes.ACKResponse); writeErr != nil {
+							s.logger.Warn("failed to send Teltonika handshake ACK to device", "imei", sessionIMEI, "error", writeErr)
+						}
 					}
+					continue
 				}
+				// Data packets: ingest first, ACK the accepted record count
+				// after. On rejection write a zero-count ACK (protocol NAK)
+				// so the device buffers and retransmits instead of
+				// believing the records landed (W2).
+				accepted := 0
 				for _, f := range telRes.Frames {
 					if f != nil && f.IMEI != "" {
 						if ingestErr := s.ingestor.IngestAsync(ctx, *f); ingestErr != nil {
-							s.logger.Error("teltonika GPS ingest failed", "imei", f.IMEI, "error", ingestErr)
+							s.logger.Error("teltonika GPS ingest rejected", "imei", f.IMEI, "error", ingestErr)
+						} else {
+							accepted++
 						}
+					}
+				}
+				ack := telRes.ACKResponse
+				if accepted < telRes.RecordCount {
+					ack = []byte{0x00, 0x00, 0x00, byte(accepted)}
+				}
+				if len(ack) > 0 {
+					_ = conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+					if _, writeErr := conn.Write(ack); writeErr != nil {
+						s.logger.Warn("failed to send Teltonika ACK to device", "imei", sessionIMEI, "error", writeErr)
 					}
 				}
 				continue
@@ -201,18 +222,29 @@ func (s *TCPIngestServer) handleConnection(ctx context.Context, conn net.Conn) {
 			sessionIMEI = res.IMEI
 		}
 
-		// Send protocol ACK back to device immediately if required
+		// Frameless packets (login handshake, heartbeat status): ACK the
+		// transport immediately — there is nothing to persist.
+		// Data packets: ingest first, ACK only on acceptance — no ACK
+		// means the device retransmits per protocol (W2).
+		if res.Frame == nil || res.Frame.IMEI == "" {
+			if len(res.ACKResponse) > 0 {
+				_ = conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+				if _, writeErr := conn.Write(res.ACKResponse); writeErr != nil {
+					s.logger.Warn("failed to send ACK to device", "imei", sessionIMEI, "error", writeErr)
+				}
+			}
+			continue
+		}
+
+		if ingestErr := s.ingestor.IngestAsync(ctx, *res.Frame); ingestErr != nil {
+			s.logger.Error("hardware GPS ingest rejected, ACK withheld", "imei", res.Frame.IMEI, "error", ingestErr)
+			continue
+		}
+
 		if len(res.ACKResponse) > 0 {
 			_ = conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
 			if _, writeErr := conn.Write(res.ACKResponse); writeErr != nil {
 				s.logger.Warn("failed to send ACK to device", "imei", sessionIMEI, "error", writeErr)
-			}
-		}
-
-		// If frame was decoded, ingest through the async queue pipeline
-		if res.Frame != nil && res.Frame.IMEI != "" {
-			if ingestErr := s.ingestor.IngestAsync(ctx, *res.Frame); ingestErr != nil {
-				s.logger.Error("hardware GPS ingest failed", "imei", res.Frame.IMEI, "error", ingestErr)
 			}
 		}
 	}

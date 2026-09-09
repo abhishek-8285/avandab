@@ -19,6 +19,7 @@ import (
 
 	"transport-app/internal/events"
 	"transport-app/internal/realtime"
+	"transport-app/internal/shared"
 	"transport-app/internal/shared/id"
 	"transport-app/internal/shared/uow"
 	"transport-app/internal/telemetry"
@@ -128,6 +129,9 @@ func TestBusIntegration_SnapshotToSSE(t *testing.T) {
 	}
 	body, _ := json.Marshal(snap)
 	postReq := httptest.NewRequest(http.MethodPost, "/api/v1/telemetry/snapshots", bytes.NewReader(body))
+	// Prod middleware always sets the tenant; the W1 spoof guard fails
+	// closed without it, so mirror prod here (device lives in tenant "1").
+	postReq = postReq.WithContext(shared.ContextWithTenantID(postReq.Context(), "1"))
 	postReq.Header.Set("Content-Type", "application/json")
 	postRec := httptest.NewRecorder()
 
