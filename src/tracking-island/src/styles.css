@@ -89,3 +89,54 @@
   .ti-drawer { left: 0; right: 0; top: auto; bottom: 0; width: auto;
     border-radius: 12px 12px 0 0; max-height: 55%; }
 }
+
+/* Empty State Overlay */
+.ti-empty-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 25;
+  pointer-events: none;
+}
+.ti-empty-card {
+  pointer-events: auto;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 24px 28px;
+  max-width: 420px;
+  text-align: center;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+.ti-empty-icon { font-size: 36px; margin-bottom: 12px; }
+.ti-empty-card h3 { margin: 0 0 8px; font-size: 16px; font-weight: 700; color: #0f172a; }
+.ti-empty-card p { margin: 0 0 20px; font-size: 13px; color: #64748b; line-height: 1.5; }
+.ti-empty-actions { display: flex; gap: 10px; justify-content: center; }
+.ti-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.ti-btn-primary { background: #2563eb; color: #fff; }
+.ti-btn-primary:hover { background: #1d4ed8; color: #fff; }
+.ti-btn-secondary { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+.ti-btn-secondary:hover { background: #e2e8f0; color: #1e293b; }
+.ti-empty-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #2563eb;
+  text-decoration: none;
+}
+.ti-empty-link:hover { text-decoration: underline; }
+

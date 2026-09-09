@@ -89,6 +89,19 @@ export default function TrackingApp({ config }: { config: TrackingMapConfig }) {
         <MapViewport vehicles={vehicles} version={version} selectedId={selectedId} follow={follow}
           geofences={geofences} showGeofences={showGeofences} osmUrl={config.OSMUrl}
           onSelect={(id) => { setSelectedId(id); if (!id) setFollow(false); }} handleRef={setHandle} />
+        {vehicles.size === 0 && (
+          <div className="ti-empty-overlay">
+            <div className="ti-empty-card">
+              <div className="ti-empty-icon">🚛</div>
+              <h3>No Vehicles Reporting Telemetry</h3>
+              <p>Register a vehicle in your fleet or pair an AIS-140 GPS tracker / driver phone to start streaming live coordinates.</p>
+              <div className="ti-empty-actions">
+                <a href="/vehicles/new" className="ti-btn ti-btn-primary">+ Add Vehicle</a>
+                <a href="/telemetry/devices" className="ti-btn ti-btn-secondary">Pair GPS Tracker</a>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       {selected && (
         <VehicleDetailDrawer vehicle={selected} following={follow}

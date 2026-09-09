@@ -111,7 +111,10 @@ export default function FleetSidebar({ vehicles, selectedId, onSelect }: Props) 
       </div>
       <div id="fleet-list" className="ti-list" ref={listRef} onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)}>
         {list.length === 0 ? (
-          <div className="ti-empty">No vehicles reporting telemetry.<br />Add a vehicle or check the GPS gateway.</div>
+          <div className="ti-empty">
+            <div>No vehicles reporting telemetry.</div>
+            <a href="/vehicles/new" className="ti-empty-link">+ Add Vehicle</a>
+          </div>
         ) : (
           <div style={{ height: list.length * ROW, position: 'relative' }}>
             {visible.map((v, i) => {
