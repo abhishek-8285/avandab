@@ -56,9 +56,9 @@ export default function TrackingApp({ config }: { config: TrackingMapConfig }) {
   for (const v of vehicles.values()) if (v.status === 'running' || v.status === 'stopped') activeCount += 1;
   const connLabel =
     conn === 'live' ? 'Live Stream' :
-    conn === 'poll' ? 'Reconnecting…' :
+    conn === 'poll' ? 'Live (Polling)' :
     conn === 'connecting' ? 'Connecting…' : 'Offline';
-  const beaconColor = conn === 'live' ? '#22c55e' : conn === 'offline' ? '#dc2626' : '#f59e0b';
+  const beaconColor = conn === 'live' ? '#22c55e' : conn === 'poll' ? '#0284c7' : conn === 'offline' ? '#dc2626' : '#f59e0b';
 
   return (
     <div className="ti-root">

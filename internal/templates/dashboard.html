@@ -611,14 +611,22 @@
                             });
                         }catch(err){}
                     });
-                    dashES.onerror = ()=>{ stopDashStream(); };
+                    dashES.onerror = ()=>{
+                        if (document.hidden) {
+                            stopDashStream();
+                        } else if (stamp) {
+                            stamp.textContent = ' reconnecting live stream…';
+                        }
+                    };
                 }catch(_){}
             }
             function stopDashStream() {
                 if (dashES) {
                     dashES.close();
                     dashES = null;
-                    if(stamp) stamp.textContent = ' live paused (tab hidden)';
+                }
+                if (stamp && document.hidden) {
+                    stamp.textContent = ' live paused (tab hidden)';
                 }
             }
             startDashStream();

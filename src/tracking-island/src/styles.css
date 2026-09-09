@@ -51,7 +51,7 @@
 .ti-badge { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 700;
   padding: 4px 10px; border-radius: 999px; background: #f1f5f9; color: #475569; }
 .ti-badge.live { background: #dcfce7; color: #15803d; }
-.ti-badge.poll { background: #fef3c7; color: #b45309; }
+.ti-badge.poll { background: #e0f2fe; color: #0369a1; }
 .ti-badge.offline { background: #fee2e2; color: #b91c1c; }
 .ti-beacon { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .ti-badge.live .ti-beacon { animation: ti-pulse 1.6s infinite; }

@@ -3,6 +3,7 @@ package realtime
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"transport-app/internal/events"
 	"transport-app/internal/shared"
@@ -77,10 +78,19 @@ func StreamHandler(h Broadcaster, sseEnabled ...bool) http.HandlerFunc {
 		// Flush headers immediately
 		flusher.Flush()
 
+		ticker := time.NewTicker(25 * time.Second)
+		defer ticker.Stop()
+
 		for {
 			select {
 			case <-r.Context().Done():
 				return
+			case <-ticker.C:
+				// SSE keep-alive comment to prevent reverse proxies (Cloudflare/Caddy) from timing out idle connections
+				if _, err := w.Write([]byte(": ping\n\n")); err != nil {
+					return
+				}
+				flusher.Flush()
 			case frame, ok := <-ch:
 				if !ok {
 					return // channel closed (slow consumer dropped or hub shutdown)

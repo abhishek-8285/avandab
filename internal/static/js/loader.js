@@ -51,26 +51,34 @@
     if (fetchPending === 0) { clearTimeout(delayTimer); delayTimer = null; render(); }
   }
 
-  // Background polls must never flash the fullscreen overlay — otherwise a
-  // 10s telemetry poll looks like a full page reload.
+  // Background polls, HTMX partial updates, and API requests must never flash
+  // the fullscreen overlay — otherwise partial DOM morphs or 10s polls look like full page reloads.
   function isSilentFetch(target, opts) {
     try {
       if (opts && (opts.silent === true || opts.loader === false)) return true;
-      var h = opts && opts.headers;
-      if (h) {
+      var checkHeaders = function (h) {
+        if (!h) return false;
         if (typeof h.get === 'function') {
-          if (h.get('X-Silent') != null || h.get('X-Loader-Silent') != null) return true;
+          if (h.get('X-Silent') != null || h.get('X-Loader-Silent') != null || h.get('HX-Request') != null) return true;
+          var acc = h.get('Accept') || '';
+          if (acc.indexOf('application/json') !== -1 || acc.indexOf('text/event-stream') !== -1) return true;
         } else {
-          for (var k in h) { if (/^x-(silent|loader-silent)$/i.test(k)) return true; }
+          for (var k in h) {
+            if (/^x-(silent|loader-silent)$/i.test(k) || /^hx-request$/i.test(k)) return true;
+            if (/^accept$/i.test(k) && typeof h[k] === 'string' && (h[k].indexOf('application/json') !== -1 || h[k].indexOf('text/event-stream') !== -1)) return true;
+          }
         }
-      }
+        return false;
+      };
+      if (opts && opts.headers && checkHeaders(opts.headers)) return true;
+      if (target && target.headers && checkHeaders(target.headers)) return true;
     } catch (e) {}
     var s = '';
     try {
       if (typeof target === 'string') s = target;
       else if (target && target.url) s = target.url;
     } catch (e) {}
-    return /\/api\/v1\/telemetry\/(live|history|geofences|stream)|\/alerts\/unread|\/api\/v1\/errors\/client|\/api\/v1\/users\/me\/preferences/.test(s);
+    return /^\/api\/|\/dashboard\/|\/alerts\/|\/trips\/[^\/]+\/compliance|\/static\/|\/sw\.js|\/ws/.test(s);
   }
 
   var Loader = {
