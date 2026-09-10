@@ -53,14 +53,26 @@ func (c *CacheConfig) GetDefaultTTL() time.Duration { return c.DefaultTTL }
 func (c *CacheConfig) GetKeyPrefix() string         { return c.KeyPrefix }
 
 // StorageConfig selects where uploads/documents live. local keeps files on
-// disk under LocalDir; s3 is reserved for object-storage wiring.
+// disk under LocalDir; s3 connects to S3-compatible object storage (Cloudflare R2, AWS S3, MinIO).
 type StorageConfig struct {
-	Driver   string // local (default) | s3
-	LocalDir string
+	Driver            string // local (default) | s3
+	LocalDir          string
+	S3Bucket          string
+	S3Endpoint        string
+	S3Region          string
+	S3AccessKeyID     string
+	S3SecretAccessKey string
+	S3PublicURL       string
 }
 
-func (c *StorageConfig) GetDriver() string   { return c.Driver }
-func (c *StorageConfig) GetLocalDir() string { return c.LocalDir }
+func (c *StorageConfig) GetDriver() string            { return c.Driver }
+func (c *StorageConfig) GetLocalDir() string          { return c.LocalDir }
+func (c *StorageConfig) GetS3Bucket() string          { return c.S3Bucket }
+func (c *StorageConfig) GetS3Endpoint() string        { return c.S3Endpoint }
+func (c *StorageConfig) GetS3Region() string          { return c.S3Region }
+func (c *StorageConfig) GetS3AccessKeyID() string     { return c.S3AccessKeyID }
+func (c *StorageConfig) GetS3SecretAccessKey() string { return c.S3SecretAccessKey }
+func (c *StorageConfig) GetS3PublicURL() string       { return c.S3PublicURL }
 
 // Config holds all application configuration.
 type Config struct {
@@ -109,6 +121,7 @@ type Config struct {
 	Comm                 CommConfig
 	Google               GoogleConfig
 	FCM                  FCMConfig
+	Turnstile            TurnstileConfig
 }
 
 // CommConfig controls the durable outbound queue (comm_outbox, migration
@@ -137,6 +150,18 @@ func (c *GoogleOAuthConfig) Enabled() bool {
 
 // GoogleConfig is an alias for backwards compatibility.
 type GoogleConfig = GoogleOAuthConfig
+
+// TurnstileConfig holds Cloudflare Turnstile bot verification settings.
+// Free bot and brute-force mitigation on public auth endpoints.
+type TurnstileConfig struct {
+	SiteKey   string
+	SecretKey string
+}
+
+// Enabled reports whether Cloudflare Turnstile verification is active.
+func (c *TurnstileConfig) Enabled() bool {
+	return c != nil && c.SecretKey != ""
+}
 
 // NotifyConfig holds outbound delivery channel settings. Empty values keep a
 // channel unconfigured — sends then fail honestly instead of faking success.
@@ -523,8 +548,14 @@ func Load() *Config {
 	// on a single instance it is a no-op claim; at scale-out it stops
 	// duplicate cron/worker execution automatically.
 	cfg.Storage = StorageConfig{
-		Driver:   strings.ToLower(getEnv("STORAGE_DRIVER", "local")),
-		LocalDir: getEnv("LOCAL_STORAGE_DIR", cfg.UploadDir),
+		Driver:            strings.ToLower(getEnv("STORAGE_DRIVER", "local")),
+		LocalDir:          getEnv("LOCAL_STORAGE_DIR", cfg.UploadDir),
+		S3Bucket:          getEnv("S3_BUCKET", ""),
+		S3Endpoint:        getEnv("S3_ENDPOINT", ""),
+		S3Region:          getEnv("S3_REGION", "auto"),
+		S3AccessKeyID:     getEnv("S3_ACCESS_KEY_ID", ""),
+		S3SecretAccessKey: getEnv("S3_SECRET_ACCESS_KEY", ""),
+		S3PublicURL:       getEnv("S3_PUBLIC_URL", ""),
 	}
 	cfg.WorkerLeaderLock = getEnvBool("WORKER_LEADER_LOCK", true)
 
@@ -564,6 +595,12 @@ func Load() *Config {
 		ServerKey:          os.Getenv("FCM_SERVER_KEY"),
 		ServiceAccountJSON: getEnv("FCM_SERVICE_ACCOUNT", os.Getenv("GOOGLE_APPLICATION_CREDENTIALS")),
 		Endpoint:           os.Getenv("FCM_ENDPOINT"),
+	}
+
+	// Cloudflare Turnstile bot protection for auth forms.
+	cfg.Turnstile = TurnstileConfig{
+		SiteKey:   os.Getenv("TURNSTILE_SITE_KEY"),
+		SecretKey: os.Getenv("TURNSTILE_SECRET_KEY"),
 	}
 
 	if err := cfg.Validate(); err != nil {
@@ -627,7 +664,14 @@ func (c *Config) Validate() error {
 	}
 
 	switch c.Storage.Driver {
-	case "", "local", "s3":
+	case "", "local":
+	case "s3":
+		if strings.TrimSpace(c.Storage.S3Bucket) == "" {
+			return fmt.Errorf("S3_BUCKET: required when STORAGE_DRIVER=s3")
+		}
+		if strings.TrimSpace(c.Storage.S3AccessKeyID) == "" || strings.TrimSpace(c.Storage.S3SecretAccessKey) == "" {
+			return fmt.Errorf("S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY: required when STORAGE_DRIVER=s3")
+		}
 	default:
 		return fmt.Errorf("STORAGE_DRIVER: unsupported driver %q; use local or s3", c.Storage.Driver)
 	}

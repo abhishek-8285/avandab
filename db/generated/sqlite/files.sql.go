@@ -8,11 +8,12 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const createFile = `-- name: CreateFile :one
-INSERT INTO files (id, filename, original_name, path, size, mime_type, uploadable_type, uploadable_id)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO files (id, filename, original_name, path, size, mime_type, uploadable_type, uploadable_id, tenant_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id, filename, original_name, path, size, mime_type, uploadable_type, uploadable_id, created_at
 `
 
@@ -25,9 +26,22 @@ type CreateFileParams struct {
 	MimeType       string         `json:"mime_type"`
 	UploadableType string         `json:"uploadable_type"`
 	UploadableID   sql.NullString `json:"uploadable_id"`
+	TenantID       string         `json:"tenant_id"`
 }
 
-func (q *Queries) CreateFile(ctx context.Context, arg CreateFileParams) (File, error) {
+type CreateFileRow struct {
+	ID             string         `json:"id"`
+	Filename       string         `json:"filename"`
+	OriginalName   string         `json:"original_name"`
+	Path           string         `json:"path"`
+	Size           int64          `json:"size"`
+	MimeType       string         `json:"mime_type"`
+	UploadableType string         `json:"uploadable_type"`
+	UploadableID   sql.NullString `json:"uploadable_id"`
+	CreatedAt      time.Time      `json:"created_at"`
+}
+
+func (q *Queries) CreateFile(ctx context.Context, arg CreateFileParams) (CreateFileRow, error) {
 	row := q.db.QueryRowContext(ctx, createFile,
 		arg.ID,
 		arg.Filename,
@@ -37,8 +51,9 @@ func (q *Queries) CreateFile(ctx context.Context, arg CreateFileParams) (File, e
 		arg.MimeType,
 		arg.UploadableType,
 		arg.UploadableID,
+		arg.TenantID,
 	)
-	var i File
+	var i CreateFileRow
 	err := row.Scan(
 		&i.ID,
 		&i.Filename,
@@ -54,36 +69,59 @@ func (q *Queries) CreateFile(ctx context.Context, arg CreateFileParams) (File, e
 }
 
 const deleteFile = `-- name: DeleteFile :exec
-DELETE FROM files WHERE id = ?
+DELETE FROM files WHERE id = ? AND tenant_id = ?
 `
 
-func (q *Queries) DeleteFile(ctx context.Context, id string) error {
-	_, err := q.db.ExecContext(ctx, deleteFile, id)
+type DeleteFileParams struct {
+	ID       string `json:"id"`
+	TenantID string `json:"tenant_id"`
+}
+
+func (q *Queries) DeleteFile(ctx context.Context, arg DeleteFileParams) error {
+	_, err := q.db.ExecContext(ctx, deleteFile, arg.ID, arg.TenantID)
 	return err
 }
 
 const deleteFilesByUploadable = `-- name: DeleteFilesByUploadable :exec
-DELETE FROM files WHERE uploadable_type = ? AND uploadable_id = ?
+DELETE FROM files WHERE uploadable_type = ? AND uploadable_id = ? AND tenant_id = ?
 `
 
 type DeleteFilesByUploadableParams struct {
 	UploadableType string         `json:"uploadable_type"`
 	UploadableID   sql.NullString `json:"uploadable_id"`
+	TenantID       string         `json:"tenant_id"`
 }
 
 func (q *Queries) DeleteFilesByUploadable(ctx context.Context, arg DeleteFilesByUploadableParams) error {
-	_, err := q.db.ExecContext(ctx, deleteFilesByUploadable, arg.UploadableType, arg.UploadableID)
+	_, err := q.db.ExecContext(ctx, deleteFilesByUploadable, arg.UploadableType, arg.UploadableID, arg.TenantID)
 	return err
 }
 
 const getFileByID = `-- name: GetFileByID :one
 SELECT id, filename, original_name, path, size, mime_type, uploadable_type, uploadable_id, created_at
-FROM files WHERE id = ?
+FROM files WHERE id = ? AND tenant_id = ?
 `
 
-func (q *Queries) GetFileByID(ctx context.Context, id string) (File, error) {
-	row := q.db.QueryRowContext(ctx, getFileByID, id)
-	var i File
+type GetFileByIDParams struct {
+	ID       string `json:"id"`
+	TenantID string `json:"tenant_id"`
+}
+
+type GetFileByIDRow struct {
+	ID             string         `json:"id"`
+	Filename       string         `json:"filename"`
+	OriginalName   string         `json:"original_name"`
+	Path           string         `json:"path"`
+	Size           int64          `json:"size"`
+	MimeType       string         `json:"mime_type"`
+	UploadableType string         `json:"uploadable_type"`
+	UploadableID   sql.NullString `json:"uploadable_id"`
+	CreatedAt      time.Time      `json:"created_at"`
+}
+
+func (q *Queries) GetFileByID(ctx context.Context, arg GetFileByIDParams) (GetFileByIDRow, error) {
+	row := q.db.QueryRowContext(ctx, getFileByID, arg.ID, arg.TenantID)
+	var i GetFileByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Filename,
@@ -101,24 +139,37 @@ func (q *Queries) GetFileByID(ctx context.Context, id string) (File, error) {
 const getFilesByUploadable = `-- name: GetFilesByUploadable :many
 SELECT id, filename, original_name, path, size, mime_type, uploadable_type, uploadable_id, created_at
 FROM files
-WHERE uploadable_type = ? AND uploadable_id = ?
+WHERE uploadable_type = ? AND uploadable_id = ? AND tenant_id = ?
 ORDER BY created_at ASC
 `
 
 type GetFilesByUploadableParams struct {
 	UploadableType string         `json:"uploadable_type"`
 	UploadableID   sql.NullString `json:"uploadable_id"`
+	TenantID       string         `json:"tenant_id"`
 }
 
-func (q *Queries) GetFilesByUploadable(ctx context.Context, arg GetFilesByUploadableParams) ([]File, error) {
-	rows, err := q.db.QueryContext(ctx, getFilesByUploadable, arg.UploadableType, arg.UploadableID)
+type GetFilesByUploadableRow struct {
+	ID             string         `json:"id"`
+	Filename       string         `json:"filename"`
+	OriginalName   string         `json:"original_name"`
+	Path           string         `json:"path"`
+	Size           int64          `json:"size"`
+	MimeType       string         `json:"mime_type"`
+	UploadableType string         `json:"uploadable_type"`
+	UploadableID   sql.NullString `json:"uploadable_id"`
+	CreatedAt      time.Time      `json:"created_at"`
+}
+
+func (q *Queries) GetFilesByUploadable(ctx context.Context, arg GetFilesByUploadableParams) ([]GetFilesByUploadableRow, error) {
+	rows, err := q.db.QueryContext(ctx, getFilesByUploadable, arg.UploadableType, arg.UploadableID, arg.TenantID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []File
+	var items []GetFilesByUploadableRow
 	for rows.Next() {
-		var i File
+		var i GetFilesByUploadableRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Filename,

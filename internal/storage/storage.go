@@ -35,6 +35,16 @@ type Settings interface {
 	GetLocalDir() string
 }
 
+// S3Settings provides S3/R2-specific configuration needed by DriverS3.
+type S3Settings interface {
+	GetS3Bucket() string
+	GetS3Endpoint() string
+	GetS3Region() string
+	GetS3AccessKeyID() string
+	GetS3SecretAccessKey() string
+	GetS3PublicURL() string
+}
+
 // New builds the configured backend.
 func New(cfg Settings) (Store, error) {
 	switch strings.ToLower(cfg.GetDriver()) {
@@ -48,7 +58,11 @@ func New(cfg Settings) (Store, error) {
 		}
 		return &localStore{root: dir}, nil
 	case DriverS3:
-		return nil, fmt.Errorf("storage: s3 driver not wired yet — add an S3 client implementation in internal/storage before setting STORAGE_DRIVER=s3")
+		s3Cfg, ok := cfg.(S3Settings)
+		if !ok {
+			return nil, fmt.Errorf("storage: s3 driver requires S3Settings implementation")
+		}
+		return newS3(s3Cfg)
 	default:
 		return nil, fmt.Errorf("storage: unsupported driver %q (use local or s3)", cfg.GetDriver())
 	}

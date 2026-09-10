@@ -17,6 +17,7 @@ import (
 	fuel "transport-app/internal/fuel"
 	invoiceapp "transport-app/internal/invoice/application"
 	"transport-app/internal/repository"
+	"transport-app/internal/storage"
 )
 
 // Store is the combined repository interface used by all services.
@@ -115,6 +116,9 @@ func (s *Services) DB() *sql.DB {
 // outbox relay, founder handlers, and automation subscribers all listen on
 // the SAME instance. Passing a nil bus creates a local one (test convenience).
 func NewServices(store Store, cfg *config.Config, log *slog.Logger, eventBus events.EventBus) *Services {
+	if log == nil {
+		log = slog.Default()
+	}
 	s := &Services{store: store, cfg: cfg, log: log}
 
 	if eventBus == nil {
@@ -159,7 +163,15 @@ func NewServices(store Store, cfg *config.Config, log *slog.Logger, eventBus eve
 	s.Notes = &CreditNoteService{baseService: bs}
 	s.Settings = &CompanySettingsService{baseService: bs}
 	s.Dashboard = &DashboardService{baseService: bs}
-	s.Files = &FileService{baseService: bs}
+	var fileStore storage.Store
+	if cfg != nil && (cfg.Storage.Driver != "" || cfg.Storage.LocalDir != "") {
+		var err error
+		fileStore, err = storage.New(&cfg.Storage)
+		if err != nil {
+			log.Warn("storage backend initialization failed; using local fallback", "driver", cfg.Storage.Driver, "error", err)
+		}
+	}
+	s.Files = &FileService{baseService: bs, storage: fileStore}
 	s.Documents = NewDocumentService(bs, s.Files)
 	s.Audit = &AuditLogService{baseService: bs}
 	s.Compliance = &ComplianceService{baseService: bs}

@@ -27,6 +27,7 @@ import (
 	"transport-app/internal/events"
 	"transport-app/internal/repository/sqlite"
 	"transport-app/internal/service"
+	"transport-app/internal/shared"
 )
 
 func setupFilesAPITest(t *testing.T, allowed map[string]bool) (*App, http.Handler, *sql.DB) {
@@ -65,7 +66,15 @@ func setupFilesAPITest(t *testing.T, allowed map[string]bool) (*App, http.Handle
 }
 
 func filesAPIContext(r *http.Request) *http.Request {
-	ctx := context.WithValue(r.Context(), auth.ContextUser, &auth.SessionData{UserID: "u-admin-1", Role: "admin"})
+	return filesAPITenantContext(r, string(shared.DefaultTenant))
+}
+
+// filesAPITenantContext mirrors RequireAPIAuth: it sets both the acting user
+// and the tenant in the request context, since file reads/writes are
+// tenant-scoped at the repository seam.
+func filesAPITenantContext(r *http.Request, tenant string) *http.Request {
+	ctx := shared.ContextWithTenantID(r.Context(), shared.TenantID(tenant))
+	ctx = context.WithValue(ctx, auth.ContextUser, &auth.SessionData{UserID: "u-admin-1", Role: "admin"})
 	return r.WithContext(ctx)
 }
 
@@ -224,4 +233,62 @@ func TestFilesAPIPermissionsDenied(t *testing.T) {
 	rec = httptest.NewRecorder()
 	rtr.ServeHTTP(rec, filesAPIContext(delReq))
 	assert.Equal(t, http.StatusForbidden, rec.Code)
+}
+
+// A file uploaded in tenant 1 must be invisible to a fully-permitted user in
+// tenant 2: metadata GET, entity list, and delete all 404 rather than leak or
+// destroy another org's blob. Regression guard for the files.tenant_id hole.
+func TestFilesAPITenantIsolation(t *testing.T) {
+	app, rtr, dbConn := setupFilesAPITest(t, nil) // mockAuthSvc allows everything
+
+	req := multipartFileRequest(t, "/api/v1/files", "proof.png", pngBytes(), map[string]string{
+		"uploadable_type": "trip_pod",
+		"uploadable_id":   "trip-iso",
+	})
+	rec := httptest.NewRecorder()
+	rtr.ServeHTTP(rec, filesAPIContext(req)) // filesAPIContext => tenant "1"
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+
+	var uploaded map[string]interface{}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &uploaded))
+	fileID, _ := uploaded["id"].(string)
+	require.NotEmpty(t, fileID)
+
+	var storedTenant string
+	require.NoError(t, dbConn.QueryRow(`SELECT tenant_id FROM files WHERE id = ?`, fileID).Scan(&storedTenant))
+	assert.Equal(t, "1", storedTenant, "row must carry the uploader's tenant")
+
+	// Tenant 2 (all perms) cannot see metadata.
+	rec = httptest.NewRecorder()
+	getReq, err := http.NewRequest(http.MethodGet, "/api/v1/files/"+fileID, nil)
+	require.NoError(t, err)
+	rtr.ServeHTTP(rec, filesAPITenantContext(getReq, "2"))
+	assert.Equal(t, http.StatusNotFound, rec.Code, "cross-tenant metadata read must 404")
+
+	// Tenant 2 cannot list it under the entity.
+	rec = httptest.NewRecorder()
+	listReq, err := http.NewRequest(http.MethodGet, "/api/v1/files?uploadable_type=trip_pod&uploadable_id=trip-iso", nil)
+	require.NoError(t, err)
+	rtr.ServeHTTP(rec, filesAPITenantContext(listReq, "2"))
+	require.Equal(t, http.StatusOK, rec.Code)
+	var list []map[string]interface{}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &list))
+	assert.Empty(t, list, "cross-tenant entity list must be empty")
+
+	// Tenant 2 cannot delete it, and the blob must survive.
+	rec = httptest.NewRecorder()
+	delReq, err := http.NewRequest(http.MethodDelete, "/api/v1/files/"+fileID, nil)
+	require.NoError(t, err)
+	rtr.ServeHTTP(rec, filesAPITenantContext(delReq, "2"))
+	assert.Equal(t, http.StatusNotFound, rec.Code, "cross-tenant delete must 404")
+
+	var count int
+	require.NoError(t, dbConn.QueryRow(`SELECT count(*) FROM files WHERE id = ?`, fileID).Scan(&count))
+	assert.Equal(t, 1, count, "cross-tenant delete must not remove the row")
+	assert.Len(t, entriesOnDisk(t, filepath.Join(app.Config.UploadDir, "trips")), 1, "cross-tenant delete must not remove the blob")
+
+	// The owner tenant still sees it.
+	rec = httptest.NewRecorder()
+	rtr.ServeHTTP(rec, filesAPIContext(getReq))
+	assert.Equal(t, http.StatusOK, rec.Code)
 }

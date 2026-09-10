@@ -931,6 +931,7 @@ type File struct {
 	UploadableType string         `json:"uploadable_type"`
 	UploadableID   sql.NullString `json:"uploadable_id"`
 	CreatedAt      time.Time      `json:"created_at"`
+	TenantID       string         `json:"tenant_id"`
 }
 
 type FounderAudit struct {

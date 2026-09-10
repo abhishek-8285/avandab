@@ -20,6 +20,7 @@ func (r *SQLRepository) CreateFile(ctx context.Context, file domain.File) (domai
 		MimeType:       file.MimeType,
 		UploadableType: file.UploadableType,
 		UploadableID:   nullString(file.UploadableID),
+		TenantID:       tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return domain.File{}, err
@@ -38,7 +39,10 @@ func (r *SQLRepository) CreateFile(ctx context.Context, file domain.File) (domai
 }
 
 func (r *SQLRepository) GetFileByID(ctx context.Context, id domain.FileID) (domain.File, error) {
-	f, err := r.Q(ctx).GetFileByID(ctx, string(id))
+	f, err := r.Q(ctx).GetFileByID(ctx, db.GetFileByIDParams{
+		ID:       string(id),
+		TenantID: tenantIDFromCtx(ctx),
+	})
 	if err != nil {
 		return domain.File{}, err
 	}
@@ -59,6 +63,7 @@ func (r *SQLRepository) GetFilesByUploadable(ctx context.Context, uploadableType
 	rows, err := r.Q(ctx).GetFilesByUploadable(ctx, db.GetFilesByUploadableParams{
 		UploadableType: uploadableType,
 		UploadableID:   nullString(&uploadableID),
+		TenantID:       tenantIDFromCtx(ctx),
 	})
 	if err != nil {
 		return nil, err
@@ -81,12 +86,16 @@ func (r *SQLRepository) GetFilesByUploadable(ctx context.Context, uploadableType
 }
 
 func (r *SQLRepository) DeleteFile(ctx context.Context, id domain.FileID) error {
-	return r.Q(ctx).DeleteFile(ctx, string(id))
+	return r.Q(ctx).DeleteFile(ctx, db.DeleteFileParams{
+		ID:       string(id),
+		TenantID: tenantIDFromCtx(ctx),
+	})
 }
 
 func (r *SQLRepository) DeleteFilesByUploadable(ctx context.Context, uploadableType string, uploadableID string) error {
 	return r.Q(ctx).DeleteFilesByUploadable(ctx, db.DeleteFilesByUploadableParams{
 		UploadableType: uploadableType,
 		UploadableID:   nullString(&uploadableID),
+		TenantID:       tenantIDFromCtx(ctx),
 	})
 }
