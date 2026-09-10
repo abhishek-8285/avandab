@@ -154,3 +154,71 @@ func TestChangePassword_MismatchRendersHTML(t *testing.T) {
 	assert.Contains(t, body, "Passwords do not match")
 	assert.Contains(t, body, "Change Password")
 }
+
+type mockTurnstileVerifier struct {
+	valid bool
+	err   error
+}
+
+func (m *mockTurnstileVerifier) Verify(ctx context.Context, token, remoteIP string) (bool, error) {
+	return m.valid, m.err
+}
+
+func TestAuth_TurnstileWidgetRendering(t *testing.T) {
+	h := newAuthTestApp(t)
+	h.Config.Turnstile = config.TurnstileConfig{
+		SiteKey:   "1x00000000000000000000AA",
+		SecretKey: "1x0000000000000000000000000000000AA",
+	}
+
+	// Login page
+	wLogin := httptest.NewRecorder()
+	reqLogin := httptest.NewRequest(http.MethodGet, "/login", nil)
+	h.LoginPage(wLogin, reqLogin)
+	assert.Equal(t, http.StatusOK, wLogin.Code)
+	bodyLogin := wLogin.Body.String()
+	assert.Contains(t, bodyLogin, "cf-turnstile")
+	assert.Contains(t, bodyLogin, "1x00000000000000000000AA")
+	assert.Contains(t, bodyLogin, "challenges.cloudflare.com/turnstile")
+
+	// Register page
+	wReg := httptest.NewRecorder()
+	reqReg := httptest.NewRequest(http.MethodGet, "/register", nil)
+	h.RegisterPage(wReg, reqReg)
+	assert.Equal(t, http.StatusOK, wReg.Code)
+	bodyReg := wReg.Body.String()
+	assert.Contains(t, bodyReg, "cf-turnstile")
+	assert.Contains(t, bodyReg, "1x00000000000000000000AA")
+	assert.Contains(t, bodyReg, "challenges.cloudflare.com/turnstile")
+}
+
+func TestLogin_TurnstileRejectsInvalidToken(t *testing.T) {
+	h := newAuthTestApp(t)
+	h.Config.Turnstile = config.TurnstileConfig{
+		SiteKey:   "1x00000000000000000000AA",
+		SecretKey: "1x0000000000000000000000000000000AA",
+	}
+	h.App.Turnstile = &mockTurnstileVerifier{valid: false}
+
+	form := url.Values{}
+	form.Set("email", "test@fleet.com")
+	form.Set("password", "secret123")
+	form.Set("cf-turnstile-response", "invalid-bot-token")
+
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+
+	h.Login(w, req)
+	assert.Equal(t, http.StatusSeeOther, w.Code)
+	assert.Equal(t, "/login", w.Header().Get("Location"))
+
+	// Check flash_error cookie
+	var flashError string
+	for _, c := range w.Result().Cookies() {
+		if c.Name == "flash_error" {
+			flashError = c.Value
+		}
+	}
+	assert.Contains(t, flashError, "Security verification failed")
+}

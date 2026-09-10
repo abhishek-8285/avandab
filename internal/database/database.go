@@ -61,8 +61,8 @@ var sqlitePragmas = []string{
 	"PRAGMA journal_mode=WAL;",
 	"PRAGMA synchronous=NORMAL;",
 	"PRAGMA busy_timeout=10000;",
-	"PRAGMA cache_size=-131072;",  // 128MB page cache
-	"PRAGMA mmap_size=536870912;", // 512MB memory-mapped file I/O
+	"PRAGMA cache_size=-32768;",   // 32MB page cache (tuned for 1GB VPS)
+	"PRAGMA mmap_size=134217728;", // 128MB memory-mapped file I/O (tuned for 1GB VPS)
 	"PRAGMA locking_mode=NORMAL;",
 	"PRAGMA foreign_keys=ON;",
 	"PRAGMA temp_store=MEMORY;",
@@ -98,16 +98,16 @@ func Open(ctx context.Context, cfg Settings, logger *slog.Logger) (*sql.DB, erro
 	}
 	drivers.Store(db, driver)
 
-	// Pool sizing: sqlite defaults preserved from the previous hardcoded
-	// values; network engines fall back to database/sql defaults unless set.
+	// Pool sizing: sqlite defaults tuned for single-writer WAL;
+	// network engines fall back to database/sql defaults unless set.
 	if driver == DriverSQLite {
 		maxOpen := cfg.GetMaxOpenConns()
 		if maxOpen <= 0 {
-			maxOpen = 64
+			maxOpen = 16
 		}
 		maxIdle := cfg.GetMaxIdleConns()
 		if maxIdle < 0 {
-			maxIdle = 32
+			maxIdle = 8
 		}
 		db.SetMaxOpenConns(maxOpen)
 		db.SetMaxIdleConns(maxIdle)

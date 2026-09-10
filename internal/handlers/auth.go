@@ -95,7 +95,11 @@ func NewAuthHandlers(app *App) *AuthHandlers {
 // LoginPage renders the login page.
 func (h *AuthHandlers) LoginPage(w http.ResponseWriter, r *http.Request) {
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "login_form.html", nil)
+		data := map[string]interface{}{}
+		if h.Config.Turnstile.SiteKey != "" {
+			data["TurnstileSiteKey"] = h.Config.Turnstile.SiteKey
+		}
+		h.renderFragment(w, "login_form.html", data)
 		return
 	}
 
@@ -128,13 +132,21 @@ func (h *AuthHandlers) LoginPage(w http.ResponseWriter, r *http.Request) {
 		pd.Extra["GoogleEnabled"] = true
 	}
 
+	if h.Config.Turnstile.SiteKey != "" {
+		pd.Extra["TurnstileSiteKey"] = h.Config.Turnstile.SiteKey
+	}
+
 	h.renderAuthPage(w, "login_form.html", pd)
 }
 
 // RegisterPage renders the user onboarding registration page.
 func (h *AuthHandlers) RegisterPage(w http.ResponseWriter, r *http.Request) {
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "register_form.html", nil)
+		data := map[string]interface{}{}
+		if h.Config.Turnstile.SiteKey != "" {
+			data["TurnstileSiteKey"] = h.Config.Turnstile.SiteKey
+		}
+		h.renderFragment(w, "register_form.html", data)
 		return
 	}
 	pd := PageData{Title: "Create Account"}
@@ -159,6 +171,12 @@ func (h *AuthHandlers) RegisterPage(w http.ResponseWriter, r *http.Request) {
 		}
 		pd.Extra["GoogleEnabled"] = true
 	}
+	if h.Config.Turnstile.SiteKey != "" {
+		if pd.Extra == nil {
+			pd.Extra = map[string]interface{}{}
+		}
+		pd.Extra["TurnstileSiteKey"] = h.Config.Turnstile.SiteKey
+	}
 	h.renderAuthPage(w, "register_form.html", pd)
 }
 
@@ -175,6 +193,20 @@ func (h *AuthHandlers) Register(w http.ResponseWriter, r *http.Request) {
 	companyName := r.PostFormValue("company_name")
 	password := r.PostFormValue("password")
 	confirm := r.PostFormValue("confirm_password")
+
+	if h.Turnstile != nil && h.Config.Turnstile.Enabled() {
+		turnstileToken := r.PostFormValue("cf-turnstile-response")
+		remoteIP := r.Header.Get("CF-Connecting-IP")
+		if remoteIP == "" {
+			remoteIP = r.RemoteAddr
+		}
+		valid, err := h.Turnstile.Verify(r.Context(), turnstileToken, remoteIP)
+		if err != nil || !valid {
+			slog.Warn("turnstile verification failed on register", "email", email, "error", err)
+			h.renderRegisterError(w, r, "Security verification failed. Please complete the CAPTCHA.", email, name, phone, companyName)
+			return
+		}
+	}
 
 	if password != confirm {
 		h.renderRegisterError(w, r, "Passwords do not match", email, name, phone, companyName)
@@ -218,16 +250,20 @@ func (h *AuthHandlers) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandlers) renderRegisterError(w http.ResponseWriter, r *http.Request, errMsg, email, name, phone, companyName string) {
+	data := map[string]interface{}{
+		"Title":         "Create Account",
+		"Error":         errMsg,
+		"Email":         email,
+		"Name":          name,
+		"Phone":         phone,
+		"CompanyName":   companyName,
+		"GoogleEnabled": h.App.GoogleEnabledFor(),
+	}
+	if h.Config.Turnstile.SiteKey != "" {
+		data["TurnstileSiteKey"] = h.Config.Turnstile.SiteKey
+	}
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "register_form.html", map[string]interface{}{
-			"Title":         "Create Account",
-			"Error":         errMsg,
-			"Email":         email,
-			"Name":          name,
-			"Phone":         phone,
-			"CompanyName":   companyName,
-			"GoogleEnabled": h.App.GoogleEnabledFor(),
-		})
+		h.renderFragment(w, "register_form.html", data)
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
@@ -252,6 +288,42 @@ func (h *AuthHandlers) Login(w http.ResponseWriter, r *http.Request) {
 	email := r.PostFormValue("email")
 	password := r.PostFormValue("password")
 
+	if h.Turnstile != nil && h.Config.Turnstile.Enabled() {
+		turnstileToken := r.PostFormValue("cf-turnstile-response")
+		remoteIP := r.Header.Get("CF-Connecting-IP")
+		if remoteIP == "" {
+			remoteIP = r.RemoteAddr
+		}
+		valid, err := h.Turnstile.Verify(r.Context(), turnstileToken, remoteIP)
+		if err != nil || !valid {
+			slog.Warn("turnstile verification failed on login", "email", email, "error", err)
+			errMsg := "Security verification failed. Please complete the CAPTCHA."
+			if isDatastarRequest(r) {
+				data := map[string]interface{}{
+					"Title": "Login",
+					"Error": errMsg,
+					"Email": email,
+				}
+				if h.Config.Turnstile.SiteKey != "" {
+					data["TurnstileSiteKey"] = h.Config.Turnstile.SiteKey
+				}
+				h.renderFragment(w, "login_form.html", data)
+				return
+			}
+			http.SetCookie(w, &http.Cookie{
+				Name:     "flash_error",
+				Value:    errMsg,
+				Path:     "/",
+				HttpOnly: true,
+				Secure:   h.Config.CookieSecure,
+				SameSite: http.SameSiteLaxMode,
+				MaxAge:   30,
+			})
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+	}
+
 	result, err := h.Services.Auth.Login(r.Context(), service.LoginRequest{
 		Email:    email,
 		Password: password,
@@ -259,10 +331,14 @@ func (h *AuthHandlers) Login(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if isDatastarRequest(r) {
-			h.renderFragment(w, "login_form.html", map[string]interface{}{
+			data := map[string]interface{}{
 				"Title": "Login",
 				"Error": err.Error(),
-			})
+			}
+			if h.Config.Turnstile.SiteKey != "" {
+				data["TurnstileSiteKey"] = h.Config.Turnstile.SiteKey
+			}
+			h.renderFragment(w, "login_form.html", data)
 			return
 		}
 

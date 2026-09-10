@@ -492,6 +492,60 @@ func TestIngestor_SOSEmittedInSameTransaction(t *testing.T) {
 	}
 }
 
+// A parked SOS frame would normally be deduped by the parked guard. The panic
+// fix must still reach the live map and emit a PositionEvent, otherwise
+// responders see the stale pre-SOS location.
+func TestIngestor_ParkedSOSStillRefreshesLivePosition(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicle(t, db, "v-1")
+	insertTestDevice(t, db, "IMEI-PARK-SOS", DeviceStatusActive, strPtr("v-1"))
+
+	ing := NewIngestor(db, uow.NewSQLUnitOfWork(db), events.NewInMemoryBus(),
+		id.NewUUIDGenerator(), &testAudit{},
+		IngestConfig{
+			ParkedDedupWindow: 10 * time.Minute,
+			ParkedDedupMaxM:   50,
+		})
+
+	ctx := context.Background()
+	base := time.Now().UTC()
+	parked := false
+
+	// Frame 1: parked baseline.
+	_, err := ing.IngestRawFrame(ctx, providers.RawFrame{
+		IMEI: "IMEI-PARK-SOS", DeviceTime: base,
+		Latitude: 19.070000, Longitude: 72.830000,
+		Motion: &parked, Provider: "own", ProviderMsgID: "p-1",
+	})
+	require.NoError(t, err)
+
+	// Frame 2: still parked, within the dedup window/distance, but SOS.
+	res, err := ing.IngestRawFrame(ctx, providers.RawFrame{
+		IMEI: "IMEI-PARK-SOS", DeviceTime: base.Add(30 * time.Second),
+		Latitude: 19.070050, Longitude: 72.830050,
+		Motion: &parked, SOS: true, Provider: "own", ProviderMsgID: "p-2",
+	})
+	require.NoError(t, err)
+	require.True(t, res.Accepted)
+
+	var posCount int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM telemetry_positions WHERE imei = 'IMEI-PARK-SOS'`).Scan(&posCount))
+	assert.Equal(t, 2, posCount, "SOS frame must be written to history despite being parked")
+
+	var lat, lng float64
+	require.NoError(t, db.QueryRow(`SELECT latitude, longitude FROM vehicle_latest_position WHERE vehicle_id = 'v-1'`).Scan(&lat, &lng))
+	assert.InDelta(t, 19.070050, lat, 1e-6, "live map must advance to the SOS fix, not the pre-SOS point")
+	assert.InDelta(t, 72.830050, lng, 1e-6)
+
+	var posEvents, sosEvents int
+	require.NoError(t, db.QueryRow(`SELECT
+		SUM(CASE WHEN event_type = 'PositionEvent' THEN 1 ELSE 0 END),
+		SUM(CASE WHEN event_type = 'SOSEvent' THEN 1 ELSE 0 END)
+		FROM outbox_events WHERE aggregate_id = 'v-1'`).Scan(&posEvents, &sosEvents))
+	assert.GreaterOrEqual(t, posEvents, 2, "SOS must emit a PositionEvent for live tracking")
+	assert.Equal(t, 1, sosEvents)
+}
+
 func TestIngestor_SOSReplayDeduped(t *testing.T) {
 	db := newTestIngestorDB(t)
 	insertTestVehicle(t, db, "v-1")
@@ -899,4 +953,110 @@ func TestIngestor_SnapshotWritesTsUnix(t *testing.T) {
 	var tsUnix int64
 	require.NoError(t, db.QueryRow(`SELECT ts_unix FROM telemetry_snapshots`).Scan(&tsUnix))
 	assert.Equal(t, deviceTime.Unix(), tsUnix, "pipeline must stamp the machine-readable clock (00134)")
+}
+
+func TestIngestor_MovingDedup(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicle(t, db, "v-move")
+	insertTestDevice(t, db, "IMEI-MOVE", DeviceStatusActive, strPtr("v-move"))
+
+	audit := &testAudit{}
+	ing := NewIngestor(db, uow.NewSQLUnitOfWork(db), events.NewInMemoryBus(),
+		id.NewUUIDGenerator(), audit,
+		IngestConfig{
+			MovingDedupWindow: 20 * time.Second,
+			MovingDedupMinM:   30.0,
+			MovingDedupMinDeg: 15.0,
+		})
+
+	ctx := context.Background()
+	base := time.Now().UTC()
+	speed := 40.0
+	heading := 90.0
+	moving := true
+
+	// Frame 1: initial moving point
+	f1 := providers.RawFrame{
+		IMEI:          "IMEI-MOVE",
+		DeviceTime:    base,
+		Latitude:      19.070000,
+		Longitude:     72.830000,
+		Speed:         speed,
+		Heading:       heading,
+		Motion:        &moving,
+		Provider:      "own",
+		ProviderMsgID: "m-1",
+	}
+	res, err := ing.IngestRawFrame(ctx, f1)
+	require.NoError(t, err)
+	assert.True(t, res.Accepted)
+
+	var nPositions int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM telemetry_positions WHERE imei='IMEI-MOVE'`).Scan(&nPositions))
+	assert.Equal(t, 1, nPositions)
+
+	// Frame 2: 5 seconds later, moved only 2 meters, straight line (heading 91)
+	// -> Redundant moving breadcrumb: skipped from history, but latest_position updated!
+	heading2 := 91.0
+	f2 := providers.RawFrame{
+		IMEI:          "IMEI-MOVE",
+		DeviceTime:    base.Add(5 * time.Second),
+		Latitude:      19.070010,
+		Longitude:     72.830010,
+		Speed:         speed,
+		Heading:       heading2,
+		Motion:        &moving,
+		Provider:      "own",
+		ProviderMsgID: "m-2",
+	}
+	res, err = ing.IngestRawFrame(ctx, f2)
+	require.NoError(t, err)
+	assert.True(t, res.Accepted)
+
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM telemetry_positions WHERE imei='IMEI-MOVE'`).Scan(&nPositions))
+	assert.Equal(t, 1, nPositions, "redundant moving frame within 30m and 15 deg must not write to positions table")
+
+	// Verify vehicle_latest_position WAS updated for live tracking
+	var latestLat float64
+	require.NoError(t, db.QueryRow(`SELECT latitude FROM vehicle_latest_position WHERE vehicle_id='v-move'`).Scan(&latestLat))
+	assert.InDelta(t, 19.070010, latestLat, 0.000001, "vehicle_latest_position must still be updated with newest live coordinate")
+
+	// Frame 3: Turned corner (heading changed by 45 degrees > 15 deg threshold)
+	heading3 := 135.0
+	f3 := providers.RawFrame{
+		IMEI:          "IMEI-MOVE",
+		DeviceTime:    base.Add(10 * time.Second),
+		Latitude:      19.070020,
+		Longitude:     72.830020,
+		Speed:         speed,
+		Heading:       heading3,
+		Motion:        &moving,
+		Provider:      "own",
+		ProviderMsgID: "m-3",
+	}
+	res, err = ing.IngestRawFrame(ctx, f3)
+	require.NoError(t, err)
+	assert.True(t, res.Accepted)
+
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM telemetry_positions WHERE imei='IMEI-MOVE'`).Scan(&nPositions))
+	assert.Equal(t, 2, nPositions, "turning corner > 15 degrees must record a new position breadcrumb")
+
+	// Frame 4: Moved > 30 meters down the road
+	f4 := providers.RawFrame{
+		IMEI:          "IMEI-MOVE",
+		DeviceTime:    base.Add(15 * time.Second),
+		Latitude:      19.071000, // ~100+ meters away
+		Longitude:     72.831000,
+		Speed:         speed,
+		Heading:       heading3,
+		Motion:        &moving,
+		Provider:      "own",
+		ProviderMsgID: "m-4",
+	}
+	res, err = ing.IngestRawFrame(ctx, f4)
+	require.NoError(t, err)
+	assert.True(t, res.Accepted)
+
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM telemetry_positions WHERE imei='IMEI-MOVE'`).Scan(&nPositions))
+	assert.Equal(t, 3, nPositions, "displacement > 30m must record a new position breadcrumb")
 }

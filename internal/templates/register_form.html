@@ -134,6 +134,11 @@
                 </div>
                 <p class="text-xs text-text-muted">Must be at least 8 characters</p>
 
+                {{if .TurnstileSiteKey}}
+                <div class="cf-turnstile my-3" data-sitekey="{{.TurnstileSiteKey}}" data-theme="auto"></div>
+                <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+                {{end}}
+
                 <button type="submit" class="w-full mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-primary text-on-primary text-sm font-semibold px-4 py-2.5 shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer border-0">
                     Register Operator Account
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>

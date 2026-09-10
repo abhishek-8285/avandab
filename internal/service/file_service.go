@@ -22,11 +22,6 @@ type FileService struct {
 	storage storage.Store
 }
 
-// SetStorage configures the storage backend for FileService.
-func (s *FileService) SetStorage(store storage.Store) {
-	s.storage = store
-}
-
 // UploadResult contains information about an uploaded file.
 type UploadResult struct {
 	File domain.File

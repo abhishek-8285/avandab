@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -155,4 +156,70 @@ func TestTripHandlers_CompleteTrip_PaidInvoiceGuard(t *testing.T) {
 	var detStatus string
 	require.NoError(t, db.QueryRow(`SELECT status FROM trip_detentions WHERE id = 'd1'`).Scan(&detStatus))
 	assert.Equal(t, domain.DetentionClosed, detStatus, "detention stays closed when the invoice is already paid")
+}
+
+func completeTripPostRequest(t *testing.T, tripID string, form url.Values) *http.Request {
+	t.Helper()
+	r := httptest.NewRequest(http.MethodPost, "/trips/"+tripID+"/complete", strings.NewReader(form.Encode()))
+	r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	ctx := chi.NewRouteContext()
+	ctx.URLParams.Add("id", tripID)
+	rctx := context.WithValue(r.Context(), chi.RouteCtxKey, ctx)
+	rctx = shared.ContextWithTenantID(rctx, shared.DefaultTenant)
+	return r.WithContext(rctx)
+}
+
+func TestTripHandlers_CompleteTrip_GeneratesInvoiceWithoutDetentions(t *testing.T) {
+	db := handlerTestDB(t)
+	seedDeliveredTrip(t, db, "t1", "b1")
+
+	h := &TripHandlers{App: &App{DB: db}}
+	w := httptest.NewRecorder()
+	h.CompleteTrip(w, completeTripRequest(t, "t1"))
+	assert.Equal(t, http.StatusSeeOther, w.Code)
+
+	// Trip completed.
+	var status string
+	require.NoError(t, db.QueryRow(`SELECT status FROM trips WHERE id = 't1'`).Scan(&status))
+	assert.Equal(t, "completed", status)
+
+	// Invoice generated even without detentions!
+	var invoiceCount int
+	require.NoError(t, db.QueryRow(`SELECT count(*) FROM invoices WHERE booking_id = 'b1'`).Scan(&invoiceCount))
+	assert.Equal(t, 1, invoiceCount)
+
+	var subtotal, tax, total float64
+	require.NoError(t, db.QueryRow(`SELECT subtotal, tax, total FROM invoices WHERE booking_id = 'b1'`).Scan(&subtotal, &tax, &total))
+	assert.InDelta(t, 25000.0, subtotal, 0.01)
+	assert.InDelta(t, 4500.0, tax, 0.01)
+	assert.InDelta(t, 29500.0, total, 0.01)
+}
+
+func TestTripHandlers_CompleteTrip_BreakdownSetsVehicleMaintenanceAndBlocked(t *testing.T) {
+	db := handlerTestDB(t)
+	seedDeliveredTrip(t, db, "t1", "b1")
+
+	// Seed vehicle and assign to trip
+	_, err := db.Exec(`INSERT INTO vehicles (id, tenant_id, registration_number, vehicle_number, vehicle_type, capacity, status)
+		VALUES ('v1', '1', 'KA01AB1234', 'KA01AB1234', 'truck', 10, 'running')`)
+	require.NoError(t, err)
+	_, err = db.Exec(`UPDATE trips SET vehicle_id = 'v1' WHERE id = 't1'`)
+	require.NoError(t, err)
+
+	form := url.Values{}
+	form.Set("breakdown", "1")
+	form.Set("breakdown_note", "Engine overheated on highway")
+
+	h := &TripHandlers{App: &App{DB: db}}
+	w := httptest.NewRecorder()
+	req := completeTripPostRequest(t, "t1", form)
+	h.CompleteTrip(w, req)
+	assert.Equal(t, http.StatusSeeOther, w.Code)
+
+	var vehStatus, blockedReason string
+	var blocked int
+	require.NoError(t, db.QueryRow(`SELECT status, blocked, blocked_reason FROM vehicles WHERE id = 'v1'`).Scan(&vehStatus, &blocked, &blockedReason))
+	assert.Equal(t, "maintenance", vehStatus)
+	assert.Equal(t, 1, blocked)
+	assert.Contains(t, blockedReason, "Engine overheated on highway")
 }

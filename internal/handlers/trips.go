@@ -983,9 +983,6 @@ func (h *TripHandlers) CompleteTrip(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return err
 			}
-			if len(detentions) == 0 {
-				return nil
-			}
 
 			lines := make([]invoiceApp.InvoiceLineItemInput, 0, len(detentions))
 			for _, d := range detentions {
@@ -1034,7 +1031,7 @@ func (h *TripHandlers) CompleteTrip(w http.ResponseWriter, r *http.Request) {
 			}
 			// Paid/partially-paid invoice → nothing attached, detentions
 			// stay closed so they can be handled manually (no data loss).
-			if !attached {
+			if !attached || len(detentions) == 0 {
 				return nil
 			}
 			for _, d := range detentions {
@@ -1055,8 +1052,17 @@ func (h *TripHandlers) CompleteTrip(w http.ResponseWriter, r *http.Request) {
 		if breakdownNote != "" {
 			desc += ": " + breakdownNote
 		}
+		if closedVehicleID == "" && h.DB != nil {
+			_ = h.DB.QueryRowContext(r.Context(), `SELECT vehicle_id FROM trips WHERE id = $1 AND tenant_id = $2`, id, string(tenant)).Scan(&closedVehicleID)
+		}
 		if closedVehicleID != "" {
 			desc += " (vehicle " + closedVehicleID + ")"
+			if h.DB != nil {
+				_, _ = h.DB.ExecContext(r.Context(),
+					`UPDATE vehicles SET status = 'maintenance', blocked = 1, blocked_reason = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3`,
+					desc, closedVehicleID, string(tenant),
+				)
+			}
 		}
 		if h.Services != nil && h.Services.OpsAlerts != nil {
 			_, _ = h.Services.OpsAlerts.CreateAlert(r.Context(), service.OpsAlert{

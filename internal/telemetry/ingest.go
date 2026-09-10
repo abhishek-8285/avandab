@@ -46,6 +46,9 @@ type IngestConfig struct {
 	GSMPoorLevel      int           // gsm signal at/below which poor_signal fires (1)
 	ParkedDedupWindow time.Duration // motion=0 frames within this window may be deduped (10 min)
 	ParkedDedupMaxM   float64       // max distance from last parked frame for dedup (50 m)
+	MovingDedupWindow time.Duration // maximum time gap to consider moving dedup (e.g. 20s)
+	MovingDedupMinM   float64       // minimum distance in meters to record moving breadcrumb (e.g. 30m)
+	MovingDedupMinDeg float64       // minimum heading change in degrees to record moving breadcrumb (e.g. 15 deg)
 }
 
 // applyDefaults fills zero-valued guard thresholds. Centralized so wiring
@@ -256,17 +259,21 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 			vehicleID = ing.fallbackVehicleID(txCtx, device.TenantID, frame.IMEI)
 		}
 
-		// Step 7: Parked-dedup check (migration 00117): a motion=0 frame that
-		// is within ParkedDedupWindow of the last stored frame AND within
-		// ParkedDedupMaxM of it (last frame also parked) adds no information.
-		// The position/latest/snapshot writes are skipped but the raw event
-		// (audit) and last_seen (liveness) still record the frame.
-		parked := frame.Motion != nil && !*frame.Motion && ing.parkedDuplicate(txCtx, frame)
+		// Step 7: Redundant frame checks (migration 00117 + moving deadband):
+		// A motion=0 (or speed < 1 km/h) frame within ParkedDedupWindow and
+		// ParkedDedupMaxM adds no information.
+		// A moving frame with displacement < MovingDedupMinM and heading delta
+		// < MovingDedupMinDeg within MovingDedupWindow is also redundant for history.
+		dedup := ing.checkDedup(txCtx, frame)
+		skipHistory := (dedup.Parked || dedup.MovingDedup) && !frame.SOS
+		// SOS is an emergency: even a redundant parked frame must refresh the
+		// live map and emit a PositionEvent so responders see the panic fix.
+		writeLive := !dedup.Parked || frame.SOS
 
 		// Step 7b: Insert position
 		positionID := ing.idGen.GenerateUUID()
 		receivedAt := time.Now().UTC()
-		if !parked {
+		if !skipHistory {
 			if err := ing.insertPosition(txCtx, positionID, device.TenantID, vehicleID, frame, adjustedOdometer, adjustedFuel, rawEventID, receivedAt); err != nil {
 				return fmt.Errorf("position insert: %w", err)
 			}
@@ -279,7 +286,7 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 		// drift corruption guard. Frames from providers that speak Valid are
 		// judged by the flag; providers that never set it (mobile "own") are
 		// judged by derived fix quality (H4 trust policy).
-		if vehicleID != "" && !parked && fixTrusted(frame) {
+		if vehicleID != "" && writeLive && fixTrusted(frame) {
 			if err := ing.upsertLatestPosition(txCtx, vehicleID, device.TenantID, frame, adjustedOdometer, adjustedFuel, receivedAt); err != nil {
 				return fmt.Errorf("latest position upsert: %w", err)
 			}
@@ -290,7 +297,7 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 		// This requires coordination with the booking spec. Deferred to Phase 2.
 
 		// Step 10: Enrich + INSERT telemetry_snapshots
-		if !parked {
+		if !skipHistory {
 			if err := ing.insertSnapshot(txCtx, frame, device, vehicleID, adjustedOdometer, adjustedFuel, positionID, receivedAt); err != nil {
 				return fmt.Errorf("snapshot insert: %w", err)
 			}
@@ -323,14 +330,14 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 			aggregateID = frame.IMEI // IMEI when unassigned (Decision D6)
 		}
 		var eventsToSave []any
-		if !parked {
+		if writeLive {
 			eventsToSave = append(eventsToSave, positionEvent)
 		}
 		// Device-health guard (migration 00117): transition detection against
 		// the previous stored row. Fires at most one alert (power_cut >
 		// low_battery > poor_signal) per frame and only on a healthy→unhealthy
 		// crossing, so recovery re-arms it without alert spam.
-		if !parked {
+		if !dedup.Parked {
 			if alert := ing.deviceHealthGuard(txCtx, positionID, device, vehicleID, frame); alert != nil {
 				alertEvent = alert
 				eventsToSave = append(eventsToSave, alertEvent)
@@ -408,28 +415,61 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 }
 
 // parkedDuplicate reports whether the frame is a redundant parked report:
-// the last stored row for the IMEI was also parked (motion=0), is within
-// ParkedDedupWindow, and within ParkedDedupMaxM of the incoming frame.
-func (ing *Ingestor) parkedDuplicate(ctx context.Context, frame RawFrame) bool {
+type dedupStatus struct {
+	Parked      bool
+	MovingDedup bool
+}
+
+// checkDedup inspects the prior stored row to determine whether the incoming
+// frame is a redundant parked frame or falls inside the moving deadband.
+func (ing *Ingestor) checkDedup(ctx context.Context, frame RawFrame) dedupStatus {
+	var status dedupStatus
 	db := txOrDB(ctx, ing.deviceStore.db)
 	var lastTime time.Time
 	var lat, lng sql.NullFloat64
 	var motion sql.NullInt64
+	var speed, heading sql.NullFloat64
 	err := db.QueryRowContext(ctx, `
-		SELECT device_time, latitude, longitude, motion
+		SELECT device_time, latitude, longitude, motion, speed, heading
 		FROM telemetry_positions WHERE imei = $1
-		ORDER BY device_time DESC LIMIT 1`, frame.IMEI).Scan(&lastTime, &lat, &lng, &motion)
-	if err != nil || !motion.Valid || motion.Int64 != 0 || !lat.Valid || !lng.Valid {
-		return false
+		ORDER BY device_time DESC LIMIT 1`, frame.IMEI).
+		Scan(&lastTime, &lat, &lng, &motion, &speed, &heading)
+	if err != nil || !lat.Valid || !lng.Valid {
+		return status
 	}
-	// Window compares DEVICE times, not wall clock: a phone flushing a parked
-	// frame queued 30 minutes ago must be judged against its own fix gap, not
-	// arrival time. Out-of-order (stale) frames are always stored.
+
 	gap := frame.DeviceTime.Sub(lastTime)
-	if gap < 0 || gap > ing.cfg.ParkedDedupWindow {
-		return false
+	if gap < 0 {
+		return status // out-of-order frame, always store
 	}
-	return haversineMeters(lat.Float64, lng.Float64, frame.Latitude, frame.Longitude) <= ing.cfg.ParkedDedupMaxM
+
+	dist := haversineMeters(lat.Float64, lng.Float64, frame.Latitude, frame.Longitude)
+
+	// Parked / stationary check per Spec 17 (migration 00117)
+	isParked := frame.Motion != nil && !*frame.Motion
+	prevParked := motion.Valid && motion.Int64 == 0
+
+	if isParked && prevParked && gap <= ing.cfg.ParkedDedupWindow && dist <= ing.cfg.ParkedDedupMaxM {
+		status.Parked = true
+		return status
+	}
+
+	// Moving deadband check (only active when MovingDedupMinM > 0)
+	if !isParked && ing.cfg.MovingDedupMinM > 0 && gap <= ing.cfg.MovingDedupWindow && dist <= ing.cfg.MovingDedupMinM {
+		if heading.Valid {
+			hDiff := math.Abs(frame.Heading - heading.Float64)
+			if hDiff > 180 {
+				hDiff = 360 - hDiff
+			}
+			if hDiff > ing.cfg.MovingDedupMinDeg {
+				return status
+			}
+		}
+		status.MovingDedup = true
+		return status
+	}
+
+	return status
 }
 
 // haversineMeters returns the great-circle distance in metres (mirrors the

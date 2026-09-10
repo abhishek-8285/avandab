@@ -26,6 +26,9 @@ func newMockS3Client() *mockS3Client {
 }
 
 func (m *mockS3Client) PutObject(_ context.Context, params *s3.PutObjectInput, _ ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
+	if m.putObserver != nil {
+		m.putObserver(params)
+	}
 	data, err := io.ReadAll(params.Body)
 	if err != nil {
 		return nil, err

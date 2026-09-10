@@ -14,12 +14,14 @@ go vet ./...
 
 echo "==> [2/4] Cross-compiling binary locally (Linux amd64)..."
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o bin/server ./cmd/server
-gzip -9 -c bin/server > bin/server.gz
+echo "==> [3/5] Transferring binary to ${TARGET_HOST} with rsync..."
+rsync -avzP bin/server "${TARGET_HOST}:${REMOTE_DIR}/bin/server.new"
+ssh "${TARGET_HOST}" "chmod +x ${REMOTE_DIR}/bin/server.new"
 
-echo "==> [3/4] Streaming compressed binary to ${TARGET_HOST}..."
-cat bin/server.gz | ssh "${TARGET_HOST}" "gzip -d > ${REMOTE_DIR}/bin/server.new && chmod +x ${REMOTE_DIR}/bin/server.new"
+echo "==> [4/5] Syncing templates and static assets to ${TARGET_HOST}..."
+tar -czf - internal/templates internal/static | ssh "${TARGET_HOST}" "tar -xzf - -C ${REMOTE_DIR}"
 
-echo "==> [4/4] Performing binary swap and service restart..."
+echo "==> [5/5] Performing binary swap and service restart..."
 ssh "${TARGET_HOST}" "sudo systemctl stop avandab && mv -f ${REMOTE_DIR}/bin/server.new ${REMOTE_DIR}/bin/server && sudo systemctl start avandab && systemctl is-active avandab"
 
 echo "==> [5/5] Verifying health status..."

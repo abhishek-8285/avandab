@@ -103,6 +103,11 @@
                     </div>
                 </div>
 
+                {{if .TurnstileSiteKey}}
+                <div class="cf-turnstile my-3" data-sitekey="{{.TurnstileSiteKey}}" data-theme="auto"></div>
+                <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+                {{end}}
+
                 <button type="submit" class="w-full mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-primary text-on-primary text-sm font-semibold px-4 py-2.5 shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer border-0">
                     Sign In
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
