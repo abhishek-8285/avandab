@@ -972,6 +972,8 @@ func main() {
 		controlTowerAPIHandler.Register(r)
 		// Work orders (job cards) JSON API — tenant-scoped, maintenance RBAC.
 		app.Maintenance.RegisterAPIRoutes(r)
+		// Fuel issues (TMS_SOP p.9 parity) JSON API — tenant-scoped, fuel RBAC.
+		app.FuelAudit.RegisterFuelIssueAPIRoutes(r)
 		// Spec 18 Wave A — route optimization API (tenant-scoped, permission-gated)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "create")).Post("/api/v1/routes/optimize", app.Routes.Optimize)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "read")).Get("/api/v1/routes/optimize/jobs", app.Routes.OptimizeJobs)

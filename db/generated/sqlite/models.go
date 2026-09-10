@@ -1002,6 +1002,29 @@ type FuelEvent struct {
 	CreatedAt       time.Time       `json:"created_at"`
 }
 
+type FuelIssue struct {
+	ID              string          `json:"id"`
+	TenantID        string          `json:"tenant_id"`
+	IssueNumber     sql.NullString  `json:"issue_number"`
+	FuelStationID   string          `json:"fuel_station_id"`
+	PumpPointID     sql.NullString  `json:"pump_point_id"`
+	VehicleID       string          `json:"vehicle_id"`
+	DriverID        sql.NullString  `json:"driver_id"`
+	TripID          sql.NullString  `json:"trip_id"`
+	FuelType        string          `json:"fuel_type"`
+	OpeningReading  float64         `json:"opening_reading"`
+	ClosingReading  float64         `json:"closing_reading"`
+	LitresIssued    float64         `json:"litres_issued"`
+	VehicleOdometer sql.NullFloat64 `json:"vehicle_odometer"`
+	RatePerLitre    sql.NullFloat64 `json:"rate_per_litre"`
+	TotalCost       sql.NullFloat64 `json:"total_cost"`
+	Remarks         string          `json:"remarks"`
+	IssuedAt        time.Time       `json:"issued_at"`
+	CreatedBy       string          `json:"created_by"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
+}
+
 type FuelPrice struct {
 	ID          string         `json:"id"`
 	TenantID    string         `json:"tenant_id"`
