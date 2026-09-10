@@ -125,24 +125,40 @@ func (r *MaintenanceRepository) ListSchedulesForTenant(ctx context.Context, vehi
 	return r.listSchedules(ctx, vehicleID, tenantID, false)
 }
 
-// GetLatestOdometer returns the max odometer from snapshots, falling back to vehicles.odometer / current_mileage.
+// GetLatestOdometer returns the max odometer across vehicle_measurements, telemetry_snapshots, and vehicles.odometer.
 func (r *MaintenanceRepository) GetLatestOdometer(ctx context.Context, vehicleID string) (float64, error) {
+	var maxOdo float64
+
+	var measOdo sql.NullFloat64
+	if err := r.db.QueryRowContext(ctx, `
+		SELECT MAX(m.counter_reading)
+		FROM vehicle_measurements m
+		JOIN vehicle_measuring_points p ON m.point_id = p.id
+		WHERE p.vehicle_id = $1 AND p.kind = 'ODO'`, vehicleID).Scan(&measOdo); err == nil && measOdo.Valid {
+		if measOdo.Float64 > maxOdo {
+			maxOdo = measOdo.Float64
+		}
+	}
+
 	var snapOdo sql.NullFloat64
-	err := r.db.QueryRowContext(ctx, `
+	if err := r.db.QueryRowContext(ctx, `
 		SELECT MAX(odometer) FROM telemetry_snapshots
-		WHERE vehicle_id = $1 AND odometer IS NOT NULL`, vehicleID).Scan(&snapOdo)
-	if err == nil && snapOdo.Valid && snapOdo.Float64 > 0 {
-		return snapOdo.Float64, nil
+		WHERE vehicle_id = $1 AND odometer IS NOT NULL`, vehicleID).Scan(&snapOdo); err == nil && snapOdo.Valid {
+		if snapOdo.Float64 > maxOdo {
+			maxOdo = snapOdo.Float64
+		}
 	}
 
 	var vehOdo sql.NullFloat64
-	err = r.db.QueryRowContext(ctx, `
+	if err := r.db.QueryRowContext(ctx, `
 		SELECT COALESCE(odometer, current_mileage, 0) FROM vehicles
-		WHERE id = $1`, vehicleID).Scan(&vehOdo)
-	if err == nil && vehOdo.Valid {
-		return vehOdo.Float64, nil
+		WHERE id = $1`, vehicleID).Scan(&vehOdo); err == nil && vehOdo.Valid {
+		if vehOdo.Float64 > maxOdo {
+			maxOdo = vehOdo.Float64
+		}
 	}
-	return 0, nil
+
+	return maxOdo, nil
 }
 
 // SetMaintenanceDue sets the DATE on vehicles.maintenance_due (DATE semantics from 00042).
@@ -584,11 +600,12 @@ func (r *MaintenanceRepository) CreateWorkOrder(ctx context.Context, w domain.Wo
 	}
 	_, err := r.db.ExecContext(ctx, `
 		INSERT INTO work_orders (id, tenant_id, vehicle_id, schedule_id, trip_id, title, description,
-			assignee, vendor, cost_estimate, cost_actual, status, due_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+			assignee, vendor, cost_estimate, cost_actual, status, due_at, plan_id, due_km)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
 		w.ID, w.TenantID, w.VehicleID, nullStr(w.ScheduleID), nullStr(w.TripID),
 		w.Title, w.Description, w.Assignee, w.Vendor,
-		nullFloat(w.CostEstimate), nullFloat(w.CostActual), w.Status, nullTime(w.DueAt))
+		nullFloat(w.CostEstimate), nullFloat(w.CostActual), w.Status, nullTime(w.DueAt),
+		nullStr(w.PlanID), nullFloat(w.DueKM))
 	return err
 }
 
@@ -597,7 +614,7 @@ func (r *MaintenanceRepository) FindWorkOrder(ctx context.Context, tenantID, id 
 	row := r.db.QueryRowContext(ctx, `
 		SELECT id, tenant_id, vehicle_id, schedule_id, trip_id, title, description,
 			assignee, vendor, cost_estimate, cost_actual, status, due_at, closed_at,
-			created_at, updated_at
+			created_at, updated_at, plan_id, due_km
 		FROM work_orders WHERE id = $1 AND tenant_id = $2`, id, tenantID)
 	w, err := scanWorkOrder(row)
 	if err != nil {
@@ -619,7 +636,7 @@ func (r *MaintenanceRepository) ListWorkOrders(ctx context.Context, tenantID, st
 	}
 	query := `SELECT id, tenant_id, vehicle_id, schedule_id, trip_id, title, description,
 			assignee, vendor, cost_estimate, cost_actual, status, due_at, closed_at,
-			created_at, updated_at
+			created_at, updated_at, plan_id, due_km
 		FROM work_orders WHERE tenant_id = ?`
 	args := []interface{}{tenantID}
 	if status != "" {
@@ -657,7 +674,7 @@ func (r *MaintenanceRepository) FindOpenWorkOrder(ctx context.Context, tenantID,
 	}
 	query := `SELECT id, tenant_id, vehicle_id, schedule_id, trip_id, title, description,
 			assignee, vendor, cost_estimate, cost_actual, status, due_at, closed_at,
-			created_at, updated_at
+			created_at, updated_at, plan_id, due_km
 		FROM work_orders
 		WHERE tenant_id = $1 AND vehicle_id = $2 AND status NOT IN ('done','cancelled')`
 	args := []interface{}{tenantID, vehicleID}
@@ -814,13 +831,13 @@ type workOrderScanner interface {
 
 func scanWorkOrder(row workOrderScanner) (*domain.WorkOrder, error) {
 	var w domain.WorkOrder
-	var schedID, tripID sql.NullString
-	var costEst, costAct sql.NullFloat64
+	var schedID, tripID, planID sql.NullString
+	var costEst, costAct, dueKM sql.NullFloat64
 	var dueAt, closedAt sql.NullTime
 	var createdAt, updatedAt time.Time
 	if err := row.Scan(&w.ID, &w.TenantID, &w.VehicleID, &schedID, &tripID,
 		&w.Title, &w.Description, &w.Assignee, &w.Vendor, &costEst, &costAct,
-		&w.Status, &dueAt, &closedAt, &createdAt, &updatedAt); err != nil {
+		&w.Status, &dueAt, &closedAt, &createdAt, &updatedAt, &planID, &dueKM); err != nil {
 		return nil, err
 	}
 	if schedID.Valid {
@@ -829,11 +846,17 @@ func scanWorkOrder(row workOrderScanner) (*domain.WorkOrder, error) {
 	if tripID.Valid {
 		w.TripID = &tripID.String
 	}
+	if planID.Valid {
+		w.PlanID = &planID.String
+	}
 	if costEst.Valid {
 		w.CostEstimate = &costEst.Float64
 	}
 	if costAct.Valid {
 		w.CostActual = &costAct.Float64
+	}
+	if dueKM.Valid {
+		w.DueKM = &dueKM.Float64
 	}
 	if dueAt.Valid {
 		w.DueAt = &dueAt.Time
@@ -843,6 +866,212 @@ func scanWorkOrder(row workOrderScanner) (*domain.WorkOrder, error) {
 	}
 	w.CreatedAt = createdAt
 	return &w, nil
+}
+
+// FindOpenWorkOrderByPlan returns the active job card generated for an IP41 plan.
+func (r *MaintenanceRepository) FindOpenWorkOrderByPlan(ctx context.Context, tenantID, vehicleID, planID string) (*domain.WorkOrder, error) {
+	if tenantID == "" || vehicleID == "" || planID == "" {
+		return nil, nil
+	}
+	query := `SELECT id, tenant_id, vehicle_id, schedule_id, trip_id, title, description,
+			assignee, vendor, cost_estimate, cost_actual, status, due_at, closed_at,
+			created_at, updated_at, plan_id, due_km
+		FROM work_orders
+		WHERE tenant_id = $1 AND vehicle_id = $2 AND plan_id = $3 AND status NOT IN ('done','cancelled')
+		ORDER BY created_at DESC LIMIT 1`
+	w, err := scanWorkOrder(r.db.QueryRowContext(ctx, query, tenantID, vehicleID, planID))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return w, nil
+}
+
+// ── Maintenance Plans IP41 (Spec 04 §14) ─────────────────────────────────
+
+// CreateMaintenancePlan inserts a new IP41 maintenance plan.
+func (r *MaintenanceRepository) CreateMaintenancePlan(ctx context.Context, p domain.MaintenancePlan) error {
+	if p.TenantID == "" || p.VehicleID == "" || p.PlanNumber == "" || p.ServiceType == "" {
+		return errors.New("maintenance: tenant, vehicle, plan_number and service_type are required")
+	}
+	if p.Status == "" {
+		p.Status = "active"
+	}
+	if p.CallHorizonPercent <= 0 {
+		p.CallHorizonPercent = 100.0
+	}
+	_, err := r.db.ExecContext(ctx, `
+		INSERT INTO maintenance_plans (
+			id, tenant_id, plan_number, vehicle_id, measuring_point_id, service_type,
+			description, cycle_interval_km, cycle_interval_days, call_horizon_percent,
+			last_scheduled_km, last_scheduled_date, next_due_km, next_due_date, status
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+		p.ID, p.TenantID, p.PlanNumber, p.VehicleID, nullStr(p.MeasuringPointID), p.ServiceType,
+		p.Description, nullFloat(p.CycleIntervalKM), nullInt(p.CycleIntervalDays), p.CallHorizonPercent,
+		nullFloat(p.LastScheduledKM), nullTime(p.LastScheduledDate), nullFloat(p.NextDueKM), nullTime(p.NextDueDate), p.Status)
+	return err
+}
+
+// FindMaintenancePlan returns a single plan by ID scoped to tenant.
+func (r *MaintenanceRepository) FindMaintenancePlan(ctx context.Context, tenantID, id string) (*domain.MaintenancePlan, error) {
+	if tenantID == "" || id == "" {
+		return nil, nil
+	}
+	row := r.db.QueryRowContext(ctx, `
+		SELECT id, tenant_id, plan_number, vehicle_id, measuring_point_id, service_type,
+			description, cycle_interval_km, cycle_interval_days, call_horizon_percent,
+			last_scheduled_km, last_scheduled_date, next_due_km, next_due_date, status,
+			created_at, updated_at
+		FROM maintenance_plans
+		WHERE id = $1 AND tenant_id = $2`, id, tenantID)
+	p, err := scanMaintenancePlan(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return p, nil
+}
+
+// ListMaintenancePlans lists plans for a tenant, optionally filtered by vehicle.
+func (r *MaintenanceRepository) ListMaintenancePlans(ctx context.Context, tenantID, vehicleID string) ([]domain.MaintenancePlan, error) {
+	if tenantID == "" {
+		return nil, nil
+	}
+	query := `SELECT id, tenant_id, plan_number, vehicle_id, measuring_point_id, service_type,
+			description, cycle_interval_km, cycle_interval_days, call_horizon_percent,
+			last_scheduled_km, last_scheduled_date, next_due_km, next_due_date, status,
+			created_at, updated_at
+		FROM maintenance_plans WHERE tenant_id = ?`
+	args := []interface{}{tenantID}
+	if vehicleID != "" {
+		query += " AND vehicle_id = ?"
+		args = append(args, vehicleID)
+	}
+	query += " ORDER BY created_at DESC"
+	rebound, rerr := appdb.Rebind(query)
+	if rerr != nil {
+		return nil, rerr
+	}
+	rows, err := r.db.QueryContext(ctx, rebound, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []domain.MaintenancePlan
+	for rows.Next() {
+		p, err := scanMaintenancePlan(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *p)
+	}
+	return out, rows.Err()
+}
+
+// UpdateMaintenancePlan updates an existing plan's schedule and status.
+func (r *MaintenanceRepository) UpdateMaintenancePlan(ctx context.Context, p domain.MaintenancePlan) error {
+	if p.TenantID == "" || p.ID == "" {
+		return errors.New("maintenance: tenant and plan id required")
+	}
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE maintenance_plans SET
+			description = $1, cycle_interval_km = $2, cycle_interval_days = $3,
+			call_horizon_percent = $4, last_scheduled_km = $5, last_scheduled_date = $6,
+			next_due_km = $7, next_due_date = $8, status = $9, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $10 AND tenant_id = $11`,
+		p.Description, nullFloat(p.CycleIntervalKM), nullInt(p.CycleIntervalDays),
+		p.CallHorizonPercent, nullFloat(p.LastScheduledKM), nullTime(p.LastScheduledDate),
+		nullFloat(p.NextDueKM), nullTime(p.NextDueDate), p.Status,
+		p.ID, p.TenantID)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return errors.New("maintenance: plan not found")
+	}
+	return nil
+}
+
+// GetMeasuringPointAnnualEstimate retrieves the annual_estimate configured for a measuring point or vehicle ODO.
+func (r *MaintenanceRepository) GetMeasuringPointAnnualEstimate(ctx context.Context, tenantID, vehicleID, pointID string) (float64, error) {
+	if tenantID == "" {
+		return 0, nil
+	}
+	var annualEst sql.NullFloat64
+	var err error
+	if pointID != "" {
+		err = r.db.QueryRowContext(ctx, `
+			SELECT annual_estimate FROM vehicle_measuring_points
+			WHERE tenant_id = $1 AND id = $2`, tenantID, pointID).Scan(&annualEst)
+	} else if vehicleID != "" {
+		err = r.db.QueryRowContext(ctx, `
+			SELECT annual_estimate FROM vehicle_measuring_points
+			WHERE tenant_id = $1 AND vehicle_id = $2 AND kind = 'ODO'
+			ORDER BY created_at DESC LIMIT 1`, tenantID, vehicleID).Scan(&annualEst)
+	}
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	if annualEst.Valid {
+		return annualEst.Float64, nil
+	}
+	return 0, nil
+}
+
+func scanMaintenancePlan(row workOrderScanner) (*domain.MaintenancePlan, error) {
+	var p domain.MaintenancePlan
+	var mpID sql.NullString
+	var cycleKM, lastKM, nextKM sql.NullFloat64
+	var cycleDays sql.NullInt64
+	var lastDate, nextDate sql.NullTime
+	var createdAt, updatedAt time.Time
+	if err := row.Scan(&p.ID, &p.TenantID, &p.PlanNumber, &p.VehicleID, &mpID, &p.ServiceType,
+		&p.Description, &cycleKM, &cycleDays, &p.CallHorizonPercent,
+		&lastKM, &lastDate, &nextKM, &nextDate, &p.Status, &createdAt, &updatedAt); err != nil {
+		return nil, err
+	}
+	if mpID.Valid {
+		p.MeasuringPointID = &mpID.String
+	}
+	if cycleKM.Valid {
+		p.CycleIntervalKM = &cycleKM.Float64
+	}
+	if cycleDays.Valid {
+		d := int(cycleDays.Int64)
+		p.CycleIntervalDays = &d
+	}
+	if lastKM.Valid {
+		p.LastScheduledKM = &lastKM.Float64
+	}
+	if lastDate.Valid {
+		t := lastDate.Time.UTC()
+		p.LastScheduledDate = &t
+	}
+	if nextKM.Valid {
+		p.NextDueKM = &nextKM.Float64
+	}
+	if nextDate.Valid {
+		t := nextDate.Time.UTC()
+		p.NextDueDate = &t
+	}
+	p.CreatedAt = createdAt
+	p.UpdatedAt = updatedAt
+	return &p, nil
+}
+
+func nullInt(i *int) sql.NullInt64 {
+	if i != nil {
+		return sql.NullInt64{Int64: int64(*i), Valid: true}
+	}
+	return sql.NullInt64{}
 }
 
 func nullStr(s *string) sql.NullString {

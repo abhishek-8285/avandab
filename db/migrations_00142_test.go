@@ -24,7 +24,7 @@ func TestMigration00142FuelIssues(t *testing.T) {
 	provider, err := goose.NewProvider(goose.DialectSQLite3, database, migFS)
 	require.NoError(t, err)
 
-	_, err = provider.Up(ctx)
+	_, err = provider.UpTo(ctx, 142)
 	require.NoError(t, err)
 
 	assertForeignKeyCheckClean(t, database, "after 00142 up")

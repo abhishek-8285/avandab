@@ -37,7 +37,7 @@
 
 - **B1. Trip Start/Close `ZMOTM_MMS` (pp.6-8). `00141`.** Close-reading/date/time on Trip Close + Breakdown→notification hook; feeds Gate Register. *(2026-09-10: close-odometer + SOP close dialog shipped — B1 seed; date/time + breakdown hook still open.)*
 - **B2. Fuel issue entry (p.9). `00142`.** Completed (`00142_fuel_issues.sql`): Fuel station OP/CL pump readings recorded, litres issued calculated, pump & fuel top-up measuring points updated, validity expiry enforced per TMS_SOP p.9; REST API mounted at `/api/v1/fuel-issues`.
-- **B3. Maintenance plans `IP41` (pp.10-15). `00143`.** Scheduling from `annual_estimate` (`00126`) onto `work_orders` (`00123`).
+- **B3. Maintenance plans `IP41` (pp.10-15). `00143`.** Completed (`00143_maintenance_plans_ip41.sql`): Single Cycle Plans with `annual_estimate` (`00126`) KM projection, call horizon percentage, and automatic Job Card (`work_orders`, `00123`) generation; REST API mounted at `/api/v1/maintenance/plans`.
 - **B4. Maintenance notifications `IW28` + dispatch block (p.13).** Completed (no-DB, leverages `00123` `work_orders`): `in_progress`/`assigned` cards block `IsMaintenanceBlocked` and trip assignment; verified in `TestWorkOrders_IsMaintenanceBlocked_DispatchBlock`.
 - **B5. Reports `ZMOTM_MR` Gate/Fuel/KMPL/Breakdown (pp.16-20). `00145`.** Exact p.18 Vehicle-Master columns = acceptance test.
 - **B6. Facility master / ZFID sync (p.1-2). `00146`.** Table per p.2 screenshot cols; `vehicles.facility_id` TEXT → FK (NULL still allowed for contractual).

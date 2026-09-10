@@ -21,15 +21,18 @@ import (
 // MaintenanceHandlers powers the preventive maintenance UI, schedule management, and DTC intake (Spec 04 §6, §12).
 type MaintenanceHandlers struct {
 	*App
-	repo   *maintsql.MaintenanceRepository
-	worker *maintenance.Worker
+	repo      *maintsql.MaintenanceRepository
+	worker    *maintenance.Worker
+	scheduler *maintenance.PlanScheduler
 }
 
 // NewMaintenanceHandlers creates a new MaintenanceHandlers instance.
 func NewMaintenanceHandlers(app *App, db *sql.DB) *MaintenanceHandlers {
+	repo := maintsql.NewMaintenanceRepository(db)
 	return &MaintenanceHandlers{
-		App:  app,
-		repo: maintsql.NewMaintenanceRepository(db),
+		App:       app,
+		repo:      repo,
+		scheduler: maintenance.NewPlanScheduler(db, repo),
 	}
 }
 

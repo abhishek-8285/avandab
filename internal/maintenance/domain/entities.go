@@ -77,11 +77,34 @@ type WorkOrder struct {
 	DueAt        *time.Time `json:"due_at,omitempty"`
 	ClosedAt     *time.Time `json:"closed_at,omitempty"`
 	CreatedAt    time.Time  `json:"created_at"`
+	PlanID       *string    `json:"plan_id,omitempty"`
+	DueKM        *float64   `json:"due_km,omitempty"`
 }
 
 // Terminal reports whether the job card is closed (done/cancelled).
 func (w WorkOrder) Terminal() bool {
 	return w.Status == WorkOrderDone || w.Status == WorkOrderCancelled
+}
+
+// MaintenancePlan represents an IP41 Single Cycle Plan with measuring point & annual_estimate scheduling (Spec 04 §14).
+type MaintenancePlan struct {
+	ID                 string     `json:"id"`
+	TenantID           string     `json:"tenant_id"`
+	PlanNumber         string     `json:"plan_number"`
+	VehicleID          string     `json:"vehicle_id"`
+	MeasuringPointID   *string    `json:"measuring_point_id,omitempty"`
+	ServiceType        string     `json:"service_type"`
+	Description        string     `json:"description"`
+	CycleIntervalKM    *float64   `json:"cycle_interval_km,omitempty"`
+	CycleIntervalDays  *int       `json:"cycle_interval_days,omitempty"`
+	CallHorizonPercent float64    `json:"call_horizon_percent"`
+	LastScheduledKM    *float64   `json:"last_scheduled_km,omitempty"`
+	LastScheduledDate  *time.Time `json:"last_scheduled_date,omitempty"`
+	NextDueKM          *float64   `json:"next_due_km,omitempty"`
+	NextDueDate        *time.Time `json:"next_due_date,omitempty"`
+	Status             string     `json:"status"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
 }
 
 // ServiceTypes valid enum values

@@ -1163,6 +1163,26 @@ type InvoiceSequence struct {
 	Prefix        string `json:"prefix"`
 }
 
+type MaintenancePlan struct {
+	ID                 string          `json:"id"`
+	TenantID           string          `json:"tenant_id"`
+	PlanNumber         string          `json:"plan_number"`
+	VehicleID          string          `json:"vehicle_id"`
+	MeasuringPointID   sql.NullString  `json:"measuring_point_id"`
+	ServiceType        string          `json:"service_type"`
+	Description        string          `json:"description"`
+	CycleIntervalKm    sql.NullFloat64 `json:"cycle_interval_km"`
+	CycleIntervalDays  sql.NullInt64   `json:"cycle_interval_days"`
+	CallHorizonPercent float64         `json:"call_horizon_percent"`
+	LastScheduledKm    sql.NullFloat64 `json:"last_scheduled_km"`
+	LastScheduledDate  sql.NullTime    `json:"last_scheduled_date"`
+	NextDueKm          sql.NullFloat64 `json:"next_due_km"`
+	NextDueDate        sql.NullTime    `json:"next_due_date"`
+	Status             string          `json:"status"`
+	CreatedAt          time.Time       `json:"created_at"`
+	UpdatedAt          time.Time       `json:"updated_at"`
+}
+
 type MaintenanceRecord struct {
 	ID          string          `json:"id"`
 	VehicleID   string          `json:"vehicle_id"`
@@ -2107,6 +2127,8 @@ type WorkOrder struct {
 	ClosedAt     sql.NullTime    `json:"closed_at"`
 	CreatedAt    time.Time       `json:"created_at"`
 	UpdatedAt    time.Time       `json:"updated_at"`
+	PlanID       sql.NullString  `json:"plan_id"`
+	DueKm        sql.NullFloat64 `json:"due_km"`
 }
 
 type WorkerLease struct {
