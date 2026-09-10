@@ -279,6 +279,15 @@ func (r *SQLRepository) CountDrivers(ctx context.Context, query string, status s
 	return count, nil
 }
 
+// CountAvailableDrivers is the O(1)-memory twin of GetAvailableDrivers:
+// dashboard chips need the number, not the rows.
+func (r *SQLRepository) CountAvailableDrivers(ctx context.Context) (int64, error) {
+	var n int64
+	err := r.queryRow(ctx, `SELECT COUNT(*) FROM drivers WHERE status = 'available' AND tenant_id = ?`,
+		tenantIDFromCtx(ctx)).Scan(&n)
+	return n, err
+}
+
 func (r *SQLRepository) GetAvailableDrivers(ctx context.Context) ([]domain.Driver, error) {
 	rows, err := r.Q(ctx).GetAvailableDrivers(ctx, tenantIDFromCtx(ctx))
 	if err != nil {

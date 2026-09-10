@@ -1,7 +1,9 @@
-const CACHE_NAME = 'avandab-v2';
-const STATIC_CACHE = 'avandab-static-v2';
+const CACHE_NAME = 'avandab-v3';
+const STATIC_CACHE = 'avandab-static-v3';
 
-// Assets to pre-cache on install (shell)
+// Assets to pre-cache on install (shell). Runtime requests carry ?v= query
+// strings, so lookups use ignoreSearch (see cacheFirst) — bare paths here
+// still match versioned requests.
 const PRECACHE_ASSETS = [
   '/static/css/tailwind.css',
   '/static/css/app.css',
@@ -16,6 +18,14 @@ const PRECACHE_ASSETS = [
   '/static/icons/icon-192.png',
   '/static/icons/icon-512.png',
 ];
+
+// HTML pages safe to cache for offline use: public marketing/legal routes
+// only. Authenticated pages (dashboard, bookings, ...) are never cached —
+// they carry per-user data and must not linger on shared devices.
+const PUBLIC_HTML_ROUTES = ['/', '/features', '/contact-us', '/privacy', '/terms', '/refunds'];
+const isPublicHTML = (pathname) =>
+  pathname === '/' ||
+  PUBLIC_HTML_ROUTES.some((p) => p !== '/' && (pathname === p || pathname.startsWith(p + '/')));
 
 // Install: pre-cache shell assets
 self.addEventListener('install', (event) => {
@@ -43,29 +53,33 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Only handle same-origin requests
-  if (url.origin !== self.location.origin) return;
+  // Only handle same-origin GETs
+  if (url.origin !== self.location.origin || event.request.method !== 'GET') return;
 
-  // Strategy 1: Cache-first for /static assets (immutable, versioned)
+  // Strategy 1: Cache-first for /static assets (immutable, versioned).
+  // ignoreSearch makes bare-path precache entries match ?v= requests.
   if (url.pathname.startsWith('/static/')) {
     event.respondWith(cacheFirst(event.request, STATIC_CACHE));
     return;
   }
 
-  // Strategy 2: Network-first for HTML pages (always fresh)
-  if (event.request.headers.get('accept')?.includes('text/html')) {
+  // Strategy 2: Network-first ONLY for public HTML pages (always fresh,
+  // cached as offline fallback). Authenticated pages pass through untouched.
+  if (
+    event.request.headers.get('accept')?.includes('text/html') &&
+    isPublicHTML(url.pathname)
+  ) {
     event.respondWith(networkFirst(event.request, CACHE_NAME));
     return;
   }
 
-  // Strategy 3: Stale-while-revalidate for API/SSE (progressive enhancement)
-  // Do NOT cache SSE streams or API responses for offline use
-  // Just pass through
+  // Strategy 3: Everything else (API/SSE/authed pages) — pass through.
+  // Do NOT cache SSE streams or API responses.
 });
 
 // Cache-first: try cache, fall back to network, update cache
 async function cacheFirst(request, cacheName) {
-  const cached = await caches.match(request);
+  const cached = await caches.match(request, { ignoreSearch: true });
   if (cached) return cached;
 
   try {

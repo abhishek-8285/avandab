@@ -38,7 +38,9 @@ type rateLimiter struct {
 const rateLimiterShards = 16
 
 // newRateLimiter builds a sharded limiter with the given per-IP limit and
-// window (window <= 0 defaults to 1 minute, limit <= 0 to 10).
+// window (window <= 0 defaults to 1 minute, limit <= 0 to 10). A background
+// goroutine reaps idle buckets every window so the request path never scans
+// the whole map (O(1) allow vs O(N) sweep-per-request).
 func newRateLimiter(limit int, window time.Duration) *rateLimiter {
 	if limit <= 0 {
 		limit = 10
@@ -53,7 +55,21 @@ func newRateLimiter(limit int, window time.Duration) *rateLimiter {
 	for i := range rl.shards {
 		rl.shards[i] = &rateLimiterShard{buckets: make(map[string]*ipBucket)}
 	}
+	go rl.reapLoop(window)
 	return rl
+}
+
+// reapLoop periodically drops buckets idle longer than the window.
+func (rl *rateLimiter) reapLoop(window time.Duration) {
+	t := time.NewTicker(window)
+	defer t.Stop()
+	for now := range t.C {
+		for _, shard := range rl.shards {
+			shard.mu.Lock()
+			shard.sweep(now, window)
+			shard.mu.Unlock()
+		}
+	}
 }
 
 // RateLimit returns middleware that limits requests per client IP to
@@ -122,19 +138,18 @@ func (rl *rateLimiter) allow(ip string, now time.Time) bool {
 	shard.mu.Lock()
 	defer shard.mu.Unlock()
 
-	shard.sweep(now, rl.window)
-
-	b, ok := shard.buckets[ip]
-	if !ok || now.After(b.resetAt) {
-		shard.buckets[ip] = &ipBucket{count: 1, resetAt: now.Add(rl.window), lastSeen: now}
+	// Reaping runs on a background ticker; the request path only touches
+	// its own key so allow stays O(1) under IP-scan floods.
+	if b, ok := shard.buckets[ip]; ok && now.Sub(b.lastSeen) <= rl.window && !now.After(b.resetAt) {
+		b.lastSeen = now
+		if b.count >= rl.limit {
+			return false
+		}
+		b.count++
 		return true
 	}
 
-	b.lastSeen = now
-	if b.count >= rl.limit {
-		return false
-	}
-	b.count++
+	shard.buckets[ip] = &ipBucket{count: 1, resetAt: now.Add(rl.window), lastSeen: now}
 	return true
 }
 

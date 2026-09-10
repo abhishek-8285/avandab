@@ -1,7 +1,7 @@
 # Migration Ownership Index
 
 Single source of truth for `db/migrations/` version numbers. Repo head is
-`00140_files_tenant_scope.sql`; next free slot is `00141`.
+`00141_files_backfill_tenant_from_owner.sql`; next free slot is `00142`.
 (`00039_experiments.sql` remains TAKEN — never edit.) Every new migration
 appends the next free number. **This table is authoritative; spec §3 numbers
 MUST match it.**
@@ -125,6 +125,7 @@ which always allocate head-ward from the maximum above.
 | 00138 | `outbox_events.published_at` + `alerts(ack_status, snoozed_until)` + `driver_expenses(tenant_id, category, audit_status, status)` partial scale indexes | Scaling & Optimization |
 | 00139 | `sessions(token_hash, expires_at)` + `vehicles/drivers(tenant_id, status)` + `invoices(tenant_id, payment_status)` + `payments(tenant_id, payment_date)` + `audit_logs` scale indexes | Scaling & Optimization |
 | 00140 | `files.tenant_id` + idx_files_tenant_uploadable + trg_files_tenant_fk_insert/update (backfill to '1'; closes cross-tenant file-read hole, 00077 follow-up) | Files tenant scoping |
+| 00141 | files uploadable_type CHECK widening (+`driver_issue` — table rebuild, carries 00140 tenant_id/index/triggers) + files.tenant_id data backfill from owner entity (`driver_issue`→drivers.tenant_id; `trip_pod`/`expense_receipt`→trips.tenant_id; dangling refs stay '1'; down = documented no-op, 00136 convention) | 00140 follow-up — fixes always-failing driver-issue photo uploads + restores non-bootstrap orgs' historical upload access |
 | 00141+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a

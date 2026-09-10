@@ -165,9 +165,10 @@ Stop coding and output a `BLOCKER REPORT` when:
 Format: `[BLOCKER] <Issue> | [EVIDENCE] <File:Line> | [OPTIONS] <A vs B>`
 
 ### Knowledge base & execution order
-- **The Bible:** `ALL_TECH_SPECS.txt` is the single source of truth. If code
-  contradicts the spec, the code is the legacy bug — follow the spec and note
-  the override explicitly.
+- **Source of truth:** `docs/*.md` (numbered guide + `docs/tech-specs/`) supersede
+  everything on conflict. `ALL_TECH_SPECS.txt` is only a pointer index to those
+  docs — it holds no normative spec text. If code contradicts a doc, the code is
+  the legacy bug — follow the doc and note the override explicitly.
 - **Critical path (never out of order):** Phase 0 (Security/Event Bus) →
   Phase 1 (Telemetry/Geofence) → Phase 2 (Ops/Alerts) → Phase 3 (Integrations).
 - **Read before write:** before touching a domain, read its aggregate,

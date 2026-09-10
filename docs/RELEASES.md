@@ -36,3 +36,30 @@ sqlc regen: `TelemetrySnapshot.TsUnix`. Index head → `00134`, next free `00135
 - `go build ./...`, `go vet ./...`, `gofmt` clean; full `./internal/...` + `./db/...` green; mobile `tsc` + 52/52 suites (336 tests).
 - Security gate (`security-check.sh`) 8/8 green; pre-commit sqlc-integrity hook caught and fixed one regen miss before commit.
 - Live HTTP A/B: pre-fix binary leaks a 2020 ghost as `no_signal`; fixed binary excludes it. Zero-ID sync probe: 3 fixes → 1 position pre-fix.
+
+---
+
+## 544247ca — Storage, scale & ops hardening cycle (2026-09-10)
+
+### Migrations (sqlite + pg mirror; up/down recorded in ownership index, not re-verified this refresh)
+| # | Change | Data note |
+|---|--------|-----------|
+| 00135 | `vehicles.registration_number` UNIQUE → UNIQUE(`tenant_id`, `registration_number`) + `vehicle_latest_position` UNIQUE(`tenant_id`,`vehicle_id`) | Plates become per-tenant (telemetry H3+L10) |
+| 00136 | `telemetry_positions.vehicle_id` `''` → NULL backfill | idempotent; down is documented no-op |
+| 00137 | `vehicle_commands` table + `av_operator` role | AV teleoperation deck |
+| 00138/00139 | Partial + list scale indexes (outbox, alerts snooze, fuel audits, sessions, vehicles/drivers, invoices, payments, audit logs) | read-only perf |
+| 00140 | `files.tenant_id` + triggers | **Operator-visible: file reads are now strictly tenant-scoped** — closes cross-tenant licence/RC/POD read via UUID |
+
+### Behavior changes (operator-visible)
+- **Files** (`00140`): viewer/`%:read` roles can no longer read another org's uploads by UUID. Existing rows backfilled to bootstrap tenant — verify multi-tenant file access after deploy.
+- **Plates** (`00135`): two tenants may now hold the same registration number; live-map cache is tenant-unique.
+- **Live telemetry**: etag-304 + spatial bbox + delta sync; ack-after-accept; cross-tenant device/vehicle/driver ID spoof rejected; SSE keep-alive; telemetry partition retention cleaner.
+- **Ops**: Cloudflare Turnstile bot protection on public forms; egress origin shield + immutable static caching; PWA service worker + offline precache + client image compression; Google gl=IN live-map tiles, viewports locked to India; trips auto-seed default pickup/drop stops on `/trips/new`.
+- **Deploy**: `scripts/deploy-vps.sh` — local stripped cross-compile + rsync + systemd swap + `/health` gate. Compiling on the 1 GB VPS is blocked (policy + AGENTS.md prohibition #6).
+
+### Proof (2026-09-10 refresh at `544247ca`)
+- `go build ./...` exit 0; `go vet ./...` exit 0.
+- `go test ./internal/... ./db/... -count=1`: **120 packages ok, 0 FAIL** (`/tmp/gotest_refresh.log`).
+- Mobile: 56/56 suites, 351/351 tests (`npx jest`).
+- Security gate: `LINT_BASE=$(git rev-parse HEAD) ./scripts/security-check.sh` — all checks passed.
+- Docs reconciled same day: `docs/09` survey refresh, `docs/ROADMAP.md` head `00140`, C5 rewrite of `AVANDAB_ZERO_COST_ARCHITECTURE.md`.

@@ -9,6 +9,7 @@ import (
 	"transport-app/internal/domain"
 	"transport-app/internal/events"
 	"transport-app/internal/repository"
+	"transport-app/internal/shared"
 )
 
 // TelemetryDataPoint represents a streamed IoT data point from a vehicle/sensor.
@@ -82,6 +83,7 @@ func (s *TelemetryService) ProcessTelemetryStream(ctx context.Context, dp Teleme
 						"vehicle_id":  alert.VehicleID,
 						"driver_id":   alert.DriverID,
 						"trip_id":     alert.TripID,
+						"tenant_id":   string(shared.TenantIDFromContext(ctx)),
 						"latitude":    dp.Latitude,
 						"longitude":   dp.Longitude,
 						"occurred_at": alert.CreatedAt,
@@ -90,6 +92,9 @@ func (s *TelemetryService) ProcessTelemetryStream(ctx context.Context, dp Teleme
 				s.events.Publish(ctx, events.Event{
 					Type: events.GPSDeviationAlert,
 					Payload: map[string]interface{}{
+						"tenant_id":   string(shared.TenantIDFromContext(ctx)),
+						"trip_id":     alert.TripID,
+						"vehicle_id":  alert.VehicleID,
 						"alert":       alert,
 						"eta_risk":    "HIGH",
 						"occurred_at": time.Now(),
@@ -131,6 +136,7 @@ func (s *TelemetryService) ProcessTelemetryStream(ctx context.Context, dp Teleme
 						"vehicle_id":  alert.VehicleID,
 						"driver_id":   alert.DriverID,
 						"trip_id":     alert.TripID,
+						"tenant_id":   string(shared.TenantIDFromContext(ctx)),
 						"latitude":    dp.Latitude,
 						"longitude":   dp.Longitude,
 						"occurred_at": alert.CreatedAt,
@@ -139,6 +145,9 @@ func (s *TelemetryService) ProcessTelemetryStream(ctx context.Context, dp Teleme
 				s.events.Publish(ctx, events.Event{
 					Type: events.FuelTheftAlert,
 					Payload: map[string]interface{}{
+						"tenant_id":   string(shared.TenantIDFromContext(ctx)),
+						"trip_id":     alert.TripID,
+						"vehicle_id":  alert.VehicleID,
 						"alert":       alert,
 						"occurred_at": time.Now(),
 					},

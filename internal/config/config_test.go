@@ -159,7 +159,7 @@ func TestLoad_DatabaseAndCacheDefaults(t *testing.T) {
 	if cfg.DatabaseURL != cfg.Database.URL {
 		t.Errorf("DatabaseURL %q must mirror Database.URL %q", cfg.DatabaseURL, cfg.Database.URL)
 	}
-	if cfg.Cache.Driver != "none" {
-		t.Errorf("default CACHE_DRIVER = %q, want none", cfg.Cache.Driver)
+	if cfg.Cache.Driver != "memory" {
+		t.Errorf("default CACHE_DRIVER = %q, want memory", cfg.Cache.Driver)
 	}
 }

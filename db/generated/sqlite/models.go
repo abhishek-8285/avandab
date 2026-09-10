@@ -930,8 +930,8 @@ type File struct {
 	MimeType       string         `json:"mime_type"`
 	UploadableType string         `json:"uploadable_type"`
 	UploadableID   sql.NullString `json:"uploadable_id"`
-	CreatedAt      time.Time      `json:"created_at"`
 	TenantID       string         `json:"tenant_id"`
+	CreatedAt      time.Time      `json:"created_at"`
 }
 
 type FounderAudit struct {

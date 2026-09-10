@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -356,10 +357,12 @@ func (h *ShareHandlers) ViewShare(w http.ResponseWriter, r *http.Request) {
 		newExpiry = maxExpiry
 	}
 
-	_, _ = h.db.ExecContext(r.Context(), `
+	if _, sErr := h.db.ExecContext(r.Context(), `
 		UPDATE share_links
 		SET expires_at = $1, view_count = view_count + 1, last_viewed_at = $2
-		WHERE id = $3`, newExpiry, now, id)
+		WHERE id = $3`, newExpiry, now, id); sErr != nil {
+		slog.WarnContext(r.Context(), "share view counter update failed", slog.Any("error", sErr))
+	}
 
 	// 4. Render share_public.html
 	cfg := h.Config
@@ -478,10 +481,12 @@ func (h *ShareHandlers) VerifyPIN(w http.ResponseWriter, r *http.Request) {
 			newExpiry = maxExpiry
 		}
 
-		_, _ = h.db.ExecContext(r.Context(), `
+		if _, sErr := h.db.ExecContext(r.Context(), `
 			UPDATE share_links
 			SET failed_pin_attempts = 0, locked_until = NULL, expires_at = $1
-			WHERE id = $2`, newExpiry, id)
+			WHERE id = $2`, newExpiry, id); sErr != nil {
+			slog.WarnContext(r.Context(), "share PIN unlock counter reset failed", slog.Any("error", sErr))
+		}
 
 		isSecure := false
 		if h.Config != nil && h.Config.CookieSecure {
@@ -515,10 +520,14 @@ func (h *ShareHandlers) VerifyPIN(w http.ResponseWriter, r *http.Request) {
 		newLock = &lockTime
 	}
 
-	_, _ = h.db.ExecContext(r.Context(), `
+	if _, sErr := h.db.ExecContext(r.Context(), `
 		UPDATE share_links
 		SET failed_pin_attempts = $1, locked_until = $2
-		WHERE id = $3`, newAttempts, newLock, id)
+		WHERE id = $3`, newAttempts, newLock, id); sErr != nil {
+		// Security-relevant counter: a lost write means brute-force lockout
+		// tracking silently resets.
+		slog.WarnContext(r.Context(), "share PIN failure counter update failed", slog.Any("error", sErr))
+	}
 
 	if newAttempts >= 5 {
 		w.Header().Set("Retry-After", "900")
@@ -620,8 +629,10 @@ func (h *ShareHandlers) ShareData(w http.ResponseWriter, r *http.Request) {
 	maintDue := false
 	if vehicleID.Valid && vehicleID.String != "" {
 		var md sql.NullBool
-		_ = h.db.QueryRowContext(r.Context(),
-			`SELECT maintenance_due FROM vehicles WHERE id = $1`, vehicleID.String).Scan(&md)
+		if qErr := h.db.QueryRowContext(r.Context(),
+			`SELECT maintenance_due FROM vehicles WHERE id = $1`, vehicleID.String).Scan(&md); qErr != nil && qErr != sql.ErrNoRows {
+			slog.WarnContext(r.Context(), "share vehicle maintenance-due lookup failed", slog.Any("error", qErr))
+		}
 		if md.Valid && md.Bool {
 			maintDue = true
 		}

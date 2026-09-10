@@ -4,10 +4,12 @@ import (
 	"time"
 
 	"transport-app/internal/domain/types"
+	"transport-app/internal/shared"
 )
 
 // BookingCreatedEvent is emitted when a new booking is created.
 type BookingCreatedEvent struct {
+	TenantID      shared.TenantID
 	BookingID     types.BookingID
 	BookingNumber string
 	CustomerID    types.CustomerID
@@ -18,6 +20,7 @@ type BookingCreatedEvent struct {
 
 // BookingConfirmedEvent is emitted when a booking is confirmed.
 type BookingConfirmedEvent struct {
+	TenantID    shared.TenantID
 	BookingID   types.BookingID
 	ConfirmedAt time.Time
 	OccurredAt  time.Time
@@ -25,6 +28,7 @@ type BookingConfirmedEvent struct {
 
 // BookingCancelledEvent is emitted when a booking is cancelled.
 type BookingCancelledEvent struct {
+	TenantID    shared.TenantID
 	BookingID   types.BookingID
 	CancelledAt time.Time
 	OccurredAt  time.Time
@@ -32,6 +36,7 @@ type BookingCancelledEvent struct {
 
 // BookingCompletedEvent is emitted when a booking is completed.
 type BookingCompletedEvent struct {
+	TenantID    shared.TenantID
 	BookingID   types.BookingID
 	CompletedAt time.Time
 	OccurredAt  time.Time

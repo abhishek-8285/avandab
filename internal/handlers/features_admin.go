@@ -92,7 +92,9 @@ func (h *FeaturesAdmin) Toggle(w http.ResponseWriter, r *http.Request) {
 	if h.Services != nil && h.Services.Audit != nil {
 		uid := domain.UserID(userID)
 		detail := f.Key + "=" + boolLabel(body.Enabled)
-		_ = h.Services.Audit.LogAction(r.Context(), &uid, "feature_flag.toggle", "feature_flags", f.Key, nil, &detail)
+		if aErr := h.Services.Audit.LogAction(r.Context(), &uid, "feature_flag.toggle", "feature_flags", f.Key, nil, &detail); aErr != nil {
+			slog.WarnContext(r.Context(), "feature flag audit log write failed", slog.String("feature", f.Key), slog.Any("error", aErr))
+		}
 	}
 	httpx.JSON(w, http.StatusOK, map[string]interface{}{
 		"feature": f.Key,

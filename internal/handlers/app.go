@@ -750,13 +750,33 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 	templateData := buildTemplateData(data)
 
 	// Per-org feature snapshot for nav visibility + upsell locks.
+	// Cached 60s/tenant in App.Cache (renderPage is the hottest read path);
+	// the map is precomputed because templates iterate it. Cache misses
+	// degrade to a direct Snapshot() call, so no behavior change when
+	// CACHE_DRIVER=none (nil cache) or on backend errors.
 	if a.Features != nil {
 		on := map[string]bool{}
 		// Unresolved viewers (public pages) get no snapshot — never the
 		// bootstrap org's flags.
 		if tid := string(shared.TenantIDFromContext(r.Context())); tid != "" {
-			for _, e := range a.Features.Snapshot(r.Context(), tid) {
-				on[e.Key] = e.Enabled
+			key := "features:snapshot:" + tid
+			cached := false
+			if a.Cache != nil {
+				if raw, ok, err := a.Cache.Get(r.Context(), key); err == nil && ok {
+					if json.Unmarshal(raw, &on) == nil {
+						cached = true
+					}
+				}
+			}
+			if !cached {
+				for _, e := range a.Features.Snapshot(r.Context(), tid) {
+					on[e.Key] = e.Enabled
+				}
+				if a.Cache != nil {
+					if raw, err := json.Marshal(on); err == nil {
+						_ = a.Cache.Set(r.Context(), key, raw, time.Minute)
+					}
+				}
 			}
 		}
 		templateData["Features"] = on

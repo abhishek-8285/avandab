@@ -22,7 +22,7 @@
  │  08. Deployment & Runbook      (docs/08-DEPLOYMENT-AND-PRODUCTION-RUNBOOK.md)│
  ├─────────────────────────────────────────────────────────────────────────────┤
  │                               REFERENCE                                     │
- │  • Migration Registry (1-117)  (docs/tech-specs/00-migration-ownership-index.md)
+ │  • Migration Registry (1-140)  (docs/tech-specs/00-migration-ownership-index.md)
  │  • REST API Specification      (openapi.yaml)                                │
  └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -40,5 +40,7 @@
 | **[`05-BILLING-GST-AND-SETTLEMENTS.md`](05-BILLING-GST-AND-SETTLEMENTS.md)** | GST CGST/SGST/IGST tax engine, PDF invoices with UPI QR codes, double-entry driver balance ledger, and Razorpay gateway. |
 | **[`06-AUTH-RBAC-AND-MULTI-TENANCY.md`](06-AUTH-RBAC-AND-MULTI-TENANCY.md)** | Tenant context isolation, Casbin 6-role RBAC matrix, session cookies, and API bearer token security. |
 | **[`07-AI-OPERATIONS-ASSISTANT.md`](07-AI-OPERATIONS-ASSISTANT.md)** | Multi-agent orchestrator (Booking, Payments, Kharcha, Ops, Support), online RL loop, and admin safety approval gate. |
-| **[`08-DEPLOYMENT-AND-PRODUCTION-RUNBOOK.md`](08-DEPLOYMENT-AND-PRODUCTION-RUNBOOK.md)** | 1-click Android VPS deploy (`deploy_avandab.sh`), Cloudflare Tunnel, OSRM routing setup, Linux `ulimit -n 65535`, and private M2M APN SIMs. |
-| **[`tech-specs/00-migration-ownership-index.md`](tech-specs/00-migration-ownership-index.md)** | Goose SQL database migration numbering index (00001 to 00117). |
+| **[`08-DEPLOYMENT-AND-PRODUCTION-RUNBOOK.md`](08-DEPLOYMENT-AND-PRODUCTION-RUNBOOK.md)** | Cross-compiled VPS deploy (`scripts/deploy-vps.sh`, systemd), 1-click Android deploy (`deploy_avandab.sh`), Cloudflare Tunnel, OSRM routing setup, Linux `ulimit -n 65535`, and private M2M APN SIMs. |
+| **[`09-CODEBASE-AND-FEATURE-ASSESSMENT.md`](09-CODEBASE-AND-FEATURE-ASSESSMENT.md)** | Evidence-based built-state survey: measured metrics, feature inventory, scorecard, honest gaps. |
+| **[`ROADMAP.md`](ROADMAP.md)** / **[`RELEASES.md`](RELEASES.md)** | Phased forward plan with closed-evidence items; append-only release log. |
+| **[`tech-specs/00-migration-ownership-index.md`](tech-specs/00-migration-ownership-index.md)** | Goose SQL database migration numbering index (00001 to 00140; next free slot 00141). |

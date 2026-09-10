@@ -1,6 +1,8 @@
 # 🚚 Avandab Multi-Tenant Logistics Platform
 ## 100% Zero-Cost / Free-Tier Enterprise Architecture & Operations Manual
 
+> **Reconciliation note (2026-09-10, ROADMAP C5):** §§2/4B/6 rewritten to observed reality; §3/§5 caveats added. Operational authority for deployment is `docs/08`. The ₹0 claim is the *platform baseline* — usage-billed extras are listed honestly in the Final Cost Summary caveats.
+
 ---
 
 ## 📌 1. Executive Summary & Cost Philosophy
@@ -23,11 +25,11 @@ This architecture document outlines the complete zero-cost, high-reliability inf
 │                                     │                                                            │
 │                                     ▼                                                            │
 │                    ┌──────────────────────────────────┐                                          │
-│                    │   Google Cloud Compute VM        │                                          │
-│                    │   Public IP: 34.42.182.104       │                                          │
+│                    │   1 GB amd64 VPS / TECNO Termux  │                                          │
+│                    │   Ingress: Cloudflare Tunnel     │                                          │
 │                    │   • Golang Backend (:8080)       │                                          │
-│                    │   • SQLite WAL Database          │                                          │
-│                    │   • Postfix Mail Daemon          │                                          │
+│                    │   • SQLite WAL (+ PG parity)     │                                          │
+│                    │   • comm_outbox mail relay       │                                          │
 │                    └────────────────┬─────────────────┘                                          │
 │                                     │                                                            │
 │                                     ▼                                                            │
@@ -41,17 +43,18 @@ This architecture document outlines the complete zero-cost, high-reliability inf
 
 ---
 
-## 🖥️ 2. Cloud Server Infrastructure (Google Cloud Always Free)
+## 🖥️ 2. Compute Infrastructure (observed reality — reconciled 2026-09-10)
 
-| Parameter | Configuration | Free Tier Compliance |
+| Parameter | Configuration | Notes |
 | :--- | :--- | :--- |
-| **Provider** | Google Cloud Platform (Compute Engine) | Always Free Tier + $300 Credits |
-| **Instance Type** | `e2-micro` (2 vCPUs, 1.0 GB RAM) | 1 Free VM per month in US regions |
-| **Operating System** | Debian GNU/Linux 13 (Trixie) | Minimal ~65 MB RAM footprint |
-| **Dedicated Public IP** | `34.42.182.104` | Static / External IPv4 included |
-| **Disk Storage** | 10 GB - 30 GB Standard Persistent Disk | Included in Free Tier ($0.00) |
-| **Swap Buffer** | 2.0 GB Virtual Swap Memory (`/swapfile`) | Prevents OOM memory spikes |
-| **Runtime Service** | Golang Native Binary (`./bin/server`) | Runs in background via `tmux` |
+| **Primary production target** | 1 GB amd64 VPS behind Cloudflare Tunnel | Deployed via `scripts/deploy-vps.sh` — local stripped cross-compile + rsync + `systemctl avandab.service` + `/health` gate |
+| **Alternate / legacy target** | TECNO-LE7 Android phone in Termux | `deploy_avandab.sh` (ADB) / `deploy_remote.sh` (SSH, port 8090), watchdog `scripts/ensure-avandab-running.sh` |
+| **Compile rule** | Binaries built locally (`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 -trimpath -ldflags "-s -w"`) | NEVER compile on the 1 GB target — OOM/swap-thrash (`docs/08` Option C) |
+| **Database** | SQLite WAL primary, dual-engine PG parity maintained | `db/migrations_pg/` mirrors all 134 migrations; `cmd/sqlite2pg` + `internal/datamigrate` for cutover |
+| **Swap Buffer** | 2.0 GB `/swapfile` on 1 GB instances | Prevents OOM memory spikes |
+| **Runtime Service** | Golang native binary under `systemd` (VPS) or Termux background (phone) | Health: `http://localhost:8080/health` |
+
+Earlier revisions of this section claimed a GCP `e2-micro` at `34.42.182.104` — that content was aspirational and never observed in the deploy scripts. Superseded by the table above (ROADMAP C5).
 
 ### Key Server Ports:
 * **Port 8080 (TCP)**: Avandab Web Management Cockpit & API.
@@ -67,6 +70,7 @@ This architecture document outlines the complete zero-cost, high-reliability inf
 * **Edge CDN & Caching**: Static assets (CSS, JS, SVG logos) cached in Indian edge datacenters (Delhi, Mumbai, Chennai, Bangalore), speeding page loads by 10x.
 * **Automatic SSL / TLS**: Free 256-bit encryption for `avandab.com` and all subdomains.
 * **DDoS & Web Application Firewall (WAF)**: Mitigates malicious volumetric attacks at zero cost.
+* **Live-map tiles caveat**: the web live map defaults to free OSM tiles (`MAP_TILE_PROVIDER`, default `auto`); some public share/playback templates embed unofficial Google `vt` tile URLs (`mt1.google.com`) — ToS-gray, not an official free API. Prefer OSM for strict zero-cost/ToS cleanliness.
 
 ---
 
@@ -105,8 +109,9 @@ Instead of paying Google Workspace ₹1,500/user/month, outgoing transactional e
 
 * **Brevo Free Relay**: 9,000 emails / month (300 / day).
 * **Resend Free Relay**: 3,000 emails / month (100 / day).
-* **Total Combined Free Allowance**: **12,000 to 22,000 Free Branded Invoices/e-PODs per month!**
+* **Total combined free allowance: ~12,000 branded mails/month** (the "22,000" figure in earlier revisions was never substantiated — dropped).
 * **Security & Branding**: 100% pure `From: Avandab Billing <billing@avandab.com>` with `DKIM: PASS`.
+* **Observed mail path (2026-09-10)**: outgoing mail flows through `comm_outbox` (`00118`) with the quota-aware provider pool (`00120`) — Brevo 300/day (9k/mo) + Resend 100/day (3k/mo), strategies `priority` / `cost_optimized` / `round_robin` (`EMAIL_PROVIDERS_JSON`). Over-quota providers fail over honestly; mail queues in the outbox, nothing silently drops.
 
 ---
 
@@ -120,6 +125,7 @@ Instead of paying Google Workspace ₹1,500/user/month, outgoing transactional e
 2. **Instant Online UPI Payment (`/pay/{invoiceId}`)**:
    - Razorpay 1-click checkout (Google Pay, PhonePe, Paytm, QR Code, NetBanking).
    - Zero setup fee, zero AMC.
+   - Gateway per-transaction fees (MDR) still apply per Razorpay pricing — ₹0 refers to the platform integration, not payment processing.
    - Instant automated ledger settlement and receipt generation.
 3. **Digital e-POD Certificate (`/epod/{tripId}`)**:
    - OTP-verified delivery proof.
@@ -132,26 +138,20 @@ Instead of paying Google Workspace ₹1,500/user/month, outgoing transactional e
 
 ### A. Checking Server Status
 ```bash
-# Connect via SSH:
-ssh bhshrivastav@34.42.182.104
-
-# Check active tmux background session:
-tmux attach -t avandab
-
-# Detach from tmux without stopping server:
-# Press: Ctrl + B, then press D
+ssh avandab                          # VPS (systemd)
+systemctl status avandab
+curl -sf http://localhost:8080/health
+# Android/legacy path: ssh <tecno-host> (Termux, port 8090)
 ```
 
-### B. Updating Server Binary
+### B. Updating Server Binary (correct flow)
 ```bash
-# 1. On server terminal:
-cd ~/avandab
-git pull origin main
-go build -o bin/server ./cmd/server
-
-# 2. Restart inside tmux:
-./bin/server
+# From local dev machine — compilation NEVER on the 1 GB server:
+./scripts/deploy-vps.sh avandab
+# → local go vet + stripped amd64 cross-compile + rsync + systemctl restart + /health check
 ```
+Compiling `go build` on the server is forbidden — 1 GB RAM OOMs
+(AGENTS.md prohibition #6; `docs/08` Option C).
 
 ### C. Testing Outbound Mail Delivery
 ```bash
@@ -160,8 +160,9 @@ echo -e "Subject: 🚚 Avandab Test Email\nFrom: Avandab Billing <billing@avanda
 
 ---
 
-## 🏆 Final Cost Summary
-* **Monthly Infrastructure Cost**: **₹0.00**
-* **Annual Software Overhead**: **₹0.00**
-* **Platform Uptime**: **99.99% Cloud Datacenter SLA**
+## 🏆 Final Cost Summary (reconciled 2026-09-10)
+* **Monthly baseline cost**: **₹0.00** — phone-or-VPS single node + Cloudflare free tier (DNS/CDN/SSL/email routing) + Brevo/Resend free relays + OSM tiles + routing via mock or public OSRM demo
+* **Annual baseline**: **₹0.00**
+* **Usage-billed extras NOT in the baseline (honest list)**: AI agent / RAG LLM tokens (defaults `api.openai.com`, `gpt-4o-mini` + `text-embedding-3-small` — point at a local/free OpenAI-compatible endpoint to keep ₹0); WhatsApp dispatch (Meta/Gupshup per-conversation fees); Razorpay MDR per transaction; S3/R2 storage beyond R2 10 GB free tier; mail beyond ~12k/mo
+* **Platform uptime**: single-node — **no SLA claim** (5k-truck scale unproven pre PG-cutover, per `docs/ROADMAP.md` risks #1)
 * **Domain Brand Reputation**: **100% Enterprise Branded (`@avandab.com`)**

@@ -362,20 +362,31 @@ func (h *TripHandlers) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Assign driver/vehicle if supplied in form post
+	// Assign driver/vehicle if supplied in form post. Failures surface via
+	// the flash banner on the next page - the trip already exists, so we
+	// redirect after collecting messages instead of silently swallowing
+	// (AGENTS.md no-silent-failures).
+	assignFailures := make([]string, 0, 2)
 	if dID := r.PostFormValue("driver_id"); dID != "" {
-		_ = h.assignDriverUC.Execute(r.Context(), tripapp.AssignDriverCommand{
+		if err := h.assignDriverUC.Execute(r.Context(), tripapp.AssignDriverCommand{
 			TripID:   id,
 			DriverID: dID,
 			TenantID: shared.TenantIDFromContext(r.Context()),
-		})
+		}); err != nil {
+			assignFailures = append(assignFailures, "driver assignment failed: "+err.Error())
+		}
 	}
 	if vID := r.PostFormValue("vehicle_id"); vID != "" {
-		_ = h.assignVehicleUC.Execute(r.Context(), tripapp.AssignVehicleCommand{
+		if err := h.assignVehicleUC.Execute(r.Context(), tripapp.AssignVehicleCommand{
 			TripID:    id,
 			VehicleID: vID,
 			TenantID:  shared.TenantIDFromContext(r.Context()),
-		})
+		}); err != nil {
+			assignFailures = append(assignFailures, "vehicle assignment failed: "+err.Error())
+		}
+	}
+	if len(assignFailures) > 0 {
+		http.SetCookie(w, flashCookie("flash_error", strings.Join(assignFailures, ", ")))
 	}
 
 	http.Redirect(w, r, "/trips", http.StatusSeeOther)

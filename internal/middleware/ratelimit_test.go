@@ -73,6 +73,42 @@ func TestRateLimiter_IdleSweep(t *testing.T) {
 	}
 }
 
+// TestRateLimiter_SweepDirectReapsIdle proves the reaper contract after the
+// O(1)-allow refactor: sweep itself drops idle buckets (background reaper
+// calls it), and the allow path never scans other IPs' buckets.
+func TestRateLimiter_SweepDirectReapsIdle(t *testing.T) {
+	rl := newRateLimiter(2, time.Minute)
+	now := time.Now()
+
+	if !rl.allow("10.9.9.1", now) {
+		t.Fatal("first request should be allowed")
+	}
+	shard := rl.shardFor("10.9.9.1")
+
+	// Active bucket survives a sweep inside the window.
+	shard.mu.Lock()
+	shard.sweep(now.Add(30*time.Second), rl.window)
+	n := len(shard.buckets)
+	shard.mu.Unlock()
+	if n != 1 {
+		t.Fatalf("active bucket must survive sweep, got %d buckets", n)
+	}
+
+	// Idle past the window: sweep reaps it.
+	shard.mu.Lock()
+	shard.sweep(now.Add(2*time.Minute), rl.window)
+	n = len(shard.buckets)
+	shard.mu.Unlock()
+	if n != 0 {
+		t.Fatalf("idle bucket must be reaped by sweep, got %d buckets", n)
+	}
+
+	// Allow after reap starts a fresh bucket (reaper not on request path).
+	if !rl.allow("10.9.9.1", now.Add(2*time.Minute)) {
+		t.Fatal("allow after reap must succeed with fresh bucket")
+	}
+}
+
 func TestRateLimitMiddleware_StatusCodes(t *testing.T) {
 	mw := RateLimit(2)
 	handler := mw(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -255,6 +255,7 @@ func (s *TripService) AssignDriver(ctx context.Context, tripID domain.TripID, dr
 			Type: "TripAssignedEvent",
 			Payload: map[string]interface{}{
 				"trip_id":     string(tripID),
+				"tenant_id":   string(shared.TenantIDFromContext(ctx)),
 				"driver_id":   string(driverID),
 				"occurred_at": time.Now().UTC(),
 			},
@@ -342,6 +343,7 @@ func (s *TripService) AssignVehicle(ctx context.Context, tripID domain.TripID, v
 			Type: "TripAssignedEvent",
 			Payload: map[string]interface{}{
 				"trip_id":     string(tripID),
+				"tenant_id":   string(shared.TenantIDFromContext(ctx)),
 				"vehicle_id":  string(vehicleID),
 				"occurred_at": time.Now().UTC(),
 			},

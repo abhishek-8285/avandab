@@ -103,11 +103,14 @@
             maxBoundsViscosity: 1.0
         }).setView([20.5937, 78.9629], 5);
 
-        var tileUrl = 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&gl=IN';
+        // Tile provider is config-driven (Spec 04 section 2: no Google tile
+        // scraping unless explicitly configured). auto/''/osm -> MapConfig.OSMUrl.
+        {{$isGoogle := and .MapConfig (eq (printf "%v" .MapConfig.Provider) "google")}}
+        var tileUrl = {{if $isGoogle}}'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&gl=IN'{{else}}(cfg.OSMUrl || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'){{end}};
         L.tileLayer(tileUrl, {
             minZoom: 4,
             maxZoom: 22,
-            attribution: '&copy; Google Maps'
+            attribution: {{if $isGoogle}}'&copy; Google Maps'{{else}}'&copy; OpenStreetMap contributors'{{end}}
         }).addTo(map);
 
         var marker = null;

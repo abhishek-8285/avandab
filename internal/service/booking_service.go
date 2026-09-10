@@ -9,6 +9,7 @@ import (
 	bookingevents "transport-app/internal/domain/booking"
 	"transport-app/internal/events"
 	"transport-app/internal/repository"
+	"transport-app/internal/shared"
 )
 
 // BookingService handles booking management and workflow.
@@ -82,6 +83,7 @@ func (s *BookingService) CreateBooking(ctx context.Context, req CreateBookingReq
 	s.events.Publish(ctx, events.Event{
 		Type: events.BookingCreated,
 		Payload: bookingevents.BookingCreatedEvent{
+			TenantID:      shared.TenantIDFromContext(ctx),
 			BookingID:     created.ID,
 			BookingNumber: created.BookingNumber,
 			CustomerID:    created.CustomerID,
@@ -184,6 +186,7 @@ func (s *BookingService) ConfirmBooking(ctx context.Context, id domain.BookingID
 	s.events.Publish(ctx, events.Event{
 		Type: events.BookingConfirmed,
 		Payload: bookingevents.BookingConfirmedEvent{
+			TenantID:    shared.TenantIDFromContext(ctx),
 			BookingID:   id,
 			ConfirmedAt: time.Now(),
 			OccurredAt:  time.Now(),

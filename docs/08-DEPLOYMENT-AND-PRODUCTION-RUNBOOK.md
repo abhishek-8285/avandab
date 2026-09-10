@@ -27,6 +27,19 @@ The script automatically:
 2. Pushes the binary and static assets to `/data/local/tmp/app/`.
 3. Starts the server and binds the Cloudflare Tunnel to `avandab.com`.
 
+### Option C: Cross-compiled VPS Deployment (`scripts/deploy-vps.sh`) — recommended
+```bash
+./scripts/deploy-vps.sh <ssh-host>   # default host alias: avandab
+```
+The script runs `go vet` locally, cross-compiles a stripped amd64 binary
+(`CGO_ENABLED=0 GOOS=linux GOARCH=amd64 -trimpath -ldflags "-s -w"`), rsyncs it
+plus `internal/templates`/`internal/static`, swaps the binary under
+`systemctl` (`avandab.service`), and health-checks `http://localhost:8080/health`.
+
+**Rule: NEVER run `go build` / `go test` on the target server.** 1 GB RAM
+instances OOM/swap-thrash on compile. All compilation happens locally; only
+stripped binaries ship.
+
 ---
 
 ## 2. OSRM Self-Hosted Routing Engine Setup

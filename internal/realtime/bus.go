@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"transport-app/internal/events"
+	"transport-app/internal/shared"
 )
 
 // AttachToBus subscribes the hub to relevant bus events and forwards them.
@@ -39,8 +40,36 @@ func AttachToBus(bus events.EventBus, h Broadcaster) {
 	for _, eventType := range forwardTypes {
 		et := eventType // capture
 		bus.Subscribe(et, func(ctx context.Context, e events.Event) error {
-			h.Publish(ctx, e)
+			h.Publish(ctx, StampTenant(ctx, e))
 			return nil
 		})
 	}
+}
+
+// StampTenant stamps the publisher tenant onto an event payload at the
+// realtime forward seam (Spec 04 SSE tenant isolation). Map payloads get a
+// copied map with tenant_id filled when empty; struct payloads already carry
+// TenantID via the service publishers and pass through untouched. Never
+// hardcodes a tenant literal: an empty context tenant leaves the event
+// unstamped and the handler keeps legacy passthrough. Pure: never mutates
+// the input event or its payload map.
+func StampTenant(ctx context.Context, e events.Event) events.Event {
+	tid := string(shared.TenantIDFromContext(ctx))
+	if tid == "" {
+		return e
+	}
+	m, ok := e.Payload.(map[string]interface{})
+	if !ok || m == nil {
+		return e
+	}
+	if v, ok := m["tenant_id"].(string); ok && v != "" {
+		return e
+	}
+	cp := make(map[string]interface{}, len(m)+1)
+	for k, v := range m {
+		cp[k] = v
+	}
+	cp["tenant_id"] = tid
+	e.Payload = cp
+	return e
 }

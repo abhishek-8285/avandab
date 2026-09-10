@@ -531,10 +531,10 @@ func Load() *Config {
 		OSRMURL:  getEnv("OSRM_URL", getEnv("ROUTING_OSRM_URL", "http://osrm.internal:5000")),
 	}
 
-	// Cache backend (none by default; memory for single-instance dev,
-	// redis for shared/multi-instance deployments).
+	// Cache backend (memory by default for single-instance peak speed;
+	// none to disable, redis for shared/multi-instance deployments).
 	cfg.Cache = CacheConfig{
-		Driver:        strings.ToLower(getEnv("CACHE_DRIVER", "none")),
+		Driver:        strings.ToLower(getEnv("CACHE_DRIVER", "memory")),
 		RedisAddr:     getEnv("REDIS_ADDR", "localhost:6379"),
 		RedisPassword: os.Getenv("REDIS_PASSWORD"),
 		RedisDB:       getEnvInt("REDIS_DB", 0),

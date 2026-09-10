@@ -54,6 +54,12 @@ type Store interface {
 	CountExpiringEwaybills(ctx context.Context) (int64, error)
 	CountPendingKharcha(ctx context.Context) (int64, error)
 	CountLowFastag(ctx context.Context, threshold float64) (int64, error)
+
+	// Dashboard count chips (COUNT(*) twins of the row-fetching queries;
+	// the old code materialized full rows just to take len()).
+	CountAvailableVehicles(ctx context.Context) (int64, error)
+	CountAvailableDrivers(ctx context.Context) (int64, error)
+	CountPendingInvoices(ctx context.Context) (int64, error)
 }
 
 // Services holds all service instances and shared dependencies.

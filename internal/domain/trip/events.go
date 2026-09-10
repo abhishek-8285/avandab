@@ -22,6 +22,7 @@ type TripCreatedEvent struct {
 // TripScheduledEvent is emitted when a trip is scheduled.
 type TripScheduledEvent struct {
 	TripID     types.TripID
+	TenantID   shared.TenantID
 	Status     TripStatus
 	OccurredAt time.Time
 }
@@ -29,6 +30,7 @@ type TripScheduledEvent struct {
 // TripAssignedEvent is emitted when a driver or vehicle is assigned to a trip.
 type TripAssignedEvent struct {
 	TripID     types.TripID
+	TenantID   shared.TenantID
 	DriverID   *types.DriverID
 	VehicleID  *types.VehicleID
 	OccurredAt time.Time
@@ -53,6 +55,7 @@ type TripCompletedEvent struct {
 // TripCancelledEvent is emitted when a trip is cancelled.
 type TripCancelledEvent struct {
 	TripID      types.TripID
+	TenantID    shared.TenantID
 	CancelledAt time.Time
 	OccurredAt  time.Time
 }
@@ -60,5 +63,6 @@ type TripCancelledEvent struct {
 // TripDeletedEvent is emitted when a trip is deleted.
 type TripDeletedEvent struct {
 	TripID     types.TripID
+	TenantID   shared.TenantID
 	OccurredAt time.Time
 }

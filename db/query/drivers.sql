@@ -51,6 +51,11 @@ WHERE tenant_id = sqlc.arg(tenant_id)
   AND (lower(first_name) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(last_name) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(phone) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(license_number) LIKE '%' || lower(sqlc.arg(search)) || '%')
   AND (sqlc.arg(status_all) = '' OR status = sqlc.arg(status));
 
+-- name: CountAvailableDrivers :one
+SELECT COUNT(*) AS count
+FROM drivers
+WHERE status = 'available' AND tenant_id = ?;
+
 -- name: GetAvailableDrivers :many
 SELECT id, driver_id, first_name, last_name, phone, email, address,
     license_number, license_expiry, experience_years, status, emergency_contact_name,

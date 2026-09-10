@@ -4,17 +4,19 @@
 
 ## Where we are (built)
 
-**Stack** (`docs/01`): pure-Go binary, Chi router, SQLite WAL (`modernc.org/sqlite`), goose migrations, server-rendered HTML (Datastar/HTMX) + Leaflet OSM live map, in-memory event bus + transactional outbox, TCP `:5023` GPS ingest, MQTT `:1883`, Expo SDK 52 mobile app.
+**Stack** (`docs/01`): pure-Go binary, Chi router, SQLite WAL (`modernc.org/sqlite`), goose migrations, server-rendered HTML (Datastar/HTMX) + live map (OSM/Google gl=IN tiles, config-driven), in-memory event bus + transactional outbox, TCP `:5023` GPS ingest, MQTT `:1883`, Expo SDK 52 mobile app.
 
-**Migrations:** `db/migrations/` = 122 files, head `00128_eway_bills_status_lifecycle.sql`; `db/migrations_pg/` mirrors at 122. Next free slot **`00129`**. `00068–00072` confirmed ABSENT (RESERVED-UNBUILT still true).
+**Migrations:** `db/migrations/` = 134 files, head `00140_files_tenant_scope.sql`; `db/migrations_pg/` mirrors at 134. Next free slot **`00141`**. *(2026-09-10: verified on disk; index header matches.)* `00068–00072` confirmed ABSENT (RESERVED-UNBUILT still true).
 
 **Recent direction:** tenant fail-closed hardening + `DefaultTenant` fallback removal (`e74c040`); vehicle compliance hard-block restore (`e9c23ad`); founder-signal tenant scoping; PG dual-engine parity + CI gate; per-tenant company profiles (`00125`); self-registration → `org_admin`.
 
+**Built 2026-09-09 → 10 (28 commits):** telemetry hardening round 2 — per-tenant plates (`00135`), positions NULL backfill (`00136`), ack-after-accept + worker failure metrics, etag-304/spatial-bbox/delta sync on live endpoint, SSE keep-alive, cross-tenant sync-spoof fix, egress origin shield + static cache; AV teleoperation deck + `vehicle_commands`/`av_operator` (`00137`); scale indexes (`00138/00139`); S3/R2 storage driver + `files.tenant_id` scoping (`00140`, closes cross-tenant file-read hole); Cloudflare Turnstile bot protection; telemetry partition retention cleaner; PWA service worker + offline precache + client image compression; cross-compiled VPS deploy (`scripts/deploy-vps.sh`, systemd, rsync; compile-on-target blocked); Google gl=IN live-map tiles + India-bounded viewports; SOP trip-close odometer (B1 seed).
+
 **Built per migration (spot-verified):** telemetry GT06/AIS-140 + provider parity (`00117`); trip state machine + dwell + detention; route/ETA jobs (`00066/00067`); GST engine + PDF/QR + settlement ledger + Razorpay; tenancy registry + trigger hardening (`00102–00105`); churn (`00073–00076`); files (`00077`); RAG RBAC (`00078`); leader leases (`00079`); driver lifecycle (`00108`); dispatch offers (`00109`); quotes (`00110`); settlement ledger (`00111`); multi-leg + multistop EWB (`00112/00113`); entitlements + subscription webhooks (`00114/00115`); push tokens (`00116`); comm outbox (`00118`); email pool (`00120`); booking/trip indexes + idempotency (`00121/00122`); work orders (`00123/00124`); fleet SOP parity (`00126` JSON API + SAP-tab HTML); EWB delivered lifecycle (`00127/00128`). Agent orchestrator + RL loop + approval gate. OpenAPI covers `/api/v1/vehicles` (+points/measurements).
 
-**Zero-code-presence follow-ups (repo-wide grep):** `ZMOTM_MMS`/`ZMOTM_MR`, `IP41`/`IW28` (only in SOP spec doc); backhaul (one comment); STO portal / load board, ESG, fuel cards (index rows only). KMPL partial (template + fuel audit exist; SOP report set not built). Mobile: 17 screens but only `DispatchScreen`/`TripsScreen` are `.tsx` — rest are `.ts`, stub-vs-real unverified.
+**Zero-code-presence follow-ups (repo-wide grep 2026-09-10):** `ZMOTM_MR` report set, `IP41`/`IW28` (only in SOP spec doc) — note `ZMOTM_MMS` p.8 trip-close odometer is now wired (`internal/handlers/trips.go`, `internal/trip/domain/aggregate/trip_aggregate.go`, `internal/trip/application/complete_trip.go`); backhaul (one comment); STO portal / load board, ESG, fuel cards (index rows only). KMPL partial (template + fuel audit exist; SOP report set not built). Mobile: 17 screens but only `DispatchScreen`/`TripsScreen` are `.tsx` — rest are `.ts`, stub-vs-real unverified.
 
-**Reality divergences (`AVANDAB_ZERO_COST_ARCHITECTURE.md` vs observed):** compute is TECNO-LE7 Android VPS + Cloudflare tunnel, not GCP e2-micro (§2 stale); mail converged further (`comm_outbox` + quota pool, §4B understates); DB is dual-engine PG parity, not single SQLite; OSRM-via-Docker contradicts "zero-Docker". `ALL_TECH_SPECS.txt` is a pointer stub, not a spec. Ownership index header stale (says head `00039`/range `1–117`; table runs to `00128`).
+**Reality divergences (`AVANDAB_ZERO_COST_ARCHITECTURE.md` vs observed):** *(2026-09-10, C5 — reconciled in place: §2/§4B/§6 rewritten to observed reality, honesty banner added.)* Residual: §3 live-map caveat added (some public share/playback templates embed unofficial Google `vt` tile URLs — ToS-gray, not an official free API); `ALL_TECH_SPECS.txt` remains a pointer stub by design; ownership index header now correct (head `00140`, A5 done 2026-09-08).
 
 ## Phase A — Stabilize (ship in AGENTS.md critical-path order)
 
@@ -29,14 +31,16 @@
 - **A9. EWB delivered-lifecycle staging proof** (`00127/00128`). Drive one trip to `DELIVERED`, assert events. No migration.
 - **A10. Mobile stub inventory** (`docs/04`). Classify each screen stub vs wired with API binding per row. No migration.
 
-## Phase B — Feature gaps (SOP non-goals; each ≤1 migration; next free `00129+`)
+## Phase B — Feature gaps (SOP non-goals; each ≤1 migration; next free `00141+`)
 
-- **B1. Trip Start/Close `ZMOTM_MMS` (pp.6-8). `00129`.** Close-reading/date/time on Trip Close + Breakdown→notification hook; feeds Gate Register.
-- **B2. Fuel issue entry (p.9). `00130`.** Station OP/CL readings → `PUMP` measuring points; expiry → `valid_to`.
-- **B3. Maintenance plans `IP41` (pp.10-15). `00131`.** Scheduling from `annual_estimate` (`00126`) onto `work_orders` (`00123`).
-- **B4. Maintenance notifications `IW28` + dispatch block (p.13). `00132`** (or no-DB if `work_orders` suffices). In-Process ⇒ `CanAssign` block.
-- **B5. Reports `ZMOTM_MR` Gate/Fuel/KMPL/Breakdown (pp.16-20). `00133`.** Exact p.18 Vehicle-Master columns = acceptance test.
-- **B6. Facility master / ZFID sync (p.1-2). `00134`.** Table per p.2 screenshot cols; `vehicles.facility_id` TEXT → FK (NULL still allowed for contractual).
+*(2026-09-10 re-slot: `00129`–`00134` were consumed by infra seams — GSTN/verify seam (`00130`), license NULL backfill (`00131`), vehicle expiry nullable (`00132`), `email_verified_at` (`00133`), `ts_unix` (`00134`) — so B1–B6 slots re-allocated to `00141`+.)*
+
+- **B1. Trip Start/Close `ZMOTM_MMS` (pp.6-8). `00141`.** Close-reading/date/time on Trip Close + Breakdown→notification hook; feeds Gate Register. *(2026-09-10: close-odometer + SOP close dialog shipped — B1 seed; date/time + breakdown hook still open.)*
+- **B2. Fuel issue entry (p.9). `00142`.** Station OP/CL readings → `PUMP` measuring points; expiry → `valid_to`.
+- **B3. Maintenance plans `IP41` (pp.10-15). `00143`.** Scheduling from `annual_estimate` (`00126`) onto `work_orders` (`00123`).
+- **B4. Maintenance notifications `IW28` + dispatch block (p.13). `00144`** (or no-DB if `work_orders` suffices). In-Process ⇒ `CanAssign` block.
+- **B5. Reports `ZMOTM_MR` Gate/Fuel/KMPL/Breakdown (pp.16-20). `00145`.** Exact p.18 Vehicle-Master columns = acceptance test.
+- **B6. Facility master / ZFID sync (p.1-2). `00146`.** Table per p.2 screenshot cols; `vehicles.facility_id` TEXT → FK (NULL still allowed for contractual).
 - **B7. `00068` Backhaul matching (no DB).** Return-load suggestions on completed-trip corridors.
 - **B8. `00069` STO portal + load board listings.** Shipper order portal + carrier search, tenant-scoped. *(Needs one-page spec first — no spec doc on disk.)*
 - **B9. `00070` CX tracking timeline (no DB, uses `00044` share).** Public milestone timeline on share links.
@@ -56,7 +60,7 @@
 ## Risks & open questions
 
 1. Single-node fragility (2026-08-31 load-28/502 on 5.6 GiB device) vs 5k-truck claims — C1/C2 hedge; no scale promises before PG-cutover proof.
-2. 61 pre-existing FK violations — A3 may promote some to bug fixes with `00129+` migrations.
+2. 61 pre-existing FK violations — *(resolved: A3 done 2026-09-08, `foreign_key_check` 0 rows at v134+; dispositions in `scripts/cutover-data-cleanup.sql`)*.
 3. Mock-by-default providers safe only while flags stay true; guard staging mocks from prod compliance.
 4. Index drift invites number collisions (past `00081/00084/00085`) — do A5 before any B-ticket.
 5. B7–B11 blocked on one-page specs each (owner, state machine, acceptance).

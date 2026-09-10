@@ -248,6 +248,16 @@ func (r *SQLRepository) CountInvoices(ctx context.Context, query string, status 
 	return count, nil
 }
 
+// CountPendingInvoices is the cheap twin of GetPendingInvoices: the
+// dashboard count chip should not JOIN+materialize full invoice rows.
+func (r *SQLRepository) CountPendingInvoices(ctx context.Context) (int64, error) {
+	var n int64
+	err := r.queryRow(ctx, `SELECT COUNT(*) FROM invoices
+WHERE payment_status IN ('pending', 'partially_paid') AND tenant_id = ?`,
+		tenantIDFromCtx(ctx)).Scan(&n)
+	return n, err
+}
+
 func (r *SQLRepository) GetPendingInvoices(ctx context.Context) ([]repository.InvoiceWithJoins, error) {
 	rows, err := r.Q(ctx).GetPendingInvoices(ctx, tenantIDFromCtx(ctx))
 	if err != nil {

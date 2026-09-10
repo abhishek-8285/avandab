@@ -154,31 +154,41 @@ func (s *DashboardService) GetDashboardData(ctx context.Context) (DashboardData,
 
 	// 2. Available vehicles
 	g.Go(func() error {
-		vehicles, err := s.store.GetAvailableVehicles(ctx)
+		n, err := s.store.CountAvailableVehicles(ctx)
 		if err == nil {
-			availVehiclesCount = int64(len(vehicles))
+			availVehiclesCount = n
+		} else {
+			logErr(ctx, s.log, "dashboard.count_available_vehicles", err)
 		}
 		return nil
 	})
 
 	// 3. Available drivers
 	g.Go(func() error {
-		drivers, err := s.store.GetAvailableDrivers(ctx)
+		n, err := s.store.CountAvailableDrivers(ctx)
 		if err == nil {
-			availDriversCount = int64(len(drivers))
+			availDriversCount = n
+		} else {
+			logErr(ctx, s.log, "dashboard.count_available_drivers", err)
 		}
 		return nil
 	})
 
 	// 4. Pending invoices (count + oldest-first rows for the alert feed)
 	g.Go(func() error {
+		if n, err := s.store.CountPendingInvoices(ctx); err == nil {
+			pendingPaymentsCount = int(n)
+		} else {
+			logErr(ctx, s.log, "dashboard.count_pending_invoices", err)
+		}
 		pending, err := s.store.GetPendingInvoices(ctx)
 		if err == nil {
-			pendingPaymentsCount = len(pending)
 			if len(pending) > 10 {
 				pending = pending[:10]
 			}
 			pendingInvoices = pending
+		} else {
+			logErr(ctx, s.log, "dashboard.pending_invoices", err)
 		}
 		return nil
 	})
@@ -243,13 +253,15 @@ func (s *DashboardService) GetDashboardData(ctx context.Context) (DashboardData,
 		return nil
 	})
 
-	// 14. Yesterday's trip count (for the delta chip; sum-all, same as today)
+	// 5. Yesterday's trip count (for the delta chip; sum-all, same as today)
 	g.Go(func() error {
 		counts, err := s.store.CountTripsByStatusForDate(ctx, yesterday)
 		if err == nil {
 			for _, n := range counts {
 				yesterdayCount += n
 			}
+		} else {
+			logErr(ctx, s.log, "dashboard.count_trips_yesterday", err)
 		}
 		return nil
 	})
@@ -317,6 +329,7 @@ func (s *DashboardService) GetDashboardData(ctx context.Context) (DashboardData,
 			upcomingTrips = trips
 		} else {
 			upcomingTrips = []repository.TripWithJoins{}
+			logErr(ctx, s.log, "dashboard.upcoming_trips", err)
 		}
 		return nil
 	})
@@ -328,6 +341,7 @@ func (s *DashboardService) GetDashboardData(ctx context.Context) (DashboardData,
 			recentBookings = bookings
 		} else {
 			recentBookings = []repository.BookingWithJoins{}
+			logErr(ctx, s.log, "dashboard.recent_bookings", err)
 		}
 		return nil
 	})
@@ -339,6 +353,7 @@ func (s *DashboardService) GetDashboardData(ctx context.Context) (DashboardData,
 			recentPayments = payments
 		} else {
 			recentPayments = []repository.PaymentWithInvoice{}
+			logErr(ctx, s.log, "dashboard.recent_payments", err)
 		}
 		return nil
 	})
@@ -350,6 +365,7 @@ func (s *DashboardService) GetDashboardData(ctx context.Context) (DashboardData,
 			recentActivity = logs
 		} else {
 			recentActivity = []repository.AuditLogWithUser{}
+			logErr(ctx, s.log, "dashboard.recent_activity", err)
 		}
 		return nil
 	})
@@ -400,20 +416,12 @@ func (s *DashboardService) GetUpcomingTrips(ctx context.Context, date string) ([
 
 // GetAvailableDriversForDashboard returns available drivers count.
 func (s *DashboardService) GetAvailableDriversForDashboard(ctx context.Context) (int64, error) {
-	drivers, err := s.store.GetAvailableDrivers(ctx)
-	if err != nil {
-		return 0, err
-	}
-	return int64(len(drivers)), nil
+	return s.store.CountAvailableDrivers(ctx)
 }
 
 // GetAvailableVehiclesForDashboard returns available vehicles count.
 func (s *DashboardService) GetAvailableVehiclesForDashboard(ctx context.Context) (int64, error) {
-	vehicles, err := s.store.GetAvailableVehicles(ctx)
-	if err != nil {
-		return 0, err
-	}
-	return int64(len(vehicles)), nil
+	return s.store.CountAvailableVehicles(ctx)
 }
 
 // GetTodayTripsSummary returns counts of trips by status for a given date.
@@ -426,11 +434,11 @@ func (s *DashboardService) GetTodayTripsSummary(ctx context.Context, date string
 
 // GetPendingPaymentsCount returns the count of invoices with pending/partial payments.
 func (s *DashboardService) GetPendingPaymentsCount(ctx context.Context) (int, error) {
-	pending, err := s.store.GetPendingInvoices(ctx)
+	n, err := s.store.CountPendingInvoices(ctx)
 	if err != nil {
 		return 0, err
 	}
-	return len(pending), nil
+	return int(n), nil
 }
 
 // GetMonthlyRevenueSummary returns the total revenue for the current month.
@@ -461,11 +469,19 @@ func (s *DashboardService) GetStats(ctx context.Context) (map[string]int64, erro
 		stats[string(status)] = count
 	}
 
-	vehicles, _ := s.store.GetAvailableVehicles(ctx)
-	stats["available_vehicles"] = int64(len(vehicles))
+	n, err := s.store.CountAvailableVehicles(ctx)
+	if err != nil {
+		stats["available_vehicles"] = 0
+	} else {
+		stats["available_vehicles"] = n
+	}
 
-	drivers, _ := s.store.GetAvailableDrivers(ctx)
-	stats["available_drivers"] = int64(len(drivers))
+	n, err = s.store.CountAvailableDrivers(ctx)
+	if err != nil {
+		stats["available_drivers"] = 0
+	} else {
+		stats["available_drivers"] = n
+	}
 
 	return stats, nil
 }

@@ -227,6 +227,15 @@ func (r *SQLRepository) CountVehicles(ctx context.Context, query string, status 
 	return count, nil
 }
 
+// CountAvailableVehicles is the O(1)-memory twin of GetAvailableVehicles:
+// dashboard chips need the number, not the rows.
+func (r *SQLRepository) CountAvailableVehicles(ctx context.Context) (int64, error) {
+	var n int64
+	err := r.queryRow(ctx, `SELECT COUNT(*) FROM vehicles WHERE status = 'available' AND tenant_id = ?`,
+		tenantIDFromCtx(ctx)).Scan(&n)
+	return n, err
+}
+
 func (r *SQLRepository) GetAvailableVehicles(ctx context.Context) ([]domain.Vehicle, error) {
 	rows, err := r.Q(ctx).GetAvailableVehicles(ctx, tenantIDFromCtx(ctx))
 	if err != nil {

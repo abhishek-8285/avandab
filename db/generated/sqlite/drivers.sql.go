@@ -11,6 +11,19 @@ import (
 	"time"
 )
 
+const countAvailableDrivers = `-- name: CountAvailableDrivers :one
+SELECT COUNT(*) AS count
+FROM drivers
+WHERE status = 'available' AND tenant_id = ?
+`
+
+func (q *Queries) CountAvailableDrivers(ctx context.Context, tenantID string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countAvailableDrivers, tenantID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countDrivers = `-- name: CountDrivers :one
 SELECT COUNT(*) AS count
 FROM drivers

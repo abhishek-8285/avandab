@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -109,7 +111,9 @@ func (h *KharchaHandlers) Create(w http.ResponseWriter, r *http.Request) {
 
 	// If a fuel claim, queue it for the audit pass immediately.
 	if category == "fuel" && h.Services.FuelAudit != nil {
-		_, _ = h.Services.FuelAudit.AuditPendingClaims(ctx)
+		if _, aErr := h.Services.FuelAudit.AuditPendingClaims(ctx); aErr != nil {
+			slog.WarnContext(ctx, "fuel audit pass failed after expense create", slog.Any("error", aErr))
+		}
 	}
 
 	if isDatastarRequest(r) {
@@ -159,11 +163,15 @@ func (h *KharchaHandlers) CreateExpenseAPI(w http.ResponseWriter, r *http.Reques
 	driverID := session.UserID
 	if h.DB != nil {
 		var dID string
-		_ = h.DB.QueryRowContext(ctx, `
+		if qErr := h.DB.QueryRowContext(ctx, `
 			SELECT id FROM drivers
 			WHERE id = $1 OR email = (SELECT email FROM users WHERE id = $2)
 			LIMIT 1
-		`, session.UserID, session.UserID).Scan(&dID)
+		`, session.UserID, session.UserID).Scan(&dID); qErr != nil && qErr != sql.ErrNoRows {
+			// Handled fallback: the expense stays under the auth user id, but
+			// the lookup must not fail silently (AGENTS.md no-silent-failures).
+			slog.WarnContext(ctx, "driver resolution from auth user failed", slog.Any("error", qErr))
+		}
 		if dID != "" {
 			driverID = dID
 		}
@@ -203,7 +211,9 @@ func (h *KharchaHandlers) CreateExpenseAPI(w http.ResponseWriter, r *http.Reques
 
 	// Fuel claims enter the audit queue immediately (parity with web create).
 	if category == "fuel" && h.Services.FuelAudit != nil {
-		_, _ = h.Services.FuelAudit.AuditPendingClaims(ctx)
+		if _, aErr := h.Services.FuelAudit.AuditPendingClaims(ctx); aErr != nil {
+			slog.WarnContext(ctx, "fuel audit pass failed after expense create", slog.Any("error", aErr))
+		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -251,7 +261,9 @@ func (h *KharchaHandlers) Approve(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("HX-Trigger", `{"showToast":{"tone":"success","msg":"Expense approved"}}`)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		// row
-		_ = h.Templates.ExecuteTemplate(w, "kharcha_row_approved.html", expense)
+		if tErr := h.Templates.ExecuteTemplate(w, "kharcha_row_approved.html", expense); tErr != nil {
+			slog.WarnContext(ctx, "kharcha approved-row partial render failed", slog.Any("error", tErr))
+		}
 		// OOB partials via htmx 4 <template hx type="partial">
 		_, _ = fmt.Fprintf(w, `<template hx type="partial" hx-target="#kharcha-queue-count" hx-swap="innerMorph">%d waiting</template>`, len(pending))
 		_, _ = fmt.Fprintf(w, `<template hx type="partial" hx-target="#kpi-pending-count" hx-swap="innerMorph">%d</template>`, stats.PendingCount)
@@ -300,7 +312,9 @@ func (h *KharchaHandlers) Reject(w http.ResponseWriter, r *http.Request) {
 		pending, _ := h.Services.Kharcha.ListPendingExpenses(ctx)
 		w.Header().Set("HX-Trigger", `{"showToast":{"tone":"success","msg":"Expense rejected"}}`)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_ = h.Templates.ExecuteTemplate(w, "kharcha_row_rejected.html", expense)
+		if tErr := h.Templates.ExecuteTemplate(w, "kharcha_row_rejected.html", expense); tErr != nil {
+			slog.WarnContext(ctx, "kharcha rejected-row partial render failed", slog.Any("error", tErr))
+		}
 		_, _ = fmt.Fprintf(w, `<template hx type="partial" hx-target="#kharcha-queue-count" hx-swap="innerMorph">%d waiting</template>`, len(pending))
 		_, _ = fmt.Fprintf(w, `<template hx type="partial" hx-target="#kpi-pending-count" hx-swap="innerMorph">%d</template>`, stats.PendingCount)
 		return
@@ -347,11 +361,15 @@ func (h *KharchaHandlers) DeliverWithPOD(w http.ResponseWriter, r *http.Request)
 	driverMatches := assignedDriverID == session.UserID
 	if !driverMatches && h.DB != nil {
 		var dID, dCode string
-		_ = h.DB.QueryRowContext(ctx, `
+		if qErr := h.DB.QueryRowContext(ctx, `
 			SELECT id, driver_id FROM drivers
 			WHERE id = $1 OR email = (SELECT email FROM users WHERE id = $2)
 			LIMIT 1
-		`, session.UserID, session.UserID).Scan(&dID, &dCode)
+		`, session.UserID, session.UserID).Scan(&dID, &dCode); qErr != nil && qErr != sql.ErrNoRows {
+			// No driver row is a valid state (falls through to the 403); real
+			// DB errors must surface in logs, not vanish.
+			slog.WarnContext(ctx, "driver resolution from auth user failed", slog.Any("error", qErr))
+		}
 		if (dID != "" && assignedDriverID == dID) || (dCode != "" && assignedDriverID == dCode) {
 			driverMatches = true
 		}

@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -288,7 +290,7 @@ func (h *EWayBillHandlers) List(w http.ResponseWriter, r *http.Request) {
 
 	// 1. Fetch stats
 	var stats EWBStats
-	_ = h.DB.QueryRowContext(r.Context(), `
+	if sErr := h.DB.QueryRowContext(r.Context(), `
 		SELECT COUNT(*),
 		       COALESCE(SUM(CASE WHEN status='active' AND (vehicle_number IS NOT NULL AND vehicle_number != '') THEN 1 ELSE 0 END), 0),
 		       COALESCE(SUM(CASE WHEN status='active' AND (vehicle_number IS NULL OR vehicle_number = '') THEN 1 ELSE 0 END), 0),
@@ -296,7 +298,10 @@ func (h *EWayBillHandlers) List(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(SUM(CASE WHEN status='cancelled' THEN 1 ELSE 0 END), 0),
 		       COALESCE(SUM(CASE WHEN status='expired' THEN 1 ELSE 0 END), 0)
 		FROM eway_bills
-	`).Scan(&stats.Total, &stats.Active, &stats.PartAOnly, &stats.Extended, &stats.Cancelled, &stats.Expired)
+	`).Scan(&stats.Total, &stats.Active, &stats.PartAOnly, &stats.Extended, &stats.Cancelled, &stats.Expired); sErr != nil && sErr != sql.ErrNoRows {
+		// Zeroed stats on a failed query is a silent failure - surface it in logs.
+		slog.WarnContext(r.Context(), "EWB stats query failed", slog.Any("error", sErr))
+	}
 
 	// 2. Fetch list items
 	items := h.queryEWBItems(r.Context())

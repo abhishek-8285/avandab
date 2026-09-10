@@ -39,8 +39,10 @@ func StreamHandler(h Broadcaster, sseEnabled ...bool) http.HandlerFunc {
 		// (RequireAPIAuth stamps it on the context). Events carrying a
 		// tenant_id are delivered only to that tenant — without this, any
 		// authenticated user sees every org's live positions and SOS
-		// locations. Events without a tenant stamp (trip bus events —
-		// TODO: stamp tenant at publish) pass through as before.
+		// locations. Map-payload events are tenant-stamped at publish by
+		// AttachToBus/StampTenant; struct payloads carry TenantID from service
+		// publishers. Unstamped maps (no tenant in publish context) keep legacy
+		// passthrough.
 		// No caller tenant (tests, mounts outside the auth group):
 		// legacy passthrough, trip/vehicle filters still apply.
 		callerTenant := string(shared.TenantIDFromContext(r.Context()))

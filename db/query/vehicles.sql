@@ -101,6 +101,11 @@ WHERE tenant_id = sqlc.arg(tenant_id)
   AND (sqlc.arg(fleet_class_all) = '' OR fleet_class = sqlc.arg(fleet_class))
   AND (sqlc.arg(ownership_all) = '' OR ownership = sqlc.arg(ownership));
 
+-- name: CountAvailableVehicles :one
+SELECT COUNT(*) AS count
+FROM vehicles
+WHERE status = 'available' AND tenant_id = ?;
+
 -- name: GetAvailableVehicles :many
 SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
     fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage, blocked, blocked_reason, rc_expiry, odometer, puc_expiry,
