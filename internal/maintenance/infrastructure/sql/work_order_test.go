@@ -193,3 +193,81 @@ func TestWorkOrders_Complete(t *testing.T) {
 	_, err = repo.CompleteWorkOrder(ctx, "tenant-A", "wo-c", "u1")
 	require.Error(t, err)
 }
+
+// TestWorkOrders_IsMaintenanceBlocked_DispatchBlock verifies that work orders
+// in 'in_progress' or 'assigned' state block vehicle assignment per SOP IW28 (p.13).
+func TestWorkOrders_IsMaintenanceBlocked_DispatchBlock(t *testing.T) {
+	db := maintTenantTestDB(t)
+	_, err := db.Exec(`ALTER TABLE vehicles ADD COLUMN maintenance_due TEXT;
+		ALTER TABLE vehicles ADD COLUMN maintenance_override_by TEXT;
+		ALTER TABLE vehicles ADD COLUMN maintenance_override_at DATETIME;
+		ALTER TABLE vehicles ADD COLUMN maintenance_override_reason TEXT;
+		CREATE TABLE dtc_events (
+			id TEXT PRIMARY KEY, vehicle_id TEXT, trip_id TEXT, dtc_code TEXT,
+			severity TEXT, description TEXT, raw_payload TEXT,
+			occurred_at DATETIME, resolved_at DATETIME, created_at DATETIME
+		);
+		CREATE TABLE work_orders (
+			id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, vehicle_id TEXT NOT NULL,
+			schedule_id TEXT, trip_id TEXT, title TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
+			assignee TEXT NOT NULL DEFAULT '', vendor TEXT NOT NULL DEFAULT '',
+			cost_estimate REAL, cost_actual REAL,
+			status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','assigned','in_progress','on_hold','done','cancelled')),
+			due_at DATETIME, closed_at DATETIME,
+			created_at DATETIME NOT NULL DEFAULT (datetime('now')),
+			updated_at DATETIME NOT NULL DEFAULT (datetime('now'))
+		);`)
+	require.NoError(t, err)
+
+	_, err = db.Exec(`INSERT INTO vehicles (id, tenant_id) VALUES ('veh-iw28', 'tenant-1')`)
+	require.NoError(t, err)
+
+	repo := NewMaintenanceRepository(db)
+	ctx := context.Background()
+
+	// 1. Initially unblocked
+	blocked, reason, err := repo.IsMaintenanceBlocked(ctx, "veh-iw28")
+	require.NoError(t, err)
+	assert.False(t, blocked)
+	assert.Empty(t, reason)
+
+	// 2. Open work order does not block dispatch yet
+	require.NoError(t, repo.CreateWorkOrder(ctx, domain.WorkOrder{
+		ID: "wo-iw28", TenantID: "tenant-1", VehicleID: "veh-iw28",
+		Title: "Brake overhaul",
+	}))
+	blocked, _, err = repo.IsMaintenanceBlocked(ctx, "veh-iw28")
+	require.NoError(t, err)
+	assert.False(t, blocked, "open work order should not block before assignment/workshop start")
+
+	// 3. Assigned work order blocks dispatch
+	require.NoError(t, repo.AssignWorkOrder(ctx, "tenant-1", "wo-iw28", "Mechanic Dev", "City Garage"))
+	blocked, reason, err = repo.IsMaintenanceBlocked(ctx, "veh-iw28")
+	require.NoError(t, err)
+	assert.True(t, blocked, "assigned work order must block dispatch")
+	assert.Contains(t, reason, "in-process")
+
+	// 4. In-progress work order blocks dispatch (IW28 p.13)
+	require.NoError(t, repo.TransitionWorkOrder(ctx, "tenant-1", "wo-iw28", domain.WorkOrderInProgress))
+	blocked, reason, err = repo.IsMaintenanceBlocked(ctx, "veh-iw28")
+	require.NoError(t, err)
+	assert.True(t, blocked, "in_progress work order must block dispatch")
+	assert.Contains(t, reason, "in-process")
+
+	// 5. Admin override lifts the dispatch block
+	_, err = db.Exec(`UPDATE vehicles SET maintenance_override_by = 'admin-1', maintenance_override_at = datetime('now'), maintenance_override_reason = 'Urgent dispatch' WHERE id = 'veh-iw28'`)
+	require.NoError(t, err)
+	blocked, _, err = repo.IsMaintenanceBlocked(ctx, "veh-iw28")
+	require.NoError(t, err)
+	assert.False(t, blocked, "override must lift work order block")
+
+	// Remove override
+	_, err = db.Exec(`UPDATE vehicles SET maintenance_override_by = NULL, maintenance_override_at = NULL WHERE id = 'veh-iw28'`)
+	require.NoError(t, err)
+
+	// 6. Transition to done unblocks the vehicle
+	require.NoError(t, repo.TransitionWorkOrder(ctx, "tenant-1", "wo-iw28", domain.WorkOrderDone))
+	blocked, _, err = repo.IsMaintenanceBlocked(ctx, "veh-iw28")
+	require.NoError(t, err)
+	assert.False(t, blocked, "done work order must unblock vehicle")
+}

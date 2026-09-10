@@ -365,6 +365,14 @@ func (w *Worker) EvaluateResolution(ctx context.Context, vehicleID string) {
 		}
 	}
 
+	// 3. Check active work orders (in_progress / assigned)
+	var activeWOCount int
+	if err := w.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM work_orders
+		WHERE vehicle_id = $1 AND status IN ('in_progress', 'assigned')`, vehicleID).Scan(&activeWOCount); err == nil && activeWOCount > 0 {
+		return // Work orders still in progress / assigned
+	}
+
 	// Clear maintenance due
 	if err := w.repo.ClearMaintenanceDue(ctx, vehicleID); err == nil {
 		if w.bus != nil {

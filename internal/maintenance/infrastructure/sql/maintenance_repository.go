@@ -194,8 +194,15 @@ func (r *MaintenanceRepository) IsMaintenanceBlocked(ctx context.Context, vehicl
 		hasCriticalDTC = true
 	}
 
+	var activeWOID string
+	_ = r.db.QueryRowContext(ctx, `
+		SELECT id FROM work_orders
+		WHERE vehicle_id = $1 AND status IN ('in_progress', 'assigned')
+		LIMIT 1`, vehicleID).Scan(&activeWOID)
+	hasActiveWO := activeWOID != ""
+
 	isDue := due.Valid && due.String != ""
-	if !isDue && !hasCriticalDTC {
+	if !isDue && !hasCriticalDTC && !hasActiveWO {
 		return false, "", nil
 	}
 
@@ -204,6 +211,9 @@ func (r *MaintenanceRepository) IsMaintenanceBlocked(ctx context.Context, vehicl
 		return false, "", nil // Override lifts block
 	}
 
+	if hasActiveWO {
+		return true, fmt.Sprintf("vehicle %s is blocked for maintenance (work order %s in-process); override requires maintenance:update permission", vehicleID, activeWOID), nil
+	}
 	if isDue {
 		return true, fmt.Sprintf("vehicle %s is blocked for maintenance (due since: %s); override requires maintenance:update permission", vehicleID, due.String), nil
 	}
