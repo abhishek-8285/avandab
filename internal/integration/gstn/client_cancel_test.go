@@ -2,6 +2,9 @@ package gstn
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -51,4 +54,40 @@ func TestStub_CancelIRN_RejectsBadInput(t *testing.T) {
 	_, err = c.CancelIRN(context.Background(), CancelIRNRequest{IRN: strings.Repeat("c", 64), CancelReason: 9})
 	require.Error(t, err, "out-of-range cancel_reason must be rejected")
 	assert.Contains(t, err.Error(), "cancel_reason")
+}
+
+func TestRealHttpClient_CancelIRN_WirePayload(t *testing.T) {
+	var capturedPayload map[string]interface{}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/einvoice/cancel", r.URL.Path)
+		assert.Equal(t, "test-api-key", r.Header.Get("X-API-Key"))
+		assert.Equal(t, "application/json", r.Header.Get("Content-Type"))
+
+		_ = json.NewDecoder(r.Body).Decode(&capturedPayload)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"Irn":"1234567890123456789012345678901234567890123456789012345678901234","CancelDate":"2026-09-11 12:00:00"}`))
+	}))
+	defer srv.Close()
+
+	client := NewClient(Config{
+		Enabled:  true,
+		UseMock:  false,
+		Endpoint: srv.URL,
+		APIKey:   "test-api-key",
+	})
+	res, err := client.CancelIRN(context.Background(), CancelIRNRequest{
+		IRN:          "1234567890123456789012345678901234567890123456789012345678901234",
+		CancelReason: 2,
+		CancelRemark: "Order cancelled by shipper",
+	})
+	require.NoError(t, err)
+	assert.True(t, res.Cancelled)
+	assert.Equal(t, "1234567890123456789012345678901234567890123456789012345678901234", res.IRN)
+	assert.Equal(t, "2026-09-11 12:00:00", res.CancelDate)
+	assert.Equal(t, "Order cancelled by shipper", res.Remark)
+
+	// Verify exact NIC/GSP wire field names
+	assert.Equal(t, "1234567890123456789012345678901234567890123456789012345678901234", capturedPayload["Irn"])
+	assert.Equal(t, "2", capturedPayload["CnlRsn"])
+	assert.Equal(t, "Order cancelled by shipper", capturedPayload["CnlRem"])
 }

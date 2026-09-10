@@ -56,7 +56,7 @@
 | Area | State | Proof |
 |---|---|---|
 | Money/compliance integrations (EWB, GSTN, FASTag, accounting) | **mock-by-default** | roadmap C4; mock-honesty flags |
-| Mobile driver app | 16 screens, only `DispatchScreen`/`TripsScreen` are real `.tsx`; rest `.ts` stubs — one stub (`FirstTimeSetupScreen`) deleted this cycle, inventory otherwise unverified | roadmap A10 (open); `ls mobile/src/screens/` |
+| Mobile driver app | 16 screens: `src/screens/*.ts` are re-export barrels for `src/components/*Screen.tsx` (all full React Native components: ActiveNav 25KB, DeliveryVerify 32KB, Profile 31KB, Expense 17KB, Paisa 16KB, etc.); verified wired to mobile services | roadmap A10 (verified); `mobile/README.md` |
 | OpenAPI coverage | ~1 domain (`/api/v1/vehicles`) out of dozens of mounted APIs | roadmap A6/B12 (open) |
 | Scale | single Android device VPS; no scale promises before PG cutover | FAILURE_ANALYSIS; roadmap C1/C2 |
 | Data integrity | FK violations disposition pending | roadmap A3 (open) |
@@ -97,8 +97,8 @@
 1. **A3** FK-health triage (61 violations) — cheapest integrity win, untouched two surveys running
 2. **A8** Legacy-delegation ADR — now covers `handlers/` god-files **and** `agent/tools.go`; decide end-state before more growth
 3. **A6** OpenAPI↔router parity audit — makes B12 gap closure measurable
-4. **A10** Mobile stub inventory — one stub deleted this cycle; 14 `.ts` stubs remain unverified
-5. Then Phase B in migration-slot order (`00135+`; head is `00134`)
+4. **A10** Mobile stub inventory — closed with verified inventory (`src/screens/*.ts` barrels -> `src/components/*Screen.tsx` implementations)
+5. Then Phase B in migration-slot order (`00142+`; head is `00141`)
 
 ## 7. Sources
 

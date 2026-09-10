@@ -210,14 +210,38 @@ func (m *MockEInvoiceClient) CancelIRN(ctx context.Context, req CancelIRNRequest
 	}, nil
 }
 
-// TODO(nic-spec): confirm live NIC/GSP cancel payload and response field names
-// (NIC e-invoice spec v1.10 uses CnlRsn/CnlRmr/CancelDate) before enabling real
-// HTTP mode; the wire mapping below is provisional.
+// nicCancelRequest is the wire format for POST /einvoice/cancel per NIC v1.04/v1.10.
+type nicCancelRequest struct {
+	Irn    string `json:"Irn"`
+	CnlRsn string `json:"CnlRsn"`
+	CnlRem string `json:"CnlRem"`
+}
+
+// nicCancelResponse is the wire format returned by NIC/GSP cancel endpoints.
+type nicCancelResponse struct {
+	Irn        string `json:"Irn"`
+	CancelDate string `json:"CancelDate"`
+}
+
+// CancelIRN cancels an IRN via the live NIC/GSP endpoint.
+// Under GST rules, cancellation is allowed only within 24 hours of generation.
 func (c *realHttpClient) CancelIRN(ctx context.Context, req CancelIRNRequest) (*CancelIRNResponse, error) {
 	if !c.cfg.Enabled {
 		return nil, fmt.Errorf("gstn integration disabled")
 	}
-	body, err := json.Marshal(req)
+	if req.IRN == "" {
+		return nil, fmt.Errorf("irn is required to cancel e-invoice")
+	}
+	if req.CancelReason < 1 || req.CancelReason > 4 {
+		return nil, fmt.Errorf("cancel_reason must be 1=Duplicate, 2=Order cancelled, 3=Data entry error, 4=Other")
+	}
+
+	payload := nicCancelRequest{
+		Irn:    req.IRN,
+		CnlRsn: fmt.Sprintf("%d", req.CancelReason),
+		CnlRem: req.CancelRemark,
+	}
+	body, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
 	}
@@ -235,11 +259,16 @@ func (c *realHttpClient) CancelIRN(ctx context.Context, req CancelIRNRequest) (*
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("gstn_unavailable: status %d", resp.StatusCode)
 	}
-	var out CancelIRNResponse
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+	var nicResp nicCancelResponse
+	if err := json.NewDecoder(resp.Body).Decode(&nicResp); err != nil {
 		return nil, fmt.Errorf("gstn_unavailable: %w", err)
 	}
-	return &out, nil
+	return &CancelIRNResponse{
+		IRN:        nicResp.Irn,
+		Cancelled:  true,
+		CancelDate: nicResp.CancelDate,
+		Remark:     req.CancelRemark,
+	}, nil
 }
 
 func min(a, b int) int {

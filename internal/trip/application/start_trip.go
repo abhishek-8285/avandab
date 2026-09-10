@@ -45,9 +45,11 @@ func (uc *StartTripUseCase) Execute(ctx context.Context, cmd StartTripCommand) e
 			return err
 		}
 
-		// A trip must have a driver before it can move. Vehicle stays
-		// optional for now (legacy trips start driver-only); TODO enforce
-		// vehicle-required once dispatch UI guarantees vehicle selection.
+		// A trip must have an assigned driver before it can move. Vehicle
+		// assignment remains optional at dispatch start to accommodate
+		// spot/contractual carrier dispatches where vehicles are assigned at
+		// the gate register. When a vehicle is assigned, full compliance gate
+		// checks (RC, insurance, fitness, PUC, blacklists) are strictly enforced below.
 		if t.DriverID == nil || *t.DriverID == "" {
 			return errors.New("driver must be assigned before trip can start")
 		}

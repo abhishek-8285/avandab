@@ -41,12 +41,12 @@
 - **B4. Maintenance notifications `IW28` + dispatch block (p.13). `00144`** (or no-DB if `work_orders` suffices). In-Process ⇒ `CanAssign` block.
 - **B5. Reports `ZMOTM_MR` Gate/Fuel/KMPL/Breakdown (pp.16-20). `00145`.** Exact p.18 Vehicle-Master columns = acceptance test.
 - **B6. Facility master / ZFID sync (p.1-2). `00146`.** Table per p.2 screenshot cols; `vehicles.facility_id` TEXT → FK (NULL still allowed for contractual).
-- **B7. `00068` Backhaul matching (no DB).** Return-load suggestions on completed-trip corridors.
-- **B8. `00069` STO portal + load board listings.** Shipper order portal + carrier search, tenant-scoped. *(Needs one-page spec first — no spec doc on disk.)*
-- **B9. `00070` CX tracking timeline (no DB, uses `00044` share).** Public milestone timeline on share links.
-- **B10. `00071` Fuel cards + accounting-sync extension.** Card ledger posts to sync log; kharcha cross-check (`00094`).
-- **B11. `00072` ESG snapshots.** Per-period CO₂/km snapshot + report view.
-- **B12. OpenAPI gap closure.** Work orders, dispatch offers, quotes, settlement ledger/payouts, entitlements/webhooks, push tokens, comm outbox, churn portal — path + schema + auth + e2e each. *(B7–B11 specs 19/20 have index rows but no spec docs — write one page each first.)*
+- **B7. `00068` Backhaul matching (no DB).** Return-load suggestions on completed-trip corridors. *(One-page spec: `docs/tech-specs/b7-spec-19-backhaul-matching.md`)*
+- **B8. `00069` STO portal + load board listings.** Shipper order portal + carrier search, tenant-scoped. *(One-page spec: `docs/tech-specs/b8-spec-19-sto-portal-load-board.md`)*
+- **B9. `00070` CX tracking timeline (no DB, uses `00044` share).** Public milestone timeline on share links. *(One-page spec: `docs/tech-specs/b9-spec-20-cx-customer-timeline.md`)*
+- **B10. `00071` Fuel cards + accounting-sync extension.** Card ledger posts to sync log; kharcha cross-check (`00094`). *(One-page spec: `docs/tech-specs/b10-spec-20-fuel-card-accounting.md`)*
+- **B11. `00072` ESG snapshots.** Per-period CO₂/km snapshot + report view. *(One-page spec: `docs/tech-specs/b11-spec-20-esg-snapshots.md`)*
+- **B12. OpenAPI gap closure.** Work orders, dispatch offers, quotes, settlement ledger/payouts, entitlements/webhooks, push tokens, comm outbox, churn portal — path + schema + auth + e2e each. *(B7–B11 one-page specs delivered in `docs/tech-specs/`.)*
 
 ## Phase C — Future bets
 
@@ -63,7 +63,7 @@
 2. 61 pre-existing FK violations — *(resolved: A3 done 2026-09-08, `foreign_key_check` 0 rows at v134+; dispositions in `scripts/cutover-data-cleanup.sql`)*.
 3. Mock-by-default providers safe only while flags stay true; guard staging mocks from prod compliance.
 4. Index drift invites number collisions (past `00081/00084/00085`) — do A5 before any B-ticket.
-5. B7–B11 blocked on one-page specs each (owner, state machine, acceptance).
+5. B7–B11 blocked on one-page specs each — *(resolved 2026-09-11: specs created in `docs/tech-specs/b7..b11`)*.
 6. B6 soft-depends B1 Gate Register — confirm order B6∥B1.
 7. OpenAPI survey was partial (through `/telemetry/*`) — A6 may enlarge B12.
 8. Mobile `.ts` screens may be stubs — A10 decides mobile tickets per feature.

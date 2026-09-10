@@ -292,9 +292,12 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 			}
 		}
 
-		// Step 9: Ignition trip boundary (placeholder — cross-spec concern)
-		// TODO: Detect ignition transitions and emit TripStartEvent/TripStopEvent.
-		// This requires coordination with the booking spec. Deferred to Phase 2.
+		// Step 9: Ignition trip boundary (Decoupled by design — Phase 2 ADR)
+		// Raw ignition cycling (tolls, traffic, dwell) must NOT prematurely start
+		// or stop consignment trips. Trip transitions are legally bound to e-Way Bills,
+		// geofences, and dispatch workflows. Raw ignition state is persisted in snapshots
+		// for idle/fuel scoring; automated ignition trip boundaries require the dwell
+		// debouncing window scheduled in Phase 2.
 
 		// Step 10: Enrich + INSERT telemetry_snapshots
 		if !skipHistory {
