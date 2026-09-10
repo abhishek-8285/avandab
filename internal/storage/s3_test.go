@@ -67,7 +67,6 @@ type fullS3Config struct {
 	region    string
 	accessKey string
 	secretKey string
-	publicURL string
 }
 
 func (c *fullS3Config) GetDriver() string            { return c.driver }
@@ -77,7 +76,6 @@ func (c *fullS3Config) GetS3Endpoint() string        { return c.endpoint }
 func (c *fullS3Config) GetS3Region() string          { return c.region }
 func (c *fullS3Config) GetS3AccessKeyID() string     { return c.accessKey }
 func (c *fullS3Config) GetS3SecretAccessKey() string { return c.secretKey }
-func (c *fullS3Config) GetS3PublicURL() string       { return c.publicURL }
 
 func TestS3Store_SaveOpenDelete(t *testing.T) {
 	client := newMockS3Client()

@@ -42,7 +42,6 @@ type S3Settings interface {
 	GetS3Region() string
 	GetS3AccessKeyID() string
 	GetS3SecretAccessKey() string
-	GetS3PublicURL() string
 }
 
 // New builds the configured backend.

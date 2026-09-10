@@ -21,9 +21,8 @@ type s3API interface {
 }
 
 type s3Store struct {
-	client    s3API
-	bucket    string
-	publicURL string
+	client s3API
+	bucket string
 }
 
 func newS3(cfg S3Settings) (Store, error) {
@@ -60,9 +59,8 @@ func newS3(cfg S3Settings) (Store, error) {
 	})
 
 	return &s3Store{
-		client:    client,
-		bucket:    bucket,
-		publicURL: strings.TrimRight(cfg.GetS3PublicURL(), "/"),
+		client: client,
+		bucket: bucket,
 	}, nil
 }
 
