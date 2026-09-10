@@ -16,6 +16,7 @@ type CreateTripCommand struct {
 	DepartureTime  time.Time
 	Remarks        string
 	IdempotencyKey string
+	Stops          []aggregate.TripStop
 }
 
 // TripFacade defines the public API of the Trip module.

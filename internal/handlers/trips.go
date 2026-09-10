@@ -282,10 +282,31 @@ func (h *TripHandlers) New(w http.ResponseWriter, r *http.Request) {
 	drivers, _, _ := h.Services.Drivers.ListDrivers(r.Context(), "", "available", 1000, 0)
 	vehicles, _, _ := h.Services.Vehicles.ListVehicles(r.Context(), "", "available", 1000, 0)
 	routes, _, _ := h.Services.Routes.ListRoutes(r.Context(), "", 1000, 0)
+
+	var selectedRouteID string
+	var selectedDeparture string
+	bookings, _, _ := h.Services.Bookings.ListBookings(r.Context(), "", "confirmed", 100, 0)
+	if bookingID != "" {
+		if b, err := h.Services.Bookings.GetBooking(r.Context(), domain.BookingID(bookingID)); err == nil && b.Booking.ID != "" {
+			selectedRouteID = string(b.RouteID)
+			if !b.PickupDate.IsZero() {
+				selectedDeparture = b.PickupDate.Format("2006-01-02T15:04")
+			}
+		}
+	}
+
 	h.renderForm(w, r, "trip_edit.html", PageData{
 		Title: "New Trip",
 		User:  session,
-		Extra: map[string]interface{}{"Drivers": drivers, "Vehicles": vehicles, "Routes": routes, "SelectedBookingID": bookingID},
+		Extra: map[string]interface{}{
+			"Drivers":           drivers,
+			"Vehicles":          vehicles,
+			"Routes":            routes,
+			"Bookings":          bookings,
+			"SelectedBookingID": bookingID,
+			"SelectedRouteID":   selectedRouteID,
+			"DepartureTime":     selectedDeparture,
+		},
 	})
 }
 
@@ -319,7 +340,25 @@ func (h *TripHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		session, _ := h.getUserFromContext(r)
-		h.renderForm(w, r, "trip_edit.html", PageData{Title: "New Trip", User: session, FlashError: err.Error()})
+		drivers, _, _ := h.Services.Drivers.ListDrivers(r.Context(), "", "available", 1000, 0)
+		vehicles, _, _ := h.Services.Vehicles.ListVehicles(r.Context(), "", "available", 1000, 0)
+		routes, _, _ := h.Services.Routes.ListRoutes(r.Context(), "", 1000, 0)
+		bookings, _, _ := h.Services.Bookings.ListBookings(r.Context(), "", "confirmed", 100, 0)
+		h.renderForm(w, r, "trip_edit.html", PageData{
+			Title:      "New Trip",
+			User:       session,
+			FlashError: err.Error(),
+			Extra: map[string]interface{}{
+				"Drivers":           drivers,
+				"Vehicles":          vehicles,
+				"Routes":            routes,
+				"Bookings":          bookings,
+				"SelectedBookingID": r.PostFormValue("booking_id"),
+				"SelectedRouteID":   r.PostFormValue("route_id"),
+				"SelectedDriverID":  r.PostFormValue("driver_id"),
+				"SelectedVehicleID": r.PostFormValue("vehicle_id"),
+			},
+		})
 		return
 	}
 

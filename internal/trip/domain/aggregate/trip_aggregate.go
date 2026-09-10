@@ -160,7 +160,7 @@ func NewTripAggregate(
 	return t
 }
 
-// AddStop appends a stop to the trip.
+// AddStop appends or replaces a stop on the trip.
 func (t *TripAggregate) AddStop(stop TripStop) {
 	if stop.StopSequence == 0 {
 		stop.StopSequence = len(t.Stops) + 1
@@ -170,6 +170,12 @@ func (t *TripAggregate) AddStop(stop TripStop) {
 	}
 	if stop.Status == "" {
 		stop.Status = StopStatusPending
+	}
+	for i, existing := range t.Stops {
+		if (stop.ID != "" && existing.ID == stop.ID) || (stop.StopSequence > 0 && existing.StopSequence == stop.StopSequence) {
+			t.Stops[i] = stop
+			return
+		}
 	}
 	t.Stops = append(t.Stops, stop)
 }
@@ -396,6 +402,16 @@ func (t *TripAggregate) ReachPickup(now time.Time) error {
 	t.Status = TripReachedPickup
 	t.ReachedPickupAt = &now
 	t.UpdatedAt = now
+	for i, s := range t.Stops {
+		if s.StopSequence != 1 || s.StopType != StopTypePickup || s.Status == StopStatusCompleted {
+			continue
+		}
+		t.Stops[i].Status = StopStatusCompleted
+		t.Stops[i].ActualArrival = &now
+		t.Stops[i].ActualDeparture = &now
+		t.Stops[i].UpdatedAt = now
+		break
+	}
 	t.RecordEvent(TripReachedPickupEvent{
 		TripID:     t.ID,
 		TenantID:   t.TenantID,
@@ -424,6 +440,18 @@ func (t *TripAggregate) StartTransit(now time.Time) error {
 func (t *TripAggregate) Deliver(now time.Time) error {
 	if t.Status != TripInTransit && t.Status != TripReachedPickup {
 		return errors.New("trip must be in transit or reached pickup before being delivered")
+	}
+	// For default 2-stop trips or legacy workflow where deliver is called directly,
+	// complete any pending drop stop.
+	for i, s := range t.Stops {
+		if s.StopType != StopTypeDrop || s.Status == StopStatusCompleted || len(t.Stops) > 2 {
+			continue
+		}
+		t.Stops[i].Status = StopStatusCompleted
+		t.Stops[i].ActualArrival = &now
+		t.Stops[i].ActualDeparture = &now
+		t.Stops[i].PODRequired = false
+		t.Stops[i].UpdatedAt = now
 	}
 	// Multi-stop check: if stops are defined, all stops must be completed before overall trip delivery
 	if len(t.Stops) > 0 && !t.AllStopsCompleted() {
