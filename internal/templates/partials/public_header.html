@@ -1,8 +1,9 @@
-<header class="header">
+<header class="header relative">
     <nav class="navigation" aria-label="Primary">
-        <div class="navigation-button-container hidden">
-            <button id="mobile-menu-toggle" type="button" class="navigation-button" aria-label="Toggle navigation" aria-expanded="false">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        <div class="navigation-button-container">
+            <button id="mobile-menu-toggle" type="button" class="navigation-button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="mobile-nav-panel">
+                <svg id="hamburger-icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+                <svg id="hamburger-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 hidden"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
             </button>
         </div>
 
@@ -100,6 +101,103 @@
                 </a>
             </li>
         </ul>
-
     </nav>
+
+    <!-- Mobile Navigation Drawer -->
+    <div id="mobile-nav-panel" class="hidden lg:hidden border-b border-border-subtle bg-surface-container-lowest/98 backdrop-blur-xl shadow-2xl px-4 py-5 space-y-4 max-h-[calc(100vh-80px)] overflow-y-auto" role="region" aria-label="Mobile Navigation">
+        <div class="space-y-4">
+            <div>
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-primary mb-2">Operations</div>
+                <div class="grid grid-cols-2 gap-1.5 text-sm">
+                    <a href="/features/dashboard" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Cockpit</a>
+                    <a href="/features/trips" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Live Dispatch</a>
+                    <a href="/features/routes" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Routes</a>
+                    <a href="/features/bookings" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Bookings</a>
+                </div>
+            </div>
+
+            <div class="border-t border-border-subtle pt-3">
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-primary mb-2">Fleet Management</div>
+                <div class="grid grid-cols-2 gap-1.5 text-sm">
+                    <a href="/features/vehicles" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Active Units</a>
+                    <a href="/features/drivers" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Drivers Directory</a>
+                    <a href="/features/customers" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Customers</a>
+                    <a href="/features/kharcha" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Kharcha (Ledger)</a>
+                </div>
+            </div>
+
+            <div class="border-t border-border-subtle pt-3">
+                <div class="text-[10px] font-semibold uppercase tracking-wider text-primary mb-2">Finance &amp; Reports</div>
+                <div class="grid grid-cols-2 gap-1.5 text-sm">
+                    <a href="/features/invoices" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Invoices</a>
+                    <a href="/features/payments" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Payments</a>
+                    <a href="/features/reports" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Reports</a>
+                    <a href="/#benefits" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Benefits</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="border-t border-border-subtle pt-4 flex flex-col gap-2">
+            <a href="/register" class="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-primary text-on-primary font-semibold text-sm shadow-sm hover:bg-primary/90 transition-all">
+                Register Fleet (Start Free)
+            </a>
+            <div class="grid grid-cols-2 gap-2">
+                <a href="/contact-us" class="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-border-subtle bg-surface-container-low text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    Contact Support
+                </a>
+                <a href="https://wa.me/918285336507?text=Hi%20Avandab%20team,%20I%20want%20a%20demo%20for%20my%20fleet" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.29"/></svg>
+                    WhatsApp Chat
+                </a>
+            </div>
+        </div>
+    </div>
+    <script>
+        (function () {
+            var toggle = document.getElementById('mobile-menu-toggle');
+            var panel = document.getElementById('mobile-nav-panel');
+            var iconOpen = document.getElementById('hamburger-icon-open');
+            var iconClose = document.getElementById('hamburger-icon-close');
+            if (!toggle || !panel) return;
+
+            function setOpen(isOpen) {
+                toggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                if (isOpen) {
+                    panel.classList.remove('hidden');
+                    if (iconOpen) iconOpen.classList.add('hidden');
+                    if (iconClose) iconClose.classList.remove('hidden');
+                } else {
+                    panel.classList.add('hidden');
+                    if (iconOpen) iconOpen.classList.remove('hidden');
+                    if (iconClose) iconClose.classList.add('hidden');
+                }
+            }
+
+            toggle.addEventListener('click', function (e) {
+                e.stopPropagation();
+                var isOpen = toggle.getAttribute('aria-expanded') === 'true';
+                setOpen(!isOpen);
+            });
+
+            document.addEventListener('click', function (e) {
+                if (!panel.classList.contains('hidden') && !panel.contains(e.target) && !toggle.contains(e.target)) {
+                    setOpen(false);
+                }
+            });
+
+            document.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape' && !panel.classList.contains('hidden')) {
+                    setOpen(false);
+                    toggle.focus();
+                }
+            });
+
+            panel.querySelectorAll('a').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    setOpen(false);
+                });
+            });
+        })();
+    </script>
 </header>

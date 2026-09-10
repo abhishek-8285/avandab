@@ -662,8 +662,24 @@ var featureRegistry = map[string]FeatureContent{
 	},
 }
 
+var featureAliases = map[string]string{
+	"tracking":  "trips",
+	"expenses":  "kharcha",
+	"invoicing": "invoices",
+	"analytics": "reports",
+	"fuel":      "kharcha",
+	"finance":   "invoices",
+	"gps":       "trips",
+}
+
 // GetFeature returns the feature content for a slug and whether it exists.
 func GetFeature(slug string) (FeatureContent, bool) {
-	fc, ok := featureRegistry[slug]
-	return fc, ok
+	if fc, ok := featureRegistry[slug]; ok {
+		return fc, true
+	}
+	if target, ok := featureAliases[slug]; ok {
+		fc, ok := featureRegistry[target]
+		return fc, ok
+	}
+	return FeatureContent{}, false
 }

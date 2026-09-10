@@ -17,6 +17,21 @@
 <meta name="twitter:image" content="{{if .OGImage}}{{.OGImage}}{{else}}https://avandab.com/static/icons/icon-512.png{{end}}">
 <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+{{if .PWAEnabled}}
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Avandab">
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' })
+                .catch(function(err) { console.warn('[PWA] SW register failed:', err); });
+        });
+    }
+</script>
+{{end}}
 {{if .CanonicalPath}}<link rel="alternate" hreflang="en" href="https://avandab.com{{.CanonicalPath}}"><link rel="alternate" hreflang="x-default" href="https://avandab.com{{.CanonicalPath}}">{{end}}
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Avandab","url":"https://avandab.com/","logo":"https://avandab.com/static/icons/icon-512.png","contactPoint":[{"@type":"ContactPoint","telephone":"+91-8285336507","contactType":"customer service","areaServed":"IN"}]}</script>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Avandab","url":"https://avandab.com/","potentialAction":{"@type":"SearchAction","target":"https://avandab.com/search?q={query}","query-input":"required name=query"}}</script>

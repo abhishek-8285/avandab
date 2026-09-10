@@ -382,6 +382,7 @@ func (h *ShareHandlers) ViewShare(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	w.Header().Set("Cache-Control", "no-cache, s-maxage=10, stale-while-revalidate=30")
 	h.renderStandalone(w, "share_public.html", map[string]interface{}{
 		"Token":        token,
 		"TripNumber":   tripNumber,
@@ -690,7 +691,7 @@ func (h *ShareHandlers) ShareData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+	w.Header().Set("Cache-Control", "no-cache, s-maxage=5, stale-while-revalidate=10")
 	w.Header().Set("Pragma", "no-cache")
 	w.Header().Set("Expires", "0")
 	_ = json.NewEncoder(w).Encode(resp)

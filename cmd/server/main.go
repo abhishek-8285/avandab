@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -701,8 +702,11 @@ func main() {
 
 	// Ops: liveness, health, readiness (no auth — probe endpoints)
 	r.Get("/healthz", healthChecker.LivenessHandler)
+	r.Head("/healthz", healthChecker.LivenessHandler)
 	r.Get("/health", healthChecker.HealthHandler)
+	r.Head("/health", healthChecker.HealthHandler)
 	r.Get("/readyz", healthChecker.ReadinessHandler)
+	r.Head("/readyz", healthChecker.ReadinessHandler)
 	// Prometheus scrape endpoint (probe-style, no auth — bind the port to an
 	// internal interface or firewall it in production if exposure is a concern).
 	r.Get("/metrics", metrics.Handler().ServeHTTP)
@@ -753,8 +757,15 @@ func main() {
 		BatchSize:               telemetryCfg.BatchSize,
 		FlushInterval:           telemetryCfg.FlushInterval,
 		RawRetentionDays:        telemetryCfg.RawRetentionDays,
+		MovingDedupWindow:       20 * time.Second,
+		MovingDedupMinM:         30.0, // 30 meters
+		MovingDedupMinDeg:       15.0, // 15 degrees
 	}
 	ingestor := telemetry.NewIngestor(database, sqlUoW, eventBus, idGen, nil, ingestCfg)
+
+	// Automated Retention Pruner (prunes >30d raw events/positions/snapshots + >7d outbox)
+	telemetryCleaner := telemetry.NewTelemetryCleaner(database, telemetryCfg.RawRetentionDays, logger)
+	telemetryCleaner.Start(ctx)
 
 	// ── High-Throughput Async Ingestion Queue ─────────────────────────
 	asyncQueue := telemetry.NewAsyncIngestQueue(10000, 4, ingestor, logger)
@@ -1174,15 +1185,36 @@ func main() {
 		// Public routes
 		r.Get("/", app.Marketing)
 		app.MountPWARoutes(r)
-		r.Get("/robots.txt", func(w http.ResponseWriter, r *http.Request) {
+
+		faviconHandler := func(w http.ResponseWriter, r *http.Request) {
+			staticDir := "internal/static"
+			if cfg != nil && cfg.StaticDir != "" {
+				staticDir = cfg.StaticDir
+			}
+			w.Header().Set("Content-Type", "image/svg+xml")
+			w.Header().Set("Cache-Control", "public, max-age=86400")
+			http.ServeFile(w, r, filepath.Join(staticDir, "img", "favicon.svg"))
+		}
+		r.Get("/favicon.ico", faviconHandler)
+		r.Head("/favicon.ico", faviconHandler)
+
+		robotsHandler := func(w http.ResponseWriter, r *http.Request) {
 			serveRobots(w)
-		})
-		r.Get("/sitemap.xml", func(w http.ResponseWriter, r *http.Request) {
+		}
+		r.Get("/robots.txt", robotsHandler)
+		r.Head("/robots.txt", robotsHandler)
+
+		sitemapHandler := func(w http.ResponseWriter, r *http.Request) {
 			serveSitemap(w)
-		})
-		r.Get("/llms.txt", func(w http.ResponseWriter, r *http.Request) {
+		}
+		r.Get("/sitemap.xml", sitemapHandler)
+		r.Head("/sitemap.xml", sitemapHandler)
+
+		llmsHandler := func(w http.ResponseWriter, r *http.Request) {
 			serveLLMs(w)
-		})
+		}
+		r.Get("/llms.txt", llmsHandler)
+		r.Head("/llms.txt", llmsHandler)
 		r.Get("/login", app.Auth.LoginPage)
 		r.With(middleware.RateLimitDistributed(appCache, 10)).Post("/login", app.Auth.Login)
 		r.Get("/register", app.Auth.RegisterPage)
@@ -1201,6 +1233,9 @@ func main() {
 
 		// Public Contact & Status Tracking
 		r.Route("/contact-us", app.Contact.Routes)
+		r.Get("/contact", func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, "/contact-us", http.StatusMovedPermanently)
+		})
 
 		// Legal & Policy Pages
 		r.Get("/privacy", app.Privacy)
@@ -1217,9 +1252,9 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.ContentSecurityPolicy(cfg.LiveMap.CSPEnabled))
 			r.Get("/share", app.Share.HandleShareIndex)
-			r.With(middleware.RateLimitDistributed(appCache, 20), middleware.NoCache).Get("/share/{token}", app.Share.ViewShare)
+			r.With(middleware.RateLimitDistributed(appCache, 20)).Get("/share/{token}", app.Share.ViewShare)
 			r.With(middleware.RateLimitDistributed(appCache, 10)).Post("/share/{token}/verify", app.Share.VerifyPIN)
-			r.With(middleware.RateLimitDistributed(appCache, 30), middleware.NoCache).Get("/share/{token}/data", app.Share.ShareData)
+			r.With(middleware.RateLimitDistributed(appCache, 30)).Get("/share/{token}/data", app.Share.ShareData)
 		})
 
 		// Public Digital e-POD Certificate Viewer (login-free)
@@ -1434,6 +1469,9 @@ func main() {
 		Addr:              addr,
 		Handler:           r,
 		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		IdleTimeout:       120 * time.Second,
+		MaxHeaderBytes:    1 << 20, // 1 MB
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -1706,14 +1744,25 @@ func main() {
 	// internal/service import cycle).
 	runLeadered("fuel_audit_pass", func(ctx context.Context) {
 		auditOnce := func() {
-			tenantIDs, err := service.GetActiveTenantIDs(ctx, database)
-			if err != nil {
-				logger.Error("fuel audit: failed to list tenants", "error", err)
+			// Fast check: query only tenants with pending fuel claims using idx_driver_expenses_pending_fuel
+			claimRows, cErr := database.QueryContext(ctx, `
+				SELECT DISTINCT tenant_id FROM driver_expenses 
+				WHERE category = 'fuel' AND COALESCE(audit_status,'pending') = 'pending' AND COALESCE(status,'pending') = 'pending'`)
+			if cErr != nil {
+				logger.Error("fuel audit: failed to list pending claim tenants", "error", cErr)
 				return
 			}
-			for _, tid := range tenantIDs {
-				// Per-org gate + tenant ctx (was: single DefaultTenant pass
-				// that silently skipped every other org's claims).
+			defer func() { _ = claimRows.Close() }()
+
+			var pendingTenants []string
+			for claimRows.Next() {
+				var tid string
+				if err := claimRows.Scan(&tid); err == nil && tid != "" {
+					pendingTenants = append(pendingTenants, tid)
+				}
+			}
+
+			for _, tid := range pendingTenants {
 				if !app.Features.Enabled(ctx, tid, "fuel_audit") {
 					continue
 				}
@@ -1752,6 +1801,38 @@ func main() {
 	if app.AlertsRepo != nil {
 		inboxRepo := app.AlertsRepo
 		runLeadered("alerts_snooze_sweep", func(c context.Context) {
+			snoozeOnce := func() {
+				// Fast check: query only tenants with expired snoozed alerts using idx_alerts_snooze_status
+				snoozeRows, sErr := database.QueryContext(c, `
+					SELECT DISTINCT tenant_id FROM alerts 
+					WHERE ack_status = 'snoozed' AND snoozed_until IS NOT NULL AND snoozed_until <= ?`, time.Now().UTC())
+				if sErr != nil {
+					logger.Error("snooze sweep failed to query snoozed alerts", "error", sErr)
+					return
+				}
+				defer func() { _ = snoozeRows.Close() }()
+
+				var snoozedTenants []string
+				for snoozeRows.Next() {
+					var tid string
+					if err := snoozeRows.Scan(&tid); err == nil && tid != "" {
+						snoozedTenants = append(snoozedTenants, tid)
+					}
+				}
+
+				for _, tid := range snoozedTenants {
+					if !app.Features.Enabled(c, tid, "alert_inbox") {
+						continue
+					}
+					n, err := inboxRepo.ReopenExpiredSnoozesForTenant(c, tid, time.Now().UTC())
+					if err != nil {
+						logger.Error("snooze sweep failed", "tenant", tid, "error", err)
+					} else if n > 0 {
+						logger.Info("snooze sweep reopened alerts", "tenant", tid, "count", n)
+					}
+				}
+			}
+
 			ticker := time.NewTicker(time.Minute)
 			defer ticker.Stop()
 			for {
@@ -1759,24 +1840,7 @@ func main() {
 				case <-c.Done():
 					return
 				case <-ticker.C:
-					// Per-org reopen (was: one global UPDATE that also
-					// reopened orgs which disabled the inbox).
-					tenantIDs, err := service.GetActiveTenantIDs(c, database)
-					if err != nil {
-						logger.Error("snooze sweep failed to list tenants", "error", err)
-						continue
-					}
-					for _, tid := range tenantIDs {
-						if !app.Features.Enabled(c, tid, "alert_inbox") {
-							continue
-						}
-						n, err := inboxRepo.ReopenExpiredSnoozesForTenant(c, tid, time.Now().UTC())
-						if err != nil {
-							logger.Error("snooze sweep failed", "tenant", tid, "error", err)
-						} else if n > 0 {
-							logger.Info("snooze sweep reopened alerts", "tenant", tid, "count", n)
-						}
-					}
+					snoozeOnce()
 				}
 			}
 		})

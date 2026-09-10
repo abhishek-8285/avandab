@@ -5,12 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{{if .Title}}{{.Title}} - Avandab{{else}}Avandab - Modern Fleet & Logistics Operations{{end}}</title>
     {{template "seo_head.html" .}}
-    <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
-    <link rel="dns-prefetch" href="https://api.fontshare.com">
     <link rel="stylesheet" href="/static/css/fonts.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link rel="stylesheet" href="/static/css/material-icons.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link rel="stylesheet" href="/static/css/material-symbols.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
-    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@700,500,400&display=swap" rel="stylesheet">
     <script src="/static/js/loader.js?v=20260818" defer></script>
     <script src="/static/js/htmx.min.js?v={{if .Version}}{{.Version}}{{else}}20260822{{end}}" defer></script>
     <link rel="stylesheet" href="/static/css/tailwind.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
@@ -1134,6 +1131,128 @@
                 </div>
             </div>
         </div>
+    <!-- Interactive Fleet Savings Calculator -->
+    <section id="calculator" class="py-20 border-t border-border-subtle bg-surface-container-low">
+        <div class="max-w-6xl mx-auto px-6">
+            <div class="mb-12 space-y-2 text-center sm:text-left reveal">
+                <span class="ecasb-badge">Fleet ROI Calculator</span>
+                <h2 class="font-display font-bold text-2xl sm:text-3xl text-on-surface mt-2">Calculate your fleet's monthly &amp; annual savings</h2>
+                <p class="text-secondary text-sm sm:text-base max-w-2xl">Stop bleeding margin on diesel theft, unauthorized route detours, and unbilled detention. Move the sliders below to see your estimated bottom-line recovery.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch reveal">
+                <!-- Sliders & Inputs (7 cols) -->
+                <div class="lg:col-span-7 ecasb-card p-6 sm:p-8 flex flex-col justify-between space-y-6">
+                    <div>
+                        <!-- Slider 1: Fleet Size -->
+                        <div class="space-y-2 mb-6">
+                            <div class="flex items-center justify-between">
+                                <label for="calc-trucks" class="text-xs font-semibold uppercase tracking-wider text-secondary flex items-center gap-1.5">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-primary shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                    Active Fleet Size
+                                </label>
+                                <span id="calc-trucks-display" class="font-data-mono font-semibold text-base text-primary bg-primary/10 px-3 py-0.5 rounded-full">15 Trucks</span>
+                            </div>
+                            <input id="calc-trucks" type="range" min="2" max="150" value="15" step="1" class="w-full accent-primary h-2 bg-surface-container rounded-lg cursor-pointer transition-all">
+                            <div class="flex justify-between text-[11px] text-text-muted font-medium">
+                                <span>2 Trucks</span>
+                                <span>50 Trucks</span>
+                                <span>150 Trucks</span>
+                            </div>
+                        </div>
+
+                        <!-- Slider 2: Monthly KM per Truck -->
+                        <div class="space-y-2 mb-6">
+                            <div class="flex items-center justify-between">
+                                <label for="calc-km" class="text-xs font-semibold uppercase tracking-wider text-secondary flex items-center gap-1.5">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-primary shrink-0"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                                    Avg. Monthly Run Per Truck
+                                </label>
+                                <span id="calc-km-display" class="font-data-mono font-semibold text-base text-primary bg-primary/10 px-3 py-0.5 rounded-full">6,500 km</span>
+                            </div>
+                            <input id="calc-km" type="range" min="2000" max="12000" value="6500" step="500" class="w-full accent-primary h-2 bg-surface-container rounded-lg cursor-pointer transition-all">
+                            <div class="flex justify-between text-[11px] text-text-muted font-medium">
+                                <span>2,000 km</span>
+                                <span>6,500 km</span>
+                                <span>12,000 km</span>
+                            </div>
+                        </div>
+
+                        <!-- Pill checklist -->
+                        <div class="border-t border-border-subtle pt-4 space-y-2.5">
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-text-muted block mb-2">Automated Savings Included</span>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-on-surface-variant">
+                                <div class="flex items-center gap-2">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 text-status-success shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                                    <span>Diesel theft &amp; idling prevention</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 text-status-success shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                                    <span>GPS detention &amp; demurrage recovery</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 text-status-success shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                                    <span>Automated e-POD invoice clearance</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 text-status-success shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                                    <span>Driver advance &amp; toll audit reconciliation</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-[11px] text-text-muted italic border-t border-border-subtle pt-3">
+                        * Estimates based on verified average recovery across 40+ Indian fleet operations: 4.5% fuel efficiency improvement + ₹5,000/mo unbilled detention recovered per truck.
+                    </div>
+                </div>
+
+                <!-- Live Results Card (5 cols) -->
+                <div class="lg:col-span-5 rounded-2xl border-2 border-primary/25 bg-gradient-to-b from-surface-container-lowest to-surface-container-low p-6 sm:p-8 flex flex-col justify-between shadow-lg relative overflow-hidden">
+                    <div class="absolute -right-12 -top-12 w-36 h-36 bg-primary/10 rounded-full blur-2xl pointer-events-none"></div>
+
+                    <div class="space-y-6 relative z-10">
+                        <div>
+                            <span class="text-xs font-semibold uppercase tracking-wider text-text-muted">Estimated Annual Bottom-Line Boost</span>
+                            <div id="calc-annual-total" class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-primary font-display tracking-tight mt-1">₹18.48 Lakhs</div>
+                            <div class="text-xs text-secondary mt-1 font-medium">Extra cash retained in your transport business every year</div>
+                        </div>
+
+                        <div class="border-t border-border-subtle pt-4 space-y-3">
+                            <div class="flex justify-between items-center text-sm">
+                                <span class="text-on-surface-variant font-medium">Estimated Monthly Savings:</span>
+                                <span id="calc-monthly-total" class="font-data-mono font-semibold text-on-surface text-base">₹1,54,000 / mo</span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs text-text-muted pl-2 border-l-2 border-primary/30">
+                                <span>Diesel &amp; Route Optimization:</span>
+                                <span id="calc-diesel-total" class="font-data-mono font-semibold text-on-surface">₹69,500</span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs text-text-muted pl-2 border-l-2 border-emerald-500/30">
+                                <span>Detention &amp; Rapid e-POD Recovery:</span>
+                                <span id="calc-detention-total" class="font-data-mono font-semibold text-on-surface">₹75,000</span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs text-text-muted pl-2 border-l-2 border-amber-500/30">
+                                <span>Dispatcher &amp; Toll Reconcile Hours:</span>
+                                <span id="calc-admin-total" class="font-data-mono font-semibold text-on-surface">₹9,500</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-8 space-y-3 relative z-10">
+                        <a id="calc-cta-btn" href="/register" class="w-full inline-flex items-center justify-center gap-2 py-3 px-6 rounded-full bg-primary text-on-primary font-semibold text-sm shadow-md hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-lg transition-all text-center">
+                            <span>Claim Your Savings &rarr; Start Free</span>
+                        </a>
+                        <div class="flex items-center justify-center gap-3 text-[11px] text-text-muted">
+                            <span class="flex items-center gap-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3 h-3 text-status-success"><polyline points="20 6 9 17 4 12"/></svg> Free to Start</span>
+                            <span>&bull;</span>
+                            <span class="flex items-center gap-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3 h-3 text-status-success"><polyline points="20 6 9 17 4 12"/></svg> No Credit Card</span>
+                            <span>&bull;</span>
+                            <span class="flex items-center gap-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3 h-3 text-status-success"><polyline points="20 6 9 17 4 12"/></svg> 5 Min Setup</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </section>
 
     <!-- Competitor Comparison -->
@@ -1176,10 +1295,84 @@
     </section>
 
     <!-- ECASB Footer -->
-    {{template "footer.html" .}}
+    <div class="pb-16 md:pb-0">
+        {{template "footer.html" .}}
+    </div>
+
+    <!-- Sticky Mobile Conversion Dock (Visible only on mobile devices) -->
+    <aside id="mobile-sticky-dock" class="md:hidden fixed bottom-0 inset-x-0 z-40 p-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))] bg-surface-container-lowest/95 backdrop-blur-md border-t border-border-subtle shadow-[0_-4px_16px_rgba(0,0,0,0.12)] flex items-center gap-2" aria-label="Quick Mobile Actions">
+        <a href="https://wa.me/918285336507?text=Hi%20Avandab,%20I%20want%20a%20demo%20of%20the%20fleet%20platform" target="_blank" rel="noopener noreferrer" class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm active:scale-[0.98] transition-all">
+            <svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 shrink-0"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.29"/></svg>
+            <span>WhatsApp Demo</span>
+        </a>
+        <a href="/register" class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-primary text-on-primary font-semibold text-xs shadow-sm active:scale-[0.98] transition-all">
+            <span>Start Free</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+        </a>
+    </aside>
 
     {{template "cookie-consent" .}}
     <script src="/static/js/theme.js?v={{if .Version}}{{.Version}}{{else}}20260820{{end}}"></script>
+    <script>
+        (function () {
+            var trucksInput = document.getElementById('calc-trucks');
+            var kmInput = document.getElementById('calc-km');
+            var trucksDisplay = document.getElementById('calc-trucks-display');
+            var kmDisplay = document.getElementById('calc-km-display');
+            var annualTotal = document.getElementById('calc-annual-total');
+            var monthlyTotal = document.getElementById('calc-monthly-total');
+            var dieselTotal = document.getElementById('calc-diesel-total');
+            var detentionTotal = document.getElementById('calc-detention-total');
+            var adminTotal = document.getElementById('calc-admin-total');
+            var ctaBtn = document.getElementById('calc-cta-btn');
+
+            if (!trucksInput || !kmInput) return;
+
+            function formatINR(num) {
+                return '₹' + Number(Math.round(num)).toLocaleString('en-IN');
+            }
+
+            function formatLakhs(num) {
+                var lakhs = num / 100000;
+                if (lakhs >= 100) {
+                    var crores = lakhs / 100;
+                    return '₹' + crores.toFixed(2) + ' Crores';
+                }
+                return '₹' + lakhs.toFixed(2) + ' Lakhs';
+            }
+
+            function update() {
+                var trucks = parseInt(trucksInput.value, 10) || 15;
+                var km = parseInt(kmInput.value, 10) || 6500;
+
+                trucksDisplay.textContent = trucks + (trucks === 1 ? ' Truck' : ' Trucks');
+                kmDisplay.textContent = km.toLocaleString('en-IN') + ' km';
+
+                // 4.5% diesel savings at ₹95/L and ~4 km/L
+                var dieselMonthly = (trucks * km / 4) * 95 * 0.045;
+                // Detention recovery: ~₹5,000 / truck / mo
+                var detentionMonthly = trucks * 5000;
+                // Dispatch & Toll reconcile: ~₹650 / truck / mo
+                var adminMonthly = trucks * 650;
+
+                var totalMonthly = dieselMonthly + detentionMonthly + adminMonthly;
+                var totalAnnual = totalMonthly * 12;
+
+                if (monthlyTotal) monthlyTotal.textContent = formatINR(totalMonthly) + ' / mo';
+                if (dieselTotal) dieselTotal.textContent = formatINR(dieselMonthly);
+                if (detentionTotal) detentionTotal.textContent = formatINR(detentionMonthly);
+                if (adminTotal) adminTotal.textContent = formatINR(adminMonthly);
+                if (annualTotal) annualTotal.textContent = formatLakhs(totalAnnual);
+                if (ctaBtn) {
+                    ctaBtn.querySelector('span').textContent = 'Claim ' + formatLakhs(totalAnnual) + ' Savings → Start Free';
+                }
+            }
+
+            trucksInput.addEventListener('input', update);
+            kmInput.addEventListener('input', update);
+            update();
+        })();
+    </script>
     <script>
         (function () {
             var els = Array.prototype.slice.call(document.querySelectorAll(".reveal"));

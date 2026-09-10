@@ -86,6 +86,12 @@ func TestManifestContentType(t *testing.T) {
 	assert.Contains(t, rec.Header().Get("Content-Type"), "application/manifest+json")
 	assert.Contains(t, rec.Header().Get("Cache-Control"), "public, max-age=86400")
 
+	// Verify HEAD request
+	reqHead := httptest.NewRequest("HEAD", "/manifest.webmanifest", nil)
+	recHead := httptest.NewRecorder()
+	r.ServeHTTP(recHead, reqHead)
+	assert.Equal(t, http.StatusOK, recHead.Code)
+
 	body := rec.Body.String()
 	assert.Contains(t, body, "Avandab Fleet Management")
 	assert.Contains(t, body, "Avandab")
@@ -107,6 +113,12 @@ func TestServiceWorkerContentType(t *testing.T) {
 	assert.Contains(t, rec.Header().Get("Content-Type"), "text/javascript")
 	assert.Contains(t, rec.Header().Get("Cache-Control"), "no-cache")
 	assert.Equal(t, "/", rec.Header().Get("Service-Worker-Allowed"))
+
+	// Verify HEAD request
+	reqHead := httptest.NewRequest("HEAD", "/sw.js", nil)
+	recHead := httptest.NewRecorder()
+	r.ServeHTTP(recHead, reqHead)
+	assert.Equal(t, http.StatusOK, recHead.Code)
 
 	body := rec.Body.String()
 	assert.Contains(t, body, "CACHE_NAME")
@@ -197,4 +209,40 @@ func TestFaviconSVGServingAndMime(t *testing.T) {
 	assert.Contains(t, rec.Header().Get("Content-Type"), "image/svg+xml")
 	assert.Contains(t, rec.Body.String(), "<svg")
 	assert.Contains(t, rec.Body.String(), "xmlns=\"http://www.w3.org/2000/svg\"")
+}
+
+func TestPWAOnPublicPages(t *testing.T) {
+	r, _, _ := setupPWATestRouter(t, true)
+
+	// Test a public template route like /privacy or /terms
+	r.Get("/privacy", func(w http.ResponseWriter, req *http.Request) {
+		w.Write([]byte(`<!DOCTYPE html><html><head><link rel="manifest" href="/manifest.webmanifest"></head></html>`))
+	})
+
+	req := httptest.NewRequest("GET", "/privacy", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Body.String(), `href="/manifest.webmanifest"`)
+}
+
+func TestPWAOnAuthPages(t *testing.T) {
+	r, app, _ := setupPWATestRouter(t, true)
+
+	r.Get("/login", func(w http.ResponseWriter, req *http.Request) {
+		app.renderAuthPage(w, "login_form.html", PageData{
+			Title: "Login",
+		})
+	})
+
+	req := httptest.NewRequest("GET", "/login", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	assert.Equal(t, http.StatusOK, rec.Code)
+	body := rec.Body.String()
+	assert.Contains(t, body, `<link rel="manifest" href="/manifest.webmanifest">`)
+	assert.Contains(t, body, `navigator.serviceWorker.register('/sw.js'`)
+	assert.Contains(t, body, `user_theme`)
 }

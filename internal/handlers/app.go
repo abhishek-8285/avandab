@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html"
 	"html/template"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -74,6 +75,9 @@ type App struct {
 
 	// Experiments records A/B experiment events (best-effort).
 	Experiments *experiments.Recorder
+
+	// Turnstile validates Cloudflare Turnstile bot verification.
+	Turnstile auth.TurnstileVerifier
 
 	// Handler groups
 	Auth       *AuthHandlers
@@ -172,6 +176,7 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	}
 
 	app.Experiments = experiments.NewRecorder(db)
+	app.Turnstile = auth.NewTurnstileVerifier(cfg.Turnstile.SecretKey)
 
 	app.Auth = &AuthHandlers{App: app}
 	app.OTP = &OTPHandlers{App: app}
@@ -882,6 +887,7 @@ func (a *App) renderAuthPage(w http.ResponseWriter, name string, data PageData) 
 		FlashError     string
 		FlashSuccess   string
 		Version        string
+		PWAEnabled     bool
 		CanonicalPath  string
 		NoIndex        bool
 		SEODescription string
@@ -895,6 +901,7 @@ func (a *App) renderAuthPage(w http.ResponseWriter, name string, data PageData) 
 		FlashError:     data.FlashError,
 		FlashSuccess:   data.FlashSuccess,
 		Version:        AppVersion,
+		PWAEnabled:     a.Config != nil && a.Config.PWAEnabled,
 		CanonicalPath:  data.CanonicalPath,
 		NoIndex:        data.NoIndex,
 		SEODescription: data.SEODescription,
@@ -1033,6 +1040,7 @@ func (a *App) Marketing(w http.ResponseWriter, r *http.Request) {
 				"CanonicalPath":  "/",
 				"NoIndex":        false,
 				"OGType":         "website",
+				"PWAEnabled":     a.Config != nil && a.Config.PWAEnabled,
 			}
 			if err := tmpl.Execute(&buf, data); err == nil {
 				cachedHomeHTML[key] = buf.Bytes()
@@ -1044,7 +1052,7 @@ func (a *App) Marketing(w http.ResponseWriter, r *http.Request) {
 	homeCacheMu.Unlock()
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800")
+	w.Header().Set("Cache-Control", "public, max-age=0, must-revalidate")
 	if len(pageHTML) > 0 {
 		_, _ = w.Write(pageHTML)
 		return
@@ -1076,7 +1084,7 @@ func (a *App) PolicyPage(w http.ResponseWriter, r *http.Request, name string) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800")
+	w.Header().Set("Cache-Control", "public, max-age=0, must-revalidate")
 	seo := map[string]map[string]string{
 		"privacy.html": {"Title": "Privacy Policy", "Desc": "Avandab Privacy Policy — how we collect, use and protect fleet, driver and customer data under India's DPDP Act, 2023.", "Path": "/privacy"},
 		"terms.html":   {"Title": "Terms of Service", "Desc": "Avandab Terms of Service — service, payment, cancellation, liability and dispute terms for fleet operations.", "Path": "/terms"},
@@ -1094,6 +1102,7 @@ func (a *App) PolicyPage(w http.ResponseWriter, r *http.Request, name string) {
 		"CanonicalPath":  path,
 		"NoIndex":        false,
 		"OGType":         "website",
+		"PWAEnabled":     a.Config != nil && a.Config.PWAEnabled,
 	}
 	if err := tmpl.Execute(w, data); err != nil {
 		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
@@ -1125,7 +1134,7 @@ func (a *App) FeaturePage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800")
+	w.Header().Set("Cache-Control", "public, max-age=0, must-revalidate")
 	related := make([]FeatureContent, 0, len(fc.Related))
 	for _, slug := range fc.Related {
 		if rf, ok := GetFeature(slug); ok {
@@ -1142,6 +1151,7 @@ func (a *App) FeaturePage(w http.ResponseWriter, r *http.Request) {
 		"NoIndex":         false,
 		"OGType":          "article",
 		"SEOJSONLD":       seoFAQJSONLD(fc.FAQ),
+		"PWAEnabled":      a.Config != nil && a.Config.PWAEnabled,
 	}
 	tmpl := a.templatesFor(r).Lookup("feature.html")
 	if tmpl == nil {
@@ -1190,6 +1200,18 @@ func (a *App) DownloadFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	if a.Services != nil && a.Services.Files != nil {
+		if rc, err := a.Services.Files.OpenFile(r.Context(), file); err == nil {
+			defer func() { _ = rc.Close() }()
+			if file.MimeType != "" {
+				w.Header().Set("Content-Type", file.MimeType)
+			}
+			_, _ = io.Copy(w, rc)
+			return
+		}
+	}
+
 	uploadDir := filepath.Clean(a.Config.UploadDir)
 	if uploadDir == "." {
 		uploadDir = ""
@@ -1199,7 +1221,6 @@ func (a *App) DownloadFile(w http.ResponseWriter, r *http.Request) {
 		a.renderError(w, http.StatusBadRequest, "Invalid File Path", "The requested file path is invalid.", nil)
 		return
 	}
-	w.Header().Set("X-Content-Type-Options", "nosniff")
 	http.ServeFile(w, r, filePath)
 }
 
@@ -1351,7 +1372,14 @@ func (a *App) renderErrorInfo(w http.ResponseWriter, r *http.Request, info Error
 		return
 	}
 
-	layout := a.templatesFor(r).Lookup("layout.html")
+	layoutName := "layout.html"
+	if info.User == nil {
+		layoutName = "auth_layout.html"
+	}
+	layout := a.templatesFor(r).Lookup(layoutName)
+	if layout == nil {
+		layout = a.Templates.Lookup(layoutName)
+	}
 	if layout == nil {
 		_, _ = w.Write([]byte(buf.String()))
 		return
@@ -1467,16 +1495,20 @@ func (a *App) MountPWARoutes(r chi.Router) {
 		staticDir = a.Config.StaticDir
 	}
 
-	r.Get("/manifest.webmanifest", func(w http.ResponseWriter, r *http.Request) {
+	manifestHandler := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/manifest+json")
 		w.Header().Set("Cache-Control", "public, max-age=86400")
 		http.ServeFile(w, r, filepath.Join(staticDir, "manifest.webmanifest"))
-	})
+	}
+	r.Get("/manifest.webmanifest", manifestHandler)
+	r.Head("/manifest.webmanifest", manifestHandler)
 
-	r.Get("/sw.js", func(w http.ResponseWriter, r *http.Request) {
+	swHandler := func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/javascript")
-		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		w.Header().Set("Service-Worker-Allowed", "/")
 		http.ServeFile(w, r, filepath.Join(staticDir, "js", "sw.js"))
-	})
+	}
+	r.Get("/sw.js", swHandler)
+	r.Head("/sw.js", swHandler)
 }

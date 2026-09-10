@@ -5,31 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="mobile-web-app-capable" content="yes">
     <title>{{.Title}} - Avandab</title>
-    {{if .CanonicalPath}}<link rel="canonical" href="https://avandab.com{{.CanonicalPath}}">{{end}}
-    {{if .NoIndex}}<meta name="robots" content="noindex, follow">{{else if .CanonicalPath}}<meta name="robots" content="index, follow">{{else}}<meta name="robots" content="noindex, follow">{{end}}
-    {{if .SEODescription}}<meta name="description" content="{{.SEODescription}}">{{end}}
-    <meta name="theme-color" content="#2563eb">
-    <meta property="og:site_name" content="Avandab">
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="{{.Title}} - Avandab">
-    {{if .SEODescription}}<meta property="og:description" content="{{.SEODescription}}">{{end}}
-    {{if .CanonicalPath}}<meta property="og:url" content="https://avandab.com{{.CanonicalPath}}">{{end}}
-    <meta property="og:image" content="https://avandab.com/static/icons/icon-512.png">
-    <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="{{.Title}} - Avandab">
-    {{if .SEODescription}}<meta name="twitter:description" content="{{.SEODescription}}">{{end}}
-    <meta name="twitter:image" content="https://avandab.com/static/icons/icon-512.png">
-    <link rel="icon" href="/static/img/favicon.svg" type="image/svg+xml">
-    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-    <link rel="preconnect" href="https://api.fontshare.com" crossorigin>
+    {{template "seo_head.html" .}}
     <link rel="stylesheet" href="/static/css/material-icons.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link rel="stylesheet" href="/static/css/fonts.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link rel="stylesheet" href="/static/css/material-symbols.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
-    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@700,500,400&display=swap" rel="stylesheet">
     <script src="/static/js/loader.js?v=20260818" defer></script>
     <script src="/static/js/htmx.min.js?v={{if .Version}}{{.Version}}{{else}}20260822{{end}}" defer></script>
     <link rel="stylesheet" href="/static/css/tailwind.css?v={{if .Version}}{{.Version}}{{else}}20260821{{end}}">
     <link rel="stylesheet" href="/static/css/app.css?v={{if .Version}}{{.Version}}{{else}}20260821{{end}}">
+    {{template "theme_head.html" .}}
 
 
     <style>
@@ -40,7 +24,7 @@
             color: var(--color-on-surface);
             font-family: 'Plus Jakarta Sans', sans-serif;
         }
-        .font-display { font-family: 'Outfit', 'Satoshi', 'Plus Jakarta Sans', sans-serif; }
+        .font-display { font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
     </style>
     <script>
         document.documentElement.style.opacity = "1";

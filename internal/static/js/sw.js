@@ -1,13 +1,18 @@
-const CACHE_NAME = 'avandab-v1';
-const STATIC_CACHE = 'avandab-static-v1';
+const CACHE_NAME = 'avandab-v2';
+const STATIC_CACHE = 'avandab-static-v2';
 
 // Assets to pre-cache on install (shell)
 const PRECACHE_ASSETS = [
   '/static/css/tailwind.css',
+  '/static/css/app.css',
+  '/static/css/fonts.css',
+  '/static/css/material-symbols.css',
+  '/static/css/material-icons.css',
   '/static/js/htmx.min.js',
   '/static/js/router.js',
   '/static/js/toast.js',
   '/static/js/console.js',
+  '/static/js/compress-image.js',
   '/static/icons/icon-192.png',
   '/static/icons/icon-512.png',
 ];

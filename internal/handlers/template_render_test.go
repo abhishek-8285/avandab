@@ -742,6 +742,8 @@ func TestNotFoundHandler_HTML(t *testing.T) {
 	assert.Contains(t, body, "ERR_PAGE_NOT_FOUND")
 	assert.Contains(t, body, "req-test-404")
 	assert.Contains(t, body, "/some-non-existent-page")
+	assert.NotContains(t, body, "sidebar-shell")
+	assert.NotContains(t, body, "Logout")
 }
 
 func TestNotFoundHandler_API(t *testing.T) {

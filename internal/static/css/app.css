@@ -495,15 +495,27 @@ button:disabled:hover {
             }
         }
         .navigation-button-container {
-            display: none !important;
+            display: none;
+        }
+        @media (max-width: 1023px) {
+            .navigation-button-container {
+                display: flex;
+                align-items: center;
+                margin-right: 0.75rem;
+            }
         }
 
         .navigation-button {
-            width: 24px;
-            height: 24px;
+            width: 28px;
+            height: 28px;
             cursor: pointer;
             display: flex;
             align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: 0;
+            padding: 0;
+            color: var(--color-on-surface);
         }
 
         /* Far Left Logo */
