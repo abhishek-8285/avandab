@@ -108,7 +108,7 @@ Multi-agent system in `internal/agent/` (chat at `/assistant`, API at
 hallucinations. Never claim a task is complete without proven verification.
 On a blocker: halt and report — never fake a workaround.
 
-### The 5 Absolute Prohibitions
+### The 6 Absolute Prohibitions
 1. **NEVER fake a fix.** Do not comment out failing tests, swallow errors with
    `_ =`, or hardcode mock data to make a build pass. Fix the root cause.
 2. **NEVER hallucinate file contents.** Read a file before modifying or
@@ -121,6 +121,10 @@ On a blocker: halt and report — never fake a workaround.
 5. **NEVER bypass security/auth.** Do not mount routes outside
    `RequireAPIAuth`/`RequirePermission` unless the spec explicitly says so
    (e.g., public webhooks). Never leave secrets in plaintext.
+6. **NEVER compile on the production VPS.** Forbidden: running `go build`, `go run`,
+   or `go test` on the remote VPS. The VPS is a 1GB runtime environment; compiling
+   causes kernel swap thrash and OOM crashes. Always cross-compile locally and
+   deploy stripped binaries using `./scripts/deploy-vps.sh`.
 
 ### The "Prove It" Protocol (mandatory before claiming done)
 1. `go build ./...` — exit 0
