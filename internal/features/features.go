@@ -82,8 +82,8 @@ var Catalog = []Feature{
 	// Command Center (Spec 22)
 	{Key: "command_center", Name: "Owner Command Center", Category: "Command Center", Tier: TierAddon,
 		Description: "One-screen console: money strip, fleet context, ranked alerts.", EnvFlag: "COMMAND_CENTER_ENABLED"},
-	{Key: "bookings_board", Name: "Bookings Kanban Board", Category: "Command Center", Tier: TierAddon,
-		Description: "Drag-and-drop booking status board with live sync.", EnvFlag: "BOOKINGS_BOARD_ENABLED"},
+	{Key: "bookings_board", Name: "Bookings Kanban Board", Category: "Operations", Tier: TierCore,
+		Description: "Drag-and-drop booking status board with live sync.", EnvFlag: "BOOKINGS_BOARD_ENABLED", EnvDefaultOn: true},
 	{Key: "driver_money", Name: "Driver Paisa Tab", Category: "Command Center", Tier: TierCore,
 		Description: "Driver balance transparency, settlements history, advance requests.", EnvFlag: "DRIVER_MONEY_ENABLED", EnvDefaultOn: true},
 	{Key: "alert_inbox", Name: "Ranked Alert Inbox", Category: "Command Center", Tier: TierAddon,

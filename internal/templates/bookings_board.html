@@ -12,12 +12,18 @@ server remains the only mutation authority — no new endpoint. */}}
             </div>
             <p class="text-sm text-secondary mt-1">Drag a card forward to confirm or complete it. Backwards moves are rejected.</p>
         </div>
+        <div class="flex items-center gap-2 flex-wrap shrink-0">
+        <div class="flex items-center gap-1 p-1 rounded-full bg-surface-container-low border border-border-subtle w-fit" aria-label="Bookings views">
+            <a href="/bookings/board" aria-current="page" class="px-4 py-1.5 rounded-full text-sm font-semibold bg-surface-container-lowest shadow-xs border border-border-subtle text-on-surface transition-colors">Board</a>
+            <a href="/bookings" class="px-4 py-1.5 rounded-full text-sm font-semibold text-secondary hover:text-on-surface transition-colors">List</a>
+        </div>
         <a href="/bookings/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all">+ New booking</a>
+        </div>
     </div>
 
     <div id="board" class="grid grid-cols-2 lg:grid-cols-4 gap-4 overflow-x-auto"
-         data-columns='[{{range $i, $c := .Extra.Columns}}{{if $i}},{{end}}"{{$c.Status}}"{{end}}]'>
-        {{range .Extra.Columns}}
+         data-columns='[{{range $i, $c := .Columns}}{{if $i}},{{end}}"{{$c.Status}}"{{end}}]'>
+        {{range .Columns}}
         <section class="board-column bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[320px]"
                  data-status="{{.Status}}">
             <div class="px-4 py-3 border-b border-border-subtle flex items-center justify-between gap-2 {{if eq .Status "pending"}}bg-gradient-to-r from-amber-500/[0.07] to-transparent{{else if eq .Status "confirmed"}}bg-gradient-to-r from-blue-500/[0.06] to-transparent{{else if eq .Status "completed"}}bg-gradient-to-r from-emerald-500/[0.06] to-transparent{{else}}bg-gradient-to-r from-rose-500/[0.06] to-transparent{{end}}">
