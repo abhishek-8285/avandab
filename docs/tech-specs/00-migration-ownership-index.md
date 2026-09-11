@@ -1,7 +1,7 @@
 # Migration Ownership Index
 
 Single source of truth for `db/migrations/` version numbers. Repo head is
-`00144_trip_start_odometer_and_gate_register.sql`; next free slot is `00145`.
+`00145_facilities_master.sql`; next free slot is `00146`.
 (`00039_experiments.sql` remains TAKEN — never edit.) Every new migration
 appends the next free number. **This table is authoritative; spec §3 numbers
 MUST match it.**
@@ -129,7 +129,8 @@ which always allocate head-ward from the maximum above.
 | 00142 | `fuel_issues` table (fuel station OP/CL readings, litres issued, pump measuring points, receiving vehicle) + tenant FK triggers | Fleet SOP Parity B2 (p.9) |
 | 00143 | `maintenance_plans` table (IP41 single cycle plans, annual estimate KM projection, call horizon) | Fleet SOP Parity B3 (pp.10-15) |
 | 00144 | trips `start_odometer` and `gate_facility_id` (ZMOTM_MR Gate Register depot in/out log) | Fleet SOP Parity B5 (pp.16-20) |
-| 00145+ | future specs | reserved |
+| 00145 | `facilities` table (ZFID facility master, plant/circle/cost_center, operational offices) | Fleet SOP Parity B6 (pp.1-2) |
+| 00146+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

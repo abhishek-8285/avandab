@@ -881,6 +881,29 @@ type ExperimentsSpec16 struct {
 	UpdatedAt    time.Time      `json:"updated_at"`
 }
 
+type Facility struct {
+	ID           string          `json:"id"`
+	TenantID     string          `json:"tenant_id"`
+	FacilityCode string          `json:"facility_code"`
+	Name         string          `json:"name"`
+	FacilityType string          `json:"facility_type"`
+	Plant        string          `json:"plant"`
+	Circle       string          `json:"circle"`
+	ProfitCenter string          `json:"profit_center"`
+	CostCenter   string          `json:"cost_center"`
+	Address      string          `json:"address"`
+	City         string          `json:"city"`
+	State        string          `json:"state"`
+	Pincode      string          `json:"pincode"`
+	Latitude     sql.NullFloat64 `json:"latitude"`
+	Longitude    sql.NullFloat64 `json:"longitude"`
+	ValidFrom    sql.NullTime    `json:"valid_from"`
+	ValidTo      sql.NullTime    `json:"valid_to"`
+	IsActive     int64           `json:"is_active"`
+	CreatedAt    time.Time       `json:"created_at"`
+	UpdatedAt    time.Time       `json:"updated_at"`
+}
+
 type FastagTag struct {
 	ID            string         `json:"id"`
 	TenantID      string         `json:"tenant_id"`

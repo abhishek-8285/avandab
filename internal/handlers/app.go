@@ -148,6 +148,8 @@ type App struct {
 	Founder *FounderHandlers
 	// SOS powers the driver panic/emergency SOS endpoint (Phase 8 §P3A).
 	SOS *SOSHandlers
+	// Facilities powers the facility master catalog (ZFID sync, TMS SOP pp.1-2, B6).
+	Facilities *FacilityHandlers
 }
 
 // NewApp creates a new handler app with all handler groups initialized.
@@ -240,6 +242,7 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	}
 
 	app.SOS = NewSOSHandlers(app, db)
+	app.Facilities = &FacilityHandlers{App: app}
 
 	return app
 }
