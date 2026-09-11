@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"time"
 
 	"transport-app/internal/repository"
 	"transport-app/internal/shared"
@@ -19,6 +20,10 @@ type CompleteTripCommand struct {
 	// Nil = closed without a reading (reading triple = CloseOdometer +
 	// CompletedAt). Breakdown alerts are filed by callers, not here.
 	CloseOdometer *float64
+	// ClosedAt is the driver-reported close date/time (ZMOTM_MMS pp.6-8 close
+	// dialog; offline closes sync late). Nil = server now. Future values are
+	// rejected — a close cannot happen after it is recorded.
+	ClosedAt *time.Time
 	// OnCompleted runs inside the same UnitOfWork transaction after the trip
 	// is saved, letting callers attach detentions/invoices atomically with
 	// the completion (Spec 02 §6 — no torn states).
@@ -55,11 +60,18 @@ func (uc *CompleteTripUseCase) Execute(ctx context.Context, cmd CompleteTripComm
 		if err != nil {
 			return err
 		}
-		if err := t.Complete(uc.clock.Now()); err != nil {
+		now := uc.clock.Now()
+		if cmd.ClosedAt != nil {
+			if cmd.ClosedAt.After(now.Add(time.Minute)) {
+				return errors.New("closed_at cannot be in the future")
+			}
+			now = *cmd.ClosedAt
+		}
+		if err := t.Complete(now); err != nil {
 			return err
 		}
 		if cmd.CloseOdometer != nil {
-			if err := t.RecordCloseReading(*cmd.CloseOdometer, uc.clock.Now()); err != nil {
+			if err := t.RecordCloseReading(*cmd.CloseOdometer, now); err != nil {
 				return err
 			}
 		}

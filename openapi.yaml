@@ -9603,6 +9603,10 @@ components:
       properties:
         close_odometer:
           type: number
+        closed_at:
+          type: string
+          format: date-time
+          description: Driver-reported close date/time (RFC3339, ZMOTM_MMS pp.6-8). Optional; defaults to server time. Future values rejected (400).
         breakdown:
           type: boolean
         breakdown_note:

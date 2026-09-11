@@ -384,16 +384,27 @@ func (h *APITripHandler) Complete(w http.ResponseWriter, r *http.Request) {
 	// Optional SOP close body; empty body preserves the legacy behavior.
 	var req struct {
 		CloseOdometer *float64 `json:"close_odometer"`
+		ClosedAt      string   `json:"closed_at"`
 		Breakdown     bool     `json:"breakdown"`
 		BreakdownNote string   `json:"breakdown_note"`
 	}
 	if r.Body != nil {
 		_ = json.NewDecoder(r.Body).Decode(&req)
 	}
+	var closedAt *time.Time
+	if req.ClosedAt != "" {
+		ts, err := time.Parse(time.RFC3339, req.ClosedAt)
+		if err != nil {
+			http.Error(w, "closed_at must be RFC3339", http.StatusBadRequest)
+			return
+		}
+		closedAt = &ts
+	}
 	if err := h.completeUC.Execute(r.Context(), application.CompleteTripCommand{
 		TripID:        aggregate.TripID(id),
 		TenantID:      shared.TenantIDFromContext(r.Context()),
 		CloseOdometer: req.CloseOdometer,
+		ClosedAt:      closedAt,
 	}); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

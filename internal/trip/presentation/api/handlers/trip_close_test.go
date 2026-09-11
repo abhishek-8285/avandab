@@ -125,3 +125,38 @@ func TestComplete_WithoutBreakdownFilesNoAlert(t *testing.T) {
 	assert.Equal(t, "completed", status)
 	assert.Equal(t, 0, breakdownAlertCount(t, db))
 }
+
+func TestComplete_ClosedAtPersistsDriverReportedTime(t *testing.T) {
+	db := newCloseTestDB(t)
+	h := newCloseTestHandler(t, db)
+	seedCloseTrip(t, db, "trip-close-ts")
+
+	closed := time.Now().Add(-2 * time.Hour).UTC().Truncate(time.Second)
+	w := callComplete(t, h, "trip-close-ts",
+		`{"close_odometer":125500.0,"closed_at":"`+closed.Format(time.RFC3339)+`"}`)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var completedAt time.Time
+	require.NoError(t, db.QueryRow(
+		`SELECT completed_at FROM trips WHERE id = 'trip-close-ts'`).Scan(&completedAt))
+	assert.WithinDuration(t, closed, completedAt.UTC(), time.Minute)
+}
+
+func TestComplete_FutureClosedAtRejected(t *testing.T) {
+	db := newCloseTestDB(t)
+	h := newCloseTestHandler(t, db)
+	seedCloseTrip(t, db, "trip-close-future")
+
+	future := time.Now().Add(2 * time.Hour).UTC().Format(time.RFC3339)
+	w := callComplete(t, h, "trip-close-future", `{"closed_at":"`+future+`"}`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestComplete_BadClosedAtFormatRejected(t *testing.T) {
+	db := newCloseTestDB(t)
+	h := newCloseTestHandler(t, db)
+	seedCloseTrip(t, db, "trip-close-badfmt")
+
+	w := callComplete(t, h, "trip-close-badfmt", `{"closed_at":"11-09-2026 15:04"}`)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
