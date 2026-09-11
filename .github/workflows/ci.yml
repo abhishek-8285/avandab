@@ -286,8 +286,17 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
           cache: true
-      - name: Migrate empty PG to latest (goose)
-        run: go run github.com/pressly/goose/v3/cmd/goose@v3.27.3 -dir db/migrations_pg postgres "$DATABASE_URL" up
+      - name: Migrate empty PG to latest (goose, two-phase)
+        run: |
+          GOOSE="go run github.com/pressly/goose/v3/cmd/goose@v3.27.3 -dir db/migrations_pg postgres $DATABASE_URL"
+          # Two-phase migrate mirroring cmd/server startup (A7): explicit-id
+          # seeds desync identity sequences, so migrate to just before the
+          # first generated insert, resync, then go. Single-pass `up` dies
+          # at 00137 on fresh chains (roles_pkey).
+          $GOOSE up-to 72
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "SELECT setval('roles_id_seq', (SELECT COALESCE(MAX(id), 0) FROM roles), true);" -c "SELECT setval('permissions_id_seq', (SELECT COALESCE(MAX(id), 0) FROM permissions), true);"
+          $GOOSE up
+          $GOOSE version
       - name: Migration tests + PG proof
         run: |
           go test ./db/... ./internal/database/... ./internal/datamigrate/...
