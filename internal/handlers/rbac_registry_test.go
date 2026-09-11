@@ -225,3 +225,23 @@ func TestSidebarFeaturesLink_VisibilityByRole(t *testing.T) {
 	require.Contains(t, adminOut, `href="/settings/features"`,
 		"admin (allow-all) still sees the Features nav link")
 }
+
+// TestDashboardTabs_Wired pins the Today/Trends split: both tab buttons and
+// all eight section anchors must exist with the right data-dashtab side.
+// (The toggle itself is JS, verified live; this fails the build if the
+// wiring rots.)
+func TestDashboardTabs_Wired(t *testing.T) {
+	src, err := os.ReadFile("../templates/dashboard.html")
+	require.NoError(t, err)
+	body := string(src)
+	require.Contains(t, body, `data-dashtab-btn="today"`)
+	require.Contains(t, body, `data-dashtab-btn="trends"`)
+	today := []string{"dash-sec-kpis", "dash-sec-strip", "dash-sec-attention", "dash-sec-alerts", "dash-sec-upcoming"}
+	trends := []string{"dash-sec-charts", "dash-sec-recents", "dash-sec-activity"}
+	for _, id := range today {
+		require.Contains(t, body, `id="`+id+`" data-dashtab="today"`, "section %s must sit on the Today tab", id)
+	}
+	for _, id := range trends {
+		require.Contains(t, body, `id="`+id+`" data-dashtab="trends"`, "section %s must sit on the Trends tab", id)
+	}
+}

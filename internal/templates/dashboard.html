@@ -36,8 +36,14 @@
         </div>
     </div>
 
+    <!-- Dashboard tabs — Today (operate) vs Trends (review). JS-only toggle, no reload. -->
+    <div class="flex items-center gap-1 p-1 rounded-full bg-surface-container-low border border-border-subtle w-fit" role="tablist" aria-label="Dashboard views">
+        <button id="dash-tabbtn-today" type="button" role="tab" aria-selected="true" data-dashtab-btn="today" class="px-4 py-1.5 rounded-full text-sm font-semibold bg-surface-container-lowest shadow-xs border border-border-subtle text-on-surface transition-colors">Today</button>
+        <button id="dash-tabbtn-trends" type="button" role="tab" aria-selected="false" data-dashtab-btn="trends" class="px-4 py-1.5 rounded-full text-sm font-semibold text-secondary hover:text-on-surface transition-colors">Trends</button>
+    </div>
+
     <!-- KPI HERO — 4 premium cards with gradient accents -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div id="dash-sec-kpis" data-dashtab="today" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Today's Trips -->
         <a href="/trips" data-drill="kpi-today-trips" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-primary/20 transition-all duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-violet-500 to-cyan-400 opacity-90"></div>
@@ -104,7 +110,7 @@
     </div>
 
     <!-- Secondary KPI strip -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div id="dash-sec-strip" data-dashtab="today" class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <a href="/vehicles?status=available" class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
             <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600 shrink-0">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
@@ -149,7 +155,7 @@
 
     <!-- Needs attention — exception strip (only non-zero backlogs render) -->
     {{if or (gt .Stats.Attention.Total 0) .PendingAgentActions}}
-    <div class="bg-surface-container-lowest rounded-2xl border border-amber-500/20 shadow-xs p-4">
+    <div id="dash-sec-attention" data-dashtab="today" class="bg-surface-container-lowest rounded-2xl border border-amber-500/20 shadow-xs p-4">
         <div class="flex items-center gap-2 mb-3">
             <span class="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
             <h2 class="text-title-sm font-bold text-on-surface">Needs attention</h2>
@@ -240,7 +246,7 @@
     </div>
 
     <!-- Charts Row — premium cards -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div id="dash-sec-charts" data-dashtab="trends" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                 <div>
@@ -292,7 +298,7 @@
     </div>
 
     <!-- Alerts Row — actionable ops health -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div id="dash-sec-alerts" data-dashtab="today" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between bg-gradient-to-r from-rose-500/[0.06] to-transparent">
                 <div class="flex items-center gap-2">
@@ -332,7 +338,7 @@
     </div>
 
     <!-- Upcoming Trips — fully functional datatable -->
-    <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
+    <div id="dash-sec-upcoming" data-dashtab="today" class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-4 border-b border-border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex items-center gap-3">
                 <h2 class="text-title-sm font-bold text-on-surface">Upcoming Trips</h2>
@@ -385,7 +391,7 @@
     </div>
 
     <!-- Recent Bookings and Payments — premium split -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div id="dash-sec-recents" data-dashtab="trends" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between">
                 <h2 class="text-title-sm font-bold text-on-surface">Recent Bookings</h2>
@@ -432,7 +438,7 @@
     </div>
 
     <!-- Recent Activity — timeline -->
-    <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
+    <div id="dash-sec-activity" data-dashtab="trends" class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between">
             <h2 class="text-title-sm font-bold text-on-surface">Recent Activity</h2>
             <a href="/audit-logs" class="text-xs font-semibold text-primary hover:underline">Audit log →</a>
@@ -471,6 +477,35 @@
                 btn.addEventListener('click', (e)=>{ e.stopPropagation(); const willOpen=menu.classList.contains('hidden'); menu.classList.toggle('hidden', !willOpen); btn.setAttribute('aria-expanded', String(willOpen)); });
                 document.addEventListener('click', (e)=>{ if(!wrap.contains(e.target)){ menu.classList.add('hidden'); btn.setAttribute('aria-expanded','false'); }});
                 document.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ menu.classList.add('hidden'); btn.setAttribute('aria-expanded','false'); btn.focus(); }});
+            })();
+            // Dashboard tabs — Today vs Trends. Sections carry data-dashtab;
+            // choice persists in localStorage. Charts live under Trends:
+            // dispatch resize on show so Chart.js picks up the visible size.
+            (function(){
+                const btns=document.querySelectorAll('[data-dashtab-btn]');
+                if(!btns.length) return;
+                const activeCls=['bg-surface-container-lowest','shadow-xs','border','border-border-subtle','text-on-surface'];
+                function paint(active){
+                    btns.forEach(btn=>{
+                        const on=btn.getAttribute('data-dashtab-btn')===active;
+                        btn.setAttribute('aria-selected', String(on));
+                        activeCls.forEach(c=>btn.classList.toggle(c, on));
+                        btn.classList.toggle('text-secondary', !on);
+                        btn.classList.toggle('hover:text-on-surface', !on);
+                    });
+                    document.querySelectorAll('[data-dashtab]').forEach(sec=>{
+                        sec.classList.toggle('hidden', sec.getAttribute('data-dashtab')!==active);
+                    });
+                }
+                function show(name, save){
+                    paint(name);
+                    if(save){ try{ localStorage.setItem('dash-tab', name); }catch(_){} }
+                    window.dispatchEvent(new Event('resize'));
+                }
+                btns.forEach(b=>b.addEventListener('click', ()=>show(b.getAttribute('data-dashtab-btn'), true)));
+                let initial='today';
+                try{ if(localStorage.getItem('dash-tab')==='trends') initial='trends'; }catch(_){}
+                if(initial!=='today') paint(initial);
             })();
             // Upcoming trips live filter — handles both desktop table and mobile cards
             const q = document.getElementById('upcoming-search');
