@@ -23,16 +23,14 @@ import (
 	"transport-app/internal/auth"
 )
 
-var (
-	guardCallRe  = regexp.MustCompile(`(?:ResourcePermission|RequirePermission)\(\s*[A-Za-z0-9_.]+,\s*"([^"]+)",\s*"([^"]+)"\s*\)`)
-	sidebarCanRe = regexp.MustCompile(`\{\{\s*if\s+can\s+\.User\s+"([^"]+)"\s+"([^"]+)"`)
-)
-
 // collectGuardPermissions extracts every resource:action pair referenced by
 // route guards and sidebar `can` checks. Deliberately exhaustive, not
 // curated: adding a guard without seeding its permission must break the build.
+// (Regexes are func-local: repo CI forbids package-level vars in _test.go.)
 func collectGuardPermissions(t *testing.T) map[string]struct{} {
 	t.Helper()
+	guardCallRe := regexp.MustCompile(`(?:ResourcePermission|RequirePermission)\(\s*[A-Za-z0-9_.]+,\s*"([^"]+)",\s*"([^"]+)"\s*\)`)
+	sidebarCanRe := regexp.MustCompile(`\{\{\s*if\s+can\s+\.User\s+"([^"]+)"\s+"([^"]+)"`)
 	roots := []string{".", "../integration", "../../cmd/server"}
 	out := map[string]struct{}{}
 	for _, root := range roots {
