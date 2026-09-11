@@ -1,7 +1,7 @@
 # Migration Ownership Index
 
 Single source of truth for `db/migrations/` version numbers. Repo head is
-`00149_identity_sequence_resync.sql`; next free slot is `00150`.
+`00150_org_admin_rbac_backfill.sql`; next free slot is `00151`.
 (`00039_experiments.sql` remains TAKEN — never edit.) Every new migration
 appends the next free number. **This table is authoritative; spec §3 numbers
 MUST match it.**
@@ -16,6 +16,15 @@ which always allocate head-ward from the maximum above.
   `00042`. Every other spec only seeds rows or adds columns — never a second
   `CREATE TABLE`.
 - Every new migration has correct `-- +goose Up` / `-- +goose Down`.
+- **Permission backfill rule (from 00150):** any migration inserting rows
+  into `permissions` MUST also insert the matching `role_permissions` rows
+  for every role the UI promises that capability to — in practice always
+  org_admin (6) unless the exclusion list in `00150_org_admin_rbac_backfill.sql`
+  says otherwise (founder:*, experiments:*, features:update, tenants:manage,
+  users:manage, customer_portal:*, driver:*-self, rag:write). 00064's
+  "grant all" only covered permissions existing at its date; every later
+  migration that forgot role 6 shipped a 403. `TestRouteGuardPermissions_ExistInDB`
+  + `TestOrgAdmin_RBACGrants` enforce this at `go test` time.
 - `tenant_id` is `TEXT` referencing `tenants(id)` via triggers (since 00102/00103).
   Before 00102 `tenants` did not exist — free-form `TEXT` with no FK was required.
   Since 00102 `tenants` exists and all rows backfilled to default tenant via 00065,
@@ -134,7 +143,8 @@ which always allocate head-ward from the maximum above.
 | 00147 | `fuel_cards`, `fuel_card_transactions` (commercial fuel cards + accounting sync) | Spec 20 B10 |
 | 00148 | `trip_esg_metrics`, `esg_emission_snapshots` (ESG emission snapshots & Scope 3 carbon accounting) | Spec 20 B11 |
 | 00149 | PG identity-sequence resync + `customer` backfill (repairs 00027/00064 explicit-id desync that broke 00137 on fresh chains; sqlite side is a no-op marker keeping 1:1 sets) + `PreGooseCutVersion=72` two-phase startup in `cmd/server/main.go` | Phase A A7 |
-| 00150+ | future specs | reserved |
+| 00150 | RBAC registry backfill: seeds 15 guard-referenced permission rows (ewaybill:read/create/update/write, dashboard:read, fastag:read/update, trips:cancel, fuel:create, scorecard:update, accounting:read/sync, integrations:accounting/gstn, users:manage) + grants operational set to org_admin (6), ops set to dispatcher (2); PG port in `migrations_pg/` | UI failure fix (live crawl 2026-09-11) |
+| 00151+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

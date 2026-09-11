@@ -298,7 +298,7 @@
                     <span>{{t "nav.errors"}}</span>
                 </a>
                 {{end}}
-                {{if can .User "settings" "update"}}
+                {{if can .User "features" "update"}}
                 <a href="/settings/features" class="nav-item {{if eq .Title "Features"}}active{{end}}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v3"/><path d="M18.4 5.6 16 8"/><path d="M21 12h-3"/><path d="M18.4 18.4 16 16"/><path d="M12 21v-3"/><path d="M5.6 18.4 8 16"/><path d="M3 12h3"/><path d="M5.6 5.6 8 8"/></svg>
                     <span>Features</span>
