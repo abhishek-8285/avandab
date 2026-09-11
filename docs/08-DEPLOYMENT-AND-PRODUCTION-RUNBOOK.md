@@ -104,6 +104,7 @@ For physical hardware GPS trackers:
 | `TELEMETRY_DEVICE_SECRET_PEPPER` | empty (unset) | HMAC-SHA256 pepper for mobile/HTTP telemetry tokens. Set before provisioning hardware — rotation invalidates stored device hashes (reprovisioning required). Non-dev startup warns when unset. |
 | `RAZORPAY_KEY_ID` | empty | Razorpay API Key for payments. |
 | `RAZORPAY_KEY_SECRET` | empty | Razorpay API Secret for HMAC signature verification. |
+| `RAZORPAY_WEBHOOK_SECRET` | empty | Webhook HMAC secret for payments + subscription + payout webhooks. All three fail closed (503) when unset — set in prod or webhooks stay disabled. |
 | `AGENT_REQUIRE_APPROVAL` | `true` | Requires admin approval for mutating AI tools. |
 | `AGENT_API_KEY` | empty | OpenAI API Key for operations assistant. |
 | `INTEGRATION_EWAYBILL_USE_MOCK` | `true` | Demo mode for NIC e-waybills; live needs `INTEGRATION_EWAYBILL_API_KEY` + `INTEGRATION_EWAYBILL_ENDPOINT`. |

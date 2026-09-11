@@ -310,17 +310,20 @@ func (s *SettlementAppService) ProcessProviderWebhook(ctx context.Context, tenan
 		return errors.New("provider_event_id is required")
 	}
 
-	// 1. Signature Verification: Mandatory if webhook secret configured
-	if s.webhookSecret != "" {
-		if signature == "" {
-			return errors.New("missing webhook signature: signature is mandatory")
-		}
-		mac := hmac.New(sha256.New, []byte(s.webhookSecret))
-		mac.Write(body)
-		expectedSignature := hex.EncodeToString(mac.Sum(nil))
-		if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
-			return errors.New("invalid webhook signature")
-		}
+	// 1. Signature Verification: fail closed without a secret (C3) — an
+	// unverified payout webhook can forge PAID outcomes. Mirrors the payment
+	// webhook's ErrWebhookNotConfigured.
+	if s.webhookSecret == "" {
+		return errors.New("webhook secret not configured")
+	}
+	if signature == "" {
+		return errors.New("missing webhook signature: signature is mandatory")
+	}
+	mac := hmac.New(sha256.New, []byte(s.webhookSecret))
+	mac.Write(body)
+	expectedSignature := hex.EncodeToString(mac.Sum(nil))
+	if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
+		return errors.New("invalid webhook signature")
 	}
 
 	// 2. Webhook Idempotency Check (globally unique by provider + provider_event_id)

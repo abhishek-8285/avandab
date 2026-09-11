@@ -394,3 +394,13 @@ func TestPhase8_ConcurrentSettlementCreation(t *testing.T) {
 	}
 	assert.True(t, successCount > 0)
 }
+
+func TestWebhook_EmptySecretRejected(t *testing.T) {
+	db := setupSettlementTestDB(t)
+	repo := settleSQL.NewSQLSettlementRepository(db)
+	svc := application.NewSettlementAppService(repo, "", 100.0)
+
+	err := svc.ProcessProviderWebhook(context.Background(), "tenant-1", "evt_no_secret", "whatever", []byte(`{"event":"payout.processed"}`))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not configured")
+}

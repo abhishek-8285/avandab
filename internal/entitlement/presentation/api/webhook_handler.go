@@ -40,13 +40,19 @@ func (h *WebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() { _ = r.Body.Close() }()
 
-	// Verify HMAC-SHA256 signature if secret configured
-	if h.webhookSecret != "" {
-		sig := r.Header.Get("X-Razorpay-Signature")
-		if sig == "" || !verifySignature(body, sig, h.webhookSecret) {
-			http.Error(w, `{"error":"invalid signature"}`, http.StatusUnauthorized)
-			return
-		}
+	// Fail closed without a secret (C3): an unverified subscription webhook
+	// can forge plan upgrades and PAST_DUE downgrades. Mirrors the payment
+	// webhook's ErrWebhookNotConfigured → 503.
+	if h.webhookSecret == "" {
+		http.Error(w, `{"error":"webhook not configured"}`, http.StatusServiceUnavailable)
+		return
+	}
+
+	// Verify HMAC-SHA256 signature
+	sig := r.Header.Get("X-Razorpay-Signature")
+	if sig == "" || !verifySignature(body, sig, h.webhookSecret) {
+		http.Error(w, `{"error":"invalid signature"}`, http.StatusUnauthorized)
+		return
 	}
 
 	var raw map[string]interface{}

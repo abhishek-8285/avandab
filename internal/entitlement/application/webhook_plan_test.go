@@ -3,6 +3,9 @@ package application_test
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -82,7 +85,7 @@ func TestWebhook_HTTP_PlanRefFromNotes(t *testing.T) {
 	providerSubID := "sub_rzp_http_plan"
 	seedTestSubscription(t, db, "tenant-a", domain.PlanStarter, domain.SubTrial, providerSubID)
 
-	handler := entApi.NewWebhookHandler(svc, "")
+	handler := entApi.NewWebhookHandler(svc, "plan_notes_secret")
 	now := time.Now()
 	bodyJSON := fmt.Sprintf(`{
 		"event_id": "evt_http_plan_001",
@@ -96,7 +99,10 @@ func TestWebhook_HTTP_PlanRefFromNotes(t *testing.T) {
 		}}}
 	}`, now.Unix(), providerSubID, now.Unix(), now.Add(30*24*time.Hour).Unix())
 
+	mac := hmac.New(sha256.New, []byte("plan_notes_secret"))
+	mac.Write([]byte(bodyJSON))
 	req := httptest.NewRequest("POST", "/api/v1/billing/webhooks/razorpay", bytes.NewBufferString(bodyJSON))
+	req.Header.Set("X-Razorpay-Signature", hex.EncodeToString(mac.Sum(nil)))
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 	assert.Equal(t, http.StatusOK, w.Code)

@@ -140,6 +140,10 @@ func (h *SettlementHandler) RazorpayPayoutWebhook(w http.ResponseWriter, r *http
 	}
 
 	if err := h.svc.ProcessProviderWebhook(r.Context(), tenantID, eventID, signature, body); err != nil {
+		if err.Error() == "webhook secret not configured" {
+			httpx.JSON(w, http.StatusServiceUnavailable, map[string]string{"error": err.Error()})
+			return
+		}
 		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}

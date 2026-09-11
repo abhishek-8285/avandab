@@ -321,3 +321,22 @@ func TestSpec25A_HTTPWebhookHandler_SignatureVerification(t *testing.T) {
 		assert.Equal(t, domain.SubActive, sub.Status)
 	})
 }
+
+func TestSpec25A_HTTPWebhookHandler_EmptySecretRejected503(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	svc := application.NewService(db)
+	seedTestSubscription(t, db, "tenant-a", domain.PlanGrowth, domain.SubTrial, "sub_rzp_nosecret")
+
+	handler := entApi.NewWebhookHandler(svc, "")
+	req := httptest.NewRequest("POST", "/api/v1/billing/webhooks/razorpay", bytes.NewBufferString(`{"event_id":"evt_nosecret","event":"subscription.activated"}`))
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusServiceUnavailable, w.Code)
+
+	sub, err := svc.GetSubscription(context.Background(), "tenant-a")
+	require.NoError(t, err)
+	assert.Equal(t, domain.SubTrial, sub.Status, "rejected webhook must not mutate subscription")
+}
