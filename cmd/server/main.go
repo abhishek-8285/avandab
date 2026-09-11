@@ -1893,6 +1893,25 @@ func main() {
 	runLeadered("eta_cleanup", func(c context.Context) { etaService.RunCleanupCron(c, 24*time.Hour, logger) })
 	runLeadered("eta_aggregation", func(c context.Context) { etaService.RunAggregationCron(c, 24*time.Hour, logger) })
 
+	// Subscription dunning progression (C3): PAST_DUE → GRACE → READ_ONLY on
+	// status age. Runs once at boot (catches downtime arrears) then daily.
+	runLeadered("subscription_dunning", func(c context.Context) {
+		ticker := time.NewTicker(24 * time.Hour)
+		defer ticker.Stop()
+		for {
+			if pd, gr, err := subscriptionSvc.SweepDunning(c, time.Now().UTC()); err != nil {
+				logger.Error("subscription dunning sweep failed", "error", err)
+			} else if pd+gr > 0 {
+				logger.Info("subscription dunning sweep progressed", "to_grace", pd, "to_read_only", gr)
+			}
+			select {
+			case <-c.Done():
+				return
+			case <-ticker.C:
+			}
+		}
+	})
+
 	go func() {
 		logger.Info("Server listening", "address", addr)
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {

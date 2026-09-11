@@ -28,6 +28,9 @@ type Service interface {
 	CommitBooking(ctx context.Context, tx *sql.Tx, tenantID shared.TenantID, bookingID string) error
 	ReleaseBooking(ctx context.Context, tx *sql.Tx, tenantID shared.TenantID, bookingID string) error
 	CreateSubscription(ctx context.Context, tenantID shared.TenantID, planID domain.PlanID, status domain.SubscriptionStatus, periodStart, periodEnd time.Time) (*domain.TenantSubscription, error)
+	// SweepDunning progresses stale delinquencies: PAST_DUE older than
+	// PastDueGraceDays → GRACE, GRACE older than GraceReadOnlyDays → READ_ONLY.
+	SweepDunning(ctx context.Context, now time.Time) (pastDueToGrace, graceToReadOnly int64, err error)
 	HandleSubscriptionWebhook(ctx context.Context, providerSubID string, status domain.SubscriptionStatus, periodStart, periodEnd time.Time) error
 	ProcessSubscriptionWebhook(ctx context.Context, p WebhookEventPayload) error
 	SetEntitlementOverride(ctx context.Context, tenantID shared.TenantID, entType, keyName, value, reason string, expiresAt *time.Time) error
@@ -621,4 +624,43 @@ func parseTime(s string) (time.Time, error) {
 		return t, nil
 	}
 	return time.Parse("2006-01-02 15:04:05", s)
+}
+
+// Dunning policy: delinquency progresses on status age (updated_at marks the
+// last status write — every transition refreshes it).
+const (
+	// PastDueGraceDays in PAST_DUE before softening to GRACE.
+	PastDueGraceDays = 7
+	// GraceReadOnlyDays in GRACE before hardening to READ_ONLY (ingress blocked).
+	GraceReadOnlyDays = 14
+)
+
+// SweepDunning progresses stale delinquencies one step per run — a tenant
+// never jumps PAST_DUE straight to READ_ONLY. Idempotent; returns per-step
+// counts. Terminal states (ACCOUNT_CLOSED, OPERATIONALLY_TERMINATED) and
+// overrides are untouched: overrides bypass plan status in reads.
+func (s *service) SweepDunning(ctx context.Context, now time.Time) (pastDueToGrace, graceToReadOnly int64, err error) {
+	pastDueCutoff := now.AddDate(0, 0, -PastDueGraceDays).Format(time.RFC3339)
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE tenant_subscriptions
+		SET status = $1, updated_at = $2
+		WHERE status = $3 AND updated_at < $4
+	`, string(domain.SubGrace), now.Format(time.RFC3339), string(domain.SubPastDue), pastDueCutoff)
+	if err != nil {
+		return 0, 0, err
+	}
+	if pastDueToGrace, err = res.RowsAffected(); err != nil {
+		return 0, 0, err
+	}
+	graceCutoff := now.AddDate(0, 0, -GraceReadOnlyDays).Format(time.RFC3339)
+	res, err = s.db.ExecContext(ctx, `
+		UPDATE tenant_subscriptions
+		SET status = $1, updated_at = $2
+		WHERE status = $3 AND updated_at < $4
+	`, string(domain.SubReadOnly), now.Format(time.RFC3339), string(domain.SubGrace), graceCutoff)
+	if err != nil {
+		return pastDueToGrace, 0, err
+	}
+	graceToReadOnly, err = res.RowsAffected()
+	return pastDueToGrace, graceToReadOnly, err
 }
