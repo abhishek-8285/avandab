@@ -310,34 +310,6 @@ func toDomainVehicle(v db.Vehicle) domain.Vehicle {
 	}
 }
 
-func toDomainCustomer(c db.Customer) domain.Customer {
-	return domain.Customer{
-		ID:               domain.CustomerID(c.ID),
-		CustomerCode:     c.CustomerCode.String,
-		Title:            fromNullString(c.Title),
-		Name:             c.Name,
-		Company:          fromNullString(c.Company),
-		ContactPerson:    fromNullString(c.ContactPerson),
-		Phone:            c.Phone,
-		Email:            fromNullString(c.Email),
-		GST:              fromNullString(c.Gst),
-		Address:          fromNullString(c.Address),
-		BillingAddress:   fromNullString(c.BillingAddress),
-		InternalID:       fromNullString(c.InternalID),
-		PhotoURL:         fromNullString(c.PhotoUrl),
-		PlaceUUID:        fromNullString(c.PlaceUuid),
-		Meta:             c.Meta,
-		Type:             c.Type,
-		Status:           c.Status,
-		PaymentTermsDays: int(c.PaymentTermsDays),
-		TenantID:         c.TenantID,
-		StateCode:        fromNullString(c.StateCode),
-		Notes:            fromNullString(c.Notes),
-		CreatedAt:        c.CreatedAt,
-		UpdatedAt:        c.UpdatedAt,
-	}
-}
-
 func toDomainCustomerFromCreateRow(r db.CreateCustomerRow) domain.Customer {
 	return domain.Customer{
 		ID:               domain.CustomerID(r.ID),

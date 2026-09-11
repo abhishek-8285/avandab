@@ -187,7 +187,7 @@ func applyUpdateWithRollback(m *VersionManifest) error {
 	// Step 1: Backup current working binary and assets before replacing
 	log.Printf("[Agent] Backing up current deployment before upgrade...")
 	_ = os.RemoveAll(backupDir)
-	_ = os.MkdirAll(backupDir, 0755)
+	_ = os.MkdirAll(backupDir, 0750)
 	_ = copyFile(filepath.Join(workDir, "server"), filepath.Join(backupDir, "server"))
 	_ = copyFile(versionFile, filepath.Join(backupDir, "current_version.txt"))
 
@@ -421,14 +421,14 @@ func untarGz(src string, dest string) error {
 		}
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err := os.MkdirAll(target, 0755); err != nil {
+			if err := os.MkdirAll(target, 0750); err != nil {
 				return err
 			}
 		case tar.TypeReg:
 			if header.Size > maxFileSize {
 				return fmt.Errorf("tar entry %s exceeds maximum file size limit", header.Name)
 			}
-			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+			if err := os.MkdirAll(filepath.Dir(target), 0750); err != nil {
 				return err
 			}
 			outFile, err := os.OpenFile(target, os.O_CREATE|os.O_RDWR|os.O_TRUNC, header.FileInfo().Mode())

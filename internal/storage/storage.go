@@ -52,7 +52,7 @@ func New(cfg Settings) (Store, error) {
 		if dir == "" {
 			return nil, fmt.Errorf("storage: LOCAL_STORAGE_DIR required for the local driver")
 		}
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
 			return nil, fmt.Errorf("storage: mkdir %s: %w", dir, err)
 		}
 		return &localStore{root: dir}, nil
@@ -87,7 +87,7 @@ func (s *localStore) Save(_ context.Context, key string, r io.Reader, _ string) 
 	if err != nil {
 		return "", err
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
 		return "", fmt.Errorf("storage: mkdir for %s: %w", path, err)
 	}
 	f, err := os.CreateTemp(filepath.Dir(path), ".upload-*")

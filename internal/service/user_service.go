@@ -598,17 +598,6 @@ func toNullString(v string) sql.NullString {
 // tenant id or slug.
 var ErrTenantSlugTaken = errors.New("a tenant with this slug already exists")
 
-// isPostgresDriver reports whether the sql.DB handle is backed by a Postgres
-// driver. database/sql exposes no driver name at runtime, so this matches the
-// concrete driver type registered in internal/database (pgx/v5/stdlib →
-// "*stdlib.Driver"; also tolerates lib/pq "*pq.Driver").
-func isPostgresDriver(handle *sql.DB) bool {
-	t := fmt.Sprintf("%T", handle.Driver())
-	return strings.Contains(t, "stdlib.Driver") ||
-		strings.Contains(t, "pq.Driver") ||
-		strings.Contains(t, "postgres")
-}
-
 // TenantSummary is one row of the super-admin tenants list (Spec 24 & Spec 25).
 type TenantSummary struct {
 	ID            string
