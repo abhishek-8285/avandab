@@ -28,6 +28,7 @@ import (
 	"transport-app/internal/operations/notifications"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
+	"transport-app/internal/sto"
 	"transport-app/internal/telemetry"
 
 	"github.com/go-chi/chi/v5"
@@ -152,6 +153,8 @@ type App struct {
 	Facilities *FacilityHandlers
 	// Backhaul powers the return-corridor matching engine and dispatch offers (B7).
 	Backhaul *BackhaulHandlers
+	// STO powers Stock Transfer Orders and Load Board syndication (B8).
+	STO *STOHandlers
 }
 
 // NewApp creates a new handler app with all handler groups initialized.
@@ -246,6 +249,8 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	app.SOS = NewSOSHandlers(app, db)
 	app.Facilities = &FacilityHandlers{App: app}
 	app.Backhaul = &BackhaulHandlers{App: app, BackhaulSvc: service.NewBackhaulService(db)}
+	stoRepo := sto.NewSQLRepository(db)
+	app.STO = &STOHandlers{App: app, STOSvc: sto.NewService(stoRepo, db)}
 
 	return app
 }

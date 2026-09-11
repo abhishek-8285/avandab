@@ -1,6 +1,6 @@
 # Spec 19 §2: Stock Transfer Order (STO) Portal & Load Board Listings (B8)
 
-- **Migration Slot:** `00069` (Allocated in ownership index)
+- **Migration Slot:** `00146` (Re-slotted from `00069` reserved slot per sequential migration rule; allocated in ownership index)
 - **Owner:** Domain: `internal/sto/application` & `internal/handlers/sto.go` | Route: `/api/v1/sto/*`, `/api/v1/loadboard/*`
 - **Status:** Approved Spec (Roadmap B8)
 

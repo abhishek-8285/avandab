@@ -130,7 +130,8 @@ which always allocate head-ward from the maximum above.
 | 00143 | `maintenance_plans` table (IP41 single cycle plans, annual estimate KM projection, call horizon) | Fleet SOP Parity B3 (pp.10-15) |
 | 00144 | trips `start_odometer` and `gate_facility_id` (ZMOTM_MR Gate Register depot in/out log) | Fleet SOP Parity B5 (pp.16-20) |
 | 00145 | `facilities` table (ZFID facility master, plant/circle/cost_center, operational offices) | Fleet SOP Parity B6 (pp.1-2) |
-| 00146+ | future specs | reserved |
+| 00146 | `stock_transfer_orders`, `load_board_listings`, `load_board_bids` (STO portal + load board syndication) | Spec 19 B8 |
+| 00147+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

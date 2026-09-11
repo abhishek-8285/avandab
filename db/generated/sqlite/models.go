@@ -1186,6 +1186,38 @@ type InvoiceSequence struct {
 	Prefix        string `json:"prefix"`
 }
 
+type LoadBoardBid struct {
+	ID          string         `json:"id"`
+	TenantID    string         `json:"tenant_id"`
+	ListingID   string         `json:"listing_id"`
+	CarrierID   string         `json:"carrier_id"`
+	CarrierName string         `json:"carrier_name"`
+	BidAmount   float64        `json:"bid_amount"`
+	VehicleID   sql.NullString `json:"vehicle_id"`
+	DriverID    sql.NullString `json:"driver_id"`
+	Status      string         `json:"status"`
+	Remarks     sql.NullString `json:"remarks"`
+	SubmittedAt time.Time      `json:"submitted_at"`
+	DecidedAt   sql.NullTime   `json:"decided_at"`
+}
+
+type LoadBoardListing struct {
+	ID                  string         `json:"id"`
+	TenantID            string         `json:"tenant_id"`
+	StoID               sql.NullString `json:"sto_id"`
+	BookingID           sql.NullString `json:"booking_id"`
+	OriginCity          string         `json:"origin_city"`
+	DestinationCity     string         `json:"destination_city"`
+	VehicleTypeRequired string         `json:"vehicle_type_required"`
+	TargetRate          float64        `json:"target_rate"`
+	MaxRate             float64        `json:"max_rate"`
+	Visibility          string         `json:"visibility"`
+	Status              string         `json:"status"`
+	ExpiresAt           time.Time      `json:"expires_at"`
+	CreatedAt           time.Time      `json:"created_at"`
+	UpdatedAt           time.Time      `json:"updated_at"`
+}
+
 type MaintenancePlan struct {
 	ID                 string          `json:"id"`
 	TenantID           string          `json:"tenant_id"`
@@ -1528,6 +1560,24 @@ type ShareLink struct {
 	FailedPinAttempts int64          `json:"failed_pin_attempts"`
 	LockedUntil       sql.NullTime   `json:"locked_until"`
 	RevokedAt         sql.NullTime   `json:"revoked_at"`
+}
+
+type StockTransferOrder struct {
+	ID                    string         `json:"id"`
+	TenantID              string         `json:"tenant_id"`
+	StoNumber             string         `json:"sto_number"`
+	OriginFacilityID      string         `json:"origin_facility_id"`
+	DestinationFacilityID string         `json:"destination_facility_id"`
+	MaterialCode          string         `json:"material_code"`
+	MaterialDescription   string         `json:"material_description"`
+	Quantity              float64        `json:"quantity"`
+	Uom                   string         `json:"uom"`
+	RequiredDeliveryDate  string         `json:"required_delivery_date"`
+	Status                string         `json:"status"`
+	Notes                 sql.NullString `json:"notes"`
+	CreatedBy             string         `json:"created_by"`
+	CreatedAt             time.Time      `json:"created_at"`
+	UpdatedAt             time.Time      `json:"updated_at"`
 }
 
 type StopPodAttachment struct {
