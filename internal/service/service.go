@@ -291,7 +291,7 @@ func (s *Services) initEventHandlers() {
 		if !exists {
 			return nil
 		}
-		tripID, ok := tripIDVal.(domain.TripID)
+		tripID, ok := tripIDFromPayload(tripIDVal)
 		if !ok {
 			return nil
 		}
@@ -303,6 +303,21 @@ func (s *Services) initEventHandlers() {
 		}
 		return nil
 	})
+}
+
+// tripIDFromPayload extracts the trip id from a delivered-event payload.
+// Publishers send domain.TripID on the direct bus; a JSON round-trip (outbox
+// relay) degrades it to string. Accept both — never silently skip delivery
+// side effects on representation alone.
+func tripIDFromPayload(v interface{}) (domain.TripID, bool) {
+	switch t := v.(type) {
+	case domain.TripID:
+		return t, t != ""
+	case string:
+		return domain.TripID(t), t != ""
+	default:
+		return "", false
+	}
 }
 
 type baseService struct {
