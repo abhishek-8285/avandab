@@ -88,6 +88,10 @@ tags:
     description: Billing endpoints.
   - name: Plans
     description: Commercial plan catalog and live pricing.
+  - name: Errors
+    description: Error reports and incidents.
+  - name: Vehicles
+    description: Vehicle registry and measurements.
 
 paths:
   /api/driver/advances:
