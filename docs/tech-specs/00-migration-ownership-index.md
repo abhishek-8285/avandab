@@ -1,7 +1,7 @@
 # Migration Ownership Index
 
 Single source of truth for `db/migrations/` version numbers. Repo head is
-`00145_facilities_master.sql`; next free slot is `00146`.
+`00149_identity_sequence_resync.sql`; next free slot is `00150`.
 (`00039_experiments.sql` remains TAKEN — never edit.) Every new migration
 appends the next free number. **This table is authoritative; spec §3 numbers
 MUST match it.**
@@ -133,7 +133,8 @@ which always allocate head-ward from the maximum above.
 | 00146 | `stock_transfer_orders`, `load_board_listings`, `load_board_bids` (STO portal + load board syndication) | Spec 19 B8 |
 | 00147 | `fuel_cards`, `fuel_card_transactions` (commercial fuel cards + accounting sync) | Spec 20 B10 |
 | 00148 | `trip_esg_metrics`, `esg_emission_snapshots` (ESG emission snapshots & Scope 3 carbon accounting) | Spec 20 B11 |
-| 00149+ | future specs | reserved |
+| 00149 | PG identity-sequence resync + `customer` backfill (repairs 00027/00064 explicit-id desync that broke 00137 on fresh chains; sqlite side is a no-op marker keeping 1:1 sets) + `PreGooseCutVersion=72` two-phase startup in `cmd/server/main.go` | Phase A A7 |
+| 00150+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

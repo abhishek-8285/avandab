@@ -37,7 +37,7 @@ SET name = ?,
     valid_from = ?,
     valid_to = ?,
     is_active = ?,
-    updated_at = datetime('now')
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ?
 RETURNING *;
 

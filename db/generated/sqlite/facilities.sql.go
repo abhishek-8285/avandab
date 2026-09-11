@@ -324,7 +324,7 @@ SET name = ?,
     valid_from = ?,
     valid_to = ?,
     is_active = ?,
-    updated_at = datetime('now')
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ?
 RETURNING id, tenant_id, facility_code, name, facility_type, plant, circle, profit_center, cost_center, address, city, state, pincode, latitude, longitude, valid_from, valid_to, is_active, created_at, updated_at
 `

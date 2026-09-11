@@ -81,6 +81,14 @@ func TestMigrateFixture(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Two-phase migrate mirroring cmd/server startup (A7): UpTo the cut,
+	// resync identity sequences behind explicit-id seeds, then full Up.
+	if _, err := provider.UpTo(ctx, int64(appdb.PreGooseCutVersion)); err != nil {
+		t.Fatalf("pg up-to %d: %v", appdb.PreGooseCutVersion, err)
+	}
+	if err := appdb.ResyncIdentitySequences(ctx, pg); err != nil {
+		t.Fatalf("pg resync: %v", err)
+	}
 	if _, err := provider.Up(ctx); err != nil {
 		t.Fatalf("pg up: %v", err)
 	}

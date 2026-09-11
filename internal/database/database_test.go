@@ -2,11 +2,14 @@ package database_test
 
 import (
 	"context"
+	"database/sql"
 	"log/slog"
 	"testing"
 	"time"
 
 	"transport-app/internal/database"
+
+	_ "modernc.org/sqlite"
 )
 
 type testSettings struct {
@@ -70,5 +73,16 @@ func TestGooseDialect(t *testing.T) {
 	}
 	if got := database.GooseDialect(""); got != database.GooseDialect("sqlite") {
 		t.Error("empty driver should default to sqlite dialect")
+	}
+}
+
+func TestResyncIdentitySequences_NonPostgresNoop(t *testing.T) {
+	db, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+	if err := database.ResyncIdentitySequences(context.Background(), db); err != nil {
+		t.Errorf("resync on sqlite = %v, want nil no-op", err)
 	}
 }

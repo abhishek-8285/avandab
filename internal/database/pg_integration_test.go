@@ -40,6 +40,10 @@ func TestMain(m *testing.M) {
 			defer func() { _ = db.Close() }()
 			if migrations, ferr := fsSub(); ferr == nil {
 				if provider, perr := goose.NewProvider(appdb.GooseDialect("postgres"), db, migrations); perr == nil {
+					// Mirror cmd/server startup (A7): two-phase migrate so the
+					// identity-resync repair runs before 00137 on fresh DBs.
+					_, _ = provider.UpTo(ctx, appdb.PreGooseCutVersion)
+					_ = appdb.ResyncIdentitySequences(ctx, db)
 					_, _ = provider.Up(ctx)
 				}
 			}
@@ -79,6 +83,15 @@ func TestPostgresMigrations(t *testing.T) {
 	provider, err := goose.NewProvider(appdb.GooseDialect("postgres"), db, migrations)
 	if err != nil {
 		t.Fatalf("goose.NewProvider = %v", err)
+	}
+	// Two-phase migrate mirroring cmd/server startup (A7): UpTo the cut,
+	// resync identity sequences behind explicit-id seeds, then full Up.
+	// A single provider.Up fails on fresh chains at 00137 (roles_pkey).
+	if _, err := provider.UpTo(pingCtx, int64(appdb.PreGooseCutVersion)); err != nil {
+		t.Fatalf("migrations up-to %d on postgres = %v", appdb.PreGooseCutVersion, err)
+	}
+	if err := appdb.ResyncIdentitySequences(pingCtx, db); err != nil {
+		t.Fatalf("resync identity sequences = %v", err)
 	}
 	if _, err := provider.Up(pingCtx); err != nil {
 		t.Fatalf("migrations up on postgres = %v", err)
@@ -139,4 +152,40 @@ func maxMigrationVersion(t *testing.T, migFS fs.FS) int {
 		t.Fatal("no versioned migrations found")
 	}
 	return max
+}
+
+// TestResyncIdentitySequences proves the A7 repair: an explicit-id insert
+// desyncs roles_id_seq (the 00027/00064 failure mode); after Resync, the
+// next generated id is back above MAX(id) instead of colliding with it.
+func TestResyncIdentitySequences(t *testing.T) {
+	url := os.Getenv("DATABASE_URL")
+	if url == "" {
+		t.Skip("DATABASE_URL not set; skipping postgres integration test")
+	}
+	ctx := context.Background()
+	db, err := appdb.Open(ctx, &testSettings{driver: "postgres", url: url, maxOpen: 4, maxIdle: 2}, slog.Default())
+	if err != nil {
+		t.Fatalf("Open(postgres) = %v, want nil", err)
+	}
+	defer func() { _ = db.Close() }()
+
+	var baseMax int64
+	if err := db.QueryRowContext(ctx, `SELECT COALESCE(MAX(id),0) FROM roles`).Scan(&baseMax); err != nil {
+		t.Fatalf("roles max: %v", err)
+	}
+	probe := baseMax + 500
+	if _, err := db.ExecContext(ctx, `INSERT INTO roles (id, name, description) VALUES ($1, 'resync-probe', 'a7 test') ON CONFLICT (id) DO NOTHING`, probe); err != nil {
+		t.Fatalf("probe insert: %v", err)
+	}
+	defer func() { _, _ = db.ExecContext(ctx, `DELETE FROM roles WHERE name = 'resync-probe'`) }()
+	if err := appdb.ResyncIdentitySequences(ctx, db); err != nil {
+		t.Fatalf("resync = %v, want nil", err)
+	}
+	var last int64
+	if err := db.QueryRowContext(ctx, `SELECT last_value FROM roles_id_seq`).Scan(&last); err != nil {
+		t.Fatalf("seq read: %v", err)
+	}
+	if last != probe {
+		t.Errorf("roles_id_seq = %d, want %d (MAX after probe insert)", last, probe)
+	}
 }

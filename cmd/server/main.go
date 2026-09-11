@@ -303,6 +303,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	// PG two-phase migrate (A7): explicit-id seeds desync identity sequences,
+	// so migrate to just before the first generated insert, resync, then go.
+	if appdb.MigrationDir(cfg.Database.Driver) == "migrations_pg" {
+		if _, err := provider.UpTo(ctx, appdb.PreGooseCutVersion); err != nil {
+			logger.Error("Failed to run pre-resync migrations", "error", err)
+			os.Exit(1)
+		}
+		if err := appdb.ResyncIdentitySequences(ctx, database); err != nil {
+			logger.Error("Failed to resync identity sequences", "error", err)
+			os.Exit(1)
+		}
+	}
+
 	if _, err := provider.Up(ctx); err != nil {
 		logger.Error("Failed to run migrations", "error", err)
 		os.Exit(1)
