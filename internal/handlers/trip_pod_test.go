@@ -23,27 +23,36 @@ func TestUploadTripPOD_RoundTrip(t *testing.T) {
 	rtr := chi.NewRouter()
 	rtr.Post("/trips/{id}/pod", h.UploadTripPOD)
 
+	// Trip IDs are UUIDs (create flow); the handler rejects anything else.
+	tripID := "123e4567-e89b-42d3-a456-426614174000"
 	// Valid PNG -> 303 back to the trip, file row stored as trip_pod.
-	req := multipartFileRequest(t, "/trips/trip-pod-1/pod", "pod.png", pngBytes(), nil)
+	req := multipartFileRequest(t, "/trips/"+tripID+"/pod", "pod.png", pngBytes(), nil)
 	req = filesAPITenantContext(req, string(shared.DefaultTenant))
 	w := httptest.NewRecorder()
 	rtr.ServeHTTP(w, req)
 	require.Equal(t, http.StatusSeeOther, w.Code, w.Body.String())
-	require.Equal(t, "/trips/trip-pod-1", w.Header().Get("Location"))
+	require.Equal(t, "/trips/"+tripID, w.Header().Get("Location"))
 
 	var typ string
 	require.NoError(t, app.DB.QueryRow(
-		`SELECT uploadable_type FROM files WHERE uploadable_id = 'trip-pod-1'`).Scan(&typ))
+		`SELECT uploadable_type FROM files WHERE uploadable_id = ?`, tripID).Scan(&typ))
 	require.Equal(t, "trip_pod", typ)
 
 	// Non-multipart post (no file) -> back to trip page, never 500.
-	req2 := httptest.NewRequest(http.MethodPost, "/trips/trip-pod-1/pod",
+	req2 := httptest.NewRequest(http.MethodPost, "/trips/"+tripID+"/pod",
 		strings.NewReader("foo=bar"))
 	req2.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req2 = filesAPITenantContext(req2, string(shared.DefaultTenant))
 	w2 := httptest.NewRecorder()
 	rtr.ServeHTTP(w2, req2)
 	require.Equal(t, http.StatusSeeOther, w2.Code)
+
+	// Non-UUID id -> 400, never touches storage or redirect.
+	req3 := httptest.NewRequest(http.MethodPost, "/trips/not-a-uuid/pod", nil)
+	req3 = filesAPITenantContext(req3, string(shared.DefaultTenant))
+	w3 := httptest.NewRecorder()
+	rtr.ServeHTTP(w3, req3)
+	require.Equal(t, http.StatusBadRequest, w3.Code)
 }
 
 func TestTripPODFiles_Mapping(t *testing.T) {

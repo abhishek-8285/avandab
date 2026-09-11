@@ -624,12 +624,23 @@ type podFileItem struct {
 // this is a browser form, not an API.
 func (h *TripHandlers) UploadTripPOD(w http.ResponseWriter, r *http.Request) {
 	h.init()
-	tripID := chi.URLParam(r, "id")
+	// Trip IDs are UUID v4 (create flow). Reject anything else before the
+	// id reaches storage paths or the redirect below (gosec G710).
+	parsed, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		// Plain 400 (not renderError): the error page needs full App
+		// templates, and this branch must hold for malformed probes.
+		http.Error(w, "Invalid trip identifier.", http.StatusBadRequest)
+		return
+	}
+	tripID := parsed.String()
 	back := "/trips/" + tripID
 	fail := func(msg string) {
 		http.SetCookie(w, flashCookie("flash_error", msg))
 		http.Redirect(w, r, back, http.StatusSeeOther)
 	}
+	// Bound the body before parsing (gosec G120), mirroring FilesAPI.
+	r.Body = http.MaxBytesReader(w, r.Body, maxFileUploadBytes+1<<20)
 	if err := r.ParseMultipartForm(maxFileUploadBytes); err != nil {
 		fail("Could not read upload (max 25MB).")
 		return
