@@ -2037,6 +2037,7 @@ func runDailyDigest(ctx context.Context, svc *founder.FounderService, logger *sl
 // Migration 00043 seeded only scorecard:read; the resolve route (Spec 03
 // §6.1) needs the update permission, and editing that migration is forbidden
 // by the Migration Ownership Index — so this runs at startup instead.
+// Backstop only — migrations own permission truth (see 00150 + ownership index rule); do NOT add new startup seeders, add a migration.
 func seedScorecardUpdatePermission(ctx context.Context, db *sql.DB, authSvc auth.AuthorizationService) error {
 	if _, err := db.ExecContext(ctx,
 		`INSERT INTO permissions (name, description)
@@ -2055,6 +2056,7 @@ func seedScorecardUpdatePermission(ctx context.Context, db *sql.DB, authSvc auth
 // seedDashboardReadPermission ensures the dashboard:read permission exists
 // (Spec 22 §2.2 money-strip gate). Step 2 adds no migration, so this runs
 // idempotently at startup; admins are granted by default.
+// Backstop only — migrations own permission truth (see 00150 + ownership index rule); do NOT add new startup seeders, add a migration.
 func seedDashboardReadPermission(ctx context.Context, db *sql.DB, authSvc auth.AuthorizationService) error {
 	if _, err := db.ExecContext(ctx,
 		`INSERT INTO permissions (name, description)
@@ -2073,6 +2075,7 @@ func seedDashboardReadPermission(ctx context.Context, db *sql.DB, authSvc auth.A
 // seedEwaybillWritePermission ensures the ewaybill:write permission exists
 // (Spec 22 §2.3 console extend gate). Idempotent startup self-heal; admins
 // are granted by default.
+// Backstop only — migrations own permission truth (see 00150 + ownership index rule); do NOT add new startup seeders, add a migration.
 func seedEwaybillWritePermission(ctx context.Context, db *sql.DB, authSvc auth.AuthorizationService) error {
 	if _, err := db.ExecContext(ctx,
 		`INSERT INTO permissions (name, description)

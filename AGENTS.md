@@ -131,9 +131,11 @@ On a blocker: halt and report — never fake a workaround.
 2. `go vet ./...` — exit 0
 3. `go test ./internal/...` — pass; new code MUST ship with `_test.go`
 4. Migration safety: new migrations must apply AND roll back (`goose up`/`down`)
-5. Spec alignment: quote the exact spec section your code fulfills
+5. Ratchet law: every bug fix MUST ship a test that fails on the pre-fix code
+   (red-proven before the fix lands). Fix the instance AND the class.
+6. Spec alignment: quote the exact spec section your code fulfills
    (e.g., "Spec 09 §5.1")
-6. Security gate — see "Security Gate" below. No task is done until it passes.
+7. Security gate — see "Security Gate" below. No task is done until it passes.
 
 ### Security Gate (mandatory on EVERY change — any agent, any tool)
 Every code change — ZCode, Claude Code, any other AI agent, humans — MUST
@@ -146,9 +148,12 @@ LINT_BASE=$(git rev-parse HEAD) ./scripts/security-check.sh
 - Runs gosec lint, govulncheck, npm audit, hard-coded-tenant + secret scans.
   `LINT_BASE` ratchets to changed code so legacy lint debt doesn't block.
 - Enforcement is layered so no agent can silently skip it:
-  `hooks/pre-commit` (via `git config core.hooksPath hooks`) runs the full
-  pre-commit suite; `hooks/pre-push` runs the whole-repo gate. Never commit
-  with `--no-verify`.
+  `hooks/pre-commit` (via `git config core.hooksPath hooks`) runs the FAST
+  gate (changed packages only); `hooks/pre-push` runs the full suite;
+  branch protection requires green CI ("Integration Gate") to merge to master.
+  Never commit with `--no-verify`.
+- Promotion path: `./scripts/deploy-staging.sh` → `./scripts/smoke.sh
+  https://dev.avandab.com` (must print SMOKE GREEN) → `./scripts/deploy-vps.sh`.
 - `SECURITY_GATE_STRICT=0` (warn-only) is for local iteration only — never
   in CI, never when claiming a task complete.
 - New code must introduce ZERO new gosec/errcheck/noctx findings. Fixes to

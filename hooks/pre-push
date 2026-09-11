@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
-# Versioned pre-push hook — full security gate (no LINT_BASE ratchet).
-# Blocks push when the whole-repo security suite fails.
+# Versioned pre-push hook — full gate (security whole-repo + FULL test suite).
+# Pre-commit stays fast (changed packages only); push proves everything.
 set -e
 echo "=== pre-push: full security gate ==="
 export LINT_BASE="${LINT_BASE:-origin/master}"
 ./scripts/security-check.sh
 echo "=== pre-push: gate passed ==="
+echo "=== pre-push: full test suite (30m cap) ==="
+go test -timeout 30m ./...
+echo "=== pre-push: all green ==="
