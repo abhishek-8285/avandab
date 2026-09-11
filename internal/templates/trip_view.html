@@ -202,6 +202,38 @@
             </div>
         </section>
 
+        <!-- Proof of Delivery — OTP state + attached photos -->
+        <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+                <h3 class="text-sm font-bold text-on-surface">Proof of Delivery</h3>
+                {{if and .Trip.DeliveredAt (gt (len .PODFiles) 0)}}<span class="inline-flex px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-bold text-emerald-700">Complete · {{len .PODFiles}} photo{{if gt (len .PODFiles) 1}}s{{end}}</span>
+                {{else if gt (len .PODFiles) 0}}<span class="inline-flex px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/15 text-[11px] font-bold text-blue-700">{{len .PODFiles}} photo{{if gt (len .PODFiles) 1}}s{{end}} · awaiting delivery</span>
+                {{else}}<span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container text-[11px] font-bold text-text-muted border border-border-subtle">No photos yet</span>{{end}}
+            </div>
+            <div class="p-5">
+            <ul class="space-y-2 text-sm">
+                <li class="flex items-center gap-2">{{if .Trip.DeliveredAt}}<span class="text-emerald-600">✓</span><span class="font-medium text-on-surface">Delivered <span class="text-text-muted tabular-nums">{{datetime .Trip.DeliveredAt}}</span></span>{{else}}<span class="text-text-muted">○</span><span class="text-text-muted">Not delivered yet</span>{{end}}</li>
+                <li class="flex items-center gap-2">{{if .PODOTP}}<span class="text-emerald-600">✓</span><span class="font-medium text-on-surface">Delivery OTP issued</span>{{else}}<span class="text-text-muted">○</span><span class="text-text-muted">No OTP issued</span>{{end}}</li>
+                <li class="flex items-center gap-2">{{if gt (len .PODFiles) 0}}<span class="text-emerald-600">✓</span><span class="font-medium text-on-surface">{{len .PODFiles}} POD photo{{if gt (len .PODFiles) 1}}s{{end}} attached</span>{{else}}<span class="text-text-muted">○</span><span class="text-text-muted">No POD photos attached</span>{{end}}</li>
+            </ul>
+            {{if .PODFiles}}
+            <div class="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-4">
+                {{range .PODFiles}}
+                <a href="{{.URL}}" target="_blank" rel="noopener" class="group block rounded-xl overflow-hidden border border-border-subtle bg-surface-container-low hover:border-primary/30 transition-colors" title="{{.Name}} · {{.SizeLabel}}">
+                    {{if .IsImage}}<img src="{{.URL}}" alt="POD photo" loading="lazy" class="w-full h-20 object-cover">{{else}}<div class="w-full h-20 grid place-items-center text-xs font-semibold text-text-muted px-2 text-center break-words">{{.Name}}</div>{{end}}
+                    <div class="px-2 py-1 text-[10px] text-text-muted tabular-nums truncate">{{.SizeLabel}} · {{datetime .CreatedAt}}</div>
+                </a>
+                {{end}}
+            </div>
+            {{end}}
+            <form method="post" action="/trips/{{.Trip.ID}}/pod" enctype="multipart/form-data" class="mt-4 flex items-center gap-2 flex-wrap">
+                <input type="file" name="file" accept="image/*,.pdf" required class="text-sm text-secondary file:mr-3 file:px-4 file:py-2 file:rounded-full file:border file:border-border-subtle file:bg-surface-container-low file:text-sm file:font-semibold file:text-on-surface hover:file:bg-surface-container transition-colors">
+                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 transition-all">Attach photo</button>
+                <span class="text-xs text-text-muted">Max 25MB · JPG/PNG/PDF</span>
+            </form>
+            </div>
+        </section>
+
         <!-- Kharcha ledger for this trip -->
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 flex-wrap">

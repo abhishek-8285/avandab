@@ -120,6 +120,7 @@ func (h *TripHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "shares", "create")).Post("/{id}/share", h.App.Share.CreateShare)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "read")).Get("/{id}/compliance", h.TripComplianceFragment)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/send-pod-otp", h.SendPODOTPSMS)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/pod", h.UploadTripPOD)
 }
 
 // Playback renders the trip playback page (GET /trips/{id}/playback) —
@@ -564,8 +565,92 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 			"Stops":             stopsList,
 			"CurrentStop":       currentStop,
 			"Progression":       progression,
+			"PODFiles":          h.tripPODFiles(r, id),
 		},
 	})
+}
+
+// tripPODFiles lists trip_pod attachments best-effort: a file-store hiccup
+// must never break the trip page (warn-only, like the stops block above).
+func (h *TripHandlers) tripPODFiles(r *http.Request, tripID string) []podFileItem {
+	out := []podFileItem{}
+	if h.Services == nil || h.Services.Files == nil {
+		return out
+	}
+	files, err := h.Services.Files.GetFilesByEntity(r.Context(), "trip_pod", tripID)
+	if err != nil {
+		slog.WarnContext(r.Context(), "trip pod files skipped",
+			slog.String("trip_id", tripID), slog.Any("error", err))
+		return out
+	}
+	for _, f := range files {
+		out = append(out, podFileItem{
+			ID:        string(f.ID),
+			Name:      f.OriginalName,
+			MimeType:  f.MimeType,
+			Size:      f.Size,
+			SizeLabel: humanFileSize(f.Size),
+			CreatedAt: f.CreatedAt,
+			URL:       "/files/" + string(f.ID),
+			IsImage:   strings.HasPrefix(f.MimeType, "image/"),
+		})
+	}
+	return out
+}
+
+func humanFileSize(b int64) string {
+	if b < 1024 {
+		return fmt.Sprintf("%d B", b)
+	}
+	if b < 1024*1024 {
+		return fmt.Sprintf("%.0f KB", float64(b)/1024)
+	}
+	return fmt.Sprintf("%.1f MB", float64(b)/1024/1024)
+}
+
+type podFileItem struct {
+	ID        string
+	Name      string
+	MimeType  string
+	Size      int64
+	SizeLabel string
+	CreatedAt time.Time
+	URL       string
+	IsImage   bool
+}
+
+// UploadTripPOD handles the trip-view ePOD photo form (multipart). Errors
+// ride a flash cookie back to the trip page; success too — no JSON branch,
+// this is a browser form, not an API.
+func (h *TripHandlers) UploadTripPOD(w http.ResponseWriter, r *http.Request) {
+	h.init()
+	tripID := chi.URLParam(r, "id")
+	back := "/trips/" + tripID
+	fail := func(msg string) {
+		http.SetCookie(w, flashCookie("flash_error", msg))
+		http.Redirect(w, r, back, http.StatusSeeOther)
+	}
+	if err := r.ParseMultipartForm(maxFileUploadBytes); err != nil {
+		fail("Could not read upload (max 25MB).")
+		return
+	}
+	_, header, err := r.FormFile("file")
+	if err != nil {
+		fail("Choose a photo to upload first.")
+		return
+	}
+	if h.Services == nil || h.Services.Files == nil {
+		fail("File service unavailable.")
+		return
+	}
+	if _, err := h.Services.Files.UploadFile(r.Context(), header, "trip_pod", tripID); err != nil {
+		slog.WarnContext(r.Context(), "trip pod upload rejected",
+			slog.String("trip_id", tripID), slog.Any("error", err))
+		fail("Upload rejected: " + err.Error())
+		return
+	}
+	http.SetCookie(w, flashCookie("flash_success", "POD photo attached."))
+	http.Redirect(w, r, back, http.StatusSeeOther)
 }
 
 func (h *TripHandlers) Edit(w http.ResponseWriter, r *http.Request) {
