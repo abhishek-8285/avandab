@@ -257,7 +257,9 @@ func (s *Services) initEventHandlers() {
 		if err != nil {
 			return err
 		}
-		_, _ = s.Trips.CreateTrip(ctx, CreateTripRequest{
+		// Surface creation failure to the bus central log — a swallowed
+		// error here means confirmed bookings with no trip and no trace.
+		if _, err := s.Trips.CreateTrip(ctx, CreateTripRequest{
 			BookingID:     &evt.BookingID,
 			RouteID:       b.RouteID,
 			DriverID:      nil,
@@ -265,7 +267,9 @@ func (s *Services) initEventHandlers() {
 			DepartureTime: b.PickupDate.Format("2006-01-02T15:04:05"),
 			ArrivalTime:   "",
 			Remarks:       "Auto-created from confirmed booking",
-		})
+		}); err != nil {
+			return err
+		}
 		return nil
 	})
 
@@ -277,6 +281,7 @@ func (s *Services) initEventHandlers() {
 		}
 		if _, err := s.Invoices.GenerateInvoiceFromTrip(ctx, evt.TripID); err != nil {
 			s.log.Error("auto-invoice generation failed for completed trip", "trip_id", evt.TripID, "error", err)
+			return err
 		}
 		return nil
 	})
@@ -295,13 +300,20 @@ func (s *Services) initEventHandlers() {
 		if !ok {
 			return nil
 		}
+		// Attempt both side effects; return the first failure so the bus
+		// central log records it (a nil return would bury a half-done fan-out).
+		var firstErr error
 		if _, err := s.Invoices.GenerateInvoiceFromTrip(ctx, tripID); err != nil {
 			s.log.Error("auto-invoice generation failed for delivered trip", "trip_id", tripID, "error", err)
+			firstErr = err
 		}
 		if _, err := s.Settlements.GenerateSettlement(ctx, string(tripID), false); err != nil {
 			s.log.Error("auto-settlement generation failed for delivered trip", "trip_id", tripID, "error", err)
+			if firstErr == nil {
+				firstErr = err
+			}
 		}
-		return nil
+		return firstErr
 	})
 }
 
