@@ -1,0 +1,975 @@
+paths:
+  /api/v1/fuel-issues:
+    get:
+      tags:
+      - Fuel
+      summary: List fuel issue logs
+      description: Requires `fuel:read` permission. Optional `vehicle_id`, `fuel_station_id`
+        filters; `limit` (default 50, max 100) and `offset` (default 0) paginate.
+      parameters:
+      - name: vehicle_id
+        in: query
+        schema:
+          type: string
+      - name: fuel_station_id
+        in: query
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 50
+      - name: offset
+        in: query
+        schema:
+          type: integer
+          default: 0
+      responses:
+        '200':
+          description: Fuel issue logs.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fuel_issues:
+                    type: array
+                    items:
+                      type: object
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Fuel
+      summary: Record a fuel issue
+      description: Requires `fuel:create` permission. Requires `fuel_station_id` and
+        `vehicle_id`; `closing_reading` must exceed `opening_reading` (litres = close
+        minus open); `fuel_type` defaults to diesel; unknown station/vehicle or expired
+        station validity returns 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - fuel_station_id
+              - vehicle_id
+              properties:
+                issue_number:
+                  type: string
+                fuel_station_id:
+                  type: string
+                pump_point_id:
+                  type: string
+                vehicle_id:
+                  type: string
+                driver_id:
+                  type: string
+                trip_id:
+                  type: string
+                fuel_type:
+                  type: string
+                opening_reading:
+                  type: number
+                closing_reading:
+                  type: number
+                vehicle_odometer:
+                  type: number
+                rate_per_litre:
+                  type: number
+                remarks:
+                  type: string
+                issued_at:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Fuel issue recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  tenant_id:
+                    type: string
+                  issue_number:
+                    type: string
+                  fuel_station_id:
+                    type: string
+                  vehicle_id:
+                    type: string
+                  driver_id:
+                    type: string
+                  trip_id:
+                    type: string
+                  fuel_type:
+                    type: string
+                  opening_reading:
+                    type: number
+                  closing_reading:
+                    type: number
+                  litres_issued:
+                    type: number
+                  vehicle_odometer:
+                    type: number
+                  rate_per_litre:
+                    type: number
+                  total_cost:
+                    type: number
+                  issued_at:
+                    type: string
+                    format: date-time
+                  created_by:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/fuel-issues/{id}:
+    get:
+      tags:
+      - Fuel
+      summary: Get one fuel issue
+      description: Requires `fuel:read` permission. Path `id` is the fuel issue id;
+        unknown id returns 404.
+      parameters:
+      - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Fuel issue record.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  tenant_id:
+                    type: string
+                  issue_number:
+                    type: string
+                  fuel_station_id:
+                    type: string
+                  vehicle_id:
+                    type: string
+                  fuel_type:
+                    type: string
+                  opening_reading:
+                    type: number
+                  closing_reading:
+                    type: number
+                  litres_issued:
+                    type: number
+                  issued_at:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/maintenance/plans:
+    get:
+      tags:
+      - Maintenance
+      summary: List maintenance plans
+      description: Requires `maintenance:read` permission. Optional `vehicle_id` filter;
+        returns active and configured single-cycle plans for the tenant.
+      parameters:
+      - name: vehicle_id
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Maintenance plans.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  maintenance_plans:
+                    type: array
+                    items:
+                      type: object
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Maintenance
+      summary: Create a maintenance plan
+      description: Requires `maintenance:create` permission. Requires `plan_number`,
+        `vehicle_id`, `service_type`; `call_horizon_percent` defaults to 100 when
+        non-positive; server computes initial next-due projection from odometer and
+        annual estimate.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - plan_number
+              - vehicle_id
+              - service_type
+              properties:
+                plan_number:
+                  type: string
+                vehicle_id:
+                  type: string
+                measuring_point_id:
+                  type: string
+                service_type:
+                  type: string
+                description:
+                  type: string
+                cycle_interval_km:
+                  type: number
+                cycle_interval_days:
+                  type: integer
+                call_horizon_percent:
+                  type: number
+                last_scheduled_km:
+                  type: number
+                next_due_km:
+                  type: number
+      responses:
+        '201':
+          description: Maintenance plan created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  tenant_id:
+                    type: string
+                  plan_number:
+                    type: string
+                  vehicle_id:
+                    type: string
+                  service_type:
+                    type: string
+                  status:
+                    type: string
+                  next_due_km:
+                    type: number
+                  next_due_date:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/maintenance/plans/{id}:
+    get:
+      tags:
+      - Maintenance
+      summary: Get one maintenance plan with live projection
+      description: Requires `maintenance:read` permission. Path `id` is the plan id;
+        unknown id returns 404. Returns plan plus current odometer, annual estimate,
+        and projected due km/date with call-horizon flag.
+      parameters:
+      - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Maintenance plan with projection.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  maintenance_plan:
+                    type: object
+                  current_odometer:
+                    type: number
+                  annual_estimate:
+                    type: number
+                  projected_due_km:
+                    type: number
+                  projected_due_date:
+                    type: string
+                    format: date-time
+                  call_horizon_due:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/maintenance/plans/{id}/evaluate:
+    post:
+      tags:
+      - Maintenance
+      summary: Evaluate a plan and trigger work order if due
+      description: Requires `maintenance:update` permission. Path `id` is the plan
+        id; empty body. Returns `call_triggered` true with the work order when the
+        call horizon is breached, else `up_to_date`.
+      parameters:
+      - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Evaluation outcome.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  call_triggered:
+                    type: boolean
+                  work_order:
+                    type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/reports/vehicle-master:
+    get:
+      tags:
+      - Reports
+      summary: Vehicle master report (SAP ZMOTM_MR parity)
+      description: Requires `reports:read` permission. Pagination via `q`, `status`,
+        `limit` (default 20, max 100), `page` (1-based; offset derived). Returns vehicle
+        rows plus total/limit/offset.
+      parameters:
+      - name: q
+        in: query
+        schema:
+          type: string
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: page
+        in: query
+        schema:
+          type: integer
+          default: 1
+      responses:
+        '200':
+          description: Vehicle master rows.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vehicles:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/reports/gate-register:
+    get:
+      tags:
+      - Reports
+      summary: Gate register report (SAP ZMOTM_MR parity)
+      description: Requires `reports:read` permission. Pagination via `q` (trip-number
+        match), `limit` (default 20, max 100), `page` (1-based; offset derived). Distance
+        prefers odometer delta, falling back to route distance on completed trips.
+      parameters:
+      - name: q
+        in: query
+        schema:
+          type: string
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: page
+        in: query
+        schema:
+          type: integer
+          default: 1
+      responses:
+        '200':
+          description: Gate register rows.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  records:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/reports/fuel-kmpl:
+    get:
+      tags:
+      - Reports
+      summary: Fuel and KMPL report (SAP ZMOTM_MR parity)
+      description: Requires `reports:read` permission. Pagination via `limit` (default
+        20, max 100) and `page` (1-based; offset derived). KMPL is derived per vehicle
+        from consecutive odometer readings divided by litres issued.
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: page
+        in: query
+        schema:
+          type: integer
+          default: 1
+      responses:
+        '200':
+          description: Fuel and KMPL rows.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  records:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/reports/breakdown:
+    get:
+      tags:
+      - Reports
+      summary: Breakdown and outstanding notifications report
+      description: Requires `reports:read` permission. Pagination via `limit` (default
+        20, max 100) and `page` (1-based; offset derived). Merges vehicle-breakdown
+        ops alerts with open work orders (job cards) as outstanding notifications.
+      parameters:
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          default: 20
+      - name: page
+        in: query
+        schema:
+          type: integer
+          default: 1
+      responses:
+        '200':
+          description: Breakdown rows.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  records:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/experiments:
+    get:
+      tags:
+      - Experiments
+      summary: List experiments
+      description: Requires `experiments:read` permission. Optional `status` filter
+        (draft, running, paused, completed, archived). Fails closed on missing tenant.
+      parameters:
+      - name: status
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Experiments for the tenant.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  experiments:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Experiments
+      summary: Create an experiment
+      description: Requires `experiments:write` permission. Requires `name`; optional
+        `variant_a`/`variant_b` (default control/treatment), `traffic_split` 0-100,
+        `start_date`/`end_date` as YYYY-MM-DD, `metric_name`. Returns the id in draft
+        status.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                variant_a:
+                  type: string
+                variant_b:
+                  type: string
+                traffic_split:
+                  type: number
+                start_date:
+                  type: string
+                end_date:
+                  type: string
+                metric_name:
+                  type: string
+      responses:
+        '201':
+          description: Experiment created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  experiment_id:
+                    type: string
+                  status:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/experiments/evaluate:
+    get:
+      tags:
+      - Experiments
+      summary: Evaluate a feature flag for a subject
+      description: Requires `experiments:read` permission. Requires `name`, `subject_type`
+        (user, driver, vehicle, customer), and `subject_id`. Returns the assigned
+        variant (`a` control / `b` treatment) plus `in_treatment`.
+      parameters:
+      - name: name
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: subject_type
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: subject_id
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Evaluation outcome.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  experiment:
+                    type: string
+                  subject_type:
+                    type: string
+                  subject_id:
+                    type: string
+                  variant:
+                    type: string
+                  in_treatment:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/experiments/{id}:
+    get:
+      tags:
+      - Experiments
+      summary: Get one experiment
+      description: Requires `experiments:read` permission. Path `id` is the experiment
+        id; unknown id returns 404.
+      parameters:
+      - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Experiment row.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  tenant_id:
+                    type: string
+                  name:
+                    type: string
+                  description:
+                    type: string
+                  variant_a:
+                    type: string
+                  variant_b:
+                    type: string
+                  traffic_split:
+                    type: number
+                  status:
+                    type: string
+                  metric_name:
+                    type: string
+                  created_by:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/experiments/{id}/start:
+    post:
+      tags:
+      - Experiments
+      summary: Start an experiment
+      description: Requires `experiments:write` permission. Path `id` is the experiment
+        id; draft-to-running transition only, illegal transitions return 409. Empty
+        body.
+      parameters:
+      - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Transition accepted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  experiment_id:
+                    type: string
+                  ok:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/experiments/{id}/pause:
+    post:
+      tags:
+      - Experiments
+      summary: Pause a running experiment
+      description: Requires `experiments:write` permission. Path `id` is the experiment
+        id; running-to-paused transition only, illegal transitions return 409. Empty
+        body.
+      parameters:
+      - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Transition accepted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  experiment_id:
+                    type: string
+                  ok:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/experiments/{id}/resume:
+    post:
+      tags:
+      - Experiments
+      summary: Resume a paused experiment
+      description: Requires `experiments:write` permission. Path `id` is the experiment
+        id; paused-to-running transition only, illegal transitions return 409. Empty
+        body.
+      parameters:
+      - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Transition accepted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  experiment_id:
+                    type: string
+                  ok:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/experiments/{id}/complete:
+    post:
+      tags:
+      - Experiments
+      summary: Complete an experiment
+      description: Requires `experiments:write` permission. Path `id` is the experiment
+        id; terminal transition out of running/paused, illegal transitions return
+        409. Empty body.
+      parameters:
+      - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Transition accepted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  experiment_id:
+                    type: string
+                  ok:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/experiments/{id}/archive:
+    post:
+      tags:
+      - Experiments
+      summary: Archive an experiment
+      description: Requires `experiments:write` permission. Path `id` is the experiment
+        id; terminal transition, illegal transitions return 409. Empty body.
+      parameters:
+      - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Transition accepted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  experiment_id:
+                    type: string
+                  ok:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/experiments/{id}/assignments:
+    get:
+      tags:
+      - Experiments
+      summary: List experiment assignments
+      description: Requires `experiments:read` permission. Path `id` is the experiment
+        id; returns subject-to-variant assignments plus total.
+      parameters:
+      - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Assignments for the experiment.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  assignments:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/experiments/{id}/metrics:
+    post:
+      tags:
+      - Experiments
+      summary: Record an experiment metric
+      description: Requires `experiments:read` permission (per handler, not write).
+        Path `id` is the experiment id. Requires `subject_type` (user, driver, vehicle,
+        customer) and `subject_id`; `metric_value` is the observed outcome.
+      parameters:
+      - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - subject_type
+              - subject_id
+              properties:
+                subject_type:
+                  type: string
+                subject_id:
+                  type: string
+                metric_value:
+                  type: number
+      responses:
+        '200':
+          description: Metric recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  experiment_id:
+                    type: string
+                  ok:
+                    type: boolean
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/experiments/{id}/results:
+    get:
+      tags:
+      - Experiments
+      summary: Get aggregated experiment results
+      description: Requires `experiments:read` permission. Path `id` is the experiment
+        id; aggregates recorded metrics per variant (control `a`, treatment `b`)
+        from founder audit rows.
+      parameters:
+      - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Per-variant aggregates.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  experiment_id:
+                    type: string
+                  variant_a:
+                    type: object
+                  variant_b:
+                    type: object
+                  total_subjects:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/billing/webhooks/razorpay:
+    post:
+      tags:
+      - Billing
+      summary: Razorpay subscription webhook
+      description: Public webhook (no bearer; HMAC-SHA256 `X-Razorpay-Signature` verified
+        when secret configured; mount has only rate limiting, no auth middleware).
+        Body is the raw Razorpay event; plan ref travels in subscription `notes[plan_id]`;
+        events without a subscription id return 200 `ignored_no_subscription`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event:
+                  type: string
+                event_id:
+                  type: string
+                created_at:
+                  type: integer
+                payload:
+                  type: object
+      responses:
+        '200':
+          description: Webhook processed or ignored.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'

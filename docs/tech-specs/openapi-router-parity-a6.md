@@ -33,6 +33,25 @@ diffed method-aware against `openapi.yaml` `paths:`. (Case-only diffs ignored.)
    `vehicle-assignments/{}/accept`, webhooks (`billing`, `payouts`,
    `payments/razorpay*`).
 
+## Re-audit 2026-09-11 (B12 closure)
+
+Method: same method-aware extraction (direct `.Verb("/api/v1...")` incl.
+chained `r.With(...).Verb`, `r.Route` prefix + relative verbs, nested routes,
+`Mount` closure-variable resolve), non-test Go (`internal/`, `cmd/server/main.go`),
+`{param}`→`{}`, trailing-slash normalized.
+
+## Result
+- Router: **229** `/api/v1` ops. Spec: **214** ops (`openapi.yaml`: 183 paths).
+- **In router, not in spec: 20** — all `/api/v1/integrations/*` (ewaybill,
+  fastag, gstn, accounting stubs in `internal/integration/handler.go`).
+  Deliberately deferred per above (mock-by-default; spec when providers go real).
+- **In spec, no v1 route: 0** — the spec never lies. (5 apparent dead entries
+  are `/api/driver/*` non-v1 twins whose routes exist in `cmd/server/main.go`;
+  out of v1-spec scope by design. `POST /api/v1/outbox/batch` remains
+  documented-but-unmounted — handler `Register` only wired in tests,
+  `internal/handlers/outbox_batch.go:21-22`.)
+- B12 closure criterion amended: router∖spec = integrations-deferred-only. ✅
+
 ## Rule going forward
 New `/api/v1` routes ship with an `openapi.yaml` `paths:` entry in the same PR
 (B12 closure criterion per route). This audit re-runs by re-executing the

@@ -1,0 +1,1572 @@
+paths:
+  /api/v1/work-orders:
+    get:
+      tags: [Work Orders]
+      summary: "List work orders"
+      description: "Requires `maintenance:read` permission. Optional `status` filter and `limit` (default 50, max 200)."
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [open, assigned, in_progress, on_hold, done, cancelled] }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+      responses:
+        '200':
+          description: "Work orders for the caller's org."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  work_orders:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        tenant_id: { type: string }
+                        vehicle_id: { type: string }
+                        schedule_id: { type: string, nullable: true }
+                        trip_id: { type: string, nullable: true }
+                        title: { type: string }
+                        description: "{ type: string }"
+                        assignee: { type: string }
+                        vendor: { type: string }
+                        cost_estimate: { type: number, nullable: true }
+                        cost_actual: { type: number, nullable: true }
+                        status: { type: string, enum: [open, assigned, in_progress, on_hold, done, cancelled] }
+                        due_at: { type: string, format: date-time, nullable: true }
+                        closed_at: { type: string, format: date-time, nullable: true }
+                        created_at: { type: string, format: date-time }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Work Orders]
+      summary: "Open a work order"
+      description: "Requires `maintenance:create` permission. Opens a job card in `open` status; id/tenant/status are server-owned. `due_at` must be RFC3339."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vehicle_id: { type: string }
+                schedule_id: { type: string }
+                trip_id: { type: string }
+                title: { type: string }
+                description: "{ type: string }"
+                assignee: { type: string }
+                vendor: { type: string }
+                cost_estimate: { type: number }
+                cost_actual: { type: number }
+                due_at: { type: string, format: date-time }
+      responses:
+        '201':
+          description: "Work order opened."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  tenant_id: { type: string }
+                  vehicle_id: { type: string }
+                  title: { type: string }
+                  status: { type: string }
+                  created_at: { type: string, format: date-time }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/work-orders/{id}:
+    get:
+      tags: [Work Orders]
+      summary: "Get a work order"
+      description: "Requires `maintenance:read` permission. Foreign or absent ids return 404."
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: "The job card."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  tenant_id: { type: string }
+                  vehicle_id: { type: string }
+                  title: { type: string }
+                  description: "{ type: string }"
+                  assignee: { type: string }
+                  vendor: { type: string }
+                  cost_estimate: { type: number, nullable: true }
+                  cost_actual: { type: number, nullable: true }
+                  status: { type: string }
+                  due_at: { type: string, format: date-time, nullable: true }
+                  closed_at: { type: string, format: date-time, nullable: true }
+                  created_at: { type: string, format: date-time }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/work-orders/{id}/assign:
+    post:
+      tags: [Work Orders]
+      summary: "Assign a work order"
+      description: "Requires `maintenance:update` permission. Sets mechanic/vendor; open cards move to `assigned`. Absent/foreign id is 404, terminal card is 409."
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                assignee: { type: string }
+                vendor: { type: string }
+      responses:
+        '200':
+          description: "Work order after assignment."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  status: { type: string }
+                  assignee: { type: string }
+                  vendor: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/work-orders/{id}/transition:
+    post:
+      tags: [Work Orders]
+      summary: "Transition a work order"
+      description: "Requires `maintenance:update` permission. Body `status` must be a known lifecycle value; `done` completes via the actor-stamped close path and re-evaluates vehicle resolution. Terminal cards are immutable (409)."
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [open, assigned, in_progress, on_hold, done, cancelled] }
+      responses:
+        '200':
+          description: "Work order after transition."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  status: { type: string }
+                  closed_at: { type: string, format: date-time, nullable: true }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/telemetry/live:
+    get:
+      tags: [Telemetry]
+      summary: "Live fleet markers"
+      description: "Bearer auth, tenant-scoped. Query params actually read: `trip_id`, `bbox` (minLat,minLng,maxLat,maxLng), `since` (RFC3339) or `since_unix`, `q`/`search`, `envelope=true`. `If-None-Match` yields 304. `staleMin` is server config, not a query param."
+      parameters:
+        - name: trip_id
+          in: query
+          schema: { type: string }
+        - name: bbox
+          in: query
+          description: "minLat,minLng,maxLat,maxLng viewport filter."
+          schema: { type: string }
+        - name: since
+          in: query
+          description: "RFC3339 delta-sync cutoff."
+          schema: { type: string, format: date-time }
+        - name: since_unix
+          in: query
+          description: "Unix-seconds delta-sync cutoff (used when `since` absent)."
+          schema: { type: integer }
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: envelope
+          in: query
+          description: "'true' wraps markers with sync metadata (server_time, totals, etag)."
+          schema: { type: string, enum: ['true', 'false'] }
+      responses:
+        '200':
+          description: "Bare marker array, or `{meta, vehicles}` envelope when requested."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  meta:
+                    type: object
+                    properties:
+                      server_time: { type: string, format: date-time }
+                      total_in_fleet: { type: integer }
+                      matched_count: { type: integer }
+                      etag: { type: string }
+                      active_count: { type: integer }
+                  vehicles:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        trip_id: { type: string }
+                        vehicle_id: { type: string }
+                        vehicle_number: { type: string }
+                        lat: { type: number }
+                        lng: { type: number }
+                        speed: { type: number }
+                        heading: { type: number, nullable: true }
+                        fuel_level: { type: number, nullable: true }
+                        odometer: { type: number, nullable: true }
+                        status: { type: string }
+                        battery_level: { type: number, nullable: true }
+                        motion: { type: boolean, nullable: true }
+                        driver_name: { type: string }
+                        driver_phone: { type: string }
+                        ts: { type: string, format: date-time }
+        '304':
+          description: "Fleet snapshot unchanged (If-None-Match hit)."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/telemetry/history:
+    get:
+      tags: [Telemetry]
+      summary: "Vehicle breadcrumb trail"
+      description: "Bearer auth, tenant-scoped. Requires `vehicle_id` or `trip_id`. Params actually read: `vehicle_id`, `trip_id`, `from`/`to` (RFC3339), `limit` (default 500, cap 2000), `after`/`after_id` (keyset cursor), `minutes` (default 90, cap 7 days; only when no `from` and no `trip_id`). Truncation signalled via X-Truncated / X-Next-From / X-Next-ID headers."
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema: { type: string }
+        - name: trip_id
+          in: query
+          schema: { type: string }
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 2000, default: 500 }
+        - name: after
+          in: query
+          schema: { type: string, format: date-time }
+        - name: after_id
+          in: query
+          schema: { type: string }
+        - name: minutes
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 10080, default: 90 }
+      responses:
+        '200':
+          description: "Ordered breadcrumb points."
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    lat: { type: number }
+                    lng: { type: number }
+                    speed: { type: number }
+                    ts: { type: string, format: date-time }
+                    heading: { type: number, nullable: true }
+                    odometer: { type: number, nullable: true }
+                    trip_id: { type: string }
+                    vehicle_id: { type: string }
+                    ignition: { type: boolean, nullable: true }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/telemetry/playback:
+    get:
+      tags: [Telemetry]
+      summary: "Enriched trip playback (query form)"
+      description: "Bearer auth, tenant-scoped. Same handler as the trip path form; `trip_id` query is required here. Params: `trip_id`, `vehicle_id`, `limit` (default 2000, cap 5000), `from`/`to`, `after`/`after_id`."
+      parameters:
+        - name: trip_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: vehicle_id
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 5000, default: 2000 }
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+        - name: after
+          in: query
+          schema: { type: string, format: date-time }
+        - name: after_id
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: "Points plus server-side distance summary, stops, geofence overlay and detention windows."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trip_id: { type: string }
+                  vehicle_id: { type: string }
+                  points:
+                    type: array
+                    items: { type: object }
+                  summary:
+                    type: object
+                    properties:
+                      total_points: { type: integer }
+                      returned_points: { type: integer }
+                      distance_km: { type: number }
+                      duration_seconds: { type: integer }
+                      avg_speed_kmh: { type: number }
+                      max_speed_kmh: { type: number }
+                  stops:
+                    type: array
+                    items: { type: object }
+                  geofence_events:
+                    type: array
+                    items: { type: object }
+                  detentions:
+                    type: array
+                    items: { type: object }
+                  truncated: { type: boolean }
+                  next_from: { type: string, format: date-time, nullable: true }
+                  next_id: { type: string }
+                  next_limit: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/telemetry/geofences:
+    get:
+      tags: [Telemetry]
+      summary: "Active geofence zones"
+      description: "Bearer auth, tenant-scoped. No query params. Returns the tracking-map overlay zones."
+      responses:
+        '200':
+          description: "Active zones for the tenant."
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    name: { type: string }
+                    kind: { type: string }
+                    shape: { type: string }
+                    center_lat: { type: number }
+                    center_lng: { type: number }
+                    radius_m: { type: number }
+                    polygon:
+                      type: array
+                      items: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/telemetry/reverse_geocode:
+    get:
+      tags: [Telemetry]
+      summary: "Reverse-geocode a point"
+      description: "Bearer auth. Caching Nominatim proxy; `lat` and `lng` are required. 503 when NOMINATIM_URL is not configured."
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema: { type: number, minimum: -90, maximum: 90 }
+        - name: lng
+          in: query
+          required: true
+          schema: { type: number, minimum: -180, maximum: 180 }
+      responses:
+        '200':
+          description: "Cached or upstream address."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  display_name: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/telemetry/stream:
+    get:
+      tags: [Telemetry]
+      summary: "Live telemetry SSE stream"
+      description: "Bearer auth, tenant-isolated fan-out. Optional `trip_id` / `vehicle_id` filters. 25s `: ping` keep-alive comments; slow consumers are dropped."
+      parameters:
+        - name: trip_id
+          in: query
+          schema: { type: string }
+        - name: vehicle_id
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: "SSE event stream of tenant-stamped telemetry/SOS/alert frames."
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/telemetry/sync:
+    post:
+      tags: [Telemetry]
+      summary: "Sync GPS log batch"
+      description: "Bearer auth. Mobile batch upload; `device_id` (or `driver_id` fallback) is tenant-pinned — foreign devices/drivers are 403. Unparseable timestamps are skipped, not fatal."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncBatchRequest'
+      responses:
+        '200':
+          description: "Batch acknowledged with accepted offline ids."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncBatchResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/telemetry/snapshots:
+    post:
+      tags: [Telemetry]
+      summary: "Submit telemetry snapshot"
+      description: "Bearer auth. Full state snapshot routed through the ingest pipeline; `vehicle_id` is required and must belong to the caller. `timestamp` must be RFC3339."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelemetrySnapshotPayload'
+      responses:
+        '200':
+          description: "Snapshot accepted or quarantined."
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SnapshotResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/telemetry/devices/{imei}/gps:
+    post:
+      tags: [Telemetry]
+      summary: "Device GPS ingest"
+      description: "Public device endpoint — auth is the `X-Device-Token` header (HMAC-SHA256 of the provisioned secret), not Bearer. Unknown IMEI quarantines server-side (404); retired devices return 202 quarantined."
+      security: []
+      parameters:
+        - name: imei
+          in: path
+          required: true
+          schema: { type: string }
+        - name: X-Device-Token
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                device_time: { type: string, format: date-time }
+                latitude: { type: number }
+                longitude: { type: number }
+                speed: { type: number }
+                heading: { type: number }
+                ignition: { type: boolean }
+                accuracy: { type: number }
+                fuel_level: { type: number }
+                odometer: { type: number }
+                satellites: { type: integer }
+                battery_level: { type: number }
+                motion: { type: boolean }
+                valid: { type: boolean }
+                trip_id: { type: string }
+                driver_id: { type: string }
+                provider_msg_id: { type: string }
+      responses:
+        '200':
+          description: "Frame accepted."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted: { type: boolean }
+                  deduped: { type: boolean }
+        '202':
+          description: "Frame quarantined (retired device or pipeline quarantine)."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted: { type: boolean }
+                  quarantined: { type: boolean }
+                  reason: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/trips/{id}/playback:
+    get:
+      tags: [Telemetry]
+      summary: "Enriched trip playback (path form)"
+      description: "Bearer auth, tenant-scoped. Same handler as the query form; trip comes from the path. Optional `vehicle_id`, `limit` (default 2000, cap 5000), `from`/`to`, `after`/`after_id`."
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+        - name: vehicle_id
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 5000, default: 2000 }
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+        - name: after
+          in: query
+          schema: { type: string, format: date-time }
+        - name: after_id
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: "Points plus server-side distance summary, stops, geofence overlay and detention windows."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trip_id: { type: string }
+                  vehicle_id: { type: string }
+                  points:
+                    type: array
+                    items: { type: object }
+                  summary:
+                    type: object
+                    properties:
+                      total_points: { type: integer }
+                      returned_points: { type: integer }
+                      distance_km: { type: number }
+                      duration_seconds: { type: integer }
+                      avg_speed_kmh: { type: number }
+                      max_speed_kmh: { type: number }
+                  stops:
+                    type: array
+                    items: { type: object }
+                  geofence_events:
+                    type: array
+                    items: { type: object }
+                  detentions:
+                    type: array
+                    items: { type: object }
+                  truncated: { type: boolean }
+                  next_from: { type: string, format: date-time, nullable: true }
+                  next_id: { type: string }
+                  next_limit: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/trips/{id}/summary:
+    get:
+      tags: [Telemetry]
+      summary: "Trip context for tracking sheet"
+      description: "Bearer auth, tenant-scoped. Read-only projection over trips/routes/bookings/drivers/vehicles. `trip_id` query is a fallback when the path id is empty. Unknown or foreign trips are 404."
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+        - name: trip_id
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: "Trip context payload."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trip_id: { type: string }
+                  trip_number: { type: string }
+                  status: { type: string }
+                  origin: { type: string }
+                  destination: { type: string }
+                  route_km: { type: number, nullable: true }
+                  estimated_hours: { type: number, nullable: true }
+                  departure_time: { type: string, format: date-time, nullable: true }
+                  arrival_time: { type: string, format: date-time, nullable: true }
+                  started_at: { type: string, format: date-time, nullable: true }
+                  reached_pickup_at: { type: string, format: date-time, nullable: true }
+                  in_transit_at: { type: string, format: date-time, nullable: true }
+                  delivered_at: { type: string, format: date-time, nullable: true }
+                  completed_at: { type: string, format: date-time, nullable: true }
+                  cargo_weight_kg: { type: number, nullable: true }
+                  vehicle_number: { type: string }
+                  driver_name: { type: string }
+                  driver_phone: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/telemetry/sessions/start:
+    post:
+      tags: [Telemetry]
+      summary: "Start driver telemetry session"
+      description: "Bearer auth (driver session). Binds the session to the driver's active vehicle assignment when present."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                installation_id: { type: string }
+                app_version: { type: string }
+                os_version: { type: string }
+      responses:
+        '201':
+          description: "Session started."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  tenant_id: { type: string }
+                  installation_id: { type: string }
+                  driver_id: { type: string }
+                  vehicle_id: { type: string, nullable: true }
+                  session_type: { type: string }
+                  status: { type: string }
+                  start_reason: { type: string }
+                  started_at: { type: string, format: date-time }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/telemetry/sessions/end:
+    post:
+      tags: [Telemetry]
+      summary: "End driver telemetry session"
+      description: "Bearer auth (driver session). Closes the caller's session."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [session_id]
+              properties:
+                session_id: { type: string }
+      responses:
+        '200':
+          description: "Session closed."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/telemetry/events:
+    post:
+      tags: [Telemetry]
+      summary: "Ingest driver telemetry event"
+      description: "Bearer auth (driver session). Validates coordinates (rejects 0,0 and out-of-range), rejects frames older than 7 days as STALE, and upserts the vehicle latest-position projection."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                session_id: { type: string }
+                installation_id: { type: string }
+                client_event_id: { type: string }
+                occurred_at: { type: string, format: date-time }
+                latitude: { type: number }
+                longitude: { type: number }
+                accuracy_meters: { type: number }
+                speed_kmph: { type: number }
+                heading_degrees: { type: number }
+                battery_level_pct: { type: integer }
+                battery_state: { type: string }
+                trip_id: { type: string }
+      responses:
+        '200':
+          description: "Ingest verdict (ACCEPTED, DUPLICATE, STALE, INVALID_SESSION, INVALID_COORDINATES)."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  message: { type: string }
+                  client_event_id: { type: string }
+                  event_id: { type: string }
+                  vehicle_id: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/geofences/detentions/{id}/attach:
+    post:
+      tags: [Geofences]
+      summary: "Attach detention to invoice"
+      description: "Requires `geofences:update` AND `invoices:update` permissions. Bills a closed detention onto its trip's invoice. 409 when the invoice is already paid."
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: "Detention attached."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/geofences/detentions/{id}/waive:
+    post:
+      tags: [Geofences]
+      summary: "Waive a detention"
+      description: "Requires `geofences:update` permission. Zeroes the amount of an open detention and marks it waived."
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: "Detention waived."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/routes/optimize:
+    post:
+      tags: [Routes]
+      summary: "Solve a route-optimization job"
+      description: "Requires `routes:create` permission. Creates a pending job, solves synchronously (mock/OSRM, fallback on failure), and returns 202 with the completed result. Max 50 shipments. Optional `provider` overrides ROUTING_PROVIDER."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [shipments, vehicles]
+              properties:
+                shipments:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      latitude: { type: number }
+                      longitude: { type: number }
+                      demand: { type: number }
+                      time_window_start: { type: string, format: date-time }
+                      time_window_end: { type: string, format: date-time }
+                      skills:
+                        type: array
+                        items: { type: string }
+                vehicles:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      start_lat: { type: number }
+                      start_lng: { type: number }
+                      end_lat: { type: number }
+                      end_lng: { type: number }
+                      capacity: { type: number }
+                      skills:
+                        type: array
+                        items: { type: string }
+                constraints:
+                  type: object
+                  properties:
+                    max_shipments_per_vehicle: { type: integer }
+                    max_route_duration_min: { type: integer }
+                    terrain_avoid:
+                      type: array
+                      items: { type: string }
+                provider: { type: string }
+      responses:
+        '202':
+          description: "Job solved."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  job_id: { type: string }
+                  status: { type: string }
+                  provider: { type: string }
+                  result:
+                    type: object
+                    properties:
+                      routes:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            vehicle_id: { type: string }
+                            legs:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  shipment_id: { type: string }
+                                  distance_km: { type: number }
+                                  duration_min: { type: number }
+                                  sequence: { type: integer }
+                            total_km: { type: number }
+                            total_min: { type: number }
+                      total_cost: { type: number }
+                      total_km: { type: number }
+                      solve_time_ms: { type: integer }
+                      provider_name: { type: string }
+                      created_at: { type: string, format: date-time }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/routes/optimize/jobs:
+    get:
+      tags: [Routes]
+      summary: "List optimization jobs"
+      description: "Requires `routes:read` permission. Last 20 jobs for the tenant, newest first."
+      responses:
+        '200':
+          description: "Recent jobs."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        status: { type: string }
+                        provider: { type: string }
+                        created_at: { type: string }
+                        completed_at: { type: string, nullable: true }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/routes/optimize/jobs/{jobID}:
+    get:
+      tags: [Routes]
+      summary: "Get optimization job status"
+      description: "Requires `routes:read` permission. Polling endpoint; includes `result` when completed and `error` when failed."
+      parameters:
+        - name: jobID
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: "Job detail."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  status: { type: string }
+                  provider: { type: string }
+                  created_at: { type: string }
+                  completed_at: { type: string }
+                  result: { type: object }
+                  error: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/auth/otp/send:
+    post:
+      tags: [Auth]
+      summary: "Send phone OTP"
+      description: "Public, rate-limited (5/min). Issues a 6-digit code (5-min TTL, 30s resend throttle) via SMS webhook. Generic `{ok:true}` envelope either way; `dev_code` is echoed only in development without an SMS sender."
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone: { type: string, description: E.164 format, e.g. +919876543210. }
+      responses:
+        '200':
+          description: "OTP send attempted (generic envelope)."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  dev_code: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/auth/otp/verify:
+    post:
+      tags: [Auth]
+      summary: "Verify phone OTP"
+      description: "Public, rate-limited (15/min). Checks the code and stamps `phone_verified_at` for matching users. Identical shape whether or not an account exists (no enumeration); 5 wrong tries invalidate the code."
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, code]
+              properties:
+                phone: { type: string }
+                code: { type: string }
+      responses:
+        '200':
+          description: "Verification verdict."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verified: { type: boolean }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: "Request password reset"
+      description: "Public, rate-limited (10/min). Identical response whether or not the account exists (no enumeration). Queues the reset email via comm_outbox; `reset_link` is returned only in development without a mailer."
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email }
+      responses:
+        '200':
+          description: "Reset instructions sent (generic envelope)."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  message: { type: string }
+                  reset_link: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: "Reset password with token"
+      description: "Public, rate-limited (10/min). Redeems a single-use reset token and sets the new password. Invalid, expired, or replayed tokens are 400."
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                password: { type: string, format: password }
+      responses:
+        '200':
+          description: "Password reset."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/users/me/preferences:
+    get:
+      tags: [Users]
+      summary: "Get my preferences"
+      description: "Bearer auth (session user, no extra permission). Returns the caller's theme preference, defaulting to `system`."
+      responses:
+        '200':
+          description: "Caller preferences."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id: { type: string }
+                  theme_preference: { type: string, enum: [light, dark, system] }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      tags: [Users]
+      summary: "Update my preferences"
+      description: "Bearer auth (session user, no extra permission). `theme` must be light, dark, or system."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [theme]
+              properties:
+                theme: { type: string, enum: [light, dark, system] }
+      responses:
+        '200':
+          description: "Preferences updated."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  theme_preference: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Users]
+      summary: "Update my preferences (alias)"
+      description: "Bearer auth. POST alias of the PATCH endpoint; same body and permission posture."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [theme]
+              properties:
+                theme: { type: string, enum: [light, dark, system] }
+      responses:
+        '200':
+          description: "Preferences updated."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  theme_preference: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/ops-alerts:
+    get:
+      tags: [Ops Alerts]
+      summary: "List ops alerts"
+      description: "Requires `ops_alerts:read` permission. Filters `status`, `type`, `severity` plus `page`/`limit` pagination."
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [open, acknowledged, resolved, dismissed] }
+        - name: type
+          in: query
+          schema: { type: string }
+        - name: severity
+          in: query
+          schema: { type: string, enum: [low, medium, high, critical] }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: "Paginated alerts."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alerts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        tenant_id: { type: string }
+                        alert_type: { type: string }
+                        severity: { type: string }
+                        title: { type: string }
+                        description: "{ type: string }"
+                        entity_type: { type: string, nullable: true }
+                        entity_id: { type: string, nullable: true }
+                        status: { type: string }
+                        acknowledged_by: { type: string, nullable: true }
+                        acknowledged_at: { type: string, format: date-time, nullable: true }
+                        resolved_by: { type: string, nullable: true }
+                        resolved_at: { type: string, format: date-time, nullable: true }
+                        resolution_note: { type: string, nullable: true }
+                        created_at: { type: string, format: date-time }
+                  total: { type: integer }
+                  page: { type: integer }
+                  limit: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/ops-alerts/{id}:
+    get:
+      tags: [Ops Alerts]
+      summary: "Get an ops alert"
+      description: "Requires `ops_alerts:read` permission."
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: "The alert."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  tenant_id: { type: string }
+                  alert_type: { type: string }
+                  severity: { type: string }
+                  title: { type: string }
+                  description: "{ type: string }"
+                  status: { type: string }
+                  created_at: { type: string, format: date-time }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/ops-alerts/{id}/acknowledge:
+    post:
+      tags: [Ops Alerts]
+      summary: "Acknowledge an ops alert"
+      description: "Requires `ops_alerts:update` permission. Only open alerts can be acknowledged; otherwise 409. Actor is the session user."
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: "Alert acknowledged."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  alert_id: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/ops-alerts/{id}/resolve:
+    post:
+      tags: [Ops Alerts]
+      summary: "Resolve an ops alert"
+      description: "Requires `ops_alerts:update` permission. Optional `note` is stored as the resolution note. Terminal alerts yield 409."
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: { type: string }
+      responses:
+        '200':
+          description: "Alert resolved."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  alert_id: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/ops-alerts/{id}/dismiss:
+    post:
+      tags: [Ops Alerts]
+      summary: "Dismiss an ops alert"
+      description: "Requires `ops_alerts:update` permission. Optional `reason` is recorded. Terminal alerts yield 409."
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        '200':
+          description: "Alert dismissed."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  alert_id: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/ops-alerts/generate:
+    post:
+      tags: [Ops Alerts]
+      summary: "Create an ops alert manually"
+      description: "Requires `ops_alerts:update` permission. `alert_type` and `title` are required; severity defaults to medium server-side."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [alert_type, title]
+              properties:
+                alert_type: { type: string }
+                severity: { type: string, enum: [low, medium, high, critical] }
+                title: { type: string }
+                description: "{ type: string }"
+                entity_type: { type: string }
+                entity_id: { type: string }
+      responses:
+        '201':
+          description: "Alert created open."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alert_id: { type: string }
+                  status: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/outbox/batch:
+    post:
+      tags: [Outbox]
+      summary: "Flush mobile outbox batch"
+      description: "Bearer auth (no per-route permission gate in Register; durable insert into outbox_events in one Tx). Each command carries `idempotency_key` (PK, generated when absent), `command`, and `payload` string. Any Tx failure is 503 so the client retries — never silent loss."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                commands:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      idempotency_key: { type: string }
+                      command: { type: string }
+                      payload: { type: string }
+      responses:
+        '200':
+          description: "Batch durably queued."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted: { type: integer }
+                  status: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/sos:
+    post:
+      tags: [SOS]
+      summary: "Trigger driver SOS"
+      description: "Bearer auth (driver session; `X-Driver-ID` header is the unauthenticated fallback). Missing trip/vehicle resolve from the driver's active trip. Idempotent on `command_id` — duplicates return 200 instead of 201."
+      parameters:
+        - name: X-Driver-ID
+          in: header
+          description: "Driver id fallback when no session is present."
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                command_id: { type: string }
+                trip_id: { type: string }
+                vehicle_id: { type: string }
+                latitude: { type: number }
+                longitude: { type: number }
+                accuracy: { type: number }
+                battery_level: { type: number }
+                reason: { type: string }
+                triggered_at: { type: string, format: date-time }
+                occurred_at: { type: string, format: date-time }
+      responses:
+        '201':
+          description: "SOS acknowledged and fanned out to the alert pipeline."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  sos_id: { type: string }
+                  driver_id: { type: string }
+                  vehicle_id: { type: string }
+                  received_at: { type: string, format: date-time }
+                  message: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/pnl:
+    get:
+      tags: [Profit & Loss]
+      summary: "Get daily P&L snapshots"
+      description: "Requires `pnl:read` permission. Both `from` and `to` are required in YYYY-MM-DD; `to` must be >= `from`."
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: "Daily snapshots for the range (empty array, not null, when none)."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  from: { type: string }
+                  to: { type: string }
+                  tenant_id: { type: string }
+                  snapshots:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        tenant_id: { type: string }
+                        snapshot_date: { type: string }
+                        revenue: { type: number }
+                        expenses: { type: number }
+                        fuel_costs: { type: number }
+                        driver_payouts: { type: number }
+                        maintenance: { type: number }
+                        toll_costs: { type: number }
+                        tds_deducted: { type: number }
+                        net_profit: { type: number }
+                        trip_count: { type: integer }
+                        vehicle_count: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/pnl/generate:
+    post:
+      tags: [Profit & Loss]
+      summary: "Generate a P&L snapshot"
+      description: "Requires `pnl:write` permission. Body `date` is YYYY-MM-DD and optional — defaults to yesterday. Idempotent per (tenant, date)."
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date: { type: string, format: date }
+      responses:
+        '201':
+          description: "Snapshot generated."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  tenant_id: { type: string }
+                  snapshot_date: { type: string }
+                  revenue: { type: number }
+                  expenses: { type: number }
+                  fuel_costs: { type: number }
+                  driver_payouts: { type: number }
+                  maintenance: { type: number }
+                  toll_costs: { type: number }
+                  tds_deducted: { type: number }
+                  net_profit: { type: number }
+                  trip_count: { type: integer }
+                  vehicle_count: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'

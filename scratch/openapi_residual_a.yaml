@@ -1,0 +1,588 @@
+paths:
+  /api/v1/control-tower/trips:
+    get:
+      tags: [ControlTower]
+      summary: List control-tower trip projections
+      description: Requires `trips:read` permission. Optional `status` filter; returns dispatcher projection array.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Control-tower trip projections.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    trip_id: { type: string }
+                    trip_number: { type: string }
+                    tenant_id: { type: string }
+                    booking_id: { type: string }
+                    status: { type: string }
+                    start_time: { type: string, format: date-time }
+                    end_time: { type: string, format: date-time }
+                    origin: { type: string }
+                    destination: { type: string }
+                    driver: { type: object }
+                    vehicle: { type: object }
+                    stops: { type: array, items: { type: object } }
+                    current_stop: { type: object }
+                    progression: { type: object }
+                    telemetry: { type: object }
+                    safety: { type: object }
+                    ewb: { type: object }
+                    sync_state: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/control-tower/trips/{id}:
+    get:
+      tags: [ControlTower]
+      summary: Get one control-tower trip projection
+      description: Requires `trips:read` permission. Path `id` is required (query `id` fallback); missing trip is 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Control-tower trip projection.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trip_id: { type: string }
+                  trip_number: { type: string }
+                  tenant_id: { type: string }
+                  booking_id: { type: string }
+                  status: { type: string }
+                  start_time: { type: string, format: date-time }
+                  end_time: { type: string, format: date-time }
+                  origin: { type: string }
+                  destination: { type: string }
+                  driver: { type: object }
+                  vehicle: { type: object }
+                  stops: { type: array, items: { type: object } }
+                  current_stop: { type: object }
+                  progression: { type: object }
+                  telemetry: { type: object }
+                  safety: { type: object }
+                  ewb: { type: object }
+                  sync_state: { type: object }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/customer/quotes:
+    post:
+      tags: [Customer]
+      summary: Create a customer freight quote
+      description: Tenant + session user identity (no extra RBAC wrapper; behind RequireAPIAuth). Body requires `origin`, `destination`; optional `cargo_type`, `vehicle_type`, `weight_kg`, `distance_km`, `ttl_minutes`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [origin, destination]
+              properties:
+                origin: { type: string }
+                destination: { type: string }
+                cargo_type: { type: string }
+                vehicle_type: { type: string }
+                weight_kg: { type: number }
+                distance_km: { type: number }
+                ttl_minutes: { type: integer }
+      responses:
+        '201':
+          description: Quote created with server-side pricing.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  tenant_id: { type: string }
+                  customer_id: { type: string }
+                  origin: { type: string }
+                  destination: { type: string }
+                  cargo_type: { type: string }
+                  vehicle_type: { type: string }
+                  weight_kg: { type: number }
+                  distance_km: { type: number }
+                  base_rate: { type: number }
+                  per_km_rate: { type: number }
+                  estimated_toll: { type: number }
+                  subtotal: { type: number }
+                  gst_rate: { type: number }
+                  gst_amount: { type: number }
+                  discount_amount: { type: number }
+                  total_price: { type: number }
+                  status: { type: string }
+                  expires_at: { type: string, format: date-time }
+                  created_at: { type: string, format: date-time }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/customer/bookings:
+    post:
+      tags: [Customer]
+      summary: Create a customer booking from a quote
+      description: Tenant + session user identity (no extra RBAC wrapper; behind RequireAPIAuth). Body requires `quote_id`; honors `Idempotency-Key` header (replay returns 200 with `is_idempotent`).
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quote_id]
+              properties:
+                idempotency_key: { type: string }
+                quote_id: { type: string }
+                pickup_address: { type: string }
+                pickup_lat: { type: number }
+                pickup_lng: { type: number }
+                pickup_contact_name: { type: string }
+                pickup_contact_phone: { type: string }
+                delivery_address: { type: string }
+                delivery_lat: { type: number }
+                delivery_lng: { type: number }
+                delivery_contact_name: { type: string }
+                delivery_contact_phone: { type: string }
+                scheduled_at: { type: string, format: date-time }
+                cargo_description: { type: string }
+                special_instructions: { type: string }
+                payment_method: { type: string }
+      responses:
+        '201':
+          description: Booking confirmed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  booking_id: { type: string }
+                  booking_number: { type: string }
+                  status: { type: string }
+                  total_price: { type: number }
+                  is_idempotent: { type: boolean }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    get:
+      tags: [Customer]
+      summary: List my customer bookings
+      description: Tenant + session user identity (no extra RBAC wrapper; behind RequireAPIAuth). Paginated with `limit`/`offset`.
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+        - name: offset
+          in: query
+          schema: { type: integer, default: 0 }
+      responses:
+        '200':
+          description: Customer booking tracking projections.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bookings:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        booking_id: { type: string }
+                        booking_number: { type: string }
+                        status: { type: string }
+                        pickup: { type: object }
+                        delivery: { type: object }
+                        vehicle: { type: object }
+                        driver: { type: object }
+                        eta: { type: string }
+                        tracking: { type: object }
+                        documents: { type: array, items: { type: object } }
+                        payment: { type: object }
+                        created_at: { type: string, format: date-time }
+                        updated_at: { type: string, format: date-time }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/customer/bookings/{id}/tracking:
+    get:
+      tags: [Customer]
+      summary: Get customer booking tracking view
+      description: Tenant + session user identity (no extra RBAC wrapper; behind RequireAPIAuth). Path `id` is the booking id; masked driver view (no Aadhaar/PAN/bank).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Unified tracking projection (pickup, delivery, vehicle, masked driver, ETA, live point, documents, payment).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  booking_id: { type: string }
+                  booking_number: { type: string }
+                  status: { type: string }
+                  pickup: { type: object }
+                  delivery: { type: object }
+                  vehicle: { type: object }
+                  driver: { type: object }
+                  eta: { type: string }
+                  tracking: { type: object }
+                  documents: { type: array, items: { type: object } }
+                  payment: { type: object }
+                  created_at: { type: string, format: date-time }
+                  updated_at: { type: string, format: date-time }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/customer/bookings/{id}/cancel:
+    post:
+      tags: [Customer]
+      summary: Cancel my customer booking
+      description: Tenant + session user identity (no extra RBAC wrapper; behind RequireAPIAuth). Optional `reason` body (defaults to "Customer cancelled booking").
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: { type: string }
+      responses:
+        '200':
+          description: Booking cancelled.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  message: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/founder/signals:
+    get:
+      tags: [Founder]
+      summary: List founder signals
+      description: Requires `founder:read` permission. Filter `signal_type`, `unacknowledged=true|1`; returns `signals` plus `total`.
+      parameters:
+        - name: signal_type
+          in: query
+          schema: { type: string }
+        - name: unacknowledged
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Founder signals with total count.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signals:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        signal_type: { type: string }
+                        signal_value: { type: number }
+                        threshold_value: { type: number }
+                        direction: { type: string }
+                        metadata: { type: string }
+                        acknowledged: { type: boolean }
+                        created_at: { type: string, format: date-time }
+                  total: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/founder/signals/{id}:
+    get:
+      tags: [Founder]
+      summary: Get one founder signal
+      description: Requires `founder:read` permission. Path `id` is the signal id; unknown id is 404.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Founder signal detail.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  signal_type: { type: string }
+                  signal_value: { type: number }
+                  threshold_value: { type: number }
+                  direction: { type: string }
+                  metadata: { type: string }
+                  acknowledged: { type: boolean }
+                  created_at: { type: string, format: date-time }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/founder/signals/{id}/acknowledge:
+    post:
+      tags: [Founder]
+      summary: Acknowledge a founder signal
+      description: Requires `founder:update` permission. No body; actor taken from session (defaults system/admin). Double-ack fails (handler returns 409; see BadRequest envelope).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Acknowledgement recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signal_id: { type: string }
+                  acknowledged: { type: boolean }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/founder/audit:
+    get:
+      tags: [Founder]
+      summary: List founder audit trail
+      description: Requires `founder:read` permission. Filter `action`, `resource_type`; returns `audit` plus `total`.
+      parameters:
+        - name: action
+          in: query
+          schema: { type: string }
+        - name: resource_type
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Append-only audit entries with total count.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  audit:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        actor_id: { type: string }
+                        actor_role: { type: string }
+                        action: { type: string }
+                        resource_type: { type: string }
+                        resource_id: { type: string }
+                        details: { type: string }
+                        ip_address: { type: string }
+                        user_agent: { type: string }
+                        created_at: { type: string, format: date-time }
+                  total: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/founder/dashboard:
+    get:
+      tags: [Founder]
+      summary: Get founder aggregate dashboard
+      description: Requires `founder:read` permission. Returns unacknowledged signal count, recent signals, active experiments, open ops alerts, latest PNL.
+      responses:
+        '200':
+          description: Aggregate founder metrics.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unacknowledged_signals: { type: integer }
+                  recent_signals: { type: array, items: { type: object } }
+                  active_experiments: { type: integer }
+                  open_ops_alerts: { type: integer }
+                  latest_pnl: { type: object }
+                  active_nav: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/founder/kpis:
+    get:
+      tags: [Founder]
+      summary: Get pilot KPI scorecard
+      description: Requires `founder:read` permission. Query `days` (default 14, max 90); null metric means no samples, not zero.
+      parameters:
+        - name: days
+          in: query
+          schema: { type: integer, default: 14 }
+      responses:
+        '200':
+          description: Five pilot metrics plus console usage and storage snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  window_days: { type: integer }
+                  settlement_cycle_minutes: { type: number }
+                  kharcha_app_submitted_pct: { type: number }
+                  disputed_settlements_pct: { type: number }
+                  driver_wau_pct: { type: number }
+                  ewb_expiry_caught_pct: { type: number }
+                  console_opens: { type: integer }
+                  panel_actions: { type: integer }
+                  storage: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/founder/storage:
+    get:
+      tags: [Founder]
+      summary: Get storage measurement for scale triggers
+      description: Requires `founder:read` permission. No params; per-table row counts for watched tables plus DB size from pragmas.
+      responses:
+        '200':
+          description: Storage stats payload.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_db_bytes: { type: integer }
+                  freelist_kb: { type: integer }
+                  tables:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        table: { type: string }
+                        rows: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/compliance/dashboard:
+    get:
+      tags: [Compliance]
+      summary: Get compliance dashboard metrics
+      description: Requires `compliance:read` permission. No params; driver/vehicle totals, blocked lists with reasons, pending document count.
+      responses:
+        '200':
+          description: Compliance overview metrics.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  drivers:
+                    type: object
+                    properties:
+                      total: { type: integer }
+                      blocked: { type: integer }
+                      expiring_soon: { type: integer }
+                  vehicles:
+                    type: object
+                    properties:
+                      total: { type: integer }
+                      blocked: { type: integer }
+                      expiring_soon: { type: integer }
+                  blocked_drivers:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        reason: { type: string }
+                  blocked_vehicles:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        reason: { type: string }
+                  documents_pending: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/hsn-sac/search:
+    get:
+      tags: [Invoices]
+      summary: Search HSN/SAC master
+      description: Behind RequireAPIAuth (no extra RBAC wrapper). Query `q` matches code or description; top 10 by code.
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Matching HSN/SAC records.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        code: { type: string }
+                        description: { type: string }
+                        type: { type: string }
+                        rate: { type: number }
+        '401':
+          $ref: '#/components/responses/Unauthorized'

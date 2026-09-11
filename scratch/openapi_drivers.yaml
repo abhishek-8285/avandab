@@ -1,0 +1,1629 @@
+paths:
+  /api/v1/drivers/me/onboarding:
+    get:
+      tags: [Drivers]
+      summary: Get my driver onboarding state
+      description: Bearer auth, self only (driver resolved from session user id or email, tenant-scoped). Returns current step plus per-area statuses.
+      responses:
+        '200':
+          description: Onboarding state.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  driver_id: { type: string }
+                  current_step: { type: string }
+                  identity_status: { type: string }
+                  license_status: { type: string }
+                  vehicle_status: { type: string }
+                  bank_status: { type: string }
+                  overall_status: { type: string }
+                  completed_steps: { type: array, items: { type: string } }
+                  requirements: { type: array, items: { type: object } }
+                  can_submit: { type: boolean }
+                  rejection_reason: { type: string }
+                  is_eligible: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/drivers/onboarding/funnel:
+    get:
+      tags: [Drivers]
+      summary: Get onboarding funnel snapshot
+      description: Bearer auth, manager-facing tenant-wide drop-off snapshot (started/in_progress/submitted/approved/rejected plus stuck_by_step per canonical step).
+      responses:
+        '200':
+          description: Funnel counts for the acting tenant.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenant_id: { type: string }
+                  started: { type: integer }
+                  in_progress: { type: integer }
+                  submitted: { type: integer }
+                  approved: { type: integer }
+                  rejected: { type: integer }
+                  stuck_by_step: { type: object, additionalProperties: { type: integer } }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/drivers/me/license:
+    post:
+      tags: [Drivers]
+      summary: Submit my driving license
+      description: Bearer auth, self only. expires_on is required (YYYY-MM-DD, never defaulted); issued_on optional; classes defaults to [LMV].
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expires_on]
+              properties:
+                license_number: { type: string }
+                issuing_authority: { type: string }
+                issued_on: { type: string, description: 'YYYY-MM-DD' }
+                expires_on: { type: string, description: 'YYYY-MM-DD, required' }
+                classes: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: License submitted for verification.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/drivers/me/documents:
+    post:
+      tags: [Drivers]
+      summary: Submit my onboarding document
+      description: Bearer auth, self only. Stores a document reference (storage key + hash) for KYC review.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                document_type: { type: string }
+                storage_key: { type: string }
+                mime_type: { type: string }
+                file_size_bytes: { type: integer }
+                document_hash: { type: string }
+      responses:
+        '201':
+          description: Document stored.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  document_id: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/drivers/me/vehicle-claims:
+    post:
+      tags: [Drivers]
+      summary: Claim a vehicle
+      description: Bearer auth, self only. registration_number is required; rc_document_id optionally links a previously uploaded RC document.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [registration_number]
+              properties:
+                registration_number: { type: string }
+                rc_document_id: { type: string }
+      responses:
+        '201':
+          description: Claim filed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  claim_id: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/drivers/me/payout-account:
+    post:
+      tags: [Drivers]
+      summary: Submit my payout bank account
+      description: Bearer auth, self only. Account must later be verified by a reviewer before payouts are eligible.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                account_holder_name: { type: string }
+                account_number: { type: string }
+                ifsc_code: { type: string }
+                bank_name: { type: string }
+      responses:
+        '201':
+          description: Payout account stored.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  account_id: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/drivers/me/verification/submit:
+    post:
+      tags: [Drivers]
+      summary: Submit my onboarding for verification
+      description: Bearer auth, self only. No body. Fails 400 until all onboarding requirements are satisfied.
+      responses:
+        '200':
+          description: Application submitted for operational verification.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/drivers/me/push-token:
+    post:
+      tags: [Drivers]
+      summary: Register my push token
+      description: Bearer auth, self only (driver_id defaults to caller). One of push_token/expo_push_token/token is required; platform defaults to android; device_id defaults to {platform}-{user_id}.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                driver_id: { type: string }
+                device_id: { type: string }
+                push_token: { type: string }
+                expo_push_token: { type: string }
+                token: { type: string }
+                platform: { type: string, default: android }
+      responses:
+        '200':
+          description: Push token registered.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/drivers/push-token:
+    post:
+      tags: [Drivers]
+      summary: Register a push token (alias)
+      description: Bearer auth. Alias of POST /api/v1/drivers/me/push-token handled by the same handler; same body and defaults.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                driver_id: { type: string }
+                device_id: { type: string }
+                push_token: { type: string }
+                expo_push_token: { type: string }
+                token: { type: string }
+                platform: { type: string, default: android }
+      responses:
+        '200':
+          description: Push token registered.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/driver/push-token:
+    post:
+      tags: [Drivers]
+      summary: Register a push token (legacy alias)
+      description: Bearer auth. Legacy singular-prefix alias of POST /api/v1/drivers/me/push-token; same body and defaults.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                driver_id: { type: string }
+                device_id: { type: string }
+                push_token: { type: string }
+                expo_push_token: { type: string }
+                token: { type: string }
+                platform: { type: string, default: android }
+      responses:
+        '200':
+          description: Push token registered.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/driver/me/push-token:
+    post:
+      tags: [Drivers]
+      summary: Register my push token (legacy alias)
+      description: Bearer auth, self only. Legacy singular-prefix alias of POST /api/v1/drivers/me/push-token; same body and defaults.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                driver_id: { type: string }
+                device_id: { type: string }
+                push_token: { type: string }
+                expo_push_token: { type: string }
+                token: { type: string }
+                platform: { type: string, default: android }
+      responses:
+        '200':
+          description: Push token registered.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/drivers/me/offers:
+    get:
+      tags: [Drivers]
+      summary: List my pending dispatch offers
+      description: Bearer auth, self only. Returns unexpired offers with status offered, newest first; empty array when none.
+      responses:
+        '200':
+          description: Pending dispatch offers.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    booking_id: { type: string }
+                    driver_id: { type: string }
+                    vehicle_id: { type: string }
+                    status: { type: string }
+                    offered_at: { type: string, format: date-time }
+                    expires_at: { type: string, format: date-time }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/drivers/me/commands:
+    post:
+      tags: [Drivers]
+      summary: Send a driver command
+      description: Bearer auth, self only. Idempotent on command_id (defaults to cmd_uuid). type is one of ACCEPT_OFFER, REJECT_OFFER, START_TRIP, EN_ROUTE_PICKUP, ARRIVE_PICKUP, ARRIVED_PICKUP, START_LOADING, COMPLETE_LOADING, LOADED, START_DELIVERY, IN_TRANSIT, ARRIVE_DELIVERY, ARRIVED_DELIVERY, START_UNLOADING, COMPLETE_TRIP, CANCEL_TRIP, INTERRUPT_TRIP, TRIP_INTERRUPTED. payload carries offer_id (accept/reject) or trip_id (transitions; COMPLETE_TRIP optionally enforces POD via pod_required/pod_document_id).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type]
+              properties:
+                command_id: { type: string }
+                type: { type: string }
+                payload: { type: object, additionalProperties: {} }
+      responses:
+        '200':
+          description: Command processed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  status: { type: string }
+                  message: { type: string }
+                  trip_id: { type: string }
+                  trip_state: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Command rejected (stale state, expired offer, missing POD).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  status: { type: string }
+                  message: { type: string }
+
+  /api/v1/drivers/{id}/verify:
+    post:
+      tags: [Drivers]
+      summary: Review a driver license
+      description: Reviewer only (admin or org_admin; drivers can never self-approve). license_id and approve are required; reason records rejections.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [license_id]
+              properties:
+                license_id: { type: string }
+                approve: { type: boolean }
+                reason: { type: string }
+      responses:
+        '200':
+          description: Review recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/drivers/{id}/vehicle-claims/{claimId}/verify:
+    post:
+      tags: [Drivers]
+      summary: Review a vehicle claim
+      description: Reviewer only (admin or org_admin). claimId path selects the claim; approve plus optional reason in body.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+        - name: claimId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                approve: { type: boolean }
+                reason: { type: string }
+      responses:
+        '200':
+          description: Review recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/drivers/{id}/vehicle-assignments:
+    post:
+      tags: [Drivers]
+      summary: Assign a vehicle to a driver
+      description: Reviewer only (admin or org_admin). assignment_type defaults to company_assigned.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vehicle_id: { type: string }
+                assignment_type: { type: string, default: company_assigned }
+      responses:
+        '201':
+          description: Vehicle assigned.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  assignment_id: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/vehicle-assignments/{id}/accept:
+    post:
+      tags: [Drivers]
+      summary: Accept a vehicle assignment
+      description: Bearer auth. Stub handler — ignores the assignment id and always succeeds; wire to real acceptance flow before relying on it.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Assignment accepted (stub).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/drivers/me:
+    get:
+      tags: [Drivers]
+      summary: Get my driver profile
+      description: Bearer auth, self only (driver matched by user id or user email, tenant-scoped). Includes active-trip vehicle plate plus latest known location.
+      responses:
+        '200':
+          description: Driver profile.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  driver_id: { type: string }
+                  user_id: { type: string }
+                  name: { type: string }
+                  phone: { type: string }
+                  status: { type: string }
+                  vehicle_plate: { type: string }
+                  current_location:
+                    type: object
+                    properties:
+                      latitude: { type: number }
+                      longitude: { type: number }
+                  license_number: { type: string }
+                  license_expiry: { type: string }
+                  bank_details: { type: string }
+                  aadhaar: { type: string }
+                  pan: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      tags: [Drivers]
+      summary: Update my driver profile
+      description: Bearer auth, self only. All fields optional; status applies only for available/leave/inactive; vehicle_number (or vehicle_plate) upserts the vehicle row and links the telemetry device.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                license_number: { type: string }
+                license_expiry: { type: string }
+                bank_details: { type: string }
+                aadhaar: { type: string }
+                pan: { type: string }
+                status: { type: string }
+                vehicle_number: { type: string }
+                vehicle_plate: { type: string }
+      responses:
+        '200':
+          description: Profile updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  driver_id: { type: string }
+                  status: { type: string }
+                  vehicle_plate: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Drivers]
+      summary: Update my driver profile (alias)
+      description: Bearer auth, self only. POST alias of PUT /api/v1/drivers/me handled by the same handler; same body and response.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                license_number: { type: string }
+                license_expiry: { type: string }
+                bank_details: { type: string }
+                aadhaar: { type: string }
+                pan: { type: string }
+                status: { type: string }
+                vehicle_number: { type: string }
+                vehicle_plate: { type: string }
+      responses:
+        '200':
+          description: Profile updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  driver_id: { type: string }
+                  status: { type: string }
+                  vehicle_plate: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/drivers/me/status:
+    post:
+      tags: [Drivers]
+      summary: Update my duty status
+      description: Bearer auth, self only. status must be available, leave, or inactive; on_trip is system-controlled and rejected here.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [available, leave, inactive] }
+      responses:
+        '200':
+          description: Status updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  driver_id: { type: string }
+                  status: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/drivers/me/issues:
+    get:
+      tags: [Drivers]
+      summary: List my reported issues
+      description: Bearer auth, self only. Newest first, capped at 20.
+      responses:
+        '200':
+          description: Recent driver issues.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  issues:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        trip_id: { type: string }
+                        category: { type: string }
+                        severity: { type: string }
+                        message: { type: string }
+                        photo_url: { type: string }
+                        status: { type: string }
+                        created_at: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Drivers]
+      summary: Report an issue
+      description: Bearer auth, self only. Multipart form; message is required; category defaults to other; severity defaults to low; photo file optional.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string }
+                category: { type: string, enum: [vehicle, road, cargo, customer, accident, other] }
+                severity: { type: string, enum: [low, medium, high, critical] }
+                trip_id: { type: string }
+                photo: { type: string, format: binary }
+      responses:
+        '201':
+          description: Issue recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  status: { type: string }
+                  category: { type: string }
+                  severity: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/drivers/me/wallet:
+    get:
+      tags: [Settlements]
+      summary: Get my driver wallet
+      description: Bearer auth, self only (driver id resolved from session). Returns payable, pending, paid, and held balances plus recent ledger entries.
+      responses:
+        '200':
+          description: Driver wallet.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  driver_id: { type: string }
+                  available_balance: { type: number }
+                  pending_balance: { type: number }
+                  paid_balance: { type: number }
+                  held_balance: { type: number }
+                  currency: { type: string }
+                  recent_entries: { type: array, items: { type: object } }
+                  updated_at: { type: string, format: date-time }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/drivers/me/payouts:
+    post:
+      tags: [Settlements]
+      summary: Request a payout from my wallet
+      description: Bearer auth, self only. idempotency_key is required (body or Idempotency-Key header); duplicate keys return 200 with is_duplicate. Requires a verified payout account plus sufficient available balance above the minimum payout limit.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [idempotency_key, amount]
+              properties:
+                idempotency_key: { type: string }
+                amount: { type: number }
+      responses:
+        '201':
+          description: Payout initiated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  payout_id: { type: string }
+                  driver_id: { type: string }
+                  amount: { type: number }
+                  status: { type: string }
+                  idempotency_key: { type: string }
+                  is_duplicate: { type: boolean }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/telemetry/sessions/start:
+    post:
+      tags: [Telemetry]
+      summary: Start a driver telemetry session
+      description: Bearer auth, driver-scoped. Binds the session to the driver's active vehicle assignment when one exists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                installation_id: { type: string }
+                app_version: { type: string }
+                os_version: { type: string }
+      responses:
+        '201':
+          description: Telemetry session started.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  installation_id: { type: string }
+                  driver_id: { type: string }
+                  vehicle_id: { type: string }
+                  session_type: { type: string }
+                  status: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/telemetry/sessions/end:
+    post:
+      tags: [Telemetry]
+      summary: End a driver telemetry session
+      description: Bearer auth, driver-scoped. session_id selects the active session to close.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [session_id]
+              properties:
+                session_id: { type: string }
+      responses:
+        '200':
+          description: Session ended.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/telemetry/events:
+    post:
+      tags: [Telemetry]
+      summary: Ingest a driver telemetry event
+      description: Bearer auth, driver-scoped. Per-event idempotency via client_event_id; response status is ACCEPTED, DUPLICATE, STALE, INVALID_SESSION, or INVALID_COORDINATES.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                session_id: { type: string }
+                installation_id: { type: string }
+                client_event_id: { type: string }
+                occurred_at: { type: string }
+                latitude: { type: number }
+                longitude: { type: number }
+                accuracy_meters: { type: number }
+                speed_kmph: { type: number }
+                heading_degrees: { type: number }
+                battery_level_pct: { type: integer }
+                battery_state: { type: string }
+                trip_id: { type: string }
+      responses:
+        '200':
+          description: Ingest outcome.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  message: { type: string }
+                  client_event_id: { type: string }
+                  event_id: { type: string }
+                  vehicle_id: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/trips/{id}/stops/{stopId}/reach:
+    post:
+      tags: [Trips]
+      summary: Mark a trip stop reached
+      description: Requires `trips:update` permission. No body; mobile offline queue posts here (the /trips/... twins are session-cookie web routes).
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+        - name: stopId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Stop marked arrived.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  stop_id: { type: string }
+                  trip_id: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/trips/{id}/stops/{stopId}/pod:
+    post:
+      tags: [Trips]
+      summary: Submit stop proof of delivery
+      description: "Requires `trips:update` permission. Accepts multipart, JSON, or form: pod_url (or photo/pod_file upload), signature_url (or signature/signature_data data-URI), notes, otp. Mirrors into trip POD columns plus stop_pod_attachments."
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+        - name: stopId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                pod_url: { type: string }
+                pod_file: { type: string, format: binary }
+                photo: { type: string, format: binary }
+                signature_url: { type: string }
+                signature_data: { type: string }
+                notes: { type: string }
+                otp: { type: string }
+      responses:
+        '200':
+          description: POD verified.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  stop_id: { type: string }
+                  trip_id: { type: string }
+                  pod_url: { type: string }
+                  signature_url: { type: string }
+                  epod_url: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/driver/trips/{id}/stops/{stopId}/pod:
+    post:
+      tags: [Trips]
+      summary: Submit stop proof of delivery (driver alias)
+      description: Requires `trips:update` permission. Driver-namespaced alias of the stop POD endpoint; same handler, body, and response.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+        - name: stopId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                pod_url: { type: string }
+                pod_file: { type: string, format: binary }
+                photo: { type: string, format: binary }
+                signature_url: { type: string }
+                signature_data: { type: string }
+                notes: { type: string }
+                otp: { type: string }
+      responses:
+        '200':
+          description: POD verified.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  stop_id: { type: string }
+                  trip_id: { type: string }
+                  pod_url: { type: string }
+                  signature_url: { type: string }
+                  epod_url: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/trips/{id}/stops/{stopId}/complete:
+    post:
+      tags: [Trips]
+      summary: Complete a trip stop
+      description: Requires `trips:update` permission. No body; closes the stop after reach/POD.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+        - name: stopId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Stop completed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  stop_id: { type: string }
+                  trip_id: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/trips/{id}/deliver-pod:
+    post:
+      tags: [Trips]
+      summary: Submit trip e-POD
+      description: "Bearer auth, no extra permission gate — handler enforces assigned-driver match (by user id, driver id, or code) with admin/dispatcher override. Multipart: consignee_name/phone, notes, pod_signature_data (or signature_dataurl), quantity_short, damage_qty, refusal_reason, pod_photo file (or pod_url), otp, pod_scan_value."
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                consignee_name: { type: string }
+                consignee_phone: { type: string }
+                notes: { type: string }
+                pod_signature_data: { type: string }
+                quantity_short: { type: number }
+                damage_qty: { type: number }
+                refusal_reason: { type: string }
+                pod_photo: { type: string, format: binary }
+                pod_url: { type: string }
+                otp: { type: string }
+                pod_scan_value: { type: string }
+      responses:
+        '200':
+          description: Trip delivered with e-POD.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trip_number: { type: string }
+                  status: { type: string }
+                  pod_url: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/trips/{id}/summary:
+    get:
+      tags: [Trips]
+      summary: Get trip tracking summary
+      description: Bearer auth (RequireAPIAuth group), tenant-scoped via trips.tenant_id. Read-only projection for the live-tracking detail sheet; 404 for unknown ids or cross-tenant trips.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Trip context (route, schedule, timeline, cargo, driver).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trip_id: { type: string }
+                  trip_number: { type: string }
+                  status: { type: string }
+                  origin: { type: string }
+                  destination: { type: string }
+                  route_km: { type: number }
+                  estimated_hours: { type: number }
+                  departure_time: { type: string, format: date-time }
+                  arrival_time: { type: string, format: date-time }
+                  started_at: { type: string, format: date-time }
+                  reached_pickup_at: { type: string, format: date-time }
+                  in_transit_at: { type: string, format: date-time }
+                  delivered_at: { type: string, format: date-time }
+                  completed_at: { type: string, format: date-time }
+                  cargo_weight_kg: { type: number }
+                  vehicle_number: { type: string }
+                  driver_name: { type: string }
+                  driver_phone: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/trips/{id}/playback:
+    get:
+      tags: [Trips]
+      summary: Get trip playback
+      description: Bearer auth (RequireAPIAuth group), tenant-scoped. Enriched replay with server-side distance, stops, geofence overlay, and detention windows. Paged via limit (default 2000, max 5000) plus from/to/after/after_id cursors (RFC3339); X-Truncated/X-Next-From headers when truncated.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+        - name: vehicle_id
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 2000, maximum: 5000 }
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+        - name: after
+          in: query
+          schema: { type: string, format: date-time }
+        - name: after_id
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Playback points plus summary, stops, geofence events, and detentions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trip_id: { type: string }
+                  vehicle_id: { type: string }
+                  points: { type: array, items: { type: object } }
+                  summary: { type: object }
+                  stops: { type: array, items: { type: object } }
+                  geofence_events: { type: array, items: { type: object } }
+                  detentions: { type: array, items: { type: object } }
+                  truncated: { type: boolean }
+                  next_from: { type: string, format: date-time }
+                  next_id: { type: string }
+                  next_limit: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/settlements/generate:
+    post:
+      tags: [Settlements]
+      summary: Generate a trip settlement
+      description: "Requires `settlements:write` permission. trip_id is required; force_recompute recalculates an existing settlement. Keyed error codes: trip_not_found (404), driver_not_assigned (409), booking_price_missing (422)."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [trip_id]
+              properties:
+                trip_id: { type: string }
+                force_recompute: { type: boolean }
+      responses:
+        '200':
+          description: Settlement generated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  settlement_id: { type: string }
+                  trip_id: { type: string }
+                  driver_id: { type: string }
+                  gross_fare: { type: number }
+                  rate_model: { type: string }
+                  rate_basis: { type: object }
+                  commission_amount: { type: number }
+                  advances_kharcha: { type: number }
+                  approved_deductions: { type: number }
+                  performance_bonus: { type: number }
+                  tds_rate: { type: number }
+                  tds_amount: { type: number }
+                  net_payout: { type: number }
+                  status: { type: string }
+                  lines: { type: array, items: { type: object } }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/settlements:
+    get:
+      tags: [Settlements]
+      summary: List settlements
+      description: Requires `settlements:read` permission. Optional status and driver_id filters with limit/offset paging.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: driver_id
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer }
+        - name: offset
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Matching settlements with count.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  settlements: { type: array, items: { type: object } }
+                  count: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/settlements/{id}:
+    get:
+      tags: [Settlements]
+      summary: Get a settlement by id
+      description: Requires `settlements:read` permission. Returns the full settlement record with ledger lines.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Settlement detail.
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/settlements/{id}/deductions:
+    get:
+      tags: [Settlements]
+      summary: Get settlement deductions
+      description: Requires `settlements:read` permission. Returns only advances/deduction/tds lines plus kharcha, deductions, and TDS totals.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Deduction breakdown.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  settlement_id: { type: string }
+                  advances_kharcha: { type: number }
+                  approved_deductions: { type: number }
+                  tds_rate: { type: number }
+                  tds_amount: { type: number }
+                  lines: { type: array, items: { type: object } }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/settlements/{id}/mark-paid:
+    post:
+      tags: [Settlements]
+      summary: Mark a settlement paid
+      description: Requires `settlements:approve` permission. payment_ref is required; paid_at accepts RFC3339 (defaults to now).
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payment_ref]
+              properties:
+                payment_ref: { type: string }
+                paid_at: { type: string, format: date-time }
+                mode: { type: string }
+      responses:
+        '200':
+          description: Settlement marked paid.
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/settlements/{id}/confirm:
+    post:
+      tags: [Settlements]
+      summary: Confirm settlement payout received
+      description: Requires `settlements:write` permission. Driver-side confirmation of a paid settlement.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: Confirmation recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  confirmed_at: { type: string, format: date-time }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/settlements/{id}/dispute:
+    post:
+      tags: [Settlements]
+      summary: Dispute a settlement
+      description: Requires `settlements:write` permission. reason is required; expected_net optionally states the driver's expected payout.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string }
+                expected_net: { type: number }
+      responses:
+        '200':
+          description: Dispute recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  dispute_reason: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/settlements/calculate:
+    post:
+      tags: [Settlements]
+      summary: Calculate and create a settlement
+      description: Bearer auth. Wallet/payout rail (statuses pending/calculated/approved/payable/paid); trip_id, driver_id, and tenant context are required. Idempotent per trip — returns the existing settlement when one already exists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [trip_id, driver_id]
+              properties:
+                trip_id: { type: string }
+                driver_id: { type: string }
+                gross_fare: { type: number }
+                toll_adjustment: { type: number }
+                advance_deductions: { type: number }
+                commission_rate: { type: number }
+                tds_rate: { type: number }
+      responses:
+        '200':
+          description: Settlement calculated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  trip_id: { type: string }
+                  driver_id: { type: string }
+                  gross_fare: { type: number }
+                  commission_amount: { type: number }
+                  toll_adjustment: { type: number }
+                  advance_deductions: { type: number }
+                  net_payout: { type: number }
+                  status: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/kharcha/expense:
+    post:
+      tags: [Settlements]
+      summary: Claim a driver expense
+      description: "Requires `trips:update` permission (same gate as the web kharcha form). Multipart mirroring the mobile ExpenseScreen: trip_id, expense_type (or type), amount (required number), notes, receipt_photo file, idempotency_key; latitude/longitude accepted but not persisted."
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                trip_id: { type: string }
+                expense_type: { type: string }
+                type: { type: string }
+                amount: { type: number }
+                notes: { type: string }
+                receipt_photo: { type: string, format: binary }
+                idempotency_key: { type: string }
+                latitude: { type: number }
+                longitude: { type: number }
+      responses:
+        '201':
+          description: Expense created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+                  id: { type: string }
+                  expense_id: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/webhooks/payouts/razorpay:
+    post:
+      tags: [Settlements]
+      summary: Razorpay payout webhook
+      description: Provider callback advancing payout status (processed/reversed/failed). Verified via X-Razorpay-Signature; X-Razorpay-Event-Id is required (falls back to event payload only in local test envs).
+      parameters:
+        - name: X-Razorpay-Event-Id
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Razorpay-Signature
+          in: header
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                event: { type: string }
+                payload: { type: object }
+      responses:
+        '200':
+          description: Webhook processed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/driver/balance:
+    get:
+      tags: [Settlements]
+      summary: Get my driver balance (Paisa tab)
+      description: Bearer auth behind the driver_money feature flag; driver resolved from session. Running balance equals paid settlements minus paid advances plus approved advances; cached 60s per driver.
+      responses:
+        '200':
+          description: Driver balance snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  running_balance: { type: number }
+                  last_settlement_id: { type: string }
+                  last_settlement_at: { type: string, format: date-time }
+                  pending_advances: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/driver/settlements:
+    get:
+      tags: [Settlements]
+      summary: List my settlements (Paisa tab)
+      description: Bearer auth behind the driver_money feature flag; driver resolved from session. Latest 50 with id, period (trip_id), gross, deductions, net, status, tds, paid_at.
+      responses:
+        '200':
+          description: Driver settlements.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  settlements:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        period: { type: string }
+                        gross: { type: number }
+                        deductions: { type: number }
+                        net: { type: number }
+                        status: { type: string }
+                        tds: { type: number }
+                        paid_at: { type: string, format: date-time }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/driver/advances:
+    get:
+      tags: [Settlements]
+      summary: List my advance requests
+      description: Bearer auth behind the driver_money feature flag; driver resolved from session.
+      responses:
+        '200':
+          description: Advance requests.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  advances:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        trip_id: { type: string }
+                        amount: { type: number }
+                        reason: { type: string }
+                        status: { type: string }
+                        requested_at: { type: string, format: date-time }
+                        decided_by: { type: string }
+                        decided_at: { type: string, format: date-time }
+                        settlement_id: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [Settlements]
+      summary: Request an advance
+      description: Bearer auth behind the driver_money feature flag; driver resolved from session. amount must be positive.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                trip_id: { type: string }
+                amount: { type: number }
+                reason: { type: string }
+      responses:
+        '201':
+          description: Advance requested.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  status: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/driver/advances/{id}/decision:
+    post:
+      tags: [Settlements]
+      summary: Decide an advance request
+      description: Requires `kharcha:approve` permission (admin side) behind the driver_money feature flag. decision approve/reject with optional note; already-decided advances return 409.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                decision: { type: string }
+                note: { type: string }
+      responses:
+        '200':
+          description: Decision recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'

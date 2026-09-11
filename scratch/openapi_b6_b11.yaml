@@ -1,0 +1,977 @@
+paths:
+  /api/v1/facilities:
+    get:
+      tags: [Facilities]
+      summary: List facilities
+      description: Requires `facilities:read` permission. Search via `q`/`search`, filter `type`/`facility_type`, `active_only`, paginated with `limit`/`offset`.
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: type
+          in: query
+          schema: { type: string, enum: [depot, hub, branch, workshop, office, fuel_station] }
+        - name: facility_type
+          in: query
+          schema: { type: string, enum: [depot, hub, branch, workshop, office, fuel_station] }
+        - name: active_only
+          in: query
+          schema: { type: boolean }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Facility list with total count.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  facilities:
+                    type: array
+                    items:
+                      type: object
+                  total: { type: integer }
+                  limit: { type: integer }
+                  offset: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [Facilities]
+      summary: Create facility
+      description: Requires `facilities:write` permission. Body requires `facility_code`, `name`; optional SAP master fields (plant, circle, profit/cost center, geo).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [facility_code, name]
+              properties:
+                facility_code: { type: string }
+                name: { type: string }
+                facility_type: { type: string, enum: [depot, hub, branch, workshop, office, fuel_station], default: depot }
+                plant: { type: string }
+                circle: { type: string }
+                profit_center: { type: string }
+                cost_center: { type: string }
+                address: { type: string }
+                city: { type: string }
+                state: { type: string }
+                pincode: { type: string }
+                latitude: { type: number }
+                longitude: { type: number }
+                valid_from: { type: string, format: date }
+                valid_to: { type: string, format: date }
+                is_active: { type: boolean }
+      responses:
+        '201':
+          description: Facility created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  facility:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/facilities/{id}:
+    get:
+      tags: [Facilities]
+      summary: Get one facility
+      description: Requires `facilities:read` permission. `{id}` accepts internal ID or `facility_code` (fallback lookup).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Single facility.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  facility:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [Facilities]
+      summary: Update facility
+      description: Requires `facilities:write` permission. `{id}` accepts ID or `facility_code`; body requires `name`.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+                facility_type: { type: string, enum: [depot, hub, branch, workshop, office, fuel_station] }
+                plant: { type: string }
+                circle: { type: string }
+                profit_center: { type: string }
+                cost_center: { type: string }
+                address: { type: string }
+                city: { type: string }
+                state: { type: string }
+                pincode: { type: string }
+                latitude: { type: number }
+                longitude: { type: number }
+                valid_from: { type: string, format: date }
+                valid_to: { type: string, format: date }
+                is_active: { type: boolean }
+      responses:
+        '200':
+          description: Facility updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  facility:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [Facilities]
+      summary: Delete facility
+      description: Requires `facilities:write` permission. `{id}` accepts ID or `facility_code` (resolved before delete).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Facility deleted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted: { type: boolean }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/backhaul/matches:
+    get:
+      tags: [Backhaul]
+      summary: Find backhaul matches
+      description: Requires `trips:read` permission. Query requires `trip_id`; optional `radius_km` (default 50).
+      parameters:
+        - name: trip_id
+          in: query
+          required: true
+          schema: { type: string }
+        - name: radius_km
+          in: query
+          schema: { type: number, default: 50 }
+      responses:
+        '200':
+          description: Candidate bookings with deadhead km, pickup distance, and freight margin.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    booking_id: { type: string }
+                    booking_number: { type: string }
+                    customer_name: { type: string }
+                    deadhead_km: { type: number }
+                    pickup_distance_km: { type: number }
+                    dropoff_distance_km: { type: number }
+                    freight_margin: { type: number }
+                    corridor_savings_pct: { type: number }
+                    price: { type: number }
+                    vehicle_type: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/backhaul/offers:
+    post:
+      tags: [Backhaul]
+      summary: Create backhaul dispatch offer
+      description: Requires `trips:update` permission. Body requires `trip_id`, `booking_id`; optional `offered_rate`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [trip_id, booking_id]
+              properties:
+                trip_id: { type: string }
+                booking_id: { type: string }
+                offered_rate: { type: number }
+      responses:
+        '201':
+          description: Dispatch offer created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  offer_id: { type: string }
+                  trip_id: { type: string }
+                  booking_id: { type: string }
+                  driver_id: { type: string }
+                  vehicle_id: { type: string }
+                  offered_rate: { type: number }
+                  status: { type: string }
+                  offered_at: { type: string, format: date-time }
+                  expires_at: { type: string, format: date-time }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/sto:
+    get:
+      tags: [STO]
+      summary: List STOs
+      description: Requires `sto:read` permission. Filter by `status`, paginated with `limit`/`offset`.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [DRAFT, RELEASED, POSTED, ASSIGNED, IN_TRANSIT, RECEIVED, CANCELLED] }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: STO list with total count.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  total: { type: integer }
+                  limit: { type: integer }
+                  offset: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [STO]
+      summary: Create STO draft
+      description: Requires `sto:write` permission. Body requires `origin_facility_id`, `destination_facility_id`, `material_code`, `quantity`, `uom`, `required_delivery_date`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [origin_facility_id, destination_facility_id, material_code, quantity, uom, required_delivery_date]
+              properties:
+                origin_facility_id: { type: string }
+                destination_facility_id: { type: string }
+                material_code: { type: string }
+                material_description: { type: string }
+                quantity: { type: number }
+                uom: { type: string }
+                required_delivery_date: { type: string }
+                notes: { type: string }
+                created_by: { type: string }
+      responses:
+        '201':
+          description: STO draft created (status DRAFT).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  sto_number: { type: string }
+                  status: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/sto/{id}:
+    get:
+      tags: [STO]
+      summary: Get one STO
+      description: Requires `sto:read` permission. Fetch STO by ID.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: STO record.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  sto_number: { type: string }
+                  status: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/sto/{id}/release:
+    post:
+      tags: [STO]
+      summary: Release STO
+      description: Requires `sto:write` permission. Transitions DRAFT STO to RELEASED; no body.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: STO released.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  status: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/sto/{id}/post-to-loadboard:
+    post:
+      tags: [STO]
+      summary: Post STO to load board
+      description: Requires `sto:write` permission. Posts RELEASED STO; optional body (`vehicle_type_required`, `target_rate`, `max_rate`, `visibility`, `expires_hours`).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                vehicle_type_required: { type: string }
+                target_rate: { type: number }
+                max_rate: { type: number }
+                visibility: { type: string, enum: [PRIVATE, FEDERATED, PUBLIC] }
+                expires_hours: { type: integer }
+      responses:
+        '201':
+          description: Load board listing created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  status: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/loadboard/listings:
+    get:
+      tags: [LoadBoard]
+      summary: List load board listings
+      description: Requires `loadboard:read` permission. Filter `status`, `origin_city`, `destination_city` with `limit`/`offset`.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [OPEN, BIDDING, AWARDED, EXPIRED, CANCELLED] }
+        - name: origin_city
+          in: query
+          schema: { type: string }
+        - name: destination_city
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Listings with total count.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  total: { type: integer }
+                  limit: { type: integer }
+                  offset: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/loadboard/listings/{id}:
+    get:
+      tags: [LoadBoard]
+      summary: Get one listing
+      description: Requires `loadboard:read` permission. Fetch listing by ID.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Listing detail.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  status: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/loadboard/listings/{id}/bids:
+    get:
+      tags: [LoadBoard]
+      summary: List bids on a listing
+      description: Requires `loadboard:read` permission. Returns all carrier bids for the listing.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Bid list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    carrier_id: { type: string }
+                    bid_amount: { type: number }
+                    status: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [LoadBoard]
+      summary: Submit carrier bid
+      description: Requires `loadboard:write` permission. Body requires `carrier_id`, `carrier_name`, `bid_amount`.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [carrier_id, carrier_name, bid_amount]
+              properties:
+                carrier_id: { type: string }
+                carrier_name: { type: string }
+                bid_amount: { type: number }
+                vehicle_id: { type: string }
+                driver_id: { type: string }
+                remarks: { type: string }
+      responses:
+        '201':
+          description: Bid submitted.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  bid_amount: { type: number }
+                  status: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/loadboard/listings/{id}/award:
+    post:
+      tags: [LoadBoard]
+      summary: Award winning bid
+      description: Requires `loadboard:write` permission. Body requires `bid_id`; spawns booking and trip.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [bid_id]
+              properties:
+                bid_id: { type: string }
+      responses:
+        '200':
+          description: Award result with winning bid plus spawned IDs.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  listing_id: { type: string }
+                  winning_bid:
+                    type: object
+                  sto_id: { type: string }
+                  booking_id: { type: string }
+                  trip_id: { type: string }
+                  awarded_at: { type: string, format: date-time }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/share/{token}/timeline:
+    get:
+      tags: [Sharing]
+      summary: Get public CX timeline
+      description: Public (no auth). PII-masked timeline; driver phone masked, earnings omitted. Milestone enum ORDER_CREATED, VEHICLE_DISPATCHED, STOP_ARRIVED, IN_TRANSIT_CHECKPOINT, OUT_FOR_DELIVERY, DELIVERED_POD.
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Trip timeline with milestones and polyline.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trip_id: { type: string }
+                  trip_number: { type: string }
+                  status: { type: string }
+                  eta: { type: string, format: date-time }
+                  vehicle_label: { type: string }
+                  driver_name: { type: string }
+                  driver_phone: { type: string, description: 'Masked, e.g. +91 98*** **321' }
+                  milestones:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        type: { type: string, enum: [ORDER_CREATED, VEHICLE_DISPATCHED, STOP_ARRIVED, IN_TRANSIT_CHECKPOINT, OUT_FOR_DELIVERY, DELIVERED_POD] }
+                        title: { type: string }
+                        location: { type: string }
+                        timestamp: { type: string, format: date-time }
+                        status: { type: string, enum: [completed, in_progress, pending] }
+                  polyline:
+                    type: array
+                    items:
+                      type: array
+                      items: { type: number }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/fuel-cards:
+    get:
+      tags: [FuelCards]
+      summary: List fuel cards
+      description: Requires `fuel:read` permission. Returns registered cards with spend metrics.
+      responses:
+        '200':
+          description: Fuel card list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    card_number_masked: { type: string }
+                    provider: { type: string, enum: [IOCL, BPCL, HPCL, SHELL, FLEET_BANK] }
+                    assigned_vehicle_id: { type: string }
+                    assigned_driver_id: { type: string }
+                    daily_spend_limit: { type: number }
+                    status: { type: string, enum: [ACTIVE, SUSPENDED, CANCELLED] }
+                    spend_today: { type: number }
+                    total_transactions: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [FuelCards]
+      summary: Register fuel card
+      description: Requires `fuel:write` permission. Body requires `card_number`, `provider`; optional vehicle/driver binding and `daily_spend_limit`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [card_number, provider]
+              properties:
+                card_number: { type: string }
+                provider: { type: string, enum: [IOCL, BPCL, HPCL, SHELL, FLEET_BANK] }
+                assigned_vehicle_id: { type: string }
+                assigned_driver_id: { type: string }
+                daily_spend_limit: { type: number }
+      responses:
+        '201':
+          description: Fuel card registered.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  card_number_masked: { type: string }
+                  provider: { type: string }
+                  status: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/fuel-cards/transactions/sync:
+    post:
+      tags: [FuelCards]
+      summary: Sync OMC statement feed
+      description: Requires `fuel:write` permission. Body requires `transactions` array (external_txn_id, txn_time, station, fuel_type, litres, rate, amount).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [transactions]
+              properties:
+                transactions:
+                  type: array
+                  items:
+                    type: object
+                    required: [external_txn_id, txn_time, fuel_station_name, fuel_type, volume_litres, rate_per_litre, total_amount]
+                    properties:
+                      card_number: { type: string }
+                      card_token_hash: { type: string }
+                      external_txn_id: { type: string }
+                      txn_time: { type: string, format: date-time }
+                      fuel_station_name: { type: string }
+                      fuel_station_city: { type: string }
+                      fuel_type: { type: string, enum: [DIESEL, PETROL, CNG, DEF, LUBRICANT] }
+                      volume_litres: { type: number }
+                      rate_per_litre: { type: number }
+                      total_amount: { type: number }
+                      odometer_reported: { type: number }
+                      notes: { type: string }
+      responses:
+        '200':
+          description: Ingestion outcome with auto-reconciliation counts.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ingested_count: { type: integer }
+                  matched_count: { type: integer }
+                  generated_count: { type: integer }
+                  anomaly_count: { type: integer }
+                  transactions:
+                    type: array
+                    items:
+                      type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/fuel-cards/transactions/{id}/reconcile:
+    post:
+      tags: [FuelCards]
+      summary: Manually reconcile transaction
+      description: Requires `fuel:write` permission. Path `{id}` is transaction ID; body requires `expense_id`.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expense_id]
+              properties:
+                expense_id: { type: string }
+                notes: { type: string }
+      responses:
+        '200':
+          description: Transaction reconciled.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  reconciliation_status: { type: string, enum: [UNRECONCILED, MATCHED_EXPENSE, SYSTEM_GENERATED, FLAGGED_ANOMALY] }
+                  matched_expense_id: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/esg/trips/{trip_id}:
+    get:
+      tags: [ESG]
+      summary: Get trip carbon certificate
+      description: Requires `esg:read` permission. Returns audited Scope 3 carbon metrics for one trip.
+      parameters:
+        - name: trip_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Carbon audit certificate.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  trip_id: { type: string }
+                  trip_number: { type: string }
+                  vehicle_number: { type: string }
+                  distance_km: { type: number }
+                  payload_tonnes: { type: number }
+                  cargo_tkm: { type: number }
+                  fuel_consumed_litres: { type: number }
+                  co2e_kg: { type: number }
+                  co2e_per_tkm: { type: number }
+                  emission_norm: { type: string, enum: [BS3, BS4, BS6, EV, CNG, OTHER] }
+                  methodology: { type: string, enum: [FUEL_PRIMARY, DISTANCE_ACTIVITY, DEFAULT_FACTOR] }
+                  certified_at: { type: string, format: date-time }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/esg/snapshots:
+    get:
+      tags: [ESG]
+      summary: List emission snapshots
+      description: Requires `esg:read` permission. Returns historical periodic emission aggregates.
+      responses:
+        '200':
+          description: Snapshot list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string }
+                    period_start: { type: string }
+                    period_end: { type: string }
+                    total_trips: { type: integer }
+                    total_distance_km: { type: number }
+                    total_cargo_tkm: { type: number }
+                    total_fuel_litres: { type: number }
+                    total_co2e_kg: { type: number }
+                    avg_co2e_per_tkm: { type: number }
+                    ev_distance_km: { type: number }
+                    bs6_distance_km: { type: number }
+                    bs4_distance_km: { type: number }
+                    created_by: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/esg/snapshots/generate:
+    post:
+      tags: [ESG]
+      summary: Generate emission snapshot
+      description: Requires `esg:write` permission. Body requires `period_start`, `period_end` (YYYY-MM-DD); actor taken from session.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [period_start, period_end]
+              properties:
+                period_start: { type: string }
+                period_end: { type: string }
+      responses:
+        '201':
+          description: Snapshot generated and stored.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  period_start: { type: string }
+                  period_end: { type: string }
+                  total_trips: { type: integer }
+                  total_co2e_kg: { type: number }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/esg/reports/brsr:
+    get:
+      tags: [ESG]
+      summary: Get BRSR Principle 6 report
+      description: Requires `esg:read` permission. Query `year` and `format` (json default, csv downloads attachment).
+      parameters:
+        - name: year
+          in: query
+          schema: { type: string }
+        - name: format
+          in: query
+          schema: { type: string, enum: [json, csv] }
+      responses:
+        '200':
+          description: SEBI BRSR Principle 6 carbon summary (JSON object or CSV).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reporting_period: { type: string }
+                  scope1_emissions_tonne: { type: number }
+                  scope3_cat4_emissions_tonne: { type: number }
+                  total_emissions_tonne: { type: number }
+                  carbon_intensity_kg_per_km: { type: number }
+                  carbon_intensity_kg_per_tkm: { type: number }
+                  total_distance_km: { type: number }
+                  green_fleet_share_percentage: { type: number }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'

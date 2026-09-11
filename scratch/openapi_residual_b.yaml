@@ -1,0 +1,650 @@
+paths:
+  /api/v1/files:
+    post:
+      tags:
+      - Files
+      summary: Upload a file
+      description: Requires `files:create` permission. Multipart upload capped at 25 MB;
+        `uploadable_type` is required (one of driver_license, vehicle_insurance, vehicle_permit,
+        company_logo, vehicle_rc, vehicle_fitness, vehicle_puc, trip_pod, expense_receipt,
+        logo, general); `uploadable_id` optionally links the owning entity.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              - uploadable_type
+              properties:
+                file:
+                  type: string
+                  format: binary
+                uploadable_type:
+                  type: string
+                uploadable_id:
+                  type: string
+      responses:
+        '201':
+          description: File uploaded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  filename:
+                    type: string
+                  original_name:
+                    type: string
+                  size:
+                    type: integer
+                  content_type:
+                    type: string
+                  url:
+                    type: string
+                  uploadable_type:
+                    type: string
+                  uploadable_id:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    get:
+      tags:
+      - Files
+      summary: List files for an entity
+      description: Requires `files:read` permission. Both `uploadable_type` and `uploadable_id`
+        query params are required.
+      parameters:
+      - name: uploadable_type
+        in: query
+        required: true
+        schema:
+          type: string
+      - name: uploadable_id
+        in: query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Files attached to the entity.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    filename:
+                      type: string
+                    original_name:
+                      type: string
+                    size:
+                      type: integer
+                    content_type:
+                      type: string
+                    url:
+                      type: string
+                    uploadable_type:
+                      type: string
+                    uploadable_id:
+                      type: string
+                    created_at:
+                      type: string
+                      format: date-time
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/files/{id}:
+    get:
+      tags:
+      - Files
+      summary: Get file metadata
+      description: Requires `files:read` permission. Returns the file record by id.
+      parameters:
+      - $ref: '#/components/parameters/IDParam'
+      responses:
+        '200':
+          description: File metadata.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  filename:
+                    type: string
+                  original_name:
+                    type: string
+                  size:
+                    type: integer
+                  content_type:
+                    type: string
+                  url:
+                    type: string
+                  uploadable_type:
+                    type: string
+                  uploadable_id:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - Files
+      summary: Delete a file
+      description: Requires `files:delete` permission. Removes the file record and its
+        stored blob.
+      parameters:
+      - $ref: '#/components/parameters/IDParam'
+      responses:
+        '204':
+          description: File deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/documents/driver/{driver_id}:
+    post:
+      tags:
+      - Documents
+      summary: Upload a driver document
+      description: Requires `documents:upload` permission. Multipart upload (10 MB form
+        cap); `file` is required; `doc_type` must be one of aadhaar, pan, dl, bank_proof,
+        medical, other; `expiry_date` is optional YYYY-MM-DD.
+      parameters:
+      - name: driver_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                doc_type:
+                  type: string
+                expiry_date:
+                  type: string
+                  description: YYYY-MM-DD
+      responses:
+        '201':
+          description: Driver document stored.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  driver_id:
+                    type: string
+                  doc_type:
+                    type: string
+                  file_url:
+                    type: string
+                  expiry_date:
+                    type: string
+                    format: date-time
+                  status:
+                    type: string
+                  verified_by:
+                    type: string
+                  verified_at:
+                    type: string
+                    format: date-time
+                  created_at:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    get:
+      tags:
+      - Documents
+      summary: List driver documents
+      description: Requires `documents:read` permission. Returns all vault documents
+        for the driver.
+      parameters:
+      - name: driver_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Driver documents with count.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  driver_id:
+                    type: string
+                  documents:
+                    type: array
+                    items:
+                      type: object
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/documents/vehicle/{vehicle_id}:
+    post:
+      tags:
+      - Documents
+      summary: Upload a vehicle document
+      description: Requires `documents:upload` permission. Multipart upload (10 MB form
+        cap); `file` is required; `doc_type` must be one of rc, insurance, puc, fitness,
+        permit, others; `expiry_date` is optional YYYY-MM-DD.
+      parameters:
+      - name: vehicle_id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+              - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                doc_type:
+                  type: string
+                expiry_date:
+                  type: string
+                  description: YYYY-MM-DD
+      responses:
+        '201':
+          description: Vehicle document stored.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  vehicle_id:
+                    type: string
+                  doc_type:
+                    type: string
+                  file_url:
+                    type: string
+                  expiry_date:
+                    type: string
+                    format: date-time
+                  status:
+                    type: string
+                  verified_by:
+                    type: string
+                  verified_at:
+                    type: string
+                    format: date-time
+                  created_at:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    get:
+      tags:
+      - Documents
+      summary: List vehicle documents
+      description: Requires `documents:read` permission. Returns all vault documents
+        for the vehicle.
+      parameters:
+      - name: vehicle_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Vehicle documents with count.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  vehicle_id:
+                    type: string
+                  documents:
+                    type: array
+                    items:
+                      type: object
+                  count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/documents/verify/{entity_type}/{entity_id}/{document_id}:
+    post:
+      tags:
+      - Documents
+      summary: Verify a document
+      description: Requires `documents:upload` permission. Marks the vault document
+        verified; `verified_by` is the acting user id (defaults to admin). Unknown
+        documents return 404.
+      parameters:
+      - name: entity_type
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: entity_id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: document_id
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Document verified.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  verified_by:
+                    type: string
+                  document_id:
+                    type: string
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/accounting/sync/status:
+    get:
+      tags:
+      - Accounting
+      summary: Get accounting sync status
+      description: Requires `accounting:read` permission. Returns the adapter name,
+        enabled flag, pending/failed event count, and last acked sync timestamp.
+      responses:
+        '200':
+          description: Accounting sync health.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  adapter:
+                    type: string
+                  enabled:
+                    type: boolean
+                  pending_events:
+                    type: integer
+                  last_synced_at:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/accounting/sync/trigger:
+    post:
+      tags:
+      - Accounting
+      summary: Trigger accounting sync flush
+      description: Requires `accounting:sync` permission. Retries pending/failed outbox
+        events to the accounting adapter; optional `since_minutes` bounds the retry
+        window (0 or omitted means all).
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                since_minutes:
+                  type: integer
+      responses:
+        '200':
+          description: Sync flush result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  dispatched:
+                    type: integer
+                  failed:
+                    type: integer
+                  skipped_duplicates:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/accounting/contacts/sync:
+    post:
+      tags:
+      - Accounting
+      summary: Sync contacts to accounting
+      description: Requires `accounting:sync` permission. Pushes customer and driver
+        contacts to the external accounting system; no request body.
+      responses:
+        '200':
+          description: Contact sync result.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  synced:
+                    type: integer
+                  failed:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/accounting/reconcile:
+    get:
+      tags:
+      - Accounting
+      summary: Reconcile accounting sync log
+      description: Requires `accounting:read` permission. Compares local sync logs
+        against acknowledged external ids; `unacked_refs` lists up to 50 unacked refs.
+      responses:
+        '200':
+          description: Reconciliation summary.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  acked:
+                    type: integer
+                  unacked:
+                    type: integer
+                  unacked_refs:
+                    type: array
+                    items:
+                      type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/payments/razorpay-order:
+    post:
+      tags:
+      - Payments
+      summary: Create a Razorpay order
+      description: Requires `payments:create` permission. `invoice_id` is required;
+        the amount is always derived server-side from the invoice balance (Spec 11
+        §5.1). 404 when the invoice is missing; 402 when it has no outstanding balance.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - invoice_id
+              properties:
+                invoice_id:
+                  type: string
+      responses:
+        '200':
+          description: Razorpay order created.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  order_id:
+                    type: string
+                  razorpay_key_id:
+                    type: string
+                  amount_paise:
+                    type: integer
+                  currency:
+                    type: string
+                  invoice_id:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/payments/razorpay/verify:
+    post:
+      tags:
+      - Payments
+      summary: Verify a Razorpay payment
+      description: Requires `payments:create` permission. Validates the checkout signature
+        and records the payment against the invoice balance. All four fields are required;
+        a bad signature returns 401.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - invoice_id
+              - order_id
+              - payment_id
+              - signature
+              properties:
+                invoice_id:
+                  type: string
+                order_id:
+                  type: string
+                payment_id:
+                  type: string
+                signature:
+                  type: string
+      responses:
+        '201':
+          description: Payment verified and recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  method:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/payments/razorpay-webhook/status:
+    get:
+      tags:
+      - Payments
+      summary: Get Razorpay webhook status
+      description: Requires `payments:read` permission. Returns the last webhook received
+        timestamp plus per-event-type counts.
+      responses:
+        '200':
+          description: Webhook activity snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  last_received_at:
+                    type: string
+                    format: date-time
+                  counts:
+                    type: object
+                    additionalProperties:
+                      type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
