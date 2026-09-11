@@ -32,21 +32,29 @@ func (r *EventLogRepository) dbFromContext(ctx context.Context) interface {
 	return r.db
 }
 
-// InsertEvent logs a zone transition or breach alert.
-func (r *EventLogRepository) InsertEvent(ctx context.Context, e domain.GeofenceEvent) error {
+// InsertEvent logs a zone transition or breach alert. Idempotent on the
+// event id: replays (worker retry after commit, overlapping polls) report
+// inserted=false instead of duplicating the row — callers must skip that
+// event's side effects (detentions, outbox alerts) when false.
+func (r *EventLogRepository) InsertEvent(ctx context.Context, e domain.GeofenceEvent) (bool, error) {
 	db := r.dbFromContext(ctx)
-	_, err := db.ExecContext(ctx,
+	res, err := db.ExecContext(ctx,
 		`INSERT INTO geofence_events
 		 (id, tenant_id, vehicle_id, trip_id, geofence_id, zone_kind,
 		  event_type, alert_type, severity, latitude, longitude, details, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+		 ON CONFLICT (id) DO NOTHING`,
 		e.ID, e.TenantID, ptrOrNil(e.VehicleID), ptrOrNil(e.TripID), ptrOrNil(e.GeofenceID),
 		ptrOrNil(e.ZoneKind), e.EventType, ptrOrNil(e.AlertType), ptrOrNil(e.Severity),
 		nullFloatPtr(e.Latitude), nullFloatPtr(e.Longitude), ptrOrNil(e.Details), e.CreatedAt)
 	if err != nil {
-		return fmt.Errorf("insert geofence event: %w", err)
+		return false, fmt.Errorf("insert geofence event: %w", err)
 	}
-	return nil
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("insert geofence event rows: %w", err)
+	}
+	return n == 1, nil
 }
 
 // OpenDetention starts a pickup/drop dwell window (status=open).

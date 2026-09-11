@@ -413,3 +413,32 @@ func TestDwellWorker_DetentionBilling_FreeSecondsAndRate(t *testing.T) {
 	assert.Equal(t, 15.00, amount)
 	assert.Equal(t, "pickup-zone", zoneName)
 }
+
+func TestDwellWorker_RetrySameEventsInsertsOnce(t *testing.T) {
+	db := newTestDB(t)
+	zone := domain.Geofence{
+		ID: "z1", TenantID: "1", Name: "pickup-zone", Kind: domain.KindPickup,
+		Shape: domain.ShapeCircle, CenterLat: 12.97, CenterLng: 77.59, RadiusM: 100,
+	}
+	seedFixtures(t, db, zone)
+	w, _ := buildWorker(t, db, nil)
+
+	t0 := time.Date(2026, 8, 19, 10, 0, 0, 0, time.UTC)
+	tripID := "t1"
+	fix := domain.Fix{VehicleID: "v1", TripID: &tripID, Timestamp: t0, Latitude: 12.9704, Longitude: 77.59}
+	state := domain.EngineState{VehicleID: "v1", TenantID: "1", State: domain.StateInside, LastFixAt: t0}
+	events := []application.ZoneEvent{{
+		EventType: domain.EventEntering, Zone: zone, Lat: fix.Latitude, Lng: fix.Longitude, At: t0,
+	}}
+
+	ctx := context.Background()
+	require.NoError(t, w.persist(ctx, state, state, fix, events, "1"))
+	// Retry with identical inputs (commit-then-crash / overlapping poll).
+	require.NoError(t, w.persist(ctx, state, state, fix, events, "1"))
+
+	var eventCount, detentionCount int
+	require.NoError(t, db.QueryRow(`SELECT count(*) FROM geofence_events WHERE vehicle_id = 'v1'`).Scan(&eventCount))
+	require.NoError(t, db.QueryRow(`SELECT count(*) FROM trip_detentions WHERE trip_id = 't1'`).Scan(&detentionCount))
+	assert.Equal(t, 1, eventCount, "replayed entering event must not duplicate")
+	assert.Equal(t, 1, detentionCount, "replayed entering event must not reopen detention")
+}

@@ -110,7 +110,7 @@ type EngineStateRepository interface {
 
 // EventLogRepository persists zone events, alerts and detention windows.
 type EventLogRepository interface {
-	InsertEvent(ctx context.Context, e GeofenceEvent) error
+	InsertEvent(ctx context.Context, e GeofenceEvent) (inserted bool, err error)
 	OpenDetention(ctx context.Context, d Detention) error
 	FindOpenDetention(ctx context.Context, tenantID, tripID, zoneKind string) (*Detention, error)
 	CloseDetention(ctx context.Context, id string, exitedAt time.Time, dwellSeconds, freeSeconds int64, ratePerHour, amount float64) error

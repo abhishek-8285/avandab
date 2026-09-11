@@ -4,8 +4,11 @@ package worker
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"log/slog"
 	"math"
 	"strings"
@@ -355,6 +358,19 @@ func (w *DwellWorker) applyTransitions(ctx context.Context, fix domain.Fix, zone
 	}
 }
 
+// dwellEventID deterministically identifies a zone event so replays dedupe
+// on the geofence_events primary key. Same input fix + event replays the
+// same id; distinct fixes differ by timestamp (UnixNano) at minimum.
+func dwellEventID(tenant string, fix domain.Fix, ev application.ZoneEvent) string {
+	trip := ""
+	if fix.TripID != nil {
+		trip = *fix.TripID
+	}
+	sum := sha256.Sum256([]byte(fmt.Sprintf("%s|%s|%s|%s|%s|%d",
+		tenant, trip, fix.VehicleID, ev.Zone.ID, ev.EventType, ev.At.UnixNano())))
+	return "dwell-" + hex.EncodeToString(sum[:])[:24]
+}
+
 // persist writes the state transition, zone events, detentions and outbox
 // alerts atomically via the UnitOfWork (Spec 02 §4 — outbox in same tx).
 func (w *DwellWorker) persist(ctx context.Context, current, next domain.EngineState,
@@ -366,10 +382,14 @@ func (w *DwellWorker) persist(ctx context.Context, current, next domain.EngineSt
 		}
 
 		for _, ev := range zoneEvents {
-			eventID := w.idGen.GenerateUUID()
+			// Deterministic id: a retried persist (commit-then-crash,
+			// overlapping poll) replays the same row, and the insert-skip
+			// below drops it instead of duplicating events, detentions and
+			// breach alerts (C1 duplicate fencing).
+			eventID := dwellEventID(tenant, fix, ev)
 			lat := fix.Latitude
 			lng := fix.Longitude
-			if err := w.logs.InsertEvent(txCtx, domain.GeofenceEvent{
+			inserted, err := w.logs.InsertEvent(txCtx, domain.GeofenceEvent{
 				ID:         eventID,
 				TenantID:   tenant,
 				VehicleID:  &fix.VehicleID,
@@ -381,8 +401,12 @@ func (w *DwellWorker) persist(ctx context.Context, current, next domain.EngineSt
 				Longitude:  &lng,
 				Details:    strPtr(ev.Details),
 				CreatedAt:  ev.At,
-			}); err != nil {
+			})
+			if err != nil {
 				return err
+			}
+			if !inserted {
+				continue // replay of an already-persisted event: skip side effects
 			}
 
 			switch ev.EventType {
