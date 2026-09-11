@@ -34,6 +34,10 @@ type Service interface {
 	HandleSubscriptionWebhook(ctx context.Context, providerSubID string, status domain.SubscriptionStatus, periodStart, periodEnd time.Time) error
 	ProcessSubscriptionWebhook(ctx context.Context, p WebhookEventPayload) error
 	SetEntitlementOverride(ctx context.Context, tenantID shared.TenantID, entType, keyName, value, reason string, expiresAt *time.Time) error
+	// ListPlans returns the commercial catalog (live pricing source).
+	ListPlans(ctx context.Context) ([]domain.Plan, error)
+	// UpdatePlanPrice sets a plan's monthly price without a migration (C3 live pricing).
+	UpdatePlanPrice(ctx context.Context, planID domain.PlanID, monthlyPriceINR float64) error
 }
 
 type service struct {
@@ -624,6 +628,67 @@ func parseTime(s string) (time.Time, error) {
 		return t, nil
 	}
 	return time.Parse("2006-01-02 15:04:05", s)
+}
+
+// ListPlans returns the commercial catalog ordered by price. Inactive plans
+// are included (IsActive false) so admin UIs can reactivate by price update.
+func (s *service) ListPlans(ctx context.Context) ([]domain.Plan, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT id, name, description, monthly_price_inr, features_json, quotas_json, is_active
+		FROM subscription_plans ORDER BY monthly_price_inr, id
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var plans []domain.Plan
+	for rows.Next() {
+		var p domain.Plan
+		var featuresJSON, quotasJSON string
+		var isActive int
+		if err := rows.Scan(&p.ID, &p.Name, &p.Description, &p.MonthlyPriceINR, &featuresJSON, &quotasJSON, &isActive); err != nil {
+			return nil, err
+		}
+		var features []string
+		if err := json.Unmarshal([]byte(featuresJSON), &features); err != nil {
+			return nil, err
+		}
+		p.Features = make(map[domain.FeatureKey]bool, len(features))
+		for _, f := range features {
+			p.Features[domain.FeatureKey(f)] = true
+		}
+		p.Quotas = map[domain.QuotaKey]int{}
+		if err := json.Unmarshal([]byte(quotasJSON), &p.Quotas); err != nil {
+			return nil, err
+		}
+		p.IsActive = isActive == 1
+		plans = append(plans, p)
+	}
+	return plans, rows.Err()
+}
+
+// UpdatePlanPrice sets a plan's monthly price (and reactivates it) without a
+// migration. Negative prices are rejected; unknown plans report ErrPlanNotFound.
+func (s *service) UpdatePlanPrice(ctx context.Context, planID domain.PlanID, monthlyPriceINR float64) error {
+	if monthlyPriceINR < 0 {
+		return errors.New("monthly price cannot be negative")
+	}
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE subscription_plans
+		SET monthly_price_inr = $1, is_active = 1, updated_at = CURRENT_TIMESTAMP
+		WHERE id = $2
+	`, monthlyPriceINR, string(planID))
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return domain.ErrPlanNotFound
+	}
+	return nil
 }
 
 // Dunning policy: delinquency progresses on status age (updated_at marks the

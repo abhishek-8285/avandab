@@ -86,6 +86,8 @@ tags:
     description: Experiments endpoints.
   - name: Billing
     description: Billing endpoints.
+  - name: Plans
+    description: Commercial plan catalog and live pricing.
 
 paths:
   /api/driver/advances:
@@ -5993,6 +5995,64 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IDResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/plans:
+    get:
+      tags: [Plans]
+      summary: List commercial plans
+      description: Plan catalog with live prices (C3). Any authenticated caller.
+      responses:
+        '200':
+          description: Plans ordered by price.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plans:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/plans/{id}:
+    put:
+      tags: [Plans]
+      summary: Update plan price
+      description: Live pricing without a migration; reactivates the plan. Requires `users:manage` permission.
+      parameters:
+        - $ref: '#/components/parameters/IDParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [monthly_price_inr]
+              properties:
+                monthly_price_inr:
+                  type: number
+                  minimum: 0
+      responses:
+        '200':
+          description: Price updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plan_id:
+                    type: string
+                  monthly_price_inr:
+                    type: number
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':

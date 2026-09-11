@@ -991,6 +991,11 @@ func main() {
 		customerAPIHandler.RegisterRoutes(r)
 		settlementAPIHandler.RegisterRoutes(r)
 		controlTowerAPIHandler.Register(r)
+		// Commercial plan catalog (C3 live pricing): list for any authed
+		// caller, price updates admin-gated (users:manage, like email pool).
+		plansAPIHandler := entitlementAPI.NewPlansHandler(subscriptionSvc)
+		r.Get("/api/v1/plans", plansAPIHandler.ListPlans)
+		r.With(middleware.RequirePermission(authSvc, "users", "manage")).Put("/api/v1/plans/{id}", plansAPIHandler.UpdatePlanPrice)
 		// Work orders (job cards) JSON API — tenant-scoped, maintenance RBAC.
 		app.Maintenance.RegisterAPIRoutes(r)
 		// Maintenance plans (IP41 SOP parity) JSON API — tenant-scoped, maintenance RBAC.
