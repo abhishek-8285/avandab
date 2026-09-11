@@ -23,7 +23,7 @@ func (c *zohoClient) ExportInvoice(ctx context.Context, invoice ExportedInvoice)
 	return ExportResult{
 		SyncID:     uuid.New().String(),
 		Status:     "SUCCESS",
-		ExternalID: "ZOHO-INV-" + invoice.InvoiceNumber,
+		ExternalID: "ZOHO-MOCK-INV-" + invoice.InvoiceNumber,
 		Message:    "Invoice exported to Zoho Books successfully",
 	}, nil
 }
@@ -53,7 +53,7 @@ func (c *zohoClient) PushJournalEntry(ctx context.Context, entry JournalEntry) (
 		return JournalEntryResult{}, ErrNotImplemented
 	}
 	return JournalEntryResult{
-		EntryID: "ZOHO-JE-" + uuid.New().String()[:8],
+		EntryID: "ZOHO-MOCK-JE-" + uuid.New().String()[:8],
 		Status:  "SUCCESS",
 		Message: "Journal entry pushed to Zoho Books successfully",
 	}, nil

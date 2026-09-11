@@ -23,7 +23,7 @@ func (c *quickbooksClient) ExportInvoice(ctx context.Context, invoice ExportedIn
 	return ExportResult{
 		SyncID:     uuid.New().String(),
 		Status:     "SUCCESS",
-		ExternalID: "QB-INV-" + invoice.InvoiceNumber,
+		ExternalID: "QB-MOCK-INV-" + invoice.InvoiceNumber,
 		Message:    "Invoice exported to QuickBooks successfully",
 	}, nil
 }
@@ -53,7 +53,7 @@ func (c *quickbooksClient) PushJournalEntry(ctx context.Context, entry JournalEn
 		return JournalEntryResult{}, ErrNotImplemented
 	}
 	return JournalEntryResult{
-		EntryID: "QB-JE-" + uuid.New().String()[:8],
+		EntryID: "QB-MOCK-JE-" + uuid.New().String()[:8],
 		Status:  "SUCCESS",
 		Message: "Journal entry pushed to QuickBooks successfully",
 	}, nil

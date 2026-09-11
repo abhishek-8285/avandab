@@ -23,7 +23,7 @@ func (c *tallyClient) ExportInvoice(ctx context.Context, invoice ExportedInvoice
 	return ExportResult{
 		SyncID:     uuid.New().String(),
 		Status:     "SUCCESS",
-		ExternalID: "TALLY-INV-" + invoice.InvoiceNumber,
+		ExternalID: "TALLY-MOCK-INV-" + invoice.InvoiceNumber,
 		Message:    "Invoice exported to Tally successfully (mock)",
 	}, nil
 }
@@ -53,7 +53,7 @@ func (c *tallyClient) PushJournalEntry(ctx context.Context, entry JournalEntry) 
 		return JournalEntryResult{}, ErrNotImplemented
 	}
 	return JournalEntryResult{
-		EntryID: "TALLY-JE-" + uuid.New().String()[:8],
+		EntryID: "TALLY-MOCK-JE-" + uuid.New().String()[:8],
 		Status:  "SUCCESS",
 		Message: "Journal entry pushed to Tally successfully (mock)",
 	}, nil

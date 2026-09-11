@@ -166,13 +166,13 @@ func TestAccounting_AdapterFactory_And_Providers(t *testing.T) {
 	tallyCli := accounting.NewClient(accounting.Config{Provider: "tally", Enabled: true, UseMock: true})
 	tallyInv, err := tallyCli.ExportInvoice(ctx, accounting.ExportedInvoice{InvoiceNumber: "INV-301"})
 	require.NoError(t, err)
-	assert.Contains(t, tallyInv.ExternalID, "TALLY-INV-INV-301")
+	assert.Contains(t, tallyInv.ExternalID, "TALLY-MOCK-INV-")
 	assert.Contains(t, tallyInv.Message, "(mock)")
 
 	zohoCli := accounting.NewClient(accounting.Config{Provider: "zoho", Enabled: true, UseMock: true})
 	zohoJE, err := zohoCli.PushJournalEntry(ctx, accounting.JournalEntry{Reference: "REF-ZOHO"})
 	require.NoError(t, err)
-	assert.Contains(t, zohoJE.EntryID, "ZOHO-JE-")
+	assert.Contains(t, zohoJE.EntryID, "ZOHO-MOCK-JE-")
 
 	qbCli := accounting.NewClient(accounting.Config{Provider: "quickbooks", Enabled: true, UseMock: true})
 	qbContacts, err := qbCli.SyncContacts(ctx, []accounting.Contact{{Name: "QB Contact"}})

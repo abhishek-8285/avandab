@@ -51,6 +51,28 @@ func TestMockHonesty_SyntheticIDsCarryMockPrefix(t *testing.T) {
 		t.Errorf("accounting mock EntryID %q missing JE-MOCK- prefix", je.EntryID)
 	}
 
+	for provider, want := range map[string][2]string{
+		"tally":      {"TALLY-MOCK-INV-", "TALLY-MOCK-JE-"},
+		"zoho":       {"ZOHO-MOCK-INV-", "ZOHO-MOCK-JE-"},
+		"quickbooks": {"QB-MOCK-INV-", "QB-MOCK-JE-"},
+	} {
+		cli := accounting.NewClient(accounting.Config{Provider: provider, Enabled: true, UseMock: true})
+		exp, err := cli.ExportInvoice(ctx, accounting.ExportedInvoice{InvoiceNumber: "INV-A1"})
+		if err != nil {
+			t.Fatalf("%s mock export: %v", provider, err)
+		}
+		if !strings.HasPrefix(exp.ExternalID, want[0]) {
+			t.Errorf("%s mock ExternalID %q missing %s prefix", provider, exp.ExternalID, want[0])
+		}
+		jr, err := cli.PushJournalEntry(ctx, accounting.JournalEntry{Reference: "JE-A1"})
+		if err != nil {
+			t.Fatalf("%s mock journal: %v", provider, err)
+		}
+		if !strings.HasPrefix(jr.EntryID, want[1]) {
+			t.Errorf("%s mock EntryID %q missing %s prefix", provider, jr.EntryID, want[1])
+		}
+	}
+
 	irn, err := gstn.NewMockEInvoiceClient(gstn.Config{Enabled: true, UseMock: true}).GenerateIRN(ctx, gstn.InvoiceView{
 		InvoiceID: "inv-a1", InvoiceNumber: "INV-A1", InvoiceDate: "2026-09-11",
 		SupplierGSTIN: "27AAAAA0000A1Z5", RecipientGSTIN: "27BBBBB0000B1Z5", TotalValue: 1180,
