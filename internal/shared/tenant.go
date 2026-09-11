@@ -9,11 +9,14 @@ import (
 // TenantID represents a company/tenant identifier in a multi-tenant system.
 type TenantID string
 
-// DefaultTenant is the single-tenant bootstrap tenant. It must be removed once
-// migration 00056 (sessions.tenant_id) lands and tenants are derived from real
-// user data instead of a constant. It exists as the single, controlled point
-// that still assumes one tenant — no handler or middleware may hardcode the
-// literal "1" anywhere else.
+// DefaultTenant is the single-tenant bootstrap tenant ("1"). It is the
+// explicit, auditable identity for bootstrap seeds (first admin), the
+// single-tenant resolver, and worker global scope — never an implicit
+// fallback: TenantIDFromContext fails closed on missing tenants, and the
+// tenant lint forbids new DefaultTenant uses without //nolint:tenant-default
+// plus justification. Removing it requires multi-tenant-by-default
+// resolution (MULTI_TENANT_ENABLED) plus a bootstrap rewrite — deferred
+// while deployments are single-org.
 const DefaultTenant TenantID = "1"
 
 // NewTenantID validates and creates a TenantID.
