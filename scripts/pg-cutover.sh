@@ -30,9 +30,11 @@ if [ "$MODE" = "--check" ]; then
   exit 0
 fi
 
-echo "== 1. backup ${SQLITE_DB} -> ${BACKUP}"
-cp "$SQLITE_DB" "$BACKUP"
-cp "${SQLITE_DB}-wal" "${BACKUP}-wal" 2>/dev/null || true
+echo "== 0. freeze writes (one binary serves API+TCP+MQTT)"
+echo "    systemctl stop avandab  # and confirm: curl /login -> 000"
+echo "== 1. backup ${SQLITE_DB} -> ${BACKUP} (backup API: cp on WAL-mode files can copy malformed)"
+sqlite3 "file:${SQLITE_DB}?mode=ro" ".backup '${BACKUP}'"
+sqlite3 "file:${BACKUP}?mode=ro" "PRAGMA integrity_check;"
 ls -la "$BACKUP"
 
 echo "== 2. boot server on sqlite (auto-migrate to latest)"

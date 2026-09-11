@@ -51,7 +51,7 @@
 ## Phase C — Future bets
 
 - **C1. Multi-instance safety.** Built: `worker_leases` (`00079`) + leader election. Remaining: ingest/API topology split, lease tuning, dwell/outbox duplicate fencing.
-- **C2. PG cutover.** Built: mirror, `internal/datamigrate/`, `cmd/sqlite2pg/`, rebind, CI gate. Remaining: freeze→migrate→verify→flip→rollback runbook, Timescale decision (>5k-truck trigger), history archival.
+- **C2. PG cutover.** Done 2026-09-11: `docs/tech-specs/c2-pg-cutover-runbook.md` (freeze→migrate→verify→flip→rollback) rehearsed end to end on scratch PG16 — sqlite boot/migrate, freeze, backup-API copy, empty-PG boot to v149, `--check` clean, live 44/44 tables 2332 rows 0 quarantined, PG smokes (`/login`+token+trips 200), rollback smokes green. `pg-cutover.sh` backup step fixed (WAL-unsafe `cp` → backup API + freeze note). Timescale deferred to >5k-truck trigger; archival via partition retention cleaner.
 - **C3. Commercialization.** Built: catalog/subscriptions/meters (`00114`), sub webhooks (`00115`), profiles (`00125`), flags (`00089`). Remaining: live pricing, prod webhook creds off mock, quota enforcement on, dunning/cancel flow. Mutating agent tools stay approval-gated.
 - **C4. Live provider integrations.** EWB, GSTN, FASTag, accounting all mock-by-default: sandbox contract → prod creds → mock-honesty in non-prod → runbook each.
 - **C5. Zero-cost doc reconciliation.** Rewrite or supersede `AVANDAB_ZERO_COST_ARCHITECTURE.md` §§2/4/6 (device reality, mail path, PG path, OSRM posture).
