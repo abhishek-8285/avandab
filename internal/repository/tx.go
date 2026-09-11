@@ -23,6 +23,25 @@ type DBGetter interface {
 	DB() *sql.DB
 }
 
+// ExecTx runs query on the ambient transaction when present, else db. Raw
+// db.ExecContext from inside a UoW transaction grabs a second pool
+// connection and deadlocks SQLite's single-writer lock (modernc retries
+// forever) — UoW-scoped writes must always route through here.
+func ExecTx(ctx context.Context, db *sql.DB, query string, args ...any) (sql.Result, error) {
+	if tx := TxFromContext(ctx); tx != nil {
+		return tx.ExecContext(ctx, query, args...)
+	}
+	return db.ExecContext(ctx, query, args...)
+}
+
+// QueryRowTx is ExecTx for single-row reads.
+func QueryRowTx(ctx context.Context, db *sql.DB, query string, args ...any) *sql.Row {
+	if tx := TxFromContext(ctx); tx != nil {
+		return tx.QueryRowContext(ctx, query, args...)
+	}
+	return db.QueryRowContext(ctx, query, args...)
+}
+
 // TxManager manages database transactions, ensuring atomicity across
 // multiple repository operations.
 type TxManager interface {

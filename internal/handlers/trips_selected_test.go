@@ -591,7 +591,6 @@ func TestSelectedTrips_CRUD(t *testing.T) {
 	})
 
 	t.Run("AssignDriver compliance blocked with override as admin", func(t *testing.T) {
-		t.Skip("DEADLOCK: admin-override path opens a Tx then blocks in modernc sqlite conn.retry — possible prod bug, see compliance override flow (trips.go handleComplianceBlock → UoW). Needs root-cause fix before this test can run.")
 		ctx := shared.ContextWithTenantID(context.Background(), shared.DefaultTenant)
 		expiredDriverID2 := fmt.Sprintf("drv-exp2-%d", time.Now().UnixNano())
 		_, err := db.Exec(`INSERT INTO drivers (id, driver_id, tenant_id, first_name, last_name, phone, license_number, license_expiry, experience_years, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
