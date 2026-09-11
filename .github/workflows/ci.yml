@@ -117,7 +117,9 @@ jobs:
         run: ./scripts/check-coverage.sh
 
       - name: Test isolation (shuffle)
-        run: go test -shuffle=on -count=3 ./internal/... ./test/...
+        # go's own default timeout is 10m and panics the suite mid-run
+        # (handlers x3 counts outgrew it); keep under the 30m job cap.
+        run: go test -timeout 25m -shuffle=on -count=3 ./internal/... ./test/...
 
       - name: Audit shared state
         run: |
