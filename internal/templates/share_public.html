@@ -71,8 +71,32 @@
             </div>
         </div>
 
-        <!-- Map Container -->
-        <div id="share-map" class="flex-1 min-h-[450px] w-full rounded-2xl border border-border-subtle overflow-hidden shadow-sm bg-surface-container-low"></div>
+        <!-- Main Tracking Split Grid (Spec 20 §3) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1 min-h-[520px]">
+            <!-- Left Column: Milestone Progress Timeline (5 cols on lg) -->
+            <div class="lg:col-span-5 flex flex-col bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 overflow-hidden">
+                <div class="flex items-center justify-between pb-3 border-b border-border-subtle">
+                    <div>
+                        <h2 class="text-sm font-bold text-on-surface m-0 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
+                            Shipment Milestones
+                        </h2>
+                        <p class="text-[11px] text-text-muted m-0">Live customer tracking updates</p>
+                    </div>
+                    <span id="cx-driver-badge" class="hidden text-xs bg-surface-container px-2.5 py-1 rounded-full text-secondary font-medium"></span>
+                </div>
+
+                <!-- Vertical Milestone List Container -->
+                <div id="timeline-container" class="flex-1 overflow-y-auto py-3 space-y-4 pr-1">
+                    <div class="text-xs text-text-muted italic py-4 text-center">Loading shipment milestones...</div>
+                </div>
+            </div>
+
+            <!-- Right Column: Interactive Map (7 cols on lg) -->
+            <div class="lg:col-span-7 flex flex-col min-h-[450px] lg:min-h-full rounded-2xl border border-border-subtle overflow-hidden shadow-sm bg-surface-container-low relative">
+                <div id="share-map" class="w-full h-full min-h-[450px]"></div>
+            </div>
+        </div>
     </main>
 
     <!-- Footer -->
@@ -83,7 +107,8 @@
     <script id="share-page-data" type="application/json">
     {
         "mapConfig": {{json .MapConfig}},
-        "dataEndpoint": {{json .DataEndpoint}}
+        "dataEndpoint": {{json .DataEndpoint}},
+        "timelineEndpoint": {{json .TimelineEndpoint}}
     }
     </script>
     <script>
@@ -91,7 +116,8 @@
         var pageData = JSON.parse(document.getElementById('share-page-data').textContent || '{}');
         var cfg = pageData.mapConfig || {};
         var dataEndpoint = pageData.dataEndpoint || '';
-        var pollInterval = (cfg.PollSec > 0 ? cfg.PollSec : 30) * 1000;
+        var timelineEndpoint = pageData.timelineEndpoint || (dataEndpoint ? dataEndpoint.replace('/data', '/timeline') : '');
+        var pollInterval = (cfg.PollSec > 0 ? cfg.PollSec : 5) * 1000;
 
         var INDIA_BOUNDS = [[6.5, 68.0], [37.5, 97.5]];
         var INDIA_PAN_BOUNDS = [[4.0, 65.0], [38.5, 100.0]];
@@ -103,8 +129,6 @@
             maxBoundsViscosity: 1.0
         }).setView([20.5937, 78.9629], 5);
 
-        // Tile provider is config-driven (Spec 04 section 2: no Google tile
-        // scraping unless explicitly configured). auto/''/osm -> MapConfig.OSMUrl.
         {{$isGoogle := and .MapConfig (eq (printf "%v" .MapConfig.Provider) "google")}}
         var tileUrl = {{if $isGoogle}}'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&gl=IN'{{else}}(cfg.OSMUrl || 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'){{end}};
         L.tileLayer(tileUrl, {
@@ -114,7 +138,21 @@
         }).addTo(map);
 
         var marker = null;
+        var polylineLayer = null;
         var hasCentered = false;
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>'"]/g, function (tag) {
+                return ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                })[tag] || tag;
+            });
+        }
 
         function markerIcon(speed) {
             var isRunning = speed > 0;
@@ -138,6 +176,13 @@
             return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
 
+        function fmtDate(iso) {
+            if (!iso) return '';
+            var d = new Date(iso);
+            if (Number.isNaN(d.getTime())) return '';
+            return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        }
+
         function setText(id, val) {
             var el = document.getElementById(id);
             if (el) el.textContent = val;
@@ -153,6 +198,8 @@
 
             if (data.eta_min && data.eta_max) {
                 setText('eta-value', fmtTime(data.eta_min) + ' – ' + fmtTime(data.eta_max));
+            } else if (data.eta) {
+                setText('eta-value', fmtTime(data.eta));
             }
             setText('last-updated-text', 'Updated ' + new Date().toLocaleTimeString());
         }
@@ -174,7 +221,71 @@
             }
         }
 
+        function updatePolyline(points) {
+            if (!points || points.length < 2) return;
+            if (polylineLayer) {
+                polylineLayer.setLatLngs(points);
+            } else {
+                polylineLayer = L.polyline(points, {
+                    color: '#2563eb',
+                    weight: 4,
+                    opacity: 0.85,
+                    lineJoin: 'round'
+                }).addTo(map);
+            }
+        }
+
+        function renderMilestones(milestones) {
+            var container = document.getElementById('timeline-container');
+            if (!container || !milestones || milestones.length === 0) return;
+
+            var html = '';
+            for (var i = 0; i < milestones.length; i++) {
+                var m = milestones[i];
+                var isLast = (i === milestones.length - 1);
+
+                var badgeColor = 'bg-surface-container border-border text-text-muted';
+                var dotColor = 'bg-border';
+                var pulse = '';
+                var statusLabel = 'Upcoming';
+                var statusBadgeClass = 'bg-surface-container text-text-muted border-border-subtle';
+
+                if (m.status === 'completed') {
+                    badgeColor = 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600';
+                    dotColor = 'bg-emerald-500';
+                    statusLabel = 'Completed';
+                    statusBadgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300';
+                } else if (m.status === 'in_progress') {
+                    badgeColor = 'bg-blue-500/15 border-blue-500 text-blue-600';
+                    dotColor = 'bg-blue-600';
+                    pulse = '<span class="absolute -inset-1 rounded-full bg-blue-400 opacity-60 animate-ping"></span>';
+                    statusLabel = 'In-Transit';
+                    statusBadgeClass = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300';
+                }
+
+                var timeStr = m.timestamp ? (fmtTime(m.timestamp) + (fmtDate(m.timestamp) ? ' · ' + fmtDate(m.timestamp) : '')) : 'Pending checkpoint';
+
+                html += '<div class="relative flex items-start gap-3">' +
+                    (!isLast ? '<div class="absolute left-3.5 top-6 bottom-0 w-0.5 ' + (m.status === 'completed' ? 'bg-emerald-400' : 'bg-border-subtle') + '"></div>' : '') +
+                    '<div class="relative z-10 w-7 h-7 rounded-full flex items-center justify-center ' + badgeColor + ' border flex-shrink-0 shadow-xs">' +
+                        pulse +
+                        '<span class="w-2 h-2 rounded-full ' + dotColor + '"></span>' +
+                    '</div>' +
+                    '<div class="flex-1 pb-4 min-w-0">' +
+                        '<div class="flex items-center justify-between gap-2">' +
+                            '<h3 class="text-xs sm:text-sm font-semibold text-on-surface m-0 truncate">' + escapeHTML(m.title) + '</h3>' +
+                            '<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ' + statusBadgeClass + ' capitalize flex-shrink-0">' + statusLabel + '</span>' +
+                        '</div>' +
+                        (m.location ? '<p class="text-[11px] text-text-muted m-0 mt-0.5 truncate">' + escapeHTML(m.location) + '</p>' : '') +
+                        '<p class="text-[10px] text-text-muted tabular-nums m-0 mt-0.5">' + timeStr + '</p>' +
+                    '</div>' +
+                '</div>';
+            }
+            container.innerHTML = html;
+        }
+
         function poll() {
+            // 1. Fetch live telemetry data
             fetch(dataEndpoint, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
                 .then(function (res) {
                     if (res.status === 410) {
@@ -189,11 +300,40 @@
                     if (!data) return;
                     updateShareUI(data);
                     updateShareMarker(data);
+                    if (data.polyline) {
+                        updatePolyline(data.polyline);
+                    }
                 })
                 .catch(function (err) {
                     var lastUpd = document.getElementById('last-updated-text');
                     if (lastUpd) lastUpd.textContent = 'Connection error: ' + err.message;
                 });
+
+            // 2. Fetch milestone timeline
+            if (timelineEndpoint) {
+                fetch(timelineEndpoint, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
+                    .then(function (res) {
+                        if (!res.ok) return null;
+                        return res.json();
+                    })
+                    .then(function (tData) {
+                        if (!tData) return;
+                        if (tData.milestones) {
+                            renderMilestones(tData.milestones);
+                        }
+                        if (tData.polyline && (!polylineLayer || polylineLayer.getLatLngs().length === 0)) {
+                            updatePolyline(tData.polyline);
+                        }
+                        if (tData.driver_name) {
+                            var drvBadge = document.getElementById('cx-driver-badge');
+                            if (drvBadge) {
+                                drvBadge.textContent = 'Driver: ' + tData.driver_name + (tData.driver_phone ? ' (' + tData.driver_phone + ')' : '');
+                                drvBadge.classList.remove('hidden');
+                            }
+                        }
+                    })
+                    .catch(function () {});
+            }
         }
 
         poll();

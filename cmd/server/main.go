@@ -1260,13 +1260,15 @@ func main() {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 		})
 
-		// Public live trip share links (Spec 04 §4) — login-free
+		// Public live trip share links (Spec 04 §4, Spec 20 §1) — login-free
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.ContentSecurityPolicy(cfg.LiveMap.CSPEnabled))
 			r.Get("/share", app.Share.HandleShareIndex)
 			r.With(middleware.RateLimitDistributed(appCache, 20)).Get("/share/{token}", app.Share.ViewShare)
 			r.With(middleware.RateLimitDistributed(appCache, 10)).Post("/share/{token}/verify", app.Share.VerifyPIN)
 			r.With(middleware.RateLimitDistributed(appCache, 30)).Get("/share/{token}/data", app.Share.ShareData)
+			r.With(middleware.RateLimitDistributed(appCache, 30)).Get("/share/{token}/timeline", app.Share.ShareTimeline)
+			r.With(middleware.RateLimitDistributed(appCache, 30)).Get("/api/v1/share/{token}/timeline", app.Share.ShareTimeline)
 		})
 
 		// Public Digital e-POD Certificate Viewer (login-free)

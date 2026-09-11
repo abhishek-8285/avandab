@@ -452,3 +452,122 @@ func TestShare_Data_Endpoint_HybridEta(t *testing.T) {
 	assert.NotEmpty(t, data["eta_min"])
 	assert.NotEmpty(t, data["eta_max"])
 }
+
+func TestShare_Timeline_Endpoint(t *testing.T) {
+	db := newShareTestDB(t)
+	app := newShareTestApp(t, db, allowAuthSvc{})
+
+	setupTestTrip(t, db, "trip-timeline-cx", "veh-timeline-cx")
+
+	// Add driver with phone
+	_, err := db.Exec(`INSERT INTO drivers (id, driver_id, first_name, last_name, phone, license_number, license_expiry, status, tenant_id)
+		VALUES ('drv-cx', 'DRV-CX-1', 'Suresh', 'Verma', '+919812345678', 'DL-CX-1', date('now','+1 year'), 'available', '1')`)
+	require.NoError(t, err)
+
+	_, err = db.Exec(`UPDATE trips SET driver_id = 'drv-cx', started_at = datetime('now', '-2 hours'), status = 'in_transit' WHERE id = 'trip-timeline-cx'`)
+	require.NoError(t, err)
+
+	// Add a FASTag toll crossing
+	_, err = db.Exec(`INSERT INTO fastag_tags (id, tenant_id, tag_id, vehicle_id, vehicle_number, issuer, tag_class, balance, status)
+		VALUES ('tag-cx', '1', 'TAG-CX-1', 'veh-timeline-cx', 'MH-12-AB-1234', 'ICICI', 'VC4', 1000.0, 'ACTIVE')`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO fastag_transactions (id, tenant_id, tag_id, vehicle_id, trip_id, plaza_name, amount, txn_timestamp, status)
+		VALUES ('ft-cx', '1', 'TAG-CX-1', 'veh-timeline-cx', 'trip-timeline-cx', 'Vashi Toll Plaza', 100.0, datetime('now', '-1 hour'), 'SUCCESS')`)
+	require.NoError(t, err)
+
+	token := "cx-timeline-token-test"
+	tokenHash := sha256Hex(token)
+	now := time.Now().UTC()
+	_, err = db.Exec(`INSERT INTO share_links (id, trip_id, token_hash, created_by, created_at, expires_at)
+		VALUES ('link-cx-tl', 'trip-timeline-cx', ?, 'user-1', ?, ?)`, tokenHash, now, now.Add(24*time.Hour))
+	require.NoError(t, err)
+
+	r := chi.NewRouter()
+	r.Get("/share/{token}/timeline", app.Share.ShareTimeline)
+	r.Get("/api/v1/share/{token}/timeline", app.Share.ShareTimeline)
+
+	// 1. Test GET /api/v1/share/{token}/timeline
+	req := httptest.NewRequest("GET", "/api/v1/share/"+token+"/timeline", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp map[string]interface{}
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+
+	assert.Equal(t, "trip-timeline-cx", resp["trip_id"])
+	assert.Equal(t, "in_transit", resp["status"])
+	assert.Equal(t, "Suresh Verma", resp["driver_name"])
+	assert.Equal(t, "+91 98*** **678", resp["driver_phone"]) // PII Masking verified!
+
+	milestones, ok := resp["milestones"].([]interface{})
+	require.True(t, ok)
+	require.GreaterOrEqual(t, len(milestones), 4)
+
+	// Verify order created and dispatched
+	m0 := milestones[0].(map[string]interface{})
+	assert.Equal(t, "ORDER_CREATED", m0["type"])
+	assert.Equal(t, "completed", m0["status"])
+
+	m1 := milestones[1].(map[string]interface{})
+	assert.Equal(t, "VEHICLE_DISPATCHED", m1["type"])
+	assert.Equal(t, "completed", m1["status"])
+
+	// 2. Test unknown token returns 404
+	req404 := httptest.NewRequest("GET", "/api/v1/share/non-existent-token/timeline", nil)
+	w404 := httptest.NewRecorder()
+	r.ServeHTTP(w404, req404)
+	assert.Equal(t, http.StatusNotFound, w404.Code)
+
+	// 3. Test expired link returns 410
+	tokenExp := "cx-timeline-expired-token"
+	tokenExpHash := sha256Hex(tokenExp)
+	_, err = db.Exec(`INSERT INTO share_links (id, trip_id, token_hash, created_by, created_at, expires_at)
+		VALUES ('link-cx-exp', 'trip-timeline-cx', ?, 'user-1', ?, ?)`, tokenExpHash, now.Add(-48*time.Hour), now.Add(-24*time.Hour))
+	require.NoError(t, err)
+
+	req410 := httptest.NewRequest("GET", "/api/v1/share/"+tokenExp+"/timeline", nil)
+	w410 := httptest.NewRecorder()
+	r.ServeHTTP(w410, req410)
+	assert.Equal(t, http.StatusGone, w410.Code)
+}
+
+func TestShare_Timeline_PIN_Protection(t *testing.T) {
+	db := newShareTestDB(t)
+	app := newShareTestApp(t, db, allowAuthSvc{})
+
+	setupTestTrip(t, db, "trip-timeline-pin", "veh-timeline-pin")
+
+	token := "pin-timeline-token"
+	tokenHash := sha256Hex(token)
+	saltHex := "abcd1234abcd1234abcd1234abcd1234"
+	pinHash := hashPIN("1234", saltHex)
+	now := time.Now().UTC()
+
+	_, err := db.Exec(`INSERT INTO share_links (id, trip_id, token_hash, pin_hash, pin_salt, created_by, created_at, expires_at)
+		VALUES ('link-pin-tl', 'trip-timeline-pin', ?, ?, ?, 'user-1', ?, ?)`,
+		tokenHash, pinHash, saltHex, now, now.Add(24*time.Hour))
+	require.NoError(t, err)
+
+	r := chi.NewRouter()
+	r.Get("/api/v1/share/{token}/timeline", app.Share.ShareTimeline)
+
+	// 1. Unauthenticated request without PIN cookie returns 403
+	req := httptest.NewRequest("GET", "/api/v1/share/"+token+"/timeline", nil)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusForbidden, w.Code)
+
+	// 2. Request with valid signed PIN cookie returns 200
+	secret := app.Share.getCookieSecret()
+	cookieVal := signPINCookie(tokenHash, secret)
+
+	reqAuth := httptest.NewRequest("GET", "/api/v1/share/"+token+"/timeline", nil)
+	reqAuth.AddCookie(&http.Cookie{
+		Name:  "share_pin_" + tokenHash,
+		Value: cookieVal,
+	})
+	wAuth := httptest.NewRecorder()
+	r.ServeHTTP(wAuth, reqAuth)
+	assert.Equal(t, http.StatusOK, wAuth.Code)
+}

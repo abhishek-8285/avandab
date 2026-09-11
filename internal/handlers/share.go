@@ -19,21 +19,24 @@ import (
 
 	"transport-app/internal/eta"
 	"transport-app/internal/shared"
+	"transport-app/internal/trip/application"
 )
 
 // ShareHandlers powers trip share link generation, public viewing, PIN validation,
-// and administrative revocation (Spec 04 §4, §7).
+// and administrative revocation (Spec 04 §4, §7, Spec 20 §1).
 type ShareHandlers struct {
 	*App
-	db         *sql.DB
-	EtaService *eta.EtaService
+	db              *sql.DB
+	EtaService      *eta.EtaService
+	TimelineUseCase *application.TimelineUseCase
 }
 
 // NewShareHandlers creates a new ShareHandlers instance.
 func NewShareHandlers(app *App, db *sql.DB) *ShareHandlers {
 	return &ShareHandlers{
-		App: app,
-		db:  db,
+		App:             app,
+		db:              db,
+		TimelineUseCase: application.NewTimelineUseCase(db, nil),
 	}
 }
 
@@ -387,16 +390,17 @@ func (h *ShareHandlers) ViewShare(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Cache-Control", "no-cache, s-maxage=10, stale-while-revalidate=30")
 	h.renderStandalone(w, "share_public.html", map[string]interface{}{
-		"Token":        token,
-		"TripNumber":   tripNumber,
-		"TripStatus":   status,
-		"DataEndpoint": fmt.Sprintf("/share/%s/data", token),
+		"Token":            token,
+		"TripNumber":       tripNumber,
+		"TripStatus":       status,
+		"DataEndpoint":     fmt.Sprintf("/share/%s/data", token),
+		"TimelineEndpoint": fmt.Sprintf("/api/v1/share/%s/timeline", token),
 		"MapConfig": map[string]interface{}{
 			"Provider":    mapProvider,
 			"GoogleStyle": mapGoogleStyle,
 			"GL":          mapGL,
 			"OSMUrl":      mapOSM,
-			"PollSec":     30,
+			"PollSec":     5,
 		},
 	})
 }
@@ -685,6 +689,27 @@ func (h *ShareHandlers) ShareData(w http.ResponseWriter, r *http.Request) {
 		lastSeenStr = &s
 	}
 
+	// Fetch polyline coordinates
+	var polyline [][]float64
+	pRows, pErr := h.db.QueryContext(r.Context(), `
+		SELECT latitude, longitude
+		FROM telemetry_positions
+		WHERE trip_id = $1
+		ORDER BY device_time ASC
+		LIMIT 500`, tripID)
+	if pErr == nil {
+		defer func() { _ = pRows.Close() }()
+		for pRows.Next() {
+			var pLat, pLng float64
+			if err := pRows.Scan(&pLat, &pLng); err == nil {
+				polyline = append(polyline, []float64{pLat, pLng})
+			}
+		}
+	}
+	if len(polyline) == 0 && lat != nil && lng != nil {
+		polyline = append(polyline, []float64{*lat, *lng})
+	}
+
 	resp := map[string]interface{}{
 		"trip_number":     tripNumber,
 		"vehicle_label":   vehLabel,
@@ -699,6 +724,7 @@ func (h *ShareHandlers) ShareData(w http.ResponseWriter, r *http.Request) {
 		"eta_max":         etaMax,
 		"eta_method":      etaMethod,
 		"maintenance_due": maintDue,
+		"polyline":        polyline,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -706,6 +732,69 @@ func (h *ShareHandlers) ShareData(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Pragma", "no-cache")
 	w.Header().Set("Expires", "0")
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+func (h *ShareHandlers) getTimelineUseCase() *application.TimelineUseCase {
+	if h.TimelineUseCase == nil {
+		h.TimelineUseCase = application.NewTimelineUseCase(h.db, h.EtaService)
+	}
+	return h.TimelineUseCase
+}
+
+// ShareTimeline returns the CX tracking timeline for the shared trip (Spec 20 §1, §3).
+func (h *ShareHandlers) ShareTimeline(w http.ResponseWriter, r *http.Request) {
+	token := chi.URLParam(r, "token")
+	tokenHash := sha256Hex(token)
+
+	var tripID, tripTenantID string
+	var pinHash sql.NullString
+	var expiresAt time.Time
+	var revokedAt sql.NullTime
+
+	err := h.db.QueryRowContext(r.Context(), `
+		SELECT s.trip_id, t.tenant_id, s.pin_hash, s.expires_at, s.revoked_at
+		FROM share_links s
+		JOIN trips t ON t.id = s.trip_id
+		WHERE s.token_hash = $1`, tokenHash).Scan(
+		&tripID, &tripTenantID, &pinHash, &expiresAt, &revokedAt,
+	)
+
+	if err == sql.ErrNoRows {
+		http.Error(w, `{"error":"share link not found"}`, http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		http.Error(w, `{"error":"internal server error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	now := time.Now().UTC()
+	if revokedAt.Valid || expiresAt.Before(now) {
+		http.Error(w, `{"error":"share link expired or revoked"}`, http.StatusGone)
+		return
+	}
+
+	// PIN requirement check
+	if pinHash.Valid && pinHash.String != "" {
+		cookie, err := r.Cookie("share_pin_" + tokenHash)
+		secret := h.getCookieSecret()
+		if err != nil || !verifyPINCookie(tokenHash, cookie.Value, secret) {
+			http.Error(w, `{"error":"PIN verification required"}`, http.StatusForbidden)
+			return
+		}
+	}
+
+	uc := h.getTimelineUseCase()
+	timeline, err := uc.BuildTimeline(r.Context(), tripID, tripTenantID)
+	if err != nil {
+		slog.ErrorContext(r.Context(), "failed to build CX timeline", slog.String("trip_id", tripID), slog.Any("error", err))
+		http.Error(w, `{"error":"failed to generate timeline"}`, http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-cache, s-maxage=2, stale-while-revalidate=5")
+	_ = json.NewEncoder(w).Encode(timeline)
 }
 
 // ListShares renders the administrative share link management page (Spec 04 §4).
