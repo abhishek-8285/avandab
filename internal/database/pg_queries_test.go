@@ -21,13 +21,12 @@ import (
 	appdb "transport-app/internal/database"
 )
 
-var queryConstRe = regexp.MustCompile("(?s)const \\w+ = `-- name: (\\S+) [^\\n]*\\n(.*?)`")
-
 func TestPostgresQueryCompat(t *testing.T) {
 	url := os.Getenv("DATABASE_URL")
 	if url == "" {
 		t.Skip("DATABASE_URL not set")
 	}
+	queryConstRe := regexp.MustCompile("(?s)const \\w+ = `-- name: (\\S+) [^\\n]*\\n(.*?)`")
 	files, err := filepath.Glob("../../db/generated/sqlite/*.go")
 	if err != nil || len(files) == 0 {
 		t.Fatalf("generated files: %v %d", err, len(files))

@@ -24,18 +24,15 @@ import (
 	appdb "transport-app/internal/database"
 )
 
-var (
-	goLitRe  = regexp.MustCompile("(?s)`[^`]*`")
-	dmlRe    = regexp.MustCompile(`(?i)^\s*(SELECT|INSERT|UPDATE|DELETE|WITH)\b`)
-	fromRe   = regexp.MustCompile(`\bFROM\b`)
-	dynamicR = regexp.MustCompile(`%[sdv]|%\d+d`)
-)
-
 func TestPostgresGoSQL(t *testing.T) {
 	url := os.Getenv("DATABASE_URL")
 	if url == "" {
 		t.Skip("DATABASE_URL not set")
 	}
+	goLitRe := regexp.MustCompile("(?s)`[^`]*`")
+	dmlRe := regexp.MustCompile(`(?i)^\s*(SELECT|INSERT|UPDATE|DELETE|WITH)\b`)
+	fromRe := regexp.MustCompile(`\bFROM\b`)
+	dynamicR := regexp.MustCompile(`%[sdv]|%\d+d`)
 	var files []string
 	sidecar := func(p string) bool {
 		// Own-database sidecars (never run on the main PG): skip.

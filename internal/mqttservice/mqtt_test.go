@@ -23,7 +23,9 @@ func (m *fakeMessage) MessageID() uint16 { return 1 }
 func (m *fakeMessage) Payload() []byte   { return m.payload }
 func (m *fakeMessage) Ack()              {}
 
-var _ mqtt.Message = (*fakeMessage)(nil)
+func TestFakeMessageImplementsMessage(t *testing.T) {
+	_ = mqtt.Message((*fakeMessage)(nil))
+}
 
 // Telemetry payload must survive a JSON round-trip (wire format contract).
 func TestGPSTelemetryPayload_JSONRoundTrip(t *testing.T) {

@@ -113,7 +113,9 @@ func (stubAuthSvc) Reload() error                         { return nil }
 func (stubAuthSvc) AddRoleForUser(uid, role string) error { return nil }
 func (stubAuthSvc) DeleteRolesForUser(uid string) error   { return nil }
 
-var _ auth.AuthorizationService = stubAuthSvc{}
+func TestStubAuthSvcImplementsService(t *testing.T) {
+	_ = auth.AuthorizationService(stubAuthSvc{})
+}
 
 func newAPITestHandler(t *testing.T, dbConn *sql.DB) *APIVehicleHandler {
 	t.Helper()
