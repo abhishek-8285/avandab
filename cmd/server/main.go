@@ -748,7 +748,7 @@ func main() {
 		}
 		apiSecret = []byte(cfg.CookieSecret)
 	}
-	authAPIHandler := authAPIHandlers.NewAPIAuthHandler(services.Auth, services.Users, apiSecret, database)
+	authAPIHandler := authAPIHandlers.NewAPIAuthHandler(services.Auth, services.Users, apiSecret, database).WithAuthorizer(authSvc)
 
 	// ── Tenant resolution (Spec 24) ─────────────────────────────────────
 	// Gate off (default): every request resolves to the bootstrap tenant.

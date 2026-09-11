@@ -19,10 +19,11 @@ import (
 
 // APIAuthHandler handles REST authentication endpoints.
 type APIAuthHandler struct {
-	authSvc *service.AuthService
-	userSvc *service.UserService
-	secret  []byte
-	db      *sql.DB
+	authSvc    *service.AuthService
+	userSvc    *service.UserService
+	authorizer auth.AuthorizationService
+	secret     []byte
+	db         *sql.DB
 }
 
 // NewAPIAuthHandler constructs an APIAuthHandler.
@@ -32,6 +33,14 @@ func NewAPIAuthHandler(authSvc *service.AuthService, userSvc *service.UserServic
 		dbConn = db[0]
 	}
 	return &APIAuthHandler{authSvc: authSvc, userSvc: userSvc, secret: secret, db: dbConn}
+}
+
+// WithAuthorizer attaches the Casbin authorizer so self-registration grants
+// the role in-memory immediately (mirrors the web path). Without it, new
+// users exist in user_roles but fail every permission check until restart.
+func (h *APIAuthHandler) WithAuthorizer(a auth.AuthorizationService) *APIAuthHandler {
+	h.authorizer = a
+	return h
 }
 
 // Register mounts the auth endpoints onto a chi.Router.
@@ -72,6 +81,12 @@ func (h *APIAuthHandler) RegisterUser(w http.ResponseWriter, r *http.Request) {
 		// (auth.go SaveRegister) — a token claiming "admin" would over-grant
 		// wherever the live-role override has no validator attached.
 		roleName = string(domain.RoleOrgAdmin)
+	}
+	// Grant the role in the live authorizer now: the DB row alone leaves
+	// every permission check failing until the next restart (Casbin policy
+	// loads once at boot). Best-effort like the web path.
+	if h.authorizer != nil {
+		_ = h.authorizer.AddRoleForUser(string(user.ID), roleName)
 	}
 
 	userTenantID := user.TenantID

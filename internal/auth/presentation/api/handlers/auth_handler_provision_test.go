@@ -3,11 +3,20 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
 
+	"transport-app/internal/config"
 	"transport-app/internal/domain"
+	"transport-app/internal/events"
+	repoSQLite "transport-app/internal/repository/sqlite"
+	"transport-app/internal/service"
 )
 
 func linkTestDB(t *testing.T) *sql.DB {
@@ -102,5 +111,65 @@ func TestLinkDriverProfile_ForeignNumberFailsClosed(t *testing.T) {
 		if n != want {
 			t.Fatalf("%s rows for tenant_Y = %d, want %d (rollback broken)", tbl, n, want)
 		}
+	}
+}
+
+type recordingAuthorizer struct {
+	adds [][2]string
+}
+
+func (r *recordingAuthorizer) Can(string, string, string) bool { return false }
+func (r *recordingAuthorizer) Reload() error                   { return nil }
+func (r *recordingAuthorizer) AddRoleForUser(userID, role string) error {
+	r.adds = append(r.adds, [2]string{userID, role})
+	return nil
+}
+func (r *recordingAuthorizer) DeleteRolesForUser(string) error { return nil }
+
+// API self-registration must grant the role in the live authorizer (mirrors
+// the web path): the user_roles row alone leaves every permission check
+// failing until restart.
+func TestRegisterUser_GrantsAuthorizerRole(t *testing.T) {
+	name := "test_authzreg"
+	db, err := sql.Open("sqlite", "file:"+name+"?mode=memory&cache=shared")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	_ = goose.SetDialect("sqlite")
+	if err := goose.Up(db, "../../../../../db/migrations"); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	logger := slog.New(slog.DiscardHandler)
+	svcs := service.NewServices(
+		repoSQLite.NewRepository(db),
+		&config.Config{AppEnv: "testing", CookieSecret: "test-cookie-secret-32-chars-long!"},
+		logger,
+		events.NewInMemoryBus(),
+	)
+	rec := &recordingAuthorizer{}
+	h := NewAPIAuthHandler(nil, svcs.Users, []byte("test-secret-32bytes-for-test!!"), db).WithAuthorizer(rec)
+
+	body := `{"name":"Authz Reg","email":"authzreg@test.local","password":"Authz-Pass-123!"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/auth/register", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	h.RegisterUser(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("register = %d, want 200: %s", w.Code, w.Body.String())
+	}
+	if len(rec.adds) != 1 {
+		t.Fatalf("authorizer grants = %d, want exactly 1 (user, org_admin)", len(rec.adds))
+	}
+	if rec.adds[0][1] != "org_admin" {
+		t.Fatalf("granted role = %q, want org_admin for first user", rec.adds[0][1])
+	}
+	var userID string
+	if err := db.QueryRow(`SELECT id FROM users WHERE email = 'authzreg@test.local'`).Scan(&userID); err != nil {
+		t.Fatalf("registered user missing: %v", err)
+	}
+	if rec.adds[0][0] != userID {
+		t.Fatalf("grant user = %q, want registered user %q", rec.adds[0][0], userID)
 	}
 }
