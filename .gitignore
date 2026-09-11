@@ -86,3 +86,6 @@ strix_runs/
 config/firebase-service-account.json
 mobile/android/app/google-services.json
 uploads/
+
+# CI/local audit artifact (breaks porcelain-based gates if committed)
+audit-results.txt
