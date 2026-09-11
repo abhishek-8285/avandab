@@ -945,6 +945,9 @@ func main() {
 		if app.OpsAlerts != nil {
 			app.OpsAlerts.RegisterRoutes(r)
 		}
+		// Durable mobile outbox batch — handler + spec existed but the route
+		// was never mounted. Bearer-auth only (no per-route permission gate).
+		handlers.NewOutboxBatchHandler(database).Register(r)
 		if app.ABExperiments != nil {
 			r.With(featureGate("experiments")).Group(app.ABExperiments.RegisterRoutes)
 		}

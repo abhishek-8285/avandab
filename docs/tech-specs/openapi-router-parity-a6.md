@@ -47,9 +47,7 @@ chained `r.With(...).Verb`, `r.Route` prefix + relative verbs, nested routes,
   Deliberately deferred per above (mock-by-default; spec when providers go real).
 - **In spec, no v1 route: 0** — the spec never lies. (5 apparent dead entries
   are `/api/driver/*` non-v1 twins whose routes exist in `cmd/server/main.go`;
-  out of v1-spec scope by design. `POST /api/v1/outbox/batch` remains
-  documented-but-unmounted — handler `Register` only wired in tests,
-  `internal/handlers/outbox_batch.go:21-22`.)
+  out of v1-spec scope by design.)
 - B12 closure criterion amended: router∖spec = integrations-deferred-only. ✅
 
 ## Rule going forward

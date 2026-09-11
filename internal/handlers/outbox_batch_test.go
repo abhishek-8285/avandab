@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	_ "modernc.org/sqlite"
 )
 
@@ -117,5 +118,25 @@ func TestOutboxBatch_InvalidBodyReturns400(t *testing.T) {
 	h.HandleBatch(rec, req)
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+// TestOutboxBatch_RegisterMountsRoute pins the wiring: Register must mount
+// POST /api/v1/outbox/batch (the route was once orphaned — handler + spec
+// existed but main.go never called Register).
+func TestOutboxBatch_RegisterMountsRoute(t *testing.T) {
+	r := chi.NewRouter()
+	NewOutboxBatchHandler(newOutboxTestDB(t)).Register(r)
+	found := false
+	if err := chi.Walk(r, func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
+		if method == http.MethodPost && route == "/api/v1/outbox/batch" {
+			found = true
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("walk: %v", err)
+	}
+	if !found {
+		t.Fatal("POST /api/v1/outbox/batch not mounted by Register")
 	}
 }
