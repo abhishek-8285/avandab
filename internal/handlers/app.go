@@ -150,6 +150,8 @@ type App struct {
 	SOS *SOSHandlers
 	// Facilities powers the facility master catalog (ZFID sync, TMS SOP pp.1-2, B6).
 	Facilities *FacilityHandlers
+	// Backhaul powers the return-corridor matching engine and dispatch offers (B7).
+	Backhaul *BackhaulHandlers
 }
 
 // NewApp creates a new handler app with all handler groups initialized.
@@ -243,6 +245,7 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 
 	app.SOS = NewSOSHandlers(app, db)
 	app.Facilities = &FacilityHandlers{App: app}
+	app.Backhaul = &BackhaulHandlers{App: app, BackhaulSvc: service.NewBackhaulService(db)}
 
 	return app
 }
