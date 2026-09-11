@@ -33,7 +33,7 @@ func (c *mockClient) ExportInvoice(ctx context.Context, invoice ExportedInvoice)
 
 	slog.Default().Info("[accounting:mock] ExportInvoice called", "endpoint", c.cfg.Endpoint, "enabled", c.cfg.Enabled, "invoice", invoice.InvoiceNumber)
 	mockWarn(ctx, "[accounting:mock] mock ExportInvoice returning demo data", "invoice", invoice.InvoiceNumber)
-	extID := "EXT-" + invoice.InvoiceNumber
+	extID := "EXT-MOCK-" + invoice.InvoiceNumber
 	return ExportResult{
 		SyncID:     uuid.New().String(),
 		Status:     "SUCCESS",

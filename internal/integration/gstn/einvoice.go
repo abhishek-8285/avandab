@@ -7,10 +7,13 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
+
+	"transport-app/internal/shared"
 )
 
 // LineItemView represents one line item for GST e-invoicing.
@@ -139,6 +142,14 @@ func NewMockEInvoiceClient(cfg Config) *MockEInvoiceClient {
 	return &MockEInvoiceClient{cfg: cfg}
 }
 
+// mockWarn marks demo-mode fabrications at Warn with tenant context so mock
+// IRN data is never mistaken for real NIC data in logs. Every mock method
+// that synthesizes provider data must call it on the mock path.
+func mockWarn(ctx context.Context, msg string, args ...any) {
+	args = append(args, "mock", true, "tenant", string(shared.TenantIDFromContext(ctx)))
+	slog.Default().Warn(msg, args...)
+}
+
 func (m *MockEInvoiceClient) GenerateIRN(ctx context.Context, inv InvoiceView) (*IRNResponse, error) {
 	if !m.cfg.Enabled {
 		return nil, fmt.Errorf("gstn integration disabled")
@@ -146,6 +157,7 @@ func (m *MockEInvoiceClient) GenerateIRN(ctx context.Context, inv InvoiceView) (
 	if !m.cfg.UseMock {
 		return nil, fmt.Errorf("gstn: e-invoice GSP credentials not configured; set INTEGRATION_GSTN_API_KEY or INTEGRATION_GSTN_USE_MOCK=true for demo mode")
 	}
+	mockWarn(ctx, "[gstn] mock GenerateIRN returning demo data", "invoice", inv.InvoiceNumber)
 	irn := ComputeIRN(inv)
 	ackNo := fmt.Sprintf("ACK%012d", time.Now().UnixNano()%1000000000000)
 	ackDate := time.Now().Format("2006-01-02 15:04:05")
@@ -171,6 +183,7 @@ func (m *MockEInvoiceClient) PushEInvoice(ctx context.Context, invoiceID, irn st
 	if irn == "" {
 		return nil, fmt.Errorf("irn is required to push e-invoice")
 	}
+	mockWarn(ctx, "[gstn] mock PushEInvoice returning demo data", "invoice", invoiceID)
 	ackNo := fmt.Sprintf("ACK%012d", time.Now().UnixNano()%1000000000000)
 	ackDate := time.Now().Format("2006-01-02 15:04:05")
 	signedQR := fmt.Sprintf("data:image/png;base64,mock_qr_%s", irn[:min(16, len(irn))])
@@ -198,6 +211,7 @@ func (m *MockEInvoiceClient) CancelIRN(ctx context.Context, req CancelIRNRequest
 	if req.CancelReason < 1 || req.CancelReason > 4 {
 		return nil, fmt.Errorf("cancel_reason must be 1=Duplicate, 2=Order cancelled, 3=Data entry error, 4=Other")
 	}
+	mockWarn(ctx, "[gstn] mock CancelIRN returning demo data", "irn", req.IRN)
 	cancelNo := fmt.Sprintf("CNL%012d", time.Now().UnixNano()%1000000000000)
 	cancelDate := time.Now().Format("2006-01-02 15:04:05")
 

@@ -101,7 +101,7 @@ For physical hardware GPS trackers:
 | `APP_ENV` | `development` | Environment mode (`development` / `production`). |
 | `PORT` | `8080` | HTTP Web and API port. |
 | `TELEMETRY_TCP_PORT` | `:5023` | Hardware GPS TCP socket port. |
-| `TELEMETRY_DEVICE_SECRET_PEPPER` | `default-pepper` | HMAC-SHA256 secret for mobile/HTTP telemetry tokens. |
+| `TELEMETRY_DEVICE_SECRET_PEPPER` | empty (unset) | HMAC-SHA256 pepper for mobile/HTTP telemetry tokens. Set before provisioning hardware — rotation invalidates stored device hashes (reprovisioning required). Non-dev startup warns when unset. |
 | `RAZORPAY_KEY_ID` | empty | Razorpay API Key for payments. |
 | `RAZORPAY_KEY_SECRET` | empty | Razorpay API Secret for HMAC signature verification. |
 | `AGENT_REQUIRE_APPROVAL` | `true` | Requires admin approval for mutating AI tools. |
@@ -111,4 +111,4 @@ For physical hardware GPS trackers:
 | `INTEGRATION_FASTAG_USE_MOCK` | `true` | Demo mode for NETC FASTag; live needs `INTEGRATION_FASTAG_API_KEY` + `INTEGRATION_FASTAG_ENDPOINT`. |
 | `INTEGRATION_ACCOUNTING_USE_MOCK` | `true` | Demo mode for accounting export; live needs `INTEGRATION_ACCOUNTING_ENDPOINT` + `API_KEY` + `PROVIDER`. |
 
-> **Mock honesty:** all four providers default to mock (`*_USE_MOCK=true`). Synthetic IDs carry a `MOCK-` prefix (`EWB-MOCK-`, `MOCK-`, `JE-MOCK-`) plus `(mock)` messages and warn logs — never real provider data. Set the flag to `false` with live creds for production.
+> **Mock honesty:** all four providers default to mock (`*_USE_MOCK=true`). Synthetic IDs carry a `MOCK-` prefix (`EWB-MOCK-`, `MOCK-`, `JE-MOCK-`, `EXT-MOCK-`) plus `(mock)` messages and warn logs — never real provider data. Exception: GSTN e-invoice IRNs are format-locked NIC hashes (persisted on invoices), so honesty there is warn logs + `mock_qr_` payloads. Pinned by `TestMockHonesty_SyntheticIDsCarryMockPrefix`. Set the flag to `false` with live creds for production.

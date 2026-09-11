@@ -163,3 +163,19 @@ func TestLoad_DatabaseAndCacheDefaults(t *testing.T) {
 		t.Errorf("default CACHE_DRIVER = %q, want memory", cfg.Cache.Driver)
 	}
 }
+
+func TestUsingKnownDefaultSecret(t *testing.T) {
+	strong := config.Config{CookieSecret: "test-strong-cookie-secret-32bytes!!", APITokenSecret: "test-strong-api-secret-distinct!!!"}
+	if strong.UsingKnownDefaultSecret() {
+		t.Error("strong distinct secrets must not count as known defaults")
+	}
+	for name, cfg := range map[string]config.Config{
+		"codebase default":   {CookieSecret: "dev-secret-key-change-in-production-32b!", APITokenSecret: "x"},
+		"legacy env default": {CookieSecret: "dev-secret-32bytes-for-cookie-signing!", APITokenSecret: "x"},
+		"empty api secret":   {CookieSecret: "test-strong-cookie-secret-32bytes!!", APITokenSecret: ""},
+	} {
+		if !cfg.UsingKnownDefaultSecret() {
+			t.Errorf("%s must count as known default secret", name)
+		}
+	}
+}

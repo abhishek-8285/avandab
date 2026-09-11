@@ -20,7 +20,7 @@
 
 ## Phase A — Stabilize (ship in AGENTS.md critical-path order)
 
-- **A1. Secrets + mock-honesty audit** (`docs/08` §5). Rotate `COOKIE_SECRET`/`API_SECRET` off dev defaults; assert mock flags carpet `MOCK-` prefixes in non-prod. No migration.
+- **A1. Secrets + mock-honesty audit** (`docs/08` §5). Done 2026-09-11: fail-closed startup on known defaults already in `cmd/server/main.go:256` (pinned by `TestUsingKnownDefaultSecret`); mock carpet completed (`EXT-MOCK-` external IDs, `mockWarn` on all 3 GSTN e-invoice mock paths, pinned by `TestMockHonesty_SyntheticIDsCarryMockPrefix`; IRN format-locked exception documented); empty device pepper warns in non-dev (rotation = reprovisioning, so warn-only) + `default-pepper` doc corrected to empty-unset. No migration.
 - **A2. Tenant-hardening tail sweep** (`docs/06` §1). Re-run tenant lint; wire `scripts/tenant-lint.sh` into CI. No migration. *(2026-09-07: lint at 0 warnings.)*
 - **A3. FK-health triage (61 pre-existing violations)** (SOP spec §10 notes). Read-only enumerate + disposition per table. No migration. *(Done 2026-09-08: `foreign_key_check` 0 rows on dev copy at v128 and after migrating copy to head v134 — 125 REFERENCES clauses, so non-vacuous. Original 61 disposed by `scripts/cutover-data-cleanup.sql`: 9 role-id maps + 52 orphans.)*
 - **A4. Ops auto-checks green** (`FAILURE_ANALYSIS` auto-checks). Cron backup + ensure scripts, DNS forwarder, opencode `HOME=/` guard, `/tmp` trap. *(2026-09-07: crontab set, hooks on.)* No migration.

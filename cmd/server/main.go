@@ -260,6 +260,11 @@ func main() {
 	if cfg.IsDevelopment() && cfg.UsingKnownDefaultSecret() {
 		logger.Warn("Running on default secrets — development only. Never deploy without strong, unique COOKIE_SECRET and API_SECRET values.")
 	}
+	// Device-token pepper has no fail-closed default: changing it invalidates
+	// stored device hashes (reprovisioning required), so warn only outside dev.
+	if !cfg.IsDevelopment() && cfg.Telemetry.DeviceSecretPepper == "" {
+		logger.Warn("TELEMETRY_DEVICE_SECRET_PEPPER unset — device hashes HMAC'd without pepper. Set it before provisioning hardware; rotation requires device reprovisioning.")
+	}
 	port := cfg.Port
 	if port == "" {
 		port = "8080"

@@ -124,7 +124,7 @@ func TestAccounting_AdapterFactory_And_Providers(t *testing.T) {
 	invRes, err := mockCli.ExportInvoice(ctx, accounting.ExportedInvoice{InvoiceNumber: "INV-101"})
 	require.NoError(t, err)
 	assert.Equal(t, "SUCCESS", invRes.Status)
-	assert.Equal(t, "EXT-INV-101", invRes.ExternalID)
+	assert.Equal(t, "EXT-MOCK-INV-101", invRes.ExternalID)
 
 	contactRes, err := mockCli.SyncContacts(ctx, []accounting.Contact{{Name: "Test Driver"}})
 	require.NoError(t, err)
@@ -256,7 +256,7 @@ func TestAccounting_OutboxConsumer_Idempotency_And_GLRules(t *testing.T) {
 	`).Scan(&invStatus, &invExtID)
 	require.NoError(t, err)
 	assert.Equal(t, "acked", invStatus)
-	assert.Equal(t, "EXT-INV-2026-999", invExtID)
+	assert.Equal(t, "EXT-MOCK-INV-2026-999", invExtID)
 }
 
 // 4. Test TriggerSync, SyncContacts, and Reconciliation
