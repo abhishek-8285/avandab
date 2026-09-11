@@ -6,17 +6,17 @@
 
 **Stack** (`docs/01`): pure-Go binary, Chi router, SQLite WAL (`modernc.org/sqlite`), goose migrations, server-rendered HTML (Datastar/HTMX) + live map (OSM/Google gl=IN tiles, config-driven), in-memory event bus + transactional outbox, TCP `:5023` GPS ingest, MQTT `:1883`, Expo SDK 52 mobile app.
 
-**Migrations:** `db/migrations/` = 134 files, head `00140_files_tenant_scope.sql`; `db/migrations_pg/` mirrors at 134. Next free slot **`00141`**. *(2026-09-10: verified on disk; index header matches.)* `00068–00072` confirmed ABSENT (RESERVED-UNBUILT still true).
+**Migrations:** `db/migrations/` = 143 files, head `00149_identity_sequence_resync.sql`; `db/migrations_pg/` mirrors at 143. Next free slot **`00150`**. *(2026-09-11: verified on disk; index header matches.)* `00068–00072` confirmed ABSENT (RESERVED-UNBUILT still true).
 
 **Recent direction:** tenant fail-closed hardening + `DefaultTenant` fallback removal (`e74c040`); vehicle compliance hard-block restore (`e9c23ad`); founder-signal tenant scoping; PG dual-engine parity + CI gate; per-tenant company profiles (`00125`); self-registration → `org_admin`.
 
 **Built 2026-09-09 → 10 (28 commits):** telemetry hardening round 2 — per-tenant plates (`00135`), positions NULL backfill (`00136`), ack-after-accept + worker failure metrics, etag-304/spatial-bbox/delta sync on live endpoint, SSE keep-alive, cross-tenant sync-spoof fix, egress origin shield + static cache; AV teleoperation deck + `vehicle_commands`/`av_operator` (`00137`); scale indexes (`00138/00139`); S3/R2 storage driver + `files.tenant_id` scoping (`00140`, closes cross-tenant file-read hole); Cloudflare Turnstile bot protection; telemetry partition retention cleaner; PWA service worker + offline precache + client image compression; cross-compiled VPS deploy (`scripts/deploy-vps.sh`, systemd, rsync; compile-on-target blocked); Google gl=IN live-map tiles + India-bounded viewports; SOP trip-close odometer (B1 seed).
 
-**Built per migration (spot-verified):** telemetry GT06/AIS-140 + provider parity (`00117`); trip state machine + dwell + detention; route/ETA jobs (`00066/00067`); GST engine + PDF/QR + settlement ledger + Razorpay; tenancy registry + trigger hardening (`00102–00105`); churn (`00073–00076`); files (`00077`); RAG RBAC (`00078`); leader leases (`00079`); driver lifecycle (`00108`); dispatch offers (`00109`); quotes (`00110`); settlement ledger (`00111`); multi-leg + multistop EWB (`00112/00113`); entitlements + subscription webhooks (`00114/00115`); push tokens (`00116`); comm outbox (`00118`); email pool (`00120`); booking/trip indexes + idempotency (`00121/00122`); work orders (`00123/00124`); fleet SOP parity (`00126` JSON API + SAP-tab HTML); EWB delivered lifecycle (`00127/00128`). Agent orchestrator + RL loop + approval gate. OpenAPI covers `/api/v1/vehicles` (+points/measurements).
+**Built per migration (spot-verified):** telemetry GT06/AIS-140 + provider parity (`00117`); trip state machine + dwell + detention; route/ETA jobs (`00066/00067`); GST engine + PDF/QR + settlement ledger + Razorpay; tenancy registry + trigger hardening (`00102–00105`); churn (`00073–00076`); files (`00077`); RAG RBAC (`00078`); leader leases (`00079`); driver lifecycle (`00108`); dispatch offers (`00109`); quotes (`00110`); settlement ledger (`00111`); multi-leg + multistop EWB (`00112/00113`); entitlements + subscription webhooks (`00114/00115`); push tokens (`00116`); comm outbox (`00118`); email pool (`00120`); booking/trip indexes + idempotency (`00121/00122`); work orders (`00123/00124`); fleet SOP parity (`00126` JSON API + SAP-tab HTML); EWB delivered lifecycle (`00127/00128`); fuel issues (`00142`); maintenance plans (`00143`); gate register (`00144`); facilities (`00145`); STO/load board (`00146`); fuel cards (`00147`); ESG (`00148`); identity resync (`00149`). Agent orchestrator + RL loop + approval gate. OpenAPI covers 185 paths (B12 closed, A6 re-audit green).
 
-**Zero-code-presence follow-ups (repo-wide grep 2026-09-10):** `ZMOTM_MR` report set, `IP41`/`IW28` (only in SOP spec doc) — note `ZMOTM_MMS` p.8 trip-close odometer is now wired (`internal/handlers/trips.go`, `internal/trip/domain/aggregate/trip_aggregate.go`, `internal/trip/application/complete_trip.go`); backhaul (one comment); STO portal / load board, ESG, fuel cards (index rows only). KMPL partial (template + fuel audit exist; SOP report set not built). Mobile: 17 screens but only `DispatchScreen`/`TripsScreen` are `.tsx` — rest are `.ts`, stub-vs-real unverified.
+**Zero-code-presence follow-ups (repo-wide grep 2026-09-10, resolved 2026-09-11):** `ZMOTM_MR` report set, `IP41`/`IW28`, backhaul, STO portal / load board, ESG, fuel cards — all built since (B2–B11 + reports/plans APIs). KMPL partial (template + fuel audit exist; SOP report set not built). Mobile `.ts`-vs-`.tsx` question resolved by A10 inventory (13 wired, 4 stub mockups).
 
-**Reality divergences (`AVANDAB_ZERO_COST_ARCHITECTURE.md` vs observed):** *(2026-09-10, C5 — reconciled in place: §2/§4B/§6 rewritten to observed reality, honesty banner added.)* Residual: §3 live-map caveat added (some public share/playback templates embed unofficial Google `vt` tile URLs — ToS-gray, not an official free API); `ALL_TECH_SPECS.txt` remains a pointer stub by design; ownership index header now correct (head `00140`, A5 done 2026-09-08).
+**Reality divergences (`AVANDAB_ZERO_COST_ARCHITECTURE.md` vs observed):** *(2026-09-10, C5 — reconciled in place: §2/§4B/§6 rewritten to observed reality, honesty banner added.)* Residual: §3 live-map caveat added (some public share/playback templates embed unofficial Google `vt` tile URLs — ToS-gray, not an official free API); `ALL_TECH_SPECS.txt` remains a pointer stub by design; ownership index header now correct (head `00149`, repaired 2026-09-08 and 2026-09-11).
 
 ## Phase A — Stabilize (ship in AGENTS.md critical-path order)
 
@@ -31,7 +31,7 @@
 - **A9. EWB delivered-lifecycle staging proof** (`00127/00128`). Done 2026-09-11: `TestA9_TripDeliveryOnMigratedChain` migrates the real chain to head, publishes `TripDeliveredEvent`, asserts bill → `delivered` + `DELIVERED` audit row (00127/00128 CHECKs exercised end to end; constraint up/down pinned by migration tests, handler path by P4 test). No migration.
 - **A10. Mobile stub inventory** (`docs/04`). Done 2026-09-11: `docs/tech-specs/a10-mobile-stub-inventory.md` — 17 registered screens classified (4 stubs: OnboardingOverview/BookingSchedule/EarningsOverview mockup images + unregistered EarningsOverview; 13 wired with API binding per row). Every mobile-hit endpoint verified present in spec + on router. No migration.
 
-## Phase B — Feature gaps (SOP non-goals; each ≤1 migration; next free `00141+`)
+## Phase B — Feature gaps (SOP non-goals; each ≤1 migration; next free `00150+`)
 
 *(2026-09-10 re-slot: `00129`–`00134` were consumed by infra seams — GSTN/verify seam (`00130`), license NULL backfill (`00131`), vehicle expiry nullable (`00132`), `email_verified_at` (`00133`), `ts_unix` (`00134`) — so B1–B6 slots re-allocated to `00141`+.)*
 
@@ -59,12 +59,12 @@
 
 ## Risks & open questions
 
-1. Single-node fragility (2026-08-31 load-28/502 on 5.6 GiB device) vs 5k-truck claims — C1/C2 hedge; no scale promises before PG-cutover proof.
+1. Single-node fragility (2026-08-31 load-28/502 on 5.6 GiB device) vs 5k-truck claims — C1/C2 hedge; cutover rehearsed 2026-09-11 but not executed, still single-node — no scale promises.
 2. 61 pre-existing FK violations — *(resolved: A3 done 2026-09-08, `foreign_key_check` 0 rows at v134+; dispositions in `scripts/cutover-data-cleanup.sql`)*.
 3. Mock-by-default providers safe only while flags stay true; guard staging mocks from prod compliance.
 4. Index drift invites number collisions (past `00081/00084/00085`) — do A5 before any B-ticket.
 5. B7–B11 blocked on one-page specs each — *(resolved 2026-09-11: specs created in `docs/tech-specs/b7..b11`)*.
-6. B6 soft-depends B1 Gate Register — confirm order B6∥B1.
-7. OpenAPI survey was partial (through `/telemetry/*`) — A6 may enlarge B12.
-8. Mobile `.ts` screens may be stubs — A10 decides mobile tickets per feature.
+6. B6 soft-depends B1 Gate Register — *(moot 2026-09-11: both done)*.
+7. OpenAPI survey was partial (through `/telemetry/*`) — *(resolved 2026-09-11: A6 re-audit green, 183 paths)*.
+8. Mobile `.ts` screens may be stubs — *(resolved 2026-09-11: A10 inventory, 13 wired / 4 stubs)*.
 9. Agent mutating tools stay gated — auto-billing must never bypass `/agent-actions`.
