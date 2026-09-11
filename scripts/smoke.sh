@@ -26,7 +26,7 @@ code=$(post /company/onboard "company_name=SmokeCo" "address=1 Main St, Pune" "p
 [ "$code" = "303" ] || [ "$code" = "200" ] || { echo "ONBOARD FAILED: $code"; exit 1; }
 
 # route -> expected title fragment (empty = any 200, no error markers)
-ROUTES="/dashboard:Dashboard /bookings:Bookings /trips:Trips /drivers:Drivers
+ROUTES="/dashboard:Dashboard /bookings:Bookings /bookings/board:Bookings Board /trips:Trips /drivers:Drivers
 /vehicles:Vehicles /customers:Customers /invoices:Invoices /payments:Payments
 /settings:Settings /users:Users /reports:Reports /alerts: /audit-logs:Audit
 /geofences:Geofences /ewaybill:Way /ops/errors:Error /profile:Profile"

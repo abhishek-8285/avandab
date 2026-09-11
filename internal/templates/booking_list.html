@@ -1,4 +1,8 @@
 {{template "page_header.html" (dict "Title" "Bookings" "Subtitle" "Manage transport bookings, schedules, and pricing" "ActionHref" "/bookings/new" "ActionIcon" "add" "ActionLabel" "New Booking")}}
+<div class="flex items-center gap-1 p-1 rounded-full bg-surface-container-low border border-border-subtle w-fit mb-4" aria-label="Bookings views">
+    <a href="/bookings/board" class="px-4 py-1.5 rounded-full text-sm font-semibold text-secondary hover:text-on-surface transition-colors">Board</a>
+    <a href="/bookings" aria-current="page" class="px-4 py-1.5 rounded-full text-sm font-semibold bg-surface-container-lowest shadow-xs border border-border-subtle text-on-surface transition-colors">List</a>
+</div>
 {{template "kpi_grid.html" .}}
 
 <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
