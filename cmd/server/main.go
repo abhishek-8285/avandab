@@ -976,6 +976,8 @@ func main() {
 		app.Maintenance.RegisterPlanAPIRoutes(r)
 		// Fuel issues (TMS_SOP p.9 parity) JSON API — tenant-scoped, fuel RBAC.
 		app.FuelAudit.RegisterFuelIssueAPIRoutes(r)
+		// ZMOTM_MR fleet & operational reports JSON API — tenant-scoped, reports RBAC.
+		app.Reports.RegisterAPIRoutes(r)
 		// Spec 18 Wave A — route optimization API (tenant-scoped, permission-gated)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "create")).Post("/api/v1/routes/optimize", app.Routes.Optimize)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "read")).Get("/api/v1/routes/optimize/jobs", app.Routes.OptimizeJobs)

@@ -320,9 +320,18 @@ func (h *APITripHandler) Schedule(w http.ResponseWriter, r *http.Request) {
 
 func (h *APITripHandler) Start(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	var req struct {
+		StartOdometer  *float64 `json:"start_odometer"`
+		GateFacilityID string   `json:"gate_facility_id"`
+	}
+	if r.Body != nil {
+		_ = json.NewDecoder(r.Body).Decode(&req)
+	}
 	if err := h.startUC.Execute(r.Context(), application.StartTripCommand{
-		TripID:   aggregate.TripID(id),
-		TenantID: shared.TenantIDFromContext(r.Context()),
+		TripID:         aggregate.TripID(id),
+		TenantID:       shared.TenantIDFromContext(r.Context()),
+		StartOdometer:  req.StartOdometer,
+		GateFacilityID: req.GateFacilityID,
 	}); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

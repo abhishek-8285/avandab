@@ -18,8 +18,10 @@ import (
 
 // StartTripCommand contains parameters to transition a trip to started.
 type StartTripCommand struct {
-	TripID   aggregate.TripID
-	TenantID shared.TenantID
+	TripID         aggregate.TripID
+	TenantID       shared.TenantID
+	StartOdometer  *float64
+	GateFacilityID string
 }
 
 // StartTripUseCase orchestrates starting a trip.
@@ -69,6 +71,26 @@ func (uc *StartTripUseCase) Execute(ctx context.Context, cmd StartTripCommand) e
 		if err := t.Start(uc.clock.Now()); err != nil {
 			return err
 		}
+
+		if cmd.StartOdometer != nil {
+			if err := t.RecordStartReading(*cmd.StartOdometer, cmd.GateFacilityID, uc.clock.Now()); err != nil {
+				return err
+			}
+		} else if t.VehicleID != nil && *t.VehicleID != "" {
+			// Fallback to vehicle's current odometer if available
+			vehicleRepo, ok := txCtx.Repositories().Vehicles().(vehicleDomain.VehicleRepository)
+			if ok {
+				if v, err := vehicleRepo.Find(txCtx, vehicleAgg.VehicleID(*t.VehicleID), cmd.TenantID); err == nil && v != nil && v.Odometer > 0 {
+					_ = t.RecordStartReading(v.Odometer, cmd.GateFacilityID, uc.clock.Now())
+				}
+			}
+			if cmd.GateFacilityID != "" && t.GateFacilityID == "" {
+				t.GateFacilityID = cmd.GateFacilityID
+			}
+		} else if cmd.GateFacilityID != "" {
+			t.GateFacilityID = cmd.GateFacilityID
+		}
+
 		if err := repo.Save(txCtx, t); err != nil {
 			return err
 		}

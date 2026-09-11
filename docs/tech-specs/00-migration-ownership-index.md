@@ -127,8 +127,8 @@ which always allocate head-ward from the maximum above.
 | 00140 | `files.tenant_id` + idx_files_tenant_uploadable + trg_files_tenant_fk_insert/update (backfill to '1'; closes cross-tenant file-read hole, 00077 follow-up) | Files tenant scoping |
 | 00141 | files uploadable_type CHECK widening (+`driver_issue` — table rebuild, carries 00140 tenant_id/index/triggers) + files.tenant_id data backfill from owner entity (`driver_issue`→drivers.tenant_id; `trip_pod`/`expense_receipt`→trips.tenant_id; dangling refs stay '1'; down = documented no-op, 00136 convention) | 00140 follow-up — fixes always-failing driver-issue photo uploads + restores non-bootstrap orgs' historical upload access |
 | 00142 | `fuel_issues` table (fuel station OP/CL readings, litres issued, pump measuring points, receiving vehicle) + tenant FK triggers | Fleet SOP Parity B2 (p.9) |
-| 00143 | `maintenance_plans` table (IP41 single cycle plans, measuring point annual estimate projection) + work_orders plan_id/due_km + tenant FK triggers | Fleet SOP Parity B3 (pp.10-15) |
-| 00144+ | future specs | reserved |
+| 00144 | trips `start_odometer` and `gate_facility_id` (ZMOTM_MR Gate Register depot in/out log) | Fleet SOP Parity B5 (pp.16-20) |
+| 00145+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

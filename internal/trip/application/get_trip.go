@@ -38,6 +38,8 @@ type TripResponseDTO struct {
 	DeliveredAt               *time.Time `json:"delivered_at"`
 	CompletedAt               *time.Time `json:"completed_at"`
 	CloseOdometer             *float64   `json:"close_odometer"`
+	StartOdometer             *float64   `json:"start_odometer"`
+	GateFacilityID            string     `json:"gate_facility_id"`
 }
 
 // VehicleRegistration returns VehicleRegistrationNumber for template compatibility.
@@ -101,6 +103,8 @@ func (uc *GetTripUseCase) Execute(ctx context.Context, query GetTripQuery) (Trip
 			DeliveredAt:               t.DeliveredAt,
 			CompletedAt:               t.CompletedAt,
 			CloseOdometer:             t.CloseOdometer,
+			StartOdometer:             t.StartOdometer,
+			GateFacilityID:            t.GateFacilityID,
 		}
 		return nil
 	})

@@ -113,6 +113,13 @@ type TripAggregate struct {
 	// written by the close dialog alongside CompletedAt. Nil = not recorded.
 	CloseOdometer *float64
 
+	// StartOdometer is the SOP gate-out odometer reading (ZMOTM_MR Gate Register p.18):
+	// recorded at gate departure. Nil = not recorded.
+	StartOdometer *float64
+
+	// GateFacilityID is the departure depot/gate facility ID.
+	GateFacilityID string
+
 	// Multi-Stop legs
 	Stops []TripStop
 
@@ -504,6 +511,19 @@ func (t *TripAggregate) RecordCloseReading(odometer float64, now time.Time) erro
 		return errors.New("close odometer reading must be positive")
 	}
 	t.CloseOdometer = &odometer
+	t.UpdatedAt = now
+	return nil
+}
+
+// RecordStartReading records gate departure reading and facility (ZMOTM_MR SOP p.18).
+func (t *TripAggregate) RecordStartReading(odometer float64, facilityID string, now time.Time) error {
+	if odometer <= 0 {
+		return errors.New("start odometer reading must be positive")
+	}
+	t.StartOdometer = &odometer
+	if facilityID != "" {
+		t.GateFacilityID = facilityID
+	}
 	t.UpdatedAt = now
 	return nil
 }

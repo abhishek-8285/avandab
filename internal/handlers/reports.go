@@ -34,6 +34,10 @@ func (h *ReportHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "reports", "read")).Get("/trips.csv", h.ExportTripsCSV)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "reports", "read")).Get("/drivers.csv", h.ExportDriversCSV)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "reports", "read")).Get("/vehicles.csv", h.ExportVehiclesCSV)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "reports", "read")).Get("/vehicle-master.csv", h.ExportVehiclesCSV)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "reports", "read")).Get("/gate-register.csv", h.ExportGateRegisterCSV)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "reports", "read")).Get("/fuel-kmpl.csv", h.ExportFuelKMPLCSV)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "reports", "read")).Get("/breakdown.csv", h.ExportBreakdownCSV)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "reports", "read")).Get("/customers.csv", h.ExportCustomersCSV)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "reports", "read")).Get("/pending-payments.csv", h.ExportPendingPaymentsCSV)
 
@@ -319,42 +323,6 @@ func (h *ReportHandlers) ExportDriversCSV(w http.ResponseWriter, r *http.Request
 	}
 
 	writeCSV(w, "drivers_report.csv", header, rows, maxRows, nextURL)
-}
-
-func (h *ReportHandlers) ExportVehiclesCSV(w http.ResponseWriter, r *http.Request) {
-	pp := parsePaginationParams(r)
-	maxRows := h.Config.ExportMaxRows
-	if maxRows <= 0 {
-		maxRows = 50000
-	}
-
-	vehicles, total, err := h.Services.Vehicles.ListVehicles(r.Context(), pp.Query, pp.Status, maxRows, pp.Offset)
-	if err != nil {
-		http.Error(w, "Failed to load vehicles report", http.StatusInternalServerError)
-		return
-	}
-
-	header := []string{"RegistrationNumber", "VehicleNumber", "Type", "Capacity", "FuelType", "Status"}
-	var rows [][]string
-	for _, v := range vehicles {
-		rows = append(rows, []string{
-			v.RegistrationNumber,
-			v.VehicleNumber,
-			string(v.VehicleType),
-			fmt.Sprintf("%d", v.Capacity),
-			string(v.FuelType),
-			string(v.Status),
-		})
-	}
-
-	nextURL := ""
-	if total > int64(pp.Offset+len(vehicles)) {
-		q := r.URL.Query()
-		q.Set("offset", fmt.Sprintf("%d", pp.Offset+len(vehicles)))
-		nextURL = fmt.Sprintf("%s?%s", r.URL.Path, q.Encode())
-	}
-
-	writeCSV(w, "vehicles_report.csv", header, rows, maxRows, nextURL)
 }
 
 func (h *ReportHandlers) ExportCustomersCSV(w http.ResponseWriter, r *http.Request) {

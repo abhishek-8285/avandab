@@ -29,6 +29,8 @@ type SQLTripModel struct {
 	DeliveredAt     sql.NullTime    `json:"delivered_at"`
 	CompletedAt     sql.NullTime    `json:"completed_at"`
 	CloseOdometer   sql.NullFloat64 `json:"close_odometer"`
+	StartOdometer   sql.NullFloat64 `json:"start_odometer"`
+	GateFacilityID  sql.NullString  `json:"gate_facility_id"`
 	IdempotencyKey  sql.NullString  `json:"idempotency_key"`
 }
 
@@ -98,6 +100,16 @@ func MapToAggregate(m SQLTripModel) *aggregate.TripAggregate {
 		closeOdometer = &val
 	}
 
+	var startOdometer *float64
+	if m.StartOdometer.Valid {
+		val := m.StartOdometer.Float64
+		startOdometer = &val
+	}
+	gateFacilityID := ""
+	if m.GateFacilityID.Valid {
+		gateFacilityID = m.GateFacilityID.String
+	}
+
 	return &aggregate.TripAggregate{
 		ID:              aggregate.TripID(m.ID),
 		TenantID:        shared.TenantID(m.TenantID),
@@ -116,6 +128,8 @@ func MapToAggregate(m SQLTripModel) *aggregate.TripAggregate {
 		DeliveredAt:     deliveredAt,
 		CompletedAt:     completedAt,
 		CloseOdometer:   closeOdometer,
+		StartOdometer:   startOdometer,
+		GateFacilityID:  gateFacilityID,
 		CreatedAt:       m.CreatedAt,
 		UpdatedAt:       m.UpdatedAt,
 		Version:         m.Version,
@@ -179,6 +193,16 @@ func MapToPersistence(agg *aggregate.TripAggregate) SQLTripModel {
 		closeOdometer = sql.NullFloat64{Float64: *agg.CloseOdometer, Valid: true}
 	}
 
+	var startOdometer sql.NullFloat64
+	if agg.StartOdometer != nil {
+		startOdometer = sql.NullFloat64{Float64: *agg.StartOdometer, Valid: true}
+	}
+
+	var gateFacilityID sql.NullString
+	if agg.GateFacilityID != "" {
+		gateFacilityID = sql.NullString{String: agg.GateFacilityID, Valid: true}
+	}
+
 	var idempotencyKey sql.NullString
 	if agg.IdempotencyKey != "" {
 		idempotencyKey = sql.NullString{String: agg.IdempotencyKey, Valid: true}
@@ -205,6 +229,8 @@ func MapToPersistence(agg *aggregate.TripAggregate) SQLTripModel {
 		DeliveredAt:     deliveredAt,
 		CompletedAt:     completedAt,
 		CloseOdometer:   closeOdometer,
+		StartOdometer:   startOdometer,
+		GateFacilityID:  gateFacilityID,
 		IdempotencyKey:  idempotencyKey,
 	}
 }

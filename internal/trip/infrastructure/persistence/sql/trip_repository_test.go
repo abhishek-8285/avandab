@@ -64,7 +64,9 @@ CREATE TABLE trips (
     delivered_at DATETIME,
     completed_at DATETIME,
     idempotency_key TEXT,
-    close_odometer REAL
+    close_odometer REAL,
+    start_odometer REAL,
+    gate_facility_id TEXT
 );
 CREATE TABLE outbox_events (
     id TEXT PRIMARY KEY,
@@ -273,6 +275,41 @@ func TestTripRepository_Save_CloseOdometerRoundTrip(t *testing.T) {
 	found2, err := repo.Find(ctx, "tr-noread", "1")
 	require.NoError(t, err)
 	assert.Nil(t, found2.CloseOdometer)
+}
+
+func TestTripRepository_Save_StartOdometerAndGateFacilityRoundTrip(t *testing.T) {
+	dbConn := setupTripTestDB(t)
+	seedRoute(t, dbConn, "route-1", "A", "B")
+	repo := NewTripRepository(dbConn)
+	ctx := context.Background()
+	now := time.Date(2026, 9, 11, 8, 0, 0, 0, time.UTC)
+	agg := newTestTripAgg("tr-gate", "1", "TR-GATE-01", nil, "route-1", now.Add(2*time.Hour), "", now)
+	require.NoError(t, agg.Schedule(now))
+	require.NoError(t, agg.AssignDriver("drv-1", now))
+	require.NoError(t, agg.Start(now.Add(time.Hour)))
+	require.NoError(t, agg.RecordStartReading(54200.5, "DEPOT-BLR-01", now.Add(time.Hour)))
+	require.NoError(t, repo.Save(ctx, agg))
+
+	found, err := repo.Find(ctx, "tr-gate", "1")
+	require.NoError(t, err)
+	require.NotNil(t, found.StartOdometer)
+	assert.InDelta(t, 54200.5, *found.StartOdometer, 0.001)
+	assert.Equal(t, "DEPOT-BLR-01", found.GateFacilityID)
+
+	rm, err := repo.GetReadModel(ctx, "tr-gate", "1")
+	require.NoError(t, err)
+	require.NotNil(t, rm.StartOdometer)
+	assert.InDelta(t, 54200.5, *rm.StartOdometer, 0.001)
+	assert.Equal(t, "DEPOT-BLR-01", rm.GateFacilityID)
+
+	// SearchReadModels should also retrieve StartOdometer and GateFacilityID
+	rms, count, err := repo.SearchReadModels(ctx, "1", "", "", 10, 0)
+	require.NoError(t, err)
+	require.Equal(t, int64(1), count)
+	require.Len(t, rms, 1)
+	require.NotNil(t, rms[0].StartOdometer)
+	assert.InDelta(t, 54200.5, *rms[0].StartOdometer, 0.001)
+	assert.Equal(t, "DEPOT-BLR-01", rms[0].GateFacilityID)
 }
 
 func TestTripRepository_Save_ConcurrencyConflict(t *testing.T) {

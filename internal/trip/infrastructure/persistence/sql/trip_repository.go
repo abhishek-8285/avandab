@@ -66,6 +66,8 @@ func (r *tripRepository) Save(ctx context.Context, t *aggregate.TripAggregate) e
 			DeliveredAt:     p.DeliveredAt,
 			CompletedAt:     p.CompletedAt,
 			CloseOdometer:   p.CloseOdometer,
+			StartOdometer:   p.StartOdometer,
+			GateFacilityID:  p.GateFacilityID,
 			ID:              p.ID,
 			TenantID:        p.TenantID,
 			Version:         p.Version,
@@ -96,6 +98,8 @@ func (r *tripRepository) Save(ctx context.Context, t *aggregate.TripAggregate) e
 			DeliveredAt:     p.DeliveredAt,
 			CompletedAt:     p.CompletedAt,
 			CloseOdometer:   p.CloseOdometer,
+			StartOdometer:   p.StartOdometer,
+			GateFacilityID:  p.GateFacilityID,
 			IdempotencyKey:  p.IdempotencyKey,
 		})
 		if err != nil {
@@ -149,6 +153,8 @@ func (r *tripRepository) Find(ctx context.Context, id aggregate.TripID, tenantID
 		DeliveredAt:     row.DeliveredAt,
 		CompletedAt:     row.CompletedAt,
 		CloseOdometer:   row.CloseOdometer,
+		StartOdometer:   row.StartOdometer,
+		GateFacilityID:  row.GateFacilityID,
 	}
 	agg := converters.MapToAggregate(m)
 	stops, err := r.loadStops(ctx, string(id), string(tenantID))
@@ -192,6 +198,8 @@ func (r *tripRepository) FindByNumber(ctx context.Context, number string, tenant
 		DeliveredAt:     row.DeliveredAt,
 		CompletedAt:     row.CompletedAt,
 		CloseOdometer:   row.CloseOdometer,
+		StartOdometer:   row.StartOdometer,
+		GateFacilityID:  row.GateFacilityID,
 	}
 	agg := converters.MapToAggregate(m)
 	stops, err := r.loadStops(ctx, row.ID, string(tenantID))
@@ -235,6 +243,8 @@ func (r *tripRepository) FindByBookingID(ctx context.Context, bookingID string, 
 		DeliveredAt:     row.DeliveredAt,
 		CompletedAt:     row.CompletedAt,
 		CloseOdometer:   row.CloseOdometer,
+		StartOdometer:   row.StartOdometer,
+		GateFacilityID:  row.GateFacilityID,
 	}
 	agg := converters.MapToAggregate(m)
 	stops, err := r.loadStops(ctx, row.ID, string(tenantID))
@@ -281,6 +291,8 @@ func (r *tripRepository) FindByIdempotencyKey(ctx context.Context, key string, t
 		DeliveredAt:     row.DeliveredAt,
 		CompletedAt:     row.CompletedAt,
 		CloseOdometer:   row.CloseOdometer,
+		StartOdometer:   row.StartOdometer,
+		GateFacilityID:  row.GateFacilityID,
 		IdempotencyKey:  sql.NullString{String: key, Valid: true},
 	}
 	agg := converters.MapToAggregate(m)
@@ -437,6 +449,14 @@ func (r *tripRepository) GetReadModel(ctx context.Context, id aggregate.TripID, 
 	if row.CloseOdometer.Valid {
 		closeOdometer = &row.CloseOdometer.Float64
 	}
+	var startOdometer *float64
+	if row.StartOdometer.Valid {
+		startOdometer = &row.StartOdometer.Float64
+	}
+	gateFacilityID := ""
+	if row.GateFacilityID.Valid {
+		gateFacilityID = row.GateFacilityID.String
+	}
 
 	return domain.TripReadModel{
 		ID:                        row.ID,
@@ -464,6 +484,8 @@ func (r *tripRepository) GetReadModel(ctx context.Context, id aggregate.TripID, 
 		DeliveredAt:               deliveredAt,
 		CompletedAt:               completedAt,
 		CloseOdometer:             closeOdometer,
+		StartOdometer:             startOdometer,
+		GateFacilityID:            gateFacilityID,
 	}, nil
 }
 
@@ -474,7 +496,7 @@ func (r *tripRepository) SearchReadModels(ctx context.Context, tenantID shared.T
 	querySQL := `
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer, t.start_odometer, t.gate_facility_id,
     COALESCE(d.driver_id, '') AS driver_display_id,
     COALESCE(d.first_name, '') AS driver_first_name,
     COALESCE(d.last_name, '') AS driver_last_name,
@@ -512,13 +534,14 @@ LIMIT ? OFFSET ?`
 		var m domain.TripReadModel
 		var bookingID, driverID, vehicleID sql.NullString
 		var arrivalTime, startedAt, reachedPickupAt, inTransitAt, deliveredAt, completedAt sql.NullTime
-		var closeOdometer sql.NullFloat64
+		var closeOdometer, startOdometer sql.NullFloat64
+		var gateFacilityID sql.NullString
 		var remarks sql.NullString
 
 		err := rows.Scan(
 			&m.ID, &m.TripNumber, &bookingID, &driverID, &vehicleID, &m.RouteID,
 			&m.DepartureTime, &arrivalTime, &m.Status, &remarks, &m.CreatedAt, &m.UpdatedAt,
-			&startedAt, &reachedPickupAt, &inTransitAt, &deliveredAt, &completedAt, &closeOdometer,
+			&startedAt, &reachedPickupAt, &inTransitAt, &deliveredAt, &completedAt, &closeOdometer, &startOdometer, &gateFacilityID,
 			&m.DriverDisplayID, &m.DriverFirstName, &m.DriverLastName,
 			&m.VehicleRegistrationNumber, &m.VehicleNumber,
 			&m.RouteSource, &m.RouteDestination,
@@ -559,6 +582,12 @@ LIMIT ? OFFSET ?`
 		}
 		if closeOdometer.Valid {
 			m.CloseOdometer = &closeOdometer.Float64
+		}
+		if startOdometer.Valid {
+			m.StartOdometer = &startOdometer.Float64
+		}
+		if gateFacilityID.Valid {
+			m.GateFacilityID = gateFacilityID.String
 		}
 
 		readModels = append(readModels, m)
@@ -637,7 +666,7 @@ func (r *tripRepository) SearchReadModelsByDriver(ctx context.Context, tenantID 
 	querySQL := fmt.Sprintf(`
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer, t.start_odometer, t.gate_facility_id,
     COALESCE(d.driver_id, '') AS driver_display_id,
     COALESCE(d.first_name, '') AS driver_first_name,
     COALESCE(d.last_name, '') AS driver_last_name,
@@ -679,13 +708,14 @@ LIMIT ? OFFSET ?`, driverClause)
 		var m domain.TripReadModel
 		var bookingID, driverID, vehicleID sql.NullString
 		var arrivalTime, startedAt, reachedPickupAt, inTransitAt, deliveredAt, completedAt sql.NullTime
-		var closeOdometer sql.NullFloat64
+		var closeOdometer, startOdometer sql.NullFloat64
+		var gateFacilityID sql.NullString
 		var remarks sql.NullString
 
 		err := rows.Scan(
 			&m.ID, &m.TripNumber, &bookingID, &driverID, &vehicleID, &m.RouteID,
 			&m.DepartureTime, &arrivalTime, &m.Status, &remarks, &m.CreatedAt, &m.UpdatedAt,
-			&startedAt, &reachedPickupAt, &inTransitAt, &deliveredAt, &completedAt, &closeOdometer,
+			&startedAt, &reachedPickupAt, &inTransitAt, &deliveredAt, &completedAt, &closeOdometer, &startOdometer, &gateFacilityID,
 			&m.DriverDisplayID, &m.DriverFirstName, &m.DriverLastName,
 			&m.VehicleRegistrationNumber, &m.VehicleNumber,
 			&m.RouteSource, &m.RouteDestination,
@@ -726,6 +756,12 @@ LIMIT ? OFFSET ?`, driverClause)
 		}
 		if closeOdometer.Valid {
 			m.CloseOdometer = &closeOdometer.Float64
+		}
+		if startOdometer.Valid {
+			m.StartOdometer = &startOdometer.Float64
+		}
+		if gateFacilityID.Valid {
+			m.GateFacilityID = gateFacilityID.String
 		}
 
 		readModels = append(readModels, m)

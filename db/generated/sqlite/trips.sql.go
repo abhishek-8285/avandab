@@ -310,11 +310,11 @@ func (q *Queries) CountTripsByStatus(ctx context.Context, arg CountTripsByStatus
 const createTrip = `-- name: CreateTrip :one
 INSERT INTO trips (id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version,
-    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, idempotency_key, close_odometer)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?)
+    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, idempotency_key, close_odometer, start_odometer, gate_facility_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id, trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks, tenant_id, version, created_at, updated_at,
-    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, idempotency_key, close_odometer
+    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, idempotency_key, close_odometer, start_odometer, gate_facility_id
 `
 
 type CreateTripParams struct {
@@ -336,6 +336,8 @@ type CreateTripParams struct {
 	CompletedAt     sql.NullTime    `json:"completed_at"`
 	IdempotencyKey  sql.NullString  `json:"idempotency_key"`
 	CloseOdometer   sql.NullFloat64 `json:"close_odometer"`
+	StartOdometer   sql.NullFloat64 `json:"start_odometer"`
+	GateFacilityID  sql.NullString  `json:"gate_facility_id"`
 }
 
 type CreateTripRow struct {
@@ -360,6 +362,8 @@ type CreateTripRow struct {
 	CompletedAt     sql.NullTime    `json:"completed_at"`
 	IdempotencyKey  sql.NullString  `json:"idempotency_key"`
 	CloseOdometer   sql.NullFloat64 `json:"close_odometer"`
+	StartOdometer   sql.NullFloat64 `json:"start_odometer"`
+	GateFacilityID  sql.NullString  `json:"gate_facility_id"`
 }
 
 func (q *Queries) CreateTrip(ctx context.Context, arg CreateTripParams) (CreateTripRow, error) {
@@ -382,6 +386,8 @@ func (q *Queries) CreateTrip(ctx context.Context, arg CreateTripParams) (CreateT
 		arg.CompletedAt,
 		arg.IdempotencyKey,
 		arg.CloseOdometer,
+		arg.StartOdometer,
+		arg.GateFacilityID,
 	)
 	var i CreateTripRow
 	err := row.Scan(
@@ -406,6 +412,8 @@ func (q *Queries) CreateTrip(ctx context.Context, arg CreateTripParams) (CreateT
 		&i.CompletedAt,
 		&i.IdempotencyKey,
 		&i.CloseOdometer,
+		&i.StartOdometer,
+		&i.GateFacilityID,
 	)
 	return i, err
 }
@@ -511,7 +519,7 @@ func (q *Queries) GetOverdueTrips(ctx context.Context, tenantID string) ([]GetOv
 const getTripByBookingID = `-- name: GetTripByBookingID :one
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.tenant_id, t.version, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer, t.start_odometer, t.gate_facility_id,
     d.driver_id AS driver_display_id, d.first_name AS driver_first_name, d.last_name AS driver_last_name,
     v.registration_number AS vehicle_registration_number, v.vehicle_number AS vehicle_number,
     r.source AS route_source, r.destination AS route_destination
@@ -548,6 +556,8 @@ type GetTripByBookingIDRow struct {
 	DeliveredAt               sql.NullTime    `json:"delivered_at"`
 	CompletedAt               sql.NullTime    `json:"completed_at"`
 	CloseOdometer             sql.NullFloat64 `json:"close_odometer"`
+	StartOdometer             sql.NullFloat64 `json:"start_odometer"`
+	GateFacilityID            sql.NullString  `json:"gate_facility_id"`
 	DriverDisplayID           sql.NullString  `json:"driver_display_id"`
 	DriverFirstName           sql.NullString  `json:"driver_first_name"`
 	DriverLastName            sql.NullString  `json:"driver_last_name"`
@@ -581,6 +591,8 @@ func (q *Queries) GetTripByBookingID(ctx context.Context, arg GetTripByBookingID
 		&i.DeliveredAt,
 		&i.CompletedAt,
 		&i.CloseOdometer,
+		&i.StartOdometer,
+		&i.GateFacilityID,
 		&i.DriverDisplayID,
 		&i.DriverFirstName,
 		&i.DriverLastName,
@@ -595,7 +607,7 @@ func (q *Queries) GetTripByBookingID(ctx context.Context, arg GetTripByBookingID
 const getTripByID = `-- name: GetTripByID :one
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.tenant_id, t.version, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer, t.start_odometer, t.gate_facility_id,
     d.driver_id AS driver_display_id, d.first_name AS driver_first_name, d.last_name AS driver_last_name,
     v.registration_number AS vehicle_registration_number, v.vehicle_number AS vehicle_number,
     r.source AS route_source, r.destination AS route_destination
@@ -632,6 +644,8 @@ type GetTripByIDRow struct {
 	DeliveredAt               sql.NullTime    `json:"delivered_at"`
 	CompletedAt               sql.NullTime    `json:"completed_at"`
 	CloseOdometer             sql.NullFloat64 `json:"close_odometer"`
+	StartOdometer             sql.NullFloat64 `json:"start_odometer"`
+	GateFacilityID            sql.NullString  `json:"gate_facility_id"`
 	DriverDisplayID           sql.NullString  `json:"driver_display_id"`
 	DriverFirstName           sql.NullString  `json:"driver_first_name"`
 	DriverLastName            sql.NullString  `json:"driver_last_name"`
@@ -665,6 +679,8 @@ func (q *Queries) GetTripByID(ctx context.Context, arg GetTripByIDParams) (GetTr
 		&i.DeliveredAt,
 		&i.CompletedAt,
 		&i.CloseOdometer,
+		&i.StartOdometer,
+		&i.GateFacilityID,
 		&i.DriverDisplayID,
 		&i.DriverFirstName,
 		&i.DriverLastName,
@@ -679,7 +695,7 @@ func (q *Queries) GetTripByID(ctx context.Context, arg GetTripByIDParams) (GetTr
 const getTripByIdempotencyKey = `-- name: GetTripByIdempotencyKey :one
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.tenant_id, t.version, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer, t.start_odometer, t.gate_facility_id,
     d.driver_id AS driver_display_id, d.first_name AS driver_first_name, d.last_name AS driver_last_name,
     v.registration_number AS vehicle_registration_number, v.vehicle_number AS vehicle_number,
     r.source AS route_source, r.destination AS route_destination
@@ -716,6 +732,8 @@ type GetTripByIdempotencyKeyRow struct {
 	DeliveredAt               sql.NullTime    `json:"delivered_at"`
 	CompletedAt               sql.NullTime    `json:"completed_at"`
 	CloseOdometer             sql.NullFloat64 `json:"close_odometer"`
+	StartOdometer             sql.NullFloat64 `json:"start_odometer"`
+	GateFacilityID            sql.NullString  `json:"gate_facility_id"`
 	DriverDisplayID           sql.NullString  `json:"driver_display_id"`
 	DriverFirstName           sql.NullString  `json:"driver_first_name"`
 	DriverLastName            sql.NullString  `json:"driver_last_name"`
@@ -749,6 +767,8 @@ func (q *Queries) GetTripByIdempotencyKey(ctx context.Context, arg GetTripByIdem
 		&i.DeliveredAt,
 		&i.CompletedAt,
 		&i.CloseOdometer,
+		&i.StartOdometer,
+		&i.GateFacilityID,
 		&i.DriverDisplayID,
 		&i.DriverFirstName,
 		&i.DriverLastName,
@@ -763,7 +783,7 @@ func (q *Queries) GetTripByIdempotencyKey(ctx context.Context, arg GetTripByIdem
 const getTripByNumber = `-- name: GetTripByNumber :one
 SELECT t.id, t.trip_number, t.booking_id, t.driver_id, t.vehicle_id, t.route_id,
     t.departure_time, t.arrival_time, t.status, t.remarks, t.tenant_id, t.version, t.created_at, t.updated_at,
-    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer,
+    t.started_at, t.reached_pickup_at, t.in_transit_at, t.delivered_at, t.completed_at, t.close_odometer, t.start_odometer, t.gate_facility_id,
     d.driver_id AS driver_display_id, d.first_name AS driver_first_name, d.last_name AS driver_last_name,
     v.registration_number AS vehicle_registration_number, v.vehicle_number AS vehicle_number,
     r.source AS route_source, r.destination AS route_destination
@@ -800,6 +820,8 @@ type GetTripByNumberRow struct {
 	DeliveredAt               sql.NullTime    `json:"delivered_at"`
 	CompletedAt               sql.NullTime    `json:"completed_at"`
 	CloseOdometer             sql.NullFloat64 `json:"close_odometer"`
+	StartOdometer             sql.NullFloat64 `json:"start_odometer"`
+	GateFacilityID            sql.NullString  `json:"gate_facility_id"`
 	DriverDisplayID           sql.NullString  `json:"driver_display_id"`
 	DriverFirstName           sql.NullString  `json:"driver_first_name"`
 	DriverLastName            sql.NullString  `json:"driver_last_name"`
@@ -833,6 +855,8 @@ func (q *Queries) GetTripByNumber(ctx context.Context, arg GetTripByNumberParams
 		&i.DeliveredAt,
 		&i.CompletedAt,
 		&i.CloseOdometer,
+		&i.StartOdometer,
+		&i.GateFacilityID,
 		&i.DriverDisplayID,
 		&i.DriverFirstName,
 		&i.DriverLastName,
@@ -1046,12 +1070,13 @@ UPDATE trips
 SET trip_number = ?, booking_id = ?, driver_id = ?, vehicle_id = ?, route_id = ?,
     departure_time = ?, arrival_time = ?, status = ?, remarks = ?,
     started_at = ?, reached_pickup_at = ?, in_transit_at = ?, delivered_at = ?, completed_at = ?, close_odometer = ?,
+    start_odometer = ?, gate_facility_id = ?,
     version = version + 1,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ? AND version = ?
 RETURNING trip_number, booking_id, driver_id, vehicle_id, route_id,
     departure_time, arrival_time, status, remarks,
-    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, close_odometer,
+    started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at, close_odometer, start_odometer, gate_facility_id,
     id, tenant_id, version, created_at, updated_at
 `
 
@@ -1071,6 +1096,8 @@ type UpdateTripParams struct {
 	DeliveredAt     sql.NullTime    `json:"delivered_at"`
 	CompletedAt     sql.NullTime    `json:"completed_at"`
 	CloseOdometer   sql.NullFloat64 `json:"close_odometer"`
+	StartOdometer   sql.NullFloat64 `json:"start_odometer"`
+	GateFacilityID  sql.NullString  `json:"gate_facility_id"`
 	ID              string          `json:"id"`
 	TenantID        string          `json:"tenant_id"`
 	Version         int64           `json:"version"`
@@ -1092,6 +1119,8 @@ type UpdateTripRow struct {
 	DeliveredAt     sql.NullTime    `json:"delivered_at"`
 	CompletedAt     sql.NullTime    `json:"completed_at"`
 	CloseOdometer   sql.NullFloat64 `json:"close_odometer"`
+	StartOdometer   sql.NullFloat64 `json:"start_odometer"`
+	GateFacilityID  sql.NullString  `json:"gate_facility_id"`
 	ID              string          `json:"id"`
 	TenantID        string          `json:"tenant_id"`
 	Version         int64           `json:"version"`
@@ -1116,6 +1145,8 @@ func (q *Queries) UpdateTrip(ctx context.Context, arg UpdateTripParams) (UpdateT
 		arg.DeliveredAt,
 		arg.CompletedAt,
 		arg.CloseOdometer,
+		arg.StartOdometer,
+		arg.GateFacilityID,
 		arg.ID,
 		arg.TenantID,
 		arg.Version,
@@ -1137,6 +1168,8 @@ func (q *Queries) UpdateTrip(ctx context.Context, arg UpdateTripParams) (UpdateT
 		&i.DeliveredAt,
 		&i.CompletedAt,
 		&i.CloseOdometer,
+		&i.StartOdometer,
+		&i.GateFacilityID,
 		&i.ID,
 		&i.TenantID,
 		&i.Version,
