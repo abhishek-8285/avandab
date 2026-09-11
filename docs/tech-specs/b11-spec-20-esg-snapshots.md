@@ -1,6 +1,6 @@
 # Spec 20 §3: ESG Emission Snapshots & Scope 3 Carbon Accounting (B11)
 
-- **Migration Slot:** `00072` (Allocated in ownership index)
+- **Migration Slot:** `00148` (Re-slotted from `00072` reserved slot per sequential migration rule)
 - **Owner:** Domain: `internal/sustainability/application` & `internal/handlers/esg.go` | Route: `/api/v1/esg/*`
 - **Status:** Approved Spec (Roadmap B11)
 

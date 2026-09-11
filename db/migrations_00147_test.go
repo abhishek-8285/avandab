@@ -19,7 +19,7 @@ func TestMigration00147_FuelCards_UpAndDown(t *testing.T) {
 	defer db.Close()
 
 	_ = goose.SetDialect("sqlite")
-	require.NoError(t, goose.Up(db, "migrations"))
+	require.NoError(t, goose.UpTo(db, "migrations", 147))
 
 	// Verify tables created
 	var count int

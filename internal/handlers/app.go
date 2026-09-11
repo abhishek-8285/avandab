@@ -31,6 +31,8 @@ import (
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 	"transport-app/internal/sto"
+	"transport-app/internal/sustainability"
+	esgapp "transport-app/internal/sustainability/application"
 	"transport-app/internal/telemetry"
 
 	"github.com/go-chi/chi/v5"
@@ -159,6 +161,8 @@ type App struct {
 	STO *STOHandlers
 	// FuelCards powers commercial fuel cards and accounting sync (B10).
 	FuelCards *FuelCardHandlers
+	// ESG powers Scope 3 carbon emission snapshots and BRSR reporting (B11).
+	ESG *ESGHandlers
 }
 
 // NewApp creates a new handler app with all handler groups initialized.
@@ -258,6 +262,9 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	fuelCardRepo := fuel.NewSQLFuelCardRepository(db)
 	fuelCardUseCase := fuelapp.NewFuelCardUseCase(fuelCardRepo)
 	app.FuelCards = NewFuelCardHandlers(app, fuelCardUseCase)
+	esgRepo := sustainability.NewSQLESGRepository(db)
+	esgUseCase := esgapp.NewESGUsecase(esgRepo)
+	app.ESG = NewESGHandlers(app, esgUseCase)
 
 	return app
 }

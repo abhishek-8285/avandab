@@ -132,7 +132,8 @@ which always allocate head-ward from the maximum above.
 | 00145 | `facilities` table (ZFID facility master, plant/circle/cost_center, operational offices) | Fleet SOP Parity B6 (pp.1-2) |
 | 00146 | `stock_transfer_orders`, `load_board_listings`, `load_board_bids` (STO portal + load board syndication) | Spec 19 B8 |
 | 00147 | `fuel_cards`, `fuel_card_transactions` (commercial fuel cards + accounting sync) | Spec 20 B10 |
-| 00148+ | future specs | reserved |
+| 00148 | `trip_esg_metrics`, `esg_emission_snapshots` (ESG emission snapshots & Scope 3 carbon accounting) | Spec 20 B11 |
+| 00149+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

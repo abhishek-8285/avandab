@@ -779,6 +779,24 @@ type ErrorReport struct {
 	Metadata    string         `json:"metadata"`
 }
 
+type EsgEmissionSnapshot struct {
+	ID              string    `json:"id"`
+	TenantID        string    `json:"tenant_id"`
+	PeriodStart     string    `json:"period_start"`
+	PeriodEnd       string    `json:"period_end"`
+	TotalTrips      int64     `json:"total_trips"`
+	TotalDistanceKm float64   `json:"total_distance_km"`
+	TotalCargoTkm   float64   `json:"total_cargo_tkm"`
+	TotalFuelLitres float64   `json:"total_fuel_litres"`
+	TotalCo2eKg     float64   `json:"total_co2e_kg"`
+	AvgCo2ePerTkm   float64   `json:"avg_co2e_per_tkm"`
+	EvDistanceKm    float64   `json:"ev_distance_km"`
+	Bs6DistanceKm   float64   `json:"bs6_distance_km"`
+	Bs4DistanceKm   float64   `json:"bs4_distance_km"`
+	CreatedBy       string    `json:"created_by"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
 type EtaHistory struct {
 	ID            string         `json:"id"`
 	TenantID      string         `json:"tenant_id"`
@@ -1940,6 +1958,20 @@ type TripDetention struct {
 	Status          string         `json:"status"`
 	CreatedAt       time.Time      `json:"created_at"`
 	UpdatedAt       time.Time      `json:"updated_at"`
+}
+
+type TripEsgMetric struct {
+	ID                 string    `json:"id"`
+	TenantID           string    `json:"tenant_id"`
+	TripID             string    `json:"trip_id"`
+	DistanceKm         float64   `json:"distance_km"`
+	PayloadTonnes      float64   `json:"payload_tonnes"`
+	FuelConsumedLitres float64   `json:"fuel_consumed_litres"`
+	Co2eKg             float64   `json:"co2e_kg"`
+	Co2ePerTkm         float64   `json:"co2e_per_tkm"`
+	EmissionNorm       string    `json:"emission_norm"`
+	Methodology        string    `json:"methodology"`
+	CreatedAt          time.Time `json:"created_at"`
 }
 
 type TripFeedback struct {
