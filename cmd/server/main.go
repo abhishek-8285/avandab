@@ -984,6 +984,8 @@ func main() {
 		app.Backhaul.RegisterAPIRoutes(r)
 		// STO portal and load board syndication (B8) JSON API — tenant-scoped, STO/loadboard RBAC.
 		app.STO.RegisterAPIRoutes(r)
+		// Fuel cards and accounting reconciliation (B10) JSON API — tenant-scoped, fuel RBAC.
+		app.FuelCards.RegisterAPIRoutes(r)
 		// Spec 18 Wave A — route optimization API (tenant-scoped, permission-gated)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "create")).Post("/api/v1/routes/optimize", app.Routes.Optimize)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "read")).Get("/api/v1/routes/optimize/jobs", app.Routes.OptimizeJobs)

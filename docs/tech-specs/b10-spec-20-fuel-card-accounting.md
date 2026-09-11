@@ -1,6 +1,6 @@
 # Spec 20 §2: Commercial Fuel Cards & Accounting Integration (B10)
 
-- **Migration Slot:** `00071` (Allocated in ownership index)
+- **Migration Slot:** `00147` (Re-slotted from `00071` reserved slot per sequential migration rule)
 - **Owner:** Domain: `internal/fuel/application` & `internal/handlers/fuel_cards.go` | Route: `/api/v1/fuel-cards/*`
 - **Status:** Approved Spec (Roadmap B10)
 

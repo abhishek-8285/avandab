@@ -24,6 +24,8 @@ import (
 	"transport-app/internal/domain"
 	"transport-app/internal/experiments"
 	"transport-app/internal/features"
+	"transport-app/internal/fuel"
+	fuelapp "transport-app/internal/fuel/application"
 	"transport-app/internal/i18n"
 	"transport-app/internal/operations/notifications"
 	"transport-app/internal/service"
@@ -155,6 +157,8 @@ type App struct {
 	Backhaul *BackhaulHandlers
 	// STO powers Stock Transfer Orders and Load Board syndication (B8).
 	STO *STOHandlers
+	// FuelCards powers commercial fuel cards and accounting sync (B10).
+	FuelCards *FuelCardHandlers
 }
 
 // NewApp creates a new handler app with all handler groups initialized.
@@ -251,6 +255,9 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	app.Backhaul = &BackhaulHandlers{App: app, BackhaulSvc: service.NewBackhaulService(db)}
 	stoRepo := sto.NewSQLRepository(db)
 	app.STO = &STOHandlers{App: app, STOSvc: sto.NewService(stoRepo, db)}
+	fuelCardRepo := fuel.NewSQLFuelCardRepository(db)
+	fuelCardUseCase := fuelapp.NewFuelCardUseCase(fuelCardRepo)
+	app.FuelCards = NewFuelCardHandlers(app, fuelCardUseCase)
 
 	return app
 }

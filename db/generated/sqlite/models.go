@@ -985,6 +985,40 @@ type FounderSignal struct {
 	CreatedAt      time.Time       `json:"created_at"`
 }
 
+type FuelCard struct {
+	ID                string         `json:"id"`
+	TenantID          string         `json:"tenant_id"`
+	CardNumberMasked  string         `json:"card_number_masked"`
+	CardTokenHash     string         `json:"card_token_hash"`
+	Provider          string         `json:"provider"`
+	AssignedVehicleID sql.NullString `json:"assigned_vehicle_id"`
+	AssignedDriverID  sql.NullString `json:"assigned_driver_id"`
+	DailySpendLimit   float64        `json:"daily_spend_limit"`
+	Status            string         `json:"status"`
+	CreatedAt         time.Time      `json:"created_at"`
+	UpdatedAt         time.Time      `json:"updated_at"`
+}
+
+type FuelCardTransaction struct {
+	ID                   string          `json:"id"`
+	TenantID             string          `json:"tenant_id"`
+	FuelCardID           string          `json:"fuel_card_id"`
+	ExternalTxnID        string          `json:"external_txn_id"`
+	TxnTime              time.Time       `json:"txn_time"`
+	FuelStationName      string          `json:"fuel_station_name"`
+	FuelStationCity      sql.NullString  `json:"fuel_station_city"`
+	FuelType             string          `json:"fuel_type"`
+	VolumeLitres         float64         `json:"volume_litres"`
+	RatePerLitre         float64         `json:"rate_per_litre"`
+	TotalAmount          float64         `json:"total_amount"`
+	OdometerReported     sql.NullFloat64 `json:"odometer_reported"`
+	ReconciliationStatus string          `json:"reconciliation_status"`
+	MatchedExpenseID     sql.NullString  `json:"matched_expense_id"`
+	SyncLogID            sql.NullString  `json:"sync_log_id"`
+	Notes                sql.NullString  `json:"notes"`
+	CreatedAt            time.Time       `json:"created_at"`
+}
+
 type FuelClaimAudit struct {
 	ID                  string          `json:"id"`
 	ExpenseID           string          `json:"expense_id"`
