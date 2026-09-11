@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Pre-Commit Automated Quality & Integrity Gate
+# Pre-Commit FAST Gate (~2 min): commit often, fail fast.
+# Full suite runs on pre-push + CI. See hooks/pre-push.
 # ==============================================================================
 set -e
 
@@ -70,12 +71,42 @@ if [ -n "$(git diff --name-only db/generated/)" ]; then
 fi
 echo -e "${GREEN}✅ sqlc files up to date.${NC}"
 
-# 5. Unit Tests
-echo -e "\n${CYAN}[7/7] Executing Go unit tests...${NC}"
-# 30m (not the 10m default): the ./test integration package alone needs
-# ~12m on weak devices (122-migration setup per test); hangs still fail.
-go test -timeout 30m -v ./...
-echo -e "${GREEN}✅ All unit tests passed.${NC}"
+# 5. Tests for CHANGED packages only (full suite is pre-push + CI).
+echo -e "\n${CYAN}[7/8] Testing changed packages...${NC}"
+CHANGED_GO=$(git diff --cached --name-only --diff-filter=ACM | grep '\.go$' || true)
+if [ -z "$CHANGED_GO" ] && ! git diff --cached --name-only | grep -qE '^(internal/templates/|db/migrations)'; then
+    echo -e "${GREEN}✅ No Go/template/migration changes — skipping tests.${NC}"
+else
+    PKGS=$(echo "$CHANGED_GO" | grep -v '_test\.go$' | xargs -r -n1 dirname | sort -u | sed 's|^|./|' | tr '\n' ' ')
+    # Template changes render through handlers tests; migrations touch everything.
+    # (-run subsets apply to handlers only; other packages always run fully.)
+    HANDLERS_RUN=""
+    if git diff --cached --name-only | grep -q '^internal/templates/'; then
+        PKGS="$PKGS ./internal/handlers/"
+        HANDLERS_RUN="-run 'Template|Render|Ratchet|Registry|Guard|Tabs_Wired|FeaturesLink'"
+    fi
+    if git diff --cached --name-only | grep -qE '^db/migrations'; then
+        PKGS="$PKGS ./db/ ./internal/handlers/"
+        HANDLERS_RUN="-run 'Template|Render|Ratchet|Registry|Guard|Migration|Parity|Tabs_Wired|FeaturesLink'"
+    fi
+    if [ -z "$PKGS" ]; then PKGS="./internal/handlers/"; fi
+    if echo "$PKGS" | grep -q './internal/handlers/'; then
+        # shellcheck disable=SC2086
+        go test -timeout 10m -count=1 $HANDLERS_RUN ./internal/handlers/
+        PKGS=$(echo "$PKGS" | sed 's|./internal/handlers/||')
+    fi
+    if [ -n "$(echo "$PKGS" | tr -d ' ')" ]; then
+        # shellcheck disable=SC2086
+        go test -timeout 10m -count=1 $PKGS
+    fi
+    unset HANDLERS_RUN
+    echo -e "${GREEN}✅ Changed-package tests passed.${NC}"
+fi
+
+# 6. Whole-repo compile (catches cross-package breaks cheaply).
+echo -e "\n${CYAN}[8/8] Compiling all packages...${NC}"
+go build ./...
+echo -e "${GREEN}✅ Build passed.${NC}"
 
 echo -e "\n${GREEN}==============================================================================${NC}"
 echo -e "${GREEN}🎉 All pre-commit checks passed! Your commit is ready to push.${NC}"

@@ -25,6 +25,10 @@ which always allocate head-ward from the maximum above.
   "grant all" only covered permissions existing at its date; every later
   migration that forgot role 6 shipped a 403. `TestRouteGuardPermissions_ExistInDB`
   + `TestOrgAdmin_RBACGrants` enforce this at `go test` time.
+- **No new startup permission seeders.** `cmd/server/main.go` still carries
+  three legacy self-heal seeders (scorecard:update, dashboard:read,
+  ewaybill:write) as idempotent backstops only. All new permissions ship via
+  migration (see 00150 pattern covering sqlite + `migrations_pg/` ports).
 - `tenant_id` is `TEXT` referencing `tenants(id)` via triggers (since 00102/00103).
   Before 00102 `tenants` did not exist — free-form `TEXT` with no FK was required.
   Since 00102 `tenants` exists and all rows backfilled to default tenant via 00065,
