@@ -4,9 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"encoding/xml"
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 	appdb "transport-app/internal/database"
 
@@ -117,8 +119,58 @@ func HistoryHandler(db *sql.DB) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
+		if r.URL.Query().Get("format") == "gpx" {
+			writeGPX(w, trackName(vehicleID, tripID), points)
+			return
+		}
 		_ = json.NewEncoder(w).Encode(points)
 	}
+}
+
+// trackName labels the GPX track/file after the requested entity.
+func trackName(vehicleID, tripID string) string {
+	if tripID != "" {
+		return "trip-" + tripID
+	}
+	return "vehicle-" + vehicleID
+}
+
+type gpxPoint struct {
+	Lat  float64 `xml:"lat,attr"`
+	Lon  float64 `xml:"lon,attr"`
+	Time string  `xml:"time"`
+}
+
+type gpxDoc struct {
+	XMLName xml.Name   `xml:"gpx"`
+	Version string     `xml:"version,attr"`
+	Creator string     `xml:"creator,attr"`
+	Xmlns   string     `xml:"xmlns,attr"`
+	Name    string     `xml:"trk>name"`
+	Points  []gpxPoint `xml:"trk>trkseg>trkpt"`
+}
+
+// writeGPX renders history points as a GPX 1.1 track (Traccar-compatible:
+// import into geojson.io, GPX Studio, or back onto our playback page as an
+// overlay). encoding/xml escapes names; coordinates are floats.
+func writeGPX(w http.ResponseWriter, name string, points []HistoryPoint) {
+	doc := gpxDoc{Version: "1.1", Creator: "Avandab", Xmlns: "http://www.topografix.com/GPX/1/1", Name: name}
+	for _, p := range points {
+		doc.Points = append(doc.Points, gpxPoint{
+			Lat: p.Lat, Lon: p.Lng, Time: p.Ts.UTC().Format(time.RFC3339),
+		})
+	}
+	safe := strings.Map(func(r rune) rune {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_' {
+			return r
+		}
+		return '_'
+	}, name)
+	w.Header().Set("Content-Type", "application/gpx+xml")
+	w.Header().Set("Content-Disposition", `attachment; filename="`+safe+`.gpx"`)
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write([]byte(xml.Header))
+	_ = xml.NewEncoder(w).Encode(doc)
 }
 
 // fetchHistoryPoints is the dual-source wrapper kept for tests.

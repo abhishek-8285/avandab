@@ -50,6 +50,9 @@
             <div class="ml-auto bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-lg px-2 py-1.5 shadow-lg pointer-events-auto flex items-center gap-1">
                 <button type="button" id="pb-export-csv" class="px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wide bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:border-primary/40 transition-colors cursor-pointer">CSV</button>
                 <button type="button" id="pb-export-gpx" class="px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wide bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:border-primary/40 transition-colors cursor-pointer">GPX</button>
+                <label for="pb-gpx-file" class="px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wide bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:border-primary/40 transition-colors cursor-pointer" title="Overlay a GPX track for comparison — parsed locally in your browser, never uploaded">Overlay</label>
+                <input type="file" id="pb-gpx-file" accept=".gpx,application/gpx+xml,text/xml" class="hidden">
+                <span id="pb-gpx-status" class="hidden px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wide bg-violet-500/10 border border-violet-500/20 text-violet-700 cursor-pointer" title="Click to clear the overlay"></span>
             </div>
         </div>
 
@@ -409,6 +412,57 @@
         }
         document.getElementById('pb-export-csv').addEventListener('click', exportCSV);
         document.getElementById('pb-export-gpx').addEventListener('click', exportGPX);
+
+        // GPX overlay (pelmers/gpx-replay pattern): parse a GPX file entirely
+        // in the browser and draw it as a dashed comparison track. Nothing is
+        // uploaded — use it to diff planned vs driven routes, or replay an
+        // exported track from another trip/vehicle.
+        var gpxOverlay=null;
+        var gpxStatus=document.getElementById('pb-gpx-status');
+        function clearGpxOverlay(){
+            if(gpxOverlay && typeof map!=='undefined' && map){ map.removeLayer(gpxOverlay); }
+            gpxOverlay=null;
+            if(gpxStatus){ gpxStatus.classList.add('hidden'); gpxStatus.textContent=''; }
+        }
+        if(gpxStatus) gpxStatus.addEventListener('click', clearGpxOverlay);
+        var gpxInput=document.getElementById('pb-gpx-file');
+        if(gpxInput) gpxInput.addEventListener('change', function(){
+            var f=this.files && this.files[0];
+            this.value='';
+            if(!f) return;
+            if(f.size>5*1024*1024){ setGpxStatus('file too big (5MB)', true); return; }
+            var rd=new FileReader();
+            rd.onload=function(){
+                var latlngs=[];
+                try{
+                    var xml=new DOMParser().parseFromString(String(rd.result||''), 'application/xml');
+                    if(xml.getElementsByTagName('parsererror').length) throw new Error('bad xml');
+                    var pts=xml.getElementsByTagName('trkpt');
+                    if(!pts.length) pts=xml.getElementsByTagName('rtept');
+                    if(!pts.length) pts=xml.getElementsByTagName('wpt');
+                    for(var i=0;i<pts.length && i<20000;i++){
+                        var la=parseFloat(pts[i].getAttribute('lat')), ln=parseFloat(pts[i].getAttribute('lon'));
+                        if(isFinite(la)&&isFinite(ln)&&Math.abs(la)<=90&&Math.abs(ln)<=180) latlngs.push([la,ln]);
+                    }
+                }catch(e){ setGpxStatus('not a GPX file', true); return; }
+                if(latlngs.length<2){ setGpxStatus('no track points', true); return; }
+                clearGpxOverlay();
+                gpxOverlay=L.polyline(latlngs,{color:'#8b5cf6',weight:3,opacity:0.9,dashArray:'8 6'}).addTo(map);
+                map.fitBounds(gpxOverlay.getBounds(),{padding:[30,30],maxZoom:16});
+                setGpxStatus(latlngs.length+' pts · clear', false);
+            };
+            rd.onerror=function(){ setGpxStatus('read failed', true); };
+            rd.readAsText(f);
+        });
+        function setGpxStatus(txt, isErr){
+            if(!gpxStatus) return;
+            gpxStatus.textContent=txt;
+            gpxStatus.classList.remove('hidden');
+            gpxStatus.classList.toggle('text-rose-700', !!isErr);
+            gpxStatus.classList.toggle('border-rose-500/20', !!isErr);
+            gpxStatus.classList.toggle('bg-rose-500/10', !!isErr);
+            gpxStatus.classList.toggle('text-violet-700', !isErr);
+        }
 
         var playbackCache={truncatedPages:1};
         // Fetch helpers with keyset pagination (after+after_id handles same-second duplicates)
