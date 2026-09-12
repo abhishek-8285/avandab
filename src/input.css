@@ -74,7 +74,8 @@
   --color-status-info: #2563eb;
 
   --color-border-subtle: #e2e8f0;
-  --color-text-muted: #64748b;
+  /* #64748b scores 4.36:1 on background (fails WCAG AA 4.5); #5b6d85 = 4.85 */
+  --color-text-muted: #5b6d85;
 
   /* Border radius (premium) */
   --radius-sm: 0.375rem;
