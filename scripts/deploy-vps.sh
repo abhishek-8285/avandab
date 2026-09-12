@@ -13,7 +13,9 @@ echo "==> [1/6] Running pre-deploy checks locally..."
 go vet ./...
 
 echo "==> [2/6] Cross-compiling binary locally (Linux amd64)..."
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o bin/server ./cmd/server
+# Stamp the git SHA so ?v= cache-busting marks real deploys, not restarts.
+VERSION="$(git rev-parse --short HEAD)"
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w -X main.Version=${VERSION}" -o bin/server ./cmd/server
 echo "==> [3/6] Transferring binary to ${TARGET_HOST} with rsync..."
 # --timeout=120: a stalled transfer must die loudly, never hang silently
 # (a silent 10min rsync stall bit us on 2026-09-12; run unbuffered, not piped).

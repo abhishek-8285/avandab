@@ -1481,7 +1481,7 @@
 
     {{template "cookie-consent" .}}
 
-    <script src="/static/js/loader.js?v=20260818" defer></script>
+    <script src="/static/js/loader.js?v={{if .Version}}{{.Version}}{{else}}20260818{{end}}" defer></script>
     <script>
         (function () {
             var nav = document.getElementById('feat-section-nav');

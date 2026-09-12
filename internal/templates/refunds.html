@@ -66,7 +66,7 @@
     {{template "footer.html" .}}
 
     {{template "cookie-consent" .}}
-    <script src="/static/js/loader.js?v=20260818" defer></script>
+    <script src="/static/js/loader.js?v={{if .Version}}{{.Version}}{{else}}20260818{{end}}" defer></script>
     <script src="/static/js/theme.js?v={{if .Version}}{{.Version}}{{else}}20260820{{end}}" defer></script>
 </body>
 </html>

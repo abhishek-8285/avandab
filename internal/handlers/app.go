@@ -1170,7 +1170,7 @@ func (a *App) FeaturePage(w http.ResponseWriter, r *http.Request) {
 	slug := chi.URLParam(r, "slug")
 	fc, ok := GetFeature(slug)
 	if !ok {
-		http.NotFound(w, r)
+		a.NotFoundHandler(w, r)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
