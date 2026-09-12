@@ -172,6 +172,12 @@ func (h *VehicleHandlers) Create(w http.ResponseWriter, r *http.Request) {
 			currentMileage = &mil
 		}
 	}
+	var standardKmpl *float64
+	if s := r.PostFormValue("standard_kmpl"); s != "" {
+		if f, err := strconv.ParseFloat(s, 64); err == nil {
+			standardKmpl = &f
+		}
+	}
 	rcExpiry, err := parseOptionalDate(r, "rc_expiry")
 	if err != nil {
 		h.failPage(w, r, err, http.StatusBadRequest, "Vehicle Create Failed")
@@ -203,6 +209,7 @@ func (h *VehicleHandlers) Create(w http.ResponseWriter, r *http.Request) {
 		FitnessExpiry:      fitExp,
 		PermitExpiry:       perExp,
 		CurrentMileage:     currentMileage,
+		StandardKmpl:       standardKmpl,
 		RCExpiry:           rcExpiry,
 		PUCExpiry:          pucExpiry,
 		Odometer:           odometer,
@@ -412,6 +419,12 @@ func (h *VehicleHandlers) Update(w http.ResponseWriter, r *http.Request) {
 			currentMileage = &mil
 		}
 	}
+	var standardKmpl *float64
+	if s := r.PostFormValue("standard_kmpl"); s != "" {
+		if f, err := strconv.ParseFloat(s, 64); err == nil {
+			standardKmpl = &f
+		}
+	}
 	rcExpiry, err := parseOptionalDate(r, "rc_expiry")
 	if err != nil {
 		h.failPage(w, r, err, http.StatusBadRequest, "Vehicle Update Failed")
@@ -459,6 +472,7 @@ func (h *VehicleHandlers) Update(w http.ResponseWriter, r *http.Request) {
 		PermitExpiry:       perExp,
 		Status:             status,
 		CurrentMileage:     currentMileage,
+		StandardKmpl:       standardKmpl,
 		Blocked:            blocked,
 		BlockedReason:      r.PostFormValue("blocked_reason"),
 		RCExpiry:           rcExpiry,

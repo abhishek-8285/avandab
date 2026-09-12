@@ -74,7 +74,8 @@ CREATE TABLE vehicles (
     load_volume REAL,
     volume_unit TEXT,
     secondary_fuel TEXT,
-    usage_indicator TEXT
+    usage_indicator TEXT,
+    standard_kmpl REAL
 );
 CREATE TABLE outbox_events (
     id TEXT PRIMARY KEY,

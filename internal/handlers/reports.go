@@ -37,6 +37,7 @@ func (h *ReportHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "reports", "read")).Get("/vehicle-master.csv", h.ExportVehiclesCSV)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "reports", "read")).Get("/gate-register.csv", h.ExportGateRegisterCSV)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "reports", "read")).Get("/fuel-kmpl.csv", h.ExportFuelKMPLCSV)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "reports", "read")).Get("/kmpl-summary.csv", h.ExportKMPLSummaryCSV)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "reports", "read")).Get("/breakdown.csv", h.ExportBreakdownCSV)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "reports", "read")).Get("/customers.csv", h.ExportCustomersCSV)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "reports", "read")).Get("/pending-payments.csv", h.ExportPendingPaymentsCSV)

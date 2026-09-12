@@ -20,6 +20,7 @@ type CreateVehicleCommand struct {
 	FitnessExpiry      time.Time
 	PermitExpiry       time.Time
 	CurrentMileage     *float64
+	StandardKmpl       *float64
 	Blocked            bool
 	BlockedReason      string
 	RCExpiry           *time.Time
@@ -42,6 +43,7 @@ type UpdateVehicleCommand struct {
 	PermitExpiry       time.Time
 	Status             aggregate.VehicleStatus
 	CurrentMileage     *float64
+	StandardKmpl       *float64
 	Blocked            bool
 	BlockedReason      string
 	RCExpiry           *time.Time

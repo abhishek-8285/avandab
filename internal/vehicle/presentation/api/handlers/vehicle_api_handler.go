@@ -94,6 +94,7 @@ type vehicleRequest struct {
 	PermitExpiry       string                    `json:"permit_expiry"`
 	Status             string                    `json:"status"`
 	CurrentMileage     *float64                  `json:"current_mileage"`
+	StandardKmpl       *float64                  `json:"standard_kmpl"`
 	Blocked            *bool                     `json:"blocked"`
 	BlockedReason      string                    `json:"blocked_reason"`
 	RCExpiry           string                    `json:"rc_expiry"`
@@ -184,6 +185,7 @@ func (h *APIVehicleHandler) Create(w http.ResponseWriter, r *http.Request) {
 		FitnessExpiry:      fitExp,
 		PermitExpiry:       perExp,
 		CurrentMileage:     req.CurrentMileage,
+		StandardKmpl:       req.StandardKmpl,
 		Blocked:            blocked,
 		BlockedReason:      req.BlockedReason,
 		RCExpiry:           rcExp,
@@ -297,6 +299,10 @@ func (h *APIVehicleHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if req.CurrentMileage != nil {
 		mileage = req.CurrentMileage
 	}
+	norm := stored.StandardKmpl
+	if req.StandardKmpl != nil {
+		norm = req.StandardKmpl
+	}
 	rcExp := stored.RCExpiry
 	if req.RCExpiry != "" {
 		if rcExp, err = parseAPIDateOpt(req.RCExpiry, "rc_expiry"); err != nil {
@@ -352,6 +358,7 @@ func (h *APIVehicleHandler) Update(w http.ResponseWriter, r *http.Request) {
 		PermitExpiry:       perExp,
 		Status:             aggregate.VehicleStatus(status),
 		CurrentMileage:     mileage,
+		StandardKmpl:       norm,
 		Blocked:            blocked,
 		BlockedReason:      blockedReason,
 		RCExpiry:           rcExp,

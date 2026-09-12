@@ -2103,6 +2103,7 @@ type Vehicle struct {
 	VolumeUnit                sql.NullString  `json:"volume_unit"`
 	SecondaryFuel             sql.NullString  `json:"secondary_fuel"`
 	UsageIndicator            sql.NullString  `json:"usage_indicator"`
+	StandardKmpl              sql.NullFloat64 `json:"standard_kmpl"`
 }
 
 type VehicleClaim struct {

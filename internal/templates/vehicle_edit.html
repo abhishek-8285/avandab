@@ -26,6 +26,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {{template "field.html" (dict "Label" "Capacity (seats/kg)" "Name" "capacity" "Type" "number" "Value" (and $vehicle $vehicle.Capacity) "Placeholder" "e.g. 5000" "Hint" "Payload capacity (kg) or seat count")}}
                     {{template "field.html" (dict "Label" "Odometer Reading (km)" "Name" "odometer" "Type" "number" "Value" (and $vehicle (or $vehicle.Odometer $vehicle.CurrentMileage)) "Placeholder" "e.g. 15000" "Hint" "Current odometer / mileage in km")}}
+                    {{template "field.html" (dict "Label" "Standard KMPL (norm)" "Name" "standard_kmpl" "Type" "number" "Value" (and $vehicle $vehicle.StandardKmpl) "Placeholder" "e.g. 4.5" "Hint" "Fleet KMPL norm for variance flagging; blank = no norm")}}
 
                     <div>
                         <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Vehicle Type</label>

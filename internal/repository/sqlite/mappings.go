@@ -305,6 +305,7 @@ func toDomainVehicle(v db.Vehicle) domain.Vehicle {
 		BlockedReason:      fromNullString(v.BlockedReason),
 		Odometer:           v.Odometer,
 		CurrentMileage:     fromNullFloat(v.CurrentMileage),
+		StandardKmpl:       fromNullFloat(v.StandardKmpl),
 		CreatedAt:          v.CreatedAt,
 		UpdatedAt:          v.UpdatedAt,
 	}
