@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{{if .Title}}{{.Title}} - Avandab{{else}}Frequently Asked Questions - Avandab{{end}}</title>
+    {{template "seo_head.html" .}}
+    <link rel="stylesheet" href="/static/css/fonts.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
+    <link rel="stylesheet" href="/static/css/tailwind.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
+    <link rel="stylesheet" href="/static/css/app.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
+    {{template "theme_head.html" .}}
+    <style>
+        body { background-color: var(--color-background); color: var(--color-on-surface); font-family: 'Plus Jakarta Sans', sans-serif; }
+        details.faq-item summary { cursor: pointer; list-style: none; }
+        details.faq-item summary::-webkit-details-marker { display: none; }
+        details.faq-item summary .faq-chevron { transition: transform .2s ease; }
+        details.faq-item[open] summary .faq-chevron { transform: rotate(180deg); }
+    </style>
+    <script type="application/ld+json">
+    {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[
+      {"@type":"Question","name":"How long does setup take?","acceptedAnswer":{"@type":"Answer","text":"Most fleets are operational in about 10 minutes: register, onboard your company, add vehicles and drivers, and create your first booking."}},
+      {"@type":"Question","name":"How does trip tracking work?","acceptedAnswer":{"@type":"Answer","text":"Trips move through scheduled, assigned, in-transit and delivered states. Vehicles with GPS hardware report positions live; customers can follow a share link without logging in."}},
+      {"@type":"Question","name":"What is ePOD and how is delivery verified?","acceptedAnswer":{"@type":"Answer","text":"Electronic proof of delivery: the driver uploads a photo or PDF at delivery, optionally verified with a one-time password shared with the consignee."}},
+      {"@type":"Question","name":"Can my customers track their shipments?","acceptedAnswer":{"@type":"Answer","text":"Yes. Grant a customer portal access and they see only their own bookings, invoices and trip tracking. Public share links work without login."}},
+      {"@type":"Question","name":"Does Avandab handle billing and GST?","acceptedAnswer":{"@type":"Answer","text":"Completed trips generate invoices automatically, including GST breakdown with e-invoice (IRN/QR) support, and payments are recorded against them."}},
+      {"@type":"Question","name":"Is my data isolated from other companies?","acceptedAnswer":{"@type":"Answer","text":"Yes. Every record is tenant-scoped and enforced at the middleware layer; users only ever see their own organisation's data."}},
+      {"@type":"Question","name":"How is my data protected?","acceptedAnswer":{"@type":"Answer","text":"Data is protected under India's DPDP Act, 2023. See our Privacy Policy for what we collect and why, and contact us to exercise your rights."}},
+      {"@type":"Question","name":"What GPS hardware is supported?","acceptedAnswer":{"@type":"Answer","text":"Standard GPS trackers that report over TCP, plus manual trip updates and GPX file import for vehicles without live hardware."}},
+      {"@type":"Question","name":"Is there a driver mobile app?","acceptedAnswer":{"@type":"Answer","text":"Yes. Drivers get trip assignments, navigation, delivery verification and expense logging, with offline support that syncs later."}},
+      {"@type":"Question","name":"How do I get support?","acceptedAnswer":{"@type":"Answer","text":"Use the contact page to raise a ticket and track its status, or reply from your account for billing and operations help."}}
+    ]}
+    </script>
+</head>
+<body class="has-public-nav">
+    {{template "public_header.html" .}}
+
+    <main class="max-w-4xl mx-auto px-4 py-8 sm:py-12">
+        <nav class="mb-6 flex flex-wrap items-center gap-1.5 text-xs" aria-label="Breadcrumb">
+            <a href="/" class="hover:text-primary transition-colors">Home</a>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3"><path d="m9 18 6-6-6-6"/></svg>
+            <span class="text-primary font-semibold">FAQ</span>
+        </nav>
+
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-6 sm:p-10 space-y-4">
+        <h1 class="font-display text-3xl font-bold text-on-surface mb-1">Frequently Asked Questions</h1>
+        <p class="text-sm text-text-muted">Short answers to the questions every fleet owner asks. Still stuck? <a href="/contact-us" class="text-primary hover:underline">Contact support</a>.</p>
+
+        <div class="space-y-3 mt-6">
+        <details class="faq-item rounded-xl border border-border-subtle p-4">
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">How long does setup take?
+            <svg class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Most fleets are operational in about 10 minutes: register, onboard your company, add vehicles and drivers, and create your first booking.</p>
+        </details>
+        <details class="faq-item rounded-xl border border-border-subtle p-4">
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">How does trip tracking work?
+            <svg class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Trips move through scheduled, assigned, in-transit and delivered states. Vehicles with GPS hardware report positions live; customers can follow a <a href="/features/dashboard" class="text-primary hover:underline">share link</a> without logging in.</p>
+        </details>
+        <details class="faq-item rounded-xl border border-border-subtle p-4">
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">What is ePOD and how is delivery verified?
+            <svg class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Electronic proof of delivery: the driver uploads a photo or PDF at delivery, optionally verified with a one-time password shared with the consignee.</p>
+        </details>
+        <details class="faq-item rounded-xl border border-border-subtle p-4">
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">Can my customers track their shipments?
+            <svg class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Yes. Grant a customer portal access and they see only their own bookings, invoices and trip tracking. Public share links work without login.</p>
+        </details>
+        <details class="faq-item rounded-xl border border-border-subtle p-4">
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">Does Avandab handle billing and GST?
+            <svg class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Completed trips generate invoices automatically, including GST breakdown with e-invoice (IRN/QR) support, and payments are recorded against them.</p>
+        </details>
+        <details class="faq-item rounded-xl border border-border-subtle p-4">
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">Is my data isolated from other companies?
+            <svg class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Yes. Every record is tenant-scoped and enforced at the middleware layer; users only ever see their own organisation's data.</p>
+        </details>
+        <details class="faq-item rounded-xl border border-border-subtle p-4">
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">How is my data protected?
+            <svg class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Data is protected under India's DPDP Act, 2023. See our <a href="/privacy" class="text-primary hover:underline">Privacy Policy</a> for what we collect and why, and <a href="/contact-us" class="text-primary hover:underline">contact us</a> to exercise your rights.</p>
+        </details>
+        <details class="faq-item rounded-xl border border-border-subtle p-4">
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">What GPS hardware is supported?
+            <svg class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Standard GPS trackers that report over TCP, plus manual trip updates and GPX file import for vehicles without live hardware.</p>
+        </details>
+        <details class="faq-item rounded-xl border border-border-subtle p-4">
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">Is there a driver mobile app?
+            <svg class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Yes. Drivers get trip assignments, navigation, delivery verification and expense logging, with offline support that syncs later.</p>
+        </details>
+        <details class="faq-item rounded-xl border border-border-subtle p-4">
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">How do I get support?
+            <svg class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Use the <a href="/contact-us" class="text-primary hover:underline">contact page</a> to raise a ticket and track its status, or reply from your account for billing and operations help.</p>
+        </details>
+        </div>
+
+        <div class="mt-8 flex flex-wrap gap-3">
+            <a href="/register" class="px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-opacity">Start free — 10 min setup</a>
+            <a href="/contact-us" class="px-5 py-2.5 rounded-xl border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">Ask a question</a>
+        </div>
+
+        <p class="text-xs text-text-muted mt-10">&copy; 2026 Avandab Operations Platform. All rights reserved.</p>
+        </div>
+    </main>
+
+    {{template "footer.html" .}}
+
+    {{template "cookie-consent" .}}
+    <script src="/static/js/loader.js?v={{if .Version}}{{.Version}}{{else}}20260818{{end}}" defer></script>
+    <script src="/static/js/theme.js?v={{if .Version}}{{.Version}}{{else}}20260820{{end}}" defer></script>
+</body>
+</html>
