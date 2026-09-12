@@ -92,7 +92,7 @@ jobs:
     name: Backend Tests & Coverage
     runs-on: ubuntu-latest
     needs: [backend-build]
-    timeout-minutes: 30
+    timeout-minutes: 22
     steps:
       - uses: actions/checkout@v4
 
@@ -102,24 +102,12 @@ jobs:
           go-version: ${{ env.GO_VERSION }}
           cache: true
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: mobile/package-lock.json
-
-      - name: Install Mobile Dependencies
-        working-directory: ./mobile
-        run: npm ci
-
-      - name: Coverage Gate (80% minimum threshold)
+      - name: Tests + coverage (single pass, shuffled)
+        # Was: separate coverage run + -count=3 full runs + duplicated mobile
+        # coverage (~20min). Now one -count=1 pass with the honest app-wide
+        # profile; shuffle still proves test isolation. Flake-hunting moved
+        # to the weekly flake-watch workflow. Mobile coverage: Mobile job.
         run: ./scripts/check-coverage.sh
-
-      - name: Test isolation (shuffle)
-        # go's own default timeout is 10m and panics the suite mid-run
-        # (handlers x3 counts outgrew it); keep under the 30m job cap.
-        run: go test -timeout 25m -shuffle=on -count=3 ./internal/... ./test/...
 
       - name: Audit shared state
         run: |
