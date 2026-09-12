@@ -1,0 +1,29 @@
+name: Flake Watch
+
+# Weekly order-dependence hunt: the per-PR suite runs -count=1 (fast).
+# This runs the full suite triple-shuffled to catch flakes and shared-state
+# leaks the fast gate would miss. Read-only: never blocks merges.
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.26'
+
+jobs:
+  flake-hunt:
+    name: Triple-shuffle full suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Flake hunt
+        run: go test -timeout 25m -shuffle=on -count=3 ./internal/... ./test/...
