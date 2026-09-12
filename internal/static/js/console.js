@@ -325,12 +325,15 @@
     }
 
     // ── boot ────────────────────────────────────────────────────────
-    document.addEventListener("DOMContentLoaded", function () {
+    function bootConsole() {
         if (!$("fleet-cards")) { return; } // not on the console page
+        if (window.__consoleTimer) { clearInterval(window.__consoleTimer); window.__consoleTimer = null; }
         initMobileSheet();
         loadFleet();
         wireActions();
         initPalette();
-        setInterval(refreshMoneyStrip, 60000);
-    });
+        window.__consoleTimer = setInterval(refreshMoneyStrip, 60000);
+    }
+    document.addEventListener("DOMContentLoaded", bootConsole);
+    document.body.addEventListener("htmx:load", bootConsole);
 })();

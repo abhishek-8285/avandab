@@ -11,6 +11,15 @@
     <script src="/static/js/loader.js?v=20260818" defer></script>
     <script src="/static/js/compress-image.js?v=20260910" defer></script>
     <script src="/static/js/htmx.min.js?v={{if .Version}}{{.Version}}{{else}}20260822{{end}}" defer></script>
+    <!-- Page scripts load globally (defer, cached): hx-boost swaps don't
+         execute script tags, so per-page hooks only fire if already loaded.
+         Each guards on its own root element. -->
+    <script src="/static/js/chart.umd.min.js?v={{if .Version}}{{.Version}}{{else}}20260824{{end}}" defer></script>
+    <script src="/static/js/dashboard-charts.js?v={{if .Version}}{{.Version}}{{else}}20260824{{end}}" defer></script>
+    <script src="/static/js/dashboard-live.js?v={{if .Version}}{{.Version}}{{else}}20260912{{end}}" defer></script>
+    <script src="/static/js/bookings_board.js?v={{if .Version}}{{.Version}}{{else}}20260824{{end}}" defer></script>
+    <script src="/static/js/console.js?v={{if .Version}}{{.Version}}{{else}}20260824{{end}}" defer></script>
+    <script src="/static/js/geofence_draw.js?v={{if .Version}}{{.Version}}{{else}}20260824{{end}}" defer></script>
     <link rel="stylesheet" href="/static/css/tailwind.css?v={{if .Version}}{{.Version}}{{else}}20260821{{end}}">
     <link rel="stylesheet" href="/static/css/app.css?v={{if .Version}}{{.Version}}{{else}}20260821{{end}}">
     {{if .Extra}}{{if .Extra.MapAssets}}
@@ -43,7 +52,7 @@
     </script>
     {{template "theme_head.html" .}}
 </head>
-<body class="bg-surface-container-low font-sans" data-authenticated="{{if .User}}true{{else}}false{{end}}">
+<body class="bg-surface-container-low font-sans" data-authenticated="{{if .User}}true{{else}}false{{end}}" hx-boost="true">
     <div class="flex h-screen overflow-hidden bg-background">
         <div id="mobile-overlay" class="fixed inset-0 z-40 bg-black/50 opacity-0 invisible transition-opacity duration-300 md:hidden"></div>
 
@@ -120,7 +129,7 @@
                 {{end}}
                 {{if can .User "geofences" "read"}}
                 {{if and .Features (index .Features "geofences")}}
-                <a href="/geofences" class="nav-item {{if eq .Title "Geofences"}}active{{end}}">
+                <a href="/geofences" hx-boost="false" class="nav-item {{if eq .Title "Geofences"}}active{{end}}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                     <span>{{t "nav.geofences"}}</span>
                 </a>
@@ -565,24 +574,32 @@
                 setTimeout(function() { toast.remove(); }, 250);
             }
         }
-        document.addEventListener('DOMContentLoaded', function() {
-            var toasts = document.querySelectorAll('.flash-toast');
-            toasts.forEach(function(toast) {
+        // initLayoutShell (re-)binds everything that lives inside <body> and
+        // therefore dies on every hx-boost swap. Idempotent: safe to run on
+        // DOMContentLoaded AND htmx:load. Document-level closers stay once-only below.
+        function initLayoutShell() {
+            // Flash toasts auto-dismiss (per-toast guard).
+            document.querySelectorAll('.flash-toast').forEach(function(toast) {
+                if (toast.dataset.dismissArmed) return;
+                toast.dataset.dismissArmed = 'true';
                 setTimeout(function() {
                     if (toast && toast.parentNode) {
                         dismissFlashToast(toast);
                     }
                 }, 6000);
             });
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            initLayoutShell();
         });
 
-        (function() {
+        function initSidebarShell() {
             var sidebar = document.getElementById('sidebar');
             var overlay = document.getElementById('mobile-overlay');
             var btn = document.getElementById('mobile-menu-btn');
-            var sidebarLinks = sidebar ? sidebar.querySelectorAll('a, button') : [];
-            if (!sidebar || !btn) return;
-
+            if (!sidebar || !btn || btn.dataset.shellBound) return;
+            btn.dataset.shellBound = 'true';
+            var sidebarLinks = sidebar.querySelectorAll('a, button');
             var firstLink = sidebarLinks[0];
             var lastLink = sidebarLinks[sidebarLinks.length - 1];
 
@@ -616,21 +633,66 @@
 
             overlay.addEventListener('click', closeSidebar);
 
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape' && isSidebarOpen()) {
-                    closeSidebar();
-                }
-                if (e.key === 'Tab' && isSidebarOpen()) {
-                    if (e.shiftKey && document.activeElement === firstLink) {
-                        e.preventDefault();
-                        lastLink.focus();
-                    } else if (!e.shiftKey && document.activeElement === lastLink) {
-                        e.preventDefault();
-                        firstLink.focus();
+            // Document-level trap: bind once, resolve elements fresh so it
+            // keeps working after boost swaps replace the sidebar nodes.
+            if (!window.__sidebarKeyTrap) {
+                window.__sidebarKeyTrap = true;
+                document.addEventListener('keydown', function(e) {
+                    var sb = document.getElementById('sidebar');
+                    if (!sb || sb.classList.contains('-translate-x-full')) return;
+                    if (e.key === 'Escape') {
+                        sb.classList.remove('translate-x-0');
+                        sb.classList.add('-translate-x-full');
                     }
+                    if (e.key === 'Tab') {
+                        var links = sb.querySelectorAll('a, button');
+                        var first = links[0], last = links[links.length - 1];
+                        if (e.shiftKey && document.activeElement === first) {
+                            e.preventDefault();
+                            last.focus();
+                        } else if (!e.shiftKey && document.activeElement === last) {
+                            e.preventDefault();
+                            first.focus();
+                        }
+                    }
+                });
+            }
+        }
+        initSidebarShell();
+
+        // Trip edit autofill: picking a booking pre-fills route + pickup date.
+        // Lives here (not trip_edit.html) so it survives hx-boost entry.
+        function initTripEditAutofill() {
+            var bookingSelect = document.getElementById('booking_select');
+            var routeSelect = document.getElementById('route_select');
+            var depTimeInput = document.getElementById('departure_time');
+            if (!bookingSelect || !routeSelect || bookingSelect.dataset.autofillBound) return;
+            bookingSelect.dataset.autofillBound = 'true';
+            bookingSelect.addEventListener('change', function() {
+                var opt = bookingSelect.options[bookingSelect.selectedIndex];
+                if (!opt) return;
+                var routeId = opt.getAttribute('data-route');
+                var pickup = opt.getAttribute('data-pickup');
+                if (routeId) {
+                    routeSelect.value = routeId;
+                }
+                if (pickup && depTimeInput && !depTimeInput.value) {
+                    depTimeInput.value = pickup;
                 }
             });
-        })();
+        }
+
+        // Re-bind shell bits replaced by boost swaps. htmx:load also fires on
+        // first full load (after DOMContentLoaded), init is idempotent.
+        document.body.addEventListener('htmx:load', function() {
+            initLayoutShell();
+            initSidebarShell();
+            initFormGuards();
+            initSidebarActive();
+            initDropdowns();
+            initNotifCenter();
+            initTripEditAutofill();
+        });
 
         // Delete confirmation — forms carrying data-confirm must be explicitly OK'd
         document.addEventListener('submit', function(e) {
@@ -643,10 +705,13 @@
             }
         }, true);
 
-        // Form submit loading state — prevent double submission
-        document.addEventListener('DOMContentLoaded', function() {
+        // Form submit loading state — prevent double submission.
+        // Per-form guard flag: re-runs safely after boost swaps.
+        function initFormGuards() {
             var forms = document.querySelectorAll('form[method="POST"]');
             forms.forEach(function(form) {
+                if (form.dataset.guardBound) return;
+                form.dataset.guardBound = 'true';
                 form.addEventListener('submit', function(e) {
                     var btn = form.querySelector('button[type="submit"]');
                     if (!btn || btn.disabled) return;
@@ -658,27 +723,34 @@
                     btn.dataset.originalHtml = originalHTML;
                 });
             });
-        });
+        }
+        initFormGuards();
 
-        // Automatic Sidebar Active State Highlights based on window.location.pathname
-        document.addEventListener('DOMContentLoaded', function() {
+        // Automatic Sidebar Active State Highlights based on window.location.pathname.
+        // Clears first: on boost swaps the old nodes are replaced, but the
+        // active class must follow the new URL, not accumulate.
+        function initSidebarActive() {
             var currentPath = window.location.pathname;
             var navLinks = document.querySelectorAll('#sidebar-nav a');
-            
+
             navLinks.forEach(function(link) {
+                link.classList.remove('active');
                 var href = link.getAttribute('href');
                 if (href && (href === currentPath || (href !== '/' && currentPath.startsWith(href)))) {
                     link.classList.add('active');
                 }
             });
-        });
+        }
+        initSidebarActive();
 
-        // Universal Topbar Dropdowns Controller (User, Help, Notifications)
-        document.addEventListener('DOMContentLoaded', function() {
+        // Universal Topbar Dropdowns Controller (User, Help, Notifications).
+        // Per-button guard: re-runs safely after boost swaps.
+        function initDropdowns() {
             function setupDropdown(btnId, menuId, wrapperId) {
                 var btn = document.getElementById(btnId);
                 var menu = document.getElementById(menuId);
-                if (!btn || !menu) return;
+                if (!btn || !menu || btn.dataset.ddBound) return;
+                btn.dataset.ddBound = 'true';
 
                 btn.addEventListener('click', function(e) {
                     e.stopPropagation();
@@ -706,7 +778,12 @@
             setupDropdown('user-menu-btn', 'user-menu-dropdown', 'user-menu-wrapper');
             setupDropdown('help-menu-btn', 'help-menu-dropdown', 'help-menu-wrapper');
             setupDropdown('notif-bell-btn', 'notif-menu', 'notif-dropdown-wrapper');
+        }
+        initDropdowns();
 
+        // Document-level dropdown closers: bind once, resolve nodes fresh.
+        if (!window.__dropdownClosers) {
+            window.__dropdownClosers = true;
             // Close all dropdowns when clicking outside
             document.addEventListener('click', function(e) {
                 var wrappers = ['user-menu-wrapper', 'help-menu-wrapper', 'notif-dropdown-wrapper', 'theme-menu-wrapper'];
@@ -739,14 +816,20 @@
                     });
                 }
             });
+        }
 
+        // Notification center: mark-read + badge poll. Timer lives on window
+        // so re-init after boost swaps resets instead of stacking intervals.
+        function initNotifCenter() {
             var markReadBtn = document.getElementById('notif-mark-read');
             var badge = document.getElementById('notif-badge');
             var bellBtn = document.getElementById('notif-bell-btn');
 
-            if (markReadBtn) {
+            if (markReadBtn && !markReadBtn.dataset.mrBound) {
+                markReadBtn.dataset.mrBound = 'true';
                 markReadBtn.addEventListener('click', function() {
-                    if (badge) badge.remove();
+                    var b = document.getElementById('notif-badge');
+                    if (b) b.remove();
                     var chip = document.getElementById('notif-unread-chip');
                     if (chip) chip.remove();
                     fetch('/alerts/mark-all-read', { method: 'POST' }).catch(function() {});
@@ -757,14 +840,13 @@
             }
 
             // Periodic auto-refresh for notification badge (pause on hidden tab, stop on unauth/redirect)
-            var notifPollTimer = null;
             function pollUnread() {
                 if (document.hidden) return;
                 fetch('/alerts/unread', { credentials: 'same-origin' })
                     .then(function(res) {
                         if (!res.ok || res.redirected) {
                             // Session expired or unauthorized: cancel interval to eliminate egress loop
-                            if (notifPollTimer) { clearInterval(notifPollTimer); notifPollTimer = null; }
+                            if (window.__notifPollTimer) { clearInterval(window.__notifPollTimer); window.__notifPollTimer = null; }
                             return null;
                         }
                         return res.text();
@@ -775,21 +857,27 @@
                         var doc = parser.parseFromString(html, 'text/html');
                         var newBadge = doc.getElementById('notif-badge');
                         var existingBadge = document.getElementById('notif-badge');
+                        var bell = document.getElementById('notif-bell-btn');
                         if (existingBadge && newBadge) {
                             existingBadge.outerHTML = newBadge.outerHTML;
-                        } else if (!existingBadge && newBadge && !newBadge.classList.contains('hidden') && bellBtn) {
-                            bellBtn.appendChild(newBadge);
+                        } else if (!existingBadge && newBadge && !newBadge.classList.contains('hidden') && bell) {
+                            bell.appendChild(newBadge);
                         }
                     })
                     .catch(function() {});
             }
-            notifPollTimer = setInterval(pollUnread, 60000);
-            document.addEventListener('visibilitychange', function() {
-                if (!document.hidden && notifPollTimer) {
-                    pollUnread();
-                }
-            });
-        });
+            if (window.__notifPollTimer) { clearInterval(window.__notifPollTimer); }
+            window.__notifPollTimer = setInterval(pollUnread, 60000);
+            if (!window.__notifVisBound) {
+                window.__notifVisBound = true;
+                document.addEventListener('visibilitychange', function() {
+                    if (!document.hidden && window.__notifPollTimer) {
+                        pollUnread();
+                    }
+                });
+            }
+        }
+        initNotifCenter();
         // Fallback: replace any remaining material-symbols spans (dynamic .Icon etc.) with inline SVG if font fails
         document.addEventListener('DOMContentLoaded', function() {
             var iconMap = {

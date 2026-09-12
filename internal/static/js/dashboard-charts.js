@@ -58,6 +58,8 @@
             return;
         }
         setEmpty(canvasId, emptyId, false);
+        // Destroy previous instance: boot re-runs on hx-boost swaps.
+        if (charts[name]) { try { charts[name].destroy(); } catch (e) {} delete charts[name]; }
         charts[name] = new Chart(canvas, data);
     }
 
@@ -321,6 +323,13 @@
 
     function boot() {
         if (typeof Chart === "undefined") return;
+        // Re-read chart data from the DOM: on hx-boost entry the inline
+        // parse script never executes, so the global may be stale.
+        var cfgEl = document.getElementById("dashboard-chart-data");
+        if (cfgEl) {
+            try { CFG = JSON.parse(cfgEl.textContent || "{}"); }
+            catch (e) { CFG = {}; }
+        }
         initRevenue();
         initStatus();
         initBookings();
@@ -331,4 +340,6 @@
     } else {
         boot();
     }
+    // Re-boot charts after hx-boost body swaps (canvases are replaced).
+    document.body.addEventListener("htmx:load", boot);
 })();

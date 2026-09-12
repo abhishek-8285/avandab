@@ -118,9 +118,11 @@
         var mode = getCurrentThemeMode();
         applyTheme(mode);
 
-        // 1. Setup 3-way dropdowns
+        // 1. Setup 3-way dropdowns (per-button guard: re-runs on hx-boost swaps)
         var dropdownBtns = document.querySelectorAll('#theme-menu-btn, [data-theme-menu-btn]');
         dropdownBtns.forEach(function (btn) {
+            if (btn.dataset.themeBound) return;
+            btn.dataset.themeBound = 'true';
             btn.addEventListener('click', function (e) {
                 e.stopPropagation();
                 var wrapper = btn.closest('#theme-menu-wrapper, [data-theme-wrapper]') || btn.parentElement;
@@ -132,8 +134,10 @@
             });
         });
 
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function (e) {
+        // Close dropdown when clicking outside (document-level: bind once)
+        if (!window.__themeDocBound) {
+            window.__themeDocBound = true;
+            document.addEventListener('click', function (e) {
             document.querySelectorAll('#theme-dropdown, [data-theme-dropdown]').forEach(function (dd) {
                 var wrapper = dd.closest('#theme-menu-wrapper, [data-theme-wrapper]') || dd.parentElement;
                 if (wrapper && !wrapper.contains(e.target)) {
@@ -142,10 +146,13 @@
                     if (btn) btn.setAttribute('aria-expanded', 'false');
                 }
             });
-        });
+            });
+        }
 
         // 2. Setup theme choices inside dropdowns
         document.querySelectorAll('[data-theme-choice]').forEach(function (btn) {
+            if (btn.dataset.themeBound) return;
+            btn.dataset.themeBound = 'true';
             btn.addEventListener('click', function (e) {
                 e.stopPropagation();
                 var choice = btn.getAttribute('data-theme-choice');
@@ -155,8 +162,10 @@
 
         // 3. Setup single toggle buttons (e.g., in public header or mobile bars)
         document.querySelectorAll('#theme-toggle, [data-theme-toggle]').forEach(function (btn) {
+            if (btn.dataset.themeBound) return;
             // Only attach if it's not a dropdown trigger
             if (!btn.hasAttribute('data-theme-menu-btn') && btn.id !== 'theme-menu-btn') {
+                btn.dataset.themeBound = 'true';
                 btn.addEventListener('click', function (e) {
                     e.preventDefault();
                     window.AvandabTheme.toggleNext();
@@ -164,20 +173,23 @@
             }
         });
 
-        // 4. Live OS theme change listener
-        try {
-            var mq = window.matchMedia('(prefers-color-scheme: dark)');
-            var onOSChange = function () {
-                if (getCurrentThemeMode() === 'system') {
-                    applyTheme('system');
+        // 4. Live OS theme change listener (bind once)
+        if (!window.__themeMqBound) {
+            window.__themeMqBound = true;
+            try {
+                var mq = window.matchMedia('(prefers-color-scheme: dark)');
+                var onOSChange = function () {
+                    if (getCurrentThemeMode() === 'system') {
+                        applyTheme('system');
+                    }
+                };
+                if (mq.addEventListener) {
+                    mq.addEventListener('change', onOSChange);
+                } else if (mq.addListener) {
+                    mq.addListener(onOSChange);
                 }
-            };
-            if (mq.addEventListener) {
-                mq.addEventListener('change', onOSChange);
-            } else if (mq.addListener) {
-                mq.addListener(onOSChange);
-            }
-        } catch (e) {}
+            } catch (e) {}
+        }
     }
 
     if (document.readyState === 'loading') {
@@ -185,4 +197,5 @@
     } else {
         initThemeEvents();
     }
+    document.body.addEventListener('htmx:load', initThemeEvents);
 })();

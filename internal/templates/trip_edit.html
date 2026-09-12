@@ -104,23 +104,5 @@
     </form>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const bookingSelect = document.getElementById('booking_select');
-    const routeSelect = document.getElementById('route_select');
-    const depTimeInput = document.getElementById('departure_time');
-    if (!bookingSelect || !routeSelect) return;
-    bookingSelect.addEventListener('change', function() {
-        const opt = bookingSelect.options[bookingSelect.selectedIndex];
-        if (!opt) return;
-        const routeId = opt.getAttribute('data-route');
-        const pickup = opt.getAttribute('data-pickup');
-        if (routeId) {
-            routeSelect.value = routeId;
-        }
-        if (pickup && depTimeInput && !depTimeInput.value) {
-            depTimeInput.value = pickup;
-        }
-    });
-});
+<!-- Booking autofill lives in layout.html initTripEditAutofill (survives hx-boost). -->
 </script>
