@@ -169,6 +169,9 @@ jobs:
       - name: Tenant Isolation Lint
         run: ./scripts/tenant-lint.sh
 
+      - name: Legacy Freeze Lint
+        run: ./scripts/legacy-freeze.sh
+
   # ──────────────────────────────────────────────────────────
   # Job 4: Mobile (fully independent, parallel with backend)
   # ──────────────────────────────────────────────────────────
