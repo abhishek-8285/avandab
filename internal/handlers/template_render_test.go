@@ -455,12 +455,6 @@ func TestAllTemplatesRenderCleanly(t *testing.T) {
 				}},
 			},
 		})},
-		{"map.html", buildTemplateData(PageData{
-			Title: "Live Fleet Map",
-			Extra: map[string]interface{}{
-				"MapAssets": true,
-			},
-		})},
 		{"settlement_list.html", buildTemplateData(PageData{
 			Title: "Driver Settlements",
 			Extra: map[string]interface{}{

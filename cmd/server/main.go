@@ -1357,8 +1357,9 @@ func main() {
 
 			// Live Fleet Map (Spec 12 §2.2, §4.3)
 			// /map superseded by /tracking (FlyFleet live surveillance) — redirect stragglers.
+			// (The legacy map.html/map.js//map/stream chain was removed; the
+			// tracking island owns live map + stream now.)
 			r.Get("/map", http.RedirectHandler("/tracking", http.StatusSeeOther).ServeHTTP)
-			r.Get("/map/stream", app.Map.Stream)
 
 			// Ops dashboard (errors & incidents, login audit) - Admin only
 			r.With(middleware.RoleRequired(domain.DefaultRoleID(domain.RoleAdmin))).Get("/ops/dashboard", dashboardHandler.ServeHTTP)
