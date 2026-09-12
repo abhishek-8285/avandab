@@ -25,13 +25,29 @@ post /register "name=Smoke" "email=$EMAIL" "password=$PASS" "confirm_password=$P
 code=$(post /company/onboard "company_name=SmokeCo" "address=1 Main St, Pune" "phone=9876543210" "email=$EMAIL" | cut -d' ' -f1)
 [ "$code" = "303" ] || [ "$code" = "200" ] || { echo "ONBOARD FAILED: $code"; exit 1; }
 
-# route -> expected title fragment (empty = any 200, no error markers)
-ROUTES="/dashboard:Dashboard /bookings:Bookings /bookings/board:Bookings Board /trips:Trips /drivers:Drivers
-/vehicles:Vehicles /customers:Customers /invoices:Invoices /payments:Payments
-/settings:Settings /users:Users /reports:Reports /alerts: /audit-logs:Audit
-/geofences:Geofences /ewaybill:Way /ops/errors:Error /profile:Profile"
+# route -> expected title fragment (empty = any 200, no error markers).
+# Newline-separated: titles may contain spaces.
+ROUTES="/dashboard:Dashboard
+/bookings:Bookings
+/bookings/board:Bookings Board
+/trips:Trips
+/drivers:Drivers
+/vehicles:Vehicles
+/customers:Customers
+/invoices:Invoices
+/payments:Payments
+/settings:Settings
+/users:Users
+/reports:Reports
+/alerts:
+/audit-logs:Audit
+/geofences:Geofences
+/ewaybill:Way
+/ops/errors:Error
+/profile:Profile"
 FAIL=0
-for entry in $ROUTES; do
+while IFS= read -r entry; do
+    [ -z "$entry" ] && continue
     path="${entry%%:*}"; want="${entry#*:}"
     body="$(mktemp)"
     code=$(curl -s --max-time 15 -b "$JAR" -o "$body" -w "%{http_code}" "$BASE$path")
@@ -45,5 +61,5 @@ for entry in $ROUTES; do
     if [ -n "$want" ] && ! grep -q "<title>[^<]*$want" "$body"; then bad="title missing '$want'"; fi
     rm -f "$body"
     if [ -n "$bad" ]; then echo "FAIL $path: $bad"; FAIL=1; else echo "ok   $path"; fi
-done
+done <<< "$ROUTES"
 [ "$FAIL" = "0" ] && echo "SMOKE GREEN" || { echo "SMOKE RED"; exit 1; }
