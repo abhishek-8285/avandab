@@ -45,6 +45,10 @@
                 <dt class="text-eyebrow text-text-muted">Odometer</dt>
                 <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{if .Vehicle.CurrentMileage}}{{printf "%.0f" .Vehicle.CurrentMileage}}{{else if .Vehicle.Odometer}}{{printf "%.0f" .Vehicle.Odometer}}{{else}}0{{end}} km</dd>
             </div>
+            <div class="rounded-xl bg-surface-container-low p-3">
+                <dt class="text-eyebrow text-text-muted">Standard KMPL</dt>
+                <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{if .Vehicle.StandardKmpl}}{{printf "%.2f" .Vehicle.StandardKmpl}}{{else}}—{{end}}</dd>
+            </div>
         </dl>
     </div>
 </div>

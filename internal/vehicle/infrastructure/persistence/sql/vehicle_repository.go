@@ -98,6 +98,7 @@ func (r *vehicleRepository) Save(ctx context.Context, v *aggregate.VehicleAggreg
 				VolumeUnit:          converters.NullString(p.VolumeUnit),
 				SecondaryFuel:       converters.NullString(p.SecondaryFuel),
 				UsageIndicator:      converters.NullString(p.UsageIndicator),
+				StandardKmpl:        converters.NullFloat64(v.StandardKmpl),
 			})
 			if err != nil {
 				return err
@@ -157,6 +158,7 @@ func (r *vehicleRepository) Save(ctx context.Context, v *aggregate.VehicleAggreg
 			VolumeUnit:          converters.NullString(p.VolumeUnit),
 			SecondaryFuel:       converters.NullString(p.SecondaryFuel),
 			UsageIndicator:      converters.NullString(p.UsageIndicator),
+			StandardKmpl:        converters.NullFloat64(v.StandardKmpl),
 			ID:                  string(v.ID),
 			TenantID:            string(v.TenantID),
 		})
@@ -298,6 +300,7 @@ func dbVehicleFromGetRow(row db.GetVehicleByIDRow) db.Vehicle {
 		VolumeUnit:          row.VolumeUnit,
 		SecondaryFuel:       row.SecondaryFuel,
 		UsageIndicator:      row.UsageIndicator,
+		StandardKmpl:        row.StandardKmpl,
 	}
 }
 
@@ -358,5 +361,6 @@ func dbVehicleFromSearchRow(row db.SearchVehiclesRow) db.Vehicle {
 		VolumeUnit:          row.VolumeUnit,
 		SecondaryFuel:       row.SecondaryFuel,
 		UsageIndicator:      row.UsageIndicator,
+		StandardKmpl:        row.StandardKmpl,
 	}
 }

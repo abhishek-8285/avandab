@@ -23,6 +23,7 @@ type VehicleResponseDTO struct {
 	PermitExpiry       time.Time                `json:"permit_expiry"`
 	Status             string                   `json:"status"`
 	CurrentMileage     *float64                 `json:"current_mileage"`
+	StandardKmpl       *float64                 `json:"standard_kmpl"`
 	Blocked            bool                     `json:"blocked"`
 	BlockedReason      string                   `json:"blocked_reason"`
 	RCExpiry           *time.Time               `json:"rc_expiry"`
@@ -71,6 +72,7 @@ func (uc *GetVehicleUseCase) Execute(ctx context.Context, q GetVehicleQuery) (Ve
 			PermitExpiry:       v.PermitExpiry,
 			Status:             v.Status,
 			CurrentMileage:     v.CurrentMileage,
+			StandardKmpl:       v.StandardKmpl,
 			Blocked:            v.Blocked,
 			BlockedReason:      v.BlockedReason,
 			RCExpiry:           v.RCExpiry,

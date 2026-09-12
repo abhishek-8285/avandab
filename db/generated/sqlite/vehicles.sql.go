@@ -70,9 +70,9 @@ INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, cap
     valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
     cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
     engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
-    volume_unit, secondary_fuel, usage_indicator)
+    volume_unit, secondary_fuel, usage_indicator, standard_kmpl)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id, registration_number, vehicle_number, vehicle_type, capacity,
     fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage, blocked, blocked_reason, rc_expiry, odometer, puc_expiry,
     tenant_id, created_at, updated_at,
@@ -81,7 +81,7 @@ RETURNING id, registration_number, vehicle_number, vehicle_type, capacity,
     valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
     cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
     engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
-    volume_unit, secondary_fuel, usage_indicator
+    volume_unit, secondary_fuel, usage_indicator, standard_kmpl
 `
 
 type CreateVehicleParams struct {
@@ -137,6 +137,7 @@ type CreateVehicleParams struct {
 	VolumeUnit          sql.NullString  `json:"volume_unit"`
 	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
 	UsageIndicator      sql.NullString  `json:"usage_indicator"`
+	StandardKmpl        sql.NullFloat64 `json:"standard_kmpl"`
 }
 
 type CreateVehicleRow struct {
@@ -194,6 +195,7 @@ type CreateVehicleRow struct {
 	VolumeUnit          sql.NullString  `json:"volume_unit"`
 	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
 	UsageIndicator      sql.NullString  `json:"usage_indicator"`
+	StandardKmpl        sql.NullFloat64 `json:"standard_kmpl"`
 }
 
 func (q *Queries) CreateVehicle(ctx context.Context, arg CreateVehicleParams) (CreateVehicleRow, error) {
@@ -250,6 +252,7 @@ func (q *Queries) CreateVehicle(ctx context.Context, arg CreateVehicleParams) (C
 		arg.VolumeUnit,
 		arg.SecondaryFuel,
 		arg.UsageIndicator,
+		arg.StandardKmpl,
 	)
 	var i CreateVehicleRow
 	err := row.Scan(
@@ -307,6 +310,7 @@ func (q *Queries) CreateVehicle(ctx context.Context, arg CreateVehicleParams) (C
 		&i.VolumeUnit,
 		&i.SecondaryFuel,
 		&i.UsageIndicator,
+		&i.StandardKmpl,
 	)
 	return i, err
 }
@@ -334,7 +338,7 @@ SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
     valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
     cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
     engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
-    volume_unit, secondary_fuel, usage_indicator
+    volume_unit, secondary_fuel, usage_indicator, standard_kmpl
 FROM vehicles
 WHERE status = 'available' AND tenant_id = ?
 ORDER BY created_at ASC
@@ -395,6 +399,7 @@ type GetAvailableVehiclesRow struct {
 	VolumeUnit          sql.NullString  `json:"volume_unit"`
 	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
 	UsageIndicator      sql.NullString  `json:"usage_indicator"`
+	StandardKmpl        sql.NullFloat64 `json:"standard_kmpl"`
 }
 
 func (q *Queries) GetAvailableVehicles(ctx context.Context, tenantID string) ([]GetAvailableVehiclesRow, error) {
@@ -461,6 +466,7 @@ func (q *Queries) GetAvailableVehicles(ctx context.Context, tenantID string) ([]
 			&i.VolumeUnit,
 			&i.SecondaryFuel,
 			&i.UsageIndicator,
+			&i.StandardKmpl,
 		); err != nil {
 			return nil, err
 		}
@@ -484,7 +490,7 @@ SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
     valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
     cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
     engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
-    volume_unit, secondary_fuel, usage_indicator
+    volume_unit, secondary_fuel, usage_indicator, standard_kmpl
 FROM vehicles
 WHERE status = 'available' AND tenant_id = ? AND updated_at < ?2
 ORDER BY created_at ASC
@@ -551,6 +557,7 @@ type GetIdleVehiclesRow struct {
 	VolumeUnit          sql.NullString  `json:"volume_unit"`
 	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
 	UsageIndicator      sql.NullString  `json:"usage_indicator"`
+	StandardKmpl        sql.NullFloat64 `json:"standard_kmpl"`
 }
 
 // Stale bound is a Go-side param (impl passes UTC now-2h, matching the old
@@ -619,6 +626,7 @@ func (q *Queries) GetIdleVehicles(ctx context.Context, arg GetIdleVehiclesParams
 			&i.VolumeUnit,
 			&i.SecondaryFuel,
 			&i.UsageIndicator,
+			&i.StandardKmpl,
 		); err != nil {
 			return nil, err
 		}
@@ -642,7 +650,7 @@ SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
     valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
     cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
     engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
-    volume_unit, secondary_fuel, usage_indicator
+    volume_unit, secondary_fuel, usage_indicator, standard_kmpl
 FROM vehicles WHERE id = ? AND tenant_id = ?
 `
 
@@ -706,6 +714,7 @@ type GetVehicleByIDRow struct {
 	VolumeUnit          sql.NullString  `json:"volume_unit"`
 	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
 	UsageIndicator      sql.NullString  `json:"usage_indicator"`
+	StandardKmpl        sql.NullFloat64 `json:"standard_kmpl"`
 }
 
 func (q *Queries) GetVehicleByID(ctx context.Context, arg GetVehicleByIDParams) (GetVehicleByIDRow, error) {
@@ -766,6 +775,7 @@ func (q *Queries) GetVehicleByID(ctx context.Context, arg GetVehicleByIDParams) 
 		&i.VolumeUnit,
 		&i.SecondaryFuel,
 		&i.UsageIndicator,
+		&i.StandardKmpl,
 	)
 	return i, err
 }
@@ -779,7 +789,7 @@ SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
     valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
     cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
     engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
-    volume_unit, secondary_fuel, usage_indicator
+    volume_unit, secondary_fuel, usage_indicator, standard_kmpl
 FROM vehicles WHERE registration_number = ? AND tenant_id = ?
 `
 
@@ -843,6 +853,7 @@ type GetVehicleByRegistrationRow struct {
 	VolumeUnit          sql.NullString  `json:"volume_unit"`
 	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
 	UsageIndicator      sql.NullString  `json:"usage_indicator"`
+	StandardKmpl        sql.NullFloat64 `json:"standard_kmpl"`
 }
 
 func (q *Queries) GetVehicleByRegistration(ctx context.Context, arg GetVehicleByRegistrationParams) (GetVehicleByRegistrationRow, error) {
@@ -903,6 +914,7 @@ func (q *Queries) GetVehicleByRegistration(ctx context.Context, arg GetVehicleBy
 		&i.VolumeUnit,
 		&i.SecondaryFuel,
 		&i.UsageIndicator,
+		&i.StandardKmpl,
 	)
 	return i, err
 }
@@ -916,7 +928,7 @@ SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
     valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
     cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
     engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
-    volume_unit, secondary_fuel, usage_indicator
+    volume_unit, secondary_fuel, usage_indicator, standard_kmpl
 FROM vehicles
 WHERE tenant_id = ?1
   AND (lower(registration_number) LIKE '%' || lower(?2) || '%' OR lower(vehicle_number) LIKE '%' || lower(?2) || '%' OR lower(vehicle_type) LIKE '%' || lower(?2) || '%'
@@ -996,6 +1008,7 @@ type SearchVehiclesRow struct {
 	VolumeUnit          sql.NullString  `json:"volume_unit"`
 	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
 	UsageIndicator      sql.NullString  `json:"usage_indicator"`
+	StandardKmpl        sql.NullFloat64 `json:"standard_kmpl"`
 }
 
 func (q *Queries) SearchVehicles(ctx context.Context, arg SearchVehiclesParams) ([]SearchVehiclesRow, error) {
@@ -1073,6 +1086,7 @@ func (q *Queries) SearchVehicles(ctx context.Context, arg SearchVehiclesParams) 
 			&i.VolumeUnit,
 			&i.SecondaryFuel,
 			&i.UsageIndicator,
+			&i.StandardKmpl,
 		); err != nil {
 			return nil, err
 		}
@@ -1100,6 +1114,7 @@ SET registration_number = ?, vehicle_number = ?, vehicle_type = ?, capacity = ?,
     vehicle_category = ?, engine_number = ?, engine_power = ?, engine_capacity = ?,
     cylinder_count = ?, max_speed = ?, weight = ?, weight_unit = ?, load_volume = ?,
     volume_unit = ?, secondary_fuel = ?, usage_indicator = ?,
+    standard_kmpl = ?,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ?
 RETURNING id, registration_number, vehicle_number, vehicle_type, capacity,
@@ -1110,7 +1125,7 @@ RETURNING id, registration_number, vehicle_number, vehicle_type, capacity,
     valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
     cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
     engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
-    volume_unit, secondary_fuel, usage_indicator
+    volume_unit, secondary_fuel, usage_indicator, standard_kmpl
 `
 
 type UpdateVehicleParams struct {
@@ -1164,6 +1179,7 @@ type UpdateVehicleParams struct {
 	VolumeUnit          sql.NullString  `json:"volume_unit"`
 	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
 	UsageIndicator      sql.NullString  `json:"usage_indicator"`
+	StandardKmpl        sql.NullFloat64 `json:"standard_kmpl"`
 	ID                  string          `json:"id"`
 	TenantID            string          `json:"tenant_id"`
 }
@@ -1223,6 +1239,7 @@ type UpdateVehicleRow struct {
 	VolumeUnit          sql.NullString  `json:"volume_unit"`
 	SecondaryFuel       sql.NullString  `json:"secondary_fuel"`
 	UsageIndicator      sql.NullString  `json:"usage_indicator"`
+	StandardKmpl        sql.NullFloat64 `json:"standard_kmpl"`
 }
 
 func (q *Queries) UpdateVehicle(ctx context.Context, arg UpdateVehicleParams) (UpdateVehicleRow, error) {
@@ -1277,6 +1294,7 @@ func (q *Queries) UpdateVehicle(ctx context.Context, arg UpdateVehicleParams) (U
 		arg.VolumeUnit,
 		arg.SecondaryFuel,
 		arg.UsageIndicator,
+		arg.StandardKmpl,
 		arg.ID,
 		arg.TenantID,
 	)
@@ -1336,6 +1354,7 @@ func (q *Queries) UpdateVehicle(ctx context.Context, arg UpdateVehicleParams) (U
 		&i.VolumeUnit,
 		&i.SecondaryFuel,
 		&i.UsageIndicator,
+		&i.StandardKmpl,
 	)
 	return i, err
 }

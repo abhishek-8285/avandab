@@ -79,7 +79,8 @@ CREATE TABLE vehicles (
     load_volume REAL,
     volume_unit TEXT,
     secondary_fuel TEXT,
-    usage_indicator TEXT
+    usage_indicator TEXT,
+    standard_kmpl REAL
 );
 CREATE TABLE vehicle_measuring_points (
   id TEXT PRIMARY KEY, tenant_id TEXT NOT NULL, vehicle_id TEXT NOT NULL,
@@ -315,4 +316,61 @@ func TestVehicleAPI_DeleteGuard(t *testing.T) {
 	// Deleting unknown id → 404.
 	w = apiRequest(t, h.Delete, http.MethodDelete, "/api/v1/vehicles/nope", nil, map[string]string{"id": "nope"})
 	require.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestVehicleAPI_StandardKmplRoundTrip(t *testing.T) {
+	h := newAPITestHandler(t, newAPITestDB(t))
+
+	// Create with a norm.
+	w := apiRequest(t, h.Create, http.MethodPost, "/api/v1/vehicles", map[string]any{
+		"registration_number": "KA50KMPL1", "vehicle_number": "V-KMPL",
+		"vehicle_type": "truck", "capacity": 10000, "fuel_type": "diesel",
+		"insurance_expiry": futureDateStr(), "fitness_expiry": futureDateStr(), "permit_expiry": futureDateStr(),
+		"standard_kmpl": 4.5,
+	}, nil)
+	require.Equal(t, http.StatusCreated, w.Code, w.Body.String())
+	var created map[string]string
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &created))
+	vid := created["id"]
+
+	// GET exposes the norm.
+	w = apiRequest(t, h.Get, http.MethodGet, "/api/v1/vehicles/"+vid, nil, map[string]string{"id": vid})
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	var got map[string]any
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &got))
+	require.Equal(t, 4.5, got["standard_kmpl"])
+
+	// Partial PUT without the norm preserves it.
+	w = apiRequest(t, h.Update, http.MethodPut, "/api/v1/vehicles/"+vid, map[string]any{
+		"vehicle_number": "V-KMPL-2",
+	}, map[string]string{"id": vid})
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	w = apiRequest(t, h.Get, http.MethodGet, "/api/v1/vehicles/"+vid, nil, map[string]string{"id": vid})
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &got))
+	require.Equal(t, 4.5, got["standard_kmpl"], "partial PUT must preserve norm")
+
+	// PUT a new norm.
+	w = apiRequest(t, h.Update, http.MethodPut, "/api/v1/vehicles/"+vid, map[string]any{
+		"standard_kmpl": 5.25,
+	}, map[string]string{"id": vid})
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+	w = apiRequest(t, h.Get, http.MethodGet, "/api/v1/vehicles/"+vid, nil, map[string]string{"id": vid})
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &got))
+	require.Equal(t, 5.25, got["standard_kmpl"])
+
+	// Non-positive norms rejected with a friendly 400, never a raw CHECK.
+	for _, bad := range []float64{0, -3.5} {
+		w = apiRequest(t, h.Update, http.MethodPut, "/api/v1/vehicles/"+vid, map[string]any{
+			"standard_kmpl": bad,
+		}, map[string]string{"id": vid})
+		require.Equal(t, http.StatusBadRequest, w.Code, "norm %v", bad)
+		assert.Contains(t, w.Body.String(), "standard KMPL must be positive")
+	}
+	w = apiRequest(t, h.Create, http.MethodPost, "/api/v1/vehicles", map[string]any{
+		"registration_number": "KA50KMPL2", "vehicle_number": "V-KMPL-BAD",
+		"vehicle_type": "truck", "fuel_type": "diesel",
+		"insurance_expiry": futureDateStr(), "fitness_expiry": futureDateStr(), "permit_expiry": futureDateStr(),
+		"standard_kmpl": -1,
+	}, nil)
+	require.Equal(t, http.StatusBadRequest, w.Code, w.Body.String())
 }
