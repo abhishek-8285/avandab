@@ -215,7 +215,7 @@ func TestCustomerPortal_Tracking_JSON_MultiStopPayload(t *testing.T) {
 
 	schema := `
 	CREATE TABLE trips (id TEXT PRIMARY KEY, tenant_id TEXT, trip_number TEXT, booking_id TEXT, driver_id TEXT, vehicle_id TEXT, status TEXT, start_time TEXT, end_time TEXT, arrival_time TEXT, departure_time TEXT);
-	CREATE TABLE trip_stops (id TEXT PRIMARY KEY, trip_id TEXT, tenant_id TEXT, stop_sequence INTEGER, stop_type TEXT, location_name TEXT, status TEXT, actual_arrival TEXT, actual_departure TEXT, requires_pod INTEGER DEFAULT 0, pod_url TEXT);
+	CREATE TABLE trip_stops (id TEXT PRIMARY KEY, trip_id TEXT, tenant_id TEXT, stop_sequence INTEGER, stop_type TEXT, location_name TEXT, address TEXT, status TEXT, actual_arrival TEXT, actual_departure TEXT, requires_pod INTEGER DEFAULT 0, pod_url TEXT);
 	CREATE TABLE bookings (id TEXT PRIMARY KEY, tenant_id TEXT, customer_id TEXT, status TEXT);
 	CREATE TABLE customer_users (id INTEGER PRIMARY KEY AUTOINCREMENT, customer_id TEXT, user_id TEXT);
 	CREATE TABLE vehicles (id TEXT PRIMARY KEY, registration_number TEXT, vehicle_number TEXT);

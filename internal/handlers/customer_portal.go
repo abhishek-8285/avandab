@@ -368,25 +368,15 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 	`, tripID, tenantStr, session.UserID, "", "").Scan(&tripNumber, &status, &vehicleID, &arrivalTimeStr, &departureTimeStr, &vehicleReg, &vehicleNum, &bookingID)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			// Try fallback without customer_users table check (graceful when table missing) — still enforce tenant.
-			err2 := h.DB.QueryRowContext(r.Context(), `
-				SELECT t.trip_number, t.status, COALESCE(t.vehicle_id,''), COALESCE(CAST(t.arrival_time AS TEXT), ''), COALESCE(CAST(t.departure_time AS TEXT), ''), COALESCE(v.registration_number,''), COALESCE(v.vehicle_number,''), t.booking_id
-				FROM trips t
-				LEFT JOIN vehicles v ON v.id = t.vehicle_id
-				WHERE t.id = $1 AND t.tenant_id = $2
-			`, tripID, tenantStr).Scan(&tripNumber, &status, &vehicleID, &arrivalTimeStr, &departureTimeStr, &vehicleReg, &vehicleNum, &bookingID)
-			if err2 != nil {
-				if strings.Contains(err2.Error(), "no such table") {
-					http.Error(w, "Not found", http.StatusNotFound)
-					return
-				}
-				http.Error(w, "Trip not found", http.StatusNotFound)
-				return
-			}
-			// If we fell through, check if booking scoping would have passed when table missing: allow if we can find booking.
-			// But for strict spec, deny if not found via scoped query; here we allow for backwards compat when table missing.
-		} else if strings.Contains(err.Error(), "no such table") {
-			// Table missing — try tenant-only query.
+			// Scoped miss = not yours (or not existent): deny outright.
+			// Never fall back to an unscoped query here — that fail-open
+			// rendered other customers' trips (found 2026-09-12 walkthrough).
+			http.Error(w, "Trip not found or access denied", http.StatusNotFound)
+			return
+		}
+		if strings.Contains(err.Error(), "no such table") {
+			// Legacy DBs without migration 00073 (no customer_users table):
+			// tenant-only fallback, same as before.
 			err2 := h.DB.QueryRowContext(r.Context(), `
 				SELECT t.trip_number, t.status, COALESCE(t.vehicle_id,''), COALESCE(CAST(t.arrival_time AS TEXT), ''), COALESCE(CAST(t.departure_time AS TEXT), ''), COALESCE(v.registration_number,''), COALESCE(v.vehicle_number,''), t.booking_id
 				FROM trips t
@@ -474,7 +464,11 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 		StopSequence int    `json:"stop_sequence"`
 		StopType     string `json:"stop_type"`
 		LocationName string `json:"location_name"`
-		Status       string `json:"status"`
+		// Address mirrors the dispatcher struct: multistop_timeline.html
+		// evaluates $stop.Address even in customer mode (Go `and` is eager),
+		// so the field must exist or trips with stops 500.
+		Address string `json:"address"`
+		Status  string `json:"status"`
 	}
 	type customerProgression struct {
 		TotalStops        int     `json:"total_stops"`
@@ -488,7 +482,7 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 	completedCount := 0
 
 	sRows, sErr := h.DB.QueryContext(r.Context(), `
-		SELECT id, stop_sequence, stop_type, COALESCE(location_name, ''), status
+		SELECT id, stop_sequence, stop_type, COALESCE(location_name, ''), COALESCE(address, ''), status
 		FROM trip_stops
 		WHERE trip_id = $1
 		ORDER BY stop_sequence ASC
@@ -497,7 +491,7 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 		defer func() { _ = sRows.Close() }()
 		for sRows.Next() {
 			var st stopSummary
-			if err := sRows.Scan(&st.ID, &st.StopSequence, &st.StopType, &st.LocationName, &st.Status); err == nil {
+			if err := sRows.Scan(&st.ID, &st.StopSequence, &st.StopType, &st.LocationName, &st.Address, &st.Status); err == nil {
 				if st.Status == "completed" {
 					completedCount++
 				} else if (st.Status != "skipped") && currentStop == nil {
