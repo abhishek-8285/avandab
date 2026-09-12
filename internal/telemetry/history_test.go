@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -180,4 +181,34 @@ func TestLiveStore_ETA_Cached(t *testing.T) {
 	res, ok := store.cachedEta(ctx, "t1")
 	require.True(t, ok)
 	assert.Equal(t, firstMethod, res.Method)
+}
+
+// TestHistoryHandler_GPXExport verifies ?format=gpx renders the same points
+// as a GPX 1.1 track (Traccar-compatible): XML content type, attachment
+// filename, one trkpt per point in ascending time order.
+func TestHistoryHandler_GPXExport(t *testing.T) {
+	db := newTestIngestorDB(t)
+	insertTestVehicleReg(t, db, "v1", "REG-1")
+	insertTestTrip(t, db, "t1")
+	now := time.Now().UTC()
+	insertLiveSnapshotWithTrip(t, db, "g1", "t1", "v1", now.Add(-30*time.Minute), 40.0, 19.1, 72.9)
+	insertLiveSnapshotWithTrip(t, db, "g2", "t1", "v1", now.Add(-10*time.Minute), 60.0, 19.2, 73.0)
+	handler := HistoryHandler(db)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/telemetry/history?trip_id=t1&format=gpx", nil)
+	req = req.WithContext(shared.ContextWithTenantID(req.Context(), "1"))
+	w := httptest.NewRecorder()
+	handler(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Header().Get("Content-Type"), "application/gpx+xml")
+	assert.Contains(t, w.Header().Get("Content-Disposition"), "trip-t1.gpx")
+
+	body := w.Body.String()
+	assert.Contains(t, body, "<gpx")
+	assert.Contains(t, body, "<trkseg>")
+	require.Equal(t, 2, strings.Count(body, "<trkpt"))
+	assert.Contains(t, body, `lat="19.1"`)
+	assert.Contains(t, body, `lon="72.9"`)
+	// Ascending: older point first.
+	assert.Less(t, strings.Index(body, `lat="19.1"`), strings.Index(body, `lat="19.2"`))
 }
