@@ -8,9 +8,10 @@ build-css:
 build-tracking:
 	cd src/tracking-island && npm ci --no-audit --no-fund && npm run build
 
-## Build the server binary
+## Build the server binary (VERSION stamps ?v= cache-busting)
+VERSION ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 build: build-tracking
-	go build -o bin/mvtms ./cmd/server/
+	go build -ldflags "-X main.Version=$(VERSION)" -o bin/mvtms ./cmd/server/
 
 ## Build the RAG CLI
 build-rag:
