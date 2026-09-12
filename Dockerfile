@@ -12,8 +12,9 @@ RUN go mod download
 # Copy source
 COPY . .
 
-# Build
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o bin/mvtms ./cmd/server
+# Build (VERSION arg stamps ?v= cache-busting; defaults to deploys via scripts)
+ARG VERSION=docker
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w -X main.Version=${VERSION}" -o bin/mvtms ./cmd/server
 
 # Runtime stage
 FROM gcr.io/distroless/static-debian12
