@@ -25,6 +25,18 @@ post /register "name=Smoke" "email=$EMAIL" "password=$PASS" "confirm_password=$P
 code=$(post /company/onboard "company_name=SmokeCo" "address=1 Main St, Pune" "phone=9876543210" "email=$EMAIL" | cut -d' ' -f1)
 [ "$code" = "303" ] || [ "$code" = "200" ] || { echo "ONBOARD FAILED: $code"; exit 1; }
 
+# Write-path canary (opt-in: SMOKE_WRITE_CHECK=1). 2026-09-12: staging lost
+# its tenants('1') row and EVERY write died on the FK trigger while smoke
+# stayed green — smoke only ever GETs. One create asserting 303 catches the
+# whole class. Staging-only: leaves one SmokeE2E customer per run (cleaned
+# with the periodic staging reset); never enable against prod.
+if [ "${SMOKE_WRITE_CHECK:-0}" = "1" ]; then
+    wphone="9${STAMP: -9}" # unique per run, valid Indian mobile
+    wcode=$(post /customers/new "name=SmokeE2E $STAMP" "phone=$wphone" | cut -d' ' -f1)
+    [ "$wcode" = "303" ] || { echo "WRITE CHECK FAILED: POST /customers/new -> $wcode (write path broken?)"; exit 1; }
+    echo "ok   POST /customers/new (write canary)"
+fi
+
 # route -> expected title fragment (empty = any 200, no error markers).
 # Newline-separated: titles may contain spaces.
 ROUTES="/dashboard:Dashboard
