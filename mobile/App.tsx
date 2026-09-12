@@ -1,8 +1,7 @@
 import 'react-native-gesture-handler';
 import './src/i18n';
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, Modal } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, Modal, StatusBar } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
@@ -255,7 +254,7 @@ export default function App() {
   return (
     <SafeAreaProvider style={{ backgroundColor: '#075e54' }}>
       <QueryClientProvider client={queryClient}>
-        <StatusBar style="light" backgroundColor="#075e54" />
+        <StatusBar barStyle="light-content" backgroundColor="#075e54" />
         <NavigationContainer theme={navTheme}>
           {isAuthenticated ? (
             <DriverNavigator />
@@ -443,7 +442,7 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
-      <StatusBar style="light" backgroundColor="#075e54" />
+      <StatusBar barStyle="light-content" backgroundColor="#075e54" />
 
       {/* WhatsApp Signature Top Header */}
       <View style={styles.header}>

@@ -5,6 +5,7 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
+  StatusBar,
   Linking,
   Alert,
   Modal,
@@ -12,7 +13,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SOSButton } from './SOSButton';
@@ -190,7 +190,7 @@ export function ActiveNavigationScreen({
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <StatusBar style="light" backgroundColor="#075e54" />
+      <StatusBar barStyle="light-content" backgroundColor="#075e54" />
 
       {/* Clean Compact Header */}
       <View style={styles.header}>

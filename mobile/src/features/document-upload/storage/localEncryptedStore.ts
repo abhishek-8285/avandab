@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+// ponytail: legacy FileSystem namespace; migrate to File/Directory/Paths classes if expo drops the legacy subpath.
+import * as FileSystem from 'expo-file-system/legacy';
 import { DocumentUploadTask } from '../types/document';
 
 const UPLOAD_QUEUE_STORAGE_KEY = 'avandab_doc_upload_queue_v1';

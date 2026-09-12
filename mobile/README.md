@@ -1,19 +1,21 @@
 # Avandab Driver App (mobile)
 
-Expo SDK 52 / React Native 0.76 driver-facing app for the Avandab/MVTMS fleet
+Expo SDK 57 / React Native 0.86 driver-facing app for the Avandab/MVTMS fleet
 platform: trip dispatch, GPS telemetry, ePOD capture, offline-first expense
 (kharcha) entry, document vault, and DPDP-style consent tracking.
 
-## SDK pin + upgrade status (2026-09-07, read-only audit)
+## SDK pin + upgrade status (2026-09-12, SDK 52→57 done on `chore/expo-57`)
 
-- Pinned: `expo ~52.0.0`, `react-native 0.76.9`, `react 18.3.1`, Node 20.
-- `npm audit --omit=dev`: 16 vulns (9 moderate, 7 high). Chains
-  `decode-uri-component` (via query-string/react-navigation),
-  `postcss` (via @expo/metro-config), `image-size` (via metro) have
-  `fixAvailable: false` or major-only fixes (`expo 57.0.20`, `react-native 0.86.3`).
-- Blocked without breaking upgrade: SDK 52→57 means RN 0.76→0.86, React 18→19,
-  Node 20→22. Do NOT run `expo install --fix` / upgrade until migration approved.
-- `expo-doctor`: 16/18 pass; known fails left as-is: CNG sync warning (`android/` folder present — do NOT prebuild/delete), `react-native-svg@15.11.2` (expects 15.8.0 — do NOT `expo install --fix` until SDK 52→57 migration approved).
+- Pinned: `expo ~57.0.0`, `react-native 0.86.3`, `react 19.2.3`, Node 22.
+- `expo-doctor`: 20/21 pass; only known fail left as-is: CNG sync warning
+  (`android/` folder present — do NOT prebuild/delete).
+- Deliberately held back: `typescript ~5.9` (SDK wants ~6.0.3, but the
+  ecosystem — react-i18next, typescript-eslint — still caps at TS <6.1;
+  pinned via `expo.install.exclude`), `expo-status-bar` Android-only props
+  dropped in v57 (6 screens moved to RN `StatusBar`), `expo-file-system`
+  legacy namespace (`expo-file-system/legacy` — migrate to File/Directory/
+  Paths if expo drops it), react-hooks v6 lint rules warn-only (33 pre-existing
+  hits; fix patterns in a follow-up with device testing).
 
 ## Architecture — autonomous loop
 

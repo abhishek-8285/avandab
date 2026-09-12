@@ -1,5 +1,9 @@
+// React 19 concurrent rendering requires the ACT environment flag.
+// @ts-ignore
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
 // Reset mocks between tests to prevent cross-test contamination.
-import '@testing-library/react-native/extend-expect';
+// v13+: matchers are registered automatically, no extend-expect import.
 
 beforeEach(() => {
   jest.clearAllMocks();

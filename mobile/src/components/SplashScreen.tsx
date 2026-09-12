@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, Text, View, Animated } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import { StyleSheet, Text, View, Animated, StatusBar } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Font, Radius } from '../constants/theme';
 
@@ -51,7 +50,7 @@ export function SplashScreen({ onFinish }: SplashScreenProps) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" backgroundColor="#075e54" />
+      <StatusBar barStyle="light-content" backgroundColor="#075e54" />
 
       <View style={styles.content}>
         <Animated.View
