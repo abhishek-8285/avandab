@@ -14,7 +14,8 @@ echo "==> [1/5] Cross-compiling binary locally (Linux amd64)..."
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o bin/server ./cmd/server
 echo "==> [2/5] Syncing binary + templates + static to staging..."
 ssh "${TARGET_HOST}" "mkdir -p ${REMOTE_DIR}/bin"
-rsync -avz bin/server "${TARGET_HOST}:${REMOTE_DIR}/bin/server.new"
+# --timeout=120: fail loudly on stall, never hang silently (see deploy-vps.sh).
+rsync -avz --timeout=120 bin/server "${TARGET_HOST}:${REMOTE_DIR}/bin/server.new"
 ssh "${TARGET_HOST}" "chmod +x ${REMOTE_DIR}/bin/server.new"
 tar -czf - internal/templates internal/static | ssh "${TARGET_HOST}" "tar -xzf - -C ${REMOTE_DIR}"
 

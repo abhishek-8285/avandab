@@ -15,7 +15,9 @@ go vet ./...
 echo "==> [2/6] Cross-compiling binary locally (Linux amd64)..."
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o bin/server ./cmd/server
 echo "==> [3/6] Transferring binary to ${TARGET_HOST} with rsync..."
-rsync -avzP bin/server "${TARGET_HOST}:${REMOTE_DIR}/bin/server.new"
+# --timeout=120: a stalled transfer must die loudly, never hang silently
+# (a silent 10min rsync stall bit us on 2026-09-12; run unbuffered, not piped).
+rsync -avzP --timeout=120 bin/server "${TARGET_HOST}:${REMOTE_DIR}/bin/server.new"
 ssh "${TARGET_HOST}" "chmod +x ${REMOTE_DIR}/bin/server.new"
 
 echo "==> [4/6] Syncing templates and static assets to ${TARGET_HOST}..."
