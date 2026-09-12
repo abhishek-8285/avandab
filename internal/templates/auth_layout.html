@@ -6,15 +6,12 @@
     <meta name="mobile-web-app-capable" content="yes">
     <title>{{.Title}} - Avandab</title>
     {{template "seo_head.html" .}}
-    <link rel="stylesheet" href="/static/css/material-icons.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link rel="stylesheet" href="/static/css/fonts.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
-    <link rel="stylesheet" href="/static/css/material-symbols.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <script src="/static/js/loader.js?v=20260818" defer></script>
     <script src="/static/js/htmx.min.js?v={{if .Version}}{{.Version}}{{else}}20260822{{end}}" defer></script>
     <link rel="stylesheet" href="/static/css/tailwind.css?v={{if .Version}}{{.Version}}{{else}}20260821{{end}}">
     <link rel="stylesheet" href="/static/css/app.css?v={{if .Version}}{{.Version}}{{else}}20260821{{end}}">
     {{template "theme_head.html" .}}
-
 
     <style>
         body {
