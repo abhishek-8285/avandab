@@ -24,7 +24,8 @@ echo "==> [4/6] Syncing templates and static assets to ${TARGET_HOST}..."
 tar -czf - internal/templates internal/static | ssh "${TARGET_HOST}" "tar -xzf - -C ${REMOTE_DIR}"
 # tar sync never deletes: drop files removed from the repo (router.js +
 # datastar.js deleted 2026-09-12; SW precache breaks if stale files linger).
-ssh "${TARGET_HOST}" "rm -f ${REMOTE_DIR}/internal/static/js/router.js ${REMOTE_DIR}/internal/static/js/datastar.js"
+# Material-symbols font stack removed same day (never rendered anything).
+ssh "${TARGET_HOST}" "rm -f ${REMOTE_DIR}/internal/static/js/router.js ${REMOTE_DIR}/internal/static/js/datastar.js ${REMOTE_DIR}/internal/static/css/material-symbols.css ${REMOTE_DIR}/internal/static/css/material-icons.css ${REMOTE_DIR}/internal/static/fonts/material-symbols-outlined.woff2 ${REMOTE_DIR}/internal/static/fonts/material-icons.woff2"
 
 echo "==> [5/6] Performing binary swap and service restart..."
 ssh "${TARGET_HOST}" "sudo systemctl stop avandab && mv -f ${REMOTE_DIR}/bin/server.new ${REMOTE_DIR}/bin/server && sudo systemctl start avandab && systemctl is-active avandab"

@@ -18,7 +18,7 @@ ssh "${TARGET_HOST}" "mkdir -p ${REMOTE_DIR}/bin"
 rsync -avz --timeout=120 bin/server "${TARGET_HOST}:${REMOTE_DIR}/bin/server.new"
 ssh "${TARGET_HOST}" "chmod +x ${REMOTE_DIR}/bin/server.new"
 tar -czf - internal/templates internal/static | ssh "${TARGET_HOST}" "tar -xzf - -C ${REMOTE_DIR}"
-ssh "${TARGET_HOST}" "rm -f ${REMOTE_DIR}/internal/static/js/router.js ${REMOTE_DIR}/internal/static/js/datastar.js"
+ssh "${TARGET_HOST}" "rm -f ${REMOTE_DIR}/internal/static/js/router.js ${REMOTE_DIR}/internal/static/js/datastar.js ${REMOTE_DIR}/internal/static/css/material-symbols.css ${REMOTE_DIR}/internal/static/css/material-icons.css ${REMOTE_DIR}/internal/static/fonts/material-symbols-outlined.woff2 ${REMOTE_DIR}/internal/static/fonts/material-icons.woff2"
 
 echo "==> [3/5] Swapping binary and restarting staging..."
 ssh "${TARGET_HOST}" "mv -f ${REMOTE_DIR}/bin/server.new ${REMOTE_DIR}/bin/server && sudo systemctl restart avandab-staging && systemctl is-active avandab-staging"
