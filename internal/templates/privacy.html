@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{{if .Title}}{{.Title}} - Avandab{{else}}Privacy Policy - Avandab{{end}}</title>
     {{template "seo_head.html" .}}
     <link rel="stylesheet" href="/static/css/fonts.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link rel="stylesheet" href="/static/css/tailwind.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
@@ -118,7 +119,7 @@
     {{template "footer.html" .}}
 
     {{template "cookie-consent" .}}
-    <script src="/static/js/loader.js?v=20260818" defer></script>
+    <script src="/static/js/loader.js?v={{if .Version}}{{.Version}}{{else}}20260818{{end}}" defer></script>
     <script src="/static/js/theme.js?v={{if .Version}}{{.Version}}{{else}}20260820{{end}}" defer></script>
 </body>
 </html>
