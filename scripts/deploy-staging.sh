@@ -34,4 +34,4 @@ done
 echo "Staging health check timed out!" >&2
 exit 1
 '
-echo "==> [5/5] Done. Next: ./scripts/smoke.sh https://dev.avandab.com"
+echo "==> [5/5] Done. Next: SMOKE_WRITE_CHECK=1 ./scripts/smoke.sh http://localhost:8081 (via forward; dev DNS still unflipped)"
