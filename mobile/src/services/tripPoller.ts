@@ -163,6 +163,11 @@ class TripPollerService {
 
   private async assign(tripId: string, token: string | null): Promise<void> {
     const key = this.getIdempotencyKey(tripId);
+    // Self-claim: the server requires driver_id (empty body 400s) and the
+    // poller claims for the logged-in driver. No resolved driver → skip
+    // instead of POSTing a body the server must reject.
+    const driverId = this.driverId;
+    if (!driverId) return;
     const op = new RetryableOperation({
       maxRetries: this.assignMaxRetries,
       baseDelayMs: this.assignBaseDelayMs,
@@ -179,7 +184,7 @@ class TripPollerService {
               'Idempotency-Key': key,
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
-            body: JSON.stringify({}),
+            body: JSON.stringify({ driver_id: driverId }),
           },
         );
         // 409 = already claimed — success, don't retry

@@ -63,6 +63,8 @@ describe('TripPoller', () => {
     expect(String(calls[0][0])).toContain('/api/v1/trips/trip_1/assign-driver');
     expect(calls[0][1].method).toBe('POST');
     expect(calls[0][1].headers.Authorization).toBe('Bearer tok');
+    // Self-claim must carry the resolved driver id (empty body 400s server-side).
+    expect(JSON.parse(calls[0][1].body)).toEqual({ driver_id: 'drv_1' });
 
     const key1: string = calls[0][1].headers['Idempotency-Key'];
     const key2: string = calls[1][1].headers['Idempotency-Key'];
