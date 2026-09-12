@@ -423,8 +423,11 @@
     </script>
 </head>
 <body class="bg-background text-on-surface font-sans antialiased overflow-x-hidden has-public-nav">
+    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-primary focus:text-white focus:text-sm focus:font-semibold">Skip to content</a>
     <!-- Header -->
     {{template "public_header.html" .}}
+
+    <main id="main">
 
     <!-- Premium Hero — rebuilt for clarity, depth and product truth -->
     <style>
@@ -1290,6 +1293,7 @@
     </section>
 
     <!-- ECASB Footer -->
+    </main>
     <div class="pb-16 md:pb-0">
         {{template "footer.html" .}}
     </div>
