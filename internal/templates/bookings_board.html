@@ -64,5 +64,5 @@ server remains the only mutation authority — no new endpoint. */}}
     <p id="board-feedback" class="hidden text-sm"></p>
 </div>
 
-<script src="/static/js/bookings_board.js?v={{if .Version}}{{.Version}}{{else}}20260824{{end}}" defer></script>
+<!-- bookings_board.js loads globally via layout.html (survives hx-boost). -->
 {{end}}

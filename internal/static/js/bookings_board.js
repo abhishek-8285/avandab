@@ -31,6 +31,9 @@
   }
 
   function init() {
+    // Re-init after hx-boost swaps: close the shared EventSource first so it
+    // never duplicates — including when navigating AWAY from the board.
+    if (window.__boardSSE) { try { window.__boardSSE.close(); } catch (e) {} window.__boardSSE = null; }
     var board = document.getElementById("board");
     if (!board) return;
 
@@ -84,34 +87,37 @@
       });
     });
 
-    /* Live sync: booking events arrive on the shared SSE hub (≤2s, paused in background). */
+    /* Live sync: booking events arrive on the shared SSE hub (≤2s, paused in background).
+     * Handle lives on window: init re-runs after hx-boost swaps. */
     if (window.EventSource) {
-      var es = null;
       function connectSSE() {
-        if (es || document.hidden) return;
+        if (window.__boardSSE || document.hidden) return;
         try {
-          es = new EventSource("/api/v1/telemetry/stream");
-          es.addEventListener("telemetry", function (ev) {
+          window.__boardSSE = new EventSource("/api/v1/telemetry/stream");
+          window.__boardSSE.addEventListener("telemetry", function (ev) {
             var msg;
             try { msg = JSON.parse(ev.data); } catch (e) { return; }
             if (msg && msg.booking_id) {
               window.location.reload();
             }
           });
-          es.onerror = function () { disconnectSSE(); };
+          window.__boardSSE.onerror = function () { disconnectSSE(); };
         } catch (e) {}
       }
       function disconnectSSE() {
-        if (es) { es.close(); es = null; }
+        if (window.__boardSSE) { try { window.__boardSSE.close(); } catch (e) {} window.__boardSSE = null; }
       }
       connectSSE();
-      document.addEventListener("visibilitychange", function () {
-        if (document.hidden) {
-          disconnectSSE();
-        } else {
-          connectSSE();
-        }
-      });
+      if (!window.__boardVisBound) {
+        window.__boardVisBound = true;
+        document.addEventListener("visibilitychange", function () {
+          if (document.hidden) {
+            disconnectSSE();
+          } else {
+            connectSSE();
+          }
+        });
+      }
     }
   }
 
@@ -120,4 +126,5 @@
   } else {
     init();
   }
+  document.body.addEventListener("htmx:load", init);
 })();

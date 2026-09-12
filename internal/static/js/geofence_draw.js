@@ -58,6 +58,9 @@
     if (!root || typeof L === 'undefined') {
       return;
     }
+    // Guard: initAll re-runs on hx-boost swaps AND first load.
+    if (root.dataset.drawerBound) return;
+    root.dataset.drawerBound = 'true';
     var shapeInput = root.querySelector('input[name="shape"]');
     var kindSelect = root.querySelector('select[name="kind"]');
     var mode = shapeInput ? shapeInput.value : 'circle';
@@ -524,6 +527,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', initAll);
-  document.addEventListener('datastar:after-swap', initAll);
+  document.body.addEventListener('htmx:load', initAll);
 })();
 

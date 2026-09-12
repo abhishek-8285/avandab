@@ -42,7 +42,7 @@ The platform uses a clean, vertical-slice Domain-Driven Design (DDD) with a sync
 | **HTTP Routing** | `go-chi/chi/v5` | Lightweight, idiomatic HTTP router with strict middleware layering. |
 | **Database** | SQLite (pure Go) | `modernc.org/sqlite` with WAL mode (`PRAGMA journal_mode=WAL`), zero CGO. |
 | **Migrations** | `goose/v3` | Embedded Go migrations (`db/migrations/*.sql`) executing idempotently. |
-| **Web UI / Templates** | HTML5 + Datastar + HTMX | Server-rendered reactive hypermedia with zero JavaScript build pipeline. |
+| **Web UI / Templates** | Go `html/template` (162 files) + HTMX islands + vanilla JS | Server-rendered multipage app, zero JS build pipeline. HTMX on 13 templates only (live search, pagination, row actions, 30–60s polls; no `hx-boost`, core CRUD is plain POST→redirect). Live surfaces (dashboard, tracking, share links) use hand-rolled `EventSource`/`fetch`+`setInterval`. Datastar JS is vendored (`internal/static/js/datastar.js`) but loaded by zero pages — dead code, do not cite as stack. |
 | **Styling** | Tailwind CSS | Modern utility classes with light/dark aura modes. |
 | **Live Map Frontend** | Leaflet.js + OSM | OpenStreetMap tiles with custom SVG truck markers and cluster groups. |
 | **Event Bus** | In-Memory Bus + Outbox | Thread-safe in-memory publish/subscribe with transactional durability. |
@@ -59,7 +59,7 @@ The platform uses a clean, vertical-slice Domain-Driven Design (DDD) with a sync
 │   ├── agent/              # AI assistant CLI & operations worker
 │   └── rag/                # Local codebase documentation search & embedder
 ├── db/
-│   ├── migrations/         # Canonical Goose SQL migrations (00001 - 00117)
+│   ├── migrations/         # Canonical Goose SQL migrations (00001 - 00151)
 │   └── query/              # Sqlc query definitions
 ├── docs/                   # Unified, accurate platform documentation
 ├── internal/

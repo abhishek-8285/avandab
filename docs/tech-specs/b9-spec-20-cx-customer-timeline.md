@@ -23,7 +23,7 @@ The timeline is derived dynamically from canonical aggregate state and historica
 
 ## 3. UI & API Specifications
 - **Public HTML View:** `/share/{token}`
-  - Datastar/HTMX live reactive timeline with vertical step progression.
+  - Plain `setInterval` polling for step progression (verified 2026-09-12: no Datastar/HTMX on this page).
   - Color-coded badges: Green (Completed), Blue Pulse (In-Transit), Gray (Upcoming).
   - Embedded tile map displaying current vehicle location and completed path polyline.
 - **JSON API Contract:** `GET /api/v1/share/{token}/timeline`

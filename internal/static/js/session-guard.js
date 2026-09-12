@@ -146,6 +146,8 @@
   });
 
   function init() {
+    // Re-asserts primary on hx-boost swaps; same-tab no-op for others
+    // (handleIncomingMessage ignores our own TAB_ID).
     claimPrimary(false);
   }
 
@@ -154,6 +156,7 @@
   } else {
     init();
   }
+  document.body.addEventListener('htmx:load', init);
 
   window.AvandabSessionGuard = {
     tabId: TAB_ID,
