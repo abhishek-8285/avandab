@@ -78,15 +78,20 @@ export function evaluateCompliance(docs: VehicleDocument[], now: Date = new Date
   return { score: 'green', canStartTrip: true, missing, expired, expiringSoon };
 }
 
-interface RawVehicleDocument {
-  doc_type?: string;
-  expiry_date?: string | null;
+interface RawVehicle {
+  insurance_expiry?: string | null;
+  fitness_expiry?: string | null;
+  permit_expiry?: string | null;
+  rc_expiry?: string | null;
+  puc_expiry?: string | null;
 }
 
-/** GET vehicle documents and evaluate compliance. Fetch errors propagate. */
+/** GET vehicle expiries and evaluate compliance. Fetch errors propagate. */
 export async function fetchCompliance(vehicleId: string): Promise<ComplianceResult> {
   const token = useAuthStore.getState().token;
-  const res = await fetch(`${getApiBaseURL()}/api/v1/documents/vehicle/${vehicleId}`, {
+  // NOTE: there is no /api/v1/documents/vehicle route (never mounted).
+  // Compliance expiries live on the vehicle row: GET /api/v1/vehicles/{id}.
+  const res = await fetch(`${getApiBaseURL()}/api/v1/vehicles/${encodeURIComponent(vehicleId)}`, {
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
@@ -94,19 +99,17 @@ export async function fetchCompliance(vehicleId: string): Promise<ComplianceResu
   if (!res.ok) {
     throw new Error(`Server returned HTTP ${res.status}`);
   }
-  const json = await res.json();
-  const rawDocs: RawVehicleDocument[] = Array.isArray(json?.documents) ? json.documents : [];
-
-  // Defensive snake_case → camelCase mapping; unknown doc types ignored
+  const json = (await res.json()) as RawVehicle;
   const docs: VehicleDocument[] = [];
-  for (const raw of rawDocs) {
-    if (!raw || typeof raw.doc_type !== 'string') continue;
-    if (!(REQUIRED_DOCS as string[]).includes(raw.doc_type)) continue;
-    docs.push({
-      docType: raw.doc_type as DocType,
-      expiryDate: typeof raw.expiry_date === 'string' ? raw.expiry_date : null,
-    });
-  }
+  const pick = (docType: DocType, v: unknown) => {
+    if (typeof v === 'string' && v) docs.push({ docType, expiryDate: v.slice(0, 10) });
+  };
+  // road_tax has no server field: stays missing (soft warning by design).
+  pick('insurance', json?.insurance_expiry);
+  pick('fitness', json?.fitness_expiry);
+  pick('permit', json?.permit_expiry);
+  pick('rc', json?.rc_expiry);
+  pick('puc', json?.puc_expiry);
 
   return evaluateCompliance(docs);
 }

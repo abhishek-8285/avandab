@@ -78,27 +78,27 @@ describe('fetchCompliance', () => {
     global.fetch = globalFetch;
   });
 
-  test('maps snake_case response and passes auth header', async () => {
+  test('maps vehicle expiries and passes auth header', async () => {
     const fetchMock = jest.fn().mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => ({
-        documents: [
-          { doc_type: 'rc', expiry_date: '2030-01-01' },
-          { doc_type: 'insurance', expiry_date: null },
-          { doc_type: 'unknown_kind', expiry_date: '2099-01-01' }, // ignored defensively
-        ],
+        insurance_expiry: '2030-01-01T00:00:00Z',
+        fitness_expiry: null,
+        permit_expiry: '2030-06-01T00:00:00Z',
+        rc_expiry: '2030-01-01',
+        puc_expiry: null,
       }),
     });
     global.fetch = fetchMock as any;
 
     const res = await fetchCompliance('veh_9');
 
-    expect(fetchMock.mock.calls[0][0]).toContain('/api/v1/documents/vehicle/veh_9');
+    expect(fetchMock.mock.calls[0][0]).toContain('/api/v1/vehicles/veh_9');
     expect(fetchMock.mock.calls[0][1].headers.Authorization).toBe('Bearer tok');
 
     expect(res.missing).toEqual(
-      REQUIRED_DOCS.filter((t) => t !== 'rc' && t !== 'insurance')
+      REQUIRED_DOCS.filter((t) => t !== 'rc' && t !== 'insurance' && t !== 'permit')
     );
     expect(res.score).toBe('amber');
     expect(res.canStartTrip).toBe(true); // only missing, nothing expired/expiring
