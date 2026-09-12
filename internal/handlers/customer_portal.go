@@ -326,6 +326,7 @@ func (h *CustomerPortalHandlers) ListMyInvoices(w http.ResponseWriter, r *http.R
 			"Pagination":   pd,
 			"Query":        pp.Query,
 			"StatusFilter": pp.Status,
+			"PortalPay":    true,
 		})
 		return
 	}
@@ -333,7 +334,7 @@ func (h *CustomerPortalHandlers) ListMyInvoices(w http.ResponseWriter, r *http.R
 	h.renderPage(w, r, "customer_invoices.html", PageData{
 		Title: "My Invoices",
 		User:  session,
-		Extra: map[string]interface{}{"Invoices": invoices, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status},
+		Extra: map[string]interface{}{"Invoices": invoices, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "PortalPay": true},
 	})
 }
 
