@@ -33,6 +33,25 @@ const (
 	VehicleBlocked     VehicleStatus = "blocked"
 )
 
+// NormalizeFuelType defaults empty input to diesel (matches the vehicle
+// form's pre-selected option) so callers never leak a raw DB CHECK failure
+// to users. Unknown values are returned unchanged for ValidFuelType to reject.
+func NormalizeFuelType(f FuelType) FuelType {
+	if f == "" {
+		return FuelTypeDiesel
+	}
+	return f
+}
+
+// ValidFuelType reports whether f is a known fuel type.
+func ValidFuelType(f FuelType) bool {
+	switch NormalizeFuelType(f) {
+	case FuelTypeDiesel, FuelTypePetrol, FuelTypeGas, FuelTypeElectric, FuelTypeCNG:
+		return true
+	}
+	return false
+}
+
 // FleetClass is the SOP fleet-object type (TMS_SOP IE31 screen, p.2).
 // NOTE: the Vehicle Master report (p.18) swaps the labels — there "Vehicle
 // Type" is ownership and "Vehicle Category" is the fleet class.

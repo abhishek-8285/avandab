@@ -210,6 +210,41 @@ func TestCreateVehicleUseCase_SuccessNilMileage(t *testing.T) {
 	assert.Nil(t, repo.saved[0].CurrentMileage)
 }
 
+func TestCreateVehicleUseCase_FuelTypeDefaultsAndValidation(t *testing.T) {
+	now := time.Now()
+	newCmd := func(fuel aggregate.FuelType) CreateVehicleCommand {
+		return CreateVehicleCommand{
+			TenantID:           "t1",
+			RegistrationNumber: "REG1",
+			VehicleNumber:      "VN1",
+			VehicleType:        aggregate.VehicleTypeTruck,
+			Capacity:           10,
+			FuelType:           fuel,
+			InsuranceExpiry:    now,
+			FitnessExpiry:      now,
+			PermitExpiry:       now,
+		}
+	}
+
+	t.Run("empty fuel defaults to diesel", func(t *testing.T) {
+		repo := &mockVehicleRepo{}
+		uc := NewCreateVehicleUseCase(&mockUoW{provider: repo}, &mockIDGen{id: "veh-1"}, &mockClock{now: now})
+		_, err := uc.Execute(context.Background(), newCmd(""))
+		require.NoError(t, err)
+		require.Len(t, repo.saved, 1)
+		assert.Equal(t, aggregate.FuelTypeDiesel, repo.saved[0].FuelType)
+	})
+
+	t.Run("invalid fuel rejected with friendly error", func(t *testing.T) {
+		uow := &mockUoW{provider: &mockVehicleRepo{}}
+		uc := NewCreateVehicleUseCase(uow, &mockIDGen{id: "veh-1"}, &mockClock{now: now})
+		_, err := uc.Execute(context.Background(), newCmd("rocket"))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid fuel type")
+		assert.False(t, uow.called, "UoW should not be called on validation error")
+	})
+}
+
 func TestCreateVehicleUseCase_RepoTypeAssertionFailure(t *testing.T) {
 	clk := &mockClock{now: time.Now()}
 	idGen := &mockIDGen{id: "veh-1"}
