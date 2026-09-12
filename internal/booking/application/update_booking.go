@@ -42,8 +42,8 @@ func (uc *UpdateBookingUseCase) Execute(ctx context.Context, cmd UpdateBookingCo
 	if cmd.VehicleType == "" {
 		return errors.New("vehicle type is required")
 	}
-	if cmd.Passengers < 1 {
-		return errors.New("passengers must be at least 1")
+	if cmd.Passengers < 0 {
+		return errors.New("passengers cannot be negative")
 	}
 	if cmd.Price < 0 {
 		return errors.New("price cannot be negative")
