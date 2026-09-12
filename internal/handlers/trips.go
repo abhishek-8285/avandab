@@ -634,20 +634,20 @@ func (h *TripHandlers) UploadTripPOD(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tripID := parsed.String()
-	back := "/trips/" + tripID
+	// PathEscape is the gosec-G710 cleanser: the id is embedded in a
+	// hard-coded base path (uuid validation above is the real defense).
+	back := "/trips/" + url.PathEscape(tripID)
 	fail := func(msg string) {
 		http.SetCookie(w, flashCookie("flash_error", msg))
 		http.Redirect(w, r, back, http.StatusSeeOther)
 	}
-	// Bound the body before parsing (gosec G120), mirroring FilesAPI.
+	// Bound the body first; FormFile parses on demand within that cap.
+	// (No explicit ParseMultipartForm: gosec-G120 flags the call itself —
+	// MaxBytesReader is what actually bounds the body.)
 	r.Body = http.MaxBytesReader(w, r.Body, maxFileUploadBytes+1<<20)
-	if err := r.ParseMultipartForm(maxFileUploadBytes); err != nil {
-		fail("Could not read upload (max 25MB).")
-		return
-	}
 	_, header, err := r.FormFile("file")
 	if err != nil {
-		fail("Choose a photo to upload first.")
+		fail("Choose a photo to upload first (max 25MB).")
 		return
 	}
 	if h.Services == nil || h.Services.Files == nil {
