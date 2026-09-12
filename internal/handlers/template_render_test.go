@@ -278,7 +278,7 @@ func TestAllTemplatesRenderCleanly(t *testing.T) {
 		})},
 		{"trip_view.html", buildTemplateData(PageData{
 			Title: "View Trip",
-			Extra: map[string]interface{}{"Trip": sampleTripDTO},
+			Extra: map[string]interface{}{"Trip": sampleTripDTO, "PODFiles": []podFileItem{}},
 		})},
 		{"invoice_view.html", buildTemplateData(PageData{
 			Title: "View Invoice",

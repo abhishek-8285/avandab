@@ -172,7 +172,9 @@ func TestMigration00150_DownUp(t *testing.T) {
 	require.Equal(t, 1, n, "00150 must grant errors:read to org_admin on migrate up")
 
 	goose.SetLogger(goose.NopLogger())
-	require.NoError(t, goose.Down(db, "../../db/migrations"))
+	// Explicit floor (not bare Down): later migrations must not change what
+	// this test rolls back.
+	require.NoError(t, goose.DownTo(db, "../../db/migrations", 149))
 	require.NoError(t, db.QueryRow(
 		`SELECT COUNT(*) FROM permissions WHERE name = 'ewaybill:read'`).Scan(&n))
 	require.Equal(t, 0, n, "00150 down must remove the ewaybill rows")

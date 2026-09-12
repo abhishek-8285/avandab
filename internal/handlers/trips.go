@@ -120,6 +120,7 @@ func (h *TripHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "shares", "create")).Post("/{id}/share", h.App.Share.CreateShare)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "read")).Get("/{id}/compliance", h.TripComplianceFragment)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/send-pod-otp", h.SendPODOTPSMS)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "trips", "update")).Post("/{id}/pod", h.UploadTripPOD)
 }
 
 // Playback renders the trip playback page (GET /trips/{id}/playback) —
@@ -564,8 +565,103 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 			"Stops":             stopsList,
 			"CurrentStop":       currentStop,
 			"Progression":       progression,
+			"PODFiles":          h.tripPODFiles(r, id),
 		},
 	})
+}
+
+// tripPODFiles lists trip_pod attachments best-effort: a file-store hiccup
+// must never break the trip page (warn-only, like the stops block above).
+func (h *TripHandlers) tripPODFiles(r *http.Request, tripID string) []podFileItem {
+	out := []podFileItem{}
+	if h.Services == nil || h.Services.Files == nil {
+		return out
+	}
+	files, err := h.Services.Files.GetFilesByEntity(r.Context(), "trip_pod", tripID)
+	if err != nil {
+		slog.WarnContext(r.Context(), "trip pod files skipped",
+			slog.String("trip_id", tripID), slog.Any("error", err))
+		return out
+	}
+	for _, f := range files {
+		out = append(out, podFileItem{
+			ID:        string(f.ID),
+			Name:      f.OriginalName,
+			MimeType:  f.MimeType,
+			Size:      f.Size,
+			SizeLabel: humanFileSize(f.Size),
+			CreatedAt: f.CreatedAt,
+			URL:       "/files/" + string(f.ID),
+			IsImage:   strings.HasPrefix(f.MimeType, "image/"),
+		})
+	}
+	return out
+}
+
+func humanFileSize(b int64) string {
+	if b < 1024 {
+		return fmt.Sprintf("%d B", b)
+	}
+	if b < 1024*1024 {
+		return fmt.Sprintf("%.0f KB", float64(b)/1024)
+	}
+	return fmt.Sprintf("%.1f MB", float64(b)/1024/1024)
+}
+
+type podFileItem struct {
+	ID        string
+	Name      string
+	MimeType  string
+	Size      int64
+	SizeLabel string
+	CreatedAt time.Time
+	URL       string
+	IsImage   bool
+}
+
+// UploadTripPOD handles the trip-view ePOD photo form (multipart). Errors
+// ride a flash cookie back to the trip page; success too — no JSON branch,
+// this is a browser form, not an API.
+func (h *TripHandlers) UploadTripPOD(w http.ResponseWriter, r *http.Request) {
+	h.init()
+	// Trip IDs are UUID v4 (create flow). Reject anything else before the
+	// id reaches storage paths or the redirect below (gosec G710).
+	parsed, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		// Plain 400 (not renderError): the error page needs full App
+		// templates, and this branch must hold for malformed probes.
+		http.Error(w, "Invalid trip identifier.", http.StatusBadRequest)
+		return
+	}
+	tripID := parsed.String()
+	// PathEscape is the gosec-G710 cleanser: the id is embedded in a
+	// hard-coded base path (uuid validation above is the real defense).
+	back := "/trips/" + url.PathEscape(tripID)
+	fail := func(msg string) {
+		http.SetCookie(w, flashCookie("flash_error", msg))
+		http.Redirect(w, r, back, http.StatusSeeOther)
+	}
+	// Bound the body first; FormFile parses on demand within that cap.
+	// (No explicit ParseMultipartForm: gosec-G120 flags the call itself —
+	// MaxBytesReader is what actually bounds the body.)
+	r.Body = http.MaxBytesReader(w, r.Body, maxFileUploadBytes+1<<20)
+	_, header, err := r.FormFile("file")
+	if err != nil {
+		fail("Choose a photo to upload first (max 25MB).")
+		return
+	}
+	if h.Services == nil || h.Services.Files == nil {
+		fail("File service unavailable.")
+		return
+	}
+	if _, err := h.Services.Files.UploadFile(r.Context(), header, "trip_pod", tripID); err != nil {
+		slog.WarnContext(r.Context(), "trip pod upload rejected",
+			slog.String("trip_id", tripID), slog.Any("error", err))
+		fail("Upload rejected: " + err.Error())
+		return
+	}
+	http.SetCookie(w, flashCookie("flash_success", "POD photo attached."))
+	http.Redirect(w, r, back, http.StatusSeeOther)
 }
 
 func (h *TripHandlers) Edit(w http.ResponseWriter, r *http.Request) {
