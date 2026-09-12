@@ -82,20 +82,36 @@
   }
   function openSettings() { clearConsent(); showBanner(); }
 
+  // Bindings live here (not inline) so they survive hx-boost body swaps.
+  function bindConsentControls() {
+    var settingsLinks = document.querySelectorAll('[data-cookie-settings]');
+    for (var i = 0; i < settingsLinks.length; i++) {
+      if (settingsLinks[i].dataset.ccBound) continue;
+      settingsLinks[i].dataset.ccBound = 'true';
+      settingsLinks[i].addEventListener('click', function (e) { e.preventDefault(); openSettings(); });
+    }
+    var acceptBtn = document.getElementById('cookie-accept');
+    var rejectBtn = document.getElementById('cookie-reject');
+    if (acceptBtn && !acceptBtn.dataset.ccBound) {
+      acceptBtn.dataset.ccBound = 'true';
+      acceptBtn.addEventListener('click', accept);
+    }
+    if (rejectBtn && !rejectBtn.dataset.ccBound) {
+      rejectBtn.dataset.ccBound = 'true';
+      rejectBtn.addEventListener('click', reject);
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     var c = getConsent();
     if (c === 'accepted') { loadAnalytics(); }
     else if (c === 'rejected') { /* non-essential disabled */ }
     else { showBanner(); }
 
-    var settingsLinks = document.querySelectorAll('[data-cookie-settings]');
-    for (var i = 0; i < settingsLinks.length; i++) {
-      settingsLinks[i].addEventListener('click', function (e) { e.preventDefault(); openSettings(); });
+    bindConsentControls();
+    if (document.body) {
+      document.body.addEventListener('htmx:load', bindConsentControls);
     }
-    var acceptBtn = document.getElementById('cookie-accept');
-    var rejectBtn = document.getElementById('cookie-reject');
-    if (acceptBtn) acceptBtn.addEventListener('click', accept);
-    if (rejectBtn) rejectBtn.addEventListener('click', reject);
     window.addEventListener('resize', function () {
       if (!document.documentElement.classList.contains('cookie-open')) return;
       var b = document.getElementById('cookie-banner');

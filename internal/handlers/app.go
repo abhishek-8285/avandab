@@ -1129,6 +1129,7 @@ func (a *App) PolicyPage(w http.ResponseWriter, r *http.Request, name string) {
 		"privacy.html": {"Title": "Privacy Policy", "Desc": "Avandab Privacy Policy — how we collect, use and protect fleet, driver and customer data under India's DPDP Act, 2023.", "Path": "/privacy"},
 		"terms.html":   {"Title": "Terms of Service", "Desc": "Avandab Terms of Service — service, payment, cancellation, liability and dispute terms for fleet operations.", "Path": "/terms"},
 		"refunds.html": {"Title": "Refund Policy", "Desc": "Avandab Refund Policy — eligibility, submission window and processing for undelivered services.", "Path": "/refunds"},
+		"faq.html":     {"Title": "Frequently Asked Questions", "Desc": "Avandab FAQ — setup, tracking, ePOD, billing, data protection and support answers for fleet owners.", "Path": "/faq"},
 	}
 	meta := seo[name]
 	title, desc, path := name, "", "/"
@@ -1162,6 +1163,11 @@ func (a *App) Terms(w http.ResponseWriter, r *http.Request) {
 // Refunds serves the refund policy page.
 func (a *App) Refunds(w http.ResponseWriter, r *http.Request) {
 	a.PolicyPage(w, r, "refunds.html")
+}
+
+// FAQ serves the public frequently-asked-questions page.
+func (a *App) FAQ(w http.ResponseWriter, r *http.Request) {
+	a.PolicyPage(w, r, "faq.html")
 }
 
 // FeaturePage serves a public, login-free explainer for a single product
