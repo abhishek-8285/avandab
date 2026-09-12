@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, Image, TouchableOpacity, Animated, ScrollView, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -11,7 +11,8 @@ interface GetStartedScreenProps {
 }
 
 export function GetStartedScreen({ onGetStarted, onSignIn, onOpenQRDemo }: GetStartedScreenProps) {
-  const pulseAnim = useRef(new Animated.Value(0)).current;
+  // Stable animation instance; useState initializer instead of useRef(...).current.
+  const [pulseAnim] = useState(() => new Animated.Value(0));
   const insets = useSafeAreaInsets();
 
   useEffect(() => {

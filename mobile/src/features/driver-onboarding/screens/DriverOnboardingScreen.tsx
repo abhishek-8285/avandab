@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -41,16 +41,18 @@ export const DriverOnboardingScreen: React.FC<Props> = ({ token, user, onComplet
   const [activeStep, setActiveStep] = useState<OnboardingStepName>('profile');
   const [ownershipType, setOwnershipType] = useState<OwnershipType>('owner_operator');
 
-  // Hydrate activeStep from remote backend state
-  useEffect(() => {
-    if (state?.current_step) {
-      if (state.overall_status === 'submitted' || state.overall_status === 'approved') {
-        setActiveStep('pending_approval');
-      } else {
-        setActiveStep(state.current_step);
-      }
+  // Hydrate activeStep from remote backend state (render-phase adjustment:
+  // derived state, not an effect — avoids cascading renders).
+  const [prevStepKey, setPrevStepKey] = useState<string | null>(null);
+  const stepKey = state ? `${state.current_step}|${state.overall_status}` : null;
+  if (stepKey !== null && stepKey !== prevStepKey) {
+    setPrevStepKey(stepKey);
+    if (state!.overall_status === 'submitted' || state!.overall_status === 'approved') {
+      setActiveStep('pending_approval');
+    } else if (state!.current_step) {
+      setActiveStep(state!.current_step);
     }
-  }, [state?.current_step, state?.overall_status]);
+  }
 
   if (loading) {
     return (

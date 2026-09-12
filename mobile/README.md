@@ -14,8 +14,31 @@ platform: trip dispatch, GPS telemetry, ePOD capture, offline-first expense
   pinned via `expo.install.exclude`), `expo-status-bar` Android-only props
   dropped in v57 (6 screens moved to RN `StatusBar`), `expo-file-system`
   legacy namespace (`expo-file-system/legacy` — migrate to File/Directory/
-  Paths if expo drops it), react-hooks v6 lint rules warn-only (33 pre-existing
-  hits; fix patterns in a follow-up with device testing).
+  Paths if expo drops it).
+- 2026-09-12 follow-up: the 33 react-hooks v6 hits are fixed at error severity
+  (fetch-in-effect inlined post-await, render-phase adjustment for
+  prop-derived resets, `useState`-held Animated values, ticking clock for
+  detention). No behavior change except: interval refetches no longer flash the
+  loader, detention counter ticks every 60s.
+
+## TS 6 revisit checklist
+
+Retry `typescript ~6.x` (drop `expo.install.exclude`) when ALL hold:
+- [ ] `react-i18next` peer allows TS ≥6 (`peerOptional typescript@"^5"` today)
+- [ ] `@typescript-eslint/*` peer allows TS ≥6 (`>=4.8.4 <6.1.0` today)
+- [ ] `@types/jest` installs cleanly under the new toolchain
+- [ ] `tsc --noEmit`, `jest`, `eslint` green after the bump
+
+## Real-device smoke (human, post-merge)
+
+- [ ] `npx expo run:android` / dev-client build on Node 22, install on device
+- [ ] Login → dispatch offers list loads (loader → offers, no flash loop)
+- [ ] Accept offer → active trip → detention counter advances each minute
+- [ ] Voice kharcha: open sheet (permission prompt), speak preset, save draft
+- [ ] Issues screen: list loads offline-stale, submit with photo
+- [ ] Paisa screen: balance/settlements render, advance submit refreshes
+- [ ] Background app 30s → foreground: offers refetch silently (no loader flash)
+- [ ] Kill + relaunch: onboarding step resumes from server state
 
 ## Architecture — autonomous loop
 

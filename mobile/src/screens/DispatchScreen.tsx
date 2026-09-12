@@ -19,11 +19,17 @@ export function DispatchScreen() {
   const [locationGranted, setLocationGranted] = useState(false);
   const { data: trips } = useQuery<Trip[]>({ queryKey: ['trips', driverId, token], queryFn: async () => { if (!token) return []; try { const res = await fetch(`${getApiBaseURL()}/api/v1/trips?driver_id=me&page=1&limit=50`, { headers: { Authorization: `Bearer ${token}` } }); if (res.status === 401) { useAuthStore.getState().logout(); return []; } if (res.ok) { const json = await res.json(); const mapped = ((json.trips as RawTrip[]) || []).map(mapTripStatus); if (mapped.length > 0) await DB.saveTrips(mapped); return mapped; } } catch {} return await DB.getTrips(); }, enabled: !!token });
   const activeTrip = trips?.find((t) => t.status === 'IN_TRANSIT') ?? trips?.find((t) => t.status === 'PENDING') ?? null;
+  // Ticking clock kept in state (not read during render): detention updates each minute.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(interval);
+  }, []);
   const detentionMins = (() => {
     if (!activeTrip?.startTime) return 0;
     const d = new Date(activeTrip.startTime);
     if (isNaN(d.getTime())) return 0;
-    const mins = Math.floor((Date.now() - d.getTime()) / 60000);
+    const mins = Math.floor((now - d.getTime()) / 60000);
     return mins > 30 ? mins - 30 : 0;
   })();
   const detentionCharge = detentionMins > 0 ? Math.round(detentionMins * 5) : 0;

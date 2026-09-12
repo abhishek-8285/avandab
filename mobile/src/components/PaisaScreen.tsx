@@ -30,6 +30,24 @@ interface PaisaScreenProps {
 
 const money = (n: number) => `₹${Number(n).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
+async function fetchPaisaData(): Promise<{
+  bal: DriverBalance | null;
+  stl: DriverSettlement[];
+  adv: AdvanceRequest[];
+} | null> {
+  try {
+    const [bal, stl, adv] = await Promise.all([
+      getDriverBalance(),
+      getDriverSettlements(),
+      getAdvanceRequests(),
+    ]);
+    return { bal, stl, adv };
+  } catch (e: any) {
+    // Retain standard local preview state
+    return null;
+  }
+}
+
 export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
   const { locale } = useLanguageStore();
   const [balance, setBalance] = useState<DriverBalance | null>({
@@ -48,26 +66,29 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
   const [showAdvanceForm, setShowAdvanceForm] = useState(false);
 
   const refresh = useCallback(async () => {
-    try {
-      setError(null);
-      const [bal, stl, adv] = await Promise.all([
-        getDriverBalance(),
-        getDriverSettlements(),
-        getAdvanceRequests(),
-      ]);
-      if (bal !== null) {
-        setBalance(bal);
+    setError(null);
+    const data = await fetchPaisaData();
+    if (data) {
+      if (data.bal !== null) {
+        setBalance(data.bal);
       }
-      setSettlements(stl || []);
-      setAdvances(adv || []);
-    } catch (e: any) {
-      // Retain standard local preview state
+      setSettlements(data.stl || []);
+      setAdvances(data.adv || []);
     }
   }, []);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    void (async () => {
+      const data = await fetchPaisaData();
+      if (data) {
+        if (data.bal !== null) {
+          setBalance(data.bal);
+        }
+        setSettlements(data.stl || []);
+        setAdvances(data.adv || []);
+      }
+    })();
+  }, []);
 
   const submitAdvance = async () => {
     const amt = Number(amount);

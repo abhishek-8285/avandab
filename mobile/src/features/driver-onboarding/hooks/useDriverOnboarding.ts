@@ -10,17 +10,12 @@ import {
 
 export function useDriverOnboarding(token?: string) {
   const [state, setState] = useState<OnboardingState | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(() => !!token);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchState = useCallback(async () => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
+    if (!token) return;
     try {
       const remoteState = await onboardingApi.fetchOnboardingState(token);
       setState(remoteState);
@@ -32,8 +27,18 @@ export function useDriverOnboarding(token?: string) {
   }, [token]);
 
   useEffect(() => {
-    fetchState();
-  }, [fetchState]);
+    void (async () => {
+      if (!token) return;
+      try {
+        const remoteState = await onboardingApi.fetchOnboardingState(token);
+        setState(remoteState);
+      } catch (err: any) {
+        setError(err.message || 'Could not connect to onboarding service');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [token]);
 
   const submitLicense = async (data: LicenseFormData) => {
     if (!token) return;
