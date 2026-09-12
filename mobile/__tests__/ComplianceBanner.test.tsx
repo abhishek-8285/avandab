@@ -4,11 +4,17 @@ import { ComplianceBanner } from '../src/components/ComplianceBanner';
 
 const globalFetch = global.fetch;
 
-function mockDocuments(docs: { doc_type: string; expiry_date: string | null }[]) {
+function mockVehicle(v: {
+  insurance_expiry?: string | null;
+  fitness_expiry?: string | null;
+  permit_expiry?: string | null;
+  rc_expiry?: string | null;
+  puc_expiry?: string | null;
+}) {
   return jest.fn().mockResolvedValue({
     ok: true,
     status: 200,
-    json: async () => ({ documents: docs }),
+    json: async () => v,
   }) as any;
 }
 
@@ -31,32 +37,33 @@ describe('ComplianceBanner', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  test('renders green score when all documents are valid', async () => {
-    global.fetch = mockDocuments([
-      { doc_type: 'rc', expiry_date: '2099-01-01' },
-      { doc_type: 'fitness', expiry_date: '2099-02-01' },
-      { doc_type: 'insurance', expiry_date: '2099-03-01' },
-      { doc_type: 'puc', expiry_date: '2099-04-01' },
-      { doc_type: 'permit', expiry_date: '2099-05-01' },
-      { doc_type: 'road_tax', expiry_date: '2099-06-01' },
-    ]);
+  // NOTE: road_tax has no server field, so it is always "missing" (soft
+  // warning): the best a fully-documented vehicle can score is amber with
+  // canStartTrip=true. Pure-eval green is covered in compliance.test.ts.
+  test('renders amber (start allowed) when all server-known documents are valid', async () => {
+    global.fetch = mockVehicle({
+      rc_expiry: '2099-01-01',
+      fitness_expiry: '2099-02-01',
+      insurance_expiry: '2099-03-01',
+      puc_expiry: '2099-04-01',
+      permit_expiry: '2099-05-01',
+    });
     const { findByLabelText, findByText } = render(
       <ComplianceBannerHarness vehicleId="veh_1" />
     );
 
-    expect(await findByLabelText('compliance.score_green')).toBeTruthy();
-    expect(await findByText('compliance.score_green')).toBeTruthy();
+    expect(await findByLabelText('compliance.score_amber')).toBeTruthy();
+    expect(await findByText('compliance.score_amber')).toBeTruthy();
   });
 
   test('renders red score when a document is expired', async () => {
-    global.fetch = mockDocuments([
-      { doc_type: 'rc', expiry_date: '2099-01-01' },
-      { doc_type: 'fitness', expiry_date: '2099-02-01' },
-      { doc_type: 'insurance', expiry_date: '2000-01-01' },
-      { doc_type: 'puc', expiry_date: '2099-04-01' },
-      { doc_type: 'permit', expiry_date: '2099-05-01' },
-      { doc_type: 'road_tax', expiry_date: '2099-06-01' },
-    ]);
+    global.fetch = mockVehicle({
+      rc_expiry: '2099-01-01',
+      fitness_expiry: '2099-02-01',
+      insurance_expiry: '2000-01-01',
+      puc_expiry: '2099-04-01',
+      permit_expiry: '2099-05-01',
+    });
     const { findByLabelText } = render(<ComplianceBannerHarness vehicleId="veh_2" />);
 
     expect(await findByLabelText('compliance.score_red')).toBeTruthy();
