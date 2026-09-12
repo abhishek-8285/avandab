@@ -23,7 +23,42 @@ func newIdemBookingCmd(tenant shared.TenantID, key string) CreateBookingCommand 
 	}
 }
 
-// Retried creates with the same key return the original booking, one row.
+// Freight bookings carry cargo, not passengers: zero passengers must succeed.
+func TestCreateBooking_ZeroPassengersFreight(t *testing.T) {
+	db := newCascadeTestDB(t)
+	unitOfWork := uow.NewSQLUnitOfWork(db)
+	clk := clock.NewRealClock()
+	idGen := id.NewUUIDGenerator()
+	ctx := context.Background()
+	tenantID := shared.TenantID("tenant-1")
+	seedCascadeLane(t, db)
+
+	uc := NewCreateBookingUseCase(unitOfWork, idGen, clk)
+	cmd := newIdemBookingCmd(tenantID, "idem-bk-zero-pax")
+	cmd.Passengers = 0
+	cargo := 9000.0
+	cmd.CargoWeight = &cargo
+	_, err := uc.Execute(ctx, cmd)
+	require.NoError(t, err, "freight booking with zero passengers must succeed")
+}
+
+// Negative passengers are still rejected.
+func TestCreateBooking_NegativePassengersRejected(t *testing.T) {
+	db := newCascadeTestDB(t)
+	unitOfWork := uow.NewSQLUnitOfWork(db)
+	clk := clock.NewRealClock()
+	idGen := id.NewUUIDGenerator()
+	ctx := context.Background()
+	tenantID := shared.TenantID("tenant-1")
+	seedCascadeLane(t, db)
+
+	uc := NewCreateBookingUseCase(unitOfWork, idGen, clk)
+	cmd := newIdemBookingCmd(tenantID, "idem-bk-neg-pax")
+	cmd.Passengers = -1
+	_, err := uc.Execute(ctx, cmd)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "passengers cannot be negative")
+}
 func TestCreateBooking_IdempotentRetry(t *testing.T) {
 	db := newCascadeTestDB(t)
 	unitOfWork := uow.NewSQLUnitOfWork(db)

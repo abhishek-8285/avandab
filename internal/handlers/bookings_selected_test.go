@@ -297,13 +297,13 @@ func TestSelectedBookings_CRUD(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 	})
 
-	t.Run("Create validation error invalid passengers zero", func(t *testing.T) {
+	t.Run("Create validation error invalid passengers negative", func(t *testing.T) {
 		form := url.Values{
 			"customer_id":  {string(cust.ID)},
 			"route_id":     {string(route.ID)},
 			"pickup_date":  {futureDate},
 			"vehicle_type": {"truck"},
-			"passengers":   {"0"},
+			"passengers":   {"-1"},
 			"price":        {"1000"},
 		}
 		req := withBookingTenantSession(httptest.NewRequest(http.MethodPost, "/bookings/new", strings.NewReader(form.Encode())), "1", "user-1", "admin")
@@ -393,7 +393,7 @@ func TestSelectedBookings_CRUD(t *testing.T) {
 			"route_id":     {string(route.ID)},
 			"pickup_date":  {futureDate},
 			"vehicle_type": {"truck"},
-			"passengers":   {"0"},
+			"passengers":   {"-1"},
 			"price":        {"1000"},
 		}
 		req := withBookingTenantSession(httptest.NewRequest(http.MethodPost, "/bookings/"+createdID+"/edit", strings.NewReader(form.Encode())), "1", "user-1", "admin")
