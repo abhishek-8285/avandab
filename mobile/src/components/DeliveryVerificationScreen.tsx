@@ -5,12 +5,12 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
+  StatusBar,
   Image,
   TextInput,
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -253,7 +253,7 @@ export function DeliveryVerificationScreen({
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <StatusBar style="light" backgroundColor="#075e54" />
+      <StatusBar barStyle="light-content" backgroundColor="#075e54" />
 
       {/* Header */}
       <View style={styles.header}>
