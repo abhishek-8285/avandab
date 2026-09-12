@@ -919,7 +919,7 @@ func TestAllTemplatesRender(t *testing.T) {
 		"driver_list.html", "driver_list_table.html", "driver_view.html",
 		"ewaybill_detail.html", "ewaybill_index.html", "invoice_line_items.html",
 		"invoice_list.html", "invoice_list_table.html", "invoice_view.html",
-		"map.html", "payment_list.html", "payment_list_table.html", "payment_view.html",
+		"payment_list.html", "payment_list_table.html", "payment_view.html",
 		"report_customers.html", "report_drivers.html", "report_pending_payments.html",
 		"report_trips.html", "report_vehicles.html", "route_list.html",
 		"route_list_table.html", "route_view.html", "route_optimize.html", "route_optimize_jobs.html", "scorecard_driver.html",

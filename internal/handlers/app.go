@@ -33,7 +33,6 @@ import (
 	"transport-app/internal/sto"
 	"transport-app/internal/sustainability"
 	esgapp "transport-app/internal/sustainability/application"
-	"transport-app/internal/telemetry"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -117,8 +116,6 @@ type App struct {
 	Scorecard *ScorecardHandlers
 	// Tracking powers the live fleet map page (Spec 04 §1.3).
 	Tracking *TrackingHandlers
-	// Map powers the live fleet map page and SSE stream (Spec 12 §2.2, §4.3).
-	Map *MapHandlers
 	// Share powers trip share link generation, public viewing & admin management (Spec 04 §4).
 	Share *ShareHandlers
 	// Maintenance powers preventive maintenance schedules, DTCs, and records (Spec 04 §6).
@@ -221,8 +218,6 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	app.Scorecard = &ScorecardHandlers{App: app}
 	// Live fleet tracking map (Spec 04 §1.3).
 	app.Tracking = &TrackingHandlers{App: app}
-	// Live map & stream handler (Spec 12 §2.2, §4.3).
-	app.Map = NewMapHandlers(app, telemetry.NewLiveStore(db, 15*time.Minute))
 	// Trip share links (Spec 04 §4).
 	app.Share = NewShareHandlers(app, db)
 	// Preventive maintenance (Spec 04 §6).

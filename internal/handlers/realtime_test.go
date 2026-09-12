@@ -21,14 +21,12 @@ import (
 	"github.com/stretchr/testify/require"
 	_ "modernc.org/sqlite"
 
-	"transport-app/internal/auth"
 	"transport-app/internal/config"
 	"transport-app/internal/events"
 	"transport-app/internal/middleware"
 	"transport-app/internal/repository/sqlite"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
-	"transport-app/internal/telemetry"
 )
 
 func newRealtimeTestDB(t *testing.T) *sql.DB {
@@ -129,63 +127,6 @@ func TestDashboardSSE_DisabledGracefulClose(t *testing.T) {
 
 	assert.Equal(t, "text/event-stream", w.Header().Get("Content-Type"))
 	assert.Contains(t, w.Body.String(), `data: {"dashboard":`)
-}
-
-func TestMapSSE_StreamHeadersAndPayload(t *testing.T) {
-	db := newRealtimeTestDB(t)
-	liveStore := telemetry.NewLiveStore(db, 15*time.Minute)
-
-	app := &App{
-		Config: &config.Config{AppEnv: "testing"},
-	}
-	mapHandler := NewMapHandlers(app, liveStore)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
-	defer cancel()
-
-	ctx = shared.ContextWithTenantID(ctx, shared.DefaultTenant)
-	req := httptest.NewRequest("GET", "/map/stream", nil).WithContext(ctx)
-	w := httptest.NewRecorder()
-
-	mapHandler.Stream(w, req)
-
-	assert.Equal(t, "text/event-stream", w.Header().Get("Content-Type"))
-	assert.Equal(t, "no-cache", w.Header().Get("Cache-Control"))
-	assert.Equal(t, "keep-alive", w.Header().Get("Connection"))
-	assert.Equal(t, "no", w.Header().Get("X-Accel-Buffering"))
-
-	body := w.Body.String()
-	assert.Contains(t, body, "event: datastar-merge-signals")
-	assert.Contains(t, body, `data: {"vehicles":`)
-}
-
-func TestMapPage_Render(t *testing.T) {
-	cwd, _ := os.Getwd()
-	if filepath.Base(cwd) == "handlers" {
-		t.Chdir("../..")
-	}
-	authSvc := &mockAuthSvc{}
-	tmpl, err := parseTemplates(authSvc)
-	require.NoError(t, err)
-
-	app := &App{
-		Config:    &config.Config{AppEnv: "testing"},
-		Templates: tmpl,
-		AuthSrv:   authSvc,
-	}
-	mapHandler := NewMapHandlers(app, nil)
-
-	req := httptest.NewRequest("GET", "/map", nil)
-	ctx := context.WithValue(req.Context(), auth.ContextUser, &auth.SessionData{UserID: "u-1", Role: "admin"})
-	req = req.WithContext(ctx)
-	w := httptest.NewRecorder()
-
-	mapHandler.Page(w, req)
-
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), `id="map"`)
-	assert.Contains(t, w.Body.String(), "Live Fleet Map")
-	assert.Contains(t, w.Body.String(), "/static/js/map.js")
 }
 
 func TestSkipForPaths_TimeoutBypass(t *testing.T) {
