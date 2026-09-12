@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"transport-app/internal/shared"
@@ -42,6 +43,11 @@ func NewUpdateVehicleUseCase(uow ports.UnitOfWork, clock ports.Clock) *UpdateVeh
 }
 
 func (uc *UpdateVehicleUseCase) Execute(ctx context.Context, cmd UpdateVehicleCommand) error {
+	// Same normalization as create: friendly error here, never a raw DB CHECK.
+	cmd.FuelType = aggregate.NormalizeFuelType(cmd.FuelType)
+	if !aggregate.ValidFuelType(cmd.FuelType) {
+		return fmt.Errorf("invalid fuel type %q: must be one of diesel, petrol, gas, electric, cng", string(cmd.FuelType))
+	}
 	return uc.uow.Execute(ctx, func(txCtx ports.TxContext) error {
 		repo, ok := txCtx.Repositories().Vehicles().(domain.VehicleRepository)
 		if !ok {

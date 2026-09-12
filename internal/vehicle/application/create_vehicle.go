@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"transport-app/internal/shared"
@@ -43,6 +44,14 @@ func NewCreateVehicleUseCase(uow ports.UnitOfWork, idGen ports.IDGenerator, cloc
 func (uc *CreateVehicleUseCase) Execute(ctx context.Context, cmd CreateVehicleCommand) (aggregate.VehicleID, error) {
 	if cmd.RegistrationNumber == "" || cmd.VehicleNumber == "" {
 		return "", errors.New("registration number and vehicle number are required")
+	}
+
+	// Normalize + validate before touching the DB: an empty/unknown fuel
+	// type must fail here with a friendly message, never as a raw CHECK
+	// constraint from the repository layer.
+	cmd.FuelType = aggregate.NormalizeFuelType(cmd.FuelType)
+	if !aggregate.ValidFuelType(cmd.FuelType) {
+		return "", fmt.Errorf("invalid fuel type %q: must be one of diesel, petrol, gas, electric, cng", string(cmd.FuelType))
 	}
 
 	id := aggregate.VehicleID(uc.idGen.GenerateUUID())
