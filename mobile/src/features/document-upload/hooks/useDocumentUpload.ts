@@ -16,7 +16,9 @@ export function useDocumentUpload(token?: string) {
   }, []);
 
   useEffect(() => {
-    loadTasks();
+    void (async () => {
+      setTasks(await localDocumentStore.getTasks());
+    })();
     const unsubscribe = uploadQueue.addListener((updatedTask) => {
       setTasks((prev) => {
         const idx = prev.findIndex((t) => t.id === updatedTask.id);

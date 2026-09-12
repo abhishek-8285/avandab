@@ -34,6 +34,21 @@ interface IssuesScreenProps {
   onBack: () => void;
 }
 
+async function fetchIssuesList(token: string | null): Promise<IssueRow[] | null> {
+  try {
+    const res = await fetch(`${getApiBaseURL()}/api/v1/drivers/me/issues`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (res.ok) {
+      const json = await res.json();
+      return json.issues ?? [];
+    }
+  } catch {
+    // offline — list stays stale
+  }
+  return null;
+}
+
 export function IssuesScreen({ tripId, onBack }: IssuesScreenProps) {
   const { token } = useAuthStore();
   const [category, setCategory] = useState<string>('vehicle');
@@ -45,24 +60,18 @@ export function IssuesScreen({ tripId, onBack }: IssuesScreenProps) {
   const [loadingList, setLoadingList] = useState(true);
 
   const loadIssues = useCallback(async () => {
-    try {
-      const res = await fetch(`${getApiBaseURL()}/api/v1/drivers/me/issues`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (res.ok) {
-        const json = await res.json();
-        setIssues(json.issues ?? []);
-      }
-    } catch {
-      // offline — list stays stale
-    } finally {
-      setLoadingList(false);
-    }
+    const rows = await fetchIssuesList(token);
+    if (rows !== null) setIssues(rows);
+    setLoadingList(false);
   }, [token]);
 
   useEffect(() => {
-    loadIssues();
-  }, [loadIssues]);
+    void (async () => {
+      const rows = await fetchIssuesList(token);
+      if (rows !== null) setIssues(rows);
+      setLoadingList(false);
+    })();
+  }, [token]);
 
   const pickPhoto = async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();

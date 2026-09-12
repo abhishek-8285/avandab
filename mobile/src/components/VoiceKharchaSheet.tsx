@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -53,14 +53,15 @@ export function VoiceKharchaSheet({
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [audioPlaybackProgress, setAudioPlaybackProgress] = useState(0);
 
-  // Pulse animation for recording mic
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  // Pulse animation for recording mic (stable instances; useState initializer
+  // instead of useRef(...).current, which reads a ref during render).
+  const [pulseAnim] = useState(() => new Animated.Value(1));
   // Live audio wave bars
-  const wave1 = useRef(new Animated.Value(8)).current;
-  const wave2 = useRef(new Animated.Value(14)).current;
-  const wave3 = useRef(new Animated.Value(24)).current;
-  const wave4 = useRef(new Animated.Value(18)).current;
-  const wave5 = useRef(new Animated.Value(10)).current;
+  const [wave1] = useState(() => new Animated.Value(8));
+  const [wave2] = useState(() => new Animated.Value(14));
+  const [wave3] = useState(() => new Animated.Value(24));
+  const [wave4] = useState(() => new Animated.Value(18));
+  const [wave5] = useState(() => new Animated.Value(10));
 
   // Listen to native speech recognition events
   useSpeechRecognitionEvent('start', () => {
@@ -141,8 +142,11 @@ export function VoiceKharchaSheet({
     };
   }, [isListening]);
 
-  // Request permissions on modal open
-  useEffect(() => {
+  // Reset form state when the modal opens (render-phase adjustment of derived
+  // state — pure setStates only; the native side effects stay in the effect below).
+  const [prevVisible, setPrevVisible] = useState<boolean | null>(null);
+  if (visible !== prevVisible) {
+    setPrevVisible(visible);
     if (visible) {
       setTranscript('');
       setLiveTranscript('');
@@ -153,7 +157,12 @@ export function VoiceKharchaSheet({
       setIsListening(false);
       setIsPlayingAudio(false);
       setAudioPlaybackProgress(0);
+    }
+  }
 
+  // Native side effects on open/close (no setState — lint-clean by construction).
+  useEffect(() => {
+    if (visible) {
       if (ExpoSpeechRecognitionModule?.requestPermissionsAsync) {
         ExpoSpeechRecognitionModule.requestPermissionsAsync().catch(() => {});
       }
@@ -164,7 +173,8 @@ export function VoiceKharchaSheet({
     }
   }, [visible]);
 
-  const handleProcessSpeech = (utterance: string) => {
+  // Function declaration (hoisted): used by the speech-result subscription above.
+  function handleProcessSpeech(utterance: string) {
     setIsListening(false);
     setTranscript(utterance);
     setLiveTranscript('');
@@ -188,7 +198,7 @@ export function VoiceKharchaSheet({
         `Heard "${trimmed}", but no amount found. Please speak an expense like "Diesel 2000" or enter the amount below.`
       );
     }
-  };
+  }
 
   const handleStartListening = async () => {
     try {

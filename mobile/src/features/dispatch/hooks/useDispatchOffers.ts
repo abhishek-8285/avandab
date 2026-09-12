@@ -6,11 +6,11 @@ import { commandProcessor } from '../../../core/sync/commandProcessor';
 
 export function useDispatchOffers(token?: string) {
   const [offers, setOffers] = useState<DispatchOffer[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  // Loader shows on mount when a token exists; background interval refetches stay silent.
+  const [loading, setLoading] = useState<boolean>(() => !!token);
 
   const fetchOffers = useCallback(async () => {
     if (!token) return;
-    setLoading(true);
     try {
       const data = await dispatchApi.getPendingOffers(token);
       setOffers(data);
@@ -22,10 +22,20 @@ export function useDispatchOffers(token?: string) {
   }, [token]);
 
   useEffect(() => {
-    fetchOffers();
+    void (async () => {
+      if (!token) return;
+      try {
+        const data = await dispatchApi.getPendingOffers(token);
+        setOffers(data);
+      } catch {
+        // Retain existing state if network drops
+      } finally {
+        setLoading(false);
+      }
+    })();
     const interval = setInterval(fetchOffers, 10000);
     return () => clearInterval(interval);
-  }, [fetchOffers]);
+  }, [fetchOffers, token]);
 
   const acceptOffer = async (offerId: string): Promise<void> => {
     if (!token) throw new Error('Authentication required');

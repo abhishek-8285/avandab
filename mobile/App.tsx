@@ -352,42 +352,40 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
     };
   }, [user?.id, user?.driverId]);
 
-  const handleRequestLocation = async () => {
-    try {
-      Analytics.track('driver_gps_permission_requested');
-      const loc = await Telemetry.requestLocationPermission();
-
-      const lat = loc.latitude ?? 19.0760;
-      const lng = loc.longitude ?? 72.8777;
-
-      const finalLoc = {
-        granted: loc.granted,
-        latitude: loc.granted ? lat : null,
-        longitude: loc.granted ? lng : null,
-        error: loc.error,
-      };
-
-      setLocationState(finalLoc);
-      if (finalLoc.granted) {
-        Analytics.track('driver_gps_location_acquired', { lat, lng });
-        if (driverIdentifier) {
-          MQTT.publishLocation(driverIdentifier, lat, lng);
-        }
-        Telemetry.startLiveLocationTracking((liveLat, liveLng) => {
-          setLocationState((prev) => ({ ...prev, granted: true, latitude: liveLat, longitude: liveLng }));
-          if (driverIdentifier) {
-            MQTT.publishLocation(driverIdentifier, liveLat, liveLng);
-          }
-        });
-      }
-    } catch (e: any) {
-      Analytics.track('driver_gps_error', { error: e.message });
-    }
-  };
-
   // Auto-activate location tracking on screen focus and on dispatch tab
   useEffect(() => {
-    handleRequestLocation();
+    void (async () => {
+      try {
+        Analytics.track('driver_gps_permission_requested');
+        const loc = await Telemetry.requestLocationPermission();
+
+        const lat = loc.latitude ?? 19.0760;
+        const lng = loc.longitude ?? 72.8777;
+
+        const finalLoc = {
+          granted: loc.granted,
+          latitude: loc.granted ? lat : null,
+          longitude: loc.granted ? lng : null,
+          error: loc.error,
+        };
+
+        setLocationState(finalLoc);
+        if (finalLoc.granted) {
+          Analytics.track('driver_gps_location_acquired', { lat, lng });
+          if (driverIdentifier) {
+            MQTT.publishLocation(driverIdentifier, lat, lng);
+          }
+          Telemetry.startLiveLocationTracking((liveLat, liveLng) => {
+            setLocationState((prev) => ({ ...prev, granted: true, latitude: liveLat, longitude: liveLng }));
+            if (driverIdentifier) {
+              MQTT.publishLocation(driverIdentifier, liveLat, liveLng);
+            }
+          });
+        }
+      } catch (e: any) {
+        Analytics.track('driver_gps_error', { error: e.message });
+      }
+    })();
   }, [driverIdentifier, activeTab]);
 
 

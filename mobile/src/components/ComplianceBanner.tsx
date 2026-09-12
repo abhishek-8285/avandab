@@ -26,10 +26,7 @@ export function ComplianceBanner({ vehicleId, onPressDetails }: ComplianceBanner
   const [result, setResult] = useState<ComplianceResult | null>(null);
 
   useEffect(() => {
-    if (!vehicleId) {
-      setResult(null);
-      return;
-    }
+    if (!vehicleId) return;
     let cancelled = false;
     fetchCompliance(vehicleId)
       .then((res) => {
