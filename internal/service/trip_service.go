@@ -585,7 +585,7 @@ func (s *TripService) EnsurePODOTP(ctx context.Context, tripID string) (string, 
 		return "", err
 	}
 	if otp != "" && expires != "" {
-		if exp, perr := time.Parse(time.RFC3339, expires); perr == nil && time.Now().Before(exp) {
+		if exp, ok := parsePODOTPExpiry(expires); ok && time.Now().Before(exp) {
 			return otp, nil
 		}
 	}
@@ -604,8 +604,25 @@ func (s *TripService) EnsurePODOTP(ctx context.Context, tripID string) (string, 
 	return code, nil
 }
 
+// parsePODOTPExpiry accepts both expiry layouts found in the wild:
+// RFC3339 (EnsurePODOTP writer; the sqlite driver also stores bound
+// time.Time values RFC3339-with-offset, which this parses) and bare sqlite
+// datetime (manual rows / datetime('now') producers). Bare walls are read as
+// UTC — never local wall time (server local is IST, UTC is canonical).
+func parsePODOTPExpiry(s string) (time.Time, bool) {
+	if exp, err := time.Parse(time.RFC3339, s); err == nil {
+		return exp, true
+	}
+	exp, err := time.Parse("2006-01-02 15:04:05", s)
+	return exp, err == nil
+}
+
 // verifyPODOTP enforces the read-back when the trip has an active code and
-// records pod_otp_verified on success.
+// records pod_otp_verified on success. Fail-closed: an active code must match
+// AND be unexpired, otherwise delivery is blocked until a fresh code is
+// issued via EnsurePODOTP. Expiry is parsed in both RFC3339 (EnsurePODOTP
+// writer) and sqlite-datetime (trip-create writer) layouts — an unparseable
+// expiry with an active code enforces rather than bypasses.
 func (s *TripService) verifyPODOTP(ctx context.Context, tripID, code string, verified *bool) error {
 	db := s.tripDB()
 	if db == nil {
@@ -618,8 +635,9 @@ func (s *TripService) verifyPODOTP(ctx context.Context, tripID, code string, ver
 	if err != nil || otp == "" {
 		return nil // legacy trip, no gate
 	}
-	if exp, perr := time.Parse(time.RFC3339, expires); perr != nil && !time.Now().Before(exp) {
-		return nil // expired → gate no longer enforceable by us; deliver unverified
+	exp, ok := parsePODOTPExpiry(expires)
+	if !ok || !time.Now().Before(exp) {
+		return ErrPODOTPRequired // corrupt or expired code: re-issue, don't bypass
 	}
 	if subtle.ConstantTimeCompare([]byte(code), []byte(otp)) != 1 {
 		return ErrPODOTPRequired
