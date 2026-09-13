@@ -1,0 +1,59 @@
+# Docker build context filter.
+# Purpose: keep secrets, databases and build output OUT of the context that
+# Docker sends to the daemon (they were traversing on every build: 1.6GB from
+# .git + mobile/ + node_modules alone), and make accidental future COPYs of
+# secrets impossible.
+#
+# Do NOT ignore anything the image needs:
+#   - go.mod / go.sum                  (COPY at line 15)
+#   - cmd/, internal/, db/             (go build ./cmd/server; db/migrations* are go:embed)
+#   - internal/templates, internal/static, db/migrations (runtime COPY)
+#   - .env.example                     (runtime COPY; negated below)
+
+# VCS + tooling
+.git
+.github
+.agents
+.claude
+.commandcode
+.opencode
+.zcode
+.mcp.json
+.cce
+
+# Secrets / local config — never in the image
+.env
+.env.*
+!.env.example
+config/firebase-service-account.json
+mobile/android/app/google-services.json
+
+# Databases + runtime artifacts
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+backups/
+uploads/
+*.log
+server
+server_*
+bin/
+audit-results.txt
+playwright-report/
+test-results/
+strix_runs/
+
+# Not needed to compile or run the server binary
+node_modules
+mobile
+src
+static
+test
+docs
+scripts
+hooks
+coverage
+*.out
+openapi.yaml
+ALL_TECH_SPECS.txt

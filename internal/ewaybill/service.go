@@ -160,24 +160,34 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 		return &existingRec, nil
 	}
 
-	// 1. Resolve trip, route, customer, booking data.
-	// Tenant-scoped: t.tenant_id must equal the caller's tenant (or the
-	// bootstrap fallback below). company_settings id=1 stays the
-	// PLATFORM-global default singleton (migration 00125): tenant row first,
-	// global fallback — never a neighbouring tenant's GSTIN.
+	// 1a. Authorization gate: resolve the trip's owning tenant and verify the
+	// caller may act on it. A missing trip and a cross-tenant trip are
+	// deliberately indistinguishable to the caller (both "not found").
+	var tripTenant string
+	if err := s.db.QueryRowContext(ctx, `SELECT tenant_id FROM trips WHERE id = $1`, req.TripID).Scan(&tripTenant); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("trip %s not found", req.TripID)
+		}
+		return nil, fmt.Errorf("resolve trip tenant: %w", err)
+	}
+	if ctxTenant := string(shared.TenantIDFromContext(ctx)); ctxTenant != "" && ctxTenant != tripTenant {
+		return nil, fmt.Errorf("trip %s not found in tenant scope", req.TripID)
+	}
+	// Background/legacy callers carry no tenant; the trip's own tenant is the
+	// authoritative scope for the enrichment query either way.
+	tenantID := tripTenant
+
+	// 1b. Enrich from related rows. Best-effort by design: a trip with no
+	// linked booking/route/customer is a data-completeness gap, not an
+	// authorization failure, so ErrNoRows falls back to the caller's request
+	// values (the pre-existing contract). Any OTHER error (missing table, bad
+	// schema) fails hard — silently stamping a government document from
+	// partial tax context is not acceptable. Tenant scoping is retained on the
+	// enrichment query itself (WHERE + the trip's own tenant), so the
+	// authorization decision is already made above.
 	var bookingPrice, routeDist, standardFare float64
 	var tripNumber, routeSource, routeDest string
 	var custGST, compGST, compState, vehicleNumber sql.NullString
-	var tripTenant string
-
-	tenantID := string(shared.TenantIDFromContext(ctx))
-	if tenantID == "" {
-		// No request tenant (background job / legacy test caller): resolve
-		// the trip's own tenant so the document still stamps the owning org.
-		// Callers that DO carry a tenant stay strictly scoped by the WHERE
-		// clause below (fail-closed on cross-tenant IDs).
-		_ = s.db.QueryRowContext(ctx, `SELECT tenant_id FROM trips WHERE id = $1`, req.TripID).Scan(&tenantID)
-	}
 
 	err = s.db.QueryRowContext(ctx, `
 		SELECT t.trip_number, r.source, r.destination, r.distance, r.standard_fare,
@@ -190,8 +200,7 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 			       (SELECT state_code FROM tenant_company_profiles WHERE tenant_id = t.tenant_id),
 			       CASE WHEN t.tenant_id IS NULL OR t.tenant_id IN ('', '1')
 				       THEN (SELECT state_code FROM company_settings WHERE id = 1) END, '27'),
-		       v.registration_number,
-		       t.tenant_id
+		       v.registration_number
 		FROM trips t
 		JOIN bookings b ON t.booking_id = b.id
 		JOIN routes r ON t.route_id = r.id
@@ -201,15 +210,11 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 	`, req.TripID, tenantID).Scan(
 		&tripNumber, &routeSource, &routeDest, &routeDist, &standardFare,
 		&bookingPrice, &custGST, &compGST, &compState, &vehicleNumber,
-		&tripTenant,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, fmt.Errorf("trip %s not found in tenant scope", req.TripID)
-	}
-	if err != nil {
-		// Surface real query errors (missing table, bad schema) instead of
-		// degrading to request values — silent fallbacks on a government
-		// document path previously let cross-tenant calls slip through.
+		s.logger.Warn("could not fetch complete trip details, using request values",
+			"trip_id", req.TripID, "tenant_id", tenantID)
+	} else if err != nil {
 		return nil, fmt.Errorf("resolve trip tax context: %w", err)
 	}
 

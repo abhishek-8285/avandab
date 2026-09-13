@@ -27,7 +27,10 @@ else
 fi
 
 if [ -n "$CHANGED_GO_FILES" ]; then
-  TENANT_HITS=$(grep -nE 'TenantID(Resp)?\s*(:|=)\s*("1"|shared\.TenantID\("1"|shared\.DefaultTenant)' $CHANGED_GO_FILES \
+  # internal/shared/tenant.go is the sanctioned HOME of the bootstrap seam
+  # (DefaultTenant's const definition) — tenant-lint.sh excludes it too.
+  TENANT_SCAN_FILES=$(echo "$CHANGED_GO_FILES" | grep -v '^internal/shared/tenant\.go$' || true)
+  TENANT_HITS=$(grep -nE 'TenantID(Resp)?\s*(:|=)\s*("1"|shared\.TenantID\("1"|shared\.DefaultTenant)' $TENANT_SCAN_FILES \
     | grep -v 'nolint:tenant-default' \
     | grep -v 'nolint:tenant-hardcode' \
     | grep -v '_test.go' || true)
@@ -40,6 +43,26 @@ if [ -n "$CHANGED_GO_FILES" ]; then
   fi
 fi
 echo "✅ No hard-coded tenant literals in changed code"
+
+# ── Request-path panic guard (Prohibition: no 5xx from a bad session) ────────
+# MustTenantID panics when the tenant is absent. On an HTTP handler that turns
+# a bad/expired session into a 500 via Recoverer instead of a 401. New usage
+# inside internal/handlers/ is blocked; the pre-existing call sites are
+# grandfathered by the LINT_BASE ratchet (this scan looks at ADDED lines only).
+if [ -n "$LINT_BASE" ]; then
+  NEW_MUST_TENANT=$(git diff "$LINT_BASE" -- 'internal/handlers/*.go' 'internal/*/presentation/**/*.go' 2>/dev/null \
+    | grep -E '^\+' \
+    | grep -vE '^\+\+\+' \
+    | grep -E 'MustTenantID\(' \
+    | grep -v '_test.go' || true)
+  if [ -n "$NEW_MUST_TENANT" ]; then
+    echo "❌ New MustTenantID() on a request path (panics -> 500 for a bad session):"
+    echo "$NEW_MUST_TENANT" | head -10
+    echo "Use shared.TenantRequired(ctx) and answer 401 (see handlers/share.go requireTenant)."
+    exit 1
+  fi
+  echo "✅ No new MustTenantID() on request paths"
+fi
 
 # ── Tenant isolation lint (compile-time safety) ──────────────────────────────
 ./scripts/tenant-lint.sh

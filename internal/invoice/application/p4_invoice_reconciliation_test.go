@@ -74,6 +74,16 @@ func setupP4InvoiceDB(t *testing.T) *sql.DB {
 		PRIMARY KEY (tenant_id, key)
 	);
 
+	-- Mirrors migration 00125: per-tenant company profile (GSTIN/state code).
+	-- GeneratePartA resolves tenant GST context from here first, so the fixture
+	-- must carry it exactly like a migrated database does.
+	CREATE TABLE IF NOT EXISTS tenant_company_profiles (
+		tenant_id    TEXT PRIMARY KEY,
+		company_name TEXT NOT NULL DEFAULT '',
+		gst_number   TEXT,
+		state_code   TEXT NOT NULL DEFAULT '27'
+	);
+
 	CREATE TABLE IF NOT EXISTS customers (
 		id TEXT PRIMARY KEY,
 		name TEXT NOT NULL,

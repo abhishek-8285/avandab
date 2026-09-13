@@ -75,8 +75,17 @@ func RequireTenantOr(ctx context.Context, tenantID string) (TenantID, error) {
 	return TenantID(tenantID), nil
 }
 
-// MustTenantID panics if tenant is missing. Use only where panic is appropriate
-// (e.g., background jobs where missing tenant is a programmer error).
+// MustTenantID panics if tenant is missing. Use only where a panic is
+// genuinely appropriate — i.e. NON-request paths (background jobs, cron
+// entrypoints) where a missing tenant is a programmer error.
+//
+// DEPRECATED for HTTP handlers: on a request path a missing tenant means a
+// bad/expired session, so panicking turns it into a 500 through Recoverer
+// instead of a clean 401. Use TenantRequired (or RequireTenantID) and answer
+// 401. New MustTenantID usage inside internal/handlers is blocked by the
+// security gate (scripts/security-check.sh); the pre-existing call sites are
+// a quantified backlog being converted handler-by-handler because each one
+// owns its own error contract (JSON vs HTMX vs redirect).
 func MustTenantID(ctx context.Context) TenantID {
 	t, err := TenantRequired(ctx)
 	if err != nil {
