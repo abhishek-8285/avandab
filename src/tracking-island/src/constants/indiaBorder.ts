@@ -23,9 +23,18 @@ export const INDIA_DEFAULT_ZOOM = 5;
 export const INDIA_MIN_ZOOM = 4;
 export const INDIA_MAX_ZOOM = 22;
 
+/** Default OSM tile endpoint (Spec 04 §2 default). */
+export const OSM_DEFAULT_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+export const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
 /**
- * Google Maps Raster Tile Endpoint with gl=IN (Region: India).
- * Exactly as used in FlyFleet (apps/dashboard-web/src/components/LiveMap.tsx).
- * Serves official Government of India / Survey of India boundaries at zero cost.
+ * Google Maps Raster Tile Endpoint builder with gl region param.
+ * Opt-in only: default tiles are OSM per Spec 04 §2 (OSM-only, attribution
+ * mandatory, no Google tile scraping). Google serves only when tile Provider
+ * is explicitly 'google'.
  */
-export const GOOGLE_INDIA_TILE_URL = 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&gl=IN';
+export function googleTileUrl(style = 'm', gl = 'IN'): string {
+  return `https://mt1.google.com/vt/lyrs=${style}&x={x}&y={y}&z={z}&gl=${gl}`;
+}
+
+export const GOOGLE_INDIA_TILE_URL = googleTileUrl();
