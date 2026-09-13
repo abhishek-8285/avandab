@@ -16,8 +16,10 @@ echo "=== Security Scanner Suite ==="
 ./scripts/check-npm-audit.sh
 
 # ── Hard-coded multi-tenancy scan (Prohibition #4) ──────────────────────────
-# Any literal TenantID assignment in Go code must derive from
-# shared.TenantIDFromContext or shared.DefaultTenant (with nolint marker).
+# Fail on literal tenant assignments in Go code: TenantID:"1", TenantID="1",
+# TenantID: shared.TenantID("1"), shared.DefaultTenant WITHOUT nolint marker.
+# The sanctioned seam (shared.DefaultTenant WITH //nolint:tenant-default plus
+# justification, e.g. bootstrap/global-scope) stays legal.
 if [ -n "$LINT_BASE" ]; then
   CHANGED_GO_FILES=$(git diff --name-only --diff-filter=ACM "$LINT_BASE" -- '*.go' 2>/dev/null || true)
 else
@@ -25,13 +27,15 @@ else
 fi
 
 if [ -n "$CHANGED_GO_FILES" ]; then
-  TENANT_HITS=$(grep -nE 'TenantID(Resp)?\s*(:|=)\s*shared\.TenantID\("' $CHANGED_GO_FILES \
+  TENANT_HITS=$(grep -nE 'TenantID(Resp)?\s*(:|=)\s*("1"|shared\.TenantID\("1"|shared\.DefaultTenant)' $CHANGED_GO_FILES \
+    | grep -v 'nolint:tenant-default' \
     | grep -v 'nolint:tenant-hardcode' \
     | grep -v '_test.go' || true)
   if [ -n "$TENANT_HITS" ]; then
     echo "❌ Hard-coded tenant literal found (Prohibition #4):"
     echo "$TENANT_HITS"
-    echo "Derive tenant from shared.TenantIDFromContext(ctx) instead."
+    echo "Derive tenant from shared.TenantIDFromContext(ctx) instead,"
+    echo "or mark the sanctioned bootstrap seam with //nolint:tenant-default + justification."
     exit 1
   fi
 fi

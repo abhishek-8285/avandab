@@ -82,14 +82,16 @@ func TestGetOnboarding_Unauthenticated(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 }
 
-func TestGetOnboarding_MissingTenantPanics(t *testing.T) {
+// TestGetOnboarding_MissingTenantIs401 — fail-closed contract: an
+// authenticated request without a tenant is rejected at the edge with 401,
+// never a 500 panic and never a silent default. (Ratchet: this replaced the
+// earlier panic-based contract — panicking on request paths turned a bad
+// session into a server error.)
+func TestGetOnboarding_MissingTenantIs401(t *testing.T) {
 	r := lifecycleRouter(setupLifecycleTestDB(t))
 
-	// Fail-closed contract: an authenticated request without a tenant must
-	// panic (surfaces as 500 via Recoverer), never silently default.
-	assert.Panics(t, func() {
-		lifecycleRequest(t, r, http.MethodGet, "/api/v1/drivers/me/onboarding", "", "drv-1")
-	})
+	rr := lifecycleRequest(t, r, http.MethodGet, "/api/v1/drivers/me/onboarding", "", "drv-1")
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 }
 
 func TestGetOnboarding_ReturnsState(t *testing.T) {

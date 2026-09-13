@@ -52,17 +52,22 @@ func (h *DriverLifecycleAPIHandler) RegisterRoutes(r chi.Router) {
 	r.Post("/api/v1/vehicle-assignments/{id}/accept", h.AcceptAssignment)
 }
 
+// getContextData resolves (tenant, user) for an authenticated driver request.
+// Fail closed on a missing tenant by returning ok=false: callers already
+// answer 401 "unauthorized" for the session case, so a bad/expired session
+// never becomes a 500 panic and never silently defaults to another org.
+// (Deliberately does NOT write the response — callers own the 401 body.)
 func (h *DriverLifecycleAPIHandler) getContextData(r *http.Request) (string, string, bool) {
 	ctx := r.Context()
-	// Fail closed: these routes sit behind RequireAPIAuth (cmd/server/main.go)
-	// which always sets tenant, so a missing tenant is a programmer error
-	// (panics surface as 500 via Recoverer). Session checked first to
-	// preserve 401 for unauthenticated callers. Never silently default here.
 	session, ok := ctx.Value(auth.ContextUser).(*auth.SessionData)
 	if !ok || session == nil || session.UserID == "" {
 		return "", "", false
 	}
-	return string(shared.MustTenantID(ctx)), session.UserID, true
+	tid, err := shared.TenantRequired(ctx)
+	if err != nil {
+		return "", "", false
+	}
+	return string(tid), session.UserID, true
 }
 
 // isReviewer reports whether the caller may decide reviewer mutations

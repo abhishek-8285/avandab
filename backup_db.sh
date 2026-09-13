@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Avandab 24/7 Automated Daily SQLite Backup Script
-# Backs up mvtms.db safely using SQLite online backup API
+# Avandab 24/7 Automated Daily SQLite Backup Script (DEVICE-side, via ADB)
+# Backs up mvtms.db safely using the SQLite online backup API ON THE DEVICE.
+# NOTE: this is the DEVICE/ADB backup path (device DB is canonically
+# mvtms.db at /data/local/tmp). The REPO/LOCAL backup path with the same
+# purpose is scripts/backup-db.sh (repo-local transport.db + R2 sync).
+# Do not merge the two: different hosts, different DB filenames, different
+# destinations. See scripts/backup-avandab-db.sh (deprecated wrapper).
 # ==============================================================================
 set -e
 

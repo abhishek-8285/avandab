@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
-# Automated safe online backup for Avandab SQLite database with Cloudflare R2 sync.
+# Automated safe online backup for the REPO-LOCAL Avandab SQLite database
+# (transport.db) with Cloudflare R2 sync. NOTE: the DEVICE/ADB backup path
+# (device DB mvtms.db at /data/local/tmp) lives in ./backup_db.sh — different
+# host, different filename, do not merge. scripts/backup-avandab-db.sh is a
+# deprecated wrapper forwarding here.
 set -euo pipefail
 
-DB_PATH="${1:-/home/bhshrivastav/avandab/transport.db}"
-BACKUP_DIR="${2:-/home/bhshrivastav/avandab/backups}"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DB_PATH="${1:-${REPO_ROOT}/transport.db}"
+BACKUP_DIR="${2:-${REPO_ROOT}/backups}"
 TIMESTAMP="$(date -u +%Y%m%d_%H%M%SZ)"
 BACKUP_FILE="${BACKUP_DIR}/transport_${TIMESTAMP}.db"
 COMPRESSED_FILE="${BACKUP_FILE}.gz"
