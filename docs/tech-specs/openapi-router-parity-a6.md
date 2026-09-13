@@ -1,5 +1,12 @@
 # A6: OpenAPI↔router parity audit
 
+> CONTRACT STATUS: `openapi.yaml` is a HAND-MAINTAINED snapshot — no generator
+> exists (no Makefile/scripts/CI target emits it). Treat it as the human-curated
+> contract: every new `/api/v1` route ships with a `paths:` entry in the same
+> PR (rule below), and this audit re-runs by hand re-executing the extraction
+> method. Do NOT auto-generate it without a spec decision (mock-shaped
+> integrations would get pinned as contract).
+
 Date: 2026-09-08. Method: static extraction of every `.(Get|Post|Put|Delete|Patch)("...")`
 and `r.Route("/api/v1...", func...)` block from non-test Go, normalized `{param}`→`{}`,
 diffed method-aware against `openapi.yaml` `paths:`. (Case-only diffs ignored.)
@@ -41,7 +48,7 @@ chained `r.With(...).Verb`, `r.Route` prefix + relative verbs, nested routes,
 `{param}`→`{}`, trailing-slash normalized.
 
 ## Result
-- Router: **229** `/api/v1` ops. Spec: **214** ops (`openapi.yaml`: 183 paths).
+- Router: **229** `/api/v1` ops. Spec: **214** ops (`openapi.yaml`: 186 paths, re-audit 2026-09-13).
 - **In router, not in spec: 20** — all `/api/v1/integrations/*` (ewaybill,
   fastag, gstn, accounting stubs in `internal/integration/handler.go`).
   Deliberately deferred per above (mock-by-default; spec when providers go real).

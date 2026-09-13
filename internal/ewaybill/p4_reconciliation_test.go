@@ -14,6 +14,7 @@ import (
 	"transport-app/internal/events"
 	"transport-app/internal/ewaybill"
 	intEWB "transport-app/internal/integration/ewaybill"
+	"transport-app/internal/shared"
 )
 
 type mockRecordedBus struct {
@@ -71,6 +72,13 @@ func setupP4TestDB(t *testing.T) *sql.DB {
 		state_code TEXT NOT NULL DEFAULT '27'
 	);
 	INSERT INTO company_settings (id, gst_number, state_code) VALUES (1, '27AABCU9603R1ZX', '27');
+
+	CREATE TABLE IF NOT EXISTS tenant_company_profiles (
+		tenant_id      TEXT PRIMARY KEY,
+		company_name   TEXT NOT NULL DEFAULT '',
+		gst_number     TEXT,
+		state_code     TEXT NOT NULL DEFAULT '27'
+	);
 
 	CREATE TABLE IF NOT EXISTS company_config (
 		tenant_id TEXT NOT NULL,
@@ -244,6 +252,48 @@ func TestP4_MultiTenantEWayBillIsolation(t *testing.T) {
 	}
 	if countB != 1 {
 		t.Fatalf("Tenant B enabled ewaybill_auto_generate; expected 1 eway_bill, got %d", countB)
+	}
+}
+
+// TestGeneratePartA_CrossTenantDenied is the ratchet for the tenant gate:
+// a caller scoped to tenant_B must NOT generate a document off tenant_A's
+// trip (previously: unscoped lookup + neighbour GSTIN on a govt document).
+func TestGeneratePartA_CrossTenantDenied(t *testing.T) {
+	db := setupP4TestDB(t)
+	defer db.Close()
+
+	bus := newMockRecordedBus()
+	client := intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true})
+	svc := ewaybill.NewEWayBillService(db, bus, client, slog.Default(), ewaybill.Config{Enabled: true, MinInvoiceValue: 50000})
+
+	_, _ = db.Exec(`INSERT INTO customers (id, name, gst) VALUES ('cust_A', 'Cust A', '27AAAC0001A1Z1')`)
+	_, _ = db.Exec(`INSERT INTO routes (id, tenant_id, source, destination, distance, standard_fare) VALUES ('rt_A', 'tenant_A', 'Mumbai', 'Pune', 150, 5000)`)
+	_, _ = db.Exec(`INSERT INTO bookings (id, tenant_id, customer_id, route_id, price) VALUES ('bk_A', 'tenant_A', 'cust_A', 'rt_A', 75000)`)
+	_, _ = db.Exec(`INSERT INTO trips (id, tenant_id, trip_number, booking_id, route_id, status) VALUES ('trip_A', 'tenant_A', 'TRP-A-1', 'bk_A', 'rt_A', 'started')`)
+
+	// Caller carries tenant_B in context: must fail closed.
+	ctxB := shared.ContextWithTenantID(context.Background(), "tenant_B")
+	_, err := svc.GeneratePartA(ctxB, ewaybill.GeneratePartARequest{
+		TripID:     "trip_A",
+		GoodsValue: 75000,
+		GenMode:    "MANUAL",
+	})
+	if err == nil {
+		t.Fatal("cross-tenant GeneratePartA must fail, got nil error")
+	}
+
+	// Same-tenant caller still succeeds.
+	ctxA := shared.ContextWithTenantID(context.Background(), "tenant_A")
+	rec, err := svc.GeneratePartA(ctxA, ewaybill.GeneratePartARequest{
+		TripID:     "trip_A",
+		GoodsValue: 75000,
+		GenMode:    "MANUAL",
+	})
+	if err != nil {
+		t.Fatalf("same-tenant GeneratePartA failed: %v", err)
+	}
+	if rec.EwbNumber == "" {
+		t.Fatal("expected ewb_number, got empty")
 	}
 }
 

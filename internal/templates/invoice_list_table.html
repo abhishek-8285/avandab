@@ -17,7 +17,7 @@
             {{range .Invoices}}
             <tr class="hover:bg-surface-container-low/50 transition-colors group">
                 <td class="px-3 py-2 whitespace-nowrap">
-                    <a href="/invoices/{{.ID}}" class="text-sm text-primary font-bold tabular-nums hover:underline">{{.InvoiceNumber}}</a>
+                    <a href="{{if $.PortalPay}}/pay/{{.ID}}{{else}}/invoices/{{.ID}}{{end}}" class="text-sm text-primary font-bold tabular-nums hover:underline">{{.InvoiceNumber}}</a>
                 </td>
                 <td class="px-3 py-2 text-sm font-medium text-on-surface">{{.CustomerName}}</td>
                 <td class="px-3 py-2 text-sm font-data-mono text-xs text-secondary">{{if .TripNumber}}{{.TripNumber}}{{else}}<span class="text-text-muted">—</span>{{end}}</td>
@@ -28,7 +28,8 @@
                     <span class="status-badge {{statusBadge .PaymentStatus}}">{{.PaymentStatus}}</span>
                 </td>
                 <td class="px-3 py-2 text-right whitespace-nowrap">
-                    <a href="/invoices/{{.ID}}" class="action-view text-xs font-semibold opacity-80 group-hover:opacity-100 transition-opacity">View Invoice</a>
+                    <a href="{{if $.PortalPay}}/pay/{{.ID}}{{else}}/invoices/{{.ID}}{{end}}" class="action-view text-xs font-semibold opacity-80 group-hover:opacity-100 transition-opacity">View Invoice</a>
+                    {{if and $.PortalPay (ne .PaymentStatus "paid")}}<a href="/pay/{{.ID}}" class="ml-2 inline-flex items-center rounded-full bg-primary px-2.5 py-1 text-xs font-bold text-on-primary hover:bg-primary/90 transition">Pay now</a>{{end}}
                 </td>
             </tr>
             {{end}}

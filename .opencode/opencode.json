@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "opencode/muse-spark-1.2-contributor-free",
+  "model": "opencode/muse-spark-1.3-contributor-free",
   "plugin": ["@opencode-ai/plugin"],
   "instructions": [
     "Project config for Avandab MVTMS. Workspace is /avandab. Do not scan filesystem root."

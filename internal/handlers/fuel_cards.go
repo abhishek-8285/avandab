@@ -37,9 +37,24 @@ func (h *FuelCardHandlers) RegisterAPIRoutes(r chi.Router) {
 	})
 }
 
+// requireTenant resolves the acting org. Fail closed with 401: fuel-card
+// routes sit behind RequirePermission which sets tenant; a missing tenant
+// means a bad/expired session, never a 500 panic.
+func (h *FuelCardHandlers) requireTenant(w http.ResponseWriter, r *http.Request) (string, bool) {
+	tid, err := shared.TenantRequired(r.Context())
+	if err != nil {
+		http.Error(w, `{"error":"tenant required"}`, http.StatusUnauthorized)
+		return "", false
+	}
+	return string(tid), true
+}
+
 // RegisterCard registers a new fuel card and binds it to vehicle/driver (POST /api/v1/fuel-cards).
 func (h *FuelCardHandlers) RegisterCard(w http.ResponseWriter, r *http.Request) {
-	tenantID := string(shared.MustTenantID(r.Context()))
+	tenantID, ok := h.requireTenant(w, r)
+	if !ok {
+		return
+	}
 
 	var req fuel.RegisterFuelCardRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -60,7 +75,10 @@ func (h *FuelCardHandlers) RegisterCard(w http.ResponseWriter, r *http.Request) 
 
 // ListCards lists all registered fuel cards with spend metrics (GET /api/v1/fuel-cards).
 func (h *FuelCardHandlers) ListCards(w http.ResponseWriter, r *http.Request) {
-	tenantID := string(shared.MustTenantID(r.Context()))
+	tenantID, ok := h.requireTenant(w, r)
+	if !ok {
+		return
+	}
 
 	cards, err := h.useCase.ListCards(r.Context(), tenantID)
 	if err != nil {
@@ -78,7 +96,10 @@ func (h *FuelCardHandlers) ListCards(w http.ResponseWriter, r *http.Request) {
 
 // SyncTransactions ingests OMC statement feeds and runs automated reconciliation (POST /api/v1/fuel-cards/transactions/sync).
 func (h *FuelCardHandlers) SyncTransactions(w http.ResponseWriter, r *http.Request) {
-	tenantID := string(shared.MustTenantID(r.Context()))
+	tenantID, ok := h.requireTenant(w, r)
+	if !ok {
+		return
+	}
 
 	var req fuel.SyncFuelTransactionsRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -98,7 +119,10 @@ func (h *FuelCardHandlers) SyncTransactions(w http.ResponseWriter, r *http.Reque
 
 // ReconcileTransaction manually matches a transaction against an expense (POST /api/v1/fuel-cards/transactions/{id}/reconcile).
 func (h *FuelCardHandlers) ReconcileTransaction(w http.ResponseWriter, r *http.Request) {
-	tenantID := string(shared.MustTenantID(r.Context()))
+	tenantID, ok := h.requireTenant(w, r)
+	if !ok {
+		return
+	}
 	txnID := chi.URLParam(r, "id")
 	if txnID == "" {
 		http.Error(w, `{"error":"transaction id required"}`, http.StatusBadRequest)

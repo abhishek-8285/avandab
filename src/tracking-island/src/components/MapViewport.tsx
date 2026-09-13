@@ -10,7 +10,9 @@ import {
   INDIA_DEFAULT_ZOOM,
   INDIA_MIN_ZOOM,
   INDIA_MAX_ZOOM,
-  GOOGLE_INDIA_TILE_URL,
+  googleTileUrl,
+  OSM_DEFAULT_TILE_URL,
+  OSM_ATTRIBUTION,
 } from '../constants/indiaBorder';
 
 const STATUS_COLOR: Record<string, string> = {
@@ -61,6 +63,14 @@ function getVehicleIconPath(type?: string): string {
   }
 }
 
+function tooltipHTML(v: LiveVehicle): string {
+  const batt = v.battery_level !== undefined ? `Battery ${Math.round(v.battery_level)}%` : 'Battery —';
+  const motion = v.motion === true ? 'MOVING' : v.motion === false ? 'PARKED' : 'OK';
+  const fix = v.valid === false ? ' · No GPS fix' : '';
+  const name = v.vehicle_number || v.vehicle_id;
+  return `<b>${name}</b><br>${batt} · ${motion}${fix}`;
+}
+
 function truckIcon(color: string, rotation: number, dim: boolean, vehicleType?: string): L.DivIcon {
   const innerPaths = getVehicleIconPath(vehicleType);
   return L.divIcon({
@@ -92,6 +102,9 @@ interface Props {
   geofences: GeofenceZone[];
   showGeofences: boolean;
   osmUrl: string;
+  provider: string;
+  googleStyle?: string;
+  gl?: string;
   onSelect: (id: string | null) => void;
   handleRef: (h: MapHandle | null) => void;
 }
@@ -120,15 +133,18 @@ export default function MapViewport(p: Props) {
       maxBoundsViscosity: 1.0,
     }).setView(INDIA_CENTER, INDIA_DEFAULT_ZOOM);
 
-    const tileUrl = propsRef.current.osmUrl && !propsRef.current.osmUrl.includes('openstreetmap.org')
-      ? propsRef.current.osmUrl
-      : GOOGLE_INDIA_TILE_URL;
+    // Spec 04 §2: OSM-only by default with mandatory attribution. Google
+    // tiles serve only when Provider is explicitly 'google' (opt-in).
+    const useGoogle = propsRef.current.provider === 'google';
+    const tileUrl = useGoogle
+      ? googleTileUrl(propsRef.current.googleStyle || 'm', propsRef.current.gl || 'IN')
+      : (propsRef.current.osmUrl || OSM_DEFAULT_TILE_URL);
 
     L.tileLayer(tileUrl, {
       minZoom: INDIA_MIN_ZOOM,
       maxZoom: INDIA_MAX_ZOOM,
       maxNativeZoom: 20,
-      attribution: '&copy; Google Maps',
+      attribution: useGoogle ? '&copy; Google Maps' : OSM_ATTRIBUTION,
     }).addTo(map);
 
     geoLayerRef.current = L.layerGroup().addTo(map);
@@ -201,6 +217,7 @@ export default function MapViewport(p: Props) {
           icon: truckIcon(STATUS_COLOR[v.status] ?? '#64748b', v.heading ?? 0, stale, v.vehicle_type),
           title: v.vehicle_number || v.vehicle_id,
         }).addTo(map);
+        mk.bindTooltip(tooltipHTML(v));
         mk.on('click', (e) => { L.DomEvent.stopPropagation(e); propsRef.current.onSelect(v.vehicle_id); });
         markers.set(v.vehicle_id, mk);
       } else {
@@ -212,6 +229,7 @@ export default function MapViewport(p: Props) {
         } else {
           mk.setIcon(truckIcon(STATUS_COLOR[v.status] ?? '#64748b', v.heading ?? 0, stale, v.vehicle_type));
         }
+        mk.setTooltipContent(tooltipHTML(v));
       }
       const el = mk.getElement();
       if (el) el.classList.toggle('ti-selected', v.vehicle_id === selectedId);

@@ -96,6 +96,7 @@ export default function TrackingApp({ config }: { config: TrackingMapConfig }) {
         </div>
         <MapViewport vehicles={vehicles} version={version} selectedId={selectedId} follow={follow}
           geofences={geofences} showGeofences={showGeofences} osmUrl={config.OSMUrl}
+          provider={config.Provider} googleStyle={config.GoogleStyle} gl={config.GL}
           onSelect={(id) => { setSelectedId(id); if (!id) setFollow(false); }} handleRef={setHandle} />
       </div>
       {selected && (

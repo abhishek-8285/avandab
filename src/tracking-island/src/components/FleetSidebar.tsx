@@ -175,7 +175,7 @@ export default function FleetSidebar({ vehicles, selectedId, onSelect }: Props) 
                   <span className="ti-row-main">
                     <span className="ti-row-name">
                       {v.vehicle_number || v.vehicle_id}
-                      {v.speed > SPEED_LIMIT_KMH && <ZapIcon className="ti-zap-icon" title="Overspeed warning" />}
+                      {v.speed > SPEED_LIMIT_KMH && <ZapIcon className="ti-zap-icon" aria-label="Overspeed warning" />}
                     </span>
                     <span className="ti-row-sub ti-mono">{Math.round(v.speed)} km/h · {STATUS_LABEL[v.status] ?? v.status}</span>
                   </span>

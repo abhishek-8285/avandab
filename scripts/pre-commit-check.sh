@@ -22,7 +22,7 @@ npx @tailwindcss/cli -i src/input.css -o internal/static/css/tailwind.css --mini
 echo -e "${GREEN}✅ Tailwind CSS rebuilt.${NC}"
 
 # 2. Verify no CDN fallback scripts left in templates
-echo -e "\n${CYAN}[2/7] Checking for CDN Tailwind references in templates...${NC}"
+echo -e "\n${CYAN}[2/8] Checking for CDN Tailwind references in templates...${NC}"
 CDN_REFS=$(grep -rn 'cdn.tailwindcss.com' internal/templates/ || true)
 if [ -n "$CDN_REFS" ]; then
     echo -e "${RED}❌ Error: CDN Tailwind references found in templates:${NC}"
@@ -31,6 +31,22 @@ if [ -n "$CDN_REFS" ]; then
     exit 1
 fi
 echo -e "${GREEN}✅ No CDN references found.${NC}"
+
+# 2b. Secret hygiene: fail on committed default secrets in staged changes.
+# Catches Prohibition #5 regressions (e.g. COOKIE_SECRET:-<literal>) before
+# they reach history. Placeholders stay legal: ${VAR:?msg} / ${VAR:-} / $VAR.
+echo -e "\n${CYAN}[2b/8] Checking staged diff for committed secret defaults...${NC}"
+SECRET_DEFAULTS=$(git diff --cached -- deploy_avandab.sh deploy_remote.sh scripts/ Dockerfile docker-compose.yml .env.example 2>/dev/null \
+    | grep -E '^\+' | grep -vE '^\+\+\+' \
+    | grep -vE '^\+\s*#' \
+    | grep -Ei '(COOKIE_SECRET|API_SECRET|SMTP_PASS|RAZORPAY_[A-Z_]*SECRET|AGENT_API_KEY|GOOGLE_CLIENT_SECRET)[^:?}]*:-[^}?[:space:]#]' || true)
+if [ -n "$SECRET_DEFAULTS" ]; then
+    echo -e "${RED}❌ Error: staged diff sets a secret via ':-<literal>' fallback:${NC}"
+    echo "$SECRET_DEFAULTS" | head -10
+    echo -e "${YELLOW}Use '\${VAR:?message}' (fail-closed) or read from the environment instead.${NC}"
+    exit 1
+fi
+echo -e "${GREEN}✅ No committed secret defaults staged.${NC}"
 
 # 3. Format Check (gofmt)
 echo -e "\n${CYAN}[3/7] Checking Go code formatting (gofmt)...${NC}"

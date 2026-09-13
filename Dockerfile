@@ -1,5 +1,12 @@
 # syntax=docker/dockerfile:1
 
+# ── Docker build context ──────────────────────────────────────────────
+# No .dockerignore by design: the build COPYs only allow-listed paths
+# (go.mod/go.sum, then source) and the runtime stage keeps only the binary
+# + db/migrations + templates/static + .env.example. Never add a COPY of
+# .env / *.db / server.log / node_modules / .git — secrets arrive via
+# environment at run time, not in image layers.
+
 # Build stage
 FROM golang:1.26-bookworm AS builder
 

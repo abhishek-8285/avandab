@@ -6,7 +6,7 @@ import { test, expect } from '@playwright/test';
 //   3. Real OSM tile traffic
 //   4. Telemetry ingestion renders registry rows, markers, counters
 //   5. Healthy SSE pauses REST polling (no duplicate traffic)
-//   6. Stream loss flips beacon to amber "Reconnecting…" and resumes polling
+//   6. Stream loss flips beacon to amber "Connecting…" and resumes polling
 //   7. No fabricated data on the page
 
 const VEHICLES = [
@@ -39,6 +39,9 @@ const VEHICLES = [
 ];
 
 test.describe('tracking page', () => {
+  // Fresh-user registration hits SQLite writes; run serially to avoid
+  // lock contention between parallel contexts.
+  test.describe.configure({ mode: 'serial' });
   test.beforeEach(async ({ page }) => {
     // Self-onboarding registers + auto-logs-in (viewer role suffices;
     // /tracking has no permission gate per Spec 04 §7).
@@ -177,9 +180,10 @@ test.describe('tracking page', () => {
     await expect(page.locator('#density-total')).toHaveText('2');
     await expect(page.locator('.leaflet-marker-icon').first()).toBeVisible();
 
-    // Row content reflects payload (status label, speeding bolt).
+    // Row content reflects payload (status label, overspeed indicator).
     await expect(page.locator('.fleet-row', { hasText: 'MH01AB1111' })).toContainText('Moving');
-    await expect(page.locator('.fleet-row', { hasText: 'MH01AB1111' })).toContainText('⚡');
+    // Overspeed renders as SVG badge (aria-labelled), not text.
+    await expect(page.locator('.fleet-row', { hasText: 'MH01AB1111' }).locator('.ti-zap-icon')).toBeVisible();
 
     // Panel status tabs mirror the map chips (same state, second chip set).
     await expect(page.locator('#panel-count-all')).toHaveText('2');
@@ -229,9 +233,12 @@ test.describe('tracking page', () => {
     expect(liveCalls, 'polling must stop while SSE is healthy').toBe(before);
 
     // SSE patch ingests too: push a third vehicle through the stream only.
+    // NOTE: layout's dashboard-live.js also opens an EventSource (stubbed by
+    // the same fake), so select the island stream by URL, never by index.
     const streamedIn = { ...VEHICLES[0], vehicle_id: '33333333-3333-3333-3333-333333333333', vehicle_number: 'KA03EF3333' };
     await page.evaluate((v) => {
-      const es = (window as any).FakeEventSource.instances[0];
+      const all = (window as any).FakeEventSource.instances;
+      const es = all.find((i: any) => String(i.url || '').includes('/telemetry/stream')) || all[all.length - 1];
       es.emit(v);
     }, streamedIn);
     await expect(page.locator('#fleet-list .fleet-row')).toHaveCount(3, { timeout: 5_000 });
@@ -239,16 +246,20 @@ test.describe('tracking page', () => {
     // Coalesced rerender must not have re-triggered polling either.
     expect(liveCalls).toBe(before);
 
-    // ── 6. Stream dies → amber "Reconnecting…" + polling resumes ──
+    // ── 6. Stream dies → polling resumes, reconnect returns to live ──
+    // NOTE: the 'connecting' flash lasts one task turn under the fake
+    // (instant onopen), so assert observable states: poll failover first,
+    // then successful reconnect back to live.
     await page.evaluate(() => {
-      const es = (window as any).FakeEventSource.instances[0];
+      const all = (window as any).FakeEventSource.instances;
+      const es = all.find((i: any) => String(i.url || '').includes('/telemetry/stream')) || all[all.length - 1];
       es.fail();
     });
-    await expect(page.locator('#conn-label')).toHaveText('Reconnecting…', { timeout: 10_000 });
-    await expect(page.locator('#conn-beacon')).toHaveCSS('background-color', 'rgb(245, 158, 11)');
+    await expect(page.locator('#conn-label')).toHaveText('Live (Polling)', { timeout: 10_000 });
     await expect
       .poll(() => liveCalls, { timeout: 20_000, message: 'polling must resume after stream loss' })
       .toBeGreaterThan(before);
+    await expect(page.locator('#conn-label')).toHaveText('Live Stream', { timeout: 15_000 });
 
     // ── 7. Nothing fabricated ──
     await expect(page.getByText('Smart Allocation')).toHaveCount(0);

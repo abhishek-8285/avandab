@@ -77,7 +77,7 @@ export LOG_LEVEL=info
 export GODEBUG=netdns=go+1
 export DATABASE_URL='file:transport.db?_journal_mode=WAL&_synchronous=NORMAL&_temp_store=MEMORY&_busy_timeout=10000&cache=shared&mode=rwc'
 export APP_DOMAIN='avandab.com'
-export COOKIE_SECRET="${COOKIE_SECRET:-avandab-production-secret-auth-key-2026-secure-32chars}"
+export COOKIE_SECRET="${COOKIE_SECRET:?COOKIE_SECRET must be set in the environment — refusing to boot on a committed default secret}"
 
 # Background Auto-Restart Watchdog Loop
 nohup sh -c '

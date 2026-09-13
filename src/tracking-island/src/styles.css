@@ -251,5 +251,9 @@
   color: #cbd5e1;
 }
 
+/* Migration-00117 parity states (class names match server status tokens). */
+.ti-drawer .text-status-error { color: #dc2626; }
+.ti-drawer .text-status-success { color: #16a34a; }
+
 
 

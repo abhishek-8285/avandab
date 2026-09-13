@@ -13,6 +13,7 @@ import (
 
 	"transport-app/internal/events"
 	intEWB "transport-app/internal/integration/ewaybill"
+	"transport-app/internal/shared"
 )
 
 var (
@@ -126,6 +127,11 @@ func NewEWayBillService(db *sql.DB, bus events.EventBus, client intEWB.Client, l
 }
 
 // GeneratePartA creates a Part-A E-Way Bill for a trip.
+// Tenant gate (fail-closed): the trip lookup below is scoped by tenant from
+// ctx. Requests carry tenant via middleware; background callers must inject it
+// (shared.ContextWithTenantID) — autogenerate.go resolves it from the event /
+// trip row. A caller in another tenant gets sql.ErrNoRows, never a neighbour's
+// GSTIN on a government document.
 func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARequest) (*EWayBillRecord, error) {
 	// 0. Replay / Idempotency check: if an active/part_a EWB already exists for this trip, return it
 	var existingRec EWayBillRecord
@@ -154,7 +160,31 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 		return &existingRec, nil
 	}
 
-	// 1. Resolve trip, route, customer, booking data
+	// 1a. Authorization gate: resolve the trip's owning tenant and verify the
+	// caller may act on it. A missing trip and a cross-tenant trip are
+	// deliberately indistinguishable to the caller (both "not found").
+	var tripTenant string
+	if err := s.db.QueryRowContext(ctx, `SELECT tenant_id FROM trips WHERE id = $1`, req.TripID).Scan(&tripTenant); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("trip %s not found", req.TripID)
+		}
+		return nil, fmt.Errorf("resolve trip tenant: %w", err)
+	}
+	if ctxTenant := string(shared.TenantIDFromContext(ctx)); ctxTenant != "" && ctxTenant != tripTenant {
+		return nil, fmt.Errorf("trip %s not found in tenant scope", req.TripID)
+	}
+	// Background/legacy callers carry no tenant; the trip's own tenant is the
+	// authoritative scope for the enrichment query either way.
+	tenantID := tripTenant
+
+	// 1b. Enrich from related rows. Best-effort by design: a trip with no
+	// linked booking/route/customer is a data-completeness gap, not an
+	// authorization failure, so ErrNoRows falls back to the caller's request
+	// values (the pre-existing contract). Any OTHER error (missing table, bad
+	// schema) fails hard — silently stamping a government document from
+	// partial tax context is not acceptable. Tenant scoping is retained on the
+	// enrichment query itself (WHERE + the trip's own tenant), so the
+	// authorization decision is already made above.
 	var bookingPrice, routeDist, standardFare float64
 	var tripNumber, routeSource, routeDest string
 	var custGST, compGST, compState, vehicleNumber sql.NullString
@@ -176,13 +206,16 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 		JOIN routes r ON t.route_id = r.id
 		JOIN customers c ON b.customer_id = c.id
 		LEFT JOIN vehicles v ON t.vehicle_id = v.id
-		WHERE t.id = $1
-	`, req.TripID).Scan(
+		WHERE t.id = $1 AND t.tenant_id = $2
+	`, req.TripID, tenantID).Scan(
 		&tripNumber, &routeSource, &routeDest, &routeDist, &standardFare,
 		&bookingPrice, &custGST, &compGST, &compState, &vehicleNumber,
 	)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		s.logger.Warn("could not fetch complete trip details, using request values", "error", err)
+	if errors.Is(err, sql.ErrNoRows) {
+		s.logger.Warn("could not fetch complete trip details, using request values",
+			"trip_id", req.TripID, "tenant_id", tenantID)
+	} else if err != nil {
+		return nil, fmt.Errorf("resolve trip tax context: %w", err)
 	}
 
 	goodsValue := req.GoodsValue

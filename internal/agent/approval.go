@@ -105,7 +105,7 @@ func (a *ApprovalService) Approve(ctx context.Context, actionID, adminID, adminN
 				execErr = fmt.Errorf("tool handler panicked: %v", r)
 			}
 		}()
-		result, execErr = handler(execCtx, json.RawMessage(action.ArgsJSON))
+		result, execErr = handler(execCtx, normalizeArgs(json.RawMessage(action.ArgsJSON)))
 	}()
 
 	action.DecidedBy = adminName

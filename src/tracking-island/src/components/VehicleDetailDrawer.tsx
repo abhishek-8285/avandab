@@ -46,14 +46,24 @@ export default function VehicleDetailDrawer({ vehicle, onClose, onFollow, follow
   }, [vehicle?.trip_id]);
 
   if (!vehicle) return null;
-  const row = (icon: React.ReactNode, k: string, v: string | undefined) =>
+  // Migration-00117 parity: battery/motion/valid render from live payload.
+  // Absent fields show honest placeholders, never fabricated values.
+  const batt = vehicle.battery_level;
+  const battText = batt !== undefined ? `${Math.round(batt)}%` : '—';
+  const battClass = batt === undefined ? '' : batt <= 20 ? 'text-status-error' : 'text-status-success';
+  const motion = vehicle.motion;
+  const deviceText =
+    motion === true ? 'MOVING' + (vehicle.valid === false ? ' · NO GPS FIX' : '')
+    : motion === false ? 'PARKED' + (vehicle.valid === false ? ' · NO GPS FIX' : '')
+    : 'OK';
+  const row = (icon: React.ReactNode, k: string, v: string | undefined, id?: string) =>
     v ? (
       <div className="ti-kv">
         <span className="ti-kv-left">
           {icon}
           <span>{k}</span>
         </span>
-        <b>{v}</b>
+        <b id={id}>{v}</b>
       </div>
     ) : null;
 
@@ -79,9 +89,23 @@ export default function VehicleDetailDrawer({ vehicle, onClose, onFollow, follow
       </div>
       <div className="ti-drawer-body">
         {row(<VehicleTypeIcon type={vehicle.vehicle_type} className="ti-row-icon" />, 'Class', (vehicle.vehicle_type || 'truck').replace('_', ' ').toUpperCase())}
-        {row(<SpeedIcon className="ti-row-icon" />, 'Speed', `${Math.round(vehicle.speed)} km/h`)}
-        {row(<OdometerIcon className="ti-row-icon" />, 'Odometer', vehicle.odometer !== undefined ? `${Math.round(vehicle.odometer)} km` : undefined)}
-        {row(<FuelIcon className="ti-row-icon" />, 'Fuel', vehicle.fuel_level !== undefined ? `${vehicle.fuel_level}%` : undefined)}
+        {row(<SpeedIcon className="ti-row-icon" />, 'Speed', `${Math.round(vehicle.speed)} km/h`, 'intel-speed')}
+        {row(<OdometerIcon className="ti-row-icon" />, 'Odometer', vehicle.odometer !== undefined ? `${Math.round(vehicle.odometer)} km` : undefined, 'intel-odometer')}
+        {row(<FuelIcon className="ti-row-icon" />, 'Fuel', vehicle.fuel_level !== undefined ? `${vehicle.fuel_level}%` : undefined, 'intel-fuel')}
+        <div className="ti-kv">
+          <span className="ti-kv-left">
+            <ActivityIcon className="ti-row-icon" />
+            <span>Battery</span>
+          </span>
+          <b id="intel-battery" className={battClass}>{battText}</b>
+        </div>
+        <div className="ti-kv">
+          <span className="ti-kv-left">
+            <ShieldIcon className="ti-row-icon" />
+            <span>Device</span>
+          </span>
+          <b id="intel-device">{deviceText}</b>
+        </div>
         {row(<UserIcon className="ti-row-icon" />, 'Driver', vehicle.driver_name)}
         {row(<PhoneIcon className="ti-row-icon" />, 'Driver phone', vehicle.driver_phone)}
         {row(

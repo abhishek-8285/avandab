@@ -135,15 +135,24 @@ func (h *OpsErrorsHandler) APIClientReport(w http.ResponseWriter, r *http.Reques
 	})
 }
 
-// tenantID resolves the acting org. Fail closed: ops-error routes sit behind
-// auth middleware which always sets tenant (panics surface as 500 via Recoverer).
-func (h *OpsErrorsHandler) tenantID(r *http.Request) string {
-	return string(shared.MustTenantID(r.Context()))
+// tenantID resolves the acting org. Fail closed with 401: ops-error routes
+// sit behind auth middleware which sets tenant; a missing tenant means a
+// bad/expired session, never a 500 panic.
+func (h *OpsErrorsHandler) tenantID(w http.ResponseWriter, r *http.Request) (string, bool) {
+	tid, err := shared.TenantRequired(r.Context())
+	if err != nil {
+		http.Error(w, `{"error":"tenant required"}`, http.StatusUnauthorized)
+		return "", false
+	}
+	return string(tid), true
 }
 
 func (h *OpsErrorsHandler) Page(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
-	tenantID := h.tenantID(r)
+	tenantID, ok := h.tenantID(w, r)
+	if !ok {
+		return
+	}
 
 	pp := parsePaginationParams(r)
 	filter := h.errorFilter(r, tenantID)
