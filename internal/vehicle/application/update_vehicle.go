@@ -25,6 +25,7 @@ type UpdateVehicleCommand struct {
 	PermitExpiry       time.Time
 	Status             aggregate.VehicleStatus
 	CurrentMileage     *float64
+	StandardKmpl       *float64
 	Blocked            bool
 	BlockedReason      string
 	RCExpiry           *time.Time
@@ -81,6 +82,10 @@ func (uc *UpdateVehicleUseCase) Execute(ctx context.Context, cmd UpdateVehicleCo
 		}
 
 		v.ApplyCompliance(cmd.Blocked, cmd.BlockedReason, cmd.RCExpiry, cmd.PUCExpiry, cmd.Odometer, uc.clock.Now())
+
+		if err := v.SetStandardKmpl(cmd.StandardKmpl, uc.clock.Now()); err != nil {
+			return err
+		}
 
 		return repo.Save(txCtx, v)
 	})

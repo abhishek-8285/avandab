@@ -149,7 +149,8 @@ which always allocate head-ward from the maximum above.
 | 00149 | PG identity-sequence resync + `customer` backfill (repairs 00027/00064 explicit-id desync that broke 00137 on fresh chains; sqlite side is a no-op marker keeping 1:1 sets) + `PreGooseCutVersion=72` two-phase startup in `cmd/server/main.go` | Phase A A7 |
 | 00150 | RBAC registry backfill: seeds 15 guard-referenced permission rows (ewaybill:read/create/update/write, dashboard:read, fastag:read/update, trips:cancel, fuel:create, scorecard:update, accounting:read/sync, integrations:accounting/gstn, users:manage) + grants operational set to org_admin (6), ops set to dispatcher (2); PG port in `migrations_pg/` | UI failure fix (live crawl 2026-09-11) |
 | 00151 | files:read/create → dispatcher (2) for trip ePOD viewing/uploading; PG port in `migrations_pg/` | Trip ePOD section (2026-09-11) |
-| 00152+ | future specs | reserved |
+| 00152 | `vehicles.standard_kmpl` NULL (CHECK > 0 when set) — per-vehicle KMPL norm for variance flagging in KMPL summary report; PG port in `migrations_pg/` | KMPL SOP report set B13 (p.19 follow-up) |
+| 00153+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

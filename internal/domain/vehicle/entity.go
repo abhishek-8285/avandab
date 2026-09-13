@@ -25,6 +25,7 @@ type Vehicle struct {
 	BlockedReason      *string
 	Odometer           float64
 	CurrentMileage     *float64
+	StandardKmpl       *float64
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 }

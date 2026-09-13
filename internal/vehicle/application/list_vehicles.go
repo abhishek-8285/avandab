@@ -107,6 +107,7 @@ func (uc *ListVehiclesUseCase) Execute(ctx context.Context, q ListVehiclesQuery)
 				PermitExpiry:       v.PermitExpiry,
 				Status:             v.Status,
 				CurrentMileage:     v.CurrentMileage,
+				StandardKmpl:       v.StandardKmpl,
 				Blocked:            v.Blocked,
 				BlockedReason:      v.BlockedReason,
 				RCExpiry:           v.RCExpiry,

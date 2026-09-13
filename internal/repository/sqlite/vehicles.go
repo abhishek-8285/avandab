@@ -26,6 +26,7 @@ func (r *SQLRepository) CreateVehicle(ctx context.Context, vehicle domain.Vehicl
 		PermitExpiry:       sql.NullTime{Time: vehicle.PermitExpiry, Valid: !vehicle.PermitExpiry.IsZero()},
 		Status:             string(vehicle.Status),
 		CurrentMileage:     nullFloat(vehicle.CurrentMileage),
+		StandardKmpl:       nullFloat(vehicle.StandardKmpl),
 		Blocked:            boolToInt64(vehicle.Blocked),
 		BlockedReason:      nullString(vehicle.BlockedReason),
 		RcExpiry:           sql.NullTime{Time: vehicle.RCExpiry, Valid: !vehicle.RCExpiry.IsZero()},

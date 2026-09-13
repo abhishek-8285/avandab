@@ -21,6 +21,7 @@ type VehicleReadModel struct {
 	PermitExpiry       time.Time
 	Status             string
 	CurrentMileage     *float64
+	StandardKmpl       *float64
 	Blocked            bool
 	BlockedReason      string
 	RCExpiry           *time.Time

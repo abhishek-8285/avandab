@@ -33,6 +33,7 @@ func ToDomain(v db.Vehicle) *aggregate.VehicleAggregate {
 	agg.RCExpiry = getTimePointer(v.RcExpiry)
 	agg.PUCExpiry = getTimePointer(v.PucExpiry)
 	agg.Odometer = v.Odometer
+	agg.StandardKmpl = getFloat64Pointer(v.StandardKmpl)
 	return agg
 }
 
@@ -111,6 +112,7 @@ func ToReadModel(v db.Vehicle) domain.VehicleReadModel {
 		RCExpiry:           getTimePointer(v.RcExpiry),
 		PUCExpiry:          getTimePointer(v.PucExpiry),
 		Odometer:           v.Odometer,
+		StandardKmpl:       getFloat64Pointer(v.StandardKmpl),
 		Profile:            ProfileFromDB(v),
 		CreatedAt:          v.CreatedAt,
 		UpdatedAt:          v.UpdatedAt,

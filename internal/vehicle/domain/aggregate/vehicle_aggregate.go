@@ -177,6 +177,7 @@ type VehicleAggregate struct {
 	PermitExpiry       time.Time
 	Status             VehicleStatus
 	CurrentMileage     *float64
+	StandardKmpl       *float64
 	Blocked            bool
 	BlockedReason      string
 	RCExpiry           *time.Time
@@ -281,6 +282,18 @@ func (a *VehicleAggregate) UpdateDetails(
 		UpdatedAt:          now,
 	})
 
+	return nil
+}
+
+// SetStandardKmpl sets the fleet KMPL norm used for variance flagging in the
+// KMPL summary report. Nil clears the norm (no variance computed). Rejects
+// non-positive values here so callers never leak a raw DB CHECK failure.
+func (a *VehicleAggregate) SetStandardKmpl(kmpl *float64, now time.Time) error {
+	if kmpl != nil && *kmpl <= 0 {
+		return errors.New("standard KMPL must be positive")
+	}
+	a.StandardKmpl = kmpl
+	a.UpdatedAt = now
 	return nil
 }
 

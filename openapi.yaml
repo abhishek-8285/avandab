@@ -6277,6 +6277,62 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /api/v1/reports/kmpl-summary:
+    get:
+      tags:
+        - Reports
+      summary: KMPL summary report per vehicle and month (B13)
+      description: Requires `reports:read` permission. Tank-to-tank method over `fuel_issues`
+        odometer runs; `month` is `YYYY-MM` (default current month). Variance is computed
+        against the vehicle's `standard_kmpl` norm; `BELOW_NORM` flags underperformers.
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: string
+            default: ''
+        - name: vehicle_id
+          in: query
+          schema:
+            type: string
+            default: ''
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: KMPL summary rows.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  records:
+                    type: array
+                    items:
+                      type: object
+                  total:
+                    type: integer
+                  month:
+                    type: string
+                  limit:
+                    type: integer
+                  offset:
+                    type: integer
+        '400':
+          description: Invalid month parameter.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /api/v1/reports/gate-register:
     get:
       tags:
@@ -9799,7 +9855,10 @@ components:
           type: string
         current_mileage:
           type: number
+        standard_kmpl:
+          type: number
           nullable: true
+          description: Fleet KMPL norm for variance flagging (00152, B13).
         blocked:
           type: boolean
         blocked_reason:
@@ -9853,6 +9912,10 @@ components:
           format: date
         current_mileage:
           type: number
+        standard_kmpl:
+          type: number
+          nullable: true
+          description: Fleet KMPL norm for variance flagging (00152, B13).
         rc_expiry:
           type: string
           format: date
@@ -9894,6 +9957,10 @@ components:
           type: string
         current_mileage:
           type: number
+        standard_kmpl:
+          type: number
+          nullable: true
+          description: Fleet KMPL norm for variance flagging (00152, B13).
         blocked:
           type: boolean
         blocked_reason:

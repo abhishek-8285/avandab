@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -21,6 +22,7 @@ func (h *ReportHandlers) RegisterAPIRoutes(r chi.Router) {
 		r.With(middleware.RequirePermission(h.AuthSrv, "reports", "read")).Get("/vehicle-master", h.APIVehicleMaster)
 		r.With(middleware.RequirePermission(h.AuthSrv, "reports", "read")).Get("/gate-register", h.APIGateRegister)
 		r.With(middleware.RequirePermission(h.AuthSrv, "reports", "read")).Get("/fuel-kmpl", h.APIFuelKMPL)
+		r.With(middleware.RequirePermission(h.AuthSrv, "reports", "read")).Get("/kmpl-summary", h.APIKMPLSummary)
 		r.With(middleware.RequirePermission(h.AuthSrv, "reports", "read")).Get("/breakdown", h.APIBreakdown)
 	})
 }
@@ -457,7 +459,7 @@ func (h *ReportHandlers) loadFuelKMPLRows(r *http.Request, maxRows int, offset i
 	querySQL := `
 SELECT f.id, COALESCE(f.issue_number, ''),
        f.litres_issued, f.vehicle_odometer, f.rate_per_litre, f.total_cost,
-       f.issued_at,
+       f.issued_at, f.vehicle_id,
        COALESCE(v.registration_number, ''),
        COALESCE(vs.registration_number, vs.vehicle_number, ''),
        COALESCE(d.first_name, '') || ' ' || COALESCE(d.last_name, ''),
@@ -482,20 +484,100 @@ LIMIT ? OFFSET ?`
 	defer func() { _ = rows.Close() }()
 
 	var dtos []FuelKMPLDTO
-	prevOdoMap := make(map[string]float64)
+
+	type fillRow struct {
+		id, issueNo, vehNo, station, driver, tripNo string
+		vehicleID                                   string
+		litres                                      float64
+		odo, rate, cost                             sql.NullFloat64
+		issuedAt                                    time.Time
+	}
+	var fills []fillRow
+	pageMin := time.Time{}
 
 	for rows.Next() {
 		var id, issueNo, vehNo, station, driver, tripNo string
+		var vehicleID string
 		var litres float64
 		var odo, rate, cost sql.NullFloat64
 		var issuedAt time.Time
 
 		if err := rows.Scan(
-			&id, &issueNo, &litres, &odo, &rate, &cost, &issuedAt,
+			&id, &issueNo, &litres, &odo, &rate, &cost, &issuedAt, &vehicleID,
 			&vehNo, &station, &driver, &tripNo,
 		); err != nil {
 			return nil, 0, err
 		}
+		fills = append(fills, fillRow{id, issueNo, vehNo, station, driver, tripNo, vehicleID, litres, odo, rate, cost, issuedAt})
+		if pageMin.IsZero() || issuedAt.Before(pageMin) {
+			pageMin = issuedAt
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	// B13 pagination-carryover fix: page 1 starts each vehicle with a blank
+	// previous odometer (correct — first fill ever has no KMPL), but page 2+
+	// must seed from the last fill BEFORE the page, else every page's first
+	// row per vehicle wrongly shows blank KMPL. Latest pre-page odometer per
+	// vehicle wins (max odo breaks exact-timestamp ties).
+	prevOdoMap := make(map[string]float64)
+	if offset > 0 && !pageMin.IsZero() {
+		vidToNo := make(map[string]string, len(fills))
+		var vids []string
+		for _, f := range fills {
+			if _, ok := vidToNo[f.vehicleID]; !ok {
+				vidToNo[f.vehicleID] = f.vehNo
+				vids = append(vids, f.vehicleID)
+			}
+		}
+		placeholders := make([]string, len(vids))
+		seedArgs := make([]any, 0, len(vids)+2)
+		seedArgs = append(seedArgs, tenantID, pageMin.Format("2006-01-02 15:04:05"))
+		for i, vid := range vids {
+			placeholders[i] = "?"
+			seedArgs = append(seedArgs, vid)
+		}
+		seedQ := `
+SELECT vehicle_id, vehicle_odometer, issued_at FROM fuel_issues
+WHERE tenant_id = ? AND vehicle_odometer IS NOT NULL AND vehicle_odometer > 0 AND issued_at < ?
+AND vehicle_id IN (` + strings.Join(placeholders, ",") + `)`
+		reboundSeed, err := appdb.Rebind(seedQ)
+		if err != nil {
+			return nil, 0, err
+		}
+		seedRows, err := h.DB.QueryContext(r.Context(), reboundSeed, seedArgs...)
+		if err != nil {
+			return nil, 0, err
+		}
+		defer func() { _ = seedRows.Close() }()
+		bestTS := make(map[string]time.Time)
+		for seedRows.Next() {
+			var vid string
+			var odo float64
+			var ts time.Time
+			if err := seedRows.Scan(&vid, &odo, &ts); err != nil {
+				return nil, 0, err
+			}
+			vehNo, onPage := vidToNo[vid]
+			if !onPage {
+				continue
+			}
+			if b, ok := bestTS[vehNo]; !ok || ts.After(b) || (ts.Equal(b) && odo > prevOdoMap[vehNo]) {
+				bestTS[vehNo] = ts
+				prevOdoMap[vehNo] = odo
+			}
+		}
+		if err := seedRows.Err(); err != nil {
+			return nil, 0, err
+		}
+	}
+
+	for _, f := range fills {
+		odo, rate, cost := f.odo, f.rate, f.cost
+		vehNo, litres, issuedAt := f.vehNo, f.litres, f.issuedAt
+		issueNo, station, driver, tripNo := f.issueNo, f.station, f.driver, f.tripNo
 
 		var odoVal, rateVal, costVal *float64
 		if odo.Valid {
@@ -807,4 +889,277 @@ func (h *ReportHandlers) APIBreakdown(w http.ResponseWriter, r *http.Request) {
 		"limit":   pp.Limit,
 		"offset":  pp.Offset,
 	})
+}
+
+// ── 5. KMPL Summary Report (per vehicle × month, B13) ──
+// Tank-to-tank method: distance = last odometer − opening odometer, fuel =
+// litres filled after the opening fill. The opening fill is the latest fill
+// before the period (its fuel belongs to prior consumption); without one,
+// the first in-period fill opens the run and its litres are excluded.
+
+var kmplSummaryHeaders = []string{
+	"Vehicle No", "Month", "Fills", "Litres", "Distance KM", "KMPL",
+	"Standard KMPL", "Variance %", "Flag",
+}
+
+type KMPLSummaryDTO struct {
+	VehicleNo    string   `json:"vehicle_no"`
+	Month        string   `json:"month"`
+	Fills        int      `json:"fills"`
+	Litres       float64  `json:"litres"`
+	DistanceKM   *float64 `json:"distance_km"`
+	KMPL         *float64 `json:"kmpl"`
+	StandardKmpl *float64 `json:"standard_kmpl"`
+	VariancePct  *float64 `json:"variance_pct"`
+	Flag         string   `json:"flag"`
+}
+
+func parseMonthParam(s string) (start time.Time, month string, err error) {
+	if s == "" {
+		now := time.Now().UTC()
+		start = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+		return start, start.Format("2006-01"), nil
+	}
+	m, perr := time.Parse("2006-01", s)
+	if perr != nil {
+		return time.Time{}, "", perr
+	}
+	start = time.Date(m.Year(), m.Month(), 1, 0, 0, 0, 0, time.UTC)
+	return start, s, nil
+}
+
+func (h *ReportHandlers) loadKMPLSummaryRows(r *http.Request) ([]KMPLSummaryDTO, int64, string, error) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	monthStart, month, err := parseMonthParam(r.URL.Query().Get("month"))
+	if err != nil {
+		return nil, 0, "", fmt.Errorf("invalid month %q: want YYYY-MM", r.URL.Query().Get("month"))
+	}
+	monthEnd := monthStart.AddDate(0, 1, 0)
+	startStr := monthStart.Format("2006-01-02 15:04:05")
+	endStr := monthEnd.Format("2006-01-02 15:04:05")
+	vehicleFilter := r.URL.Query().Get("vehicle_id")
+
+	fillQ := `
+SELECT f.vehicle_id, COALESCE(v.registration_number, ''),
+       f.litres_issued, f.vehicle_odometer, f.issued_at, v.standard_kmpl
+FROM fuel_issues f
+LEFT JOIN vehicles v ON f.vehicle_id = v.id
+WHERE f.tenant_id = ? AND f.issued_at >= ? AND f.issued_at < ?`
+	fillArgs := []any{tenantID, startStr, endStr}
+	if vehicleFilter != "" {
+		fillQ += ` AND f.vehicle_id = ?`
+		fillArgs = append(fillArgs, vehicleFilter)
+	}
+	fillQ += ` ORDER BY COALESCE(v.registration_number, ''), f.issued_at ASC`
+	reboundFill, err := appdb.Rebind(fillQ)
+	if err != nil {
+		return nil, 0, "", err
+	}
+	rows, err := h.DB.QueryContext(r.Context(), reboundFill, fillArgs...)
+	if err != nil {
+		return nil, 0, "", err
+	}
+	defer func() { _ = rows.Close() }()
+
+	type fill struct {
+		vid, vehNo string
+		litres     float64
+		odo        sql.NullFloat64
+		at         time.Time
+		norm       sql.NullFloat64
+	}
+	byVehicle := make(map[string][]fill)
+	order := []string{}
+	for rows.Next() {
+		var fl fill
+		if err := rows.Scan(&fl.vid, &fl.vehNo, &fl.litres, &fl.odo, &fl.at, &fl.norm); err != nil {
+			return nil, 0, "", err
+		}
+		if _, ok := byVehicle[fl.vid]; !ok {
+			order = append(order, fl.vid)
+		}
+		byVehicle[fl.vid] = append(byVehicle[fl.vid], fl)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, "", err
+	}
+
+	// Opening fill per vehicle: latest pre-period fill with a usable odometer.
+	// Its fuel belongs to prior consumption, so its litres are excluded while
+	// its odometer opens the distance run. Without one, the first in-period
+	// fill opens the run instead.
+	openQ := `
+SELECT vehicle_id, vehicle_odometer, issued_at FROM fuel_issues
+WHERE tenant_id = ? AND vehicle_odometer IS NOT NULL AND vehicle_odometer > 0 AND issued_at < ?`
+	openArgs := []any{tenantID, startStr}
+	if vehicleFilter != "" {
+		openQ += ` AND vehicle_id = ?`
+		openArgs = append(openArgs, vehicleFilter)
+	}
+	reboundOpen, err := appdb.Rebind(openQ)
+	if err != nil {
+		return nil, 0, "", err
+	}
+	openRows, err := h.DB.QueryContext(r.Context(), reboundOpen, openArgs...)
+	if err != nil {
+		return nil, 0, "", err
+	}
+	defer func() { _ = openRows.Close() }()
+	openOdo := make(map[string]float64)
+	openTS := make(map[string]time.Time)
+	for openRows.Next() {
+		var vid string
+		var odo float64
+		var ts time.Time
+		if err := openRows.Scan(&vid, &odo, &ts); err != nil {
+			return nil, 0, "", err
+		}
+		if b, ok := openTS[vid]; !ok || ts.After(b) || (ts.Equal(b) && odo > openOdo[vid]) {
+			openTS[vid] = ts
+			openOdo[vid] = odo
+		}
+	}
+	if err := openRows.Err(); err != nil {
+		return nil, 0, "", err
+	}
+
+	var dtos []KMPLSummaryDTO
+	for _, vid := range order {
+		fills := byVehicle[vid]
+		d := KMPLSummaryDTO{
+			VehicleNo: fills[0].vehNo,
+			Month:     month,
+			Fills:     len(fills),
+		}
+		if fills[0].norm.Valid && fills[0].norm.Float64 > 0 {
+			n := fills[0].norm.Float64
+			d.StandardKmpl = &n
+		}
+		opening, openIdx := 0.0, -1
+		if o, ok := openOdo[vid]; ok {
+			opening = o
+		} else {
+			// No pre-period fill: first in-period fill with an odometer opens.
+			for i, fl := range fills {
+				if fl.odo.Valid && fl.odo.Float64 > 0 {
+					opening, openIdx = fl.odo.Float64, i
+					break
+				}
+			}
+		}
+		fuel := 0.0
+		lastOdo := 0.0
+		for i, fl := range fills {
+			if i == openIdx {
+				continue // opening fill's own litres belong to prior consumption
+			}
+			if fl.litres > 0 {
+				fuel += fl.litres
+			}
+			if fl.odo.Valid && fl.odo.Float64 > 0 {
+				lastOdo = fl.odo.Float64
+			}
+		}
+		if dist := lastOdo - opening; opening > 0 && dist > 0 {
+			d.DistanceKM = &dist
+			if fuel > 0 {
+				k := dist / fuel
+				d.KMPL = &k
+				if d.StandardKmpl != nil && *d.StandardKmpl > 0 {
+					v := (k - *d.StandardKmpl) / *d.StandardKmpl * 100
+					d.VariancePct = &v
+					if k < *d.StandardKmpl {
+						d.Flag = "BELOW_NORM"
+					}
+				}
+			}
+		}
+		// Litres reported = fuel consumed in-period (opening fill excluded).
+		d.Litres = fuel
+		dtos = append(dtos, d)
+	}
+	return dtos, int64(len(dtos)), month, nil
+}
+
+func (h *ReportHandlers) APIKMPLSummary(w http.ResponseWriter, r *http.Request) {
+	pp := parsePaginationParams(r)
+	dtos, total, month, err := h.loadKMPLSummaryRows(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	end := pp.Offset + pp.Limit
+	if end > len(dtos) {
+		end = len(dtos)
+	}
+	page := []KMPLSummaryDTO{}
+	if pp.Offset < len(dtos) {
+		page = dtos[pp.Offset:end]
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"records": page,
+		"total":   total,
+		"month":   month,
+		"limit":   pp.Limit,
+		"offset":  pp.Offset,
+	})
+}
+
+func (h *ReportHandlers) ExportKMPLSummaryCSV(w http.ResponseWriter, r *http.Request) {
+	pp := parsePaginationParams(r)
+	maxRows := h.Config.ExportMaxRows
+	if maxRows <= 0 {
+		maxRows = 50000
+	}
+
+	dtos, total, month, err := h.loadKMPLSummaryRows(r)
+	if err != nil {
+		http.Error(w, "Failed to load KMPL summary report: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(dtos) > maxRows {
+		dtos = dtos[:maxRows]
+	}
+
+	rows := make([][]string, 0, len(dtos))
+	for _, d := range dtos {
+		distStr := ""
+		if d.DistanceKM != nil {
+			distStr = fmt.Sprintf("%.1f", *d.DistanceKM)
+		}
+		kmplStr := ""
+		if d.KMPL != nil {
+			kmplStr = fmt.Sprintf("%.2f", *d.KMPL)
+		}
+		normStr := ""
+		if d.StandardKmpl != nil {
+			normStr = fmt.Sprintf("%.2f", *d.StandardKmpl)
+		}
+		varStr := ""
+		if d.VariancePct != nil {
+			varStr = fmt.Sprintf("%+.1f", *d.VariancePct)
+		}
+		rows = append(rows, []string{
+			d.VehicleNo,
+			d.Month,
+			fmt.Sprintf("%d", d.Fills),
+			fmt.Sprintf("%.2f", d.Litres),
+			distStr,
+			kmplStr,
+			normStr,
+			varStr,
+			d.Flag,
+		})
+	}
+
+	nextURL := ""
+	if total > int64(pp.Offset+len(dtos)) {
+		q := r.URL.Query()
+		q.Set("offset", fmt.Sprintf("%d", pp.Offset+len(dtos)))
+		nextURL = fmt.Sprintf("%s?%s", r.URL.Path, q.Encode())
+	}
+
+	writeCSV(w, "kmpl_summary_"+month+".csv", kmplSummaryHeaders, rows, maxRows, nextURL)
 }

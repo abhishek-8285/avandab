@@ -23,6 +23,7 @@ type CreateVehicleCommand struct {
 	FitnessExpiry      time.Time
 	PermitExpiry       time.Time
 	CurrentMileage     *float64
+	StandardKmpl       *float64
 	Blocked            bool
 	BlockedReason      string
 	RCExpiry           *time.Time
@@ -77,6 +78,10 @@ func (uc *CreateVehicleUseCase) Execute(ctx context.Context, cmd CreateVehicleCo
 	}
 
 	v.ApplyCompliance(cmd.Blocked, cmd.BlockedReason, cmd.RCExpiry, cmd.PUCExpiry, cmd.Odometer, uc.clock.Now())
+
+	if err := v.SetStandardKmpl(cmd.StandardKmpl, uc.clock.Now()); err != nil {
+		return "", err
+	}
 
 	err := uc.uow.Execute(ctx, func(txCtx ports.TxContext) error {
 		repo, ok := txCtx.Repositories().Vehicles().(domain.VehicleRepository)

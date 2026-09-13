@@ -6,9 +6,9 @@ INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, cap
     valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
     cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
     engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
-    volume_unit, secondary_fuel, usage_indicator)
+    volume_unit, secondary_fuel, usage_indicator, standard_kmpl)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 RETURNING id, registration_number, vehicle_number, vehicle_type, capacity,
     fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, current_mileage, blocked, blocked_reason, rc_expiry, odometer, puc_expiry,
     tenant_id, created_at, updated_at,
@@ -17,7 +17,7 @@ RETURNING id, registration_number, vehicle_number, vehicle_type, capacity,
     valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
     cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
     engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
-    volume_unit, secondary_fuel, usage_indicator;
+    volume_unit, secondary_fuel, usage_indicator, standard_kmpl;
 
 -- name: GetVehicleByID :one
 SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
@@ -28,7 +28,7 @@ SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
     valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
     cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
     engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
-    volume_unit, secondary_fuel, usage_indicator
+    volume_unit, secondary_fuel, usage_indicator, standard_kmpl
 FROM vehicles WHERE id = ? AND tenant_id = ?;
 
 -- name: GetVehicleByRegistration :one
@@ -40,7 +40,7 @@ SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
     valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
     cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
     engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
-    volume_unit, secondary_fuel, usage_indicator
+    volume_unit, secondary_fuel, usage_indicator, standard_kmpl
 FROM vehicles WHERE registration_number = ? AND tenant_id = ?;
 
 -- name: UpdateVehicle :one
@@ -56,6 +56,7 @@ SET registration_number = ?, vehicle_number = ?, vehicle_type = ?, capacity = ?,
     vehicle_category = ?, engine_number = ?, engine_power = ?, engine_capacity = ?,
     cylinder_count = ?, max_speed = ?, weight = ?, weight_unit = ?, load_volume = ?,
     volume_unit = ?, secondary_fuel = ?, usage_indicator = ?,
+    standard_kmpl = ?,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND tenant_id = ?
 RETURNING id, registration_number, vehicle_number, vehicle_type, capacity,
@@ -66,7 +67,7 @@ RETURNING id, registration_number, vehicle_number, vehicle_type, capacity,
     valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
     cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
     engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
-    volume_unit, secondary_fuel, usage_indicator;
+    volume_unit, secondary_fuel, usage_indicator, standard_kmpl;
 
 -- name: DeleteVehicle :exec
 DELETE FROM vehicles WHERE id = ? AND tenant_id = ?;
@@ -80,7 +81,7 @@ SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
     valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
     cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
     engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
-    volume_unit, secondary_fuel, usage_indicator
+    volume_unit, secondary_fuel, usage_indicator, standard_kmpl
 FROM vehicles
 WHERE tenant_id = sqlc.arg(tenant_id)
   AND (lower(registration_number) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(vehicle_number) LIKE '%' || lower(sqlc.arg(search)) || '%' OR lower(vehicle_type) LIKE '%' || lower(sqlc.arg(search)) || '%'
@@ -115,7 +116,7 @@ SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
     valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
     cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
     engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
-    volume_unit, secondary_fuel, usage_indicator
+    volume_unit, secondary_fuel, usage_indicator, standard_kmpl
 FROM vehicles
 WHERE status = 'available' AND tenant_id = ?
 ORDER BY created_at ASC;
@@ -129,7 +130,7 @@ SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
     valid_from, valid_to, facility_id, maint_plant, planning_plant, company_code, business_area,
     cost_center, asset_no, fleet_object_no, chassis_no, vehicle_category, engine_number,
     engine_power, engine_capacity, cylinder_count, max_speed, weight, weight_unit, load_volume,
-    volume_unit, secondary_fuel, usage_indicator
+    volume_unit, secondary_fuel, usage_indicator, standard_kmpl
 FROM vehicles
 -- Stale bound is a Go-side param (impl passes UTC now-2h, matching the old
 -- datetime('now', '-2 hours')) so the query stays portable.
