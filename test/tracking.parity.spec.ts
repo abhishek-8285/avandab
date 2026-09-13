@@ -77,6 +77,22 @@ test.describe('tracking parity panel', () => {
     });
     expect([200, 303]).toContain(onboard.status());
 
+    // Fresh registrants land on /company/onboard (compliance gate). Complete
+    // minimum viable onboarding so /tracking renders instead of setup wizard.
+    await page.goto('/login');
+    const origin = new URL(page.url()).origin;
+    const onboard = await page.request.post('/company/onboard', {
+      headers: { Origin: origin, Referer: `${origin}/company/onboard` },
+      form: {
+        company_name: 'Parity Fleet Pvt Ltd',
+        address: 'MIDC Bhosari, Pune 411026',
+        phone: '9999999999',
+        email,
+      },
+      maxRedirects: 0,
+    });
+    expect([200, 303]).toContain(onboard.status());
+
     // Deterministic data loading: replace EventSource with a fake that never
     // opens, so the REST poll is the sole data source.
     await page.addInitScript(() => {
