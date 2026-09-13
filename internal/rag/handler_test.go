@@ -35,6 +35,9 @@ func newSecuredRouter(t *testing.T) (*chi.Mux, *Handler, []byte, *auth.SessionSt
 	if err != nil {
 		t.Fatal(err)
 	}
+	// t.Cleanup (not defer): the store must outlive this helper and close
+	// before t.TempDir() cleanup — Windows cannot unlink an open vectors.db.
+	t.Cleanup(func() { _ = store.Close() })
 	svc := NewService(NewHashEmbedder(64), store, 500, 50, t.TempDir())
 	h := NewHandler(svc)
 
@@ -129,6 +132,9 @@ func TestHandler_UploadRejectsPathTraversal(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Close before t.TempDir() cleanup: Windows cannot unlink an open
+	// vectors.db, so a leaked handle fails the test on cleanup.
+	t.Cleanup(func() { _ = store.Close() })
 	uploadDir := t.TempDir()
 	outside := t.TempDir()
 	svc := NewService(NewHashEmbedder(64), store, 500, 50, uploadDir)
@@ -176,6 +182,9 @@ func TestHandler_UploadSanitizedNameIndexed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Close before t.TempDir() cleanup: Windows cannot unlink an open
+	// vectors.db, so a leaked handle fails the test on cleanup.
+	t.Cleanup(func() { _ = store.Close() })
 	uploadDir := t.TempDir()
 	svc := NewService(NewHashEmbedder(64), store, 500, 50, uploadDir)
 	h := NewHandler(svc)
