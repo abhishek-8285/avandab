@@ -172,3 +172,35 @@ func mustPending(t *testing.T, svc *rl.Service) string {
 	}
 	return pending[0].ID
 }
+
+func TestApproveNormalizesDoubleEncodedArgs(t *testing.T) {
+	svc, err := rl.New(filepath.Join(t.TempDir(), "rl.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer svc.Close()
+
+	approval := NewApprovalService(svc, &ToolEnv{})
+	var gotArgs json.RawMessage
+	approval.Gate("create_booking", func(ctx context.Context, args json.RawMessage) (string, error) {
+		gotArgs = args
+		return "ok", nil
+	})
+
+	// OpenAI-style double encoding, as stored when submitted via chat loop.
+	double := json.RawMessage(`"{\"price\":100}"`)
+	gated := approval.GatedTool(&RegisteredTool{Name: "create_booking"})
+	if _, err := gated.Handler(context.Background(), double); err != nil {
+		t.Fatal(err)
+	}
+	action, err := approval.Approve(context.Background(), mustPending(t, svc), "usr-admin", "Admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if action.Status != rl.ActionExecuted {
+		t.Fatalf("expected executed, got %s", action.Status)
+	}
+	if string(gotArgs) != `{"price":100}` {
+		t.Errorf("approve path must normalize args like live path, got %s", string(gotArgs))
+	}
+}
