@@ -13,6 +13,7 @@ import (
 
 	"transport-app/internal/events"
 	intEWB "transport-app/internal/integration/ewaybill"
+	"transport-app/internal/shared"
 )
 
 var (
@@ -126,6 +127,11 @@ func NewEWayBillService(db *sql.DB, bus events.EventBus, client intEWB.Client, l
 }
 
 // GeneratePartA creates a Part-A E-Way Bill for a trip.
+// Tenant gate (fail-closed): the trip lookup below is scoped by tenant from
+// ctx. Requests carry tenant via middleware; background callers must inject it
+// (shared.ContextWithTenantID) — autogenerate.go resolves it from the event /
+// trip row. A caller in another tenant gets sql.ErrNoRows, never a neighbour's
+// GSTIN on a government document.
 func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARequest) (*EWayBillRecord, error) {
 	// 0. Replay / Idempotency check: if an active/part_a EWB already exists for this trip, return it
 	var existingRec EWayBillRecord
@@ -154,10 +160,24 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 		return &existingRec, nil
 	}
 
-	// 1. Resolve trip, route, customer, booking data
+	// 1. Resolve trip, route, customer, booking data.
+	// Tenant-scoped: t.tenant_id must equal the caller's tenant (or the
+	// bootstrap fallback below). company_settings id=1 stays the
+	// PLATFORM-global default singleton (migration 00125): tenant row first,
+	// global fallback — never a neighbouring tenant's GSTIN.
 	var bookingPrice, routeDist, standardFare float64
 	var tripNumber, routeSource, routeDest string
 	var custGST, compGST, compState, vehicleNumber sql.NullString
+	var tripTenant string
+
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	if tenantID == "" {
+		// No request tenant (background job / legacy test caller): resolve
+		// the trip's own tenant so the document still stamps the owning org.
+		// Callers that DO carry a tenant stay strictly scoped by the WHERE
+		// clause below (fail-closed on cross-tenant IDs).
+		_ = s.db.QueryRowContext(ctx, `SELECT tenant_id FROM trips WHERE id = $1`, req.TripID).Scan(&tenantID)
+	}
 
 	err = s.db.QueryRowContext(ctx, `
 		SELECT t.trip_number, r.source, r.destination, r.distance, r.standard_fare,
@@ -170,19 +190,27 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 			       (SELECT state_code FROM tenant_company_profiles WHERE tenant_id = t.tenant_id),
 			       CASE WHEN t.tenant_id IS NULL OR t.tenant_id IN ('', '1')
 				       THEN (SELECT state_code FROM company_settings WHERE id = 1) END, '27'),
-		       v.registration_number
+		       v.registration_number,
+		       t.tenant_id
 		FROM trips t
 		JOIN bookings b ON t.booking_id = b.id
 		JOIN routes r ON t.route_id = r.id
 		JOIN customers c ON b.customer_id = c.id
 		LEFT JOIN vehicles v ON t.vehicle_id = v.id
-		WHERE t.id = $1
-	`, req.TripID).Scan(
+		WHERE t.id = $1 AND t.tenant_id = $2
+	`, req.TripID, tenantID).Scan(
 		&tripNumber, &routeSource, &routeDest, &routeDist, &standardFare,
 		&bookingPrice, &custGST, &compGST, &compState, &vehicleNumber,
+		&tripTenant,
 	)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		s.logger.Warn("could not fetch complete trip details, using request values", "error", err)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("trip %s not found in tenant scope", req.TripID)
+	}
+	if err != nil {
+		// Surface real query errors (missing table, bad schema) instead of
+		// degrading to request values — silent fallbacks on a government
+		// document path previously let cross-tenant calls slip through.
+		return nil, fmt.Errorf("resolve trip tax context: %w", err)
 	}
 
 	goodsValue := req.GoodsValue

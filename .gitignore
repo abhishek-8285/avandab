@@ -46,6 +46,10 @@ coverage/
 dist/
 playwright-report/
 test-results/
+bin/server
+bin/server.gz
+bin/server_arm64
+bin/mvtms-arm64
 
 # Logs
 *.log
