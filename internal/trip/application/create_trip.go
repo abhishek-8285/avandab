@@ -127,7 +127,7 @@ func (uc *CreateTripUseCase) Execute(ctx context.Context, cmd CreateTripCommand)
 			if exec != nil && bookingCustID != "" {
 				var cName, cPhone, cEmail sql.NullString
 				_ = exec.QueryRowContext(txCtx,
-					`SELECT name, phone, email FROM customers WHERE id = $1 AND (tenant_id = $2 OR tenant_id = '1')`,
+					`SELECT name, phone, email FROM customers WHERE id = $1 AND tenant_id = $2`,
 					bookingCustID, string(cmd.TenantID),
 				).Scan(&cName, &cPhone, &cEmail)
 				if cName.Valid {
@@ -164,7 +164,7 @@ func (uc *CreateTripUseCase) Execute(ctx context.Context, cmd CreateTripCommand)
 				var rSrc, rDest string
 				var rHours sql.NullFloat64
 				err := exec.QueryRowContext(txCtx,
-					`SELECT source, destination, estimated_hours FROM routes WHERE id = $1 AND (tenant_id = $2 OR tenant_id = '1')`,
+					`SELECT source, destination, estimated_hours FROM routes WHERE id = $1 AND tenant_id = $2`,
 					cmd.RouteID, string(cmd.TenantID),
 				).Scan(&rSrc, &rDest, &rHours)
 				if err == nil {

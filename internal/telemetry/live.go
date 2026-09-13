@@ -348,7 +348,7 @@ func (s *LiveStore) maintenanceDueSet(ctx context.Context, tenantID string) map[
 		return nil
 	}
 	rows, err := s.db.QueryContext(ctx,
-		`SELECT id FROM vehicles WHERE (tenant_id = $1 OR tenant_id = '1') AND maintenance_due IS NOT NULL`, tenantID)
+		`SELECT id FROM vehicles WHERE tenant_id = $1 AND maintenance_due IS NOT NULL`, tenantID)
 	if err != nil {
 		return nil
 	}
