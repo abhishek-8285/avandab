@@ -47,6 +47,12 @@
   --color-error-container: #fee2e2;
   --color-on-error-container: #991b1b;
 
+  /* Warning container pair — alert_inbox severity-2 badge used
+     bg-warning-container/text-on-warning-container, which were never defined,
+     so rank-2 (warning) alerts rendered with no background at all. */
+  --color-warning-container: #fef3c7;
+  --color-on-warning-container: #92400e;
+
   --color-background: #f3f5f9;
   --color-on-background: #0f172a;
   --color-surface: #f3f5f9;
