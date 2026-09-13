@@ -85,6 +85,12 @@ jobs:
             exit 1
           fi
 
+      - name: CSS sync audit — every template class resolves to CSS
+        # tailwind.css is committed, so this fails when a template uses a class
+        # that was never compiled in (edited without `make build-css`) or that
+        # is simply a typo. Both render silently unstyled in production.
+        run: python3 scripts/css-sync-audit.py
+
   # ──────────────────────────────────────────────────────────
   # Job 2: Backend Tests & Coverage (depends on build)
   # ──────────────────────────────────────────────────────────

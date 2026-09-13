@@ -4,7 +4,7 @@
         <h3 class="text-title-md font-semibold text-on-surface flex items-center gap-2">
             <span>E-Way Bill</span>
             {{if .EWayBill}}
-                <span class="px-2 py-0.5 text-xs font-medium rounded-full {{if eq .EWayBill.Status "active"}}bg-status-success/20 text-status-success{{else if eq .EWayBill.Status "part_a"}}bg-status-info/20 text-status-info{{else if eq .EWayBill.Status "cancelled"}}bg-status-alert/20 text-status-alert{{else}}bg-status-warn/20 text-status-warn{{end}}">
+                <span class="px-2 py-0.5 text-xs font-medium rounded-full {{if eq .EWayBill.Status "active"}}bg-status-success/20 text-status-success{{else if eq .EWayBill.Status "part_a"}}bg-status-info/20 text-status-info{{else if eq .EWayBill.Status "cancelled"}}bg-status-alert/20 text-status-alert{{else}}bg-status-warning/20 text-status-warning{{end}}">
                     {{.EWayBill.Status}}
                 </span>
             {{end}}
