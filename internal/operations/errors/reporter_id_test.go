@@ -33,10 +33,13 @@ type fixedClock struct{ t time.Time }
 
 func (c fixedClock) Now() time.Time { return c.t }
 
-var (
-	_ ports.IDGenerator = (*seqID)(nil)
-	_ ports.Clock       = fixedClock{}
-)
+// Compile-time seam check: the fakes above must satisfy the ports.
+func TestSeamFakesSatisfyPorts(t *testing.T) {
+	var (
+		_ ports.IDGenerator = (*seqID)(nil)
+		_ ports.Clock       = fixedClock{}
+	)
+}
 
 // Regression: ids used to be `err_<time.Now().UnixNano()>` with nothing else.
 // `time.Now()` does NOT advance every nanosecond — on Windows it advances in

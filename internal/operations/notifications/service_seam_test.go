@@ -27,10 +27,13 @@ type fixedClock struct{ t time.Time }
 
 func (c fixedClock) Now() time.Time { return c.t }
 
-var (
-	_ ports.IDGenerator = (*seqID)(nil)
-	_ ports.Clock       = fixedClock{}
-)
+// Compile-time seam check: the fakes above must satisfy the ports.
+func TestSeamFakesSatisfyPorts(t *testing.T) {
+	var (
+		_ ports.IDGenerator = (*seqID)(nil)
+		_ ports.Clock       = fixedClock{}
+	)
+}
 
 // notif_ ids used to come from a package-level generator + time.Now() inline,
 // untestable and invisible to callers. With the seam injected, two sends

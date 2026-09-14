@@ -20,10 +20,15 @@ import (
 //  2. Every chip-family token inside a Go `class="..."` attribute must be
 //     safelisted (dashboard `badge-*` template DATA keys and prose like
 //     "one-line" live outside class attributes and are correctly ignored).
-var (
-	safelistRe  = regexp.MustCompile(`@source inline\("([^"]+)"\)`)
-	classAttrRe = regexp.MustCompile(`class="([^"]+)"`)
-)
+// Compiled per call (not package-level): the shared-state audit forbids
+// package vars in test files, and two compilations per run are noise.
+func safelistPattern() *regexp.Regexp {
+	return regexp.MustCompile(`@source inline\("([^"]+)"\)`)
+}
+
+func classAttrPattern() *regexp.Regexp {
+	return regexp.MustCompile(`class="([^"]+)"`)
+}
 
 func safelistedClasses(t *testing.T) map[string]bool {
 	t.Helper()
@@ -32,7 +37,7 @@ func safelistedClasses(t *testing.T) map[string]bool {
 		t.Fatalf("reading src/input.css: %v", err)
 	}
 	set := map[string]bool{}
-	for _, m := range safelistRe.FindAllSubmatch(raw, -1) {
+	for _, m := range safelistPattern().FindAllSubmatch(raw, -1) {
 		for _, cls := range strings.Fields(string(m[1])) {
 			set[cls] = true
 		}
@@ -91,7 +96,7 @@ func TestGoEmittedChipClassesSafelisted(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, m := range classAttrRe.FindAllSubmatch(raw, -1) {
+		for _, m := range classAttrPattern().FindAllSubmatch(raw, -1) {
 			for _, tok := range strings.Fields(string(m[1])) {
 				// Strip variant prefixes (dark:, hover:) and trailing opacity slash.
 				if i := strings.LastIndex(tok, ":"); i >= 0 {

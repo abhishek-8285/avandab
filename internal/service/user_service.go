@@ -707,3 +707,128 @@ func (s *UserService) CreateTenantWithAdmin(ctx context.Context, tenantID, name,
 	s.log.Info("tenant provisioned with org admin", "tenant_id", tenantID, "admin_user_id", created.ID, "email", created.Email)
 	return created, nil
 }
+
+// DPDP consent ledger (Digital Personal Data Protection Act, 2023, §§6–8).
+// One row per (tenant, user, purpose) in user_consents (00153): grant records
+// notice_version + granted_at; withdrawal stamps withdrawn_at; re-grant clears
+// it. No row (legacy/OAuth/admin-created users) = allowed — only an explicit
+// withdrawal blocks Login, mirroring the tenantActive legacy allowance.
+const (
+	// ConsentPurposePlatformUse is the single purpose in this slice: processing
+	// the account to operate the platform. New purposes widen the CHECK + UX.
+	ConsentPurposePlatformUse = "platform_use"
+	// ConsentNoticeVersion identifies the notice text the user agreed to.
+	// Bump when the notice changes; re-grant then re-binds users to it.
+	ConsentNoticeVersion = "v1"
+)
+
+// grantConsentTx upserts a granted row, routing through the ambient tx when
+// the caller holds one (registration) via repository.ExecTx.
+func grantConsentTx(ctx context.Context, rawDB *sql.DB, tenantID, userID string) error {
+	_, err := repository.ExecTx(ctx, rawDB, `
+		INSERT INTO user_consents (id, tenant_id, user_id, purpose, notice_version, granted_at, withdrawn_at)
+		VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, NULL)
+		ON CONFLICT (tenant_id, user_id, purpose) DO UPDATE SET
+			notice_version = excluded.notice_version,
+			granted_at = CURRENT_TIMESTAMP,
+			withdrawn_at = NULL,
+			updated_at = CURRENT_TIMESTAMP`,
+		"consent_"+tenantID+"_"+userID, tenantID, userID, ConsentPurposePlatformUse, ConsentNoticeVersion)
+	return err
+}
+
+// consentWithdrawn reports whether the user explicitly withdrew platform-use
+// consent. Missing row = legacy = false (allowed).
+func consentWithdrawn(ctx context.Context, rawDB *sql.DB, tenantID, userID string) (bool, error) {
+	var withdrawn sql.NullTime
+	err := repository.QueryRowTx(ctx, rawDB, `
+		SELECT withdrawn_at FROM user_consents
+		WHERE tenant_id = $1 AND user_id = $2 AND purpose = $3`,
+		tenantID, userID, ConsentPurposePlatformUse).Scan(&withdrawn)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return withdrawn.Valid, nil
+}
+
+// consentDB returns the raw DB or nil when the store cannot provide one
+// (fakes without storage: consent checks become pass-through, same as
+// tenantActive).
+func (s *baseService) consentDB() *sql.DB {
+	getter, ok := s.store.(repository.DBGetter)
+	if !ok || getter == nil {
+		return nil
+	}
+	return getter.DB()
+}
+
+// GrantConsent records (or re-records after withdrawal) platform-use consent.
+func (s *UserService) GrantConsent(ctx context.Context, tenantID, userID string) error {
+	rawDB := s.consentDB()
+	if rawDB == nil {
+		return nil
+	}
+	return grantConsentTx(ctx, rawDB, tenantID, userID)
+}
+
+// WithdrawConsent stamps withdrawal; Login refuses while set (DPDP §6(4):
+// cease processing on withdrawal). Works with or without a prior grant.
+func (s *UserService) WithdrawConsent(ctx context.Context, tenantID, userID string) error {
+	rawDB := s.consentDB()
+	if rawDB == nil {
+		return nil
+	}
+	_, err := repository.ExecTx(ctx, rawDB, `
+		INSERT INTO user_consents (id, tenant_id, user_id, purpose, notice_version, granted_at, withdrawn_at)
+		VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+		ON CONFLICT (tenant_id, user_id, purpose) DO UPDATE SET
+			withdrawn_at = CURRENT_TIMESTAMP,
+			updated_at = CURRENT_TIMESTAMP`,
+		"consent_"+tenantID+"_"+userID, tenantID, userID, ConsentPurposePlatformUse, ConsentNoticeVersion)
+	return err
+}
+
+// ConsentStatus reports the ledger state for the caller (nulls when unknown).
+func (s *UserService) ConsentStatus(ctx context.Context, tenantID, userID string) (grantedAt, withdrawnAt sql.NullTime, err error) {
+	rawDB := s.consentDB()
+	if rawDB == nil {
+		return sql.NullTime{}, sql.NullTime{}, nil
+	}
+	err = repository.QueryRowTx(ctx, rawDB, `
+		SELECT granted_at, withdrawn_at FROM user_consents
+		WHERE tenant_id = $1 AND user_id = $2 AND purpose = $3`,
+		tenantID, userID, ConsentPurposePlatformUse).Scan(&grantedAt, &withdrawnAt)
+	if err == sql.ErrNoRows {
+		return sql.NullTime{}, sql.NullTime{}, nil
+	}
+	return grantedAt, withdrawnAt, err
+}
+
+// ConsentNeedsRefresh reports whether the user's ledger row is no longer bound
+// to the current notice: a stale notice_version or a standing withdrawal. This
+// is the future redirect trigger sending stale users back to the consent
+// notice page for re-grant. Missing row (legacy) and unknown stores stay
+// false; only an explicit row can demand a refresh. Errors fail closed to
+// false — the login withdrawal gate, not this helper, enforces safety.
+func (s *UserService) ConsentNeedsRefresh(ctx context.Context, tenantID, userID string) bool {
+	rawDB := s.consentDB()
+	if rawDB == nil {
+		return false
+	}
+	var version string
+	var withdrawn sql.NullTime
+	err := repository.QueryRowTx(ctx, rawDB, `
+		SELECT notice_version, withdrawn_at FROM user_consents
+		WHERE tenant_id = $1 AND user_id = $2 AND purpose = $3`,
+		tenantID, userID, ConsentPurposePlatformUse).Scan(&version, &withdrawn)
+	if err != nil {
+		return false
+	}
+	if withdrawn.Valid {
+		return true
+	}
+	return version != ConsentNoticeVersion
+}

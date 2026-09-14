@@ -92,9 +92,6 @@ type Services struct {
 	PNL            *PNLService
 	OpsAlerts      *OpsAlertService
 	Experiments    *ExperimentsService
-	Privacy        *PrivacyService
-	AccessReviews  *AccessReviewService
-	BreachWatch    *BreachWatchService
 	FounderSignals *FounderSignalsService
 	FounderAudit   *FounderAuditService
 	EWayBill       *ewaybill.EWayBillService
@@ -185,8 +182,6 @@ func NewServices(store Store, cfg *config.Config, log *slog.Logger, eventBus eve
 	s.Files = &FileService{baseService: bs, storage: fileStore}
 	s.Documents = NewDocumentService(bs, s.Files)
 	s.Audit = &AuditLogService{baseService: bs}
-	s.Privacy = &PrivacyService{baseService: bs}
-	s.AccessReviews = &AccessReviewService{baseService: bs}
 	s.Compliance = &ComplianceService{baseService: bs}
 	s.Trips.compliance = s.Compliance
 	s.Settlements = &DriverSettlementService{
@@ -220,9 +215,6 @@ func NewServices(store Store, cfg *config.Config, log *slog.Logger, eventBus eve
 
 		// A/B experiments service (Spec 16 §5).
 		s.Experiments = NewExperimentsService(bs, dbGetter.DB())
-
-		// DPDP breach overdue watch: nil without raw DB, same as PNL.
-		s.BreachWatch = NewBreachWatchService(bs, dbGetter.DB(), s.Privacy, s.OpsAlerts)
 
 		// Founder signals + audit trail (Spec 16 §6, §7).
 		s.FounderAudit = NewFounderAuditService(bs, dbGetter.DB())

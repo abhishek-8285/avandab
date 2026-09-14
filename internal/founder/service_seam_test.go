@@ -28,10 +28,13 @@ type fixedClock struct{ t time.Time }
 
 func (c fixedClock) Now() time.Time { return c.t }
 
-var (
-	_ ports.IDGenerator = (*seqID)(nil)
-	_ ports.Clock       = fixedClock{}
-)
+// Compile-time seam check: the fakes above must satisfy the ports.
+func TestSeamFakesSatisfyPorts(t *testing.T) {
+	var (
+		_ ports.IDGenerator = (*seqID)(nil)
+		_ ports.Clock       = fixedClock{}
+	)
+}
 
 // Alert ids used to be fmt.Sprintf("rev_%d", time.Now().UnixNano()). Two
 // alerts minted inside one coarse-clock tick collided. With the seam injected,
