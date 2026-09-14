@@ -56,9 +56,15 @@ func TestScorecardRoutes_RedirectWithoutSession(t *testing.T) {
 }
 
 // TestScorecardTierBadge verifies the tier badge CSS mapping.
+//
+// Tiers now return the same semantic `badge-*` utilities as statusBadgeClass,
+// so a tier chip and a status chip share one dark-aware mechanism. Asserting
+// the literal token instead of a raw palette pair means the test survives the
+// next token rename — only a change in which TIER maps to which badge should
+// break it.
 func TestScorecardTierBadge(t *testing.T) {
-	assert.Equal(t, "bg-emerald-100 text-emerald-700", string(tierBadgeClass("A")))
-	assert.Equal(t, "bg-blue-100 text-blue-700", string(tierBadgeClass("B")))
-	assert.Equal(t, "bg-rose-100 text-rose-700", string(tierBadgeClass("C")))
-	assert.Equal(t, "bg-rose-100 text-rose-700", string(tierBadgeClass("Z")))
+	assert.Equal(t, "badge-success", string(tierBadgeClass("A")))
+	assert.Equal(t, "badge-info", string(tierBadgeClass("B")))
+	assert.Equal(t, "badge-alert", string(tierBadgeClass("C")))
+	assert.Equal(t, "badge-alert", string(tierBadgeClass("Z")))
 }

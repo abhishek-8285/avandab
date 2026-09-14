@@ -4,6 +4,7 @@ import (
 	"hash/fnv"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -72,6 +73,15 @@ func (rl *rateLimiter) reapLoop(window time.Duration) {
 	}
 }
 
+// rateLimitDisabled reports whether the rate limiter should stand down. This
+// is opt-in via env so the test/E2E harness (which drives many registrations
+// from a single loopback IP and would otherwise trip the public 10/min cap)
+// can run unthrottled. Production never sets these vars, so the limiter stays
+// active there.
+func rateLimitDisabled() bool {
+	return os.Getenv("RATE_LIMIT_DISABLED") == "1" || os.Getenv("AVANDAB_TEST_MODE") == "1"
+}
+
 // RateLimit returns middleware that limits requests per client IP to
 // `limit` per `window` (default window: 1 minute).
 //
@@ -81,6 +91,10 @@ func RateLimit(limit int) func(http.Handler) http.Handler {
 	rl := newRateLimiter(limit, time.Minute)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if rateLimitDisabled() {
+				next.ServeHTTP(w, r)
+				return
+			}
 			if !rl.allow(auth.ClientIP(r), time.Now()) {
 				http.Error(w, "Too many requests", http.StatusTooManyRequests)
 				return
@@ -95,6 +109,9 @@ func RateLimit(limit int) func(http.Handler) http.Handler {
 // backend does not support atomic increments (CACHE_DRIVER=none), it falls
 // back to the local in-memory limiter — never to unlimited.
 func RateLimitDistributed(c cache.Cache, limit int) func(http.Handler) http.Handler {
+	if rateLimitDisabled() {
+		return func(next http.Handler) http.Handler { return next }
+	}
 	incr, ok := c.(cache.Incrementer)
 	if !ok {
 		return RateLimit(limit)

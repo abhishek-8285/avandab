@@ -6,7 +6,7 @@
         <div class="min-w-0">
             <div class="flex items-center gap-3 flex-wrap">
                 <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Kharcha Ledger</h1>
-                <span id="queue-live-pill" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold tracking-wide uppercase text-emerald-700 dark:text-emerald-300 cursor-default"
+                <span id="queue-live-pill" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-soft border border-emerald-500/20 text-[11px] font-bold tracking-wide uppercase text-emerald-strong dark:text-emerald-300 cursor-default"
                       hx-get="/kharcha/pending"
                       hx-trigger="every 30s"
                       hx-target="#kharcha-queue"
@@ -101,10 +101,10 @@
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-amber-500/20 transition-all duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-80"></div>
             <div class="flex items-start justify-between">
-                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
+                <div class="w-10 h-10 rounded-xl bg-amber-soft border border-amber-line grid place-items-center text-amber-mid group-hover:bg-amber-500 group-hover:text-white transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                 </div>
-                <span class="text-eyebrow px-2 py-1 rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/15">Awaiting approval</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-amber-soft text-amber-strong border border-amber-line">Awaiting approval</span>
             </div>
             <div class="mt-4">
                 <div id="kpi-pending-count" class="text-stat text-status-warning tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.Stats.PendingCount}}</div>
@@ -117,10 +117,10 @@
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-emerald-500/20 transition-all duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-80"></div>
             <div class="flex items-start justify-between">
-                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                <div class="w-10 h-10 rounded-xl bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                 </div>
-                <span class="text-eyebrow px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/15">Cleared</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-emerald-soft text-emerald-strong border border-emerald-line">Cleared</span>
             </div>
             <div class="mt-4">
                 <div class="text-stat text-status-success tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.Stats.ApprovedToday}}</div>
@@ -149,10 +149,10 @@
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-rose-500/20 transition-all duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-500 to-red-500 opacity-80"></div>
             <div class="flex items-start justify-between">
-                <div class="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/15 grid place-items-center text-rose-600 group-hover:bg-rose-500 group-hover:text-white transition-colors">
+                <div class="w-10 h-10 rounded-xl bg-rose-soft border border-rose-line grid place-items-center text-rose-mid group-hover:bg-rose-500 group-hover:text-white transition-colors">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
                 </div>
-                <span class="text-eyebrow px-2 py-1 rounded-full bg-rose-500/10 text-rose-700 border border-rose-500/15">Outstanding</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-rose-soft text-rose-strong border border-rose-line">Outstanding</span>
             </div>
             <div class="mt-4">
                 <div class="text-stat text-status-alert tabular-nums text-3xl font-black tracking-tight" data-numeric>₹{{priceFormat .Stats.UnsettledTotal}}</div>
@@ -166,7 +166,7 @@
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div class="flex items-center gap-2">
-                <span class="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></span>
+                <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></span>
                 <h2 class="text-sm font-bold text-on-surface">Active Trips</h2>
             </div>
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .ActiveTrips}} in transit</span>

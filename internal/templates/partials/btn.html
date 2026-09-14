@@ -2,7 +2,12 @@
 {{$s := .Size}}{{if not $s}}{{$s = "md"}}{{end}}
 {{$sizeCls := "px-4 py-2 text-sm"}}{{if eq $s "sm"}}{{$sizeCls = "px-3 py-1.5 text-xs"}}{{end}}
 {{$variantCls := "rounded-full bg-primary text-on-primary font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px"}}{{if eq $v "secondary"}}{{$variantCls = "rounded-full bg-surface-container-lowest border border-border-subtle text-on-surface font-semibold shadow-xs hover:bg-surface-container-low hover:border-primary/20"}}{{else if eq $v "ghost"}}{{$variantCls = "rounded-full bg-transparent text-primary font-semibold hover:bg-primary/10"}}{{else if eq $v "danger"}}{{$variantCls = "rounded-full bg-status-alert text-on-primary font-semibold shadow-sm hover:opacity-90 hover:-translate-y-px"}}{{end}}
-{{$cls := printf "inline-flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] %s %s %s" $variantCls $sizeCls (or .Class "")}} 
+{{/* Touch target floor lives here, not in each of the ~200 call sites.
+     WCAG 2.5.5 asks for a 44x44 minimum; this is an ops tool driven one-handed
+     in cabs, so every button gets it regardless of size variant. The `sm`
+     variant keeps its tighter padding — it just can't shrink below 44px tall.
+     Call sites that already pass min-h-[44px] are harmless duplicates. */}}
+{{$cls := printf "inline-flex items-center justify-center gap-2 min-h-[44px] px-4 transition-all duration-150 active:scale-[0.98] %s %s %s" $variantCls $sizeCls (or .Class "")}}
 {{if .Href}}
 <a href="{{.Href}}" class="{{$cls}} text-decoration-none">{{if .Icon}}{{icon .Icon}}{{end}}<span>{{.Label}}</span></a>
 {{else}}

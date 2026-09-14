@@ -61,10 +61,10 @@
             <!-- Check A -->
             <div class="px-5 py-3.5 flex items-start justify-between gap-4">
                 <div class="flex items-start gap-3 min-w-0">
-                    <span class="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600 text-xs font-black shrink-0">A</span>
+                    <span class="w-8 h-8 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid text-xs font-black shrink-0">A</span>
                     <div class="min-w-0">
                         <p class="text-sm font-semibold text-on-surface">Level sensor
-                            {{if .Claim.ExpectedLevel}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">available</span>{{else}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-text-muted">no evidence</span>{{end}}
+                            {{if .Claim.ExpectedLevel}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong dark:text-emerald-300">available</span>{{else}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-text-muted">no evidence</span>{{end}}
                         </p>
                         <p class="text-xs text-text-muted mt-1">
                             Σ refill_detected events in the claim window
@@ -80,10 +80,10 @@
             <!-- Check B -->
             <div class="px-5 py-3.5 flex items-start justify-between gap-4">
                 <div class="flex items-start gap-3 min-w-0">
-                    <span class="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/15 grid place-items-center text-violet-600 text-xs font-black shrink-0">B</span>
+                    <span class="w-8 h-8 rounded-lg bg-violet-soft border border-violet-line grid place-items-center text-violet-mid text-xs font-black shrink-0">B</span>
                     <div class="min-w-0">
                         <p class="text-sm font-semibold text-on-surface">Odometer
-                            {{if .Claim.ExpectedOdo}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">available</span>{{else}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-text-muted">no evidence</span>{{end}}
+                            {{if .Claim.ExpectedOdo}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong dark:text-emerald-300">available</span>{{else}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-text-muted">no evidence</span>{{end}}
                         </p>
                         <p class="text-xs text-text-muted mt-1 tabular-nums">
                             odometer delta {{printf "%.1f" .Claim.OdometerDeltaKm}} km ÷ kmpl {{printf "%.2f" .Claim.KmplUsed}}
@@ -97,7 +97,7 @@
             <!-- Check C -->
             <div class="px-5 py-3.5 flex items-start justify-between gap-4">
                 <div class="flex items-start gap-3 min-w-0">
-                    <span class="w-8 h-8 rounded-lg bg-cyan-500/10 border border-cyan-500/15 grid place-items-center text-cyan-600 text-xs font-black shrink-0">C</span>
+                    <span class="w-8 h-8 rounded-lg bg-cyan-soft border border-cyan-line grid place-items-center text-cyan-mid text-xs font-black shrink-0">C</span>
                     <div class="min-w-0">
                         <p class="text-sm font-semibold text-on-surface">Cross-check</p>
                         <p class="text-xs text-text-muted mt-1">A vs B must agree within 25% when both are available</p>
@@ -121,7 +121,7 @@
         </div>
         {{if .Claim.RefillEvents}}
         <div class="overflow-x-auto">
-        <table class="w-full text-sm">
+        <table class="rtable w-full text-sm">
             <thead class="bg-surface-container-low">
                 <tr>
                     <th class="th-cell">Time</th>
@@ -133,10 +133,10 @@
             <tbody class="divide-y divide-border-subtle">
                 {{range .Claim.RefillEvents}}
                 <tr class="hover:bg-surface-container-low/50 transition-colors">
-                    <td class="px-3 py-2 text-xs text-text-muted tabular-nums" data-numeric>{{datetime .OccurredAt}}</td>
-                    <td class="px-3 py-2 text-sm font-semibold text-on-surface tabular-nums" data-numeric>{{printf "%.1f" .OdometerBefore}} → {{printf "%.1f" .OdometerAfter}}</td>
-                    <td class="px-3 py-2 text-sm text-right font-bold text-on-surface tabular-nums" data-numeric>{{printf "%.1f" .EstimatedLitres}} L</td>
-                    <td class="px-3 py-2 text-sm text-right text-secondary font-semibold tabular-nums" data-numeric>{{printf "%.0f" .Confidence}}%</td>
+                    <td data-label="Time" class="px-3 py-2 text-xs text-text-muted tabular-nums" data-numeric>{{datetime .OccurredAt}}</td>
+                    <td data-label="Odometer" class="px-3 py-2 text-sm font-semibold text-on-surface tabular-nums" data-numeric>{{printf "%.1f" .OdometerBefore}} → {{printf "%.1f" .OdometerAfter}}</td>
+                    <td data-label="Est. Litres" class="px-3 py-2 text-sm text-right font-bold text-on-surface tabular-nums" data-numeric>{{printf "%.1f" .EstimatedLitres}} L</td>
+                    <td data-label="Confidence" class="px-3 py-2 text-sm text-right text-secondary font-semibold tabular-nums" data-numeric>{{printf "%.0f" .Confidence}}%</td>
                 </tr>
                 {{end}}
             </tbody>
@@ -186,7 +186,7 @@
     <!-- Review trail -->
     {{if .Claim.ReviewedAt}}
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xs px-5 py-3 flex items-center gap-3">
-        <span class="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></span>
+        <span class="w-8 h-8 rounded-lg bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></span>
         <p class="text-xs text-text-muted">
             Reviewed by <strong class="text-secondary">{{nullString .Claim.ReviewedBy}}</strong> on
             <strong class="text-secondary tabular-nums">{{derefTime .Claim.ReviewedAt}}</strong>

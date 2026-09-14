@@ -12,11 +12,11 @@
                 <div class="flex items-center gap-2.5 flex-wrap mt-0.5">
                     <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-on-surface font-data-mono tabular-nums truncate">{{.EWayBill.EwbNumber}}</h1>
                     {{if eq .EWayBill.Status "active"}}
-                    <span class="inline-flex px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Active</span>
+                    <span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold uppercase tracking-wide text-emerald-strong dark:text-emerald-300">Active</span>
                     {{else if eq .EWayBill.Status "cancelled"}}
-                    <span class="inline-flex px-2 py-1 rounded-full bg-rose-500/10 border border-rose-500/15 text-[11px] font-bold uppercase tracking-wide text-rose-700 dark:text-rose-300">Cancelled</span>
+                    <span class="inline-flex px-2 py-1 rounded-full bg-rose-soft border border-rose-line text-[11px] font-bold uppercase tracking-wide text-rose-strong dark:text-rose-300">Cancelled</span>
                     {{else if eq .EWayBill.Status "expired"}}
-                    <span class="inline-flex px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/15 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300">Expired</span>
+                    <span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-bold uppercase tracking-wide text-amber-strong dark:text-amber-300">Expired</span>
                     {{end}}
                 </div>
                 <p class="text-sm text-secondary mt-1">
@@ -43,11 +43,11 @@
                     Cancel EWB
                 </button>
             {{else if eq .EWayBill.Status "cancelled"}}
-                <span class="inline-flex px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/15 text-xs font-bold text-rose-700 dark:text-rose-300">
+                <span class="inline-flex px-3 py-1 rounded-full bg-rose-soft border border-rose-line text-xs font-bold text-rose-strong dark:text-rose-300">
                     Cancelled ({{.EWayBill.CancelReason}})
                 </span>
             {{else if eq .EWayBill.Status "expired"}}
-                <span class="inline-flex px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/15 text-xs font-bold text-amber-700 dark:text-amber-300">
+                <span class="inline-flex px-3 py-1 rounded-full bg-amber-soft border border-amber-line text-xs font-bold text-amber-strong dark:text-amber-300">
                     Expired
                 </span>
             {{end}}
@@ -147,15 +147,15 @@
                             <td class="px-4 py-2.5 font-data-mono text-xs text-text-muted whitespace-nowrap">{{.CreatedAt.Format "02 Jan 15:04:05"}}</td>
                             <td class="px-4 py-2.5">
                                 {{if eq .EventType "PART_A_GENERATED"}}
-                                <span class="inline-flex px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/15 text-[11px] font-bold text-amber-700 dark:text-amber-300">PART_A_GENERATED</span>
+                                <span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-bold text-amber-strong dark:text-amber-300">PART_A_GENERATED</span>
                                 {{else if eq .EventType "PART_B_ADDED"}}
-                                <span class="inline-flex px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-bold text-emerald-700 dark:text-emerald-300">PART_B_ADDED</span>
+                                <span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong dark:text-emerald-300">PART_B_ADDED</span>
                                 {{else if eq .EventType "EXTENDED"}}
-                                <span class="inline-flex px-2 py-1 rounded-full bg-blue-500/10 border border-blue-500/15 text-[11px] font-bold text-blue-700 dark:text-blue-300">EXTENDED</span>
+                                <span class="inline-flex px-2 py-1 rounded-full bg-blue-soft border border-blue-line text-[11px] font-bold text-blue-strong dark:text-blue-300">EXTENDED</span>
                                 {{else if eq .EventType "EXTENSION_DENIED"}}
-                                <span class="inline-flex px-2 py-1 rounded-full bg-rose-500/10 border border-rose-500/15 text-[11px] font-bold text-rose-700 dark:text-rose-300">EXTENSION_DENIED</span>
+                                <span class="inline-flex px-2 py-1 rounded-full bg-rose-soft border border-rose-line text-[11px] font-bold text-rose-strong dark:text-rose-300">EXTENSION_DENIED</span>
                                 {{else if eq .EventType "CANCELLED"}}
-                                <span class="inline-flex px-2 py-1 rounded-full bg-rose-500/10 border border-rose-500/15 text-[11px] font-bold text-rose-700 dark:text-rose-300">CANCELLED</span>
+                                <span class="inline-flex px-2 py-1 rounded-full bg-rose-soft border border-rose-line text-[11px] font-bold text-rose-strong dark:text-rose-300">CANCELLED</span>
                                 {{else}}
                                 <span class="inline-flex px-2 py-1 rounded-full bg-surface-container text-text-muted border border-border-subtle text-[11px] font-bold">{{.EventType}}</span>
                                 {{end}}
@@ -190,13 +190,13 @@
             </div>
             <form method="POST" action="/ewaybill/{{.EWayBill.EwbNumber}}/part-b" class="space-y-4">
                 <div>
-                    <label class="block text-eyebrow text-secondary mb-1.5">Vehicle Registration Number</label>
-                    <input type="text" name="vehicle_number" required placeholder="e.g. MH12AB1234"
+                    <label for="vehicle_number" class="block text-eyebrow text-secondary mb-1.5">Vehicle Registration Number</label>
+                    <input id="vehicle_number" type="text" name="vehicle_number" required placeholder="e.g. MH12AB1234"
                            class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" />
                 </div>
                 <div>
-                    <label class="block text-eyebrow text-secondary mb-1.5">Transporter ID [Optional]</label>
-                    <input type="text" name="transporter_id" placeholder="e.g. TR-12345"
+                    <label for="transporter_id" class="block text-eyebrow text-secondary mb-1.5">Transporter ID [Optional]</label>
+                    <input id="transporter_id" type="text" name="transporter_id" placeholder="e.g. TR-12345"
                            class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" />
                 </div>
                 <div class="flex justify-end gap-2 pt-2 border-t border-border-subtle flex-wrap">
@@ -221,8 +221,11 @@
             <p class="text-xs text-text-muted -mt-2">Extension requires GPS geofence proximity evidence within destination range.</p>
             <form method="POST" action="/ewaybill/{{.EWayBill.EwbNumber}}/extend" class="space-y-4">
                 <div>
-                    <label class="block text-eyebrow text-secondary mb-1.5">Reason for Extension</label>
-                    <select name="reason" required class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    {{/* id must be unique per page: the cancel modal below has
+                         its own `reason` select, and two elements sharing
+                         id="reason" makes label/for resolve to the wrong one. */}}
+                    <label for="reason-extend" class="block text-eyebrow text-secondary mb-1.5">Reason for Extension</label>
+                    <select id="reason-extend" name="reason" required class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                         <option value="traffic_delay">Traffic congestion / Road blockage</option>
                         <option value="vehicle_breakdown">Vehicle breakdown / Transshipment</option>
                         <option value="unloading_queue">Consignee unloading queue</option>
@@ -250,8 +253,8 @@
             </div>
             <form method="POST" action="/ewaybill/{{.EWayBill.EwbNumber}}/cancel" class="space-y-4">
                 <div>
-                    <label class="block text-eyebrow text-secondary mb-1.5">Cancellation Reason</label>
-                    <select name="reason" required class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    <label for="reason-cancel" class="block text-eyebrow text-secondary mb-1.5">Cancellation Reason</label>
+                    <select id="reason-cancel" name="reason" required class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                         <option value="order_cancelled">Order Cancelled by Customer</option>
                         <option value="data_entry_mistake">Data Entry Mistake</option>
                         <option value="duplicate">Duplicate Generation</option>

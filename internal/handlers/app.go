@@ -472,32 +472,42 @@ func parseTemplatesLang(authSrv auth.AuthorizationService, lang string) (*templa
 	return tmpl, nil
 }
 
+// statusBadgeClass maps a domain status to a status-badge utility.
+//
+// It returns semantic `badge-*` utilities (defined in src/input.css) rather
+// than raw palette classes. Two reasons:
+//  1. Raw `bg-*-100 text-*-800` pairs cannot respond to `.dark`, so every
+//     badge was a light chip on a dark surface in dark mode.
+//  2. These strings are emitted from Go, so Tailwind cannot discover them by
+//     scanning templates — hence the `@source inline` safelist in input.css.
+//     Adding a NEW tone here without adding it there yields a silently
+//     unstyled badge.
 func statusBadgeClass(status interface{}) string {
 	s := fmt.Sprintf("%v", status)
 	classes := map[string]string{
-		"pending":        "bg-yellow-100 text-yellow-800",
-		"confirmed":      "bg-blue-100 text-blue-800",
-		"completed":      "bg-green-100 text-green-800",
-		"cancelled":      "bg-red-100 text-red-800",
-		"draft":          "bg-gray-100 text-gray-800",
-		"scheduled":      "bg-purple-100 text-purple-800",
-		"assigned":       "bg-indigo-100 text-indigo-800",
-		"started":        "bg-orange-100 text-orange-800",
-		"reached_pickup": "bg-blue-100 text-blue-800",
-		"in_transit":     "bg-teal-100 text-teal-800",
-		"delivered":      "bg-emerald-100 text-emerald-800",
-		"available":      "bg-green-100 text-green-800",
-		"on_trip":        "bg-orange-100 text-orange-800",
-		"maintenance":    "bg-yellow-100 text-yellow-800",
-		"running":        "bg-blue-100 text-blue-800",
-		"inactive":       "bg-gray-100 text-gray-800",
-		"paid":           "bg-green-100 text-green-800",
-		"partially_paid": "bg-yellow-100 text-yellow-800",
+		"pending":        "badge-warning",
+		"confirmed":      "badge-info",
+		"completed":      "badge-success",
+		"cancelled":      "badge-alert",
+		"draft":          "badge-neutral",
+		"scheduled":      "badge-accent",
+		"assigned":       "badge-accent",
+		"started":        "badge-warning",
+		"reached_pickup": "badge-info",
+		"in_transit":     "badge-accent",
+		"delivered":      "badge-success",
+		"available":      "badge-success",
+		"on_trip":        "badge-warning",
+		"maintenance":    "badge-warning",
+		"running":        "badge-info",
+		"inactive":       "badge-neutral",
+		"paid":           "badge-success",
+		"partially_paid": "badge-warning",
 	}
 	if cls, ok := classes[s]; ok {
 		return cls
 	}
-	return "bg-gray-100 text-gray-800"
+	return "badge-neutral"
 }
 
 // tmplNums coerces template arithmetic operands. Returns float values plus

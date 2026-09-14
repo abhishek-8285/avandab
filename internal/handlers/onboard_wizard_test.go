@@ -706,8 +706,12 @@ func TestUserOnboardingPage_DynamicSteps(t *testing.T) {
 	assert.NotContains(t, body, "Profile Picture", "uncompletable steps must be gone")
 	assert.NotContains(t, body, "Bank Account Details")
 	assert.NotContains(t, body, "Driving Details")
-	assert.Equal(t, 2, strings.Count(body, `font-semibold text-amber-700 shrink-0">Pending`), "phone + name pending")
-	assert.Equal(t, 1, strings.Count(body, `font-semibold text-emerald-700 dark:text-emerald-300 shrink-0">Completed`), "defaulted timezone completed")
+	// Count the badge TEXT, not the badge classes. These assertions used to
+	// string-match `font-semibold text-amber-700 shrink-0">Pending`, which
+	// broke the moment the chip moved to semantic tokens — a styling change,
+	// not a behaviour change. The status a user sees is the thing under test.
+	assert.Equal(t, 2, strings.Count(body, `>Pending</span>`), "phone + name pending")
+	assert.Equal(t, 1, strings.Count(body, `>Completed</span>`), "defaulted timezone completed")
 	// Shared timezone partial: wide list, default-selected Kolkata.
 	assert.Contains(t, body, `value="Asia/Tokyo"`)
 	assert.Contains(t, body, `value="Asia/Kolkata" selected`)
@@ -716,7 +720,7 @@ func TestUserOnboardingPage_DynamicSteps(t *testing.T) {
 	_, err = app.Services.Auth.UpdateProfile(seedCtx, owner.ID, "Step Owner", "+91 93333 00003", "Asia/Tokyo")
 	require.NoError(t, err)
 	body = render()
-	assert.Equal(t, 3, strings.Count(body, `font-semibold text-emerald-700 dark:text-emerald-300 shrink-0">Completed`))
+	assert.Equal(t, 3, strings.Count(body, `>Completed</span>`))
 	assert.Contains(t, body, "93333 00003", "saved phone must surface (+ renders as &#43;)")
 	assert.Contains(t, body, `value="Asia/Tokyo" selected`)
 }

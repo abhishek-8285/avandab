@@ -17,7 +17,7 @@
 
 {{if .ErrorRef}}
 <div class="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 mb-8 flex items-start gap-3">
-    <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 grid place-items-center text-amber-600 shrink-0">
+    <div class="w-9 h-9 rounded-lg bg-amber-soft border border-amber-500/20 grid place-items-center text-amber-mid shrink-0">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
     </div>
     <div class="min-w-0">
@@ -128,7 +128,7 @@
 <div class="mt-4 bg-surface-container-low border border-border-subtle rounded-xl p-4 space-y-3">
     <div class="flex items-center justify-between border-b border-border-subtle pb-2">
         <div>
-            <span class="block text-[10px] font-bold uppercase tracking-wider text-text-muted">Ticket Number</span>
+            <span class="block text-[11px] font-bold uppercase tracking-wider text-text-muted">Ticket Number</span>
             <div class="font-data-mono font-bold text-sm text-primary tabular-nums">{{.Ticket.TicketNumber}}</div>
         </div>
         <div>
@@ -172,13 +172,13 @@
         </a>
 
         <!-- WhatsApp Quick Chat -->
-        <a href="https://wa.me/918285336507?text=Hi%20Avandab%20team,%20I%20need%20support%20for%20my%20fleet" target="_blank" rel="noopener noreferrer" class="flex gap-3.5 items-start p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40 hover:bg-emerald-500/15 transition-all text-left">
+        <a href="https://wa.me/918285336507?text=Hi%20Avandab%20team,%20I%20need%20support%20for%20my%20fleet" target="_blank" rel="noopener noreferrer" class="flex gap-3.5 items-start p-3.5 rounded-xl bg-emerald-soft border border-emerald-500/20 hover:border-emerald-500/40 hover:bg-emerald-500/15 transition-all text-left">
             <div class="bg-emerald-600 text-white rounded-lg p-2 shrink-0">
                 <svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.29"/></svg>
             </div>
             <div>
-                <div class="text-eyebrow text-emerald-700 dark:text-emerald-400">Instant WhatsApp Support</div>
-                <div class="font-data-mono text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">+91 8285336507</div>
+                <div class="text-eyebrow text-emerald-strong dark:text-emerald-400">Instant WhatsApp Support</div>
+                <div class="font-data-mono text-sm font-bold text-emerald-mid dark:text-emerald-400 mt-0.5">+91 8285336507</div>
                 <div class="text-[11px] text-text-muted">Chat directly with dispatch team</div>
             </div>
         </a>
@@ -188,7 +188,7 @@
     <div class="space-y-4 text-xs">
         <!-- 1. Operations & Dispatch -->
         <div class="border-t border-border-subtle pt-3">
-            <div class="text-[10px] font-black uppercase tracking-wider text-primary mb-2">🚚 Fleet Operations, Tracking &amp; Telemetry</div>
+            <div class="text-[11px] font-black uppercase tracking-wider text-primary mb-2">🚚 Fleet Operations, Tracking &amp; Telemetry</div>
             <div class="space-y-2">
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Trip Assignments &amp; Routes:</span>
@@ -219,22 +219,22 @@
 
         <!-- 2. Billing & Finance -->
         <div class="border-t border-border-subtle pt-3">
-            <div class="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2">💰 Billing, GST Invoices &amp; Accounts</div>
+            <div class="text-[11px] font-black uppercase tracking-wider text-emerald-mid dark:text-emerald-400 mb-2">💰 Billing, GST Invoices &amp; Accounts</div>
             <div class="space-y-2">
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">GST Invoices &amp; Razorpay Pay:</span>
-                    <a href="mailto:billing@avandab.com" class="font-data-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">billing@avandab.com</a>
+                    <a href="mailto:billing@avandab.com" class="font-data-mono font-semibold text-emerald-mid dark:text-emerald-400 hover:underline">billing@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Ledger, Khata &amp; Settlements:</span>
-                    <a href="mailto:accounts@avandab.com" class="font-data-mono font-semibold text-emerald-600 dark:text-emerald-400 hover:underline">accounts@avandab.com</a>
+                    <a href="mailto:accounts@avandab.com" class="font-data-mono font-semibold text-emerald-mid dark:text-emerald-400 hover:underline">accounts@avandab.com</a>
                 </div>
             </div>
         </div>
 
         <!-- 3. Support, Claims & Emergency -->
         <div class="border-t border-border-subtle pt-3">
-            <div class="text-[10px] font-black uppercase tracking-wider text-red-600 dark:text-red-400 mb-2">🚨 Customer Care, Claims &amp; 24/7 SOS Radar</div>
+            <div class="text-[11px] font-black uppercase tracking-wider text-red-mid dark:text-red-400 mb-2">🚨 Customer Care, Claims &amp; 24/7 SOS Radar</div>
             <div class="space-y-2">
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">General Support &amp; Helpdesk:</span>
@@ -242,7 +242,7 @@
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">24/7 Highway SOS &amp; Breakdown:</span>
-                    <a href="mailto:sos@avandab.com" class="font-data-mono font-bold text-red-600 dark:text-red-400 hover:underline">sos@avandab.com</a>
+                    <a href="mailto:sos@avandab.com" class="font-data-mono font-bold text-red-mid dark:text-red-400 hover:underline">sos@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Driver Welfare &amp; Highway Help:</span>
@@ -250,14 +250,14 @@
                 </div>
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Cargo Damage &amp; Claims:</span>
-                    <a href="mailto:claims@avandab.com" class="font-data-mono font-semibold text-red-600 dark:text-red-400 hover:underline">claims@avandab.com</a>
+                    <a href="mailto:claims@avandab.com" class="font-data-mono font-semibold text-red-mid dark:text-red-400 hover:underline">claims@avandab.com</a>
                 </div>
             </div>
         </div>
 
         <!-- 4. Legal & Corporate -->
         <div class="border-t border-border-subtle pt-3">
-            <div class="text-[10px] font-black uppercase tracking-wider text-secondary mb-2">⚖️ Legal, Sales &amp; Executive</div>
+            <div class="text-[11px] font-black uppercase tracking-wider text-secondary mb-2">⚖️ Legal, Sales &amp; Executive</div>
             <div class="space-y-2">
                 <div class="flex justify-between items-center py-1">
                     <span class="text-on-surface-variant">Corporate Freight Contracts:</span>

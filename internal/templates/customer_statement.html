@@ -82,7 +82,7 @@
 
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle p-4 shadow-sm">
             <span class="text-eyebrow text-text-muted">Invoiced Balance</span>
-            <p class="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.OutstandingInvoices}}</p>
+            <p class="text-xl sm:text-2xl font-black text-amber-mid dark:text-amber-400 tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.OutstandingInvoices}}</p>
             <span class="text-[11px] text-text-muted mt-1 block">Unpaid Bills</span>
         </div>
 
@@ -126,7 +126,7 @@
             </div>
             <div class="p-4">
                 <span class="text-eyebrow text-text-muted">16 - 30 Days</span>
-                <p class="text-lg font-black {{if gt .Statement.Aging.Days16To30 0.0}}text-amber-600 dark:text-amber-400{{else}}text-on-surface{{end}} tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.Aging.Days16To30}}</p>
+                <p class="text-lg font-black {{if gt .Statement.Aging.Days16To30 0.0}}text-amber-mid dark:text-amber-400{{else}}text-on-surface{{end}} tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.Aging.Days16To30}}</p>
             </div>
             <div class="p-4">
                 <span class="text-eyebrow text-text-muted">31 - 60 Days</span>
@@ -134,7 +134,7 @@
             </div>
             <div class="p-4">
                 <span class="text-eyebrow text-text-muted">60+ Days Overdue</span>
-                <p class="text-lg font-black {{if gt .Statement.Aging.Days60Plus 0.0}}text-red-600 dark:text-red-400{{else}}text-on-surface{{end}} tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.Aging.Days60Plus}}</p>
+                <p class="text-lg font-black {{if gt .Statement.Aging.Days60Plus 0.0}}text-red-mid dark:text-red-400{{else}}text-on-surface{{end}} tabular-nums mt-1 font-data-mono" data-numeric>₹{{printf "%.2f" .Statement.Aging.Days60Plus}}</p>
             </div>
             <div class="p-4 col-span-2 sm:col-span-1 bg-surface-container-low/50">
                 <span class="text-eyebrow text-text-muted">Total Outstanding</span>
@@ -324,8 +324,8 @@
                             <a href="/invoices/{{.ID}}" class="hover:underline text-decoration-none">{{.InvoiceNumber}}</a>
                         </td>
                         <td class="px-4 py-2.5 text-xs text-text-muted tabular-nums">{{date_only .CreatedAt}}</td>
-                        <td class="px-4 py-2.5 text-xs tabular-nums {{if gt .DaysOverdue 0}}text-red-600 font-bold{{else}}text-text-muted{{end}}">
-                            {{if .DueDate}}{{date_only .DueDate}}{{if gt .DaysOverdue 0}} <span class="text-[10px]">({{.DaysOverdue}}d late)</span>{{end}}{{else}}—{{end}}
+                        <td class="px-4 py-2.5 text-xs tabular-nums {{if gt .DaysOverdue 0}}text-red-mid font-bold{{else}}text-text-muted{{end}}">
+                            {{if .DueDate}}{{date_only .DueDate}}{{if gt .DaysOverdue 0}} <span class="text-[11px]">({{.DaysOverdue}}d late)</span>{{end}}{{else}}—{{end}}
                         </td>
                         <td class="px-4 py-2.5">
                             <span class="status-badge {{statusBadge .PaymentStatus}}">{{.PaymentStatus}}</span>
@@ -334,7 +334,7 @@
                         <td class="px-4 py-2.5 text-sm text-right tabular-nums text-secondary" data-numeric>₹{{printf "%.2f" .Tax}}</td>
                         <td class="px-4 py-2.5 text-sm text-right font-semibold text-on-surface tabular-nums" data-numeric>₹{{printf "%.2f" .Total}}</td>
                         <td class="px-4 py-2.5 text-sm text-right font-semibold text-status-success tabular-nums" data-numeric>₹{{printf "%.2f" .PaidAmount}}</td>
-                        <td class="px-4 py-2.5 text-sm text-right font-black tabular-nums {{if gt .Balance 0.0}}text-amber-600 dark:text-amber-400{{else}}text-status-success{{end}}" data-numeric>
+                        <td class="px-4 py-2.5 text-sm text-right font-black tabular-nums {{if gt .Balance 0.0}}text-amber-mid dark:text-amber-400{{else}}text-status-success{{end}}" data-numeric>
                             ₹{{printf "%.2f" .Balance}}
                         </td>
                         <td class="px-4 py-2.5 text-center print:hidden">

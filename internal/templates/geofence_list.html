@@ -17,13 +17,13 @@
     </div>
 
     {{if .FlashSuccess}}
-    <div class="bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 rounded-xl px-4 py-3 text-sm flex items-center gap-2">
+    <div class="bg-emerald-soft border border-emerald-500/20 text-emerald-strong dark:text-emerald-300 rounded-xl px-4 py-3 text-sm flex items-center gap-2">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         <span>{{.FlashSuccess}}</span>
     </div>
     {{end}}
     {{if .FlashError}}
-    <div class="bg-rose-500/10 border border-rose-500/20 text-status-alert rounded-xl px-4 py-3 text-sm flex items-center gap-2">
+    <div class="bg-rose-soft border border-rose-500/20 text-status-alert rounded-xl px-4 py-3 text-sm flex items-center gap-2">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 shrink-0"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
         <span>{{.FlashError}}</span>
     </div>
@@ -46,7 +46,7 @@
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-emerald-500/20 transition-all">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-80"></div>
             <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 shrink-0">
+                <div class="w-9 h-9 rounded-lg bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid shrink-0">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                 </div>
                 <div class="min-w-0">
@@ -58,7 +58,7 @@
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-blue-500/20 transition-all">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-400 opacity-80"></div>
             <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600 shrink-0">
+                <div class="w-9 h-9 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid shrink-0">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
                 </div>
                 <div class="min-w-0">
@@ -70,7 +70,7 @@
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-amber-500/20 transition-all">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-80"></div>
             <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600 shrink-0">
+                <div class="w-9 h-9 rounded-lg bg-amber-soft border border-amber-line grid place-items-center text-amber-mid shrink-0">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                 </div>
                 <div class="min-w-0">
@@ -94,7 +94,7 @@
         )}}
 
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-border-subtle" id="geofences-table">
+            <table class="rtable min-w-full divide-y divide-border-subtle" id="geofences-table">
                 <thead class="bg-surface-container-low">
                     <tr>
                         <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Zone Name &amp; Trigger</th>
@@ -114,13 +114,13 @@
                         data-active="{{if .IsActive}}true{{else}}false{{end}}"
                         data-name="{{.Name}}"
                         data-route="{{.RouteName}}">
-                        <td class="px-3 py-2">
+                        <td data-label="Zone Name & Trigger" class="px-3 py-2">
                             <div class="flex items-center gap-2.5">
                                 <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0
-                                    {{if or (eq .Kind "pickup") (eq .Kind "drop")}}bg-emerald-500/10 text-emerald-600 border border-emerald-500/20
-                                    {{else if eq .Kind "depot"}}bg-blue-500/10 text-blue-600 border border-blue-500/20
-                                    {{else if eq .Kind "restricted"}}bg-amber-500/10 text-amber-600 border border-amber-500/20
-                                    {{else}}bg-rose-500/10 text-rose-600 border border-rose-500/20{{end}}">
+                                    {{if or (eq .Kind "pickup") (eq .Kind "drop")}}bg-emerald-soft text-emerald-mid border border-emerald-500/20
+                                    {{else if eq .Kind "depot"}}bg-blue-soft text-blue-mid border border-blue-500/20
+                                    {{else if eq .Kind "restricted"}}bg-amber-soft text-amber-mid border border-amber-500/20
+                                    {{else}}bg-rose-soft text-rose-mid border border-rose-500/20{{end}}">
                                     {{if eq .Shape "circle"}}
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><circle cx="12" cy="12" r="9"/></svg>
                                     {{else}}
@@ -131,9 +131,9 @@
                                     <div class="flex items-center gap-1.5">
                                         <span class="text-sm font-bold text-on-surface truncate">{{.Name}}</span>
                                         {{if eq .Kind "restricted"}}
-                                        <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-data-mono font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">ALERT</span>
+                                        <span class="shrink-0 text-[11px] px-1.5 py-0.5 rounded-full font-data-mono font-bold bg-amber-soft text-amber-strong dark:text-amber-400 border border-amber-500/20">ALERT</span>
                                         {{else if eq .Kind "no_entry"}}
-                                        <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-data-mono font-bold bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20">NO ENTRY</span>
+                                        <span class="shrink-0 text-[11px] px-1.5 py-0.5 rounded-full font-data-mono font-bold bg-rose-soft text-rose-strong dark:text-rose-400 border border-rose-500/20">NO ENTRY</span>
                                         {{end}}
                                     </div>
                                     <div class="text-[11px] text-text-muted truncate">
@@ -148,36 +148,36 @@
                             </div>
                         </td>
 
-                        <td class="px-3 py-2 whitespace-nowrap">
+                        <td data-label="Kind" class="px-3 py-2 whitespace-nowrap">
                             {{if eq .Kind "pickup"}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/15">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-soft text-emerald-strong dark:text-emerald-300 border border-emerald-line">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                                 Pickup
                             </span>
                             {{else if eq .Kind "drop"}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border border-cyan-500/15">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-cyan-soft text-cyan-strong dark:text-cyan-300 border border-cyan-line">
                                 <span class="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
                                 Drop
                             </span>
                             {{else if eq .Kind "depot"}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-soft text-blue-strong dark:text-blue-300 border border-blue-line">
                                 <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                                 Depot / Hub
                             </span>
                             {{else if eq .Kind "restricted"}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/15">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-soft text-amber-strong dark:text-amber-300 border border-amber-line">
                                 <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                 Restricted
                             </span>
                             {{else}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/15">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-soft text-rose-strong dark:text-rose-300 border border-rose-line">
                                 <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                                 No Entry
                             </span>
                             {{end}}
                         </td>
 
-                        <td class="px-3 py-2 whitespace-nowrap">
+                        <td data-label="Shape & Dimensions" class="px-3 py-2 whitespace-nowrap">
                             <div class="flex items-center gap-2">
                                 <span class="capitalize text-xs font-medium text-on-surface">{{.Shape}}</span>
                                 {{if eq .Shape "circle"}}
@@ -192,7 +192,7 @@
                             </div>
                         </td>
 
-                        <td class="px-3 py-2 whitespace-nowrap">
+                        <td data-label="Route Scope" class="px-3 py-2 whitespace-nowrap">
                             {{if .RouteName}}
                             <span class="inline-flex items-center gap-1 text-xs font-data-mono px-2 py-0.5 rounded-md bg-surface-container text-secondary border border-border-subtle">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3 text-text-muted"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
@@ -203,15 +203,15 @@
                             {{end}}
                         </td>
 
-                        <td class="px-3 py-2 text-center whitespace-nowrap">
+                        <td data-label="Priority" class="px-3 py-2 text-center whitespace-nowrap">
                             <span class="text-xs font-data-mono font-bold tabular-nums px-2 py-0.5 rounded-md bg-surface-container text-on-surface border border-border-subtle" data-numeric>
                                 P{{.Priority}}
                             </span>
                         </td>
 
-                        <td class="px-3 py-2 text-center whitespace-nowrap">
+                        <td data-label="Status" class="px-3 py-2 text-center whitespace-nowrap">
                             {{if .IsActive}}
-                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/15">
+                            <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-soft text-emerald-strong dark:text-emerald-300 border border-emerald-line">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                 Active
                             </span>
@@ -223,7 +223,7 @@
                             {{end}}
                         </td>
 
-                        <td class="px-3 py-2 text-right whitespace-nowrap">
+                        <td data-label="Actions" class="px-3 py-2 text-right whitespace-nowrap">
                             <div class="flex items-center justify-end gap-1">
                                 {{if can $.User "geofences" "update"}}
                                 <a href="/geofences/{{.ID}}/edit" class="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-surface-container transition-colors" title="Edit Geofence">

@@ -1,5 +1,5 @@
 <div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-border-subtle text-sm text-on-surface">
+    <table class="rtable min-w-full divide-y divide-border-subtle text-sm text-on-surface">
         <thead class="bg-surface-container-low">
             <tr>
                 <th class="th-cell">Timestamp</th>
@@ -13,22 +13,22 @@
         <tbody class="divide-y divide-border-subtle">
             {{range .}}
             <tr class="hover:bg-surface-container-low/50 transition-colors">
-                <td class="px-3 py-2 text-xs text-text-muted tabular-nums whitespace-nowrap">{{.TxnTimeStr}}</td>
-                <td class="px-3 py-2 text-sm font-bold text-on-surface tabular-nums">{{.VehicleNumber}} <span class="text-xs font-normal text-text-muted font-data-mono">({{.TagID}})</span></td>
-                <td class="px-3 py-2 text-sm text-on-surface">{{.PlazaName}} <span class="text-xs text-text-muted">({{.PlazaID}})</span></td>
-                <td class="px-3 py-2 text-sm font-bold text-primary tabular-nums text-right" data-numeric>₹{{printf "%.2f" .Amount}}</td>
-                <td class="px-3 py-2 text-sm">
+                <td data-label="Timestamp" class="px-3 py-2 text-xs text-text-muted tabular-nums whitespace-nowrap">{{.TxnTimeStr}}</td>
+                <td data-label="Vehicle / Tag" class="px-3 py-2 text-sm font-bold text-on-surface tabular-nums">{{.VehicleNumber}} <span class="text-xs font-normal text-text-muted font-data-mono">({{.TagID}})</span></td>
+                <td data-label="Toll Plaza" class="px-3 py-2 text-sm text-on-surface">{{.PlazaName}} <span class="text-xs text-text-muted">({{.PlazaID}})</span></td>
+                <td data-label="Amount" class="px-3 py-2 text-sm font-bold text-primary tabular-nums text-right" data-numeric>₹{{printf "%.2f" .Amount}}</td>
+                <td data-label="Trip Matched" class="px-3 py-2 text-sm">
                     {{if .TripID}}
                         <a href="/trips/{{.TripID}}" class="text-primary hover:underline font-bold tabular-nums">{{.TripID}}</a>
                     {{else}}
                         <span class="text-xs text-text-muted">Unassigned</span>
                     {{end}}
                 </td>
-                <td class="px-3 py-2">
+                <td data-label="Status" class="px-3 py-2">
                     {{if .Reconciled}}
-                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-500/10 border border-emerald-500/15 text-emerald-700 dark:text-emerald-300"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>Reconciled</span>
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-soft border border-emerald-line text-emerald-strong dark:text-emerald-300"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>Reconciled</span>
                     {{else}}
-                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-500/10 border border-amber-500/15 text-amber-700 dark:text-amber-300"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-pulse"></span>Pending</span>
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-soft border border-amber-line text-amber-strong dark:text-amber-300"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-pulse"></span>Pending</span>
                     {{end}}
                 </td>
             </tr>

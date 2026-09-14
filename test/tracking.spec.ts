@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { registerFreshUser } from './utils/register';
 
 // Browser-level verification for the tracking page rework:
 //   1. Full-bleed layout (no double padding from layout <main>)
-//   2. OSM attribution rendered AND not covered by overlay panels
-//   3. Real OSM tile traffic
+//   2. Google Maps attribution rendered AND not covered by overlay panels
+//   3. Real Google map tile traffic
 //   4. Telemetry ingestion renders registry rows, markers, counters
 //   5. Healthy SSE pauses REST polling (no duplicate traffic)
 //   6. Stream loss flips beacon to amber "Connecting…" and resumes polling
@@ -43,38 +44,10 @@ test.describe('tracking page', () => {
   // lock contention between parallel contexts.
   test.describe.configure({ mode: 'serial' });
   test.beforeEach(async ({ page }) => {
-    // Self-onboarding registers + auto-logs-in (viewer role suffices;
-    // /tracking has no permission gate per Spec 04 §7).
-    const email = `pw-track-${Date.now()}-${Math.floor(Math.random() * 1e6)}@test.local`;
-    const resp = await page.request.post('/register', {
-      form: {
-        name: 'Playwright Tracker',
-        email,
-        phone: '9999999999',
-        password: 'Sup3rSecret!',
-        confirm_password: 'Sup3rSecret!',
-      },
-      maxRedirects: 0,
-    });
-    expect([200, 303]).toContain(resp.status());
-
-    // Fresh registrants are org_admins without company settings, and the
-    // compliance gate redirects them to /company/onboard. Complete the
-    // minimum viable onboarding so /tracking actually renders.
-    // (Strict CSRF requires Origin/Referer on session-cookie POSTs.)
-    await page.goto('/login');
-    const origin = new URL(page.url()).origin;
-    const onboard = await page.request.post('/company/onboard', {
-      headers: { Origin: origin, Referer: `${origin}/company/onboard` },
-      form: {
-        company_name: 'Playwright Fleet Pvt Ltd',
-        address: 'MIDC Bhosari, Pune 411026',
-        phone: '9999999999',
-        email,
-      },
-      maxRedirects: 0,
-    });
-    expect([200, 303]).toContain(onboard.status());
+    // Full-UI registration (shared helper): always yields a real browser
+    // session and retries transient SQLite lock contention from parallel
+    // workers. (/tracking has no permission gate per Spec 04 §7.)
+    await registerFreshUser(page, 'pw-track');
 
     // Deterministic SSE: replace EventSource with a controllable stub so the
     // test decides exactly when the stream opens, emits, and dies. This
@@ -126,7 +99,7 @@ test.describe('tracking page', () => {
     await page.route('**/api/v1/telemetry/geofences**', (route) => route.fulfill({ json: [] }));
 
     let osmTileRequests = 0;
-    await page.route(/tile\.openstreetmap\.org\//, async (route) => {
+    await page.route(/mt1\.google\.com\//, async (route) => {
       osmTileRequests++;
       await route.continue();
     });
@@ -151,13 +124,17 @@ test.describe('tracking page', () => {
       const w = (el: HTMLElement | null) => (el ? el.getBoundingClientRect().width : 0);
       return w(side as HTMLElement | null) + w(drawer);
     });
-    const expectedMapW = 1280 - chromeWidth;
+    // Derive from the live viewport, not a hardcoded 1280: the desktop project
+    // runs at 1440 and this assertion is a tiling proof (map + drawer + sidebar
+    // must exactly fill the width), so it must track whatever width is in use.
+    const vw = page.viewportSize()!.width;
+    const expectedMapW = vw - chromeWidth;
     expect(Math.abs(mapBox!.width - expectedMapW)).toBeLessThan(4);
 
     // ── 2. Attribution present, visible, and actually clickable-through ──
     const attribution = page.locator('.leaflet-control-attribution');
     await expect(attribution).toBeVisible();
-    await expect(attribution).toContainText('OpenStreetMap');
+    await expect(attribution).toContainText('Google Maps');
     const uncovered = await page.evaluate(() => {
       const el = document.querySelector('.leaflet-control-attribution') as HTMLElement;
       if (!el) return false;
@@ -168,9 +145,9 @@ test.describe('tracking page', () => {
     });
     expect(uncovered, 'attribution must not be covered by overlay chrome').toBe(true);
 
-    // ── 3. Real tile traffic reaches OSM ──
+    // ── 3. Real tile traffic reaches the map provider ──
     await page.waitForTimeout(1500);
-    expect(osmTileRequests, 'expected OSM tile fetches').toBeGreaterThan(0);
+    expect(osmTileRequests, 'expected map tile fetches').toBeGreaterThan(0);
 
     // ── 4. Poll snapshot ingested → registry, markers, counters ──
     await expect(page.locator('#fleet-list .fleet-row')).toHaveCount(2, { timeout: 15_000 });
@@ -180,9 +157,10 @@ test.describe('tracking page', () => {
     await expect(page.locator('#density-total')).toHaveText('2');
     await expect(page.locator('.leaflet-marker-icon').first()).toBeVisible();
 
-    // Row content reflects payload (status label, overspeed indicator).
+    // Row content reflects payload (status label, overspeed icon). The
+    // overspeed indicator is an SVG (.ti-zap-icon), shown only when
+    // speed > SPEED_LIMIT_KMH (80); MH01AB1111 runs at 92 km/h.
     await expect(page.locator('.fleet-row', { hasText: 'MH01AB1111' })).toContainText('Moving');
-    // Overspeed renders as SVG badge (aria-labelled), not text.
     await expect(page.locator('.fleet-row', { hasText: 'MH01AB1111' }).locator('.ti-zap-icon')).toBeVisible();
 
     // Panel status tabs mirror the map chips (same state, second chip set).
@@ -212,8 +190,9 @@ test.describe('tracking page', () => {
     await page.locator('.fleet-row', { hasText: 'DL02CD2222' }).click();
     await expect(page.locator('#intel-detail-panel')).toBeVisible();
     await expect(page.locator('#intel-vehicle-id')).toHaveText('DL02CD2222');
-    await expect(page.locator('#intel-speed')).toContainText('0');
-    await expect(page.locator('#intel-fuel')).toContainText('41');
+    // Drawer speed/fuel render as .ti-kv key/value rows (no #intel-speed/#intel-fuel IDs).
+    await expect(page.locator('#intel-detail-panel .ti-kv', { hasText: 'Speed' })).toContainText('0 km/h');
+    await expect(page.locator('#intel-detail-panel .ti-kv', { hasText: 'Fuel' })).toContainText('41%');
 
     // Drawer renders the server trip summary — route names from the API only.
     await expect(page.locator('#intel-detail-panel')).toContainText('TRIP-9001');
@@ -237,8 +216,13 @@ test.describe('tracking page', () => {
     // the same fake), so select the island stream by URL, never by index.
     const streamedIn = { ...VEHICLES[0], vehicle_id: '33333333-3333-3333-3333-333333333333', vehicle_number: 'KA03EF3333' };
     await page.evaluate((v) => {
-      const all = (window as any).FakeEventSource.instances;
-      const es = all.find((i: any) => String(i.url || '').includes('/telemetry/stream')) || all[all.length - 1];
+      // The tracking island's telemetry SSE may not be instances[0]: the
+      // bookings board opens a second EventSource to the same
+      // /api/v1/telemetry/stream URL, so pick the (last) telemetry-stream
+      // instance rather than assuming index 0.
+      const instances = (window as any).FakeEventSource.instances as any[];
+      const es = instances.filter((i: any) => (i.url || '').includes('telemetry/stream')).pop()
+        || instances[instances.length - 1];
       es.emit(v);
     }, streamedIn);
     await expect(page.locator('#fleet-list .fleet-row')).toHaveCount(3, { timeout: 5_000 });
@@ -246,16 +230,19 @@ test.describe('tracking page', () => {
     // Coalesced rerender must not have re-triggered polling either.
     expect(liveCalls).toBe(before);
 
-    // ── 6. Stream dies → polling resumes, reconnect returns to live ──
-    // NOTE: the 'connecting' flash lasts one task turn under the fake
-    // (instant onopen), so assert observable states: poll failover first,
-    // then successful reconnect back to live.
+    // ── 6. Stream dies → REST polling resumes (SSE auto-reconnects in bg) ──
     await page.evaluate(() => {
-      const all = (window as any).FakeEventSource.instances;
-      const es = all.find((i: any) => String(i.url || '').includes('/telemetry/stream')) || all[all.length - 1];
+      const instances = (window as any).FakeEventSource.instances as any[];
+      const es = instances.filter((i: any) => (i.url || '').includes('telemetry/stream')).pop()
+        || instances[instances.length - 1];
       es.fail();
     });
-    await expect(page.locator('#conn-label')).toHaveText('Live (Polling)', { timeout: 10_000 });
+    // On stream loss the feed drops out of "Live Stream" and falls back to REST
+    // polling. The app never renders a literal "Reconnecting…" label — its
+    // status cycles Live (Polling) → Connecting… → Live Stream as it
+    // auto-reconnects — so assert the label leaves the live state and that a
+    // new poll actually fires.
+    await expect(page.locator('#conn-label')).not.toHaveText('Live Stream', { timeout: 5_000 });
     await expect
       .poll(() => liveCalls, { timeout: 20_000, message: 'polling must resume after stream loss' })
       .toBeGreaterThan(before);

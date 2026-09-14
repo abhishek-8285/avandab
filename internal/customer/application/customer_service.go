@@ -9,14 +9,33 @@ import (
 	"github.com/google/uuid"
 
 	"transport-app/internal/customer/domain"
+	"transport-app/internal/shared/ports"
 )
 
 type CustomerAppService struct {
-	repo domain.CustomerRepository
+	repo  domain.CustomerRepository
+	idGen ports.IDGenerator
 }
 
-func NewCustomerAppService(repo domain.CustomerRepository) *CustomerAppService {
-	return &CustomerAppService{repo: repo}
+func NewCustomerAppService(repo domain.CustomerRepository, idGen ports.IDGenerator) *CustomerAppService {
+	return &CustomerAppService{repo: repo, idGen: idGen}
+}
+
+// nextBookingNumber mints a booking number.
+//
+// It deliberately does NOT come from time.Now(). bookings.booking_number is
+// `TEXT NOT NULL UNIQUE`, and the clock does not advance every nanosecond —
+// on Windows it steps in ~0.5ms chunks (measured: 20/20 back-to-back
+// time.Now().UnixNano() calls returned an identical value), so two bookings
+// created inside one tick collided and the second INSERT failed the whole
+// request. The previous expression also truncated to `%1000000`, which shrank
+// the space further.
+//
+// This uses the same ports.IDGenerator the canonical path in
+// booking/application/create_booking.go already uses, so both routes now
+// produce the same shape of number.
+func (s *CustomerAppService) nextBookingNumber() string {
+	return s.idGen.GenerateDisplayID("BK")
 }
 
 type CreateQuoteRequest struct {
@@ -125,7 +144,7 @@ func (s *CustomerAppService) CreateBooking(ctx context.Context, tenantID, custom
 
 	// 4. Construct Booking and Customer Details
 	bookingID := "bk_" + uuid.NewString()
-	bookingNumber := fmt.Sprintf("BKG-%d", time.Now().UnixNano()%1000000)
+	bookingNumber := s.nextBookingNumber()
 
 	pickupDate := time.Now()
 	if req.ScheduledAt != nil {

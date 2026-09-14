@@ -13,7 +13,7 @@
         </div>
         <div class="flex items-center gap-3 flex-wrap shrink-0">
             {{if .Detail.InsufficientData}}
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-status-warning/15 bg-status-warning/10 text-[10px] font-bold text-status-warning">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-status-warning/15 bg-status-warning/10 text-[11px] font-bold text-status-warning">
                 <span class="w-1.5 h-1.5 rounded-full bg-status-warning"></span>
                 INSUFFICIENT DATA · {{.Detail.EventCount}} event(s) in window
             </span>
@@ -73,7 +73,7 @@
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Detail.Breakdown}} types</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-border-subtle">
+            <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
                         <th class="th-cell">Event Type</th>
@@ -84,9 +84,9 @@
                 <tbody class="divide-y divide-border-subtle">
                     {{range .Detail.Breakdown}}
                     <tr class="hover:bg-surface-container-low/50 transition-colors">
-                        <td class="px-3 py-2 text-sm font-medium text-on-surface capitalize">{{replace .EventType "_" " " -1}}</td>
-                        <td class="px-3 py-2 text-sm text-right font-bold tabular-nums text-on-surface" data-numeric>{{.Count}}</td>
-                        <td class="px-3 py-2 text-sm text-right font-semibold tabular-nums text-secondary" data-numeric>{{printf "%.1f" .Penalty}}</td>
+                        <td data-label="Event Type" class="px-3 py-2 text-sm font-medium text-on-surface capitalize">{{replace .EventType "_" " " -1}}</td>
+                        <td data-label="Count" class="px-3 py-2 text-sm text-right font-bold tabular-nums text-on-surface" data-numeric>{{.Count}}</td>
+                        <td data-label="Weighted Penalty" class="px-3 py-2 text-sm text-right font-semibold tabular-nums text-secondary" data-numeric>{{printf "%.1f" .Penalty}}</td>
                     </tr>
                     {{else}}
                     <tr>
@@ -101,7 +101,7 @@
     <!-- Fraud-Cap Events -->
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle bg-gradient-to-r from-rose-500/[0.06] to-transparent flex items-center gap-2">
-            <span class="w-7 h-7 rounded-lg bg-rose-500/10 border border-rose-500/15 grid place-items-center text-rose-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><circle cx="12" cy="8" r="2"/><path d="M12 12v4"/></svg></span>
+            <span class="w-7 h-7 rounded-lg bg-rose-soft border border-rose-line grid place-items-center text-rose-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><circle cx="12" cy="8" r="2"/><path d="M12 12v4"/></svg></span>
             <div>
                 <h2 class="text-sm font-bold text-on-surface">Fraud-Cap Events</h2>
                 <p class="text-xs text-text-muted">Unresolved fuel theft suspicion / odometer rollback cap the score at the fraud ceiling (69). Resolving clears the cap on the next recompute.</p>
@@ -115,7 +115,7 @@
                     <div class="text-xs text-text-muted tabular-nums">{{datetime .OccurredAt}} · {{.ID}}</div>
                 </div>
                 {{if .Resolved}}
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-500/15 bg-emerald-500/10 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-line bg-emerald-soft text-[11px] font-bold text-emerald-strong dark:text-emerald-300">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                     RESOLVED
                 </span>
@@ -131,7 +131,7 @@
             </div>
             {{else}}
             <div class="px-4 py-10 text-center">
-                <div class="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
+                <div class="w-10 h-10 rounded-full bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
                 <p class="text-sm font-medium text-on-surface mt-3">Clean record</p><p class="text-xs text-text-muted">No fraud events in the window</p>
             </div>
             {{end}}

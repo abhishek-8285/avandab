@@ -1,9 +1,9 @@
 <div class="max-w-3xl mx-auto bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
     <div class="p-6 sm:p-8 space-y-5">
         {{if .Error}}
-        <div class="rounded-xl bg-rose-500/10 border border-rose-500/20 p-5 space-y-2">
+        <div class="rounded-xl bg-rose-soft border border-rose-500/20 p-5 space-y-2">
             <div class="flex items-center gap-2.5">
-                <span class="w-8 h-8 rounded-lg bg-rose-500/15 border border-rose-500/20 grid place-items-center text-rose-600 shrink-0">
+                <span class="w-8 h-8 rounded-lg bg-rose-500/15 border border-rose-500/20 grid place-items-center text-rose-mid shrink-0">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
                 </span>
                 <div>
@@ -13,21 +13,21 @@
             </div>
             <div class="text-sm text-on-surface">{{.Error}}</div>
             {{if .Results}}
-            <ul class="pt-2 mt-1 border-t border-rose-500/15 list-disc pl-5 text-xs text-secondary space-y-0.5 tabular-nums">
+            <ul class="pt-2 mt-1 border-t border-rose-line list-disc pl-5 text-xs text-secondary space-y-0.5 tabular-nums">
                 {{range .Results}}{{if not .Success}}<li><span class="font-data-mono font-semibold">{{.IMEI}}</span>: {{.Error}}</li>{{end}}{{end}}
             </ul>
             {{end}}
         </div>
         {{else}}
-        <div class="rounded-xl bg-emerald-500/10 border border-emerald-500/20 p-5 space-y-2">
+        <div class="rounded-xl bg-emerald-soft border border-emerald-500/20 p-5 space-y-2">
             <div class="flex items-center gap-2.5">
-                <span class="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+                <span class="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/20 grid place-items-center text-emerald-mid shrink-0">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
                 </span>
                 <div class="text-sm font-bold text-status-success">Registered <span class="tabular-nums">{{.Success}}</span> of <span class="tabular-nums">{{.Total}}</span> devices</div>
             </div>
             {{if .Results}}
-            <ul class="pt-2 mt-1 border-t border-emerald-500/15 list-disc pl-5 text-xs text-secondary space-y-0.5 tabular-nums">
+            <ul class="pt-2 mt-1 border-t border-emerald-line list-disc pl-5 text-xs text-secondary space-y-0.5 tabular-nums">
                 {{range .Results}}<li><span class="font-data-mono font-semibold">{{.IMEI}}</span> → {{.DeviceID}}</li>{{end}}
             </ul>
             {{end}}

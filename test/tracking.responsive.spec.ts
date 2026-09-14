@@ -1,12 +1,22 @@
 import { test, expect } from '@playwright/test';
+import { registerFreshUser } from './utils/register';
+import { expectNoHorizontalOverflow, isBelowLg } from './utils/responsive';
 
 // Parallel registration writes deadlock the fresh SQLite server DB
 // ("database is deadlocked") — run these viewport sweeps one at a time.
 test.describe.configure({ mode: 'serial' });
 
 // Responsive verification for the tracking React island.
-// Mobile (390x844): registry off-canvas, detail drawer docks to bottom, no overflow.
-// Tablet (820x1180): same off-canvas behavior below lg.
+//
+// The viewport now comes from the PROJECT (desktop 1440 / tablet 820 / mobile
+// 390) rather than being set per-test, so every project gets the same
+// assertions with no duplicated loop. Layout expectations branch on Tailwind's
+// `lg` breakpoint (1024px):
+//
+//   below lg  -> registry stows off-canvas, an expand rail appears, and the
+//                vehicle detail sheet docks to the bottom of the map theater
+//                at full width.
+//   lg and up -> registry is pinned open, no rail, detail sheet is a side panel.
 
 const VEHICLES = [
   {
@@ -35,51 +45,32 @@ const VEHICLES = [
   },
 ];
 
-async function register(page: import('@playwright/test').Page) {
-  const email = `pw-resp-${Date.now()}-${Math.floor(Math.random() * 1e6)}@test.local`;
-  const resp = await page.request.post('/register', {
-    form: {
-      name: 'Playwright Resp',
-      email,
-      phone: '9999999999',
-      password: 'Sup3rSecret!',
-      confirm_password: 'Sup3rSecret!',
-    },
-    maxRedirects: 0,
+// Registration uses the shared full-UI helper (see ./utils/register): API-only
+// registration was flaky — it sometimes produced no browser session, so
+// /tracking redirected to /login under parallel workers.
+
+test('tracking responsive layout', async ({ page }) => {
+  await registerFreshUser(page, 'pw-resp');
+
+  await page.route('**/api/v1/telemetry/live', (route) => route.fulfill({ json: VEHICLES }));
+  await page.route('**/api/v1/telemetry/geofences**', (route) => route.fulfill({ json: [] }));
+  await page.route('**/api/v1/trips/*/summary', (route) =>
+    route.fulfill({ status: 404, json: { error: 'trip not found' } }),
+  );
+
+  page.on('pageerror', (err) => console.log('PAGEERROR:', err.message));
+  page.on('console', (msg) => {
+    if (msg.type() === 'error') {
+      console.log('CONSOLE:', msg.text());
+    }
   });
-  expect([200, 303]).toContain(resp.status());
 
-  // Fresh registrants are org_admins without company settings; the
-  // compliance gate would redirect /tracking to /company/onboard.
-  // (Strict CSRF requires Origin/Referer on session-cookie POSTs.)
-  await page.goto('/login');
-  const origin = new URL(page.url()).origin;
-  const onboard = await page.request.post('/company/onboard', {
-    headers: { Origin: origin, Referer: `${origin}/company/onboard` },
-    form: {
-      company_name: 'Playwright Resp Fleet',
-      address: 'MIDC Bhosari, Pune 411026',
-      phone: '9999999999',
-      email,
-    },
-    maxRedirects: 0,
-  });
-  expect([200, 303]).toContain(onboard.status());
-}
+  await page.goto('/tracking');
 
-for (const vp of [{ w: 390, h: 844, label: 'mobile' }, { w: 820, h: 1180, label: 'tablet' }]) {
-  test(`tracking responsive @ ${vp.label} (${vp.w}x${vp.h})`, async ({ page }) => {
-    await page.setViewportSize({ width: vp.w, height: vp.h });
-    await register(page);
+  const vw = page.viewportSize()!.width;
+  const compact = isBelowLg(page);
 
-    await page.route('**/api/v1/telemetry/live', (route) => route.fulfill({ json: VEHICLES }));
-    await page.route('**/api/v1/telemetry/geofences**', (route) => route.fulfill({ json: [] }));
-    await page.route('**/api/v1/trips/*/summary', (route) => route.fulfill({ status: 404, json: { error: 'trip not found' } }));
-
-    page.on('pageerror', (err) => console.log('PAGEERROR:', err.message));
-    page.on('console', (msg) => { if (msg.type() === 'error') { console.log('CONSOLE:', msg.text()); } });
-
-    await page.goto('/tracking');
+  if (compact) {
     // Registry stowed off-canvas below lg; expand rail visible instead.
     await expect(page.locator('#drawer-expand-rail')).toBeVisible({ timeout: 15000 });
     const drawerState = await page.evaluate(() => {
@@ -88,33 +79,51 @@ for (const vp of [{ w: 390, h: 844, label: 'mobile' }, { w: 820, h: 1180, label:
       return { left: r.left, width: r.width, vw: window.innerWidth };
     });
     expect(drawerState.left, 'drawer starts off-canvas').toBeLessThanOrEqual(0);
+  } else {
+    // Desktop: registry is pinned open, no rail.
+    await expect(page.locator('#drawer-expand-rail')).toHaveCount(0);
+    await expect(page.locator('#fleet-drawer')).toBeVisible({ timeout: 15000 });
+  }
 
-    // No horizontal overflow.
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    expect(overflow, 'no horizontal page overflow').toBeLessThanOrEqual(0);
+  await expectNoHorizontalOverflow(page, '/tracking');
 
-    // Top bar fits viewport width.
-    const bar = await page.locator('#map-theater .ti-topbar').boundingBox();
-    expect(bar).not.toBeNull();
-    expect(bar!.x).toBeGreaterThanOrEqual(0);
-    expect(bar!.x + bar!.width).toBeLessThanOrEqual(vp.w + 1);
+  // Top bar fits viewport width.
+  const bar = await page.locator('#map-theater .ti-topbar').boundingBox();
+  expect(bar).not.toBeNull();
+  expect(bar!.x).toBeGreaterThanOrEqual(0);
+  expect(bar!.x + bar!.width).toBeLessThanOrEqual(vw + 1);
 
-    // Open registry, pick vehicle → drawer docks to the theater bottom edge.
+  if (compact) {
     await page.locator('#drawer-expand-rail').click();
-    await expect(page.locator('#fleet-list .fleet-row')).toHaveCount(2, { timeout: 15000 });
-    await page.locator('.fleet-row', { hasText: 'MH01AB1111' }).click();
-    await expect(page.locator('#intel-detail-panel')).toBeVisible();
-    await expect(page.locator('#intel-vehicle-id')).toHaveText('MH01AB1111');
+  }
+  await expect(page.locator('#fleet-list .fleet-row')).toHaveCount(2, { timeout: 15000 });
+  await page.locator('.fleet-row', { hasText: 'MH01AB1111' }).click();
+  await expect(page.locator('#intel-detail-panel')).toBeVisible();
+  await expect(page.locator('#intel-vehicle-id')).toHaveText('MH01AB1111');
 
-    const sheet = await page.locator('#intel-detail-panel').boundingBox();
-    const theater = await page.locator('#map-theater').boundingBox();
-    expect(sheet).not.toBeNull();
-    expect(theater).not.toBeNull();
-    expect(sheet!.y + sheet!.height, 'sheet flush with theater bottom').toBeCloseTo(theater!.y + theater!.height, 1);
+  const sheet = await page.locator('#intel-detail-panel').boundingBox();
+  const theater = await page.locator('#map-theater').boundingBox();
+  expect(sheet).not.toBeNull();
+  expect(theater).not.toBeNull();
+
+  if (compact) {
+    // Sheet docks to the theater's bottom edge at full width.
+    expect(sheet!.y + sheet!.height, 'sheet flush with theater bottom').toBeCloseTo(
+      theater!.y + theater!.height,
+      1,
+    );
     expect(sheet!.width, 'sheet is full-width on small screens').toBe(theater!.width);
     // Registry stowed after the pick (0.22s transform transition).
     await expect
-      .poll(() => page.evaluate(() => document.getElementById('fleet-drawer')!.getBoundingClientRect().left), { timeout: 3000 })
+      .poll(
+        () => page.evaluate(() => document.getElementById('fleet-drawer')!.getBoundingClientRect().left),
+        { timeout: 3000 },
+      )
       .toBeLessThanOrEqual(0);
-  });
-}
+  } else {
+    // Desktop: sheet is a side panel, so it is narrower than the theater.
+    expect(sheet!.width, 'sheet is a side panel at lg+').toBeLessThan(theater!.width);
+  }
+
+  await expectNoHorizontalOverflow(page, '/tracking with detail sheet open');
+});

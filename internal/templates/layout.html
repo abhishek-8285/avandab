@@ -51,6 +51,16 @@
     {{template "theme_head.html" .}}
 </head>
 <body class="bg-surface-container-low font-sans" data-authenticated="{{if .User}}true{{else}}false{{end}}" hx-boost="true">
+    {{/* In-page HTMX feedback (audit P1-5).
+         Only 11 of 41 swap sites declared an hx-indicator, so a slow swap
+         looked like nothing happened — and with hx-boost on <body> a swap is
+         the normal way this UI updates. These two nodes give every request a
+         progress bar and every swap a screen-reader announcement, without
+         touching 41 templates. Styling lives in app.css; state is set with a
+         data-attribute so no extra utility classes are needed. */}}
+    <div id="htmx-progress" aria-hidden="true" data-active="false"></div>
+    <div id="htmx-status" role="status" aria-live="polite" class="sr-only"></div>
+
     <div class="flex h-screen overflow-hidden bg-background">
         <div id="mobile-overlay" class="fixed inset-0 z-40 bg-black/50 opacity-0 invisible transition-opacity duration-300 md:hidden"></div>
 
@@ -81,7 +91,7 @@
                 {{else}}
                 <span class="nav-item opacity-45 cursor-not-allowed select-none" title="Add-on — contact to enable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     <span class="italic">{{t "nav.tracking"}}</span>
-                    <span class="ml-auto text-[9px] font-bold uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-1.5 py-0.5">Add-on</span>
+                    <span class="ml-auto text-[11px] font-bold uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-1.5 py-0.5">Add-on</span>
                 </span>
                 {{end}}
                 {{end}}
@@ -134,7 +144,7 @@
                 {{else}}
                 <span class="nav-item opacity-45 cursor-not-allowed select-none" title="Add-on — contact to enable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     <span class="italic">{{t "nav.geofences"}}</span>
-                    <span class="ml-auto text-[9px] font-bold uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-1.5 py-0.5">Add-on</span>
+                    <span class="ml-auto text-[11px] font-bold uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-1.5 py-0.5">Add-on</span>
                 </span>
                 {{end}}
                 {{end}}
@@ -147,7 +157,7 @@
                 {{else}}
                 <span class="nav-item opacity-45 cursor-not-allowed select-none" title="Add-on — contact to enable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     <span class="italic">{{t "nav.telemetry"}}</span>
-                    <span class="ml-auto text-[9px] font-bold uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-1.5 py-0.5">Add-on</span>
+                    <span class="ml-auto text-[11px] font-bold uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-1.5 py-0.5">Add-on</span>
                 </span>
                 {{end}}
                 {{if and .Features (index .Features "telemetry")}}
@@ -158,7 +168,7 @@
                 {{else}}
                 <span class="nav-item opacity-45 cursor-not-allowed select-none" title="Add-on — contact to enable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     <span class="italic">{{t "nav.quarantine"}}</span>
-                    <span class="ml-auto text-[9px] font-bold uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-1.5 py-0.5">Add-on</span>
+                    <span class="ml-auto text-[11px] font-bold uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-1.5 py-0.5">Add-on</span>
                 </span>
                 {{end}}
                 {{end}}
@@ -217,7 +227,7 @@
                 {{else}}
                 <span class="nav-item opacity-45 cursor-not-allowed select-none" title="Add-on — contact to enable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     <span class="italic">{{t "nav.fuel"}}</span>
-                    <span class="ml-auto text-[9px] font-bold uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-1.5 py-0.5">Add-on</span>
+                    <span class="ml-auto text-[11px] font-bold uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-1.5 py-0.5">Add-on</span>
                 </span>
                 {{end}}
                 {{end}}
@@ -230,7 +240,7 @@
                 {{else}}
                 <span class="nav-item opacity-45 cursor-not-allowed select-none" title="Add-on — contact to enable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     <span class="italic">{{t "nav.scorecard"}}</span>
-                    <span class="ml-auto text-[9px] font-bold uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-1.5 py-0.5">Add-on</span>
+                    <span class="ml-auto text-[11px] font-bold uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-1.5 py-0.5">Add-on</span>
                 </span>
                 {{end}}
                 {{end}}
@@ -249,7 +259,7 @@
                 {{else}}
                 <span class="nav-item opacity-45 cursor-not-allowed select-none" title="Add-on — contact to enable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     <span class="italic">{{t "nav.pnl"}}</span>
-                    <span class="ml-auto text-[9px] font-bold uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-1.5 py-0.5">Add-on</span>
+                    <span class="ml-auto text-[11px] font-bold uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-1.5 py-0.5">Add-on</span>
                 </span>
                 {{end}}
                 {{end}}
@@ -411,7 +421,7 @@
                             <div class="flex justify-between items-center pb-2 mb-1 border-b border-border-subtle px-1">
                                 <div class="text-sm font-semibold text-on-surface flex items-center gap-1.5">
                                     <span>Notifications</span>
-                                    {{if .HasUnread}}<span id="notif-unread-chip" class="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-[10px] font-bold">{{.UnreadCount}} new</span>{{end}}
+                                    {{if .HasUnread}}<span id="notif-unread-chip" class="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-[11px] font-bold">{{.UnreadCount}} new</span>{{end}}
                                 </div>
                                 <button type="button" id="notif-mark-read" class="text-xs font-medium text-primary hover:underline bg-transparent border-0 cursor-pointer">
                                     Mark as read
@@ -422,7 +432,7 @@
                                 {{if .Notifications}}
                                     {{range .Notifications}}
                                     <a href="/alerts" class="flex items-start gap-2.5 py-2 hover:bg-surface-container-low rounded-md px-2 transition-colors cursor-pointer text-decoration-none">
-                                        <div class="w-6 h-6 rounded-full {{if eq .Severity "critical"}}bg-red-500/10 text-red-500{{else if eq .Severity "blocker"}}bg-red-600/10 text-red-600{{else if eq .Severity "warning"}}bg-amber-500/10 text-amber-500{{else}}bg-primary/10 text-primary{{end}} flex items-center justify-center shrink-0 mt-0.5">
+                                        <div class="w-6 h-6 rounded-full {{if eq .Severity "critical"}}bg-red-soft text-red-500{{else if eq .Severity "blocker"}}bg-red-600/10 text-red-mid{{else if eq .Severity "warning"}}bg-amber-soft text-amber-500{{else}}bg-primary/10 text-primary{{end}} flex items-center justify-center shrink-0 mt-0.5">
                                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
                                         </div>
                                         <div class="flex-1 min-w-0">
@@ -477,7 +487,7 @@
                             <div class="flex items-center gap-2">
                                 <span class="text-xs md:text-sm text-on-surface-variant group-hover:text-primary transition-colors font-semibold hidden sm:inline-block max-w-[120px] md:max-w-[160px] truncate">{{.User.Name}}</span>
                                 {{if .User.Role}}
-                                    <span class="hidden lg:inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider">{{replace .User.Role "_" " " -1}}</span>
+                                    <span class="hidden lg:inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary border border-primary/20 uppercase tracking-wider">{{replace .User.Role "_" " " -1}}</span>
                                 {{end}}
                             </div>
                         </button>
@@ -487,9 +497,9 @@
                                 <div class="font-bold text-on-surface truncate">{{.User.Name}}</div>
                                 <div class="flex items-center gap-1.5 mt-1">
                                     {{if .User.Role}}
-                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-primary/10 text-primary uppercase tracking-wider">{{replace .User.Role "_" " " -1}}</span>
+                                        <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-primary/10 text-primary uppercase tracking-wider">{{replace .User.Role "_" " " -1}}</span>
                                     {{else}}
-                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300">Member</span>
+                                        <span class="px-1.5 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300">Member</span>
                                     {{end}}
                                 </div>
                             </div>
@@ -511,8 +521,8 @@
                                 <div class="flex items-center gap-3 px-4 py-2">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-text-muted shrink-0"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
                                     <span class="flex-1">{{t "menu.language"}}</span>
-                                    <a href="/lang?to=en" onclick="event.preventDefault();location.href='/lang?to=en&next='+encodeURIComponent(location.pathname+location.search)" class="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors text-decoration-none">English</a>
-                                    <a href="/lang?to=hi" onclick="event.preventDefault();location.href='/lang?to=hi&next='+encodeURIComponent(location.pathname+location.search)" class="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors text-decoration-none">हिन्दी</a>
+                                    <a href="/lang?to=en" onclick="event.preventDefault();location.href='/lang?to=en&next='+encodeURIComponent(location.pathname+location.search)" class="px-2 py-0.5 rounded text-[11px] font-bold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors text-decoration-none">English</a>
+                                    <a href="/lang?to=hi" onclick="event.preventDefault();location.href='/lang?to=hi&next='+encodeURIComponent(location.pathname+location.search)" class="px-2 py-0.5 rounded text-[11px] font-bold bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition-colors text-decoration-none">हिन्दी</a>
                                 </div>
                                 <form method="POST" action="/logout">
                                     <button type="submit" class="w-full flex items-center gap-3 px-4 py-2 text-status-alert hover:bg-status-alert/10 transition-colors bg-transparent border-0 cursor-pointer text-left font-medium">
@@ -691,6 +701,46 @@
             initNotifCenter();
             initTripEditAutofill();
         });
+
+        // In-page HTMX feedback. hx-boost lives on <body>, so fragment swaps
+        // are how most of this UI updates; without this a slow swap is silent.
+        // Boosted full-page navigations are excluded — loader.js already shows
+        // its overlay for those, and two indicators would double up.
+        function initHtmxFeedback() {
+            if (window.__htmxFeedbackBound) return;
+            window.__htmxFeedbackBound = true;
+
+            var bar = document.getElementById('htmx-progress');
+            var status = document.getElementById('htmx-status');
+
+            function isBoosted(e) {
+                var t = e.detail && e.detail.target;
+                return !t || t === document.body;
+            }
+
+            document.body.addEventListener('htmx:beforeRequest', function(e) {
+                if (isBoosted(e)) return;
+                var t = e.detail.target;
+                if (t && t.setAttribute) t.setAttribute('aria-busy', 'true');
+                if (bar) bar.setAttribute('data-active', 'true');
+            });
+
+            document.body.addEventListener('htmx:afterRequest', function(e) {
+                if (isBoosted(e)) return;
+                var t = e.detail.target;
+                if (t && t.removeAttribute) t.removeAttribute('aria-busy');
+                if (bar) bar.setAttribute('data-active', 'false');
+            });
+
+            // Announce the result, then clear so an identical second swap is
+            // still announced (live regions only fire on a text change).
+            document.body.addEventListener('htmx:afterSwap', function(e) {
+                if (isBoosted(e) || !status) return;
+                status.textContent = 'Content updated';
+                window.setTimeout(function() { status.textContent = ''; }, 1000);
+            });
+        }
+        initHtmxFeedback();
 
         // Delete confirmation — forms carrying data-confirm must be explicitly OK'd
         document.addEventListener('submit', function(e) {

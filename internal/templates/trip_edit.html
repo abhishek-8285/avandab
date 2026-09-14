@@ -17,7 +17,7 @@
                 <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Route &amp; Booking</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Route *</label>
+                        <label for="route_select" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Route *</label>
                         <select name="route_id" id="route_select" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             <option value="">Select Route</option>
                             {{range .Routes}}
@@ -51,8 +51,8 @@
                 <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Assignment</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Driver</label>
-                        <select name="driver_id" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <label for="driver_id" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Driver</label>
+                        <select id="driver_id" name="driver_id" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             <option value="">Select Driver</option>
                             {{range .Drivers}}
                             <option value="{{.ID}}" {{if eq (printf "%s" .ID) $.SelectedDriverID}}selected{{end}}>{{.FirstName}} {{.LastName}} ({{.DriverID}})</option>
@@ -60,8 +60,8 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Vehicle</label>
-                        <select name="vehicle_id" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <label for="vehicle_id" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Vehicle</label>
+                        <select id="vehicle_id" name="vehicle_id" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             <option value="">Select Vehicle</option>
                             {{range .Vehicles}}
                             <option value="{{.ID}}" {{if eq (printf "%s" .ID) $.SelectedVehicleID}}selected{{end}}>{{.VehicleNumber}} ({{.RegistrationNumber}})</option>
@@ -76,13 +76,13 @@
                 <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Schedule</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Departure Time *</label>
+                        <label for="departure_time" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Departure Time *</label>
                         <input type="datetime-local" name="departure_time" id="departure_time" value="{{if $t}}{{datetime $t.DepartureTime}}{{else if $.DepartureTime}}{{$.DepartureTime}}{{end}}" required
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Arrival Time</label>
-                        <input type="datetime-local" name="arrival_time" value="{{if $t}}{{if $t.ArrivalTime}}{{datetime $t.ArrivalTime}}{{end}}{{end}}"
+                        <label for="arrival_time" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Arrival Time</label>
+                        <input id="arrival_time" type="datetime-local" name="arrival_time" value="{{if $t}}{{if $t.ArrivalTime}}{{datetime $t.ArrivalTime}}{{end}}{{end}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                 </div>
@@ -91,8 +91,8 @@
             <!-- Notes -->
             <section>
                 <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Notes</h3>
-                <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Remarks</label>
-                <textarea name="remarks" rows="2"
+                <label for="remarks" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Remarks</label>
+                <textarea id="remarks" name="remarks" rows="2"
                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">{{if $t}}{{$t.Remarks}}{{end}}</textarea>
             </section>
         </div>

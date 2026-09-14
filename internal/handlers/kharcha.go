@@ -250,7 +250,12 @@ func (h *KharchaHandlers) Approve(w http.ResponseWriter, r *http.Request) {
 	expense, err := h.Services.Kharcha.GetExpenseByID(ctx, expenseID)
 	if err != nil {
 		// Silently replace row with approved confirmation
-		_, _ = fmt.Fprintf(w, `<div class="px-6 py-4 flex items-center gap-3 bg-emerald-50/60"><span class="w-2 h-2 rounded-full bg-emerald-500"></span><span class="text-sm font-semibold text-emerald-700">Expense approved successfully.</span></div>`)
+		// Chip tokens for wash + text so this banner survives dark mode. This is
+		// the one Go site where light mode shifts slightly: the wash moves from
+		// emerald-50/60 to emerald-500/10 (the shared chip wash), so it reads a
+		// touch more saturated. The solid `bg-emerald-500` dot is left alone —
+		// an opaque fill is legible on both light and dark surfaces.
+		_, _ = fmt.Fprintf(w, `<div class="px-6 py-4 flex items-center gap-3 bg-emerald-soft"><span class="w-2 h-2 rounded-full bg-emerald-500"></span><span class="text-sm font-semibold text-emerald-strong">Expense approved successfully.</span></div>`)
 		return
 	}
 

@@ -24,7 +24,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition-all duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-violet-500 opacity-80"></div>
-            <div class="w-10 h-10 rounded-xl bg-violet-500/10 border border-violet-500/15 grid place-items-center text-violet-600">
+            <div class="w-10 h-10 rounded-xl bg-violet-soft border border-violet-line grid place-items-center text-violet-mid">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
             </div>
             <div class="mt-4">
@@ -35,10 +35,10 @@
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition-all duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-80"></div>
             <div class="flex items-start justify-between">
-                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600">
+                <div class="w-10 h-10 rounded-xl bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
                 </div>
-                <span class="inline-flex items-center px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Ready</span>
+                <span class="inline-flex items-center px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold uppercase tracking-wide text-emerald-strong dark:text-emerald-300">Ready</span>
             </div>
             <div class="mt-4">
                 <div class="text-3xl font-black tracking-tight tabular-nums text-status-success" data-numeric>{{.AvailableDrivers}}</div>
@@ -79,7 +79,7 @@
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Drivers}} shown</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-border-subtle">
+            <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
                         <th class="th-cell">Driver ID</th>
@@ -93,11 +93,11 @@
                     {{if .Drivers}}
                     {{range .Drivers}}
                     <tr class="hover:bg-surface-container-low/50 transition-colors">
-                        <td class="px-3 py-2 text-sm font-bold text-primary tabular-nums">{{.DriverID}}</td>
-                        <td class="px-3 py-2 text-sm"><span class="font-medium text-on-surface">{{.FirstName}} {{.LastName}}</span></td>
-                        <td class="px-3 py-2 text-sm tabular-nums text-secondary" data-numeric>{{.Phone}}</td>
-                        <td class="px-3 py-2 text-sm tabular-nums text-on-surface">{{.LicenseNumber}}</td>
-                        <td class="px-3 py-2 text-sm">
+                        <td data-label="Driver ID" class="px-3 py-2 text-sm font-bold text-primary tabular-nums">{{.DriverID}}</td>
+                        <td data-label="Name" class="px-3 py-2 text-sm"><span class="font-medium text-on-surface">{{.FirstName}} {{.LastName}}</span></td>
+                        <td data-label="Phone" class="px-3 py-2 text-sm tabular-nums text-secondary" data-numeric>{{.Phone}}</td>
+                        <td data-label="License Number" class="px-3 py-2 text-sm tabular-nums text-on-surface">{{.LicenseNumber}}</td>
+                        <td data-label="Status" class="px-3 py-2 text-sm">
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                         </td>
                     </tr>

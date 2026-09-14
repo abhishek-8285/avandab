@@ -88,7 +88,7 @@
                                     <span class="text-xs font-bold text-on-surface">Tier 1: GST Enterprise</span>
                                 </div>
                                 <p class="text-[11px] text-secondary leading-tight">15-char GSTIN • B2B Tax Invoices, IRN &amp; e-Way Bills</p>
-                                <span class="inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">Full GSTN Integration</span>
+                                <span class="inline-block mt-2 px-2 py-0.5 rounded text-[11px] font-bold bg-primary/10 text-primary border border-primary/20">Full GSTN Integration</span>
                             </div>
 
                             <!-- Tier 2 -->
@@ -98,7 +98,7 @@
                                     <span class="text-xs font-bold text-on-surface">Tier 2: Non-GST with PAN</span>
                                 </div>
                                 <p class="text-[11px] text-secondary leading-tight">10-char PAN • Sec 31(3)(c) Bill of Supply &amp; RCM</p>
-                                <span class="inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-300/40">Sec 194C(6) TDS Exempt</span>
+                                <span class="inline-block mt-2 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-300/40">Sec 194C(6) TDS Exempt</span>
                             </div>
 
                             <!-- Tier 3 -->
@@ -108,7 +108,7 @@
                                     <span class="text-xs font-bold text-on-surface">Tier 3: Micro Transporter</span>
                                 </div>
                                 <p class="text-[11px] text-secondary leading-tight">No GST &amp; No PAN • Rule 54(3) Consignment Bilty</p>
-                                <span class="inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-bold bg-surface-container-high text-secondary border border-border-subtle">Rule 54(3) Compliant</span>
+                                <span class="inline-block mt-2 px-2 py-0.5 rounded text-[11px] font-bold bg-surface-container-high text-secondary border border-border-subtle">Rule 54(3) Compliant</span>
                             </div>
                         </div>
                     </div>
@@ -116,20 +116,20 @@
                     <div class="space-y-4">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div class="sm:col-span-2">
-                                <label class="block text-xs font-bold text-secondary mb-1.5">Company / Enterprise Name <span class="text-status-alert">*</span></label>
+                                <label for="company_name" class="block text-xs font-bold text-secondary mb-1.5">Company / Enterprise Name <span class="text-status-alert">*</span></label>
                                 <input type="text" id="company_name" name="company_name" required value="{{if .Settings}}{{.Settings.CompanyName}}{{end}}" placeholder="e.g. Apex Logistics &amp; Transport Corp"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             </div>
 
                             <div>
-                                <label class="block text-xs font-bold text-secondary mb-1.5">GST / Tax ID (GSTIN) <span class="text-[11px] font-normal text-text-muted">(Tier 1)</span></label>
+                                <label for="gst_number" class="block text-xs font-bold text-secondary mb-1.5">GST / Tax ID (GSTIN) <span class="text-[11px] font-normal text-text-muted">(Tier 1)</span></label>
                                 <input type="text" id="gst_number" name="gst_number" value="{{if .Settings}}{{nullString .Settings.GSTNumber}}{{end}}" placeholder="27ABCDE1234F1Z5" pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]" title="GSTIN format: 27ABCDE1234F1Z5" oninput="onGSTINInput(this.value)"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                                 <p class="text-[11px] text-text-muted mt-1">15-digit GSTIN used on Tax Invoices and e-Way bills.</p>
                             </div>
 
                             <div>
-                                <label class="block text-xs font-bold text-secondary mb-1.5">Income Tax PAN Number <span class="text-[11px] font-normal text-text-muted">(Tier 1 &amp; 2)</span></label>
+                                <label for="pan_number" class="block text-xs font-bold text-secondary mb-1.5">Income Tax PAN Number <span class="text-[11px] font-normal text-text-muted">(Tier 1 &amp; 2)</span></label>
                                 <input type="text" id="pan_number" name="pan_number" value="{{if .Settings}}{{nullString .Settings.PanNumber}}{{end}}" placeholder="ABCDE1234F" pattern="[A-Z]{5}[0-9]{4}[A-Z]" title="PAN format: ABCDE1234F" oninput="onPANInput(this.value)"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                                 <p class="text-[11px] text-text-muted mt-1">10-digit PAN. Auto-extracted from GSTIN or entered for Sec 194C(6) TDS declaration.</p>
@@ -151,8 +151,8 @@
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-secondary mb-1.5">Operating Currency</label>
-                                <select name="currency" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                <label for="currency" class="block text-xs font-bold text-secondary mb-1.5">Operating Currency</label>
+                                <select id="currency" name="currency" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                                     <option value="INR" {{if .Settings}}{{if eq .Settings.Currency "INR"}}selected{{end}}{{else}}selected{{end}}>INR (₹) - Indian Rupee</option>
                                     <option value="USD" {{if .Settings}}{{if eq .Settings.Currency "USD"}}selected{{end}}{{end}}>USD ($) - US Dollar</option>
                                     <option value="EUR" {{if .Settings}}{{if eq .Settings.Currency "EUR"}}selected{{end}}{{end}}>EUR (€) - Euro</option>
@@ -164,12 +164,12 @@
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-secondary mb-1.5">Primary Contact Email <span class="text-status-alert">*</span></label>
+                                <label for="email" class="block text-xs font-bold text-secondary mb-1.5">Primary Contact Email <span class="text-status-alert">*</span></label>
                                 <input type="email" id="email" name="email" required value="{{if .Settings}}{{nullString .Settings.Email}}{{end}}" placeholder="operations@company.com"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-secondary mb-1.5">Official Phone Number <span class="text-status-alert">*</span></label>
+                                <label for="phone" class="block text-xs font-bold text-secondary mb-1.5">Official Phone Number <span class="text-status-alert">*</span></label>
                                 <input type="tel" id="phone" name="phone" required value="{{if .Settings}}{{nullString .Settings.Phone}}{{end}}" placeholder="+91 98765 43210"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             </div>
@@ -177,21 +177,21 @@
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-secondary mb-1.5">Company Headquarter / Hub Address <span class="text-status-alert">*</span></label>
+                                <label for="address" class="block text-xs font-bold text-secondary mb-1.5">Company Headquarter / Hub Address <span class="text-status-alert">*</span></label>
                                 <textarea id="address" name="address" required rows="3" placeholder="Plot 42, Transport Nagar, Phase 2"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">{{if .Settings}}{{nullString .Settings.Address}}{{end}}</textarea>
                             </div>
                             <div class="space-y-4">
                                 <div>
-                                    <label class="block text-xs font-bold text-secondary mb-1.5">Company Timezone</label>
-                                    <select name="timezone" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                    <label for="timezone" class="block text-xs font-bold text-secondary mb-1.5">Company Timezone</label>
+                                    <select id="timezone" name="timezone" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                                         {{$ctz := ""}}{{if .Settings}}{{$ctz = .Settings.Timezone}}{{end}}
                                         {{template "timezone_options.html" $ctz}}
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-bold text-secondary mb-1.5">Company Logo (Optional)</label>
-                                    <input type="file" name="logo" accept="image/png,image/jpeg,image/webp"
+                                    <label for="logo" class="block text-xs font-bold text-secondary mb-1.5">Company Logo (Optional)</label>
+                                    <input id="logo" type="file" name="logo" accept="image/png,image/jpeg,image/webp"
                                         class="w-full text-xs text-text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all cursor-pointer">
                                 </div>
                             </div>
@@ -223,14 +223,14 @@
                     <div class="space-y-4">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-secondary mb-1.5">Registration / Plate Number</label>
-                                <input type="text" name="vehicle_registration" placeholder="e.g. DL 01 LN 1234"
+                                <label for="vehicle_registration" class="block text-xs font-bold text-secondary mb-1.5">Registration / Plate Number</label>
+                                <input id="vehicle_registration" type="text" name="vehicle_registration" placeholder="e.g. DL 01 LN 1234"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                                 <p class="text-[11px] text-text-muted mt-1">Official vehicle license plate.</p>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-secondary mb-1.5">Vehicle Model / Fleet Name</label>
-                                <input type="text" name="vehicle_model" placeholder="e.g. Tata 407 LPT / Eicher Pro 2049"
+                                <label for="vehicle_model" class="block text-xs font-bold text-secondary mb-1.5">Vehicle Model / Fleet Name</label>
+                                <input id="vehicle_model" type="text" name="vehicle_model" placeholder="e.g. Tata 407 LPT / Eicher Pro 2049"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                                 <p class="text-[11px] text-text-muted mt-1">Make, model or internal fleet number.</p>
                             </div>
@@ -238,8 +238,8 @@
 
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-secondary mb-1.5">Vehicle Type</label>
-                                <select name="vehicle_type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                <label for="vehicle_type" class="block text-xs font-bold text-secondary mb-1.5">Vehicle Type</label>
+                                <select id="vehicle_type" name="vehicle_type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                                     <option value="truck">Truck / Heavy Commercial</option>
                                     <option value="mini_truck" selected>Mini Truck (LCV)</option>
                                     <option value="pickup">Pickup (1.5T / 2T)</option>
@@ -249,8 +249,8 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-secondary mb-1.5">Fuel Type</label>
-                                <select name="fuel_type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                <label for="fuel_type" class="block text-xs font-bold text-secondary mb-1.5">Fuel Type</label>
+                                <select id="fuel_type" name="fuel_type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                                     <option value="diesel" selected>Diesel</option>
                                     <option value="cng">CNG</option>
                                     <option value="electric">Electric (EV)</option>
@@ -259,8 +259,8 @@
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-secondary mb-1.5">Payload Capacity (kg)</label>
-                                <input type="number" name="capacity" placeholder="e.g. 2500"
+                                <label for="capacity" class="block text-xs font-bold text-secondary mb-1.5">Payload Capacity (kg)</label>
+                                <input id="capacity" type="number" name="capacity" placeholder="e.g. 2500"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             </div>
                         </div>
@@ -291,26 +291,26 @@
                     <div class="space-y-4">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-secondary mb-1.5">Driver Full Name</label>
-                                <input type="text" name="driver_name" placeholder="e.g. Ramesh Kumar"
+                                <label for="driver_name" class="block text-xs font-bold text-secondary mb-1.5">Driver Full Name</label>
+                                <input id="driver_name" type="text" name="driver_name" placeholder="e.g. Ramesh Kumar"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-secondary mb-1.5">Mobile Phone Number</label>
-                                <input type="tel" name="driver_phone" placeholder="+91 98765 43210"
+                                <label for="driver_phone" class="block text-xs font-bold text-secondary mb-1.5">Mobile Phone Number</label>
+                                <input id="driver_phone" type="tel" name="driver_phone" placeholder="+91 98765 43210"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-xs font-bold text-secondary mb-1.5">Driving License (DL) Number</label>
-                                <input type="text" name="driver_license" placeholder="e.g. DL-1420110012345"
+                                <label for="driver_license" class="block text-xs font-bold text-secondary mb-1.5">Driving License (DL) Number</label>
+                                <input id="driver_license" type="text" name="driver_license" placeholder="e.g. DL-1420110012345"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             </div>
                             <div>
-                                <label class="block text-xs font-bold text-secondary mb-1.5">Driving Experience (Years)</label>
-                                <input type="number" name="experience" placeholder="e.g. 4" min="0" max="50"
+                                <label for="experience" class="block text-xs font-bold text-secondary mb-1.5">Driving Experience (Years)</label>
+                                <input id="experience" type="number" name="experience" placeholder="e.g. 4" min="0" max="50"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             </div>
                         </div>

@@ -24,7 +24,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition-all duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-80"></div>
-            <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600">
+            <div class="w-10 h-10 rounded-xl bg-amber-soft border border-amber-line grid place-items-center text-amber-mid">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             </div>
             <div class="mt-4">
@@ -34,7 +34,7 @@
         </div>
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition-all duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-400 opacity-80"></div>
-            <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600">
+            <div class="w-10 h-10 rounded-xl bg-blue-soft border border-blue-line grid place-items-center text-blue-mid">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             </div>
             <div class="mt-4">
@@ -66,7 +66,7 @@
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Customers}} shown</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-border-subtle">
+            <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
                         <th class="th-cell">Customer Name</th>
@@ -79,10 +79,10 @@
                     {{if .Customers}}
                     {{range .Customers}}
                     <tr class="hover:bg-surface-container-low/50 transition-colors">
-                        <td class="px-3 py-2 text-sm font-semibold text-on-surface">{{.Name}}</td>
-                        <td class="px-3 py-2 text-sm text-secondary">{{nullString .Company}}</td>
-                        <td class="px-3 py-2 text-sm tabular-nums text-on-surface">{{.Email}}</td>
-                        <td class="px-3 py-2 text-sm tabular-nums text-secondary" data-numeric>{{.Phone}}</td>
+                        <td data-label="Customer Name" class="px-3 py-2 text-sm font-semibold text-on-surface">{{.Name}}</td>
+                        <td data-label="Company / Org" class="px-3 py-2 text-sm text-secondary">{{nullString .Company}}</td>
+                        <td data-label="Email Address" class="px-3 py-2 text-sm tabular-nums text-on-surface">{{.Email}}</td>
+                        <td data-label="Phone Number" class="px-3 py-2 text-sm tabular-nums text-secondary" data-numeric>{{.Phone}}</td>
                     </tr>
                     {{end}}
                     {{else}}

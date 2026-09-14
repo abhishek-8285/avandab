@@ -20,7 +20,7 @@
         )}}
 
         <div id="alerts-container" class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-border-subtle">
+            <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
                         <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Severity</th>
@@ -35,38 +35,38 @@
                     {{if .Alerts}}
                     {{range .Alerts}}
                     <tr class="hover:bg-surface-container-low/60 transition-colors">
-                        <td class="px-3 py-2 whitespace-nowrap">
+                        <td data-label="Severity" class="px-3 py-2 whitespace-nowrap">
                             <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold
-                                {{if eq .Severity "critical"}}bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/15
-                                {{else if eq .Severity "high"}}bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/15
-                                {{else if eq .Severity "medium"}}bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15
+                                {{if eq .Severity "critical"}}bg-rose-soft text-rose-strong dark:text-rose-300 border border-rose-line
+                                {{else if eq .Severity "high"}}bg-amber-soft text-amber-strong dark:text-amber-300 border border-amber-line
+                                {{else if eq .Severity "medium"}}bg-blue-soft text-blue-strong dark:text-blue-300 border border-blue-line
                                 {{else}}bg-surface-container text-text-muted border border-border-subtle{{end}}">
                                 {{.Severity}}
                             </span>
                         </td>
-                        <td class="px-3 py-2 text-xs font-data-mono text-secondary whitespace-nowrap">{{.AlertType}}</td>
-                        <td class="px-3 py-2 font-semibold max-w-sm truncate" title="{{.Title}}">{{.Title}}</td>
-                        <td class="px-3 py-2 whitespace-nowrap">
+                        <td data-label="Type" class="px-3 py-2 text-xs font-data-mono text-secondary whitespace-nowrap">{{.AlertType}}</td>
+                        <td data-label="Title" class="px-3 py-2 font-semibold max-w-sm truncate" title="{{.Title}}">{{.Title}}</td>
+                        <td data-label="Status" class="px-3 py-2 whitespace-nowrap">
                             <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold
-                                {{if eq .Status "open"}}bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/15
-                                {{else if eq .Status "acknowledged"}}bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15
-                                {{else if eq .Status "resolved"}}bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/15
+                                {{if eq .Status "open"}}bg-rose-soft text-rose-strong dark:text-rose-300 border border-rose-line
+                                {{else if eq .Status "acknowledged"}}bg-blue-soft text-blue-strong dark:text-blue-300 border border-blue-line
+                                {{else if eq .Status "resolved"}}bg-emerald-soft text-emerald-strong dark:text-emerald-300 border border-emerald-line
                                 {{else}}bg-surface-container text-text-muted border border-border-subtle{{end}}">
                                 {{.Status}}
                             </span>
                         </td>
-                        <td class="px-3 py-2 text-xs text-text-muted tabular-nums whitespace-nowrap">{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
-                        <td class="px-3 py-2 text-right whitespace-nowrap">
+                        <td data-label="Created" class="px-3 py-2 text-xs text-text-muted tabular-nums whitespace-nowrap">{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
+                        <td data-label="Actions" class="px-3 py-2 text-right whitespace-nowrap">
                             <div class="flex items-center justify-end gap-1.5 flex-wrap">
                             {{if eq .Status "open"}}
                                 {{if can $.User "ops_alerts" "update"}}
-                                <button onclick="acknowledgeAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 border border-blue-500/15 px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer">Ack</button>
-                                <button onclick="resolveAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/15 px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer">Resolve</button>
+                                <button onclick="acknowledgeAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-blue-soft hover:bg-blue-500/20 text-blue-strong dark:text-blue-300 border border-blue-line px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer">Ack</button>
+                                <button onclick="resolveAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-emerald-soft hover:bg-emerald-500/20 text-emerald-strong dark:text-emerald-300 border border-emerald-line px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer">Resolve</button>
                                 <button onclick="dismissAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-surface-container-lowest border border-border-subtle text-on-surface px-2.5 py-1 text-[11px] font-bold hover:bg-surface-container-low transition-all cursor-pointer">Dismiss</button>
                                 {{end}}
                             {{else if eq .Status "acknowledged"}}
                                 {{if can $.User "ops_alerts" "update"}}
-                                <button onclick="resolveAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/15 px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer">Resolve</button>
+                                <button onclick="resolveAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-emerald-soft hover:bg-emerald-500/20 text-emerald-strong dark:text-emerald-300 border border-emerald-line px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer">Resolve</button>
                                 {{end}}
                             {{end}}
                             </div>
@@ -76,7 +76,7 @@
                     {{else}}
                     <tr><td colspan="6" class="px-4 py-12 text-center">
                         <div class="flex flex-col items-center gap-2">
-                            <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600">
+                            <div class="w-12 h-12 rounded-2xl bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
                             </div>
                             <p class="text-sm font-medium text-on-surface mt-1">No alerts</p>

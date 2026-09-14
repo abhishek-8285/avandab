@@ -44,7 +44,7 @@
 
         {{if .Settlements}}
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-border-subtle">
+            <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
                         <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Trip / ID</th>
@@ -61,22 +61,22 @@
                 <tbody class="divide-y divide-border-subtle">
                     {{range .Settlements}}
                     <tr class="hover:bg-surface-container-low/50 transition-colors group">
-                        <td class="px-3 py-2 whitespace-nowrap">
+                        <td data-label="Trip / ID" class="px-3 py-2 whitespace-nowrap">
                             <a href="/settlements/{{.ID}}" class="text-sm font-bold text-primary hover:underline tabular-nums">{{.TripID}}</a>
                             <span class="block text-xs text-text-muted font-data-mono">{{.ID}}</span>
                         </td>
-                        <td class="px-3 py-2 text-sm font-medium text-on-surface">{{.DriverID}}</td>
-                        <td class="px-3 py-2 text-sm text-right tabular-nums text-on-surface whitespace-nowrap" data-numeric>₹{{printf "%.2f" .GrossFare}}</td>
-                        <td class="px-3 py-2 text-sm text-right tabular-nums font-semibold text-status-warning whitespace-nowrap" data-numeric>{{if gt .AdvancesKharcha 0.0}}-₹{{printf "%.2f" .AdvancesKharcha}}{{else}}₹0.00{{end}}</td>
-                        <td class="px-3 py-2 text-sm text-right tabular-nums font-semibold text-status-alert whitespace-nowrap" data-numeric>{{if gt .Deductions 0.0}}-₹{{printf "%.2f" .Deductions}}{{else}}₹0.00{{end}}</td>
-                        <td class="px-3 py-2 text-sm text-right tabular-nums text-text-muted whitespace-nowrap" data-numeric>{{if gt .TDSAmount 0.0}}-₹{{printf "%.2f" .TDSAmount}} ({{printf "%.1f" .TDSRate}}%){{else}}₹0.00{{end}}</td>
-                        <td class="px-3 py-2 text-sm text-right tabular-nums font-black text-on-surface whitespace-nowrap" data-numeric>₹{{printf "%.2f" .NetPayout}}</td>
-                        <td class="px-3 py-2 text-center">
+                        <td data-label="Driver" class="px-3 py-2 text-sm font-medium text-on-surface">{{.DriverID}}</td>
+                        <td data-label="Gross Fare (₹)" class="px-3 py-2 text-sm text-right tabular-nums text-on-surface whitespace-nowrap" data-numeric>₹{{printf "%.2f" .GrossFare}}</td>
+                        <td data-label="Advances (₹)" class="px-3 py-2 text-sm text-right tabular-nums font-semibold text-status-warning whitespace-nowrap" data-numeric>{{if gt .AdvancesKharcha 0.0}}-₹{{printf "%.2f" .AdvancesKharcha}}{{else}}₹0.00{{end}}</td>
+                        <td data-label="Deductions (₹)" class="px-3 py-2 text-sm text-right tabular-nums font-semibold text-status-alert whitespace-nowrap" data-numeric>{{if gt .Deductions 0.0}}-₹{{printf "%.2f" .Deductions}}{{else}}₹0.00{{end}}</td>
+                        <td data-label="TDS" class="px-3 py-2 text-sm text-right tabular-nums text-text-muted whitespace-nowrap" data-numeric>{{if gt .TDSAmount 0.0}}-₹{{printf "%.2f" .TDSAmount}} ({{printf "%.1f" .TDSRate}}%){{else}}₹0.00{{end}}</td>
+                        <td data-label="Net Payout (₹)" class="px-3 py-2 text-sm text-right tabular-nums font-black text-on-surface whitespace-nowrap" data-numeric>₹{{printf "%.2f" .NetPayout}}</td>
+                        <td data-label="Status" class="px-3 py-2 text-center">
                             <span class="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide {{if eq .Status "paid"}}bg-status-success/10 border border-status-success/15 text-status-success{{else if eq .Status "pending"}}bg-status-warning/10 border border-status-warning/15 text-status-warning{{else if eq .Status "disputed"}}bg-status-alert/10 border border-status-alert/15 text-status-alert{{else}}bg-status-info/10 border border-status-info/15 text-status-info{{end}}">
                                 {{.Status}}
                             </span>
                         </td>
-                        <td class="px-3 py-2 text-center whitespace-nowrap">
+                        <td data-label="Actions" class="px-3 py-2 text-center whitespace-nowrap">
                             <a href="/settlements/{{.ID}}" class="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 px-2.5 py-1 rounded-full hover:bg-primary/10 transition-colors">
                                 View
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>

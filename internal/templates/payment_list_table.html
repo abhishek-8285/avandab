@@ -1,5 +1,5 @@
 <div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-border-subtle">
+    <table class="rtable min-w-full divide-y divide-border-subtle">
         <thead class="bg-surface-container-low">
             <tr>
                 <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Invoice #</th>
@@ -14,18 +14,18 @@
             {{if .Payments}}
             {{range .Payments}}
             <tr class="hover:bg-surface-container-low/50 transition-colors group">
-                <td class="px-3 py-2 whitespace-nowrap">
+                <td data-label="Invoice #" class="px-3 py-2 whitespace-nowrap">
                     <span class="text-sm text-primary font-bold tabular-nums">{{.InvoiceNumber}}</span>
                 </td>
-                <td class="px-3 py-2 text-sm tabular-nums text-on-surface">
+                <td data-label="Payment Date" class="px-3 py-2 text-sm tabular-nums text-on-surface">
                     <span class="time-display" data-utc-time="{{.PaymentDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PaymentDate}}</span>
                 </td>
-                <td class="px-3 py-2 text-sm text-right tabular-nums font-bold text-status-success" data-numeric>₹{{printf "%.2f" .Amount}}</td>
-                <td class="px-3 py-2">
+                <td data-label="Amount (₹)" class="px-3 py-2 text-sm text-right tabular-nums font-bold text-status-success" data-numeric>₹{{printf "%.2f" .Amount}}</td>
+                <td data-label="Method" class="px-3 py-2">
                     <span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold uppercase tracking-wide text-secondary">{{.Method}}</span>
                 </td>
-                <td class="px-3 py-2 text-sm font-data-mono text-xs text-text-muted">{{nullString .Reference}}</td>
-                <td class="px-3 py-2 text-right whitespace-nowrap">
+                <td data-label="Reference ID" class="px-3 py-2 text-sm font-data-mono text-xs text-text-muted">{{nullString .Reference}}</td>
+                <td data-label="Actions" class="px-3 py-2 text-right whitespace-nowrap">
                     <a href="/payments/{{.ID}}" class="action-view text-xs font-semibold opacity-80 group-hover:opacity-100 transition-opacity">View Receipt</a>
                 </td>
             </tr>
