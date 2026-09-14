@@ -54,7 +54,7 @@
                         <td data-label="Actions" class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap text-right">
                             {{if eq .Status "active"}}
                             <form action="/shares/{{.ID}}/revoke" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to revoke this share link?');">
-                                <button type="submit" class="inline-flex items-center gap-1.5 rounded-md bg-status-alert text-on-primary px-3 py-1.5 text-xs font-medium hover:opacity-90 transition-all cursor-pointer">
+                                <button type="submit" class="inline-flex items-center gap-1.5 rounded-md bg-status-alert text-on-primary px-3 py-1.5 text-xs font-medium hover:opacity-90 transition cursor-pointer">
                                     Revoke
                                 </button>
                             </form>

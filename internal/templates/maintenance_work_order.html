@@ -73,15 +73,15 @@
         <form method="POST" action="/maintenance/work-orders/{{.WorkOrder.ID}}/assign" class="p-6 flex flex-col sm:flex-row gap-3 sm:items-end">
             <div class="flex-1">
                 <label for="assignee" class="block text-eyebrow text-text-muted mb-1.5">Assignee</label>
-                <input id="assignee" type="text" name="assignee" value="{{.WorkOrder.Assignee}}" placeholder="Mechanic name"
-                       class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                <input aria-label="Mechanic name" autocomplete="off" id="assignee" type="text" name="assignee" value="{{.WorkOrder.Assignee}}" placeholder="Mechanic name"
+                       class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
             </div>
             <div class="flex-1">
                 <label for="vendor" class="block text-eyebrow text-text-muted mb-1.5">Vendor</label>
-                <input id="vendor" type="text" name="vendor" value="{{.WorkOrder.Vendor}}" placeholder="Garage / vendor"
-                       class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                <input aria-label="Garage / vendor" autocomplete="off" id="vendor" type="text" name="vendor" value="{{.WorkOrder.Vendor}}" placeholder="Garage / vendor"
+                       class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
             </div>
-            <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 transition-all cursor-pointer shrink-0">Assign</button>
+            <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 transition cursor-pointer shrink-0">Assign</button>
         </form>
     </div>
 
@@ -91,15 +91,15 @@
         </div>
         <div class="p-6 flex gap-2 flex-wrap">
             {{if or (eq .WorkOrder.Status "open") (eq .WorkOrder.Status "assigned") (eq .WorkOrder.Status "on_hold")}}
-            <form method="POST" action="/maintenance/work-orders/{{.WorkOrder.ID}}/transition" class="inline"><input type="hidden" name="status" value="in_progress"><button type="submit" class="inline-flex items-center px-4 py-2 rounded-full bg-amber-soft border border-amber-500/20 text-amber-strong dark:text-amber-300 text-sm font-bold hover:bg-amber-500/20 transition-all cursor-pointer">Start Work</button></form>
+            <form method="POST" action="/maintenance/work-orders/{{.WorkOrder.ID}}/transition" class="inline"><input type="hidden" name="status" value="in_progress"><button type="submit" class="inline-flex items-center px-4 py-2 rounded-full bg-amber-soft border border-amber-500/20 text-amber-strong dark:text-amber-300 text-sm font-bold hover:bg-amber-500/20 transition cursor-pointer">Start Work</button></form>
             {{end}}
             {{if or (eq .WorkOrder.Status "assigned") (eq .WorkOrder.Status "in_progress")}}
-            <form method="POST" action="/maintenance/work-orders/{{.WorkOrder.ID}}/transition" class="inline"><input type="hidden" name="status" value="on_hold"><button type="submit" class="inline-flex items-center px-4 py-2 rounded-full bg-surface-container-high text-secondary text-sm font-bold hover:bg-surface-container-high/70 transition-all cursor-pointer">Hold</button></form>
+            <form method="POST" action="/maintenance/work-orders/{{.WorkOrder.ID}}/transition" class="inline"><input type="hidden" name="status" value="on_hold"><button type="submit" class="inline-flex items-center px-4 py-2 rounded-full bg-surface-container-high text-secondary text-sm font-bold hover:bg-surface-container-high/70 transition cursor-pointer">Hold</button></form>
             {{end}}
             {{if eq .WorkOrder.Status "in_progress"}}
-            <form method="POST" action="/maintenance/work-orders/{{.WorkOrder.ID}}/transition" class="inline"><input type="hidden" name="status" value="done"><button type="submit" class="inline-flex items-center px-4 py-2 rounded-full bg-emerald-soft border border-emerald-500/20 text-emerald-strong dark:text-emerald-300 text-sm font-bold hover:bg-emerald-500/20 transition-all cursor-pointer">Mark Done</button></form>
+            <form method="POST" action="/maintenance/work-orders/{{.WorkOrder.ID}}/transition" class="inline"><input type="hidden" name="status" value="done"><button type="submit" class="inline-flex items-center px-4 py-2 rounded-full bg-emerald-soft border border-emerald-500/20 text-emerald-strong dark:text-emerald-300 text-sm font-bold hover:bg-emerald-500/20 transition cursor-pointer">Mark Done</button></form>
             {{end}}
-            <form method="POST" action="/maintenance/work-orders/{{.WorkOrder.ID}}/transition" class="inline"><input type="hidden" name="status" value="cancelled"><button type="submit" class="inline-flex items-center px-4 py-2 rounded-full bg-rose-soft border border-rose-500/20 text-rose-strong dark:text-rose-300 text-sm font-bold hover:bg-rose-500/20 transition-all cursor-pointer">Cancel</button></form>
+            <form method="POST" action="/maintenance/work-orders/{{.WorkOrder.ID}}/transition" class="inline"><input type="hidden" name="status" value="cancelled"><button type="submit" class="inline-flex items-center px-4 py-2 rounded-full bg-rose-soft border border-rose-500/20 text-rose-strong dark:text-rose-300 text-sm font-bold hover:bg-rose-500/20 transition cursor-pointer">Cancel</button></form>
         </div>
     </div>
     {{end}}

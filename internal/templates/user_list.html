@@ -3,27 +3,27 @@
 <div class="space-y-4">
     <!-- Compact stat row (totals only — per-status counts need a handler TODO) -->
     <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
-        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition">
             <div class="w-9 h-9 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
             </div>
             <div class="min-w-0">
                 <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{if .Pagination}}{{.Pagination.Total}}{{else}}0{{end}}</div>
                 <div class="text-xs text-secondary font-medium mt-1">Total Accounts</div>
             </div>
         </div>
-        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition">
             <div class="w-9 h-9 rounded-lg bg-violet-soft border border-violet-line grid place-items-center text-violet-mid shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>
             </div>
             <div class="min-w-0">
                 <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{len .Users}}</div>
                 <div class="text-xs text-secondary font-medium mt-1">On This Page</div>
             </div>
         </div>
-        <div class="col-span-2 lg:col-span-1 flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+        <div class="col-span-2 lg:col-span-1 flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition">
             <div class="w-9 h-9 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             </div>
             <div class="min-w-0">
                 <div class="text-sm font-bold text-on-surface truncate">{{if .Query}}“{{.Query}}”{{else if .StatusFilter}}{{.StatusFilter}}{{else}}All Accounts{{end}}</div>

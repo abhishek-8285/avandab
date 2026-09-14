@@ -27,7 +27,7 @@
             border: 1px solid var(--color-border-subtle);
             border-radius: 0.75rem;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04);
-            transition: all 0.2s ease-in-out;
+            transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
         }
         .ecasb-card:hover {
             border-color: rgba(0, 104, 95, 0.4);
@@ -108,7 +108,7 @@
             border: 1px solid var(--color-border-subtle);
             border-radius: 0.875rem;
             box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03);
-            transition: all 0.2s ease-in-out;
+            transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
         }
         .ecasb-mini-features .mini-item:hover {
             background-color: var(--color-surface-container-lowest);
@@ -476,13 +476,13 @@
               </p>
 
               <div class="hero-enter d4 flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 pt-1">
-                <a href="/register" class="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-primary px-6 sm:px-7 py-[12px] sm:py-[13px] text-[14px] font-bold text-on-primary shadow-[0_10px_24px_-12px_var(--color-primary),0_4px_12px_-6px_rgba(0,0,0,0.08)] transition-all hover:bg-primary/90 hover:shadow-[0_16px_32px_-14px_var(--color-primary)] hover:-translate-y-px active:translate-y-0 whitespace-nowrap">
+                <a href="/register" class="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-primary px-6 sm:px-7 py-[12px] sm:py-[13px] text-[14px] font-bold text-on-primary shadow-[0_10px_24px_-12px_var(--color-primary),0_4px_12px_-6px_rgba(0,0,0,0.08)] transition hover:bg-primary/90 hover:shadow-[0_16px_32px_-14px_var(--color-primary)] hover:-translate-y-px active:translate-y-0 whitespace-nowrap">
                   <span class="absolute inset-0 -translate-x-[120%] bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[heroShine_1.1s_ease]" style="animation: none"></span>
                   <span class="relative">Start free — 10 min setup</span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="relative w-4 h-4 transition-transform group-hover:translate-x-[3px]"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="relative w-4 h-4 transition-transform group-hover:translate-x-[3px]"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                 </a>
                 <a href="#story" class="inline-flex items-center justify-center gap-2 rounded-full border border-border-subtle bg-surface-container-lowest px-6 sm:px-7 py-[12px] sm:py-[13px] text-[14px] font-bold text-on-surface hover:bg-surface-container-low hover:border-border-subtle transition whitespace-nowrap">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-4 h-4 text-primary"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-4 h-4 text-primary"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
                   See live dispatch
                 </a>
                 <span class="hidden sm:inline-flex text-[11px] font-medium text-text-muted whitespace-nowrap">No card • Cancel anytime</span>
@@ -495,10 +495,10 @@
               </div>
 
               <div class="hero-enter d4 flex flex-wrap items-center justify-center lg:justify-start gap-2 pt-1">
-                <span class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-container-lowest px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-secondary shadow-sm whitespace-nowrap"><span class="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-emerald-soft text-emerald-mid shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3.5 h-3.5"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 11-7 11S5 14 5 9a7 7 0 0 1 7-7Z"/><circle cx="12" cy="9" r="2.2"/></svg></span>Live GPS</span>
-                <span class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-container-lowest px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-secondary shadow-sm whitespace-nowrap"><span class="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3.5 h-3.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>GST invoicing</span>
-                <span class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-container-lowest px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-secondary shadow-sm whitespace-nowrap"><span class="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-amber-soft text-amber-mid shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3.5 h-3.5"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg></span>Kharcha</span>
-                <span class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-container-lowest px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-secondary shadow-sm whitespace-nowrap"><span class="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3.5 h-3.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3.2"/></svg></span>Customer link</span>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-container-lowest px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-secondary shadow-sm whitespace-nowrap"><span class="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-emerald-soft text-emerald-mid shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3.5 h-3.5"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 11-7 11S5 14 5 9a7 7 0 0 1 7-7Z"/><circle cx="12" cy="9" r="2.2"/></svg></span>Live GPS</span>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-container-lowest px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-secondary shadow-sm whitespace-nowrap"><span class="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3.5 h-3.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>GST invoicing</span>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-container-lowest px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-secondary shadow-sm whitespace-nowrap"><span class="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-amber-soft text-amber-mid shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3.5 h-3.5"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg></span>Kharcha</span>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-container-lowest px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-secondary shadow-sm whitespace-nowrap"><span class="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3.5 h-3.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3.2"/></svg></span>Customer link</span>
               </div>
             </div>
 
@@ -521,7 +521,7 @@
                   </div>
                   <div class="flex items-center gap-2">
                     <span class="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-background px-2.5 py-1 text-[11px] font-semibold text-secondary">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-3 h-3"><circle cx="11" cy="11" r="7"/><path d="m21 21-3.6-3.6"/></svg> ⌘K
+                      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="w-3 h-3"><circle cx="11" cy="11" r="7"/><path d="m21 21-3.6-3.6"/></svg> ⌘K
                     </span>
                     <span class="h-7 w-7 rounded-full bg-primary text-on-primary flex items-center justify-center text-[11px] font-bold">A</span>
                   </div>
@@ -621,7 +621,7 @@
                       </div>
                       <div class="rounded-xl border border-border-subtle bg-surface-container-lowest p-3">
                         <div class="flex items-center gap-2">
-                          <span class="h-7 w-7 rounded-full bg-emerald-soft text-emerald-mid flex items-center justify-center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg></span>
+                          <span class="h-7 w-7 rounded-full bg-emerald-soft text-emerald-mid flex items-center justify-center"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg></span>
                           <div>
                             <div class="text-xs font-bold text-on-surface">₹42,800 collected</div>
                             <div class="text-[11px] text-secondary">INV-221 • Shree Traders • now</div>
@@ -655,7 +655,7 @@
 
                 <!-- bottom bar: ask -->
                 <div class="flex items-center gap-2 border-t border-border-subtle bg-surface-container-low px-3 py-2.5">
-                  <span class="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3 h-3"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
+                  <span class="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3 h-3"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></span>
                   <span class="flex-1 rounded-full border border-border-subtle bg-surface-container-lowest px-3 py-1.5 text-[12px] text-text-muted">Ask Avandab — “Show overdue from last week”</span>
                   <span class="hidden sm:inline-flex rounded-full bg-on-surface text-surface-container-lowest px-3 py-1.5 text-[11px] font-bold">↵</span>
                 </div>
@@ -663,14 +663,14 @@
 
               <!-- floating glass metrics -->
               <div class="hidden xl:flex absolute -left-4 top-[22%] items-center gap-2 rounded-2xl border border-border-subtle bg-surface-container-lowest/90 backdrop-blur-xl px-3.5 py-2.5 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.18)]" style="animation: heroFloat 4.2s ease-in-out infinite">
-                <span class="h-8 w-8 rounded-xl bg-emerald-soft text-emerald-mid flex items-center justify-center"><svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 11-7 11S5 14 5 9a7 7 0 0 1 7-7Z"/></svg></span>
+                <span class="h-8 w-8 rounded-xl bg-emerald-soft text-emerald-mid flex items-center justify-center"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 11-7 11S5 14 5 9a7 7 0 0 1 7-7Z"/></svg></span>
                 <div>
                   <div class="text-[11px] font-extrabold tracking-wide text-on-surface">On-time</div>
                   <div class="text-[11px] font-bold text-emerald-mid">98.2% • +1.4%</div>
                 </div>
               </div>
               <div class="hidden xl:flex absolute -right-3 bottom-[18%] items-center gap-2 rounded-2xl border border-border-subtle bg-surface-container-lowest/90 backdrop-blur-xl px-3.5 py-2.5 shadow-[0_16px_40px_-12px_rgba(0,0,0,0.18)]" style="animation: heroFloat2 4.8s ease-in-out infinite">
-                <span class="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
+                <span class="h-8 w-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>
                 <div>
                   <div class="text-[11px] font-extrabold tracking-wide text-on-surface">INV-221 paid</div>
                   <div class="text-[11px] text-secondary">₹18,500 • UPI</div>
@@ -707,7 +707,7 @@
             <div class="cloud c2"></div>
             <div class="cloud c3"></div>
             <div class="scene-skyline">
-                <svg viewBox="0 0 1200 90" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                <svg aria-hidden="true" viewBox="0 0 1200 90" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
                     <defs>
                         <g id="skyline-set" fill="currentColor" fill-opacity="0.08">
                             <rect x="0" y="32" width="34" height="58"/>
@@ -732,7 +732,7 @@
             </svg>
             </div>
             <div class="scene-roadside">
-                <svg viewBox="0 0 600 70" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+                <svg aria-hidden="true" viewBox="0 0 600 70" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
                     <defs>
                         <g id="rs-set" fill="currentColor" fill-opacity=".12">
                             <rect x="36" y="34" width="7" height="30"/>
@@ -761,11 +761,11 @@
 
             <div class="fx fx-calls">
                 <div class="fx-call k1">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                     <span>"Truck chahiye kal subah"</span><span class="call-badge">×4</span>
                 </div>
                 <div class="fx-call k2">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
                     <span>Driver calling</span><span class="call-badge">×7</span>
                 </div>
                 <div class="fx-note"><i></i><i></i><i></i><i></i><i></i></div>
@@ -773,10 +773,10 @@
 
             <div class="fx fx-blind">
                 <div class="cust-bubble">
-                    <svg viewBox="0 0 40 40"><circle cx="20" cy="14" r="8" fill="var(--color-primary)" opacity=".85"/><path d="M6 36c2-8 8-12 14-12s12 4 14 12" fill="var(--color-primary)" opacity=".85"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 40 40"><circle cx="20" cy="14" r="8" fill="var(--color-primary)" opacity=".85"/><path d="M6 36c2-8 8-12 14-12s12 4 14 12" fill="var(--color-primary)" opacity=".85"/></svg>
                     <span>"Where is my load?"</span>
                 </div>
-                <svg class="fx-route" viewBox="0 0 480 170" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <svg aria-hidden="true" class="fx-route" viewBox="0 0 480 170" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M24 140C120 30 250 190 456 34" stroke="#94a3b8" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 16"/>
                     <circle cx="24" cy="140" r="9" fill="#ef4444"/>
                     <circle cx="24" cy="140" r="17" stroke="#ef4444" stroke-opacity=".35" stroke-width="3"/>
@@ -803,8 +803,8 @@
                 <span class="zip zp1"></span>
                 <span class="zip zp2"></span>
                 <span class="zip zp3"></span>
-                <div class="checkchip ck1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="m5 13 4 4L19 7"/></svg></div>
-                <div class="checkchip ck2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="m5 13 4 4L19 7"/></svg></div>
+                <div class="checkchip ck1"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="m5 13 4 4L19 7"/></svg></div>
+                <div class="checkchip ck2"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="m5 13 4 4L19 7"/></svg></div>
                 <div class="fx-dash">
                     <div class="dash-head">
                         <span class="dash-dot" style="background:#f87171"></span>
@@ -814,15 +814,15 @@
                         <span class="dash-live">LIVE</span>
                     </div>
                     <div class="dash-row">
-                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h1v2a1 1 0 0 0 2 0v-2h9v2a1 1 0 0 0 2 0v-2h2a1 1 0 0 0 1-1v-7l-4-4H3Zm11 4h3l2 2v2h-5V9Z"/></svg>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h1v2a1 1 0 0 0 2 0v-2h9v2a1 1 0 0 0 2 0v-2h2a1 1 0 0 0 1-1v-7l-4-4H3Zm11 4h3l2 2v2h-5V9Z"/></svg>
                         <span>TRP-1042 · Nashik → Pune</span><span class="dash-pill">En Route</span>
                     </div>
                     <div class="dash-row">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                         <span>INV-2210 · Shree Traders</span><span class="dash-pill">Auto-sent</span>
                     </div>
                     <div class="dash-row">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="22" x2="15" y2="22"/><line x1="4" y1="9" x2="14" y2="9"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"/></svg>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="22" x2="15" y2="22"/><line x1="4" y1="9" x2="14" y2="9"/><path d="M14 22V4a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v18"/><path d="M14 13h2a2 2 0 0 1 2 2v2a2 2 0 0 0 2 2h0a2 2 0 0 0 2-2V9.83a2 2 0 0 0-.59-1.42L18 5"/></svg>
                         <span>Diesel 38.4 L · Trip-linked</span><span class="dash-pill">Logged</span>
                     </div>
                     <div class="dash-bars"><b></b><b></b><b></b><b></b><b></b><b></b></div>
@@ -832,7 +832,7 @@
             <div class="vehicle-track">
                 <div class="story-truck">
                     <div class="truck-glow"></div>
-                    <svg viewBox="0 0 340 180" style="overflow:visible" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <svg aria-hidden="true" viewBox="0 0 340 180" style="overflow:visible" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <defs>
                             <linearGradient id="tg-body" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0" stop-color="#ffffff"/>
@@ -952,7 +952,7 @@
             </div>
             <a href="#benefits" class="story-continue is-hidden" id="story-continue" aria-label="Scroll to see all features">
                 <span class="sc-text">Scroll — 30+ modules ahead</span>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
             </a>
         </div>
 
@@ -1004,15 +1004,15 @@
                     <li>Every rupee in and out, recorded</li>
                 </ul>
                 <div class="cta-row">
-                    <a href="/login" style="background-color: var(--color-primary) !important; color: var(--color-surface-container-lowest) !important;" class="px-7 py-3.5 rounded-full font-bold text-sm shadow-md transition-all duration-150 flex items-center justify-center gap-2 hover:-translate-y-px">
+                    <a href="/login" style="background-color: var(--color-primary) !important; color: var(--color-surface-container-lowest) !important;" class="px-7 py-3.5 rounded-full font-bold text-sm shadow-md transition duration-150 flex items-center justify-center gap-2 hover:-translate-y-px">
                         Take the wheel
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                     </a>
-                    <a href="#benefits" class="px-7 py-3.5 rounded-full border border-border-subtle bg-surface-container-lowest text-on-surface-variant font-bold text-sm hover:bg-surface-container-low transition-all duration-150 shadow-xs flex items-center justify-center hover:-translate-y-px">
+                    <a href="#benefits" class="px-7 py-3.5 rounded-full border border-border-subtle bg-surface-container-lowest text-on-surface-variant font-bold text-sm hover:bg-surface-container-low transition duration-150 shadow-xs flex items-center justify-center hover:-translate-y-px">
                         See all features
                     </a>
                 </div>
-                <div class="chapter-continue" aria-hidden="true"><span>Keep scrolling — features & comparison below</span> <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></div>
+                <div class="chapter-continue" aria-hidden="true"><span>Keep scrolling — features & comparison below</span> <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></div>
             </div>
         </div>
     </section>
@@ -1033,42 +1033,42 @@
             <div class="feat-groups">
                 <div class="feat-group reveal">
                     <div class="fg-head">
-                        <div class="fg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>
+                        <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>
                         <h4>Run daily operations</h4>
                     </div>
                     <div class="fg-chips"><span>Bookings</span><span>Trips &amp; routes</span><span>Driver management</span><span>Vehicle records</span><span>Customer CRM</span><span>Maintenance scheduler</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
-                        <div class="fg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>
+                        <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>
                         <h4>See everything live</h4>
                     </div>
                     <div class="fg-chips"><span>Live map</span><span>Trip tracking &amp; ETA</span><span>Geofences</span><span>Telemetry devices</span><span>Alerts &amp; ops alerts</span><span>Notifications</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
-                        <div class="fg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg></div>
+                        <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg></div>
                         <h4>Money, closed loop</h4>
                     </div>
                     <div class="fg-chips"><span>Invoices</span><span>Payment tracking</span><span>Kharcha ledger</span><span>Settlements</span><span>Fuel audit</span><span>PnL reports</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
-                        <div class="fg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></div>
+                        <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></div>
                         <h4>Compliance built-in</h4>
                     </div>
                     <div class="fg-chips"><span>E-way bill</span><span>FASTag</span><span>Audit trail</span><span>User roles &amp; permissions</span><span>Driver scorecard</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
-                        <div class="fg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                        <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
                         <h4>For your customers</h4>
                     </div>
                     <div class="fg-chips"><span>Self-service portal</span><span>My Shipments live view</span><span>Direct invoices</span><span>Support access</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
-                        <div class="fg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg></div>
+                        <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg></div>
                         <h4>Extras that compound</h4>
                     </div>
                     <div class="fg-chips"><span>Mobile driver app</span><span>E-PoD signatures</span><span>AI assistant</span><span>REST API</span><span>Experiments lab</span><span>Self-host option</span></div>
@@ -1088,7 +1088,7 @@
             <div class="feat-groups personas">
                 <div class="feat-group reveal">
                     <div class="fg-head">
-                        <div class="fg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12 12h.01"/><path d="M12 2a10 10 0 1 0 10 10"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></div>
+                        <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12 12h.01"/><path d="M12 2a10 10 0 1 0 10 10"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></div>
                         <h4>Fleet owner</h4>
                     </div>
                     <p class="fg-desc">Know profit per trip and spot fuel leaks — no spreadsheets, no guessing.</p>
@@ -1096,7 +1096,7 @@
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
-                        <div class="fg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg></div>
+                        <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg></div>
                         <h4>Dispatch &amp; operations</h4>
                     </div>
                     <p class="fg-desc">Book, assign and track every trip from one board — with alerts when something needs attention.</p>
@@ -1104,7 +1104,7 @@
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
-                        <div class="fg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 18h.01"/></svg></div>
+                        <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 18h.01"/></svg></div>
                         <h4>Drivers</h4>
                     </div>
                     <p class="fg-desc">Trip details on mobile, delivery marked on the spot with a signed proof.</p>
@@ -1112,7 +1112,7 @@
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
-                        <div class="fg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                        <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
                         <h4>Your customers</h4>
                     </div>
                     <p class="fg-desc">Self-serve shipment tracking and invoices — fewer status calls to your office.</p>
@@ -1137,12 +1137,12 @@
                         <div class="space-y-2 mb-6">
                             <div class="flex items-center justify-between">
                                 <label for="calc-trucks" class="text-xs font-semibold uppercase tracking-wider text-secondary flex items-center gap-1.5">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-primary shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-primary shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                                     Active Fleet Size
                                 </label>
                                 <span id="calc-trucks-display" class="font-data-mono font-semibold text-base text-primary bg-primary/10 px-3 py-0.5 rounded-full">15 Trucks</span>
                             </div>
-                            <input id="calc-trucks" type="range" min="2" max="150" value="15" step="1" class="w-full accent-primary h-2 bg-surface-container rounded-lg cursor-pointer transition-all">
+                            <input id="calc-trucks" type="range" min="2" max="150" value="15" step="1" class="w-full accent-primary h-2 bg-surface-container rounded-lg cursor-pointer transition">
                             <div class="flex justify-between text-[11px] text-text-muted font-medium">
                                 <span>2 Trucks</span>
                                 <span>50 Trucks</span>
@@ -1154,12 +1154,12 @@
                         <div class="space-y-2 mb-6">
                             <div class="flex items-center justify-between">
                                 <label for="calc-km" class="text-xs font-semibold uppercase tracking-wider text-secondary flex items-center gap-1.5">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-primary shrink-0"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-primary shrink-0"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
                                     Avg. Monthly Run Per Truck
                                 </label>
                                 <span id="calc-km-display" class="font-data-mono font-semibold text-base text-primary bg-primary/10 px-3 py-0.5 rounded-full">6,500 km</span>
                             </div>
-                            <input id="calc-km" type="range" min="2000" max="12000" value="6500" step="500" class="w-full accent-primary h-2 bg-surface-container rounded-lg cursor-pointer transition-all">
+                            <input id="calc-km" type="range" min="2000" max="12000" value="6500" step="500" class="w-full accent-primary h-2 bg-surface-container rounded-lg cursor-pointer transition">
                             <div class="flex justify-between text-[11px] text-text-muted font-medium">
                                 <span>2,000 km</span>
                                 <span>6,500 km</span>
@@ -1172,19 +1172,19 @@
                             <span class="text-[11px] font-semibold uppercase tracking-wider text-text-muted block mb-2">Automated Savings Included</span>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-on-surface-variant">
                                 <div class="flex items-center gap-2">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 text-status-success shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 text-status-success shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
                                     <span>Diesel theft &amp; idling prevention</span>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 text-status-success shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 text-status-success shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
                                     <span>GPS detention &amp; demurrage recovery</span>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 text-status-success shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 text-status-success shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
                                     <span>Automated e-POD invoice clearance</span>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 text-status-success shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
+                                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 text-status-success shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
                                     <span>Driver advance &amp; toll audit reconciliation</span>
                                 </div>
                             </div>
@@ -1228,15 +1228,15 @@
                     </div>
 
                     <div class="mt-8 space-y-3 relative z-10">
-                        <a id="calc-cta-btn" href="/register" class="w-full inline-flex items-center justify-center gap-2 py-3 px-6 rounded-full bg-primary text-on-primary font-semibold text-sm shadow-md hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-lg transition-all text-center">
+                        <a id="calc-cta-btn" href="/register" class="w-full inline-flex items-center justify-center gap-2 py-3 px-6 rounded-full bg-primary text-on-primary font-semibold text-sm shadow-md hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-lg transition text-center">
                             <span>Claim Your Savings &rarr; Start Free</span>
                         </a>
                         <div class="flex items-center justify-center gap-3 text-[11px] text-text-muted">
-                            <span class="flex items-center gap-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3 h-3 text-status-success"><polyline points="20 6 9 17 4 12"/></svg> Free to Start</span>
+                            <span class="flex items-center gap-1"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3 h-3 text-status-success"><polyline points="20 6 9 17 4 12"/></svg> Free to Start</span>
                             <span>&bull;</span>
-                            <span class="flex items-center gap-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3 h-3 text-status-success"><polyline points="20 6 9 17 4 12"/></svg> No Credit Card</span>
+                            <span class="flex items-center gap-1"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3 h-3 text-status-success"><polyline points="20 6 9 17 4 12"/></svg> No Credit Card</span>
                             <span>&bull;</span>
-                            <span class="flex items-center gap-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3 h-3 text-status-success"><polyline points="20 6 9 17 4 12"/></svg> 5 Min Setup</span>
+                            <span class="flex items-center gap-1"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3 h-3 text-status-success"><polyline points="20 6 9 17 4 12"/></svg> 5 Min Setup</span>
                         </div>
                     </div>
                 </div>
@@ -1291,13 +1291,13 @@
 
     <!-- Sticky Mobile Conversion Dock (Visible only on mobile devices) -->
     <aside id="mobile-sticky-dock" class="md:hidden fixed bottom-0 inset-x-0 z-40 p-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))] bg-surface-container-lowest/95 backdrop-blur-md border-t border-border-subtle shadow-[0_-4px_16px_rgba(0,0,0,0.12)] flex items-center gap-2" aria-label="Quick Mobile Actions">
-        <a href="https://wa.me/918285336507?text=Hi%20Avandab,%20I%20want%20a%20demo%20of%20the%20fleet%20platform" target="_blank" rel="noopener noreferrer" class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm active:scale-[0.98] transition-all">
-            <svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 shrink-0"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.29"/></svg>
+        <a href="https://wa.me/918285336507?text=Hi%20Avandab,%20I%20want%20a%20demo%20of%20the%20fleet%20platform" target="_blank" rel="noopener noreferrer" class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm active:scale-[0.98] transition">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 shrink-0"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.29"/></svg>
             <span>WhatsApp Demo</span>
         </a>
-        <a href="/register" class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-primary text-on-primary font-semibold text-xs shadow-sm active:scale-[0.98] transition-all">
+        <a href="/register" class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-primary text-on-primary font-semibold text-xs shadow-sm active:scale-[0.98] transition">
             <span>Start Free</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
         </a>
     </aside>
 

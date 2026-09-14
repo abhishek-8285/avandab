@@ -2,7 +2,7 @@
 <div class="max-w-3xl mx-auto pt-6 pb-12">
     <div class="mb-5">
         <a href="/dashboard" class="w-10 h-10 rounded-full border border-border-subtle bg-surface-container-lowest hover:bg-surface-container-low flex items-center justify-center text-on-surface transition-colors inline-flex" aria-label="Go to Dashboard">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
         </a>
     </div>
 
@@ -23,24 +23,24 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label for="name" class="block text-xs font-semibold text-secondary mb-1">Full Name</label>
-                        <input id="name" type="text" name="name" value="{{if .UserDetail}}{{.UserDetail.Name}}{{end}}" placeholder="Your full name"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <input aria-label="Your full name" autocomplete="name" id="name" type="text" name="name" value="{{if .UserDetail}}{{.UserDetail.Name}}{{end}}" placeholder="Your full name"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
                     <div>
                         <label for="phone" class="block text-xs font-semibold text-secondary mb-1">Mobile Phone Number <span class="text-status-alert">*</span></label>
-                        <input id="phone" type="tel" name="phone" required value="{{if .UserDetail}}{{nullString .UserDetail.Phone}}{{end}}" placeholder="+91 98765 43210"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <input aria-label="+91 98765 43210" autocomplete="tel" id="phone" type="tel" name="phone" required value="{{if .UserDetail}}{{nullString .UserDetail.Phone}}{{end}}" placeholder="+91 98765 43210"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
                 </div>
                 <div>
                     <label for="timezone" class="block text-xs font-semibold text-secondary mb-1">Timezone</label>
                     <select id="timezone" name="timezone"
-                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         {{$tz := ""}}{{if .UserDetail}}{{$tz = .UserDetail.Timezone}}{{end}}
                         {{template "timezone_options.html" $tz}}
                     </select>
                 </div>
-                <button type="submit" class="w-full py-2.5 px-6 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 transition-all cursor-pointer">
+                <button type="submit" class="w-full py-2.5 px-6 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 transition cursor-pointer">
                     Save &amp; Continue
                 </button>
             </form>
@@ -89,7 +89,7 @@
                 </div>
             </div>
 
-            <a href="/dashboard" class="w-full py-3 px-6 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all inline-flex items-center justify-center gap-2 text-decoration-none">
+            <a href="/dashboard" class="w-full py-3 px-6 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition inline-flex items-center justify-center gap-2 text-decoration-none">
                 Continue
             </a>
         </div>

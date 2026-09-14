@@ -1,4 +1,4 @@
-<a href="/drivers" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Drivers</a>
+<a href="/drivers" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Drivers</a>
 
 <div class="space-y-5 max-w-[1600px] mx-auto">
 
@@ -91,7 +91,7 @@
                     <a href="/trips/{{.ID}}" class="group flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-surface-container-low/60 transition-colors text-decoration-none rounded-lg -mx-1">
                         <span class="text-sm font-bold text-primary tabular-nums group-hover:underline">{{.TripNumber}}</span>
                         <span class="flex items-center gap-3">
-                            <span class="text-xs text-text-muted tabular-nums">{{if .CreatedAt.Valid}}{{.CreatedAt.Time.Format "02-01-2006"}}{{end}}</span>
+                            <span class="text-xs text-text-muted tabular-nums">{{if .CreatedAt.Valid}}<time datetime="{{.CreatedAt.Time.Format "2006-01-02"}}">{{.CreatedAt.Time.Format "02-01-2006"}}</time>{{end}}</span>
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                         </span>
                     </a>
@@ -134,8 +134,8 @@
                 <ul class="space-y-2">
                     {{range .Files}}
                     <li class="text-sm flex items-center gap-1.5 flex-wrap">
-                        <a href="/files/{{.ID}}" target="_blank" class="inline-flex items-center gap-1.5 text-primary hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded font-semibold break-all">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                        <a href="/files/{{.ID}}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-primary hover:text-primary/80 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded font-semibold break-all">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
                             {{.OriginalName}}
                         </a>
                         <span class="text-xs text-text-muted">({{fileExt .Filename}})</span>
@@ -152,7 +152,7 @@
 
 <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
     <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2 bg-gradient-to-r from-blue-500/[0.06] to-transparent">
-        <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg></span>
+        <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg></span>
         <h2 class="text-sm font-bold text-on-surface">Recent Behaviour Events</h2>
     </div>
         <div class="p-2">
@@ -165,7 +165,7 @@
                         {{if .Description.Valid}}<p class="text-xs text-text-muted truncate">{{.Description.String}}</p>{{end}}
                     </div>
                     <span class="flex items-center gap-2 shrink-0">
-                        <span class="text-xs text-text-muted tabular-nums">{{if .CreatedAt.Valid}}{{.CreatedAt.Time.Format "02-01-2006"}}{{end}}</span>
+                        <span class="text-xs text-text-muted tabular-nums">{{if .CreatedAt.Valid}}<time datetime="{{.CreatedAt.Time.Format "2006-01-02"}}">{{.CreatedAt.Time.Format "02-01-2006"}}</time>{{end}}</span>
                         {{if .Resolved}}
                         <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold bg-status-success/10 text-status-success border border-status-success/20">resolved</span>
                         {{else}}
@@ -177,7 +177,7 @@
             </div>
             {{else}}
             <div class="px-4 py-8 text-center">
-                <div class="w-10 h-10 rounded-full bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
+                <div class="w-10 h-10 rounded-full bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid mx-auto"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
                 <p class="text-sm font-medium text-on-surface mt-3">Clean record</p><p class="text-xs text-text-muted">No behaviour events.</p>
             </div>
             {{end}}

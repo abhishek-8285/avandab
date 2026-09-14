@@ -30,7 +30,7 @@
 
                     <div>
                         <label for="vehicle_type" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Vehicle Type</label>
-                        <select id="vehicle_type" name="vehicle_type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <select id="vehicle_type" name="vehicle_type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             <option value="truck" {{if and $vehicle (eq $vehicle.VehicleType "truck")}}selected{{end}}>Truck</option>
                             <option value="mini_truck" {{if and $vehicle (eq $vehicle.VehicleType "mini_truck")}}selected{{end}}>Mini Truck</option>
                             <option value="bus" {{if and $vehicle (eq $vehicle.VehicleType "bus")}}selected{{end}}>Bus</option>
@@ -42,7 +42,7 @@
 
                     <div>
                         <label for="fuel_type" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Fuel Type</label>
-                        <select id="fuel_type" name="fuel_type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <select id="fuel_type" name="fuel_type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             <option value="diesel" {{if and $vehicle (eq $vehicle.FuelType "diesel")}}selected{{end}}>Diesel</option>
                             <option value="petrol" {{if and $vehicle (eq $vehicle.FuelType "petrol")}}selected{{end}}>Petrol</option>
                             <option value="gas" {{if and $vehicle (eq $vehicle.FuelType "gas")}}selected{{end}}>Gas</option>
@@ -70,7 +70,7 @@
                         <span class="text-sm font-semibold text-on-surface">Advanced Fleet Master Data & ERP</span>
                         <span class="text-xs text-text-muted block mt-0.5">Asset codes, technical specs (chassis, engine), and ERP organization mapping (Optional)</span>
                     </div>
-                    <svg class="w-5 h-5 text-text-muted transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                    <svg aria-hidden="true" class="w-5 h-5 text-text-muted transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
                 </summary>
                 <div class="p-4 pt-2 space-y-6 border-t border-border-subtle/50">
                     <div>
@@ -78,7 +78,7 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div>
                                 <label for="fleet_class" class="block text-xs font-semibold uppercase tracking-wider text-secondary mb-1.5">Fleet Class</label>
-                                <select id="fleet_class" name="fleet_class" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                <select id="fleet_class" name="fleet_class" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                                     <option value="CV" {{if or (not $vehicle) (eq $vehicle.Profile.FleetClass "CV")}}selected{{end}}>CV - Commercial Vehicle</option>
                                     <option value="PV" {{if and $vehicle (eq $vehicle.Profile.FleetClass "PV")}}selected{{end}}>PV - Passenger Vehicle</option>
                                     {{if and $vehicle (eq $vehicle.Profile.FleetClass "FS")}}<option value="FS" selected>FS - Fuel Station</option>{{end}}
@@ -87,7 +87,7 @@
                             </div>
                             <div>
                                 <label for="ownership" class="block text-xs font-semibold uppercase tracking-wider text-secondary mb-1.5">Ownership</label>
-                                <select id="ownership" name="ownership" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                <select id="ownership" name="ownership" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                                     <option value="O" {{if or (not $vehicle) (eq $vehicle.Profile.Ownership "O")}}selected{{end}}>O - Own Vehicle</option>
                                     <option value="C" {{if and $vehicle (eq $vehicle.Profile.Ownership "C")}}selected{{end}}>C - Contract / Leased Vehicle</option>
                                     {{if and $vehicle (eq $vehicle.Profile.Ownership "F")}}<option value="F" selected>F - Fuel Station</option>{{end}}
@@ -142,7 +142,7 @@
                             {{template "field.html" (dict "Label" "Weight" "Name" "weight" "Type" "number" "Value" (and $vehicle $vehicle.Profile.Weight) "Placeholder" "e.g. 16")}}
                             <div>
                                 <label for="weight_unit" class="block text-xs font-semibold uppercase tracking-wider text-secondary mb-1.5">Unit of Weight</label>
-                                <select id="weight_unit" name="weight_unit" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                                <select id="weight_unit" name="weight_unit" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                                     <option value="TO" {{if or (not $vehicle) (eq $vehicle.Profile.WeightUnit "TO")}}selected{{end}}>TO (Metric Tonnes)</option>
                                     <option value="KG" {{if and $vehicle (eq $vehicle.Profile.WeightUnit "KG")}}selected{{end}}>KG (Kilograms)</option>
                                 </select>
@@ -161,7 +161,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-w-none sm:max-w-md">
                     <div>
                         <label for="status" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Status</label>
-                        <select id="status" name="status" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <select id="status" name="status" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             <option value="available" {{if and $vehicle (eq $vehicle.Status "available")}}selected{{end}}>Available</option>
                             <option value="running" {{if and $vehicle (eq $vehicle.Status "running")}}selected{{end}}>Running</option>
                             <option value="maintenance" {{if and $vehicle (eq $vehicle.Status "maintenance")}}selected{{end}}>Maintenance</option>
@@ -176,7 +176,7 @@
             {{if and $vehicle .IsMaintenanceDue}}
             <div class="p-4 bg-status-warning/10 border border-status-warning/30 rounded-xl space-y-2">
                 <h4 class="text-sm font-semibold text-on-surface font-display flex items-center gap-1.5">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-status-warning"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-status-warning"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
                     Preventive Maintenance Due Since {{.MaintenanceDue}}
                 </h4>
                 <p class="text-xs text-text-muted">
@@ -186,9 +186,9 @@
                     <label for="maintenance_override_reason" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">
                         Dispatcher Override Reason
                     </label>
-                    <input id="maintenance_override_reason" type="text" name="maintenance_override_reason"
-                        placeholder="Enter reason for maintenance override..."
-                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    <input aria-label="Enter reason for maintenance override" autocomplete="off" id="maintenance_override_reason" type="text" name="maintenance_override_reason"
+                        placeholder="Enter reason for maintenance override…"
+                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                 </div>
             </div>
             {{end}}
@@ -196,7 +196,7 @@
 
         <div class="sticky bottom-0 bg-surface-container-lowest border-t border-border-subtle px-6 py-3 flex justify-end gap-2 flex-wrap">
             <a href="/vehicles" class="inline-flex items-center justify-center rounded-full bg-surface-container-lowest border border-border-subtle px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors text-decoration-none">Cancel</a>
-            <button type="submit" class="inline-flex items-center justify-center rounded-full bg-primary text-on-primary px-5 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer">Save Vehicle</button>
+            <button type="submit" class="inline-flex items-center justify-center rounded-full bg-primary text-on-primary px-5 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">Save Vehicle</button>
         </div>
     </form>
 </div>

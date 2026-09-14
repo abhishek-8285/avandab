@@ -13,17 +13,17 @@
             <p class="text-sm text-secondary mt-1">Real-time fleet, trips and revenue — auto-refreshes every 5s. <span class="hidden sm:inline">Click any KPI to drill down.</span></p>
         </div>
         <div class="flex items-center gap-2 flex-wrap shrink-0">
-            <a href="/bookings/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:shadow-md hover:-translate-y-px transition-all">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 5v14M5 12h14"/></svg>
+            <a href="/bookings/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:shadow-md hover:-translate-y-px transition">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 5v14M5 12h14"/></svg>
                 New Booking
             </a>
-            <a href="/trips/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 hover:shadow-sm transition-all">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg>
+            <a href="/trips/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 hover:shadow-sm transition">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg>
                 Dispatch Trip
             </a>
             <div class="relative" id="dash-more-wrap">
                 <button id="dash-more-btn" type="button" aria-expanded="false" aria-haspopup="true" aria-label="More actions" class="w-9 h-9 grid place-items-center rounded-full bg-surface-container-lowest border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
                 </button>
                 <div id="dash-more-menu" class="absolute right-0 top-full mt-2 w-52 bg-surface-container-lowest border border-border-subtle rounded-xl shadow-xl p-1 hidden z-30">
                     <a href="/vehicles/new" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-surface-container-low">+ Add Vehicle</a>
@@ -45,11 +45,11 @@
     <!-- KPI HERO — 4 premium cards with gradient accents -->
     <div id="dash-sec-kpis" data-dashtab="today" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Today's Trips -->
-        <a href="/trips" data-drill="kpi-today-trips" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-primary/20 transition-all duration-200">
+        <a href="/trips" data-drill="kpi-today-trips" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-primary/20 transition duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-violet-500 to-cyan-400 opacity-90"></div>
             <div class="flex items-start justify-between">
                 <div class="w-10 h-10 rounded-xl bg-primary/10 border border-primary/10 grid place-items-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>
                 </div>
                 {{if gt .Stats.DeltaYesterday 0}}<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong">▲ +{{.Stats.DeltaYesterday}} vs yesterday</span>{{else if lt .Stats.DeltaYesterday 0}}<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-soft border border-red-line text-[11px] font-bold text-red-mid">▼ {{mul .Stats.DeltaYesterday -1}} vs yesterday</span>{{else}}<span class="inline-flex items-center px-2 py-1 rounded-full bg-surface-container-low border border-border-subtle text-[11px] font-medium text-text-muted">— vs yesterday</span>{{end}}
             </div>
@@ -61,11 +61,11 @@
         </a>
 
         <!-- Active -->
-        <a href="/trips?status=active" data-drill="kpi-active" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-amber-500/20 transition-all duration-200">
+        <a href="/trips?status=active" data-drill="kpi-active" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-amber-500/20 transition duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-80"></div>
             <div class="flex items-start justify-between">
                 <div class="w-10 h-10 rounded-xl bg-amber-soft border border-amber-line grid place-items-center text-amber-mid group-hover:bg-amber-500 group-hover:text-white transition-colors">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><circle cx="12" cy="8" r="2"/><path d="M12 12v4"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><circle cx="12" cy="8" r="2"/><path d="M12 12v4"/></svg>
                 </div>
                 <span class="text-eyebrow px-2 py-1 rounded-full bg-amber-soft text-amber-strong border border-amber-line">In motion</span>
             </div>
@@ -77,11 +77,11 @@
         </a>
 
         <!-- Completed -->
-        <a href="/trips?status=completed" data-drill="kpi-completed" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-emerald-500/20 transition-all duration-200">
+        <a href="/trips?status=completed" data-drill="kpi-completed" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-emerald-500/20 transition duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-80"></div>
             <div class="flex items-start justify-between">
                 <div class="w-10 h-10 rounded-xl bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
                 </div>
                 <span class="text-eyebrow px-2 py-1 rounded-full bg-emerald-soft text-emerald-strong border border-emerald-line">Done</span>
             </div>
@@ -93,11 +93,11 @@
         </a>
 
         <!-- Cancelled -->
-        <a href="/trips?status=cancelled" data-drill="kpi-cancelled" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-rose-500/20 transition-all duration-200">
+        <a href="/trips?status=cancelled" data-drill="kpi-cancelled" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px hover:border-rose-500/20 transition duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-500 to-red-500 opacity-80"></div>
             <div class="flex items-start justify-between">
                 <div class="w-10 h-10 rounded-xl bg-rose-soft border border-rose-line grid place-items-center text-rose-mid group-hover:bg-rose-500 group-hover:text-white transition-colors">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/><path d="M9 9l6 6"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/><path d="M9 9l6 6"/></svg>
                 </div>
                 {{if gt .Stats.CancelledTripsCount 0}}<span class="text-eyebrow px-2 py-1 rounded-full bg-rose-soft text-rose-strong border border-rose-line">Needs review</span>{{else}}<span class="text-eyebrow px-2 py-1 rounded-full bg-emerald-soft text-emerald-strong border border-emerald-line">Clear</span>{{end}}
             </div>
@@ -111,45 +111,45 @@
 
     <!-- Secondary KPI strip -->
     <div id="dash-sec-strip" data-dashtab="today" class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <a href="/vehicles?status=available" class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+        <a href="/vehicles?status=available" class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition">
             <div class="w-9 h-9 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
             </div>
             <div class="min-w-0">
                 <div id="kpi-vehicles" class="text-xl font-bold tabular-nums text-on-surface leading-none">{{.Stats.AvailableVehiclesCount}}</div>
                 <div class="text-xs text-secondary font-medium mt-1">Available Vehicles</div>
             </div>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted ml-auto shrink-0"><path d="M9 18l6-6-6-6"/></svg>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted ml-auto shrink-0"><path d="M9 18l6-6-6-6"/></svg>
         </a>
-        <a href="/drivers?status=available" class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition-all">
+        <a href="/drivers?status=available" class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition">
             <div class="w-9 h-9 rounded-lg bg-violet-soft border border-violet-line grid place-items-center text-violet-mid shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
             </div>
             <div class="min-w-0">
                 <div id="kpi-drivers" class="text-xl font-bold tabular-nums text-on-surface leading-none">{{.Stats.AvailableDriversCount}}</div>
                 <div class="text-xs text-secondary font-medium mt-1">Available Drivers</div>
             </div>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted ml-auto shrink-0"><path d="M9 18l6-6-6-6"/></svg>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted ml-auto shrink-0"><path d="M9 18l6-6-6-6"/></svg>
         </a>
-        <a href="/invoices?status=open" class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-amber-500/20 transition-all">
+        <a href="/invoices?status=open" class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-amber-500/20 transition">
             <div class="w-9 h-9 rounded-lg bg-amber-soft border border-amber-line grid place-items-center text-amber-mid shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
             </div>
             <div class="min-w-0">
                 <div id="kpi-pending" class="text-xl font-bold tabular-nums text-on-surface leading-none">{{.Stats.PendingPaymentsCount}}</div>
                 <div class="text-xs text-secondary font-medium mt-1">Pending Payments</div>
             </div>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted ml-auto shrink-0"><path d="M9 18l6-6-6-6"/></svg>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted ml-auto shrink-0"><path d="M9 18l6-6-6-6"/></svg>
         </a>
-        <a href="/reports/revenue" class="flex items-center gap-4 bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white hover:shadow-lg hover:scale-[1.01] transition-all">
+        <a href="/reports/revenue" class="flex items-center gap-4 bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white hover:shadow-lg hover:scale-[1.01] transition">
             <div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </div>
             <div class="min-w-0">
                 <div id="kpi-revenue" class="text-xl font-black tabular-nums leading-none">{{printf "₹%.2f" .Stats.MonthlyRevenue}}</div>
                 <div class="text-xs font-medium text-white/80 mt-1">Monthly Revenue</div>
             </div>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-white/70 ml-auto shrink-0"><path d="M9 18l6-6-6-6"/></svg>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-white/70 ml-auto shrink-0"><path d="M9 18l6-6-6-6"/></svg>
         </a>
     </div>
 
@@ -157,7 +157,7 @@
     {{if or (gt .Stats.Attention.Total 0) .PendingAgentActions}}
     <div id="dash-sec-attention" data-dashtab="today" class="bg-surface-container-lowest rounded-2xl border border-amber-500/20 shadow-xs p-4">
         <div class="flex items-center gap-2 mb-3">
-            <span class="w-7 h-7 rounded-lg bg-amber-soft border border-amber-line grid place-items-center text-amber-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
+            <span class="w-7 h-7 rounded-lg bg-amber-soft border border-amber-line grid place-items-center text-amber-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
             <h2 class="text-title-sm font-bold text-on-surface">Needs attention</h2>
             <span id="att-total" class="px-2 py-0.5 rounded-full bg-amber-soft border border-amber-line text-xs font-bold tabular-nums text-amber-strong">{{.Stats.Attention.Total}}</span>
         </div>
@@ -226,7 +226,7 @@
     </div>
     {{else}}
     <div class="bg-surface-container-lowest rounded-xl border border-emerald-500/20 shadow-xs px-4 py-3 flex items-center gap-2.5">
-        <span class="w-7 h-7 rounded-lg bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></span>
+        <span class="w-7 h-7 rounded-lg bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></span>
         <p class="text-sm font-medium text-on-surface">All clear <span class="text-text-muted font-normal">— no backlogs need attention</span></p>
     </div>
     {{end}}
@@ -258,7 +258,7 @@
             <div class="p-4 h-56 relative">
                 <canvas id="chart-revenue"></canvas>
                 <div id="chart-revenue-empty" class="hidden absolute inset-0 items-center justify-center flex-col gap-2 text-center p-4">
-                    <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 4-6"/></svg></div>
+                    <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 4-6"/></svg></div>
                     <p class="text-sm font-medium text-text-muted">No revenue data yet</p><p class="text-xs text-text-muted">Revenue will appear after first paid invoice</p>
                 </div>
             </div>
@@ -274,7 +274,7 @@
             <div class="p-4 h-56 relative">
                 <canvas id="chart-status"></canvas>
                 <div id="chart-status-empty" class="hidden absolute inset-0 items-center justify-center flex-col gap-2 text-center p-4">
-                    <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg></div>
+                    <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg></div>
                     <p class="text-sm font-medium text-text-muted">No trips today</p>
                 </div>
             </div>
@@ -290,7 +290,7 @@
             <div class="p-4 h-56 relative">
                 <canvas id="chart-bookings"></canvas>
                 <div id="chart-bookings-empty" class="hidden absolute inset-0 items-center justify-center flex-col gap-2 text-center p-4">
-                    <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11h-6"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                    <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11h-6"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
                     <p class="text-sm font-medium text-text-muted">No bookings yet</p>
                 </div>
             </div>
@@ -302,7 +302,7 @@
         <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between bg-gradient-to-r from-rose-500/[0.06] to-transparent">
                 <div class="flex items-center gap-2">
-                    <span class="w-7 h-7 rounded-lg bg-rose-soft border border-rose-line grid place-items-center text-rose-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
+                    <span class="w-7 h-7 rounded-lg bg-rose-soft border border-rose-line grid place-items-center text-rose-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
                     <h2 class="text-title-sm font-bold text-on-surface">Overdue Trips</h2>
                 </div>
                 <span id="badge-overdue" class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-rose-500 text-white text-xs font-bold tabular-nums">{{len .Stats.OverdueTrips}}</span>
@@ -314,7 +314,7 @@
         <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between bg-gradient-to-r from-amber-500/[0.07] to-transparent">
                 <div class="flex items-center gap-2">
-                    <span class="w-7 h-7 rounded-lg bg-amber-soft border border-amber-line grid place-items-center text-amber-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></span>
+                    <span class="w-7 h-7 rounded-lg bg-amber-soft border border-amber-line grid place-items-center text-amber-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></span>
                     <h2 class="text-title-sm font-bold text-on-surface">Idle Vehicles</h2>
                 </div>
                 <span id="badge-idle" class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-amber-500 text-white text-xs font-bold tabular-nums">{{len .Stats.IdleVehicles}}</span>
@@ -326,7 +326,7 @@
         <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between bg-gradient-to-r from-blue-500/[0.06] to-transparent">
                 <div class="flex items-center gap-2">
-                    <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg></span>
+                    <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg></span>
                     <h2 class="text-title-sm font-bold text-on-surface">Pending Payments</h2>
                 </div>
                 <span id="badge-pending" class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-blue-600 text-white text-xs font-bold tabular-nums">{{.Stats.PendingPaymentsCount}}</span>
@@ -346,11 +346,11 @@
             </div>
             <div class="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
                 <div class="relative flex-1 min-w-0 sm:flex-none">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                    <input id="upcoming-search" type="text" placeholder="Filter trips, driver, route…" class="w-full sm:w-64 pl-9 pr-3 py-2 rounded-full bg-surface-container-low border border-border-subtle text-sm placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    <input aria-label="Filter trips, driver, route" autocomplete="off" id="upcoming-search" type="text" placeholder="Filter trips, driver, route…" class="w-full sm:w-64 pl-9 pr-3 py-2 rounded-full bg-surface-container-low border border-border-subtle text-sm placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
                 </div>
                 <div class="flex items-center gap-2 w-full sm:w-auto">
-                    <select id="upcoming-status" class="flex-1 sm:flex-none px-3 py-2 rounded-full bg-surface-container-low border border-border-subtle text-xs font-medium focus:outline-none focus:border-primary">
+                    <select id="upcoming-status" aria-label="Filter by status" class="flex-1 sm:flex-none px-3 py-2 rounded-full bg-surface-container-low border border-border-subtle text-xs font-medium focus:outline-none focus:border-primary">
                         <option value="">All status</option>
                         <option value="scheduled">Scheduled</option>
                         <option value="assigned">Assigned</option>
@@ -465,8 +465,8 @@
             <p class="text-sm text-secondary mt-1">Fleet, trips and revenue — <a href="/dashboard?variant=b" class="text-primary font-semibold hover:underline">Switch to Command view →</a></p>
         </div>
         <div class="flex items-center gap-2 flex-wrap shrink-0">
-            <a href="/bookings/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 transition-all">+ New Booking</a>
-            <a href="/trips/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold hover:bg-surface-container-low transition-all">+ Dispatch</a>
+            <a href="/bookings/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 transition">+ New Booking</a>
+            <a href="/trips/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold hover:bg-surface-container-low transition">+ Dispatch</a>
         </div>
     </div>
     <!-- Hero KPIs — premium (with text-stat for test compat) -->
@@ -474,29 +474,29 @@
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-violet-500"></div>
             <div class="flex items-start justify-between">
-                <div class="w-10 h-10 rounded-xl bg-primary/10 border border-primary/10 grid place-items-center text-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg></div>
+                <div class="w-10 h-10 rounded-xl bg-primary/10 border border-primary/10 grid place-items-center text-primary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg></div>
                 {{if gt $dy 0}}<span class="px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong">▲ +{{$dy}} vs yesterday</span>{{else if lt $dy 0}}<span class="px-2 py-1 rounded-full bg-rose-soft border border-rose-line text-[11px] font-bold text-rose-mid">▼ {{mul $dy -1}} vs yesterday</span>{{else}}<span class="px-2 py-1 rounded-full bg-surface-container border text-[11px] font-medium text-text-muted">— vs yesterday</span>{{end}}
             </div>
             <div class="mt-4"><div class="text-stat text-primary tabular-nums text-3xl font-black">{{.Stats.TodaysTripsCount}}</div><div class="text-sm font-medium text-secondary mt-1">Today's Trips</div></div>
         </div>
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5">
-            <div class="w-10 h-10 rounded-xl bg-amber-soft border border-amber-line grid place-items-center text-amber-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg></div>
+            <div class="w-10 h-10 rounded-xl bg-amber-soft border border-amber-line grid place-items-center text-amber-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg></div>
             <div class="mt-4"><div class="text-stat text-status-warning tabular-nums text-3xl font-black">{{.Stats.ActiveTripsCount}}</div><div class="text-sm font-medium text-secondary mt-1">Active Trips</div></div>
         </div>
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5">
-            <div class="w-10 h-10 rounded-xl bg-emerald-soft grid place-items-center text-emerald-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
+            <div class="w-10 h-10 rounded-xl bg-emerald-soft grid place-items-center text-emerald-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
             <div class="mt-4"><div class="text-stat text-status-success tabular-nums text-3xl font-black">{{.Stats.CompletedTripsCount}}</div><div class="text-sm font-medium text-secondary mt-1">Completed Trips</div></div>
         </div>
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5">
-            <div class="w-10 h-10 rounded-xl bg-rose-soft grid place-items-center text-rose-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/></svg></div>
+            <div class="w-10 h-10 rounded-xl bg-rose-soft grid place-items-center text-rose-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/></svg></div>
             <div class="mt-4"><div class="text-stat text-status-alert tabular-nums text-3xl font-black">{{.Stats.CancelledTripsCount}}</div><div class="text-sm font-medium text-secondary mt-1">Cancelled Trips</div></div>
         </div>
     </div>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4"><div class="w-9 h-9 rounded-lg bg-blue-soft grid place-items-center text-blue-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></div><div><div class="text-xl font-bold tabular-nums">{{.Stats.AvailableVehiclesCount}}</div><div class="text-xs text-secondary font-medium">Available Vehicles</div></div></div>
-        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4"><div class="w-9 h-9 rounded-lg bg-violet-soft grid place-items-center text-violet-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div><div class="text-xl font-bold tabular-nums">{{.Stats.AvailableDriversCount}}</div><div class="text-xs text-secondary font-medium">Available Drivers</div></div></div>
-        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4"><div class="w-9 h-9 rounded-lg bg-amber-soft grid place-items-center text-amber-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/></svg></div><div><div class="text-xl font-bold tabular-nums">{{.Stats.PendingPaymentsCount}}</div><div class="text-xs text-secondary font-medium">Pending Payments</div></div></div>
-        <div class="flex items-center gap-4 bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white"><div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div><div class="text-xl font-black tabular-nums">{{printf "₹%.2f" .Stats.MonthlyRevenue}}</div><div class="text-xs font-medium text-white/80">Monthly Revenue</div></div></div>
+        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4"><div class="w-9 h-9 rounded-lg bg-blue-soft grid place-items-center text-blue-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></div><div><div class="text-xl font-bold tabular-nums">{{.Stats.AvailableVehiclesCount}}</div><div class="text-xs text-secondary font-medium">Available Vehicles</div></div></div>
+        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4"><div class="w-9 h-9 rounded-lg bg-violet-soft grid place-items-center text-violet-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div><div class="text-xl font-bold tabular-nums">{{.Stats.AvailableDriversCount}}</div><div class="text-xs text-secondary font-medium">Available Drivers</div></div></div>
+        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4"><div class="w-9 h-9 rounded-lg bg-amber-soft grid place-items-center text-amber-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/></svg></div><div><div class="text-xl font-bold tabular-nums">{{.Stats.PendingPaymentsCount}}</div><div class="text-xs text-secondary font-medium">Pending Payments</div></div></div>
+        <div class="flex items-center gap-4 bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white"><div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div><div class="text-xl font-black tabular-nums">{{printf "₹%.2f" .Stats.MonthlyRevenue}}</div><div class="text-xs font-medium text-white/80">Monthly Revenue</div></div></div>
     </div>
 
     <!-- Upcoming Trips -->

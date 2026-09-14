@@ -3,7 +3,7 @@
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div class="flex items-start gap-3 min-w-0">
             <a href="/ewaybill" class="w-9 h-9 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container transition-colors shrink-0" aria-label="Back to e-way bills">
-                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
             </a>
@@ -21,7 +21,7 @@
                 </div>
                 <p class="text-sm text-secondary mt-1">
                     Trip: <a href="/trips/{{.EWayBill.TripID}}" class="font-data-mono text-primary hover:underline font-semibold">{{.EWayBill.TripID}}</a> |
-                    Generated: <span class="tabular-nums">{{.EWayBill.CreatedAt.Format "02 Jan 2006 15:04"}}</span> | Mode: <span class="font-semibold">{{.EWayBill.GenMode}}</span>
+                    Generated: <span class="tabular-nums"><time datetime="{{.EWayBill.CreatedAt.Format "2006-01-02T15:04"}}">{{.EWayBill.CreatedAt.Format "02 Jan 2006 15:04"}}</time></span> | Mode: <span class="font-semibold">{{.EWayBill.GenMode}}</span>
                 </p>
             </div>
         </div>
@@ -29,17 +29,17 @@
             {{if eq .EWayBill.Status "active"}}
                 {{if not .EWayBill.VehicleNumber}}
                 <button onclick="document.getElementById('part-b-modal').classList.remove('hidden')"
-                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer">
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">
                     Attach Part-B
                 </button>
                 {{else}}
                 <button onclick="document.getElementById('extend-modal').classList.remove('hidden')"
-                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 transition-all cursor-pointer">
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 transition cursor-pointer">
                     Extend Validity
                 </button>
                 {{end}}
                 <button onclick="document.getElementById('cancel-modal').classList.remove('hidden')"
-                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-status-alert text-on-primary text-sm font-semibold shadow-sm hover:opacity-90 transition-all cursor-pointer">
+                        class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-status-alert text-on-primary text-sm font-semibold shadow-sm hover:opacity-90 transition cursor-pointer">
                     Cancel EWB
                 </button>
             {{else if eq .EWayBill.Status "cancelled"}}
@@ -60,7 +60,7 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden lg:col-span-2">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                 <h2 class="text-sm font-bold text-on-surface">Part-A Consignment Details</h2>
-                <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">Valid Until: {{.EWayBill.ValidUntil.Format "02 Jan 15:04"}}</span>
+                <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">Valid Until: <time datetime="{{.EWayBill.ValidUntil.Format "2006-01-02T15:04"}}">{{.EWayBill.ValidUntil.Format "02 Jan 15:04"}}</time></span>
             </div>
             <div class="p-5">
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
@@ -144,7 +144,7 @@
                     {{if .Events}}
                         {{range .Events}}
                         <tr class="hover:bg-surface-container-low/50 transition-colors">
-                            <td class="px-4 py-2.5 font-data-mono text-xs text-text-muted whitespace-nowrap">{{.CreatedAt.Format "02 Jan 15:04:05"}}</td>
+                            <td class="px-4 py-2.5 font-data-mono text-xs text-text-muted whitespace-nowrap"><time datetime="{{.CreatedAt.Format "2006-01-02T15:04"}}">{{.CreatedAt.Format "02 Jan 15:04:05"}}</time></td>
                             <td class="px-4 py-2.5">
                                 {{if eq .EventType "PART_A_GENERATED"}}
                                 <span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-bold text-amber-strong dark:text-amber-300">PART_A_GENERATED</span>
@@ -168,7 +168,7 @@
                         <tr>
                             <td colspan="4" class="px-4 py-12 text-center">
                                 <div class="flex flex-col items-center gap-2">
-                                    <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
+                                    <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
                                     <p class="text-sm font-medium text-on-surface">No events recorded.</p>
                                 </div>
                             </td>
@@ -185,26 +185,26 @@
             <div class="flex justify-between items-center pb-3 border-b border-border-subtle">
                 <h2 class="text-sm font-bold text-on-surface">Attach Part-B Vehicle</h2>
                 <button onclick="document.getElementById('part-b-modal').classList.add('hidden')" class="w-8 h-8 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-text-muted hover:text-on-surface hover:bg-surface-container transition-colors" aria-label="Close modal">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
+                    <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
                 </button>
             </div>
             <form method="POST" action="/ewaybill/{{.EWayBill.EwbNumber}}/part-b" class="space-y-4">
                 <div>
                     <label for="vehicle_number" class="block text-eyebrow text-secondary mb-1.5">Vehicle Registration Number</label>
-                    <input id="vehicle_number" type="text" name="vehicle_number" required placeholder="e.g. MH12AB1234"
-                           class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" />
+                    <input aria-label="e.g. MH12AB1234" autocomplete="off" id="vehicle_number" type="text" name="vehicle_number" required placeholder="e.g. MH12AB1234"
+                           class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition" />
                 </div>
                 <div>
                     <label for="transporter_id" class="block text-eyebrow text-secondary mb-1.5">Transporter ID [Optional]</label>
-                    <input id="transporter_id" type="text" name="transporter_id" placeholder="e.g. TR-12345"
-                           class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" />
+                    <input aria-label="e.g. TR-12345" autocomplete="off" id="transporter_id" type="text" name="transporter_id" placeholder="e.g. TR-12345"
+                           class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition" />
                 </div>
                 <div class="flex justify-end gap-2 pt-2 border-t border-border-subtle flex-wrap">
                     <button type="button" onclick="document.getElementById('part-b-modal').classList.add('hidden')"
                             class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">
                         Cancel
                     </button>
-                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer">Attach Part-B</button>
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">Attach Part-B</button>
                 </div>
             </form>
         </div>
@@ -215,7 +215,7 @@
             <div class="flex justify-between items-center pb-3 border-b border-border-subtle">
                 <h2 class="text-sm font-bold text-on-surface">Extend E-Way Bill Validity</h2>
                 <button onclick="document.getElementById('extend-modal').classList.add('hidden')" class="w-8 h-8 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-text-muted hover:text-on-surface hover:bg-surface-container transition-colors" aria-label="Close modal">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
+                    <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
                 </button>
             </div>
             <p class="text-xs text-text-muted -mt-2">Extension requires GPS geofence proximity evidence within destination range.</p>
@@ -225,7 +225,7 @@
                          its own `reason` select, and two elements sharing
                          id="reason" makes label/for resolve to the wrong one. */}}
                     <label for="reason-extend" class="block text-eyebrow text-secondary mb-1.5">Reason for Extension</label>
-                    <select id="reason-extend" name="reason" required class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    <select id="reason-extend" name="reason" required class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         <option value="traffic_delay">Traffic congestion / Road blockage</option>
                         <option value="vehicle_breakdown">Vehicle breakdown / Transshipment</option>
                         <option value="unloading_queue">Consignee unloading queue</option>
@@ -237,7 +237,7 @@
                             class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">
                         Cancel
                     </button>
-                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer">Request Extension</button>
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">Request Extension</button>
                 </div>
             </form>
         </div>
@@ -248,13 +248,13 @@
             <div class="flex justify-between items-center pb-3 border-b border-border-subtle">
                 <h2 class="text-sm font-bold text-status-alert">Cancel E-Way Bill</h2>
                 <button onclick="document.getElementById('cancel-modal').classList.add('hidden')" class="w-8 h-8 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-text-muted hover:text-on-surface hover:bg-surface-container transition-colors" aria-label="Close modal">
-                    <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
+                    <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
                 </button>
             </div>
             <form method="POST" action="/ewaybill/{{.EWayBill.EwbNumber}}/cancel" class="space-y-4">
                 <div>
                     <label for="reason-cancel" class="block text-eyebrow text-secondary mb-1.5">Cancellation Reason</label>
-                    <select id="reason-cancel" name="reason" required class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    <select id="reason-cancel" name="reason" required class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         <option value="order_cancelled">Order Cancelled by Customer</option>
                         <option value="data_entry_mistake">Data Entry Mistake</option>
                         <option value="duplicate">Duplicate Generation</option>
@@ -266,7 +266,7 @@
                             class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">
                         Dismiss
                     </button>
-                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-status-alert text-on-primary text-sm font-semibold shadow-sm hover:opacity-90 transition-all cursor-pointer">Confirm Cancellation</button>
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-status-alert text-on-primary text-sm font-semibold shadow-sm hover:opacity-90 transition cursor-pointer">Confirm Cancellation</button>
                 </div>
             </form>
         </div>

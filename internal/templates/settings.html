@@ -10,8 +10,8 @@
                 <div class="space-y-4">
                     <div>
                         <label for="company_name" class="block text-xs font-bold text-secondary mb-1.5">Company Name</label>
-                        <input id="company_name" type="text" name="company_name" value="{{if .Settings}}{{.Settings.CompanyName}}{{end}}"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <input autocomplete="organization" id="company_name" type="text" name="company_name" value="{{if .Settings}}{{.Settings.CompanyName}}{{end}}"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
 
                     <div>
@@ -25,27 +25,27 @@
                              at; a file input has no accessible name without
                              an associated label. */}}
                         <input id="company-logo" type="file" name="logo" accept="image/*"
-                            class="w-full text-sm text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all cursor-pointer">
+                            class="w-full text-sm text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition cursor-pointer">
                         <p class="text-xs text-text-muted mt-1">Leave empty to keep the current logo.</p>
                     </div>
 
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label for="phone" class="block text-xs font-bold text-secondary mb-1.5">Phone</label>
-                            <input id="phone" type="text" name="phone" value="{{if .Settings}}{{nullString .Settings.Phone}}{{end}}"
-                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <input autocomplete="tel" id="phone" type="text" name="phone" value="{{if .Settings}}{{nullString .Settings.Phone}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         </div>
                         <div>
                             <label for="email" class="block text-xs font-bold text-secondary mb-1.5">Email</label>
-                            <input id="email" type="email" name="email" value="{{if .Settings}}{{nullString .Settings.Email}}{{end}}"
-                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <input autocomplete="email" spellcheck="false" id="email" type="email" name="email" value="{{if .Settings}}{{nullString .Settings.Email}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         </div>
                     </div>
 
                     <div>
                         <label for="address" class="block text-xs font-bold text-secondary mb-1.5">Address</label>
                         <textarea id="address" name="address" rows="3"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">{{if .Settings}}{{nullString .Settings.Address}}{{end}}</textarea>
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">{{if .Settings}}{{nullString .Settings.Address}}{{end}}</textarea>
                     </div>
                 </div>
             </div>
@@ -56,17 +56,17 @@
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                             <label for="currency" class="block text-xs font-bold text-secondary mb-1.5">Currency</label>
-                            <input id="currency" type="text" name="currency" value="{{if .Settings}}{{.Settings.Currency}}{{end}}"
-                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <input autocomplete="off" id="currency" type="text" name="currency" value="{{if .Settings}}{{.Settings.Currency}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         </div>
                         <div>
                             <label for="timezone" class="block text-xs font-bold text-secondary mb-1.5">Timezone</label>
-                            <input id="timezone" type="text" name="timezone" value="{{if .Settings}}{{.Settings.Timezone}}{{end}}"
-                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <input autocomplete="off" id="timezone" type="text" name="timezone" value="{{if .Settings}}{{.Settings.Timezone}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         </div>
                         <div>
                             <label for="gst_enabled" class="block text-xs font-bold text-secondary mb-1.5">GST Enabled</label>
-                            <select id="gst_enabled" name="gst_enabled" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <select id="gst_enabled" name="gst_enabled" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                                 <option value="1" {{if .Settings.GSTEnabled}}selected{{end}}>Yes</option>
                                 <option value="0" {{if not .Settings.GSTEnabled}}selected{{end}}>No</option>
                             </select>
@@ -76,14 +76,14 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label for="settings_gst_number" class="block text-xs font-bold text-secondary mb-1.5">GST Registration Number (GSTIN) <span class="text-[11px] font-normal text-text-muted">(Tier 1)</span></label>
-                            <input type="text" id="settings_gst_number" name="gst_number" value="{{if .Settings}}{{nullString .Settings.GSTNumber}}{{end}}" placeholder="27ABCDE1234F1Z5" pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]" title="GSTIN format: 27ABCDE1234F1Z5" oninput="onSettingsGSTInput(this.value)"
-                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <input aria-label="27ABCDE1234F1Z5" autocomplete="off" type="text" id="settings_gst_number" name="gst_number" value="{{if .Settings}}{{nullString .Settings.GSTNumber}}{{end}}" placeholder="27ABCDE1234F1Z5" pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]" title="GSTIN format: 27ABCDE1234F1Z5" oninput="onSettingsGSTInput(this.value)"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             <p class="text-[11px] text-text-muted mt-1">15-digit GSTIN used on Tax Invoices and e-Way bills.</p>
                         </div>
                         <div>
                             <label for="settings_pan_number" class="block text-xs font-bold text-secondary mb-1.5">Income Tax PAN Number <span class="text-[11px] font-normal text-text-muted">(Tier 1 &amp; 2)</span></label>
-                            <input type="text" id="settings_pan_number" name="pan_number" value="{{if .Settings}}{{nullString .Settings.PanNumber}}{{end}}" placeholder="ABCDE1234F" pattern="[A-Z]{5}[0-9]{4}[A-Z]" title="PAN format: ABCDE1234F"
-                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <input aria-label="ABCDE1234F" autocomplete="off" type="text" id="settings_pan_number" name="pan_number" value="{{if .Settings}}{{nullString .Settings.PanNumber}}{{end}}" placeholder="ABCDE1234F" pattern="[A-Z]{5}[0-9]{4}[A-Z]" title="PAN format: ABCDE1234F"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             <p class="text-[11px] text-text-muted mt-1">10-digit PAN. Auto-extracted from GSTIN or entered for Sec 194C(6) TDS declaration.</p>
                         </div>
                     </div>
@@ -91,8 +91,8 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label for="gst_rate" class="block text-xs font-bold text-secondary mb-1.5">GST Rate (%)</label>
-                            <input id="gst_rate" type="number" step="0.01" name="gst_rate" value="{{if .Settings}}{{.Settings.GSTRate}}{{end}}"
-                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <input autocomplete="off" id="gst_rate" type="number" step="0.01" name="gst_rate" value="{{if .Settings}}{{.Settings.GSTRate}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         </div>
                         <div class="flex items-center">
                             <div class="p-3 rounded-xl border border-border-subtle bg-surface-container-low/60 w-full">
@@ -118,26 +118,26 @@
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <div>
                             <label for="booking_prefix" class="block text-xs font-bold text-secondary mb-1.5">Booking Prefix</label>
-                            <input id="booking_prefix" type="text" name="booking_prefix" value="{{if .Settings}}{{.Settings.BookingPrefix}}{{end}}"
-                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <input autocomplete="off" id="booking_prefix" type="text" name="booking_prefix" value="{{if .Settings}}{{.Settings.BookingPrefix}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         </div>
                         <div>
                             <label for="trip_prefix" class="block text-xs font-bold text-secondary mb-1.5">Trip Prefix</label>
-                            <input id="trip_prefix" type="text" name="trip_prefix" value="{{if .Settings}}{{.Settings.TripPrefix}}{{end}}"
-                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <input autocomplete="off" id="trip_prefix" type="text" name="trip_prefix" value="{{if .Settings}}{{.Settings.TripPrefix}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         </div>
                         <div>
                             <label for="invoice_prefix" class="block text-xs font-bold text-secondary mb-1.5">Invoice Prefix</label>
-                            <input id="invoice_prefix" type="text" name="invoice_prefix" value="{{if .Settings}}{{.Settings.InvoicePrefix}}{{end}}"
-                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <input autocomplete="off" id="invoice_prefix" type="text" name="invoice_prefix" value="{{if .Settings}}{{.Settings.InvoicePrefix}}{{end}}"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         </div>
                     </div>
 
                     <div>
                         <label for="financial_year" class="block text-xs font-bold text-secondary mb-1.5">Financial Year</label>
-                        <input id="financial_year" type="text" name="financial_year" value="{{if .Settings}}{{nullString .Settings.FinancialYear}}{{end}}"
+                        <input aria-label="e.g. 2024-2025" autocomplete="off" id="financial_year" type="text" name="financial_year" value="{{if .Settings}}{{nullString .Settings.FinancialYear}}{{end}}"
                             placeholder="e.g. 2024-2025"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
                 </div>
             </div>

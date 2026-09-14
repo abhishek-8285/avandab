@@ -55,18 +55,18 @@
                                 {{.Status}}
                             </span>
                         </td>
-                        <td data-label="Created" class="px-3 py-2 text-xs text-text-muted tabular-nums whitespace-nowrap">{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
+                        <td data-label="Created" class="px-3 py-2 text-xs text-text-muted tabular-nums whitespace-nowrap"><time datetime="{{.CreatedAt.Format "2006-01-02T15:04"}}">{{.CreatedAt.Format "2006-01-02 15:04"}}</time></td>
                         <td data-label="Actions" class="px-3 py-2 text-right whitespace-nowrap">
                             <div class="flex items-center justify-end gap-1.5 flex-wrap">
                             {{if eq .Status "open"}}
                                 {{if can $.User "ops_alerts" "update"}}
-                                <button onclick="acknowledgeAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-blue-soft hover:bg-blue-500/20 text-blue-strong dark:text-blue-300 border border-blue-line px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer">Ack</button>
-                                <button onclick="resolveAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-emerald-soft hover:bg-emerald-500/20 text-emerald-strong dark:text-emerald-300 border border-emerald-line px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer">Resolve</button>
-                                <button onclick="dismissAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-surface-container-lowest border border-border-subtle text-on-surface px-2.5 py-1 text-[11px] font-bold hover:bg-surface-container-low transition-all cursor-pointer">Dismiss</button>
+                                <button onclick="acknowledgeAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-blue-soft hover:bg-blue-500/20 text-blue-strong dark:text-blue-300 border border-blue-line px-2.5 py-1 text-[11px] font-bold transition cursor-pointer">Ack</button>
+                                <button onclick="resolveAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-emerald-soft hover:bg-emerald-500/20 text-emerald-strong dark:text-emerald-300 border border-emerald-line px-2.5 py-1 text-[11px] font-bold transition cursor-pointer">Resolve</button>
+                                <button onclick="dismissAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-surface-container-lowest border border-border-subtle text-on-surface px-2.5 py-1 text-[11px] font-bold hover:bg-surface-container-low transition cursor-pointer">Dismiss</button>
                                 {{end}}
                             {{else if eq .Status "acknowledged"}}
                                 {{if can $.User "ops_alerts" "update"}}
-                                <button onclick="resolveAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-emerald-soft hover:bg-emerald-500/20 text-emerald-strong dark:text-emerald-300 border border-emerald-line px-2.5 py-1 text-[11px] font-bold transition-all cursor-pointer">Resolve</button>
+                                <button onclick="resolveAlert('{{.ID}}')" class="inline-flex items-center rounded-full bg-emerald-soft hover:bg-emerald-500/20 text-emerald-strong dark:text-emerald-300 border border-emerald-line px-2.5 py-1 text-[11px] font-bold transition cursor-pointer">Resolve</button>
                                 {{end}}
                             {{end}}
                             </div>
@@ -77,7 +77,7 @@
                     <tr><td colspan="6" class="px-4 py-12 text-center">
                         <div class="flex flex-col items-center gap-2">
                             <div class="w-12 h-12 rounded-2xl bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
                             </div>
                             <p class="text-sm font-medium text-on-surface mt-1">No alerts</p>
                             <p class="text-xs text-text-muted">Fleet operations are quiet.</p>

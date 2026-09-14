@@ -44,7 +44,7 @@
     <div class="flex flex-wrap gap-2 mt-4 pt-3 border-t border-border-subtle">
         {{if not .EWayBill.VehicleNumber}}
         <form method="POST" action="/ewaybill/{{.EWayBill.EwbNumber}}/part-b" class="inline flex items-center gap-2">
-            <input type="text" name="vehicle_number" placeholder="Vehicle Reg No." required class="text-xs border border-border-subtle rounded px-2 py-1 bg-surface-container text-on-surface" />
+            <input aria-label="Vehicle Reg No." autocomplete="off" type="text" name="vehicle_number" placeholder="Vehicle Reg No." required class="text-xs border border-border-subtle rounded px-2 py-1 bg-surface-container text-on-surface" />
             <button type="submit" class="text-xs px-3 py-1.5 rounded bg-primary text-on-primary font-medium hover:opacity-90">Attach Part-B</button>
         </form>
         {{end}}

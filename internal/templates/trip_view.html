@@ -1,4 +1,4 @@
-<a href="/trips" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Trips</a>
+<a href="/trips" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Trips</a>
 
 <div class="space-y-5 max-w-[1600px] mx-auto">
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
@@ -10,7 +10,7 @@
                 <div class="min-w-0">
                     <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-on-surface font-display inline-flex items-center gap-2 flex-wrap">
                         {{.Trip.RouteSource}}
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-secondary shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-secondary shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                         {{.Trip.RouteDestination}}
                     </h1>
                     <div class="flex items-center gap-3 mt-1 flex-wrap">
@@ -20,7 +20,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap shrink-0">
-                    <a href="/trips/{{.Trip.ID}}/playback" hx-boost="false" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 hover:shadow-sm transition-all text-decoration-none" title="Replay where the vehicle went"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><polygon points="5 3 19 12 5 21 5 3"/><circle cx="12" cy="12" r="10" opacity="0.15"/></svg> Playback</a>
+                    <a href="/trips/{{.Trip.ID}}/playback" hx-boost="false" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 hover:shadow-sm transition text-decoration-none" title="Replay where the vehicle went"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><polygon points="5 3 19 12 5 21 5 3"/><circle cx="12" cy="12" r="10" opacity="0.15"/></svg> Playback</a>
                     {{template "btn.html" (dict "Label" "Edit" "Href" (printf "/trips/%s/edit" .Trip.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit")}}
                 </div>
             </div>
@@ -163,7 +163,7 @@
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                 <h3 class="flex items-center gap-2 text-sm font-bold text-on-surface">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     Execution Timeline
                 </h3>
                 <span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">Lifecycle</span>
@@ -227,8 +227,8 @@
             </div>
             {{end}}
             <form method="post" action="/trips/{{.Trip.ID}}/pod" enctype="multipart/form-data" class="mt-4 flex items-center gap-2 flex-wrap">
-                <input type="file" name="file" accept="image/*,.pdf" required class="text-sm text-secondary file:mr-3 file:px-4 file:py-2 file:rounded-full file:border file:border-border-subtle file:bg-surface-container-low file:text-sm file:font-semibold file:text-on-surface hover:file:bg-surface-container transition-colors">
-                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 transition-all">Attach photo</button>
+                <input type="file" name="file" accept="image/*,.pdf" aria-label="Attach POD photo" required class="text-sm text-secondary file:mr-3 file:px-4 file:py-2 file:rounded-full file:border file:border-border-subtle file:bg-surface-container-low file:text-sm file:font-semibold file:text-on-surface hover:file:bg-surface-container transition-colors">
+                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 transition">Attach photo</button>
                 <span class="text-xs text-text-muted">Max 25MB · JPG/PNG/PDF</span>
             </form>
             </div>
@@ -278,13 +278,13 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                 <h2 class="flex items-center gap-2 text-sm font-bold text-on-surface">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                     Billing
                 </h2>
                 <span class="status-badge inline-flex px-2 py-1 text-[11px] font-bold rounded-full {{statusBadge .PaymentStatus}}">{{.PaymentStatus}}</span>
             </div>
             <div class="p-5 space-y-4">
-                <div class="bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white hover:shadow-lg transition-all">
+                <div class="bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white hover:shadow-lg transition">
                     <div class="text-eyebrow text-white/80">Invoice Total</div>
                     <div class="text-2xl font-black tabular-nums leading-tight mt-1">₹{{printf "%.2f" .Total}}</div>
                     <a href="/invoices/{{.ID}}" class="text-xs font-semibold text-white/90 hover:text-white hover:underline text-decoration-none mt-2 inline-block">{{.InvoiceNumber}} · View invoice →</a>
@@ -295,7 +295,7 @@
 
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden h-fit">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                 <h2 class="text-sm font-bold text-on-surface">Actions</h2>
             </div>
             <div class="p-5 flex flex-col gap-2 items-stretch">
@@ -310,7 +310,7 @@
 
                 {{if eq .Trip.Status "scheduled"}}
                 <form method="POST" action="/trips/{{.Trip.ID}}/assign-driver" class="flex items-center gap-1 flex-wrap" data-post>
-                    <select name="driver_id" class="flex-1 min-w-[8rem] bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    <select name="driver_id" aria-label="Driver" class="flex-1 min-w-[8rem] bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         {{range .AvailableDrivers}}
                         <option value="{{.ID}}">{{.FirstName}} {{.LastName}}</option>
                         {{end}}
@@ -318,7 +318,7 @@
                     {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Assign Driver" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2")}}
                 </form>
                 <form method="POST" action="/trips/{{.Trip.ID}}/assign-vehicle" class="flex items-center gap-1 flex-wrap">
-                    <select name="vehicle_id" class="flex-1 min-w-[8rem] bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    <select name="vehicle_id" aria-label="Vehicle" class="flex-1 min-w-[8rem] bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         {{range .AvailableVehicles}}
                         <option value="{{.ID}}">{{.VehicleNumber}} ({{.RegistrationNumber}})</option>
                         {{end}}

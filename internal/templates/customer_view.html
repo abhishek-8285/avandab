@@ -1,4 +1,4 @@
-<a href="/customers" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Customers</a>
+<a href="/customers" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Customers</a>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
     <div class="lg:col-span-2 space-y-4">
@@ -132,7 +132,7 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle">
                 <h2 class="flex items-center gap-2 text-sm font-bold text-on-surface">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                     Actions
                 </h2>
             </div>
@@ -149,7 +149,7 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                 <div class="flex items-center gap-2">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                     <h2 class="text-sm font-bold text-on-surface">Invoices</h2>
                 </div>
                 {{if .RecentInvoices}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .RecentInvoices}}</span>{{end}}
@@ -157,7 +157,7 @@
             {{if .RecentInvoices}}
             <div class="p-4 space-y-3">
                 {{range .RecentInvoices}}
-                <a href="/invoices/{{.ID}}" class="flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface-container-low p-3 hover:bg-surface-container hover:border-primary/20 transition-all text-decoration-none group">
+                <a href="/invoices/{{.ID}}" class="flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface-container-low p-3 hover:bg-surface-container hover:border-primary/20 transition text-decoration-none group">
                     <span class="min-w-0">
                         <span class="block text-xs font-bold text-on-surface font-data-mono truncate" data-numeric>{{.InvoiceNumber}}</span>
                         <span class="block text-xs text-secondary font-semibold tabular-nums mt-0.5" data-numeric>₹{{printf "%.2f" .Total}}</span>
@@ -180,7 +180,7 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle">
                 <h2 class="flex items-center gap-2 text-sm font-bold text-on-surface">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                     At a Glance
                 </h2>
             </div>
@@ -195,7 +195,7 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle">
                 <h2 class="flex items-center gap-2 text-sm font-bold text-on-surface">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     Portal Access
                 </h2>
             </div>
@@ -203,18 +203,18 @@
                 <p class="text-xs text-secondary">Creates a shipper login (customer role) linked to this customer. Existing users are linked as-is.</p>
                 <div>
                     <label for="portal-email" class="block text-eyebrow text-text-muted">Email</label>
-                    <input id="portal-email" name="email" type="email" required class="mt-1 w-full rounded-lg border border-border-subtle bg-surface-container-low px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    <input autocomplete="email" spellcheck="false" id="portal-email" name="email" type="email" required class="mt-1 w-full rounded-lg border border-border-subtle bg-surface-container-low px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                 </div>
                 <div>
                     <label for="portal-phone" class="block text-eyebrow text-text-muted">Phone</label>
-                    <input id="portal-phone" name="phone" type="tel" required class="mt-1 w-full rounded-lg border border-border-subtle bg-surface-container-low px-3 py-2 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    <input autocomplete="tel" id="portal-phone" name="phone" type="tel" required class="mt-1 w-full rounded-lg border border-border-subtle bg-surface-container-low px-3 py-2 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                 </div>
                 <div>
                     <label for="portal-password" class="block text-eyebrow text-text-muted">Initial Password</label>
-                    <input id="portal-password" name="password" type="password" minlength="8" required class="mt-1 w-full rounded-lg border border-border-subtle bg-surface-container-low px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                    <input autocomplete="new-password" id="portal-password" name="password" type="password" minlength="8" required class="mt-1 w-full rounded-lg border border-border-subtle bg-surface-container-low px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     <span class="text-[11px] text-secondary mt-1 block">Ignored when linking an existing user.</span>
                 </div>
-                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-full bg-primary text-on-primary text-sm font-semibold px-4 py-2 min-h-[44px] shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">Grant Portal Access</button>
+                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-full bg-primary text-on-primary text-sm font-semibold px-4 py-2 min-h-[44px] shadow-sm hover:bg-primary/90 hover:-translate-y-px transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">Grant Portal Access</button>
             </form>
         </div>
     </aside>

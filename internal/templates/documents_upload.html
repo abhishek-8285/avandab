@@ -14,24 +14,24 @@
                 <div class="space-y-4">
                     <div>
                         <label for="doc_type" class="block text-xs font-bold text-secondary mb-1.5">Document Type</label>
-                        <input id="doc_type" type="text" name="doc_type" placeholder="rc, insurance, puc, fitness, permit, dl, aadhaar, pan" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <input aria-label="rc, insurance, puc, fitness, permit, dl, aadhaar, pan" autocomplete="off" id="doc_type" type="text" name="doc_type" placeholder="rc, insurance, puc, fitness, permit, dl, aadhaar, pan" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
 
                     <div>
                         <label for="expiry_date" class="block text-xs font-bold text-secondary mb-1.5">Expiry Date (optional)</label>
-                        <input id="expiry_date" type="date" name="expiry_date" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <input id="expiry_date" type="date" name="expiry_date" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
                 </div>
             </div>
 
             <div>
                 <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">File</h2>
-                <input type="file" name="file" accept="image/*,application/pdf" required class="w-full text-sm text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all cursor-pointer">
+                <input type="file" name="file" accept="image/*,application/pdf" aria-label="Document file" required class="w-full text-sm text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition cursor-pointer">
             </div>
 
             <div class="sticky bottom-0 -mx-5 px-5 py-3 bg-surface-container-lowest border-t border-border-subtle flex justify-end">
-                <button type="submit" class="inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-5 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
+                <button type="submit" class="inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-5 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
                     Upload to Vault
                 </button>
             </div>

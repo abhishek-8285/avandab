@@ -5,7 +5,7 @@
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="min-w-0">
             <a href="/fuel/audit" class="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
                 Back to audit queue
             </a>
             <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display mt-1">Fuel Claim Audit</h1>
@@ -144,7 +144,7 @@
         </div>
         {{else}}
         <div class="py-10 text-center">
-            <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/></svg></div>
+            <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted mx-auto"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/></svg></div>
             <p class="text-sm font-medium text-on-surface mt-3">No refill events recorded</p>
             <p class="text-xs text-text-muted">Nothing matched the claim window</p>
         </div>
@@ -171,11 +171,11 @@
                     Fail
                 </label>
             </div>
-            <textarea name="note" rows="2" placeholder="Review note (optional)"
-                      class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all resize-none"></textarea>
+            <textarea aria-label="Review note (optional)" name="note" rows="2" placeholder="Review note (optional)"
+                      class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition resize-none"></textarea>
             <div class="flex justify-end pt-1">
                 <button type="submit"
-                        class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all">
+                        class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition">
                     Submit Verdict
                 </button>
             </div>
@@ -186,7 +186,7 @@
     <!-- Review trail -->
     {{if .Claim.ReviewedAt}}
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xs px-5 py-3 flex items-center gap-3">
-        <span class="w-8 h-8 rounded-lg bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></span>
+        <span class="w-8 h-8 rounded-lg bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></span>
         <p class="text-xs text-text-muted">
             Reviewed by <strong class="text-secondary">{{nullString .Claim.ReviewedBy}}</strong> on
             <strong class="text-secondary tabular-nums">{{derefTime .Claim.ReviewedAt}}</strong>

@@ -18,9 +18,9 @@
                 <label for="pnl-to" class="block text-eyebrow text-text-muted mb-1">To</label>
                 <input type="date" id="pnl-to" class="rounded-lg bg-surface-container-low border border-border-subtle text-sm text-on-surface px-3 py-2 tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" value="{{.To}}">
             </div>
-            <button onclick="loadPNL()" class="inline-flex items-center px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer border-0">Load</button>
+            <button onclick="loadPNL()" class="inline-flex items-center px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer border-0">Load</button>
             {{if can .User "pnl" "write"}}
-            <button onclick="generatePNL()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-600 text-white text-sm font-semibold shadow-sm hover:bg-emerald-700 hover:-translate-y-px transition-all cursor-pointer border-0">Generate Today</button>
+            <button onclick="generatePNL()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-600 text-white text-sm font-semibold shadow-sm hover:bg-emerald-700 hover:-translate-y-px transition cursor-pointer border-0">Generate Today</button>
             {{end}}
         </div>
     </div>
@@ -29,10 +29,10 @@
     {{if .Snapshots}}
     {{$latest := index .Snapshots (sub (len .Snapshots) 1)}}
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        <a href="/pnl/dashboard?from={{$latest.SnapshotDate}}&to={{$latest.SnapshotDate}}" class="group relative overflow-hidden bg-gradient-to-br from-primary to-violet-600 rounded-2xl shadow-md p-4 text-white hover:shadow-lg hover:scale-[1.01] transition-all">
+        <a href="/pnl/dashboard?from={{$latest.SnapshotDate}}&to={{$latest.SnapshotDate}}" class="group relative overflow-hidden bg-gradient-to-br from-primary to-violet-600 rounded-2xl shadow-md p-4 text-white hover:shadow-lg hover:scale-[1.01] transition">
             <div class="flex items-start justify-between">
                 <div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center shrink-0">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 </div>
                 <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-white/15 border border-white/20 text-[11px] font-bold uppercase tracking-wide tabular-nums">{{$latest.SnapshotDate}}</span>
             </div>
@@ -41,50 +41,50 @@
                 <div class="text-xs font-medium text-white/80 mt-1.5">Net Profit · latest day</div>
             </div>
         </a>
-        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition-all duration-200">
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-80"></div>
             <div class="w-9 h-9 rounded-lg bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
             </div>
             <div class="mt-3">
                 <div class="text-xl font-black tracking-tight tabular-nums text-status-success leading-none" data-numeric>₹{{printf "%.2f" $latest.Revenue}}</div>
                 <div class="text-xs font-medium text-secondary mt-1.5">Revenue · latest day</div>
             </div>
         </div>
-        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition-all duration-200">
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-500 to-red-500 opacity-80"></div>
             <div class="w-9 h-9 rounded-lg bg-rose-soft border border-rose-line grid place-items-center text-rose-mid">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/><path d="M9 9l6 6"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/><path d="M9 9l6 6"/></svg>
             </div>
             <div class="mt-3">
                 <div class="text-xl font-black tracking-tight tabular-nums text-status-alert leading-none" data-numeric>₹{{printf "%.2f" $latest.Expenses}}</div>
                 <div class="text-xs font-medium text-secondary mt-1.5">Expenses · latest day</div>
             </div>
         </div>
-        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition-all duration-200">
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-80"></div>
             <div class="w-9 h-9 rounded-lg bg-amber-soft border border-amber-line grid place-items-center text-amber-mid">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
             </div>
             <div class="mt-3">
                 <div class="text-xl font-black tracking-tight tabular-nums text-amber-mid dark:text-amber-400 leading-none" data-numeric>₹{{printf "%.2f" $latest.DriverPayouts}}</div>
                 <div class="text-xs font-medium text-secondary mt-1.5">Driver Payouts · latest day</div>
             </div>
         </div>
-        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition-all duration-200">
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-cyan-500 to-blue-500 opacity-80"></div>
             <div class="w-9 h-9 rounded-lg bg-cyan-soft border border-cyan-line grid place-items-center text-cyan-mid">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="10" y1="10" y2="10"/><line x1="14" x2="20" y1="10" y2="10"/><line x1="14" x2="14" y1="21" y2="14"/><line x1="10" x2="10" y1="3" y2="21"/><line x1="18" x2="18" y1="13" y2="21"/><line x1="20" x2="20" y1="16" y2="21"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="10" y1="10" y2="10"/><line x1="14" x2="20" y1="10" y2="10"/><line x1="14" x2="14" y1="21" y2="14"/><line x1="10" x2="10" y1="3" y2="21"/><line x1="18" x2="18" y1="13" y2="21"/><line x1="20" x2="20" y1="16" y2="21"/></svg>
             </div>
             <div class="mt-3">
                 <div class="text-xl font-black tracking-tight tabular-nums text-cyan-strong dark:text-cyan-400 leading-none" data-numeric>₹{{printf "%.2f" $latest.FuelCosts}}</div>
                 <div class="text-xs font-medium text-secondary mt-1.5">Fuel Costs · latest day</div>
             </div>
         </div>
-        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition-all duration-200">
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-violet-500 to-purple-500 opacity-80"></div>
             <div class="w-9 h-9 rounded-lg bg-violet-soft border border-violet-line grid place-items-center text-violet-mid">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-2.8a.5.5 0 0 0-.45-.3H3a.5.5 0 0 0-.45.3L1.14 12.2a1.5 1.5 0 0 0 0 1.6L2.6 16.6A.5.5 0 0 0 3.05 17H18"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-2.8a.5.5 0 0 0-.45-.3H3a.5.5 0 0 0-.45.3L1.14 12.2a1.5 1.5 0 0 0 0 1.6L2.6 16.6A.5.5 0 0 0 3.05 17H18"/></svg>
             </div>
             <div class="mt-3">
                 <div class="text-xl font-black tracking-tight tabular-nums text-violet-mid dark:text-violet-400 leading-none" data-numeric>{{$latest.TripCount}}</div>
@@ -132,7 +132,7 @@
                     {{else}}
                     <tr><td colspan="7" class="px-4 py-12 text-center">
                         <div class="flex flex-col items-center gap-2">
-                            <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 4-6"/></svg></div>
+                            <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 4-6"/></svg></div>
                             <p class="text-sm font-medium text-on-surface">No P&amp;L snapshots in this range</p><p class="text-xs text-text-muted">Generate today's snapshot or widen the date window</p><button type="button" onclick="generatePNL()" class="mt-1 inline-flex px-3 py-1.5 rounded-full bg-primary text-on-primary text-xs font-bold">Generate Today</button>
                         </div>
                     </td></tr>
