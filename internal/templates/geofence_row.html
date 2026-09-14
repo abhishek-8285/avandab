@@ -8,10 +8,10 @@
     <td class="px-3 py-2">
         <div class="flex items-center gap-2.5">
             <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0
-                {{if or (eq .Kind "pickup") (eq .Kind "drop")}}bg-emerald-500/10 text-emerald-600 border border-emerald-500/20
-                {{else if eq .Kind "depot"}}bg-blue-500/10 text-blue-600 border border-blue-500/20
-                {{else if eq .Kind "restricted"}}bg-amber-500/10 text-amber-600 border border-amber-500/20
-                {{else}}bg-rose-500/10 text-rose-600 border border-rose-500/20{{end}}">
+                {{if or (eq .Kind "pickup") (eq .Kind "drop")}}bg-emerald-soft text-emerald-mid border border-emerald-500/20
+                {{else if eq .Kind "depot"}}bg-blue-soft text-blue-mid border border-blue-500/20
+                {{else if eq .Kind "restricted"}}bg-amber-soft text-amber-mid border border-amber-500/20
+                {{else}}bg-rose-soft text-rose-mid border border-rose-500/20{{end}}">
                 {{if eq .Shape "circle"}}
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><circle cx="12" cy="12" r="9"/></svg>
                 {{else}}
@@ -22,9 +22,9 @@
                 <div class="flex items-center gap-1.5">
                     <span class="text-sm font-bold text-on-surface truncate">{{.Name}}</span>
                     {{if eq .Kind "restricted"}}
-                    <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-data-mono font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">ALERT</span>
+                    <span class="shrink-0 text-[11px] px-1.5 py-0.5 rounded-full font-data-mono font-bold bg-amber-soft text-amber-strong dark:text-amber-400 border border-amber-500/20">ALERT</span>
                     {{else if eq .Kind "no_entry"}}
-                    <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full font-data-mono font-bold bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20">NO ENTRY</span>
+                    <span class="shrink-0 text-[11px] px-1.5 py-0.5 rounded-full font-data-mono font-bold bg-rose-soft text-rose-strong dark:text-rose-400 border border-rose-500/20">NO ENTRY</span>
                     {{end}}
                 </div>
                 <div class="text-[11px] text-text-muted truncate">
@@ -41,27 +41,27 @@
 
     <td class="px-3 py-2 whitespace-nowrap">
         {{if eq .Kind "pickup"}}
-        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/15">
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-soft text-emerald-strong dark:text-emerald-300 border border-emerald-line">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
             Pickup
         </span>
         {{else if eq .Kind "drop"}}
-        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 border border-cyan-500/15">
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-cyan-soft text-cyan-strong dark:text-cyan-300 border border-cyan-line">
             <span class="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
             Drop
         </span>
         {{else if eq .Kind "depot"}}
-        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15">
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-soft text-blue-strong dark:text-blue-300 border border-blue-line">
             <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
             Depot / Hub
         </span>
         {{else if eq .Kind "restricted"}}
-        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/15">
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-soft text-amber-strong dark:text-amber-300 border border-amber-line">
             <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
             Restricted
         </span>
         {{else}}
-        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/15">
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-soft text-rose-strong dark:text-rose-300 border border-rose-line">
             <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
             No Entry
         </span>
@@ -102,7 +102,7 @@
 
     <td class="px-3 py-2 text-center whitespace-nowrap">
         {{if .IsActive}}
-        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/15">
+        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-soft text-emerald-strong dark:text-emerald-300 border border-emerald-line">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
             Active
         </span>

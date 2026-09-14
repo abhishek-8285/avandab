@@ -1,0 +1,29 @@
+# Line-ending policy — canonical form is LF (matches CI, which runs on Linux).
+#
+# Why this file exists: Git-for-Windows defaults to core.autocrlf=true, which
+# checks every text file out as CRLF. The CI gate `gofmt -l -s .` then flags
+# the ENTIRE codebase as unformatted, even though the committed blobs are LF.
+# Pinning LF here makes a Windows checkout byte-identical to CI regardless of
+# the contributor's local git config.
+
+* text=auto eol=lf
+
+# Windows batch scripts must keep CRLF or cmd.exe mis-parses them.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets — never normalize, never diff as text.
+*.ttf      binary
+*.otf      binary
+*.woff     binary
+*.woff2    binary
+*.png      binary
+*.jpg      binary
+*.jpeg     binary
+*.gif      binary
+*.webp     binary
+*.ico      binary
+*.pdf      binary
+*.zip      binary
+*.jar      binary
+*.keystore binary

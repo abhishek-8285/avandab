@@ -11,27 +11,27 @@
                 <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Account</h2>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-xs font-bold text-secondary mb-1.5">Email *</label>
-                        <input type="email" name="email" value="{{if $u}}{{$u.Email}}{{end}}" required
+                        <label for="email" class="block text-xs font-bold text-secondary mb-1.5">Email *</label>
+                        <input id="email" type="email" name="email" value="{{if $u}}{{$u.Email}}{{end}}" required
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-secondary mb-1.5">Name *</label>
-                        <input type="text" name="name" value="{{if $u}}{{$u.Name}}{{end}}" required
+                        <label for="name" class="block text-xs font-bold text-secondary mb-1.5">Name *</label>
+                        <input id="name" type="text" name="name" value="{{if $u}}{{$u.Name}}{{end}}" required
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-secondary mb-1.5">Phone</label>
-                        <input type="tel" name="phone" value="{{if $u}}{{nullString $u.Phone}}{{end}}"
+                        <label for="phone" class="block text-xs font-bold text-secondary mb-1.5">Phone</label>
+                        <input id="phone" type="tel" name="phone" value="{{if $u}}{{nullString $u.Phone}}{{end}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
 
                     {{if not $u}}
                     <div>
-                        <label class="block text-xs font-bold text-secondary mb-1.5">Initial Password (Leave blank for default: <code class="bg-surface-container px-1 rounded text-xs normal-case">email-changeme</code>)</label>
-                        <input type="password" name="password" placeholder="Set temporary password"
+                        <label for="password" class="block text-xs font-bold text-secondary mb-1.5">Initial Password (Leave blank for default: <code class="bg-surface-container px-1 rounded text-xs normal-case">email-changeme</code>)</label>
+                        <input id="password" type="password" name="password" placeholder="Set temporary password"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                     {{end}}
@@ -42,8 +42,8 @@
                 <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Access Control</h2>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-xs font-bold text-secondary mb-1.5">Role *</label>
-                        <select name="role_id" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <label for="role_id" class="block text-xs font-bold text-secondary mb-1.5">Role *</label>
+                        <select id="role_id" name="role_id" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             {{range .Roles}}
                             <option value="{{.ID}}" {{if and $u (eq .ID $u.Role.ID)}}selected{{end}}>{{.Name}}</option>
                             {{end}}
@@ -51,8 +51,8 @@
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-secondary mb-1.5">Status</label>
-                        <select name="status" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <label for="status" class="block text-xs font-bold text-secondary mb-1.5">Status</label>
+                        <select id="status" name="status" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             <option value="active" {{if and $u (eq $u.Status "active")}}selected{{end}}>Active</option>
                             <option value="inactive" {{if and $u (eq $u.Status "inactive")}}selected{{end}}>Inactive</option>
                             <option value="suspended" {{if and $u (eq $u.Status "suspended")}}selected{{end}}>Suspended</option>

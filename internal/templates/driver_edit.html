@@ -23,8 +23,8 @@
                     {{template "field.html" (dict "Label" "Email" "Name" "email" "Type" "email" "Value" (and $driver (nullString $driver.Email)))}}
                 </div>
                 <div class="mt-4">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Address</label>
-                    <textarea name="address" rows="2"
+                    <label for="address" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Address</label>
+                    <textarea id="address" name="address" rows="2"
                         class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">{{if $driver}}{{nullString $driver.Address}}{{end}}</textarea>
                 </div>
             </section>
@@ -50,8 +50,8 @@
                 <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Status &amp; Notes</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-none sm:max-w-md">
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Status</label>
-                        <select name="status" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <label for="status" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Status</label>
+                        <select id="status" name="status" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             <option value="available" {{if and $driver (eq $driver.Status "available")}}selected{{end}}>Available</option>
                             <option value="on_trip" {{if and $driver (eq $driver.Status "on_trip")}}selected{{end}}>On Trip</option>
                             <option value="leave" {{if and $driver (eq $driver.Status "leave")}}selected{{end}}>Leave</option>
@@ -60,8 +60,8 @@
                     </div>
                 </div>
                 <div class="mt-4">
-                    <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Notes</label>
-                    <textarea name="notes" rows="2"
+                    <label for="notes" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Notes</label>
+                    <textarea id="notes" name="notes" rows="2"
                         class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">{{if $driver}}{{nullString $driver.Notes}}{{end}}</textarea>
                 </div>
             </section>

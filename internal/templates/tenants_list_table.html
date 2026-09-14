@@ -1,5 +1,5 @@
 <div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-border-subtle">
+    <table class="rtable min-w-full divide-y divide-border-subtle">
         <thead class="bg-surface-container-low">
             <tr>
                 <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Organization</th>
@@ -15,40 +15,40 @@
             {{range .Tenants}}
             <tr class="hover:bg-surface-container-low/50 transition-colors group">
                 <!-- Org Name & ID -->
-                <td class="px-3 py-2.5 whitespace-nowrap">
+                <td data-label="Organization" class="px-3 py-2.5 whitespace-nowrap">
                     <div class="font-semibold text-on-surface">{{.Name}}</div>
                     <div class="font-data-mono text-xs text-text-muted">{{.Slug}} · ID: {{.ID}}</div>
                 </td>
 
                 <!-- Plan & MRR -->
-                <td class="px-3 py-2.5 whitespace-nowrap">
-                    <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold font-data-mono rounded-full {{if eq .PlanID "GROWTH"}}bg-primary/10 text-primary border border-primary/20{{else if eq .PlanID "SCALE"}}bg-purple-500/10 text-purple-600 border border-purple-500/20{{else if eq .PlanID "ENTERPRISE"}}bg-amber-500/10 text-amber-700 border border-amber-500/20{{else}}bg-surface-container text-text-muted border border-border-subtle{{end}}">
+                <td data-label="Plan & MRR" class="px-3 py-2.5 whitespace-nowrap">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold font-data-mono rounded-full {{if eq .PlanID "GROWTH"}}bg-primary/10 text-primary border border-primary/20{{else if eq .PlanID "SCALE"}}bg-purple-500/10 text-purple-600 border border-purple-500/20{{else if eq .PlanID "ENTERPRISE"}}bg-amber-soft text-amber-strong border border-amber-500/20{{else}}bg-surface-container text-text-muted border border-border-subtle{{end}}">
                         {{.PlanID}}
                     </span>
                     <span class="text-xs font-semibold tabular-nums text-text-muted ml-1.5">{{if gt .MonthlyPrice 0.0}}₹{{printf "%.0f" .MonthlyPrice}}/mo{{else}}Free{{end}}</span>
                 </td>
 
                 <!-- Commercial Status -->
-                <td class="px-3 py-2.5 whitespace-nowrap">
+                <td data-label="Commercial Status" class="px-3 py-2.5 whitespace-nowrap">
                     {{if eq .SubStatus "ACTIVE"}}
-                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-500/10 text-emerald-700 border border-emerald-500/15"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>ACTIVE</span>
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-soft text-emerald-strong border border-emerald-line"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>ACTIVE</span>
                     {{else if eq .SubStatus "TRIAL"}}
-                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-cyan-500/10 text-cyan-700 border border-cyan-500/15"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-pulse"></span>TRIAL</span>
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-cyan-soft text-cyan-strong border border-cyan-line"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-pulse"></span>TRIAL</span>
                     {{else if eq .SubStatus "PAST_DUE"}}
-                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-500/10 text-amber-700 border border-amber-500/15"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>PAST DUE</span>
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-soft text-amber-strong border border-amber-line"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>PAST DUE</span>
                     {{else if eq .SubStatus "READ_ONLY"}}
-                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-slate-500/10 text-slate-700 border border-slate-500/15"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>READ ONLY</span>
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-slate-soft text-slate-strong border border-slate-line"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>READ ONLY</span>
                     {{else}}
-                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-red-500/10 text-red-700 border border-red-500/15"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.SubStatus}}</span>
+                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-red-soft text-red-strong border border-red-line"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.SubStatus}}</span>
                     {{end}}
                 </td>
 
                 <!-- Usage Quota Meter -->
-                <td class="px-3 py-2.5 whitespace-nowrap min-w-[140px]">
+                <td data-label="Trip Quota Usage" class="px-3 py-2.5 whitespace-nowrap min-w-[140px]">
                     {{if gt .TripsMax 0}}
                     <div class="flex items-center justify-between text-xs tabular-nums mb-1">
                         <span class="font-medium {{if .IsNearQuota}}text-status-alert font-bold{{else}}text-on-surface{{end}}">{{.TripsUsed}} / {{.TripsMax}} trips</span>
-                        <span class="text-text-muted text-[10px]">{{printf "%.0f" .QuotaUsagePct}}%</span>
+                        <span class="text-text-muted text-[11px]">{{printf "%.0f" .QuotaUsagePct}}%</span>
                     </div>
                     <div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
                         <div class="h-full rounded-full {{if .IsNearQuota}}bg-status-alert{{else}}bg-primary{{end}}" style="width: {{printf "%.0f" .QuotaUsagePct}}%;"></div>
@@ -59,10 +59,10 @@
                 </td>
 
                 <!-- Users -->
-                <td class="px-3 py-2.5 text-sm tabular-nums whitespace-nowrap">{{.UserCount}}</td>
+                <td data-label="Users" class="px-3 py-2.5 text-sm tabular-nums whitespace-nowrap">{{.UserCount}}</td>
 
                 <!-- Platform Owner Actions -->
-                <td class="px-3 py-2.5 text-right whitespace-nowrap">
+                <td data-label="Platform Controls" class="px-3 py-2.5 text-right whitespace-nowrap">
                     <div class="inline-flex items-center gap-2">
                         <!-- Quick Plan Changer Form -->
                         <form method="POST" action="/tenants/{{.ID}}/plan" class="inline-flex items-center gap-1">
@@ -78,7 +78,7 @@
                         <!-- Extend Trial Form -->
                         {{if eq .SubStatus "TRIAL"}}
                         <form method="POST" action="/tenants/{{.ID}}/extend-trial" class="inline">
-                            <button type="submit" title="Grant +14 days trial extension" class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold bg-cyan-500/10 text-cyan-700 border border-cyan-500/20 hover:bg-cyan-500/20 transition-all">
+                            <button type="submit" title="Grant +14 days trial extension" class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold bg-cyan-soft text-cyan-strong border border-cyan-500/20 hover:bg-cyan-500/20 transition-all">
                                 +14d Trial
                             </button>
                         </form>

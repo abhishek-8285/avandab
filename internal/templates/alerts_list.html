@@ -27,7 +27,7 @@
             "ShowSearch" false
         )}}
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-border-subtle">
+            <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
                         <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Severity</th>
@@ -44,38 +44,38 @@
                     {{if .Alerts}}
                         {{range .Alerts}}
                         <tr class="hover:bg-surface-container-low/60 transition-colors" id="alert-row-{{.ID}}">
-                            <td class="px-3 py-2 whitespace-nowrap">
+                            <td data-label="Severity" class="px-3 py-2 whitespace-nowrap">
                                 {{if eq .Severity "blocker"}}
                                     <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-status-alert text-on-primary">
                                         <span class="w-1.5 h-1.5 rounded-full bg-on-primary animate-pulse"></span>
                                         BLOCKER
                                     </span>
                                 {{else if eq .Severity "critical"}}
-                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/15">
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-soft text-rose-strong dark:text-rose-300 border border-rose-line">
                                         <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
                                         CRITICAL
                                     </span>
                                 {{else if eq .Severity "warning"}}
-                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/15">
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-soft text-amber-strong dark:text-amber-300 border border-amber-line">
                                         <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                         WARNING
                                     </span>
                                 {{else}}
-                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15">
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-soft text-blue-strong dark:text-blue-300 border border-blue-line">
                                         <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                                         INFO
                                     </span>
                                 {{end}}
                             </td>
-                            <td class="px-3 py-2 max-w-md">
+                            <td data-label="Alert Details" class="px-3 py-2 max-w-md">
                                 <div class="font-semibold text-sm text-on-surface truncate">{{.Title}}</div>
                                 <div class="text-xs text-text-muted mt-0.5 line-clamp-2">{{.Message}}</div>
                             </td>
-                            <td class="px-3 py-2 whitespace-nowrap">
+                            <td data-label="Source & Type" class="px-3 py-2 whitespace-nowrap">
                                 <span class="font-medium text-xs text-on-surface">{{.Source}}</span>
                                 <div class="text-xs text-text-muted font-data-mono mt-0.5">{{.AlertType}}</div>
                             </td>
-                            <td class="px-3 py-2 whitespace-nowrap text-xs">
+                            <td data-label="Entity" class="px-3 py-2 whitespace-nowrap text-xs">
                                 {{if .EntityID}}
                                     <span class="font-medium text-on-surface capitalize">{{if .EntityType}}{{.EntityType}}{{else}}Entity{{end}}:</span>
                                     <span class="font-data-mono font-semibold text-primary">{{.EntityID}}</span>
@@ -83,7 +83,7 @@
                                     <span class="text-text-muted">Global</span>
                                 {{end}}
                             </td>
-                            <td class="px-3 py-2 text-right whitespace-nowrap tabular-nums" data-numeric>
+                            <td data-label="Occurrences" class="px-3 py-2 text-right whitespace-nowrap tabular-nums" data-numeric>
                                 {{if gt .Occurrences 1}}
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold tabular-nums bg-surface-container text-on-surface border border-border-subtle">
                                         ×{{.Occurrences}}
@@ -92,31 +92,31 @@
                                     <span class="text-xs text-text-muted tabular-nums">×1</span>
                                 {{end}}
                             </td>
-                            <td class="px-3 py-2 whitespace-nowrap text-xs text-text-muted tabular-nums">
+                            <td data-label="Last Seen" class="px-3 py-2 whitespace-nowrap text-xs text-text-muted tabular-nums">
                                 <span class="time-display" data-utc-time="{{.LastSeenAt.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .LastSeenAt}}</span>
                             </td>
-                            <td class="px-3 py-2 whitespace-nowrap">
+                            <td data-label="Status" class="px-3 py-2 whitespace-nowrap">
                                 <span id="alert-status-{{.ID}}" class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold
-                                    {{if eq .Status "open"}}bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/15
-                                    {{else if eq .Status "acknowledged"}}bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15
-                                    {{else if eq .Status "resolved"}}bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/15
-                                    {{else if eq .Status "escalated"}}bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/15
+                                    {{if eq .Status "open"}}bg-rose-soft text-rose-strong dark:text-rose-300 border border-rose-line
+                                    {{else if eq .Status "acknowledged"}}bg-blue-soft text-blue-strong dark:text-blue-300 border border-blue-line
+                                    {{else if eq .Status "resolved"}}bg-emerald-soft text-emerald-strong dark:text-emerald-300 border border-emerald-line
+                                    {{else if eq .Status "escalated"}}bg-amber-soft text-amber-strong dark:text-amber-300 border border-amber-line
                                     {{else}}bg-surface-container text-text-muted border border-border-subtle{{end}}">
                                     {{.Status}}
                                 </span>
                             </td>
-                            <td class="px-3 py-2 whitespace-nowrap text-right">
+                            <td data-label="Actions" class="px-3 py-2 whitespace-nowrap text-right">
                                 <div class="flex items-center justify-end gap-1.5">
                                     {{if eq .Status "open"}}
                                         <form method="POST" action="/alerts/{{.ID}}/ack">
-                                            <button type="submit" class="inline-flex px-2.5 py-1 rounded-full bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-blue-300 text-[11px] font-bold transition-all cursor-pointer border border-blue-500/15">
+                                            <button type="submit" class="inline-flex px-2.5 py-1 rounded-full bg-blue-soft hover:bg-blue-500/20 text-blue-strong dark:text-blue-300 text-[11px] font-bold transition-all cursor-pointer border border-blue-line">
                                                 Ack
                                             </button>
                                         </form>
                                     {{end}}
                                     {{if or (eq .Status "open") (eq .Status "acknowledged") (eq .Status "escalated")}}
                                         <form method="POST" action="/alerts/{{.ID}}/resolve">
-                                            <button type="submit" class="inline-flex px-2.5 py-1 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold transition-all cursor-pointer border border-emerald-500/15">
+                                            <button type="submit" class="inline-flex px-2.5 py-1 rounded-full bg-emerald-soft hover:bg-emerald-500/20 text-emerald-strong dark:text-emerald-300 text-[11px] font-bold transition-all cursor-pointer border border-emerald-line">
                                                 Resolve
                                             </button>
                                         </form>

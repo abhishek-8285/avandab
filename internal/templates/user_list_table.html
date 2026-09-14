@@ -1,5 +1,5 @@
 <div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-border-subtle">
+    <table class="rtable min-w-full divide-y divide-border-subtle">
         <thead class="bg-surface-container-low">
             <tr>
                 <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Full Name</th>
@@ -13,13 +13,13 @@
             {{if .Users}}
             {{range .Users}}
             <tr class="hover:bg-surface-container-low/50 transition-colors group">
-                <td class="px-3 py-2 text-sm font-semibold text-on-surface whitespace-nowrap">{{.Name}}</td>
-                <td class="px-3 py-2 font-data-mono text-xs text-secondary">{{.Email}}</td>
-                <td class="px-3 py-2 text-sm font-medium">{{.RoleName}}</td>
-                <td class="px-3 py-2">
+                <td data-label="Full Name" class="px-3 py-2 text-sm font-semibold text-on-surface whitespace-nowrap">{{.Name}}</td>
+                <td data-label="Email Address" class="px-3 py-2 font-data-mono text-xs text-secondary">{{.Email}}</td>
+                <td data-label="Role" class="px-3 py-2 text-sm font-medium">{{.RoleName}}</td>
+                <td data-label="Status" class="px-3 py-2">
                     <span class="status-badge inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                 </td>
-                <td class="px-3 py-2 text-right whitespace-nowrap">
+                <td data-label="Actions" class="px-3 py-2 text-right whitespace-nowrap">
                     <a href="/users/{{.ID}}/edit" class="action-edit mr-2">Edit</a>
                     <form method="POST" action="/users/{{.ID}}/delete" data-confirm="Are you sure? This cannot be undone." class="inline" onsubmit="return confirm('Are you sure you want to delete this user?');">
                         <button type="submit" class="action-delete">Delete</button>

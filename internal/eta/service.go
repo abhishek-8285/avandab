@@ -7,7 +7,16 @@ import (
 	"math"
 	"sync"
 	"time"
+
+	"transport-app/internal/shared/id"
 )
+
+// Ids must NOT be minted from time.Now(): on Windows the clock steps in ~0.5ms
+// chunks, so two ids generated inside one tick are identical and the second
+// INSERT fails on a UNIQUE/PK column. See docs/10-FRONTEND-UX-AUDIT.md §7.4.
+// GenerateUUID (not GenerateDisplayID) because these are opaque primary keys,
+// and the display variant truncates to 32 bits.
+var idGen = id.NewUUIDGenerator()
 
 // EtaResult is the output of the hybrid ETA calculation (Spec 04 §5).
 type EtaResult struct {
@@ -307,7 +316,7 @@ func (s *EtaService) writeAuditLog(ctx context.Context, tripID string, action st
 	if s.db == nil {
 		return
 	}
-	auditID := fmt.Sprintf("eta-%d", time.Now().UnixNano())
+	auditID := "eta-" + idGen.GenerateUUID()
 	newValues := fmt.Sprintf(`{"reason":"%s"}`, reason)
 	_, _ = s.db.ExecContext(ctx, `
 		INSERT INTO audit_logs (id, action, table_name, record_id, new_values, created_at)

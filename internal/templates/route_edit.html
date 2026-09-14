@@ -22,13 +22,13 @@
                 <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Lane</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Source *</label>
-                        <input type="text" name="source" value="{{if $route}}{{$route.Source}}{{end}}" required
+                        <label for="source" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Source *</label>
+                        <input id="source" type="text" name="source" value="{{if $route}}{{$route.Source}}{{end}}" required
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Destination *</label>
-                        <input type="text" name="destination" value="{{if $route}}{{$route.Destination}}{{end}}" required
+                        <label for="destination" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Destination *</label>
+                        <input id="destination" type="text" name="destination" value="{{if $route}}{{$route.Destination}}{{end}}" required
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                 </div>
@@ -38,18 +38,18 @@
                 <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Tariff</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Distance (km)</label>
-                        <input type="number" step="0.1" name="distance" value="{{if $route}}{{$route.Distance}}{{end}}"
+                        <label for="distance" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Distance (km)</label>
+                        <input id="distance" type="number" step="0.1" name="distance" value="{{if $route}}{{$route.Distance}}{{end}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Est. Hours</label>
-                        <input type="number" step="0.1" name="estimated_hours" value="{{if $route}}{{$route.EstimatedHours}}{{end}}"
+                        <label for="estimated_hours" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Est. Hours</label>
+                        <input id="estimated_hours" type="number" step="0.1" name="estimated_hours" value="{{if $route}}{{$route.EstimatedHours}}{{end}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Standard Fare</label>
-                        <input type="number" step="0.01" name="standard_fare" value="{{if $route}}{{$route.StandardFare}}{{end}}"
+                        <label for="standard_fare" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Standard Fare</label>
+                        <input id="standard_fare" type="number" step="0.01" name="standard_fare" value="{{if $route}}{{$route.StandardFare}}{{end}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                 </div>
@@ -59,20 +59,20 @@
                 <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Direction &amp; Reverse Leg</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Direction</label>
-                        <select name="direction" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <label for="direction" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Direction</label>
+                        <select id="direction" name="direction" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             <option value="oneway" {{if and $route (eq $route.Direction "oneway")}}selected{{end}}>One-way</option>
                             <option value="bidirectional" {{if and $route (eq $route.Direction "bidirectional")}}selected{{end}}>Bidirectional</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Reverse Distance (km)</label>
-                        <input type="number" step="0.1" name="reverse_distance" value="{{if and $route $route.ReverseDistance}}{{index $route.ReverseDistance}}{{end}}" placeholder="optional"
+                        <label for="reverse_distance" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Reverse Distance (km)</label>
+                        <input id="reverse_distance" type="number" step="0.1" name="reverse_distance" value="{{if and $route $route.ReverseDistance}}{{index $route.ReverseDistance}}{{end}}" placeholder="optional"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Reverse Fare</label>
-                        <input type="number" step="0.01" name="reverse_standard_fare" value="{{if and $route $route.ReverseStandardFare}}{{index $route.ReverseStandardFare}}{{end}}" placeholder="optional"
+                        <label for="reverse_standard_fare" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Reverse Fare</label>
+                        <input id="reverse_standard_fare" type="number" step="0.01" name="reverse_standard_fare" value="{{if and $route $route.ReverseStandardFare}}{{index $route.ReverseStandardFare}}{{end}}" placeholder="optional"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                 </div>

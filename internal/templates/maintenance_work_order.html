@@ -7,17 +7,17 @@
         </div>
         <div>
             {{if eq .WorkOrder.Status "open"}}
-            <span class="inline-flex px-3 py-1 text-xs rounded-full bg-blue-500/10 border border-blue-500/15 text-blue-700 dark:text-blue-300 font-bold uppercase">Open</span>
+            <span class="inline-flex px-3 py-1 text-xs rounded-full bg-blue-soft border border-blue-line text-blue-strong dark:text-blue-300 font-bold uppercase">Open</span>
             {{else if eq .WorkOrder.Status "assigned"}}
-            <span class="inline-flex px-3 py-1 text-xs rounded-full bg-indigo-500/10 border border-indigo-500/15 text-indigo-700 dark:text-indigo-300 font-bold uppercase">Assigned</span>
+            <span class="inline-flex px-3 py-1 text-xs rounded-full bg-indigo-soft border border-indigo-line text-indigo-strong dark:text-indigo-300 font-bold uppercase">Assigned</span>
             {{else if eq .WorkOrder.Status "in_progress"}}
-            <span class="inline-flex px-3 py-1 text-xs rounded-full bg-amber-500/10 border border-amber-500/15 text-amber-700 dark:text-amber-300 font-bold uppercase">In Progress</span>
+            <span class="inline-flex px-3 py-1 text-xs rounded-full bg-amber-soft border border-amber-line text-amber-strong dark:text-amber-300 font-bold uppercase">In Progress</span>
             {{else if eq .WorkOrder.Status "on_hold"}}
             <span class="inline-flex px-3 py-1 text-xs rounded-full bg-surface-container-high text-secondary font-bold uppercase">On Hold</span>
             {{else if eq .WorkOrder.Status "done"}}
-            <span class="inline-flex px-3 py-1 text-xs rounded-full bg-emerald-500/10 border border-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-bold uppercase">Done</span>
+            <span class="inline-flex px-3 py-1 text-xs rounded-full bg-emerald-soft border border-emerald-line text-emerald-strong dark:text-emerald-300 font-bold uppercase">Done</span>
             {{else}}
-            <span class="inline-flex px-3 py-1 text-xs rounded-full bg-rose-500/10 border border-rose-500/15 text-rose-700 dark:text-rose-300 font-bold uppercase">Cancelled</span>
+            <span class="inline-flex px-3 py-1 text-xs rounded-full bg-rose-soft border border-rose-line text-rose-strong dark:text-rose-300 font-bold uppercase">Cancelled</span>
             {{end}}
         </div>
     </div>
@@ -72,13 +72,13 @@
         </div>
         <form method="POST" action="/maintenance/work-orders/{{.WorkOrder.ID}}/assign" class="p-6 flex flex-col sm:flex-row gap-3 sm:items-end">
             <div class="flex-1">
-                <label class="block text-eyebrow text-text-muted mb-1.5">Assignee</label>
-                <input type="text" name="assignee" value="{{.WorkOrder.Assignee}}" placeholder="Mechanic name"
+                <label for="assignee" class="block text-eyebrow text-text-muted mb-1.5">Assignee</label>
+                <input id="assignee" type="text" name="assignee" value="{{.WorkOrder.Assignee}}" placeholder="Mechanic name"
                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
             <div class="flex-1">
-                <label class="block text-eyebrow text-text-muted mb-1.5">Vendor</label>
-                <input type="text" name="vendor" value="{{.WorkOrder.Vendor}}" placeholder="Garage / vendor"
+                <label for="vendor" class="block text-eyebrow text-text-muted mb-1.5">Vendor</label>
+                <input id="vendor" type="text" name="vendor" value="{{.WorkOrder.Vendor}}" placeholder="Garage / vendor"
                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
             <button type="submit" class="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 transition-all cursor-pointer shrink-0">Assign</button>
@@ -91,15 +91,15 @@
         </div>
         <div class="p-6 flex gap-2 flex-wrap">
             {{if or (eq .WorkOrder.Status "open") (eq .WorkOrder.Status "assigned") (eq .WorkOrder.Status "on_hold")}}
-            <form method="POST" action="/maintenance/work-orders/{{.WorkOrder.ID}}/transition" class="inline"><input type="hidden" name="status" value="in_progress"><button type="submit" class="inline-flex items-center px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 text-sm font-bold hover:bg-amber-500/20 transition-all cursor-pointer">Start Work</button></form>
+            <form method="POST" action="/maintenance/work-orders/{{.WorkOrder.ID}}/transition" class="inline"><input type="hidden" name="status" value="in_progress"><button type="submit" class="inline-flex items-center px-4 py-2 rounded-full bg-amber-soft border border-amber-500/20 text-amber-strong dark:text-amber-300 text-sm font-bold hover:bg-amber-500/20 transition-all cursor-pointer">Start Work</button></form>
             {{end}}
             {{if or (eq .WorkOrder.Status "assigned") (eq .WorkOrder.Status "in_progress")}}
             <form method="POST" action="/maintenance/work-orders/{{.WorkOrder.ID}}/transition" class="inline"><input type="hidden" name="status" value="on_hold"><button type="submit" class="inline-flex items-center px-4 py-2 rounded-full bg-surface-container-high text-secondary text-sm font-bold hover:bg-surface-container-high/70 transition-all cursor-pointer">Hold</button></form>
             {{end}}
             {{if eq .WorkOrder.Status "in_progress"}}
-            <form method="POST" action="/maintenance/work-orders/{{.WorkOrder.ID}}/transition" class="inline"><input type="hidden" name="status" value="done"><button type="submit" class="inline-flex items-center px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-sm font-bold hover:bg-emerald-500/20 transition-all cursor-pointer">Mark Done</button></form>
+            <form method="POST" action="/maintenance/work-orders/{{.WorkOrder.ID}}/transition" class="inline"><input type="hidden" name="status" value="done"><button type="submit" class="inline-flex items-center px-4 py-2 rounded-full bg-emerald-soft border border-emerald-500/20 text-emerald-strong dark:text-emerald-300 text-sm font-bold hover:bg-emerald-500/20 transition-all cursor-pointer">Mark Done</button></form>
             {{end}}
-            <form method="POST" action="/maintenance/work-orders/{{.WorkOrder.ID}}/transition" class="inline"><input type="hidden" name="status" value="cancelled"><button type="submit" class="inline-flex items-center px-4 py-2 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 text-sm font-bold hover:bg-rose-500/20 transition-all cursor-pointer">Cancel</button></form>
+            <form method="POST" action="/maintenance/work-orders/{{.WorkOrder.ID}}/transition" class="inline"><input type="hidden" name="status" value="cancelled"><button type="submit" class="inline-flex items-center px-4 py-2 rounded-full bg-rose-soft border border-rose-500/20 text-rose-strong dark:text-rose-300 text-sm font-bold hover:bg-rose-500/20 transition-all cursor-pointer">Cancel</button></form>
         </div>
     </div>
     {{end}}

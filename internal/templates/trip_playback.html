@@ -16,7 +16,7 @@
             </p>
         </div>
         <div class="flex items-center gap-2">
-            <label class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-container-low border border-border-subtle text-[10px] font-medium uppercase tracking-wide cursor-pointer select-none">
+            <label class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-container-low border border-border-subtle text-[11px] font-medium uppercase tracking-wide cursor-pointer select-none">
                 <input type="checkbox" id="pb-geofence-toggle" checked class="rounded border-border-subtle text-primary focus:ring-primary h-3 w-3 cursor-pointer">
                 <span class="text-primary">Geofences</span>
             </label>
@@ -33,7 +33,7 @@
             <div class="text-center space-y-2">
                 <div class="w-8 h-8 mx-auto rounded-full border-2 border-primary/30 border-t-primary animate-spin"></div>
                 <div class="text-xs font-medium text-secondary">Loading trip trail…</div>
-                <div class="text-[10px] font-data-mono text-text-muted" id="pb-status-detail"></div>
+                <div class="text-[11px] font-data-mono text-text-muted" id="pb-status-detail"></div>
             </div>
         </div>
 
@@ -45,14 +45,14 @@
                 <span><span class="text-text-muted uppercase tracking-wide font-semibold">Avg</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-avg">—</span></span>
                 <span><span class="text-text-muted uppercase tracking-wide font-semibold">Max</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-max">—</span></span>
                 <span><span class="text-text-muted uppercase tracking-wide font-semibold">Stops</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-stops">—</span></span>
-                <span id="pb-stat-truncated" class="hidden text-amber-600 font-semibold">+ more</span>
+                <span id="pb-stat-truncated" class="hidden text-amber-mid font-semibold">+ more</span>
             </div>
             <div class="ml-auto bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-lg px-2 py-1.5 shadow-lg pointer-events-auto flex items-center gap-1">
-                <button type="button" id="pb-export-csv" class="px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wide bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:border-primary/40 transition-colors cursor-pointer">CSV</button>
-                <button type="button" id="pb-export-gpx" class="px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wide bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:border-primary/40 transition-colors cursor-pointer">GPX</button>
-                <label for="pb-gpx-file" class="px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wide bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:border-primary/40 transition-colors cursor-pointer" title="Overlay a GPX track for comparison — parsed locally in your browser, never uploaded">Overlay</label>
+                <button type="button" id="pb-export-csv" class="px-2 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:border-primary/40 transition-colors cursor-pointer">CSV</button>
+                <button type="button" id="pb-export-gpx" class="px-2 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:border-primary/40 transition-colors cursor-pointer">GPX</button>
+                <label for="pb-gpx-file" class="px-2 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:border-primary/40 transition-colors cursor-pointer" title="Overlay a GPX track for comparison — parsed locally in your browser, never uploaded">Overlay</label>
                 <input type="file" id="pb-gpx-file" accept=".gpx,application/gpx+xml,text/xml" class="hidden">
-                <span id="pb-gpx-status" class="hidden px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-wide bg-violet-500/10 border border-violet-500/20 text-violet-700 cursor-pointer" title="Click to clear the overlay"></span>
+                <span id="pb-gpx-status" class="hidden px-2 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide bg-violet-soft border border-violet-500/20 text-violet-strong cursor-pointer" title="Click to clear the overlay"></span>
             </div>
         </div>
 
@@ -67,14 +67,14 @@
                 </button>
                 <div class="flex-1 min-w-0 space-y-1">
                     <input type="range" id="pb-scrub" min="0" max="100" value="0" class="w-full accent-primary cursor-pointer" />
-                    <div class="flex items-center justify-between text-[10px] font-data-mono text-text-muted">
+                    <div class="flex items-center justify-between text-[11px] font-data-mono text-text-muted">
                         <span id="pb-time-start">—</span>
                         <span id="pb-time-current" class="font-semibold text-on-surface">—</span>
                         <span id="pb-time-end">—</span>
                     </div>
                 </div>
                 <div class="flex items-center gap-1 shrink-0">
-                    <label class="text-[10px] font-semibold uppercase tracking-wide text-text-muted">Speed</label>
+                    <label for="pb-speed" class="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Speed</label>
                     <select id="pb-speed" class="bg-surface-container-low border border-border-subtle rounded-md px-1.5 py-1 text-xs font-medium text-on-surface focus:outline-none focus:border-primary cursor-pointer">
                         <option value="1">1×</option>
                         <option value="2">2×</option>
@@ -330,7 +330,7 @@
                     +' · '+fmtTs(d.entered_at)+(d.exited_at?' → '+fmtTs(d.exited_at):' (open)')
                     +'</span>'
                     +'<span class="flex items-center gap-2"><span class="font-data-mono">'+d.dwell_seconds+'s</span>'
-                    +'<span class="px-1.5 py-0.5 rounded text-[10px] font-bold" style="background:'+statusColor+'14;color:'+statusColor+'">'+esc(d.status)+'</span>'
+                    +'<span class="px-1.5 py-0.5 rounded text-[11px] font-bold" style="background:'+statusColor+'14;color:'+statusColor+'">'+esc(d.status)+'</span>'
                     +'</span></div>';
             });
             detList.innerHTML=html;

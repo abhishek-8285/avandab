@@ -1,0 +1,48 @@
+name: Perf SLA
+
+# Wall-clock latency SLAs cannot be asserted inside `go test ./...`: packages run
+# in parallel, so the measured tail reflects CPU contention rather than the
+# database. Observed P95 for identical code in
+# internal/controltower/application/p6_production_readiness_test.go:
+#   ~2-8ms isolated  vs  53-141ms under full-suite load.
+# This job runs those tests in isolation so the budget is a real signal.
+#
+# Without CONTROLTOWER_P95_MS set the tests log their latency and skip the
+# assertion (see assertP95SLA) — the budget below is what actually enforces it.
+
+on:
+  schedule:
+    # Nightly, off the top of the hour to avoid runner contention.
+    - cron: '20 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: perf-sla
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: '1.26'
+
+jobs:
+  perf-sla:
+    name: Control Tower Latency SLA (isolated)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # P95 budget for the Control Tower perf assertions. Isolated runs measure
+      # ~2-8ms, so 25ms keeps the original intent with headroom.
+      CONTROLTOWER_P95_MS: '25'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Perf-sensitive tests in isolation (-p 1)
+        run: go test -p 1 -count=1 -v ./internal/controltower/application/ -run 'TestP6_'

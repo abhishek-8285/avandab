@@ -1,7 +1,7 @@
 {{define "scorecard_table.html"}}
 {{range $i, $r := .Leaderboard}}
 <tr class="border-b border-border-subtle hover:bg-surface-container-low/50 transition-colors">
-    <td class="px-3 py-2" data-numeric>
+    <td data-label="#" class="px-3 py-2" data-numeric>
         {{if lt $i 1}}
         <span class="grid place-items-center w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white text-xs font-black tabular-nums shadow-sm">{{add $i 1}}</span>
         {{else if lt $i 2}}
@@ -12,28 +12,28 @@
         <span class="text-text-muted tabular-nums text-sm font-semibold px-2.5">{{add $i 1}}</span>
         {{end}}
     </td>
-    <td class="px-3 py-2">
+    <td data-label="Driver" class="px-3 py-2">
         <a href="/scorecard/drivers/{{$r.DriverID}}" class="font-bold text-on-surface hover:text-primary hover:underline">
             {{$r.DriverName}}
         </a>
         <div class="text-xs text-text-muted tabular-nums">{{$r.DriverCode}}</div>
     </td>
-    <td class="px-3 py-2 text-sm text-right font-black tabular-nums {{if ge $r.Score 85.0}}text-status-success{{else if ge $r.Score 70.0}}text-status-info{{else}}text-status-alert{{end}}" data-numeric>
+    <td data-label="Score" class="px-3 py-2 text-sm text-right font-black tabular-nums {{if ge $r.Score 85.0}}text-status-success{{else if ge $r.Score 70.0}}text-status-info{{else}}text-status-alert{{end}}" data-numeric>
         {{printf "%.0f" $r.Score}}
     </td>
-    <td class="px-3 py-2 text-sm text-center">
+    <td data-label="Tier" class="px-3 py-2 text-sm text-center">
         <span class="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold {{tierBadge $r.Tier}}">{{$r.Tier}}</span>
     </td>
-    <td class="px-3 py-2 text-sm text-right tabular-nums text-secondary" data-numeric>{{$r.EventCount}}</td>
-    <td class="px-3 py-2 text-sm text-secondary">{{if $r.Sparkline}}{{safeHTML $r.Sparkline}}{{else}}<span class="text-text-muted text-xs">—</span>{{end}}</td>
-    <td class="px-3 py-2 text-sm text-center">
+    <td data-label="Events" class="px-3 py-2 text-sm text-right tabular-nums text-secondary" data-numeric>{{$r.EventCount}}</td>
+    <td data-label="30-Day Trend" class="px-3 py-2 text-sm text-secondary">{{if $r.Sparkline}}{{safeHTML $r.Sparkline}}{{else}}<span class="text-text-muted text-xs">—</span>{{end}}</td>
+    <td data-label="Status" class="px-3 py-2 text-sm text-center">
         {{if $r.InsufficientData}}
-        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-status-warning/15 bg-status-warning/10 text-[10px] font-bold text-status-warning" title="Fewer than 3 events in the window — score not yet meaningful">
+        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-status-warning/15 bg-status-warning/10 text-[11px] font-bold text-status-warning" title="Fewer than 3 events in the window — score not yet meaningful">
             <span class="w-1.5 h-1.5 rounded-full bg-status-warning"></span>
             INSUFFICIENT DATA
         </span>
         {{else}}
-        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-emerald-500/15 bg-emerald-500/10 text-[10px] font-bold text-emerald-700 dark:text-emerald-300">
+        <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full border border-emerald-line bg-emerald-soft text-[11px] font-bold text-emerald-strong dark:text-emerald-300">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
             ACTIVE
         </span>

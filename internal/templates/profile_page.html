@@ -36,7 +36,7 @@
                         <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Editable Details</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
                             <div class="flex flex-col gap-1">
-                                <label class="block text-xs font-bold text-secondary mb-1">Full Name <span class="text-status-alert">*</span></label>
+                                <label for="profile-name" class="block text-xs font-bold text-secondary mb-1">Full Name <span class="text-status-alert">*</span></label>
                                 <input name="name" id="profile-name"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                                     type="text"
@@ -45,7 +45,7 @@
                                     required/>
                             </div>
                             <div class="flex flex-col gap-1">
-                                <label class="block text-xs font-bold text-secondary mb-1">Phone Number</label>
+                                <label for="profile-phone" class="block text-xs font-bold text-secondary mb-1">Phone Number</label>
                                 <input name="phone" id="profile-phone"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                                     type="tel"
@@ -78,7 +78,7 @@
                     </div>
 
                     <div class="flex flex-col gap-1">
-                        <label class="block text-xs font-bold text-secondary mb-1 flex items-center justify-between">
+                        <label for="profile-timezone" class="block text-xs font-bold text-secondary mb-1 flex items-center justify-between">
                             <span>User Timezone</span>
                             <span class="text-xs normal-case text-primary font-semibold cursor-pointer hover:underline" id="btn-detect-tz">⚡ Auto-detect</span>
                         </label>

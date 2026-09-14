@@ -1,7 +1,7 @@
 {{define "fuel_audit_queue.html"}}
 {{if .AuditClaims}}
 <div class="overflow-x-auto">
-<table class="w-full text-sm">
+<table class="rtable w-full text-sm">
     <thead class="bg-surface-container-low">
         <tr>
             <th class="th-cell">Driver</th>
@@ -18,19 +18,19 @@
     <tbody class="divide-y divide-border-subtle">
         {{range .AuditClaims}}
         <tr class="hover:bg-surface-container-low/50 transition-colors">
-            <td class="px-3 py-2 text-sm font-semibold text-on-surface">
+            <td data-label="Driver" class="px-3 py-2 text-sm font-semibold text-on-surface">
                 {{.DriverName}}
                 {{if .ReviewNote}}<span class="block text-xs text-text-muted truncate max-w-40" title="{{.ReviewNote}}">note: {{.ReviewNote}}</span>{{end}}
             </td>
-            <td class="px-3 py-2 text-xs font-bold text-primary tabular-nums">{{.TripNumber}}</td>
-            <td class="px-3 py-2 text-xs font-medium text-secondary uppercase tabular-nums">{{.VehicleReg}}</td>
-            <td class="px-3 py-2 text-sm text-right font-bold text-on-surface tabular-nums" data-numeric>
+            <td data-label="Trip" class="px-3 py-2 text-xs font-bold text-primary tabular-nums">{{.TripNumber}}</td>
+            <td data-label="Vehicle" class="px-3 py-2 text-xs font-medium text-secondary uppercase tabular-nums">{{.VehicleReg}}</td>
+            <td data-label="Claimed" class="px-3 py-2 text-sm text-right font-bold text-on-surface tabular-nums" data-numeric>
                 {{if .FuelLitres}}{{printf "%.1f" (derefFloat .FuelLitres)}} L{{else}}—{{end}}
             </td>
-            <td class="px-3 py-2 text-sm text-right font-semibold text-secondary tabular-nums" data-numeric>
+            <td data-label="Expected" class="px-3 py-2 text-sm text-right font-semibold text-secondary tabular-nums" data-numeric>
                 {{if gt .ExpectedBest 0.0}}{{printf "%.1f" .ExpectedBest}} L{{else}}—{{end}}
             </td>
-            <td class="px-3 py-2 text-sm" data-numeric>
+            <td data-label="Variance" class="px-3 py-2 text-sm" data-numeric>
                 {{if gt .ExpectedBest 0.0}}
                 <span class="inline-flex px-2 py-0.5 rounded-full border text-[11px] font-bold tabular-nums {{auditBadge .Result}}"
                       title="Claimed {{if .FuelLitres}}{{printf "%.1f" (derefFloat .FuelLitres)}}L{{else}}0.0L{{end}}, Expected {{printf "%.1f" .ExpectedBest}}L ±{{printf "%.1f" .VariancePct}}%">
@@ -40,11 +40,11 @@
                 <span class="text-xs text-text-muted">no evidence</span>
                 {{end}}
             </td>
-            <td class="px-3 py-2 text-sm">
+            <td data-label="Audit" class="px-3 py-2 text-sm">
                 <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full {{auditBadge .Result}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Result}}</span>
             </td>
-            <td class="px-3 py-2 text-xs text-text-muted tabular-nums" data-numeric>{{datetime .CreatedAt}}</td>
-            <td class="px-3 py-2 text-sm text-right">
+            <td data-label="Date" class="px-3 py-2 text-xs text-text-muted tabular-nums" data-numeric>{{datetime .CreatedAt}}</td>
+            <td data-label="Review" class="px-3 py-2 text-sm text-right">
                 <a href="/fuel/audit/{{.ExpenseID}}"
                    class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-colors">
                     REVIEW

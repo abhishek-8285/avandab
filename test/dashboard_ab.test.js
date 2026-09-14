@@ -65,7 +65,12 @@ test.describe('Dashboard A/B variants', () => {
     await expect(page.getByText('Overdue Trips').first()).toBeVisible();
     await expect(page.getByText('Idle Vehicles').first()).toBeVisible();
 
-    const chartData = await page.evaluate(() => window.__DASHBOARD_CHARTS__);
+    // The variant is server-rendered into the #dashboard-chart-data JSON
+    // blob. The app reads it from the DOM (not from window.__DASHBOARD_CHARTS__,
+    // which is only a legacy fallback initializer and is never populated in
+    // the browser), so assert against the rendered blob — the real contract.
+    const chartRaw = await page.locator('#dashboard-chart-data').textContent();
+    const chartData = JSON.parse(chartRaw || '{}');
     expect(chartData.variant).toBe('B');
   });
 

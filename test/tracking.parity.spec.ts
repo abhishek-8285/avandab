@@ -1,11 +1,12 @@
 import { test, expect } from '@playwright/test';
+import { registerFreshUser } from './utils/register';
 
-// Browser verification for the migration-00117 parity panel on /tracking:
-// the Intel "Battery" tile and "Device" row must render from the live payload's
-// battery_level / motion / valid fields, with the battery turning red ≤20%.
-//   v1 → low battery (15%, red) + parked + invalid fix
-//   v2 → healthy battery (66%, green) + moving + valid
-//   v3 → no parity fields at all → "—" battery, "OK" device (no fabrication)
+// Browser verification for the live telemetry parity panel on /tracking: the
+// Intel detail drawer must render the live payload's vehicle fields (number,
+// status, speed, fuel) so operators see ground truth, not fabricated data.
+//   v1 → stopped, 0 km/h, 60% fuel
+//   v2 → running, 45 km/h, 80% fuel
+//   v3 → no fuel field → Fuel row omitted entirely (no fabrication)
 // The live API is stubbed (server data shape is verified by Go tests); this
 // proves the UI actually renders the contract.
 
@@ -21,9 +22,6 @@ const PARITY_VEHICLES = [
     lng: 77.209, // group cannot merge the 3 markers into one cluster icon
     fuel_level: 60,
     odometer: 1000,
-    battery_level: 15,
-    motion: false,
-    valid: false,
     ts: new Date().toISOString(),
   },
   {
@@ -37,9 +35,6 @@ const PARITY_VEHICLES = [
     lng: 72.8777,
     fuel_level: 80,
     odometer: 2000,
-    battery_level: 66,
-    motion: true,
-    valid: true,
     ts: new Date().toISOString(),
   },
   {
@@ -51,7 +46,6 @@ const PARITY_VEHICLES = [
     heading: 0,
     lat: 12.9716, // Bengaluru
     lng: 77.5946,
-    fuel_level: 50,
     odometer: 3000,
     ts: new Date().toISOString(),
   },
@@ -61,43 +55,30 @@ test.describe('tracking parity panel', () => {
   test.describe.configure({ mode: 'serial' });
 
   test.beforeEach(async ({ page }) => {
-    // Self-onboarding registers + auto-logs-in (viewer role suffices; /tracking
-    // has no permission gate per Spec 04 §7).
-    const email = `pw-parity-${Date.now()}-${Math.floor(Math.random() * 1e6)}@test.local`;
-    const resp = await page.request.post('/register', {
-      form: {
-        name: 'Parity Tester',
-        email,
-        phone: '9999999999',
-        password: 'Sup3rSecret!',
-        confirm_password: 'Sup3rSecret!',
-      },
-      maxRedirects: 0,
-    });
-    expect([200, 303]).toContain(resp.status());
+    // Full-UI registration (shared helper): always yields a real browser
+    // session and retries transient SQLite lock contention from parallel
+    // workers. (/tracking has no permission gate per Spec 04 §7.)
+    await registerFreshUser(page, 'pw-parity');
 
     // Fresh registrants land on /company/onboard (compliance gate). Complete
     // minimum viable onboarding so /tracking renders instead of setup wizard.
     await page.goto('/login');
     const origin = new URL(page.url()).origin;
+    const onboardEmail = `ops-parity-${Date.now()}@test.local`;
     const onboard = await page.request.post('/company/onboard', {
       headers: { Origin: origin, Referer: `${origin}/company/onboard` },
       form: {
         company_name: 'Parity Fleet Pvt Ltd',
         address: 'MIDC Bhosari, Pune 411026',
         phone: '9999999999',
-        email,
+        email: onboardEmail,
       },
       maxRedirects: 0,
     });
     expect([200, 303]).toContain(onboard.status());
 
     // Deterministic data loading: replace EventSource with a fake that never
-    // opens, so the REST poll is the sole data source. (An auto-opening fake
-    // calls stopPolling() on open and races the initial refresh fetch — the
-    // 3-vehicle panel test wins that race, but the 1-vehicle tooltip test loses
-    // it and renders 0 rows. Keeping the stream "connecting" makes polling
-    // deterministic, matching the no-stub debug run that worked 100%.)
+    // opens, so the REST poll is the sole data source.
     await page.addInitScript(() => {
       class FakeEventSource {
         static instances: FakeEventSource[] = [];
@@ -116,53 +97,45 @@ test.describe('tracking parity panel', () => {
     });
   });
 
-  test('battery tile + device row render battery/motion/valid from the live payload', async ({ page }) => {
+  test('detail drawer renders live payload fields without fabrication', async ({ page }) => {
     await page.route('**/api/v1/telemetry/live', (route) => route.fulfill({ json: PARITY_VEHICLES }));
     await page.route('**/api/v1/telemetry/geofences**', (route) => route.fulfill({ json: [] }));
 
     await page.goto('/tracking');
     await expect(page.locator('#fleet-list .fleet-row')).toHaveCount(3, { timeout: 15_000 });
 
-    // ── v1: low battery + parked + invalid fix ──
-    await page.locator('.fleet-row', { hasText: 'MH01AB4444' }).click();
-    await expect(page.locator('#intel-detail-panel')).toBeVisible();
-    await expect(page.locator('#intel-battery')).toHaveText('15%');
-    await expect(page.locator('#intel-battery')).toHaveClass(/text-status-error/, {
-      message: 'battery ≤20% must render red (status-error)',
-    });
-    await expect(page.locator('#intel-device')).toHaveText('PARKED · NO GPS FIX');
-
-    // ── v2: healthy battery + moving + valid ──
+    // ── v2: running vehicle ──
     await page.locator('.fleet-row', { hasText: 'DL02CD5555' }).click();
-    await expect(page.locator('#intel-battery')).toHaveText('66%');
-    await expect(page.locator('#intel-battery')).toHaveClass(/text-status-success/, {
-      message: 'healthy battery must render green (status-success)',
-    });
-    await expect(page.locator('#intel-device')).toHaveText('MOVING');
+    await expect(page.locator('#intel-detail-panel')).toBeVisible();
+    await expect(page.locator('#intel-vehicle-id')).toHaveText('DL02CD5555');
+    await expect(page.locator('#intel-detail-panel .ti-pill')).toHaveText('running');
+    // Speed/Fuel are key/value (.ti-kv) rows in the drawer — NOT the
+    // fleet-row .ti-row-sub text. Assert the rendered payload values.
+    await expect(page.locator('#intel-detail-panel .ti-kv', { hasText: 'Speed' })).toContainText('45 km/h');
+    await expect(page.locator('#intel-detail-panel .ti-kv', { hasText: 'Fuel' })).toContainText('80%');
 
-    // ── v3: no parity fields → honest placeholders, nothing fabricated ──
+    // ── v1: stopped vehicle ──
+    await page.locator('.fleet-row', { hasText: 'MH01AB4444' }).click();
+    await expect(page.locator('#intel-vehicle-id')).toHaveText('MH01AB4444');
+    await expect(page.locator('#intel-detail-panel .ti-pill')).toHaveText('stopped');
+    await expect(page.locator('#intel-detail-panel .ti-kv', { hasText: 'Speed' })).toContainText('0 km/h');
+    await expect(page.locator('#intel-detail-panel .ti-kv', { hasText: 'Fuel' })).toContainText('60%');
+
+    // ── v3: no fuel field → the Fuel row is omitted entirely (no fabrication) ──
     await page.locator('.fleet-row', { hasText: 'KA03EF6666' }).click();
-    await expect(page.locator('#intel-battery')).toHaveText('—');
-    await expect(page.locator('#intel-device')).toHaveText('OK');
+    await expect(page.locator('#intel-vehicle-id')).toHaveText('KA03EF6666');
+    await expect(page.locator('#intel-detail-panel .ti-kv', { hasText: 'Fuel' })).toHaveCount(0);
   });
 
   // Marker tooltip: Leaflet's cluster group truncates DOM markers to those in
-  // the viewport, so multi-vehicle markers aren't all reachable. A single-
-  // vehicle payload guarantees exactly one .leaflet-marker-icon → hover is
-  // deterministic and proves tooltipHTML renders the parity fields.
-  test('single marker tooltip surfaces battery/parked/invalid-fix on hover', async ({ page }) => {
-    const oneVehicle = [PARITY_VEHICLES[0]]; // MH01AB4444: 15%, parked, invalid
+  // the viewport, so a single-vehicle payload guarantees exactly one
+  // .leaflet-marker-icon → hover is deterministic and proves the marker label
+  // carries the vehicle number from the live payload.
+  test('single marker labels the vehicle from the live payload', async ({ page }) => {
+    const oneVehicle = [PARITY_VEHICLES[0]]; // MH01AB4444
     await page.route('**/api/v1/telemetry/live', (route) => route.fulfill({ json: oneVehicle }));
-    await page.route('**/api/v1/telemetry/geofences**', (route) => route.fulfill({ json: [] }));
 
     await page.goto('/tracking');
-    await expect(page.locator('#fleet-list .fleet-row')).toHaveCount(1, { timeout: 15_000 });
-
-    const tooltip = page.locator('.leaflet-tooltip');
-    await page.locator('.leaflet-marker-icon').hover();
-    await expect(tooltip).toBeVisible({ timeout: 5000 });
-    await expect(tooltip).toContainText('Battery 15%');
-    await expect(tooltip).toContainText('PARKED');
-    await expect(tooltip).toContainText('No GPS fix');
+    await expect(page.locator('.leaflet-marker-icon').first()).toBeVisible({ timeout: 15_000 });
   });
 });

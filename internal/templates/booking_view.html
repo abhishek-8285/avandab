@@ -89,7 +89,7 @@
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                 <div class="flex items-center gap-2">
-                    <span class="w-7 h-7 rounded-lg bg-violet-500/10 border border-violet-500/15 grid place-items-center text-violet-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
+                    <span class="w-7 h-7 rounded-lg bg-violet-soft border border-violet-line grid place-items-center text-violet-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></span>
                     <h3 class="text-sm font-bold text-on-surface">Booking Lifecycle</h3>
                 </div>
                 <span class="status-badge {{statusBadge .Booking.Status}}">{{.Booking.Status}}</span>
@@ -122,14 +122,14 @@
         {{if .History}}
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2">
-                <span class="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg></span>
+                <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg></span>
                 <h3 class="text-sm font-bold text-on-surface">History</h3>
             </div>
             <div class="divide-y divide-border-subtle px-5">
                 {{range .History}}
                 <div class="flex items-center justify-between gap-3 py-2.5">
                     <div class="min-w-0 flex items-center gap-2.5">
-                        <span class="px-2 py-0.5 rounded-full text-[11px] font-bold capitalize shrink-0 {{if or (eq .Action "confirm") (eq .Action "complete")}}bg-emerald-500/10 text-emerald-700 border border-emerald-500/15{{else if eq .Action "cancel"}}bg-rose-500/10 text-rose-700 border border-rose-500/15{{else if eq .Action "delete"}}bg-rose-500/10 text-rose-700 border border-rose-500/15{{else}}bg-surface-container-low border border-border-subtle text-secondary{{end}}">{{.Action}}</span>
+                        <span class="px-2 py-0.5 rounded-full text-[11px] font-bold capitalize shrink-0 {{if or (eq .Action "confirm") (eq .Action "complete")}}bg-emerald-soft text-emerald-strong border border-emerald-line{{else if eq .Action "cancel"}}bg-rose-soft text-rose-strong border border-rose-line{{else if eq .Action "delete"}}bg-rose-soft text-rose-strong border border-rose-line{{else}}bg-surface-container-low border border-border-subtle text-secondary{{end}}">{{.Action}}</span>
                         <p class="text-xs text-text-muted truncate">by {{if .UserName}}{{.UserName}}{{else}}system{{end}}</p>
                     </div>
                     <span class="text-xs text-text-muted tabular-nums shrink-0">{{datetime .CreatedAt}}</span>

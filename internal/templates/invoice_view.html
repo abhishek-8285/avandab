@@ -16,7 +16,7 @@
                     {{if eq .TaxTier 1}}
                     <span class="text-[11px] font-semibold text-text-muted">Tier 1 • GST Registered</span>
                     {{else if eq .TaxTier 2}}
-                    <span class="text-[11px] font-semibold text-amber-700 dark:text-amber-300">Tier 2 • Non-GST (PAN: {{if .Company.PanNumber}}{{.Company.PanNumber}}{{end}})</span>
+                    <span class="text-[11px] font-semibold text-amber-strong dark:text-amber-300">Tier 2 • Non-GST (PAN: {{if .Company.PanNumber}}{{.Company.PanNumber}}{{end}})</span>
                     {{else}}
                     <span class="text-[11px] font-semibold text-text-muted">Tier 3 • Micro Transporter (Rule 54(3))</span>
                     {{end}}
@@ -39,7 +39,7 @@
                 </div>
                 <p class="text-sm text-text-muted mt-1">Issued <span class="time-display" data-utc-time="{{.Invoice.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .Invoice.CreatedAt}}</span></p>
                 {{if eq .TaxTier 2}}
-                <p class="text-xs text-amber-700 dark:text-amber-300/90 mt-1 font-medium">Sec. 31(3)(c) Bill of Supply • Sec. 9(3) RCM applies • Sec. 194C(6) TDS exempt on declaration</p>
+                <p class="text-xs text-amber-strong dark:text-amber-300/90 mt-1 font-medium">Sec. 31(3)(c) Bill of Supply • Sec. 9(3) RCM applies • Sec. 194C(6) TDS exempt on declaration</p>
                 {{else if eq .TaxTier 3}}
                 <p class="text-xs text-text-muted mt-1 font-medium">Issued under Rule 54(3) CGST Rules (Consignment Freight Bilty / Micro Transporter)</p>
                 {{end}}
@@ -101,7 +101,7 @@
                             {{if eq .TaxTier 1}}
                                 <span class="block text-xs font-data-mono text-text-muted mt-0.5">GSTIN: {{.Company.GSTNumber}} (State: {{.Company.StateCode}})</span>
                             {{else if eq .TaxTier 2}}
-                                <span class="block text-xs font-data-mono text-amber-700 dark:text-amber-300 mt-0.5">PAN: {{.Company.PanNumber}} • Sec 31(3)(c) Bill of Supply</span>
+                                <span class="block text-xs font-data-mono text-amber-strong dark:text-amber-300 mt-0.5">PAN: {{.Company.PanNumber}} • Sec 31(3)(c) Bill of Supply</span>
                             {{else}}
                                 <span class="block text-xs text-text-muted mt-0.5">Rule 54(3) Consignment Bilty (Micro Transporter)</span>
                             {{end}}

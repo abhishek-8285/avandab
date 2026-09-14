@@ -1,7 +1,7 @@
 {{range .Entries}}
 <tr class="hover:bg-surface-container-low/60 transition-colors group">
-    <td class="px-3 py-2 text-sm font-data-mono font-bold text-primary tabular-nums whitespace-nowrap">{{.IMEI}}</td>
-    <td class="px-3 py-2 text-sm text-on-surface whitespace-nowrap">
+    <td data-label="IMEI" class="px-3 py-2 text-sm font-data-mono font-bold text-primary tabular-nums whitespace-nowrap">{{.IMEI}}</td>
+    <td data-label="Reason" class="px-3 py-2 text-sm text-on-surface whitespace-nowrap">
         {{if eq .Reason "retired_device"}}
         {{template "status_dot.html" (dict "Tone" "alert" "Label" "Retired device")}}
         {{else if eq .Reason "quarantined_device"}}
@@ -10,10 +10,10 @@
         {{template "status_dot.html" (dict "Tone" "warning" "Label" "Unknown device")}}
         {{end}}
     </td>
-    <td class="px-3 py-2 text-xs font-data-mono text-secondary">{{.Source}}</td>
-    <td class="px-3 py-2 text-xs font-data-mono text-secondary max-w-xs truncate" title="{{.RawPayload}}">{{.RawPayload}}</td>
-    <td class="px-3 py-2 text-xs text-secondary tabular-nums whitespace-nowrap">{{datetime .CreatedAt}}</td>
-    <td class="px-3 py-2 text-right">
+    <td data-label="Source" class="px-3 py-2 text-xs font-data-mono text-secondary">{{.Source}}</td>
+    <td data-label="Raw Payload" class="px-3 py-2 text-xs font-data-mono text-secondary max-w-xs truncate" title="{{.RawPayload}}">{{.RawPayload}}</td>
+    <td data-label="Created" class="px-3 py-2 text-xs text-secondary tabular-nums whitespace-nowrap">{{datetime .CreatedAt}}</td>
+    <td data-label="Resolve" class="px-3 py-2 text-right">
         {{if can $.User "telemetry" "update"}}
         <form method="POST" action="/telemetry/quarantine/{{.ID}}/resolve" class="inline-flex flex-wrap items-center justify-end gap-2" hx-post="/telemetry/quarantine/{{.ID}}/resolve" hx-target="#quarantine-rows" hx-swap="innerMorph" hx-indicator="closest form">
             <label class="inline-flex items-center gap-1 text-xs text-secondary cursor-pointer">
@@ -22,10 +22,10 @@
             <label class="inline-flex items-center gap-1 text-xs text-secondary cursor-pointer">
                 <input type="radio" name="action" value="assign_existing" class="accent-primary"> Assign existing
             </label>
-            <label class="inline-flex items-center gap-1 text-xs text-secondary cursor-pointer">
+            <label for="vehicle_id" class="inline-flex items-center gap-1 text-xs text-secondary cursor-pointer">
                 <input type="radio" name="action" value="reject" class="accent-primary"> Reject
             </label>
-            <input type="text" name="vehicle_id" placeholder="vehicle id" class="w-28 bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1 text-xs font-data-mono text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+            <input id="vehicle_id" type="text" name="vehicle_id" placeholder="vehicle id" class="w-28 bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1 text-xs font-data-mono text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
             <button type="submit" class="inline-flex items-center rounded-full bg-primary text-on-primary px-2.5 py-1 text-[11px] font-bold hover:bg-primary/90 transition-all">Resolve</button>
         </form>
         {{end}}
@@ -35,7 +35,7 @@
 <tr>
     <td colspan="6" class="px-4 py-12 text-center">
         <div class="flex flex-col items-center gap-2">
-            <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600 mx-auto">
+            <div class="w-12 h-12 rounded-2xl bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid mx-auto">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-6 h-6"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
             </div>
             <p class="text-sm font-medium text-on-surface mt-1">Queue is clear</p>

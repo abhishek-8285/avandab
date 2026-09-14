@@ -28,11 +28,11 @@
             <h2 class="text-sm font-bold text-on-surface">Per-Vehicle Efficiency</h2>
             <span class="inline-flex items-center gap-2">
                 <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .KmplRows}} vehicles</span>
-                <span class="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/15 text-[10px] font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300 tabular-nums">{{.From}} → {{.To}}</span>
+                <span class="px-2 py-0.5 rounded-full bg-blue-soft border border-blue-line text-[11px] font-bold uppercase tracking-wide text-blue-strong dark:text-blue-300 tabular-nums">{{.From}} → {{.To}}</span>
             </span>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-border-subtle">
+            <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
                         <th class="th-cell">Vehicle</th>
@@ -47,14 +47,14 @@
                 <tbody class="divide-y divide-border-subtle">
                     {{range .KmplRows}}
                     <tr class="hover:bg-surface-container-low/50 transition-colors">
-                        <td class="px-3 py-2 text-sm font-bold text-primary tabular-nums">{{.RegistrationNo}}</td>
-                        <td class="px-3 py-2 text-sm text-right font-semibold text-on-surface tabular-nums" data-numeric>{{printf "%.1f" .OdometerDeltaKm}}</td>
-                        <td class="px-3 py-2 text-sm text-right font-semibold text-on-surface tabular-nums" data-numeric>{{printf "%.1f" .RefillLitres}}</td>
-                        <td class="px-3 py-2 text-sm text-right font-black text-on-surface tabular-nums" data-numeric>
+                        <td data-label="Vehicle" class="px-3 py-2 text-sm font-bold text-primary tabular-nums">{{.RegistrationNo}}</td>
+                        <td data-label="Odometer &Delta; (km)" class="px-3 py-2 text-sm text-right font-semibold text-on-surface tabular-nums" data-numeric>{{printf "%.1f" .OdometerDeltaKm}}</td>
+                        <td data-label="Refill (L)" class="px-3 py-2 text-sm text-right font-semibold text-on-surface tabular-nums" data-numeric>{{printf "%.1f" .RefillLitres}}</td>
+                        <td data-label="Computed Kmpl" class="px-3 py-2 text-sm text-right font-black text-on-surface tabular-nums" data-numeric>
                             {{if gt .ComputedKmpl 0.0}}{{printf "%.2f" .ComputedKmpl}}{{else}}&mdash;{{end}}
                         </td>
-                        <td class="px-3 py-2 text-sm text-right font-medium text-secondary tabular-nums" data-numeric>{{printf "%.2f" .ConfiguredKmpl}}</td>
-                        <td class="px-3 py-2 text-sm text-right" data-numeric>
+                        <td data-label="Configured Kmpl" class="px-3 py-2 text-sm text-right font-medium text-secondary tabular-nums" data-numeric>{{printf "%.2f" .ConfiguredKmpl}}</td>
+                        <td data-label="Variance" class="px-3 py-2 text-sm text-right" data-numeric>
                             {{if gt .ComputedKmpl 0.0}}
                               {{if gt .VariancePct 20.0}}
                                 <span class="inline-flex px-2 py-0.5 rounded-full border text-[11px] font-bold tabular-nums bg-status-alert/10 border-status-alert/20 text-status-alert">{{printf "%+.1f%%" .VariancePct}}</span>
@@ -65,7 +65,7 @@
                               {{end}}
                             {{else}}&mdash;{{end}}
                         </td>
-                        <td class="px-3 py-2 text-sm text-right font-semibold text-on-surface tabular-nums" data-numeric>{{.TripCount}}</td>
+                        <td data-label="Trips" class="px-3 py-2 text-sm text-right font-semibold text-on-surface tabular-nums" data-numeric>{{.TripCount}}</td>
                     </tr>
                     {{end}}
                 </tbody>

@@ -1,7 +1,7 @@
 {{range .Devices}}
 <tr class="hover:bg-surface-container-low/60 transition-colors group">
-    <td class="px-3 py-2 text-sm font-data-mono font-bold text-primary tabular-nums whitespace-nowrap">{{.IMEI}}</td>
-    <td class="px-3 py-2 text-sm text-on-surface whitespace-nowrap">
+    <td data-label="IMEI" class="px-3 py-2 text-sm font-data-mono font-bold text-primary tabular-nums whitespace-nowrap">{{.IMEI}}</td>
+    <td data-label="Status" class="px-3 py-2 text-sm text-on-surface whitespace-nowrap">
         {{if eq .Status "active"}}
         {{template "status_dot.html" (dict "Tone" "success" "Label" "Active")}}
         {{else if eq .Status "assigned"}}
@@ -16,10 +16,10 @@
         {{template "status_dot.html" (dict "Tone" "neutral" "Label" .Status)}}
         {{end}}
     </td>
-    <td class="px-3 py-2 text-xs font-data-mono text-secondary">{{nullString .VehicleID}}</td>
-    <td class="px-3 py-2"><span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-secondary">{{.DeviceType}}</span></td>
-    <td class="px-3 py-2 text-xs text-secondary tabular-nums whitespace-nowrap">{{derefTime .LastSeenAt}}</td>
-    <td class="px-3 py-2 text-right whitespace-nowrap">
+    <td data-label="Vehicle" class="px-3 py-2 text-xs font-data-mono text-secondary">{{nullString .VehicleID}}</td>
+    <td data-label="Type" class="px-3 py-2"><span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-secondary">{{.DeviceType}}</span></td>
+    <td data-label="Last Seen" class="px-3 py-2 text-xs text-secondary tabular-nums whitespace-nowrap">{{derefTime .LastSeenAt}}</td>
+    <td data-label="Actions" class="px-3 py-2 text-right whitespace-nowrap">
         {{if can $.User "telemetry" "update"}}
         {{if eq .Status "inventory"}}
         <form method="POST" action="/telemetry/devices/{{.IMEI}}/assign" class="inline-flex items-center gap-1" hx-post="/telemetry/devices/{{.IMEI}}/assign" hx-target="#telemetry-device-rows" hx-swap="innerMorph" hx-indicator="closest form">

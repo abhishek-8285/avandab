@@ -1,5 +1,5 @@
 <div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-border-subtle">
+    <table class="rtable min-w-full divide-y divide-border-subtle">
         <thead class="bg-surface-container-low">
             <tr>
                 <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Timestamp</th>
@@ -14,12 +14,12 @@
             {{if or .AuditLogs .Logs}}
             {{range (or .AuditLogs .Logs)}}
             <tr class="hover:bg-surface-container-low/60 transition-colors">
-                <td class="px-3 py-2 text-xs tabular-nums text-secondary whitespace-nowrap" data-numeric><span class="time-display" data-utc-time="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .CreatedAt}}</span></td>
-                <td class="px-3 py-2 text-sm">{{if .UserName}}<span class="font-semibold text-on-surface">{{.UserName}}</span>{{else}}<span class="text-text-muted">System</span>{{end}}</td>
-                <td class="px-3 py-2"><span class="inline-flex px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/15 text-[11px] font-bold uppercase tracking-wide text-primary">{{.Action}}</span></td>
-                <td class="px-3 py-2 text-xs font-data-mono text-secondary">{{.TableName}}</td>
-                <td class="px-3 py-2 text-xs font-data-mono tabular-nums text-secondary">{{if .RecordID}}{{.RecordID}}{{else}}-{{end}}</td>
-                <td class="px-3 py-2 text-right text-xs font-data-mono tabular-nums text-secondary whitespace-nowrap">{{if .IPAddress}}{{.IPAddress}}{{else}}-{{end}}</td>
+                <td data-label="Timestamp" class="px-3 py-2 text-xs tabular-nums text-secondary whitespace-nowrap" data-numeric><span class="time-display" data-utc-time="{{.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .CreatedAt}}</span></td>
+                <td data-label="User Account" class="px-3 py-2 text-sm">{{if .UserName}}<span class="font-semibold text-on-surface">{{.UserName}}</span>{{else}}<span class="text-text-muted">System</span>{{end}}</td>
+                <td data-label="Action" class="px-3 py-2"><span class="inline-flex px-1.5 py-0.5 rounded-full bg-primary/10 border border-primary/15 text-[11px] font-bold uppercase tracking-wide text-primary">{{.Action}}</span></td>
+                <td data-label="Target Table" class="px-3 py-2 text-xs font-data-mono text-secondary">{{.TableName}}</td>
+                <td data-label="Record ID" class="px-3 py-2 text-xs font-data-mono tabular-nums text-secondary">{{if .RecordID}}{{.RecordID}}{{else}}-{{end}}</td>
+                <td data-label="IP Address" class="px-3 py-2 text-right text-xs font-data-mono tabular-nums text-secondary whitespace-nowrap">{{if .IPAddress}}{{.IPAddress}}{{else}}-{{end}}</td>
             </tr>
             {{end}}
             {{else}}

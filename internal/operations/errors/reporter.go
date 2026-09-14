@@ -3,6 +3,7 @@ package errors
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"transport-app/internal/shared"
@@ -68,9 +69,25 @@ func NewReporter(notifSvc ports.NotificationService, store Store, env, appVersio
 	}
 }
 
+// newID builds an id for an error report or an incident.
+//
+// The suffix matters. A bare `time.Now().UnixNano()` is NOT unique in time:
+// on Windows the clock advances in ~0.5ms steps, so two reports raised inside
+// one tick collide and the second INSERT fails with
+// `UNIQUE constraint failed: error_reports.id`.
+//
+// A process-wide atomic counter is appended instead: it cannot repeat inside a
+// process (which is where the collisions happened), and the timestamp still
+// keeps ids distinct across restarts and sortable by creation order.
+var idSeq uint64
+
+func newID(prefix string) string {
+	return fmt.Sprintf("%s_%d_%d", prefix, time.Now().UnixNano(), atomic.AddUint64(&idSeq, 1))
+}
+
 func (r *Reporter) Report(ctx context.Context, report ErrorReport) (ErrorReport, error) {
 	if report.ID == "" {
-		report.ID = fmt.Sprintf("err_%d", time.Now().UnixNano())
+		report.ID = newID("err")
 	}
 	if report.Timestamp.IsZero() {
 		report.Timestamp = time.Now()
@@ -109,7 +126,7 @@ func (r *Reporter) Report(ctx context.Context, report ErrorReport) (ErrorReport,
 		open, err := r.store.HasOpenIncident(ctx, fp, merged.TenantID)
 		if err == nil && !open {
 			_ = r.store.CreateIncident(ctx, Incident{
-				ID:       fmt.Sprintf("inc_%d", time.Now().UnixNano()),
+				ID:       newID("inc"),
 				ErrorID:  merged.ID,
 				TenantID: merged.TenantID,
 				Status:   "OPEN",

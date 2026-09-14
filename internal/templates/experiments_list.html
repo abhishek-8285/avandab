@@ -25,7 +25,7 @@
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Experiments}}</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-border-subtle">
+            <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
                         <th class="px-3 py-2.5 text-left text-eyebrow text-text-muted">Name</th>
@@ -39,21 +39,21 @@
                 <tbody class="divide-y divide-border-subtle text-sm">
                     {{range .Experiments}}
                     <tr class="hover:bg-surface-container-low/50 transition-colors">
-                        <td class="px-3 py-2 font-semibold text-on-surface">{{.Name}}</td>
-                        <td class="px-3 py-2">
+                        <td data-label="Name" class="px-3 py-2 font-semibold text-on-surface">{{.Name}}</td>
+                        <td data-label="Status" class="px-3 py-2">
                             <span class="inline-flex px-2 py-1 rounded-full border text-[11px] font-bold
-                                {{if eq .Status "running"}}bg-emerald-500/10 border-emerald-500/15 text-emerald-700
-                                {{else if eq .Status "paused"}}bg-amber-500/10 border-amber-500/15 text-amber-700
+                                {{if eq .Status "running"}}bg-emerald-soft border-emerald-line text-emerald-strong
+                                {{else if eq .Status "paused"}}bg-amber-soft border-amber-line text-amber-strong
                                 {{else if eq .Status "completed"}}bg-primary/10 border-primary/20 text-primary
                                 {{else if eq .Status "archived"}}bg-surface-container-high text-secondary border-border-subtle
                                 {{else}}bg-surface-container-high text-secondary border-border-subtle{{end}}">
                                 {{.Status}}
                             </span>
                         </td>
-                        <td class="px-3 py-2 text-right text-xs font-data-mono tabular-nums font-bold text-secondary">{{printf "%.0f" .TrafficSplit}}% → B</td>
-                        <td class="px-3 py-2 text-xs text-secondary">{{.MetricName}}</td>
-                        <td class="px-3 py-2 text-xs tabular-nums text-text-muted">{{.CreatedAt.Format "2006-01-02"}}</td>
-                        <td class="px-3 py-2 text-right whitespace-nowrap">
+                        <td data-label="Traffic Split" class="px-3 py-2 text-right text-xs font-data-mono tabular-nums font-bold text-secondary">{{printf "%.0f" .TrafficSplit}}% → B</td>
+                        <td data-label="Metric" class="px-3 py-2 text-xs text-secondary">{{.MetricName}}</td>
+                        <td data-label="Created" class="px-3 py-2 text-xs tabular-nums text-text-muted">{{.CreatedAt.Format "2006-01-02"}}</td>
+                        <td data-label="Actions" class="px-3 py-2 text-right whitespace-nowrap">
                             {{if can $.User "experiments" "write"}}
                                 {{if eq .Status "draft"}}
                                 <button onclick="experimentAction('{{.ID}}', 'start')" class="inline-flex px-3 py-1 rounded-full bg-emerald-600 text-white text-xs font-bold shadow-sm hover:bg-emerald-700 hover:-translate-y-px transition-all cursor-pointer border-0">Start</button>

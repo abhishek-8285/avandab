@@ -28,7 +28,7 @@
                 <div class="w-10 h-10 rounded-xl bg-white/15 border border-white/20 grid place-items-center shrink-0">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 </div>
-                <span class="inline-flex items-center px-2 py-1 rounded-full bg-white/15 border border-white/20 text-[10px] font-bold uppercase tracking-wide">INR</span>
+                <span class="inline-flex items-center px-2 py-1 rounded-full bg-white/15 border border-white/20 text-[11px] font-bold uppercase tracking-wide">INR</span>
             </div>
             <div class="mt-4">
                 <div class="text-3xl font-black tracking-tight tabular-nums" data-numeric>₹{{printf "%.2f" .TotalRevenue}}</div>
@@ -37,7 +37,7 @@
         </div>
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition-all duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-400 opacity-80"></div>
-            <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600">
+            <div class="w-10 h-10 rounded-xl bg-blue-soft border border-blue-line grid place-items-center text-blue-mid">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>
             </div>
             <div class="mt-4">
@@ -57,7 +57,7 @@
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .MonthlyRevenue}} months</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-border-subtle">
+            <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
                         <th class="th-cell">Month</th>
@@ -67,8 +67,8 @@
                 <tbody class="divide-y divide-border-subtle">
                     {{range .MonthlyRevenue}}
                     <tr class="hover:bg-surface-container-low/50 transition-colors">
-                        <td class="px-3 py-2 text-sm font-semibold text-on-surface tabular-nums">{{.Month}}</td>
-                        <td class="px-3 py-2 text-sm text-right font-semibold tabular-nums text-on-surface" data-numeric>₹{{printf "%.2f" .Total}}</td>
+                        <td data-label="Month" class="px-3 py-2 text-sm font-semibold text-on-surface tabular-nums">{{.Month}}</td>
+                        <td data-label="Revenue (₹)" class="px-3 py-2 text-sm text-right font-semibold tabular-nums text-on-surface" data-numeric>₹{{printf "%.2f" .Total}}</td>
                     </tr>
                     {{else}}
                     <tr><td colspan="2" class="px-4 py-12 text-center">

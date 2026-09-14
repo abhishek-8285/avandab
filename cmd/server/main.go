@@ -667,7 +667,7 @@ func main() {
 	driverAppSvc := driverApp.NewDriverAppService(database)
 	driverLifecycleAPIHandler := driverAPIHandlers.NewDriverLifecycleAPIHandler(driverAppSvc)
 	customerRepo := customerSQL.NewSQLCustomerRepository(database)
-	customerAppSvc := customerApp.NewCustomerAppService(customerRepo)
+	customerAppSvc := customerApp.NewCustomerAppService(customerRepo, idGen)
 	customerAPIHandler := customerAPIHandlers.NewCustomerHandler(customerAppSvc)
 	settlementRepo := settlementSQL.NewSQLSettlementRepository(database)
 	settlementAppSvc := settlementApp.NewSettlementAppService(settlementRepo, cfg.RazorpayWebhook, 100.0)

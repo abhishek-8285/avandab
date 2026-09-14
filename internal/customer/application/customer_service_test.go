@@ -13,6 +13,7 @@ import (
 	"transport-app/internal/customer/application"
 	custSQL "transport-app/internal/customer/infrastructure/persistence/sql"
 	driverApp "transport-app/internal/driver/application"
+	"transport-app/internal/shared/id"
 )
 
 func setupCustomerTestDB(t *testing.T) *sql.DB {
@@ -191,7 +192,7 @@ func setupCustomerTestDB(t *testing.T) *sql.DB {
 func TestPhase7_CustomerBookingWorkflow(t *testing.T) {
 	db := setupCustomerTestDB(t)
 	repo := custSQL.NewSQLCustomerRepository(db)
-	svc := application.NewCustomerAppService(repo)
+	svc := application.NewCustomerAppService(repo, id.NewUUIDGenerator())
 	ctx := context.Background()
 
 	tenantID := "tenant-1"
@@ -353,7 +354,7 @@ func TestPhase7_CustomerBookingWorkflow(t *testing.T) {
 func TestPhase7_BookingCancellationBeforeTrip(t *testing.T) {
 	db := setupCustomerTestDB(t)
 	repo := custSQL.NewSQLCustomerRepository(db)
-	svc := application.NewCustomerAppService(repo)
+	svc := application.NewCustomerAppService(repo, id.NewUUIDGenerator())
 	ctx := context.Background()
 
 	tenantID := "tenant-1"

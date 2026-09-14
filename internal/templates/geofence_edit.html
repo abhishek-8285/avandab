@@ -19,7 +19,7 @@
     </div>
 
     {{if .FlashError}}
-    <div class="bg-rose-500/10 border border-rose-500/20 text-status-alert rounded-xl px-4 py-3 text-sm flex items-center gap-2">
+    <div class="bg-rose-soft border border-rose-500/20 text-status-alert rounded-xl px-4 py-3 text-sm flex items-center gap-2">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 shrink-0"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
         <span>{{.FlashError}}</span>
     </div>
@@ -57,8 +57,8 @@
                     </div>
 
                     <!-- Kind Description Banner -->
-                    <div id="kind-info-banner" class="p-3 rounded-xl bg-blue-500/10 border border-blue-500/15 text-xs text-secondary flex items-start gap-2.5">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 shrink-0 mt-0.5 text-blue-600"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <div id="kind-info-banner" class="p-3 rounded-xl bg-blue-soft border border-blue-line text-xs text-secondary flex items-start gap-2.5">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 shrink-0 mt-0.5 text-blue-mid"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                         <span id="kind-info-text">Dwell engine will log detention windows and compute billable demurrage hours beyond company free allowance.</span>
                     </div>
 
@@ -105,7 +105,7 @@
                     <div id="radius-control" class="{{if .Zone}}{{if eq .Zone.Shape "polygon"}}hidden{{end}}{{end}} space-y-2.5 pt-1">
                         <div class="flex items-center justify-between">
                             <label for="radius-slider" class="text-xs font-bold text-on-surface">Circle Radius</label>
-                            <span id="radius-value" class="text-xs font-data-mono font-bold tabular-nums px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15" data-numeric>
+                            <span id="radius-value" class="text-xs font-data-mono font-bold tabular-nums px-2 py-0.5 rounded-full bg-blue-soft text-blue-strong dark:text-blue-300 border border-blue-line" data-numeric>
                                 {{if .Zone}}{{.Zone.RadiusM}}{{else}}500{{end}} m
                             </span>
                         </div>
@@ -164,7 +164,7 @@
 
                     <!-- Quick City Jump Chips -->
                     <div class="flex items-center gap-1 overflow-x-auto shrink-0">
-                        <span class="text-[10px] uppercase font-bold tracking-wider text-text-muted mr-1">Jump:</span>
+                        <span class="text-[11px] uppercase font-bold tracking-wider text-text-muted mr-1">Jump:</span>
                         <button type="button" class="quick-jump px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-[11px] font-data-mono text-secondary hover:bg-surface-container-low cursor-pointer transition-colors" data-lat="28.6139" data-lng="77.2090">Delhi</button>
                         <button type="button" class="quick-jump px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-[11px] font-data-mono text-secondary hover:bg-surface-container-low cursor-pointer transition-colors" data-lat="19.0760" data-lng="72.8777">Mumbai</button>
                         <button type="button" class="quick-jump px-2 py-0.5 rounded-full border border-border-subtle bg-surface-container-lowest text-[11px] font-data-mono text-secondary hover:bg-surface-container-low cursor-pointer transition-colors" data-lat="12.9716" data-lng="77.5946">BLR</button>
@@ -177,7 +177,7 @@
                     <div class="flex items-center gap-2">
                         <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
                         <span class="font-bold text-on-surface uppercase tracking-wider text-[11px]">Map Canvas</span>
-                        <span id="map-mode-badge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15">
+                        <span id="map-mode-badge" class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-soft text-blue-strong dark:text-blue-300 border border-blue-line">
                             Circle Mode
                         </span>
                     </div>

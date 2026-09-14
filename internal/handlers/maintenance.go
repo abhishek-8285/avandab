@@ -375,7 +375,9 @@ func (h *MaintenanceHandlers) ResolveDTC(w http.ResponseWriter, r *http.Request)
 	if isDatastarRequest(r) {
 		w.Header().Set("HX-Trigger", `{"showToast": {"tone":"success","msg":"DTC resolved"}}`)
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write([]byte(`<span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-emerald-500/10 border border-emerald-500/15 text-emerald-700 font-bold">Resolved</span>`))
+		// Chip tokens, not raw palette: `bg-emerald-500/10` and friends are
+		// frozen values that cannot respond to `.dark`. Safelisted in input.css.
+		_, _ = w.Write([]byte(`<span class="inline-flex px-2 py-0.5 text-[11px] rounded-full bg-emerald-soft border border-emerald-line text-emerald-strong font-bold">Resolved</span>`))
 		return
 	}
 

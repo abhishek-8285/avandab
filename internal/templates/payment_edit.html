@@ -17,14 +17,14 @@
             </div>
 
             <div>
-                <label class="block text-eyebrow text-text-muted mb-1.5">Amount *</label>
-                <input type="number" step="0.01" min="0.01" name="amount" value="{{if gt .Balance 0.0}}{{printf "%.2f" .Balance}}{{end}}" required
+                <label for="amount" class="block text-eyebrow text-text-muted mb-1.5">Amount *</label>
+                <input id="amount" type="number" step="0.01" min="0.01" name="amount" value="{{if gt .Balance 0.0}}{{printf "%.2f" .Balance}}{{end}}" required
                     class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
 
             <div>
-                <label class="block text-eyebrow text-text-muted mb-1.5">Method</label>
-                <select name="method" class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                <label for="method" class="block text-eyebrow text-text-muted mb-1.5">Method</label>
+                <select id="method" name="method" class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     <option value="cash">Cash</option>
                     <option value="upi">UPI</option>
                     <option value="bank_transfer">Bank Transfer</option>
@@ -34,20 +34,20 @@
             </div>
 
             <div>
-                <label class="block text-eyebrow text-text-muted mb-1.5">Payment Date</label>
-                <input type="date" name="payment_date" value="{{date_only .Now}}"
+                <label for="payment_date" class="block text-eyebrow text-text-muted mb-1.5">Payment Date</label>
+                <input id="payment_date" type="date" name="payment_date" value="{{date_only .Now}}"
                     class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
 
             <div>
-                <label class="block text-eyebrow text-text-muted mb-1.5">Reference</label>
-                <input type="text" name="reference"
+                <label for="reference" class="block text-eyebrow text-text-muted mb-1.5">Reference</label>
+                <input id="reference" type="text" name="reference"
                     class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
 
             <div>
-                <label class="block text-eyebrow text-text-muted mb-1.5">Remarks</label>
-                <textarea name="remarks" rows="2"
+                <label for="remarks" class="block text-eyebrow text-text-muted mb-1.5">Remarks</label>
+                <textarea id="remarks" name="remarks" rows="2"
                     class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"></textarea>
             </div>
 

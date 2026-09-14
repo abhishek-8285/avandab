@@ -7,8 +7,19 @@ import (
 	"sync"
 	"time"
 
+	"transport-app/internal/shared/id"
 	"transport-app/internal/shared/ports"
 )
+
+// Ids must NOT be minted from time.Now(): on Windows the clock steps in ~0.5ms
+// chunks, so two ids generated inside one tick are identical and the second
+// INSERT fails on a UNIQUE/PK column. Invisible on Linux CI, intermittent on
+// Windows. See docs/10-FRONTEND-UX-AUDIT.md §7.4.
+//
+// GenerateUUID, not GenerateDisplayID: the latter truncates a UUID to 8 hex
+// chars (32 bits), which collides by the birthday bound at ~77k rows — fine
+// for a booking number, not for a notification table.
+var idGen = id.NewUUIDGenerator()
 
 type Notification struct {
 	ID        string    `json:"id"`
@@ -70,7 +81,7 @@ func (s *Service) SendEmail(ctx context.Context, msg ports.NotificationMessage) 
 
 func (s *Service) SendInApp(ctx context.Context, msg ports.NotificationMessage) error {
 	notif := Notification{
-		ID:        fmt.Sprintf("notif_%d", time.Now().UnixNano()),
+		ID:        "notif_" + idGen.GenerateUUID(),
 		TenantID:  msg.TenantID,
 		UserID:    msg.UserID,
 		Type:      string(ports.NotificationTypeInApp),

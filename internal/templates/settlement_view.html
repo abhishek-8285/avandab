@@ -45,7 +45,7 @@
                     {{end}}
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-border-subtle">
+                    <table class="rtable min-w-full divide-y divide-border-subtle">
                         <thead class="bg-surface-container-low">
                             <tr>
                                 <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Type</th>
@@ -56,16 +56,16 @@
                         <tbody class="divide-y divide-border-subtle">
                             {{range .Lines}}
                             <tr class="hover:bg-surface-container-low/50 transition-colors">
-                                <td class="px-3 py-2">
+                                <td data-label="Type" class="px-3 py-2">
                                     <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-data-mono font-semibold uppercase tracking-wide {{if eq .LineType "gross_fare"}}bg-status-success/10 border border-status-success/15 text-status-success{{else if eq .LineType "advances"}}bg-status-warning/10 border border-status-warning/15 text-status-warning{{else if eq .LineType "deduction"}}bg-status-alert/10 border border-status-alert/15 text-status-alert{{else if eq .LineType "tds"}}bg-secondary-container border border-primary/15 text-primary{{else}}bg-surface-container border border-border-subtle text-secondary{{end}}">
                                         {{.LineType}}
                                     </span>
                                 </td>
-                                <td class="px-3 py-2 text-sm text-on-surface">
+                                <td data-label="Description / Reference" class="px-3 py-2 text-sm text-on-surface">
                                     {{.Label}}
                                     {{if .RefID}}<span class="text-xs text-text-muted font-data-mono block">Ref: {{.RefID}}</span>{{end}}
                                 </td>
-                                <td class="px-3 py-2 text-sm text-right tabular-nums font-bold whitespace-nowrap {{if gt .Amount 0.0}}text-status-success{{else}}text-status-alert{{end}}" data-numeric>
+                                <td data-label="Amount (INR)" class="px-3 py-2 text-sm text-right tabular-nums font-bold whitespace-nowrap {{if gt .Amount 0.0}}text-status-success{{else}}text-status-alert{{end}}" data-numeric>
                                     {{if gt .Amount 0.0}}+₹{{printf "%.2f" .Amount}}{{else}}₹{{printf "%.2f" .Amount}}{{end}}
                                 </td>
                             </tr>
@@ -176,12 +176,12 @@
                     {{if can .User "settlements" "approve"}}
                     <form method="POST" action="/settlements/{{$s.ID}}/mark-paid" class="space-y-3">
                         <div>
-                            <label class="block text-eyebrow text-text-muted mb-1.5">Payment Reference / UTR #</label>
-                            <input type="text" name="payment_ref" placeholder="e.g. UTR-987654321" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" />
+                            <label for="payment_ref" class="block text-eyebrow text-text-muted mb-1.5">Payment Reference / UTR #</label>
+                            <input id="payment_ref" type="text" name="payment_ref" placeholder="e.g. UTR-987654321" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" />
                         </div>
                         <div>
-                            <label class="block text-eyebrow text-text-muted mb-1.5">Payment Mode</label>
-                            <select name="mode" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            <label for="mode" class="block text-eyebrow text-text-muted mb-1.5">Payment Mode</label>
+                            <select id="mode" name="mode" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                                 <option value="bank_transfer">Bank Transfer (NEFT/RTGS/IMPS)</option>
                                 <option value="upi">UPI</option>
                                 <option value="cheque">Cheque</option>
@@ -208,8 +208,8 @@
                             </button>
                         </form>
                         <form method="POST" action="/settlements/{{$s.ID}}/dispute" class="pt-2 border-t border-border-subtle space-y-2">
-                            <label class="block text-eyebrow text-text-muted mb-1.5">Dispute Payout</label>
-                            <input type="text" name="reason" placeholder="Reason for dispute" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" />
+                            <label for="reason" class="block text-eyebrow text-text-muted mb-1.5">Dispute Payout</label>
+                            <input id="reason" type="text" name="reason" placeholder="Reason for dispute" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all" />
                             <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-full border border-status-alert/30 bg-status-alert/10 text-status-alert px-3 py-2 text-xs font-semibold hover:bg-status-alert/20 transition-all cursor-pointer">
                                 Raise Dispute
                             </button>

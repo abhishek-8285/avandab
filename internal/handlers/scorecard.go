@@ -118,13 +118,21 @@ func (h *ScorecardHandlers) Resolve(w http.ResponseWriter, r *http.Request) {
 
 // tierBadgeClass returns the badge classes for a driver tier (A emerald,
 // B blue, C rose — Spec 03 §6.3).
+//
+// These are the same semantic `badge-*` utilities statusBadgeClass emits, so a
+// tier chip and a status chip are styled by one mechanism and both follow dark
+// mode. Being Go-emitted, they are safelisted via `@source inline` in
+// src/input.css — without that the classes would be absent from the bundle.
+//
+// Note the text step moves from -700 to the container's -800 on-token. That is
+// a deliberate normalisation to the shared badge tokens, not an accident.
 func tierBadgeClass(tier string) template.CSS {
 	switch tier {
 	case "A":
-		return "bg-emerald-100 text-emerald-700"
+		return "badge-success"
 	case "B":
-		return "bg-blue-100 text-blue-700"
+		return "badge-info"
 	default:
-		return "bg-rose-100 text-rose-700"
+		return "badge-alert"
 	}
 }

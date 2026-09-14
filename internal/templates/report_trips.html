@@ -41,10 +41,10 @@
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition-all duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-400 opacity-80"></div>
             <div class="flex items-start justify-between">
-                <div class="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600">
+                <div class="w-10 h-10 rounded-xl bg-blue-soft border border-blue-line grid place-items-center text-blue-mid">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>
                 </div>
-                <span class="inline-flex items-center px-2 py-1 rounded-full bg-blue-500/10 border border-blue-500/15 text-[11px] font-bold uppercase tracking-wide text-blue-700 dark:text-blue-300">Scheduled</span>
+                <span class="inline-flex items-center px-2 py-1 rounded-full bg-blue-soft border border-blue-line text-[11px] font-bold uppercase tracking-wide text-blue-strong dark:text-blue-300">Scheduled</span>
             </div>
             <div class="mt-4">
                 <div class="text-3xl font-black tracking-tight tabular-nums text-status-info" data-numeric>{{index .StatusCounts "scheduled"}}</div>
@@ -54,10 +54,10 @@
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition-all duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-80"></div>
             <div class="flex items-start justify-between">
-                <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600">
+                <div class="w-10 h-10 rounded-xl bg-amber-soft border border-amber-line grid place-items-center text-amber-mid">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><circle cx="12" cy="8" r="2"/><path d="M12 12v4"/></svg>
                 </div>
-                <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/15 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>In motion</span>
+                <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-bold uppercase tracking-wide text-amber-strong dark:text-amber-300"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>In motion</span>
             </div>
             <div class="mt-4">
                 <div class="text-3xl font-black tracking-tight tabular-nums text-status-warning" data-numeric>{{index .StatusCounts "started"}}</div>
@@ -67,10 +67,10 @@
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition-all duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-80"></div>
             <div class="flex items-start justify-between">
-                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600">
+                <div class="w-10 h-10 rounded-xl bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
                 </div>
-                <span class="inline-flex items-center px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/15 text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Done</span>
+                <span class="inline-flex items-center px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold uppercase tracking-wide text-emerald-strong dark:text-emerald-300">Done</span>
             </div>
             <div class="mt-4">
                 <div class="text-3xl font-black tracking-tight tabular-nums text-status-success" data-numeric>{{index .StatusCounts "completed"}}</div>
@@ -113,7 +113,7 @@
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{.TotalTrips}} trips</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-border-subtle">
+            <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
                         <th class="th-cell">Trip Number</th>
@@ -128,18 +128,18 @@
                     {{if .Trips}}
                     {{range .Trips}}
                     <tr class="hover:bg-surface-container-low/50 transition-colors">
-                        <td class="px-3 py-2 text-sm font-bold text-primary tabular-nums">{{.TripNumber}}</td>
-                        <td class="px-3 py-2 text-sm text-on-surface">
+                        <td data-label="Trip Number" class="px-3 py-2 text-sm font-bold text-primary tabular-nums">{{.TripNumber}}</td>
+                        <td data-label="Assigned Driver" class="px-3 py-2 text-sm text-on-surface">
                             {{if .DriverFirstName}}<span class="font-medium">{{.DriverFirstName}} {{.DriverLastName}}</span>{{else}}<span class="text-text-muted">Unassigned</span>{{end}}
                         </td>
-                        <td class="px-3 py-2 text-sm text-on-surface">
+                        <td data-label="Vehicle Reg" class="px-3 py-2 text-sm text-on-surface">
                             {{if .VehicleRegistration}}<span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container border border-border-subtle text-xs font-semibold tabular-nums">{{.VehicleRegistration}}</span>{{else}}<span class="text-text-muted">Unassigned</span>{{end}}
                         </td>
-                        <td class="px-3 py-2 text-sm"><span class="font-medium text-on-surface">{{.RouteSource}}</span> <span class="text-text-muted">&rarr;</span> <span class="font-medium text-on-surface">{{.RouteDestination}}</span></td>
-                        <td class="px-3 py-2 text-sm">
+                        <td data-label="Route Details" class="px-3 py-2 text-sm"><span class="font-medium text-on-surface">{{.RouteSource}}</span> <span class="text-text-muted">&rarr;</span> <span class="font-medium text-on-surface">{{.RouteDestination}}</span></td>
+                        <td data-label="Status" class="px-3 py-2 text-sm">
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                         </td>
-                        <td class="px-3 py-2 text-sm text-secondary tabular-nums text-right" data-numeric>{{datetime .DepartureTime}}</td>
+                        <td data-label="Departure Time" class="px-3 py-2 text-sm text-secondary tabular-nums text-right" data-numeric>{{datetime .DepartureTime}}</td>
                     </tr>
                     {{end}}
                     {{else}}

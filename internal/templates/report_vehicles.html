@@ -34,7 +34,7 @@
         </div>
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition-all duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-80"></div>
-            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600">
+            <div class="w-10 h-10 rounded-xl bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
             </div>
             <div class="mt-4">
@@ -76,7 +76,7 @@
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Vehicles}} shown</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-border-subtle">
+            <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
                         <th class="th-cell">Reg Number</th>
@@ -90,11 +90,11 @@
                     {{if .Vehicles}}
                     {{range .Vehicles}}
                     <tr class="hover:bg-surface-container-low/50 transition-colors">
-                        <td class="px-3 py-2 text-sm font-bold text-primary tabular-nums">{{.RegistrationNumber}}</td>
-                        <td class="px-3 py-2 text-sm tabular-nums text-secondary">{{.VehicleNumber}}</td>
-                        <td class="px-3 py-2 text-sm capitalize text-on-surface">{{.VehicleType}}</td>
-                        <td class="px-3 py-2 text-sm text-right font-semibold tabular-nums text-on-surface" data-numeric>{{.Capacity}}</td>
-                        <td class="px-3 py-2 text-sm">
+                        <td data-label="Reg Number" class="px-3 py-2 text-sm font-bold text-primary tabular-nums">{{.RegistrationNumber}}</td>
+                        <td data-label="Vehicle #" class="px-3 py-2 text-sm tabular-nums text-secondary">{{.VehicleNumber}}</td>
+                        <td data-label="Type" class="px-3 py-2 text-sm capitalize text-on-surface">{{.VehicleType}}</td>
+                        <td data-label="Capacity" class="px-3 py-2 text-sm text-right font-semibold tabular-nums text-on-surface" data-numeric>{{.Capacity}}</td>
+                        <td data-label="Status" class="px-3 py-2 text-sm">
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                         </td>
                     </tr>

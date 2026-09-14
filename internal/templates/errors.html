@@ -35,7 +35,7 @@
             </div>
         </div>
         <div class="flex items-center gap-3 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:border-rose-500/20 transition-all">
-            <div class="w-9 h-9 rounded-lg bg-rose-500/10 border border-rose-500/15 grid place-items-center text-rose-600 shrink-0">
+            <div class="w-9 h-9 rounded-lg bg-rose-soft border border-rose-line grid place-items-center text-rose-mid shrink-0">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
             </div>
             <div class="min-w-0">
@@ -44,7 +44,7 @@
             </div>
         </div>
         <div class="flex items-center gap-3 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:border-blue-500/20 transition-all">
-            <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/15 grid place-items-center text-blue-600 shrink-0">
+            <div class="w-9 h-9 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid shrink-0">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg>
             </div>
             <div class="min-w-0">
@@ -53,7 +53,7 @@
             </div>
         </div>
         <div class="flex items-center gap-3 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:border-violet-500/20 transition-all">
-            <div class="w-9 h-9 rounded-lg bg-violet-500/10 border border-violet-500/15 grid place-items-center text-violet-600 shrink-0">
+            <div class="w-9 h-9 rounded-lg bg-violet-soft border border-violet-line grid place-items-center text-violet-mid shrink-0">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </div>
             <div class="min-w-0">
@@ -70,7 +70,7 @@
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Incidents}}</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-border-subtle">
+            <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
                         <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Status</th>
@@ -85,29 +85,29 @@
                 <tbody class="divide-y divide-border-subtle">
                     {{range .Incidents}}
                     <tr class="hover:bg-surface-container-low/60 transition-colors">
-                        <td class="px-3 py-2 whitespace-nowrap">
+                        <td data-label="Status" class="px-3 py-2 whitespace-nowrap">
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold
-                                {{if eq .Status "OPEN"}}bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/15
-                                {{else if eq .Status "ASSIGNED"}}bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/15
-                                {{else}}bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/15{{end}}">
+                                {{if eq .Status "OPEN"}}bg-rose-soft text-rose-strong dark:text-rose-300 border border-rose-line
+                                {{else if eq .Status "ASSIGNED"}}bg-amber-soft text-amber-strong dark:text-amber-300 border border-amber-line
+                                {{else}}bg-emerald-soft text-emerald-strong dark:text-emerald-300 border border-emerald-line{{end}}">
                                 {{.Status}}
                             </span>
                         </td>
-                        <td class="px-3 py-2 whitespace-nowrap">
+                        <td data-label="Severity" class="px-3 py-2 whitespace-nowrap">
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold
-                                {{if eq .Severity "CRITICAL"}}bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/15
-                                {{else if eq .Severity "HIGH"}}bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/15
-                                {{else if eq .Severity "MEDIUM"}}bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15
+                                {{if eq .Severity "CRITICAL"}}bg-rose-soft text-rose-strong dark:text-rose-300 border border-rose-line
+                                {{else if eq .Severity "HIGH"}}bg-amber-soft text-amber-strong dark:text-amber-300 border border-amber-line
+                                {{else if eq .Severity "MEDIUM"}}bg-blue-soft text-blue-strong dark:text-blue-300 border border-blue-line
                                 {{else if eq .Severity "LOW"}}bg-surface-container text-text-muted border border-border-subtle
                                 {{else}}bg-surface-container text-text-muted border border-border-subtle{{end}}">
                                 {{.Severity}}
                             </span>
                         </td>
-                        <td class="px-3 py-2 font-data-mono text-xs text-primary max-w-[14rem] truncate" title="{{.ErrorID}}">{{printf "%.24s" .ErrorID}}</td>
-                        <td class="px-3 py-2 text-xs">{{if .AssignedTo}}{{.AssignedTo}}{{else}}<span class="text-text-muted">—</span>{{end}}</td>
-                        <td class="px-3 py-2 text-xs text-text-muted tabular-nums whitespace-nowrap">{{.Created.Format "2006-01-02 15:04"}}</td>
-                        <td class="px-3 py-2 max-w-[16rem] truncate text-xs text-secondary" title="{{.RootCause}}">{{.RootCause}}</td>
-                        <td class="px-3 py-2 text-right whitespace-nowrap">
+                        <td data-label="Error ID" class="px-3 py-2 font-data-mono text-xs text-primary max-w-[14rem] truncate" title="{{.ErrorID}}">{{printf "%.24s" .ErrorID}}</td>
+                        <td data-label="Assigned To" class="px-3 py-2 text-xs">{{if .AssignedTo}}{{.AssignedTo}}{{else}}<span class="text-text-muted">—</span>{{end}}</td>
+                        <td data-label="Created" class="px-3 py-2 text-xs text-text-muted tabular-nums whitespace-nowrap">{{.Created.Format "2006-01-02 15:04"}}</td>
+                        <td data-label="Root Cause" class="px-3 py-2 max-w-[16rem] truncate text-xs text-secondary" title="{{.RootCause}}">{{.RootCause}}</td>
+                        <td data-label="Actions" class="px-3 py-2 text-right whitespace-nowrap">
                             {{if ne .Status "RESOLVED"}}
                             <button onclick='openResolveModal("{{.ID}}")'
                                     class="inline-flex items-center rounded-full bg-primary text-on-primary px-3 py-1 text-[11px] font-bold shadow-sm hover:bg-primary/90 transition-all cursor-pointer border-0">
@@ -129,7 +129,7 @@
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Errors}}</span>
         </div>
         <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-border-subtle">
+            <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
                         <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Severity</th>
@@ -148,27 +148,27 @@
                         tabindex="0" role="button" aria-label="View error detail"
                         onclick="openErrorDrawer('{{.Fingerprint}}')"
                         onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openErrorDrawer('{{.Fingerprint}}'); }">
-                        <td class="px-3 py-2 whitespace-nowrap">
+                        <td data-label="Severity" class="px-3 py-2 whitespace-nowrap">
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold
-                                {{if eq .Severity "CRITICAL"}}bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/15
-                                {{else if eq .Severity "HIGH"}}bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/15
-                                {{else if eq .Severity "MEDIUM"}}bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/15
+                                {{if eq .Severity "CRITICAL"}}bg-rose-soft text-rose-strong dark:text-rose-300 border border-rose-line
+                                {{else if eq .Severity "HIGH"}}bg-amber-soft text-amber-strong dark:text-amber-300 border border-amber-line
+                                {{else if eq .Severity "MEDIUM"}}bg-blue-soft text-blue-strong dark:text-blue-300 border border-blue-line
                                 {{else}}bg-surface-container text-text-muted border border-border-subtle{{end}}">
                                 {{.Severity}}
                             </span>
                         </td>
-                        <td class="px-3 py-2 max-w-[22rem]"><span class="block truncate font-data-mono text-xs text-on-surface" title="{{.Message}}">{{.Message}}</span></td>
-                        <td class="px-3 py-2 font-data-mono text-xs whitespace-nowrap text-secondary">{{.Method}} {{.URL}}</td>
-                        <td class="px-3 py-2 font-data-mono text-[10px] text-text-muted" title="{{.Fingerprint}}">{{printf "%.12s" .Fingerprint}}</td>
-                        <td class="px-3 py-2 text-right tabular-nums" data-numeric><span class="font-bold text-on-surface">{{.Occurrences}}</span>{{if gt .Occurrences 1}}<span class="text-text-muted font-normal text-xs"> (since {{.FirstSeen.Format "01-02"}})</span>{{end}}</td>
-                        <td class="px-3 py-2 text-xs text-text-muted tabular-nums whitespace-nowrap">{{.Timestamp.Format "2006-01-02 15:04"}}</td>
-                        <td class="px-3 py-2 text-right font-data-mono text-[10px]" title="{{.RequestID}}">{{printf "%.18s" .RequestID}}</td>
+                        <td data-label="Message (first line)" class="px-3 py-2 max-w-[22rem]"><span class="block truncate font-data-mono text-xs text-on-surface" title="{{.Message}}">{{.Message}}</span></td>
+                        <td data-label="Where" class="px-3 py-2 font-data-mono text-xs whitespace-nowrap text-secondary">{{.Method}} {{.URL}}</td>
+                        <td data-label="Code" class="px-3 py-2 font-data-mono text-[11px] text-text-muted" title="{{.Fingerprint}}">{{printf "%.12s" .Fingerprint}}</td>
+                        <td data-label="Occurrences" class="px-3 py-2 text-right tabular-nums" data-numeric><span class="font-bold text-on-surface">{{.Occurrences}}</span>{{if gt .Occurrences 1}}<span class="text-text-muted font-normal text-xs"> (since {{.FirstSeen.Format "01-02"}})</span>{{end}}</td>
+                        <td data-label="Last Seen" class="px-3 py-2 text-xs text-text-muted tabular-nums whitespace-nowrap">{{.Timestamp.Format "2006-01-02 15:04"}}</td>
+                        <td data-label="Request Ref" class="px-3 py-2 text-right font-data-mono text-[11px]" title="{{.RequestID}}">{{printf "%.18s" .RequestID}}</td>
                     </tr>
                     {{end}}
                     {{else}}
                     <tr><td colspan="7" class="px-4 py-12 text-center">
                         <div class="flex flex-col items-center gap-2">
-                            <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/15 grid place-items-center text-emerald-600">
+                            <div class="w-12 h-12 rounded-2xl bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
                             </div>
                             <p class="text-sm font-medium text-on-surface mt-1">No errors recorded</p>

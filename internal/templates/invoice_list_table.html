@@ -1,5 +1,5 @@
 <div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-border-subtle">
+    <table class="rtable min-w-full divide-y divide-border-subtle">
         <thead class="bg-surface-container-low">
             <tr>
                 <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Invoice #</th>
@@ -16,18 +16,18 @@
             {{if .Invoices}}
             {{range .Invoices}}
             <tr class="hover:bg-surface-container-low/50 transition-colors group">
-                <td class="px-3 py-2 whitespace-nowrap">
+                <td data-label="Invoice #" class="px-3 py-2 whitespace-nowrap">
                     <a href="{{if $.PortalPay}}/pay/{{.ID}}{{else}}/invoices/{{.ID}}{{end}}" class="text-sm text-primary font-bold tabular-nums hover:underline">{{.InvoiceNumber}}</a>
                 </td>
-                <td class="px-3 py-2 text-sm font-medium text-on-surface">{{.CustomerName}}</td>
-                <td class="px-3 py-2 text-sm font-data-mono text-xs text-secondary">{{if .TripNumber}}{{.TripNumber}}{{else}}<span class="text-text-muted">—</span>{{end}}</td>
-                <td class="px-3 py-2 text-sm text-right tabular-nums text-on-surface" data-numeric>₹{{printf "%.2f" .Subtotal}}</td>
-                <td class="px-3 py-2 text-sm text-right tabular-nums text-on-surface" data-numeric>₹{{printf "%.2f" .Tax}}</td>
-                <td class="px-3 py-2 text-sm text-right tabular-nums font-black text-primary" data-numeric>₹{{printf "%.2f" .Total}}</td>
-                <td class="px-3 py-2">
+                <td data-label="Customer" class="px-3 py-2 text-sm font-medium text-on-surface">{{.CustomerName}}</td>
+                <td data-label="Trip #" class="px-3 py-2 text-sm font-data-mono text-xs text-secondary">{{if .TripNumber}}{{.TripNumber}}{{else}}<span class="text-text-muted">—</span>{{end}}</td>
+                <td data-label="Subtotal (₹)" class="px-3 py-2 text-sm text-right tabular-nums text-on-surface" data-numeric>₹{{printf "%.2f" .Subtotal}}</td>
+                <td data-label="Tax (₹)" class="px-3 py-2 text-sm text-right tabular-nums text-on-surface" data-numeric>₹{{printf "%.2f" .Tax}}</td>
+                <td data-label="Total (₹)" class="px-3 py-2 text-sm text-right tabular-nums font-black text-primary" data-numeric>₹{{printf "%.2f" .Total}}</td>
+                <td data-label="Status" class="px-3 py-2">
                     <span class="status-badge {{statusBadge .PaymentStatus}}">{{.PaymentStatus}}</span>
                 </td>
-                <td class="px-3 py-2 text-right whitespace-nowrap">
+                <td data-label="Actions" class="px-3 py-2 text-right whitespace-nowrap">
                     <a href="{{if $.PortalPay}}/pay/{{.ID}}{{else}}/invoices/{{.ID}}{{end}}" class="action-view text-xs font-semibold opacity-80 group-hover:opacity-100 transition-opacity">View Invoice</a>
                     {{if and $.PortalPay (ne .PaymentStatus "paid")}}<a href="/pay/{{.ID}}" class="ml-2 inline-flex items-center rounded-full bg-primary px-2.5 py-1 text-xs font-bold text-on-primary hover:bg-primary/90 transition">Pay now</a>{{end}}
                 </td>

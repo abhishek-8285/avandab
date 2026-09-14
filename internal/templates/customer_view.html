@@ -12,9 +12,9 @@
                         <h1 class="text-xl sm:text-2xl font-black tracking-tight text-on-surface font-display">{{if .Customer.Title}}<span class="text-sm font-semibold text-text-muted align-middle">{{nullString .Customer.Title}} </span>{{end}}{{.Customer.Name}}</h1>
                         <span class="status-badge {{statusBadge .Customer.Status}} shrink-0">{{.Customer.Status}}</span>
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border
-                            {{if eq .Customer.Type "supplier"}} bg-amber-50 text-amber-700 border-amber-200
-                            {{else if eq .Customer.Type "facilitator"}} bg-violet-50 text-violet-700 border-violet-200
-                            {{else if eq .Customer.Type "contact"}} bg-slate-50 text-slate-700 border-slate-200
+                            {{if eq .Customer.Type "supplier"}} bg-amber-50 text-amber-strong border-amber-200
+                            {{else if eq .Customer.Type "facilitator"}} bg-violet-50 text-violet-strong border-violet-200
+                            {{else if eq .Customer.Type "contact"}} bg-slate-50 text-slate-strong border-slate-200
                             {{else}} bg-sky-50 text-sky-700 border-sky-200{{end}}">{{.Customer.Type}}</span>
                     </div>
                     <p class="text-sm text-text-muted mt-1.5 flex flex-wrap items-center gap-2">
@@ -141,7 +141,7 @@
                 {{template "btn.html" (dict "Label" "Consolidate Unbilled Trips" "Href" (printf "/customers/%s/statement#unbilled-trips" .Customer.ID) "Variant" "primary" "Size" "sm" "Icon" "add" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 w-full")}}
                 {{template "btn.html" (dict "Label" "Edit Customer" "Href" (printf "/customers/%s/edit" .Customer.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-border-subtle focus:ring-offset-2 w-full")}}
                 <form method="post" action="/customers/{{.Customer.ID}}/delete" onsubmit="return confirm('Delete customer {{.Customer.Name}}? This cannot be undone.')">
-                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-full bg-white border border-red-200 text-red-700 text-sm font-semibold px-4 py-2 min-h-[44px] hover:bg-red-50 transition-colors">Delete Customer</button>
+                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-full bg-white border border-red-200 text-red-strong text-sm font-semibold px-4 py-2 min-h-[44px] hover:bg-red-50 transition-colors">Delete Customer</button>
                 </form>
             </div>
         </div>

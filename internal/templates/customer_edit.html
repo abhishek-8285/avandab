@@ -45,14 +45,14 @@
                         {{end}}
                     </div>
                     <div>
-                        <label class="block text-eyebrow text-text-muted mb-1.5">Full Name *</label>
-                        <input type="text" name="name" value="{{if $c}}{{$c.Name}}{{end}}" required
+                        <label for="name" class="block text-eyebrow text-text-muted mb-1.5">Full Name *</label>
+                        <input id="name" type="text" name="name" value="{{if $c}}{{$c.Name}}{{end}}" required
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                             placeholder="e.g. Acme Logistics / Rajesh Kumar">
                     </div>
                     <div>
-                        <label class="block text-eyebrow text-text-muted mb-1.5">Title</label>
-                        <input type="text" name="title" value="{{if $c}}{{nullString $c.Title}}{{end}}" list="customer-title-list"
+                        <label for="title" class="block text-eyebrow text-text-muted mb-1.5">Title</label>
+                        <input id="title" type="text" name="title" value="{{if $c}}{{nullString $c.Title}}{{end}}" list="customer-title-list"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                             placeholder="Mr / Ms / Dr">
                         <datalist id="customer-title-list"><option value="Mr"><option value="Ms"><option value="Mrs"><option value="Dr"><option value="M/s"></datalist>
@@ -60,21 +60,21 @@
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-eyebrow text-text-muted mb-1.5">Company / Organization</label>
-                        <input type="text" name="company" value="{{if $c}}{{nullString $c.Company}}{{end}}"
+                        <label for="company" class="block text-eyebrow text-text-muted mb-1.5">Company / Organization</label>
+                        <input id="company" type="text" name="company" value="{{if $c}}{{nullString $c.Company}}{{end}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                             placeholder="Legal entity name">
                     </div>
                     <div>
-                        <label class="block text-eyebrow text-text-muted mb-1.5">Contact Person</label>
-                        <input type="text" name="contact_person" value="{{if $c}}{{nullString $c.ContactPerson}}{{end}}"
+                        <label for="contact_person" class="block text-eyebrow text-text-muted mb-1.5">Contact Person</label>
+                        <input id="contact_person" type="text" name="contact_person" value="{{if $c}}{{nullString $c.ContactPerson}}{{end}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                             placeholder="Primary billing contact">
                     </div>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-eyebrow text-text-muted mb-1.5">Logo</label>
+                        <label for="logo" class="block text-eyebrow text-text-muted mb-1.5">Logo</label>
                         {{if $c}}{{if $c.PhotoURL}}<img id="photo_preview" src="{{nullString $c.PhotoURL}}" alt="logo" class="h-12 w-12 rounded-lg object-cover border border-border-subtle mb-2">{{else}}<div id="photo_preview" class="h-12 w-12 rounded-lg bg-surface-container-low border border-dashed border-border-subtle grid place-items-center text-text-muted text-xs mb-2">no img</div>{{end}}{{else}}<div id="photo_preview" class="h-12 w-12 rounded-lg bg-surface-container-low border border-dashed border-border-subtle grid place-items-center text-text-muted text-xs mb-2">no img</div>{{end}}
                         <input type="file" name="logo" id="logo" accept="image/png,image/jpeg,image/webp,image/gif"
                             class="w-full text-sm text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition-all cursor-pointer">
@@ -96,8 +96,8 @@
                 <h3 class="text-eyebrow text-text-muted">Classification</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-eyebrow text-text-muted mb-1.5">Type</label>
-                        <select name="type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <label for="type" class="block text-eyebrow text-text-muted mb-1.5">Type</label>
+                        <select id="type" name="type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             {{ $t := "" }}{{if $c}}{{$t = $c.Type}}{{end}}
                             <option value="customer" {{if eq $t "customer"}}selected{{end}}>Customer — recipient</option>
                             <option value="supplier" {{if eq $t "supplier"}}selected{{end}}>Supplier — pickup origin</option>
@@ -109,16 +109,16 @@
                         <p class="text-[11px] text-text-muted mt-1">Customer pays, supplier provides goods</p>
                     </div>
                     <div>
-                        <label class="block text-eyebrow text-text-muted mb-1.5">Status</label>
-                        <select name="status" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <label for="status" class="block text-eyebrow text-text-muted mb-1.5">Status</label>
+                        <select id="status" name="status" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                             {{ $s := "active" }}{{if $c}}{{$s = $c.Status}}{{end}}
                             <option value="active" {{if eq $s "active"}}selected{{end}}>Active</option>
                             <option value="inactive" {{if eq $s "inactive"}}selected{{end}}>Inactive</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block text-eyebrow text-text-muted mb-1.5">Payment Terms (days)</label>
-                        <input type="number" name="payment_terms_days" min="0" max="365" value="{{if $c}}{{$c.PaymentTermsDays}}{{else}}0{{end}}"
+                        <label for="payment_terms_days" class="block text-eyebrow text-text-muted mb-1.5">Payment Terms (days)</label>
+                        <input id="payment_terms_days" type="number" name="payment_terms_days" min="0" max="365" value="{{if $c}}{{$c.PaymentTermsDays}}{{else}}0{{end}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                         <p class="text-[11px] text-text-muted mt-1">Net 0 = due now · 30/45 typical</p>
                     </div>
@@ -130,23 +130,23 @@
                 <h3 class="text-eyebrow text-text-muted">Contact</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-eyebrow text-text-muted mb-1.5">Phone Number *</label>
-                        <input type="tel" name="phone" value="{{if $c}}{{$c.Phone}}{{end}}" required
+                        <label for="phone" class="block text-eyebrow text-text-muted mb-1.5">Phone Number *</label>
+                        <input id="phone" type="tel" name="phone" value="{{if $c}}{{$c.Phone}}{{end}}" required
                             pattern="(\+?91[\s-]?|0)?[6-9][0-9]{4}[\s-]?[0-9]{5}" title="Indian mobile: 9876543210 or +91 98765 43210"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                             placeholder="+91 98765 43210">
                         <p class="text-[11px] text-text-muted mt-1">Unique per tenant · used for portal & notifications</p>
                     </div>
                     <div>
-                        <label class="block text-eyebrow text-text-muted mb-1.5">Email Address</label>
-                        <input type="email" name="email" value="{{if $c}}{{nullString $c.Email}}{{end}}"
+                        <label for="email" class="block text-eyebrow text-text-muted mb-1.5">Email Address</label>
+                        <input id="email" type="email" name="email" value="{{if $c}}{{nullString $c.Email}}{{end}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                             placeholder="billing@company.com">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-eyebrow text-text-muted mb-1.5">GST Number</label>
-                    <input type="text" name="gst" value="{{if $c}}{{nullString $c.GST}}{{end}}" maxlength="15"
+                    <label for="gst" class="block text-eyebrow text-text-muted mb-1.5">GST Number</label>
+                    <input id="gst" type="text" name="gst" value="{{if $c}}{{nullString $c.GST}}{{end}}" maxlength="15"
                         pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]" title="15-char GSTIN, e.g. 27ABCDE1234F1Z5"
                         class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono uppercase tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                         placeholder="27ABCDE1234F1Z5">
@@ -159,15 +159,15 @@
                 <h3 class="text-eyebrow text-text-muted">Addresses</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-eyebrow text-text-muted mb-1.5">Delivery / Primary Address</label>
-                        <textarea name="address" rows="3"
+                        <label for="address" class="block text-eyebrow text-text-muted mb-1.5">Delivery / Primary Address</label>
+                        <textarea id="address" name="address" rows="3"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                             placeholder="Door no., street, city, pincode">{{if $c}}{{nullString $c.Address}}{{end}}</textarea>
                         <p class="text-[11px] text-text-muted mt-1">Primary delivery address</p>
                     </div>
                     <div>
-                        <label class="block text-eyebrow text-text-muted mb-1.5">Billing Address</label>
-                        <textarea name="billing_address" rows="3"
+                        <label for="billing_address" class="block text-eyebrow text-text-muted mb-1.5">Billing Address</label>
+                        <textarea id="billing_address" name="billing_address" rows="3"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                             placeholder="GST billing address if different from delivery">{{if $c}}{{nullString $c.BillingAddress}}{{end}}</textarea>
                         <p class="text-[11px] text-text-muted mt-1">Leave blank to use delivery address for billing</p>
@@ -180,15 +180,15 @@
                     </summary>
                     <div class="px-4 pb-4 pt-3 border-t border-border-subtle space-y-4">
                         <div>
-                            <label class="block text-eyebrow text-text-muted mb-1.5">Internal Reference</label>
-                            <input type="text" name="internal_id" value="{{if $c}}{{if ne (nullString $c.InternalID) $c.CustomerCode}}{{nullString $c.InternalID}}{{end}}{{end}}"
+                            <label for="internal_id" class="block text-eyebrow text-text-muted mb-1.5">Internal Reference</label>
+                            <input id="internal_id" type="text" name="internal_id" value="{{if $c}}{{if ne (nullString $c.InternalID) $c.CustomerCode}}{{nullString $c.InternalID}}{{end}}{{end}}"
                                 class="w-full bg-surface-container-lowest border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                                 placeholder="Your ERP / accounting ID">
                             <p class="text-[11px] text-text-muted mt-1">Optional, for your accounting system</p>
                         </div>
                         <div>
-                            <label class="block text-eyebrow text-text-muted mb-1.5">Linked Location ID</label>
-                            <input type="text" name="place_uuid" value="{{if $c}}{{nullString $c.PlaceUUID}}{{end}}"
+                            <label for="place_uuid" class="block text-eyebrow text-text-muted mb-1.5">Linked Location ID</label>
+                            <input id="place_uuid" type="text" name="place_uuid" value="{{if $c}}{{nullString $c.PlaceUUID}}{{end}}"
                                 class="w-full bg-surface-container-lowest border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                                 placeholder="Leave blank — used for map pins when available">
                         </div>
@@ -200,8 +200,8 @@
             <section class="p-6 space-y-4">
                 <h3 class="text-eyebrow text-text-muted">Notes</h3>
                 <div>
-                    <label class="block text-eyebrow text-text-muted mb-1.5">Internal Notes</label>
-                    <textarea name="notes" rows="2"
+                    <label for="notes" class="block text-eyebrow text-text-muted mb-1.5">Internal Notes</label>
+                    <textarea id="notes" name="notes" rows="2"
                         class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
                         placeholder="Ops-only notes…">{{if $c}}{{nullString $c.Notes}}{{end}}</textarea>
                 </div>

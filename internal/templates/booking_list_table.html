@@ -1,5 +1,8 @@
 <div class="overflow-x-auto">
-    <table class="min-w-full divide-y divide-border-subtle">
+    {{/* .rtable: below md each row reflows into a card (see app.css), so a
+         7-column table is not a horizontal scroll on a 390px phone. The
+         data-label on each cell becomes the card row's caption. */}}
+    <table class="rtable min-w-full divide-y divide-border-subtle">
         <thead class="bg-surface-container-low">
             <tr>
                 <th class="px-3 py-2.5 text-left text-eyebrow text-text-muted hidden sm:table-cell">Booking #</th>
@@ -15,15 +18,15 @@
             {{if .Bookings}}
             {{range .Bookings}}
             <tr class="hover:bg-surface-container-low/50 transition-colors group">
-                <td class="px-3 py-2 whitespace-nowrap text-sm font-bold text-primary tabular-nums hidden sm:table-cell" data-numeric>{{.BookingNumber}}</td>
-                <td class="px-3 py-2 text-sm font-medium text-on-surface">{{.CustomerName}}</td>
-                <td class="px-3 py-2 text-sm"><span class="font-medium text-on-surface">{{.RouteSource}}</span> <span class="text-text-muted">→</span> <span class="font-medium text-on-surface">{{.RouteDestination}}</span></td>
-                <td class="px-3 py-2 whitespace-nowrap text-sm tabular-nums"><span class="time-display" data-utc-time="{{.PickupDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PickupDate}}</span></td>
-                <td class="px-3 py-2 text-right text-sm font-semibold tabular-nums text-on-surface" data-numeric>₹{{printf "%.2f" .Price}}</td>
-                <td class="px-3 py-2">
+                <td data-label="Booking #" class="px-3 py-2 whitespace-nowrap text-sm font-bold text-primary tabular-nums hidden sm:table-cell" data-numeric>{{.BookingNumber}}</td>
+                <td data-label="Customer" class="px-3 py-2 text-sm font-medium text-on-surface">{{.CustomerName}}</td>
+                <td data-label="Route" class="px-3 py-2 text-sm"><span class="font-medium text-on-surface">{{.RouteSource}}</span> <span class="text-text-muted">→</span> <span class="font-medium text-on-surface">{{.RouteDestination}}</span></td>
+                <td data-label="Pickup" class="px-3 py-2 whitespace-nowrap text-sm tabular-nums"><span class="time-display" data-utc-time="{{.PickupDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PickupDate}}</span></td>
+                <td data-label="Price" class="px-3 py-2 text-right text-sm font-semibold tabular-nums text-on-surface" data-numeric>₹{{printf "%.2f" .Price}}</td>
+                <td data-label="Status" class="px-3 py-2">
                     <span class="status-badge {{statusBadge .Status}}">{{.Status}}</span>
                 </td>
-                <td class="px-3 py-2 text-right">
+                <td data-label="Actions" class="px-3 py-2 text-right">
                     <div class="flex items-center justify-end gap-1.5">
                         <a href="/bookings/{{.ID}}" class="inline-flex items-center px-2.5 py-1 rounded-full bg-primary/10 border border-primary/15 text-[11px] font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors">View</a>
                         <a href="/bookings/{{.ID}}/edit" class="inline-flex items-center px-2.5 py-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-bold text-secondary hover:bg-surface-container-high hover:text-on-surface transition-colors">Edit</a>

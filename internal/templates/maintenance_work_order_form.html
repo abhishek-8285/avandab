@@ -16,26 +16,26 @@
         <div class="p-6 space-y-4">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-eyebrow text-text-muted mb-1.5">Vehicle ID <span class="text-status-alert">*</span></label>
-                    <input type="text" name="vehicle_id" value="{{.VehicleID}}" required placeholder="e.g. veh-123"
+                    <label for="vehicle_id" class="block text-eyebrow text-text-muted mb-1.5">Vehicle ID <span class="text-status-alert">*</span></label>
+                    <input id="vehicle_id" type="text" name="vehicle_id" value="{{.VehicleID}}" required placeholder="e.g. veh-123"
                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                 </div>
                 <div>
-                    <label class="block text-eyebrow text-text-muted mb-1.5">Due Date</label>
-                    <input type="date" name="due_at"
+                    <label for="due_at" class="block text-eyebrow text-text-muted mb-1.5">Due Date</label>
+                    <input id="due_at" type="date" name="due_at"
                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                 </div>
             </div>
 
             <div>
-                <label class="block text-eyebrow text-text-muted mb-1.5">Title <span class="text-status-alert">*</span></label>
-                <input type="text" name="title" required placeholder="e.g. Brake pad replacement"
+                <label for="title" class="block text-eyebrow text-text-muted mb-1.5">Title <span class="text-status-alert">*</span></label>
+                <input id="title" type="text" name="title" required placeholder="e.g. Brake pad replacement"
                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
             </div>
 
             <div>
-                <label class="block text-eyebrow text-text-muted mb-1.5">Description</label>
-                <textarea name="description" rows="3" placeholder="Symptoms, findings, parts needed…"
+                <label for="description" class="block text-eyebrow text-text-muted mb-1.5">Description</label>
+                <textarea id="description" name="description" rows="3" placeholder="Symptoms, findings, parts needed…"
                           class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"></textarea>
             </div>
 
@@ -43,23 +43,23 @@
                 <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Assignment & Cost</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-eyebrow text-text-muted mb-1.5">Assignee</label>
-                        <input type="text" name="assignee" placeholder="e.g. Ramesh"
+                        <label for="assignee" class="block text-eyebrow text-text-muted mb-1.5">Assignee</label>
+                        <input id="assignee" type="text" name="assignee" placeholder="e.g. Ramesh"
                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                     <div>
-                        <label class="block text-eyebrow text-text-muted mb-1.5">Vendor</label>
-                        <input type="text" name="vendor" placeholder="e.g. City Garage"
+                        <label for="vendor" class="block text-eyebrow text-text-muted mb-1.5">Vendor</label>
+                        <input id="vendor" type="text" name="vendor" placeholder="e.g. City Garage"
                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                     <div>
-                        <label class="block text-eyebrow text-text-muted mb-1.5">Cost Estimate (₹)</label>
-                        <input type="number" step="any" name="cost_estimate" placeholder="e.g. 4500"
+                        <label for="cost_estimate" class="block text-eyebrow text-text-muted mb-1.5">Cost Estimate (₹)</label>
+                        <input id="cost_estimate" type="number" step="any" name="cost_estimate" placeholder="e.g. 4500"
                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                     <div>
-                        <label class="block text-eyebrow text-text-muted mb-1.5">Actual Cost (₹)</label>
-                        <input type="number" step="any" name="cost_actual" placeholder="Fill on completion"
+                        <label for="cost_actual" class="block text-eyebrow text-text-muted mb-1.5">Actual Cost (₹)</label>
+                        <input id="cost_actual" type="number" step="any" name="cost_actual" placeholder="Fill on completion"
                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
                     </div>
                 </div>

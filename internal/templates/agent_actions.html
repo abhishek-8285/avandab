@@ -8,7 +8,7 @@
             <p class="text-sm text-secondary mt-0.5">Actions proposed by the AI assistant — nothing mutating runs until you approve</p>
         </div>
         <div class="flex items-center gap-3 shrink-0">
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-bold tracking-wide uppercase text-emerald-700 dark:text-emerald-300">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-soft border border-emerald-500/20 text-[11px] font-bold tracking-wide uppercase text-emerald-strong dark:text-emerald-300">
                 <span class="w-1.5 h-1.5 rounded-full bg-status-success animate-pulse"></span>
                 LIVE
             </span>
@@ -23,7 +23,7 @@
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 bg-gradient-to-r from-amber-500/[0.07] to-transparent">
             <div class="flex items-center gap-2">
-                <span class="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/15 grid place-items-center text-amber-600"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg></span>
+                <span class="w-7 h-7 rounded-lg bg-amber-soft border border-amber-line grid place-items-center text-amber-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg></span>
                 <div>
                     <h2 class="text-sm font-bold text-on-surface">Pending Approvals</h2>
                     <p class="text-xs text-text-muted">Review the tool, arguments and requesting operator before deciding</p>
@@ -63,7 +63,7 @@
         </div>
         {{else}}
         <div class="py-12 text-center">
-            <div class="w-12 h-12 mx-auto rounded-2xl bg-emerald-500/10 border border-emerald-500/15 grid place-items-center">
+            <div class="w-12 h-12 mx-auto rounded-2xl bg-emerald-soft border border-emerald-line grid place-items-center">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0 text-status-success"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
             </div>
             <p class="text-sm font-medium text-on-surface mt-3">Queue is clear</p>
