@@ -149,6 +149,24 @@ type Booking struct {
 	IdempotencyKey sql.NullString  `json:"idempotency_key"`
 }
 
+type BreachIncident struct {
+	ID                   string       `json:"id"`
+	TenantID             string       `json:"tenant_id"`
+	Title                string       `json:"title"`
+	Description          string       `json:"description"`
+	Nature               string       `json:"nature"`
+	Extent               string       `json:"extent"`
+	AffectedCount        int64        `json:"affected_count"`
+	Status               string       `json:"status"`
+	DetectedAt           time.Time    `json:"detected_at"`
+	BoardNotifiedAt      sql.NullTime `json:"board_notified_at"`
+	PrincipalsNotifiedAt sql.NullTime `json:"principals_notified_at"`
+	DetailReport         string       `json:"detail_report"`
+	DetailedAt           sql.NullTime `json:"detailed_at"`
+	CreatedAt            time.Time    `json:"created_at"`
+	UpdatedAt            time.Time    `json:"updated_at"`
+}
+
 type CommOutbox struct {
 	ID            string         `json:"id"`
 	TenantID      string         `json:"tenant_id"`

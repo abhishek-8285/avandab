@@ -92,6 +92,7 @@ type Services struct {
 	PNL            *PNLService
 	OpsAlerts      *OpsAlertService
 	Experiments    *ExperimentsService
+	Privacy        *PrivacyService
 	FounderSignals *FounderSignalsService
 	FounderAudit   *FounderAuditService
 	EWayBill       *ewaybill.EWayBillService
@@ -182,6 +183,7 @@ func NewServices(store Store, cfg *config.Config, log *slog.Logger, eventBus eve
 	s.Files = &FileService{baseService: bs, storage: fileStore}
 	s.Documents = NewDocumentService(bs, s.Files)
 	s.Audit = &AuditLogService{baseService: bs}
+	s.Privacy = &PrivacyService{baseService: bs}
 	s.Compliance = &ComplianceService{baseService: bs}
 	s.Trips.compliance = s.Compliance
 	s.Settlements = &DriverSettlementService{

@@ -8875,6 +8875,167 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/v1/privacy/breaches:
+    get:
+      tags:
+        - Privacy
+      summary: List breach incidents
+      description: Requires privacy:manage (org/platform admin). Tenant-scoped. `?status=` filters, `?overdue=1` returns the 72h escalation watchlist.
+      responses:
+        '200':
+          description: Tenant incidents, newest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  incidents:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+        - Privacy
+      summary: Report a breach incident
+      description: Requires privacy:manage. Files status-open incident, detected now (migration 00154, DPDP Act §8(6)).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                nature:
+                  type: string
+                extent:
+                  type: string
+                affected_count:
+                  type: integer
+      responses:
+        '200':
+          description: Incident filed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  id:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/privacy/breaches/{id}:
+    get:
+      tags:
+        - Privacy
+      summary: Get one breach incident
+      description: Requires privacy:manage. Tenant-scoped fail-closed (foreign id reads as 404).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Incident with 72h detail_due_at.
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Incident not found.
+
+  /api/v1/privacy/breaches/{id}/notify:
+    post:
+      tags:
+        - Privacy
+      summary: Stamp breach notifications
+      description: Requires privacy:manage. Body sets board and/or principals; status advances to notified once both stamped.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                board:
+                  type: boolean
+                principals:
+                  type: boolean
+      responses:
+        '200':
+          description: Notification recorded.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/privacy/breaches/{id}/detail:
+    post:
+      tags:
+        - Privacy
+      summary: File the detailed breach report
+      description: Requires privacy:manage. Due within 72h of detection; advances status to detailed.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - report
+              properties:
+                report:
+                  type: string
+      responses:
+        '200':
+          description: Detail filed.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/privacy/breaches/{id}/close:
+    post:
+      tags:
+        - Privacy
+      summary: Close a breach incident
+      description: Requires privacy:manage. Ledger stays append-only (no reopen; file a new incident instead).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Incident closed.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/v1/vehicle-assignments/{id}/accept:
     post:
       tags:

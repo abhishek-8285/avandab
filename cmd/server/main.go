@@ -1050,6 +1050,15 @@ func main() {
 		r.Get("/api/v1/consent", app.Auth.ConsentStatusAPI)
 		r.Post("/api/v1/consent/grant", app.Auth.GrantConsentAPI)
 		r.Post("/api/v1/consent/withdraw", app.Auth.WithdrawConsentAPI)
+		// DPDP breach-notice ledger (00154): org/platform admins only.
+		privacyAPI := &handlers.PrivacyHandlers{App: app}
+		privacyGuard := middleware.RequirePermission(authSvc, "privacy", "manage")
+		r.With(privacyGuard).Get("/api/v1/privacy/breaches", privacyAPI.ListBreachesAPI)
+		r.With(privacyGuard).Post("/api/v1/privacy/breaches", privacyAPI.ReportBreachAPI)
+		r.With(privacyGuard).Get("/api/v1/privacy/breaches/{id}", privacyAPI.GetBreachAPI)
+		r.With(privacyGuard).Post("/api/v1/privacy/breaches/{id}/notify", privacyAPI.NotifyBreachAPI)
+		r.With(privacyGuard).Post("/api/v1/privacy/breaches/{id}/detail", privacyAPI.DetailBreachAPI)
+		r.With(privacyGuard).Post("/api/v1/privacy/breaches/{id}/close", privacyAPI.CloseBreachAPI)
 		if ragHandler != nil {
 			r.With(featureGate("rag")).Group(ragHandler.RegisterRoutes)
 		}

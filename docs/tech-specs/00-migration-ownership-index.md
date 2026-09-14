@@ -1,7 +1,7 @@
 # Migration Ownership Index
 
 Single source of truth for `db/migrations/` version numbers. Repo head is
-`00153_user_consents.sql`; next free slot is `00154`.
+`00154_breach_incidents.sql`; next free slot is `00155`.
 (`00039_experiments.sql` remains TAKEN — never edit.) Every new migration
 appends the next free number. **This table is authoritative; spec §3 numbers
 MUST match it.**
@@ -151,7 +151,8 @@ which always allocate head-ward from the maximum above.
 | 00151 | files:read/create → dispatcher (2) for trip ePOD viewing/uploading; PG port in `migrations_pg/` | Trip ePOD section (2026-09-11) |
 | 00152 | `vehicles.standard_kmpl` NULL (CHECK > 0 when set) — per-vehicle KMPL norm for variance flagging in KMPL summary report; PG port in `migrations_pg/` | KMPL SOP report set B13 (p.19 follow-up) |
 | 00153 | `user_consents` DPDP consent ledger (grant/withdraw per tenant+user+purpose); PG port in `migrations_pg/` | DPDP consent + withdrawal |
-| 00154+ | future specs | reserved |
+| 00154 | `breach_incidents` DPDP §8(6) breach-notice ledger + `privacy:manage` (roles 1, 6); PG port in `migrations_pg/` | DPDP breach notice |
+| 00155+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the
