@@ -323,6 +323,10 @@ func TestP6_ProductionAudit_100ConcurrentControlTowerReads(t *testing.T) {
 	var wg sync.WaitGroup
 	latencies := make([]time.Duration, numReaders)
 	var mu sync.Mutex
+	// Count successes explicitly: time.Since can report 0 on coarse clocks
+	// when GetTrip returns via the singleflight fast path, so a zero
+	// latency is a valid success — not a missing sample.
+	successCount := 0
 
 	start := time.Now()
 
@@ -338,6 +342,7 @@ func TestP6_ProductionAudit_100ConcurrentControlTowerReads(t *testing.T) {
 			if err == nil && proj != nil {
 				mu.Lock()
 				latencies[readerID] = dur
+				successCount++
 				mu.Unlock()
 			}
 		}(i)
@@ -346,13 +351,14 @@ func TestP6_ProductionAudit_100ConcurrentControlTowerReads(t *testing.T) {
 	wg.Wait()
 	totalElapsed := time.Since(start)
 
+	require.Equal(t, numReaders, successCount, "all 100 concurrent reads must succeed")
 	var validLats []float64
 	for _, l := range latencies {
 		if l > 0 {
 			validLats = append(validLats, float64(l.Microseconds())/1000.0)
 		}
 	}
-	require.Equal(t, numReaders, len(validLats))
+	require.NotEmpty(t, validLats, "no measurable latency samples")
 	sort.Float64s(validLats)
 
 	p50 := validLats[int(float64(len(validLats))*0.50)]
