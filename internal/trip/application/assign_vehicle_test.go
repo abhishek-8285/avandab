@@ -164,7 +164,7 @@ func TestAssignVehicle_ComplianceBlocked_And_ExpiredRC(t *testing.T) {
 		OverrideReason:      "Urgent emergency dispatch",
 	})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "Dispatch blocked")
+	assert.Contains(t, err.Error(), "dispatch blocked")
 
 	// 2. Expired RC must fail.
 	_, err = db.Exec(`UPDATE vehicles SET blocked = 0, blocked_reason = NULL, rc_expiry = date('now','-1 day') WHERE id = ?`, vehID)

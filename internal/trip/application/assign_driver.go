@@ -138,7 +138,7 @@ func (uc *AssignDriverUseCase) checkDriverCompliance(ctx ports.TxContext, driver
 			return nil
 		}
 		recordComplianceCheck(ctx, "driver", driverID, "license", "expired", "driver license expired")
-		return fmt.Errorf("Dispatch blocked: driver license expired (compliance)")
+		return fmt.Errorf("dispatch blocked: driver license expired (compliance)")
 	}
 	return nil
 }

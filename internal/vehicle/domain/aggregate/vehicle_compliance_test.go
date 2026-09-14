@@ -30,7 +30,7 @@ func TestVehicleAggregate_CanAssign_Blocked(t *testing.T) {
 	agg.ApplyCompliance(true, "RC expired", nil, nil, 0, now)
 	err := agg.CanAssign(now)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "Dispatch blocked")
+	assert.Contains(t, err.Error(), "dispatch blocked")
 }
 
 func TestVehicleAggregate_CanAssign_BlockedStatus(t *testing.T) {
@@ -39,7 +39,7 @@ func TestVehicleAggregate_CanAssign_BlockedStatus(t *testing.T) {
 	agg.Status = VehicleBlocked
 	err := agg.CanAssign(now)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "Dispatch blocked")
+	assert.Contains(t, err.Error(), "dispatch blocked")
 }
 
 func TestVehicleAggregate_CanAssign_ExpiredRC(t *testing.T) {
