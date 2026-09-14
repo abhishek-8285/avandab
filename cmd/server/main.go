@@ -951,6 +951,7 @@ func main() {
 	// Protected: Telemetry, and all /api/v1/* routes require a valid session or Bearer token
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RequireAPIAuth(authStore, apiSecret, tenantResolver))
+		r.Use(middleware.RateLimitTenantDistributed(appCache, 0)) // noisy-neighbor cap per tenant/min
 		r.With(featureGate("telemetry")).Group(func(r chi.Router) {
 			telemetry.RegisterTelemetryRoutes(r, ingestor, database, time.Duration(cfg.LiveMap.TelemetryStaleMin)*time.Minute, time.Duration(cfg.LiveMap.TelemetryStaleMinMobile)*time.Minute, etaService)
 			telemetry.RegisterGeocodeRoute(r, cfg.LiveMap.NominatimURL)
