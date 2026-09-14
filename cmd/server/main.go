@@ -93,6 +93,8 @@ import (
 	customerApp "transport-app/internal/customer/application"
 	customerSQL "transport-app/internal/customer/infrastructure/persistence/sql"
 	customerAPIHandlers "transport-app/internal/customer/presentation/api/handlers"
+	privacyApp "transport-app/internal/privacy/application"
+	privacyAPIHandlers "transport-app/internal/privacy/presentation/api/handlers"
 
 	settlementApp "transport-app/internal/settlement/application"
 	settlementSQL "transport-app/internal/settlement/infrastructure/persistence/sql"
@@ -383,7 +385,7 @@ func main() {
 		})
 	}
 	smsSender := notifications.NewWebhookSMSSender(cfg.Notify.SMSWebhookURL, cfg.Notify.SMSWebhookToken)
-	notifSvc := notifications.NewServiceWithChannels(emailSender, smsSender)
+	notifSvc := notifications.NewServiceWithChannels(emailSender, smsSender, id.NewUUIDGenerator(), clock.NewRealClock())
 
 	var emailChannel alertchannels.Provider = stubProviders["email"]
 	if emailSender.Configured() {
@@ -566,7 +568,7 @@ func main() {
 	commSubscriber.SubscribeEvents(eventBus)
 
 	// ── Ops: error reporting, login audit, dashboard ─────────────────────
-	reporter := opserrors.NewReporter(notifSvc, opserrors.NewSQLiteStore(database), cfg.AppEnv, Version)
+	reporter := opserrors.NewReporter(notifSvc, opserrors.NewSQLiteStore(database), cfg.AppEnv, Version, id.NewUUIDGenerator(), clock.NewRealClock())
 	loginAuditSvc := audit.NewLoginAuditService(notifSvc, audit.SecurityPolicy{
 		NotifyOnNewDevice: true,
 		NotifyOnNewIP:     true,
@@ -579,6 +581,10 @@ func main() {
 	sqlUoW := uow.NewSQLUnitOfWork(database)
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
+
+	// DPDP privacy slice (consent ledger lives on Users; breach/recert here).
+	privacySvc := privacyApp.NewPrivacyService(database, idGen)
+	recertSvc := privacyApp.NewAccessReviewService(database, idGen)
 
 	// Commercial enforcement: READ_ONLY/CLOSED orgs cannot create bookings.
 	// Reused by the billing webhook mount below.
@@ -934,7 +940,7 @@ func main() {
 	realtime.AttachToBus(eventBus, sseHub)
 
 	// ETA service (pure read path, Spec 04 §5, 3D) + history recorder (Spec 18 Wave A bridge)
-	etaService := eta.NewEtaService(database, cfg.LiveMap.EtaStaleMin, cfg.LiveMap.EtaWindowMin, cfg.LiveMap.EtaGuardMaxRegressMin)
+	etaService := eta.NewEtaService(database, cfg.LiveMap.EtaStaleMin, cfg.LiveMap.EtaWindowMin, cfg.LiveMap.EtaGuardMaxRegressMin, idGen, realClock)
 	if app.Share != nil {
 		app.Share.EtaService = etaService
 	}
@@ -951,6 +957,7 @@ func main() {
 	// Protected: Telemetry, and all /api/v1/* routes require a valid session or Bearer token
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.RequireAPIAuth(authStore, apiSecret, tenantResolver))
+		r.Use(middleware.RateLimitTenantDistributed(appCache, 0)) // noisy-neighbor cap per tenant/min
 		r.With(featureGate("telemetry")).Group(func(r chi.Router) {
 			telemetry.RegisterTelemetryRoutes(r, ingestor, database, time.Duration(cfg.LiveMap.TelemetryStaleMin)*time.Minute, time.Duration(cfg.LiveMap.TelemetryStaleMinMobile)*time.Minute, etaService)
 			telemetry.RegisterGeocodeRoute(r, cfg.LiveMap.NominatimURL)
@@ -1044,6 +1051,28 @@ func main() {
 		r.Get("/api/v1/users/me/preferences", app.Users.GetMyPreferences)
 		r.Patch("/api/v1/users/me/preferences", app.Users.UpdateMyPreferences)
 		r.Post("/api/v1/users/me/preferences", app.Users.UpdateMyPreferences)
+		// DPDP consent ledger (00153): self-service only, session identity is
+		// the scope — no extra permission.
+		r.Get("/api/v1/consent", app.Auth.ConsentStatusAPI)
+		r.Post("/api/v1/consent/grant", app.Auth.GrantConsentAPI)
+		r.Post("/api/v1/consent/withdraw", app.Auth.WithdrawConsentAPI)
+		// DPDP breach-notice ledger (00154) + access re-certification (00155):
+		// vertical slice (internal/privacy), org/platform admins only.
+		privacyAPI := privacyAPIHandlers.NewPrivacyHandlers(privacySvc)
+		privacyGuard := middleware.RequirePermission(authSvc, "privacy", "manage")
+		r.With(privacyGuard).Get("/api/v1/privacy/breaches", privacyAPI.ListBreachesAPI)
+		r.With(privacyGuard).Post("/api/v1/privacy/breaches", privacyAPI.ReportBreachAPI)
+		r.With(privacyGuard).Get("/api/v1/privacy/breaches/{id}", privacyAPI.GetBreachAPI)
+		r.With(privacyGuard).Post("/api/v1/privacy/breaches/{id}/notify", privacyAPI.NotifyBreachAPI)
+		r.With(privacyGuard).Post("/api/v1/privacy/breaches/{id}/detail", privacyAPI.DetailBreachAPI)
+		r.With(privacyGuard).Post("/api/v1/privacy/breaches/{id}/close", privacyAPI.CloseBreachAPI)
+		// Access re-certification ledger (00155): same governance surface.
+		accessAPI := privacyAPIHandlers.NewAccessReviewHandlers(recertSvc)
+		r.With(privacyGuard).Get("/api/v1/access-reviews/due", accessAPI.ListDueReviewsAPI)
+		r.With(privacyGuard).Post("/api/v1/access-reviews/open", accessAPI.OpenReviewAPI)
+		r.With(privacyGuard).Get("/api/v1/access-reviews/{id}", accessAPI.GetReviewAPI)
+		r.With(privacyGuard).Post("/api/v1/access-reviews/{id}/certify", accessAPI.CertifyReviewAPI)
+		r.With(privacyGuard).Post("/api/v1/access-reviews/{id}/revoke", accessAPI.RevokeReviewAPI)
 		if ragHandler != nil {
 			r.With(featureGate("rag")).Group(ragHandler.RegisterRoutes)
 		}
@@ -1503,6 +1532,9 @@ func main() {
 			// Profile (auth)
 			r.Get("/profile", app.Auth.ProfilePage)
 			r.Post("/profile", app.Auth.UpdateProfile)
+			// DPDP consent notice (HTML page half of the consent ledger).
+			r.Get("/consent", app.Auth.ConsentNoticePage)
+			r.Post("/consent", app.Auth.ConsentGrantForm)
 			r.Get("/change-password", app.Auth.ChangePasswordPage)
 			// Rate-limited: prevents unlimited old-password guessing inside
 			// an active session window.
@@ -1604,7 +1636,7 @@ func main() {
 
 	// ── Outbox relay & founder notifications ──────────────────────────
 	// NOTE: eventBus is the SAME instance injected into services above.
-	founderSvc := founder.NewFounderService(newFounderNotifier(logger))
+	founderSvc := founder.NewFounderService(newFounderNotifier(logger), idGen, realClock)
 	founderSvc.RegisterEventHandlers(eventBus)
 	if founderConfigured() {
 		runLeadered("founder_digest", func(ctx context.Context) {
@@ -1781,6 +1813,31 @@ func main() {
 					return
 				case <-ticker.C:
 					runPNLSnapshot()
+				}
+			}
+		})
+	}
+
+	// DPDP breach overdue watch: hourly sweep raising a critical ops alert
+	// per incident past the 72h filing deadline (single-writer via leader).
+	if breachWatch := privacyApp.NewBreachWatchService(database, privacySvc, services.OpsAlerts, logger); breachWatch != nil {
+		runLeadered(breachWatch.SweepName(), func(ctx context.Context) {
+			sweepOnce := func() {
+				if n, err := breachWatch.SweepOverdue(ctx); err != nil {
+					logger.Error("breach overdue sweep failed", "error", err)
+				} else if n > 0 {
+					logger.Info("breach overdue sweep raised alerts", "raised", n)
+				}
+			}
+			sweepOnce()
+			ticker := time.NewTicker(time.Hour)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					sweepOnce()
 				}
 			}
 		})

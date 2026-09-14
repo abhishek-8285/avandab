@@ -5,12 +5,14 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"transport-app/internal/auth"
 	"transport-app/internal/cache"
+	"transport-app/internal/shared"
 )
 
 // ipBucket tracks requests for a single client IP within a time window.
@@ -136,6 +138,63 @@ func RateLimitDistributed(c cache.Cache, limit int) func(http.Handler) http.Hand
 					_, _ = w.Write([]byte(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Too many attempts</title></head><body style="font-family:system-ui,sans-serif;background:#f6f8fa;color:#0f172a;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0"><main style="text-align:center;padding:2rem"><h1 style="font-size:1.4rem;margin:0 0 .5rem">Too many attempts</h1><p style="color:#64748b;margin:0 0 1.25rem">Please wait about a minute and try again.</p><a href="/" style="color:#2563eb;font-weight:600;text-decoration:none">&#8592; Back to home</a></main></body></html>`))
 					return
 				}
+				http.Error(w, "Too many requests", http.StatusTooManyRequests)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// tenantRateLimitDefault caps total requests per tenant per minute across all
+// its IPs — the noisy-neighbor guard. Per-IP limits alone let one tenant with
+// many devices crowd out others on a shared bucket; this caps the tenant
+// aggregate instead. Overridable via TENANT_RATE_LIMIT_PER_MIN (<=0 restores
+// the default); the authenticated API group wires it once via r.Use.
+const tenantRateLimitDefault = 1000
+
+func tenantRateLimit() int {
+	if v, err := strconv.Atoi(os.Getenv("TENANT_RATE_LIMIT_PER_MIN")); err == nil && v > 0 {
+		return v
+	}
+	return tenantRateLimitDefault
+}
+
+// RateLimitTenantDistributed caps requests per tenant per minute across all
+// replicas using an atomic cache counter. Mount once on the authenticated
+// group — unauthenticated traffic has no tenant and passes through to the
+// per-IP limiters. Backend failure fails closed to 429, same contract as
+// RateLimitDistributed.
+func RateLimitTenantDistributed(c cache.Cache, limit int) func(http.Handler) http.Handler {
+	if rateLimitDisabled() {
+		return func(next http.Handler) http.Handler { return next }
+	}
+	if limit <= 0 {
+		limit = tenantRateLimit()
+	}
+	incr, ok := c.(cache.Incrementer)
+	if !ok {
+		// No atomic backend: cannot count a tenant aggregate across
+		// replicas without undershooting, so stand down rather than
+		// enforce a wrong (per-replica × N) cap. Per-IP limiters stay.
+		return func(next http.Handler) http.Handler { return next }
+	}
+	window := time.Minute
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			tenant := string(shared.TenantIDFromContext(r.Context()))
+			if tenant == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+			n, err := incr.Increment(r.Context(), "ratelimit:tenant:"+tenant, window)
+			if err != nil {
+				slog.Error("tenant rate limit backend error; rejecting request", "error", err)
+				http.Error(w, "Too many requests", http.StatusTooManyRequests)
+				return
+			}
+			if n > int64(limit) {
+				w.Header().Set("Retry-After", "60")
 				http.Error(w, "Too many requests", http.StatusTooManyRequests)
 				return
 			}

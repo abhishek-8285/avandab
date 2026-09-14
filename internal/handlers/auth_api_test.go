@@ -18,6 +18,8 @@ import (
 	"transport-app/internal/auth"
 	"transport-app/internal/operations/notifications"
 	"transport-app/internal/shared"
+	"transport-app/internal/shared/clock"
+	"transport-app/internal/shared/id"
 )
 
 // setupAuthAPIEnv builds the mobile-API test env plus a real reset-token store
@@ -52,6 +54,7 @@ func TestForgotPasswordAPI_SMTPConfigured_EnqueuesOutbox(t *testing.T) {
 			Host: "smtp.test", From: "noreply@test",
 		}),
 		nil,
+		id.NewUUIDGenerator(), clock.NewRealClock(),
 	)
 
 	_, err := app.DB.Exec(`INSERT INTO tenants (id, name, slug, status) VALUES ('t-acme', 'Acme', 'acme', 'active')`)

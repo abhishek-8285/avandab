@@ -17,6 +17,8 @@ import (
 	fuel "transport-app/internal/fuel"
 	invoiceapp "transport-app/internal/invoice/application"
 	"transport-app/internal/repository"
+	"transport-app/internal/shared/clock"
+	"transport-app/internal/shared/id"
 	"transport-app/internal/storage"
 )
 
@@ -235,7 +237,7 @@ func NewServices(store Store, cfg *config.Config, log *slog.Logger, eventBus eve
 
 	// Instantiate Telegram Bot Notifier if token configured, otherwise graceful fallback
 	var founderNotifier founder.Notifier = alerts.NewTelegramBotNotifier(nil, 0)
-	s.Founder = founder.NewFounderService(founderNotifier)
+	s.Founder = founder.NewFounderService(founderNotifier, id.NewUUIDGenerator(), clock.NewRealClock())
 	s.Founder.RegisterEventHandlers(bs.events)
 
 	s.initEventHandlers()

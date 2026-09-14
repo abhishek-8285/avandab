@@ -37,9 +37,9 @@ func newS3(cfg S3Settings) (Store, error) {
 	}
 
 	endpoint := strings.TrimSpace(cfg.GetS3Endpoint())
-	region := strings.TrimSpace(cfg.GetS3Region())
-	if region == "" {
-		region = "auto"
+	region, err := ResolveS3Region(cfg.GetS3Region(), cfg.GetS3AllowedRegions())
+	if err != nil {
+		return nil, err
 	}
 
 	credProvider := credentials.NewStaticCredentialsProvider(accessKey, secretKey, "")

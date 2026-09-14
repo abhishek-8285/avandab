@@ -28,6 +28,7 @@ import (
 	"transport-app/internal/realtime"
 	"transport-app/internal/shared"
 	"transport-app/internal/shared/clock"
+	"transport-app/internal/shared/id"
 	"transport-app/internal/shared/uow"
 	"transport-app/internal/telemetry"
 	tripapp "transport-app/internal/trip/application"
@@ -255,7 +256,7 @@ func TestPhase3_3D_HybridETACalculator(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	etaSvc := eta.NewEtaService(db, 15, 30, 5)
+	etaSvc := eta.NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock())
 	res, err := etaSvc.Calculate(shared.ContextWithTenantID(context.Background(), "1"), "trip-eta")
 	require.NoError(t, err)
 

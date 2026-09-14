@@ -14,6 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"transport-app/internal/eta"
 	"transport-app/internal/shared"
+	"transport-app/internal/shared/clock"
+	"transport-app/internal/shared/id"
 )
 
 // TestHistoryHandler_Trail verifies the breadcrumb endpoint: ascending time
@@ -164,7 +166,7 @@ func TestLiveStore_ETA_Cached(t *testing.T) {
 		(id, trip_id, vehicle_id, timestamp, latitude, longitude, speed, fuel_level, odometer)
 		VALUES ('s-latest', 't1', 'v1', ?, 19.3, 72.8, 60.0, 80.0, 1030.0)`, now.Add(-1*time.Minute).Format("2006-01-02 15:04:05"))
 
-	store := NewLiveStore(db, 15*time.Minute).WithEtaService(eta.NewEtaService(db, 15, 30, 5))
+	store := NewLiveStore(db, 15*time.Minute).WithEtaService(eta.NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock()))
 
 	ctx := context.Background()
 	vehicles, err := store.Live(ctx, "1", "t1", now)

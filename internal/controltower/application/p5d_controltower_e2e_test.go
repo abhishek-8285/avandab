@@ -22,6 +22,8 @@ import (
 	"transport-app/internal/eta"
 	"transport-app/internal/handlers"
 	"transport-app/internal/shared"
+	"transport-app/internal/shared/clock"
+	"transport-app/internal/shared/id"
 )
 
 type dummyAuthService struct{}
@@ -194,7 +196,7 @@ func TestP5D_ControlTower_ProjectionAndRealtimeMatrix(t *testing.T) {
 	`)
 	require.NoError(t, err)
 
-	etaSvc := eta.NewEtaService(db, 15, 30, 5)
+	etaSvc := eta.NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock())
 	service := ctApp.NewService(db, etaSvc, 15*time.Minute)
 	authSvc := &dummyAuthService{}
 	apiHandler := ctAPI.NewHandler(service, authSvc)

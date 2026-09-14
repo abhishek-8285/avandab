@@ -83,7 +83,7 @@ func (s *EtaService) SubscribeTripEvents(bus events.EventBus, logger *slog.Logge
 			return nil
 		}
 
-		now := time.Now().UTC()
+		now := s.clock.Now().UTC()
 		trafficTag := deriveTrafficTag(now)
 
 		recorded := 0

@@ -4,9 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"time"
-
-	"github.com/google/uuid"
 )
 
 // RecordHistory stores a completed trip segment for future ETA prediction.
@@ -18,10 +15,10 @@ func (s *EtaService) RecordHistory(ctx context.Context, tenantID, tripID, segmen
 	if actualMinutes <= 0 {
 		return fmt.Errorf("eta: invalid minutes")
 	}
-	now := time.Now().UTC()
+	now := s.clock.Now().UTC()
 	dayOfWeek := int(now.Weekday())
 	hourOfDay := now.Hour()
-	id := uuid.NewString()
+	id := s.idGen.GenerateUUID()
 	_, err := s.db.ExecContext(ctx,
 		`INSERT INTO eta_history (id, tenant_id, trip_id, segment_start, segment_end, actual_minutes, traffic_tag, day_of_week, hour_of_day, created_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
@@ -37,7 +34,7 @@ func (s *EtaService) PredictFromHistory(ctx context.Context, tenantID, segmentSt
 	err := s.db.QueryRowContext(ctx,
 		`SELECT AVG(actual_minutes), COUNT(*) FROM eta_history
 		 WHERE tenant_id=$1 AND segment_start=$2 AND segment_end=$3 AND created_at > $4`,
-		tenantID, segmentStart, segmentEnd, time.Now().UTC().AddDate(0, 0, -90)).Scan(&avg, &cnt)
+		tenantID, segmentStart, segmentEnd, s.clock.Now().UTC().AddDate(0, 0, -90)).Scan(&avg, &cnt)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -49,7 +46,7 @@ func (s *EtaService) PredictFromHistory(ctx context.Context, tenantID, segmentSt
 
 // CleanupOldHistory deletes raw rows older than 90 days. Run daily via cron.
 func (s *EtaService) CleanupOldHistory(ctx context.Context) (int64, error) {
-	res, err := s.db.ExecContext(ctx, `DELETE FROM eta_history WHERE created_at < $1`, time.Now().UTC().AddDate(0, 0, -90))
+	res, err := s.db.ExecContext(ctx, `DELETE FROM eta_history WHERE created_at < $1`, s.clock.Now().UTC().AddDate(0, 0, -90))
 	if err != nil {
 		return 0, err
 	}
@@ -68,6 +65,6 @@ func (s *EtaService) AggregateMonthly(ctx context.Context) error {
 		GROUP BY tenant_id, segment_start, segment_end, month
 		ON CONFLICT (tenant_id, segment_start, segment_end, month) DO UPDATE SET
 		       avg_minutes = excluded.avg_minutes, sample_count = excluded.sample_count
-	`, time.Now().UTC().AddDate(0, 0, -90))
+	`, s.clock.Now().UTC().AddDate(0, 0, -90))
 	return err
 }

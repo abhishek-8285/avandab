@@ -9,6 +9,21 @@ import (
 	"time"
 )
 
+type AccessReview struct {
+	ID         string         `json:"id"`
+	TenantID   string         `json:"tenant_id"`
+	UserID     string         `json:"user_id"`
+	RoleName   string         `json:"role_name"`
+	Period     string         `json:"period"`
+	Status     string         `json:"status"`
+	ReviewedBy sql.NullString `json:"reviewed_by"`
+	ReviewedAt sql.NullTime   `json:"reviewed_at"`
+	DueAt      time.Time      `json:"due_at"`
+	Notes      string         `json:"notes"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
+}
+
 type AccountingGlRule struct {
 	ID            string         `json:"id"`
 	EventType     string         `json:"event_type"`
@@ -147,6 +162,24 @@ type Booking struct {
 	TenantID       string          `json:"tenant_id"`
 	Version        int64           `json:"version"`
 	IdempotencyKey sql.NullString  `json:"idempotency_key"`
+}
+
+type BreachIncident struct {
+	ID                   string       `json:"id"`
+	TenantID             string       `json:"tenant_id"`
+	Title                string       `json:"title"`
+	Description          string       `json:"description"`
+	Nature               string       `json:"nature"`
+	Extent               string       `json:"extent"`
+	AffectedCount        int64        `json:"affected_count"`
+	Status               string       `json:"status"`
+	DetectedAt           time.Time    `json:"detected_at"`
+	BoardNotifiedAt      sql.NullTime `json:"board_notified_at"`
+	PrincipalsNotifiedAt sql.NullTime `json:"principals_notified_at"`
+	DetailReport         string       `json:"detail_report"`
+	DetailedAt           sql.NullTime `json:"detailed_at"`
+	CreatedAt            time.Time    `json:"created_at"`
+	UpdatedAt            time.Time    `json:"updated_at"`
 }
 
 type CommOutbox struct {
@@ -2034,6 +2067,18 @@ type User struct {
 	GoogleSub       sql.NullString `json:"google_sub"`
 	PhoneVerifiedAt sql.NullTime   `json:"phone_verified_at"`
 	EmailVerifiedAt sql.NullTime   `json:"email_verified_at"`
+}
+
+type UserConsent struct {
+	ID            string       `json:"id"`
+	TenantID      string       `json:"tenant_id"`
+	UserID        string       `json:"user_id"`
+	Purpose       string       `json:"purpose"`
+	NoticeVersion string       `json:"notice_version"`
+	GrantedAt     time.Time    `json:"granted_at"`
+	WithdrawnAt   sql.NullTime `json:"withdrawn_at"`
+	CreatedAt     time.Time    `json:"created_at"`
+	UpdatedAt     time.Time    `json:"updated_at"`
 }
 
 type UserRole struct {

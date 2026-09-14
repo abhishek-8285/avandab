@@ -204,6 +204,14 @@ func TestAllTemplatesRender(t *testing.T) {
 		{"change_password", "change_password.html", map[string]interface{}{
 			"Error": "",
 		}},
+		{"consent_notice", "consent_notice.html", map[string]interface{}{
+			"Purpose": "platform_use", "NoticeVersion": "v1",
+		}},
+		{"consent_notice_error", "consent_notice.html", map[string]interface{}{
+			"Purpose": "platform_use", "NoticeVersion": "v1",
+			"Error":   "Please tick the checkbox to confirm you have read the notice.",
+			"Granted": true, "Withdrawn": true, "SuccessMsg": "Consent withdrawn.",
+		}},
 
 		// ---- Fuel audit ----
 		{"fuel_audit_dashboard", "fuel_audit_dashboard.html", map[string]interface{}{

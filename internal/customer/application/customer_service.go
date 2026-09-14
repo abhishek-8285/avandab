@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-
 	"transport-app/internal/customer/domain"
 	"transport-app/internal/shared/ports"
 )
@@ -53,7 +51,7 @@ func (s *CustomerAppService) CreateQuote(ctx context.Context, tenantID, customer
 		return nil, errors.New("tenant_id and customer_id are required")
 	}
 
-	quoteID := "quo_" + uuid.NewString()
+	quoteID := "quo_" + s.idGen.GenerateUUID()
 	q, err := domain.CalculateQuote(
 		quoteID, tenantID, customerID,
 		req.Origin, req.Destination, req.CargoType, req.VehicleType,
@@ -143,7 +141,7 @@ func (s *CustomerAppService) CreateBooking(ctx context.Context, tenantID, custom
 	}
 
 	// 4. Construct Booking and Customer Details
-	bookingID := "bk_" + uuid.NewString()
+	bookingID := "bk_" + s.idGen.GenerateUUID()
 	bookingNumber := s.nextBookingNumber()
 
 	pickupDate := time.Now()

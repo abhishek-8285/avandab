@@ -16,6 +16,8 @@ import (
 	tripevents "transport-app/internal/domain/trip"
 	"transport-app/internal/domain/types"
 	"transport-app/internal/events"
+	"transport-app/internal/shared/clock"
+	"transport-app/internal/shared/id"
 )
 
 func newTestEtaDB(t *testing.T) *sql.DB {
@@ -55,7 +57,7 @@ func TestSubscriber_RecordsHistoryOnTripCompleted(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	svc := NewEtaService(db, 15, 30, 5)
+	svc := NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock())
 	bus := events.NewInMemoryBus()
 	svc.SubscribeTripEvents(bus, nil)
 
@@ -91,7 +93,7 @@ func TestSubscriber_NoSegmentsNoRows(t *testing.T) {
 	_, err := db.Exec(`INSERT INTO trips (id, tenant_id, status, route_id, departure_time, created_at, updated_at, trip_number) VALUES (?, '1', 'completed', 'route-1', datetime('now'), datetime('now'), datetime('now'), 'TRP-ETA-2')`, tripID)
 	require.NoError(t, err)
 
-	svc := NewEtaService(db, 15, 30, 5)
+	svc := NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock())
 	bus := events.NewInMemoryBus()
 	svc.SubscribeTripEvents(bus, nil)
 	bus.Publish(context.Background(), events.Event{
@@ -123,7 +125,7 @@ func TestGeohash6(t *testing.T) {
 
 func TestHistory_CleanupAndAggregation(t *testing.T) {
 	db := newTestEtaDB(t)
-	svc := NewEtaService(db, 15, 30, 5)
+	svc := NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock())
 	// Insert old row >90 days
 	_, err := db.Exec(`INSERT INTO eta_history (id, tenant_id, trip_id, segment_start, segment_end, actual_minutes, traffic_tag, created_at) VALUES ('old-1','1','trip-x','abc','def',10,'low', datetime('now','-100 days'))`)
 	require.NoError(t, err)

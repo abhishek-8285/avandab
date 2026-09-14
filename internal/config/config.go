@@ -62,6 +62,9 @@ type StorageConfig struct {
 	S3Region          string
 	S3AccessKeyID     string
 	S3SecretAccessKey string
+	// S3AllowedRegions is the comma-separated residency allowlist (""
+	// → auto,ap-south-1). See storage.DefaultS3AllowedRegions.
+	S3AllowedRegions string
 }
 
 func (c *StorageConfig) GetDriver() string            { return c.Driver }
@@ -71,6 +74,7 @@ func (c *StorageConfig) GetS3Endpoint() string        { return c.S3Endpoint }
 func (c *StorageConfig) GetS3Region() string          { return c.S3Region }
 func (c *StorageConfig) GetS3AccessKeyID() string     { return c.S3AccessKeyID }
 func (c *StorageConfig) GetS3SecretAccessKey() string { return c.S3SecretAccessKey }
+func (c *StorageConfig) GetS3AllowedRegions() string  { return c.S3AllowedRegions }
 
 // Config holds all application configuration.
 type Config struct {
@@ -553,6 +557,7 @@ func Load() *Config {
 		S3Region:          getEnv("S3_REGION", "auto"),
 		S3AccessKeyID:     getEnv("S3_ACCESS_KEY_ID", ""),
 		S3SecretAccessKey: getEnv("S3_SECRET_ACCESS_KEY", ""),
+		S3AllowedRegions:  getEnv("S3_ALLOWED_REGIONS", ""),
 	}
 	cfg.WorkerLeaderLock = getEnvBool("WORKER_LEADER_LOCK", true)
 

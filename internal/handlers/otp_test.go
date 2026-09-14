@@ -14,6 +14,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"transport-app/internal/operations/notifications"
+	"transport-app/internal/shared/clock"
+	"transport-app/internal/shared/id"
 )
 
 // captureSMSSender records delivered SMS bodies (no network).
@@ -67,7 +69,7 @@ func TestSendOTP_SMSConfigured_DeliversViaNotify(t *testing.T) {
 	srv, app, cleanup := setupAuthAPIEnv(t)
 	defer cleanup()
 	capturer := &captureSMSSender{}
-	app.Notify = notifications.NewServiceWithChannels(nil, capturer)
+	app.Notify = notifications.NewServiceWithChannels(nil, capturer, id.NewUUIDGenerator(), clock.NewRealClock())
 
 	status, out := postJSON(t, srv.URL+"/api/v1/auth/otp/send", `{"phone":"+919876543210"}`)
 	assert.Equal(t, 200, status)

@@ -42,6 +42,33 @@ type S3Settings interface {
 	GetS3Region() string
 	GetS3AccessKeyID() string
 	GetS3SecretAccessKey() string
+	// GetS3AllowedRegions returns the comma-separated region allowlist
+	// enforced by the residency guard ("", single, or list).
+	GetS3AllowedRegions() string
+}
+
+// DefaultS3AllowedRegions is the fail-closed residency default (RBI payment
+// data localisation posture: India-only storage): Cloudflare R2 ("auto",
+// jurisdiction set on the bucket) and AWS Mumbai. Anything else must be
+// explicitly allowlisted via S3_ALLOWED_REGIONS.
+const DefaultS3AllowedRegions = "auto,ap-south-1"
+
+// ResolveS3Region normalises the configured region against the allowlist.
+// Unknown regions fail closed with the remediation named.
+func ResolveS3Region(region, allowed string) (string, error) {
+	region = strings.TrimSpace(region)
+	if region == "" {
+		region = "auto"
+	}
+	if strings.TrimSpace(allowed) == "" {
+		allowed = DefaultS3AllowedRegions
+	}
+	for _, a := range strings.Split(allowed, ",") {
+		if strings.EqualFold(strings.TrimSpace(a), region) {
+			return region, nil
+		}
+	}
+	return "", fmt.Errorf("storage: S3 region %q outside residency allowlist (%s); set S3_ALLOWED_REGIONS explicitly to override", region, allowed)
 }
 
 // New builds the configured backend.
