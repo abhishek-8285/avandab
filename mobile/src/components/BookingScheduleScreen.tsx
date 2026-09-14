@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors, Font, Radius, Spacing } from '../constants/theme';
@@ -27,7 +28,7 @@ export function BookingScheduleScreen({ onNext, onBack }: BookingScheduleScreenP
           <Image
             source={require('../../assets/booking_schedule.png')}
             style={styles.mockupImage}
-            resizeMode="cover"
+            contentFit="cover"
           />
         </View>
       </View>

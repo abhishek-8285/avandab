@@ -5,11 +5,11 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  Image,
   TextInput,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';

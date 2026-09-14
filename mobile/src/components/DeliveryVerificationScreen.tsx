@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
-  Image,
   TextInput,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -495,7 +495,7 @@ export function DeliveryVerificationScreen({
             <View style={styles.methodBox}>
               {signatureData ? (
                 <View style={styles.signAttachedBox}>
-                  <Image source={{ uri: signatureData }} style={styles.signThumb} resizeMode="contain" />
+                  <Image source={{ uri: signatureData }} style={styles.signThumb} contentFit="contain" />
                   <View style={{ flex: 1 }}>
                     <View style={styles.verifiedRow}>
                       <MaterialCommunityIcons name="check-circle" size={16} color="#008069" accessible={false} />

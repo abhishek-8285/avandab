@@ -7,7 +7,8 @@ import Animated, {
   withRepeat,
   cancelAnimation,
 } from 'react-native-reanimated';
-import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors, Font, Radius, Spacing } from '../constants/theme';
@@ -51,7 +52,7 @@ export function GetStartedScreen({ onGetStarted, onSignIn, onOpenQRDemo }: GetSt
         <Image
           source={require('../../assets/driver_hero.png')}
           style={styles.heroImage}
-          resizeMode="cover"
+          contentFit="cover"
           accessible={false}
         />
         <View style={styles.heroOverlay} />
