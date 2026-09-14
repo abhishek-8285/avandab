@@ -15,6 +15,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"transport-app/internal/shared/clock"
+	"transport-app/internal/shared/id"
 	"transport-app/internal/shared/ports"
 )
 
@@ -97,7 +99,7 @@ func TestSMTPEmailSenderDelivers(t *testing.T) {
 }
 
 func TestSendEmailUnconfiguredFailsHonestly(t *testing.T) {
-	svc := NewServiceWithChannels(NewSMTPEmailSender(SMTPConfig{}), nil)
+	svc := NewServiceWithChannels(NewSMTPEmailSender(SMTPConfig{}), nil, id.NewUUIDGenerator(), clock.NewRealClock())
 	require.False(t, svc.EmailConfigured())
 	err := svc.SendEmail(context.Background(), ports.NotificationMessage{Recipient: "a@b.c", Subject: "x", Body: "y"})
 	require.ErrorIs(t, err, ErrEmailNotConfigured)
@@ -142,7 +144,7 @@ func TestSendSMSNon2xxIsError(t *testing.T) {
 }
 
 func TestServiceChannelsHonestWhenUnconfigured(t *testing.T) {
-	svc := NewService()
+	svc := NewService(id.NewUUIDGenerator(), clock.NewRealClock())
 	assert.False(t, svc.SMSConfigured())
 	err := svc.SendSMS(context.Background(), ports.NotificationMessage{Recipient: "+91", Body: "x"})
 	require.ErrorIs(t, err, ErrSMSNotConfigured)

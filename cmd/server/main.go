@@ -383,7 +383,7 @@ func main() {
 		})
 	}
 	smsSender := notifications.NewWebhookSMSSender(cfg.Notify.SMSWebhookURL, cfg.Notify.SMSWebhookToken)
-	notifSvc := notifications.NewServiceWithChannels(emailSender, smsSender)
+	notifSvc := notifications.NewServiceWithChannels(emailSender, smsSender, id.NewUUIDGenerator(), clock.NewRealClock())
 
 	var emailChannel alertchannels.Provider = stubProviders["email"]
 	if emailSender.Configured() {

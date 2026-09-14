@@ -5,11 +5,13 @@ import (
 	"errors"
 	"testing"
 
+	"transport-app/internal/shared/clock"
+	"transport-app/internal/shared/id"
 	"transport-app/internal/shared/ports"
 )
 
 func TestNotificationService_SendEmailAndInApp(t *testing.T) {
-	svc := NewService()
+	svc := NewService(id.NewUUIDGenerator(), clock.NewRealClock())
 
 	ctx := context.Background()
 

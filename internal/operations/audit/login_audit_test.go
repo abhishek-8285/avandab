@@ -6,10 +6,12 @@ import (
 
 	"transport-app/internal/operations/audit"
 	"transport-app/internal/operations/notifications"
+	"transport-app/internal/shared/clock"
+	"transport-app/internal/shared/id"
 )
 
 func TestLoginAuditService_AdaptiveSecurityNotification(t *testing.T) {
-	notifSvc := notifications.NewService()
+	notifSvc := notifications.NewService(id.NewUUIDGenerator(), clock.NewRealClock())
 	policy := audit.SecurityPolicy{
 		NotifyOnNewDevice: true,
 	}
