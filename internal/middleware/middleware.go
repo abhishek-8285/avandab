@@ -167,7 +167,7 @@ func AuthRequired(store *auth.SessionStore, loginPath string, tenantResolver Ten
 			tenantID, err := tenantResolver(r.Context(), data.UserID)
 			if err != nil {
 				store.ClearSession(w)
-				http.SetCookie(w, &http.Cookie{Name: "flash_error", Value: err.Error(), Path: "/", HttpOnly: true, MaxAge: 30})
+				http.SetCookie(w, &http.Cookie{Name: "flash_error", Value: err.Error(), Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: 30})
 				http.Redirect(w, r, loginPath, http.StatusSeeOther)
 				return
 			}

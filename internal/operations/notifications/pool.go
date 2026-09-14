@@ -32,6 +32,18 @@ type ProviderSpec struct {
 	CostPer1k    float64 `json:"cost_per_1k,omitempty"`
 }
 
+// MarshalJSON renders the spec for the admin API without the SMTP password.
+// The shadowing Password field is never assigned, so `omitempty` always drops
+// the key — credentials never reach the browser. Decoding is untouched, so
+// EMAIL_PROVIDERS_JSON (which is how passwords are supplied) keeps working.
+func (s ProviderSpec) MarshalJSON() ([]byte, error) {
+	type spec ProviderSpec // alias: no methods, so this cannot recurse
+	return json.Marshal(struct {
+		spec
+		Password string `json:"password,omitempty"`
+	}{spec: spec(s)})
+}
+
 // isEnabled returns true when Enabled is nil or true.
 func (s ProviderSpec) isEnabled() bool {
 	if s.Enabled == nil {

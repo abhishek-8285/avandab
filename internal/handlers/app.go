@@ -757,13 +757,13 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 	if data.FlashSuccess == "" && r != nil {
 		if c, err := r.Cookie("flash_success"); err == nil && c.Value != "" {
 			data.FlashSuccess = c.Value
-			http.SetCookie(w, &http.Cookie{Name: "flash_success", Value: "", Path: "/", MaxAge: -1})
+			http.SetCookie(w, &http.Cookie{Name: "flash_success", Value: "", Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: -1})
 		}
 	}
 	if data.FlashError == "" && r != nil {
 		if c, err := r.Cookie("flash_error"); err == nil && c.Value != "" {
 			data.FlashError = c.Value
-			http.SetCookie(w, &http.Cookie{Name: "flash_error", Value: "", Path: "/", MaxAge: -1})
+			http.SetCookie(w, &http.Cookie{Name: "flash_error", Value: "", Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: -1})
 		}
 	}
 
@@ -978,7 +978,7 @@ func (a *App) SetLang(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, &http.Cookie{
 		Name: "lang", Value: to, Path: "/", MaxAge: 365 * 24 * 3600,
-		HttpOnly: true, SameSite: http.SameSiteLaxMode,
+		HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode,
 	})
 	http.Redirect(w, r, next, http.StatusSeeOther)
 }

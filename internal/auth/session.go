@@ -103,7 +103,7 @@ func (s *SessionStore) CreateSessionWithToken(w http.ResponseWriter, userID, rol
 		Value:    s.mustEncode(data),
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   s.secure,
+		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   86400,
 	})
@@ -160,7 +160,7 @@ func (s *SessionStore) ClearSession(w http.ResponseWriter) {
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   s.secure,
+		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	})

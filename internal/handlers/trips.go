@@ -229,7 +229,7 @@ func (h *TripHandlers) flashAndRedirect(w http.ResponseWriter, r *http.Request, 
 	if success {
 		name = "flash_success"
 	}
-	http.SetCookie(w, &http.Cookie{Name: name, Value: url.QueryEscape(msg), Path: "/", HttpOnly: true, MaxAge: 10})
+	http.SetCookie(w, &http.Cookie{Name: name, Value: url.QueryEscape(msg), Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: 10})
 	http.Redirect(w, r, "/trips/"+tripID, http.StatusSeeOther)
 }
 
@@ -427,10 +427,10 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 	if c, err := r.Cookie("flash_success"); err == nil && c.Value != "" {
 		flashMsg, _ = url.QueryUnescape(c.Value)
 		flashOK = true
-		http.SetCookie(w, &http.Cookie{Name: "flash_success", Value: "", Path: "/", MaxAge: -1})
+		http.SetCookie(w, &http.Cookie{Name: "flash_success", Value: "", Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: -1})
 	} else if c, err := r.Cookie("flash_error"); err == nil && c.Value != "" {
 		flashMsg, _ = url.QueryUnescape(c.Value)
-		http.SetCookie(w, &http.Cookie{Name: "flash_error", Value: "", Path: "/", MaxAge: -1})
+		http.SetCookie(w, &http.Cookie{Name: "flash_error", Value: "", Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: -1})
 	}
 
 	// Related context for the detail page: booking (customer + fare),
