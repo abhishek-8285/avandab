@@ -1,6 +1,5 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { Alert } from 'react-native';
 import { ForgotPasswordScreen } from '../src/components/ForgotPasswordScreen';
 
 const globalFetch = global.fetch;
@@ -34,9 +33,8 @@ describe('ForgotPasswordScreen', () => {
     expect(body).toEqual({ email: 'driver@avandab.com' });
   });
 
-  test('network failure shows an error alert and stays on the form', async () => {
+  test('network failure shows an inline error and stays on the form', async () => {
     global.fetch = jest.fn().mockRejectedValue(new Error('Offline connection failed')) as any;
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 
     const { getByPlaceholderText, getByText, queryByText } = render(
       <ForgotPasswordScreen onBackToLogin={jest.fn()} />
@@ -45,19 +43,17 @@ describe('ForgotPasswordScreen', () => {
     fillEmail(getByPlaceholderText);
     fireEvent.press(getByText('SEND RESET LINK'));
 
-    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
-    expect(alertSpy.mock.calls[0][0]).toBe('Network Error');
+    await waitFor(() => expect(getByText('Offline connection failed')).toBeTruthy());
     // Honest failure: no fake success screen.
     expect(queryByText('REQUEST SUBMITTED')).toBeNull();
   });
 
-  test('server error response surfaces the API message', async () => {
+  test('server error response surfaces the API message inline', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,
       status: 400,
       json: async () => ({ error: 'email is required' }),
     }) as any;
-    const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
 
     const { getByPlaceholderText, getByText } = render(
       <ForgotPasswordScreen onBackToLogin={jest.fn()} />
@@ -66,7 +62,6 @@ describe('ForgotPasswordScreen', () => {
     fillEmail(getByPlaceholderText);
     fireEvent.press(getByText('SEND RESET LINK'));
 
-    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
-    expect(alertSpy.mock.calls[0]).toEqual(['Request Failed', 'email is required']);
+    await waitFor(() => expect(getByText('email is required')).toBeTruthy());
   });
 });

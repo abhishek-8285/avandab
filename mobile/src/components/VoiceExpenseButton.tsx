@@ -50,9 +50,10 @@ export function VoiceExpenseButton({ tripId, onSaved, disabled = false }: VoiceE
         onPress={() => setPanelOpen((o) => !o)}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel="voice-expense-mic"
+        accessibilityLabel={panelOpen ? 'Close voice expense entry' : 'Add expense by voice'}
+        accessibilityState={{ expanded: panelOpen }}
       >
-        <MaterialCommunityIcons name="microphone" size={26} color={Colors.textOnPrimary} />
+        <MaterialCommunityIcons name="microphone" size={26} color={Colors.textOnPrimary} accessible={false} />
       </TouchableOpacity>
 
       {panelOpen && !disabled && (
@@ -64,15 +65,21 @@ export function VoiceExpenseButton({ tripId, onSaved, disabled = false }: VoiceE
             value={text}
             onChangeText={setText}
             multiline
+            accessibilityLabel="Voice expense description"
           />
           <TouchableOpacity
             style={[styles.confirmBtn, saving && { opacity: 0.6 }]}
             onPress={handleConfirm}
             disabled={saving}
             accessibilityRole="button"
-            accessibilityLabel="voice-expense-confirm"
+            accessibilityLabel="Save voice expense"
+            accessibilityState={{ disabled: saving }}
           >
-            <Text style={styles.confirmText}>{t('expense.submit')}</Text>
+            {saving ? (
+              <Text style={styles.confirmText} accessibilityLiveRegion="polite">Saving…</Text>
+            ) : (
+              <Text style={styles.confirmText}>{t('expense.submit')}</Text>
+            )}
           </TouchableOpacity>
         </View>
       )}

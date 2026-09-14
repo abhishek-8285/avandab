@@ -43,9 +43,10 @@ export function TripTimeline({ trip }: { trip?: Trip | null }) {
                     name={done ? 'check' : (iconName as any)}
                     size={14}
                     color={done || active ? '#fff' : Colors.textMuted}
+                    accessible={false}
                   />
                 </View>
-                <Text style={[styles.label, done && styles.labelDone]} numberOfLines={1}>
+                <Text style={[styles.label, done && styles.labelDone]} numberOfLines={1} ellipsizeMode="tail">
                   {s.locationName || `Stop ${s.stopSequence}`}
                 </Text>
                 {i < stops.length - 1 && <View style={[styles.connector, done && styles.connectorDone]} />}
@@ -53,7 +54,7 @@ export function TripTimeline({ trip }: { trip?: Trip | null }) {
             );
           })}
         </View>
-        <Text style={styles.hint}>
+        <Text style={styles.hint} numberOfLines={2} ellipsizeMode="tail" accessibilityLabel={`Trip reference ${trip.tripNumber || trip.id}, from ${stops[0]?.locationName || trip.origin} to ${stops[stops.length - 1]?.locationName || trip.destination}`}>
           Ref {trip.tripNumber || trip.id} · {stops[0]?.locationName || trip.origin} → {stops[stops.length - 1]?.locationName || trip.destination}
         </Text>
       </View>
@@ -71,15 +72,15 @@ export function TripTimeline({ trip }: { trip?: Trip | null }) {
           return (
             <View key={s.key} style={styles.stage}>
               <View style={[styles.dot, done && styles.dotDone, active && styles.dotActive]}>
-                <MaterialCommunityIcons name={s.icon as any} size={14} color={done ? '#fff' : Colors.textMuted} />
+                <MaterialCommunityIcons name={s.icon as any} size={14} color={done ? '#fff' : Colors.textMuted} accessible={false} />
               </View>
-              <Text style={[styles.label, done && styles.labelDone]}>{s.label}</Text>
+              <Text style={[styles.label, done && styles.labelDone]} numberOfLines={1} ellipsizeMode="tail">{s.label}</Text>
               {i < STAGES.length - 1 && <View style={[styles.connector, done && styles.connectorDone]} />}
             </View>
           );
         })}
       </View>
-      <Text style={styles.hint}>Ref {trip.tripNumber} · {trip.origin}→{trip.destination}</Text>
+      <Text style={styles.hint} numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={`Trip reference ${trip.tripNumber}, from ${trip.origin} to ${trip.destination}`}>Ref {trip.tripNumber} · {trip.origin}→{trip.destination}</Text>
     </View>
   );
 }

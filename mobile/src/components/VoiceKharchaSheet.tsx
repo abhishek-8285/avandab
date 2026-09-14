@@ -1,4 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  withRepeat,
+  cancelAnimation,
+  Easing,
+} from 'react-native-reanimated';
 import {
   StyleSheet,
   Text,
@@ -6,8 +15,6 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
-  Animated,
-  Easing,
   Alert,
   Platform,
   Vibration,
@@ -20,6 +27,7 @@ import {
 import { parseExpenseUtterance, buildExpenseDraft, ExpenseCategory, ParsedExpense } from '../services/speech';
 import { OfflineQueue } from '../services/offlineQueue';
 import { Colors, Font, Spacing } from '../constants/theme';
+import { useLanguageStore } from '../stores/languageStore';
 
 interface VoiceKharchaSheetProps {
   visible: boolean;
@@ -52,16 +60,30 @@ export function VoiceKharchaSheet({
   const [saving, setSaving] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [audioPlaybackProgress, setAudioPlaybackProgress] = useState(0);
+  const { locale } = useLanguageStore();
+  const intlTag = `${locale}-IN`;
+  const recSec = new Intl.NumberFormat(intlTag).format(3);
 
   // Pulse animation for recording mic (stable instances; useState initializer
   // instead of useRef(...).current, which reads a ref during render).
-  const [pulseAnim] = useState(() => new Animated.Value(1));
+  const pulseAnim = useSharedValue(1);
   // Live audio wave bars
-  const [wave1] = useState(() => new Animated.Value(8));
-  const [wave2] = useState(() => new Animated.Value(14));
-  const [wave3] = useState(() => new Animated.Value(24));
-  const [wave4] = useState(() => new Animated.Value(18));
-  const [wave5] = useState(() => new Animated.Value(10));
+  const wave1 = useSharedValue(8);
+  const wave2 = useSharedValue(14);
+  const wave3 = useSharedValue(24);
+  const wave4 = useSharedValue(18);
+  const wave5 = useSharedValue(10);
+
+  // Animated styles: shared values must flow through useAnimatedStyle to run
+  // on the UI thread — raw values in a style object never animate.
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseAnim.value }],
+  }));
+  const wave1Style = useAnimatedStyle(() => ({ height: wave1.value }));
+  const wave2Style = useAnimatedStyle(() => ({ height: wave2.value }));
+  const wave3Style = useAnimatedStyle(() => ({ height: wave3.value }));
+  const wave4Style = useAnimatedStyle(() => ({ height: wave4.value }));
+  const wave5Style = useAnimatedStyle(() => ({ height: wave5.value }));
 
   // Listen to native speech recognition events
   useSpeechRecognitionEvent('start', () => {
@@ -99,46 +121,38 @@ export function VoiceKharchaSheet({
   useSpeechRecognitionEvent('volumechange', (event) => {
     if (event.value !== undefined) {
       const vol = Math.max(0, Math.min(100, (event.value + 50) * 2));
-      wave1.setValue(6 + (vol * 0.2));
-      wave2.setValue(10 + (vol * 0.3));
-      wave3.setValue(14 + (vol * 0.4));
-      wave4.setValue(8 + (vol * 0.3));
-      wave5.setValue(6 + (vol * 0.2));
+      wave1.value = 6 + (vol * 0.2);
+      wave2.value = 10 + (vol * 0.3);
+      wave3.value = 14 + (vol * 0.4);
+      wave4.value = 8 + (vol * 0.3);
+      wave5.value = 6 + (vol * 0.2);
     }
   });
 
-  useEffect(() => {
-    let pulseLoop: Animated.CompositeAnimation | null = null;
-
+useEffect(() => {
     if (isListening) {
-      pulseLoop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.25,
-            duration: 600,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 600,
-            easing: Easing.inOut(Easing.ease),
-            useNativeDriver: true,
-          }),
-        ])
+      // withRepeat(-1, true): loop forever, reversing between the two keyframes
+      // (replaces the invalid withLoop(...).run() API).
+      pulseAnim.value = withRepeat(
+        withSequence(
+          withTiming(1.25, { duration: 600, easing: Easing.inOut(Easing.ease) }),
+          withTiming(1, { duration: 600, easing: Easing.inOut(Easing.ease) })
+        ),
+        -1,
+        true
       );
-      pulseLoop.start();
     } else {
-      pulseAnim.setValue(1);
-      wave1.setValue(8);
-      wave2.setValue(14);
-      wave3.setValue(24);
-      wave4.setValue(18);
-      wave5.setValue(10);
+      cancelAnimation(pulseAnim);
+      pulseAnim.value = 1;
+      wave1.value = 8;
+      wave2.value = 14;
+      wave3.value = 24;
+      wave4.value = 18;
+      wave5.value = 10;
     }
 
     return () => {
-      pulseLoop?.stop();
+      cancelAnimation(pulseAnim);
     };
   }, [isListening]);
 
@@ -356,46 +370,54 @@ export function VoiceKharchaSheet({
           <View style={styles.sheetHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={styles.headerIconBox}>
-                <MaterialCommunityIcons name="microphone" size={20} color="#008069" />
+                <MaterialCommunityIcons name="microphone" size={20} color="#008069" accessible={false} />
               </View>
               <View>
                 <Text style={styles.headerTitle}>VOICE KHARCHA (आवाज़ से खर्चा)</Text>
-                <Text style={styles.headerSubtitle}>Audio Recording & Verbatim Transcript • #{tripId}</Text>
+                <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">Audio Recording & Verbatim Transcript • #{tripId}</Text>
               </View>
             </View>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <MaterialCommunityIcons name="close" size={22} color="#667781" />
+            <TouchableOpacity
+              onPress={onClose}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel="Close voice expense sheet"
+            >
+              <MaterialCommunityIcons name="close" size={22} color="#667781" accessible={false} />
             </TouchableOpacity>
           </View>
 
           {/* Active Voice Listener / Push to Speak Area */}
           <View style={styles.micSection}>
-            <Animated.View style={[styles.micPulseRing, { transform: [{ scale: pulseAnim }] }]}>
+            <Animated.View style={[styles.micPulseRing, pulseStyle]}>
               <TouchableOpacity
                 style={[styles.bigMicBtn, isListening && styles.bigMicBtnActive]}
                 activeOpacity={0.8}
                 onPress={isListening ? handleStopListening : handleStartListening}
+                accessibilityRole="button"
+                accessibilityLabel={isListening ? 'Stop listening' : 'Start listening — record expense by voice'}
               >
                 <MaterialCommunityIcons
                   name={isListening ? 'stop' : 'microphone'}
                   size={36}
                   color="#ffffff"
+                  accessible={false}
                 />
               </TouchableOpacity>
             </Animated.View>
 
             {isListening ? (
               <View style={styles.listeningStatusBox}>
-                <Text style={styles.listeningText}>
-                  {liveTranscript ? `"${liveTranscript}"` : '🎙️ Listening & Recording Audio... (बोलिए)'}
+                <Text style={styles.listeningText} accessibilityLiveRegion="polite">
+                  {liveTranscript ? `"${liveTranscript}"` : '🎙️ Listening & Recording Audio… (बोलिए)'}
                 </Text>
                 {/* Audio Waveform */}
                 <View style={styles.waveformContainer}>
-                  <Animated.View style={[styles.waveBar, { height: wave1 }]} />
-                  <Animated.View style={[styles.waveBar, { height: wave2 }]} />
-                  <Animated.View style={[styles.waveBar, { height: wave3 }]} />
-                  <Animated.View style={[styles.waveBar, { height: wave4 }]} />
-                  <Animated.View style={[styles.waveBar, { height: wave5 }]} />
+                  <Animated.View style={[styles.waveBar, wave1Style]} />
+                  <Animated.View style={[styles.waveBar, wave2Style]} />
+                  <Animated.View style={[styles.waveBar, wave3Style]} />
+                  <Animated.View style={[styles.waveBar, wave4Style]} />
+                  <Animated.View style={[styles.waveBar, wave5Style]} />
                 </View>
                 <Text style={styles.tapToStopHint}>Tap red stop button when finished speaking</Text>
               </View>
@@ -409,8 +431,8 @@ export function VoiceKharchaSheet({
           {/* Warning when speech contains no expense */}
           {noExpenseWarning && (
             <View style={styles.warningBox}>
-              <MaterialCommunityIcons name="alert-circle-outline" size={18} color="#b45309" />
-              <Text style={styles.warningText}>{noExpenseWarning}</Text>
+              <MaterialCommunityIcons name="alert-circle-outline" size={18} color="#b45309" accessible={false} />
+              <Text style={styles.warningText} accessibilityLiveRegion="polite">{noExpenseWarning}</Text>
             </View>
           )}
 
@@ -419,10 +441,10 @@ export function VoiceKharchaSheet({
             <View style={styles.resultCard}>
               <View style={styles.resultHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <MaterialCommunityIcons name="check-decagram" size={16} color="#008069" />
+                  <MaterialCommunityIcons name="check-decagram" size={16} color="#008069" accessible={false} />
                   <Text style={styles.resultTitle}>RECORDED AUDIO & EXTRACTED DATA</Text>
                 </View>
-                <Text style={styles.originalUtterance} numberOfLines={1}>
+                <Text style={styles.originalUtterance} numberOfLines={1} ellipsizeMode="tail">
                   "{transcript}"
                 </Text>
               </View>
@@ -432,15 +454,18 @@ export function VoiceKharchaSheet({
                 style={styles.audioPlaybackPill}
                 activeOpacity={0.8}
                 onPress={handleTogglePlayAudio}
+                accessibilityRole="button"
+                accessibilityLabel={isPlayingAudio ? 'Pause driver voice recording' : 'Play driver voice recording'}
               >
                 <MaterialCommunityIcons
                   name={isPlayingAudio ? 'pause-circle' : 'play-circle'}
                   size={22}
                   color="#008069"
+                  accessible={false}
                 />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.audioPlaybackTitle}>
-                    {isPlayingAudio ? 'Playing Back Driver Audio...' : '▶️ Listen to Driver Voice Recording (0:03s)'}
+                    {isPlayingAudio ? 'Playing Back Driver Audio…' : `▶️ Listen to Driver Voice Recording (0:0${recSec}s)`}
                   </Text>
                   <View style={styles.audioProgressBarBg}>
                     <View style={[styles.audioProgressBarFill, { width: `${audioPlaybackProgress * 100}%` }]} />
@@ -456,19 +481,40 @@ export function VoiceKharchaSheet({
                 <Text style={styles.rupeeSymbol}>₹</Text>
                 <TextInput
                   style={styles.amountInputText}
-                  keyboardType="numeric"
-                  placeholder="0"
+                  keyboardType="decimal-pad"
+                  placeholder="e.g. 2500"
+                  accessibilityLabel="Expense amount in rupees"
+                  autoComplete="off"
+                  textContentType="none"
                   value={amountInput}
                   onChangeText={setAmountInput}
                 />
                 <View style={styles.adjustPillsRow}>
-                  <TouchableOpacity style={styles.adjustPill} onPress={() => adjustAmount(-100)}>
+                  <TouchableOpacity
+                    style={styles.adjustPill}
+                    onPress={() => adjustAmount(-100)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Decrease amount by 100 rupees"
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
                     <Text style={styles.adjustPillText}>-₹100</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.adjustPill} onPress={() => adjustAmount(100)}>
+                  <TouchableOpacity
+                    style={styles.adjustPill}
+                    onPress={() => adjustAmount(100)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Increase amount by 100 rupees"
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
                     <Text style={styles.adjustPillText}>+₹100</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.adjustPill} onPress={() => adjustAmount(500)}>
+                  <TouchableOpacity
+                    style={styles.adjustPill}
+                    onPress={() => adjustAmount(500)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Increase amount by 500 rupees"
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
                     <Text style={styles.adjustPillText}>+₹500</Text>
                   </TouchableOpacity>
                 </View>
@@ -477,8 +523,8 @@ export function VoiceKharchaSheet({
               {/* Discrepancy warning banner if amount was changed manually */}
               {hasDiscrepancy && (
                 <View style={styles.discrepancyBanner}>
-                  <MaterialCommunityIcons name="alert-decagram" size={16} color="#d97706" />
-                  <Text style={styles.discrepancyText}>
+                  <MaterialCommunityIcons name="alert-decagram" size={16} color="#d97706" accessible={false} />
+                  <Text style={styles.discrepancyText} accessibilityLiveRegion="polite">
                     Discrepancy Flag: Spoke ₹{originalSpokenAmount} vs Claimed ₹{currentClaimedAmount}. Ops will audit the voice clip.
                   </Text>
                 </View>
@@ -487,13 +533,13 @@ export function VoiceKharchaSheet({
               {/* Category & Vendor Metadata */}
               <View style={styles.metaRow}>
                 <View style={styles.metaBadge}>
-                  <MaterialCommunityIcons name={getCategoryIcon(categoryInput)} size={14} color="#008069" />
+                  <MaterialCommunityIcons name={getCategoryIcon(categoryInput)} size={14} color="#008069" accessible={false} />
                   <Text style={styles.metaBadgeText}>{categoryInput.toUpperCase()}</Text>
                 </View>
                 {vendorInput ? (
                   <View style={[styles.metaBadge, { backgroundColor: '#e0f2fe' }]}>
-                    <MaterialCommunityIcons name="store" size={14} color="#0284c7" />
-                    <Text style={[styles.metaBadgeText, { color: '#0284c7' }]}>{vendorInput}</Text>
+                    <MaterialCommunityIcons name="store" size={14} color="#0284c7" accessible={false} />
+                    <Text style={[styles.metaBadgeText, { color: '#0284c7' }]} numberOfLines={1} ellipsizeMode="tail">{vendorInput}</Text>
                   </View>
                 ) : null}
               </View>
@@ -504,9 +550,17 @@ export function VoiceKharchaSheet({
                 activeOpacity={0.88}
                 onPress={handleSave}
                 disabled={saving}
+                accessibilityRole="button"
+                accessibilityLabel={saving ? 'Saving expense…' : 'Confirm and attach voice to passbook'}
+                accessibilityState={{ disabled: saving, busy: saving }}
+                accessibilityLiveRegion="polite"
               >
-                <MaterialCommunityIcons name="check" size={18} color="#ffffff" />
-                <Text style={styles.confirmSaveBtnText}>CONFIRM & ATTACH VOICE TO PASSBOOK</Text>
+                {saving ? null : (
+                  <MaterialCommunityIcons name="check" size={18} color="#ffffff" accessible={false} />
+                )}
+                <Text style={styles.confirmSaveBtnText}>
+                  {saving ? 'Saving…' : 'CONFIRM & ATTACH VOICE TO PASSBOOK'}
+                </Text>
               </TouchableOpacity>
             </View>
           )}
@@ -521,6 +575,9 @@ export function VoiceKharchaSheet({
                     key={idx}
                     style={styles.suggestionChip}
                     onPress={() => handleProcessSpeech(item.text)}
+                    accessibilityRole="button"
+                    accessibilityLabel={item.label}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
                     <Text style={styles.suggestionChipText}>{item.label}</Text>
                   </TouchableOpacity>
@@ -791,6 +848,7 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: '#008069',
     paddingVertical: 12,
+    minHeight: 44,
     borderRadius: 8,
     marginTop: 4,
   },

@@ -122,8 +122,8 @@ export function IssuesScreen({ tripId, onBack }: IssuesScreenProps) {
     <View style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.header}>
-        <TouchableOpacity style={styles.iconBtn} onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={18} color={Colors.textOnChrome} />
+        <TouchableOpacity style={styles.iconBtn} onPress={onBack} accessibilityRole="button" accessibilityLabel="Back to trips" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <MaterialCommunityIcons name="arrow-left" size={18} color={Colors.textOnChrome} accessible={false} />
         </TouchableOpacity>
         <Text style={styles.headerLabel}>REPORT ISSUE</Text>
         <View style={{ width: 32 }} />
@@ -137,11 +137,16 @@ export function IssuesScreen({ tripId, onBack }: IssuesScreenProps) {
               key={c.id}
               style={[styles.chip, category === c.id && styles.chipActive]}
               onPress={() => setCategory(c.id)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: category === c.id }}
+              accessibilityLabel={c.label}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
               <MaterialCommunityIcons
                 name={c.icon as any}
                 size={13}
                 color={category === c.id ? Colors.textOnPrimary : Colors.textSecondary}
+                accessible={false}
               />
               <Text style={[styles.chipText, category === c.id && styles.chipTextActive]}>{c.label}</Text>
             </TouchableOpacity>
@@ -155,6 +160,9 @@ export function IssuesScreen({ tripId, onBack }: IssuesScreenProps) {
               key={s}
               style={[styles.chip, severity === s && styles.chipActive]}
               onPress={() => setSeverity(s)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: severity === s }}
+              accessibilityLabel={s}
             >
               <Text style={[styles.chipText, severity === s && styles.chipTextActive]}>{s.toUpperCase()}</Text>
             </TouchableOpacity>

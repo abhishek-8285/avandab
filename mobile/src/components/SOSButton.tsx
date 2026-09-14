@@ -79,12 +79,12 @@ export function SOSButton({
           [{ text: 'OK' }]
         );
       } else {
-        Alert.alert('SOS Error', result.error || 'Failed to dispatch SOS', [{ text: 'OK' }]);
+        Alert.alert('SOS Not Sent', (result.error || 'Dispatch failed.') + ' Check your connection — the signal stays queued and will retry automatically.', [{ text: 'OK' }]);
       }
     } catch (err: any) {
       setSending(false);
       setModalVisible(false);
-      Alert.alert('SOS Error', err.message || 'Unexpected error sending SOS', [{ text: 'OK' }]);
+      Alert.alert('SOS Not Sent', (err.message || 'Unexpected error.') + ' Check your connection — the signal stays queued and will retry automatically.', [{ text: 'OK' }]);
     }
   };
 
@@ -98,7 +98,7 @@ export function SOSButton({
         accessibilityLabel="Emergency SOS button"
         accessibilityRole="button"
       >
-        <MaterialCommunityIcons name="alert-octagon" size={24} color="#FFFFFF" />
+        <MaterialCommunityIcons name="alert-octagon" size={24} color="#FFFFFF" accessible={false} />
         <Text style={styles.sosButtonText}>SOS</Text>
       </TouchableOpacity>
 
@@ -111,7 +111,7 @@ export function SOSButton({
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.warningIconContainer}>
-              <MaterialCommunityIcons name="shield-alert" size={48} color="#EF4444" />
+              <MaterialCommunityIcons name="shield-alert" size={48} color="#EF4444" accessible={false} />
             </View>
 
             <Text style={styles.modalTitle}>Trigger Emergency SOS?</Text>
@@ -122,7 +122,7 @@ export function SOSButton({
             {sending ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#EF4444" />
-                <Text style={styles.loadingText}>Dispatching Emergency Alert...</Text>
+                <Text style={styles.loadingText}>Dispatching emergency alert…</Text>
               </View>
             ) : (
               <View style={styles.modalActions}>
@@ -130,6 +130,8 @@ export function SOSButton({
                   style={styles.cancelButton}
                   onPress={() => setModalVisible(false)}
                   testID="sos-cancel-button"
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel emergency SOS"
                 >
                   <Text style={styles.cancelButtonText}>Cancel</Text>
                 </TouchableOpacity>
@@ -138,6 +140,9 @@ export function SOSButton({
                   style={styles.confirmButton}
                   onPress={confirmSOS}
                   testID="sos-confirm-button"
+                  accessibilityRole="button"
+                  accessibilityLabel={sending ? 'Dispatching emergency alert…' : 'Send SOS now'}
+                  accessibilityState={{ busy: sending }}
                 >
                   <Text style={styles.confirmButtonText}>SEND SOS NOW</Text>
                 </TouchableOpacity>
@@ -230,6 +235,8 @@ const styles = StyleSheet.create({
   cancelButton: {
     flex: 1,
     paddingVertical: 12,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: Radius.md,
     backgroundColor: '#334155',
     alignItems: 'center',
@@ -242,6 +249,8 @@ const styles = StyleSheet.create({
   confirmButton: {
     flex: 1.4,
     paddingVertical: 12,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: Radius.md,
     backgroundColor: '#DC2626',
     alignItems: 'center',

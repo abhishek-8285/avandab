@@ -6,8 +6,9 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { NavigationContainer, useFocusEffect, useNavigation } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useQuery } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { Colors, Font, Radius, Spacing } from './src/constants/theme';
@@ -46,6 +47,7 @@ import { DriverOnboardingScreen } from './src/features/driver-onboarding/screens
 import { VoiceKharchaSheet } from './src/components/VoiceKharchaSheet';
 import { Trip } from './src/types/api';
 import { mapTripStatus, RawTrip } from './src/utils/tripMapper';
+import { BottomTabs } from './src/features/shell/components/BottomTabs';
 
 const queryClient = new QueryClient();
 
@@ -70,8 +72,7 @@ type DriverStackParamList = {
   Issues: { tripId?: string } | undefined;
 };
 
-const AuthStack = createStackNavigator<AuthStackParamList>();
-const DriverStack = createStackNavigator<DriverStackParamList>();
+const NativeStack = createNativeStackNavigator<AuthStackParamList & DriverStackParamList>();
 
 function FirstTimeSetupRoute({ navigation }: { navigation: any }) {
   const token = useAuthStore((s) => s.token);
@@ -85,10 +86,10 @@ function FirstTimeSetupRoute({ navigation }: { navigation: any }) {
   );
 }
 
-function AuthNavigator() {
+function AuthStack() {
   return (
-    <AuthStack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
-      <AuthStack.Screen name="Login">
+    <NativeStack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+      <NativeStack.Screen name="Login">
         {({ navigation }) => (
           <LoginScreen
             onLoginSuccess={() => {}}
@@ -96,11 +97,11 @@ function AuthNavigator() {
             onRegisterLink={() => navigation.navigate('Register')}
           />
         )}
-      </AuthStack.Screen>
-      <AuthStack.Screen name="Splash">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="Splash">
         {({ navigation }) => <SplashScreen onFinish={() => navigation.navigate('Login')} />}
-      </AuthStack.Screen>
-      <AuthStack.Screen name="GetStarted">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="GetStarted">
         {({ navigation }) => (
           <GetStartedScreen
             onGetStarted={() => navigation.navigate('OnboardingOverview')}
@@ -108,47 +109,47 @@ function AuthNavigator() {
             onOpenQRDemo={() => navigation.navigate('QRDemo')}
           />
         )}
-      </AuthStack.Screen>
-      <AuthStack.Screen name="QRDemo">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="QRDemo">
         {() => <QRDemoScreen />}
-      </AuthStack.Screen>
-      <AuthStack.Screen name="OnboardingOverview">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="OnboardingOverview">
         {({ navigation }) => (
           <OnboardingOverviewScreen
             onNext={() => navigation.navigate('BookingSchedule')}
             onSkip={() => navigation.navigate('Login')}
           />
         )}
-      </AuthStack.Screen>
-      <AuthStack.Screen name="BookingSchedule">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="BookingSchedule">
         {({ navigation }) => (
           <BookingScheduleScreen
             onNext={() => navigation.navigate('Login')}
             onBack={() => navigation.goBack()}
           />
         )}
-      </AuthStack.Screen>
-      <AuthStack.Screen name="Register">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="Register">
         {({ navigation }) => (
           <RegisterScreen
             onRegisterSuccess={() => {}}
             onBackToLogin={() => navigation.navigate('Login')}
           />
         )}
-      </AuthStack.Screen>
-      <AuthStack.Screen name="ForgotPassword">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="ForgotPassword">
         {({ navigation }) => (
           <ForgotPasswordScreen onBackToLogin={() => navigation.navigate('Login')} />
         )}
-      </AuthStack.Screen>
-    </AuthStack.Navigator>
+      </NativeStack.Screen>
+    </NativeStack.Navigator>
   );
 }
 
-function DriverNavigator() {
+function DriverStack() {
   return (
-    <DriverStack.Navigator screenOptions={{ headerShown: false }}>
-      <DriverStack.Screen name="Main">
+    <NativeStack.Navigator screenOptions={{ headerShown: false }}>
+      <NativeStack.Screen name="Main">
         {({ navigation }) => (
           <MainScreen
             onOpenSetup={() => navigation.navigate('FirstTimeSetup')}
@@ -158,13 +159,13 @@ function DriverNavigator() {
             onOpenIssues={() => navigation.navigate('Issues', {})}
           />
         )}
-      </DriverStack.Screen>
-      <DriverStack.Screen name="FirstTimeSetup">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="FirstTimeSetup">
         {({ navigation }) => (
           <FirstTimeSetupRoute navigation={navigation} />
         )}
-      </DriverStack.Screen>
-      <DriverStack.Screen name="ActiveNavigation">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="ActiveNavigation">
         {({ navigation, route }) => (
           <ActiveNavigationScreen
             tripId={route.params?.tripId}
@@ -179,8 +180,8 @@ function DriverNavigator() {
             onMenuToggle={() => navigation.navigate('Main')}
           />
         )}
-      </DriverStack.Screen>
-      <DriverStack.Screen name="DeliveryVerification">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="DeliveryVerification">
         {({ navigation, route }) => (
           <DeliveryVerificationScreen
             tripId={route.params?.tripId}
@@ -188,16 +189,16 @@ function DriverNavigator() {
             onBack={() => navigation.goBack()}
           />
         )}
-      </DriverStack.Screen>
-      <DriverStack.Screen name="Issues">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="Issues">
         {({ navigation, route }) => (
           <IssuesScreen tripId={route.params?.tripId} onBack={() => navigation.goBack()} />
         )}
-      </DriverStack.Screen>
-      <DriverStack.Screen name="Profile">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="Profile">
         {({ navigation }) => <ProfileScreen onBack={() => navigation.goBack()} />}
-      </DriverStack.Screen>
-      <DriverStack.Screen name="Expenses">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="Expenses">
         {({ navigation, route }) => (
           <ExpenseScreen
             tripId={route.params?.tripId}
@@ -205,8 +206,8 @@ function DriverNavigator() {
             onBack={() => navigation.goBack()}
           />
         )}
-      </DriverStack.Screen>
-    </DriverStack.Navigator>
+      </NativeStack.Screen>
+    </NativeStack.Navigator>
   );
 }
 
@@ -257,9 +258,9 @@ export default function App() {
         <StatusBar barStyle="light-content" backgroundColor="#075e54" />
         <NavigationContainer theme={navTheme}>
           {isAuthenticated ? (
-            <DriverNavigator />
+            <DriverStack />
           ) : (
-            <AuthNavigator />
+            <AuthStack />
           )}
         </NavigationContainer>
       </QueryClientProvider>

@@ -34,11 +34,19 @@ const SIZE: Record<Size, { h: number; font: number }> = {
 export function Button({ title, variant = 'primary', size = 'md', icon, loading, disabled, onPress, style, textStyle }: Props) {
   const v = VARIANT[variant];
   const s = SIZE[size];
+  // 44px touch floor without changing visuals: hitSlop pads small variants.
+  const pad = Math.max(0, (44 - s.h) / 2);
+  const inactive = disabled || loading;
   return (
     <TouchableOpacity
       activeOpacity={0.88}
-      disabled={disabled || loading}
+      disabled={inactive}
       onPress={onPress}
+      hitSlop={{ top: pad, bottom: pad, left: pad, right: pad }}
+      accessibilityRole="button"
+      accessibilityLabel={loading ? `${title}, loading…` : title}
+      accessibilityState={{ disabled: inactive, busy: !!loading }}
+      accessibilityLiveRegion="polite"
       style={[
         styles.base,
         { height: s.h, backgroundColor: v.bg, borderColor: v.border ?? v.bg, opacity: disabled ? 0.5 : 1 },
@@ -49,7 +57,7 @@ export function Button({ title, variant = 'primary', size = 'md', icon, loading,
         <ActivityIndicator color={v.fg} />
       ) : (
         <>
-          {icon ? <MaterialCommunityIcons name={icon as any} size={14} color={v.fg} /> : null}
+          {icon ? <MaterialCommunityIcons name={icon as any} size={14} color={v.fg} accessible={false} /> : null}
           <Text style={[styles.text, { color: v.fg, fontSize: s.font }, textStyle]}>{title}</Text>
         </>
       )}

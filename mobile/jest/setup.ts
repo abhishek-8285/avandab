@@ -40,6 +40,44 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: jest.fn().mockResolvedValue(undefined),
 }));
 
+// Mock react-native-reanimated (native module; the package's own mock.js is
+// broken in the published tarball — requires an unpublished ./src/mock).
+const animatedValue = (initial: number) => ({
+  value: initial,
+  add: jest.fn(),
+  multiply: jest.fn(),
+});
+jest.mock('react-native-reanimated', () => {
+  const timing = () => ({ run: jest.fn(), cancel: jest.fn() });
+  const mock = {
+    default: {
+      View: 'Animated.View',
+      Text: 'Animated.Text',
+      ScrollView: 'Animated.ScrollView',
+      Image: 'Animated.Image',
+      createAnimatedComponent: (Component: unknown) => Component,
+    },
+    useSharedValue: (initial: number) => animatedValue(initial),
+    useAnimatedStyle: () => ({}),
+    useDerivedValue: (processor: (v: unknown) => unknown) => ({ value: processor }),
+    useAnimatedProps: () => ({}),
+    withTiming: timing,
+    withSpring: timing,
+    withDelay: timing,
+    withSequence: timing,
+    withRepeat: timing,
+    cancelAnimation: jest.fn(),
+    Easing: {
+      linear: (e: unknown) => e,
+      ease: (e: unknown) => e,
+      in: (e: unknown) => e,
+      out: (e: unknown) => e,
+      inOut: (e: unknown) => e,
+    },
+  };
+  return { ...mock, __esModule: true };
+});
+
 // Mock expo-location (native module)
 jest.mock('expo-location', () => ({
   requestForegroundPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted', granted: true }),

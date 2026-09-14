@@ -23,11 +23,12 @@ export function SyncStatusBar() {
   const status = useSyncStore((s) => s.status);
   const { locale } = useLanguageStore();
   const labelKey = `sync.status_${status}`;
+  const label = t(labelKey, STATUS_FALLBACKS[status] ?? 'Online', locale);
 
   return (
-    <View style={styles.bar} accessibilityLabel={labelKey} accessibilityRole="text">
+    <View style={styles.bar} accessibilityLabel={label} accessibilityRole="text" accessibilityLiveRegion="polite">
       <View style={[styles.dot, { backgroundColor: STATUS_COLOR[status] ?? '#25d366' }]} />
-      <Text style={styles.label}>{t(labelKey, STATUS_FALLBACKS[status] ?? 'Online', locale)}</Text>
+      <Text style={styles.label} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
     </View>
   );
 }

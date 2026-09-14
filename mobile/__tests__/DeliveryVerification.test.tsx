@@ -41,7 +41,7 @@ describe('DeliveryVerificationScreen', () => {
     // Switch to OTP mode
     fireEvent.press(getByText('🔢 4-Digit OTP'));
 
-    const otpInput = getByPlaceholderText('• • • •');
+    const otpInput = getByPlaceholderText('e.g. 1234');
     fireEvent.changeText(otpInput, '4819');
 
     const submitBtn = getByText('CONFIRM DELIVERY & CLOSE TRIP');
@@ -82,7 +82,7 @@ describe('DeliveryVerificationScreen', () => {
     // Switch to OTP mode
     fireEvent.press(getByText('🔢 4-Digit OTP'));
 
-    const otpInput = getByPlaceholderText('• • • •');
+    const otpInput = getByPlaceholderText('e.g. 1234');
     fireEvent.changeText(otpInput, '1234');
 
     const submitBtn = getByText('CONFIRM DELIVERY & CLOSE TRIP');

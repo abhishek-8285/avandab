@@ -9,19 +9,20 @@ interface Props extends TextInputProps {
   error?: string;
 }
 
-export function Input({ label, icon, error, style, ...rest }: Props) {
+export function Input({ label, icon, error, style, accessibilityLabel, ...rest }: Props) {
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label} accessible={false}>{label}</Text>
       <View style={[styles.inputWrap, error && { borderColor: Colors.danger }]}>
-        {icon ? <MaterialCommunityIcons name={icon as any} size={16} color={Colors.textMuted} style={styles.icon} /> : null}
+        {icon ? <MaterialCommunityIcons name={icon as any} size={16} color={Colors.textMuted} style={styles.icon} accessible={false} /> : null}
         <TextInput
           style={[styles.input, icon && { paddingLeft: 34 }, style as any]}
           placeholderTextColor={Colors.textMuted}
+          accessibilityLabel={accessibilityLabel ?? label}
           {...rest}
         />
       </View>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Text style={styles.error} accessibilityLiveRegion="polite">{error}</Text> : null}
     </View>
   );
 }

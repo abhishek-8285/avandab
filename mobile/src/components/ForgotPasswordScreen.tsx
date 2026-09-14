@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert, Linking } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Linking } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors, Font, Radius, Spacing } from '../constants/theme';
@@ -14,13 +14,16 @@ export function ForgotPasswordScreen({ onBackToLogin }: ForgotPasswordScreenProp
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [devResetLink, setDevResetLink] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [linkError, setLinkError] = useState<string | null>(null);
 
   const handleResetPassword = async () => {
     if (!email) {
-      Alert.alert('Email Required', 'Please enter your registered email address.');
+      setFormError('Please enter your registered email address.');
       return;
     }
 
+    setFormError(null);
     setLoading(true);
 
     try {
@@ -31,13 +34,13 @@ export function ForgotPasswordScreen({ onBackToLogin }: ForgotPasswordScreenProp
       });
 
       if (!response.ok) {
-        let msg = `Server returned HTTP ${response.status}.`;
+        let msg = `Request failed (HTTP ${response.status}). Check the email and try again.`;
         try {
           const errBody = await response.json();
           if (errBody?.error) msg = errBody.error;
         } catch {}
         setLoading(false);
-        Alert.alert('Request Failed', msg);
+        setFormError(msg);
         return;
       }
 
@@ -49,10 +52,7 @@ export function ForgotPasswordScreen({ onBackToLogin }: ForgotPasswordScreenProp
       setSubmitted(true);
     } catch (err: any) {
       setLoading(false);
-      Alert.alert(
-        'Network Error',
-        err?.message || 'Could not reach the server. Check your connection and try again.'
-      );
+      setFormError(err?.message || 'Could not reach the server. Check your connection and try again.');
     }
   };
 
@@ -61,16 +61,16 @@ export function ForgotPasswordScreen({ onBackToLogin }: ForgotPasswordScreenProp
       <StatusBar style="light" />
 
       <View style={styles.header}>
-        <TouchableOpacity style={styles.iconButton} onPress={onBackToLogin}>
-          <MaterialCommunityIcons name="arrow-left" size={18} color={Colors.textOnChrome} />
+        <TouchableOpacity style={styles.iconButton} onPress={onBackToLogin} accessibilityRole="button" accessibilityLabel="Back to sign in">
+          <MaterialCommunityIcons name="arrow-left" size={18} color={Colors.textOnChrome} accessible={false} />
         </TouchableOpacity>
-        <Text style={styles.headerLabel}>RESET PASSWORD</Text>
-        <View style={{ width: 32 }} />
+        <Text style={styles.headerLabel} accessibilityRole="header">RESET PASSWORD</Text>
+        <View style={{ width: 44 }} />
       </View>
 
       <View style={styles.card}>
         <View style={styles.iconBox}>
-          <MaterialCommunityIcons name="lock-reset" size={24} color={Colors.primary} />
+          <MaterialCommunityIcons name="lock-reset" size={24} color={Colors.primary} accessible={false} />
         </View>
 
         <Text style={styles.title}>PASSWORD RESET</Text>
@@ -82,7 +82,7 @@ export function ForgotPasswordScreen({ onBackToLogin }: ForgotPasswordScreenProp
         {submitted ? (
           <View style={styles.successBox}>
             <View style={styles.successIconBox}>
-              <MaterialCommunityIcons name="check" size={24} color={Colors.success} />
+              <MaterialCommunityIcons name="check" size={24} color={Colors.success} accessible={false} />
             </View>
             <Text style={styles.successTitle}>REQUEST SUBMITTED</Text>
             <Text style={styles.successMessage}>
@@ -92,13 +92,18 @@ export function ForgotPasswordScreen({ onBackToLogin }: ForgotPasswordScreenProp
               <TouchableOpacity
                 style={[styles.submitBtn, { backgroundColor: Colors.info, marginBottom: Spacing.md }]}
                 onPress={() => Linking.openURL(devResetLink).catch(() =>
-                  Alert.alert('Error', 'Could not open the reset link.')
+                  setLinkError('Could not open the reset link. Copy it manually.')
                 )}
+                accessibilityRole="button"
+                accessibilityLabel="Open reset link (development)"
               >
                 <Text style={styles.submitBtnText}>OPEN RESET LINK (DEV)</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={styles.submitBtn} onPress={onBackToLogin}>
+            {linkError ? (
+              <Text style={styles.formError} accessibilityLiveRegion="polite">{linkError}</Text>
+            ) : null}
+            <TouchableOpacity style={styles.submitBtn} onPress={onBackToLogin} accessibilityRole="button" accessibilityLabel="Return to sign in">
               <Text style={styles.submitBtnText}>RETURN TO SIGN IN</Text>
             </TouchableOpacity>
           </View>
@@ -107,7 +112,7 @@ export function ForgotPasswordScreen({ onBackToLogin }: ForgotPasswordScreenProp
             <View style={styles.formGroup}>
               <Text style={styles.label}>EMAIL</Text>
               <View style={styles.inputWrapper}>
-                <MaterialCommunityIcons name="email-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} />
+                <MaterialCommunityIcons name="email-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} accessible={false} />
                 <TextInput
                   style={styles.input}
                   placeholder="driver@avandab.com"
@@ -116,15 +121,26 @@ export function ForgotPasswordScreen({ onBackToLogin }: ForgotPasswordScreenProp
                   onChangeText={setEmail}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  autoComplete="email"
+                  textContentType="emailAddress"
+                  accessibilityLabel="Registered email"
                 />
               </View>
             </View>
+
+            {formError ? (
+              <Text style={styles.formError} accessibilityLiveRegion="polite">{formError}</Text>
+            ) : null}
 
             <TouchableOpacity
               style={styles.submitBtn}
               activeOpacity={0.88}
               onPress={handleResetPassword}
               disabled={loading}
+              accessibilityRole="button"
+              accessibilityLabel={loading ? 'Sending reset link…' : 'Send reset link'}
+              accessibilityState={{ disabled: loading, busy: loading }}
+              accessibilityLiveRegion="polite"
             >
               {loading ? (
                 <ActivityIndicator color={Colors.textOnPrimary} />
@@ -133,7 +149,7 @@ export function ForgotPasswordScreen({ onBackToLogin }: ForgotPasswordScreenProp
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.backLink} onPress={onBackToLogin}>
+            <TouchableOpacity style={styles.backLink} onPress={onBackToLogin} accessibilityRole="button" accessibilityLabel="Back to sign in">
               <Text style={styles.backLinkText}>← BACK TO SIGN IN</Text>
             </TouchableOpacity>
           </View>
@@ -165,8 +181,8 @@ const styles = StyleSheet.create({
     fontFamily: Font.mono,
   },
   iconButton: {
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     borderRadius: Radius.md,
     borderWidth: 1,
     borderColor: Colors.chromeBorder,
@@ -276,6 +292,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
     fontFamily: Font.mono,
+  },
+  formError: {
+    fontSize: 12,
+    color: Colors.danger,
+    fontFamily: Font.mono,
+    marginBottom: Spacing.md,
+    textAlign: 'center',
+    width: '100%',
   },
   successBox: {
     alignItems: 'center',
