@@ -67,23 +67,34 @@ export function VoiceKharchaSheet({
   // Pulse animation for recording mic (stable instances; useState initializer
   // instead of useRef(...).current, which reads a ref during render).
   const pulseAnim = useSharedValue(1);
-  // Live audio wave bars
-  const wave1 = useSharedValue(8);
-  const wave2 = useSharedValue(14);
-  const wave3 = useSharedValue(24);
-  const wave4 = useSharedValue(18);
-  const wave5 = useSharedValue(10);
+  // Live audio wave bars — normalized scaleY (1 = full 24px bar). Animate
+  // transform only: height forces layout per frame, scaleY is GPU-composited.
+  const wave1 = useSharedValue(8 / 24);
+  const wave2 = useSharedValue(14 / 24);
+  const wave3 = useSharedValue(1);
+  const wave4 = useSharedValue(18 / 24);
+  const wave5 = useSharedValue(10 / 24);
 
   // Animated styles: shared values must flow through useAnimatedStyle to run
   // on the UI thread — raw values in a style object never animate.
   const pulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulseAnim.value }],
   }));
-  const wave1Style = useAnimatedStyle(() => ({ height: wave1.value }));
-  const wave2Style = useAnimatedStyle(() => ({ height: wave2.value }));
-  const wave3Style = useAnimatedStyle(() => ({ height: wave3.value }));
-  const wave4Style = useAnimatedStyle(() => ({ height: wave4.value }));
-  const wave5Style = useAnimatedStyle(() => ({ height: wave5.value }));
+  const wave1Style = useAnimatedStyle(() => ({
+    transform: [{ scaleY: wave1.value }],
+  }));
+  const wave2Style = useAnimatedStyle(() => ({
+    transform: [{ scaleY: wave2.value }],
+  }));
+  const wave3Style = useAnimatedStyle(() => ({
+    transform: [{ scaleY: wave3.value }],
+  }));
+  const wave4Style = useAnimatedStyle(() => ({
+    transform: [{ scaleY: wave4.value }],
+  }));
+  const wave5Style = useAnimatedStyle(() => ({
+    transform: [{ scaleY: wave5.value }],
+  }));
 
   // Listen to native speech recognition events
   useSpeechRecognitionEvent('start', () => {
@@ -121,11 +132,12 @@ export function VoiceKharchaSheet({
   useSpeechRecognitionEvent('volumechange', (event) => {
     if (event.value !== undefined) {
       const vol = Math.max(0, Math.min(100, (event.value + 50) * 2));
-      wave1.value = 6 + (vol * 0.2);
-      wave2.value = 10 + (vol * 0.3);
-      wave3.value = 14 + (vol * 0.4);
-      wave4.value = 8 + (vol * 0.3);
-      wave5.value = 6 + (vol * 0.2);
+      // Same pixel targets as before, expressed as scale of the 24px bar.
+      wave1.value = (6 + vol * 0.2) / 24;
+      wave2.value = (10 + vol * 0.3) / 24;
+      wave3.value = (14 + vol * 0.4) / 24;
+      wave4.value = (8 + vol * 0.3) / 24;
+      wave5.value = (6 + vol * 0.2) / 24;
     }
   });
 
@@ -144,11 +156,11 @@ useEffect(() => {
     } else {
       cancelAnimation(pulseAnim);
       pulseAnim.value = 1;
-      wave1.value = 8;
-      wave2.value = 14;
-      wave3.value = 24;
-      wave4.value = 18;
-      wave5.value = 10;
+      wave1.value = 8 / 24;
+      wave2.value = 14 / 24;
+      wave3.value = 1;
+      wave4.value = 18 / 24;
+      wave5.value = 10 / 24;
     }
 
     return () => {
@@ -680,6 +692,9 @@ const styles = StyleSheet.create({
   },
   waveBar: {
     width: 4,
+    height: 24,
+    // Grow upward when scaled, matching the previous height-based visuals.
+    transformOrigin: '50% 100%',
     backgroundColor: '#25d366',
     borderRadius: 2,
   },
