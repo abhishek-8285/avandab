@@ -1,6 +1,6 @@
 import 'react-native-gesture-handler';
 import './src/i18n';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, Modal, StatusBar } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
@@ -48,6 +48,7 @@ import { VoiceKharchaSheet } from './src/components/VoiceKharchaSheet';
 import { Trip } from './src/types/api';
 import { mapTripStatus, RawTrip } from './src/utils/tripMapper';
 import { BottomTabs } from './src/features/shell/components/BottomTabs';
+import { FlashList } from '@shopify/flash-list';
 
 const queryClient = new QueryClient();
 
@@ -406,6 +407,31 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
     logout();
   };
 
+  // Stable per-trip callback: FlashList rows render memoized TripCards, which
+  // only skip re-renders when callback identities survive parent state changes.
+  // FlashList rows render memoized TripCards; a memoized row wrapper owns the
+  // per-item closure so row props stay referentially stable across re-renders
+  // (fresh inline arrows in renderItem would defeat React.memo entirely).
+  const renderTripRow = useCallback(
+    ({ item }: { item: Trip }) => (
+      <TripCard
+        tripNumber={item.tripNumber}
+        driverName={item.driverName}
+        vehiclePlate={item.vehiclePlate}
+        origin={item.origin}
+        destination={item.destination}
+        status={item.status}
+        startTime={item.startTime}
+        advanceAmount={5000}
+        cargoWeight="18 Tons"
+        onPress={() => onStartNav && onStartNav(item)}
+        onNavigate={() => onStartNav && onStartNav(item)}
+      />
+    ),
+    [onStartNav]
+  );
+
+
   const { data: trips, isLoading } = useQuery<Trip[]>({
     queryKey: ['trips', driverIdentifier, token],
     queryFn: async () => {
@@ -571,23 +597,23 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
           <PaisaScreen tripId={undefined} onOpenExpenses={() => navigation.navigate('Expenses', {})} />
         </View>
       )}
-      {activeTab !== 'paisa' && (
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentPadding}>
-        {activeTab === 'trips' ? (
-          isLoading ? (
-            <>
-              <SkeletonLoader />
-              <SkeletonLoader />
-            </>
-          ) : (
-            (() => {
-              // ACTIVE: pending/in-progress work. HISTORY: delivered/completed/cancelled.
+      {activeTab === 'trips' && isLoading && (
+        <View style={[styles.content, styles.contentPadding]}>
+          <SkeletonLoader />
+          <SkeletonLoader />
+        </View>
+      )}
+      {activeTab === 'trips' && !isLoading && (() => {
+              // ACTIVE: pending/in-transit work. HISTORY: delivered/completed/cancelled.
+              // Derive header + first-card position up front so the FlashList below can
+              // inject the section header as ListHeaderComponent (v4 API: no ListHeader).
               const visibleTrips = (trips ?? []).filter((t) =>
                 tripFilter === 'active'
                   ? t.status === 'PENDING' || t.status === 'IN_TRANSIT'
                   : t.status === 'COMPLETED' || t.status === 'CANCELLED'
               );
-              if (visibleTrips.length === 0 && tripFilter === 'active') {
+              const showActiveEmpty = visibleTrips.length === 0 && tripFilter === 'active';
+              if (showActiveEmpty) {
                 return (
                   <View style={{ gap: 12 }}>
                     <TripCard
@@ -636,25 +662,18 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
                   </View>
                 );
               }
-              return visibleTrips.map((trip) => (
-                <TripCard
-                  key={trip.id}
-                  tripNumber={trip.tripNumber}
-                  driverName={trip.driverName}
-                  vehiclePlate={trip.vehiclePlate}
-                  origin={trip.origin}
-                  destination={trip.destination}
-                  status={trip.status}
-                  startTime={trip.startTime}
-                  advanceAmount={5000}
-                  cargoWeight="18 Tons"
-                  onPress={() => onStartNav && onStartNav(trip)}
-                  onNavigate={() => onStartNav && onStartNav(trip)}
+              return (
+                <FlashList
+                  data={visibleTrips}
+                  keyExtractor={(item) => item.id}
+                  style={styles.content}
+                  contentContainerStyle={styles.contentPadding}
+                  renderItem={renderTripRow}
                 />
-              ));
-            })()
-          )
-        ) : (
+              );
+            })()}
+      {activeTab !== 'paisa' && activeTab !== 'trips' && (
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentPadding}>
           <View style={{ gap: 12 }}>
             {/* Dispatch Header Banner */}
             <View style={styles.dispatchHeaderCard}>
@@ -829,7 +848,6 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
               </View>
             </View>
           </View>
-        )}
       </ScrollView>
       )}
 

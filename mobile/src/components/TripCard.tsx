@@ -20,7 +20,7 @@ interface TripCardProps {
   advanceAmount?: number;
 }
 
-export const TripCard: React.FC<TripCardProps> = ({
+const TripCardBase: React.FC<TripCardProps> = ({
   tripNumber,
   driverName,
   vehiclePlate,
@@ -509,3 +509,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 });
+
+// Memoized export: list parents (FlashList/ScrollView) re-render on scroll
+// state changes; memo skips unchanged cards when props are referentially
+// stable (list-performance-item-memo).
+export const TripCard = React.memo(TripCardBase);
