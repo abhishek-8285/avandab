@@ -284,12 +284,11 @@ func (h *ComplianceHandlers) CreateExemption(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	referer := r.Header.Get("Referer")
-	if referer != "" {
-		http.Redirect(w, r, referer, http.StatusSeeOther)
-		return
-	}
-	http.Redirect(w, r, "/trips", http.StatusSeeOther)
+	// safeRedirect provably returns only same-origin paths (covered by
+	// redirect_test.go), so an attacker-supplied Referer cannot bounce the
+	// user off-site. gosec's taint analysis cannot see through the helper.
+	target := safeRedirect(r, r.Header.Get("Referer"), "/trips")
+	http.Redirect(w, r, target, http.StatusSeeOther) //nolint:gosec // G710: safeRedirect returns only same-origin paths (see redirect_test.go)
 }
 
 // ListExemptions returns exemptions for an entity.

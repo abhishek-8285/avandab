@@ -409,9 +409,9 @@ func (h *MaintenanceHandlers) OverrideBlock(w http.ResponseWriter, r *http.Reque
 		uuid.NewString(), actorID, vehicleID, fmt.Sprintf(`{"reason":%q,"override_by":%q}`, reason, actorID),
 	)
 
-	redirect := r.Header.Get("Referer")
-	if redirect == "" {
-		redirect = "/vehicles/" + vehicleID
-	}
-	http.Redirect(w, r, redirect, http.StatusSeeOther)
+	// safeRedirect provably returns only same-origin paths (covered by
+	// redirect_test.go), so an attacker-supplied Referer cannot bounce the
+	// user off-site. gosec's taint analysis cannot see through the helper.
+	target := safeRedirect(r, r.Header.Get("Referer"), "/vehicles/"+vehicleID)
+	http.Redirect(w, r, target, http.StatusSeeOther) //nolint:gosec // G710: safeRedirect returns only same-origin paths (see redirect_test.go)
 }
