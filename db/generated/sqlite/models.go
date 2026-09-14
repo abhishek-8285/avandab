@@ -9,6 +9,21 @@ import (
 	"time"
 )
 
+type AccessReview struct {
+	ID         string         `json:"id"`
+	TenantID   string         `json:"tenant_id"`
+	UserID     string         `json:"user_id"`
+	RoleName   string         `json:"role_name"`
+	Period     string         `json:"period"`
+	Status     string         `json:"status"`
+	ReviewedBy sql.NullString `json:"reviewed_by"`
+	ReviewedAt sql.NullTime   `json:"reviewed_at"`
+	DueAt      time.Time      `json:"due_at"`
+	Notes      string         `json:"notes"`
+	CreatedAt  time.Time      `json:"created_at"`
+	UpdatedAt  time.Time      `json:"updated_at"`
+}
+
 type AccountingGlRule struct {
 	ID            string         `json:"id"`
 	EventType     string         `json:"event_type"`

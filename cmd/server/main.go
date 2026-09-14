@@ -1059,6 +1059,13 @@ func main() {
 		r.With(privacyGuard).Post("/api/v1/privacy/breaches/{id}/notify", privacyAPI.NotifyBreachAPI)
 		r.With(privacyGuard).Post("/api/v1/privacy/breaches/{id}/detail", privacyAPI.DetailBreachAPI)
 		r.With(privacyGuard).Post("/api/v1/privacy/breaches/{id}/close", privacyAPI.CloseBreachAPI)
+		// Access re-certification ledger (00155): same governance surface.
+		accessAPI := &handlers.AccessReviewHandlers{App: app}
+		r.With(privacyGuard).Get("/api/v1/access-reviews/due", accessAPI.ListDueReviewsAPI)
+		r.With(privacyGuard).Post("/api/v1/access-reviews/open", accessAPI.OpenReviewAPI)
+		r.With(privacyGuard).Get("/api/v1/access-reviews/{id}", accessAPI.GetReviewAPI)
+		r.With(privacyGuard).Post("/api/v1/access-reviews/{id}/certify", accessAPI.CertifyReviewAPI)
+		r.With(privacyGuard).Post("/api/v1/access-reviews/{id}/revoke", accessAPI.RevokeReviewAPI)
 		if ragHandler != nil {
 			r.With(featureGate("rag")).Group(ragHandler.RegisterRoutes)
 		}

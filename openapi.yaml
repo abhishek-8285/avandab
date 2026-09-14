@@ -9036,6 +9036,153 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/v1/access-reviews/due:
+    get:
+      tags:
+        - AccessReview
+      summary: List due access reviews
+      description: Requires privacy:manage. Pending reviews past due_at, oldest first (migration 00155).
+      responses:
+        '200':
+          description: Due watchlist.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reviews:
+                    type: array
+                    items:
+                      type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/access-reviews/open:
+    post:
+      tags:
+        - AccessReview
+      summary: Open an access review
+      description: Requires privacy:manage. Idempotent per tenant+user+period (never resets decided rows).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - period
+                - due_at
+              properties:
+                user_id:
+                  type: string
+                role_name:
+                  type: string
+                period:
+                  type: string
+                due_at:
+                  type: string
+      responses:
+        '200':
+          description: Review opened.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  id:
+                    type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/access-reviews/{id}:
+    get:
+      tags:
+        - AccessReview
+      summary: Get one access review
+      description: Requires privacy:manage. Tenant-scoped fail-closed (foreign id reads as 404).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Review.
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Review not found.
+
+  /api/v1/access-reviews/{id}/certify:
+    post:
+      tags:
+        - AccessReview
+      summary: Certify an access review
+      description: Requires privacy:manage. Pending-only; records reviewer and timestamp.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reviewed_by
+              properties:
+                reviewed_by:
+                  type: string
+      responses:
+        '200':
+          description: Review certified.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/access-reviews/{id}/revoke:
+    post:
+      tags:
+        - AccessReview
+      summary: Revoke access under review
+      description: Requires privacy:manage. Pending or certified rows; terminal after.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reviewed_by
+              properties:
+                reviewed_by:
+                  type: string
+                note:
+                  type: string
+      responses:
+        '200':
+          description: Access revoked.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/v1/vehicle-assignments/{id}/accept:
     post:
       tags:

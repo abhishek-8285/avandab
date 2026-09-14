@@ -93,6 +93,7 @@ type Services struct {
 	OpsAlerts      *OpsAlertService
 	Experiments    *ExperimentsService
 	Privacy        *PrivacyService
+	AccessReviews  *AccessReviewService
 	BreachWatch    *BreachWatchService
 	FounderSignals *FounderSignalsService
 	FounderAudit   *FounderAuditService
@@ -185,6 +186,7 @@ func NewServices(store Store, cfg *config.Config, log *slog.Logger, eventBus eve
 	s.Documents = NewDocumentService(bs, s.Files)
 	s.Audit = &AuditLogService{baseService: bs}
 	s.Privacy = &PrivacyService{baseService: bs}
+	s.AccessReviews = &AccessReviewService{baseService: bs}
 	s.Compliance = &ComplianceService{baseService: bs}
 	s.Trips.compliance = s.Compliance
 	s.Settlements = &DriverSettlementService{
