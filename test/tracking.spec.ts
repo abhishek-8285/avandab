@@ -3,8 +3,8 @@ import { registerFreshUser } from './utils/register';
 
 // Browser-level verification for the tracking page rework:
 //   1. Full-bleed layout (no double padding from layout <main>)
-//   2. Google Maps attribution rendered AND not covered by overlay panels
-//   3. Real Google map tile traffic
+//   2. OpenStreetMap attribution rendered AND not covered by overlay panels
+//   3. Real OSM tile traffic
 //   4. Telemetry ingestion renders registry rows, markers, counters
 //   5. Healthy SSE pauses REST polling (no duplicate traffic)
 //   6. Stream loss flips beacon to amber "Connecting…" and resumes polling
@@ -99,7 +99,7 @@ test.describe('tracking page', () => {
     await page.route('**/api/v1/telemetry/geofences**', (route) => route.fulfill({ json: [] }));
 
     let osmTileRequests = 0;
-    await page.route(/mt1\.google\.com\//, async (route) => {
+    await page.route(/tile\.openstreetmap\.org\//, async (route) => {
       osmTileRequests++;
       await route.continue();
     });
@@ -134,7 +134,7 @@ test.describe('tracking page', () => {
     // ── 2. Attribution present, visible, and actually clickable-through ──
     const attribution = page.locator('.leaflet-control-attribution');
     await expect(attribution).toBeVisible();
-    await expect(attribution).toContainText('Google Maps');
+    await expect(attribution).toContainText('OpenStreetMap');
     const uncovered = await page.evaluate(() => {
       const el = document.querySelector('.leaflet-control-attribution') as HTMLElement;
       if (!el) return false;

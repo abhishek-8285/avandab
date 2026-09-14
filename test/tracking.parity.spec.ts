@@ -64,13 +64,14 @@ test.describe('tracking parity panel', () => {
     // minimum viable onboarding so /tracking renders instead of setup wizard.
     await page.goto('/login');
     const origin = new URL(page.url()).origin;
+    const onboardEmail = `ops-parity-${Date.now()}@test.local`;
     const onboard = await page.request.post('/company/onboard', {
       headers: { Origin: origin, Referer: `${origin}/company/onboard` },
       form: {
         company_name: 'Parity Fleet Pvt Ltd',
         address: 'MIDC Bhosari, Pune 411026',
         phone: '9999999999',
-        email,
+        email: onboardEmail,
       },
       maxRedirects: 0,
     });
