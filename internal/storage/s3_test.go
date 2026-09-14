@@ -67,6 +67,7 @@ type fullS3Config struct {
 	region    string
 	accessKey string
 	secretKey string
+	allowed   string
 }
 
 func (c *fullS3Config) GetDriver() string            { return c.driver }
@@ -76,6 +77,7 @@ func (c *fullS3Config) GetS3Endpoint() string        { return c.endpoint }
 func (c *fullS3Config) GetS3Region() string          { return c.region }
 func (c *fullS3Config) GetS3AccessKeyID() string     { return c.accessKey }
 func (c *fullS3Config) GetS3SecretAccessKey() string { return c.secretKey }
+func (c *fullS3Config) GetS3AllowedRegions() string  { return c.allowed }
 
 func TestS3Store_SaveOpenDelete(t *testing.T) {
 	client := newMockS3Client()
@@ -213,5 +215,49 @@ func TestNew_S3Validation(t *testing.T) {
 	}
 	if _, err := New(cfg3); err == nil {
 		t.Error("expected error for missing S3 secret key")
+	}
+}
+
+// Residency guard (RBI localisation posture): non-allowlisted regions fail
+// closed at construction, before any byte can leave the jurisdiction.
+func TestNew_S3RegionAllowlist(t *testing.T) {
+	base := &fullS3Config{
+		driver:    "s3",
+		bucket:    "my-bucket",
+		accessKey: "test",
+		secretKey: "test",
+	}
+	// Explicit offshore region refused under the default allowlist.
+	offshore := *base
+	offshore.region = "us-east-1"
+	if _, err := New(&offshore); err == nil {
+		t.Error("expected residency rejection for us-east-1 under default allowlist")
+	}
+	// Mumbai + R2 auto pass by default.
+	for _, okRegion := range []string{"", "auto", "ap-south-1"} {
+		cfg := *base
+		cfg.region = okRegion
+		if _, err := New(&cfg); err != nil {
+			t.Errorf("region %q must pass default allowlist, got: %v", okRegion, err)
+		}
+	}
+	// Explicit opt-in admits other regions.
+	cfg := *base
+	cfg.region = "eu-west-1"
+	cfg.allowed = "auto,ap-south-1,eu-west-1"
+	if _, err := New(&cfg); err != nil {
+		t.Errorf("allowlisted eu-west-1 must pass, got: %v", err)
+	}
+}
+
+func TestResolveS3Region(t *testing.T) {
+	if _, err := ResolveS3Region("us-east-1", ""); err == nil {
+		t.Error("default allowlist must reject us-east-1")
+	}
+	if got, err := ResolveS3Region("AP-SOUTH-1", ""); err != nil || got != "AP-SOUTH-1" {
+		t.Errorf("matching must be case-insensitive, got %q, %v", got, err)
+	}
+	if _, err := ResolveS3Region("us-east-1", "us-east-1"); err != nil {
+		t.Errorf("explicit allowlist must admit, got: %v", err)
 	}
 }

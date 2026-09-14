@@ -47,11 +47,18 @@ if [ -n "${R2_BUCKET_NAME:-}" ] && [ -n "${R2_ACCOUNT_ID:-}" ] && [ -n "${R2_ACC
   fi
 fi
 
-# Sync to Google Drive (5TB Vault) if rclone remote 'gdrive' is configured
+# Sync to Google Drive (5TB Vault) if rclone remote 'gdrive' is configured.
+# Residency gate: Drive stores globally, so an offshore DB copy needs explicit
+# opt-in (RBI localisation posture). Without ALLOW_OFFSHORE_BACKUP=1 the local
+# + R2 copies are the backup set and Drive is skipped loudly, never silently.
 if command -v rclone >/dev/null 2>&1 && rclone listremotes 2>/dev/null | grep -q "^gdrive:"; then
-  echo "==> Syncing backup to 5TB Google Drive (Avandab_Backups)..."
-  rclone copy "${COMPRESSED_FILE}" "gdrive:Avandab_Backups/$(date -u +%Y)/$(date -u +%m)/"
-  echo "Google Drive upload complete!"
+  if [ "${ALLOW_OFFSHORE_BACKUP:-0}" = "1" ]; then
+    echo "==> Syncing backup to 5TB Google Drive (Avandab_Backups)..."
+    rclone copy "${COMPRESSED_FILE}" "gdrive:Avandab_Backups/$(date -u +%Y)/$(date -u +%m)/"
+    echo "Google Drive upload complete!"
+  else
+    echo "Notice: gdrive remote present but ALLOW_OFFSHORE_BACKUP!=1 — skipping offshore copy (local + R2 retained)"
+  fi
 fi
 
 echo "==> Backup complete successfully."
