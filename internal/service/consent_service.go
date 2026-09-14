@@ -105,3 +105,29 @@ func (s *UserService) ConsentStatus(ctx context.Context, tenantID, userID string
 	}
 	return grantedAt, withdrawnAt, err
 }
+
+// ConsentNeedsRefresh reports whether the user's ledger row is no longer bound
+// to the current notice: a stale notice_version or a standing withdrawal. This
+// is the future redirect trigger sending stale users back to the consent
+// notice page for re-grant. Missing row (legacy) and unknown stores stay
+// false; only an explicit row can demand a refresh. Errors fail closed to
+// false — the login withdrawal gate, not this helper, enforces safety.
+func (s *UserService) ConsentNeedsRefresh(ctx context.Context, tenantID, userID string) bool {
+	db := s.consentDB()
+	if db == nil {
+		return false
+	}
+	var version string
+	var withdrawn sql.NullTime
+	err := repository.QueryRowTx(ctx, db, `
+		SELECT notice_version, withdrawn_at FROM user_consents
+		WHERE tenant_id = $1 AND user_id = $2 AND purpose = $3`,
+		tenantID, userID, ConsentPurposePlatformUse).Scan(&version, &withdrawn)
+	if err != nil {
+		return false
+	}
+	if withdrawn.Valid {
+		return true
+	}
+	return version != ConsentNoticeVersion
+}

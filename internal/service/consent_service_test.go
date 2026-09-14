@@ -71,6 +71,31 @@ func TestConsent_WithdrawBlocksLoginUntilRegrant(t *testing.T) {
 	require.NoError(t, loginConsentUser(t, svcs, "withdraw@consent.test"))
 }
 
+// ConsentNeedsRefresh is the future version re-bind trigger: stale notice
+// version or standing withdrawal demands a refresh; fresh and legacy stay quiet.
+func TestConsent_NeedsRefresh(t *testing.T) {
+	svcs := newConsentTestServices(t)
+	ctx := context.Background()
+	u := registerConsentUser(t, svcs, "refresh@consent.test")
+
+	require.False(t, svcs.Users.ConsentNeedsRefresh(ctx, u.TenantID, string(u.ID)))
+
+	db := svcs.DB()
+	require.NotNil(t, db)
+	_, err := db.Exec(`UPDATE user_consents SET notice_version = 'v0'
+		WHERE tenant_id = $1 AND user_id = $2`, u.TenantID, string(u.ID))
+	require.NoError(t, err)
+	require.True(t, svcs.Users.ConsentNeedsRefresh(ctx, u.TenantID, string(u.ID)))
+
+	require.NoError(t, svcs.Users.GrantConsent(ctx, u.TenantID, string(u.ID)))
+	require.False(t, svcs.Users.ConsentNeedsRefresh(ctx, u.TenantID, string(u.ID)))
+
+	require.NoError(t, svcs.Users.WithdrawConsent(ctx, u.TenantID, string(u.ID)))
+	require.True(t, svcs.Users.ConsentNeedsRefresh(ctx, u.TenantID, string(u.ID)))
+
+	require.False(t, svcs.Users.ConsentNeedsRefresh(ctx, u.TenantID, "no-such-user"))
+}
+
 // No ledger row (legacy / OAuth-linked / admin-created users) stays allowed —
 // only an explicit withdrawal blocks, mirroring tenantActive.
 func TestConsent_LegacyNoRowAllowed(t *testing.T) {

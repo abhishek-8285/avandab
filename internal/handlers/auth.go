@@ -129,6 +129,80 @@ func (h *AuthHandlers) GrantConsentAPI(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true, "granted": true})
 }
 
+// consentNoticeData builds the flat template data for consent_notice.html.
+func consentNoticeData(extra map[string]interface{}) PageData {
+	if extra == nil {
+		extra = map[string]interface{}{}
+	}
+	extra["Purpose"] = service.ConsentPurposePlatformUse
+	extra["NoticeVersion"] = service.ConsentNoticeVersion
+	return PageData{Title: "Data Consent Notice", Extra: extra}
+}
+
+// ConsentNoticePage renders the DPDP platform-use data notice (GET /consent,
+// auth required): plain-language what/purpose/rights plus the explicit
+// agree-checkbox grant form. Version re-bind redirects are NOT wired here —
+// UserService.ConsentNeedsRefresh is the future trigger.
+func (h *AuthHandlers) ConsentNoticePage(w http.ResponseWriter, r *http.Request) {
+	tenantID, userID, ok := h.consentIdentity(r)
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	grantedAt, withdrawnAt, err := h.Services.Users.ConsentStatus(r.Context(), tenantID, userID)
+	if err != nil {
+		http.Error(w, "could not read consent status", http.StatusInternalServerError)
+		return
+	}
+	h.renderAuthPage(w, "consent_notice.html", consentNoticeData(map[string]interface{}{
+		"Granted":   grantedAt.Valid,
+		"Withdrawn": withdrawnAt.Valid,
+	}))
+}
+
+// ConsentGrantForm handles explicit grant/withdraw posts from the consent
+// notice page (POST /consent). A grant requires the agree=yes checkbox — a
+// post without it re-renders the notice with an error and records nothing.
+// action=withdraw records a withdrawal instead (the page half of "withdraw
+// anytime via /api/v1/consent/withdraw or the page").
+func (h *AuthHandlers) ConsentGrantForm(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Redirect(w, r, "/consent", http.StatusSeeOther)
+		return
+	}
+	tenantID, userID, ok := h.consentIdentity(r)
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+	if r.PostFormValue("action") == "withdraw" {
+		if err := h.Services.Users.WithdrawConsent(r.Context(), tenantID, userID); err != nil {
+			h.renderAuthPage(w, "consent_notice.html", consentNoticeData(map[string]interface{}{
+				"Error": "Could not record withdrawal, please try again.",
+			}))
+			return
+		}
+		h.renderAuthPage(w, "consent_notice.html", consentNoticeData(map[string]interface{}{
+			"Withdrawn":  true,
+			"SuccessMsg": "Consent withdrawn. You will not be able to log in until you grant consent again.",
+		}))
+		return
+	}
+	if r.PostFormValue("agree") != "yes" {
+		h.renderAuthPage(w, "consent_notice.html", consentNoticeData(map[string]interface{}{
+			"Error": "Please tick the checkbox to confirm you have read the notice — consent is only recorded with your explicit agreement.",
+		}))
+		return
+	}
+	if err := h.Services.Users.GrantConsent(r.Context(), tenantID, userID); err != nil {
+		h.renderAuthPage(w, "consent_notice.html", consentNoticeData(map[string]interface{}{
+			"Error": "Could not record consent, please try again.",
+		}))
+		return
+	}
+	http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+}
+
 // ResetPasswordAPI redeems a single-use reset token and sets a new password
 // (JSON API counterpart of SubmitResetPassword).
 func (h *AuthHandlers) ResetPasswordAPI(w http.ResponseWriter, r *http.Request) {

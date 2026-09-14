@@ -1518,6 +1518,9 @@ func main() {
 			// Profile (auth)
 			r.Get("/profile", app.Auth.ProfilePage)
 			r.Post("/profile", app.Auth.UpdateProfile)
+			// DPDP consent notice (HTML page half of the consent ledger).
+			r.Get("/consent", app.Auth.ConsentNoticePage)
+			r.Post("/consent", app.Auth.ConsentGrantForm)
 			r.Get("/change-password", app.Auth.ChangePasswordPage)
 			// Rate-limited: prevents unlimited old-password guessing inside
 			// an active session window.
