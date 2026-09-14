@@ -1801,6 +1801,31 @@ func main() {
 		})
 	}
 
+	// DPDP breach overdue watch: hourly sweep raising a critical ops alert
+	// per incident past the 72h filing deadline (single-writer via leader).
+	if services.BreachWatch != nil {
+		runLeadered(services.BreachWatch.SweepName(), func(ctx context.Context) {
+			sweepOnce := func() {
+				if n, err := services.BreachWatch.SweepOverdue(ctx); err != nil {
+					logger.Error("breach overdue sweep failed", "error", err)
+				} else if n > 0 {
+					logger.Info("breach overdue sweep raised alerts", "raised", n)
+				}
+			}
+			sweepOnce()
+			ticker := time.NewTicker(time.Hour)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					sweepOnce()
+				}
+			}
+		})
+	}
+
 	// Fuel claim audit pass (Spec 03 §3.2 step 2): runs on its own 5-minute
 	// ticker rather than inside the engine tick so the audit service stays
 	// independent of the anomaly engine (and avoids an internal/fuel →

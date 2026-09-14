@@ -93,6 +93,7 @@ type Services struct {
 	OpsAlerts      *OpsAlertService
 	Experiments    *ExperimentsService
 	Privacy        *PrivacyService
+	BreachWatch    *BreachWatchService
 	FounderSignals *FounderSignalsService
 	FounderAudit   *FounderAuditService
 	EWayBill       *ewaybill.EWayBillService
@@ -217,6 +218,9 @@ func NewServices(store Store, cfg *config.Config, log *slog.Logger, eventBus eve
 
 		// A/B experiments service (Spec 16 §5).
 		s.Experiments = NewExperimentsService(bs, dbGetter.DB())
+
+		// DPDP breach overdue watch: nil without raw DB, same as PNL.
+		s.BreachWatch = NewBreachWatchService(bs, dbGetter.DB(), s.Privacy, s.OpsAlerts)
 
 		// Founder signals + audit trail (Spec 16 §6, §7).
 		s.FounderAudit = NewFounderAuditService(bs, dbGetter.DB())
