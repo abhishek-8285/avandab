@@ -631,13 +631,13 @@ func TestRazorpayWebhook_PaymentCaptured_UsesInvoiceTenant(t *testing.T) {
 	)
 	require.NoError(t, uow.repos.invoices.Save(ctx, inv))
 
-	payload := fmt.Sprintf(`{
+	payload := `{
 		"event":"payment.captured",
 		"payload":{"payment":{"entity":{
 			"id":"pay_acme_1","order_id":"order_1","amount":100000,
 			"status":"captured","notes":{"invoice_id":"inv-acme-9"}
 		}}}
-	}`)
+	}`
 
 	sig := signWebhook(t, []byte(payload), testWebhookSecret)
 	paymentID, err := webhookUC.Execute(ctx, []byte(payload), sig)

@@ -305,7 +305,13 @@ type RazorpayWebhookPayload struct {
 	} `json:"payload"`
 }
 
-func (s *SettlementAppService) ProcessProviderWebhook(ctx context.Context, tenantID, providerEventID, signature string, body []byte) error {
+// ProcessProviderWebhook reconciles a signed Razorpay payout callback.
+// The caller-supplied tenant is intentionally ignored (kept in the signature as
+// `_` for API stability): provider callbacks arrive on an unauthenticated route
+// (POST /api/v1/webhooks/payouts/razorpay) so there is no trustworthy request
+// tenant. Tenancy is derived authoritatively from the payout row below, and
+// every downstream write is scoped to that value.
+func (s *SettlementAppService) ProcessProviderWebhook(ctx context.Context, _, providerEventID, signature string, body []byte) error {
 	if providerEventID == "" {
 		return errors.New("provider_event_id is required")
 	}
@@ -348,7 +354,8 @@ func (s *SettlementAppService) ProcessProviderWebhook(ctx context.Context, tenan
 	if err != nil || payout == nil {
 		return fmt.Errorf("payout lookup error: %w", err)
 	}
-	tenantID = payout.TenantID
+	// Authoritative tenant: comes from the stored payout, never from the caller.
+	tenantID := payout.TenantID
 
 	// 4. Financial Integrity: Validate amount and currency against local instruction
 	if entity.Amount > 0 {
