@@ -20,6 +20,7 @@ import (
 //  2. Every chip-family token inside a Go `class="..."` attribute must be
 //     safelisted (dashboard `badge-*` template DATA keys and prose like
 //     "one-line" live outside class attributes and are correctly ignored).
+//
 // Compiled per call (not package-level): the shared-state audit forbids
 // package vars in test files, and two compilations per run are noise.
 func safelistPattern() *regexp.Regexp {
