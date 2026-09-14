@@ -1,13 +1,14 @@
 package fastag
 
 import (
+	"context"
 	"testing"
 	"time"
 )
 
 // LoadConfig with nil DB must return safe defaults without touching storage.
 func TestLoadConfig_NilDBDefaults(t *testing.T) {
-	cfg := LoadConfig(nil)
+	cfg := LoadConfig(context.Background(), nil)
 	if !cfg.AutoKharcha {
 		t.Error("AutoKharcha should default to true")
 	}

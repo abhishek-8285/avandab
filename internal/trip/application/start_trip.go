@@ -116,7 +116,7 @@ func (uc *StartTripUseCase) checkDriverCompliance(ctx ports.TxContext, driverID 
 		if isExempt(ctx, "driver", driverID, "license") {
 			return nil
 		}
-		return fmt.Errorf("Dispatch blocked: driver license expired (compliance)")
+		return fmt.Errorf("dispatch blocked: driver license expired (compliance)")
 	}
 	return nil
 }
@@ -142,14 +142,14 @@ func (uc *StartTripUseCase) checkVehicleCompliance(ctx ports.TxContext, vehicleI
 			if isExempt(ctx, "vehicle", vehicleID, expiry.name) {
 				continue
 			}
-			return fmt.Errorf("Dispatch blocked: vehicle %s expired (compliance)", expiry.name)
+			return fmt.Errorf("dispatch blocked: vehicle %s expired (compliance)", expiry.name)
 		}
 	}
 
 	// PUC check
 	if puc := getPUCExpiry(ctx, vehicleID); puc != nil && !puc.IsZero() && puc.Before(now) {
 		if !isExempt(ctx, "vehicle", vehicleID, "puc") {
-			return fmt.Errorf("Dispatch blocked: vehicle PUC expired (compliance)")
+			return fmt.Errorf("dispatch blocked: vehicle PUC expired (compliance)")
 		}
 	}
 

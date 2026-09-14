@@ -137,7 +137,7 @@ func (h *Handler) handleSearch(w http.ResponseWriter, r *http.Request) {
 		req.TopK = 5
 	}
 
-	result, err := h.service.Query(req.Query, req.TopK)
+	result, err := h.service.Query(r.Context(), req.Query, req.TopK)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(APIError{Error: err.Error()})
@@ -193,7 +193,7 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	count, err := h.service.IndexDirectory(req.Directory)
+	count, err := h.service.IndexDirectory(r.Context(), req.Directory)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(APIError{Error: err.Error()})
@@ -211,7 +211,7 @@ func (h *Handler) handleIndex(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) handleStats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	count, err := h.service.Stats()
+	count, err := h.service.Stats(r.Context())
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(APIError{Error: err.Error()})
@@ -254,7 +254,7 @@ func (h *Handler) handleReindex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	count, err := h.service.Reindex(req.Directory)
+	count, err := h.service.Reindex(r.Context(), req.Directory)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(APIError{Error: err.Error()})
@@ -298,7 +298,7 @@ func (h *Handler) handleTeach(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	count, err := h.service.Teach(req.Name, req.Content)
+	count, err := h.service.Teach(r.Context(), req.Name, req.Content)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(APIError{Error: err.Error()})
@@ -359,7 +359,7 @@ func (h *Handler) handleUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	tmpFile.Close()
 
-	count, err := h.service.UploadFile(tmpPath)
+	count, err := h.service.UploadFile(r.Context(), tmpPath)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(APIError{Error: err.Error()})

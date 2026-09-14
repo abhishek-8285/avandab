@@ -49,6 +49,7 @@ func RequireCompanyCompliance(settings CompanySettingsReader) func(http.Handler)
 					Value:    "Please complete mandatory company compliance details to unlock fleet operations.",
 					Path:     "/",
 					HttpOnly: true,
+					Secure:   true,
 					SameSite: http.SameSiteLaxMode,
 					MaxAge:   30,
 				})

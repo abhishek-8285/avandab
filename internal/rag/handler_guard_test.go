@@ -48,6 +48,9 @@ func TestHandler_NoGuards_ReachesHandlers(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Close before t.TempDir() cleanup: Windows cannot unlink an open
+	// vectors.db, so a leaked handle fails the test on cleanup.
+	t.Cleanup(func() { _ = store.Close() })
 	svc := NewService(NewHashEmbedder(64), store, 500, 50, t.TempDir())
 	h := NewHandler(svc)
 

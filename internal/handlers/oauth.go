@@ -68,7 +68,7 @@ func (h *GoogleOAuthHandlers) Begin(w http.ResponseWriter, r *http.Request) {
 		Value:    state,
 		Path:     "/auth/google",
 		HttpOnly: true,
-		Secure:   h.Config.CookieSecure,
+		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   600,
 	})
@@ -81,8 +81,8 @@ func (h *GoogleOAuthHandlers) Begin(w http.ResponseWriter, r *http.Request) {
 // password login.
 func (h *GoogleOAuthHandlers) Callback(w http.ResponseWriter, r *http.Request) {
 	clearState := func() {
-		http.SetCookie(w, &http.Cookie{Name: googleStateCookie, Value: "", Path: "/auth/google", MaxAge: -1})
-		http.SetCookie(w, &http.Cookie{Name: "g_state", Value: "", Path: "/auth/google", MaxAge: -1})
+		http.SetCookie(w, &http.Cookie{Name: googleStateCookie, Value: "", Path: "/auth/google", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: -1})
+		http.SetCookie(w, &http.Cookie{Name: "g_state", Value: "", Path: "/auth/google", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: -1})
 	}
 
 	if !h.Enabled() {
@@ -201,16 +201,12 @@ func (h *GoogleOAuthHandlers) Callback(w http.ResponseWriter, r *http.Request) {
 // flashRedirect sets a short-lived flash_error cookie and redirects — the
 // established auth-page error idiom (see SubmitResetPassword).
 func (h *GoogleOAuthHandlers) flashRedirect(w http.ResponseWriter, r *http.Request, msg, target string) {
-	secure := false
-	if h.Config != nil {
-		secure = h.Config.CookieSecure
-	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     "flash_error",
 		Value:    msg,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   secure,
+		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   10,
 	})

@@ -260,6 +260,9 @@ func TestDriverStatusAndIssues(t *testing.T) {
 	assert.Equal(t, "open", created["status"])
 
 	resp5, err5 := http.Get(srv.URL + "/api/v1/drivers/me/issues")
+	if resp5 != nil && resp5.Body != nil {
+		defer resp5.Body.Close()
+	}
 	require.NoError(t, err5)
 	require.Equal(t, 200, resp5.StatusCode)
 	var list struct {

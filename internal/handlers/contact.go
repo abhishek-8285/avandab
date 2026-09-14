@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"math/big"
@@ -63,7 +64,7 @@ func (h *ContactHandlers) Page(w http.ResponseWriter, r *http.Request) {
 	var searchErr string
 
 	if ticketNo != "" {
-		ticket, searchErr = h.fetchTicketByNumber(ticketNo, email)
+		ticket, searchErr = h.fetchTicketByNumber(r.Context(), ticketNo, email)
 	}
 
 	pd := PageData{
@@ -132,7 +133,7 @@ func (h *ContactHandlers) Submit(w http.ResponseWriter, r *http.Request) {
 	id := uuid.New().String()
 	ticketNo := generateTicketNumber()
 
-	_, err := h.DB.Exec(`
+	_, err := h.DB.ExecContext(r.Context(), `
 		INSERT INTO contact_submissions (id, ticket_number, name, email, phone, company_name, subject, category, message, status)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
 	`, id, ticketNo, name, email, phone, company, subject, category, message)
@@ -164,14 +165,14 @@ func (h *ContactHandlers) StatusCheck(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/contact-us?"+query.Encode(), http.StatusSeeOther)
 }
 
-func (h *ContactHandlers) fetchTicketByNumber(ticketNo, email string) (*ContactTicket, string) {
+func (h *ContactHandlers) fetchTicketByNumber(ctx context.Context, ticketNo, email string) (*ContactTicket, string) {
 	if ticketNo == "" || email == "" {
 		return nil, "Enter both your ticket number and the email address you used to submit it."
 	}
 
 	var t ContactTicket
 
-	err := h.DB.QueryRow(`
+	err := h.DB.QueryRowContext(ctx, `
 		SELECT id, ticket_number, name, email, COALESCE(phone, ''), COALESCE(company_name, ''), subject, category, message, status, created_at, updated_at
 		FROM contact_submissions
 		WHERE ticket_number = $1 AND email = $2

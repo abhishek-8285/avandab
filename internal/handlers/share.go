@@ -507,17 +507,12 @@ func (h *ShareHandlers) VerifyPIN(w http.ResponseWriter, r *http.Request) {
 			slog.WarnContext(r.Context(), "share PIN unlock counter reset failed", slog.Any("error", sErr))
 		}
 
-		isSecure := false
-		if h.Config != nil && h.Config.CookieSecure {
-			isSecure = true
-		}
-
 		http.SetCookie(w, &http.Cookie{
 			Name:     "share_pin_" + tokenHash,
 			Value:    cookieVal,
 			Path:     "/share/" + token,
 			HttpOnly: true,
-			Secure:   isSecure,
+			Secure:   true,
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   int(ttl.Seconds()),
 		})

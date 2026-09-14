@@ -47,6 +47,12 @@
   --color-error-container: #fee2e2;
   --color-on-error-container: #991b1b;
 
+  /* Warning container pair — alert_inbox severity-2 badge used
+     bg-warning-container/text-on-warning-container, which were never defined,
+     so rank-2 (warning) alerts rendered with no background at all. */
+  --color-warning-container: #fef3c7;
+  --color-on-warning-container: #92400e;
+
   --color-background: #f3f5f9;
   --color-on-background: #0f172a;
   --color-surface: #f3f5f9;
@@ -135,6 +141,16 @@
   --spacing-margin-edge: 16px;
   --spacing-section-gap: 24px;
   --spacing-container-max: 100%;
+
+  /* Modal / dialog entry. Templates used `animate-fade-in`, but no such
+     animation was ever defined, so the class was a silent no-op and the
+     modal popped in with no transition. Motion matches .auth-enter. */
+  --animate-fade-in: fadeIn 250ms cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+  }
 }
 
 /* Dark mode via .dark class */

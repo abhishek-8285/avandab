@@ -156,7 +156,7 @@ func ragSearchTool(svc *rag.Service) *RegisteredTool {
 			if in.TopK <= 0 {
 				in.TopK = 5
 			}
-			res, err := svc.Query(in.Query, in.TopK)
+			res, err := svc.Query(ctx, in.Query, in.TopK)
 			if err != nil {
 				return "", err
 			}

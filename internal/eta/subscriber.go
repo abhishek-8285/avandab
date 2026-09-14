@@ -34,8 +34,6 @@ func (s *EtaService) SubscribeTripEvents(bus events.EventBus, logger *slog.Logge
 				tripID = v
 			} else if v, ok := p["trip_id"].(string); ok {
 				tripID = v
-			} else if v, ok := p["TripID"].(interface{}); ok {
-				_ = v
 			}
 			if tid, ok := p["TenantID"].(string); ok && tid != "" {
 				tenantID = tid

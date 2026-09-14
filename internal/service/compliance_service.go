@@ -77,7 +77,7 @@ func (s *ComplianceService) CheckDispatchCompliance(ctx context.Context, driverI
 			return ComplianceCheckResult{Valid: false, Blocked: true, Reason: err.Error()}, err
 		}
 		if !driverRes.Valid || driverRes.Blocked {
-			return driverRes, fmt.Errorf("Dispatch blocked: %s (compliance)", driverRes.Reason)
+			return driverRes, fmt.Errorf("dispatch blocked: %s (compliance)", driverRes.Reason)
 		}
 		result.Alerts = append(result.Alerts, driverRes.Alerts...)
 	}
@@ -89,7 +89,7 @@ func (s *ComplianceService) CheckDispatchCompliance(ctx context.Context, driverI
 			return ComplianceCheckResult{Valid: false, Blocked: true, Reason: err.Error()}, err
 		}
 		if !vehRes.Valid || vehRes.Blocked {
-			return vehRes, fmt.Errorf("Dispatch blocked: %s (compliance)", vehRes.Reason)
+			return vehRes, fmt.Errorf("dispatch blocked: %s (compliance)", vehRes.Reason)
 		}
 		result.Alerts = append(result.Alerts, vehRes.Alerts...)
 	}

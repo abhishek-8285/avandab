@@ -72,20 +72,20 @@ func (v Vehicle) CanAssign() error {
 		if v.BlockedReason != nil && *v.BlockedReason != "" {
 			reason = *v.BlockedReason
 		}
-		return fmt.Errorf("Dispatch blocked: %s (compliance)", reason)
+		return fmt.Errorf("dispatch blocked: %s (compliance)", reason)
 	}
 	now := time.Now()
 	if !v.RCExpiry.IsZero() && v.RCExpiry.Before(now) {
-		return fmt.Errorf("Dispatch blocked: vehicle permit expired (compliance)")
+		return fmt.Errorf("dispatch blocked: vehicle permit expired (compliance)")
 	}
 	if !v.FitnessExpiry.IsZero() && v.FitnessExpiry.Before(now) {
-		return fmt.Errorf("Dispatch blocked: vehicle fitness expired (compliance)")
+		return fmt.Errorf("dispatch blocked: vehicle fitness expired (compliance)")
 	}
 	if !v.InsuranceExpiry.IsZero() && v.InsuranceExpiry.Before(now) {
-		return fmt.Errorf("Dispatch blocked: vehicle insurance expired (compliance)")
+		return fmt.Errorf("dispatch blocked: vehicle insurance expired (compliance)")
 	}
 	if v.PUCExpiry != nil && !v.PUCExpiry.IsZero() && v.PUCExpiry.Before(now) {
-		return fmt.Errorf("Dispatch blocked: vehicle PUC expired (compliance)")
+		return fmt.Errorf("dispatch blocked: vehicle PUC expired (compliance)")
 	}
 	if v.Status != VehicleAvailable {
 		return fmt.Errorf("vehicle must be available to be assigned; current status: %s", v.Status)

@@ -36,7 +36,7 @@ func (h *AuditLogHandlers) MarkAllRead(w http.ResponseWriter, r *http.Request) {
 		Value:    time.Now().UTC().Format(time.RFC3339),
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   h.Config.CookieSecure,
+		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   86400 * 30, // 30 days
 	})

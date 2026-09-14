@@ -323,7 +323,7 @@ func renderErrorFragment(w http.ResponseWriter, r *http.Request, title, msg stri
 func flashCookie(name, value string) *http.Cookie {
 	return &http.Cookie{
 		Name: name, Value: value, Path: "/",
-		HttpOnly: true, MaxAge: 5,
+		HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: 5,
 	}
 }
 
@@ -333,11 +333,11 @@ func readFlashCookies(r *http.Request, w http.ResponseWriter) flashPair {
 	var f flashPair
 	if c, err := r.Cookie("flash_success"); err == nil && c.Value != "" {
 		f.success = c.Value
-		http.SetCookie(w, &http.Cookie{Name: "flash_success", Value: "", Path: "/", MaxAge: -1})
+		http.SetCookie(w, &http.Cookie{Name: "flash_success", Value: "", Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: -1})
 	}
 	if c, err := r.Cookie("flash_error"); err == nil && c.Value != "" {
 		f.error = c.Value
-		http.SetCookie(w, &http.Cookie{Name: "flash_error", Value: "", Path: "/", MaxAge: -1})
+		http.SetCookie(w, &http.Cookie{Name: "flash_error", Value: "", Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: -1})
 	}
 	return f
 }

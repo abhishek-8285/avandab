@@ -95,7 +95,7 @@ func TestComplianceService_DriverLicenseGate(t *testing.T) {
 	// Verify CheckDispatchCompliance blocks
 	res, err := svcs.Compliance.CheckDispatchCompliance(ctx, drvID, "")
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Dispatch blocked: driver license expired (compliance)")
+	require.Contains(t, err.Error(), "dispatch blocked: driver license expired (compliance)")
 	require.True(t, res.Blocked)
 	require.False(t, res.Valid)
 
@@ -205,7 +205,7 @@ func TestTripService_ComplianceGateIntegration(t *testing.T) {
 	// Attempt StartTrip -> must be blocked by compliance gate!
 	_, err = svcs.Trips.StartTrip(ctx, domain.TripID(tripID))
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Dispatch blocked: driver license expired (compliance)")
+	require.Contains(t, err.Error(), "dispatch blocked: driver license expired (compliance)")
 
 	// Grant exemption -> StartTrip succeeds
 	err = svcs.Compliance.CreateExemption(ctx, service.ComplianceExemption{

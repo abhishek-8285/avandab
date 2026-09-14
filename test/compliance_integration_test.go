@@ -121,7 +121,7 @@ func TestSubTask4C_MasterComplianceSuite(t *testing.T) {
 		TenantID: "tenant-1",
 	})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Dispatch blocked: driver license expired (compliance)")
+	require.Contains(t, err.Error(), "dispatch blocked: driver license expired (compliance)")
 
 	// Check that ComplianceBlocked event creates an alert in canonical alerts table
 	_, _ = svcs.Compliance.CheckDispatchCompliance(ctx, drvExpiredID, "")
@@ -219,7 +219,7 @@ func TestSubTask4C_MasterComplianceSuite(t *testing.T) {
 		TenantID: "tenant-1",
 	})
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Dispatch blocked: driver license expired (compliance)")
+	require.Contains(t, err.Error(), "dispatch blocked: driver license expired (compliance)")
 
 	// 6. Path B (Service / Agent): Call trip_service.AssignVehicle with blocked vehicle -> assert typed error
 	vehBlockedID := "veh-blocked-3"
@@ -228,7 +228,7 @@ func TestSubTask4C_MasterComplianceSuite(t *testing.T) {
 
 	_, err = svcs.Trips.AssignVehicle(ctx, domain.TripID(tripID), domain.VehicleID(vehBlockedID))
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Dispatch blocked: vehicle insurance expired (compliance)")
+	require.Contains(t, err.Error(), "dispatch blocked: vehicle insurance expired (compliance)")
 
 	// 7. File Upload: Upload vehicle_rc PDF, assert saved to vehicles/ subdir and links
 	pdfData := []byte("%PDF-1.4 sample vehicle RC test content")

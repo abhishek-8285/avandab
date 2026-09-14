@@ -1205,7 +1205,7 @@
                     {{range $i, $s := .Feature.Steps}}
                     <div class="relative flex items-start gap-4 {{if ne $i 0}}pt-8{{end}}">
                         {{if ne $i (add (len $.Feature.Steps) -1)}}
-                        <div class="absolute left-5 top-12 h-full w-px bg-border-border-subtle"></div>
+                        <div class="absolute left-5 top-12 h-full w-px bg-border-subtle"></div>
                         {{end}}
                         <span class="relative z-10 flex h-10 w-10 flex-none items-center justify-center rounded-full bg-primary text-sm font-bold text-on-primary shadow-sm">{{add $i 1}}</span>
                         <div class="pb-2">

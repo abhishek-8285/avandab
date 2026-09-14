@@ -166,6 +166,13 @@ func TestP6_ProductionAudit_1000TelemetryIngestionConcurrency(t *testing.T) {
 
 	var wg sync.WaitGroup
 	latencies := make([]time.Duration, numEvents)
+	// successes counts inserts that returned no error. Tracked separately from
+	// `latencies` on purpose: on platforms whose monotonic clock is too coarse
+	// to time a fast in-memory insert, a *successful* insert can measure as
+	// exactly 0. Counting non-zero timings as successes therefore reports
+	// phantom data loss (observed: 559/1000 "lost" on Windows with all inserts
+	// returning nil error).
+	successes := 0
 	var mu sync.Mutex
 
 	start := time.Now()
@@ -191,6 +198,7 @@ func TestP6_ProductionAudit_1000TelemetryIngestionConcurrency(t *testing.T) {
 				if err == nil {
 					mu.Lock()
 					latencies[idx] = dur
+					successes++
 					mu.Unlock()
 				}
 			}
@@ -200,14 +208,18 @@ func TestP6_ProductionAudit_1000TelemetryIngestionConcurrency(t *testing.T) {
 	wg.Wait()
 	totalElapsed := time.Since(start)
 
-	// Filter valid latencies
+	// Zero-loss assertion: count successful inserts, not non-zero timings.
+	require.Equal(t, numEvents, successes, "All 1000 telemetry events must succeed with zero loss")
+
+	// Latency percentiles use only measurable (>0) samples. Sub-resolution
+	// timings are excluded from the stats but still counted as successes above.
 	var validLats []float64
 	for _, l := range latencies {
 		if l > 0 {
 			validLats = append(validLats, float64(l.Microseconds())/1000.0) // ms
 		}
 	}
-	require.Equal(t, numEvents, len(validLats), "All 1000 telemetry events must succeed with zero loss")
+	require.NotEmpty(t, validLats, "no measurable latency samples")
 	sort.Float64s(validLats)
 
 	p50 := validLats[int(float64(len(validLats))*0.50)]
@@ -223,7 +235,14 @@ func TestP6_ProductionAudit_1000TelemetryIngestionConcurrency(t *testing.T) {
 	t.Logf("P99 Latency : %.2f ms", p99)
 
 	// Assertions for SLA
-	assert.Less(t, p95, 25.0, "P95 latency should be under 25ms under local memory WAL")
+	// Wall-clock latency is only meaningful when this process is not sharing the
+	// CPU with the rest of the suite (`go test ./...` runs packages in parallel,
+	// so the tail here measures the scheduler as much as the database). The
+	// budget therefore comes from controlTowerP95Budget(), overridable via
+	// CONTROLTOWER_P95_MS — same mechanism as the reader-concurrency assertion
+	// below. Measured on an idle machine this test sits at P95 ~2-8ms.
+	budget := controlTowerP95Budget()
+	assert.Less(t, p95, budget, "P95 latency should be under %.0fms under local memory WAL (override: CONTROLTOWER_P95_MS)", budget)
 	assert.Greater(t, throughput, 500.0, "Throughput should exceed 500 events/sec")
 }
 
@@ -304,6 +323,10 @@ func TestP6_ProductionAudit_100ConcurrentControlTowerReads(t *testing.T) {
 	var wg sync.WaitGroup
 	latencies := make([]time.Duration, numReaders)
 	var mu sync.Mutex
+	// Count successes explicitly: time.Since can report 0 on coarse clocks
+	// when GetTrip returns via the singleflight fast path, so a zero
+	// latency is a valid success — not a missing sample.
+	successCount := 0
 
 	start := time.Now()
 
@@ -319,6 +342,7 @@ func TestP6_ProductionAudit_100ConcurrentControlTowerReads(t *testing.T) {
 			if err == nil && proj != nil {
 				mu.Lock()
 				latencies[readerID] = dur
+				successCount++
 				mu.Unlock()
 			}
 		}(i)
@@ -327,13 +351,14 @@ func TestP6_ProductionAudit_100ConcurrentControlTowerReads(t *testing.T) {
 	wg.Wait()
 	totalElapsed := time.Since(start)
 
+	require.Equal(t, numReaders, successCount, "all 100 concurrent reads must succeed")
 	var validLats []float64
 	for _, l := range latencies {
 		if l > 0 {
 			validLats = append(validLats, float64(l.Microseconds())/1000.0)
 		}
 	}
-	require.Equal(t, numReaders, len(validLats))
+	require.NotEmpty(t, validLats, "no measurable latency samples")
 	sort.Float64s(validLats)
 
 	p50 := validLats[int(float64(len(validLats))*0.50)]

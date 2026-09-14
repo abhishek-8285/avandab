@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"database/sql"
 	"strings"
 
@@ -37,9 +38,12 @@ func NewDBAdapter(db *sql.DB) *DBAdapter {
 }
 
 // LoadPolicy loads all policies from role_permissions and user_roles tables.
+// Its signature is fixed by casbin's persist.Adapter interface, so no caller
+// context can be threaded in; the adapter is used at enforcer construction and
+// on explicit Reload(), both outside any request scope.
 func (a *DBAdapter) LoadPolicy(m model.Model) error {
 	// 1. Load role permissions
-	rows, err := a.db.Query(`
+	rows, err := a.db.QueryContext(context.Background(), `
 		SELECT r.name, p.name
 		FROM role_permissions rp
 		JOIN roles r ON rp.role_id = r.id
@@ -64,7 +68,7 @@ func (a *DBAdapter) LoadPolicy(m model.Model) error {
 	}
 
 	// 2. Load user roles
-	gRows, err := a.db.Query(`
+	gRows, err := a.db.QueryContext(context.Background(), `
 		SELECT u.id, r.name
 		FROM user_roles ur
 		JOIN users u ON ur.user_id = u.id

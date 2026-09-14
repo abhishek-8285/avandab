@@ -332,19 +332,19 @@ func (a *VehicleAggregate) CanAssign(now time.Time) error {
 		if a.BlockedReason != "" {
 			reason = a.BlockedReason
 		}
-		return errors.New("Dispatch blocked: " + reason + " (compliance)")
+		return errors.New("dispatch blocked: " + reason + " (compliance)")
 	}
 	if a.RCExpiry != nil && !a.RCExpiry.IsZero() && a.RCExpiry.Before(now) {
-		return errors.New("Dispatch blocked: vehicle RC expired (compliance)")
+		return errors.New("dispatch blocked: vehicle RC expired (compliance)")
 	}
 	if !a.FitnessExpiry.IsZero() && a.FitnessExpiry.Before(now) {
-		return errors.New("Dispatch blocked: vehicle fitness expired (compliance)")
+		return errors.New("dispatch blocked: vehicle fitness expired (compliance)")
 	}
 	if !a.InsuranceExpiry.IsZero() && a.InsuranceExpiry.Before(now) {
-		return errors.New("Dispatch blocked: vehicle insurance expired (compliance)")
+		return errors.New("dispatch blocked: vehicle insurance expired (compliance)")
 	}
 	if a.PUCExpiry != nil && !a.PUCExpiry.IsZero() && a.PUCExpiry.Before(now) {
-		return errors.New("Dispatch blocked: vehicle PUC expired (compliance)")
+		return errors.New("dispatch blocked: vehicle PUC expired (compliance)")
 	}
 	if a.Status != VehicleAvailable {
 		return errors.New("vehicle must be available to be assigned; current status: " + string(a.Status))

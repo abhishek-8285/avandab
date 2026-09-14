@@ -111,13 +111,13 @@ func (h *AuthHandlers) LoginPage(w http.ResponseWriter, r *http.Request) {
 	if cookie, err := r.Cookie("flash_error"); err == nil && cookie.Value != "" {
 		pd.FlashError = cookie.Value
 		pd.Extra["Error"] = cookie.Value
-		http.SetCookie(w, &http.Cookie{Name: "flash_error", Value: "", Path: "/", MaxAge: -1})
+		http.SetCookie(w, &http.Cookie{Name: "flash_error", Value: "", Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: -1})
 	}
 
 	if cookie, err := r.Cookie("flash_success"); err == nil && cookie.Value != "" {
 		pd.FlashSuccess = cookie.Value
 		pd.Extra["FlashSuccess"] = cookie.Value
-		http.SetCookie(w, &http.Cookie{Name: "flash_success", Value: "", Path: "/", MaxAge: -1})
+		http.SetCookie(w, &http.Cookie{Name: "flash_success", Value: "", Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: -1})
 	}
 
 	if cookie, err := r.Cookie("auth_email"); err == nil {
@@ -156,7 +156,7 @@ func (h *AuthHandlers) RegisterPage(w http.ResponseWriter, r *http.Request) {
 			Value:    "",
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   h.Config.CookieSecure,
+			Secure:   true,
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   -1,
 		})
@@ -271,7 +271,7 @@ func (h *AuthHandlers) renderRegisterError(w http.ResponseWriter, r *http.Reques
 		Value:    errMsg,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   h.Config.CookieSecure,
+		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   30,
 	})
@@ -315,7 +315,7 @@ func (h *AuthHandlers) Login(w http.ResponseWriter, r *http.Request) {
 				Value:    errMsg,
 				Path:     "/",
 				HttpOnly: true,
-				Secure:   h.Config.CookieSecure,
+				Secure:   true,
 				SameSite: http.SameSiteLaxMode,
 				MaxAge:   30,
 			})
@@ -347,7 +347,7 @@ func (h *AuthHandlers) Login(w http.ResponseWriter, r *http.Request) {
 			Value:    err.Error(),
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   h.Config.CookieSecure,
+			Secure:   true,
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   30,
 		})
@@ -356,7 +356,7 @@ func (h *AuthHandlers) Login(w http.ResponseWriter, r *http.Request) {
 			Value:    email,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   h.Config.CookieSecure,
+			Secure:   true,
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   30,
 		})
@@ -372,7 +372,7 @@ func (h *AuthHandlers) Login(w http.ResponseWriter, r *http.Request) {
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   h.Config.CookieSecure,
+		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	})
@@ -381,7 +381,7 @@ func (h *AuthHandlers) Login(w http.ResponseWriter, r *http.Request) {
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   h.Config.CookieSecure,
+		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	})
@@ -446,11 +446,11 @@ func (h *AuthHandlers) ProfilePage(w http.ResponseWriter, r *http.Request) {
 	// Read and clear flash cookies
 	if c, err := r.Cookie("flash_success"); err == nil && c.Value != "" {
 		pd.FlashSuccess = c.Value
-		http.SetCookie(w, &http.Cookie{Name: "flash_success", Value: "", Path: "/", MaxAge: -1})
+		http.SetCookie(w, &http.Cookie{Name: "flash_success", Value: "", Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: -1})
 	}
 	if c, err := r.Cookie("flash_error"); err == nil && c.Value != "" {
 		pd.FlashError = c.Value
-		http.SetCookie(w, &http.Cookie{Name: "flash_error", Value: "", Path: "/", MaxAge: -1})
+		http.SetCookie(w, &http.Cookie{Name: "flash_error", Value: "", Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: -1})
 	}
 
 	h.renderPage(w, r, "profile_page.html", pd)
@@ -499,6 +499,8 @@ func (h *AuthHandlers) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		Value:    "Password changed successfully",
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   5,
 	})
 	http.Redirect(w, r, "/profile", http.StatusSeeOther)
@@ -627,6 +629,8 @@ func (h *AuthHandlers) SubmitResetPassword(w http.ResponseWriter, r *http.Reques
 		Value:    "Password reset successful. Please log in with your new password.",
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   10,
 	})
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -703,6 +707,8 @@ func (h *AuthHandlers) SaveUserOnboard(w http.ResponseWriter, r *http.Request) {
 		Value:    "Profile setup completed.",
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   10,
 	})
 	http.Redirect(w, r, targetURL, http.StatusSeeOther)
@@ -831,6 +837,8 @@ func (h *AuthHandlers) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		Value:    "Profile updated successfully",
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   10,
 	})
 	http.Redirect(w, r, "/profile", http.StatusSeeOther)

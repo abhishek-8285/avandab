@@ -173,15 +173,8 @@ func writeGPX(w http.ResponseWriter, name string, points []HistoryPoint) {
 	_ = xml.NewEncoder(w).Encode(doc)
 }
 
-// fetchHistoryPoints is the dual-source wrapper kept for tests.
-// Prefer fetchHistoryPointsWithCursor for new code.
-
-//nolint:unused
-func fetchHistoryPoints(ctx context.Context, db *sql.DB, tenantID, vehicleID, tripID string, since, until *time.Time, limit int) ([]HistoryPoint, bool, *time.Time, error) {
-	pts, trunc, nxt, _, err := fetchHistoryPointsWithCursor(ctx, db, tenantID, vehicleID, tripID, since, until, nil, "", limit)
-	return pts, trunc, nxt, err
-}
-
+// Prefer fetchHistoryPointsWithCursor for new code: it also returns the keyset
+// cursor ID needed to page past same-second duplicates.
 func fetchHistoryPointsWithCursor(ctx context.Context, db *sql.DB, tenantID, vehicleID, tripID string, since, until, after *time.Time, afterID string, limit int) ([]HistoryPoint, bool, *time.Time, string, error) {
 	probeLimit := limit + 1
 	pts, err := queryPositionsWithCursor(ctx, db, tenantID, vehicleID, tripID, since, until, after, afterID, probeLimit)
@@ -253,12 +246,12 @@ func queryPositionsWithCursor(ctx context.Context, db *sql.DB, tenantID, vehicle
 }
 
 func querySnapshotsWithCursor(ctx context.Context, db *sql.DB, tenantID, vehicleID, tripID string, since, until, after *time.Time, afterID string, limit int) ([]HistoryPoint, error) {
-	hasHeading := columnExists(db, "telemetry_snapshots", "heading")
+	hasHeading := columnExists(ctx, db, "telemetry_snapshots", "heading")
 	headingSel := "NULL"
 	if hasHeading {
 		headingSel = "s.heading"
 	}
-	hasIgnition := columnExists(db, "telemetry_snapshots", "ignition")
+	hasIgnition := columnExists(ctx, db, "telemetry_snapshots", "ignition")
 	ignitionSel := "NULL"
 	if hasIgnition {
 		ignitionSel = "s.ignition"

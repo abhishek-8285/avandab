@@ -92,10 +92,10 @@ func (uc *AssignVehicleUseCase) checkVehicleCompliance(ctx ports.TxContext, cmd 
 		if v.BlockedReason != "" {
 			reason = v.BlockedReason
 		}
-		return fmt.Errorf("Dispatch blocked: %s (compliance)", reason)
+		return fmt.Errorf("dispatch blocked: %s (compliance)", reason)
 	}
 	if v.RCExpiry != nil && !v.RCExpiry.IsZero() && v.RCExpiry.Before(now) {
-		return fmt.Errorf("Dispatch blocked: vehicle RC expired (compliance)")
+		return fmt.Errorf("dispatch blocked: vehicle RC expired (compliance)")
 	}
 	for _, expiry := range []struct {
 		name string
@@ -131,7 +131,7 @@ func (uc *AssignVehicleUseCase) checkVehicleCompliance(ctx ports.TxContext, cmd 
 				continue
 			}
 			recordComplianceCheck(ctx, "vehicle", cmd.VehicleID, expiry.name, "expired", fmt.Sprintf("vehicle %s expired", expiry.name))
-			return fmt.Errorf("Dispatch blocked: vehicle %s expired (compliance)", expiry.name)
+			return fmt.Errorf("dispatch blocked: vehicle %s expired (compliance)", expiry.name)
 		} else if !expiry.when.IsZero() && expiry.when.Before(now.Add(7*24*time.Hour)) {
 			recordComplianceCheck(ctx, "vehicle", cmd.VehicleID, expiry.name, "warning", fmt.Sprintf("vehicle %s expires in <7 days", expiry.name))
 		}
@@ -167,7 +167,7 @@ func (uc *AssignVehicleUseCase) checkVehicleCompliance(ctx ports.TxContext, cmd 
 					recordComplianceCheck(ctx, "vehicle", cmd.VehicleID, "puc", "warning", "bypassed by override")
 				} else {
 					recordComplianceCheck(ctx, "vehicle", cmd.VehicleID, "puc", "expired", "vehicle PUC expired")
-					return fmt.Errorf("Dispatch blocked: vehicle PUC expired (compliance)")
+					return fmt.Errorf("dispatch blocked: vehicle PUC expired (compliance)")
 				}
 			} else {
 				recordComplianceCheck(ctx, "vehicle", cmd.VehicleID, "puc", "warning", "bypassed by exemption")

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -284,12 +285,11 @@ func (h *ComplianceHandlers) CreateExemption(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	referer := r.Header.Get("Referer")
-	if referer != "" {
-		http.Redirect(w, r, referer, http.StatusSeeOther)
-		return
-	}
-	http.Redirect(w, r, "/trips", http.StatusSeeOther)
+	// safeRedirect provably returns only same-origin paths (covered by
+	// redirect_test.go), so an attacker-supplied Referer cannot bounce the
+	// user off-site. gosec's taint analysis cannot see through the helper.
+	target := safeRedirect(r, r.Header.Get("Referer"), "/trips")
+	http.Redirect(w, r, target, http.StatusSeeOther) //nolint:gosec // G710: safeRedirect returns only same-origin paths (see redirect_test.go)
 }
 
 // ListExemptions returns exemptions for an entity.
@@ -388,4 +388,48 @@ func (h *TripHandlers) TripComplianceFragment(w http.ResponseWriter, r *http.Req
 
 	buf.WriteString(`</div>`)
 	_, _ = w.Write([]byte(buf.String()))
+}
+
+// safeRedirect returns a same-origin redirect target derived from target, or
+// fallback when target is empty, unparseable, or points at another host.
+//
+// Redirecting to an attacker-controlled URL is an open redirect, which is a
+// phishing vector: a malicious page can link into this app so the Referer
+// header carries the attacker's host, and the handler would then bounce the
+// just-authenticated user straight off-site. This helper only ever returns a
+// path, so the browser can never be sent to another origin.
+func safeRedirect(r *http.Request, target, fallback string) string {
+	if target == "" {
+		return fallback
+	}
+
+	// Protocol-relative URLs ("//evil.com", "/\evil.com") inherit the scheme
+	// and are treated as absolute by browsers, bypassing a naive
+	// "starts with /" check.
+	if strings.HasPrefix(target, "//") || strings.HasPrefix(target, "/\\") {
+		return fallback
+	}
+
+	u, err := url.Parse(target)
+	if err != nil {
+		return fallback
+	}
+
+	out := target
+	if u.Host != "" {
+		// Absolute URL: allowed only when it points at this host, and then
+		// reduced to its path so the result is provably same-origin.
+		if !strings.EqualFold(u.Host, r.Host) {
+			return fallback
+		}
+		out = u.Path
+		if u.RawQuery != "" {
+			out += "?" + u.RawQuery
+		}
+	}
+
+	if out == "" || out[0] != '/' {
+		return fallback
+	}
+	return out
 }

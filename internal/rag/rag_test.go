@@ -2,6 +2,7 @@ package rag
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -120,6 +121,7 @@ func TestCosineSimilarity(t *testing.T) {
 }
 
 func TestVectorStore(t *testing.T) {
+	ctx := context.Background()
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "test.db")
 
@@ -140,11 +142,11 @@ func TestVectorStore(t *testing.T) {
 	}
 	embedding := []float64{1.0, 0.0, 0.0}
 
-	if err := store.AddChunk(chunk, embedding); err != nil {
+	if err := store.AddChunk(ctx, chunk, embedding); err != nil {
 		t.Fatal(err)
 	}
 
-	count, err := store.Count()
+	count, err := store.Count(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +156,7 @@ func TestVectorStore(t *testing.T) {
 
 	// Search
 	query := []float64{1.0, 0.0, 0.0}
-	results, err := store.Search(query, 5)
+	results, err := store.Search(ctx, query, 5)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,10 +165,10 @@ func TestVectorStore(t *testing.T) {
 	}
 
 	// Clear
-	if err := store.Clear(); err != nil {
+	if err := store.Clear(ctx); err != nil {
 		t.Fatal(err)
 	}
-	count, err = store.Count()
+	count, err = store.Count(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,6 +178,7 @@ func TestVectorStore(t *testing.T) {
 }
 
 func TestVectorStore_BatchInsert(t *testing.T) {
+	ctx := context.Background()
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "test.db")
 
@@ -196,11 +199,11 @@ func TestVectorStore_BatchInsert(t *testing.T) {
 		{0.0, 0.0, 1.0},
 	}
 
-	if err := store.AddChunks(chunks, embeddings); err != nil {
+	if err := store.AddChunks(ctx, chunks, embeddings); err != nil {
 		t.Fatal(err)
 	}
 
-	count, err := store.Count()
+	count, err := store.Count(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,6 +276,7 @@ func TestEmbedderBatch(t *testing.T) {
 }
 
 func TestService_Query(t *testing.T) {
+	ctx := context.Background()
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "test.db")
 
@@ -309,7 +313,7 @@ func subtract(a, b int) int {
 `), 0644)
 
 	// Index
-	count, err := svc.IndexDirectory(testDir)
+	count, err := svc.IndexDirectory(ctx, testDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,7 +322,7 @@ func subtract(a, b int) int {
 	}
 
 	// Query
-	result, err := svc.Query("how to add numbers", 3)
+	result, err := svc.Query(ctx, "how to add numbers", 3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -333,6 +337,7 @@ func subtract(a, b int) int {
 }
 
 func TestService_Teach(t *testing.T) {
+	ctx := context.Background()
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "test.db")
 
@@ -345,7 +350,7 @@ func TestService_Teach(t *testing.T) {
 	embedder := NewHashEmbedder(64)
 	svc := NewService(embedder, store, 512, 50, "")
 
-	count, err := svc.Teach("business rules", `
+	count, err := svc.Teach(ctx, "business rules", `
 Our booking policy:
 - All bookings must be confirmed by a dispatcher
 - Cancellation requires 24 hours notice
@@ -361,7 +366,7 @@ Our booking policy:
 	}
 
 	// Query the taught content
-	result, err := svc.Query("what is the cancellation policy", 3)
+	result, err := svc.Query(ctx, "what is the cancellation policy", 3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -372,6 +377,7 @@ Our booking policy:
 }
 
 func TestService_UploadFile(t *testing.T) {
+	ctx := context.Background()
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "test.db")
 	uploadDir := filepath.Join(tmpDir, "uploads")
@@ -401,7 +407,7 @@ Section 2: Holidays
 `
 	os.WriteFile(testFile, []byte(content), 0644)
 
-	count, err := svc.UploadFile(testFile)
+	count, err := svc.UploadFile(ctx, testFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -411,7 +417,7 @@ Section 2: Holidays
 	}
 
 	// Query the uploaded content
-	result, err := svc.Query("what are the work hours", 3)
+	result, err := svc.Query(ctx, "what are the work hours", 3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -457,6 +463,7 @@ func TestExtractPDFText_Empty(t *testing.T) {
 }
 
 func TestService_TeachFromFiles(t *testing.T) {
+	ctx := context.Background()
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "test.db")
 
@@ -475,7 +482,7 @@ func TestService_TeachFromFiles(t *testing.T) {
 	os.WriteFile(file1, []byte("Booking must be confirmed by dispatcher.\nCancellation requires 24 hours notice."), 0644)
 	os.WriteFile(file2, []byte("Premium customers get priority scheduling.\nPeak hours are 9AM-6PM."), 0644)
 
-	count, err := svc.TeachFromFiles("booking policies", []string{file1, file2})
+	count, err := svc.TeachFromFiles(ctx, "booking policies", []string{file1, file2})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -485,7 +492,7 @@ func TestService_TeachFromFiles(t *testing.T) {
 	}
 
 	// Query the taught content
-	result, err := svc.Query("what is the cancellation policy", 3)
+	result, err := svc.Query(ctx, "what is the cancellation policy", 3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -496,6 +503,7 @@ func TestService_TeachFromFiles(t *testing.T) {
 }
 
 func TestService_TeachFromDir(t *testing.T) {
+	ctx := context.Background()
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "test.db")
 
@@ -514,7 +522,7 @@ func TestService_TeachFromDir(t *testing.T) {
 	os.WriteFile(filepath.Join(docsDir, "policy.md"), []byte("# Policy\n\nAll bookings need dispatcher confirmation."), 0644)
 	os.WriteFile(filepath.Join(docsDir, "rules.txt"), []byte("Cancellation: 24 hours notice required.\nPremium: priority scheduling."), 0644)
 
-	count, err := svc.TeachFromDir("business rules", docsDir)
+	count, err := svc.TeachFromDir(ctx, "business rules", docsDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -524,7 +532,7 @@ func TestService_TeachFromDir(t *testing.T) {
 	}
 
 	// Query
-	result, err := svc.Query("what is the cancellation policy", 3)
+	result, err := svc.Query(ctx, "what is the cancellation policy", 3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -535,6 +543,7 @@ func TestService_TeachFromDir(t *testing.T) {
 }
 
 func TestService_TeachFromDir_NoFiles(t *testing.T) {
+	ctx := context.Background()
 	tmpDir := t.TempDir()
 	dbPath := filepath.Join(tmpDir, "test.db")
 
@@ -548,7 +557,7 @@ func TestService_TeachFromDir_NoFiles(t *testing.T) {
 	svc := NewService(embedder, store, 512, 50, "")
 
 	// Empty directory
-	_, err = svc.TeachFromDir("empty", tmpDir)
+	_, err = svc.TeachFromDir(ctx, "empty", tmpDir)
 	if err == nil {
 		t.Error("expected error for directory with no supported files")
 	}
