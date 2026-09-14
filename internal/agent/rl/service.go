@@ -1,6 +1,7 @@
 package rl
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -119,19 +120,19 @@ func (s *Service) PolicyNotesFor(agentName string) []PolicyNote {
 // Stats returns learning stats for reporting.
 func (s *Service) Stats() (map[string]any, error) {
 	var episodes int
-	if err := s.store.db.QueryRow(`SELECT COUNT(*) FROM agent_episodes`).Scan(&episodes); err != nil {
+	if err := s.store.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM agent_episodes`).Scan(&episodes); err != nil {
 		return nil, err
 	}
 	var actions int
-	if err := s.store.db.QueryRow(`SELECT COUNT(*) FROM agent_actions`).Scan(&actions); err != nil {
+	if err := s.store.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM agent_actions`).Scan(&actions); err != nil {
 		return nil, err
 	}
 	var pending int
-	if err := s.store.db.QueryRow(`SELECT COUNT(*) FROM agent_actions WHERE status = 'pending'`).Scan(&pending); err != nil {
+	if err := s.store.db.QueryRowContext(context.Background(), `SELECT COUNT(*) FROM agent_actions WHERE status = 'pending'`).Scan(&pending); err != nil {
 		return nil, err
 	}
 	var totalReward float64
-	if err := s.store.db.QueryRow(`SELECT COALESCE(SUM(reward), 0) FROM agent_episodes`).Scan(&totalReward); err != nil {
+	if err := s.store.db.QueryRowContext(context.Background(), `SELECT COALESCE(SUM(reward), 0) FROM agent_episodes`).Scan(&totalReward); err != nil {
 		return nil, err
 	}
 	return map[string]any{

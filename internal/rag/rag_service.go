@@ -1,6 +1,7 @@
 package rag
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -34,7 +35,7 @@ func NewService(embedder Embedder, store *VectorStore, chunkSize, chunkOverlap i
 	}
 }
 
-func (s *Service) IndexDirectory(dirPath string) (int, error) {
+func (s *Service) IndexDirectory(ctx context.Context, dirPath string) (int, error) {
 	log.Printf("rag: indexing directory %s", dirPath)
 
 	chunks, err := s.chunker.IndexDirectory(dirPath, s.extensions)
@@ -53,16 +54,16 @@ func (s *Service) IndexDirectory(dirPath string) (int, error) {
 		return 0, fmt.Errorf("embed chunks: %w", err)
 	}
 
-	if err := s.store.AddChunks(chunks, embeddings); err != nil {
+	if err := s.store.AddChunks(ctx, chunks, embeddings); err != nil {
 		return 0, fmt.Errorf("store chunks: %w", err)
 	}
 
-	count, _ := s.store.Count()
+	count, _ := s.store.Count(ctx)
 	log.Printf("rag: indexed %d chunks (%d unique files)", count, countUniqueSources(chunks))
 	return count, nil
 }
 
-func (s *Service) Teach(name, content string) (int, error) {
+func (s *Service) Teach(ctx context.Context, name, content string) (int, error) {
 	if name == "" {
 		name = "unteached"
 	}
@@ -80,18 +81,18 @@ func (s *Service) Teach(name, content string) (int, error) {
 		return 0, fmt.Errorf("embed taught content: %w", err)
 	}
 
-	if err := s.store.AddChunks(chunks, embeddings); err != nil {
+	if err := s.store.AddChunks(ctx, chunks, embeddings); err != nil {
 		return 0, fmt.Errorf("store taught chunks: %w", err)
 	}
 
-	count, _ := s.store.Count()
+	count, _ := s.store.Count(ctx)
 	log.Printf("rag: taught %s — now %d total chunks", name, count)
 	return count, nil
 }
 
 // TeachFromFiles reads file content and teaches it to the RAG under a topic name.
 // Returns total chunk count after teaching.
-func (s *Service) TeachFromFiles(topic string, filePaths []string) (int, error) {
+func (s *Service) TeachFromFiles(ctx context.Context, topic string, filePaths []string) (int, error) {
 	if topic == "" {
 		topic = "untitled"
 	}
@@ -121,17 +122,17 @@ func (s *Service) TeachFromFiles(topic string, filePaths []string) (int, error) 
 		return 0, fmt.Errorf("embed taught content: %w", err)
 	}
 
-	if err := s.store.AddChunks(allChunks, embeddings); err != nil {
+	if err := s.store.AddChunks(ctx, allChunks, embeddings); err != nil {
 		return 0, fmt.Errorf("store taught chunks: %w", err)
 	}
 
-	count, _ := s.store.Count()
+	count, _ := s.store.Count(ctx)
 	log.Printf("rag: taught %s — now %d total chunks", topic, count)
 	return count, nil
 }
 
 // TeachFromDir teaches all supported files from a directory.
-func (s *Service) TeachFromDir(topic string, dirPath string) (int, error) {
+func (s *Service) TeachFromDir(ctx context.Context, topic string, dirPath string) (int, error) {
 	var files []string
 	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -164,10 +165,10 @@ func (s *Service) TeachFromDir(topic string, dirPath string) (int, error) {
 		return 0, fmt.Errorf("no supported files found in %s", dirPath)
 	}
 
-	return s.TeachFromFiles(topic, files)
+	return s.TeachFromFiles(ctx, topic, files)
 }
 
-func (s *Service) UploadFile(filePath string) (int, error) {
+func (s *Service) UploadFile(ctx context.Context, filePath string) (int, error) {
 	ext := strings.TrimPrefix(filepath.Ext(filePath), ".")
 	supported := map[string]bool{
 		"txt": true, "md": true, "pdf": true,
@@ -191,10 +192,10 @@ func (s *Service) UploadFile(filePath string) (int, error) {
 		}
 	}
 
-	return s.Teach(name, content)
+	return s.Teach(ctx, name, content)
 }
 
-func (s *Service) Query(query string, topK int) (*SearchResult, error) {
+func (s *Service) Query(ctx context.Context, query string, topK int) (*SearchResult, error) {
 	if topK <= 0 {
 		topK = 5
 	}
@@ -204,7 +205,7 @@ func (s *Service) Query(query string, topK int) (*SearchResult, error) {
 		return nil, fmt.Errorf("embed query: %w", err)
 	}
 
-	chunks, err := s.store.Search(embedding, topK)
+	chunks, err := s.store.Search(ctx, embedding, topK)
 	if err != nil {
 		return nil, fmt.Errorf("search: %w", err)
 	}
@@ -222,15 +223,15 @@ func (s *Service) Query(query string, topK int) (*SearchResult, error) {
 	}, nil
 }
 
-func (s *Service) Reindex(dirPath string) (int, error) {
-	if err := s.store.Clear(); err != nil {
+func (s *Service) Reindex(ctx context.Context, dirPath string) (int, error) {
+	if err := s.store.Clear(ctx); err != nil {
 		return 0, fmt.Errorf("clear store: %w", err)
 	}
-	return s.IndexDirectory(dirPath)
+	return s.IndexDirectory(ctx, dirPath)
 }
 
-func (s *Service) Stats() (int, error) {
-	return s.store.Count()
+func (s *Service) Stats(ctx context.Context) (int, error) {
+	return s.store.Count(ctx)
 }
 
 func (s *Service) embedBatch(chunks []Chunk) ([][]float64, error) {

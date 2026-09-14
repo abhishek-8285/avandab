@@ -18,7 +18,7 @@ type Config struct {
 }
 
 // LoadConfig reads FASTag configuration from company_config.
-func LoadConfig(db *sql.DB) Config {
+func LoadConfig(ctx context.Context, db *sql.DB) Config {
 	cfg := Config{
 		AutoKharcha: true,
 		Provider:    "MOCK",
@@ -27,7 +27,7 @@ func LoadConfig(db *sql.DB) Config {
 		return cfg
 	}
 
-	rows, err := db.Query(`SELECT key, value FROM company_config WHERE key IN ('fastag_auto_kharcha', 'fastag_merchant_id', 'fastag_provider')`)
+	rows, err := db.QueryContext(ctx, `SELECT key, value FROM company_config WHERE key IN ('fastag_auto_kharcha', 'fastag_merchant_id', 'fastag_provider')`)
 	if err != nil {
 		return cfg
 	}

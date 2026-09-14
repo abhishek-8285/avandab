@@ -149,7 +149,7 @@ func migrate(db *sql.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_rewards_episode ON agent_rewards(episode_id)`,
 	}
 	for _, st := range stmts {
-		if _, err := db.Exec(st); err != nil {
+		if _, err := db.ExecContext(context.Background(), st); err != nil {
 			return fmt.Errorf("migrate: %w", err)
 		}
 	}
@@ -189,7 +189,7 @@ func (s *Store) SaveEpisode(e *Episode) error {
 // all commit together, so a mid-way failure can never leave a half-recorded
 // episode stuck in 'pending' with partial rewards.
 func (s *Store) RecordEpisodeTx(e *Episode, rewards []RewardSignal, toolCalls []ToolCallStat) error {
-	tx, err := s.db.Begin()
+	tx, err := s.db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return err
 	}
@@ -243,7 +243,7 @@ func (s *Store) NewID(prefix string) string { return newID(prefix) }
 
 // AddReward records a signal and folds it into the episode total.
 func (s *Store) AddReward(episodeID, signal, note string, value float64) error {
-	tx, err := s.db.Begin()
+	tx, err := s.db.BeginTx(context.Background(), nil)
 	if err != nil {
 		return err
 	}
@@ -304,7 +304,7 @@ func (s *Store) CreateAction(a *Action) error {
 // GetAction loads an action by id.
 func (s *Store) GetAction(id string) (*Action, error) {
 	var a Action
-	err := s.db.QueryRow(`SELECT id, episode_id, tool_name, args_json, summary, status,
+	err := s.db.QueryRowContext(context.Background(), `SELECT id, episode_id, tool_name, args_json, summary, status,
 		COALESCE(requested_by,''), COALESCE(decided_by,''), COALESCE(decided_at,''), COALESCE(result,''), COALESCE(error,''), created_at
 		FROM agent_actions WHERE id = $1`, id).
 		Scan(&a.ID, &a.EpisodeID, &a.ToolName, &a.ArgsJSON, &a.Summary, &a.Status, &a.RequestedBy, &a.DecidedBy, &a.DecidedAt, &a.Result, &a.Error, &a.CreatedAt)

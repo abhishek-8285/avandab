@@ -181,17 +181,17 @@ func (s *LiveStore) WithMobileStaleMin(d time.Duration) *LiveStore {
 // tenant via the vehicles join (telemetry_snapshots has no tenant column).
 func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, now time.Time) ([]LiveVehicle, error) {
 	s.maintenanceDueChecked.Do(func() {
-		s.hasMaintenanceDue = columnExists(s.db, "vehicles", "maintenance_due")
+		s.hasMaintenanceDue = columnExists(ctx, s.db, "vehicles", "maintenance_due")
 	})
 	s.headingChecked.Do(func() {
-		s.hasHeading = columnExists(s.db, "telemetry_snapshots", "heading")
+		s.hasHeading = columnExists(ctx, s.db, "telemetry_snapshots", "heading")
 	})
 	headingSel := "s.heading"
 	if !s.hasHeading {
 		headingSel = "NULL as heading"
 	}
 	s.vlpParityChecked.Do(func() {
-		s.hasVLPParity = columnExists(s.db, "vehicle_latest_position", "battery_level")
+		s.hasVLPParity = columnExists(ctx, s.db, "vehicle_latest_position", "battery_level")
 	})
 	vlpJoin, vlpSel := "", "NULL as battery_level, NULL as motion, NULL as valid"
 	if s.hasVLPParity {
@@ -379,8 +379,8 @@ func markerState(lv LiveVehicle, due map[string]bool, staleMin time.Duration, no
 }
 
 // columnExists reports whether a table has a column (SQLite PRAGMA probe).
-func columnExists(db *sql.DB, table, column string) bool {
-	rows, err := db.Query(`PRAGMA table_info(` + table + `)`)
+func columnExists(ctx context.Context, db *sql.DB, table, column string) bool {
+	rows, err := db.QueryContext(ctx, `PRAGMA table_info(`+table+`)`)
 	if err != nil {
 		return false
 	}

@@ -1,6 +1,7 @@
 package rag
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -41,8 +42,10 @@ func NewVectorStore(dbPath string) (*VectorStore, error) {
 	return store, nil
 }
 
+// initSchema and setupPRAGMAs run only from NewVectorStore during process
+// startup, before any request exists, so there is no caller context to thread.
 func (vs *VectorStore) initSchema() error {
-	_, err := vs.db.Exec(`
+	_, err := vs.db.ExecContext(context.Background(), `
 		CREATE TABLE IF NOT EXISTS chunks (
 			id TEXT PRIMARY KEY,
 			content TEXT NOT NULL,
@@ -65,20 +68,20 @@ func (vs *VectorStore) setupPRAGMAs() error {
 		"PRAGMA foreign_keys=ON",
 	}
 	for _, p := range pragmas {
-		if _, err := vs.db.Exec(p); err != nil {
+		if _, err := vs.db.ExecContext(context.Background(), p); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (vs *VectorStore) AddChunk(chunk Chunk, embedding []float64) error {
+func (vs *VectorStore) AddChunk(ctx context.Context, chunk Chunk, embedding []float64) error {
 	embJSON, err := json.Marshal(embedding)
 	if err != nil {
 		return fmt.Errorf("marshal embedding: %w", err)
 	}
 
-	_, err = vs.db.Exec(
+	_, err = vs.db.ExecContext(ctx,
 		`INSERT OR REPLACE INTO chunks (id, content, source, line_from, line_to, chunk_idx, embedding)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		chunk.ID, chunk.Content, chunk.Source, chunk.LineFrom, chunk.LineTo, chunk.ChunkIdx, embJSON,
@@ -86,14 +89,14 @@ func (vs *VectorStore) AddChunk(chunk Chunk, embedding []float64) error {
 	return err
 }
 
-func (vs *VectorStore) AddChunks(chunks []Chunk, embeddings [][]float64) error {
-	tx, err := vs.db.Begin()
+func (vs *VectorStore) AddChunks(ctx context.Context, chunks []Chunk, embeddings [][]float64) error {
+	tx, err := vs.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
 	defer tx.Rollback()
 
-	stmt, err := tx.Prepare(
+	stmt, err := tx.PrepareContext(ctx,
 		`INSERT OR REPLACE INTO chunks (id, content, source, line_from, line_to, chunk_idx, embedding)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 	)
@@ -107,7 +110,7 @@ func (vs *VectorStore) AddChunks(chunks []Chunk, embeddings [][]float64) error {
 		if err != nil {
 			return fmt.Errorf("marshal embedding %d: %w", i, err)
 		}
-		_, err = stmt.Exec(chunk.ID, chunk.Content, chunk.Source, chunk.LineFrom, chunk.LineTo, chunk.ChunkIdx, embJSON)
+		_, err = stmt.ExecContext(ctx, chunk.ID, chunk.Content, chunk.Source, chunk.LineFrom, chunk.LineTo, chunk.ChunkIdx, embJSON)
 		if err != nil {
 			return fmt.Errorf("exec insert %d: %w", i, err)
 		}
@@ -116,8 +119,8 @@ func (vs *VectorStore) AddChunks(chunks []Chunk, embeddings [][]float64) error {
 	return tx.Commit()
 }
 
-func (vs *VectorStore) Search(queryEmbedding []float64, topK int) ([]VectorEntry, error) {
-	rows, err := vs.db.Query(`SELECT id, content, source, line_from, line_to, chunk_idx, embedding FROM chunks`)
+func (vs *VectorStore) Search(ctx context.Context, queryEmbedding []float64, topK int) ([]VectorEntry, error) {
+	rows, err := vs.db.QueryContext(ctx, `SELECT id, content, source, line_from, line_to, chunk_idx, embedding FROM chunks`)
 	if err != nil {
 		return nil, fmt.Errorf("query chunks: %w", err)
 	}
@@ -167,14 +170,14 @@ func (vs *VectorStore) Search(queryEmbedding []float64, topK int) ([]VectorEntry
 	return top, nil
 }
 
-func (vs *VectorStore) Count() (int, error) {
+func (vs *VectorStore) Count(ctx context.Context) (int, error) {
 	var count int
-	err := vs.db.QueryRow("SELECT COUNT(*) FROM chunks").Scan(&count)
+	err := vs.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM chunks").Scan(&count)
 	return count, err
 }
 
-func (vs *VectorStore) Clear() error {
-	_, err := vs.db.Exec("DELETE FROM chunks")
+func (vs *VectorStore) Clear(ctx context.Context) error {
+	_, err := vs.db.ExecContext(ctx, "DELETE FROM chunks")
 	return err
 }
 

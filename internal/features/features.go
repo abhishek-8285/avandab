@@ -227,16 +227,18 @@ func (reg *Registry) orgFor(ctx context.Context, tenantID string) cachedOrg {
 		rows, err := reg.db.QueryContext(ctx,
 			`SELECT feature, enabled FROM feature_flags WHERE tenant_id = $1`, tenantID)
 		if err == nil {
-			func() {
-				defer func() { _ = rows.Close() }()
-				for rows.Next() {
-					var k string
-					var v bool
-					if rows.Scan(&k, &v) == nil {
-						flags[k] = v
-					}
+			// Wrapped form: errcheck requires the error be explicitly
+			// ignored; sqlclosecheck cannot see through the closure and
+			// flags this as unclosed. Deferring is the safer semantic
+			// (closes even if rows.Next panics), so we keep it.
+			defer func() { _ = rows.Close() }()
+			for rows.Next() {
+				var k string
+				var v bool
+				if rows.Scan(&k, &v) == nil {
+					flags[k] = v
 				}
-			}()
+			}
 		}
 		var status, trialEnd, periodEnd sql.NullString
 		if err := reg.db.QueryRowContext(ctx,

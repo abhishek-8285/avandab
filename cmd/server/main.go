@@ -536,7 +536,8 @@ func main() {
 	services.EWayBill = ewbService
 
 	fastagClient := intFastag.NewClient(integCfg.FASTag, database)
-	fastagConfig := fastag.LoadConfig(database)
+	// Startup config read: no request in scope yet.
+	fastagConfig := fastag.LoadConfig(context.Background(), database)
 	fastagService := fastag.NewFASTagService(database, fastagClient, fastagConfig, logger)
 
 	app.EWayBill = handlers.NewEWayBillHandlers(app, ewbService, authSvc)
@@ -883,7 +884,7 @@ func main() {
 			if len(cfg.RAG.IndexDirs) > 0 {
 				go func() {
 					for _, dir := range cfg.RAG.IndexDirs {
-						if count, err := ragSvc.IndexDirectory(dir); err != nil {
+						if count, err := ragSvc.IndexDirectory(context.Background(), dir); err != nil {
 							logger.Error("RAG auto-index failed", "dir", dir, "error", err)
 						} else {
 							logger.Info("RAG auto-indexed", "dir", dir, "chunks", count)
