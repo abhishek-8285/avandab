@@ -23,6 +23,8 @@ import (
 	"transport-app/internal/config"
 	"transport-app/internal/eta"
 	"transport-app/internal/middleware"
+	"transport-app/internal/shared/clock"
+	"transport-app/internal/shared/id"
 )
 
 type allowAuthSvc struct{}
@@ -81,7 +83,7 @@ func newShareTestApp(t *testing.T, db *sql.DB, authSrv auth.AuthorizationService
 		Config:    cfg,
 	}
 	app.Share = NewShareHandlers(app, db)
-	app.Share.EtaService = eta.NewEtaService(db, 15, 30, 5)
+	app.Share.EtaService = eta.NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock())
 	return app
 }
 

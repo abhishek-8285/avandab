@@ -566,7 +566,7 @@ func main() {
 	commSubscriber.SubscribeEvents(eventBus)
 
 	// ── Ops: error reporting, login audit, dashboard ─────────────────────
-	reporter := opserrors.NewReporter(notifSvc, opserrors.NewSQLiteStore(database), cfg.AppEnv, Version)
+	reporter := opserrors.NewReporter(notifSvc, opserrors.NewSQLiteStore(database), cfg.AppEnv, Version, id.NewUUIDGenerator(), clock.NewRealClock())
 	loginAuditSvc := audit.NewLoginAuditService(notifSvc, audit.SecurityPolicy{
 		NotifyOnNewDevice: true,
 		NotifyOnNewIP:     true,
@@ -934,7 +934,7 @@ func main() {
 	realtime.AttachToBus(eventBus, sseHub)
 
 	// ETA service (pure read path, Spec 04 §5, 3D) + history recorder (Spec 18 Wave A bridge)
-	etaService := eta.NewEtaService(database, cfg.LiveMap.EtaStaleMin, cfg.LiveMap.EtaWindowMin, cfg.LiveMap.EtaGuardMaxRegressMin)
+	etaService := eta.NewEtaService(database, cfg.LiveMap.EtaStaleMin, cfg.LiveMap.EtaWindowMin, cfg.LiveMap.EtaGuardMaxRegressMin, idGen, realClock)
 	if app.Share != nil {
 		app.Share.EtaService = etaService
 	}
@@ -1604,7 +1604,7 @@ func main() {
 
 	// ── Outbox relay & founder notifications ──────────────────────────
 	// NOTE: eventBus is the SAME instance injected into services above.
-	founderSvc := founder.NewFounderService(newFounderNotifier(logger))
+	founderSvc := founder.NewFounderService(newFounderNotifier(logger), idGen, realClock)
 	founderSvc.RegisterEventHandlers(eventBus)
 	if founderConfigured() {
 		runLeadered("founder_digest", func(ctx context.Context) {

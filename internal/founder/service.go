@@ -3,26 +3,37 @@ package founder
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"transport-app/internal/events"
 	"transport-app/internal/founder/alerts"
 	"transport-app/internal/founder/customer_health"
 	"transport-app/internal/founder/digest"
+	"transport-app/internal/shared/ports"
 )
 
 type FounderService struct {
 	notifier Notifier
+	idGen    ports.IDGenerator
+	clock    ports.Clock
 }
 
 type Notifier interface {
 	SendAlert(event alerts.AlertEvent) error
 }
 
-func NewFounderService(notifier Notifier) *FounderService {
+func NewFounderService(notifier Notifier, idGen ports.IDGenerator, clock ports.Clock) *FounderService {
 	return &FounderService{
 		notifier: notifier,
+		idGen:    idGen,
+		clock:    clock,
 	}
+}
+
+// newID mints rev_/sys_/act_/churn_/digest_ ids from the injected IDGenerator —
+// never from time.Now().UnixNano(), which repeats inside one clock tick on
+// coarse clocks (Windows ~0.5ms steps).
+func (s *FounderService) newID(prefix string) string {
+	return prefix + "_" + s.idGen.GenerateUUID()
 }
 
 // RegisterEventHandlers subscribes the founder alert service to relevant domain events on the event bus
@@ -39,7 +50,7 @@ func (s *FounderService) RegisterEventHandlers(bus events.EventBus) {
 		mrr, _ := payload["mrr"].(string)
 
 		return s.notifier.SendAlert(alerts.AlertEvent{
-			ID:       fmt.Sprintf("rev_%d", time.Now().UnixNano()),
+			ID:       s.newID("rev"),
 			Category: alerts.CategoryRevenue,
 			Priority: alerts.PriorityHigh,
 			Title:    "New Business Customer",
@@ -48,7 +59,7 @@ func (s *FounderService) RegisterEventHandlers(bus events.EventBus) {
 				"plan":    plan,
 				"mrr":     mrr,
 			},
-			Timestamp: time.Now(),
+			Timestamp: s.clock.Now(),
 		})
 	})
 
@@ -59,12 +70,12 @@ func (s *FounderService) RegisterEventHandlers(bus events.EventBus) {
 		summary, _ := payload["summary"].(string)
 
 		return s.notifier.SendAlert(alerts.AlertEvent{
-			ID:        fmt.Sprintf("sys_%d", time.Now().UnixNano()),
+			ID:        s.newID("sys"),
 			Category:  alerts.CategorySystem,
 			Priority:  alerts.PriorityCritical,
 			Title:     title,
 			Summary:   summary,
-			Timestamp: time.Now(),
+			Timestamp: s.clock.Now(),
 		})
 	})
 
@@ -75,7 +86,7 @@ func (s *FounderService) RegisterEventHandlers(bus events.EventBus) {
 		activationTime, _ := payload["activation_time"].(string)
 
 		return s.notifier.SendAlert(alerts.AlertEvent{
-			ID:       fmt.Sprintf("act_%d", time.Now().UnixNano()),
+			ID:       s.newID("act"),
 			Category: alerts.CategoryActivation,
 			Priority: alerts.PriorityMedium,
 			Title:    "New Activated Customer",
@@ -83,7 +94,7 @@ func (s *FounderService) RegisterEventHandlers(bus events.EventBus) {
 				"company":         companyName,
 				"activation_time": activationTime,
 			},
-			Timestamp: time.Now(),
+			Timestamp: s.clock.Now(),
 		})
 	})
 }
@@ -98,7 +109,7 @@ func (s *FounderService) EvaluateCustomerHealth(companyID, companyName string, f
 			reasonStr = result.Reasons[0]
 		}
 		_ = s.notifier.SendAlert(alerts.AlertEvent{
-			ID:       fmt.Sprintf("churn_%s_%d", companyID, time.Now().Unix()),
+			ID:       fmt.Sprintf("churn_%s_%s", companyID, s.idGen.GenerateUUID()),
 			Category: alerts.CategoryChurnRisk,
 			Priority: alerts.PriorityHigh,
 			Title:    "Churn Risk",
@@ -108,7 +119,7 @@ func (s *FounderService) EvaluateCustomerHealth(companyID, companyName string, f
 				"reason":  reasonStr,
 				"action":  result.SuggestedAction,
 			},
-			Timestamp: time.Now(),
+			Timestamp: s.clock.Now(),
 		})
 	}
 
@@ -122,11 +133,11 @@ func (s *FounderService) SendDailyDigest(report digest.DailyDigestReport) error 
 	}
 	msg := digest.FormatDailyDigest(report)
 	return s.notifier.SendAlert(alerts.AlertEvent{
-		ID:        fmt.Sprintf("digest_%d", time.Now().Unix()),
+		ID:        s.newID("digest"),
 		Category:  alerts.CategoryProductUsage,
 		Priority:  alerts.PriorityLow,
 		Title:     "Daily Report",
 		Summary:   msg,
-		Timestamp: time.Now(),
+		Timestamp: s.clock.Now(),
 	})
 }

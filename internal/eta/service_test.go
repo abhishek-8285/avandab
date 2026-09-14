@@ -13,6 +13,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	_ "modernc.org/sqlite"
+
+	"transport-app/internal/shared/clock"
+	"transport-app/internal/shared/id"
 )
 
 func newEtaTestDB(t *testing.T) *sql.DB {
@@ -56,7 +59,7 @@ func seedTripAndRoute(t *testing.T, db *sql.DB, tripID, vehicleID, status string
 
 func TestEtaService_FreshnessGate(t *testing.T) {
 	db := newEtaTestDB(t)
-	svc := NewEtaService(db, 15, 30, 5)
+	svc := NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock())
 	ctx := context.Background()
 
 	seedTripAndRoute(t, db, "trip-fresh", "veh-fresh", "in_transit", 100.0, 2.0)
@@ -100,7 +103,7 @@ func TestEtaService_FreshnessGate(t *testing.T) {
 
 func TestEtaService_RollingAvgSpeed(t *testing.T) {
 	db := newEtaTestDB(t)
-	svc := NewEtaService(db, 15, 30, 5)
+	svc := NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock())
 	ctx := context.Background()
 
 	seedTripAndRoute(t, db, "trip-speed", "veh-speed", "in_transit", 150.0, 3.0)
@@ -132,7 +135,7 @@ func TestEtaService_RollingAvgSpeed(t *testing.T) {
 
 func TestEtaService_OdometerDelta(t *testing.T) {
 	db := newEtaTestDB(t)
-	svc := NewEtaService(db, 15, 30, 5)
+	svc := NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock())
 	ctx := context.Background()
 
 	seedTripAndRoute(t, db, "trip-odo", "veh-odo", "in_transit", 100.0, 2.0)
@@ -160,7 +163,7 @@ func TestEtaService_OdometerDelta(t *testing.T) {
 
 func TestEtaService_HybridBlend(t *testing.T) {
 	db := newEtaTestDB(t)
-	svc := NewEtaService(db, 15, 30, 5)
+	svc := NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock())
 	ctx := context.Background()
 
 	// Route: 100 km, 2.0 hours estimated (scheduled speed = 50 km/h)
@@ -195,7 +198,7 @@ func TestEtaService_HybridBlend(t *testing.T) {
 func TestEtaService_MonotonicGuard(t *testing.T) {
 	db := newEtaTestDB(t)
 	// guardMaxRegress = 5 minutes
-	svc := NewEtaService(db, 15, 30, 5)
+	svc := NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock())
 	ctx := context.Background()
 
 	tripID := "trip-guard"
@@ -226,7 +229,7 @@ func TestEtaService_MonotonicGuard(t *testing.T) {
 
 func TestEtaService_ScheduledFallback_And_InactivePhases(t *testing.T) {
 	db := newEtaTestDB(t)
-	svc := NewEtaService(db, 15, 30, 5)
+	svc := NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock())
 	ctx := context.Background()
 
 	// 1. Inactive phase (e.g. draft, completed, cancelled) -> Returns error
@@ -255,7 +258,7 @@ func TestLoadTrip_HaversineFallbackWhenDistanceMissing(t *testing.T) {
 		VALUES ('r-trp-geo', 12.9716, 77.5946, 18.5204, 73.8567)`)
 	require.NoError(t, err)
 
-	svc := NewEtaService(db, 15, 30, 5)
+	svc := NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock())
 	td, err := svc.loadTrip(context.Background(), "trp-geo")
 	require.NoError(t, err)
 
@@ -272,7 +275,7 @@ func TestLoadTrip_ManualDistanceWinsOverFallback(t *testing.T) {
 		VALUES ('r-trp-manual', 12.9716, 77.5946, 18.5204, 73.8567)`)
 	require.NoError(t, err)
 
-	svc := NewEtaService(db, 15, 30, 5)
+	svc := NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock())
 	td, err := svc.loadTrip(context.Background(), "trp-manual")
 	require.NoError(t, err)
 	assert.Equal(t, float64(500), td.RouteDistance)

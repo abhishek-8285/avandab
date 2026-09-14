@@ -22,6 +22,8 @@ import (
 	"transport-app/internal/middleware"
 	opserrors "transport-app/internal/operations/errors"
 	"transport-app/internal/shared"
+	"transport-app/internal/shared/clock"
+	"transport-app/internal/shared/id"
 )
 
 func newOpsErrorsTestApp(t *testing.T) (*App, *opserrors.Reporter) {
@@ -72,7 +74,7 @@ func newOpsErrorsTestApp(t *testing.T) (*App, *opserrors.Reporter) {
 		Templates: tmpl,
 		AuthSrv:   authSrv,
 	}
-	rep := opserrors.NewReporter(nil, opserrors.NewSQLiteStore(db), "test", "v-test")
+	rep := opserrors.NewReporter(nil, opserrors.NewSQLiteStore(db), "test", "v-test", id.NewUUIDGenerator(), clock.NewRealClock())
 	app.OpsErrors = NewOpsErrorsHandler(app, rep)
 	return app, rep
 }

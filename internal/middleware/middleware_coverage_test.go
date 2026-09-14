@@ -19,6 +19,8 @@ import (
 	domainuser "transport-app/internal/domain/user"
 	operrors "transport-app/internal/operations/errors"
 	"transport-app/internal/shared"
+	"transport-app/internal/shared/clock"
+	"transport-app/internal/shared/id"
 )
 
 // ---------------------------------------------------------------------------
@@ -322,7 +324,7 @@ func TestRecoverer_WithNilReporterDoesNotPanic(t *testing.T) {
 }
 
 func TestRecoverer_WithReporterNoStore(t *testing.T) {
-	reporter := operrors.NewReporter(nil, nil, "test", "1.0.0")
+	reporter := operrors.NewReporter(nil, nil, "test", "1.0.0", id.NewUUIDGenerator(), clock.NewRealClock())
 	handler := Recoverer(reporter)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		panic("reporter test")
 	}))

@@ -7,6 +7,8 @@ import (
 	"transport-app/internal/events"
 	"transport-app/internal/founder/alerts"
 	"transport-app/internal/founder/customer_health"
+	"transport-app/internal/shared/clock"
+	"transport-app/internal/shared/id"
 )
 
 type MockNotifier struct {
@@ -20,7 +22,7 @@ func (m *MockNotifier) SendAlert(event alerts.AlertEvent) error {
 
 func TestFounderServiceEventsAndHealth(t *testing.T) {
 	mock := &MockNotifier{}
-	svc := NewFounderService(mock)
+	svc := NewFounderService(mock, id.NewUUIDGenerator(), clock.NewRealClock())
 	bus := events.NewInMemoryBus()
 
 	svc.RegisterEventHandlers(bus)

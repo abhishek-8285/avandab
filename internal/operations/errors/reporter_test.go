@@ -8,6 +8,8 @@ import (
 	_ "modernc.org/sqlite"
 
 	"transport-app/internal/shared"
+	"transport-app/internal/shared/clock"
+	"transport-app/internal/shared/id"
 )
 
 func testDB(t *testing.T) *sql.DB {
@@ -60,7 +62,7 @@ CREATE TABLE incidents (
 
 func TestReporterDedupsByFingerprint(t *testing.T) {
 	db := testDB(t)
-	rep := NewReporter(nil, NewSQLiteStore(db), "test", "v1")
+	rep := NewReporter(nil, NewSQLiteStore(db), "test", "v1", id.NewUUIDGenerator(), clock.NewRealClock())
 	ctx := context.Background()
 
 	base := ErrorReport{
@@ -94,7 +96,7 @@ func TestReporterDedupsByFingerprint(t *testing.T) {
 
 func TestReporterSeparatesTenants(t *testing.T) {
 	db := testDB(t)
-	rep := NewReporter(nil, NewSQLiteStore(db), "test", "v1")
+	rep := NewReporter(nil, NewSQLiteStore(db), "test", "v1", id.NewUUIDGenerator(), clock.NewRealClock())
 	ctxA := context.Background()
 	ctxB := tenantCtx("7")
 
@@ -117,7 +119,7 @@ func TestReporterSeparatesTenants(t *testing.T) {
 
 func TestReporterAutoCreatesSingleIncident(t *testing.T) {
 	db := testDB(t)
-	rep := NewReporter(nil, NewSQLiteStore(db), "test", "v1")
+	rep := NewReporter(nil, NewSQLiteStore(db), "test", "v1", id.NewUUIDGenerator(), clock.NewRealClock())
 	ctx := context.Background()
 
 	crit := ErrorReport{URL: "/pay", Method: "POST", Message: "gateway down", Severity: SeverityCritical}
@@ -147,7 +149,7 @@ func TestReporterAutoCreatesSingleIncident(t *testing.T) {
 func TestResolveIncidentClosesOpenState(t *testing.T) {
 	db := testDB(t)
 	store := NewSQLiteStore(db)
-	rep := NewReporter(nil, store, "test", "v1")
+	rep := NewReporter(nil, store, "test", "v1", id.NewUUIDGenerator(), clock.NewRealClock())
 	ctx := context.Background()
 
 	got, _ := rep.Report(ctx, ErrorReport{
@@ -185,7 +187,7 @@ func TestResolveIncidentClosesOpenState(t *testing.T) {
 func TestGetError(t *testing.T) {
 	db := testDB(t)
 	store := NewSQLiteStore(db)
-	rep := NewReporter(nil, store, "test", "v1")
+	rep := NewReporter(nil, store, "test", "v1", id.NewUUIDGenerator(), clock.NewRealClock())
 	ctx := context.Background()
 
 	got, err := rep.Report(ctx, ErrorReport{
@@ -220,7 +222,7 @@ func TestGetError(t *testing.T) {
 func TestListErrorsFilters(t *testing.T) {
 	db := testDB(t)
 	store := NewSQLiteStore(db)
-	rep := NewReporter(nil, store, "test", "v1")
+	rep := NewReporter(nil, store, "test", "v1", id.NewUUIDGenerator(), clock.NewRealClock())
 	ctx := context.Background()
 
 	for _, sev := range []Severity{SeverityLow, SeverityMedium, SeverityCritical} {

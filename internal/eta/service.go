@@ -8,15 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"transport-app/internal/shared/id"
+	"transport-app/internal/shared/ports"
 )
-
-// Ids must NOT be minted from time.Now(): on Windows the clock steps in ~0.5ms
-// chunks, so two ids generated inside one tick are identical and the second
-// INSERT fails on a UNIQUE/PK column. See docs/10-FRONTEND-UX-AUDIT.md §7.4.
-// GenerateUUID (not GenerateDisplayID) because these are opaque primary keys,
-// and the display variant truncates to 32 bits.
-var idGen = id.NewUUIDGenerator()
 
 // EtaResult is the output of the hybrid ETA calculation (Spec 04 §5).
 type EtaResult struct {
@@ -35,6 +28,8 @@ type EtaService struct {
 	staleMin        int // ETA_STALE_MIN (default 15)
 	windowMin       int // ETA_WINDOW_MIN (default 30)
 	guardMaxRegress int // ETA_GUARD_MAX_REGRESS_MIN (default 5)
+	idGen           ports.IDGenerator
+	clock           ports.Clock
 
 	// In-memory monotonic guard state (per-trip last arrival).
 	// Single-process model (Spec 04 §1.2).
@@ -43,7 +38,7 @@ type EtaService struct {
 }
 
 // NewEtaService creates a new EtaService instance with configured parameters.
-func NewEtaService(db *sql.DB, staleMin, windowMin, guardMaxRegress int) *EtaService {
+func NewEtaService(db *sql.DB, staleMin, windowMin, guardMaxRegress int, idGen ports.IDGenerator, clock ports.Clock) *EtaService {
 	if staleMin <= 0 {
 		staleMin = 15
 	}
@@ -58,6 +53,8 @@ func NewEtaService(db *sql.DB, staleMin, windowMin, guardMaxRegress int) *EtaSer
 		staleMin:        staleMin,
 		windowMin:       windowMin,
 		guardMaxRegress: guardMaxRegress,
+		idGen:           idGen,
+		clock:           clock,
 		lastETA:         make(map[string]time.Time),
 	}
 }
@@ -186,7 +183,7 @@ func (s *EtaService) loadLatestSnapshot(ctx context.Context, tripID, vehicleID s
 }
 
 func (s *EtaService) rollingAvgSpeed(ctx context.Context, tripID string, vehicleID string) (float64, int, error) {
-	windowStart := time.Now().UTC().Add(-time.Duration(s.windowMin) * time.Minute).Format("2006-01-02 15:04:05")
+	windowStart := s.clock.Now().UTC().Add(-time.Duration(s.windowMin) * time.Minute).Format("2006-01-02 15:04:05")
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT speed FROM telemetry_snapshots
 		WHERE (trip_id = $1 OR (vehicle_id = $2 AND vehicle_id != ''))
@@ -249,7 +246,7 @@ func (s *EtaService) remainingDistance(ctx context.Context, trip *tripData, late
 
 	// 2. Fallback: time-proportional
 	if trip.DepartureTime != nil && trip.EstimatedHours > 0 && trip.RouteDistance > 0 {
-		elapsed := time.Since(*trip.DepartureTime).Hours()
+		elapsed := s.clock.Now().Sub(*trip.DepartureTime).Hours()
 		if elapsed > 0 {
 			progress := math.Min(1.0, math.Max(0.0, elapsed/trip.EstimatedHours))
 			remaining := trip.RouteDistance * (1 - progress)
@@ -316,7 +313,9 @@ func (s *EtaService) writeAuditLog(ctx context.Context, tripID string, action st
 	if s.db == nil {
 		return
 	}
-	auditID := "eta-" + idGen.GenerateUUID()
+	// opaque PK via injected seam (never clock-derived: coarse clocks repeat
+	// inside one tick — see docs/10-FRONTEND-UX-AUDIT.md §7.4).
+	auditID := "eta-" + s.idGen.GenerateUUID()
 	newValues := fmt.Sprintf(`{"reason":"%s"}`, reason)
 	_, _ = s.db.ExecContext(ctx, `
 		INSERT INTO audit_logs (id, action, table_name, record_id, new_values, created_at)
@@ -345,7 +344,7 @@ func (s *EtaService) Calculate(ctx context.Context, tripID string) (EtaResult, e
 		return s.scheduledFallback(ctx, trip, tripID, "no_telemetry")
 	}
 
-	age := time.Since(latestSnapshot.Timestamp)
+	age := s.clock.Now().Sub(latestSnapshot.Timestamp)
 	if age > time.Duration(s.staleMin)*time.Minute {
 		return s.scheduledFallback(ctx, trip, tripID, "stale_telemetry")
 	}
@@ -387,7 +386,7 @@ func (s *EtaService) Calculate(ctx context.Context, tripID string) (EtaResult, e
 	}
 
 	// Step 7: Arrival + window (±15 min)
-	now := time.Now().UTC()
+	now := s.clock.Now().UTC()
 	arrivalAt := now.Add(time.Duration(etaHours * float64(time.Hour)))
 
 	// Step 8: Monotonic guard
