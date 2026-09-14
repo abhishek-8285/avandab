@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"transport-app/internal/auth"
 	"transport-app/internal/comm"
 	"transport-app/internal/domain"
 	"transport-app/internal/service"
@@ -51,6 +52,81 @@ func (h *AuthHandlers) ForgotPasswordAPI(w http.ResponseWriter, r *http.Request)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(resp)
+}
+
+// consentIdentity resolves the caller's own (tenant, user) from the auth
+// context. Consent is strictly self-service: no one acts for another user,
+// so the session identity is the entire authorization scope.
+func (h *AuthHandlers) consentIdentity(r *http.Request) (tenantID, userID string, ok bool) {
+	sess, _ := r.Context().Value(auth.ContextUser).(*auth.SessionData)
+	if sess == nil || sess.UserID == "" {
+		return "", "", false
+	}
+	tenantID = string(shared.TenantIDFromContext(r.Context()))
+	if tenantID == "" {
+		return "", "", false
+	}
+	return tenantID, sess.UserID, true
+}
+
+// ConsentStatusAPI reports the caller's DPDP consent ledger state.
+func (h *AuthHandlers) ConsentStatusAPI(w http.ResponseWriter, r *http.Request) {
+	tenantID, userID, ok := h.consentIdentity(r)
+	if !ok {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	grantedAt, withdrawnAt, err := h.Services.Users.ConsentStatus(r.Context(), tenantID, userID)
+	if err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "could not read consent status")
+		return
+	}
+	resp := map[string]interface{}{
+		"purpose":        service.ConsentPurposePlatformUse,
+		"notice_version": service.ConsentNoticeVersion,
+		"granted":        grantedAt.Valid,
+		"withdrawn":      withdrawnAt.Valid,
+	}
+	if grantedAt.Valid {
+		resp["granted_at"] = grantedAt.Time.UTC().Format("2006-01-02T15:04:05Z")
+	}
+	if withdrawnAt.Valid {
+		resp["withdrawn_at"] = withdrawnAt.Time.UTC().Format("2006-01-02T15:04:05Z")
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(resp)
+}
+
+// WithdrawConsentAPI stamps withdrawal (DPDP §6(4)): login and session
+// minting refuse while set, until re-granted.
+func (h *AuthHandlers) WithdrawConsentAPI(w http.ResponseWriter, r *http.Request) {
+	tenantID, userID, ok := h.consentIdentity(r)
+	if !ok {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	if err := h.Services.Users.WithdrawConsent(r.Context(), tenantID, userID); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "could not record withdrawal")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true, "withdrawn": true})
+}
+
+// GrantConsentAPI records (or re-records after withdrawal) platform-use
+// consent against the current notice version.
+func (h *AuthHandlers) GrantConsentAPI(w http.ResponseWriter, r *http.Request) {
+	tenantID, userID, ok := h.consentIdentity(r)
+	if !ok {
+		writeJSONError(w, http.StatusUnauthorized, "authentication required")
+		return
+	}
+	if err := h.Services.Users.GrantConsent(r.Context(), tenantID, userID); err != nil {
+		writeJSONError(w, http.StatusInternalServerError, "could not record consent")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{"ok": true, "granted": true})
 }
 
 // ResetPasswordAPI redeems a single-use reset token and sets a new password

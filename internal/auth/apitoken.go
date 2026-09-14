@@ -20,10 +20,11 @@ type APITokenClaims struct {
 }
 
 var (
-	ErrTokenInvalid    = errors.New("api token invalid")
-	ErrTokenExpired    = errors.New("api token expired")
-	ErrTokenRevoked    = errors.New("api token revoked or user inactive")
-	ErrTenantSuspended = errors.New("organization account is suspended")
+	ErrTokenInvalid     = errors.New("api token invalid")
+	ErrTokenExpired     = errors.New("api token expired")
+	ErrTokenRevoked     = errors.New("api token revoked or user inactive")
+	ErrTenantSuspended  = errors.New("organization account is suspended")
+	ErrConsentWithdrawn = errors.New("data consent withdrawn — please re-confirm consent to continue")
 )
 
 // IssueAPIToken creates a signed, base64url-encoded token.

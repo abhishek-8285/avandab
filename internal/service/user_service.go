@@ -92,6 +92,12 @@ func (s *UserService) RegisterSelfServiceAccount(ctx context.Context, email, nam
 		}
 		created = u
 
+		// DPDP §6: signup binds platform-use consent (notice v1) in the same
+		// transaction — no account ever lands without a ledger row.
+		if err := grantConsentTx(txCtx, rawDB, tenantID, string(u.ID)); err != nil {
+			return fmt.Errorf("failed recording consent: %w", err)
+		}
+
 		// Seed initial trial subscription; a seed failure aborts
 		// provisioning so no tenant ever lands subscription-less.
 		if err := seedTrialSubscription(txCtx, rawDB, tenantID); err != nil {
@@ -684,6 +690,10 @@ func (s *UserService) CreateTenantWithAdmin(ctx context.Context, tenantID, name,
 			return err
 		}
 		created = u
+		// DPDP §6: admin-provisioned accounts bind consent like self-serve ones.
+		if err := grantConsentTx(txCtx, rawDB, tenantID, string(u.ID)); err != nil {
+			return fmt.Errorf("failed recording consent: %w", err)
+		}
 		// Manual orgs bill/meter like self-serve ones from day one; a
 		// seed failure aborts provisioning instead of landing half-done.
 		if err := seedTrialSubscription(txCtx, rawDB, tenantID); err != nil {

@@ -222,11 +222,15 @@ VALUES ('veh-zero-norm', 'tenant-alpha', 'MH12ZERO01', 'ZERO-01', 'truck', 10000
 
 	// Down drops the column; up restores it (prove-it: migrations roll back).
 	// NOTE: setupZMOTMReportsTestApp chdirs to the repo root.
+	// DownTo(151), not Down: Down rolls back a single step from head, so any
+	// newer migration (e.g. 00153) would remove the wrong version and this
+	// probe would pass vacuously or fail spuriously. Pinning the floor keeps
+	// the test head-agnostic.
 	migrationsDir := "../../db/migrations"
 	if _, serr := os.Stat(migrationsDir); os.IsNotExist(serr) {
 		migrationsDir = "db/migrations"
 	}
-	require.NoError(t, goose.Down(app.DB, migrationsDir))
+	require.NoError(t, goose.DownTo(app.DB, migrationsDir, 151))
 	var afterDown string
 	err = app.DB.QueryRow(
 		`SELECT name FROM pragma_table_info('vehicles') WHERE name = 'standard_kmpl'`,

@@ -1045,6 +1045,11 @@ func main() {
 		r.Get("/api/v1/users/me/preferences", app.Users.GetMyPreferences)
 		r.Patch("/api/v1/users/me/preferences", app.Users.UpdateMyPreferences)
 		r.Post("/api/v1/users/me/preferences", app.Users.UpdateMyPreferences)
+		// DPDP consent ledger (00153): self-service only, session identity is
+		// the scope — no extra permission.
+		r.Get("/api/v1/consent", app.Auth.ConsentStatusAPI)
+		r.Post("/api/v1/consent/grant", app.Auth.GrantConsentAPI)
+		r.Post("/api/v1/consent/withdraw", app.Auth.WithdrawConsentAPI)
 		if ragHandler != nil {
 			r.With(featureGate("rag")).Group(ragHandler.RegisterRoutes)
 		}

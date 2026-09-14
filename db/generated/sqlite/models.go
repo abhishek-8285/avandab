@@ -2036,6 +2036,18 @@ type User struct {
 	EmailVerifiedAt sql.NullTime   `json:"email_verified_at"`
 }
 
+type UserConsent struct {
+	ID            string       `json:"id"`
+	TenantID      string       `json:"tenant_id"`
+	UserID        string       `json:"user_id"`
+	Purpose       string       `json:"purpose"`
+	NoticeVersion string       `json:"notice_version"`
+	GrantedAt     time.Time    `json:"granted_at"`
+	WithdrawnAt   sql.NullTime `json:"withdrawn_at"`
+	CreatedAt     time.Time    `json:"created_at"`
+	UpdatedAt     time.Time    `json:"updated_at"`
+}
+
 type UserRole struct {
 	UserID string `json:"user_id"`
 	RoleID int64  `json:"role_id"`

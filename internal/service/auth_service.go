@@ -76,6 +76,14 @@ func (s *AuthService) Login(ctx context.Context, req LoginRequest) (*LoginResult
 		return nil, err
 	}
 
+	// DPDP §6(4): withdrawn consent ceases processing — refuse login while
+	// set. No ledger row (legacy/OAuth/admin users) stays allowed.
+	if withdrawn, err := consentWithdrawn(ctx, s.consentDB(), user.TenantID, string(user.ID)); err != nil {
+		return nil, err
+	} else if withdrawn {
+		return nil, auth.ErrConsentWithdrawn
+	}
+
 	// Update last login
 	if _, err := s.store.UpdateUserLastLogin(ctx, user.ID); err != nil {
 		s.log.Warn("failed to update last login", "user_id", user.ID, "error", err)
@@ -120,6 +128,14 @@ func (s *AuthService) CreateSessionForUser(ctx context.Context, userID domain.Us
 
 	if err := s.tenantActive(ctx, string(user.ID)); err != nil {
 		return nil, err
+	}
+
+	// Same DPDP gate as Login: withdrawn consent blocks session minting on
+	// every path (password, OAuth, registration auto-login).
+	if withdrawn, err := consentWithdrawn(ctx, s.consentDB(), user.TenantID, string(user.ID)); err != nil {
+		return nil, err
+	} else if withdrawn {
+		return nil, auth.ErrConsentWithdrawn
 	}
 
 	token, err := auth.GenerateSecureToken()

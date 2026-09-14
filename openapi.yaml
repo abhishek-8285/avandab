@@ -8804,6 +8804,77 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/v1/consent:
+    get:
+      tags:
+        - Auth
+      summary: Get my DPDP consent status
+      description: Bearer auth (session user, no extra permission). Returns the caller's platform-use consent ledger state (migration 00153).
+      responses:
+        '200':
+          description: Consent ledger state.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  purpose:
+                    type: string
+                  notice_version:
+                    type: string
+                  granted:
+                    type: boolean
+                  withdrawn:
+                    type: boolean
+                  granted_at:
+                    type: string
+                  withdrawn_at:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/consent/grant:
+    post:
+      tags:
+        - Auth
+      summary: Grant platform-use consent
+      description: Bearer auth (session user, no extra permission). Records consent against the current notice version; clears any prior withdrawal.
+      responses:
+        '200':
+          description: Consent recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  granted:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/consent/withdraw:
+    post:
+      tags:
+        - Auth
+      summary: Withdraw platform-use consent
+      description: "Bearer auth (session user, no extra permission). DPDP Act §6(4): login and session minting refuse while withdrawal stands, until re-granted."
+      responses:
+        '200':
+          description: Withdrawal recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  withdrawn:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/v1/vehicle-assignments/{id}/accept:
     post:
       tags:
