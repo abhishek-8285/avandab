@@ -211,6 +211,48 @@ func (s *EtaService) rollingAvgSpeed(ctx context.Context, tripID string, vehicle
 	return sum / float64(count), count, nil
 }
 
+// freshnessFallbackReason pins Calculate step-2 gates (Spec 04 §5):
+// missing snapshot → no_telemetry, age beyond staleMin → stale_telemetry.
+// Age exactly equal to staleMin is still fresh (strict >).
+func freshnessFallbackReason(snapshotPresent bool, age time.Duration, staleMin int) (string, bool) {
+	if !snapshotPresent {
+		return "no_telemetry", true
+	}
+	if age > time.Duration(staleMin)*time.Minute {
+		return "stale_telemetry", true
+	}
+	return "", false
+}
+
+// samplesFallbackReason pins Calculate step-3 gate: a query error, fewer
+// than 3 samples, or non-positive average speed → insufficient_samples.
+func samplesFallbackReason(sampleErr bool, sampleCount int, avgSpeed float64) (string, bool) {
+	if sampleErr || sampleCount < 3 || avgSpeed <= 0 {
+		return "insufficient_samples", true
+	}
+	return "", false
+}
+
+// odometerRemaining pins the odometer-delta leg of remainingDistance:
+// false when the delta is negative (odometer reset/swap) or route unknown.
+func odometerRemaining(routeDistance, odomLatest, odomStart float64) (float64, bool) {
+	travelled := odomLatest - odomStart
+	if routeDistance <= 0 || travelled < 0 {
+		return 0, false
+	}
+	return math.Max(0, routeDistance-travelled), true
+}
+
+// timePropRemaining pins the time-proportional leg of remainingDistance:
+// false when there is nothing to prorate against.
+func timePropRemaining(routeDistance, elapsedHours, estimatedHours float64) (float64, bool) {
+	if routeDistance <= 0 || estimatedHours <= 0 || elapsedHours <= 0 {
+		return 0, false
+	}
+	progress := math.Min(1.0, math.Max(0.0, elapsedHours/estimatedHours))
+	return routeDistance * (1 - progress), true
+}
+
 func (s *EtaService) remainingDistance(ctx context.Context, trip *tripData, latest *snapshot) (float64, string, error) {
 	// 1. Odometer-delta method
 	if latest.Odometer != nil {
@@ -236,9 +278,7 @@ func (s *EtaService) remainingDistance(ctx context.Context, trip *tripData, late
 		}
 
 		if err == nil && odomStart > 0 {
-			distanceTravelled := *latest.Odometer - odomStart
-			if distanceTravelled >= 0 && trip.RouteDistance > 0 {
-				remaining := math.Max(0, trip.RouteDistance-distanceTravelled)
+			if remaining, ok := odometerRemaining(trip.RouteDistance, *latest.Odometer, odomStart); ok {
 				return remaining, "odometer", nil
 			}
 		}
@@ -247,9 +287,7 @@ func (s *EtaService) remainingDistance(ctx context.Context, trip *tripData, late
 	// 2. Fallback: time-proportional
 	if trip.DepartureTime != nil && trip.EstimatedHours > 0 && trip.RouteDistance > 0 {
 		elapsed := s.clock.Now().Sub(*trip.DepartureTime).Hours()
-		if elapsed > 0 {
-			progress := math.Min(1.0, math.Max(0.0, elapsed/trip.EstimatedHours))
-			remaining := trip.RouteDistance * (1 - progress)
+		if remaining, ok := timePropRemaining(trip.RouteDistance, elapsed, trip.EstimatedHours); ok {
 			return remaining, "telemetry_time_prop", nil
 		}
 	}
@@ -340,19 +378,19 @@ func (s *EtaService) Calculate(ctx context.Context, tripID string) (EtaResult, e
 
 	// Step 2: Freshness gate
 	latestSnapshot, err := s.loadLatestSnapshot(ctx, tripID, trip.VehicleID)
-	if err != nil || latestSnapshot == nil || latestSnapshot.Timestamp.IsZero() {
-		return s.scheduledFallback(ctx, trip, tripID, "no_telemetry")
+	snapshotPresent := err == nil && latestSnapshot != nil && !latestSnapshot.Timestamp.IsZero()
+	var age time.Duration
+	if snapshotPresent {
+		age = s.clock.Now().Sub(latestSnapshot.Timestamp)
 	}
-
-	age := s.clock.Now().Sub(latestSnapshot.Timestamp)
-	if age > time.Duration(s.staleMin)*time.Minute {
-		return s.scheduledFallback(ctx, trip, tripID, "stale_telemetry")
+	if reason, fallback := freshnessFallbackReason(snapshotPresent, age, s.staleMin); fallback {
+		return s.scheduledFallback(ctx, trip, tripID, reason)
 	}
 
 	// Step 3: Rolling average speed
 	avgSpeed, sampleCount, err := s.rollingAvgSpeed(ctx, tripID, trip.VehicleID)
-	if err != nil || sampleCount < 3 || avgSpeed <= 0 {
-		return s.scheduledFallback(ctx, trip, tripID, "insufficient_samples")
+	if reason, fallback := samplesFallbackReason(err != nil, sampleCount, avgSpeed); fallback {
+		return s.scheduledFallback(ctx, trip, tripID, reason)
 	}
 
 	// Step 4: Remaining distance
