@@ -47,9 +47,12 @@ data. Exception: GSTN IRNs are format-locked hashes (warn logs + `mock_qr_`).
 - Env: `INTEGRATION_ACCOUNTING_ENDPOINT`, `INTEGRATION_ACCOUNTING_API_KEY`,
   `INTEGRATION_ACCOUNTING_ENABLED`, `INTEGRATION_ACCOUNTING_PROVIDER`
   (`tally|zoho|quickbooks`, default `mock`), `INTEGRATION_ACCOUNTING_USE_MOCK`.
-- Reality check: provider adapters are mock-only today — `!UseMock` returns
-  `ErrNotImplemented`, never fake success. Go-live per provider means
-  implementing its adapter first; the mock honesty carpet (`<PROV>-MOCK-`)
-  and this runbook section stay valid until then.
+- Reality check: Tally ships a live adapter (XML Import Data POST, default
+  `http://localhost:9000`, contract-pinned by `TestLiveContract_Tally`,
+  `tally_unavailable` taxonomy on non-2xx, `<LINEERROR>` rejections surfaced).
+  Zoho/QuickBooks adapters are mock-only — `!UseMock` returns
+  `ErrNotImplemented`, never fake success. Go-live per remaining provider
+  means implementing its adapter first; the mock honesty carpet
+  (`<PROV>-MOCK-`) and this runbook section stay valid until then.
 - Exercise: `POST /api/v1/integrations/accounting/export-invoice|sync-contacts|
   push-journal-entry` (`integrations:accounting`).
