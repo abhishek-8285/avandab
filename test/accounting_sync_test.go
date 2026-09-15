@@ -149,8 +149,10 @@ func TestAccounting_AdapterFactory_And_Providers(t *testing.T) {
 	}
 
 	// Enabled Real Providers without UseMock -> honest ErrNotImplemented
-	// (the adapters have no live HTTP integration; they must never fake success)
-	for _, provider := range []string{"tally", "zoho", "quickbooks"} {
+	// (the adapters have no live HTTP integration; they must never fake success).
+	// Tally excluded: it ships a live XML adapter (C4), so without a reachable
+	// Tally server it must fail with tally_unavailable — asserted below.
+	for _, provider := range []string{"zoho", "quickbooks"} {
 		cli := accounting.NewClient(accounting.Config{Provider: provider, Enabled: true})
 		_, err := cli.ExportInvoice(ctx, accounting.ExportedInvoice{InvoiceNumber: "INV-301"})
 		assert.ErrorIs(t, err, accounting.ErrNotImplemented, "%s adapter without real integration must fail honestly", provider)
@@ -162,7 +164,13 @@ func TestAccounting_AdapterFactory_And_Providers(t *testing.T) {
 		assert.ErrorIs(t, err, accounting.ErrNotImplemented)
 	}
 
-	// Enabled Real Providers in explicit demo mode (UseMock) -> marked mock results
+	// Tally live adapter with no server behind it: must fail honestly with
+	// tally_unavailable (contract-pinned happy path lives in
+	// TestLiveContract_Tally), never success, never ErrNotImplemented.
+	tallyLive := accounting.NewClient(accounting.Config{Provider: "tally", Enabled: true})
+	_, err = tallyLive.ExportInvoice(ctx, accounting.ExportedInvoice{InvoiceNumber: "INV-302"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "tally_unavailable")
 	tallyCli := accounting.NewClient(accounting.Config{Provider: "tally", Enabled: true, UseMock: true})
 	tallyInv, err := tallyCli.ExportInvoice(ctx, accounting.ExportedInvoice{InvoiceNumber: "INV-301"})
 	require.NoError(t, err)
