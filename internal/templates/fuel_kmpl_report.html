@@ -28,7 +28,7 @@
             <h2 class="text-sm font-bold text-on-surface">Per-Vehicle Efficiency</h2>
             <span class="inline-flex items-center gap-2">
                 <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .KmplRows}} vehicles</span>
-                <span class="px-2 py-0.5 rounded-full bg-blue-soft border border-blue-line text-[11px] font-bold uppercase tracking-wide text-blue-strong dark:text-blue-300 tabular-nums">{{.From}} → {{.To}}</span>
+                <span class="px-2 py-0.5 rounded-full bg-blue-soft border border-blue-line text-[11px] font-bold uppercase tracking-wide text-blue-strong dark:text-blue-300 tabular-nums">{{inDate .From}} → {{inDate .To}}</span>
             </span>
         </div>
         <div class="overflow-x-auto">

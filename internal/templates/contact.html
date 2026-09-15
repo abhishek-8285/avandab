@@ -11,8 +11,9 @@
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M3 11h3a8 8 0 0 1 8 8v3"/><path d="M11.6 16.8a3 3 0 1 1-5.8 1.8"/><path d="M18 12a6 6 0 0 0-6-6H6"/><circle cx="12" cy="12" r="2"/></svg>
         Avandab Support &amp; Inquiries
     </div>
-    <h1 class="font-display text-2xl sm:text-3xl font-bold text-on-surface mb-4 tracking-tight">Get in Touch with Our Team</h1>
-     <p class="text-sm text-on-surface-variant leading-relaxed max-w-2xl mx-auto md:mx-0">Have a question about our fleet operations, route dispatches, or enterprise pricing? Submit your inquiry or track an existing ticket below.</p>
+     <h1 class="font-display text-2xl sm:text-3xl font-bold text-on-surface mb-4 tracking-tight">Get in Touch with Our Team</h1>
+      <p class="text-sm text-on-surface-variant leading-relaxed max-w-2xl mx-auto md:mx-0">Have a question about our fleet operations, route dispatches, or enterprise pricing? Submit your inquiry or track an existing ticket below.</p>
+      <p class="text-xs text-on-surface-variant leading-relaxed max-w-2xl mx-auto md:mx-0 mt-3 border border-border-subtle rounded-xl p-3 bg-surface-container-lowest">Consumer complaints: acknowledged within 48 hours with a copy of the recorded complaint, redressed within 1 month. Grievance Officer: <a class="text-primary hover:underline" href="mailto:grievance@avandab.com">grievance@avandab.com</a> · <a class="text-primary hover:underline" href="tel:+918285336507">+91 8285336507</a> (Mon–Sat). Also via <a class="text-primary hover:underline" href="https://consumerhelpline.gov.in" target="_blank" rel="noopener">National Consumer Helpline</a>. Data-privacy requests: ack 3 business days, response 30 days — see <a class="text-primary hover:underline" href="/privacy">Privacy Policy</a>.</p>
 </section>
 
 {{if .ErrorRef}}
@@ -37,7 +38,7 @@
         <div>
             <h4 class="font-display font-semibold text-base text-status-success">Inquiry Submitted Successfully!</h4>
             <p class="text-xs text-status-success mt-0.5">
-                Your reference ticket number is <strong class="font-data-mono font-bold underline">{{.SubmittedNum}}</strong>. Save this number to check your status updates anytime.
+                Your reference ticket number is <strong class="font-data-mono font-bold underline">{{.SubmittedNum}}</strong>. Save this number to check your status updates anytime. We acknowledge within 48 hours and share a copy of the recorded complaint below — redress within 1 month.
             </p>
         </div>
     </div>
@@ -146,6 +147,15 @@
     <div class="space-y-1 text-xs text-on-surface-variant">
         <div class="flex justify-between"><span class="font-semibold">Submitted By:</span> <span>{{.Ticket.Name}}</span></div>
         <div class="flex justify-between"><span class="font-semibold">Subject:</span> <span>{{.Ticket.Subject}}</span></div>
+        <div class="flex justify-between"><span class="font-semibold">Category:</span> <span>{{.Ticket.Category}}</span></div>
+        <div class="pt-1"><span class="font-semibold">Complaint as recorded:</span><p class="mt-1 whitespace-pre-wrap border border-border-subtle rounded-lg p-2 bg-surface-container-lowest">{{.Ticket.Message}}</p></div>
+        <div class="flex flex-wrap items-center gap-2 pt-2">
+            <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('ticket-copy-{{.Ticket.TicketNumber}}').innerText)" class="px-3 py-1.5 rounded-full border border-border-subtle text-xs font-semibold hover:bg-surface-container-low transition cursor-pointer">Copy complaint</button>
+            <button type="button" onclick="window.print()" class="px-3 py-1.5 rounded-full border border-border-subtle text-xs font-semibold hover:bg-surface-container-low transition cursor-pointer">Print</button>
+        </div>
+        <div id="ticket-copy-{{.Ticket.TicketNumber}}" class="sr-only">Ticket {{.Ticket.TicketNumber}} · {{.Ticket.Name}} · {{.Ticket.Subject}} · {{.Ticket.Category}} · {{.Ticket.Message}}</div>
+        {{if .SLAState}}<p class="pt-1 font-semibold">{{if eq .SLAState "ack-overdue"}}⚠ Acknowledgement overdue (due {{.SLAAckDue}}). Write to grievance@avandab.com quoting {{.Ticket.TicketNumber}}.{{else if eq .SLAState "redress-overdue"}}⚠ Redress overdue (due {{.SLARedressDue}}). Escalate to grievance@avandab.com or https://consumerhelpline.gov.in quoting {{.Ticket.TicketNumber}}.{{else if eq .SLAState "redressed"}}✓ Redressed{{if .SLAAckAt}} (acknowledged {{.SLAAckAt}}){{end}}. Reopen via a new inquiry if unresolved.{{else}}On track{{if .SLAAckAt}} — acknowledged {{.SLAAckAt}}{{end}} — redress due {{.SLARedressDue}}.{{end}}</p>{{end}}
+        <p class="pt-1">Grievance: grievance@avandab.com · NCH: https://consumerhelpline.gov.in</p>
     </div>
 </div>
 {{end}}

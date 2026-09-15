@@ -252,19 +252,20 @@ type ComplianceExemption struct {
 }
 
 type ContactSubmission struct {
-	ID           string         `json:"id"`
-	TicketNumber string         `json:"ticket_number"`
-	Name         string         `json:"name"`
-	Email        string         `json:"email"`
-	Phone        sql.NullString `json:"phone"`
-	CompanyName  sql.NullString `json:"company_name"`
-	Subject      string         `json:"subject"`
-	Category     string         `json:"category"`
-	Message      string         `json:"message"`
-	Status       string         `json:"status"`
-	AdminNotes   sql.NullString `json:"admin_notes"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
+	ID             string         `json:"id"`
+	TicketNumber   string         `json:"ticket_number"`
+	Name           string         `json:"name"`
+	Email          string         `json:"email"`
+	Phone          sql.NullString `json:"phone"`
+	CompanyName    sql.NullString `json:"company_name"`
+	Subject        string         `json:"subject"`
+	Category       string         `json:"category"`
+	Message        string         `json:"message"`
+	Status         string         `json:"status"`
+	AdminNotes     sql.NullString `json:"admin_notes"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	AcknowledgedAt sql.NullTime   `json:"acknowledged_at"`
 }
 
 type CreditDebitNote struct {

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -61,34 +60,36 @@ func TestDriverRepository_SearchReadModelsDateRange(t *testing.T) {
 	require.True(t, ok, "driver repo must implement date-range search")
 
 	ctx := context.Background()
-	mk := func(id, firstName string, day int, status string) {
-		createdAt := time.Date(2026, 8, day, 9, 0, 0, 0, time.UTC)
+	mk := func(id, firstName string, createdAt, status string) {
 		_, err := dbConn.Exec(`INSERT INTO drivers (id, driver_id, first_name, last_name, phone, license_number, license_expiry, status, tenant_id, created_at, updated_at)
 			VALUES (?, ?, ?, 'Kumar', '+91-90000-00000', 'DL-0000', datetime('now','+5 years'), ?, '1', ?, ?)`,
 			id, "DRV-"+id, firstName, status, createdAt, createdAt)
 		require.NoError(t, err)
 	}
-	mk("drv-1", "AUGONE", 1, "available")
-	mk("drv-2", "AUGTWO", 10, "on_trip")
-	mk("drv-3", "AUGTHREE", 20, "inactive")
-	mk("drv-4", "SEPFIVE", 5, "available")
-
-	_, err := dbConn.Exec(`UPDATE drivers SET created_at = ? WHERE id = 'drv-4'`, time.Date(2026, 9, 5, 9, 0, 0, 0, time.UTC))
-	require.NoError(t, err)
+	// RFC3339 strings exactly as the Go driver writes them, plus CURRENT_TIMESTAMP-style text.
+	mk("drv-1", "AUGONE", "2026-08-01T09:00:00Z", "available")
+	mk("drv-2", "AUGTWO", "2026-08-10T09:00:00Z", "on_trip")
+	mk("drv-3", "AUGTHREE", "2026-08-20T09:00:00Z", "inactive")
+	mk("drv-4", "SEPFIVE", "2026-09-05T09:00:00Z", "available")
+	// IST-day-boundary row: 2026-08-09T18:45:00Z = 00:15 IST Aug 10.
+	mk("drv-5", "AUGISTTEN", "2026-08-09T18:45:00Z", "available")
 
 	rows, total, err := repo.SearchReadModelsDateRange(ctx, "1", "", "", "2026-08-01", "2026-08-31", 10, 0)
 	require.NoError(t, err)
-	assert.EqualValues(t, 3, total)
-	assert.Len(t, rows, 3)
+	assert.EqualValues(t, 4, total)
+	assert.Len(t, rows, 4)
 	for _, r := range rows {
-		assert.Contains(t, []string{"AUGONE", "AUGTWO", "AUGTHREE"}, r.FirstName)
+		assert.Contains(t, []string{"AUGONE", "AUGTWO", "AUGTHREE", "AUGISTTEN"}, r.FirstName)
 	}
 
-	// Single-day window (from == to)
+	// Single-day window (from == to) — the IST-boundary row belongs to Aug 10.
 	rows, total, err = repo.SearchReadModelsDateRange(ctx, "1", "", "", "2026-08-10", "2026-08-10", 10, 0)
 	require.NoError(t, err)
-	assert.EqualValues(t, 1, total)
-	assert.Equal(t, "AUGTWO", rows[0].FirstName)
+	assert.EqualValues(t, 2, total)
+	require.Len(t, rows, 2)
+	names := []string{rows[0].FirstName, rows[1].FirstName}
+	assert.Contains(t, names, "AUGTWO")
+	assert.Contains(t, names, "AUGISTTEN")
 
 	// From-only bound
 	_, total, err = repo.SearchReadModelsDateRange(ctx, "1", "", "", "2026-09-01", "", 10, 0)

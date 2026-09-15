@@ -45,6 +45,11 @@ export default function VehicleDetailDrawer({ vehicle, onClose, onFollow, follow
     return () => { live = false; };
   }, [vehicle?.trip_id]);
 
+  // Move focus into the drawer when it opens for a new vehicle (Escape closes via global handler).
+  useEffect(() => {
+    if (vehicle) document.getElementById('close-intel-btn')?.focus();
+  }, [vehicle?.vehicle_id]);
+
   if (!vehicle) return null;
   // Migration-00117 parity: battery/motion/valid render from live payload.
   // Absent fields show honest placeholders, never fabricated values.
@@ -56,14 +61,15 @@ export default function VehicleDetailDrawer({ vehicle, onClose, onFollow, follow
     motion === true ? 'MOVING' + (vehicle.valid === false ? ' · NO GPS FIX' : '')
     : motion === false ? 'PARKED' + (vehicle.valid === false ? ' · NO GPS FIX' : '')
     : 'OK';
+  const timeFmt = new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const row = (icon: React.ReactNode, k: string, v: string | undefined, id?: string) =>
     v ? (
       <div className="ti-kv">
-        <span className="ti-kv-left">
+        <dt className="ti-kv-left">
           {icon}
           <span>{k}</span>
-        </span>
-        <b id={id}>{v}</b>
+        </dt>
+        <dd id={id}>{v}</dd>
       </div>
     ) : null;
 
@@ -79,6 +85,7 @@ export default function VehicleDetailDrawer({ vehicle, onClose, onFollow, follow
           className={'ti-icon-btn' + (following ? ' on' : '')}
           onClick={onFollow}
           aria-pressed={following}
+          aria-label={following ? 'Stop following vehicle' : 'Follow vehicle on map'}
           title={following ? 'Stop following vehicle' : 'Follow vehicle on map'}
         >
           <LocateIcon className="ti-btn-svg" />
@@ -87,24 +94,24 @@ export default function VehicleDetailDrawer({ vehicle, onClose, onFollow, follow
           <CloseIcon className="ti-btn-svg" />
         </button>
       </div>
-      <div className="ti-drawer-body">
+      <dl className="ti-drawer-body">
         {row(<VehicleTypeIcon type={vehicle.vehicle_type} className="ti-row-icon" />, 'Class', (vehicle.vehicle_type || 'truck').replace('_', ' ').toUpperCase())}
-        {row(<SpeedIcon className="ti-row-icon" />, 'Speed', `${Math.round(vehicle.speed)} km/h`, 'intel-speed')}
-        {row(<OdometerIcon className="ti-row-icon" />, 'Odometer', vehicle.odometer !== undefined ? `${Math.round(vehicle.odometer)} km` : undefined, 'intel-odometer')}
+        {row(<SpeedIcon className="ti-row-icon" />, 'Speed', `${Math.round(vehicle.speed)}\u00A0km/h`, 'intel-speed')}
+        {row(<OdometerIcon className="ti-row-icon" />, 'Odometer', vehicle.odometer !== undefined ? `${Math.round(vehicle.odometer)}\u00A0km` : undefined, 'intel-odometer')}
         {row(<FuelIcon className="ti-row-icon" />, 'Fuel', vehicle.fuel_level !== undefined ? `${vehicle.fuel_level}%` : undefined, 'intel-fuel')}
         <div className="ti-kv">
-          <span className="ti-kv-left">
+          <dt className="ti-kv-left">
             <ActivityIcon className="ti-row-icon" />
             <span>Battery</span>
-          </span>
-          <b id="intel-battery" className={battClass}>{battText}</b>
+          </dt>
+          <dd id="intel-battery" className={battClass}>{battText}</dd>
         </div>
         <div className="ti-kv">
-          <span className="ti-kv-left">
+          <dt className="ti-kv-left">
             <ShieldIcon className="ti-row-icon" />
             <span>Device</span>
-          </span>
-          <b id="intel-device">{deviceText}</b>
+          </dt>
+          <dd id="intel-device">{deviceText}</dd>
         </div>
         {row(<UserIcon className="ti-row-icon" />, 'Driver', vehicle.driver_name)}
         {row(<PhoneIcon className="ti-row-icon" />, 'Driver phone', vehicle.driver_phone)}
@@ -112,21 +119,21 @@ export default function VehicleDetailDrawer({ vehicle, onClose, onFollow, follow
           <ClockIcon className="ti-row-icon" />,
           'ETA window',
           vehicle.eta_min && vehicle.eta_max
-            ? `${new Date(vehicle.eta_min).toLocaleTimeString()} – ${new Date(vehicle.eta_max).toLocaleTimeString()}`
+            ? `${timeFmt.format(new Date(vehicle.eta_min))} – ${timeFmt.format(new Date(vehicle.eta_max))}`
             : undefined
         )}
-        {row(<RouteIcon className="ti-row-icon" />, 'Remaining', vehicle.remaining_km !== undefined ? `${vehicle.remaining_km} km` : undefined)}
+        {row(<RouteIcon className="ti-row-icon" />, 'Remaining', vehicle.remaining_km !== undefined ? `${vehicle.remaining_km}\u00A0km` : undefined)}
         {row(<ShieldIcon className="ti-row-icon" />, 'Provider', vehicle.provider)}
-        {row(<ClockIcon className="ti-row-icon" />, 'Fix time', new Date(vehicle.ts).toLocaleTimeString())}
+        {row(<ClockIcon className="ti-row-icon" />, 'Fix time', timeFmt.format(new Date(vehicle.ts)))}
         {trip && (
-          <>
+          <div aria-live="polite">
             <div className="ti-sep">Active Trip</div>
             {row(<TruckIcon className="ti-row-icon" />, 'Trip', trip.trip_number)}
             {row(<RouteIcon className="ti-row-icon" />, 'Route', trip.origin && trip.destination ? `${trip.origin} → ${trip.destination}` : undefined)}
             {row(<ActivityIcon className="ti-row-icon" />, 'Status', trip.status)}
-          </>
+          </div>
         )}
-      </div>
+      </dl>
     </section>
   );
 }

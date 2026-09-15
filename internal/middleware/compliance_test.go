@@ -305,3 +305,35 @@ func TestRequireCompanyCompliance_NonManagerBypass(t *testing.T) {
 		assert.Equal(t, "/company/onboard", rr.Header().Get("Location"))
 	}
 }
+
+func TestRequireCompanyCompliance_PublicLegalExempt(t *testing.T) {
+	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	incomplete := &mockCompanySettingsReader{settings: domain.CompanySettings{}}
+	// Public consumer-compliance surfaces must never bounce to onboarding,
+	// even for managers with incomplete company profile.
+	for _, path := range []string{"/privacy", "/terms", "/refunds", "/consumer-compliance", "/faq", "/contact-us"} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		ctx := context.WithValue(req.Context(), auth.ContextUser, &auth.SessionData{UserID: "u1", Role: "org_admin"})
+		rr := httptest.NewRecorder()
+		RequireCompanyCompliance(incomplete)(nextHandler).ServeHTTP(rr, req.WithContext(ctx))
+		assert.Equal(t, http.StatusOK, rr.Code, path+" must pass through while incomplete")
+	}
+}
+
+func TestRequireCompanyCompliance_OnboardingPrereqsExempt(t *testing.T) {
+	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	incomplete := &mockCompanySettingsReader{settings: domain.CompanySettings{}}
+	// Consent, email verification and language switch are prerequisites or
+	// orthogonal to company onboarding — gating them strands new users.
+	for _, path := range []string{"/consent", "/user/send-verification", "/lang"} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		ctx := context.WithValue(req.Context(), auth.ContextUser, &auth.SessionData{UserID: "u1", Role: "org_admin"})
+		rr := httptest.NewRecorder()
+		RequireCompanyCompliance(incomplete)(nextHandler).ServeHTTP(rr, req.WithContext(ctx))
+		assert.Equal(t, http.StatusOK, rr.Code, path+" must pass through while incomplete")
+	}
+}

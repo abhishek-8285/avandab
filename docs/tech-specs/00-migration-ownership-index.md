@@ -1,7 +1,7 @@
 # Migration Ownership Index
 
 Single source of truth for `db/migrations/` version numbers. Repo head is
-`00155_access_reviews.sql`; next free slot is `00156`.
+`00156_contact_acknowledged_at.sql`; next free slot is `00157`.
 (`00039_experiments.sql` remains TAKEN — never edit.) Every new migration
 appends the next free number. **This table is authoritative; spec §3 numbers
 MUST match it.**
@@ -153,7 +153,8 @@ which always allocate head-ward from the maximum above.
 | 00153 | `user_consents` DPDP consent ledger (grant/withdraw per tenant+user+purpose); PG port in `migrations_pg/` | DPDP consent + withdrawal |
 | 00154 | `breach_incidents` DPDP §8(6) breach-notice ledger + `privacy:manage` (roles 1, 6); PG port in `migrations_pg/` | DPDP breach notice |
 | 00155 | `access_reviews` periodic access re-certification ledger (UN-style 6/12-month reviews; reuses `privacy:manage`, no new permission); PG port in `migrations_pg/` | Access recertification |
-| 00156+ | future specs | reserved |
+| 00156 | `contact_submissions.acknowledged_at` NULL (first admin touch) for E-Commerce Amendment 2026 48h-ack SLA; reuses `users:manage` admin gate, no new permission; PG port in `migrations_pg/` | Consumer grievance ack |
+| 00157+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

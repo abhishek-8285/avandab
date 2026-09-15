@@ -7,16 +7,19 @@
     {{end}}
     <div class="ml-auto flex items-center gap-2">
         {{if .ShowDates}}
+        <div class="relative">
         <div data-daterange class="relative flex items-center gap-1.5 bg-surface-container-low border border-border-subtle rounded-full pl-3 pr-1.5 py-1.5 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 transition">
-            <input type="text" inputmode="numeric" data-from name="{{default "from" .FromName}}" value="{{inDate .DateFrom}}" placeholder="dd-mm-yyyy" maxlength="10" autocomplete="off" aria-label="From date, dd-mm-yyyy"
+            <input type="text" inputmode="numeric" data-from name="{{default "from" .FromName}}" value="{{inDate .DateFrom}}" placeholder="dd-mm-yyyy" maxlength="10" autocomplete="off" aria-label="From date, dd-mm-yyyy" aria-describedby="date-filter-error"
                 class="bg-transparent text-xs text-on-surface tabular-nums focus:outline-none w-[6.5rem] placeholder:text-text-muted/70">
             <span class="text-text-muted text-xs select-none" aria-hidden="true">→</span>
-            <input type="text" inputmode="numeric" data-to name="{{default "to" .ToName}}" value="{{inDate .DateTo}}" placeholder="dd-mm-yyyy" maxlength="10" autocomplete="off" aria-label="To date, dd-mm-yyyy"
+            <input type="text" inputmode="numeric" data-to name="{{default "to" .ToName}}" value="{{inDate .DateTo}}" placeholder="dd-mm-yyyy" maxlength="10" autocomplete="off" aria-label="To date, dd-mm-yyyy" aria-describedby="date-filter-error"
                 class="bg-transparent text-xs text-on-surface tabular-nums focus:outline-none w-[6.5rem] placeholder:text-text-muted/70">
             <button type="button" data-calbtn aria-label="Open calendar" aria-expanded="false" aria-haspopup="dialog"
                 class="w-7 h-7 inline-flex items-center justify-center rounded-full text-text-muted hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer border-0 bg-transparent">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 pointer-events-none"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
             </button>
+        </div>
+        <div id="date-filter-error" data-daterr role="alert" class="absolute left-0 top-full mt-1 z-20 px-2 py-1 rounded-md bg-surface-container-lowest border border-status-alert/40 text-xs font-semibold text-status-alert shadow-sm whitespace-nowrap{{if not .DateFilterError}} hidden{{end}}">{{default "Enter real dates as dd-mm-yyyy." .DateFilterError}}</div>
         </div>
         <button type="submit" class="inline-flex items-center px-3 py-1.5 rounded-full bg-surface-container-lowest border border-border-subtle text-xs font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 transition">Apply</button>
         {{end}}
@@ -123,8 +126,11 @@
         function position() {
             if (!ctx) return;
             var r = ctx.wrap.getBoundingClientRect();
-            var pw = 272, ph = pop.offsetHeight || 340;
-            var x = Math.min(Math.max(8, r.right - pw), window.innerWidth - pw - 8);
+            // Measure, never assume: the popover is 17rem wide, so a root font
+            // size above 16px (browser zoom / a11y setting) made the hardcoded
+            // 272 shift it out of alignment.
+            var pw = pop.offsetWidth || 272, ph = pop.offsetHeight || 340;
+            var x = Math.min(Math.max(8, r.right - pw), Math.max(8, window.innerWidth - pw - 8));
             var y = r.bottom + 8;
             if (y + ph > window.innerHeight - 8) y = Math.max(8, r.top - ph - 8);
             pop.style.left = x + "px";
@@ -180,15 +186,17 @@
             var daysPrev = new Date(y, m, 0).getDate();
             var tISOtoday = todayISO();
             var h = "";
-            h += '<div class="av-cal-tabs" role="tablist">';
-            h += '<button type="button" class="av-cal-tab" data-tab="from" data-active="' + (ctx.active === "from") + '"><b>From</b><span>' + (ctx.from.value || "dd-mm-yyyy") + '</span></button>';
-            h += '<button type="button" class="av-cal-tab" data-tab="to" data-active="' + (ctx.active === "to") + '"><b>To</b><span>' + (ctx.to.value || "dd-mm-yyyy") + '</span></button>';
+            h += '<div class="av-cal-tabs" role="tablist" aria-label="Range endpoint">';
+            h += '<button type="button" role="tab" id="av-cal-tab-from" aria-selected="' + (ctx.active === "from") + '" class="av-cal-tab" data-tab="from" data-active="' + (ctx.active === "from") + '"><b>From</b><span>' + (ctx.from.value || "dd-mm-yyyy") + '</span></button>';
+            h += '<button type="button" role="tab" id="av-cal-tab-to" aria-selected="' + (ctx.active === "to") + '" class="av-cal-tab" data-tab="to" data-active="' + (ctx.active === "to") + '"><b>To</b><span>' + (ctx.to.value || "dd-mm-yyyy") + '</span></button>';
             h += "</div>";
-            h += '<div class="av-cal-nav"><button type="button" class="av-cal-navbtn" data-nav="-1" aria-label="Previous month">‹</button>';
-            h += '<div class="av-cal-title">' + MONTHS[m] + " " + y + "</div>";
-            h += '<button type="button" class="av-cal-navbtn" data-nav="1" aria-label="Next month">›</button></div>';
-            h += '<div class="av-cal-grid" role="grid">';
-            ["S","M","T","W","T","F","S"].forEach(function (d) { h += '<div class="av-cal-dow">' + d + "</div>"; });
+            h += '<div class="av-cal-nav"><button type="button" class="av-cal-navbtn" data-nav="-12" aria-label="Previous year">«</button>';
+            h += '<button type="button" class="av-cal-navbtn" data-nav="-1" aria-label="Previous month">‹</button>';
+            h += '<div class="av-cal-title" aria-live="polite">' + MONTHS[m] + " " + y + "</div>";
+            h += '<button type="button" class="av-cal-navbtn" data-nav="1" aria-label="Next month">›</button>';
+            h += '<button type="button" class="av-cal-navbtn" data-nav="12" aria-label="Next year">»</button></div>';
+            h += '<div class="av-cal-grid" role="group" aria-label="' + MONTHS[m] + " " + y + ' days">';
+            ["S","M","T","W","T","F","S"].forEach(function (d) { h += '<div class="av-cal-dow" aria-hidden="true">' + d + "</div>"; });
             var total = Math.ceil((startOffset + daysInMonth) / 7) * 7; // 4-6 rows only as needed
             for (var i = 0; i < total; i++) {
                 var dayNum, cellY = y, cellM = m, outside = false;
@@ -199,9 +207,13 @@
                 var iso = todayISO(dd);
                 var sel = iso === fISO || iso === tISO;
                 var inR = fISO && tISO && iso > fISO && iso < tISO;
-                h += '<button type="button" role="gridcell" class="av-cal-day" data-day="' + iso + '"'
+                // aria-pressed (not aria-selected) because these are toggle
+                // buttons, not grid cells — a real grid would need role="row"
+                // wrappers the 7-column CSS grid does not have.
+                h += '<button type="button" class="av-cal-day" data-day="' + iso + '"'
+                    + ' aria-pressed="' + sel + '"'
                     + ' data-outside="' + outside + '" data-selected="' + sel + '" data-inrange="' + (!!inR) + '" data-today="' + (iso === tISOtoday) + '"'
-                    + ' aria-label="' + toIN(iso) + '">' + dd.getDate() + "</button>";
+                    + ' aria-label="' + toIN(iso) + (outside ? " (outside this month)" : "") + '">' + dd.getDate() + "</button>";
             }
             h += "</div>";
             h += '<div class="av-cal-presets">'
@@ -221,9 +233,11 @@
             if (!t) return;
             if (t.hasAttribute("data-day")) { pick(t.getAttribute("data-day")); return; }
             if (t.hasAttribute("data-nav")) {
-                ctx.viewM += +t.getAttribute("data-nav");
-                if (ctx.viewM < 0) { ctx.viewM = 11; ctx.viewY--; }
-                if (ctx.viewM > 11) { ctx.viewM = 0; ctx.viewY++; }
+                // Month-aware: ±1 month or ±12 (year). Adding to viewM alone
+                // wrapped to month 11/0 and lost the year.
+                var d = new Date(ctx.viewY, ctx.viewM + (+t.getAttribute("data-nav")), 1);
+                ctx.viewY = d.getFullYear();
+                ctx.viewM = d.getMonth();
                 render(); position(); return;
             }
             if (t.hasAttribute("data-tab")) { ctx.active = t.getAttribute("data-tab"); render(); return; }
@@ -231,7 +245,14 @@
                 var k = t.getAttribute("data-preset"), now = todayISO();
                 if (k === "today") { ctx.from.value = toIN(now); ctx.to.value = toIN(now); }
                 else if (k === "week") { ctx.from.value = toIN(addDays(now, -6)); ctx.to.value = toIN(now); }
-                else if (k === "month") { ctx.from.value = toIN(now.slice(0, 8) + "01"); ctx.to.value = toIN(now); }
+                else if (k === "month") {
+                    // Whole month, not "1st → today": the label promised a month
+                    // and silently truncated the future half of it.
+                    var y = now.slice(0, 4), mm = now.slice(5, 7);
+                    var lastDay = new Date(+y, +mm, 0);
+                    ctx.from.value = toIN(y + "-" + mm + "-01");
+                    ctx.to.value = toIN(todayISO(lastDay));
+                }
                 else { ctx.from.value = ""; ctx.to.value = ""; }
                 render(); position(); return;
             }
@@ -244,6 +265,37 @@
         document.addEventListener("keydown", function (e) {
             if (e.key === "Escape" && ctx) close();
         });
+
+        // Arrow keys move the day cursor inside the grid (roving focus). Without
+        // this the calendar was mouse-only: focus stayed on the same day cell.
+        pop.addEventListener("keydown", function (e) {
+            if (!ctx) return;
+            var steps = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 };
+            var key = e.key;
+            var cur = document.activeElement && document.activeElement.getAttribute
+                ? document.activeElement.getAttribute("data-day")
+                : null;
+            if (key === "PageUp" || key === "PageDown") {
+                var mv = new Date(ctx.viewY, ctx.viewM + (key === "PageUp" ? -1 : 1), 1);
+                ctx.viewY = mv.getFullYear(); ctx.viewM = mv.getMonth();
+                render(); position();
+                var keep = cur ? pop.querySelector('[data-day="' + cur + '"]') : null;
+                var firstCell = keep || pop.querySelector("button.av-cal-day");
+                if (firstCell) firstCell.focus();
+                e.preventDefault();
+                return;
+            }
+            if (!cur || !(key in steps)) return;
+            e.preventDefault();
+            var p = cur.split("-");
+            var nd = new Date(+p[0], +p[1] - 1, +p[2] + steps[key]);
+            if (nd.getFullYear() !== ctx.viewY || nd.getMonth() !== ctx.viewM) {
+                ctx.viewY = nd.getFullYear(); ctx.viewM = nd.getMonth();
+                render(); position();
+            }
+            var cell = pop.querySelector('[data-day="' + todayISO(nd) + '"]');
+            if (cell) cell.focus();
+        });
         window.addEventListener("resize", function () { if (ctx) position(); });
         window.addEventListener("scroll", function () { if (ctx) position(); }, true);
 
@@ -253,19 +305,65 @@
             var from = form.querySelector("[data-from]"), to = form.querySelector("[data-to]");
             var btn = form.querySelector("[data-calbtn]");
             if (!from || !to) return;
+            // The search box fires hx-get on every keystroke (hx-include pulls the
+            // dates in) without ever going through the submit handler — so guard
+            // the outgoing request itself: an invalid date cancels the search and
+            // explains instead of returning silently unfiltered rows.
+            function invalidDateInput() {
+                var bad = null;
+                [from, to].forEach(function (inp) {
+                    if (inp.value && !toISO(inp.value)) bad = bad || inp;
+                });
+                return bad;
+            }
+            form.addEventListener("htmx:configRequest", function (e) {
+                var bad = invalidDateInput();
+                if (!bad) return;
+                e.preventDefault();
+                markInvalid(bad);
+                bad.focus();
+            });
             function autoDash(inp) {
                 inp.addEventListener("input", function () {
+                    // ISO input (typed, pasted, or autofilled) must survive
+                    // untouched: the digit mask below would turn 2026-08-25 into
+                    // 20-26-0825 and then silently clear it on submit.
+                    if (/^\d{4}(-\d{0,2}){0,2}$/.test(inp.value)) { markValid(inp); return; }
                     var d = inp.value.replace(/\D/g, "").slice(0, 8);
                     var out = d;
                     if (d.length > 4) out = d.slice(0, 2) + "-" + d.slice(2, 4) + "-" + d.slice(4);
                     else if (d.length > 2) out = d.slice(0, 2) + "-" + d.slice(2);
                     inp.value = out;
+                    markValid(inp);
                 });
                 inp.addEventListener("blur", function () {
-                    if (!inp.value) return;
+                    if (!inp.value) { markValid(inp); return; }
                     var iso = toISO(inp.value);
-                    inp.value = iso ? toIN(iso) : "";
+                    if (!iso) { markInvalid(inp); return; }
+                    inp.value = toIN(iso);
+                    markValid(inp);
                 });
+            }
+            function markInvalid(inp) {
+                inp.setAttribute("aria-invalid", "true");
+                inp.classList.add("text-status-alert");
+                var wrap = inp.closest("[data-daterange]");
+                var box = wrap && wrap.parentNode ? wrap.parentNode.querySelector("[data-daterr]") : null;
+                if (box) box.classList.remove("hidden");
+                if (typeof inp.setCustomValidity === "function") {
+                    inp.setCustomValidity("Enter a real date as dd-mm-yyyy");
+                }
+            }
+            function markValid(inp) {
+                inp.removeAttribute("aria-invalid");
+                inp.classList.remove("text-status-alert");
+                if (typeof inp.setCustomValidity === "function") inp.setCustomValidity("");
+                var wrap = inp.closest("[data-daterange]");
+                var box = wrap && wrap.parentNode ? wrap.parentNode.querySelector("[data-daterr]") : null;
+                var form = inp.form;
+                if (!box || !form) return;
+                var other = form.querySelector(inp.hasAttribute("data-from") ? "[data-to]" : "[data-from]");
+                if (!other || !other.getAttribute("aria-invalid")) box.classList.add("hidden");
             }
             autoDash(from); autoDash(to);
             if (btn) btn.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); openFor(form, document.activeElement === to ? "to" : "from", true); });
@@ -274,12 +372,26 @@
             to.addEventListener("focus", function () { openFor(form, "to", false); });
             from.addEventListener("click", function () { openFor(form, "from", false); });
             to.addEventListener("click", function () { openFor(form, "to", false); });
-            form.addEventListener("submit", function () {
+            form.addEventListener("submit", function (e) {
+                var bad = null;
                 [from, to].forEach(function (inp) {
+                    if (!inp.value) { markValid(inp); return; }
                     var iso = toISO(inp.value);
                     if (iso) { inp.value = iso; return; }
-                    if (inp.value && !isISO(inp.value)) inp.value = "";
+                    bad = inp;
                 });
+                if (bad) {
+                    // Never drop a date the operator typed: block the request and
+                    // say why. Clearing the field silently returned UNFILTERED
+                    // rows, which reads as "nothing matched" and is worse than an
+                    // error.
+                    e.preventDefault();
+                    e.stopPropagation();
+                    markInvalid(bad);
+                    close();
+                    bad.focus();
+                    return;
+                }
                 close();
             });
         });

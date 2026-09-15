@@ -139,6 +139,11 @@
                 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
                 {{end}}
 
+                <label class="flex items-start gap-3 text-xs text-on-surface-variant cursor-pointer">
+                    <input class="mt-0.5 w-4 h-4 shrink-0 accent-primary" id="consent-agree" name="agree" value="yes" type="checkbox" required/>
+                    <span>I have read the <a href="/privacy" class="text-primary hover:underline" target="_blank" rel="noopener">Privacy Notice</a> and <a href="/terms" class="text-primary hover:underline" target="_blank" rel="noopener">Terms</a> and I agree to the use of my name, email and phone to create and operate my account. Consent is voluntary and can be withdrawn anytime at /consent.</span>
+                </label>
+
                 <button type="submit" class="w-full mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-primary text-on-primary text-sm font-semibold px-4 py-2.5 shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer border-0">
                     Register Operator Account
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>

@@ -1,0 +1,15 @@
+name: Compliance Remainder
+
+on:
+  schedule:
+    - cron: '0 9 * * 1' # Mon 09:00 UTC — weekly ratchet until 1 Jan 2027
+  workflow_dispatch:
+
+jobs:
+  remainder:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Weekly compliance remainder
+        run: bash scripts/compliance-remainder.sh

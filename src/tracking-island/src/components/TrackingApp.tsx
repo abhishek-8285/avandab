@@ -62,7 +62,7 @@ export default function TrackingApp({ config }: { config: TrackingMapConfig }) {
   const beaconColor = conn === 'live' ? '#22c55e' : conn === 'poll' ? '#0284c7' : conn === 'offline' ? '#dc2626' : '#f59e0b';
 
   return (
-    <div className="ti-root">
+    <section className="ti-root" aria-label="Live fleet tracking">
       <FleetSidebar vehicles={vehicles} selectedId={selectedId} onSelect={(id) => { setSelectedId(id); }} />
       <div id="map-theater" className="ti-main">
         <div className="ti-topbar">
@@ -71,15 +71,15 @@ export default function TrackingApp({ config }: { config: TrackingMapConfig }) {
             <span id="conn-label">{connLabel}</span>
           </span>
           <span id="live-clock" className="ti-sync ti-mono">
-            {lastSync > 0 ? 'Updated ' + new Date(lastSync).toLocaleTimeString() : 'SYNCING…'}
+            {lastSync > 0 ? 'Updated ' + new Intl.DateTimeFormat('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date(lastSync)) : 'SYNCING…'}
           </span>
           <span className="ti-density ti-mono">
             <b id="density-active">{activeCount}</b>/<span id="density-total">{vehicles.size}</span> live
           </span>
-          <button type="button" id="refresh-feed-btn" className="ti-icon-btn" onClick={refreshNow} title="Refresh now">
+          <button type="button" id="refresh-feed-btn" className="ti-icon-btn" onClick={refreshNow} title="Refresh now" aria-label="Refresh now">
             <RefreshIcon className="ti-btn-svg" />
           </button>
-          <button type="button" id="fit-fleet-btn" className="ti-icon-btn" onClick={() => handle?.fitAll()} title="Fit all vehicles in view" disabled={vehicles.size === 0}>
+          <button type="button" id="fit-fleet-btn" className="ti-icon-btn" onClick={() => handle?.fitAll()} title="Fit all vehicles in view" aria-label="Fit all vehicles in view" disabled={vehicles.size === 0}>
             <MaximizeIcon className="ti-btn-svg" />
           </button>
           <span className="ti-sp" />
@@ -108,6 +108,6 @@ export default function TrackingApp({ config }: { config: TrackingMapConfig }) {
             if (next) handle?.focus(selected);
           }} />
       )}
-    </div>
+    </section>
   );
 }

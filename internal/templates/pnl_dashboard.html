@@ -5,7 +5,7 @@
         <div class="min-w-0">
             <div class="flex items-center gap-3 flex-wrap">
                 <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Profit &amp; Loss</h1>
-                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-bold tabular-nums text-secondary">{{.From}} → {{.To}}</span>
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-bold tabular-nums text-secondary">{{inDate .From}} → {{inDate .To}}</span>
             </div>
             <p class="text-sm text-secondary mt-1">Daily P&amp;L snapshots across the selected window</p>
         </div>

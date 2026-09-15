@@ -1,7 +1,10 @@
 /* Tracking island — scoped styles (ti- prefix). Dark/light via app tokens. */
 .ti-root { display: flex; height: 100%; min-height: 560px; width: 100%; overflow: hidden;
-  background: var(--ti-bg, #f4f6f8); color: var(--ti-fg, #1a2230); font-size: 13px; }
-.ti-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  background: var(--ti-bg, #f4f6f8); color: var(--ti-fg, #1a2230); font-size: 13px;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.ti-root button:focus-visible, .ti-root a:focus-visible, .ti-root input:focus-visible {
+  outline: 2px solid #2563eb; outline-offset: 2px; }
+.ti-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-variant-numeric: tabular-nums; }
 .ti-sp { flex: 1; }
 
 /* Sidebar */
@@ -15,7 +18,7 @@
 .ti-search-icon { position: absolute; left: 20px; top: 18px; width: 14px; height: 14px; color: #94a3b8; pointer-events: none; }
 .ti-search { width: 100%; box-sizing: border-box; padding: 7px 28px 7px 28px; font-size: 12px;
   border: 1px solid #dfe5ec; border-radius: 8px; }
-.ti-search:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
+.ti-search:focus-visible { outline: none; border-color: #2563eb; box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
 .ti-clear { position: absolute; right: 18px; top: 16px; border: 0; background: none;
   cursor: pointer; color: #64748b; padding: 2px; display: flex; align-items: center; justify-content: center; }
 .ti-clear:hover { color: #1e293b; }
@@ -24,6 +27,7 @@
 .ti-sort-btn { flex: 1; border: 1px solid transparent; background: #eef2f6; border-radius: 6px;
   font-size: 10px; padding: 4px 0; cursor: pointer; color: #475569; }
 .ti-sort-btn.on { background: #2563eb; color: #fff; }
+.ti-sort-btn:hover, .ti-tab:hover, .ti-rail:hover { border-color: #2563eb; color: #1d4ed8; }
 .ti-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 10px 12px;
   border-bottom: 1px solid #eef1f5; }
 .ti-tab { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px;
@@ -32,7 +36,7 @@
 .ti-tab.on { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
 .ti-tab-count { font-size: 13px; font-weight: 800; }
 .ti-tab-lbl { font-size: 10px; }
-.ti-list { flex: 1; overflow-y: auto; }
+.ti-list { flex: 1; overflow-y: auto; overscroll-behavior: contain; }
 .ti-row { position: absolute; left: 0; right: 0; height: 56px; display: flex; align-items: center;
   gap: 8px; padding: 0 12px; border: 0; border-bottom: 1px solid #f1f5f9; background: #fff;
   cursor: pointer; text-align: left; width: 100%; box-sizing: border-box; }
@@ -76,21 +80,23 @@
 /* Markers */
 .ti-marker { background: none; border: 0; }
 .ti-truck { transition: transform .8s cubic-bezier(.25,1,.5,1); transform: rotate(var(--ti-r, 0deg));
+  transform-origin: center; transform-box: fill-box;
   filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }
 .ti-truck svg { display: block; }
 .ti-selected .ti-truck { outline: 2px solid #2563eb; outline-offset: 2px; border-radius: 6px; }
 
 /* Drawer */
 .ti-drawer { position: absolute; right: 12px; top: 52px; width: 300px; max-height: calc(100% - 64px);
-  overflow-y: auto; background: #fff; border: 1px solid #e3e8ef; border-radius: 12px;
+  overflow-y: auto; overscroll-behavior: contain; background: #fff; border: 1px solid #e3e8ef; border-radius: 12px;
   box-shadow: 0 8px 30px rgba(15,23,42,.15); z-index: 30; }
+#intel-vehicle-id { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .ti-drawer-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #eef1f5; }
 .ti-pill { font-size: 10px; font-weight: 700; text-transform: uppercase; background: #eef2f6;
   border-radius: 999px; padding: 2px 8px; color: #475569; }
-.ti-drawer-body { padding: 10px 12px 14px; }
+.ti-drawer-body { padding: 10px 12px 14px; margin: 0; }
 .ti-kv { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 4px 0; font-size: 12px; }
-.ti-kv-left { display: inline-flex; align-items: center; color: #64748b; font-size: 12px; }
-.ti-row-icon { width: 14px; height: 14px; color: #94a3b8; flex-shrink: 0; margin-right: 6px; }
+.ti-kv-left { display: inline-flex; align-items: center; color: #64748b; font-size: 12px; margin: 0; min-width: 0; }
+.ti-kv dd { font-weight: 600; text-align: right; margin: 0; min-width: 0; overflow-wrap: break-word; }
 .ti-kv b { font-weight: 600; text-align: right; }
 .ti-sep { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
   color: #94a3b8; margin: 10px 0 4px; }
@@ -131,6 +137,7 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--color-on-surface, #0f172a);
+  text-wrap: balance;
 }
 .ti-empty-msg {
   font-size: 12px;
@@ -158,7 +165,7 @@
   font-weight: 700;
   text-decoration: none;
   box-shadow: 0 1px 3px 0 rgba(16,24,40,0.08);
-  transition: all 0.15s ease;
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 .ti-empty-btn-primary:hover {
   opacity: 0.92;
@@ -254,6 +261,17 @@
 /* Migration-00117 parity states (class names match server status tokens). */
 .ti-drawer .text-status-error { color: #dc2626; }
 .ti-drawer .text-status-success { color: #16a34a; }
+
+@media (max-width: 1023.5px) {
+  .ti-drawer { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ti-badge.live .ti-beacon { animation: none; }
+  .ti-truck { transition: none; }
+  .ti-sidebar { transition: none; }
+  .ti-empty-btn-primary, .ti-empty-btn-primary:hover, .ti-empty-btn-primary:active { transform: none; }
+}
 
 
 

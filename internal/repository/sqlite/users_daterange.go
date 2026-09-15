@@ -7,6 +7,7 @@ import (
 	db "transport-app/db/generated/sqlite"
 	"transport-app/internal/domain"
 	"transport-app/internal/repository"
+	"transport-app/internal/shared"
 )
 
 // Date-range search variants for the users list page calendar (optional
@@ -14,8 +15,8 @@ import (
 // and its mocks untouched.
 
 const userDateClause = `
-  AND (? = '' OR substr(CAST(u.created_at AS TEXT), 1, 10) >= substr(CAST(? AS TEXT), 1, 10))
-  AND (? = '' OR substr(CAST(u.created_at AS TEXT), 1, 10) <= substr(CAST(? AS TEXT), 1, 10))`
+  AND (? = '' OR datetime(CAST(u.created_at AS TEXT)) >= datetime(?))
+  AND (? = '' OR datetime(CAST(u.created_at AS TEXT)) <= datetime(?))`
 
 // query runs a raw multi-row query, picking up the active transaction from
 // context when present (mirrors exec/queryRow helpers).
@@ -27,7 +28,13 @@ func (r *SQLRepository) query(ctx context.Context, query string, args ...interfa
 }
 
 // SearchUsersDateRange mirrors SearchUsers with a created_at window filter.
+//
+// The window is compared as UTC instants (shared.DayBoundsUTC), not as raw
+// date strings: those strings are UTC calendar days while the UI filters in
+// fleet-local (IST) days, so truncation silently filed every 00:00–05:30 IST
+// row under the previous day.
 func (r *SQLRepository) SearchUsersDateRange(ctx context.Context, query string, status string, from string, to string, limit int, offset int, tenantID string) ([]repository.UserWithRole, error) {
+	dateFrom, dateTo := shared.DayBoundsUTC(from, to)
 	rows, err := r.query(ctx, `
 SELECT u.id, u.email, u.name, u.phone, u.role_id, u.status,
        u.last_login_at, u.theme_preference, u.created_at, u.updated_at,
@@ -42,7 +49,7 @@ LIMIT ? OFFSET ?`,
 		tenantID,
 		query, query, query,
 		status, status,
-		from, from, to, to,
+		dateFrom, dateFrom, dateTo, dateTo,
 		int64(limit), int64(offset),
 	)
 	if err != nil {
@@ -71,6 +78,7 @@ LIMIT ? OFFSET ?`,
 // CountUsersDateRange counts users matching the same filters as SearchUsersDateRange.
 func (r *SQLRepository) CountUsersDateRange(ctx context.Context, query string, status string, from string, to string, tenantID string) (int64, error) {
 	var count int64
+	dateFrom, dateTo := shared.DayBoundsUTC(from, to)
 	err := r.queryRow(ctx, `
 SELECT COUNT(*)
 FROM users u
@@ -80,7 +88,7 @@ WHERE u.tenant_id = $1
 		tenantID,
 		query, query, query,
 		status, status,
-		from, from, to, to,
+		dateFrom, dateFrom, dateTo, dateTo,
 	).Scan(&count)
 	return count, err
 }

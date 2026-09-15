@@ -133,6 +133,12 @@
       "skillPath": "skills/in-progress/setup-ts-deep-modules/SKILL.md",
       "computedHash": "19dabd17a305fd99857b3eaad12b044fb951bdf58152d515630d1585f80d24fa"
     },
+    "tailwind-design-system": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/frontend-mobile-development/skills/tailwind-design-system/SKILL.md",
+      "computedHash": "cd61afd28f594e8b6712b61749209cbb4466e3eec4e4223793bbd97fc85c1b63"
+    },
     "tdd": {
       "source": "mattpocock/skills",
       "sourceType": "github",
@@ -169,6 +175,12 @@
       "skillPath": "skills/engineering/triage/SKILL.md",
       "computedHash": "ad1b4d93e5995ffbc0f143fc716c8c3afb45cd13c8a1fd027a43852eb59544c7"
     },
+    "vercel-react-native-skills": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/react-native-skills/SKILL.md",
+      "computedHash": "2e9088a7333666d8c2833b8ff58bd51b955501c42b4c7244f72b4cbf22dafcc4"
+    },
     "wait-what": {
       "source": "mattpocock/skills",
       "sourceType": "github",
@@ -180,6 +192,12 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/wayfinder/SKILL.md",
       "computedHash": "8f610a50e8e8044571d918088160a9657e23f1268080728bf92009db48f6c22f"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/web-design-guidelines/SKILL.md",
+      "computedHash": "a6a44d5498f7e8f68289902f3dedfc6f38ae0cee1e96527c80724cf27f727c2a"
     },
     "wizard": {
       "source": "mattpocock/skills",

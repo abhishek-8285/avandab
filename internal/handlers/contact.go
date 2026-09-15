@@ -3,14 +3,19 @@ package handlers
 import (
 	"context"
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"transport-app/internal/apperr"
+	"transport-app/internal/httpx"
 	"transport-app/internal/middleware"
 )
 
@@ -29,18 +34,48 @@ func (h *ContactHandlers) Routes(r chi.Router) {
 
 // Ticket struct for data rendering
 type ContactTicket struct {
-	ID           string
-	TicketNumber string
-	Name         string
-	Email        string
-	Phone        string
-	CompanyName  string
-	Subject      string
-	Category     string
-	Message      string
-	Status       string
-	CreatedAt    string
-	UpdatedAt    string
+	ID             string
+	TicketNumber   string
+	Name           string
+	Email          string
+	Phone          string
+	CompanyName    string
+	Subject        string
+	Category       string
+	Message        string
+	Status         string
+	AcknowledgedAt string
+	CreatedAt      string
+	UpdatedAt      string
+}
+
+// Consumer grievance SLAs (E-Commerce Amendment 2026, eff. 1 Jan 2027):
+// acknowledge within 48h, redress within 1 month. Acknowledgement is proven
+// by acknowledged_at (00156, stamped on first admin touch); the status proxy
+// (non-pending = touched) covers only pre-migration rows.
+// ponytail: date math only, no timers/queues until complaint volume justifies.
+func contactSLA(createdAt, acknowledgedAt, status string, now time.Time) (ackDue, redressDue time.Time, state string) {
+	created, err := time.ParseInLocation("2006-01-02 15:04:05", createdAt, time.UTC)
+	if err != nil {
+		if created, err = time.Parse(time.RFC3339, createdAt); err != nil {
+			return time.Time{}, time.Time{}, "unknown"
+		}
+	}
+	ackDue = created.Add(48 * time.Hour)
+	redressDue = created.AddDate(0, 1, 0)
+	acked := acknowledgedAt != "" || status != "pending"
+	switch {
+	case status == "resolved" || status == "closed":
+		return ackDue, redressDue, "redressed"
+	case now.After(redressDue):
+		return ackDue, redressDue, "redress-overdue"
+	case acked:
+		return ackDue, redressDue, "on-track"
+	case now.After(ackDue):
+		return ackDue, redressDue, "ack-overdue"
+	default:
+		return ackDue, redressDue, "on-track"
+	}
 }
 
 func generateTicketNumber() string {
@@ -67,6 +102,23 @@ func (h *ContactHandlers) Page(w http.ResponseWriter, r *http.Request) {
 		ticket, searchErr = h.fetchTicketByNumber(r.Context(), ticketNo, email)
 	}
 
+	var slaAckDue, slaRedressDue, slaState, slaAckAt string
+	if ticket != nil {
+		ackDue, redressDue, state := contactSLA(ticket.CreatedAt, ticket.AcknowledgedAt, ticket.Status, time.Now().UTC())
+		if !ackDue.IsZero() {
+			slaAckDue = ackDue.Format("02 Jan 2006, 15:04 UTC")
+			slaRedressDue = redressDue.Format("02 Jan 2006")
+		}
+		slaState = state
+		if ticket.AcknowledgedAt != "" {
+			if at, err := time.ParseInLocation("2006-01-02 15:04:05", ticket.AcknowledgedAt, time.UTC); err == nil {
+				slaAckAt = at.Format("02 Jan 2006, 15:04 UTC")
+			} else {
+				slaAckAt = ticket.AcknowledgedAt
+			}
+		}
+	}
+
 	pd := PageData{
 		Title:          "Contact Us & Support Status",
 		SEODescription: "Contact Avandab support — fleet onboarding, billing, tracking help and ticket status lookup.",
@@ -80,6 +132,10 @@ func (h *ContactHandlers) Page(w http.ResponseWriter, r *http.Request) {
 			"SearchEmail":    email,
 			"SubmittedNum":   r.URL.Query().Get("submitted"),
 			"SubmittedEmail": email,
+			"SLAAckDue":      slaAckDue,
+			"SLARedressDue":  slaRedressDue,
+			"SLAState":       slaState,
+			"SLAAckAt":       slaAckAt,
 			"ErrorRef":       ref,
 			"ErrorAbout":     about,
 			"PrefillSubject": func() string {
@@ -173,12 +229,12 @@ func (h *ContactHandlers) fetchTicketByNumber(ctx context.Context, ticketNo, ema
 	var t ContactTicket
 
 	err := h.DB.QueryRowContext(ctx, `
-		SELECT id, ticket_number, name, email, COALESCE(phone, ''), COALESCE(company_name, ''), subject, category, message, status, created_at, updated_at
+		SELECT id, ticket_number, name, email, COALESCE(phone, ''), COALESCE(company_name, ''), subject, category, message, status, COALESCE(acknowledged_at, ''), created_at, updated_at
 		FROM contact_submissions
 		WHERE ticket_number = $1 AND email = $2
 		ORDER BY created_at DESC LIMIT 1
 	`, ticketNo, email).Scan(
-		&t.ID, &t.TicketNumber, &t.Name, &t.Email, &t.Phone, &t.CompanyName, &t.Subject, &t.Category, &t.Message, &t.Status, &t.CreatedAt, &t.UpdatedAt,
+		&t.ID, &t.TicketNumber, &t.Name, &t.Email, &t.Phone, &t.CompanyName, &t.Subject, &t.Category, &t.Message, &t.Status, &t.AcknowledgedAt, &t.CreatedAt, &t.UpdatedAt,
 	)
 
 	if err != nil {
@@ -186,4 +242,104 @@ func (h *ContactHandlers) fetchTicketByNumber(ctx context.Context, ticketNo, ema
 	}
 
 	return &t, ""
+}
+
+// UpdateStatus transitions a grievance ticket. Mounted behind users:manage
+// (same admin gate as plans price updates). First touch stamps
+// acknowledged_at — the 48h-ack proof. Whitelisted statuses only.
+// NOTE: contact_submissions is a company-global inbox (no tenant_id).
+// Triage is for the designated grievance team; in multi-tenant use, treat
+// tickets as cross-tenant data and restrict users:manage accordingly.
+func (h *ContactHandlers) UpdateStatus(w http.ResponseWriter, r *http.Request) {
+	ticketNo := chi.URLParam(r, "ticket")
+	var req struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<20)).Decode(&req); err != nil {
+		httpx.Error(w, r, apperr.New(apperr.CodeMalformedJSON).WithCause(err))
+		return
+	}
+	switch req.Status {
+	case "pending", "in_progress", "resolved", "closed":
+	default:
+		httpx.Error(w, r, apperr.New(apperr.CodeValidation).
+			WithDetail("status must be one of pending, in_progress, resolved, closed"))
+		return
+	}
+	res, err := h.DB.ExecContext(r.Context(), `
+		UPDATE contact_submissions
+		SET status = $1, updated_at = CURRENT_TIMESTAMP,
+		    acknowledged_at = COALESCE(acknowledged_at, CURRENT_TIMESTAMP)
+		WHERE ticket_number = $2
+	`, req.Status, ticketNo)
+	if err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		httpx.Error(w, r, apperr.New(apperr.CodeNotFound))
+		return
+	}
+	slog.InfoContext(r.Context(), "grievance ticket updated",
+		slog.String("ticket", ticketNo),
+		slog.String("status", req.Status),
+	)
+	httpx.JSON(w, http.StatusOK, map[string]interface{}{
+		"ticket": ticketNo, "status": req.Status, "acknowledged": true,
+	})
+}
+
+// ListTickets returns grievance tickets, newest first, cap 100, optionally
+// ?status=. Same users:manage gate as UpdateStatus (see note above).
+func (h *ContactHandlers) ListTickets(w http.ResponseWriter, r *http.Request) {
+	status := r.URL.Query().Get("status")
+	query := `SELECT ticket_number, name, email, subject, category, status,
+		COALESCE(acknowledged_at, ''), created_at, updated_at
+		FROM contact_submissions`
+	var args []interface{}
+	if status != "" {
+		switch status {
+		case "pending", "in_progress", "resolved", "closed":
+		default:
+			httpx.Error(w, r, apperr.New(apperr.CodeValidation).
+				WithDetail("status must be one of pending, in_progress, resolved, closed"))
+			return
+		}
+		query += ` WHERE status = $1`
+		args = append(args, status)
+	}
+	query += ` ORDER BY created_at DESC LIMIT 100`
+	rows, err := h.DB.QueryContext(r.Context(), query, args...)
+	if err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	defer func() { _ = rows.Close() }()
+	type ticketRow struct {
+		TicketNumber   string `json:"ticket"`
+		Name           string `json:"name"`
+		Email          string `json:"email"`
+		Subject        string `json:"subject"`
+		Category       string `json:"category"`
+		Status         string `json:"status"`
+		AcknowledgedAt string `json:"acknowledged_at"`
+		CreatedAt      string `json:"created_at"`
+		UpdatedAt      string `json:"updated_at"`
+	}
+	out := make([]ticketRow, 0)
+	for rows.Next() {
+		var t ticketRow
+		if err := rows.Scan(&t.TicketNumber, &t.Name, &t.Email, &t.Subject,
+			&t.Category, &t.Status, &t.AcknowledgedAt, &t.CreatedAt, &t.UpdatedAt); err != nil {
+			httpx.Error(w, r, err)
+			return
+		}
+		out = append(out, t)
+	}
+	if err := rows.Err(); err != nil {
+		httpx.Error(w, r, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]interface{}{"tickets": out})
 }
