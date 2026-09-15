@@ -18,16 +18,17 @@ func main() {
 
 	command := os.Args[1]
 	apiURL := getEnv("RAG_API_URL", "http://localhost:8080")
+	token := os.Getenv("RAG_API_TOKEN")
 
 	switch command {
 	case "stats":
-		handleStats(apiURL)
+		handleStats(apiURL, token)
 	case "teach":
-		handleTeach(apiURL, os.Args[2:])
+		handleTeach(apiURL, token, os.Args[2:])
 	case "search":
-		handleSearch(apiURL, os.Args[2:])
+		handleSearch(apiURL, token, os.Args[2:])
 	case "index":
-		handleIndex(apiURL, os.Args[2:])
+		handleIndex(apiURL, token, os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n", command)
 		printUsage()
@@ -35,7 +36,24 @@ func main() {
 	}
 }
 
-func handleTeach(apiURL string, args []string) {
+// authorizedRequest issues an HTTP request with Bearer auth when a token is
+// configured. The RAG API routes sit behind RequireAPIAuth; without the header
+// the CLI always gets 401 "api token invalid".
+func authorizedRequest(apiURL, token, method, path, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest(method, apiURL+path, body)
+	if err != nil {
+		return nil, err
+	}
+	if contentType != "" {
+		req.Header.Set("Content-Type", contentType)
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	return http.DefaultClient.Do(req)
+}
+
+func handleTeach(apiURL, token string, args []string) {
 	if len(args) < 1 {
 		fmt.Fprintln(os.Stderr, "usage: rag teach <topic> [file1 file2 ...]")
 		os.Exit(1)
@@ -59,7 +77,7 @@ func handleTeach(apiURL string, args []string) {
 			"name":    topic,
 			"content": string(data),
 		})
-		resp, err := http.Post(apiURL+"/api/rag/teach", "application/json", bytes.NewReader(reqBody))
+		resp, err := authorizedRequest(apiURL, token, http.MethodPost, "/api/rag/teach", "application/json", bytes.NewReader(reqBody))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to teach: %v\n", err)
 			os.Exit(1)
@@ -91,7 +109,7 @@ func handleTeach(apiURL string, args []string) {
 		"name":    topic,
 		"content": combined.String(),
 	})
-	resp, err := http.Post(apiURL+"/api/rag/teach", "application/json", bytes.NewReader(reqBody))
+	resp, err := authorizedRequest(apiURL, token, http.MethodPost, "/api/rag/teach", "application/json", bytes.NewReader(reqBody))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to teach: %v\n", err)
 		os.Exit(1)
@@ -100,7 +118,7 @@ func handleTeach(apiURL string, args []string) {
 	printResponse(resp)
 }
 
-func handleSearch(apiURL string, args []string) {
+func handleSearch(apiURL, token string, args []string) {
 	if len(args) < 1 {
 		fmt.Fprintln(os.Stderr, "usage: rag search <query> [top_k]")
 		os.Exit(1)
@@ -116,7 +134,7 @@ func handleSearch(apiURL string, args []string) {
 		"query": query,
 		"top_k": topK,
 	})
-	resp, err := http.Post(apiURL+"/api/rag/search", "application/json", bytes.NewReader(reqBody))
+	resp, err := authorizedRequest(apiURL, token, http.MethodPost, "/api/rag/search", "application/json", bytes.NewReader(reqBody))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to search: %v\n", err)
 		os.Exit(1)
@@ -139,8 +157,8 @@ func handleSearch(apiURL string, args []string) {
 	}
 }
 
-func handleStats(apiURL string) {
-	resp, err := http.Get(apiURL + "/api/rag/stats")
+func handleStats(apiURL, token string) {
+	resp, err := authorizedRequest(apiURL, token, http.MethodGet, "/api/rag/stats", "", nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to get stats: %v\n", err)
 		os.Exit(1)
@@ -149,7 +167,7 @@ func handleStats(apiURL string) {
 	printResponse(resp)
 }
 
-func handleIndex(apiURL string, args []string) {
+func handleIndex(apiURL, token string, args []string) {
 	if len(args) < 1 {
 		fmt.Fprintln(os.Stderr, "usage: rag index <directory>")
 		os.Exit(1)
@@ -158,7 +176,7 @@ func handleIndex(apiURL string, args []string) {
 	reqBody, _ := json.Marshal(map[string]any{
 		"directory": args[0],
 	})
-	resp, err := http.Post(apiURL+"/api/rag/index", "application/json", bytes.NewReader(reqBody))
+	resp, err := authorizedRequest(apiURL, token, http.MethodPost, "/api/rag/index", "application/json", bytes.NewReader(reqBody))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to index: %v\n", err)
 		os.Exit(1)
