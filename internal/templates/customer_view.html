@@ -6,7 +6,7 @@
         <div class="relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 sm:p-6">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-violet-500 to-cyan-400 opacity-90"></div>
             <div class="flex gap-4">
-                {{if .Customer.PhotoURL}}<img src="{{nullString .Customer.PhotoURL}}" alt="Photo of {{.Customer.Name}}" loading="lazy" class="w-14 h-14 rounded-2xl object-cover border border-border-subtle shrink-0 hidden sm:block">{{else}}<div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-violet-600 grid place-items-center text-white font-black text-lg shrink-0 hidden sm:flex">{{slice .Customer.Name 0 1}}</div>{{end}}
+                {{if .Customer.PhotoURL}}<img src="{{nullString .Customer.PhotoURL}}" alt="Photo of {{.Customer.Name}}" width="56" height="56" loading="lazy" class="w-14 h-14 rounded-2xl object-cover border border-border-subtle shrink-0 hidden sm:block">{{else}}<div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-violet-600 grid place-items-center text-white font-black text-lg shrink-0 hidden sm:flex">{{slice .Customer.Name 0 1}}</div>{{end}}
                 <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-2">
                         <h1 class="text-xl sm:text-2xl font-black tracking-tight text-on-surface font-display">{{if .Customer.Title}}<span class="text-sm font-semibold text-text-muted align-middle">{{nullString .Customer.Title}} </span>{{end}}{{.Customer.Name}}</h1>

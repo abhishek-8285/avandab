@@ -60,7 +60,7 @@
             <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6 pb-6 border-b border-border-subtle">
                 <div class="flex items-start gap-4">
                     {{if .Company.LogoURL}}
-                    <img src="{{.Company.LogoURL}}" alt="{{.Company.Name}}" class="w-14 h-14 rounded-xl object-contain border border-border-subtle bg-surface-container-lowest p-1" />
+                    <img src="{{.Company.LogoURL}}" alt="{{.Company.Name}}" width="56" height="56" decoding="async" class="w-14 h-14 rounded-xl object-contain border border-border-subtle bg-surface-container-lowest p-1" />
                     {{else}}
                     <div class="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 text-white font-black text-xl flex items-center justify-center shadow-xs shrink-0 font-display">
                         FF
@@ -436,8 +436,8 @@
                             "color": "#059669"
                         },
                         "handler": function (response) {
-                            payBtnLabel.textContent = "Verifying & Settling Payment...";
-                            showMessage('success', 'Payment received! Verifying cryptographic signature and recording in ledger...');
+                            payBtnLabel.textContent = "Verifying & Settling Payment…";
+                            showMessage('success', 'Payment received! Verifying cryptographic signature and recording in ledger…');
 
                             fetch("/pay/" + invoiceId + "/razorpay/verify", {
                                 method: "POST",
@@ -459,7 +459,7 @@
                                     return vdata;
                                 });
                             }).then(function (resData) {
-                                showMessage('success', '✓ Payment of ₹{{printf "%.2f" .Invoice.OutstandingBalance}} verified successfully! Payment ID: <strong>' + (resData.payment_id || response.razorpay_payment_id) + '</strong>. Redirecting to receipt...');
+                                showMessage('success', '✓ Payment of ₹{{printf "%.2f" .Invoice.OutstandingBalance}} verified successfully! Payment ID: <strong>' + (resData.payment_id || response.razorpay_payment_id) + '</strong>. Redirecting to receipt…');
                                 setTimeout(function () {
                                     window.location.href = "/pay/" + invoiceId + "?paid=true";
                                 }, 1200);
