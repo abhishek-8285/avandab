@@ -13,6 +13,8 @@ func Get(provider string) Optimizer {
 	switch p {
 	case "mock", "":
 		return &MockOptimizer{}
+	case "vrp", "vrp-min-cost":
+		return &VRPMinCost{}
 	case "osrm", "osrm-public":
 		return &OSRMClient{BaseURL: "http://router.project-osrm.org"}
 	case "osrm-selfhost":
@@ -35,5 +37,5 @@ func Get(provider string) Optimizer {
 
 // Available lists provider ids.
 func Available() []string {
-	return []string{"mock", "osrm-public", "osrm-selfhost"}
+	return []string{"mock", "vrp", "osrm-public", "osrm-selfhost"}
 }
