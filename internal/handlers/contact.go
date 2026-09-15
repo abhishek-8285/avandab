@@ -229,7 +229,7 @@ func (h *ContactHandlers) fetchTicketByNumber(ctx context.Context, ticketNo, ema
 	var t ContactTicket
 
 	err := h.DB.QueryRowContext(ctx, `
-		SELECT id, ticket_number, name, email, COALESCE(phone, ''), COALESCE(company_name, ''), subject, category, message, status, COALESCE(acknowledged_at, ''), created_at, updated_at
+		SELECT id, ticket_number, name, email, COALESCE(phone, ''), COALESCE(company_name, ''), subject, category, message, status, COALESCE(CAST(acknowledged_at AS TEXT), ''), created_at, updated_at
 		FROM contact_submissions
 		WHERE ticket_number = $1 AND email = $2
 		ORDER BY created_at DESC LIMIT 1
@@ -295,7 +295,7 @@ func (h *ContactHandlers) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 func (h *ContactHandlers) ListTickets(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
 	query := `SELECT ticket_number, name, email, subject, category, status,
-		COALESCE(acknowledged_at, ''), created_at, updated_at
+		COALESCE(CAST(acknowledged_at AS TEXT), ''), created_at, updated_at
 		FROM contact_submissions`
 	var args []interface{}
 	if status != "" {
