@@ -7,9 +7,7 @@
         <!-- Receipt or placeholder -->
         {{if .ReceiptURL}}
         <a href="{{nullString .ReceiptURL}}" target="_blank" rel="noopener">
-            <img src="{{nullString .ReceiptURL}}"
-                  alt="Expense receipt"
-                  class="w-10 h-10 rounded-lg object-cover border border-border-subtle shrink-0 hover:opacity-90 transition" />
+            <img src="{{nullString .ReceiptURL}}" alt="Expense receipt" width="40" height="40" loading="lazy" decoding="async" class="w-10 h-10 rounded-lg object-cover border border-border-subtle shrink-0 hover:opacity-90 transition" />
         </a>
         {{else}}
         <div class="w-10 h-10 rounded-lg bg-surface-container grid place-items-center text-text-muted shrink-0">

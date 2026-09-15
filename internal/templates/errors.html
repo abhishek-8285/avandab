@@ -7,7 +7,7 @@
             <p class="text-sm text-secondary mt-1">Deduplicated error groups and incident tracking</p>
         </div>
         <form method="get" action="/ops/errors" class="flex gap-2 flex-wrap items-center">
-            <select name="severity" aria-label="Severity" class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 cursor-pointer">
+            <select name="severity" aria-label="Severity" class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 cursor-pointer transition-colors">
                 <option value="">All Severities</option>
                 <option value="CRITICAL" {{if eq .Severity "CRITICAL"}}selected{{end}}>Critical</option>
                 <option value="HIGH" {{if eq .Severity "HIGH"}}selected{{end}}>High</option>
@@ -15,12 +15,12 @@
                 <option value="LOW" {{if eq .Severity "LOW"}}selected{{end}}>Low</option>
             </select>
             <input aria-label="Fingerprint" autocomplete="off" type="text" name="fingerprint" value="{{.Fingerprint}}" placeholder="Fingerprint"
-                   class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-sm w-48 font-data-mono focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+                   class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-sm w-48 font-data-mono focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 transition-colors">
             <input type="date" name="from" aria-label="From (last seen)" value="{{.From}}" title="From (last seen)"
-                   class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-sm tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+                   class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-sm tabular-nums focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 transition-colors">
             <input type="date" name="to" aria-label="To (last seen)" value="{{.To}}" title="To (last seen)"
-                   class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-sm tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
-            <button type="submit" class="rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 transition cursor-pointer border-0">Filter</button>
+                   class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-sm tabular-nums focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 transition-colors">
+            <button type="submit" class="rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 transition-colors cursor-pointer border-0">Filter</button>
         </form>
     </div>
 

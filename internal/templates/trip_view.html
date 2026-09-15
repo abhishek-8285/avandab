@@ -301,53 +301,53 @@
             <div class="p-5 flex flex-col gap-2 items-stretch">
                 {{if eq .Trip.Status "draft"}}
                 <form method="POST" action="/trips/{{.Trip.ID}}/schedule">
-                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Schedule" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 w-full")}}
+                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Schedule" "Class" "min-h-[44px] w-full")}}
                 </form>
                 <form method="POST" action="/trips/{{.Trip.ID}}/delete" data-confirm="Are you sure? This cannot be undone.">
-                    {{template "btn.html" (dict "Variant" "danger" "Size" "sm" "Type" "submit" "Label" "Delete" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-status-alert focus:ring-offset-2 w-full")}}
+                    {{template "btn.html" (dict "Variant" "danger" "Size" "sm" "Type" "submit" "Label" "Delete" "Class" "min-h-[44px] focus-visible:ring-status-alert w-full")}}
                 </form>
                 {{end}}
 
                 {{if eq .Trip.Status "scheduled"}}
                 <form method="POST" action="/trips/{{.Trip.ID}}/assign-driver" class="flex items-center gap-1 flex-wrap" data-post>
-                    <select name="driver_id" aria-label="Driver" class="flex-1 min-w-[8rem] bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
+                    <select name="driver_id" aria-label="Driver" class="flex-1 min-w-[8rem] bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 transition-colors">
                         {{range .AvailableDrivers}}
                         <option value="{{.ID}}">{{.FirstName}} {{.LastName}}</option>
                         {{end}}
                     </select>
-                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Assign Driver" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2")}}
+                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Assign Driver" "Class" "min-h-[44px]")}}
                 </form>
                 <form method="POST" action="/trips/{{.Trip.ID}}/assign-vehicle" class="flex items-center gap-1 flex-wrap">
-                    <select name="vehicle_id" aria-label="Vehicle" class="flex-1 min-w-[8rem] bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
+                    <select name="vehicle_id" aria-label="Vehicle" class="flex-1 min-w-[8rem] bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 transition-colors">
                         {{range .AvailableVehicles}}
                         <option value="{{.ID}}">{{.VehicleNumber}} ({{.RegistrationNumber}})</option>
                         {{end}}
                     </select>
-                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Assign Vehicle" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2")}}
+                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Assign Vehicle" "Class" "min-h-[44px]")}}
                 </form>
                 {{end}}
 
                 {{if eq .Trip.Status "assigned"}}
                 <form method="POST" action="/trips/{{.Trip.ID}}/start">
-                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Start Trip" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 w-full")}}
+                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Start Trip" "Class" "min-h-[44px] w-full")}}
                 </form>
                 {{end}}
 
                 {{if eq .Trip.Status "started"}}
                 <form method="POST" action="/trips/{{.Trip.ID}}/reach-pickup">
-                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Reach Pickup" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 w-full")}}
+                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Reach Pickup" "Class" "min-h-[44px] w-full")}}
                 </form>
                 {{end}}
 
                 {{if eq .Trip.Status "reached_pickup"}}
                 <form method="POST" action="/trips/{{.Trip.ID}}/in-transit">
-                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "In Transit" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 w-full")}}
+                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "In Transit" "Class" "min-h-[44px] w-full")}}
                 </form>
                 {{end}}
 
                 {{if eq .Trip.Status "in_transit"}}
                 <form method="POST" action="/trips/{{.Trip.ID}}/deliver">
-                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Deliver" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 w-full")}}
+                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Deliver" "Class" "min-h-[44px] w-full")}}
                 </form>
                 {{end}}
 
@@ -355,12 +355,12 @@
                 <form method="POST" action="/trips/{{.Trip.ID}}/complete" class="space-y-3 rounded-xl border border-border-subtle bg-surface-container-low p-3">
                     <p class="text-eyebrow text-text-muted">Trip Close (SOP ZMOTM_MMS)</p>
                     {{template "field.html" (dict "Label" "Close Odometer (km)" "Name" "close_odometer" "Type" "number" "Placeholder" "e.g. 125400" "Hint" "Counter reading at close")}}
-                    <label class="flex items-center gap-2 text-sm font-semibold text-on-surface">
+                    <label class="flex items-center gap-2 text-sm font-semibold text-on-surface cursor-pointer">
                         <input type="checkbox" name="breakdown" value="1" class="w-4 h-4 accent-[var(--color-status-alert)]">
                         Breakdown — file outstanding notification
                     </label>
                     {{template "field.html" (dict "Label" "Breakdown Note" "Name" "breakdown_note" "Placeholder" "What failed, where")}}
-                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Complete Trip" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 w-full")}}
+                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Complete Trip" "Class" "min-h-[44px] w-full")}}
                 </form>
                 {{end}}
                 {{if and (eq .Trip.Status "completed") .Trip.CloseOdometer}}
@@ -372,7 +372,7 @@
 
                 {{if or (eq .Trip.Status "scheduled") (eq .Trip.Status "assigned") (eq .Trip.Status "started") (eq .Trip.Status "reached_pickup") (eq .Trip.Status "in_transit") (eq .Trip.Status "delivered")}}
                 <form method="POST" action="/trips/{{.Trip.ID}}/cancel">
-                    {{template "btn.html" (dict "Variant" "danger" "Size" "sm" "Type" "submit" "Label" "Cancel" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-status-alert focus:ring-offset-2 w-full")}}
+                    {{template "btn.html" (dict "Variant" "danger" "Size" "sm" "Type" "submit" "Label" "Cancel" "Class" "min-h-[44px] focus-visible:ring-status-alert w-full")}}
                 </form>
                 {{end}}
             </div>

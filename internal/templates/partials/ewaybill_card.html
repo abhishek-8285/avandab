@@ -31,7 +31,7 @@
         </div>
         {{if .EWayBill.QRCode}}
         <div class="col-span-1 md:col-span-2 flex items-center gap-4 pt-2">
-            <img src="{{.EWayBill.QRCode}}" alt="EWB QR Code" class="w-20 h-20 border rounded bg-white p-1" />
+            <img src="{{.EWayBill.QRCode}}" alt="EWB QR Code" width="80" height="80" loading="lazy" decoding="async" class="w-20 h-20 border rounded bg-white p-1" />
             <div class="text-xs text-text-muted">
                 <p>Digital QR code verified against NIC E-Way Bill registry.</p>
                 <p class="mt-1">From: {{.EWayBill.FromPlace}} ({{.EWayBill.FromStateCode}}) → To: {{.EWayBill.ToPlace}} ({{.EWayBill.ToStateCode}})</p>

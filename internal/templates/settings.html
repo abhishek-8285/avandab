@@ -18,7 +18,7 @@
                         <label for="company-logo" class="block text-xs font-bold text-secondary mb-1.5">Logo</label>
                         {{if .Settings.LogoPath}}
                         <div class="mb-2">
-                            <img src="/uploads/{{.Settings.LogoPath}}" alt="Company Logo" class="max-h-24 rounded-xl border border-border-subtle">
+                            <img src="/uploads/{{.Settings.LogoPath}}" alt="Company Logo" height="96" loading="lazy" decoding="async" class="max-h-24 rounded-xl border border-border-subtle">
                         </div>
                         {{end}}
                         {{/* id added so the label above has something to point
