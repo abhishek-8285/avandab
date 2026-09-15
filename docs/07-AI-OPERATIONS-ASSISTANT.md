@@ -16,11 +16,16 @@ The assistant operates at `/assistant` (web interface) and `/api/agent/chat` (AP
                              [ Router / Orchestrator LLM ]
                              (internal/agent/orchestrator.go)
                                              │
-               ┌──────────────┬──────────────┼──────────────┬──────────────┐
-               ▼              ▼              ▼              ▼              ▼
-          [ Booking ]   [ Payments ]    [ Kharcha ]      [ Ops ]       [ Support ]
-          Create / Edit Record / Audit  Approve/Reject   Live Tracking RAG Search
-          Bookings      Invoices        Expenses         & Deviations  Docs & Policies
+                ┌──────────────┬──────────────┼──────────────┬──────────────┬──────────────┐
+                ▼              ▼              ▼              ▼              ▼              ▼
+           [ Booking ]   [ Payments ]    [ Kharcha ]      [ Ops ]     [ Maintenance ] [ Support ]
+           Create / Edit Record / Audit  Approve/Reject   Live Tracking Job cards    RAG Search
+           Bookings      Invoices        Expenses         & Deviations (open→done)   Docs & Policies
+```
+
+Seed-dev fleet (same orchestrator, `internal/agent/devagents.go` — guidance-only,
+no mutation tools): `[ Product ] [ Backend ] [ Frontend ] [ QA ]` — specs/MVP scope,
+Go APIs/migrations, web UI/mobile, prove-it + security gate.
 ```
 
 ---

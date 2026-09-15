@@ -149,11 +149,11 @@
         .feat-groups{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:1.25rem}
         @media(min-width:768px){.feat-groups{grid-template-columns:repeat(2,minmax(0,1fr))}}
         @media(min-width:1280px){.feat-groups{grid-template-columns:repeat(3,minmax(0,1fr))}}
-        .feat-group{background:var(--color-background);border:1px solid var(--color-border-subtle);border-radius:1rem;padding:1.5rem;transition:all .2s ease-in-out}
+        .feat-group{background:var(--color-background);border:1px solid var(--color-border-subtle);border-radius:1rem;padding:1.5rem;transition:border-color .2s ease-in-out,box-shadow .2s ease-in-out,transform .2s ease-in-out}
         .feat-group:hover{border-color:rgba(0,104,95,.4);box-shadow:0 10px 28px -8px rgba(0,64,55,.14);transform:translateY(-3px)}
         .fg-head{display:flex;align-items:center;gap:.65rem;margin-bottom:1.05rem}
         .fg-icon{width:38px;height:38px;border-radius:.65rem;background:color-mix(in srgb,var(--color-primary) 10%,transparent);color:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-        .fg-head h4{font-family:'Outfit',sans-serif;font-weight:800;font-size:1rem;color:var(--color-on-surface);line-height:1.3}
+        .fg-head h3{font-family:'Outfit',sans-serif;font-weight:800;font-size:1rem;color:var(--color-on-surface);line-height:1.3}
         .fg-chips{display:flex;flex-wrap:wrap;gap:.45rem}
         .fg-chips span{font-size:.72rem;font-weight:700;color:var(--color-secondary);background:var(--color-surface-container-lowest);border:1px solid var(--color-border-subtle);border-radius:9999px;padding:.32rem .72rem;transition:color .15s,border-color .15s;cursor:default}
         .fg-chips span:hover{color:var(--color-primary);border-color:rgba(0,104,95,.4)}
@@ -340,7 +340,7 @@
         .story-card{max-width:26rem;background:color-mix(in srgb,var(--color-surface-container-lowest) 90%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--color-border-subtle);border-radius:1.25rem;padding:1.9rem;box-shadow:0 26px 70px rgba(2,20,15,.22)}
         .step-chip{display:inline-flex;align-items:center;gap:.55rem;font-size:.68rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--color-primary);margin-bottom:.9rem}
         .step-chip b{width:26px;height:26px;border-radius:8px;background:color-mix(in srgb,var(--color-primary) 12%,transparent);display:inline-flex;align-items:center;justify-content:center;font-size:.8rem}
-        .story-card h3{font-family:'Outfit','Satoshi','Plus Jakarta Sans',sans-serif;font-weight:800;font-size:1.45rem;line-height:1.25;color:var(--color-on-surface);margin-bottom:.7rem}
+        .story-card h2{font-family:'Outfit','Satoshi','Plus Jakarta Sans',sans-serif;font-weight:800;font-size:1.45rem;line-height:1.25;color:var(--color-on-surface);margin-bottom:.7rem}
         .story-card p{font-size:.92rem;line-height:1.6;color:var(--color-secondary);margin:0}
         .pain-tags{display:flex;flex-wrap:wrap;gap:.45rem;margin-top:1.1rem}
         .pain-tags span{font-size:.68rem;font-weight:700;color:var(--color-secondary);border:1px solid var(--color-border-subtle);border-radius:999px;padding:.25rem .65rem;background:color-mix(in srgb,var(--color-surface-container-lowest) 70%,transparent)}
@@ -363,7 +363,7 @@
             .vehicle-track{bottom:12px}
             .story-chapter{align-items:flex-end;padding-bottom:12vh;min-height:100vh}
             .story-card{padding:1.3rem;border-radius:1rem}
-            .story-card h3{font-size:1.2rem}
+            .story-card h2{font-size:1.2rem}
             .pain-tags span{font-size:.66rem}
             .ping.p2,.paper.pa5,.loadbox.b3{display:none}
             .cust-bubble{right:4%;font-size:.7rem;padding:.5rem .7rem}
@@ -397,7 +397,7 @@
             .vehicle-track{bottom:8px}
             .story-chapter{min-height:102vh;align-items:flex-end;padding-bottom:9vh}
             .story-card{padding:1rem 1.15rem;box-shadow:0 14px 40px rgba(2,20,15,.2)}
-            .story-card h3{font-size:1.05rem;margin-bottom:.45rem}
+            .story-card h2{font-size:1.05rem;margin-bottom:.45rem}
             .story-card p{font-size:.82rem;line-height:1.45}
             .step-chip{margin-bottom:.55rem}
             .cta-row{margin-top:.9rem;gap:.55rem}
@@ -762,7 +762,7 @@
             <div class="fx fx-calls">
                 <div class="fx-call k1">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                    <span>"Truck chahiye kal subah"</span><span class="call-badge">×4</span>
+                    <span>“Truck chahiye kal subah”</span><span class="call-badge">×4</span>
                 </div>
                 <div class="fx-call k2">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
@@ -774,7 +774,7 @@
             <div class="fx fx-blind">
                 <div class="cust-bubble">
                     <svg aria-hidden="true" viewBox="0 0 40 40"><circle cx="20" cy="14" r="8" fill="var(--color-primary)" opacity=".85"/><path d="M6 36c2-8 8-12 14-12s12 4 14 12" fill="var(--color-primary)" opacity=".85"/></svg>
-                    <span>"Where is my load?"</span>
+                    <span>“Where is my load?”</span>
                 </div>
                 <svg aria-hidden="true" class="fx-route" viewBox="0 0 480 170" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M24 140C120 30 250 190 456 34" stroke="#94a3b8" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 16"/>
@@ -959,7 +959,7 @@
         <div class="story-chapter" data-scene="business">
             <div class="story-card reveal">
                 <div class="step-chip"><b>1</b>First, your world</div>
-                <h3>You move goods from one city to another. That is the whole business.</h3>
+                <h2>You move goods from one city to another. That is the whole business.</h2>
                 <p>A customer needs a load carried. Your truck picks it up, a driver takes it there. Simple — until it isn't.</p>
                 <div class="pain-tags"><span>Your trucks</span><span>Your drivers</span><span>Your customers</span></div>
             </div>
@@ -968,7 +968,7 @@
         <div class="story-chapter align-right" data-scene="calls">
             <div class="story-card reveal">
                 <div class="step-chip"><b>2</b>The booking scramble</div>
-                <h3>"Truck chahiye kal subah." One call becomes ten.</h3>
+                <h2>“Truck chahiye kal subah.” One call becomes ten.</h2>
                 <p>You ring drivers, compare rates, scribble prices on paper scraps and forward addresses on WhatsApp. Every booking lives in five different places — mostly in your head.</p>
                 <div class="pain-tags"><span>Phone calls</span><span>Paper scraps</span><span>All in memory</span></div>
             </div>
@@ -976,8 +976,8 @@
 
         <div class="story-chapter" data-scene="blind">
             <div class="story-card reveal">
-                <div class="step-chip"><b>3</b>"Where is my load?"</div>
-                <h3>The customer asks. You honestly don't know yet.</h3>
+                <div class="step-chip"><b>3</b>“Where is my load?”</div>
+                <h2>The customer asks. You honestly don't know yet.</h2>
                 <p>Until the driver answers his phone, nobody knows if the truck is in traffic, parked at a dhaba, or lost. One truck is easy to track in your head. Twenty is chaos.</p>
                 <div class="pain-tags"><span>No live location</span><span>Repeat follow-ups</span><span>Broken trust</span></div>
             </div>
@@ -986,7 +986,7 @@
         <div class="story-chapter align-right" data-scene="papers">
             <div class="story-card reveal">
                 <div class="step-chip"><b>4</b>The month-end mountain</div>
-                <h3>The trip finished — the paperwork didn't.</h3>
+                <h2>The trip finished — the paperwork didn't.</h2>
                 <p>Invoices wait to be made, fuel receipts vanish, and one payment quietly slips through the cracks. Multiply that by every trip this month.</p>
                 <div class="pain-tags"><span>Pending invoices</span><span>Lost receipts</span><span>Forgotten payments</span></div>
             </div>
@@ -995,7 +995,7 @@
         <div class="story-chapter chapter-solved" data-scene="solved">
             <div class="story-card reveal">
                 <div class="step-chip"><b>✓</b>The Avandab way</div>
-                <h3>Avandab puts your transport business on one screen.</h3>
+                <h2>Avandab puts your transport business on one screen.</h2>
                 <p>Book a trip, assign a driver, share a live tracking link, get paid — each step flows into the next, automatically.</p>
                 <ul class="solved-points">
                     <li>Dispatch a driver in seconds</li>
@@ -1022,10 +1022,10 @@
         <div class="container">
             <div class="feat-intro reveal">
                 <div>
-                    <h3 class="mini-title">
+                    <h2 class="mini-title">
                         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-6 h-6"><path d="M3 5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h1v2a1 1 0 0 0 2 0v-2h9v2a1 1 0 0 0 2 0v-2h2a1 1 0 0 0 1-1v-7l-4-4H3Zm11 4h3l2 2v2h-5V9Z"/></svg>
                         Every module. One login.
-                    </h3>
+                    </h2>
                     <p style="color:var(--color-secondary);font-size:.95rem;margin:.5rem 0 0;">No add-ons, no per-feature pricing — the complete toolkit ships together.</p>
                 </div>
                 <span class="feat-count">✓ 30+ modules included</span>
@@ -1034,42 +1034,42 @@
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>
-                        <h4>Run daily operations</h4>
+                        <h3>Run daily operations</h3>
                     </div>
                     <div class="fg-chips"><span>Bookings</span><span>Trips &amp; routes</span><span>Driver management</span><span>Vehicle records</span><span>Customer CRM</span><span>Maintenance scheduler</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>
-                        <h4>See everything live</h4>
+                        <h3>See everything live</h3>
                     </div>
                     <div class="fg-chips"><span>Live map</span><span>Trip tracking &amp; ETA</span><span>Geofences</span><span>Telemetry devices</span><span>Alerts &amp; ops alerts</span><span>Notifications</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg></div>
-                        <h4>Money, closed loop</h4>
+                        <h3>Money, closed loop</h3>
                     </div>
                     <div class="fg-chips"><span>Invoices</span><span>Payment tracking</span><span>Kharcha ledger</span><span>Settlements</span><span>Fuel audit</span><span>PnL reports</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></div>
-                        <h4>Compliance built-in</h4>
+                        <h3>Compliance built-in</h3>
                     </div>
                     <div class="fg-chips"><span>E-way bill</span><span>FASTag</span><span>Audit trail</span><span>User roles &amp; permissions</span><span>Driver scorecard</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-                        <h4>For your customers</h4>
+                        <h3>For your customers</h3>
                     </div>
                     <div class="fg-chips"><span>Self-service portal</span><span>My Shipments live view</span><span>Direct invoices</span><span>Support access</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg></div>
-                        <h4>Extras that compound</h4>
+                        <h3>Extras that compound</h3>
                     </div>
                     <div class="fg-chips"><span>Mobile driver app</span><span>E-PoD signatures</span><span>AI assistant</span><span>REST API</span><span>Experiments lab</span><span>Self-host option</span></div>
                 </div>
@@ -1089,7 +1089,7 @@
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12 12h.01"/><path d="M12 2a10 10 0 1 0 10 10"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></div>
-                        <h4>Fleet owner</h4>
+                        <h3>Fleet owner</h3>
                     </div>
                     <p class="fg-desc">Know profit per trip and spot fuel leaks — no spreadsheets, no guessing.</p>
                     <div class="fg-chips"><span>PnL reports</span><span>Fuel audit</span><span>Driver scorecard</span><span>Settlements</span></div>
@@ -1097,7 +1097,7 @@
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg></div>
-                        <h4>Dispatch &amp; operations</h4>
+                        <h3>Dispatch &amp; operations</h3>
                     </div>
                     <p class="fg-desc">Book, assign and track every trip from one board — with alerts when something needs attention.</p>
                     <div class="fg-chips"><span>Bookings</span><span>Trips &amp; routes</span><span>Live map</span><span>Ops alerts</span></div>
@@ -1105,7 +1105,7 @@
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 18h.01"/></svg></div>
-                        <h4>Drivers</h4>
+                        <h3>Drivers</h3>
                     </div>
                     <p class="fg-desc">Trip details on mobile, delivery marked on the spot with a signed proof.</p>
                     <div class="fg-chips"><span>Mobile driver app</span><span>E-PoD signatures</span><span>Trip status</span></div>
@@ -1113,7 +1113,7 @@
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-                        <h4>Your customers</h4>
+                        <h3>Your customers</h3>
                     </div>
                     <p class="fg-desc">Self-serve shipment tracking and invoices — fewer status calls to your office.</p>
                     <div class="fg-chips"><span>My Shipments portal</span><span>Live tracking link</span><span>Direct invoices</span></div>
@@ -1200,7 +1200,7 @@
                 <div class="lg:col-span-5 rounded-2xl border-2 border-primary/25 bg-gradient-to-b from-surface-container-lowest to-surface-container-low p-6 sm:p-8 flex flex-col justify-between shadow-lg relative overflow-hidden">
                     <div class="absolute -right-12 -top-12 w-36 h-36 bg-primary/10 rounded-full blur-2xl pointer-events-none"></div>
 
-                    <div class="space-y-6 relative z-10">
+                    <div class="space-y-6 relative z-10" aria-live="polite">
                         <div>
                             <span class="text-xs font-semibold uppercase tracking-wider text-text-muted">Estimated Annual Bottom-Line Boost</span>
                             <div id="calc-annual-total" class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-primary font-display tracking-tight mt-1">₹18.48 Lakhs</div>

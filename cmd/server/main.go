@@ -1201,6 +1201,13 @@ func main() {
 		}) {
 			orch.AddAgent(sub)
 		}
+		// Seed-dev fleet (product/backend/frontend/qa): guidance-only agents,
+		// same router + RL + approval infra, zero new mutation surface.
+		for _, sub := range agent.BuildDevAgentSet(agent.AgentSetOptions{
+			RagService: ragHandler.Service(),
+		}) {
+			orch.AddAgent(sub)
+		}
 		agentAPI = agent.NewHandler(orch, toolEnv)
 		// Enforce per-user RBAC on the assistant's read tools (same
 		// permissions as the REST API that serves the same data).

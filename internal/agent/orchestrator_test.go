@@ -30,6 +30,10 @@ func TestKeywordRoute(t *testing.T) {
 		"open a job card for brake repair":      "maintenance",
 		"which work orders are open":            "maintenance",
 		"vehicle maintenance due soon":          "maintenance",
+		"write a spec for driver onboarding":    "product",
+		"go test is failing in internal/agent":  "qa",
+		"migration with goose failed":           "backend",
+		"tailwind component broken":             "frontend",
 	}
 	for q, want := range cases {
 		if got := o.keywordRoute(q); got != want {
