@@ -29,12 +29,16 @@ export function QRDemoScreen() {
         <Text style={styles.headerTitle}>QR DEMO</Text>
       </View>
 
-      <View style={styles.tabRow}>
+      <View style={styles.tabRow} accessibilityRole="tablist">
         {(['scan', 'generate'] as Tab[]).map((t) => (
           <TouchableOpacity
             key={t}
             style={[styles.tab, tab === t && styles.tabActive]}
             onPress={() => { setTab(t); setScanned(''); }}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: tab === t }}
+            accessibilityLabel={t === 'scan' ? 'Scan QR code' : 'Generate QR code'}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
             <Text style={[styles.tabText, tab === t && styles.tabTextActive]}>{t.toUpperCase()}</Text>
           </TouchableOpacity>
@@ -47,7 +51,7 @@ export function QRDemoScreen() {
             <View style={styles.card}>
               <Text style={styles.cardTitle}>CAMERA PERMISSION</Text>
               <Text style={styles.cardBody}>Grant camera access to scan QR codes.</Text>
-              <TouchableOpacity style={styles.btn} onPress={() => requestPerm()}>
+              <TouchableOpacity style={styles.btn} onPress={() => requestPerm()} accessibilityRole="button" accessibilityLabel="Allow camera access" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Text style={styles.btnText}>ALLOW CAMERA</Text>
               </TouchableOpacity>
             </View>
@@ -61,8 +65,8 @@ export function QRDemoScreen() {
           {scanned !== '' && (
             <View style={styles.card}>
               <Text style={styles.cardTitle}>SCANNED</Text>
-              <Text style={styles.scannedText} selectable>{scanned}</Text>
-              <TouchableOpacity style={styles.btn} onPress={() => setScanned('')}>
+              <Text style={styles.scannedText} selectable numberOfLines={5} ellipsizeMode="tail" accessibilityLiveRegion="polite">{scanned}</Text>
+              <TouchableOpacity style={styles.btn} onPress={() => setScanned('')} accessibilityRole="button" accessibilityLabel="Scan again" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Text style={styles.btnText}>SCAN AGAIN</Text>
               </TouchableOpacity>
             </View>
@@ -76,8 +80,11 @@ export function QRDemoScreen() {
               style={styles.input}
               value={value}
               onChangeText={setValue}
-              placeholder="Enter text or URL"
+              placeholder="e.g. https://avandab.com/trip/123"
               placeholderTextColor={Colors.textMuted}
+              accessibilityLabel="QR code value"
+              autoComplete="url"
+              textContentType="URL"
             />
           </View>
           <View style={styles.qrCenter}>

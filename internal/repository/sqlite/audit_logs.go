@@ -9,6 +9,7 @@ import (
 	"transport-app/internal/repository"
 
 	db "transport-app/db/generated/sqlite"
+	"transport-app/internal/shared"
 )
 
 // AuditLogRepository implementation
@@ -102,18 +103,21 @@ func (r *SQLRepository) CountAuditLogsSince(ctx context.Context, since time.Time
 	return r.Q(ctx).CountAuditLogsSince(ctx, since)
 }
 
-// auditLogDateClause filters on created_at using date(substr(...)) because
-// SQLite stores timestamps as text in mixed formats (RFC3339 from Go,
-// 'YYYY-MM-DD HH:MM:SS' from datetime('now')) — only the prefix is stable.
+// auditLogDateClause filters created_at against the inclusive UTC instant
+// bounds from shared.DayBoundsUTC. Storage mixes RFC3339 and CURRENT_TIMESTAMP
+// text; SQLite datetime() normalizes both, so comparing instants applies the
+// fleet-local (IST) day window instead of silently filing 00:00–05:30 IST
+// events under the previous UTC day.
 const auditLogDateClause = `
-  AND (? = '' OR substr(CAST(a.created_at AS TEXT), 1, 10) >= substr(CAST(? AS TEXT), 1, 10))
-  AND (? = '' OR substr(CAST(a.created_at AS TEXT), 1, 10) <= substr(CAST(? AS TEXT), 1, 10))`
+  AND (? = '' OR datetime(CAST(a.created_at AS TEXT)) >= datetime(?))
+  AND (? = '' OR datetime(CAST(a.created_at AS TEXT)) <= datetime(?))`
 
 // ListAuditLogsDateRange mirrors ListAuditLogs and additionally filters by a
 // free-text query over action/table/record/user and a created_at window
 // (optional interface asserted by AuditLogService).
 func (r *SQLRepository) ListAuditLogsDateRange(ctx context.Context, query string, from string, to string, limit int, offset int) ([]repository.AuditLogWithUser, int64, error) {
 	qPattern := "%" + query + "%"
+	dateFrom, dateTo := shared.DayBoundsUTC(from, to)
 	rows, err := r.query(ctx, `
 SELECT a.id, a.user_id, a.action, a.table_name, a.record_id, a.old_values, a.new_values, a.ip_address, a.created_at,
        u.name AS user_name
@@ -123,7 +127,7 @@ WHERE ($1 = '' OR a.action LIKE $2 OR a.table_name LIKE $3 OR a.record_id LIKE $
 ORDER BY a.created_at DESC
 LIMIT ? OFFSET ?`,
 		query, qPattern, qPattern, qPattern, qPattern,
-		from, from, to, to,
+		dateFrom, dateFrom, dateTo, dateTo,
 		limit, offset,
 	)
 	if err != nil {
@@ -157,7 +161,7 @@ FROM audit_logs a
 LEFT JOIN users u ON a.user_id = u.id
 WHERE ($1 = '' OR a.action LIKE $2 OR a.table_name LIKE $3 OR a.record_id LIKE $4 OR u.name LIKE $5)`+auditLogDateClause,
 		query, qPattern, qPattern, qPattern, qPattern,
-		from, from, to, to,
+		dateFrom, dateFrom, dateTo, dateTo,
 	).Scan(&count)
 	if err != nil {
 		return nil, 0, err

@@ -24,7 +24,7 @@ func TestAuditLogRepository_ListAuditLogsDateRange(t *testing.T) {
 
 	ctx := context.Background()
 	mk := func(action, table string, day int) {
-		created := time.Date(2026, 8, day, 8, 0, 0, 0, time.UTC)
+		created := time.Date(2026, 8, day, 8, 0, 0, 0, time.UTC).Format("2006-01-02T15:04:05Z")
 		_, err := dbConn.Exec(`INSERT INTO audit_logs (id, action, table_name, created_at)
 			VALUES (?, ?, ?, ?)`, "log-"+action+"-"+table, action, table, created)
 		require.NoError(t, err)
@@ -32,16 +32,21 @@ func TestAuditLogRepository_ListAuditLogsDateRange(t *testing.T) {
 	mk("create_booking", "bookings", 1)
 	mk("update_trip", "trips", 10)
 	mk("delete_invoice", "invoices", 20)
+	// IST-day-boundary row: written 2026-08-09T18:45:00Z (= 00:15 IST Aug 10).
+	// The pre-instant filter filed it under Aug 09 (raw UTC truncation).
+	_, err := dbConn.Exec(`INSERT INTO audit_logs (id, action, table_name, created_at)
+		VALUES (?, ?, ?, ?)`, "log-ist-midnight", "ist_midnight_check", "bookings", "2026-08-09T18:45:00Z")
+	require.NoError(t, err)
 
 	logs, total, err := repo.ListAuditLogsDateRange(ctx, "", "2026-08-01", "2026-08-31", 10, 0)
 	require.NoError(t, err)
-	assert.EqualValues(t, 3, total)
-	require.Len(t, logs, 3)
+	assert.EqualValues(t, 4, total)
+	require.Len(t, logs, 4)
 
-	// Single-day window (from == to)
+	// Single-day window (from == to) — the IST-boundary row belongs to Aug 10.
 	_, total, err = repo.ListAuditLogsDateRange(ctx, "", "2026-08-10", "2026-08-10", 10, 0)
 	require.NoError(t, err)
-	assert.EqualValues(t, 1, total)
+	assert.EqualValues(t, 2, total)
 
 	// From-only bound
 	_, total, err = repo.ListAuditLogsDateRange(ctx, "", "2026-08-11", "", 10, 0)

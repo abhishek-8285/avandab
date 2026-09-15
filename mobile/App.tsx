@@ -1,13 +1,14 @@
 import 'react-native-gesture-handler';
 import './src/i18n';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, Alert, Modal, StatusBar } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { NavigationContainer, useFocusEffect, useNavigation } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useQuery } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { Colors, Font, Radius, Spacing } from './src/constants/theme';
@@ -46,6 +47,8 @@ import { DriverOnboardingScreen } from './src/features/driver-onboarding/screens
 import { VoiceKharchaSheet } from './src/components/VoiceKharchaSheet';
 import { Trip } from './src/types/api';
 import { mapTripStatus, RawTrip } from './src/utils/tripMapper';
+import { BottomTabs } from './src/features/shell/components/BottomTabs';
+import { FlashList } from '@shopify/flash-list';
 
 const queryClient = new QueryClient();
 
@@ -70,8 +73,7 @@ type DriverStackParamList = {
   Issues: { tripId?: string } | undefined;
 };
 
-const AuthStack = createStackNavigator<AuthStackParamList>();
-const DriverStack = createStackNavigator<DriverStackParamList>();
+const NativeStack = createNativeStackNavigator<AuthStackParamList & DriverStackParamList>();
 
 function FirstTimeSetupRoute({ navigation }: { navigation: any }) {
   const token = useAuthStore((s) => s.token);
@@ -85,10 +87,10 @@ function FirstTimeSetupRoute({ navigation }: { navigation: any }) {
   );
 }
 
-function AuthNavigator() {
+function AuthStack() {
   return (
-    <AuthStack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
-      <AuthStack.Screen name="Login">
+    <NativeStack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+      <NativeStack.Screen name="Login">
         {({ navigation }) => (
           <LoginScreen
             onLoginSuccess={() => {}}
@@ -96,11 +98,11 @@ function AuthNavigator() {
             onRegisterLink={() => navigation.navigate('Register')}
           />
         )}
-      </AuthStack.Screen>
-      <AuthStack.Screen name="Splash">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="Splash">
         {({ navigation }) => <SplashScreen onFinish={() => navigation.navigate('Login')} />}
-      </AuthStack.Screen>
-      <AuthStack.Screen name="GetStarted">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="GetStarted">
         {({ navigation }) => (
           <GetStartedScreen
             onGetStarted={() => navigation.navigate('OnboardingOverview')}
@@ -108,47 +110,47 @@ function AuthNavigator() {
             onOpenQRDemo={() => navigation.navigate('QRDemo')}
           />
         )}
-      </AuthStack.Screen>
-      <AuthStack.Screen name="QRDemo">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="QRDemo">
         {() => <QRDemoScreen />}
-      </AuthStack.Screen>
-      <AuthStack.Screen name="OnboardingOverview">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="OnboardingOverview">
         {({ navigation }) => (
           <OnboardingOverviewScreen
             onNext={() => navigation.navigate('BookingSchedule')}
             onSkip={() => navigation.navigate('Login')}
           />
         )}
-      </AuthStack.Screen>
-      <AuthStack.Screen name="BookingSchedule">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="BookingSchedule">
         {({ navigation }) => (
           <BookingScheduleScreen
             onNext={() => navigation.navigate('Login')}
             onBack={() => navigation.goBack()}
           />
         )}
-      </AuthStack.Screen>
-      <AuthStack.Screen name="Register">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="Register">
         {({ navigation }) => (
           <RegisterScreen
             onRegisterSuccess={() => {}}
             onBackToLogin={() => navigation.navigate('Login')}
           />
         )}
-      </AuthStack.Screen>
-      <AuthStack.Screen name="ForgotPassword">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="ForgotPassword">
         {({ navigation }) => (
           <ForgotPasswordScreen onBackToLogin={() => navigation.navigate('Login')} />
         )}
-      </AuthStack.Screen>
-    </AuthStack.Navigator>
+      </NativeStack.Screen>
+    </NativeStack.Navigator>
   );
 }
 
-function DriverNavigator() {
+function DriverStack() {
   return (
-    <DriverStack.Navigator screenOptions={{ headerShown: false }}>
-      <DriverStack.Screen name="Main">
+    <NativeStack.Navigator screenOptions={{ headerShown: false }}>
+      <NativeStack.Screen name="Main">
         {({ navigation }) => (
           <MainScreen
             onOpenSetup={() => navigation.navigate('FirstTimeSetup')}
@@ -158,13 +160,13 @@ function DriverNavigator() {
             onOpenIssues={() => navigation.navigate('Issues', {})}
           />
         )}
-      </DriverStack.Screen>
-      <DriverStack.Screen name="FirstTimeSetup">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="FirstTimeSetup">
         {({ navigation }) => (
           <FirstTimeSetupRoute navigation={navigation} />
         )}
-      </DriverStack.Screen>
-      <DriverStack.Screen name="ActiveNavigation">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="ActiveNavigation">
         {({ navigation, route }) => (
           <ActiveNavigationScreen
             tripId={route.params?.tripId}
@@ -179,8 +181,8 @@ function DriverNavigator() {
             onMenuToggle={() => navigation.navigate('Main')}
           />
         )}
-      </DriverStack.Screen>
-      <DriverStack.Screen name="DeliveryVerification">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="DeliveryVerification">
         {({ navigation, route }) => (
           <DeliveryVerificationScreen
             tripId={route.params?.tripId}
@@ -188,16 +190,16 @@ function DriverNavigator() {
             onBack={() => navigation.goBack()}
           />
         )}
-      </DriverStack.Screen>
-      <DriverStack.Screen name="Issues">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="Issues">
         {({ navigation, route }) => (
           <IssuesScreen tripId={route.params?.tripId} onBack={() => navigation.goBack()} />
         )}
-      </DriverStack.Screen>
-      <DriverStack.Screen name="Profile">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="Profile">
         {({ navigation }) => <ProfileScreen onBack={() => navigation.goBack()} />}
-      </DriverStack.Screen>
-      <DriverStack.Screen name="Expenses">
+      </NativeStack.Screen>
+      <NativeStack.Screen name="Expenses">
         {({ navigation, route }) => (
           <ExpenseScreen
             tripId={route.params?.tripId}
@@ -205,8 +207,8 @@ function DriverNavigator() {
             onBack={() => navigation.goBack()}
           />
         )}
-      </DriverStack.Screen>
-    </DriverStack.Navigator>
+      </NativeStack.Screen>
+    </NativeStack.Navigator>
   );
 }
 
@@ -257,9 +259,9 @@ export default function App() {
         <StatusBar barStyle="light-content" backgroundColor="#075e54" />
         <NavigationContainer theme={navTheme}>
           {isAuthenticated ? (
-            <DriverNavigator />
+            <DriverStack />
           ) : (
-            <AuthNavigator />
+            <AuthStack />
           )}
         </NavigationContainer>
       </QueryClientProvider>
@@ -404,6 +406,31 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
     useSyncStore.getState().setPendingCount(0);
     logout();
   };
+
+  // Stable per-trip callback: FlashList rows render memoized TripCards, which
+  // only skip re-renders when callback identities survive parent state changes.
+  // FlashList rows render memoized TripCards; a memoized row wrapper owns the
+  // per-item closure so row props stay referentially stable across re-renders
+  // (fresh inline arrows in renderItem would defeat React.memo entirely).
+  const renderTripRow = useCallback(
+    ({ item }: { item: Trip }) => (
+      <TripCard
+        tripNumber={item.tripNumber}
+        driverName={item.driverName}
+        vehiclePlate={item.vehiclePlate}
+        origin={item.origin}
+        destination={item.destination}
+        status={item.status}
+        startTime={item.startTime}
+        advanceAmount={5000}
+        cargoWeight="18 Tons"
+        onPress={() => onStartNav && onStartNav(item)}
+        onNavigate={() => onStartNav && onStartNav(item)}
+      />
+    ),
+    [onStartNav]
+  );
+
 
   const { data: trips, isLoading } = useQuery<Trip[]>({
     queryKey: ['trips', driverIdentifier, token],
@@ -570,23 +597,23 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
           <PaisaScreen tripId={undefined} onOpenExpenses={() => navigation.navigate('Expenses', {})} />
         </View>
       )}
-      {activeTab !== 'paisa' && (
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentPadding}>
-        {activeTab === 'trips' ? (
-          isLoading ? (
-            <>
-              <SkeletonLoader />
-              <SkeletonLoader />
-            </>
-          ) : (
-            (() => {
-              // ACTIVE: pending/in-progress work. HISTORY: delivered/completed/cancelled.
+      {activeTab === 'trips' && isLoading && (
+        <View style={[styles.content, styles.contentPadding]}>
+          <SkeletonLoader />
+          <SkeletonLoader />
+        </View>
+      )}
+      {activeTab === 'trips' && !isLoading && (() => {
+              // ACTIVE: pending/in-transit work. HISTORY: delivered/completed/cancelled.
+              // Derive header + first-card position up front so the FlashList below can
+              // inject the section header as ListHeaderComponent (v4 API: no ListHeader).
               const visibleTrips = (trips ?? []).filter((t) =>
                 tripFilter === 'active'
                   ? t.status === 'PENDING' || t.status === 'IN_TRANSIT'
                   : t.status === 'COMPLETED' || t.status === 'CANCELLED'
               );
-              if (visibleTrips.length === 0 && tripFilter === 'active') {
+              const showActiveEmpty = visibleTrips.length === 0 && tripFilter === 'active';
+              if (showActiveEmpty) {
                 return (
                   <View style={{ gap: 12 }}>
                     <TripCard
@@ -635,25 +662,18 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
                   </View>
                 );
               }
-              return visibleTrips.map((trip) => (
-                <TripCard
-                  key={trip.id}
-                  tripNumber={trip.tripNumber}
-                  driverName={trip.driverName}
-                  vehiclePlate={trip.vehiclePlate}
-                  origin={trip.origin}
-                  destination={trip.destination}
-                  status={trip.status}
-                  startTime={trip.startTime}
-                  advanceAmount={5000}
-                  cargoWeight="18 Tons"
-                  onPress={() => onStartNav && onStartNav(trip)}
-                  onNavigate={() => onStartNav && onStartNav(trip)}
+              return (
+                <FlashList
+                  data={visibleTrips}
+                  keyExtractor={(item) => item.id}
+                  style={styles.content}
+                  contentContainerStyle={styles.contentPadding}
+                  renderItem={renderTripRow}
                 />
-              ));
-            })()
-          )
-        ) : (
+              );
+            })()}
+      {activeTab !== 'paisa' && activeTab !== 'trips' && (
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentPadding}>
           <View style={{ gap: 12 }}>
             {/* Dispatch Header Banner */}
             <View style={styles.dispatchHeaderCard}>
@@ -828,7 +848,6 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
               </View>
             </View>
           </View>
-        )}
       </ScrollView>
       )}
 

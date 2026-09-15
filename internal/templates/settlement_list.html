@@ -15,6 +15,7 @@
         "StatusFilter" .StatusFilter
         "Chips" (chips "All" "" "Pending" "pending" "Paid" "paid" "Disputed" "disputed")
         "ShowDates" true
+        "DateFilterError" .DateFilterError
         "DateFrom" .DateFrom
         "DateTo" .DateTo
         "Label" "Status:"
@@ -23,9 +24,9 @@
     {{if can .User "settlements" "write"}}
     <div class="flex justify-end">
         <form method="POST" action="/settlements/generate" class="flex items-center gap-2 flex-wrap">
-            <input type="text" name="trip_id" placeholder="Enter Trip ID to generate" required class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all w-full sm:w-auto" />
-            <button type="submit" class="inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/></svg>
+            <input aria-label="Enter Trip ID to generate" autocomplete="off" type="text" name="trip_id" placeholder="Enter Trip ID to generate" required class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition w-full sm:w-auto" />
+            <button type="submit" class="inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/></svg>
                 Generate Settlement
             </button>
         </form>
@@ -79,7 +80,7 @@
                         <td data-label="Actions" class="px-3 py-2 text-center whitespace-nowrap">
                             <a href="/settlements/{{.ID}}" class="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 px-2.5 py-1 rounded-full hover:bg-primary/10 transition-colors">
                                 View
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                             </a>
                         </td>
                     </tr>

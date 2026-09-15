@@ -93,6 +93,19 @@ func isComplianceExempt(path string) bool {
 	if path == "/user/onboard" || strings.HasPrefix(path, "/user/onboard/") {
 		return true
 	}
+	// Email verification resend must work before company profile exists.
+	if path == "/user/send-verification" {
+		return true
+	}
+	// DPDP consent is a legal prerequisite: users must reach /consent
+	// before completing company onboarding, never after.
+	if path == "/consent" || strings.HasPrefix(path, "/consent/") {
+		return true
+	}
+	// Language switch is a cookie + redirect-back; gating it misroutes users.
+	if path == "/lang" {
+		return true
+	}
 	if path == "/profile" || strings.HasPrefix(path, "/profile/") {
 		return true
 	}
@@ -116,6 +129,7 @@ func isComplianceExempt(path string) bool {
 		strings.HasPrefix(path, "/share") ||
 		strings.HasPrefix(path, "/contact-us") ||
 		path == "/privacy" || path == "/terms" || path == "/refunds" ||
+		path == "/consumer-compliance" || path == "/faq" ||
 		strings.HasPrefix(path, "/features") ||
 		path == "/robots.txt" || path == "/sitemap.xml" || path == "/llms.txt" {
 		return true

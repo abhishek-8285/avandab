@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors, Font, Radius, Spacing } from '../constants/theme';
@@ -17,15 +17,17 @@ export function LoginScreen({ onLoginSuccess, onForgotPassword, onRegisterLink }
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const setAuth = useAuthStore((state) => state.setAuth);
 
   const handleSignIn = async () => {
     if (!email || !password) {
-      Alert.alert('Missing Fields', 'Please enter both email and password.');
+      setFormError('Please enter both email and password.');
       return;
     }
 
+    setFormError(null);
     setLoading(true);
 
     try {
@@ -40,7 +42,7 @@ export function LoginScreen({ onLoginSuccess, onForgotPassword, onRegisterLink }
       if (!response.ok) {
         const errText = await response.text();
         setLoading(false);
-        Alert.alert('Sign In Failed', errText || `Server returned HTTP ${response.status}.`);
+        setFormError(errText || `Sign in failed (HTTP ${response.status}). Check your connection and try again.`);
         return;
       }
 
@@ -48,7 +50,7 @@ export function LoginScreen({ onLoginSuccess, onForgotPassword, onRegisterLink }
 
       if (!data.token || !data.user_id) {
         setLoading(false);
-        Alert.alert('Sign In Failed', data.error || 'Server response missing token or user_id.');
+        setFormError(data.error || 'Sign in failed: server response missing credentials. Please try again.');
         return;
       }
 
@@ -84,7 +86,7 @@ export function LoginScreen({ onLoginSuccess, onForgotPassword, onRegisterLink }
       onLoginSuccess();
     } catch (err: any) {
       setLoading(false);
-      Alert.alert('Sign In Failed', err?.message || 'Unable to reach the server. Please try again.');
+      setFormError(err?.message || 'Unable to reach the server. Check your connection and try again.');
     }
   };
 
@@ -108,7 +110,7 @@ export function LoginScreen({ onLoginSuccess, onForgotPassword, onRegisterLink }
         <View style={styles.formGroup}>
           <Text style={styles.label}>EMAIL</Text>
           <View style={styles.inputWrapper}>
-            <MaterialCommunityIcons name="email-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} />
+            <MaterialCommunityIcons name="email-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} accessible={false} />
             <TextInput
               style={styles.input}
               placeholder="driver@avandab.com"
@@ -117,6 +119,9 @@ export function LoginScreen({ onLoginSuccess, onForgotPassword, onRegisterLink }
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+              autoComplete="email"
+              textContentType="emailAddress"
+              accessibilityLabel="Email"
             />
           </View>
         </View>
@@ -125,43 +130,55 @@ export function LoginScreen({ onLoginSuccess, onForgotPassword, onRegisterLink }
           <View style={styles.labelRow}>
             <Text style={styles.label}>PASSWORD</Text>
             {onForgotPassword && (
-              <TouchableOpacity onPress={onForgotPassword}>
+              <TouchableOpacity onPress={onForgotPassword} accessibilityRole="button" accessibilityLabel="Forgot password" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Text style={styles.forgotText}>FORGOT?</Text>
               </TouchableOpacity>
             )}
           </View>
           <View style={styles.inputWrapper}>
-            <MaterialCommunityIcons name="lock-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} />
+            <MaterialCommunityIcons name="lock-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} accessible={false} />
             <TextInput
               style={[styles.input, { paddingRight: 40 }]}
-              placeholder="••••••••"
+              placeholder="Enter password"
               placeholderTextColor={Colors.textMuted}
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
+              autoComplete="password"
+              textContentType="password"
+              accessibilityLabel="Password"
             />
-            <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
+            <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)} accessibilityRole="button" accessibilityLabel={showPassword ? 'Hide password' : 'Show password'} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <MaterialCommunityIcons
                 name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                 size={16}
                 color={Colors.textMuted}
+                accessible={false}
               />
             </TouchableOpacity>
           </View>
         </View>
+
+        {formError ? (
+          <Text style={styles.formError} accessibilityLiveRegion="polite">{formError}</Text>
+        ) : null}
 
         <TouchableOpacity
           style={styles.submitBtn}
           activeOpacity={0.88}
           onPress={handleSignIn}
           disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel={loading ? 'Signing in…' : 'Enter duty'}
+          accessibilityState={{ disabled: loading, busy: loading }}
+          accessibilityLiveRegion="polite"
         >
           {loading ? (
             <ActivityIndicator color={Colors.textOnPrimary} />
           ) : (
             <View style={styles.btnContent}>
               <Text style={styles.submitBtnText}>ENTER DUTY (ड्यूटी शुरू करें)</Text>
-              <MaterialCommunityIcons name="arrow-right" size={16} color={Colors.textOnPrimary} />
+              <MaterialCommunityIcons name="arrow-right" size={16} color={Colors.textOnPrimary} accessible={false} />
             </View>
           )}
         </TouchableOpacity>
@@ -186,14 +203,14 @@ export function LoginScreen({ onLoginSuccess, onForgotPassword, onRegisterLink }
             setPassword('password123');
           }}
         >
-          <MaterialCommunityIcons name="truck-fast" size={16} color="#008069" />
+          <MaterialCommunityIcons name="truck-fast" size={16} color="#008069" accessible={false} />
           <Text style={{ fontSize: 11, fontWeight: '800', color: '#008069' }}>
             AUTO-FILL DRIVER (Abhishek • DL-01)
           </Text>
         </TouchableOpacity>
 
         {onRegisterLink && (
-          <TouchableOpacity style={styles.registerLink} onPress={onRegisterLink}>
+          <TouchableOpacity style={styles.registerLink} onPress={onRegisterLink} accessibilityRole="button" accessibilityLabel="Register for a driver account">
             <Text style={styles.registerLinkText}>
               No driver account? <Text style={styles.registerLinkHighlight}>REGISTER</Text>
             </Text>
@@ -338,5 +355,11 @@ const styles = StyleSheet.create({
   registerLinkHighlight: {
     color: Colors.primary,
     fontWeight: '800',
+  },
+  formError: {
+    fontSize: 12,
+    color: Colors.danger,
+    fontFamily: Font.mono,
+    marginBottom: Spacing.md,
   },
 });

@@ -5,11 +5,11 @@ import {
   View,
   TouchableOpacity,
   ScrollView,
-  Image,
   TextInput,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -215,8 +215,8 @@ export function ExpenseScreen({ tripId = '1', onComplete, onBack }: ExpenseScree
     <View style={styles.container}>
       <StatusBar style="light" />
       <View style={styles.header}>
-        <TouchableOpacity style={styles.iconButton} onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={18} color={Colors.textOnChrome} />
+        <TouchableOpacity style={styles.iconButton} onPress={onBack} accessibilityRole="button" accessibilityLabel="Go back" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <MaterialCommunityIcons name="arrow-left" size={18} color={Colors.textOnChrome} accessible={false} />
         </TouchableOpacity>
         <Text style={styles.headerLabel}>EXPENSE</Text>
         <View style={styles.iconButtonPlaceholder} />
@@ -238,11 +238,15 @@ export function ExpenseScreen({ tripId = '1', onComplete, onBack }: ExpenseScree
                 key={t.id}
                 style={[styles.typeBtn, expenseType === t.id && styles.typeBtnActive]}
                 onPress={() => setExpenseType(t.id)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: expenseType === t.id }}
+                accessibilityLabel={`Expense type ${t.label}`}
               >
                 <MaterialCommunityIcons
                   name={t.icon as any}
                   size={18}
                   color={expenseType === t.id ? Colors.textOnPrimary : Colors.textSecondary}
+                  accessible={false}
                 />
                 <Text style={[styles.typeBtnText, expenseType === t.id && styles.typeBtnTextActive]}>{t.label}</Text>
               </TouchableOpacity>
@@ -260,7 +264,8 @@ export function ExpenseScreen({ tripId = '1', onComplete, onBack }: ExpenseScree
               placeholderTextColor={Colors.textMuted}
               value={amount}
               onChangeText={setAmount}
-              keyboardType="numeric"
+              keyboardType="decimal-pad"
+              accessibilityLabel="Amount in rupees"
             />
           </View>
           <View style={styles.formGroup}>
@@ -273,6 +278,7 @@ export function ExpenseScreen({ tripId = '1', onComplete, onBack }: ExpenseScree
               onChangeText={setNotes}
               multiline
               numberOfLines={3}
+              accessibilityLabel="Expense notes"
             />
           </View>
         </View>
@@ -288,22 +294,22 @@ export function ExpenseScreen({ tripId = '1', onComplete, onBack }: ExpenseScree
             <View style={styles.photoPreviewContainer}>
               <Image source={{ uri: receiptUri }} style={styles.photoPreview} />
               <View style={styles.receiptActions}>
-                <TouchableOpacity style={styles.secondaryBtn} onPress={pickReceipt}>
+                <TouchableOpacity style={styles.secondaryBtn} onPress={pickReceipt} accessibilityRole="button" accessibilityLabel="Change receipt photo" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Text style={styles.secondaryBtnText}>CHANGE</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.secondaryBtn} onPress={() => setReceiptUri(null)}>
+                <TouchableOpacity style={styles.secondaryBtn} onPress={() => Alert.alert('Remove receipt?', 'Remove the attached receipt photo?', [{ text: 'Cancel', style: 'cancel' }, { text: 'Remove', style: 'destructive', onPress: () => setReceiptUri(null) }])} accessibilityRole="button" accessibilityLabel="Remove receipt photo" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                   <Text style={styles.secondaryBtnText}>REMOVE</Text>
                 </TouchableOpacity>
               </View>
             </View>
           ) : (
             <View style={styles.receiptBtnRow}>
-              <TouchableOpacity style={styles.receiptBtn} onPress={takeReceiptPhoto}>
-                <MaterialCommunityIcons name="camera-outline" size={18} color={Colors.primary} />
+              <TouchableOpacity style={styles.receiptBtn} onPress={takeReceiptPhoto} accessibilityRole="button" accessibilityLabel="Take receipt photo with camera">
+                <MaterialCommunityIcons name="camera-outline" size={18} color={Colors.primary} accessible={false} />
                 <Text style={styles.receiptBtnText}>CAMERA</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.receiptBtn} onPress={pickReceipt}>
-                <MaterialCommunityIcons name="image-outline" size={18} color={Colors.primary} />
+              <TouchableOpacity style={styles.receiptBtn} onPress={pickReceipt} accessibilityRole="button" accessibilityLabel="Pick receipt photo from gallery">
+                <MaterialCommunityIcons name="image-outline" size={18} color={Colors.primary} accessible={false} />
                 <Text style={styles.receiptBtnText}>GALLERY</Text>
               </TouchableOpacity>
             </View>
@@ -315,13 +321,19 @@ export function ExpenseScreen({ tripId = '1', onComplete, onBack }: ExpenseScree
           activeOpacity={0.88}
           onPress={submit}
           disabled={isDisabled}
+          accessibilityRole="button"
+          accessibilityLabel="Submit expense"
+          accessibilityState={{ disabled: isDisabled }}
         >
           {submitting ? (
-            <ActivityIndicator color={Colors.textOnPrimary} size="small" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <ActivityIndicator color={Colors.textOnPrimary} size="small" />
+              <Text style={styles.submitBtnText} accessibilityLiveRegion="polite">Saving…</Text>
+            </View>
           ) : (
             <>
               <Text style={styles.submitBtnText}>SUBMIT EXPENSE</Text>
-              <MaterialCommunityIcons name="check-circle-outline" size={16} color={Colors.textOnPrimary} />
+              <MaterialCommunityIcons name="check-circle-outline" size={16} color={Colors.textOnPrimary} accessible={false} />
             </>
           )}
         </TouchableOpacity>

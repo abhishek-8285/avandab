@@ -15,8 +15,8 @@ import (
 // and its mocks untouched.
 
 const vehicleDateClause = `
-  AND (? = '' OR substr(CAST(created_at AS TEXT), 1, 10) >= substr(CAST(? AS TEXT), 1, 10))
-  AND (? = '' OR substr(CAST(created_at AS TEXT), 1, 10) <= substr(CAST(? AS TEXT), 1, 10))`
+  AND (? = '' OR datetime(CAST(created_at AS TEXT)) >= datetime(?))
+  AND (? = '' OR datetime(CAST(created_at AS TEXT)) <= datetime(?))`
 
 const vehicleFullColumns = `
 SELECT id, registration_number, vehicle_number, vehicle_type, capacity,
@@ -43,6 +43,7 @@ func (r *vehicleRepository) SearchReadModelsFiltered(ctx context.Context, tenant
 
 func (r *vehicleRepository) searchDateRange(ctx context.Context, tenantID shared.TenantID, query string, status string, fleetClass string, ownership string, from string, to string, limit int, offset int) ([]domain.VehicleReadModel, int64, error) {
 	qPattern := "%" + query + "%"
+	dateFrom, dateTo := shared.DayBoundsUTC(from, to)
 
 	querySQL := vehicleFullColumns + `
 FROM vehicles
@@ -61,7 +62,7 @@ LIMIT ? OFFSET ?`
 		status, status,
 		fleetClass, fleetClass,
 		ownership, ownership,
-		from, from, to, to,
+		dateFrom, dateFrom, dateTo, dateTo,
 		limit, offset,
 	)
 	if err != nil {
@@ -91,7 +92,7 @@ WHERE tenant_id = $1
 		status, status,
 		fleetClass, fleetClass,
 		ownership, ownership,
-		from, from, to, to,
+		dateFrom, dateFrom, dateTo, dateTo,
 	).Scan(&count)
 	if err != nil {
 		return nil, 0, err

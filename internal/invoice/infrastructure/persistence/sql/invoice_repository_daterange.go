@@ -15,12 +15,13 @@ import (
 //
 // The invoices table has no dedicated invoice_date column; the invoice date is
 // created_at (the PDF and invoice view render CreatedAt as the invoice date).
-// Timestamps are stored RFC3339 ("2026-08-15T08:00:00Z"), which SQLite date()
-// cannot parse directly — hence substr(CAST(col AS TEXT), 1, 10).
+// Storage mixes RFC3339 and CURRENT_TIMESTAMP text, so the window compares UTC
+// instants (shared.DayBoundsUTC) normalised by SQLite datetime(): raw string
+// truncation would file every 00:00–05:30 IST row under the previous UTC day.
 
 const invoiceDateClause = `
-  AND (? = '' OR substr(CAST(i.created_at AS TEXT), 1, 10) >= substr(CAST(? AS TEXT), 1, 10))
-  AND (? = '' OR substr(CAST(i.created_at AS TEXT), 1, 10) <= substr(CAST(? AS TEXT), 1, 10))`
+  AND (? = '' OR datetime(CAST(i.created_at AS TEXT)) >= datetime(?))
+  AND (? = '' OR datetime(CAST(i.created_at AS TEXT)) <= datetime(?))`
 
 const invoiceDateRangeSelect = `
 SELECT i.id, i.invoice_number, i.booking_id, i.customer_id, i.trip_id,
@@ -49,11 +50,12 @@ func (r *invoiceRepository) SearchReadModelsDateRange(ctx context.Context, tenan
 	if status == StatusFilterOpen {
 		return r.searchOutstandingInvoices(ctx, tenantID, query, from, to, limit, offset)
 	}
+	dateFrom, dateTo := shared.DayBoundsUTC(from, to)
 	rows, err := r.exec(ctx).QueryContext(ctx,
 		invoiceDateRangeSelect+invoiceDateClause+`
 ORDER BY i.created_at DESC
 LIMIT ? OFFSET ?`,
-		string(tenantID), query, query, status, status, from, from, to, to, limit, offset)
+		string(tenantID), query, query, status, status, dateFrom, dateFrom, dateTo, dateTo, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -66,7 +68,7 @@ LIMIT ? OFFSET ?`,
 
 	var count int64
 	if err := r.exec(ctx).QueryRowContext(ctx, invoiceDateRangeCount+invoiceDateClause,
-		string(tenantID), query, query, status, status, from, from, to, to,
+		string(tenantID), query, query, status, status, dateFrom, dateFrom, dateTo, dateTo,
 	).Scan(&count); err != nil {
 		return nil, 0, err
 	}

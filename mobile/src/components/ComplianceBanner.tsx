@@ -49,14 +49,23 @@ export function ComplianceBanner({ vehicleId, onPressDetails }: ComplianceBanner
       activeOpacity={onPressDetails ? 0.85 : 1}
       onPress={onPressDetails}
       disabled={!onPressDetails}
-      accessibilityRole="text"
+      accessibilityRole="button"
+      accessibilityLiveRegion="polite"
       accessibilityLabel={t(`compliance.score_${result.score}`)}
     >
-      <Text style={[styles.scoreText, { color: SCORE_FG[result.score] }]}>
+      <Text
+        style={[styles.scoreText, { color: SCORE_FG[result.score] }]}
+        numberOfLines={1}
+        ellipsizeMode="tail"
+      >
         {t(`compliance.score_${result.score}`)}
       </Text>
       {result.score === 'amber' && (
-        <Text style={[styles.summaryText, { color: SCORE_FG[result.score] }]}>
+        <Text
+          style={[styles.summaryText, { color: SCORE_FG[result.score] }]}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+        >
           {`${result.expired.length} expired · ${result.expiringSoon.length} expiring soon`}
         </Text>
       )}

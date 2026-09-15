@@ -20,7 +20,7 @@ interface TripCardProps {
   advanceAmount?: number;
 }
 
-export const TripCard: React.FC<TripCardProps> = ({
+const TripCardBase: React.FC<TripCardProps> = ({
   tripNumber,
   driverName,
   vehiclePlate,
@@ -98,11 +98,11 @@ export const TripCard: React.FC<TripCardProps> = ({
       <View style={styles.header}>
         <View style={styles.tripIdBlock}>
           <View style={styles.iconCircle}>
-            <MaterialCommunityIcons name="truck-delivery" size={16} color="#008069" />
+            <MaterialCommunityIcons name="truck-delivery" size={16} color="#008069" accessible={false} />
           </View>
           <View>
-            <Text style={styles.tripNumber}>#{tripNumber}</Text>
-            <Text style={styles.subMeta}>{startTime ? `${startTime}` : t('duty.available_desc', 'Ready for Dispatch', locale)}</Text>
+            <Text style={styles.tripNumber} numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={`Trip ${tripNumber}`}>#{tripNumber}</Text>
+            <Text style={styles.subMeta} numberOfLines={1} ellipsizeMode="tail">{startTime ? `${startTime}` : t('duty.available_desc', 'Ready for Dispatch', locale)}</Text>
           </View>
         </View>
 
@@ -115,12 +115,12 @@ export const TripCard: React.FC<TripCardProps> = ({
       {/* Driver & Vehicle Plate Row */}
       <View style={styles.driverRow}>
         <View style={styles.driverPill}>
-          <MaterialCommunityIcons name="account-tie" size={14} color="#667781" />
-          <Text style={styles.driverName}>{driverName || t('profile.driver_id', 'Driver', locale)}</Text>
+          <MaterialCommunityIcons name="account-tie" size={14} color="#667781" accessible={false} />
+          <Text style={styles.driverName} numberOfLines={1} ellipsizeMode="tail">{driverName || t('profile.driver_id', 'Driver', locale)}</Text>
         </View>
         {vehiclePlate ? (
           <View style={styles.plateChip}>
-            <MaterialCommunityIcons name="car-traction-control" size={13} color="#008069" />
+            <MaterialCommunityIcons name="car-traction-control" size={13} color="#008069" accessible={false} />
             <Text style={styles.plateText}>{vehiclePlate}</Text>
           </View>
         ) : null}
@@ -137,7 +137,7 @@ export const TripCard: React.FC<TripCardProps> = ({
           </View>
           <View style={styles.locationBlock}>
             <Text style={styles.locationLabel}>{t('dispatch.origin', 'ORIGIN', locale)}</Text>
-            <Text style={styles.locationText} numberOfLines={1}>{origin}</Text>
+            <Text style={styles.locationText} numberOfLines={1} ellipsizeMode="tail">{origin}</Text>
           </View>
         </View>
 
@@ -151,7 +151,7 @@ export const TripCard: React.FC<TripCardProps> = ({
           </View>
           <View style={styles.locationBlock}>
             <Text style={styles.locationLabel}>{t('dispatch.destination', 'DESTINATION', locale)}</Text>
-            <Text style={styles.locationText} numberOfLines={1}>{destination}</Text>
+            <Text style={styles.locationText} numberOfLines={1} ellipsizeMode="tail">{destination}</Text>
           </View>
         </View>
       </View>
@@ -159,7 +159,7 @@ export const TripCard: React.FC<TripCardProps> = ({
       {/* Cargo & Route Details Strip */}
       <View style={styles.summaryStrip}>
         <View style={styles.cargoChip}>
-          <Text style={styles.weightText}>{cargoWeight ? `📦 ${cargoWeight}` : '📦 18 Tons Steel Coils'}</Text>
+          <Text style={styles.weightText} accessibilityLabel={cargoWeight ? cargoWeight : '18 Tons Steel Coils'} numberOfLines={1} ellipsizeMode="tail">{cargoWeight ? `📦 ${cargoWeight}` : '📦 18 Tons Steel Coils'}</Text>
         </View>
         <View style={styles.routeStatusBadge}>
           <View style={styles.statusPulseDot} />
@@ -173,7 +173,9 @@ export const TripCard: React.FC<TripCardProps> = ({
           <TouchableOpacity
             style={styles.actionIconBtn}
             activeOpacity={0.85}
+            accessibilityRole="button"
             accessibilityLabel="Call Dispatcher"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             onPress={() => Linking.openURL('tel:+919876543210').catch(() => {})}
           >
             <MaterialCommunityIcons name="phone" size={17} color="#008069" />
@@ -182,7 +184,9 @@ export const TripCard: React.FC<TripCardProps> = ({
           <TouchableOpacity
             style={styles.actionIconBtn}
             activeOpacity={0.85}
+            accessibilityRole="button"
             accessibilityLabel="WhatsApp Hub"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             onPress={() => {
               const text = encodeURIComponent(`Avandab Fleet: Trip #${tripNumber} (${driverName}): En route from ${origin} to ${destination}`);
               Linking.openURL(`https://wa.me/919876543210?text=${text}`).catch(() => {});
@@ -194,7 +198,9 @@ export const TripCard: React.FC<TripCardProps> = ({
           <TouchableOpacity
             style={styles.actionIconBtn}
             activeOpacity={0.85}
+            accessibilityRole="button"
             accessibilityLabel="Play Voice Alert & Push Notification"
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             onPress={() => {
               NotificationService.showDispatchNotification({
                 tripNumber,
@@ -212,8 +218,11 @@ export const TripCard: React.FC<TripCardProps> = ({
           style={styles.navigateBtn}
           activeOpacity={0.85}
           onPress={handleStartMap}
+          accessibilityRole="button"
+          accessibilityLabel="Start map navigation"
+          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
-          <MaterialCommunityIcons name="navigation-variant" size={16} color="#ffffff" />
+          <MaterialCommunityIcons name="navigation-variant" size={16} color="#ffffff" accessible={false} />
           <Text style={styles.navigateBtnText}>{t('trips.start_map', 'START MAP', locale)}</Text>
         </TouchableOpacity>
       </View>
@@ -500,3 +509,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 });
+
+// Memoized export: list parents (FlashList/ScrollView) re-render on scroll
+// state changes; memo skips unchanged cards when props are referentially
+// stable (list-performance-item-memo).
+export const TripCard = React.memo(TripCardBase);

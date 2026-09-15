@@ -273,7 +273,7 @@ func (h *TripHandlers) List(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "trip_list.html", PageData{
 		Title: "Trips",
 		User:  session,
-		Extra: map[string]interface{}{"Trips": res.Trips, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.tripKPIs(r.Context())},
+		Extra: map[string]interface{}{"Trips": res.Trips, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "DateFilterError": pp.DateFilterError, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.tripKPIs(r.Context())},
 	})
 }
 

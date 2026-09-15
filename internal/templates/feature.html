@@ -21,13 +21,13 @@
             <div class="flex flex-col justify-center">
                 <nav class="mb-6 flex items-center gap-1 text-sm text-text-muted" aria-label="Breadcrumb">
                     <a href="/" class="hover:text-primary">Home</a>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
                     <a href="/features" class="hover:text-primary">Features</a>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
                     <span class="text-primary" aria-current="page">{{.Feature.Title}}</span>
                 </nav>
                 <span class="inline-flex w-fit items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>{{.Feature.Eyebrow}}
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>{{.Feature.Eyebrow}}
                 </span>
                 <div class="mt-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-on-primary shadow-lg shadow-primary/20">
                     {{iconWithClass .Feature.Icon "w-8 h-8"}}
@@ -37,20 +37,20 @@
                 <p class="mt-2 text-sm font-medium text-text-muted">{{.Feature.Audience}}</p>
                 <div class="mt-8 flex flex-wrap items-center gap-3">
                     <a href="/login" class="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-on-primary shadow-sm transition hover:bg-primary/90 hover:-translate-y-px hover:shadow-md">
-                        Sign in <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        Sign in <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                     </a>
                     <a href="/register" class="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-container-lowest px-6 py-3 text-sm font-semibold text-primary shadow-sm transition hover:bg-background hover:-translate-y-px hover:shadow-md">
                         Start free
                     </a>
                     <a href="https://wa.me/918285336507?text=Hi%20Avandab,%20I%20want%20a%20demo%20of%20{{.Feature.Title}}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 py-2 px-3.5 rounded-full bg-emerald-soft border border-emerald-500/20 text-xs font-semibold text-emerald-strong dark:text-emerald-300 hover:bg-emerald-500/20 transition-colors">
-                        <svg viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 text-emerald-mid shrink-0"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.29"/></svg>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 text-emerald-mid shrink-0"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.29"/></svg>
                         WhatsApp Demo
                     </a>
                 </div>
                 <div class="mt-6 flex flex-wrap gap-2">
-                    <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-container-lowest px-3 py-1 text-xs font-medium text-on-surface-variant shadow-sm ring-1 ring-border-subtle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/></svg>GST-ready invoicing</span>
-                    <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-container-lowest px-3 py-1 text-xs font-medium text-on-surface-variant shadow-sm ring-1 ring-border-subtle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Bank-grade encryption</span>
-                    <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-container-lowest px-3 py-1 text-xs font-medium text-on-surface-variant shadow-sm ring-1 ring-border-subtle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-2.8a.5.5 0 0 0-.45-.3H3a.5.5 0 0 0-.45.3L1.14 12.2a1.5 1.5 0 0 0 0 1.6L2.6 16.6A.5.5 0 0 0 3.05 17H18"/></svg>Made for Indian fleets</span>
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-container-lowest px-3 py-1 text-xs font-medium text-on-surface-variant shadow-sm ring-1 ring-border-subtle"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/></svg>GST-ready invoicing</span>
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-container-lowest px-3 py-1 text-xs font-medium text-on-surface-variant shadow-sm ring-1 ring-border-subtle"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Bank-grade encryption</span>
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-container-lowest px-3 py-1 text-xs font-medium text-on-surface-variant shadow-sm ring-1 ring-border-subtle"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-2.8a.5.5 0 0 0-.45-.3H3a.5.5 0 0 0-.45.3L1.14 12.2a1.5 1.5 0 0 0 0 1.6L2.6 16.6A.5.5 0 0 0 3.05 17H18"/></svg>Made for Indian fleets</span>
                 </div>
             </div>
 
@@ -81,7 +81,7 @@
                           <div class="rounded-xl border border-border-subtle bg-background p-2.5">
                             <div class="flex items-center justify-between">
                               <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
                               </span>
                               <span class="flex items-center gap-1 text-[11px] font-bold tracking-wide text-status-success"><span class="h-1.5 w-1.5 rounded-full bg-status-success" style="animation:dashPulse 1.6s ease-in-out infinite"></span>LIVE</span>
                             </div>
@@ -92,7 +92,7 @@
                           <div class="rounded-xl border border-border-subtle bg-background p-2.5">
                             <div class="flex items-center justify-between">
                               <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-status-success/10 text-status-success">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-2.8a.5.5 0 0 0-.45-.3H3a.5.5 0 0 0-.45.3L1.14 12.2a1.5 1.5 0 0 0 0 1.6L2.6 16.6A.5.5 0 0 0 3.05 17H18"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-2.8a.5.5 0 0 0-.45-.3H3a.5.5 0 0 0-.45.3L1.14 12.2a1.5 1.5 0 0 0 0 1.6L2.6 16.6A.5.5 0 0 0 3.05 17H18"/></svg>
                               </span>
                               <span class="h-1.5 w-1.5 rounded-full bg-status-success" style="animation:dashPulse 1.8s ease-in-out infinite"></span>
                             </div>
@@ -103,7 +103,7 @@
                           <div class="rounded-xl border border-border-subtle bg-background p-2.5">
                             <div class="flex items-center justify-between">
                               <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-status-warning/10 text-status-warning">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                               </span>
                               <span class="rounded-full bg-status-warning/15 px-1.5 py-0.5 text-[11px] font-bold text-status-warning">12 due</span>
                             </div>
@@ -114,7 +114,7 @@
                           <div class="rounded-xl border border-border-subtle bg-background p-2.5">
                             <div class="flex items-center justify-between">
                               <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg>
                               </span>
                               <span class="text-[11px] font-semibold text-status-success">▲ today</span>
                             </div>
@@ -140,14 +140,14 @@
                         <div class="space-y-2">
                           <div class="flex items-center gap-3 rounded-xl border border-border-subtle bg-background px-3 py-2.5" style="animation:dashSlide .45s ease-out .4s both">
                             <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+                              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
                             </span>
                             <div class="min-w-0 flex-1"><div class="truncate text-xs font-semibold text-on-surface">TRP-441 • Pune → Nagpur</div><div class="truncate text-[11px] text-text-muted">MH12 AB 1234 • Rajesh • starts 14:30</div></div>
                             <span class="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-bold text-primary">Scheduled</span>
                           </div>
                           <div class="flex items-center gap-3 rounded-xl border border-border-subtle bg-background px-3 py-2.5" style="animation:dashSlide .45s ease-out .58s both">
                             <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-status-success/10 text-status-success">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg>
+                              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg>
                             </span>
                             <div class="min-w-0 flex-1"><div class="truncate text-xs font-semibold text-on-surface">₹18,500 received</div><div class="truncate text-[11px] text-text-muted">Shree Traders • INV-219 • 5m ago</div></div>
                             <span class="shrink-0 rounded-full bg-status-success/12 px-2 py-1 text-[11px] font-bold text-status-success">Paid</span>
@@ -182,7 +182,7 @@
                         </div>
                         <div class="relative overflow-hidden rounded-xl border border-border-subtle bg-surface-container-low">
                           <div class="flex items-center justify-between px-3 py-2">
-                            <span class="inline-flex items-center gap-1.5 text-[11px] font-bold text-on-surface"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span> Mumbai → Pune</span>
+                            <span class="inline-flex items-center gap-1.5 text-[11px] font-bold text-on-surface"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span> Mumbai → Pune</span>
                             <span class="inline-flex items-center gap-1 rounded-full bg-surface-container-lowest px-2 py-0.5 text-[11px] font-bold text-secondary ring-1 ring-border-subtle"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500" style="animation:tripsDotPulse 1s ease-in-out infinite"></span> EWB · 18h left</span>
                           </div>
                           <div class="relative h-[84px]">
@@ -196,7 +196,7 @@
                               <text x="322" y="16" text-anchor="middle" font-size="7" font-weight="700" fill="var(--color-primary)">PUNE</text>
                             </svg>
                             <div class="absolute left-0 top-1/2 -ml-4 -mt-4 flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-on-primary shadow-md ring-2 ring-surface-container-lowest" style="animation:tripsTruckMove 3.2s ease-in-out infinite alternate">
-                              <svg viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h6.38a1 1 0 0 1 .7.29l1.09 1.09A1 1 0 0 0 13.38 9H19a1 1 0 0 1 1 1v5.5A1.5 1.5 0 0 1 18.5 17h-1.38a2.5 2.5 0 0 0-4.24 0H7.12a2.5 2.5 0 0 0-4.24 0H4.5A1.5 1.5 0 0 1 3 15.5V8.5Z"/><circle cx="7" cy="17.5" r="1.2" fill="var(--color-surface-container-lowest)"/><circle cx="17" cy="17.5" r="1.2" fill="var(--color-surface-container-lowest)"/></svg>
+                              <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" class="h-4 w-4"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h6.38a1 1 0 0 1 .7.29l1.09 1.09A1 1 0 0 0 13.38 9H19a1 1 0 0 1 1 1v5.5A1.5 1.5 0 0 1 18.5 17h-1.38a2.5 2.5 0 0 0-4.24 0H7.12a2.5 2.5 0 0 0-4.24 0H4.5A1.5 1.5 0 0 1 3 15.5V8.5Z"/><circle cx="7" cy="17.5" r="1.2" fill="var(--color-surface-container-lowest)"/><circle cx="17" cy="17.5" r="1.2" fill="var(--color-surface-container-lowest)"/></svg>
                             </div>
                             <span class="absolute bottom-1 left-1/2 -translate-x-1/2 rounded-full bg-surface-container-lowest px-2.5 py-1 text-[11px] font-bold text-secondary shadow-sm ring-1 ring-border-subtle">148 km · 2h 42m</span>
                           </div>
@@ -214,7 +214,7 @@
                               <span class="text-[11px] font-semibold text-text-muted">POD pending</span>
                             </div>
                             <span class="absolute -right-1.5 -top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white shadow-md ring-2 ring-surface-container-lowest" style="animation:tripsPodPop 3.6s ease-in-out infinite">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="m5 13 4 4L19 7"/></svg>
+                              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="m5 13 4 4L19 7"/></svg>
                             </span>
                           </div>
                           <div class="flex items-center gap-3 rounded-xl border border-border-subtle bg-background px-3 py-3 opacity-[.92]">
@@ -262,7 +262,7 @@
                             </svg>
                             <span class="absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full bg-surface-container-lowest/95 px-2.5 py-1 text-[11px] font-bold text-secondary shadow-sm ring-1 ring-border-subtle backdrop-blur"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500" style="animation:routePinPulse 1.2s ease-in-out infinite"></span> Saved route</span>
                             <div class="absolute bottom-2.5 left-2.5 right-2.5 flex items-center gap-2 rounded-xl border border-border-subtle bg-surface-container-lowest/95 px-3 py-2.5 shadow-lg backdrop-blur">
-                              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/><path d="M8 6v12"/><path d="M16 6v12"/></svg></span>
+                              <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4"><path d="M3 6h18"/><path d="M3 12h18"/><path d="M3 18h18"/><path d="M8 6v12"/><path d="M16 6v12"/></svg></span>
                               <div class="flex flex-1 items-center justify-around gap-2 text-center">
                                 <span><span class="block text-xs font-extrabold text-on-surface">148 km</span><span class="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Distance</span></span>
                                 <span class="h-7 w-px bg-border-subtle"></span>
@@ -284,7 +284,7 @@
                             <span class="inline-flex items-center gap-1 rounded-full bg-surface-container-low px-3 py-1.5 text-xs font-semibold text-secondary" style="animation:routeChipIn .4s .16s ease both">MUM – NSK <span class="text-[11px] text-text-muted">×8</span></span>
                           </div>
                           <div class="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-primary/30 bg-primary/5 px-3 py-2.5 text-xs font-bold text-primary">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M12 5v14"/><path d="M5 12h14"/></svg> Add to booking <span class="ml-1 inline-block" style="animation:routeTruckSlide .9s ease-in-out infinite alternate">→</span>
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M12 5v14"/><path d="M5 12h14"/></svg> Add to booking <span class="ml-1 inline-block" style="animation:routeTruckSlide .9s ease-in-out infinite alternate">→</span>
                           </div>
                         </div>
                     {{else if eq .Feature.Slug "bookings"}}
@@ -314,7 +314,7 @@
                           <div class="rounded-xl border border-primary/20 bg-primary/[.06] p-3 shadow-sm">
                             <div class="flex items-start justify-between gap-2">
                               <div>
-                                <div class="flex items-center gap-2"><span class="text-xs font-extrabold tracking-wide text-on-surface">BK-2102</span><span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-emerald-strong"><span class="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 text-white" style="animation:bkCheckPop .5s cubic-bezier(.34,1.56,.64,1) both"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="h-2.5 w-2.5"><path d="m5 13 4 4L19 7"/></svg></span> Confirmed ✓</span></div>
+                                <div class="flex items-center gap-2"><span class="text-xs font-extrabold tracking-wide text-on-surface">BK-2102</span><span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-wide text-emerald-strong"><span class="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 text-white" style="animation:bkCheckPop .5s cubic-bezier(.34,1.56,.64,1) both"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="h-2.5 w-2.5"><path d="m5 13 4 4L19 7"/></svg></span> Confirmed ✓</span></div>
                                 <div class="mt-1 text-xs font-semibold text-on-surface">Patel Logistics</div>
                                 <div class="text-[11px] text-secondary">Pune → Nagpur · 9 MT</div>
                               </div>
@@ -322,12 +322,12 @@
                             </div>
                             <div class="mt-3 grid grid-cols-2 gap-2">
                               <div class="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-container-lowest px-2.5 py-2">
-                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span>
+                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span>
                                 <span class="min-w-0"><span class="block text-[11px] font-extrabold text-on-surface">TRP-1043</span><span class="block text-[11px] font-semibold text-emerald-mid">Created</span></span>
                                 <span class="ml-auto text-primary" style="animation:bkArrow .8s ease-in-out infinite alternate">→</span>
                               </div>
                               <div class="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-container-lowest px-2.5 py-2">
-                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+                                <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
                                 <span class="min-w-0"><span class="block text-[11px] font-extrabold text-on-surface">INV-221</span><span class="block text-[11px] font-semibold text-primary">Auto-linked</span></span>
                                 <span class="ml-auto text-primary" style="animation:bkArrow .8s .2s ease-in-out infinite alternate">→</span>
                               </div>
@@ -335,7 +335,7 @@
                             <div class="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-secondary"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span> Billing started — no manual entry</div>
                           </div>
                           <div class="flex items-center justify-center gap-2 rounded-full bg-surface-container-low px-3 py-2 text-[11px] font-semibold text-secondary ring-1 ring-border-subtle">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 text-primary"><path d="M12 22a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z"/><path d="M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg> 2 requests · 1 confirmed · 0 lost
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-3.5 w-3.5 text-primary"><path d="M12 22a9 9 0 0 0 9-9H3a9 9 0 0 0 9 9Z"/><path d="M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg> 2 requests · 1 confirmed · 0 lost
                           </div>
                         </div>
                     {{else if eq .Feature.Slug "vehicles"}}
@@ -357,8 +357,8 @@
                               <div class="mt-1 text-[11px] font-medium text-text-muted">Due in 42 days</div>
                             </div>
                             <div class="mt-2.5 flex gap-1.5">
-                              <span class="inline-flex items-center gap-1 rounded-full bg-emerald-soft px-2 py-1 text-[11px] font-bold text-emerald-strong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3"><path d="m5 13 4 4L19 7"/></svg> RC</span>
-                              <span class="inline-flex items-center gap-1 rounded-full bg-emerald-soft px-2 py-1 text-[11px] font-bold text-emerald-strong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3"><path d="m5 13 4 4L19 7"/></svg> Ins</span>
+                              <span class="inline-flex items-center gap-1 rounded-full bg-emerald-soft px-2 py-1 text-[11px] font-bold text-emerald-strong"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3"><path d="m5 13 4 4L19 7"/></svg> RC</span>
+                              <span class="inline-flex items-center gap-1 rounded-full bg-emerald-soft px-2 py-1 text-[11px] font-bold text-emerald-strong"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3"><path d="m5 13 4 4L19 7"/></svg> Ins</span>
                               <span class="inline-flex items-center gap-1 rounded-full bg-surface-container-low px-2 py-1 text-[11px] font-bold text-secondary">PUC</span>
                             </div>
                           </div>
@@ -374,7 +374,7 @@
                               <div class="mt-1 text-[11px] font-bold text-amber-strong">Overdue 6 days</div>
                             </div>
                             <div class="mt-2.5 flex gap-1.5">
-                              <span class="inline-flex items-center gap-1 rounded-full bg-emerald-soft px-2 py-1 text-[11px] font-bold text-emerald-strong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3"><path d="m5 13 4 4L19 7"/></svg> RC</span>
+                              <span class="inline-flex items-center gap-1 rounded-full bg-emerald-soft px-2 py-1 text-[11px] font-bold text-emerald-strong"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="h-3 w-3"><path d="m5 13 4 4L19 7"/></svg> RC</span>
                               <span class="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-1 text-[11px] font-bold text-amber-strong">● Ins</span>
                             </div>
                           </div>
@@ -403,7 +403,7 @@
                         <div class="flex items-center justify-between rounded-xl border border-border-subtle bg-background px-3 py-2">
                           <div class="flex items-center gap-2.5">
                             <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                             </span>
                             <div>
                               <div class="text-xs font-semibold leading-none text-on-surface">Drivers · 24</div>
@@ -411,7 +411,7 @@
                             </div>
                           </div>
                           <span class="inline-flex items-center gap-1 rounded-full bg-status-warning/10 px-2 py-1 text-[11px] font-semibold text-status-warning ring-1 ring-status-warning/20">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
                             2 alerts
                           </span>
                         </div>
@@ -431,7 +431,7 @@
                                 </span>
                               </div>
                               <div class="mt-0.5 flex items-center gap-1 text-[11px] text-text-muted">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-3 w-3 shrink-0"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10"/><path d="M7 12h10"/><path d="M7 16h6"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-3 w-3 shrink-0"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10"/><path d="M7 12h10"/><path d="M7 16h6"/></svg>
                                 <span class="font-data-mono truncate">MH12 202309451</span><span class="opacity-40">·</span><span>HMV</span>
                               </div>
                             </div>
@@ -457,7 +457,7 @@
                           <div class="flex items-start gap-3">
                             <div class="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-container-low text-[11px] font-bold text-on-surface-variant ring-1 ring-border-subtle">AK
                               <span class="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-status-alert text-white shadow-sm">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="h-2.5 w-2.5"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="h-2.5 w-2.5"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
                               </span>
                             </div>
                             <div class="min-w-0 flex-1">
@@ -466,13 +466,13 @@
                                 <span class="inline-flex items-center gap-0.5 rounded-full bg-status-alert px-2 py-0.5 text-[11px] font-bold text-white shadow-sm" style="animation:drvWarnPulse 1.4s ease-in-out infinite">● Expired - blocked</span>
                               </div>
                               <div class="mt-0.5 flex items-center gap-1 text-[11px] text-text-muted">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-3 w-3 shrink-0"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10"/><path d="M7 12h10"/><path d="M7 16h6"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-3 w-3 shrink-0"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10"/><path d="M7 12h10"/><path d="M7 16h6"/></svg>
                                 <span class="font-data-mono truncate">MH14 202201889</span><span class="opacity-40">·</span><span>LMV</span>
                               </div>
                             </div>
                           </div>
                           <div class="mt-2.5 flex items-center justify-between">
-                            <span class="inline-flex items-center gap-1 text-[11px] font-medium text-status-alert"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Cannot assign</span>
+                            <span class="inline-flex items-center gap-1 text-[11px] font-medium text-status-alert"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg> Cannot assign</span>
                             <span class="relative flex h-5 w-9 items-center rounded-full bg-surface-container border border-border-subtle p-0.5">
                               <span class="h-4 w-4 rounded-full bg-white shadow-sm ring-1 ring-border-subtle"></span>
                             </span>
@@ -495,14 +495,14 @@
                         <div class="rounded-xl border border-border-subtle bg-background p-3 shadow-sm">
                           <div class="flex items-center gap-3">
                             <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/10">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-5 w-5"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22V11h6v11"/><path d="M8 6h1"/><path d="M12 6h1"/><path d="M16 6h1"/><path d="M8 10h1"/><path d="M12 10h1"/><path d="M16 10h1"/></svg>
+                              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-5 w-5"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22V11h6v11"/><path d="M8 6h1"/><path d="M12 6h1"/><path d="M16 6h1"/><path d="M8 10h1"/><path d="M12 10h1"/><path d="M16 10h1"/></svg>
                             </span>
                             <div class="min-w-0 flex-1">
                               <div class="text-sm font-bold leading-none text-on-surface">Shree Traders Pvt Ltd</div>
                               <div class="mt-0.5 flex items-center gap-1">
                                 <span class="font-data-mono text-[11px] leading-none text-text-muted">GSTIN 27ABECS1234F1Z5</span>
                                 <span class="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-status-success text-white">
-                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="h-2.5 w-2.5"><path d="M5 13l4 4L19 7"/></svg>
+                                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class="h-2.5 w-2.5"><path d="M5 13l4 4L19 7"/></svg>
                                 </span>
                               </div>
                             </div>
@@ -522,7 +522,7 @@
                           </div>
                           <div class="mt-2.5 flex flex-wrap gap-1.5">
                             <span class="inline-flex items-center gap-1 rounded-full bg-surface-container-low px-2.5 py-1 text-[11px] font-medium text-on-surface-variant">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3 w-3"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3 w-3"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                               Mumbai
                             </span>
                             <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">42 bookings</span>
@@ -545,7 +545,7 @@
                               </div>
                               <div class="relative flex items-center gap-2">
                                 <span class="absolute -left-6 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-surface-container-low ring-2 ring-background border border-border-subtle">
-                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-2.5 w-2.5 text-text-muted"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M10 13H8"/><path d="M16 17H8"/><path d="M13 13h1"/></svg>
+                                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-2.5 w-2.5 text-text-muted"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M10 13H8"/><path d="M16 17H8"/><path d="M13 13h1"/></svg>
                                 </span>
                                 <span class="rounded bg-surface-container-low px-1.5 py-0.5 font-data-mono text-[11px] font-bold text-on-surface-variant">INV-221</span>
                                 <span class="text-[11px] font-medium text-on-surface">₹15,930</span>
@@ -604,7 +604,7 @@
                                 <span class="absolute left-0 top-1 bottom-1 w-0.5 rounded-full bg-amber-500"></span>
                                 <div class="min-w-0 flex items-center gap-2">
                                   <span class="flex h-5 w-5 items-center justify-center rounded bg-amber-500/15 text-amber-mid">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3 w-3"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3 w-3"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                                   </span>
                                   <div>
                                     <div class="flex items-center gap-1">
@@ -627,12 +627,12 @@
                           </div>
                           <div class="flex gap-2 border-t border-border-subtle bg-surface-container-low/40 px-3 py-2.5">
                             <span class="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-background px-2.5 py-1.5 text-xs font-semibold text-on-surface ring-1 ring-border-subtle">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M10 13H8"/><path d="M16 17H8"/></svg>
+                              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M10 13H8"/><path d="M16 17H8"/></svg>
                               PDF
                             </span>
                             <span class="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-on-primary shadow-sm">
                               Send email
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5" style="animation:invNudge 1.4s ease-in-out infinite"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5" style="animation:invNudge 1.4s ease-in-out infinite"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                             </span>
                           </div>
                         </div>
@@ -646,15 +646,15 @@
                           <div class="rounded-xl border border-border-subtle bg-background p-3 shadow-sm">
                             <div class="flex justify-between">
                               <div><div class="flex items-center gap-1.5 text-[11px] font-bold tracking-widest text-secondary"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500" style="animation:payPulse 1.4s ease infinite"></span> COLLECTED THIS MONTH</div><div class="mt-1 flex items-baseline gap-2"><span class="text-2xl font-extrabold text-on-surface">₹1.20L</span><span class="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[11px] font-bold text-emerald-strong">+12%</span></div><div class="text-[11px] text-secondary">18 receipts · 3 methods</div></div>
-                              <div class="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500 text-white shadow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" style="stroke-dasharray:22;animation:payCheck .9s ease .3s both"/></svg></div>
+                              <div class="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-500 text-white shadow"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5" style="stroke-dasharray:22;animation:payCheck .9s ease .3s both"/></svg></div>
                             </div>
-                            <div class="mt-2.5 flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-strong"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Receipt #R-4419 generated <span class="ml-auto text-emerald-mid">just now</span></div>
+                            <div class="mt-2.5 flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-200 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-strong"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Receipt #R-4419 generated <span class="ml-auto text-emerald-mid">just now</span></div>
                           </div>
                           <div class="space-y-2">
                             <div class="text-[11px] font-bold tracking-widest text-secondary px-1">LEDGER · 3 PAYMENTS</div>
-                            <div class="flex items-center gap-3 rounded-xl border border-border-subtle bg-background px-3 py-2.5 shadow-sm" style="animation:payIn .4s ease both"><span class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-strong border border-emerald-200 shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg></span><div class="min-w-0 flex-1"><div class="flex items-center gap-1.5"><span class="rounded-full bg-emerald-500 text-white px-1.5 py-0.5 text-[11px] font-bold">CASH</span><span class="text-xs font-bold text-on-surface">₹5,000</span><span class="text-[11px] text-secondary">→ INV-221</span></div><div class="text-[11px] text-secondary">Shree Traders · Counter</div></div><span class="shrink-0 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-1 text-[11px] font-bold text-emerald-strong">Settled</span></div>
-                            <div class="flex items-center gap-3 rounded-xl border border-border-subtle bg-background px-3 py-2.5 shadow-sm" style="animation:payIn .4s ease .12s both"><span class="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-strong border border-violet-200 shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a10 10 0 0 0-9 14l9 6 9-6A10 10 0 0 0 12 2Z"/><path d="M8 12h8"/><path d="M12 8v8"/></svg></span><div class="min-w-0 flex-1"><div class="flex items-center gap-1.5"><span class="rounded-full bg-violet-600 text-white px-1.5 py-0.5 text-[11px] font-bold">UPI</span><span class="text-xs font-bold text-on-surface">₹18,500</span></div><div class="text-[11px] text-secondary">INV-219 · ref UPI/4829</div></div><span class="shrink-0 flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-1 text-[11px] font-bold text-emerald-strong"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500" style="animation:payPulse 1.6s ease infinite"></span> Settled</span></div>
-                            <div class="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50/60 px-3 py-2.5 shadow-sm" style="animation:payIn .4s ease .24s both"><span class="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-red-mid border border-red-200 shrink-0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span><div class="min-w-0 flex-1"><div class="flex items-center gap-1.5"><span class="rounded-full bg-white border border-red-200 text-red-mid px-1.5 py-0.5 text-[11px] font-bold">BANK</span><span class="text-xs font-bold text-red-mid">-₹2,000</span><span class="rounded-full bg-red-500 text-white px-1.5 py-0.5 text-[11px] font-bold">REVERSED</span></div><div class="text-[11px] text-red-mid/80">Refund · INV-218 · audit logged</div></div><span class="shrink-0 rounded-full bg-white border border-red-200 px-2 py-1 text-[11px] font-bold text-red-mid">↩ Reversed</span></div>
+                            <div class="flex items-center gap-3 rounded-xl border border-border-subtle bg-background px-3 py-2.5 shadow-sm" style="animation:payIn .4s ease both"><span class="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-strong border border-emerald-200 shrink-0"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01"/><path d="M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"/></svg></span><div class="min-w-0 flex-1"><div class="flex items-center gap-1.5"><span class="rounded-full bg-emerald-500 text-white px-1.5 py-0.5 text-[11px] font-bold">CASH</span><span class="text-xs font-bold text-on-surface">₹5,000</span><span class="text-[11px] text-secondary">→ INV-221</span></div><div class="text-[11px] text-secondary">Shree Traders · Counter</div></div><span class="shrink-0 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-1 text-[11px] font-bold text-emerald-strong">Settled</span></div>
+                            <div class="flex items-center gap-3 rounded-xl border border-border-subtle bg-background px-3 py-2.5 shadow-sm" style="animation:payIn .4s ease .12s both"><span class="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-100 text-violet-strong border border-violet-200 shrink-0"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a10 10 0 0 0-9 14l9 6 9-6A10 10 0 0 0 12 2Z"/><path d="M8 12h8"/><path d="M12 8v8"/></svg></span><div class="min-w-0 flex-1"><div class="flex items-center gap-1.5"><span class="rounded-full bg-violet-600 text-white px-1.5 py-0.5 text-[11px] font-bold">UPI</span><span class="text-xs font-bold text-on-surface">₹18,500</span></div><div class="text-[11px] text-secondary">INV-219 · ref UPI/4829</div></div><span class="shrink-0 flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-1 text-[11px] font-bold text-emerald-strong"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500" style="animation:payPulse 1.6s ease infinite"></span> Settled</span></div>
+                            <div class="flex items-center gap-3 rounded-xl border border-red-200 bg-red-50/60 px-3 py-2.5 shadow-sm" style="animation:payIn .4s ease .24s both"><span class="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-red-mid border border-red-200 shrink-0"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></span><div class="min-w-0 flex-1"><div class="flex items-center gap-1.5"><span class="rounded-full bg-white border border-red-200 text-red-mid px-1.5 py-0.5 text-[11px] font-bold">BANK</span><span class="text-xs font-bold text-red-mid">-₹2,000</span><span class="rounded-full bg-red-500 text-white px-1.5 py-0.5 text-[11px] font-bold">REVERSED</span></div><div class="text-[11px] text-red-mid/80">Refund · INV-218 · audit logged</div></div><span class="shrink-0 rounded-full bg-white border border-red-200 px-2 py-1 text-[11px] font-bold text-red-mid">↩ Reversed</span></div>
                           </div>
                         </div>
                     {{else if eq .Feature.Slug "reports"}}
@@ -716,10 +716,10 @@
                           </div>
                           <div class="flex items-center justify-between rounded-xl border border-border-subtle bg-background px-3 py-2.5">
                             <div class="flex items-center gap-2">
-                              <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
-                              <div class="leading-tight"><div class="flex items-center gap-1 text-xs font-semibold text-on-surface">This month <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3 text-text-muted"><path d="m6 9 6 6 6-6"/></svg></div><div class="text-[11px] text-text-muted">1 – 30 Apr 2026</div></div>
+                              <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+                              <div class="leading-tight"><div class="flex items-center gap-1 text-xs font-semibold text-on-surface">This month <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3 text-text-muted"><path d="m6 9 6 6 6-6"/></svg></div><div class="text-[11px] text-text-muted">1 – 30 Apr 2026</div></div>
                             </div>
-                            <button class="relative inline-flex items-center gap-1.5 overflow-hidden rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-on-primary"><span class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent" style="animation:repShimmer 2.2s ease-in-out infinite"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export</button>
+                            <button class="relative inline-flex items-center gap-1.5 overflow-hidden rounded-full bg-primary px-3.5 py-1.5 text-xs font-semibold text-on-primary"><span class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent" style="animation:repShimmer 2.2s ease-in-out infinite"></span><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export</button>
                           </div>
                         </div>
                     {{else if eq .Feature.Slug "audit-logs"}}
@@ -730,8 +730,8 @@
                         </style>
                         <div class="space-y-2.5">
                           <div class="flex items-center justify-between gap-2">
-                            <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-soft px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-strong ring-1 ring-amber-500/20"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>DPDPA-aligned</span>
-                            <button class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-background px-2.5 py-1 text-[11px] font-semibold text-on-surface shadow-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export</button>
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-soft px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-strong ring-1 ring-amber-500/20"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>DPDPA-aligned</span>
+                            <button class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-background px-2.5 py-1 text-[11px] font-semibold text-on-surface shadow-sm"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export</button>
                           </div>
                           <div class="relative rounded-xl border border-border-subtle bg-background p-3 pl-8">
                             <div class="absolute bottom-3 left-[15px] top-3 w-px bg-border-subtle"></div>
@@ -741,7 +741,7 @@
                                 <span class="absolute -left-[25px] top-1/2 flex h-3.5 w-3.5 -translate-y-1/2 items-center justify-center rounded-full border-2 border-background bg-primary shadow-sm" style="animation:auditPulse 1.8s ease-in-out infinite"></span>
                                 <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-on-primary">R</span>
                                 <div class="min-w-0 flex-1 leading-tight">
-                                  <div class="flex items-center gap-1 text-xs font-semibold text-on-surface"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3 text-primary"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Ramesh <span class="font-normal text-text-muted">updated</span> TRP-1042 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3 text-amber-mid"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+                                  <div class="flex items-center gap-1 text-xs font-semibold text-on-surface"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3 text-primary"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Ramesh <span class="font-normal text-text-muted">updated</span> TRP-1042 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3 text-amber-mid"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
                                   <div class="text-[11px] font-medium text-text-muted">08:42 AM • 22 Apr • IP 203.0.113.12</div>
                                 </div>
                                 <span class="hidden rounded-full bg-amber-soft px-2 py-0.5 text-[11px] font-semibold text-amber-strong sm:inline">update</span>
@@ -750,7 +750,7 @@
                                 <span class="absolute -left-[25px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-2 border-background bg-emerald-500 shadow-sm" style="animation:auditPulse 1.8s ease-in-out .4s infinite"></span>
                                 <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-[11px] font-bold text-emerald-strong">P</span>
                                 <div class="min-w-0 flex-1 leading-tight">
-                                  <div class="flex items-center gap-1 text-xs font-semibold text-on-surface"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3 text-emerald-mid"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Priya <span class="font-normal text-text-muted">logged in</span></div>
+                                  <div class="flex items-center gap-1 text-xs font-semibold text-on-surface"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3 text-emerald-mid"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Priya <span class="font-normal text-text-muted">logged in</span></div>
                                   <div class="text-[11px] font-medium text-text-muted">08:31 AM • success • Chrome / India</div>
                                 </div>
                                 <span class="hidden rounded-full bg-emerald-soft px-2 py-0.5 text-[11px] font-semibold text-emerald-strong sm:inline">login</span>
@@ -759,7 +759,7 @@
                                 <span class="absolute -left-[25px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-2 border-background bg-red-500 shadow-sm"></span>
                                 <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary/10 text-[11px] font-bold text-secondary">S</span>
                                 <div class="min-w-0 flex-1 leading-tight">
-                                  <div class="flex items-center gap-1 text-xs font-semibold text-on-surface"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3 text-red-500"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> System <span class="font-normal text-text-muted">deleted</span> INV-88</div>
+                                  <div class="flex items-center gap-1 text-xs font-semibold text-on-surface"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3 text-red-500"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> System <span class="font-normal text-text-muted">deleted</span> INV-88</div>
                                   <div class="text-[11px] font-medium text-text-muted">08:15 AM • by Amit • retention 7y</div>
                                 </div>
                                 <span class="hidden rounded-full bg-red-soft px-2 py-0.5 text-[11px] font-semibold text-red-mid sm:inline">delete</span>
@@ -768,7 +768,7 @@
                                 <span class="absolute -left-[25px] top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-2 border-background bg-primary/60 shadow-sm"></span>
                                 <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-bold text-primary">A</span>
                                 <div class="min-w-0 flex-1 leading-tight">
-                                  <div class="flex items-center gap-1 text-xs font-semibold text-on-surface"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3 text-primary"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Amit <span class="font-normal text-text-muted">created</span> BK-210</div>
+                                  <div class="flex items-center gap-1 text-xs font-semibold text-on-surface"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3 text-primary"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Amit <span class="font-normal text-text-muted">created</span> BK-210</div>
                                   <div class="text-[11px] font-medium text-text-muted">07:58 AM • booking • Mumbai → Pune</div>
                                 </div>
                                 <span class="hidden rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary sm:inline">create</span>
@@ -789,7 +789,7 @@
                           <div class="rounded-xl border border-border-subtle bg-background p-3" style="animation:setFade .4s ease both">
                             <div class="flex items-center justify-between gap-2">
                               <div class="flex items-center gap-2">
-                                <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></span>
+                                <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></span>
                                 <div class="leading-tight"><div class="text-xs font-semibold text-on-surface">Roles & permissions</div><div class="text-[11px] text-text-muted">RBAC • 2 roles • 18 rules</div></div>
                               </div>
                               <div class="flex h-5 w-9 items-center rounded-full bg-primary p-0.5"><span class="h-4 w-4 rounded-full bg-white shadow-sm" style="animation:setOn .6s ease .4s both"></span></div>
@@ -803,12 +803,12 @@
                           </div>
                           <div class="grid grid-cols-2 gap-2">
                             <div class="rounded-xl border border-border-subtle bg-background p-2.5" style="animation:setFade .4s ease .12s both">
-                              <div class="flex items-center gap-1.5 text-xs font-semibold text-on-surface"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5 text-primary"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 22a7 7 0 0 0 7-7c0-3.5-3.5-7-7-7a7 7 0 0 0-7 7c0 3.5 3.5 7 7 7z"/></svg> Branding</div>
+                              <div class="flex items-center gap-1.5 text-xs font-semibold text-on-surface"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5 text-primary"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 22a7 7 0 0 0 7-7c0-3.5-3.5-7-7-7a7 7 0 0 0-7 7c0 3.5 3.5 7 7 7z"/></svg> Branding</div>
                               <div class="mt-2 flex items-center gap-1.5"><span class="h-6 w-6 rounded-full bg-primary ring-2 ring-primary/20 ring-offset-1 ring-offset-background"></span><span class="h-6 w-6 rounded-full bg-[#0d9488]"></span><span class="h-6 w-6 rounded-full bg-[#f59e0b]"></span><span class="ml-auto rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">Updated</span></div>
                               <div class="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-border-subtle"><div class="h-full w-[78%] rounded-full bg-primary"></div></div>
                             </div>
                             <div class="rounded-xl border border-border-subtle bg-background p-2.5" style="animation:setFade .4s ease .2s both">
-                              <div class="flex items-center gap-1.5 text-xs font-semibold text-on-surface"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5 text-primary"><path d="M16 16a3 3 0 0 1-3 3H7a3 3 0 0 1 0-6h7a3 3 0 0 1 3 3z"/><path d="M8 8a3 3 0 0 1 3-3h7a3 3 0 0 1 0 6H11a3 3 0 0 1-3-3z"/></svg> Integrations</div>
+                              <div class="flex items-center gap-1.5 text-xs font-semibold text-on-surface"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5 text-primary"><path d="M16 16a3 3 0 0 1-3 3H7a3 3 0 0 1 0-6h7a3 3 0 0 1 3 3z"/><path d="M8 8a3 3 0 0 1 3-3h7a3 3 0 0 1 0 6H11a3 3 0 0 1-3-3z"/></svg> Integrations</div>
                               <div class="mt-2 space-y-1.5">
                                 <div class="flex items-center justify-between rounded-full border border-emerald-200 bg-emerald-soft px-2.5 py-1"><span class="text-[11px] font-semibold text-emerald-800">Tally</span><span class="flex items-center gap-1 text-[11px] font-bold text-emerald-strong"><span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"></span>Connected</span></div>
                                 <div class="flex items-center justify-between rounded-full border border-emerald-200 bg-emerald-soft px-2.5 py-1"><span class="text-[11px] font-semibold text-emerald-800">Zoho</span><span class="flex items-center gap-1 text-[11px] font-bold text-emerald-strong"><span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"></span>Connected</span></div>
@@ -817,7 +817,7 @@
                           </div>
                           <div class="flex items-center justify-between rounded-xl border border-border-subtle bg-background px-3 py-2.5" style="animation:setFade .4s ease .28s both">
                             <div class="flex items-center gap-2.5">
-                              <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-strong"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5"><path d="M6 8a6 6 0 0 1 12 0c0 7-6 5-6 7H6s0-7-6-5a6 6 0 0 1 6-7"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
+                              <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/15 text-amber-strong"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5"><path d="M6 8a6 6 0 0 1 12 0c0 7-6 5-6 7H6s0-7-6-5a6 6 0 0 1 6-7"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></span>
                               <div class="leading-tight"><div class="text-xs font-semibold text-on-surface">Notifications</div><div class="text-[11px] text-text-muted">Trip alerts • Billing • System</div></div>
                             </div>
                             <div class="flex items-center gap-2">
@@ -836,7 +836,7 @@
                         <div class="space-y-2.5">
                           <div class="flex items-center justify-between">
                             <div class="text-xs font-semibold text-on-surface">Team <span class="font-normal text-text-muted">• 12 members</span></div>
-                            <button class="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary shadow-sm" style="animation:usrPulse 1.8s ease-in-out infinite"><span style="animation:usrFly 1.6s ease-in-out infinite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg></span> Invite teammate</button>
+                            <button class="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary shadow-sm" style="animation:usrPulse 1.8s ease-in-out infinite"><span style="animation:usrFly 1.6s ease-in-out infinite"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3.5 w-3.5"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg></span> Invite teammate</button>
                           </div>
                           <div class="overflow-hidden rounded-xl border border-border-subtle bg-background">
                             <div class="flex items-center justify-between bg-surface-container-low px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-muted"><span>Name</span><span class="flex gap-6"><span>Role</span><span>Status</span></span></div>
@@ -881,7 +881,7 @@
                             <div class="flex items-center gap-1.5">
                               <span class="truncate text-sm font-bold leading-none text-on-surface">Avandab Logistics Pvt Ltd</span>
                               <span class="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-status-success text-white" style="animation:compPop .45s ease-out .6s both">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" class="h-2.5 w-2.5"><path d="M5 12l5 5l10 -10"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" class="h-2.5 w-2.5"><path d="M5 12l5 5l10 -10"/></svg>
                               </span>
                             </div>
                             <div class="truncate text-[11px] text-text-muted">CIN: U60200MH2018PTC312345 • Pune, MH</div>
@@ -897,11 +897,11 @@
                             <div class="mt-1 flex items-center gap-1.5">
                               <span class="font-data-mono text-xs font-bold tracking-tight text-on-surface">27AAACP1234Q1Z5</span>
                               <span class="flex h-4 w-4 items-center justify-center rounded-full bg-status-success text-white" style="animation:compPop .4s ease-out .85s both">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" class="h-2.5 w-2.5"><path d="M5 12l4 4l8 -8"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" class="h-2.5 w-2.5"><path d="M5 12l4 4l8 -8"/></svg>
                               </span>
                             </div>
                             <div class="mt-1 flex items-center gap-1 text-[11px] font-medium text-status-success">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> Verified • auto-fills on invoices
+                              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> Verified • auto-fills on invoices
                             </div>
                           </div>
                           <div class="col-span-2 rounded-xl border border-border-subtle bg-background p-3">
@@ -925,21 +925,21 @@
                           <div class="mt-3 space-y-1.5">
                             <div class="flex items-center gap-2">
                               <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-status-success text-white" style="animation:compPop .35s ease-out .65s both">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" class="h-3 w-3"><path d="M5 12l4 4l8 -8"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" class="h-3 w-3"><path d="M5 12l4 4l8 -8"/></svg>
                               </span>
                               <span class="text-xs font-medium text-on-surface line-through opacity-60">Company details</span>
                               <span class="ml-auto text-[11px] font-bold text-status-success">Done</span>
                             </div>
                             <div class="flex items-center gap-2">
                               <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-status-success text-white" style="animation:compPop .35s ease-out .8s both">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" class="h-3 w-3"><path d="M5 12l4 4l8 -8"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" class="h-3 w-3"><path d="M5 12l4 4l8 -8"/></svg>
                               </span>
                               <span class="text-xs font-medium text-on-surface line-through opacity-60">GST & tax info</span>
                               <span class="ml-auto text-[11px] font-bold text-status-success">Done</span>
                             </div>
                             <div class="flex items-center gap-2">
                               <span class="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-status-success text-white" style="animation:compPop .35s ease-out .95s both">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" class="h-3 w-3"><path d="M5 12l4 4l8 -8"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" class="h-3 w-3"><path d="M5 12l4 4l8 -8"/></svg>
                               </span>
                               <span class="text-xs font-medium text-on-surface">Branding assets</span>
                               <span class="ml-auto text-[11px] font-bold text-status-success">Done</span>
@@ -955,7 +955,7 @@
                         </div>
                         <div class="flex items-start gap-2.5 rounded-xl border border-dashed bg-status-warning/[0.08] px-3 py-2.5" style="animation:compPulse 2.2s ease-in-out infinite">
                           <span class="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-status-warning/15 text-status-warning">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.3L3.6 14.9a2 2 0 0 0 1.7 3.1h13.4a2 2 0 0 0 1.7-3.1L13.7 3.3a2 2 0 0 0-3.4 0z"/></svg>
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.3L3.6 14.9a2 2 0 0 0 1.7 3.1h13.4a2 2 0 0 0 1.7-3.1L13.7 3.3a2 2 0 0 0-3.4 0z"/></svg>
                           </span>
                           <div>
                             <div class="text-xs font-bold text-on-surface">Complete KYC to unlock invoicing</div>
@@ -984,7 +984,7 @@
                           <div class="flex items-start justify-between gap-2">
                             <div class="flex items-center gap-2.5">
                               <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-status-warning/10 text-status-warning">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path d="M3 22h12"/><path d="M14 22V8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v14"/><path d="M14 8h4a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-4"/><path d="M6 12h6"/><path d="M6 16h6"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path d="M3 22h12"/><path d="M14 22V8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v14"/><path d="M14 8h4a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-4"/><path d="M6 12h6"/><path d="M6 16h6"/></svg>
                               </span>
                               <div>
                                 <div class="flex items-center gap-1.5"><span class="text-xs font-semibold text-on-surface">Fuel • Diesel</span><span class="rounded-full bg-status-warning/15 px-1.5 py-0.5 text-[11px] font-bold leading-none text-status-warning">Pending</span></div>
@@ -996,7 +996,7 @@
                           <div class="mt-2.5 flex flex-wrap items-center gap-1.5">
                             <span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary"><span class="h-1.5 w-1.5 rounded-full bg-primary"></span>TRP-882 • Pune→Mumbai</span>
                             <span class="text-[11px] text-text-muted">• Filled 60L • cash</span>
-                            <svg viewBox="0 0 32 8" class="ml-auto hidden h-3 w-8 shrink-0 sm:block"><line x1="0" y1="4" x2="24" y2="4" stroke="var(--color-border-subtle)" stroke-width="1.2" stroke-dasharray="3 3" stroke-dashoffset="0" style="animation:khDash 1s linear infinite"/><polygon points="24,2 32,4 24,6" fill="var(--color-primary)"/></svg>
+                            <svg aria-hidden="true" viewBox="0 0 32 8" class="ml-auto hidden h-3 w-8 shrink-0 sm:block"><line x1="0" y1="4" x2="24" y2="4" stroke="var(--color-border-subtle)" stroke-width="1.2" stroke-dasharray="3 3" stroke-dashoffset="0" style="animation:khDash 1s linear infinite"/><polygon points="24,2 32,4 24,6" fill="var(--color-primary)"/></svg>
                           </div>
                           <div class="mt-3 grid grid-cols-2 gap-2">
                             <button class="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-on-primary shadow-sm" style="animation:khBtn 2s ease-in-out infinite">Approve</button>
@@ -1009,7 +1009,7 @@
                           <div class="flex items-start justify-between gap-2">
                             <div class="flex items-center gap-2.5">
                               <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
                               </span>
                               <div>
                                 <div class="flex items-center gap-1.5"><span class="text-xs font-semibold text-on-surface">Toll • FASTag</span><span class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[11px] font-bold leading-none text-primary"><span class="h-1.5 w-1.5 rounded-full bg-primary" style="animation:khPulse 1.15s infinite"></span>Auto</span></div>
@@ -1020,7 +1020,7 @@
                           </div>
                           <div class="mt-2.5 flex items-center gap-2">
                             <span class="inline-flex items-center gap-1 rounded-full border border-primary/15 bg-primary/[0.06] px-2 py-1 text-[11px] font-semibold text-primary">↗ TRP-882 auto-matched</span>
-                            <span class="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-status-success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="h-3 w-3"><path d="M5 12l5 5l10 -10"/></svg>Synced 2m ago</span>
+                            <span class="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-status-success"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" class="h-3 w-3"><path d="M5 12l5 5l10 -10"/></svg>Synced 2m ago</span>
                           </div>
                           <div class="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-text-muted">
                             <span class="inline-flex items-center gap-1"><span class="h-1.5 w-1.5 rounded-full bg-primary"></span>FASTag • HDFC</span>
@@ -1054,13 +1054,13 @@
                             </div>
                             <div class="flex gap-2" style="animation:asstMsg .38s ease-out .14s both">
                               <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary mt-1">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3z"/><path d="M12 8v8"/><path d="M9 13l3 3l3-3"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3z"/><path d="M12 8v8"/><path d="M9 13l3 3l3-3"/><path d="M5 21a7 7 0 0 1 14 0"/></svg>
                               </span>
                               <div class="max-w-[84%] rounded-2xl rounded-bl-sm border border-border-subtle bg-surface-container-lowest px-3 py-2.5 shadow-sm">
                                 <div class="text-[11px] font-bold text-on-surface">Found 1 match — last invoice</div>
                                 <div class="mt-2 flex items-center gap-2 rounded-lg border border-border-subtle bg-background px-2.5 py-2">
                                   <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-3.5 w-3.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+                                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" class="h-3.5 w-3.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
                                   </span>
                                   <div class="min-w-0 flex-1">
                                     <div class="text-xs font-bold leading-none text-on-surface">INV-221 • ₹42,800</div>
@@ -1076,7 +1076,7 @@
                         <div class="rounded-xl border border-primary/20 bg-primary/[0.06] p-3 shadow-sm" style="animation:asstCard .5s ease-out .42s both">
                           <div class="flex items-center gap-2">
                             <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-status-warning/15 text-status-warning">
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-3.5 w-3.5"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.3L3.6 14.9a2 2 0 0 0 1.7 3.1h13.4a2 2 0 0 0 1.7-3.1L13.7 3.3a2 2 0 0 0-3.4 0z"/></svg>
+                              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="h-3.5 w-3.5"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.3L3.6 14.9a2 2 0 0 0 1.7 3.1h13.4a2 2 0 0 0 1.7-3.1L13.7 3.3a2 2 0 0 0-3.4 0z"/></svg>
                             </span>
                             <span class="text-xs font-bold leading-none text-on-surface">Suggested action — needs approval</span>
                             <span class="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-status-warning" style="animation:asstPulse 1.2s infinite"></span>
@@ -1117,10 +1117,10 @@
     <!-- Social proof bar -->
     <div class="border-b border-border-subtle bg-surface-container-lowest">
         <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-2 px-4 py-3 text-xs font-medium text-secondary sm:justify-start">
-            <span class="flex items-center gap-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>GST-compliant</span>
-            <span class="flex items-center gap-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>AES-256 encryption</span>
-            <span class="flex items-center gap-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>DPDPA-aligned</span>
-            <span class="flex items-center gap-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Data hosted in India</span>
+            <span class="flex items-center gap-1.5"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>GST-compliant</span>
+            <span class="flex items-center gap-1.5"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>AES-256 encryption</span>
+            <span class="flex items-center gap-1.5"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>DPDPA-aligned</span>
+            <span class="flex items-center gap-1.5"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Data hosted in India</span>
         </div>
     </div>
 
@@ -1165,7 +1165,7 @@
                 </div>
                 <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     {{range .Feature.Capabilities}}
-                    <div class="group rounded-2xl border border-border-subtle bg-surface-container-lowest p-6 shadow-sm transition-all duration-250 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
+                    <div class="group rounded-2xl border border-border-subtle bg-surface-container-lowest p-6 shadow-sm transition duration-250 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
                         <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-on-primary">
                             {{iconWithClass .Icon "w-6 h-6"}}
                         </div>
@@ -1187,7 +1187,7 @@
                 <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                     {{range .Feature.Benefits}}
                     <div class="flex items-start gap-3 rounded-2xl border border-border-subtle bg-primary/40 p-5">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                         <p class="text-sm font-medium leading-relaxed text-on-surface-variant">{{.Text}}</p>
                     </div>
                     {{end}}
@@ -1255,41 +1255,41 @@
                     <div class="divide-y divide-border-subtle bg-surface-container-lowest">
                         <div class="grid grid-cols-2 text-sm">
                             <div class="flex items-start gap-3 px-6 py-4 text-text-muted">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                                 <span>Spreadsheets and WhatsApp for dispatch</span>
                             </div>
                             <div class="flex items-start gap-3 px-6 py-4 text-on-surface-variant">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                                 <span>One live dashboard with real-time tracking</span>
                             </div>
                         </div>
                         <div class="grid grid-cols-2 text-sm">
                             <div class="flex items-start gap-3 px-6 py-4 text-text-muted">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                                 <span>Manual invoice generation and email</span>
                             </div>
                             <div class="flex items-start gap-3 px-6 py-4 text-on-surface-variant">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                                 <span>Auto-generated GST-compliant invoices with EWB</span>
                             </div>
                         </div>
                         <div class="grid grid-cols-2 text-sm">
                             <div class="flex items-start gap-3 px-6 py-4 text-text-muted">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                                 <span>Cash-based expense tracking with no audit trail</span>
                             </div>
                             <div class="flex items-start gap-3 px-6 py-4 text-on-surface-variant">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                                 <span>Digital kharcha with proof and trip reconciliation</span>
                             </div>
                         </div>
                         <div class="grid grid-cols-2 text-sm">
                             <div class="flex items-start gap-3 px-6 py-4 text-text-muted">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                                 <span>Phone calls to check delivery status</span>
                             </div>
                             <div class="flex items-start gap-3 px-6 py-4 text-on-surface-variant">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                                 <span>Customer-facing tracking with live ETAs</span>
                             </div>
                         </div>
@@ -1303,7 +1303,7 @@
             <div class="mx-auto flex max-w-6xl flex-col items-start gap-4 px-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
                 <div class="flex items-center gap-4">
                     <span class="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     </span>
                     <div>
                         <p class="text-xs font-semibold uppercase tracking-wide text-text-muted">Who it's for</p>
@@ -1311,7 +1311,7 @@
                     </div>
                 </div>
                 <a href="/register" class="inline-flex flex-none items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-on-primary transition hover:bg-primary/90 hover:-translate-y-px hover:shadow-md">
-                    Start free <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    Start free <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                 </a>
             </div>
         </section>
@@ -1325,7 +1325,7 @@
                 <ul class="mt-8 grid gap-4 sm:grid-cols-2">
                     {{range .Feature.UseCases}}
                     <li class="flex items-start gap-3 rounded-2xl border border-border-subtle bg-surface-container-lowest p-5 shadow-sm">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                         <span class="text-sm leading-relaxed text-on-surface-variant">{{.}}</span>
                     </li>
                     {{end}}
@@ -1343,7 +1343,7 @@
                     <details class="group rounded-2xl border border-border-subtle bg-surface-container-lowest shadow-sm [&_summary::-webkit-details-marker]:hidden">
                         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 p-5 font-semibold text-on-surface">
                             <span>{{.Question}}</span>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
                         </summary>
                         <div class="px-5 pb-5 text-sm leading-relaxed text-secondary">{{.Answer}}</div>
                     </details>
@@ -1351,35 +1351,35 @@
                     <details class="group rounded-2xl border border-border-subtle bg-surface-container-lowest shadow-sm [&_summary::-webkit-details-marker]:hidden">
                         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 p-5 font-semibold text-on-surface">
                             <span>How long does setup take?</span>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
                         </summary>
                         <div class="px-5 pb-5 text-sm leading-relaxed text-secondary">Most teams are running in the same day. Add your vehicles and drivers, and start creating trips — no hardware or training required to begin.</div>
                     </details>
                     <details class="group rounded-2xl border border-border-subtle bg-surface-container-lowest shadow-sm [&_summary::-webkit-details-marker]:hidden">
                         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 p-5 font-semibold text-on-surface">
                             <span>Is my data secure?</span>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
                         </summary>
                         <div class="px-5 pb-5 text-sm leading-relaxed text-secondary">Data is encrypted in transit and at rest (AES-256), access is role-based, and every meaningful action is recorded in append-only audit logs. Data is hosted in India.</div>
                     </details>
                     <details class="group rounded-2xl border border-border-subtle bg-surface-container-lowest shadow-sm [&_summary::-webkit-details-marker]:hidden">
                         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 p-5 font-semibold text-on-surface">
                             <span>Do drivers need a smartphone?</span>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
                         </summary>
                         <div class="px-5 pb-5 text-sm leading-relaxed text-secondary">The web app works on any device with a browser. Drivers can use the mobile app for e-POD and status updates from any Android phone.</div>
                     </details>
                     <details class="group rounded-2xl border border-border-subtle bg-surface-container-lowest shadow-sm [&_summary::-webkit-details-marker]:hidden">
                         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 p-5 font-semibold text-on-surface">
                             <span>Is this actually GST-compliant?</span>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
                         </summary>
                         <div class="px-5 pb-5 text-sm leading-relaxed text-secondary">Invoices carry your company's GSTIN and tax details. Line items follow GST structure so your accountant can file without reformatting. CGST/SGST for in-state, IGST for inter-state.</div>
                     </details>
                     <details class="group rounded-2xl border border-border-subtle bg-surface-container-lowest shadow-sm [&_summary::-webkit-details-marker]:hidden">
                         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 p-5 font-semibold text-on-surface">
                             <span>Can we start with just 5–10 vehicles?</span>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
                         </summary>
                         <div class="px-5 pb-5 text-sm leading-relaxed text-secondary">Avandab scales from a handful of vehicles to hundreds. Start with a pilot, prove the value, and expand — no long-term contracts required.</div>
                     </details>
@@ -1394,22 +1394,22 @@
                 <p class="mt-3 text-secondary">Built for the way Indian transport businesses actually run.</p>
                 <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     <div class="rounded-2xl border border-border-subtle bg-surface-container-lowest p-6 shadow-sm">
-                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/></svg></span>
+                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/></svg></span>
                         <h3 class="mt-4 text-title-md font-semibold text-on-surface">GST-ready invoicing</h3>
                         <p class="mt-1.5 text-sm leading-relaxed text-secondary">Professional, compliant invoices generated from completed trips.</p>
                     </div>
                     <div class="rounded-2xl border border-border-subtle bg-surface-container-lowest p-6 shadow-sm">
-                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
                         <h3 class="mt-4 text-title-md font-semibold text-on-surface">Bank-grade security</h3>
                         <p class="mt-1.5 text-sm leading-relaxed text-secondary">Encryption in transit and at rest with role-based access control.</p>
                     </div>
                     <div class="rounded-2xl border border-border-subtle bg-surface-container-lowest p-6 shadow-sm">
-                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></span>
+                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></span>
                         <h3 class="mt-4 text-title-md font-semibold text-on-surface">DPDPA-aligned trails</h3>
                         <p class="mt-1.5 text-sm leading-relaxed text-secondary">Append-only audit logs so every action is traceable.</p>
                     </div>
                     <div class="rounded-2xl border border-border-subtle bg-surface-container-lowest p-6 shadow-sm">
-                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-2.8a.5.5 0 0 0-.45-.3H3a.5.5 0 0 0-.45.3L1.14 12.2a1.5 1.5 0 0 0 0 1.6L2.6 16.6A.5.5 0 0 0 3.05 17H18"/></svg></span>
+                        <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-2.8a.5.5 0 0 0-.45-.3H3a.5.5 0 0 0-.45.3L1.14 12.2a1.5 1.5 0 0 0 0 1.6L2.6 16.6A.5.5 0 0 0 3.05 17H18"/></svg></span>
                         <h3 class="mt-4 text-title-md font-semibold text-on-surface">Driver mobile app</h3>
                         <p class="mt-1.5 text-sm leading-relaxed text-secondary">e-POD and live status updates from the road, on any phone.</p>
                     </div>
@@ -1425,7 +1425,7 @@
                 <p class="mt-3 text-secondary">See how {{.Feature.Title}} connects to the rest of Avandab.</p>
                 <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     {{range .RelatedFeatures}}
-                    <a href="/features/{{.Slug}}" class="group flex items-center gap-4 rounded-2xl border border-border-subtle bg-surface-container-lowest p-5 shadow-sm transition-all duration-250 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
+                    <a href="/features/{{.Slug}}" class="group flex items-center gap-4 rounded-2xl border border-border-subtle bg-surface-container-lowest p-5 shadow-sm transition duration-250 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
                         <span class="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-primary/10 text-primary transition group-hover:bg-primary group-hover:text-on-primary">
                             {{iconWithClass .Icon "w-6 h-6"}}
                         </span>
@@ -1433,7 +1433,7 @@
                             <span class="block text-title-md font-semibold text-on-surface">{{.Title}}</span>
                             <span class="block truncate text-sm text-text-muted">{{.Tagline}}</span>
                         </span>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
                     </a>
                     {{end}}
                 </div>
@@ -1449,10 +1449,10 @@
                 <p class="mx-auto mt-4 max-w-2xl text-lg text-on-primary/80">Spin up your Avandab workspace and put this feature to work on your very next trip.</p>
                 <div class="mt-8 flex flex-wrap justify-center gap-3">
                     <a href="/register" class="inline-flex items-center gap-2 rounded-full bg-surface-container-lowest px-6 py-3 text-sm font-semibold text-primary shadow-sm transition hover:bg-primary/10 hover:-translate-y-px hover:shadow-md">
-                        Create your workspace <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        Create your workspace <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                     </a>
                     <a href="https://wa.me/918285336507?text=Hi%20Avandab,%20I%20want%20a%20demo%20of%20{{.Feature.Title}}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 hover:-translate-y-px">
-                        <svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.29"/></svg>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.29"/></svg>
                         WhatsApp Demo
                     </a>
                     <a href="/contact-us" class="inline-flex items-center gap-2 rounded-full border border-on-primary/30 px-6 py-3 text-sm font-semibold text-on-primary transition hover:bg-surface-container-lowest/10 hover:-translate-y-px">
@@ -1469,13 +1469,13 @@
 
     <!-- Sticky Mobile Conversion Dock (Visible only on mobile devices) -->
     <aside id="mobile-sticky-dock" class="md:hidden fixed bottom-0 inset-x-0 z-40 p-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))] bg-surface-container-lowest/95 backdrop-blur-md border-t border-border-subtle shadow-[0_-4px_16px_rgba(0,0,0,0.12)] flex items-center gap-2" aria-label="Quick Mobile Actions">
-        <a href="https://wa.me/918285336507?text=Hi%20Avandab,%20I%20want%20a%20demo%20of%20the%20fleet%20platform" target="_blank" rel="noopener noreferrer" class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm active:scale-[0.98] transition-all">
-            <svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 shrink-0"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.29"/></svg>
+        <a href="https://wa.me/918285336507?text=Hi%20Avandab,%20I%20want%20a%20demo%20of%20the%20fleet%20platform" target="_blank" rel="noopener noreferrer" class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm active:scale-[0.98] transition">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 shrink-0"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.29"/></svg>
             <span>WhatsApp Demo</span>
         </a>
-        <a href="/register" class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-primary text-on-primary font-semibold text-xs shadow-sm active:scale-[0.98] transition-all">
+        <a href="/register" class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-primary text-on-primary font-semibold text-xs shadow-sm active:scale-[0.98] transition">
             <span>Start Free</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
         </a>
     </aside>
 

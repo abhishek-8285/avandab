@@ -25,8 +25,8 @@
             <label for="vehicle_id" class="inline-flex items-center gap-1 text-xs text-secondary cursor-pointer">
                 <input type="radio" name="action" value="reject" class="accent-primary"> Reject
             </label>
-            <input id="vehicle_id" type="text" name="vehicle_id" placeholder="vehicle id" class="w-28 bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1 text-xs font-data-mono text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
-            <button type="submit" class="inline-flex items-center rounded-full bg-primary text-on-primary px-2.5 py-1 text-[11px] font-bold hover:bg-primary/90 transition-all">Resolve</button>
+            <input aria-label="vehicle id" autocomplete="off" id="vehicle_id" type="text" name="vehicle_id" placeholder="vehicle id" class="w-28 bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1 text-xs font-data-mono text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+            <button type="submit" class="inline-flex items-center rounded-full bg-primary text-on-primary px-2.5 py-1 text-[11px] font-bold hover:bg-primary/90 transition">Resolve</button>
         </form>
         {{end}}
     </td>
@@ -36,7 +36,7 @@
     <td colspan="6" class="px-4 py-12 text-center">
         <div class="flex flex-col items-center gap-2">
             <div class="w-12 h-12 rounded-2xl bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid mx-auto">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-6 h-6"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-6 h-6"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
             </div>
             <p class="text-sm font-medium text-on-surface mt-1">Queue is clear</p>
             <p class="text-xs text-text-muted">No frames awaiting resolution.</p>

@@ -27,19 +27,23 @@ func TestDeviceStore_ListByTenantFiltered(t *testing.T) {
 	insert("d1", "100000000000001", "inventory", "2026-08-01T08:00:00Z")
 	insert("d2", "100000000000002", "active", "2026-08-10T08:00:00Z")
 	insert("d3", "100000000000003", "retired", "2026-08-20T08:00:00Z")
+	// IST-day-boundary row: 2026-08-09T18:45:00Z = 00:15 IST Aug 10.
+	insert("d4", "100000000000004", "active", "2026-08-09T18:45:00Z")
 
 	// Full-month window
 	rows, total, err := listFiltered(store, ctx, "", "", "2026-08-01", "2026-08-31")
 	require.NoError(t, err)
-	assert.Len(t, rows, 3)
-	assert.EqualValues(t, 3, total)
+	assert.Len(t, rows, 4)
+	assert.EqualValues(t, 4, total)
 
-	// Single-day window (from == to)
+	// Single-day window (from == to) — the boundary row belongs to Aug 10.
 	rows, total, err = listFiltered(store, ctx, "", "", "2026-08-10", "2026-08-10")
 	require.NoError(t, err)
-	require.Len(t, rows, 1)
-	assert.EqualValues(t, 1, total)
-	assert.Equal(t, "100000000000002", rows[0].IMEI)
+	require.Len(t, rows, 2)
+	assert.EqualValues(t, 2, total)
+	imeis := []string{rows[0].IMEI, rows[1].IMEI}
+	assert.Contains(t, imeis, "100000000000002")
+	assert.Contains(t, imeis, "100000000000004")
 
 	// From-only bound
 	_, total, err = listFiltered(store, ctx, "", "", "2026-08-11", "")

@@ -13,9 +13,9 @@
 
         <div class="ml-auto flex items-center gap-2">
             <div class="relative min-w-50">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                <input type="text" name="q" value="{{.Query}}" placeholder="Search shipment..."
-                    class="bg-surface-container-low border border-border-subtle rounded-md pl-9 pr-4 py-2 text-sm text-on-surface placeholder:text-text-muted w-full focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input aria-label="Search shipment" autocomplete="off" type="text" name="q" value="{{.Query}}" placeholder="Search shipment…"
+                    class="bg-surface-container-low border border-border-subtle rounded-md pl-9 pr-4 py-2 text-sm text-on-surface placeholder:text-text-muted w-full focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition">
             </div>
             {{template "btn.html" (dict "Label" "Search" "Type" "submit" "Size" "sm")}}
         </div>

@@ -612,6 +612,11 @@ type PaginationParams struct {
 	Offset   int
 	DateFrom string
 	DateTo   string
+	// DateFilterError is set when from/to held something that is not a real
+	// date. The value is dropped from the query (the SQL window must never see
+	// garbage) but the page has to SAY so: silently returning unfiltered rows
+	// reads as "nothing matched" and already produced wrong list totals.
+	DateFilterError string
 }
 
 // dateLayout is the accepted format for from/to list filters (YYYY-MM-DD).
@@ -631,6 +636,17 @@ func parseDateParam(raw string) string {
 		return t.Format(dateLayout)
 	}
 	return ""
+}
+
+// parseDateParamStrict is parseDateParam plus the "was this a real date?"
+// answer, so callers can surface a rejected filter instead of dropping it.
+// An empty value is not an error — it means "no bound".
+func parseDateParamStrict(raw string) (value string, ok bool) {
+	if strings.TrimSpace(raw) == "" {
+		return "", true
+	}
+	v := parseDateParam(raw)
+	return v, v != ""
 }
 
 // inDate renders an ISO date (YYYY-MM-DD) in Indian format (DD-MM-YYYY)
@@ -666,12 +682,17 @@ func parsePaginationParams(r *http.Request) PaginationParams {
 		page = 1
 	}
 	offset := (page - 1) * limit
-	from := parseDateParam(r.URL.Query().Get("from"))
-	to := parseDateParam(r.URL.Query().Get("to"))
+	from, okFrom := parseDateParamStrict(r.URL.Query().Get("from"))
+	to, okTo := parseDateParamStrict(r.URL.Query().Get("to"))
+	dateErr := ""
+	if !okFrom || !okTo {
+		// The bound is dropped, so the page must say the filter was rejected.
+		dateErr = "That date range was not applied — enter real dates as dd-mm-yyyy."
+	}
 	if from != "" && to != "" && from > to {
 		from, to = to, from
 	}
-	return PaginationParams{Query: query, Status: status, Limit: limit, Page: page, Offset: offset, DateFrom: from, DateTo: to}
+	return PaginationParams{Query: query, Status: status, Limit: limit, Page: page, Offset: offset, DateFrom: from, DateTo: to, DateFilterError: dateErr}
 }
 
 func newPaginationData(pp PaginationParams, total int64, basePath string) PaginationData {
@@ -1136,10 +1157,11 @@ func (a *App) PolicyPage(w http.ResponseWriter, r *http.Request, name string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=0, must-revalidate")
 	seo := map[string]map[string]string{
-		"privacy.html": {"Title": "Privacy Policy", "Desc": "Avandab Privacy Policy — how we collect, use and protect fleet, driver and customer data under India's DPDP Act, 2023.", "Path": "/privacy"},
-		"terms.html":   {"Title": "Terms of Service", "Desc": "Avandab Terms of Service — service, payment, cancellation, liability and dispute terms for fleet operations.", "Path": "/terms"},
-		"refunds.html": {"Title": "Refund Policy", "Desc": "Avandab Refund Policy — eligibility, submission window and processing for undelivered services.", "Path": "/refunds"},
-		"faq.html":     {"Title": "Frequently Asked Questions", "Desc": "Avandab FAQ — setup, tracking, ePOD, billing, data protection and support answers for fleet owners.", "Path": "/faq"},
+		"privacy.html":             {"Title": "Privacy Policy", "Desc": "Avandab Privacy Policy — how we collect, use and protect fleet, driver and customer data under India's DPDP Act, 2023.", "Path": "/privacy"},
+		"terms.html":               {"Title": "Terms of Service", "Desc": "Avandab Terms of Service — service, payment, cancellation, liability and dispute terms for fleet operations.", "Path": "/terms"},
+		"refunds.html":             {"Title": "Refund Policy", "Desc": "Avandab Refund Policy — eligibility, submission window and processing for undelivered services.", "Path": "/refunds"},
+		"consumer_compliance.html": {"Title": "Consumer Compliance", "Desc": "Avandab Consumer Compliance — E-Commerce Amendment 2026 disclosures, grievance SLAs and dark-pattern self-audit certificate.", "Path": "/consumer-compliance"},
+		"faq.html":                 {"Title": "Frequently Asked Questions", "Desc": "Avandab FAQ — setup, tracking, ePOD, billing, data protection and support answers for fleet owners.", "Path": "/faq"},
 	}
 	meta := seo[name]
 	title, desc, path := name, "", "/"
@@ -1173,6 +1195,11 @@ func (a *App) Terms(w http.ResponseWriter, r *http.Request) {
 // Refunds serves the refund policy page.
 func (a *App) Refunds(w http.ResponseWriter, r *http.Request) {
 	a.PolicyPage(w, r, "refunds.html")
+}
+
+// ConsumerCompliance serves the E-Commerce Amendment 2026 disclosures page.
+func (a *App) ConsumerCompliance(w http.ResponseWriter, r *http.Request) {
+	a.PolicyPage(w, r, "consumer_compliance.html")
 }
 
 // FAQ serves the public frequently-asked-questions page.

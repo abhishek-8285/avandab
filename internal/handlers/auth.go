@@ -344,6 +344,12 @@ func (h *AuthHandlers) Register(w http.ResponseWriter, r *http.Request) {
 	password := r.PostFormValue("password")
 	confirm := r.PostFormValue("confirm_password")
 
+	// ponytail: explicit DPDP consent at signup; /consent gate remains the record.
+	if r.PostFormValue("agree") != "yes" {
+		h.renderRegisterError(w, r, "Please tick the consent checkbox - account creation needs your explicit agreement to the Privacy Notice and Terms.", email, name, phone, companyName)
+		return
+	}
+
 	if h.Turnstile != nil && h.Config.Turnstile.Enabled() {
 		turnstileToken := r.PostFormValue("cf-turnstile-response")
 		remoteIP := r.Header.Get("CF-Connecting-IP")

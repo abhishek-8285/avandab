@@ -17,7 +17,7 @@
                 <td data-label="Vehicle Type" class="px-3 py-2">
                     <div class="flex items-center gap-2.5">
                         <div class="w-7 h-7 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>
                         </div>
                         <span class="font-semibold text-on-surface capitalize">{{.VehicleType}}{{if and .VehicleNumber (ne .VehicleNumber .RegistrationNumber)}} <span class="text-text-muted font-normal">({{.VehicleNumber}})</span>{{end}}</span>
                     </div>
@@ -28,7 +28,7 @@
                 </td>
                 <td data-label="Actions" class="px-3 py-2 text-right">
                     <div class="flex items-center justify-end gap-2" onclick="event.stopPropagation()">
-                        <a href="/vehicles/{{.ID}}" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-low border border-border-subtle text-xs font-semibold text-on-surface hover:bg-surface-container hover:border-primary/20 transition-all">
+                        <a href="/vehicles/{{.ID}}" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container-low border border-border-subtle text-xs font-semibold text-on-surface hover:bg-surface-container hover:border-primary/20 transition">
                             View
                         </a>
                         <a href="/vehicles/{{.ID}}/edit" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/15 text-xs font-bold text-primary hover:bg-primary hover:text-on-primary transition-colors">

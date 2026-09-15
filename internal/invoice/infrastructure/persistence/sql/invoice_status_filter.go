@@ -46,7 +46,8 @@ func (r *invoiceRepository) searchOutstandingInvoices(ctx context.Context, tenan
 	if from != "" || to != "" {
 		selectSQL += invoiceDateClause
 		countSQL += invoiceDateClause
-		args = append(args, from, from, to, to)
+		dateFrom, dateTo := shared.DayBoundsUTC(from, to)
+		args = append(args, dateFrom, dateFrom, dateTo, dateTo)
 	}
 
 	rows, err := r.exec(ctx).QueryContext(ctx, selectSQL+`

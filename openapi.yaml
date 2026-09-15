@@ -2897,7 +2897,74 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/errors/{fingerprint}:
+  /api/v1/support/tickets:
+    get:
+      tags: [Support]
+      summary: List grievance tickets
+      description: Requires `users:manage` permission. Grievance triage inbox (E-Commerce Amendment 2026), newest first, cap 100.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, in_progress, resolved, closed] }
+      responses:
+        '200':
+          description: Ticket list.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tickets:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        ticket: { type: string }
+                        name: { type: string }
+                        email: { type: string }
+                        subject: { type: string }
+                        category: { type: string }
+                        status: { type: string }
+                        acknowledged_at: { type: string }
+                        created_at: { type: string }
+                        updated_at: { type: string }
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/support/tickets/{ticket}/status:
+    post:
+      tags: [Support]
+      summary: Transition a grievance ticket
+      description: Requires `users:manage` permission. Sets status (pending, in_progress, resolved, closed); first touch stamps acknowledged_at (48h-ack proof).
+      parameters:
+        - name: ticket
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [pending, in_progress, resolved, closed] }
+      responses:
+        '200':
+          description: Ticket updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ticket: { type: string }
+                  status: { type: string }
+                  acknowledged: { type: boolean }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
     get:
       tags: [Errors]
       summary: Get one error report group

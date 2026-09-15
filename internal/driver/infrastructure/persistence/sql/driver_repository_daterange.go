@@ -15,11 +15,12 @@ import (
 // and its mocks untouched.
 
 const driverDateClause = `
-  AND (? = '' OR substr(CAST(created_at AS TEXT), 1, 10) >= substr(CAST(? AS TEXT), 1, 10))
-  AND (? = '' OR substr(CAST(created_at AS TEXT), 1, 10) <= substr(CAST(? AS TEXT), 1, 10))`
+  AND (? = '' OR datetime(CAST(created_at AS TEXT)) >= datetime(?))
+  AND (? = '' OR datetime(CAST(created_at AS TEXT)) <= datetime(?))`
 
 func (r *driverRepository) SearchReadModelsDateRange(ctx context.Context, tenantID shared.TenantID, query string, status string, from string, to string, limit int, offset int) ([]domain.DriverReadModel, int64, error) {
 	qPattern := "%" + query + "%"
+	dateFrom, dateTo := shared.DayBoundsUTC(from, to)
 
 	querySQL := `
 SELECT id, driver_id, first_name, last_name, phone, email, address,
@@ -36,7 +37,7 @@ LIMIT ? OFFSET ?`
 		string(tenantID),
 		query, qPattern, qPattern, qPattern, qPattern,
 		status, status,
-		from, from, to, to,
+		dateFrom, dateFrom, dateTo, dateTo,
 		limit, offset,
 	)
 	if err != nil {
@@ -61,7 +62,7 @@ WHERE tenant_id = $1
 		string(tenantID),
 		query, qPattern, qPattern, qPattern, qPattern,
 		status, status,
-		from, from, to, to,
+		dateFrom, dateFrom, dateTo, dateTo,
 	).Scan(&count)
 	if err != nil {
 		return nil, 0, err

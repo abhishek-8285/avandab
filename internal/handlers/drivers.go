@@ -94,7 +94,7 @@ func (h *DriverHandlers) List(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "driver_list.html", PageData{
 		Title: "Drivers",
 		User:  session,
-		Extra: map[string]interface{}{"Drivers": res.Drivers, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.driverKPIs(r.Context())},
+		Extra: map[string]interface{}{"Drivers": res.Drivers, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "DateFilterError": pp.DateFilterError, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.driverKPIs(r.Context())},
 	})
 }
 

@@ -18,7 +18,7 @@ describe('VoiceExpenseButton', () => {
       <VoiceExpenseButton tripId={null} onSaved={onSaved} />
     );
 
-    fireEvent.press(getByLabelText('voice-expense-mic'));
+    fireEvent.press(getByLabelText('Add expense by voice'));
     fireEvent.changeText(getByPlaceholderText('voice.hint'), 'Diesel ₹2500 at HPCL');
     fireEvent.press(getByText('expense.submit'));
 
@@ -41,7 +41,7 @@ describe('VoiceExpenseButton', () => {
       <VoiceExpenseButton tripId="trip_1" onSaved={onSaved} />
     );
 
-    fireEvent.press(getByLabelText('voice-expense-mic'));
+    fireEvent.press(getByLabelText('Add expense by voice'));
     fireEvent.press(getByText('expense.submit'));
 
     expect(enqueueSpy).not.toHaveBeenCalled();
@@ -54,7 +54,7 @@ describe('VoiceExpenseButton', () => {
       <VoiceExpenseButton tripId="trip_1" onSaved={onSaved} disabled />
     );
 
-    fireEvent.press(getByLabelText('voice-expense-mic'));
+    fireEvent.press(getByLabelText('Add expense by voice'));
     expect(queryByPlaceholderText('voice.hint')).toBeNull();
     expect(enqueueSpy).not.toHaveBeenCalled();
   });
@@ -67,7 +67,7 @@ describe('VoiceExpenseButton', () => {
       <VoiceExpenseButton tripId="trip_1" onSaved={onSaved} />
     );
 
-    fireEvent.press(getByLabelText('voice-expense-mic'));
+    fireEvent.press(getByLabelText('Add expense by voice'));
     fireEvent.changeText(getByPlaceholderText('voice.hint'), 'Toll ₹200 at NHAI');
     fireEvent.press(getByText('expense.submit'));
 

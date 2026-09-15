@@ -53,25 +53,34 @@ func TestUserRepository_SearchUsersDateRange(t *testing.T) {
 	mk("aug01@x.com", "Aug One", "active", 1)
 	mk("aug10@x.com", "Aug Ten", "inactive", 10)
 	mk("aug20@x.com", "Aug Twenty", "suspended", 20)
+	// IST-day-boundary row: written 2026-08-09T18:45:00Z, which is 2026-08-10
+	// 00:15 IST. The pre-instant filter filed it under Aug 09 (raw UTC
+	// truncation) and the "Aug 10 only" window missed it.
+	_, err := dbConn.Exec(`INSERT INTO users (id, email, password_hash, name, role_id, status, created_at, updated_at)
+		VALUES (?, ?, 'hash', ?, ?, ?, ?, ?)`, "aug10-early@x.com", "aug10-early@x.com", "Aug Ten Early", adminRoleID, "active", "2026-08-09T18:45:00Z", "2026-08-09T18:45:00Z")
+	require.NoError(t, err)
 
 	// Full-month window
 	rows, err := repo.SearchUsersDateRange(ctx, "", "", "2026-08-01", "2026-08-31", 10, 0, "1")
 	require.NoError(t, err)
-	assert.Len(t, rows, 3)
+	assert.Len(t, rows, 4)
 	total, err := repo.CountUsersDateRange(ctx, "", "", "2026-08-01", "2026-08-31", "1")
 	require.NoError(t, err)
-	assert.EqualValues(t, 3, total)
+	assert.EqualValues(t, 4, total)
 
-	// Single-day window (from == to)
+	// Single-day window (from == to) — the IST-boundary row (00:15 IST Aug 10)
+	// belongs to Aug 10 even though its UTC stamp says Aug 09.
 	rows, err = repo.SearchUsersDateRange(ctx, "", "", "2026-08-10", "2026-08-10", 10, 0, "1")
 	require.NoError(t, err)
-	require.Len(t, rows, 1)
-	assert.Equal(t, "aug10@x.com", rows[0].Email)
+	require.Len(t, rows, 2)
+	emails := []string{rows[0].Email, rows[1].Email}
+	assert.Contains(t, emails, "aug10@x.com")
+	assert.Contains(t, emails, "aug10-early@x.com")
 	total, err = repo.CountUsersDateRange(ctx, "", "", "2026-08-10", "2026-08-10", "1")
 	require.NoError(t, err)
-	assert.EqualValues(t, 1, total)
+	assert.EqualValues(t, 2, total)
 
-	// From-only bound (excludes the Aug 10 row)
+	// From-only bound (excludes the two Aug 10 rows)
 	_, total, _ = bounds(repo, ctx, "2026-08-11", "")
 	assert.EqualValues(t, 1, total)
 

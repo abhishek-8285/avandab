@@ -66,19 +66,19 @@
                     <div class="inline-flex items-center gap-2">
                         <!-- Quick Plan Changer Form -->
                         <form method="POST" action="/tenants/{{.ID}}/plan" class="inline-flex items-center gap-1">
-                            <select name="plan_id" onchange="this.form.submit()" class="bg-surface-container-low border border-border-subtle rounded-full text-xs font-semibold px-2 py-1 text-on-surface cursor-pointer focus:ring-1 focus:ring-primary">
+                            <select name="plan_id" aria-label="Plan" onchange="this.form.submit()" class="bg-surface-container-low border border-border-subtle rounded-full text-xs font-semibold px-2 py-1 text-on-surface cursor-pointer focus:ring-1 focus:ring-primary">
                                 <option value="STARTER" {{if eq .PlanID "STARTER"}}selected{{end}}>Starter</option>
                                 <option value="GROWTH" {{if eq .PlanID "GROWTH"}}selected{{end}}>Growth</option>
                                 <option value="SCALE" {{if eq .PlanID "SCALE"}}selected{{end}}>Scale</option>
                                 <option value="ENTERPRISE" {{if eq .PlanID "ENTERPRISE"}}selected{{end}}>Enterprise</option>
                             </select>
-                            <input name="provider_subscription_id" placeholder="sub_…" title="Razorpay subscription ID — links billing webhooks so paid events upgrade this org. Leave blank to keep existing link." class="bg-surface-container-low border border-border-subtle rounded-full text-xs px-2 py-1 w-24 text-on-surface focus:ring-1 focus:ring-primary">
+                            <input aria-label="sub_" autocomplete="off" name="provider_subscription_id" placeholder="sub_…" title="Razorpay subscription ID — links billing webhooks so paid events upgrade this org. Leave blank to keep existing link." class="bg-surface-container-low border border-border-subtle rounded-full text-xs px-2 py-1 w-24 text-on-surface focus:ring-1 focus:ring-primary">
                         </form>
 
                         <!-- Extend Trial Form -->
                         {{if eq .SubStatus "TRIAL"}}
                         <form method="POST" action="/tenants/{{.ID}}/extend-trial" class="inline">
-                            <button type="submit" title="Grant +14 days trial extension" class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold bg-cyan-soft text-cyan-strong border border-cyan-500/20 hover:bg-cyan-500/20 transition-all">
+                            <button type="submit" title="Grant +14 days trial extension" class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold bg-cyan-soft text-cyan-strong border border-cyan-500/20 hover:bg-cyan-500/20 transition">
                                 +14d Trial
                             </button>
                         </form>
@@ -88,7 +88,7 @@
                         <button type="button" data-id="{{.ID}}" data-next="{{if eq .Status "active"}}suspended{{else}}active{{end}}"
                                 aria-pressed="{{if eq .Status "active"}}true{{else}}false{{end}}"
                                 onclick="toggleTenant(this)"
-                                class="js-tenant-toggle inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold cursor-pointer transition-all active:scale-[0.98] {{if eq .Status "active"}}bg-status-alert/10 text-status-alert border border-status-alert/20 hover:bg-status-alert/20{{else}}bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20{{end}}">
+                                class="js-tenant-toggle inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold cursor-pointer transition active:scale-[0.98] {{if eq .Status "active"}}bg-status-alert/10 text-status-alert border border-status-alert/20 hover:bg-status-alert/20{{else}}bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20{{end}}">
                             {{if eq .Status "active"}}Suspend{{else}}Activate{{end}}
                         </button>
                     </div>

@@ -1,5 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, Animated, ScrollView, StatusBar } from 'react-native';
+import React, { useEffect } from 'react';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  withRepeat,
+  cancelAnimation,
+} from 'react-native-reanimated';
+import { StyleSheet, Text, View, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors, Font, Radius, Spacing } from '../constants/theme';
@@ -12,24 +21,26 @@ interface GetStartedScreenProps {
 
 export function GetStartedScreen({ onGetStarted, onSignIn, onOpenQRDemo }: GetStartedScreenProps) {
   // Stable animation instance; useState initializer instead of useRef(...).current.
-  const [pulseAnim] = useState(() => new Animated.Value(0));
+  const pulseAnim = useSharedValue(0.4);
+  // Shared values only animate through useAnimatedStyle (UI thread worklet).
+  const pulseStyle = useAnimatedStyle(() => ({ opacity: pulseAnim.value }));
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, {
-          toValue: 1,
-          duration: 1200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulseAnim, {
-          toValue: 0,
-          duration: 1200,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
+    // Loop 0.4 -> 1 -> 0.4 forever (was RN Animated interpolate [0,1]→[0.4,1];
+    // withRepeat replaces the invalid withLoop(...).run() API).
+    // eslint-disable-next-line react-hooks/immutability -- shared-value .value writes are the documented reanimated API; the rule can't see the worklet transform
+    pulseAnim.value = withRepeat(
+      withSequence(
+        withTiming(1, { duration: 1200 }),
+        withTiming(0.4, { duration: 1200 })
+      ),
+      -1,
+      false
+    );
+    return () => {
+      cancelAnimation(pulseAnim);
+    };
   }, []);
 
   return (
@@ -41,7 +52,7 @@ export function GetStartedScreen({ onGetStarted, onSignIn, onOpenQRDemo }: GetSt
         <Image
           source={require('../../assets/driver_hero.png')}
           style={styles.heroImage}
-          resizeMode="cover"
+          contentFit="cover"
           accessible={false}
         />
         <View style={styles.heroOverlay} />
@@ -49,17 +60,7 @@ export function GetStartedScreen({ onGetStarted, onSignIn, onOpenQRDemo }: GetSt
         {/* Top status strip */}
         <View style={[styles.statusStrip, { top: insets.top + 12 }]}>
           <View style={styles.statusItem}>
-            <Animated.View
-              style={[
-                styles.statusDot,
-                {
-                  opacity: pulseAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.4, 1],
-                  }),
-                },
-              ]}
-            />
+            <Animated.View style={[styles.statusDot, pulseStyle]} />
             <Text style={styles.statusText}>AVANDAB NETWORK</Text>
           </View>
           <View style={styles.statusLiveBadge}>

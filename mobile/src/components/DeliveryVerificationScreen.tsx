@@ -6,11 +6,11 @@ import {
   TouchableOpacity,
   ScrollView,
   StatusBar,
-  Image,
   TextInput,
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -257,8 +257,8 @@ export function DeliveryVerificationScreen({
 
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={onBack}>
-          <MaterialCommunityIcons name="arrow-left" size={22} color="#ffffff" />
+        <TouchableOpacity style={styles.backBtn} onPress={onBack} accessibilityRole="button" accessibilityLabel="Go back" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <MaterialCommunityIcons name="arrow-left" size={22} color="#ffffff" accessible={false} />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 10 }}>
           <Text style={styles.headerTitle}>PROOF OF DELIVERY (e-POD)</Text>
@@ -271,10 +271,10 @@ export function DeliveryVerificationScreen({
           {!permission?.granted ? (
             <View style={styles.permissionBox}>
               <Text style={styles.permissionText}>Camera permission required to capture stamped POD.</Text>
-              <TouchableOpacity style={styles.primaryActionBtn} onPress={requestPermission}>
+              <TouchableOpacity style={styles.primaryActionBtn} onPress={requestPermission} accessibilityRole="button" accessibilityLabel="Grant camera permission" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Text style={styles.primaryActionBtnText}>GRANT CAMERA PERMISSION</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={{ marginTop: 12 }} onPress={() => setCameraActive(false)}>
+              <TouchableOpacity style={{ marginTop: 12, minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' }} onPress={() => setCameraActive(false)} accessibilityRole="button" accessibilityLabel="Cancel camera" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Text style={{ color: '#ffffff', fontWeight: '700' }}>CANCEL</Text>
               </TouchableOpacity>
             </View>
@@ -283,11 +283,11 @@ export function DeliveryVerificationScreen({
               <View style={styles.cameraOverlay}>
                 <View style={styles.scannerFrame} />
                 <Text style={styles.cameraGuideText}>ALIGN STAMPED BILTY / GATE PASS IN FRAME</Text>
-                <TouchableOpacity style={styles.captureBtn} onPress={takePhoto}>
+                <TouchableOpacity style={styles.captureBtn} onPress={takePhoto} accessibilityRole="button" accessibilityLabel="Capture photo proof">
                   <View style={styles.captureInnerCircle} />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.closeCameraBtn} onPress={() => setCameraActive(false)}>
-                  <MaterialCommunityIcons name="close" size={24} color="#ffffff" />
+                <TouchableOpacity style={styles.closeCameraBtn} onPress={() => setCameraActive(false)} accessibilityRole="button" accessibilityLabel="Close camera" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <MaterialCommunityIcons name="close" size={24} color="#ffffff" accessible={false} />
                 </TouchableOpacity>
               </View>
             </CameraView>
@@ -297,8 +297,8 @@ export function DeliveryVerificationScreen({
         <View style={styles.signaturePadContainer}>
           <View style={styles.signatureHeader}>
             <Text style={styles.signatureHeaderText}>RECEIVER SIGNATURE ON SCREEN</Text>
-            <TouchableOpacity onPress={() => setShowSignaturePad(false)}>
-              <MaterialCommunityIcons name="close" size={24} color="#111b21" />
+            <TouchableOpacity onPress={() => setShowSignaturePad(false)} accessibilityRole="button" accessibilityLabel="Close signature pad" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} style={{ minHeight: 44, minWidth: 44, justifyContent: 'center', alignItems: 'center' }}>
+              <MaterialCommunityIcons name="close" size={24} color="#111b21" accessible={false} />
             </TouchableOpacity>
           </View>
           {SignaturePad ? (
@@ -319,12 +319,15 @@ export function DeliveryVerificationScreen({
             </View>
           )}
           <View style={styles.signatureActions}>
-            <TouchableOpacity style={styles.secBtn} onPress={clearSignature}>
+            <TouchableOpacity style={styles.secBtn} onPress={clearSignature} accessibilityRole="button" accessibilityLabel="Clear signature" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Text style={styles.secBtnText}>CLEAR</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.primaryActionBtn}
               onPress={() => signatureRef.current?.readSignature()}
+              accessibilityRole="button"
+              accessibilityLabel="Confirm signature"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
               <Text style={styles.primaryActionBtnText}>CONFIRM SIGNATURE</Text>
             </TouchableOpacity>
@@ -340,17 +343,17 @@ export function DeliveryVerificationScreen({
           <View style={styles.consigneeCard}>
             <View style={styles.consigneeTopRow}>
               <View style={styles.receivingBadge}>
-                <MaterialCommunityIcons name="factory" size={14} color="#008069" />
+                <MaterialCommunityIcons name="factory" size={14} color="#008069" accessible={false} />
                 <Text style={styles.receivingBadgeText}>DESTINATION CONSIGNEE</Text>
               </View>
               <Text style={styles.autoFilledTag}>✓ AUTO-VERIFIED</Text>
             </View>
-            <Text style={styles.consigneeNameText}>{consigneeName}</Text>
-            <Text style={styles.consigneeSubText}>Gate 3 Receiving Bay • Chakan MIDC, Pune</Text>
+            <Text style={styles.consigneeNameText} numberOfLines={1} ellipsizeMode="tail">{consigneeName}</Text>
+            <Text style={styles.consigneeSubText} numberOfLines={2} ellipsizeMode="tail">Gate 3 Receiving Bay • Chakan MIDC, Pune</Text>
             <View style={styles.divider} />
             <View style={styles.metaRow}>
-              <Text style={styles.metaText}>📦 18 Tons Steel Coils</Text>
-              <Text style={styles.metaText}>📄 EWB #7291-8841-0294</Text>
+              <Text style={styles.metaText} accessibilityLabel="18 Tons Steel Coils" numberOfLines={1} ellipsizeMode="tail">📦 18 Tons Steel Coils</Text>
+              <Text style={styles.metaText} accessibilityLabel="E-way bill 7291-8841-0294" numberOfLines={1} ellipsizeMode="tail">📄 EWB #7291-8841-0294</Text>
             </View>
           </View>
 
@@ -360,11 +363,16 @@ export function DeliveryVerificationScreen({
             <TouchableOpacity
               style={[styles.tabBtn, activeTab === 'PHOTO' && styles.tabBtnActive]}
               onPress={() => setActiveTab('PHOTO')}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: activeTab === 'PHOTO' }}
+              accessibilityLabel="Photo Bilty"
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
               <MaterialCommunityIcons
                 name="camera"
                 size={18}
                 color={activeTab === 'PHOTO' ? '#008069' : '#667781'}
+                accessible={false}
               />
               <Text style={[styles.tabText, activeTab === 'PHOTO' && styles.tabTextActive]}>
                 📸 Photo Bilty
@@ -375,11 +383,16 @@ export function DeliveryVerificationScreen({
             <TouchableOpacity
               style={[styles.tabBtn, activeTab === 'OTP' && styles.tabBtnActive]}
               onPress={() => setActiveTab('OTP')}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: activeTab === 'OTP' }}
+              accessibilityLabel="4-Digit OTP"
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
               <MaterialCommunityIcons
                 name="numeric"
                 size={18}
                 color={activeTab === 'OTP' ? '#008069' : '#667781'}
+                accessible={false}
               />
               <Text style={[styles.tabText, activeTab === 'OTP' && styles.tabTextActive]}>
                 🔢 4-Digit OTP
@@ -390,11 +403,16 @@ export function DeliveryVerificationScreen({
             <TouchableOpacity
               style={[styles.tabBtn, activeTab === 'SIGN' && styles.tabBtnActive]}
               onPress={() => setActiveTab('SIGN')}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: activeTab === 'SIGN' }}
+              accessibilityLabel="Screen Sign"
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             >
               <MaterialCommunityIcons
                 name="draw"
                 size={18}
                 color={activeTab === 'SIGN' ? '#008069' : '#667781'}
+                accessible={false}
               />
               <Text style={[styles.tabText, activeTab === 'SIGN' && styles.tabTextActive]}>
                 ✍️ Screen Sign
@@ -411,14 +429,17 @@ export function DeliveryVerificationScreen({
                   <Image source={{ uri: capturedPhoto }} style={styles.photoThumb} />
                   <View style={{ flex: 1 }}>
                     <View style={styles.verifiedRow}>
-                      <MaterialCommunityIcons name="check-circle" size={16} color="#008069" />
+                      <MaterialCommunityIcons name="check-circle" size={16} color="#008069" accessible={false} />
                       <Text style={styles.verifiedText}>Stamped POD Attached</Text>
                     </View>
                     <TouchableOpacity
                       style={styles.retakePill}
                       onPress={() => setCameraActive(true)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Retake photo"
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                      <MaterialCommunityIcons name="camera-retake" size={14} color="#008069" />
+                      <MaterialCommunityIcons name="camera-retake" size={14} color="#008069" accessible={false} />
                       <Text style={styles.retakeText}>Retake Photo</Text>
                     </TouchableOpacity>
                   </View>
@@ -436,9 +457,11 @@ export function DeliveryVerificationScreen({
                       setCameraActive(true);
                     }
                   }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Snap stamped bilty photo"
                 >
                   <View style={styles.cameraIconCircle}>
-                    <MaterialCommunityIcons name="camera" size={32} color="#008069" />
+                    <MaterialCommunityIcons name="camera" size={32} color="#008069" accessible={false} />
                   </View>
                   <Text style={styles.cameraBtnTitle}>SNAP STAMPED BILTY / GATE PASS</Text>
                   <Text style={styles.cameraBtnSub}>Tap to open camera and snap 1 photo</Text>
@@ -455,12 +478,15 @@ export function DeliveryVerificationScreen({
                 style={styles.otpInput}
                 keyboardType="numeric"
                 maxLength={6}
-                placeholder="• • • •"
+                placeholder="e.g. 1234"
                 placeholderTextColor="#94a3b8"
                 value={otp}
                 onChangeText={setOtp}
+                accessibilityLabel="Delivery OTP"
+                autoComplete="sms-otp"
+                textContentType="oneTimeCode"
               />
-              <Text style={styles.otpHint}>OTP sent automatically to consignee mobile</Text>
+              <Text style={styles.otpHint} accessibilityLiveRegion="polite">OTP sent automatically to consignee mobile</Text>
             </View>
           )}
 
@@ -469,15 +495,18 @@ export function DeliveryVerificationScreen({
             <View style={styles.methodBox}>
               {signatureData ? (
                 <View style={styles.signAttachedBox}>
-                  <Image source={{ uri: signatureData }} style={styles.signThumb} resizeMode="contain" />
+                  <Image source={{ uri: signatureData }} style={styles.signThumb} contentFit="contain" />
                   <View style={{ flex: 1 }}>
                     <View style={styles.verifiedRow}>
-                      <MaterialCommunityIcons name="check-circle" size={16} color="#008069" />
+                      <MaterialCommunityIcons name="check-circle" size={16} color="#008069" accessible={false} />
                       <Text style={styles.verifiedText}>Signature Recorded</Text>
                     </View>
                     <TouchableOpacity
                       style={styles.retakePill}
                       onPress={() => setShowSignaturePad(true)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Sign again"
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
                       <Text style={styles.retakeText}>Sign Again</Text>
                     </TouchableOpacity>
@@ -488,8 +517,10 @@ export function DeliveryVerificationScreen({
                   style={styles.bigSignBtn}
                   activeOpacity={0.85}
                   onPress={() => setShowSignaturePad(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Get receiver signature"
                 >
-                  <MaterialCommunityIcons name="draw" size={32} color="#008069" />
+                  <MaterialCommunityIcons name="draw" size={32} color="#008069" accessible={false} />
                   <Text style={styles.cameraBtnTitle}>TAP TO GET RECEIVER SIGNATURE</Text>
                   <Text style={styles.cameraBtnSub}>Receiver signs with finger on screen</Text>
                 </TouchableOpacity>
@@ -507,11 +538,16 @@ export function DeliveryVerificationScreen({
                   key={chip}
                   style={[styles.statusChip, active && styles.statusChipActive]}
                   onPress={() => toggleChip(chip)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={chip}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                 >
                   <MaterialCommunityIcons
                     name={active ? 'checkbox-marked-circle' : 'plus-circle-outline'}
                     size={14}
                     color={active ? '#008069' : '#64748b'}
+                    accessible={false}
                   />
                   <Text style={[styles.statusChipText, active && styles.statusChipTextActive]}>
                     {chip}
@@ -525,9 +561,13 @@ export function DeliveryVerificationScreen({
           <TouchableOpacity
             style={styles.exceptionToggle}
             onPress={() => setShowExceptions(!showExceptions)}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showExceptions }}
+            accessibilityLabel={showExceptions ? 'Hide cargo issues' : 'Report cargo shortage or damage, optional'}
+            hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#b45309" />
+              <MaterialCommunityIcons name="alert-circle-outline" size={16} color="#b45309" accessible={false} />
               <Text style={styles.exceptionToggleText}>
                 {showExceptions ? 'Hide Cargo Issues' : '⚠️ Report Cargo Shortage or Damage (Optional)'}
               </Text>
@@ -536,6 +576,7 @@ export function DeliveryVerificationScreen({
               name={showExceptions ? 'chevron-up' : 'chevron-down'}
               size={18}
               color="#b45309"
+              accessible={false}
             />
           </TouchableOpacity>
 
@@ -546,10 +587,11 @@ export function DeliveryVerificationScreen({
                   <Text style={styles.fieldLabel}>SHORT QTY (TONS/BOXES)</Text>
                   <TextInput
                     style={styles.numberInput}
-                    keyboardType="numeric"
-                    placeholder="0"
+                    keyboardType="decimal-pad"
+                    placeholder="e.g. 2"
                     value={quantityShort}
                     onChangeText={setQuantityShort}
+                    accessibilityLabel="Short quantity in tons or boxes"
                   />
                 </View>
                 <View style={{ width: 12 }} />
@@ -557,10 +599,11 @@ export function DeliveryVerificationScreen({
                   <Text style={styles.fieldLabel}>DAMAGED QTY</Text>
                   <TextInput
                     style={styles.numberInput}
-                    keyboardType="numeric"
-                    placeholder="0"
+                    keyboardType="decimal-pad"
+                    placeholder="e.g. 1"
                     value={damageQty}
                     onChangeText={setDamageQty}
+                    accessibilityLabel="Damaged quantity"
                   />
                 </View>
               </View>
@@ -571,6 +614,7 @@ export function DeliveryVerificationScreen({
                 placeholder="e.g. Broken seal, water leak, box crushed"
                 value={refusalReason}
                 onChangeText={setRefusalReason}
+                accessibilityLabel="Damage reason"
               />
             </View>
           )}
@@ -581,12 +625,17 @@ export function DeliveryVerificationScreen({
             activeOpacity={0.88}
             onPress={submit}
             disabled={submitting}
+            accessibilityRole="button"
+            accessibilityLabel="Confirm delivery and close trip"
           >
             {submitting ? (
-              <ActivityIndicator color="#ffffff" size="small" />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <ActivityIndicator color="#ffffff" size="small" />
+                <Text style={styles.submitBtnText} accessibilityLiveRegion="polite">Confirming…</Text>
+              </View>
             ) : (
               <>
-                <MaterialCommunityIcons name="check-decagram" size={20} color="#ffffff" />
+                <MaterialCommunityIcons name="check-decagram" size={20} color="#ffffff" accessible={false} />
                 <Text style={styles.submitBtnText}>CONFIRM DELIVERY & CLOSE TRIP</Text>
               </>
             )}

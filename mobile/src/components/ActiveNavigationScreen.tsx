@@ -40,6 +40,13 @@ export function ActiveNavigationScreen({
 }: ActiveNavigationScreenProps) {
   const insets = useSafeAreaInsets();
   const { locale } = useLanguageStore();
+  const intlTag = `${locale}-IN`;
+  const intlNum = (n: number) =>
+    new Intl.NumberFormat(intlTag, { maximumFractionDigits: 0 }).format(n);
+  const intlTime = (h: number, m: number) =>
+    new Intl.DateTimeFormat(intlTag, { hour: 'numeric', minute: '2-digit' }).format(
+      new Date(2026, 7, 15, h, m)
+    );
 
   const [stage, setStage] = useState<TripStage>('TO_PICKUP');
   const [maxUnlockedStage, setMaxUnlockedStage] = useState<number>(1);
@@ -128,7 +135,7 @@ export function ActiveNavigationScreen({
           badgeText: '#008069',
           targetLabel: 'DELIVERY DESTINATION',
           targetAddress: destination,
-          subInfo: 'Mumbai-Pune Expressway • ~128 KM (3h 15m)',
+          subInfo: `Mumbai-Pune Expressway • ~${intlNum(128)} KM (${intlNum(3)}h ${intlNum(15)}m)`,
           navBtn: 'NAVIGATE TO FACTORY (MAPS)',
           navTarget: destination,
           footerBtn: 'ARRIVED AT DESTINATION FACTORY',
@@ -198,15 +205,27 @@ export function ActiveNavigationScreen({
           <TouchableOpacity
             style={styles.backBtn}
             onPress={onMenuToggle}
+            accessibilityRole="button"
             accessibilityLabel="Go back"
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <MaterialCommunityIcons name="arrow-left" size={22} color="#ffffff" />
+            <MaterialCommunityIcons name="arrow-left" size={22} color="#ffffff" accessible={false} />
           </TouchableOpacity>
           <View>
-            <Text style={styles.headerTitle}>#{tripNumber}</Text>
-            <Text style={styles.headerSubtitle}>{vehiclePlate} • 18 Tons</Text>
+            <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">#{tripNumber}</Text>
+            <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">{vehiclePlate} • 18 Tons</Text>
           </View>
+        </View>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={onMenuToggle}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <MaterialCommunityIcons name="arrow-left" size={22} color="#ffffff" accessible={false} />
+          </TouchableOpacity>
         </View>
 
         <View style={styles.headerRight}>
@@ -215,7 +234,7 @@ export function ActiveNavigationScreen({
             vehicleId={vehiclePlate}
             latitude={coords.latitude}
             longitude={coords.longitude}
-            style={{ paddingHorizontal: 10, paddingVertical: 5, height: 32 }}
+            style={{ paddingHorizontal: 10, paddingVertical: 5, height: 44 }}
           />
         </View>
       </View>
@@ -227,10 +246,14 @@ export function ActiveNavigationScreen({
           style={[styles.stepItem, stage === 'TO_PICKUP' && styles.stepItemActive]}
           onPress={() => handleStepTabClick(1, 'TO_PICKUP')}
           activeOpacity={0.8}
+          accessibilityRole="tab"
+          accessibilityLabel="Step 1: Pickup"
+          accessibilityState={{ selected: stage === 'TO_PICKUP' }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <View style={[styles.stepCircle, maxUnlockedStage > 1 ? styles.stepCircleDone : (stage === 'TO_PICKUP' ? styles.stepCircleActive : null)]}>
             {maxUnlockedStage > 1 ? (
-              <MaterialCommunityIcons name="check" size={11} color="#ffffff" />
+              <MaterialCommunityIcons name="check" size={11} color="#ffffff" accessible={false} />
             ) : (
               <Text style={styles.stepNum}>1</Text>
             )}
@@ -245,12 +268,16 @@ export function ActiveNavigationScreen({
           style={[styles.stepItem, stage === 'IN_TRANSIT' && styles.stepItemActive]}
           onPress={() => handleStepTabClick(2, 'IN_TRANSIT')}
           activeOpacity={0.8}
+          accessibilityRole="tab"
+          accessibilityLabel="Step 2: Transit"
+          accessibilityState={{ selected: stage === 'IN_TRANSIT' }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <View style={[styles.stepCircle, maxUnlockedStage > 2 ? styles.stepCircleDone : (stage === 'IN_TRANSIT' ? styles.stepCircleActive : (maxUnlockedStage < 2 ? styles.stepCircleLocked : null))]}>
             {maxUnlockedStage > 2 ? (
-              <MaterialCommunityIcons name="check" size={11} color="#ffffff" />
+              <MaterialCommunityIcons name="check" size={11} color="#ffffff" accessible={false} />
             ) : maxUnlockedStage < 2 ? (
-              <MaterialCommunityIcons name="lock" size={9} color="rgba(255,255,255,0.4)" />
+              <MaterialCommunityIcons name="lock" size={9} color="rgba(255,255,255,0.4)" accessible={false} />
             ) : (
               <Text style={styles.stepNum}>2</Text>
             )}
@@ -267,10 +294,14 @@ export function ActiveNavigationScreen({
           style={[styles.stepItem, stage === 'AT_DESTINATION' && styles.stepItemActive]}
           onPress={() => handleStepTabClick(3, 'AT_DESTINATION')}
           activeOpacity={0.8}
+          accessibilityRole="tab"
+          accessibilityLabel="Step 3: e-POD delivery"
+          accessibilityState={{ selected: stage === 'AT_DESTINATION' }}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
           <View style={[styles.stepCircle, stage === 'AT_DESTINATION' ? styles.stepCircleActive : styles.stepCircleLocked]}>
             {maxUnlockedStage < 3 ? (
-              <MaterialCommunityIcons name="lock" size={9} color="rgba(255,255,255,0.4)" />
+              <MaterialCommunityIcons name="lock" size={9} color="rgba(255,255,255,0.4)" accessible={false} />
             ) : (
               <Text style={styles.stepNum}>3</Text>
             )}
@@ -288,8 +319,8 @@ export function ActiveNavigationScreen({
         showsVerticalScrollIndicator={false}
       >
         {expenseSavedMsg && (
-          <View style={styles.toast}>
-            <MaterialCommunityIcons name="check-circle" size={16} color="#008069" />
+          <View style={styles.toast} accessibilityLiveRegion="polite">
+            <MaterialCommunityIcons name="check-circle" size={16} color="#008069" accessible={false} />
             <Text style={styles.toastText}>Expense saved to passbook!</Text>
           </View>
         )}
@@ -307,8 +338,8 @@ export function ActiveNavigationScreen({
           </View>
 
           <Text style={styles.targetLabel}>{currentContent.targetLabel}</Text>
-          <Text style={styles.targetAddress}>{currentContent.targetAddress}</Text>
-          <Text style={styles.subInfoText}>{currentContent.subInfo}</Text>
+          <Text style={styles.targetAddress} numberOfLines={2} ellipsizeMode="tail">{currentContent.targetAddress}</Text>
+          <Text style={styles.subInfoText} numberOfLines={2} ellipsizeMode="tail">{currentContent.subInfo}</Text>
 
           {/* Big High-Contrast Maps CTA */}
           <TouchableOpacity
@@ -316,12 +347,12 @@ export function ActiveNavigationScreen({
             activeOpacity={0.88}
             onPress={() => launchNavigation(currentContent.navTarget)}
           >
-            <MaterialCommunityIcons name="google-maps" size={22} color="#ffffff" />
+            <MaterialCommunityIcons name="google-maps" size={22} color="#ffffff" accessible={false} />
             <View style={{ flex: 1 }}>
               <Text style={styles.mapsCTATitle}>{currentContent.navBtn}</Text>
               <Text style={styles.mapsCTASub}>Live voice directions</Text>
             </View>
-            <MaterialCommunityIcons name="chevron-right" size={22} color="#ffffff" />
+            <MaterialCommunityIcons name="chevron-right" size={22} color="#ffffff" accessible={false} />
           </TouchableOpacity>
         </View>
 
@@ -343,8 +374,10 @@ export function ActiveNavigationScreen({
             style={styles.actionPill}
             activeOpacity={0.8}
             onPress={() => setExpenseModalVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Add highway expense"
           >
-            <MaterialCommunityIcons name="gas-station" size={18} color="#008069" />
+            <MaterialCommunityIcons name="gas-station" size={18} color="#008069" accessible={false} />
             <Text style={styles.actionPillText}>+ Kharcha</Text>
           </TouchableOpacity>
 
@@ -352,17 +385,21 @@ export function ActiveNavigationScreen({
             style={styles.actionPill}
             activeOpacity={0.8}
             onPress={() => Alert.alert('Call Dispatch', 'Calling Control Room: +91 98200 12345')}
+            accessibilityRole="button"
+            accessibilityLabel="Call dispatch hub"
           >
-            <MaterialCommunityIcons name="phone" size={18} color="#0284c7" />
+            <MaterialCommunityIcons name="phone" size={18} color="#0284c7" accessible={false} />
             <Text style={styles.actionPillText}>Call Hub</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.actionPill}
             activeOpacity={0.8}
-            onPress={() => Alert.alert('GST E-Way Bill', 'E-Way Bill: #7291-8841-0294\nValid till 31 Aug 2026\nVehicle: DL-01-AB-1234')}
+            onPress={() => Alert.alert('GST E-Way Bill', `E-Way Bill: #7291-8841-0294\nValid till ${new Intl.DateTimeFormat(intlTag, { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(2026, 7, 31))}\nVehicle: DL-01-AB-1234`)}
+            accessibilityRole="button"
+            accessibilityLabel="View GST E-Way Bill"
           >
-            <MaterialCommunityIcons name="shield-check" size={18} color="#008069" />
+            <MaterialCommunityIcons name="shield-check" size={18} color="#008069" accessible={false} />
             <Text style={styles.actionPillText}>E-Way Bill</Text>
           </TouchableOpacity>
         </View>
@@ -374,9 +411,9 @@ export function ActiveNavigationScreen({
           <View style={styles.routeRow}>
             <View style={[styles.dot, { backgroundColor: maxUnlockedStage > 1 ? '#008069' : '#f59e0b' }]} />
             <View style={styles.routeDetails}>
-              <Text style={styles.routeCity}>JNPT Port, Navi Mumbai</Text>
-              <Text style={styles.routeStatus}>
-                {maxUnlockedStage > 1 ? 'Loaded (10:30 AM)' : 'Loading Bay 2 (In Progress)'}
+              <Text style={styles.routeCity} numberOfLines={1} ellipsizeMode="tail">JNPT Port, Navi Mumbai</Text>
+              <Text style={styles.routeStatus} numberOfLines={1} ellipsizeMode="tail">
+                {maxUnlockedStage > 1 ? `Loaded (${intlTime(10, 30)})` : 'Loading Bay 2 (In Progress)'}
               </Text>
             </View>
           </View>
@@ -386,9 +423,9 @@ export function ActiveNavigationScreen({
           <View style={styles.routeRow}>
             <View style={[styles.dot, { backgroundColor: maxUnlockedStage >= 3 ? '#0284c7' : '#94a3b8' }]} />
             <View style={styles.routeDetails}>
-              <Text style={styles.routeCity}>Chakan MIDC, Pune</Text>
-              <Text style={styles.routeStatus}>
-                {maxUnlockedStage >= 3 ? 'Arrived at Gate 3' : (maxUnlockedStage === 2 ? 'In Transit • ETA 1:45 PM' : 'Step 2 (Locked)')}
+              <Text style={styles.routeCity} numberOfLines={1} ellipsizeMode="tail">Chakan MIDC, Pune</Text>
+              <Text style={styles.routeStatus} numberOfLines={1} ellipsizeMode="tail">
+                {maxUnlockedStage >= 3 ? 'Arrived at Gate 3' : (maxUnlockedStage === 2 ? `In Transit • ETA ${intlTime(13, 45)}` : 'Step 2 (Locked)')}
               </Text>
             </View>
           </View>
@@ -401,8 +438,10 @@ export function ActiveNavigationScreen({
           style={styles.stickyBtn}
           activeOpacity={0.88}
           onPress={handlePrimaryAction}
+          accessibilityRole="button"
+          accessibilityLabel={currentContent.footerBtn}
         >
-          <MaterialCommunityIcons name={currentContent.footerIcon as any} size={20} color="#ffffff" />
+          <MaterialCommunityIcons name={currentContent.footerIcon as any} size={20} color="#ffffff" accessible={false} />
           <Text style={styles.stickyBtnText}>{currentContent.footerBtn}</Text>
         </TouchableOpacity>
       </View>
@@ -421,8 +460,13 @@ export function ActiveNavigationScreen({
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add Highway Expense</Text>
-              <TouchableOpacity onPress={() => setExpenseModalVisible(false)}>
-                <MaterialCommunityIcons name="close" size={22} color="#667781" />
+              <TouchableOpacity
+                onPress={() => setExpenseModalVisible(false)}
+                accessibilityRole="button"
+                accessibilityLabel="Close expense form"
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              >
+                <MaterialCommunityIcons name="close" size={22} color="#667781" accessible={false} />
               </TouchableOpacity>
             </View>
 
@@ -432,6 +476,10 @@ export function ActiveNavigationScreen({
                   key={cat}
                   style={[styles.chip, expenseCategory === cat && styles.chipActive]}
                   onPress={() => setExpenseCategory(cat)}
+                  accessibilityRole="radio"
+                  accessibilityLabel={`${cat} expense category`}
+                  accessibilityState={{ selected: expenseCategory === cat }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Text style={[styles.chipText, expenseCategory === cat && styles.chipTextActive]}>
                     {cat === 'Diesel' ? '⛽ Diesel' : cat === 'Toll' ? '🛣️ Toll' : cat === 'Food' ? '🍛 Food' : '📦 Other'}
@@ -442,9 +490,12 @@ export function ActiveNavigationScreen({
 
             <TextInput
               style={styles.amountInput}
-              keyboardType="numeric"
-              placeholder="₹ Amount"
+              keyboardType="decimal-pad"
+              placeholder="e.g. ₹1500"
               placeholderTextColor="#94a3b8"
+              accessibilityLabel="Expense amount in rupees"
+              autoComplete="off"
+              textContentType="none"
               value={expenseAmount}
               onChangeText={setExpenseAmount}
             />
@@ -455,6 +506,9 @@ export function ActiveNavigationScreen({
                   key={amt}
                   style={styles.pill}
                   onPress={() => setExpenseAmount(amt)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Set expense amount to ${amt} rupees`}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
                   <Text style={styles.pillText}>+₹{amt}</Text>
                 </TouchableOpacity>
@@ -688,6 +742,7 @@ const styles = StyleSheet.create({
     gap: 6,
     backgroundColor: '#ffffff',
     paddingVertical: 10,
+    minHeight: 44,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#e2e8f0',

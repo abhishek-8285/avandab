@@ -1,5 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors, Font, Radius, Spacing } from '../constants/theme';
@@ -24,10 +25,13 @@ export function BookingScheduleScreen({ onNext, onBack }: BookingScheduleScreenP
 
       <View style={styles.heroContainer}>
         <View style={styles.phoneFrame}>
+          {/* Teaser artwork, not a calendar widget: the real shift calendar
+            ships in the bookings flow. Do not hook date logic onto this image. */}
           <Image
             source={require('../../assets/booking_schedule.png')}
             style={styles.mockupImage}
-            resizeMode="cover"
+            contentFit="cover"
+            accessible={false}
           />
         </View>
       </View>

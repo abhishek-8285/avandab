@@ -110,7 +110,7 @@ export default function FleetSidebar({ vehicles, selectedId, onSelect }: Props) 
       </div>
       <div className="ti-search-wrap">
         <SearchIcon className="ti-search-icon" />
-        <input ref={searchRef} id="vehicle-search" className="ti-search" value={query} placeholder="Search vehicle…  ( / )"
+        <input ref={searchRef} id="vehicle-search" name="vehicle-search" type="search" spellCheck={false} className="ti-search" value={query} placeholder="Search vehicle…  ( / )"
           aria-label="Search Vehicles" autoComplete="off" onChange={(e) => setQuery(e.target.value)} />
         {query && (
           <button type="button" className="ti-clear" onClick={() => setQuery('')} aria-label="Clear search">
@@ -118,31 +118,31 @@ export default function FleetSidebar({ vehicles, selectedId, onSelect }: Props) 
           </button>
         )}
       </div>
-      <div className="ti-sort-row" role="tablist" aria-label="Sort fleet list">
+      <div className="ti-sort-row" role="group" aria-label="Sort fleet list">
         <span className="ti-sort-label">Sort</span>
         {SORTS.map((s) => (
-          <button key={s.key} type="button" role="tab" aria-selected={sort === s.key}
+          <button key={s.key} type="button" aria-pressed={sort === s.key}
             className={'ti-sort-btn' + (sort === s.key ? ' on' : '')} onClick={() => setSort(s.key)}>{s.label}</button>
         ))}
       </div>
-      <div className="ti-tabs" role="tablist" aria-label="Filter fleet by status">
+      <div className="ti-tabs" role="group" aria-label="Filter fleet by status">
         {TABS.map((t) => (
-          <button key={t.key} type="button" role="tab" aria-selected={status === t.key}
+          <button key={t.key} type="button" aria-pressed={status === t.key}
             className={'ti-tab' + (status === t.key ? ' on' : '')} onClick={() => setStatus(t.key)}>
             <span className="ti-tab-count" id={`panel-count-${t.key}`}>{counts[t.key]}</span>
             <span className="ti-tab-lbl">{t.label}</span>
           </button>
         ))}
       </div>
-      <div id="fleet-list" className="ti-list" ref={listRef} onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)}>
+      <div id="fleet-list" className="ti-list" ref={listRef} role="region" aria-label="Fleet list" tabIndex={0} onScroll={(e) => setScrollTop((e.target as HTMLDivElement).scrollTop)}>
         {list.length === 0 ? (
           <div className="ti-empty-state">
-            <div className="ti-empty-illu-wrap">
+            <div className="ti-empty-illu-wrap" aria-hidden="true">
               <TelemetryEmptyIllustration className="ti-empty-illu" />
             </div>
-            <div className="ti-empty-title">
+            <h2 className="ti-empty-title">
               {query || status !== 'all' ? 'No Matching Fleet Units' : 'No Vehicles Reporting Telemetry'}
-            </div>
+            </h2>
             <div className="ti-empty-msg">
               {query || status !== 'all' 
                 ? 'No vehicles match your search or status filter. Reset filters to view all units.' 
@@ -168,16 +168,16 @@ export default function FleetSidebar({ vehicles, selectedId, onSelect }: Props) 
                 <button key={v.vehicle_id} type="button" style={{ top: (start + i) * ROW }}
                   className={'ti-row fleet-row' + (v.vehicle_id === selectedId ? ' sel' : '')}
                   onClick={() => pick(v.vehicle_id)}>
-                  <span className="ti-dot" style={{ background: DOT[b] }} />
-                  <span className="ti-row-type-badge" title={v.vehicle_type || 'truck'}>
+                  <span className="ti-dot" style={{ background: DOT[b] }} aria-hidden="true" />
+                  <span className="ti-row-type-badge" title={v.vehicle_type || 'truck'} aria-hidden="true">
                     <VehicleTypeIcon type={v.vehicle_type} className="ti-row-type-icon" />
                   </span>
                   <span className="ti-row-main">
                     <span className="ti-row-name">
                       {v.vehicle_number || v.vehicle_id}
-                      {v.speed > SPEED_LIMIT_KMH && <ZapIcon className="ti-zap-icon" aria-label="Overspeed warning" />}
+                      {v.speed > SPEED_LIMIT_KMH && <ZapIcon className="ti-zap-icon" aria-hidden="true" />}
                     </span>
-                    <span className="ti-row-sub ti-mono">{Math.round(v.speed)} km/h · {STATUS_LABEL[v.status] ?? v.status}</span>
+                    <span className="ti-row-sub ti-mono">{Math.round(v.speed)}&nbsp;km/h · {STATUS_LABEL[v.status] ?? v.status}</span>
                   </span>
                 </button>
               );

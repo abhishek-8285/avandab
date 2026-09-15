@@ -6,16 +6,16 @@
         </div>
         <div class="flex gap-2 flex-wrap shrink-0">
             {{if can .User "maintenance" "create"}}
-            <a href="/maintenance/schedules/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+            <a href="/maintenance/schedules/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                 <span>New Schedule</span>
             </a>
-            <a href="/maintenance/records/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 transition-all">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><path d="M10 9H8"/></svg>
+            <a href="/maintenance/records/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 transition">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><path d="M10 9H8"/></svg>
                 <span>Record Work</span>
             </a>
-            <a href="/maintenance/work-orders/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 transition-all">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            <a href="/maintenance/work-orders/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 transition">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
                 <span>New Job Card</span>
             </a>
             {{end}}
@@ -26,7 +26,7 @@
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between flex-wrap gap-2 bg-gradient-to-r from-amber-500/[0.07] to-transparent">
             <div class="flex items-center gap-3">
-                <span class="w-7 h-7 rounded-lg bg-amber-soft border border-amber-line grid place-items-center text-amber-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
+                <span class="w-7 h-7 rounded-lg bg-amber-soft border border-amber-line grid place-items-center text-amber-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>
                 <h2 class="text-sm font-bold text-on-surface">Vehicles Requiring Maintenance</h2>
             </div>
             <span class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-amber-500 text-white text-xs font-bold tabular-nums" data-numeric>{{len .DueVehicles}}</span>
@@ -70,7 +70,7 @@
                     <tr>
                         <td colspan="6" class="px-4 py-10 text-center">
                             <div class="flex flex-col items-center gap-2">
-                                <div class="w-10 h-10 rounded-full bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg></div>
+                                <div class="w-10 h-10 rounded-full bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg></div>
                                 <p class="text-sm font-medium text-on-surface mt-1">All fleet vehicles are compliant</p>
                                 <p class="text-xs text-text-muted">No vehicle is past its maintenance due date</p>
                             </div>
@@ -136,7 +136,7 @@
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 bg-gradient-to-r from-blue-500/[0.06] to-transparent">
             <div class="flex items-center gap-3">
-                <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
+                <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
                 <h2 class="text-sm font-bold text-on-surface">Open Job Cards</h2>
             </div>
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{if .WorkOrders}}{{len .WorkOrders}}{{else}}0{{end}}</span>
@@ -191,7 +191,7 @@
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 bg-gradient-to-r from-rose-500/[0.06] to-transparent">
             <div class="flex items-center gap-3">
-                <span class="w-7 h-7 rounded-lg bg-rose-soft border border-rose-line grid place-items-center text-rose-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
+                <span class="w-7 h-7 rounded-lg bg-rose-soft border border-rose-line grid place-items-center text-rose-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
                 <h2 class="text-sm font-bold text-on-surface">Recent Diagnostic Trouble Codes (DTCs)</h2>
             </div>
             <span class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-rose-500 text-white text-xs font-bold tabular-nums">{{len .DTCs}}</span>
@@ -238,7 +238,7 @@
                             {{if and (not .ResolvedAt) (can $.User "maintenance" "update")}}
                             <form method="POST" action="/maintenance/dtc/{{.ID}}/resolve" class="inline" hx-post="/maintenance/dtc/{{.ID}}/resolve" hx-target="closest tr" hx-swap="outerMorph" hx-indicator="closest form">
                                 <input type="hidden" name="vehicle_id" value="{{.VehicleID}}">
-                                <button type="submit" class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-surface-container-lowest border border-border-subtle text-xs font-semibold text-on-surface hover:bg-rose-soft hover:border-rose-500/30 hover:text-status-alert transition-all cursor-pointer">Resolve</button>
+                                <button type="submit" class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-surface-container-lowest border border-border-subtle text-xs font-semibold text-on-surface hover:bg-rose-soft hover:border-rose-500/30 hover:text-status-alert transition cursor-pointer">Resolve</button>
                             </form>
                             {{end}}
                         </td>

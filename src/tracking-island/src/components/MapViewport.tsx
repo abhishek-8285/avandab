@@ -63,11 +63,15 @@ function getVehicleIconPath(type?: string): string {
   }
 }
 
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function tooltipHTML(v: LiveVehicle): string {
   const batt = v.battery_level !== undefined ? `Battery ${Math.round(v.battery_level)}%` : 'Battery —';
   const motion = v.motion === true ? 'MOVING' : v.motion === false ? 'PARKED' : 'OK';
   const fix = v.valid === false ? ' · No GPS fix' : '';
-  const name = v.vehicle_number || v.vehicle_id;
+  const name = esc(v.vehicle_number || v.vehicle_id);
   return `<b>${name}</b><br>${batt} · ${motion}${fix}`;
 }
 
@@ -110,6 +114,10 @@ interface Props {
 }
 
 const INTERP_MS = 800;
+
+// ponytail: matchMedia read once; OS-level motion toggle needs reload to take effect
+const REDUCED_MOTION = typeof window !== 'undefined' && typeof window.matchMedia === 'function' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // Leaflet viewport managed imperatively: React renders never touch markers,
 // so SSE bursts can't reset popups or pan/zoom state. Positions interpolate
@@ -176,7 +184,7 @@ export default function MapViewport(p: Props) {
     (map as unknown as { __kick?: (n: number) => void }).__kick = kick;
 
     propsRef.current.handleRef({
-      focus: (v) => map.setView([v.lat, v.lng], Math.max(map.getZoom(), 14), { animate: true }),
+      focus: (v) => map.setView([v.lat, v.lng], Math.max(map.getZoom(), 14), { animate: !REDUCED_MOTION }),
       fitAll: () => {
         const pts = [...markersRef.current.values()].map((m) => m.getLatLng());
         if (pts.length > 0) {
@@ -225,7 +233,11 @@ export default function MapViewport(p: Props) {
         if (cur.lat !== v.lat || cur.lng !== v.lng) {
           const rot = bearingDeg(cur.lat, cur.lng, v.lat, v.lng);
           mk.setIcon(truckIcon(STATUS_COLOR[v.status] ?? '#64748b', v.heading ?? rot, stale, v.vehicle_type));
-          anims.set(v.vehicle_id, { fromLat: cur.lat, fromLng: cur.lng, toLat: v.lat, toLng: v.lng, start: now, marker: mk, last: v });
+          if (REDUCED_MOTION) {
+            mk.setLatLng([v.lat, v.lng]);
+          } else {
+            anims.set(v.vehicle_id, { fromLat: cur.lat, fromLng: cur.lng, toLat: v.lat, toLng: v.lng, start: now, marker: mk, last: v });
+          }
         } else {
           mk.setIcon(truckIcon(STATUS_COLOR[v.status] ?? '#64748b', v.heading ?? 0, stale, v.vehicle_type));
         }
@@ -241,7 +253,7 @@ export default function MapViewport(p: Props) {
 
     if (follow && selectedId) {
       const sel = p.vehicles.get(selectedId);
-      if (sel && hasPos(sel)) map.panTo([sel.lat, sel.lng], { animate: true });
+      if (sel && hasPos(sel)) map.panTo([sel.lat, sel.lng], { animate: !REDUCED_MOTION });
     }
     void onSelect;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -264,5 +276,5 @@ export default function MapViewport(p: Props) {
     }
   }, [p.geofences, p.showGeofences]);
 
-  return <div ref={divRef} id="live-map" className="ti-map" role="application" aria-label="Live fleet map" />;
+  return <div ref={divRef} id="live-map" className="ti-map" role="region" aria-label="Live fleet map. Arrow keys pan, plus and minus zoom." />;
 }

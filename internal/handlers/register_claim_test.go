@@ -55,6 +55,7 @@ func postRegisterWithCompany(app *App, name, email, password, companyName string
 	form.Set("company_name", companyName)
 	form.Set("password", password)
 	form.Set("confirm_password", password)
+	form.Set("agree", "yes")
 	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr := httptest.NewRecorder()
@@ -102,4 +103,28 @@ func TestRegister_MultipleRegistrationsGetIsolatedTenants(t *testing.T) {
 	assert.NotEqual(t, "1", tid1)
 	assert.NotEqual(t, "1", tid2)
 	assert.NotEqual(t, tid1, tid2, "two distinct self-registered users must get two different isolated tenant IDs")
+}
+
+func TestRegister_RejectsWithoutExplicitConsent(t *testing.T) {
+	app := newRegisterTestApp(t)
+
+	form := url.Values{}
+	form.Set("name", "No Consent")
+	form.Set("email", "noconsent@fleet.test")
+	form.Set("phone", "9900112233")
+	form.Set("company_name", "No Consent Logistics")
+	form.Set("password", "strong-pass-1")
+	form.Set("confirm_password", "strong-pass-1")
+	// agree=yes intentionally omitted — DPDP explicit consent required.
+	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	NewAuthHandlers(app).Register(rr, req)
+
+	assert.Equal(t, http.StatusSeeOther, rr.Code, "missing consent must bounce back to form, not create account")
+	assert.Equal(t, "/register", rr.Header().Get("Location"))
+
+	var count int
+	require.NoError(t, app.DB.QueryRow(`SELECT COUNT(*) FROM users WHERE email = 'noconsent@fleet.test'`).Scan(&count))
+	assert.Equal(t, 0, count, "no user row without explicit agree=yes")
 }

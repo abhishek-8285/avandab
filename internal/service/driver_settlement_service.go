@@ -704,10 +704,10 @@ func (s *DriverSettlementService) listSettlementsFiltered(ctx context.Context, s
 		args = append(args, driverID)
 	}
 	if from != "" || to != "" {
-		conditions = append(conditions, "(? = '' OR substr(CAST(created_at AS TEXT), 1, 10) >= substr(CAST(? AS TEXT), 1, 10))")
-		args = append(args, from, from)
-		conditions = append(conditions, "(? = '' OR substr(CAST(created_at AS TEXT), 1, 10) <= substr(CAST(? AS TEXT), 1, 10))")
-		args = append(args, to, to)
+		conditions = append(conditions, "(? = '' OR datetime(CAST(created_at AS TEXT)) >= datetime(?))")
+		conditions = append(conditions, "(? = '' OR datetime(CAST(created_at AS TEXT)) <= datetime(?))")
+		dateFrom, dateTo := shared.DayBoundsUTC(from, to)
+		args = append(args, dateFrom, dateFrom, dateTo, dateTo)
 	}
 
 	where := ""

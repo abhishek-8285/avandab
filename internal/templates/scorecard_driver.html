@@ -5,7 +5,7 @@
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div class="min-w-0">
             <a href="/scorecard" class="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
                 Back to leaderboard
             </a>
             <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display mt-1">{{.Detail.DriverName}}</h1>
@@ -24,7 +24,7 @@
 
     <!-- Current Score + History -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md transition-all duration-200">
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md transition duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r {{if ge .Detail.Score 85.0}}from-emerald-500 to-teal-500{{else if ge .Detail.Score 70.0}}from-blue-500 to-cyan-400{{else}}from-rose-500 to-red-500{{end}} opacity-80"></div>
             <div class="text-center py-2">
                 <div class="text-5xl font-black tracking-tight tabular-nums leading-none {{if ge .Detail.Score 85.0}}text-status-success{{else if ge .Detail.Score 70.0}}text-status-info{{else}}text-status-alert{{end}}" data-numeric>{{printf "%.0f" .Detail.Score}}</div>
@@ -101,7 +101,7 @@
     <!-- Fraud-Cap Events -->
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle bg-gradient-to-r from-rose-500/[0.06] to-transparent flex items-center gap-2">
-            <span class="w-7 h-7 rounded-lg bg-rose-soft border border-rose-line grid place-items-center text-rose-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><circle cx="12" cy="8" r="2"/><path d="M12 12v4"/></svg></span>
+            <span class="w-7 h-7 rounded-lg bg-rose-soft border border-rose-line grid place-items-center text-rose-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><circle cx="12" cy="8" r="2"/><path d="M12 12v4"/></svg></span>
             <div>
                 <h2 class="text-sm font-bold text-on-surface">Fraud-Cap Events</h2>
                 <p class="text-xs text-text-muted">Unresolved fuel theft suspicion / odometer rollback cap the score at the fraud ceiling (69). Resolving clears the cap on the next recompute.</p>
@@ -122,7 +122,7 @@
                 {{else}}
                 <form method="POST" action="/scorecard/drivers/{{$.Detail.DriverID}}/resolve">
                     <input type="hidden" name="event_id" value="{{.ID}}">
-                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-status-alert text-on-primary text-sm font-semibold shadow-sm hover:bg-status-alert/90 hover:-translate-y-px transition-all"
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-status-alert text-on-primary text-sm font-semibold shadow-sm hover:bg-status-alert/90 hover:-translate-y-px transition"
                             onclick="return confirm('Resolve this fraud event? The fraud cap will lift on the next recompute.')">
                         Resolve
                     </button>
@@ -131,7 +131,7 @@
             </div>
             {{else}}
             <div class="px-4 py-10 text-center">
-                <div class="w-10 h-10 rounded-full bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
+                <div class="w-10 h-10 rounded-full bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid mx-auto"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
                 <p class="text-sm font-medium text-on-surface mt-3">Clean record</p><p class="text-xs text-text-muted">No fraud events in the window</p>
             </div>
             {{end}}

@@ -12,6 +12,7 @@ async function registerFreshUser(page) {
     await page.fill('input[name="phone"]', '9876500000');
     await page.fill('input[name="password"]', 'TestPass123!');
     await page.fill('input[name="confirm_password"]', 'TestPass123!');
+    await page.check('input[name="agree"]'); // DPDP explicit consent gate
     await page.click('button[type="submit"]');
     // Wait for navigation; handle DB deadlock retry and onboarding flow.
     try {

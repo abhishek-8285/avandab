@@ -4,7 +4,7 @@
         <div class="rounded-xl bg-rose-soft border border-rose-500/20 p-5 space-y-2">
             <div class="flex items-center gap-2.5">
                 <span class="w-8 h-8 rounded-lg bg-rose-500/15 border border-rose-500/20 grid place-items-center text-rose-mid shrink-0">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
                 </span>
                 <div>
                     <div class="text-sm font-bold text-status-alert">Registration failed</div>
@@ -22,7 +22,7 @@
         <div class="rounded-xl bg-emerald-soft border border-emerald-500/20 p-5 space-y-2">
             <div class="flex items-center gap-2.5">
                 <span class="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/20 grid place-items-center text-emerald-mid shrink-0">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
                 </span>
                 <div class="text-sm font-bold text-status-success">Registered <span class="tabular-nums">{{.Success}}</span> of <span class="tabular-nums">{{.Total}}</span> devices</div>
             </div>
@@ -34,8 +34,8 @@
         </div>
         {{end}}
         <div class="pt-4 border-t border-border-subtle flex items-center justify-between gap-3">
-            <a href="/telemetry/devices" class="inline-flex items-center gap-1.5 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+            <a href="/telemetry/devices" class="inline-flex items-center gap-1.5 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
                 Back to devices
             </a>
         </div>

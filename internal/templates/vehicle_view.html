@@ -1,4 +1,4 @@
-<a href="/vehicles" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Vehicles</a>
+<a href="/vehicles" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Vehicles</a>
 
 <div class="space-y-5 max-w-[1600px] mx-auto">
 
@@ -95,7 +95,7 @@
                             <span class="inline-flex px-2 py-1 text-xs font-bold rounded-full bg-status-warning/10 text-status-warning border border-status-warning/20">Due Since: {{.MaintenanceDue}}</span>
                             {{else}}
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full bg-status-success/10 text-status-success border border-status-success/20">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                                 Up to date
                             </span>
                             {{end}}
@@ -162,7 +162,7 @@
                     <a href="/trips/{{.ID}}" class="group flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-surface-container-low/60 transition-colors text-decoration-none rounded-lg -mx-1">
                         <span class="text-sm font-bold text-primary tabular-nums group-hover:underline">{{.TripNumber}}</span>
                         <span class="flex items-center gap-3">
-                            <span class="text-xs text-text-muted tabular-nums">{{if .CreatedAt.Valid}}{{.CreatedAt.Time.Format "02-01-2006"}}{{end}}</span>
+                            <span class="text-xs text-text-muted tabular-nums">{{if .CreatedAt.Valid}}<time datetime="{{.CreatedAt.Time.Format "2006-01-02"}}">{{.CreatedAt.Time.Format "02-01-2006"}}</time>{{end}}</span>
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                         </span>
                     </a>
@@ -194,11 +194,11 @@
                         <p class="text-xs text-text-muted mt-0.5">{{.Description}}{{if .AnnualEstimate}} · annual est. {{.AnnualEstimate}} km{{end}}</p>
                         <form method="POST" action="/vehicles/points/{{.ID}}/measurements" class="flex flex-wrap items-center gap-2 mt-2">
                             <input type="hidden" name="vehicle_id" value="{{$.Vehicle.ID}}">
-                            <input type="number" step="any" min="0" name="counter_reading" placeholder="Counter reading" required
-                                class="w-36 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
-                            <input type="text" name="read_by" placeholder="Read by"
-                                class="w-28 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
-                            <button type="submit" class="inline-flex items-center justify-center rounded-full bg-primary text-on-primary px-3 py-1.5 text-xs font-semibold shadow-sm hover:bg-primary/90 transition-all cursor-pointer">Record IK11</button>
+                            <input aria-label="Counter reading" type="number" step="any" min="0" name="counter_reading" placeholder="Counter reading" required
+                                class="w-36 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
+                            <input aria-label="Read by" autocomplete="off" type="text" name="read_by" placeholder="Read by"
+                                class="w-28 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
+                            <button type="submit" class="inline-flex items-center justify-center rounded-full bg-primary text-on-primary px-3 py-1.5 text-xs font-semibold shadow-sm hover:bg-primary/90 transition cursor-pointer">Record IK11</button>
                         </form>
                     </div>
                     {{end}}
@@ -207,16 +207,16 @@
                 <p class="text-sm text-text-muted px-3 py-4">No measuring points registered yet.</p>
                 {{end}}
                 <form method="POST" action="/vehicles/{{.Vehicle.ID}}/points" class="flex flex-wrap items-center gap-2 px-3 py-3 border-t border-border-subtle mt-1">
-                    <select name="kind" class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary transition-all">
+                    <select name="kind" aria-label="Reading kind" class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary transition">
                         <option value="ODO">ODO</option>
                         <option value="FUEL_TOPUP">Fuel top-up</option>
                         <option value="PUMP">Pump</option>
                     </select>
-                    <input type="number" step="any" min="0" name="annual_estimate" placeholder="Annual est. km"
-                        class="w-36 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary transition-all">
-                    <input type="text" name="description" placeholder="Description"
-                        class="flex-1 min-w-32 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary transition-all">
-                    <button type="submit" class="inline-flex items-center justify-center rounded-full bg-surface-container border border-border-subtle px-3 py-1.5 text-xs font-semibold text-on-surface hover:bg-surface-container-low transition-all cursor-pointer">Create IK01 point</button>
+                    <input aria-label="Annual est. km" type="number" step="any" min="0" name="annual_estimate" placeholder="Annual est. km"
+                        class="w-36 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary transition">
+                    <input aria-label="Description" autocomplete="off" type="text" name="description" placeholder="Description"
+                        class="flex-1 min-w-32 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary transition">
+                    <button type="submit" class="inline-flex items-center justify-center rounded-full bg-surface-container border border-border-subtle px-3 py-1.5 text-xs font-semibold text-on-surface hover:bg-surface-container-low transition cursor-pointer">Create IK01 point</button>
                 </form>
             </div>
         </section>
@@ -244,7 +244,7 @@
     <div class="space-y-4">
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2 bg-gradient-to-r from-amber-500/[0.07] to-transparent">
-                <span class="w-7 h-7 rounded-lg bg-amber-soft border border-amber-line grid place-items-center text-amber-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
+                <span class="w-7 h-7 rounded-lg bg-amber-soft border border-amber-line grid place-items-center text-amber-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
                 <h2 class="text-sm font-bold text-on-surface">Maintenance Status</h2>
             </div>
             <div class="p-5">
@@ -261,8 +261,8 @@
                     {{end}}
 
                     {{if can .User "maintenance" "create"}}
-                    <a href="/maintenance/records/new?vehicle_id={{.Vehicle.ID}}" class="inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all text-decoration-none">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><path d="M10 9H8"/></svg>
+                    <a href="/maintenance/records/new?vehicle_id={{.Vehicle.ID}}" class="inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition text-decoration-none">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><path d="M10 9H8"/></svg>
                         Record Completed Work
                     </a>
                     {{end}}
@@ -270,9 +270,9 @@
                     {{if not .IsMaintenanceOverridden}}
                     {{if can .User "maintenance" "update"}}
                     <form method="POST" action="/maintenance/vehicles/{{.Vehicle.ID}}/override" class="flex flex-col sm:flex-row gap-2 sm:items-center pt-2 border-t border-border-subtle">
-                        <input type="text" name="reason" placeholder="Reason for dispatch override..." required
-                            class="flex-1 w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
-                        <button type="submit" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 transition-all cursor-pointer">
+                        <input aria-label="Reason for dispatch override" autocomplete="off" type="text" name="reason" placeholder="Reason for dispatch override…" required
+                            class="flex-1 w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
+                        <button type="submit" class="shrink-0 inline-flex items-center justify-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 transition cursor-pointer">
                             Grant Override
                         </button>
                     </form>
@@ -281,7 +281,7 @@
                 </div>
                 {{else}}
                 <p class="text-sm text-secondary flex items-center gap-1.5">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-status-success"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-status-success"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                     Preventive maintenance is up to date.
                 </p>
                 {{end}}
@@ -291,7 +291,7 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 bg-gradient-to-r from-blue-500/[0.06] to-transparent">
                 <div class="flex items-center gap-2">
-                    <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
+                    <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
                     <h2 class="text-sm font-bold text-on-surface">Open Job Cards</h2>
                 </div>
                 {{if .OpenWorkOrders}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .OpenWorkOrders}}</span>{{end}}
@@ -303,7 +303,7 @@
                     <a href="/maintenance/work-orders/{{.ID}}" class="group flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-surface-container-low/60 transition-colors text-decoration-none rounded-lg -mx-1">
                         <span class="min-w-0">
                             <span class="block text-sm font-bold text-primary truncate group-hover:underline">{{.Title}}</span>
-                            <span class="block text-xs text-text-muted tabular-nums">{{if .Assignee}}{{.Assignee}}{{else}}Unassigned{{end}}{{if .CreatedAt.Valid}} · {{.CreatedAt.Time.Format "02-01-2006"}}{{end}}</span>
+                            <span class="block text-xs text-text-muted tabular-nums">{{if .Assignee}}{{.Assignee}}{{else}}Unassigned{{end}}{{if .CreatedAt.Valid}} · <time datetime="{{.CreatedAt.Time.Format "2006-01-02"}}">{{.CreatedAt.Time.Format "02-01-2006"}}</time>{{end}}</span>
                         </span>
                         <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}} shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                     </a>
@@ -324,7 +324,7 @@
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-2 bg-gradient-to-r from-red-500/[0.08] via-amber-500/[0.05] to-transparent">
                 <div class="flex items-center gap-2">
                     <span class="w-7 h-7 rounded-lg bg-red-soft border border-red-500/20 grid place-items-center text-red-mid">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 16 12 12 8"/></svg>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><polygon points="12 8 8 12 12 16 16 12 12 8"/></svg>
                     </span>
                     <h2 class="text-sm font-bold text-on-surface">AV Teleoperation Deck</h2>
                 </div>
@@ -336,22 +336,22 @@
                 <div class="grid grid-cols-3 gap-2">
                     <form method="POST" action="/vehicles/{{.Vehicle.ID}}/command" class="w-full">
                         <input type="hidden" name="command_type" value="E_STOP">
-                        <button type="submit" data-confirm="EMERGENCY STOP: Immediately halt this autonomous vehicle?" class="w-full py-2.5 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs tracking-wider shadow-sm transition-all flex flex-col items-center justify-center gap-1 cursor-pointer">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6"/></svg>
+                        <button type="submit" data-confirm="EMERGENCY STOP: Immediately halt this autonomous vehicle?" class="w-full py-2.5 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs tracking-wider shadow-sm transition flex flex-col items-center justify-center gap-1 cursor-pointer">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6"/></svg>
                             E-STOP
                         </button>
                     </form>
                     <form method="POST" action="/vehicles/{{.Vehicle.ID}}/command" class="w-full">
                         <input type="hidden" name="command_type" value="HOLD_POSITION">
-                        <button type="submit" class="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs tracking-wider shadow-sm transition-all flex flex-col items-center justify-center gap-1 cursor-pointer">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                        <button type="submit" class="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs tracking-wider shadow-sm transition flex flex-col items-center justify-center gap-1 cursor-pointer">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
                             HOLD
                         </button>
                     </form>
                     <form method="POST" action="/vehicles/{{.Vehicle.ID}}/command" class="w-full">
                         <input type="hidden" name="command_type" value="RESUME_MISSION">
-                        <button type="submit" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs tracking-wider shadow-sm transition-all flex flex-col items-center justify-center gap-1 cursor-pointer">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        <button type="submit" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs tracking-wider shadow-sm transition flex flex-col items-center justify-center gap-1 cursor-pointer">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                             RESUME
                         </button>
                     </form>
@@ -378,7 +378,7 @@
 
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2 bg-gradient-to-r from-blue-500/[0.06] to-transparent">
-                <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+                <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
                 <h2 class="text-sm font-bold text-on-surface">Last Telemetry</h2>
             </div>
             <div class="p-5">

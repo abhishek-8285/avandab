@@ -38,6 +38,9 @@ const LANGUAGES: { code: SupportedLocale; label: string; native: string }[] = [
 export function ProfileScreen({ onBack }: ProfileScreenProps) {
   const { token, user, logout } = useAuthStore();
   const { locale, setLanguage } = useLanguageStore();
+  const intlTag = `${locale}-IN`;
+  const intlDate = (y: number, m: number) =>
+    new Intl.DateTimeFormat(intlTag, { month: 'short', year: 'numeric' }).format(new Date(y, m, 1));
   const [profile, setProfile] = useState<DriverProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [bgGpsOn, setBgGpsOn] = useState(true);
@@ -54,10 +57,10 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
 
   // Document states
   const [documents, setDocuments] = useState([
-    { id: 'dl', key: 'docs.dl', defaultTitle: 'Driving License', status: 'VALID', expiry: 'Exp: Dec 2028', warning: false },
-    { id: 'insurance', key: 'docs.insurance', defaultTitle: 'Vehicle Insurance', status: 'EXPIRING_SOON', expiry: 'Exp: 15 days remaining', warning: true },
-    { id: 'fitness', key: 'docs.fitness', defaultTitle: 'Fitness Certificate', status: 'VALID', expiry: 'Exp: Aug 2027', warning: false },
-    { id: 'puc', key: 'docs.puc', defaultTitle: 'PUC Certificate', status: 'VALID', expiry: 'Exp: Nov 2026', warning: false },
+    { id: 'dl', key: 'docs.dl', defaultTitle: 'Driving License', status: 'VALID', expiry: `Exp: ${intlDate(2028, 11)}`, warning: false },
+    { id: 'insurance', key: 'docs.insurance', defaultTitle: 'Vehicle Insurance', status: 'EXPIRING_SOON', expiry: new Intl.RelativeTimeFormat(intlTag, { numeric: 'auto' }).format(15, 'day'), warning: true },
+    { id: 'fitness', key: 'docs.fitness', defaultTitle: 'Fitness Certificate', status: 'VALID', expiry: `Exp: ${intlDate(2027, 7)}`, warning: false },
+    { id: 'puc', key: 'docs.puc', defaultTitle: 'PUC Certificate', status: 'VALID', expiry: `Exp: ${intlDate(2026, 10)}`, warning: false },
   ]);
 
   useEffect(() => {
@@ -180,8 +183,14 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
 
       {/* WhatsApp Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={onBack} accessibilityLabel="Go back">
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={onBack}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" accessible={false} />
         </TouchableOpacity>
         <View style={styles.headerTitleBlock}>
           <Text style={styles.headerTitle}>{t('header.settings_title', 'Settings & Profile', locale)}</Text>
@@ -191,16 +200,22 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
 
       <ScrollView style={styles.body} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {loading ? (
-          <ActivityIndicator color="#008069" style={{ marginTop: Spacing.xl }} />
+          <ActivityIndicator
+            color="#008069"
+            style={{ marginTop: Spacing.xl }}
+            accessible
+            accessibilityLabel={`${t('common.loading', 'Loading', locale)}…`}
+            accessibilityLiveRegion="polite"
+          />
         ) : (
           <>
             {/* WhatsApp Profile Contact Card */}
             <View style={styles.heroCard}>
               <View style={styles.avatarBox}>
-                <MaterialCommunityIcons name="account" size={40} color="#ffffff" />
+                <MaterialCommunityIcons name="account" size={40} color="#ffffff" accessible={false} />
               </View>
-              <Text style={styles.heroName}>{displayName}</Text>
-              <Text style={styles.heroSub}>{user?.email || 'driver@avandab.com'}</Text>
+              <Text style={styles.heroName} numberOfLines={1} ellipsizeMode="tail">{displayName}</Text>
+              <Text style={styles.heroSub} numberOfLines={1} ellipsizeMode="tail">{user?.email || 'driver@avandab.com'}</Text>
               
               {/* Duty Toggle Button */}
               <TouchableOpacity 
@@ -210,6 +225,8 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                 ]}
                 onPress={() => setShowDutyModal(true)}
                 activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel={dutyStatus === 'available' ? t('duty.available', 'ON DUTY', locale) : dutyStatus === 'break' ? t('duty.break', 'ON BREAK', locale) : t('duty.inactive', 'OFF DUTY', locale)}
               >
                 <View style={[
                   styles.statusDot, 
@@ -218,7 +235,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                 <Text style={styles.statusPillText}>
                   {dutyStatus === 'available' ? t('duty.available', 'ON DUTY', locale) : dutyStatus === 'break' ? t('duty.break', 'ON BREAK', locale) : t('duty.inactive', 'OFF DUTY', locale)}
                 </Text>
-                <MaterialCommunityIcons name="pencil" size={12} color="#075e54" />
+                <MaterialCommunityIcons name="pencil" size={12} color="#075e54" accessible={false} />
               </TouchableOpacity>
             </View>
 
@@ -231,24 +248,30 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
               {/* Driver ID (Readonly) */}
               <View style={styles.row}>
                 <View style={styles.rowIconBox}>
-                  <MaterialCommunityIcons name="badge-account-horizontal" size={20} color="#008069" />
+                  <MaterialCommunityIcons name="badge-account-horizontal" size={20} color="#008069" accessible={false} />
                 </View>
                 <View style={styles.rowContent}>
                   <Text style={styles.rowLabel}>{t('profile.driver_id', 'Driver ID', locale)}</Text>
-                  <Text style={styles.rowValue}>{profile?.driver_id || user?.driverId || user?.id || 'DRV-F6F19B'}</Text>
+                  <Text style={styles.rowValue} numberOfLines={1} ellipsizeMode="tail">{profile?.driver_id || user?.driverId || user?.id || 'DRV-F6F19B'}</Text>
                 </View>
               </View>
 
               <View style={styles.divider} />
 
               {/* Mobile Phone (Clickable to change) */}
-              <TouchableOpacity style={styles.interactiveRow} onPress={() => setShowPhoneModal(true)} activeOpacity={0.7}>
+              <TouchableOpacity
+                style={styles.interactiveRow}
+                onPress={() => setShowPhoneModal(true)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t('profile.phone', 'Mobile Phone', locale)}
+              >
                 <View style={styles.rowIconBox}>
-                  <MaterialCommunityIcons name="phone" size={20} color="#008069" />
+                  <MaterialCommunityIcons name="phone" size={20} color="#008069" accessible={false} />
                 </View>
                 <View style={styles.rowContent}>
                   <Text style={styles.rowLabel}>{t('profile.phone', 'Mobile Phone', locale)}</Text>
-                  <Text style={styles.rowValue}>{profile?.phone || '+91 98765 43210'}</Text>
+                  <Text style={styles.rowValue} numberOfLines={1} ellipsizeMode="tail">{profile?.phone || '+91 98765 43210'}</Text>
                 </View>
                 <View style={styles.changeBadge}>
                   <Text style={styles.changeBadgeText}>{t('profile.edit', 'CHANGE', locale)}</Text>
@@ -260,11 +283,11 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
               {/* Assigned Vehicle */}
               <View style={styles.row}>
                 <View style={styles.rowIconBox}>
-                  <MaterialCommunityIcons name="truck" size={20} color="#008069" />
+                  <MaterialCommunityIcons name="truck" size={20} color="#008069" accessible={false} />
                 </View>
                 <View style={styles.rowContent}>
                   <Text style={styles.rowLabel}>{t('profile.vehicle', 'Assigned Vehicle', locale)}</Text>
-                  <Text style={styles.rowValue}>{profile?.vehicle_plate || 'Tata Prima · DL-01-AB-1234'}</Text>
+                  <Text style={styles.rowValue} numberOfLines={1} ellipsizeMode="tail">{profile?.vehicle_plate || 'Tata Prima · DL-01-AB-1234'}</Text>
                 </View>
               </View>
             </View>
@@ -286,18 +309,22 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                           name={doc.status === 'UNDER_REVIEW' ? 'clock-outline' : doc.warning ? 'alert' : 'check-decagram'} 
                           size={20} 
                           color={doc.status === 'UNDER_REVIEW' ? '#0284c7' : doc.warning ? '#b45309' : '#008069'} 
+                          accessible={false}
                         />
                       </View>
                       <View style={styles.docContent}>
-                        <Text style={styles.docTitle}>{docTitle}</Text>
-                        <Text style={[styles.docExpiry, doc.warning && styles.docExpiryWarning]}>{doc.expiry}</Text>
+                        <Text style={styles.docTitle} numberOfLines={1} ellipsizeMode="tail">{docTitle}</Text>
+                        <Text style={[styles.docExpiry, doc.warning && styles.docExpiryWarning]} numberOfLines={1} ellipsizeMode="tail">{doc.expiry}</Text>
                       </View>
                       <TouchableOpacity 
                         style={[styles.renewBtn, doc.warning ? styles.renewBtnWarning : styles.renewBtnOutline]}
                         onPress={() => handleDocumentReupload(doc.id, docTitle)}
                         activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${docTitle}: ${doc.warning ? t('docs.renew', 'RENEW', locale) : t('docs.update', 'UPDATE', locale)}`}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       >
-                        <MaterialCommunityIcons name="camera-plus" size={14} color={doc.warning ? '#ffffff' : '#008069'} />
+                        <MaterialCommunityIcons name="camera-plus" size={14} color={doc.warning ? '#ffffff' : '#008069'} accessible={false} />
                         <Text style={[styles.renewBtnText, doc.warning ? styles.renewBtnTextWarning : styles.renewBtnTextOutline]}>
                           {doc.warning ? t('docs.renew', 'RENEW', locale) : t('docs.update', 'UPDATE', locale)}
                         </Text>
@@ -315,13 +342,19 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
 
             <View style={styles.card}>
               {/* Language Selector */}
-              <TouchableOpacity style={styles.interactiveRow} onPress={() => setShowLangModal(true)} activeOpacity={0.7}>
+              <TouchableOpacity
+                style={styles.interactiveRow}
+                onPress={() => setShowLangModal(true)}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={t('settings.language', 'App Language', locale)}
+              >
                 <View style={styles.rowIconBox}>
-                  <MaterialCommunityIcons name="translate" size={20} color="#008069" />
+                  <MaterialCommunityIcons name="translate" size={20} color="#008069" accessible={false} />
                 </View>
                 <View style={styles.rowContent}>
                   <Text style={styles.rowLabel}>{t('settings.language', 'App Language', locale)}</Text>
-                  <Text style={styles.rowValue}>
+                  <Text style={styles.rowValue} numberOfLines={1} ellipsizeMode="tail">
                     {LANGUAGES.find((l) => l.code === locale)?.native || 'हिन्दी'} ({LANGUAGES.find((l) => l.code === locale)?.label})
                   </Text>
                 </View>
@@ -552,9 +585,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },

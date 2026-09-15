@@ -28,17 +28,21 @@ func TestDriverSettlementService_ListSettlementsDateRange(t *testing.T) {
 	mk("s1", "trip-1", "pending", "2026-08-01T08:00:00Z")
 	mk("s2", "trip-2", "paid", "2026-08-10T08:00:00Z")
 	mk("s3", "trip-3", "disputed", "2026-08-20T08:00:00Z")
+	// IST-day-boundary row: 2026-08-09T18:45:00Z = 00:15 IST Aug 10.
+	mk("s4", "trip-4", "pending", "2026-08-09T18:45:00Z")
 
 	// Full-month window
 	recs, err := svcs.Settlements.ListSettlementsDateRange(ctx, "", "", "2026-08-01", "2026-08-31", 50, 0)
 	require.NoError(t, err)
-	assert.Len(t, recs, 3)
+	assert.Len(t, recs, 4)
 
-	// Single-day window (from == to)
+	// Single-day window (from == to) — the IST-boundary row belongs to Aug 10.
 	recs, err = svcs.Settlements.ListSettlementsDateRange(ctx, "", "", "2026-08-10", "2026-08-10", 50, 0)
 	require.NoError(t, err)
-	require.Len(t, recs, 1)
-	assert.Equal(t, "trip-2", string(recs[0].TripID))
+	require.Len(t, recs, 2)
+	tripIDs := []string{string(recs[0].TripID), string(recs[1].TripID)}
+	assert.Contains(t, tripIDs, "trip-2")
+	assert.Contains(t, tripIDs, "trip-4")
 
 	// From-only bound
 	recs, err = svcs.Settlements.ListSettlementsDateRange(ctx, "", "", "2026-08-11", "", 50, 0)
@@ -50,9 +54,12 @@ func TestDriverSettlementService_ListSettlementsDateRange(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, recs, 1)
 
-	// Status + date combined
+	// Status + date combined (only "pending" statuses in the month: the
+	// IST-boundary row s4 is also pending and in Aug, so it shows up).
 	recs, err = svcs.Settlements.ListSettlementsDateRange(ctx, "pending", "", "2026-08-01", "2026-08-31", 50, 0)
 	require.NoError(t, err)
-	require.Len(t, recs, 1)
-	assert.Equal(t, "trip-1", string(recs[0].TripID))
+	require.Len(t, recs, 2)
+	tripIDs = []string{string(recs[0].TripID), string(recs[1].TripID)}
+	assert.Contains(t, tripIDs, "trip-1")
+	assert.Contains(t, tripIDs, "trip-4")
 }

@@ -16,10 +16,10 @@
 
     <!-- KPI HERO ROW -->
     <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <a href="/drivers" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition-all duration-200">
+        <a href="/drivers" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-violet-500 opacity-80"></div>
             <div class="w-10 h-10 rounded-xl bg-primary/10 border border-primary/10 grid place-items-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/></svg>
             </div>
             <div class="mt-4">
                 <div class="text-stat text-primary tabular-nums text-3xl font-black tracking-tight">{{.Data.Drivers.Total}}</div>
@@ -30,11 +30,11 @@
             </div>
         </a>
 
-        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md transition-all duration-200">
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md transition duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-500 to-red-500 opacity-80"></div>
             <div class="flex items-start justify-between">
                 <div class="w-10 h-10 rounded-xl bg-rose-soft border border-rose-line grid place-items-center text-rose-mid group-hover:bg-rose-500 group-hover:text-white transition-colors">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M16 17h.01"/><path d="M18 21a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3"/><path d="M9 11a4 4 0 1 0 4 4"/><line x1="2" x2="22" y1="2" y2="22"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M16 17h.01"/><path d="M18 21a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3"/><path d="M9 11a4 4 0 1 0 4 4"/><line x1="2" x2="22" y1="2" y2="22"/></svg>
                 </div>
                 <span class="text-eyebrow px-2 py-1 rounded-full bg-rose-soft text-rose-strong border border-rose-line">Blocked</span>
             </div>
@@ -45,10 +45,10 @@
             </div>
         </div>
 
-        <a href="/vehicles" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition-all duration-200">
+        <a href="/vehicles" class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-500 to-cyan-400 opacity-80"></div>
             <div class="w-10 h-10 rounded-xl bg-blue-soft border border-blue-line grid place-items-center text-blue-mid group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
             </div>
             <div class="mt-4">
                 <div class="text-stat text-primary tabular-nums text-3xl font-black tracking-tight">{{.Data.Vehicles.Total}}</div>
@@ -59,11 +59,11 @@
             </div>
         </a>
 
-        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md transition-all duration-200">
+        <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md transition duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-500 to-red-500 opacity-80"></div>
             <div class="flex items-start justify-between">
                 <div class="w-10 h-10 rounded-xl bg-rose-soft border border-rose-line grid place-items-center text-rose-mid group-hover:bg-rose-500 group-hover:text-white transition-colors">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 9 6 6"/><path d="m15 9-6 6"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 9 6 6"/><path d="m15 9-6 6"/></svg>
                 </div>
                 <span class="text-eyebrow px-2 py-1 rounded-full bg-rose-soft text-rose-strong border border-rose-line">Blocked</span>
             </div>
@@ -74,11 +74,11 @@
             </div>
         </div>
 
-        <div class="col-span-2 sm:col-span-1 group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md transition-all duration-200">
+        <div class="col-span-2 sm:col-span-1 group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md transition duration-200">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-amber-500 to-orange-500 opacity-80"></div>
             <div class="flex items-start justify-between">
                 <div class="w-10 h-10 rounded-xl bg-amber-soft border border-amber-line grid place-items-center text-amber-mid group-hover:bg-amber-500 group-hover:text-white transition-colors">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>
                 </div>
                 <span class="text-eyebrow px-2 py-1 rounded-full bg-amber-soft text-amber-strong border border-amber-line">In queue</span>
             </div>
@@ -96,7 +96,7 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden flex flex-col">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between bg-gradient-to-r from-rose-500/[0.06] to-transparent">
                 <div class="flex items-center gap-2">
-                    <span class="w-7 h-7 rounded-lg bg-rose-soft border border-rose-line grid place-items-center text-rose-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 17h.01"/><path d="M18 21a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3"/><path d="M9 11a4 4 0 1 0 4 4"/><line x1="2" x2="22" y1="2" y2="22"/></svg></span>
+                    <span class="w-7 h-7 rounded-lg bg-rose-soft border border-rose-line grid place-items-center text-rose-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 17h.01"/><path d="M18 21a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3"/><path d="M9 11a4 4 0 1 0 4 4"/><line x1="2" x2="22" y1="2" y2="22"/></svg></span>
                     <h2 class="text-sm font-bold text-on-surface">Blocked Drivers</h2>
                 </div>
                 <span class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-rose-500 text-white text-xs font-bold tabular-nums">{{len .Data.BlockedDrivers}}</span>
@@ -105,7 +105,7 @@
                 {{if .Data.BlockedDrivers}}
                 {{range .Data.BlockedDrivers}}
                 <div class="flex items-center gap-3 px-4 py-2.5 hover:bg-rose-500/[0.04] transition-colors">
-                    <span class="w-8 h-8 rounded-lg bg-rose-soft grid place-items-center text-rose-mid shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
+                    <span class="w-8 h-8 rounded-lg bg-rose-soft grid place-items-center text-rose-mid shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
                     <div class="min-w-0 flex-1">
                         <span class="text-sm font-bold text-on-surface tabular-nums">{{.ID}}</span>
                     </div>
@@ -114,7 +114,7 @@
                 {{end}}
                 {{else}}
                 <div class="px-4 py-10 text-center">
-                    <div class="w-10 h-10 rounded-full bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
+                    <div class="w-10 h-10 rounded-full bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid mx-auto"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
                     <p class="text-sm font-medium text-on-surface mt-3">All clear</p><p class="text-xs text-text-muted">No drivers currently blocked</p>
                 </div>
                 {{end}}
@@ -125,7 +125,7 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden flex flex-col">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between bg-gradient-to-r from-rose-500/[0.06] to-transparent">
                 <div class="flex items-center gap-2">
-                    <span class="w-7 h-7 rounded-lg bg-rose-soft border border-rose-line grid place-items-center text-rose-mid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></span>
+                    <span class="w-7 h-7 rounded-lg bg-rose-soft border border-rose-line grid place-items-center text-rose-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></span>
                     <h2 class="text-sm font-bold text-on-surface">Blocked Vehicles</h2>
                 </div>
                 <span class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-rose-500 text-white text-xs font-bold tabular-nums">{{len .Data.BlockedVehicles}}</span>
@@ -134,7 +134,7 @@
                 {{if .Data.BlockedVehicles}}
                 {{range .Data.BlockedVehicles}}
                 <div class="flex items-center gap-3 px-4 py-2.5 hover:bg-rose-500/[0.04] transition-colors">
-                    <span class="w-8 h-8 rounded-lg bg-rose-soft grid place-items-center text-rose-mid shrink-0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
+                    <span class="w-8 h-8 rounded-lg bg-rose-soft grid place-items-center text-rose-mid shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
                     <div class="min-w-0 flex-1">
                         <span class="text-sm font-bold text-on-surface tabular-nums">{{.ID}}</span>
                     </div>
@@ -143,7 +143,7 @@
                 {{end}}
                 {{else}}
                 <div class="px-4 py-10 text-center">
-                    <div class="w-10 h-10 rounded-full bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid mx-auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
+                    <div class="w-10 h-10 rounded-full bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid mx-auto"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
                     <p class="text-sm font-medium text-on-surface mt-3">Fleet compliant</p><p class="text-xs text-text-muted">No vehicles currently blocked</p>
                 </div>
                 {{end}}

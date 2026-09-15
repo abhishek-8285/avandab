@@ -3,7 +3,7 @@
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="flex items-center gap-3 min-w-0">
             <span class="w-10 h-10 rounded-xl bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
             </span>
             <div class="min-w-0">
                 <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display truncate m-0">
@@ -13,14 +13,14 @@
             </div>
         </div>
         <a href="/geofences" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors self-start sm:self-auto shrink-0">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="m15 18-6-6 6-6"/></svg>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="m15 18-6-6 6-6"/></svg>
             Back to Geofences
         </a>
     </div>
 
     {{if .FlashError}}
     <div class="bg-rose-soft border border-rose-500/20 text-status-alert rounded-xl px-4 py-3 text-sm flex items-center gap-2">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 shrink-0"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 shrink-0"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
         <span>{{.FlashError}}</span>
     </div>
     {{end}}
@@ -38,8 +38,8 @@
                     <!-- Name -->
                     <div>
                         <label for="name" class="block text-xs font-bold text-on-surface mb-1.5">Zone Name <span class="text-status-alert">*</span></label>
-                        <input id="name" name="name" required value="{{if .Zone}}{{.Zone.Name}}{{end}}"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                        <input aria-label="e.g. Mumbai JNPT Terminal Hub" autocomplete="name" id="name" name="name" required value="{{if .Zone}}{{.Zone.Name}}{{end}}"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
                             placeholder="e.g. Mumbai JNPT Terminal Hub">
                     </div>
 
@@ -47,7 +47,7 @@
                     <div>
                         <label for="kind" class="block text-xs font-bold text-on-surface mb-1.5">Zone Category / Operational Trigger</label>
                         <select id="kind" name="kind" required
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all cursor-pointer">
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition cursor-pointer">
                             <option value="pickup" {{if and .Zone (eq .Zone.Kind "pickup")}}selected{{end}}>Pickup — Auto-transitions trip to reached_pickup</option>
                             <option value="drop" {{if and .Zone (eq .Zone.Kind "drop")}}selected{{end}}>Drop — Auto-transitions trip to in_transit / delivered</option>
                             <option value="depot" {{if and .Zone (eq .Zone.Kind "depot")}}selected{{else if not .Zone}}selected{{end}}>Depot / Terminal — Dwell demurrage &amp; detention tracking</option>
@@ -58,15 +58,15 @@
 
                     <!-- Kind Description Banner -->
                     <div id="kind-info-banner" class="p-3 rounded-xl bg-blue-soft border border-blue-line text-xs text-secondary flex items-start gap-2.5">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 shrink-0 mt-0.5 text-blue-mid"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 shrink-0 mt-0.5 text-blue-mid"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
                         <span id="kind-info-text">Dwell engine will log detention windows and compute billable demurrage hours beyond company free allowance.</span>
                     </div>
 
                     <!-- Route Name Filter -->
                     <div>
                         <label for="route_name" class="block text-xs font-bold text-on-surface mb-1.5">Route Scope (Optional)</label>
-                        <input id="route_name" name="route_name" value="{{if .Zone}}{{.Zone.RouteName}}{{end}}"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-data-mono"
+                        <input aria-label="e.g. BLR-MUM-01" autocomplete="off" id="route_name" name="route_name" value="{{if .Zone}}{{.Zone.RouteName}}{{end}}"
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition font-data-mono"
                             placeholder="e.g. BLR-MUM-01">
                         <p class="text-[11px] text-text-muted mt-1 mb-0">Leave blank to apply globally to all fleet movements.</p>
                     </div>
@@ -76,7 +76,7 @@
                         <div>
                             <label for="priority" class="block text-xs font-bold text-on-surface mb-1.5">Priority Level</label>
                             <input id="priority" name="priority" type="number" min="0" value="{{if .Zone}}{{.Zone.Priority}}{{else}}0{{end}}"
-                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all font-data-mono tabular-nums">
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition font-data-mono tabular-nums">
                         </div>
                         <div class="flex items-center">
                             <p class="text-[11px] text-text-muted leading-tight m-0">Higher priority wins when vehicles overlap multiple boundaries.</p>
@@ -89,13 +89,13 @@
                         <input type="hidden" name="shape" id="shape-input" value="{{if .Zone}}{{.Zone.Shape}}{{else}}circle{{end}}">
                         <div class="grid grid-cols-2 gap-2 bg-surface-container-low p-1.5 rounded-xl border border-border-subtle">
                             <button type="button" data-draw-mode="circle"
-                                class="draw-mode-btn flex-1 flex items-center justify-center gap-2 border border-indigo-500/40 bg-indigo-500/15 text-indigo-500 font-bold rounded-lg px-3 py-2 text-sm shadow-sm transition-all cursor-pointer">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="9"/></svg>
+                                class="draw-mode-btn flex-1 flex items-center justify-center gap-2 border border-indigo-500/40 bg-indigo-500/15 text-indigo-500 font-bold rounded-lg px-3 py-2 text-sm shadow-sm transition cursor-pointer">
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="9"/></svg>
                                 <span>Circle</span>
                             </button>
                             <button type="button" data-draw-mode="polygon"
-                                class="draw-mode-btn flex-1 flex items-center justify-center gap-2 border border-border-subtle bg-surface-container-low text-secondary hover:text-on-surface hover:border-border-subtle rounded-lg px-3 py-2 text-sm transition-all cursor-pointer">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polygon points="12 2 22 8.5 18 21 6 21 2 8.5 12 2"/></svg>
+                                class="draw-mode-btn flex-1 flex items-center justify-center gap-2 border border-border-subtle bg-surface-container-low text-secondary hover:text-on-surface hover:border-border-subtle rounded-lg px-3 py-2 text-sm transition cursor-pointer">
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polygon points="12 2 22 8.5 18 21 6 21 2 8.5 12 2"/></svg>
                                 <span>Polygon</span>
                             </button>
                         </div>
@@ -137,8 +137,8 @@
 
                 <!-- Form Action Buttons -->
                 <div class="pt-5 mt-5 border-t border-border-subtle flex items-center gap-2">
-                    <button type="submit" class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer border-0">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    <button type="submit" class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer border-0">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                         <span>Save Geofence</span>
                     </button>
                     <a href="/geofences" class="px-4 py-2.5 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">Cancel</a>
@@ -151,13 +151,13 @@
                 <!-- Map Top Bar: Geocoding Location Search -->
                 <div class="p-3.5 border-b border-border-subtle bg-surface-container-low flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                     <div class="relative flex-1">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                         <label for="geocoder-input" class="sr-only">Search Location</label>
-                        <input type="text" id="geocoder-input"
-                            placeholder="Jump to city, port or address (e.g. Bhiwandi, Delhi Airport, JNPT)..."
-                            class="w-full bg-surface-container-lowest border border-border-subtle rounded-lg pl-9 pr-20 py-2 text-xs text-on-surface placeholder-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <input aria-label="Jump to city, port or address (e.g. Bhiwandi, Delhi Airport, JNPT)" autocomplete="off" type="text" id="geocoder-input"
+                            placeholder="Jump to city, port or address (e.g. Bhiwandi, Delhi Airport, JNPT)…"
+                            class="w-full bg-surface-container-lowest border border-border-subtle rounded-lg pl-9 pr-20 py-2 text-xs text-on-surface placeholder-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         <button type="button" id="geocoder-btn"
-                            class="absolute right-1.5 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-full bg-primary text-on-primary font-bold text-[11px] shadow-sm hover:bg-primary/90 transition-all cursor-pointer border-0">
+                            class="absolute right-1.5 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-full bg-primary text-on-primary font-bold text-[11px] shadow-sm hover:bg-primary/90 transition cursor-pointer border-0">
                             Search
                         </button>
                     </div>
@@ -182,14 +182,14 @@
                         </span>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button type="button" id="undo-vertex" class="hidden text-xs px-2.5 py-1 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:text-on-surface hover:bg-surface-container-low transition-all cursor-pointer">
+                        <button type="button" id="undo-vertex" class="hidden text-xs px-2.5 py-1 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:text-on-surface hover:bg-surface-container-low transition cursor-pointer">
                             Undo Point
                         </button>
-                        <button type="button" id="clear-map" class="text-xs px-2.5 py-1 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:text-status-alert hover:bg-surface-container-low transition-all cursor-pointer">
+                        <button type="button" id="clear-map" class="text-xs px-2.5 py-1 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary hover:text-status-alert hover:bg-surface-container-low transition cursor-pointer">
                             Clear Shape
                         </button>
                         <button type="button" id="close-polygon"
-                            class="hidden text-xs px-3 py-1 rounded-full bg-primary text-on-primary font-bold shadow-sm hover:bg-primary/90 transition-all cursor-pointer border-0">
+                            class="hidden text-xs px-3 py-1 rounded-full bg-primary text-on-primary font-bold shadow-sm hover:bg-primary/90 transition cursor-pointer border-0">
                             Close Polygon
                         </button>
                     </div>
@@ -210,7 +210,7 @@
                 <!-- Map Footer Instructions -->
                 <div class="px-5 py-3 border-t border-border-subtle bg-surface-container-low text-xs text-text-muted flex items-center justify-between">
                     <div id="map-instructions" class="flex items-center gap-2">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-primary shrink-0"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-primary shrink-0"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
                         <span><strong>Circle Mode:</strong> Click map to place center. Drag center handle or use slider to adjust radius.</span>
                     </div>
                     <div id="vertex-counter" class="hidden font-data-mono text-[11px] font-semibold tabular-nums text-secondary">

@@ -38,12 +38,12 @@
 
         <div>
             <label for="fb-comment" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Comment (optional)</label>
-            <textarea id="fb-comment" name="comment" rows="4" maxlength="2000" placeholder="How was your delivery experience? Any issues with timing, handling, or driver communication?" class="w-full bg-surface-container-low border border-border-subtle rounded-md py-2 px-3 text-sm text-on-surface placeholder-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"></textarea>
+            <textarea aria-label="How was your delivery experience? Any issues with timing, handling, or driver communication?" id="fb-comment" name="comment" rows="4" maxlength="2000" placeholder="How was your delivery experience? Any issues with timing, handling, or driver communication?" class="w-full bg-surface-container-low border border-border-subtle rounded-md py-2 px-3 text-sm text-on-surface placeholder-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition"></textarea>
             <p class="text-[11px] text-text-muted mt-1">Max 2000 characters. Your feedback is linked to trip {{if .TripID}}{{.TripID}}{{else}}—{{end}} and visible to ops.</p>
         </div>
 
         <div class="flex items-center gap-3 pt-2">
-            <button type="submit" class="inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all focus:outline-none focus:ring-2 focus:ring-primary/30">
+            <button type="submit" class="inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition focus:outline-none focus:ring-2 focus:ring-primary/30">
                 Submit Feedback
             </button>
             <a href="/customer/bookings" class="inline-flex items-center rounded-full bg-surface-container-lowest border border-border-subtle px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">Cancel</a>

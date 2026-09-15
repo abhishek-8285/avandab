@@ -4,7 +4,7 @@
         <div>
             <div class="flex items-center gap-2">
                 <a href="/invoices/{{.Invoice.ID}}" class="text-text-muted hover:text-on-surface transition-colors" aria-label="Back to invoice">
-                    <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <svg aria-hidden="true" class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                     </svg>
                 </a>
@@ -17,11 +17,11 @@
             </p>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
-            <a href="/invoices/{{.Invoice.ID}}" class="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface-container-low text-on-surface px-4 py-2 text-sm font-medium hover:bg-surface-container transition-all">
+            <a href="/invoices/{{.Invoice.ID}}" class="inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface-container-low text-on-surface px-4 py-2 text-sm font-medium hover:bg-surface-container transition">
                 View Invoice
             </a>
             <a href="/invoices/{{.Invoice.ID}}/pdf" download
-               class="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-all">
+               class="inline-flex items-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition">
                 Download PDF
             </a>
         </div>
@@ -116,8 +116,8 @@
             <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
                 <div class="md:col-span-2 relative">
                     <label for="hsn-input" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">HSN / SAC Code</label>
-                    <input type="text" id="hsn-input" name="hsn_sac_code" list="hsn-suggestions" required placeholder="e.g. 996511"
-                           class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                    <input aria-label="e.g. 996511" autocomplete="off" type="text" id="hsn-input" name="hsn_sac_code" list="hsn-suggestions" required placeholder="e.g. 996511"
+                           class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition" />
                     <datalist id="hsn-suggestions">
                         {{range .HSNCodes}}
                         <option value="{{.Code}}">{{.Code}} - {{.Description}} ({{.Rate}}%)</option>
@@ -126,29 +126,29 @@
                 </div>
                 <div class="md:col-span-2">
                     <label for="description" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Description</label>
-                    <input id="description" type="text" name="description" required placeholder="Goods transport / Freight charges"
-                           class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                    <input aria-label="Goods transport / Freight charges" autocomplete="off" id="description" type="text" name="description" required placeholder="Goods transport / Freight charges"
+                           class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition" />
                 </div>
                 <div>
                     <label for="unit" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Unit</label>
-                    <input id="unit" type="text" name="unit" value="KGS" placeholder="KGS / MT / NOS"
-                           class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                    <input aria-label="KGS / MT / NOS" autocomplete="off" id="unit" type="text" name="unit" value="KGS" placeholder="KGS / MT / NOS"
+                           class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition" />
                 </div>
                 <div>
                     <label for="quantity" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Quantity</label>
-                    <input id="quantity" type="number" step="0.01" min="0.01" name="quantity" value="1" required
-                           class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                    <input autocomplete="off" id="quantity" type="number" step="0.01" min="0.01" name="quantity" value="1" required
+                           class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition" />
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
                 <div class="md:col-span-2">
                     <label for="rate" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Rate (₹)</label>
-                    <input id="rate" type="number" step="0.01" min="0.01" name="rate" required placeholder="10000.00"
-                           class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all" />
+                    <input aria-label="10000.00" id="rate" type="number" step="0.01" min="0.01" name="rate" required placeholder="10000.00"
+                           class="w-full bg-surface-container-low border border-border-subtle rounded-md px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition" />
                 </div>
                 <div class="md:col-span-2">
-                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition-all cursor-pointer">
-                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-primary text-on-primary px-4 py-2 text-sm font-medium hover:bg-primary/90 transition cursor-pointer">
+                        <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
                         Add Line Item

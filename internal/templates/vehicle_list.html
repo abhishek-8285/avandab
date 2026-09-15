@@ -8,6 +8,7 @@
         "StatusFilter" .StatusFilter
         "Chips" (chips "All Units" "" "Active" "available" "Running" "running" "Maintenance" "maintenance" "Out of Service" "inactive")
         "ShowDates" true
+        "DateFilterError" .DateFilterError
         "DateFrom" .DateFrom
         "DateTo" .DateTo
         "ShowSearch" true
@@ -26,7 +27,7 @@
     {{if .DateFrom}}<input type="hidden" name="from" value="{{.DateFrom}}">{{end}}
     {{if .DateTo}}<input type="hidden" name="to" value="{{.DateTo}}">{{end}}
     <label for="fleet_class" class="text-xs font-semibold uppercase tracking-wider text-secondary">Fleet class</label>
-    <select id="fleet_class" name="fleet_class" onchange="this.form.submit()" class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary transition-all">
+    <select id="fleet_class" name="fleet_class" onchange="this.form.submit()" class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary transition">
         <option value="" {{if not .FleetClassFilter}}selected{{end}}>All classes</option>
         <option value="CV" {{if eq .FleetClassFilter "CV"}}selected{{end}}>CV - Commercial</option>
         <option value="PV" {{if eq .FleetClassFilter "PV"}}selected{{end}}>PV - Passenger</option>
@@ -34,7 +35,7 @@
         <option value="OFS" {{if eq .FleetClassFilter "OFS"}}selected{{end}}>OFS - Outside Fuel Stn</option>
     </select>
     <label for="ownership" class="text-xs font-semibold uppercase tracking-wider text-secondary">Ownership</label>
-    <select id="ownership" name="ownership" onchange="this.form.submit()" class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary transition-all">
+    <select id="ownership" name="ownership" onchange="this.form.submit()" class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary transition">
         <option value="" {{if not .OwnershipFilter}}selected{{end}}>All ownership</option>
         <option value="O" {{if eq .OwnershipFilter "O"}}selected{{end}}>O - Own</option>
         <option value="C" {{if eq .OwnershipFilter "C"}}selected{{end}}>C - Contract</option>

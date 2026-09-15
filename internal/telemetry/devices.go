@@ -175,18 +175,21 @@ func (s *DeviceStore) CountByTenant(ctx context.Context, tenantID string) (int64
 	return n, err
 }
 
-// deviceDateClause filters on created_at using date(substr(...)) because
-// SQLite stores timestamps as text in mixed formats (RFC3339 from Go,
-// 'YYYY-MM-DD HH:MM:SS' from CURRENT_TIMESTAMP) — only the prefix is stable.
+// deviceDateClause filters created_at against the inclusive UTC instant
+// bounds from shared.DayBoundsUTC. Storage mixes RFC3339 and CURRENT_TIMESTAMP
+// text; SQLite datetime() normalizes both, so comparing instants applies the
+// fleet-local (IST) day window instead of silently filing 00:00–05:30 IST
+// events under the previous UTC day.
 const deviceDateClause = `
-		 AND (? = '' OR substr(CAST(created_at AS TEXT), 1, 10) >= substr(CAST(? AS TEXT), 1, 10))
-		 AND (? = '' OR substr(CAST(created_at AS TEXT), 1, 10) <= substr(CAST(? AS TEXT), 1, 10))`
+		 AND (? = '' OR datetime(CAST(created_at AS TEXT)) >= datetime(?))
+		 AND (? = '' OR datetime(CAST(created_at AS TEXT)) <= datetime(?))`
 
 // ListByTenantFiltered returns devices for a tenant filtered by free-text
 // query (imei/serial/vehicle), status and a created_at window, with
 // pagination. Used by the devices list page filter bar.
 func (s *DeviceStore) ListByTenantFiltered(ctx context.Context, tenantID string, query, status, from, to string, limit, offset int) ([]Device, error) {
 	qPattern := "%" + query + "%"
+	dateFrom, dateTo := shared.DayBoundsUTC(from, to)
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT id, tenant_id, imei, serial_number, firmware_version,
 		        sim_number, iccid, warranty_until, device_type, status,
@@ -201,7 +204,7 @@ func (s *DeviceStore) ListByTenantFiltered(ctx context.Context, tenantID string,
 		tenantID,
 		query, qPattern, qPattern, qPattern,
 		status, status,
-		from, from, to, to,
+		dateFrom, dateFrom, dateTo, dateTo,
 		limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("list devices filtered: %w", err)
@@ -215,6 +218,7 @@ func (s *DeviceStore) ListByTenantFiltered(ctx context.Context, tenantID string,
 func (s *DeviceStore) CountByTenantFiltered(ctx context.Context, tenantID string, query, status, from, to string) (int64, error) {
 	qPattern := "%" + query + "%"
 	var n int64
+	dateFrom, dateTo := shared.DayBoundsUTC(from, to)
 	err := s.db.QueryRowContext(ctx,
 		`SELECT count(*) FROM telemetry_devices
 		 WHERE tenant_id = $1
@@ -223,7 +227,7 @@ func (s *DeviceStore) CountByTenantFiltered(ctx context.Context, tenantID string
 		tenantID,
 		query, qPattern, qPattern, qPattern,
 		status, status,
-		from, from, to, to).Scan(&n)
+		dateFrom, dateFrom, dateTo, dateTo).Scan(&n)
 	return n, err
 }
 

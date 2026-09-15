@@ -62,7 +62,7 @@ func (h *UserHandlers) List(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "user_list.html", PageData{
 		Title: "Users",
 		User:  session,
-		Extra: map[string]interface{}{"Users": list, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo},
+		Extra: map[string]interface{}{"Users": list, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "DateFilterError": pp.DateFilterError, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo},
 	})
 }
 

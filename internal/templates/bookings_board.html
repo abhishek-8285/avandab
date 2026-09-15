@@ -17,7 +17,7 @@ server remains the only mutation authority — no new endpoint. */}}
             <a href="/bookings/board" aria-current="page" class="px-4 py-1.5 rounded-full text-sm font-semibold bg-surface-container-lowest shadow-xs border border-border-subtle text-on-surface transition-colors">Board</a>
             <a href="/bookings" class="px-4 py-1.5 rounded-full text-sm font-semibold text-secondary hover:text-on-surface transition-colors">List</a>
         </div>
-        <a href="/bookings/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all">+ New booking</a>
+        <a href="/bookings/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition">+ New booking</a>
         </div>
     </div>
 
@@ -35,7 +35,7 @@ server remains the only mutation authority — no new endpoint. */}}
             </div>
             <div class="board-cards flex flex-col gap-2 p-3 flex-1" data-status="{{.Status}}">
                 {{range .Cards}}
-                <article class="board-card bg-surface-container-lowest border border-border-subtle rounded-xl p-3 text-sm shadow-xs cursor-grab active:cursor-grabbing hover:shadow-md hover:border-primary/20 transition-all"
+                <article class="board-card bg-surface-container-lowest border border-border-subtle rounded-xl p-3 text-sm shadow-xs cursor-grab active:cursor-grabbing hover:shadow-md hover:border-primary/20 transition"
                          draggable="true" data-id="{{.ID}}" data-status="{{$.Status}}">
                     <div class="flex items-center justify-between gap-2">
                         <p class="font-bold text-primary tabular-nums">{{if .Number}}{{.Number}}{{else}}{{.ID}}{{end}}</p>
@@ -51,7 +51,7 @@ server remains the only mutation authority — no new endpoint. */}}
                 {{if not .Cards}}
                 <div class="flex-1 grid place-items-center py-8 text-center">
                     <div>
-                        <div class="w-9 h-9 mx-auto rounded-xl bg-surface-container grid place-items-center text-text-muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M5 12h14"/></svg></div>
+                        <div class="w-9 h-9 mx-auto rounded-xl bg-surface-container grid place-items-center text-text-muted"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M5 12h14"/></svg></div>
                         <p class="text-[11px] text-text-muted mt-2">Drop cards here</p>
                     </div>
                 </div>

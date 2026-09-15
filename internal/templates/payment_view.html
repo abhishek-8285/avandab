@@ -1,4 +1,4 @@
-<a href="/payments" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Payments</a>
+<a href="/payments" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Payments</a>
 
 <div class="space-y-5 max-w-[1400px] mx-auto">
     <!-- Hero band -->
@@ -16,7 +16,7 @@
         </div>
 
         <!-- Amount gradient card -->
-        <div class="mt-5 w-full sm:max-w-sm bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl shadow-md p-4 text-white hover:shadow-lg transition-all">
+        <div class="mt-5 w-full sm:max-w-sm bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl shadow-md p-4 text-white hover:shadow-lg transition">
             <p class="text-eyebrow text-white/80">Amount Received</p>
             <p class="text-3xl font-black tracking-tight tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .Payment.Amount}}</p>
         </div>
@@ -82,7 +82,7 @@
             <!-- Related -->
             <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 h-fit">
                 <h2 class="flex items-center gap-2 text-sm font-bold text-on-surface font-display mb-4">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                     Related
                 </h2>
                 {{if .Payment.InvoiceID}}
@@ -91,7 +91,7 @@
                         <span class="block text-eyebrow text-secondary">Invoice</span>
                         <span class="block text-sm font-bold text-primary font-data-mono mt-0.5">{{if .Payment.InvoiceNumber}}{{.Payment.InvoiceNumber}}{{else}}{{.Payment.InvoiceID}}{{end}}</span>
                     </span>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-primary transition-colors"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-primary transition-colors"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                 </a>
                 {{else}}
                 <p class="text-sm text-text-muted">No invoice linked.</p>

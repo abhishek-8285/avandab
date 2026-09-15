@@ -37,8 +37,8 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
                             <div class="flex flex-col gap-1">
                                 <label for="profile-name" class="block text-xs font-bold text-secondary mb-1">Full Name <span class="text-status-alert">*</span></label>
-                                <input name="name" id="profile-name"
-                                    class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                                <input aria-label="Enter your full name" autocomplete="name" name="name" id="profile-name"
+                                    class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
                                     type="text"
                                     value="{{if $u}}{{$u.Name}}{{end}}"
                                     placeholder="Enter your full name"
@@ -46,8 +46,8 @@
                             </div>
                             <div class="flex flex-col gap-1">
                                 <label for="profile-phone" class="block text-xs font-bold text-secondary mb-1">Phone Number</label>
-                                <input name="phone" id="profile-phone"
-                                    class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all"
+                                <input aria-label="e.g. +91 98765 43210" autocomplete="tel" name="phone" id="profile-phone"
+                                    class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
                                     type="tel"
                                     value="{{if $u}}{{nullString $u.Phone}}{{end}}"
                                     placeholder="e.g. +91 98765 43210"/>
@@ -59,16 +59,16 @@
                         <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Managed by Admin</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
                             <div class="flex flex-col gap-1">
-                                <label class="block text-xs font-bold text-secondary mb-1">Role</label>
-                                <input
+                                <label for="profile-role" class="block text-xs font-bold text-secondary mb-1">Role</label>
+                                <input autocomplete="off" id="profile-role"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface cursor-not-allowed capitalize opacity-70"
                                     disabled type="text"
                                     value="{{if and $u $u.Role}}{{$u.Role.Name}}{{else}}—{{end}}"/>
                                 <span class="text-[11px] text-text-muted mt-0.5">Role is managed by an administrator.</span>
                             </div>
                             <div class="flex flex-col gap-1">
-                                <label class="block text-xs font-bold text-secondary mb-1">Email Address</label>
-                                <input
+                                <label for="profile-email" class="block text-xs font-bold text-secondary mb-1">Email Address</label>
+                                <input autocomplete="email" spellcheck="false" id="profile-email"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface cursor-not-allowed opacity-70"
                                     disabled type="email"
                                     value="{{if $u}}{{$u.Email}}{{end}}"/>
@@ -83,7 +83,7 @@
                             <span class="text-xs normal-case text-primary font-semibold cursor-pointer hover:underline" id="btn-detect-tz">⚡ Auto-detect</span>
                         </label>
                         <select name="timezone" id="profile-timezone"
-                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             {{template "timezone_options.html" $u.Timezone}}
                         </select>
                         <span class="text-[11px] text-text-muted mt-0.5">Select your local operational timezone to align schedules, trip departure times, and logs.</span>
@@ -101,7 +101,7 @@
         <div class="space-y-4 min-w-0">
             <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
                 <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     <h2 class="text-sm font-bold text-on-surface">Local Time Alignment</h2>
                 </div>
                 <div class="p-5 text-center">

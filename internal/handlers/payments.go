@@ -119,7 +119,7 @@ func (h *PaymentHandlers) List(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "payment_list.html", PageData{
 		Title: "Payments",
 		User:  session,
-		Extra: map[string]interface{}{"Payments": res.Payments, "Pagination": pd, "Method": method, "Query": pp.Query, "StatusFilter": method, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.paymentKPIs(r.Context())},
+		Extra: map[string]interface{}{"Payments": res.Payments, "Pagination": pd, "Method": method, "Query": pp.Query, "StatusFilter": method, "DateFilterError": pp.DateFilterError, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.paymentKPIs(r.Context())},
 	})
 }
 

@@ -109,7 +109,7 @@ func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "vehicle_list.html", PageData{
 		Title: "Vehicles",
 		User:  session,
-		Extra: map[string]interface{}{"Vehicles": res.Vehicles, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "FleetClassFilter": fleetClassFilter, "OwnershipFilter": ownershipFilter, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.vehicleKPIs(r.Context())},
+		Extra: map[string]interface{}{"Vehicles": res.Vehicles, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "FleetClassFilter": fleetClassFilter, "OwnershipFilter": ownershipFilter, "DateFilterError": pp.DateFilterError, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.vehicleKPIs(r.Context())},
 	})
 }
 

@@ -16,13 +16,13 @@
         <div class="p-6 space-y-4">
             <div>
                 <label for="vehicle_id" class="block text-eyebrow text-text-muted mb-1.5">Vehicle ID <span class="text-status-alert">*</span></label>
-                <input id="vehicle_id" type="text" name="vehicle_id" value="{{.VehicleID}}" required placeholder="e.g. veh-123"
-                       class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                <input aria-label="e.g. veh-123" autocomplete="off" id="vehicle_id" type="text" name="vehicle_id" value="{{.VehicleID}}" required placeholder="e.g. veh-123"
+                       class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
             </div>
 
             <div>
                 <label for="service_type" class="block text-eyebrow text-text-muted mb-1.5">Service Type <span class="text-status-alert">*</span></label>
-                <select id="service_type" name="service_type" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                <select id="service_type" name="service_type" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     {{range .ServiceTypes}}
                     <option value="{{.}}">{{.}}</option>
                     {{end}}
@@ -34,14 +34,14 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label for="interval_km" class="block text-eyebrow text-text-muted mb-1.5">Interval (km)</label>
-                        <input id="interval_km" type="number" step="any" name="interval_km" placeholder="e.g. 10000"
-                               class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <input aria-label="e.g. 10000" id="interval_km" type="number" step="any" name="interval_km" placeholder="e.g. 10000"
+                               class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         <span class="text-xs text-text-muted mt-1 block">Trigger every N km</span>
                     </div>
                     <div>
                         <label for="interval_days" class="block text-eyebrow text-text-muted mb-1.5">Interval (Days)</label>
-                        <input id="interval_days" type="number" name="interval_days" placeholder="e.g. 90"
-                               class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <input aria-label="e.g. 90" id="interval_days" type="number" name="interval_days" placeholder="e.g. 90"
+                               class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         <span class="text-xs text-text-muted mt-1 block">Trigger every N days</span>
                     </div>
                 </div>
@@ -52,14 +52,14 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label for="due_km" class="block text-eyebrow text-text-muted mb-1.5">Specific Due (km)</label>
-                        <input id="due_km" type="number" step="any" name="due_km" placeholder="e.g. 50000"
-                               class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                        <input aria-label="e.g. 50000" id="due_km" type="number" step="any" name="due_km" placeholder="e.g. 50000"
+                               class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         <span class="text-xs text-text-muted mt-1 block">Fixed odometer milestone</span>
                     </div>
                     <div>
                         <label for="due_at" class="block text-eyebrow text-text-muted mb-1.5">Specific Due Date</label>
                         <input id="due_at" type="date" name="due_at"
-                               class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all">
+                               class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         <span class="text-xs text-text-muted mt-1 block">Fixed calendar milestone</span>
                     </div>
                 </div>
@@ -73,7 +73,7 @@
 
         <div class="px-6 py-3 border-t border-border-subtle bg-surface-container-low/40 flex justify-end gap-2">
             <a href="/maintenance" class="inline-flex items-center px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">Cancel</a>
-            <button type="submit" class="inline-flex items-center px-5 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition-all cursor-pointer">Save Schedule</button>
+            <button type="submit" class="inline-flex items-center px-5 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">Save Schedule</button>
         </div>
     </form>
 </div>

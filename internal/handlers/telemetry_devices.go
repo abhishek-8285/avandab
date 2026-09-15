@@ -123,12 +123,13 @@ func (h *TelemetryDeviceHandlers) List(w http.ResponseWriter, r *http.Request) {
 		User:       session,
 		FlashError: flash.error, FlashSuccess: flash.success,
 		Extra: map[string]interface{}{
-			"Devices":      devices,
-			"Pagination":   pd,
-			"Query":        pp.Query,
-			"StatusFilter": pp.Status,
-			"DateFrom":     pp.DateFrom,
-			"DateTo":       pp.DateTo,
+			"Devices":         devices,
+			"Pagination":      pd,
+			"Query":           pp.Query,
+			"StatusFilter":    pp.Status,
+			"DateFrom":        pp.DateFrom,
+			"DateTo":          pp.DateTo,
+			"DateFilterError": pp.DateFilterError,
 		},
 	})
 }

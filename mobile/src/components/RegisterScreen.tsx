@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors, Font, Radius, Spacing } from '../constants/theme';
@@ -18,15 +18,17 @@ export function RegisterScreen({ onRegisterSuccess, onBackToLogin }: RegisterScr
   const [password, setPassword] = useState('');
   const [vehicleNumber, setVehicleNumber] = useState('');
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const setAuth = useAuthStore((state) => state.setAuth);
 
   const handleRegister = async () => {
     if (!fullName || !email || !password) {
-      Alert.alert('Missing Fields', 'Please fill in all required fields.');
+      setFormError('Please fill in your name, email and password.');
       return;
     }
 
+    setFormError(null);
     setLoading(true);
 
     try {
@@ -49,7 +51,7 @@ export function RegisterScreen({ onRegisterSuccess, onBackToLogin }: RegisterScr
       if (!response.ok) {
         const errText = await response.text();
         setLoading(false);
-        Alert.alert('Registration Failed', errText || `Server returned HTTP ${response.status}.`);
+        setFormError(errText || `Registration failed (HTTP ${response.status}). Check your details and try again.`);
         return;
       }
 
@@ -57,7 +59,7 @@ export function RegisterScreen({ onRegisterSuccess, onBackToLogin }: RegisterScr
 
       if (!data.token) {
         setLoading(false);
-        Alert.alert('Registration Failed', 'Server response did not include an authentication token.');
+        setFormError('Registration failed: no credentials returned. Please try again.');
         return;
       }
 
@@ -67,7 +69,7 @@ export function RegisterScreen({ onRegisterSuccess, onBackToLogin }: RegisterScr
       const userId = serverUser.id || data.user_id || '';
       if (!userId) {
         setLoading(false);
-        Alert.alert('Registration Failed', 'Server response did not include a user id.');
+        setFormError('Registration failed: account was not created. Please try again.');
         return;
       }
 
@@ -81,7 +83,7 @@ export function RegisterScreen({ onRegisterSuccess, onBackToLogin }: RegisterScr
       onRegisterSuccess();
     } catch (err: any) {
       setLoading(false);
-      Alert.alert('Registration Failed', err?.message || 'Unable to reach the server. Please try again.');
+      setFormError(err?.message || 'Unable to reach the server. Check your connection and try again.');
     }
   };
 
@@ -90,11 +92,11 @@ export function RegisterScreen({ onRegisterSuccess, onBackToLogin }: RegisterScr
       <StatusBar style="light" />
 
       <View style={styles.header}>
-        <TouchableOpacity style={styles.iconButton} onPress={onBackToLogin}>
-          <MaterialCommunityIcons name="arrow-left" size={18} color={Colors.textOnChrome} />
+        <TouchableOpacity style={styles.iconButton} onPress={onBackToLogin} accessibilityRole="button" accessibilityLabel="Back to sign in">
+          <MaterialCommunityIcons name="arrow-left" size={18} color={Colors.textOnChrome} accessible={false} />
         </TouchableOpacity>
-        <Text style={styles.headerLabel}>DRIVER REGISTRATION</Text>
-        <TouchableOpacity onPress={onBackToLogin}>
+        <Text style={styles.headerLabel} accessibilityRole="header">DRIVER REGISTRATION</Text>
+        <TouchableOpacity onPress={onBackToLogin} accessibilityRole="button" accessibilityLabel="Cancel registration" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
           <Text style={styles.cancelText}>CANCEL</Text>
         </TouchableOpacity>
       </View>
@@ -109,10 +111,10 @@ export function RegisterScreen({ onRegisterSuccess, onBackToLogin }: RegisterScr
         <View style={styles.formGroup}>
           <Text style={styles.label}>FULL NAME</Text>
           <View style={styles.inputWrapper}>
-            <MaterialCommunityIcons name="account-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} />
+            <MaterialCommunityIcons name="account-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} accessible={false} />
             <TextInput
               style={styles.input}
-              placeholder="e.g. Rajesh Kumar"
+              placeholder="e.g. Rajesh Kumar" accessibilityLabel="Full name" autoComplete="name" textContentType="name"
               placeholderTextColor={Colors.textMuted}
               value={fullName}
               onChangeText={setFullName}
@@ -123,10 +125,10 @@ export function RegisterScreen({ onRegisterSuccess, onBackToLogin }: RegisterScr
         <View style={styles.formGroup}>
           <Text style={styles.label}>EMAIL</Text>
           <View style={styles.inputWrapper}>
-            <MaterialCommunityIcons name="email-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} />
+            <MaterialCommunityIcons name="email-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} accessible={false} />
             <TextInput
               style={styles.input}
-              placeholder="driver@avandab.com"
+              placeholder="driver@avandab.com" accessibilityLabel="Email" autoComplete="email" textContentType="emailAddress"
               placeholderTextColor={Colors.textMuted}
               value={email}
               onChangeText={setEmail}
@@ -139,10 +141,10 @@ export function RegisterScreen({ onRegisterSuccess, onBackToLogin }: RegisterScr
         <View style={styles.formGroup}>
           <Text style={styles.label}>PHONE</Text>
           <View style={styles.inputWrapper}>
-            <MaterialCommunityIcons name="phone-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} />
+            <MaterialCommunityIcons name="phone-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} accessible={false} />
             <TextInput
               style={styles.input}
-              placeholder="+91 98765 43210"
+              placeholder="+91 98765 43210" accessibilityLabel="Phone" autoComplete="tel" textContentType="telephoneNumber"
               placeholderTextColor={Colors.textMuted}
               value={phone}
               onChangeText={setPhone}
@@ -154,10 +156,10 @@ export function RegisterScreen({ onRegisterSuccess, onBackToLogin }: RegisterScr
         <View style={styles.formGroup}>
           <Text style={styles.label}>VEHICLE REGISTRATION</Text>
           <View style={styles.inputWrapper}>
-            <MaterialCommunityIcons name="truck-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} />
+            <MaterialCommunityIcons name="truck-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} accessible={false} />
             <TextInput
               style={styles.input}
-              placeholder="MH-12-AB-9942"
+              placeholder="MH-12-AB-9942" accessibilityLabel="Vehicle registration number" autoComplete="off"
               placeholderTextColor={Colors.textMuted}
               value={vehicleNumber}
               onChangeText={setVehicleNumber}
@@ -169,10 +171,10 @@ export function RegisterScreen({ onRegisterSuccess, onBackToLogin }: RegisterScr
         <View style={styles.formGroup}>
           <Text style={styles.label}>PASSWORD</Text>
           <View style={styles.inputWrapper}>
-            <MaterialCommunityIcons name="lock-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} />
+            <MaterialCommunityIcons name="lock-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} accessible={false} />
             <TextInput
               style={styles.input}
-              placeholder="••••••••"
+              placeholder="Create a password" accessibilityLabel="Password" autoComplete="new-password" textContentType="newPassword"
               placeholderTextColor={Colors.textMuted}
               value={password}
               onChangeText={setPassword}
@@ -181,23 +183,31 @@ export function RegisterScreen({ onRegisterSuccess, onBackToLogin }: RegisterScr
           </View>
         </View>
 
+        {formError ? (
+          <Text style={styles.formError} accessibilityLiveRegion="polite">{formError}</Text>
+        ) : null}
+
         <TouchableOpacity
           style={styles.submitBtn}
           activeOpacity={0.88}
           onPress={handleRegister}
           disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel={loading ? 'Submitting registration…' : 'Submit registration'}
+          accessibilityState={{ disabled: loading, busy: loading }}
+          accessibilityLiveRegion="polite"
         >
           {loading ? (
             <ActivityIndicator color={Colors.textOnPrimary} />
           ) : (
             <View style={styles.btnContent}>
               <Text style={styles.submitBtnText}>SUBMIT REGISTRATION</Text>
-              <MaterialCommunityIcons name="arrow-right" size={14} color={Colors.textOnPrimary} />
+              <MaterialCommunityIcons name="arrow-right" size={14} color={Colors.textOnPrimary} accessible={false} />
             </View>
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.loginLink} onPress={onBackToLogin}>
+        <TouchableOpacity style={styles.loginLink} onPress={onBackToLogin} accessibilityRole="button" accessibilityLabel="Back to sign in">
           <Text style={styles.loginLinkText}>
             Already registered? <Text style={styles.loginLinkHighlight}>SIGN IN</Text>
           </Text>
@@ -229,8 +239,8 @@ const styles = StyleSheet.create({
     fontFamily: Font.mono,
   },
   iconButton: {
-    width: 32,
-    height: 32,
+    width: 44,
+    height: 44,
     borderRadius: Radius.md,
     borderWidth: 1,
     borderColor: Colors.chromeBorder,
@@ -337,5 +347,11 @@ const styles = StyleSheet.create({
   loginLinkHighlight: {
     color: Colors.primary,
     fontWeight: '800',
+  },
+  formError: {
+    fontSize: 12,
+    color: Colors.danger,
+    fontFamily: Font.mono,
+    marginBottom: Spacing.md,
   },
 });

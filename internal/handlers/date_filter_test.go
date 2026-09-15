@@ -27,3 +27,24 @@ func TestInDate(t *testing.T) {
 	// Non-ISO passthrough (defensive)
 	assert.Equal(t, "junk", inDate("junk"))
 }
+
+func TestParseDateParamStrict(t *testing.T) {
+	// Real dates pass in both accepted formats, with no error.
+	v, ok := parseDateParamStrict("2026-08-25")
+	assert.True(t, ok)
+	assert.Equal(t, "2026-08-25", v)
+	v, ok = parseDateParamStrict("25-08-2026")
+	assert.True(t, ok)
+	assert.Equal(t, "2026-08-25", v)
+	// Empty means "no bound", not an error.
+	v, ok = parseDateParamStrict("")
+	assert.True(t, ok)
+	assert.Equal(t, "", v)
+	// Impossible / malformed input must FAIL LOUDLY: callers drop the value
+	// from the query, so without this flag the list silently returns
+	// unfiltered rows.
+	for _, bad := range []string{"31-02-2026", "garbage", "32-13-2026", "--08-2026"} {
+		_, ok = parseDateParamStrict(bad)
+		assert.False(t, ok, "input %q must be rejected", bad)
+	}
+}
