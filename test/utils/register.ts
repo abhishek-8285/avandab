@@ -24,6 +24,8 @@ export async function registerFreshUser(page: Page, tag = 'pw'): Promise<void> {
     await page.fill('input[name="phone"]', '9876500000');
     await page.fill('input[name="password"]', 'TestPass123!');
     await page.fill('input[name="confirm_password"]', 'TestPass123!');
+    // DPDP explicit consent gate: /register requires agree=yes checkbox.
+    await page.check('input[name="agree"]');
     await page.click('button[type="submit"]');
 
     try {
