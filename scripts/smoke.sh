@@ -21,7 +21,7 @@ post() { # path, field=value... (all form fields)
 }
 
 echo "== smoke $BASE as $EMAIL"
-post /register "name=Smoke" "email=$EMAIL" "password=$PASS" "confirm_password=$PASS" "company_name=SmokeCo" >/dev/null
+post /register "name=Smoke" "email=$EMAIL" "password=$PASS" "confirm_password=$PASS" "company_name=SmokeCo" "agree=yes" >/dev/null
 code=$(post /company/onboard "company_name=SmokeCo" "address=1 Main St, Pune" "phone=9876543210" "email=$EMAIL" | cut -d' ' -f1)
 [ "$code" = "303" ] || [ "$code" = "200" ] || { echo "ONBOARD FAILED: $code"; exit 1; }
 
