@@ -13,6 +13,7 @@ async function registerFreshUser(page) {
     await page.fill('input[name="phone"]', '9876500001');
     await page.fill('input[name="password"]', 'TestPass123!');
     await page.fill('input[name="confirm_password"]', 'TestPass123!');
+    await page.check('input[name="agree"]'); // DPDP explicit consent gate
     await page.click('button[type="submit"]');
     try {
       await page.waitForURL(/\/dashboard|\/company\/onboard/, { waitUntil: 'domcontentloaded', timeout: 15000 });
