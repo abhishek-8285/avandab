@@ -8,11 +8,13 @@ package integration
 // and fail the hit assertion.
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"transport-app/internal/integration/accounting"
 	"transport-app/internal/integration/ewaybill"
 	"transport-app/internal/integration/fastag"
 	"transport-app/internal/integration/gstn"
@@ -98,5 +100,47 @@ func TestLiveContract_GSTN(t *testing.T) {
 	cFail := gstn.NewClient(gstn.Config{Endpoint: srv.URL + "/fail", APIKey: "k", Enabled: true, UseMock: false})
 	if _, err := cFail.ValidateGSTIN(ctx, "X"); err == nil || !strings.Contains(err.Error(), "gstn") {
 		t.Fatalf("non-2xx must surface gstn error, got %v", err)
+	}
+}
+
+func TestLiveContract_Tally(t *testing.T) {
+	var hits []string
+	var ctype []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits = append(hits, r.Method+" "+r.URL.RequestURI())
+		ctype = append(ctype, r.Header.Get("Content-Type"))
+		raw, _ := io.ReadAll(r.Body)
+		if !strings.Contains(string(raw), "<TALLYREQUEST>Import Data</TALLYREQUEST>") {
+			http.Error(w, "not a tally envelope", http.StatusBadRequest)
+			return
+		}
+		if strings.Contains(r.URL.Path, "/fail") {
+			http.Error(w, "tally down", http.StatusBadGateway)
+			return
+		}
+		w.Header().Set("Content-Type", "text/xml")
+		_, _ = w.Write([]byte(`<RESPONSE><RESULT>1</RESULT></RESPONSE>`))
+	}))
+	defer srv.Close()
+	ctx := context.Background()
+
+	c := accounting.NewClient(accounting.Config{Endpoint: srv.URL, Enabled: true, Provider: "tally", UseMock: false})
+	res, err := c.ExportInvoice(ctx, accounting.ExportedInvoice{InvoiceNumber: "INV-C4", CustomerName: "C4 Fleet"})
+	if err != nil {
+		t.Fatalf("live export: %v", err)
+	}
+	if res.ExternalID != "TALLY-INV-C4" {
+		t.Fatalf("external id = %q, want TALLY-INV-C4", res.ExternalID)
+	}
+	if len(hits) != 1 || hits[0] != "POST /" {
+		t.Fatalf("hits = %v, want [POST /]", hits)
+	}
+	if ctype[0] != "text/xml" {
+		t.Fatalf("content-type = %q, want text/xml", ctype[0])
+	}
+
+	cFail := accounting.NewClient(accounting.Config{Endpoint: srv.URL + "/fail", Enabled: true, Provider: "tally", UseMock: false})
+	if _, err := cFail.ExportInvoice(ctx, accounting.ExportedInvoice{}); err == nil || !strings.Contains(err.Error(), "tally_unavailable") {
+		t.Fatalf("non-2xx must surface tally_unavailable, got %v", err)
 	}
 }

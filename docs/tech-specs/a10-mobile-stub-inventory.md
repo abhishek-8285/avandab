@@ -15,9 +15,9 @@ imports per screen, zero-TODO check. ROADMAP's "only 2 .tsx" note is stale:
 | Login | wired | `POST /api/v1/auth/token`, `GET /api/v1/drivers/me` |
 | Register | wired | `POST /api/v1/auth/register` |
 | ForgotPassword | wired | `POST /api/v1/auth/forgot-password` |
-| OnboardingOverview | **stub** (static mockup image, no data) | — |
-| BookingSchedule | **stub** (static mockup image, no data) | — |
-| EarningsOverview | **stub** (static mockup image, no data; not registered in `App.tsx`) | — |
+| OnboardingOverview | presentational intro slide (registered, nav works — no API needed, same as GetStarted) | — |
+| BookingSchedule | presentational intro slide (registered, nav works — teaser artwork, real calendar lives in bookings flow) | — |
+| EarningsOverview | **deleted** 2026-09-15 (was dead code: unregistered in `App.tsx`, static mockup only) | — |
 | QRDemo | wired (device camera/QR tool, no API needed) | — |
 | DriverOnboarding (`FirstTimeSetup` route) | wired (7 steps + `onboardingApi`) | `GET me/onboarding`, `POST me/license`, `POST me/vehicle-claims`, `POST me/payout-account`, `(+ documents, verification/submit)` |
 | Trips (Main tab) | wired (`src/screens/TripsScreen.tsx`, 364 lines) | `GET /api/v1/trips` (+ stops/POD) |
@@ -39,7 +39,9 @@ Notes:
   (spec-covered, mounted).
 
 ## Per-feature mobile tickets
-- OnboardingOverview / BookingSchedule / EarningsOverview: either wire to
-  real endpoints (customer bookings, settlements/wallet) or delete — one
-  ticket, no backend needed unless wiring.
-- EarningsOverview is dead code (unregistered): delete or register.
+- ~~OnboardingOverview / BookingSchedule / EarningsOverview: either wire to
+  real endpoints (customer bookings, settlements/wallet) or delete~~ —
+  resolved 2026-09-15: Onboarding/Booking are presentational intro slides
+  (no API needed); EarningsOverview deleted as dead code.
+- ~~EarningsOverview is dead code (unregistered): delete or register.~~ —
+  deleted 2026-09-15 (`EarningsOverviewScreen.tsx` + shim + unused png).
