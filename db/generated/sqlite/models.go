@@ -399,6 +399,20 @@ type Dispatch struct {
 	UpdatedAt    time.Time      `json:"updated_at"`
 }
 
+type DispatchException struct {
+	ID         string         `json:"id"`
+	TenantID   string         `json:"tenant_id"`
+	StopID     sql.NullString `json:"stop_id"`
+	TripID     sql.NullString `json:"trip_id"`
+	VehicleID  sql.NullString `json:"vehicle_id"`
+	DriverID   sql.NullString `json:"driver_id"`
+	Kind       string         `json:"kind"`
+	Status     string         `json:"status"`
+	DetailJson sql.NullString `json:"detail_json"`
+	CreatedAt  time.Time      `json:"created_at"`
+	ResolvedAt sql.NullTime   `json:"resolved_at"`
+}
+
 type DispatchOffer struct {
 	ID          string       `json:"id"`
 	TenantID    string       `json:"tenant_id"`
@@ -1490,6 +1504,56 @@ type Permission struct {
 	Description sql.NullString `json:"description"`
 	CreatedAt   time.Time      `json:"created_at"`
 	UpdatedAt   time.Time      `json:"updated_at"`
+}
+
+type PlannedRoute struct {
+	ID                 string          `json:"id"`
+	TenantID           string          `json:"tenant_id"`
+	RunID              string          `json:"run_id"`
+	Seq                int64           `json:"seq"`
+	VehicleID          sql.NullString  `json:"vehicle_id"`
+	DriverID           sql.NullString  `json:"driver_id"`
+	SuggestedVehicleID sql.NullString  `json:"suggested_vehicle_id"`
+	SuggestedDriverID  sql.NullString  `json:"suggested_driver_id"`
+	TotalKm            sql.NullFloat64 `json:"total_km"`
+	TotalMin           sql.NullFloat64 `json:"total_min"`
+	TollCostEst        sql.NullFloat64 `json:"toll_cost_est"`
+	Status             string          `json:"status"`
+	CreatedAt          time.Time       `json:"created_at"`
+}
+
+type PlannedStop struct {
+	ID                 string          `json:"id"`
+	TenantID           string          `json:"tenant_id"`
+	RouteID            string          `json:"route_id"`
+	Seq                int64           `json:"seq"`
+	BookingID          sql.NullString  `json:"booking_id"`
+	SourceType         string          `json:"source_type"`
+	Address            string          `json:"address"`
+	Lat                float64         `json:"lat"`
+	Lng                float64         `json:"lng"`
+	TimeWindowStart    sql.NullTime    `json:"time_window_start"`
+	TimeWindowEnd      sql.NullTime    `json:"time_window_end"`
+	Demand             sql.NullFloat64 `json:"demand"`
+	Skills             sql.NullString  `json:"skills"`
+	Status             string          `json:"status"`
+	PlannedEta         sql.NullTime    `json:"planned_eta"`
+	ActualEta          sql.NullTime    `json:"actual_eta"`
+	PlannedDurationMin sql.NullFloat64 `json:"planned_duration_min"`
+	ActualDurationMin  sql.NullFloat64 `json:"actual_duration_min"`
+	CreatedAt          time.Time       `json:"created_at"`
+}
+
+type PlannerRun struct {
+	ID          string         `json:"id"`
+	TenantID    string         `json:"tenant_id"`
+	Status      string         `json:"status"`
+	JobID       sql.NullString `json:"job_id"`
+	Source      string         `json:"source"`
+	KpiJson     sql.NullString `json:"kpi_json"`
+	CreatedBy   sql.NullString `json:"created_by"`
+	CreatedAt   time.Time      `json:"created_at"`
+	CommittedAt sql.NullTime   `json:"committed_at"`
 }
 
 type PnlDaily struct {
