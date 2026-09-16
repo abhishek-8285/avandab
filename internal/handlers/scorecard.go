@@ -59,7 +59,7 @@ func (h *ScorecardHandlers) Table(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	h.renderFragment(w, "scorecard_table.html", map[string]interface{}{
+	h.renderFragment(w, r, "scorecard_table.html", map[string]interface{}{
 		"Leaderboard": rows,
 		"Stats":       stats,
 	})

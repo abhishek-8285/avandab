@@ -58,7 +58,7 @@ func (h *KharchaHandlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 // GET /kharcha/pending — HTMX partial: live-refresh the queue every 30s.
 func (h *KharchaHandlers) PendingQueue(w http.ResponseWriter, r *http.Request) {
 	pending, _ := h.Services.Kharcha.ListPendingExpenses(r.Context())
-	h.renderFragment(w, "kharcha_queue.html", map[string]interface{}{
+	h.renderFragment(w, r, "kharcha_queue.html", map[string]interface{}{
 		"PendingExpenses": pending,
 	})
 }
@@ -67,7 +67,7 @@ func (h *KharchaHandlers) PendingQueue(w http.ResponseWriter, r *http.Request) {
 func (h *KharchaHandlers) Ledger(w http.ResponseWriter, r *http.Request) {
 	tripID := r.URL.Query().Get("trip_id")
 	entries, _ := h.Services.Kharcha.ListLedger(r.Context(), tripID)
-	h.renderFragment(w, "kharcha_ledger_rows.html", map[string]interface{}{
+	h.renderFragment(w, r, "kharcha_ledger_rows.html", map[string]interface{}{
 		"LedgerEntries": entries,
 	})
 }
@@ -119,7 +119,7 @@ func (h *KharchaHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	if isDatastarRequest(r) {
 		expense, err := h.Services.Kharcha.GetExpenseByID(ctx, expenseID)
 		if err == nil {
-			h.renderFragment(w, "kharcha_row_approved.html", expense)
+			h.renderFragment(w, r, "kharcha_row_approved.html", expense)
 			return
 		}
 	}
@@ -275,7 +275,7 @@ func (h *KharchaHandlers) Approve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.renderFragment(w, "kharcha_row_approved.html", expense)
+	h.renderFragment(w, r, "kharcha_row_approved.html", expense)
 }
 
 // POST /kharcha/{id}/reject — form post with reason field.
@@ -325,7 +325,7 @@ func (h *KharchaHandlers) Reject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.renderFragment(w, "kharcha_row_rejected.html", expense)
+	h.renderFragment(w, r, "kharcha_row_rejected.html", expense)
 }
 
 func writePODJSONError(w http.ResponseWriter, msg string, code int) {

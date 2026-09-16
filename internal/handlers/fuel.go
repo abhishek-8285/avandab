@@ -48,7 +48,7 @@ func (h *FuelAuditHandlers) Dashboard(w http.ResponseWriter, r *http.Request) {
 // GET /fuel/audit/queue — HTMX partial: live queue refresh every 30s.
 func (h *FuelAuditHandlers) Queue(w http.ResponseWriter, r *http.Request) {
 	claims, _ := h.Services.FuelAudit.ListAuditClaims(r.Context())
-	h.renderFragment(w, "fuel_audit_queue.html", map[string]interface{}{
+	h.renderFragment(w, r, "fuel_audit_queue.html", map[string]interface{}{
 		"AuditClaims": claims,
 	})
 }

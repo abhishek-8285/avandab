@@ -614,7 +614,7 @@ func TestRenderFragment_ListTables(t *testing.T) {
 	for _, tbl := range tables {
 		t.Run(tbl, func(t *testing.T) {
 			w := httptest.NewRecorder()
-			app.renderFragment(w, tbl, map[string]interface{}{})
+			app.renderFragment(w, nil, tbl, map[string]interface{}{})
 			assert.Equal(t, 200, w.Code)
 			assert.NotEmpty(t, w.Body.String())
 		})

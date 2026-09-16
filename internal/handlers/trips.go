@@ -261,7 +261,7 @@ func (h *TripHandlers) List(w http.ResponseWriter, r *http.Request) {
 	pd.To = pp.DateTo
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "trip_list.html", map[string]interface{}{
+		h.renderFragment(w, r, "trip_list.html", map[string]interface{}{
 			"Trips":        res.Trips,
 			"Pagination":   pd,
 			"Query":        pp.Query,
@@ -1628,6 +1628,7 @@ type EPODReceiptView struct {
 	CertificateNumber string
 	GeneratedAt       string
 	Stops             []EPODReceiptStopView
+	Lang              string
 }
 
 // PublicEPODCertificate renders the public verified electronic proof of delivery certificate (GET /epod/{tripId}).
@@ -1889,6 +1890,7 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 	}
 
 	view := EPODReceiptView{
+		Lang:              langOf(r),
 		TripID:            resolvedTripID,
 		TripNumber:        tripNumber,
 		Status:            status,
@@ -1926,10 +1928,10 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	h.renderStandalone(w, "epod_receipt.html", view)
+	h.renderStandalone(w, r, "epod_receipt.html", view)
 }
 
-func (h *TripHandlers) renderStandalone(w http.ResponseWriter, name string, data interface{}) {
+func (h *TripHandlers) renderStandalone(w http.ResponseWriter, r *http.Request, name string, data interface{}) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 
@@ -1937,7 +1939,10 @@ func (h *TripHandlers) renderStandalone(w http.ResponseWriter, name string, data
 		http.Error(w, "templates not initialized", http.StatusInternalServerError)
 		return
 	}
-	tmpl := h.App.Templates.Lookup(name)
+	if m, ok := data.(map[string]interface{}); ok {
+		m["Lang"] = langOf(r)
+	}
+	tmpl := h.App.templatesFor(r).Lookup(name)
 	if tmpl == nil {
 		http.Error(w, fmt.Sprintf("template %q not found", name), http.StatusInternalServerError)
 		return

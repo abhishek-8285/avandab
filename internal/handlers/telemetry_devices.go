@@ -110,7 +110,7 @@ func (h *TelemetryDeviceHandlers) List(w http.ResponseWriter, r *http.Request) {
 	flash := readFlashCookies(r, w)
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "telemetry_device_row.html", map[string]interface{}{
+		h.renderFragment(w, r, "telemetry_device_row.html", map[string]interface{}{
 			"Devices": devices, "Pagination": pd, "Query": pp.Query,
 			"User": session, "StatusFilter": pp.Status,
 			"DateFrom": pp.DateFrom, "DateTo": pp.DateTo,
@@ -158,7 +158,7 @@ func (h *TelemetryDeviceHandlers) BulkRegister(w http.ResponseWriter, r *http.Re
 	if parseErr != nil {
 		flash := "Invalid payload: " + parseErr.Error()
 		if isDatastarRequest(r) {
-			h.renderFragment(w, "telemetry_register_result.html", map[string]interface{}{"Error": flash})
+			h.renderFragment(w, r, "telemetry_register_result.html", map[string]interface{}{"Error": flash})
 			return
 		}
 		http.SetCookie(w, flashCookie("flash_error", flash))
@@ -170,7 +170,7 @@ func (h *TelemetryDeviceHandlers) BulkRegister(w http.ResponseWriter, r *http.Re
 	if svcErr != nil {
 		flash := "Registration failed: " + svcErr.Error()
 		if isDatastarRequest(r) {
-			h.renderFragment(w, "telemetry_register_result.html", map[string]interface{}{"Error": flash, "Results": results})
+			h.renderFragment(w, r, "telemetry_register_result.html", map[string]interface{}{"Error": flash, "Results": results})
 			return
 		}
 		http.SetCookie(w, flashCookie("flash_error", flash))
@@ -185,7 +185,7 @@ func (h *TelemetryDeviceHandlers) BulkRegister(w http.ResponseWriter, r *http.Re
 		}
 	}
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "telemetry_register_result.html", map[string]interface{}{
+		h.renderFragment(w, r, "telemetry_register_result.html", map[string]interface{}{
 			"Success": ok,
 			"Total":   len(results),
 			"Results": results,
@@ -225,7 +225,7 @@ func (h *TelemetryDeviceHandlers) Activate(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "telemetry_device_secret.html", map[string]interface{}{
+		h.renderFragment(w, r, "telemetry_device_secret.html", map[string]interface{}{
 			"Device":    result.Device,
 			"RawSecret": result.RawSecret,
 		})
@@ -260,7 +260,7 @@ func (h *TelemetryDeviceHandlers) QuarantineQueue(w http.ResponseWriter, r *http
 		return
 	}
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "telemetry_quarantine_row.html", map[string]interface{}{"Entries": entries, "User": session})
+		h.renderFragment(w, r, "telemetry_quarantine_row.html", map[string]interface{}{"Entries": entries, "User": session})
 		return
 	}
 	h.renderPage(w, r, "telemetry_quarantine_queue.html", PageData{

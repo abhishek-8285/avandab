@@ -185,7 +185,7 @@
             <div class="text-xs font-medium">
                 {{t "sy.errors.showing"}} <span class="font-bold text-on-surface tabular-nums">{{if gt .Pagination.Total 0}}{{add (mul (sub .Pagination.Page 1) .Pagination.PerPage) 1}}{{else}}0{{end}}</span>
                 {{t "sy.errors.to_w"}} <span class="font-bold text-on-surface tabular-nums">{{$end := mul .Pagination.Page .Pagination.PerPage}}{{if gt $end .Pagination.Total}}{{.Pagination.Total}}{{else}}{{$end}}{{end}}</span>
-                of <span class="font-bold text-on-surface tabular-nums">{{.Pagination.Total}}</span> {{t "sy.errors.results"}}
+                {{t "sy.errors.page_of"}} <span class="font-bold text-on-surface tabular-nums">{{.Pagination.Total}}</span> {{t "sy.errors.results"}}
             </div>
             <div class="flex items-center gap-1.5">
                 {{if .Pagination.HasPrev}}

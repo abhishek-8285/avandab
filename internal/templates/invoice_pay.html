@@ -1,6 +1,6 @@
 {{define "invoice_pay.html"}}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{.Lang}}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -316,9 +316,9 @@
 
                     <!-- Checkout Trigger Button & Payment Method Badges -->
                     <div class="space-y-4 pt-2">
-                        <button type="button" id="pay-button" data-msg-init="{{t "mo.pay.js_init"}}" data-msg-verifying="{{t "mo.pay.js_verifying"}}" data-msg-received="{{t "mo.pay.js_received"}}" data-msg-retry="{{t "mo.pay.js_retry"}}" data-msg-init-fail="{{t "mo.pay.js_init_fail"}}" data-msg-failed="{{t "mo.pay.js_failed"}}" data-msg-declined="{{t "mo.pay.js_declined"}}" data-msg-sig-fail="{{t "mo.pay.js_sig_fail"}}" data-msg-verif-fail="{{t "mo.pay.js_verif_fail"}}" data-msg-quote="{{t "mo.pay.js_quote"}}" data-msg-support="{{t "mo.pay.js_support"}}" data-msg-verified="{{t "mo.pay.js_verified"}}" data-amt="{{printf "%.2f" .Invoice.OutstandingBalance}}" class="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-base shadow-md hover:shadow-lg hover:-translate-y-0.5 transition flex items-center justify-center gap-3 cursor-pointer">
+                        <button type="button" id="pay-button" data-msg-init="{{t "mo.pay.js_init"}}" data-msg-verifying="{{t "mo.pay.js_verifying"}}" data-msg-received="{{t "mo.pay.js_received"}}" data-msg-retry="{{t "mo.pay.js_retry"}}" data-msg-init-fail="{{t "mo.pay.js_init_fail"}}" data-msg-failed="{{t "mo.pay.js_failed"}}" data-msg-declined="{{t "mo.pay.js_declined"}}" data-msg-sig-fail="{{t "mo.pay.js_sig_fail"}}" data-msg-verif-fail="{{t "mo.pay.js_verif_fail"}}" data-msg-quote="{{t "mo.pay.js_quote"}}" data-msg-support="{{t "mo.pay.js_support"}}" data-msg-verified="{{t "mo.pay.js_verified"}}" data-msg-pay-label="{{t "mo.pay.label"}}" data-msg-start-fail="{{t "mo.pay.start_fail"}}" data-amt="{{printf "%.2f" .Invoice.OutstandingBalance}}" class="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-base shadow-md hover:shadow-lg hover:-translate-y-0.5 transition flex items-center justify-center gap-3 cursor-pointer">
                             <svg aria-hidden="true" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-                            <span id="pay-btn-label">Pay ₹{{printf "%.2f" .Invoice.OutstandingBalance}} Now via Razorpay</span>
+                            <span id="pay-btn-label">{{t "mo.pay.label"}}</span>
                         </button>
 
                         <div class="flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-xs text-text-muted pt-1">
@@ -383,7 +383,12 @@
         var payButton = document.getElementById('pay-button');
         var payBtnLabel = document.getElementById('pay-btn-label');
         var statusMsg = document.getElementById('payment-status-message');
-
+function resetPayLabel() {
+            var tpl = payButton.dataset.msgPayLabel || "Pay ₹{amt} Now via Razorpay";
+            var amt = payButton.dataset.amt || "";
+            payBtnLabel.textContent = tpl.replace("{amt}", amt);
+        }
+        
         function showMessage(type, text) {
             statusMsg.classList.remove('hidden', 'bg-red-500/10', 'text-red-600', 'border-red-500/30', 'bg-emerald-500/10', 'text-emerald-600', 'border-emerald-500/30');
             if (type === 'error') {
@@ -472,7 +477,7 @@
                         "modal": {
                             "ondismiss": function () {
                                 payButton.disabled = false;
-                                payBtnLabel.textContent = "Pay ₹{{printf "%.2f" .Invoice.OutstandingBalance}} Now via Razorpay";
+                                resetPayLabel();
                             }
                         }
                     };
@@ -481,15 +486,16 @@
                     rzp.on('payment.failed', function (resp) {
                         showMessage('error', (payButton.dataset.msgFailed || 'Payment failed: ') + (resp.error.description || resp.error.reason || (payButton.dataset.msgDeclined || 'Transaction declined')));
                         payButton.disabled = false;
-                        payBtnLabel.textContent = "Pay ₹{{printf "%.2f" .Invoice.OutstandingBalance}} Now via Razorpay";
+                        resetPayLabel();
                     });
                     rzp.open();
                 }).catch(function (err) {
-                    showMessage('error', 'Unable to start checkout: ' + err.message);
+                    showMessage('error', (payButton.dataset.msgStartFail || 'Unable to start checkout: ') + err.message);
                     payButton.disabled = false;
-                    payBtnLabel.textContent = "Pay ₹{{printf "%.2f" .Invoice.OutstandingBalance}} Now via Razorpay";
+                    resetPayLabel();
                 });
             };
+            resetPayLabel();
         }
     })();
     </script>

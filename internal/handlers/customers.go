@@ -122,7 +122,7 @@ func (h *CustomerHandlers) List(w http.ResponseWriter, r *http.Request) {
 	pd := newPaginationData(pp, total, "/customers")
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "customer_list_table.html", map[string]interface{}{
+		h.renderFragment(w, r, "customer_list_table.html", map[string]interface{}{
 			"Customers":    list,
 			"Pagination":   pd,
 			"Query":        pp.Query,

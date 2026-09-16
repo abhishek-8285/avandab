@@ -104,7 +104,7 @@ func (h *PaymentHandlers) List(w http.ResponseWriter, r *http.Request) {
 	pd.To = pp.DateTo
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "payment_list_table.html", map[string]interface{}{
+		h.renderFragment(w, r, "payment_list_table.html", map[string]interface{}{
 			"Payments":     res.Payments,
 			"Pagination":   pd,
 			"Method":       method,

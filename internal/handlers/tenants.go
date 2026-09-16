@@ -198,7 +198,7 @@ func (h *TenantsHandlers) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "tenants_list_table.html", data)
+		h.renderFragment(w, r, "tenants_list_table.html", data)
 		return
 	}
 	h.renderPage(w, r, "tenants_list.html", data)

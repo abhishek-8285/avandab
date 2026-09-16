@@ -92,7 +92,7 @@ func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
 	pd.To = pp.DateTo
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "vehicle_list_table.html", map[string]interface{}{
+		h.renderFragment(w, r, "vehicle_list_table.html", map[string]interface{}{
 			"Vehicles":         res.Vehicles,
 			"Pagination":       pd,
 			"Query":            pp.Query,
@@ -540,7 +540,7 @@ func (h *VehicleHandlers) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "vehicle_view.html", nil)
+		h.renderFragment(w, r, "vehicle_view.html", nil)
 		return
 	}
 	http.Redirect(w, r, "/vehicles/"+id, http.StatusSeeOther)

@@ -185,7 +185,7 @@ func (h *RouteHandlers) OptimizeJobs(w http.ResponseWriter, r *http.Request) {
 		jobs = append(jobs, j)
 	}
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "route_optimize_jobs.html", map[string]interface{}{"Jobs": jobs})
+		h.renderFragment(w, r, "route_optimize_jobs.html", map[string]interface{}{"Jobs": jobs})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{"jobs": jobs})
@@ -243,7 +243,7 @@ func (h *RouteHandlers) List(w http.ResponseWriter, r *http.Request) {
 	pd := newPaginationData(pp, total, "/routes")
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "route_list_table.html", map[string]interface{}{
+		h.renderFragment(w, r, "route_list_table.html", map[string]interface{}{
 			"Routes":     list,
 			"Pagination": pd,
 			"Query":      pp.Query,

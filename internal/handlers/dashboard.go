@@ -153,7 +153,7 @@ func (h *DashboardHandlers) Tables(w http.ResponseWriter, r *http.Request) {
 
 	regions := make(map[string]string, len(dashboardTablePartials))
 	for id, name := range dashboardTablePartials {
-		tpl := h.Templates.Lookup(name)
+		tpl := h.templatesFor(r).Lookup(name)
 		if tpl == nil {
 			http.Error(w, "table template not found: "+name, http.StatusInternalServerError)
 			return

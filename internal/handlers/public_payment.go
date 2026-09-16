@@ -103,6 +103,7 @@ type PublicPayData struct {
 	IsPaid        bool                        `json:"is_paid"`
 	Success       bool                        `json:"success"`
 	ErrorMessage  string                      `json:"error_message,omitempty"`
+	Lang          string                      `json:"-"`
 }
 
 // PublicPay renders the customer-facing invoice payment page (GET /pay/{invoiceId}).
@@ -139,7 +140,8 @@ func (h *PaymentHandlers) PublicPay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.renderPublicPaymentTemplate(w, "invoice_pay.html", data)
+	data.Lang = langOf(r)
+	h.renderPublicPaymentTemplate(w, r, "invoice_pay.html", data)
 }
 
 // PublicRazorpayOrder creates a server-side Razorpay order for the invoice balance (POST /pay/{invoiceId}/razorpay/order).
@@ -571,7 +573,7 @@ func (h *PaymentHandlers) loadPublicPayData(ctx context.Context, invoiceID strin
 	}, nil
 }
 
-func (h *PaymentHandlers) renderPublicPaymentTemplate(w http.ResponseWriter, name string, data interface{}) {
+func (h *PaymentHandlers) renderPublicPaymentTemplate(w http.ResponseWriter, r *http.Request, name string, data interface{}) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 
@@ -579,7 +581,7 @@ func (h *PaymentHandlers) renderPublicPaymentTemplate(w http.ResponseWriter, nam
 		http.Error(w, "templates not initialized", http.StatusInternalServerError)
 		return
 	}
-	tmpl := h.App.Templates.Lookup(name)
+	tmpl := h.App.templatesFor(r).Lookup(name)
 	if tmpl == nil {
 		http.Error(w, fmt.Sprintf("template %q not found", name), http.StatusInternalServerError)
 		return

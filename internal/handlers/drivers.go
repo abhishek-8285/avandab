@@ -79,7 +79,7 @@ func (h *DriverHandlers) List(w http.ResponseWriter, r *http.Request) {
 	pd.To = pp.DateTo
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "driver_list_table.html", map[string]interface{}{
+		h.renderFragment(w, r, "driver_list_table.html", map[string]interface{}{
 			"Drivers":      res.Drivers,
 			"Pagination":   pd,
 			"Query":        pp.Query,
@@ -346,7 +346,7 @@ func (h *DriverHandlers) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "driver_view.html", nil)
+		h.renderFragment(w, r, "driver_view.html", nil)
 		return
 	}
 	http.Redirect(w, r, "/drivers/"+id, http.StatusSeeOther)

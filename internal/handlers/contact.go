@@ -155,7 +155,7 @@ func (h *ContactHandlers) Page(w http.ResponseWriter, r *http.Request) {
 
 	// If user is unauthenticated, render standalone page without dashboard sidebar layout
 	if session == nil {
-		h.renderAuthPage(w, "contact.html", pd)
+		h.renderAuthPage(w, r, "contact.html", pd)
 		return
 	}
 
