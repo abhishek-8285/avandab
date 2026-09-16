@@ -155,6 +155,7 @@ which always allocate head-ward from the maximum above.
 | 00155 | `access_reviews` periodic access re-certification ledger (UN-style 6/12-month reviews; reuses `privacy:manage`, no new permission); PG port in `migrations_pg/` | Access recertification |
 | 00156 | `contact_submissions.acknowledged_at` NULL (first admin touch) for E-Commerce Amendment 2026 48h-ack SLA; reuses `users:manage` admin gate, no new permission; PG port in `migrations_pg/` | Consumer grievance ack |
 | 00157 | Dispatcher workflow: `planner_runs` → `planned_routes` → `planned_stops` + `dispatch_exceptions` (tenant-scope FK triggers via 00103 rule; sqlite + `migrations_pg/` ports; docs/design/dispatcher-route-planner) | Dispatcher Workflow + Best Route Planner (D2) |
+| 00158 | Remove orphaned `engine_state` rows before strict tenant-scoped geofence state persistence (sqlite + `migrations_pg/` ports) | Operational Workflow Architecture |
 | 00158+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a

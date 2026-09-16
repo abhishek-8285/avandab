@@ -180,6 +180,20 @@ func setupCustomerTestDB(t *testing.T) *sql.DB {
 		response_payload TEXT NOT NULL,
 		created_at DATETIME NOT NULL DEFAULT (datetime('now'))
 	);
+
+	CREATE TABLE audit_events (
+		id TEXT PRIMARY KEY,
+		tenant_id TEXT NOT NULL,
+		actor_user_id TEXT,
+		entity_type TEXT NOT NULL,
+		entity_id TEXT NOT NULL,
+		action TEXT NOT NULL,
+		old_state TEXT,
+		new_state TEXT,
+		reason TEXT,
+		request_id TEXT,
+		created_at DATETIME
+	);
 	`
 
 	_, err = db.Exec(schema)

@@ -35,6 +35,7 @@ import (
 	dbmigr "transport-app/db"
 	"transport-app/internal/auth"
 	"transport-app/internal/config"
+	dispatchapp "transport-app/internal/dispatch/application"
 	"transport-app/internal/domain"
 	"transport-app/internal/ewaybill"
 	fastag "transport-app/internal/fastag"
@@ -1177,7 +1178,7 @@ func main() {
 			logger.Error("AGENT_REQUIRE_APPROVAL=true but the approval gate could not be built (RL store unavailable); mutating tools are disabled — the agent is read-only")
 		}
 
-		toolEnv := &agent.ToolEnv{Services: services}
+		toolEnv := &agent.ToolEnv{Services: services, Dispatch: dispatchapp.NewService(assignDriver, assignVehicle)}
 		toolsByName := make(map[string]*agent.RegisteredTool)
 		for _, t := range agent.RegisterTools(toolEnv) {
 			toolsByName[t.Name] = t

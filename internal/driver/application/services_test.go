@@ -65,6 +65,13 @@ CREATE TABLE IF NOT EXISTS trips (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS trip_stops (
+    id TEXT PRIMARY KEY,
+    tenant_id TEXT NOT NULL,
+    trip_id TEXT NOT NULL,
+    pod_url TEXT
+);
 `
 
 func setupAppServiceTestDB(t *testing.T) *sql.DB {
@@ -445,6 +452,31 @@ func TestDriverAppService_OfferExpirationAndRejection(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, respRej.Success)
 	assert.Equal(t, "REJECTED", respRej.Status)
+}
+
+func TestDriverAppService_CommandRecordFailureIsReturned(t *testing.T) {
+	db := setupAppServiceTestDB(t)
+	svc := application.NewDriverAppService(db)
+	ctx := context.Background()
+	tenantID := "tenant-command-error"
+	driverID := "drv-command-error"
+	require.NoError(t, svc.RegisterDriver(ctx, tenantID, driverID, "Command Error", "command-error@test.com", "9876543215"))
+	offer, err := svc.CreateDispatchOffer(ctx, tenantID, "booking-command-error", driverID, "veh-command-error", 15)
+	require.NoError(t, err)
+
+	_, err = db.Exec(`CREATE TRIGGER fail_driver_command_record
+		BEFORE INSERT ON driver_commands
+		BEGIN SELECT RAISE(ABORT, 'command record unavailable'); END`)
+	require.NoError(t, err)
+
+	resp, err := svc.ProcessDriverCommand(ctx, tenantID, driverID, application.DriverCommandRequest{
+		CommandID: "cmd-command-error",
+		Type:      "REJECT_OFFER",
+		Payload:   map[string]interface{}{"offer_id": offer.ID},
+	})
+	require.Error(t, err)
+	assert.False(t, resp.Success)
+	assert.Contains(t, err.Error(), "record command execution")
 }
 
 func TestDriverAppService_FullTripStateMachineAndPODEnforcement(t *testing.T) {

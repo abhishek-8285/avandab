@@ -137,11 +137,16 @@ func (s *DriverAppService) ProcessDriverCommand(ctx context.Context, tenantID, d
 	}
 
 	// 3. Record command execution for idempotency
-	payloadBytes, _ := json.Marshal(resp)
-	_, _ = ex.ExecContext(ctx, `
+	payloadBytes, err := json.Marshal(resp)
+	if err != nil {
+		return DriverCommandResponse{}, fmt.Errorf("serialize command response: %w", err)
+	}
+	if _, err = ex.ExecContext(ctx, `
 		INSERT INTO driver_commands (command_id, tenant_id, driver_id, command_type, status, response_payload)
 		VALUES ($1, $2, $3, $4, 'processed', $5)`,
-		req.CommandID, tenantID, driverID, req.Type, string(payloadBytes))
+		req.CommandID, tenantID, driverID, req.Type, string(payloadBytes)); err != nil {
+		return DriverCommandResponse{}, fmt.Errorf("record command execution: %w", err)
+	}
 
 	return resp, nil
 }
@@ -173,7 +178,9 @@ func (s *DriverAppService) executeAcceptOffer(ctx context.Context, tenantID, dri
 		return DriverCommandResponse{}, fmt.Errorf("offer is already %s", status)
 	}
 	if time.Now().After(expiresAt) {
-		_, _ = tx.ExecContext(ctx, `UPDATE dispatch_offers SET status = 'expired' WHERE id = $1`, offerID)
+		if _, err := tx.ExecContext(ctx, `UPDATE dispatch_offers SET status = 'expired' WHERE id = $1`, offerID); err != nil {
+			return DriverCommandResponse{}, fmt.Errorf("expire offer: %w", err)
+		}
 		return DriverCommandResponse{}, errors.New("offer has expired")
 	}
 
@@ -187,7 +194,9 @@ func (s *DriverAppService) executeAcceptOffer(ctx context.Context, tenantID, dri
 		return DriverCommandResponse{}, err
 	}
 	if acceptedCount > 0 {
-		_, _ = tx.ExecContext(ctx, `UPDATE dispatch_offers SET status = 'cancelled' WHERE id = $1`, offerID)
+		if _, err := tx.ExecContext(ctx, `UPDATE dispatch_offers SET status = 'cancelled' WHERE id = $1`, offerID); err != nil {
+			return DriverCommandResponse{}, fmt.Errorf("cancel competing offer: %w", err)
+		}
 		return DriverCommandResponse{}, errors.New("offer already taken by another driver")
 	}
 
@@ -202,18 +211,22 @@ func (s *DriverAppService) executeAcceptOffer(ctx context.Context, tenantID, dri
 	}
 
 	// 2. Cancel competing offers for this booking
-	_, _ = tx.ExecContext(ctx, `
+	if _, err = tx.ExecContext(ctx, `
 		UPDATE dispatch_offers
 		SET status = 'cancelled', responded_at = $1
 		WHERE tenant_id = $2 AND booking_id = $3 AND id != $4 AND status = 'offered'`,
-		now, tenantID, bookingID, offerID)
+		now, tenantID, bookingID, offerID); err != nil {
+		return DriverCommandResponse{}, fmt.Errorf("cancel competing offers: %w", err)
+	}
 
 	// 3. Create / assign Trip
 	tripID := "trip_" + uuid.NewString()
-	_, _ = tx.ExecContext(ctx, `
+	if _, err = tx.ExecContext(ctx, `
 		INSERT INTO trips (id, tenant_id, booking_id, driver_id, vehicle_id, status, started_at, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, 'assigned', $6, $7, $8)`,
-		tripID, tenantID, bookingID, driverID, vehicleID, now, now, now)
+		tripID, tenantID, bookingID, driverID, vehicleID, now, now, now); err != nil {
+		return DriverCommandResponse{}, fmt.Errorf("create assigned trip: %w", err)
+	}
 
 	if commitErr := tx.Commit(); commitErr != nil {
 		return DriverCommandResponse{}, commitErr
@@ -243,7 +256,10 @@ func (s *DriverAppService) executeRejectOffer(ctx context.Context, tenantID, dri
 	if err != nil {
 		return DriverCommandResponse{}, err
 	}
-	rows, _ := res.RowsAffected()
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return DriverCommandResponse{}, fmt.Errorf("read rejected offer result: %w", err)
+	}
 	if rows == 0 {
 		return DriverCommandResponse{}, errors.New("offer not found or already closed")
 	}
@@ -301,11 +317,13 @@ func (s *DriverAppService) executeTripTransition(ctx context.Context, tenantID, 
 		podDocID, _ := payload["pod_document_id"].(string)
 		if podRequired && podDocID == "" {
 			var count int
-			_ = ex.QueryRowContext(ctx, `
+			if err := ex.QueryRowContext(ctx, `
 				SELECT COUNT(*) FROM trip_stops
 				WHERE tenant_id = $1 AND trip_id = $2
 				AND pod_url IS NOT NULL AND pod_url != ''`,
-				tenantID, tripID).Scan(&count)
+				tenantID, tripID).Scan(&count); err != nil {
+				return DriverCommandResponse{}, fmt.Errorf("check proof of delivery: %w", err)
+			}
 			if count == 0 {
 				return DriverCommandResponse{}, errors.New("proof of delivery (POD) document is required to complete trip")
 			}
@@ -330,7 +348,7 @@ func (s *DriverAppService) executeTripTransition(ctx context.Context, tenantID, 
 	}
 
 	// Record audit event
-	_ = s.repo.RecordAuditEvent(ctx, tenantID, domain.AuditEventRecord{
+	if err := s.repo.RecordAuditEvent(ctx, tenantID, domain.AuditEventRecord{
 		ID:          uuid.NewString(),
 		TenantID:    tenantID,
 		ActorUserID: &driverID,
@@ -340,7 +358,9 @@ func (s *DriverAppService) executeTripTransition(ctx context.Context, tenantID, 
 		OldState:    &currentStatus,
 		NewState:    &nextStatus,
 		CreatedAt:   now,
-	})
+	}); err != nil {
+		return DriverCommandResponse{}, fmt.Errorf("record trip transition audit: %w", err)
+	}
 
 	return DriverCommandResponse{
 		Success:   true,

@@ -12,6 +12,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"transport-app/internal/auth"
+	dispatchapp "transport-app/internal/dispatch/application"
 	"transport-app/internal/middleware"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
@@ -24,6 +25,7 @@ type APITripHandler struct {
 	createUC        *application.CreateTripUseCase
 	assignDriverUC  *application.AssignDriverUseCase
 	assignVehicleUC *application.AssignVehicleUseCase
+	dispatchSvc     *dispatchapp.Service
 	scheduleUC      *application.ScheduleTripUseCase
 	startUC         *application.StartTripUseCase
 	reachPickupUC   *application.ReachPickupUseCase
@@ -69,6 +71,7 @@ func NewAPITripHandler(
 		listUC:          listUC,
 		opsAlerts:       opsAlerts,
 		authSrv:         authSrv,
+		dispatchSvc:     dispatchapp.NewService(assignDriverUC, assignVehicleUC),
 	}
 }
 
@@ -258,7 +261,7 @@ func (h *APITripHandler) AssignDriver(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if err := h.assignDriverUC.Execute(r.Context(), application.AssignDriverCommand{
+	if err := h.dispatchSvc.AssignDriver(r.Context(), dispatchapp.AssignDriverCommand{
 		TripID:              aggregate.TripID(id),
 		DriverID:            req.DriverID,
 		TenantID:            shared.TenantIDFromContext(r.Context()),
@@ -291,7 +294,7 @@ func (h *APITripHandler) AssignVehicle(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if err := h.assignVehicleUC.Execute(r.Context(), application.AssignVehicleCommand{
+	if err := h.dispatchSvc.AssignVehicle(r.Context(), dispatchapp.AssignVehicleCommand{
 		TripID:              aggregate.TripID(id),
 		VehicleID:           req.VehicleID,
 		TenantID:            shared.TenantIDFromContext(r.Context()),

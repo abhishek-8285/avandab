@@ -27,6 +27,7 @@ import (
 	bookingdomain "transport-app/internal/booking/domain"
 	bookingaggregate "transport-app/internal/booking/domain/aggregate"
 	"transport-app/internal/config"
+	dispatchapp "transport-app/internal/dispatch/application"
 	"transport-app/internal/domain"
 	entitlementApp "transport-app/internal/entitlement/application"
 	geofencerepo "transport-app/internal/geofence/infrastructure/persistence/sql"
@@ -60,6 +61,7 @@ type TripHandlers struct {
 	scheduleUC        *tripapp.ScheduleTripUseCase
 	assignDriverUC    *tripapp.AssignDriverUseCase
 	assignVehicleUC   *tripapp.AssignVehicleUseCase
+	dispatchSvc       *dispatchapp.Service
 	generateInvoiceUC *invoiceApp.GenerateInvoiceUseCase
 	reachStopUC       *tripapp.ReachStopUseCase
 	submitStopPODUC   *tripapp.SubmitStopPODUseCase
@@ -86,6 +88,7 @@ func (h *TripHandlers) init() {
 		h.scheduleUC = tripapp.NewScheduleTripUseCase(uowImpl, clockImpl)
 		h.assignDriverUC = tripapp.NewAssignDriverUseCase(uowImpl, clockImpl)
 		h.assignVehicleUC = tripapp.NewAssignVehicleUseCase(uowImpl, clockImpl)
+		h.dispatchSvc = dispatchapp.NewService(h.assignDriverUC, h.assignVehicleUC)
 		h.generateInvoiceUC = invoiceApp.NewGenerateInvoiceUseCase(uowImpl, idGenImpl, clockImpl)
 		h.reachStopUC = tripapp.NewReachStopUseCase(uowImpl, clockImpl)
 		h.submitStopPODUC = tripapp.NewSubmitStopPODUseCase(uowImpl, clockImpl)
@@ -369,7 +372,7 @@ func (h *TripHandlers) Create(w http.ResponseWriter, r *http.Request) {
 	// (AGENTS.md no-silent-failures).
 	assignFailures := make([]string, 0, 2)
 	if dID := r.PostFormValue("driver_id"); dID != "" {
-		if err := h.assignDriverUC.Execute(r.Context(), tripapp.AssignDriverCommand{
+		if err := h.dispatchSvc.AssignDriver(r.Context(), dispatchapp.AssignDriverCommand{
 			TripID:   id,
 			DriverID: dID,
 			TenantID: shared.TenantIDFromContext(r.Context()),
@@ -378,7 +381,7 @@ func (h *TripHandlers) Create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if vID := r.PostFormValue("vehicle_id"); vID != "" {
-		if err := h.assignVehicleUC.Execute(r.Context(), tripapp.AssignVehicleCommand{
+		if err := h.dispatchSvc.AssignVehicle(r.Context(), dispatchapp.AssignVehicleCommand{
 			TripID:    id,
 			VehicleID: vID,
 			TenantID:  shared.TenantIDFromContext(r.Context()),
@@ -932,7 +935,7 @@ func (h *TripHandlers) AssignDriver(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err := h.assignDriverUC.Execute(r.Context(), tripapp.AssignDriverCommand{
+	err := h.dispatchSvc.AssignDriver(r.Context(), dispatchapp.AssignDriverCommand{
 		TripID:              tripagg.TripID(tripID),
 		DriverID:            driverID,
 		TenantID:            shared.TenantIDFromContext(r.Context()),
@@ -999,7 +1002,7 @@ func (h *TripHandlers) AssignVehicle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err := h.assignVehicleUC.Execute(r.Context(), tripapp.AssignVehicleCommand{
+	err := h.dispatchSvc.AssignVehicle(r.Context(), dispatchapp.AssignVehicleCommand{
 		TripID:              tripagg.TripID(tripID),
 		VehicleID:           vehicleID,
 		TenantID:            shared.TenantIDFromContext(r.Context()),
