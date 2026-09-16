@@ -8,10 +8,10 @@
                         <span class="w-8 h-8 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
                         {{if .Customer}}Edit Customer{{else}}New Customer{{end}}
                     </h2>
-                    <p class="text-xs text-text-muted mt-1">Customer profile, GST and billing preferences</p>
+                    <p class="text-xs text-text-muted mt-1">{{t "fl.customer_profile_gst_and_billing_preferences"}}</p>
                     {{if .Customer}}{{if .Customer.CustomerCode}}<p class="text-xs font-data-mono tabular-nums text-primary mt-1">{{.Customer.CustomerCode}}</p>{{end}}{{end}}
                 </div>
-                <a href="/customers" class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-secondary hover:text-on-surface transition-colors shrink-0 mt-1"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><path d="m15 18-6-6 6-6"/></svg> Back to list</a>
+                <a href="/customers" class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-secondary hover:text-on-surface transition-colors shrink-0 mt-1"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><path d="m15 18-6-6 6-6"/></svg> {{t "fl.back_to_list"}}</a>
             </div>
         </div>
 
@@ -24,173 +24,173 @@
             <!-- Identity -->
             <section class="p-6 space-y-4">
                 <div class="flex items-center justify-between gap-3">
-                    <h3 class="text-eyebrow text-text-muted">Identity</h3>
-                    <span class="text-[11px] text-text-muted hidden sm:inline">* required</span>
+                    <h3 class="text-eyebrow text-text-muted">{{t "fl.identity"}}</h3>
+                    <span class="text-[11px] text-text-muted hidden sm:inline">{{t "fl.required"}}</span>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="sm:col-span-1">
-                        <label class="block text-eyebrow text-text-muted mb-1.5">Customer Code</label>
+                        <label class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.customer_code"}}</label>
                         {{if $c}}
                         <div class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-data-mono uppercase tabular-nums text-on-surface flex items-center justify-between gap-2">
                             <span>{{$c.CustomerCode}}</span>
                             <input type="hidden" name="customer_code" value="{{$c.CustomerCode}}">
-                            <button type="button" onclick="navigator.clipboard.writeText('{{$c.CustomerCode}}')" class="text-xs font-semibold text-primary hover:underline">Copy</button>
+                            <button type="button" onclick="navigator.clipboard.writeText('{{$c.CustomerCode}}')" class="text-xs font-semibold text-primary hover:underline">{{t "fl.copy"}}</button>
                         </div>
-                        <p class="text-[11px] text-text-muted mt-1">System code — not editable</p>
+                        <p class="text-[11px] text-text-muted mt-1">{{t "fl.system_code_not_editable"}}</p>
                         {{else}}
-                        <input aria-label="Leave blank for CUST-XXXXXXXX" autocomplete="off" type="text" name="customer_code" value=""
+                        <input aria-label="{{t "fl.leave_blank_for_cust_xxxxxxxx"}}" autocomplete="off" type="text" name="customer_code" value=""
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono uppercase tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
-                            placeholder="Leave blank for CUST-XXXXXXXX" pattern="CUST-[A-Z0-9-]+" title="Leave empty to auto-generate">
-                        <p class="text-[11px] text-text-muted mt-1">Auto-generated if left blank</p>
+                            placeholder="{{t "fl.leave_blank_for_cust_xxxxxxxx"}}" pattern="CUST-[A-Z0-9-]+" title="{{t "fl.leave_empty_to_auto_generate"}}">
+                        <p class="text-[11px] text-text-muted mt-1">{{t "fl.auto_generated_if_left_blank"}}</p>
                         {{end}}
                     </div>
                     <div>
-                        <label for="name" class="block text-eyebrow text-text-muted mb-1.5">Full Name *</label>
+                        <label for="name" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.full_name"}}</label>
                         <input aria-label="e.g. Acme Logistics / Rajesh Kumar" autocomplete="name" id="name" type="text" name="name" value="{{if $c}}{{$c.Name}}{{end}}" required
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
                             placeholder="e.g. Acme Logistics / Rajesh Kumar">
                     </div>
                     <div>
-                        <label for="title" class="block text-eyebrow text-text-muted mb-1.5">Title</label>
-                        <input aria-label="Mr / Ms / Dr" autocomplete="off" id="title" type="text" name="title" value="{{if $c}}{{nullString $c.Title}}{{end}}" list="customer-title-list"
+                        <label for="title" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.title"}}</label>
+                        <input aria-label="{{t "fl.mr_ms_dr"}}" autocomplete="off" id="title" type="text" name="title" value="{{if $c}}{{nullString $c.Title}}{{end}}" list="customer-title-list"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
-                            placeholder="Mr / Ms / Dr">
+                            placeholder="{{t "fl.mr_ms_dr"}}">
                         <datalist id="customer-title-list"><option value="Mr"><option value="Ms"><option value="Mrs"><option value="Dr"><option value="M/s"></datalist>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label for="company" class="block text-eyebrow text-text-muted mb-1.5">Company / Organization</label>
-                        <input aria-label="Legal entity name" autocomplete="organization" id="company" type="text" name="company" value="{{if $c}}{{nullString $c.Company}}{{end}}"
+                        <label for="company" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.company_organization"}}</label>
+                        <input aria-label="{{t "fl.legal_entity_name"}}" autocomplete="organization" id="company" type="text" name="company" value="{{if $c}}{{nullString $c.Company}}{{end}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
-                            placeholder="Legal entity name">
+                            placeholder="{{t "fl.legal_entity_name"}}">
                     </div>
                     <div>
-                        <label for="contact_person" class="block text-eyebrow text-text-muted mb-1.5">Contact Person</label>
-                        <input aria-label="Primary billing contact" autocomplete="off" id="contact_person" type="text" name="contact_person" value="{{if $c}}{{nullString $c.ContactPerson}}{{end}}"
+                        <label for="contact_person" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.contact_person"}}</label>
+                        <input aria-label="{{t "fl.primary_billing_contact"}}" autocomplete="off" id="contact_person" type="text" name="contact_person" value="{{if $c}}{{nullString $c.ContactPerson}}{{end}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
-                            placeholder="Primary billing contact">
+                            placeholder="{{t "fl.primary_billing_contact"}}">
                     </div>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label for="logo" class="block text-eyebrow text-text-muted mb-1.5">Logo</label>
-                        {{if $c}}{{if $c.PhotoURL}}<img id="photo_preview" src="{{nullString $c.PhotoURL}}" alt="logo" class="h-12 w-12 rounded-lg object-cover border border-border-subtle mb-2">{{else}}<div id="photo_preview" class="h-12 w-12 rounded-lg bg-surface-container-low border border-dashed border-border-subtle grid place-items-center text-text-muted text-xs mb-2">no img</div>{{end}}{{else}}<div id="photo_preview" class="h-12 w-12 rounded-lg bg-surface-container-low border border-dashed border-border-subtle grid place-items-center text-text-muted text-xs mb-2">no img</div>{{end}}
+                        <label for="logo" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.logo"}}</label>
+                        {{if $c}}{{if $c.PhotoURL}}<img id="photo_preview" src="{{nullString $c.PhotoURL}}" alt="logo" class="h-12 w-12 rounded-lg object-cover border border-border-subtle mb-2">{{else}}<div id="photo_preview" class="h-12 w-12 rounded-lg bg-surface-container-low border border-dashed border-border-subtle grid place-items-center text-text-muted text-xs mb-2">{{t "fl.no_img"}}</div>{{end}}{{else}}<div id="photo_preview" class="h-12 w-12 rounded-lg bg-surface-container-low border border-dashed border-border-subtle grid place-items-center text-text-muted text-xs mb-2">{{t "fl.no_img"}}</div>{{end}}
                         <input type="file" name="logo" id="logo" accept="image/png,image/jpeg,image/webp,image/gif"
                             class="w-full text-sm text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition cursor-pointer">
                         <input type="hidden" name="photo_url" value="{{if $c}}{{nullString $c.PhotoURL}}{{end}}">
-                        <p class="text-[11px] text-text-muted mt-1">PNG/JPG/WebP/GIF — leave empty to keep current</p>
+                        <p class="text-[11px] text-text-muted mt-1">{{t "fl.png_jpg_webp_gif_leave_empty_to_keep_current"}}</p>
                     </div>
                     <div>
-                        <label class="block text-eyebrow text-text-muted mb-1.5">GST State <span class="font-normal normal-case tracking-normal">auto from GSTIN</span></label>
+                        <label class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.gst_state"}} <span class="font-normal normal-case tracking-normal">{{t "fl.auto_from_gstin"}}</span></label>
                         <div class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-data-mono tabular-nums text-on-surface">
                             {{if $c}}{{if $c.StateCode}}{{nullString $c.StateCode}}{{else}}—{{end}}{{else}}—{{end}} <span class="text-text-muted text-xs">{{if $c}}{{if $c.GST}}derived from {{nullString $c.GST}}{{else}}enter GST to derive{{end}}{{else}}enter GST to derive{{end}}</span>
                         </div>
-                        <p class="text-[11px] text-text-muted mt-1">2-digit state code for e-invoicing</p>
+                        <p class="text-[11px] text-text-muted mt-1">{{t "fl.n2_digit_state_code_for_e_invoicing"}}</p>
                     </div>
                 </div>
             </section>
 
             <!-- Classification -->
             <section class="p-6 space-y-4 bg-surface-container-low/30">
-                <h3 class="text-eyebrow text-text-muted">Classification</h3>
+                <h3 class="text-eyebrow text-text-muted">{{t "fl.classification"}}</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                        <label for="type" class="block text-eyebrow text-text-muted mb-1.5">Type</label>
+                        <label for="type" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.type"}}</label>
                         <select id="type" name="type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             {{ $t := "" }}{{if $c}}{{$t = $c.Type}}{{end}}
-                            <option value="customer" {{if eq $t "customer"}}selected{{end}}>Customer — recipient</option>
-                            <option value="supplier" {{if eq $t "supplier"}}selected{{end}}>Supplier — pickup origin</option>
-                            <option value="facilitator" {{if eq $t "facilitator"}}selected{{end}}>Facilitator — coordinator</option>
-                            <option value="contact" {{if eq $t "contact"}}selected{{end}}>Contact — general</option>
-                            <option value="company" {{if eq $t "company"}}selected{{end}}>Company (legacy)</option>
-                            <option value="individual" {{if eq $t "individual"}}selected{{end}}>Individual (legacy)</option>
+                            <option value="customer" {{if eq $t "customer"}}selected{{end}}>{{t "fl.customer_recipient"}}</option>
+                            <option value="supplier" {{if eq $t "supplier"}}selected{{end}}>{{t "fl.supplier_pickup_origin"}}</option>
+                            <option value="facilitator" {{if eq $t "facilitator"}}selected{{end}}>{{t "fl.facilitator_coordinator"}}</option>
+                            <option value="contact" {{if eq $t "contact"}}selected{{end}}>{{t "fl.contact_general"}}</option>
+                            <option value="company" {{if eq $t "company"}}selected{{end}}>{{t "fl.company_legacy"}}</option>
+                            <option value="individual" {{if eq $t "individual"}}selected{{end}}>{{t "fl.individual_legacy"}}</option>
                         </select>
-                        <p class="text-[11px] text-text-muted mt-1">Customer pays, supplier provides goods</p>
+                        <p class="text-[11px] text-text-muted mt-1">{{t "fl.customer_pays_supplier_provides_goods"}}</p>
                     </div>
                     <div>
-                        <label for="status" class="block text-eyebrow text-text-muted mb-1.5">Status</label>
+                        <label for="status" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.status"}}</label>
                         <select id="status" name="status" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             {{ $s := "active" }}{{if $c}}{{$s = $c.Status}}{{end}}
-                            <option value="active" {{if eq $s "active"}}selected{{end}}>Active</option>
-                            <option value="inactive" {{if eq $s "inactive"}}selected{{end}}>Inactive</option>
+                            <option value="active" {{if eq $s "active"}}selected{{end}}>{{t "fl.active_2"}}</option>
+                            <option value="inactive" {{if eq $s "inactive"}}selected{{end}}>{{t "fl.inactive"}}</option>
                         </select>
                     </div>
                     <div>
-                        <label for="payment_terms_days" class="block text-eyebrow text-text-muted mb-1.5">Payment Terms (days)</label>
+                        <label for="payment_terms_days" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.payment_terms_days"}}</label>
                         <input id="payment_terms_days" type="number" name="payment_terms_days" min="0" max="365" value="{{if $c}}{{$c.PaymentTermsDays}}{{else}}0{{end}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                        <p class="text-[11px] text-text-muted mt-1">Net 0 = due now · 30/45 typical</p>
+                        <p class="text-[11px] text-text-muted mt-1">{{t "fl.net_0_due_now_30_45_typical"}}</p>
                     </div>
                 </div>
             </section>
 
             <!-- Contact -->
             <section class="p-6 space-y-4">
-                <h3 class="text-eyebrow text-text-muted">Contact</h3>
+                <h3 class="text-eyebrow text-text-muted">{{t "fl.contact"}}</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label for="phone" class="block text-eyebrow text-text-muted mb-1.5">Phone Number *</label>
+                        <label for="phone" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.phone_number"}}</label>
                         <input aria-label="+91 98765 43210" autocomplete="tel" id="phone" type="tel" name="phone" value="{{if $c}}{{$c.Phone}}{{end}}" required
-                            pattern="(\+?91[\s-]?|0)?[6-9][0-9]{4}[\s-]?[0-9]{5}" title="Indian mobile: 9876543210 or +91 98765 43210"
+                            pattern="(\+?91[\s-]?|0)?[6-9][0-9]{4}[\s-]?[0-9]{5}" title="{{t "fl.indian_mobile_9876543210_or_91_98765_43210"}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
                             placeholder="+91 98765 43210">
-                        <p class="text-[11px] text-text-muted mt-1">Unique per tenant · used for portal & notifications</p>
+                        <p class="text-[11px] text-text-muted mt-1">{{t "fl.unique_per_tenant_used_for_portal_notificati"}}</p>
                     </div>
                     <div>
-                        <label for="email" class="block text-eyebrow text-text-muted mb-1.5">Email Address</label>
+                        <label for="email" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.email_address"}}</label>
                         <input aria-label="billing@company.com" autocomplete="email" spellcheck="false" id="email" type="email" name="email" value="{{if $c}}{{nullString $c.Email}}{{end}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
                             placeholder="billing@company.com">
                     </div>
                 </div>
                 <div>
-                    <label for="gst" class="block text-eyebrow text-text-muted mb-1.5">GST Number</label>
+                    <label for="gst" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.gst_number"}}</label>
                     <input aria-label="27ABCDE1234F1Z5" autocomplete="off" id="gst" type="text" name="gst" value="{{if $c}}{{nullString $c.GST}}{{end}}" maxlength="15"
                         pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]" title="15-char GSTIN, e.g. 27ABCDE1234F1Z5"
                         class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono uppercase tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
                         placeholder="27ABCDE1234F1Z5">
-                    <p class="text-[11px] text-text-muted mt-1">Validated server-side · state code derived for e-invoicing</p>
+                    <p class="text-[11px] text-text-muted mt-1">{{t "fl.validated_server_side_state_code_derived_for"}}</p>
                 </div>
             </section>
 
             <!-- Addresses -->
             <section class="p-6 space-y-4 bg-surface-container-low/30">
-                <h3 class="text-eyebrow text-text-muted">Addresses</h3>
+                <h3 class="text-eyebrow text-text-muted">{{t "fl.addresses"}}</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label for="address" class="block text-eyebrow text-text-muted mb-1.5">Delivery / Primary Address</label>
-                        <textarea aria-label="Door no., street, city, pincode" id="address" name="address" rows="3"
+                        <label for="address" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.delivery_primary_address"}}</label>
+                        <textarea aria-label="{{t "fl.door_no_street_city_pincode"}}" id="address" name="address" rows="3"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
-                            placeholder="Door no., street, city, pincode">{{if $c}}{{nullString $c.Address}}{{end}}</textarea>
-                        <p class="text-[11px] text-text-muted mt-1">Primary delivery address</p>
+                            placeholder="{{t "fl.door_no_street_city_pincode"}}">{{if $c}}{{nullString $c.Address}}{{end}}</textarea>
+                        <p class="text-[11px] text-text-muted mt-1">{{t "fl.primary_delivery_address"}}</p>
                     </div>
                     <div>
-                        <label for="billing_address" class="block text-eyebrow text-text-muted mb-1.5">Billing Address</label>
-                        <textarea aria-label="GST billing address if different from delivery" id="billing_address" name="billing_address" rows="3"
+                        <label for="billing_address" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.billing_address"}}</label>
+                        <textarea aria-label="{{t "fl.gst_billing_address_if_different_from_delive"}}" id="billing_address" name="billing_address" rows="3"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
-                            placeholder="GST billing address if different from delivery">{{if $c}}{{nullString $c.BillingAddress}}{{end}}</textarea>
-                        <p class="text-[11px] text-text-muted mt-1">Leave blank to use delivery address for billing</p>
+                            placeholder="{{t "fl.gst_billing_address_if_different_from_delive"}}">{{if $c}}{{nullString $c.BillingAddress}}{{end}}</textarea>
+                        <p class="text-[11px] text-text-muted mt-1">{{t "fl.leave_blank_to_use_delivery_address_for_bill"}}</p>
                     </div>
                 </div>
                 <details class="rounded-xl border border-border-subtle bg-surface-container-low overflow-hidden">
                     <summary class="list-none px-4 py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-surface-container transition-colors">
-                        <span class="text-xs font-bold text-secondary">Advanced — linked location & reference</span>
+                        <span class="text-xs font-bold text-secondary">{{t "fl.advanced_linked_location_reference"}}</span>
                         <span class="text-xs font-data-mono text-text-muted">▾</span>
                     </summary>
                     <div class="px-4 pb-4 pt-3 border-t border-border-subtle space-y-4">
                         <div>
-                            <label for="internal_id" class="block text-eyebrow text-text-muted mb-1.5">Internal Reference</label>
-                            <input aria-label="Your ERP / accounting ID" autocomplete="off" id="internal_id" type="text" name="internal_id" value="{{if $c}}{{if ne (nullString $c.InternalID) $c.CustomerCode}}{{nullString $c.InternalID}}{{end}}{{end}}"
+                            <label for="internal_id" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.internal_reference"}}</label>
+                            <input aria-label="{{t "fl.your_erp_accounting_id"}}" autocomplete="off" id="internal_id" type="text" name="internal_id" value="{{if $c}}{{if ne (nullString $c.InternalID) $c.CustomerCode}}{{nullString $c.InternalID}}{{end}}{{end}}"
                                 class="w-full bg-surface-container-lowest border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
-                                placeholder="Your ERP / accounting ID">
-                            <p class="text-[11px] text-text-muted mt-1">Optional, for your accounting system</p>
+                                placeholder="{{t "fl.your_erp_accounting_id"}}">
+                            <p class="text-[11px] text-text-muted mt-1">{{t "fl.optional_for_your_accounting_system"}}</p>
                         </div>
                         <div>
-                            <label for="place_uuid" class="block text-eyebrow text-text-muted mb-1.5">Linked Location ID</label>
-                            <input aria-label="Leave blank — used for map pins when available" autocomplete="off" id="place_uuid" type="text" name="place_uuid" value="{{if $c}}{{nullString $c.PlaceUUID}}{{end}}"
+                            <label for="place_uuid" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.linked_location_id"}}</label>
+                            <input aria-label="{{t "fl.leave_blank_used_for_map_pins_when_available"}}" autocomplete="off" id="place_uuid" type="text" name="place_uuid" value="{{if $c}}{{nullString $c.PlaceUUID}}{{end}}"
                                 class="w-full bg-surface-container-lowest border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface font-data-mono tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
-                                placeholder="Leave blank — used for map pins when available">
+                                placeholder="{{t "fl.leave_blank_used_for_map_pins_when_available"}}">
                         </div>
                     </div>
                 </details>
@@ -198,31 +198,31 @@
 
             <!-- Notes -->
             <section class="p-6 space-y-4">
-                <h3 class="text-eyebrow text-text-muted">Notes</h3>
+                <h3 class="text-eyebrow text-text-muted">{{t "fl.notes"}}</h3>
                 <div>
-                    <label for="notes" class="block text-eyebrow text-text-muted mb-1.5">Internal Notes</label>
-                    <textarea aria-label="Ops-only notes" id="notes" name="notes" rows="2"
+                    <label for="notes" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.internal_notes"}}</label>
+                    <textarea aria-label="{{t "fl.ops_only_notes"}}" id="notes" name="notes" rows="2"
                         class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
-                        placeholder="Ops-only notes…">{{if $c}}{{nullString $c.Notes}}{{end}}</textarea>
+                        placeholder="{{t "fl.ops_only_notes_2"}}">{{if $c}}{{nullString $c.Notes}}{{end}}</textarea>
                 </div>
                 <details class="group rounded-xl border border-border-subtle bg-surface-container-low/50 overflow-hidden">
                     <summary class="list-none px-4 py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-surface-container-low transition-colors">
-                        <span class="text-xs font-bold text-secondary">Advanced — additional data</span>
+                        <span class="text-xs font-bold text-secondary">{{t "fl.advanced_additional_data"}}</span>
                         <span class="text-xs font-data-mono text-text-muted group-open:rotate-180 transition-transform">▾</span>
                     </summary>
                     <div class="px-4 pb-4 pt-3 border-t border-border-subtle">
-                        <textarea name="meta" rows="3" aria-label="Additional data (JSON)"
+                        <textarea name="meta" rows="3" aria-label="{{t "fl.additional_data_json"}}"
                             class="w-full bg-surface-container-lowest border border-border-subtle rounded-lg px-3 py-2.5 text-xs font-data-mono text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
                             placeholder='{"key":"value"}'>{{if $c}}{{if $c.Meta}}{{$c.Meta}}{{else}}{}{{end}}{{else}}{}{{end}}</textarea>
-                        <p class="text-[11px] text-text-muted mt-1">Optional JSON — for integrations</p>
+                        <p class="text-[11px] text-text-muted mt-1">{{t "fl.optional_json_for_integrations"}}</p>
                     </div>
                 </details>
             </section>
 
             <div class="sticky bottom-0 bg-surface-container-lowest border-t border-border-subtle px-6 py-3 flex justify-between items-center gap-3 flex-wrap">
-                <a href="/customers" class="text-xs font-semibold text-secondary hover:text-on-surface">Cancel</a>
+                <a href="/customers" class="text-xs font-semibold text-secondary hover:text-on-surface">{{t "fl.cancel"}}</a>
                 <div class="flex gap-2">
-                    {{template "btn.html" (dict "Label" "Save Customer" "Type" "submit" "Size" "sm")}}
+                    {{template "btn.html" (dict "Label" (t "fl.save_customer") "Type" "submit" "Size" "sm")}}
                 </div>
             </div>
         </form>

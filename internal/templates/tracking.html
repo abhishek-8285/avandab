@@ -8,7 +8,7 @@
 <div id="tracking-root"
      class="w-full h-full min-h-[560px] relative overflow-hidden rounded-xl border border-border-subtle"
       data-config='{"Provider":{{json .MapConfig.Provider}},"GoogleStyle":{{json .MapConfig.GoogleStyle}},"GL":{{json .MapConfig.GL}},"OSMUrl":{{json .MapConfig.OSMUrl}},"PollSec":{{json .MapConfig.PollSec}},"LiveEndpoint":{{json .LiveEndpoint}},"StreamEndpoint":"/api/v1/telemetry/stream","GeofenceEndpoint":"/api/v1/telemetry/geofences"}'>
-    <noscript>Live tracking requires JavaScript.</noscript>
+    <noscript>{{t "db.noscript"}}</noscript>
 </div>
 
 <link rel="stylesheet" href="/static/tracking-island/tracking.bundle.css?v={{.Version}}" />

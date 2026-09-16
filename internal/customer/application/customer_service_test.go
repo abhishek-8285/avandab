@@ -180,6 +180,20 @@ func setupCustomerTestDB(t *testing.T) *sql.DB {
 		response_payload TEXT NOT NULL,
 		created_at DATETIME NOT NULL DEFAULT (datetime('now'))
 	);
+
+	CREATE TABLE audit_events (
+		id TEXT PRIMARY KEY,
+		tenant_id TEXT NOT NULL,
+		actor_user_id TEXT,
+		entity_type TEXT NOT NULL,
+		entity_id TEXT NOT NULL,
+		action TEXT NOT NULL,
+		old_state TEXT,
+		new_state TEXT,
+		reason TEXT,
+		request_id TEXT,
+		created_at DATETIME
+	);
 	`
 
 	_, err = db.Exec(schema)
@@ -283,6 +297,10 @@ func TestPhase7_CustomerBookingWorkflow(t *testing.T) {
 	assert.Equal(t, "confirmed", trackingAfterOffer.Status)
 
 	// Driver accepts offer -> Trip created
+	// New workflow seam: confirmation creates the operational trip; ACCEPT
+	// only assigns driver/vehicle. Seed the confirmation-created row here.
+	_, err = db.Exec(`INSERT INTO trips (id, tenant_id, booking_id, driver_id, vehicle_id, status) VALUES ('trip-cust-flow', ?, ?, '', '', 'created')`, tenantID, bookResp1.BookingID)
+	require.NoError(t, err)
 	cmdAccept := driverApp.DriverCommandRequest{
 		CommandID: "cmd-accept-cust-trip",
 		Type:      "ACCEPT_OFFER",

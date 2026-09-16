@@ -1,4 +1,5 @@
 import React from 'react';
+import { Colors, FontSize} from '../../../constants/theme';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { ActiveTrip, TripExecutionStatus } from '../types/trip';
 
@@ -54,7 +55,7 @@ export const TripExecutionCard: React.FC<Props> = ({
         disabled={isProcessing || isComplete}
       >
         {isProcessing ? (
-          <ActivityIndicator color="#ffffff" size="small" />
+          <ActivityIndicator color={Colors.textOnPrimary} size="small" />
         ) : (
           <Text style={styles.btnText}>{getActionLabel(trip.status)}</Text>
         )}
@@ -65,11 +66,11 @@ export const TripExecutionCard: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#0f172a',
+    backgroundColor: Colors.mapDark,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: Colors.modalBg,
     marginHorizontal: 16,
     marginVertical: 10,
   },
@@ -80,14 +81,14 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontSize: 15,
+    fontSize: FontSize.titleLarge,
     fontWeight: '800',
-    color: '#f8fafc',
+    color: Colors.textSecondary,
     marginBottom: 2,
   },
   subtitle: {
-    fontSize: 12,
-    color: '#94a3b8',
+    fontSize: FontSize.body,
+    color: Colors.modalSub,
   },
   statusBadge: {
     paddingHorizontal: 8,
@@ -96,31 +97,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   badgeActive: {
-    backgroundColor: '#083344',
-    borderColor: '#06b6d4',
+    backgroundColor: Colors.onboardingBg,
+    borderColor: Colors.onboardingBorder,
   },
   badgeComplete: {
-    backgroundColor: '#064e3b',
-    borderColor: '#10b981',
+    backgroundColor: Colors.onboardingOkBg,
+    borderColor: Colors.onboardingOkBorder,
   },
   statusText: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '800',
-    color: '#38bdf8',
+    color: Colors.onboardingText,
   },
   btn: {
-    backgroundColor: '#0d9488',
+    backgroundColor: Colors.onboardingBtn,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
   },
   btnDisabled: {
-    backgroundColor: '#334155',
+    backgroundColor: Colors.modalBorder,
     opacity: 0.7,
   },
   btnText: {
-    color: '#ffffff',
-    fontSize: 14,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.title,
     fontWeight: '700',
   },
 });

@@ -1,5 +1,5 @@
 <div class="max-w-3xl mx-auto">
-    <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display mb-5">{{if .UserDetail}}Edit User{{else}}New User{{end}}</h1>
+    <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display mb-5">{{if .UserDetail}}{{t "sy.users.edit"}}{{else}}{{t "sy.users.new"}}{{end}}</h1>
 
     {{if .FlashError}}{{template "alert.html" (dict "Tone" "error" "Message" .FlashError)}}{{end}}
 
@@ -8,30 +8,30 @@
     <form method="POST" action="/users{{if $u}}/{{$u.ID}}/edit{{else}}/new{{end}}">
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden p-5 space-y-5">
             <div>
-                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Account</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "sy.users.account"}}</h2>
                 <div class="space-y-4">
                     <div>
-                        <label for="email" class="block text-xs font-bold text-secondary mb-1.5">Email *</label>
+                        <label for="email" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.users.email_req"}}</label>
                         <input autocomplete="email" spellcheck="false" id="email" type="email" name="email" value="{{if $u}}{{$u.Email}}{{end}}" required
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
 
                     <div>
-                        <label for="name" class="block text-xs font-bold text-secondary mb-1.5">Name *</label>
+                        <label for="name" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.users.name_req"}}</label>
                         <input autocomplete="name" id="name" type="text" name="name" value="{{if $u}}{{$u.Name}}{{end}}" required
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
 
                     <div>
-                        <label for="phone" class="block text-xs font-bold text-secondary mb-1.5">Phone</label>
+                        <label for="phone" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.users.phone"}}</label>
                         <input autocomplete="tel" id="phone" type="tel" name="phone" value="{{if $u}}{{nullString $u.Phone}}{{end}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
 
                     {{if not $u}}
                     <div>
-                        <label for="password" class="block text-xs font-bold text-secondary mb-1.5">Initial Password (Leave blank for default: <code class="bg-surface-container px-1 rounded text-xs normal-case">email-changeme</code>)</label>
-                        <input aria-label="Set temporary password" autocomplete="new-password" id="password" type="password" name="password" placeholder="Set temporary password"
+                        <label for="password" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.users.init_pre"}}<code class="bg-surface-container px-1 rounded text-xs normal-case">email-changeme</code>{{t "sy.users.init_post"}}</label>
+                        <input aria-label="{{t "sy.users.temp_ph"}}" autocomplete="new-password" id="password" type="password" name="password" placeholder="{{t "sy.users.temp_ph"}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
                     {{end}}
@@ -39,10 +39,10 @@
             </div>
 
             <div>
-                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Access Control</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "sy.users.access"}}</h2>
                 <div class="space-y-4">
                     <div>
-                        <label for="role_id" class="block text-xs font-bold text-secondary mb-1.5">Role *</label>
+                        <label for="role_id" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.users.role"}}</label>
                         <select id="role_id" name="role_id" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             {{range .Roles}}
                             <option value="{{.ID}}" {{if and $u (eq .ID $u.Role.ID)}}selected{{end}}>{{.Name}}</option>
@@ -51,19 +51,19 @@
                     </div>
 
                     <div>
-                        <label for="status" class="block text-xs font-bold text-secondary mb-1.5">Status</label>
+                        <label for="status" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.users.status"}}</label>
                         <select id="status" name="status" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                            <option value="active" {{if and $u (eq $u.Status "active")}}selected{{end}}>Active</option>
-                            <option value="inactive" {{if and $u (eq $u.Status "inactive")}}selected{{end}}>Inactive</option>
-                            <option value="suspended" {{if and $u (eq $u.Status "suspended")}}selected{{end}}>Suspended</option>
+                            <option value="active" {{if and $u (eq $u.Status "active")}}selected{{end}}>{{t "sy.users.active"}}</option>
+                            <option value="inactive" {{if and $u (eq $u.Status "inactive")}}selected{{end}}>{{t "sy.users.inactive"}}</option>
+                            <option value="suspended" {{if and $u (eq $u.Status "suspended")}}selected{{end}}>{{t "sy.users.suspended"}}</option>
                         </select>
                     </div>
                 </div>
             </div>
 
             <div class="sticky bottom-0 -mx-5 px-5 py-3 bg-surface-container-lowest border-t border-border-subtle flex justify-end gap-2 flex-wrap">
-                {{template "btn.html" (dict "Variant" "secondary" "Label" "Cancel" "Href" "/users" "Class" "min-h-[44px]")}}
-                {{template "btn.html" (dict "Variant" "primary" "Label" "Save User" "Type" "submit" "Class" "min-h-[44px] shadow-sm")}}
+                {{template "btn.html" (dict "Variant" "secondary" "Label" (t "sy.common.cancel") "Href" "/users" "Class" "min-h-[44px]")}}
+                {{template "btn.html" (dict "Variant" "primary" "Label" (t "sy.users.save") "Type" "submit" "Class" "min-h-[44px] shadow-sm")}}
             </div>
         </div>
     </form>

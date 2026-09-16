@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { Colors } from '../constants/theme';
 import { getApiBaseURL } from '../constants/network';
 import { useAuthStore } from '../stores/authStore';
 
@@ -34,7 +35,7 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
         name: 'Dispatch',
         importance: NotificationsModule.AndroidImportance?.MAX ?? 5,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#00685f',
+        lightColor: Colors.primary,
       });
     }
     const perm = await NotificationsModule.getPermissionsAsync();

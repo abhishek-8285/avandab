@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Radius, Spacing } from '../constants/theme';
+import { Colors, Radius, Spacing, FontSize} from '../constants/theme';
 import { getApiBaseURL } from '../constants/network';
 import { useAuthStore } from '../stores/authStore';
 import { useLanguageStore } from '../stores/languageStore';
@@ -179,7 +179,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor="#075e54" />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.chrome} />
 
       {/* WhatsApp Header */}
       <View style={styles.header}>
@@ -190,7 +190,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
           accessibilityLabel="Go back"
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" accessible={false} />
+          <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textOnPrimary} accessible={false} />
         </TouchableOpacity>
         <View style={styles.headerTitleBlock}>
           <Text style={styles.headerTitle}>{t('header.settings_title', 'Settings & Profile', locale)}</Text>
@@ -201,7 +201,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
       <ScrollView style={styles.body} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {loading ? (
           <ActivityIndicator
-            color="#008069"
+            color={Colors.primary}
             style={{ marginTop: Spacing.xl }}
             accessible
             accessibilityLabel={`${t('common.loading', 'Loading', locale)}…`}
@@ -212,7 +212,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
             {/* WhatsApp Profile Contact Card */}
             <View style={styles.heroCard}>
               <View style={styles.avatarBox}>
-                <MaterialCommunityIcons name="account" size={40} color="#ffffff" accessible={false} />
+                <MaterialCommunityIcons name="account" size={40} color={Colors.textOnPrimary} accessible={false} />
               </View>
               <Text style={styles.heroName} numberOfLines={1} ellipsizeMode="tail">{displayName}</Text>
               <Text style={styles.heroSub} numberOfLines={1} ellipsizeMode="tail">{user?.email || 'driver@avandab.com'}</Text>
@@ -235,7 +235,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                 <Text style={styles.statusPillText}>
                   {dutyStatus === 'available' ? t('duty.available', 'ON DUTY', locale) : dutyStatus === 'break' ? t('duty.break', 'ON BREAK', locale) : t('duty.inactive', 'OFF DUTY', locale)}
                 </Text>
-                <MaterialCommunityIcons name="pencil" size={12} color="#075e54" accessible={false} />
+                <MaterialCommunityIcons name="pencil" size={12} color={Colors.chrome} accessible={false} />
               </TouchableOpacity>
             </View>
 
@@ -248,7 +248,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
               {/* Driver ID (Readonly) */}
               <View style={styles.row}>
                 <View style={styles.rowIconBox}>
-                  <MaterialCommunityIcons name="badge-account-horizontal" size={20} color="#008069" accessible={false} />
+                  <MaterialCommunityIcons name="badge-account-horizontal" size={20} color={Colors.primary} accessible={false} />
                 </View>
                 <View style={styles.rowContent}>
                   <Text style={styles.rowLabel}>{t('profile.driver_id', 'Driver ID', locale)}</Text>
@@ -267,7 +267,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                 accessibilityLabel={t('profile.phone', 'Mobile Phone', locale)}
               >
                 <View style={styles.rowIconBox}>
-                  <MaterialCommunityIcons name="phone" size={20} color="#008069" accessible={false} />
+                  <MaterialCommunityIcons name="phone" size={20} color={Colors.primary} accessible={false} />
                 </View>
                 <View style={styles.rowContent}>
                   <Text style={styles.rowLabel}>{t('profile.phone', 'Mobile Phone', locale)}</Text>
@@ -283,7 +283,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
               {/* Assigned Vehicle */}
               <View style={styles.row}>
                 <View style={styles.rowIconBox}>
-                  <MaterialCommunityIcons name="truck" size={20} color="#008069" accessible={false} />
+                  <MaterialCommunityIcons name="truck" size={20} color={Colors.primary} accessible={false} />
                 </View>
                 <View style={styles.rowContent}>
                   <Text style={styles.rowLabel}>{t('profile.vehicle', 'Assigned Vehicle', locale)}</Text>
@@ -308,7 +308,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                         <MaterialCommunityIcons 
                           name={doc.status === 'UNDER_REVIEW' ? 'clock-outline' : doc.warning ? 'alert' : 'check-decagram'} 
                           size={20} 
-                          color={doc.status === 'UNDER_REVIEW' ? '#0284c7' : doc.warning ? '#b45309' : '#008069'} 
+                          color={doc.status === 'UNDER_REVIEW' ? Colors.info : doc.warning ? Colors.warningText : Colors.primary} 
                           accessible={false}
                         />
                       </View>
@@ -324,7 +324,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                         accessibilityLabel={`${docTitle}: ${doc.warning ? t('docs.renew', 'RENEW', locale) : t('docs.update', 'UPDATE', locale)}`}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                       >
-                        <MaterialCommunityIcons name="camera-plus" size={14} color={doc.warning ? '#ffffff' : '#008069'} accessible={false} />
+                        <MaterialCommunityIcons name="camera-plus" size={14} color={doc.warning ? Colors.textOnPrimary : Colors.primary} accessible={false} />
                         <Text style={[styles.renewBtnText, doc.warning ? styles.renewBtnTextWarning : styles.renewBtnTextOutline]}>
                           {doc.warning ? t('docs.renew', 'RENEW', locale) : t('docs.update', 'UPDATE', locale)}
                         </Text>
@@ -350,7 +350,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                 accessibilityLabel={t('settings.language', 'App Language', locale)}
               >
                 <View style={styles.rowIconBox}>
-                  <MaterialCommunityIcons name="translate" size={20} color="#008069" accessible={false} />
+                  <MaterialCommunityIcons name="translate" size={20} color={Colors.primary} accessible={false} />
                 </View>
                 <View style={styles.rowContent}>
                   <Text style={styles.rowLabel}>{t('settings.language', 'App Language', locale)}</Text>
@@ -376,16 +376,16 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                 activeOpacity={0.7}
               >
                 <View style={styles.rowIconBox}>
-                  <MaterialCommunityIcons name={voiceOn ? "volume-high" : "volume-off"} size={20} color={voiceOn ? "#008069" : "#667781"} />
+                  <MaterialCommunityIcons name={voiceOn ? "volume-high" : "volume-off"} size={20} color={voiceOn ? Colors.primary : Colors.textSecondary} />
                 </View>
                 <View style={styles.rowContent}>
                   <Text style={styles.rowLabel}>Vernacular Voice Announcements</Text>
-                  <Text style={[styles.rowValue, { color: voiceOn ? '#00a884' : '#667781' }]}>
+                  <Text style={[styles.rowValue, { color: voiceOn ? Colors.success : Colors.textSecondary }]}>
                     {voiceOn ? `ENABLED (${(LANGUAGES.find((l) => l.code === locale)?.label || 'Hindi')})` : 'MUTED'}
                   </Text>
                 </View>
-                <View style={[styles.changeBadge, { backgroundColor: voiceOn ? '#e7ffdb' : '#f0f2f5' }]}>
-                  <Text style={[styles.changeBadgeText, { color: voiceOn ? '#008069' : '#667781' }]}>
+                <View style={[styles.changeBadge, { backgroundColor: voiceOn ? Colors.primarySubtle : Colors.borderLight }]}>
+                  <Text style={[styles.changeBadgeText, { color: voiceOn ? Colors.primary : Colors.textSecondary }]}>
                     {voiceOn ? 'ON' : 'OFF'}
                   </Text>
                 </View>
@@ -393,7 +393,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
 
               {/* Test Notification & Audio Button */}
               <TouchableOpacity
-                style={[styles.interactiveRow, { backgroundColor: '#f0fdf4' }]}
+                style={[styles.interactiveRow, { backgroundColor: Colors.primarySubtle }]}
                 onPress={() => {
                   NotificationService.showDispatchNotification({
                     tripNumber: 'TRP-8491',
@@ -408,15 +408,15 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                 }}
                 activeOpacity={0.8}
               >
-                <View style={[styles.rowIconBox, { backgroundColor: '#dcf8c6' }]}>
-                  <MaterialCommunityIcons name="bell-ring" size={20} color="#008069" />
+                <View style={[styles.rowIconBox, { backgroundColor: Colors.successBg }]}>
+                  <MaterialCommunityIcons name="bell-ring" size={20} color={Colors.primary} />
                 </View>
                 <View style={styles.rowContent}>
-                  <Text style={[styles.rowLabel, { color: '#008069', fontWeight: '800' }]}>Test Notification & Voice</Text>
+                  <Text style={[styles.rowLabel, { color: Colors.primary, fontWeight: '800' }]}>Test Notification & Voice</Text>
                   <Text style={styles.rowValue}>Tap to trigger live alert sound & speech</Text>
                 </View>
-                <View style={[styles.changeBadge, { backgroundColor: '#008069' }]}>
-                  <Text style={[styles.changeBadgeText, { color: '#ffffff' }]}>PLAY</Text>
+                <View style={[styles.changeBadge, { backgroundColor: Colors.primary }]}>
+                  <Text style={[styles.changeBadgeText, { color: Colors.textOnPrimary }]}>PLAY</Text>
                 </View>
               </TouchableOpacity>
 
@@ -425,11 +425,11 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
               {/* Background GPS */}
               <View style={styles.row}>
                 <View style={styles.rowIconBox}>
-                  <MaterialCommunityIcons name="crosshairs-gps" size={20} color="#008069" />
+                  <MaterialCommunityIcons name="crosshairs-gps" size={20} color={Colors.primary} />
                 </View>
                 <View style={styles.rowContent}>
                   <Text style={styles.rowLabel}>{t('settings.gps', 'Background GPS Tracking', locale)}</Text>
-                  <Text style={[styles.rowValue, { color: bgGpsOn ? '#00a884' : '#667781' }]}>
+                  <Text style={[styles.rowValue, { color: bgGpsOn ? Colors.success : Colors.textSecondary }]}>
                     {bgGpsOn ? t('settings.gps_active', 'ACTIVE (OS-Level)', locale) : t('settings.gps_standby', 'STANDBY', locale)}
                   </Text>
                 </View>
@@ -438,7 +438,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
 
             {/* 4. Safe Sign Out Button */}
             <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut} activeOpacity={0.85}>
-              <MaterialCommunityIcons name="logout" size={20} color="#ea0038" />
+              <MaterialCommunityIcons name="logout" size={20} color={Colors.danger} />
               <Text style={styles.signOutText}>{t('profile.sign_out', 'SIGN OUT OF DEVICE', locale)}</Text>
             </TouchableOpacity>
 
@@ -454,7 +454,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>भाषा चुनें / Select Language</Text>
               <TouchableOpacity onPress={() => setShowLangModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#667781" />
+                <MaterialCommunityIcons name="close" size={24} color={Colors.textSecondary} />
               </TouchableOpacity>
             </View>
             <ScrollView style={{ maxHeight: 320 }}>
@@ -468,7 +468,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                     <Text style={[styles.langNative, locale === lang.code && styles.langTextActive]}>{lang.native}</Text>
                     <Text style={styles.langSub}>{lang.label}</Text>
                   </View>
-                  {locale === lang.code && <MaterialCommunityIcons name="check-circle" size={20} color="#008069" />}
+                  {locale === lang.code && <MaterialCommunityIcons name="check-circle" size={20} color={Colors.primary} />}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -483,7 +483,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t('profile.phone', 'Mobile Phone', locale)}: {t('profile.edit', 'Change', locale)}</Text>
               <TouchableOpacity onPress={() => setShowPhoneModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#667781" />
+                <MaterialCommunityIcons name="close" size={24} color={Colors.textSecondary} />
               </TouchableOpacity>
             </View>
             <Text style={styles.modalSubtitle}>New 10-digit Phone Number:</Text>
@@ -511,7 +511,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
               disabled={phoneSubmitted}
             >
               {phoneSubmitted ? (
-                <ActivityIndicator color="#ffffff" />
+                <ActivityIndicator color={Colors.textOnPrimary} />
               ) : (
                 <Text style={styles.modalSubmitText}>Submit for Verification</Text>
               )}
@@ -527,7 +527,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Update Duty Status</Text>
               <TouchableOpacity onPress={() => setShowDutyModal(false)}>
-                <MaterialCommunityIcons name="close" size={24} color="#667781" />
+                <MaterialCommunityIcons name="close" size={24} color={Colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -573,7 +573,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#075e54',
+    backgroundColor: Colors.chrome,
   },
   header: {
     flexDirection: 'row',
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.xs,
     paddingBottom: Spacing.md,
-    backgroundColor: '#075e54',
+    backgroundColor: Colors.chrome,
     gap: 12,
   },
   backBtn: {
@@ -595,18 +595,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: FontSize.headingLarge,
     fontWeight: '800',
-    color: '#ffffff',
+    color: Colors.textOnPrimary,
   },
   headerSubtitle: {
-    fontSize: 12,
-    color: '#dcf8c6',
+    fontSize: FontSize.body,
+    color: Colors.primary,
     fontWeight: '600',
   },
   body: {
     flex: 1,
-    backgroundColor: '#efeae2',
+    backgroundColor: Colors.background,
   },
   scrollContent: {
     padding: Spacing.lg,
@@ -614,13 +614,13 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
   heroCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
     padding: Spacing.xl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e9edef',
-    shadowColor: '#111b21',
+    borderColor: Colors.border,
+    shadowColor: Colors.textPrimary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 6,
@@ -630,19 +630,19 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#008069',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.sm,
   },
   heroName: {
-    fontSize: 20,
+    fontSize: FontSize.banner,
     fontWeight: '800',
-    color: '#111b21',
+    color: Colors.textPrimary,
   },
   heroSub: {
-    fontSize: 13,
-    color: '#667781',
+    fontSize: FontSize.bodyLarge,
+    color: Colors.textSecondary,
     marginTop: 2,
   },
   statusPill: {
@@ -655,13 +655,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   statusPillActive: {
-    backgroundColor: '#dcf8c6',
+    backgroundColor: Colors.successBg,
   },
   statusPillBreak: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: Colors.warningBg,
   },
   statusPillOff: {
-    backgroundColor: '#fee2e2',
+    backgroundColor: Colors.dangerBg,
   },
   statusDot: {
     width: 8,
@@ -669,36 +669,36 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   dotGreen: {
-    backgroundColor: '#00a884',
+    backgroundColor: Colors.success,
   },
   dotYellow: {
-    backgroundColor: '#f59e0b',
+    backgroundColor: Colors.warning,
   },
   dotRed: {
-    backgroundColor: '#ea0038',
+    backgroundColor: Colors.danger,
   },
   statusPillText: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '800',
-    color: '#111b21',
+    color: Colors.textPrimary,
   },
   sectionHeader: {
     paddingHorizontal: 4,
     marginTop: 4,
   },
   sectionHeaderText: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '800',
-    color: '#667781',
+    color: Colors.textSecondary,
     letterSpacing: 0.5,
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     borderWidth: 1,
-    borderColor: '#e9edef',
-    shadowColor: '#111b21',
+    borderColor: Colors.border,
+    shadowColor: Colors.textPrimary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
@@ -720,7 +720,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#e7ffdb',
+    backgroundColor: Colors.primarySubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -728,32 +728,32 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rowLabel: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '700',
-    color: '#667781',
+    color: Colors.textSecondary,
   },
   rowValue: {
-    fontSize: 14,
+    fontSize: FontSize.title,
     fontWeight: '700',
-    color: '#111b21',
+    color: Colors.textPrimary,
     marginTop: 2,
   },
   changeBadge: {
-    backgroundColor: '#e7ffdb',
+    backgroundColor: Colors.primarySubtle,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: Radius.full,
     borderWidth: 1,
-    borderColor: '#008069',
+    borderColor: Colors.primary,
   },
   changeBadgeText: {
-    fontSize: 9,
+    fontSize: FontSize.caption,
     fontWeight: '800',
-    color: '#008069',
+    color: Colors.primary,
   },
   divider: {
     height: 1,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: Colors.borderLight,
     marginHorizontal: 4,
   },
   docRow: {
@@ -770,26 +770,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   docIconValid: {
-    backgroundColor: '#e7ffdb',
+    backgroundColor: Colors.primarySubtle,
   },
   docIconWarning: {
-    backgroundColor: '#fef3c7',
+    backgroundColor: Colors.warningBg,
   },
   docContent: {
     flex: 1,
   },
   docTitle: {
-    fontSize: 13,
+    fontSize: FontSize.bodyLarge,
     fontWeight: '700',
-    color: '#111b21',
+    color: Colors.textPrimary,
   },
   docExpiry: {
-    fontSize: 11,
-    color: '#667781',
+    fontSize: FontSize.label,
+    color: Colors.textSecondary,
     marginTop: 1,
   },
   docExpiryWarning: {
-    color: '#b45309',
+    color: Colors.warningText,
     fontWeight: '700',
   },
   renewBtn: {
@@ -801,27 +801,27 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full,
   },
   renewBtnWarning: {
-    backgroundColor: '#b45309',
+    backgroundColor: Colors.warningText,
   },
   renewBtnOutline: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: '#008069',
+    borderColor: Colors.primary,
   },
   renewBtnText: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '800',
   },
   renewBtnTextWarning: {
-    color: '#ffffff',
+    color: Colors.textOnPrimary,
   },
   renewBtnTextOutline: {
-    color: '#008069',
+    color: Colors.primary,
   },
   signOutBtn: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderWidth: 1.5,
-    borderColor: '#fee2e2',
+    borderColor: Colors.dangerBg,
     paddingVertical: 14,
     borderRadius: Radius.full,
     flexDirection: 'row',
@@ -831,15 +831,15 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   signOutText: {
-    color: '#ea0038',
-    fontSize: 13,
+    color: Colors.danger,
+    fontSize: FontSize.bodyLarge,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   version: {
     textAlign: 'center',
-    fontSize: 11,
-    color: '#8696a0',
+    fontSize: FontSize.label,
+    color: Colors.textMuted,
     marginVertical: Spacing.sm,
   },
   modalOverlay: {
@@ -848,7 +848,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
     padding: Spacing.xl,
@@ -861,13 +861,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   modalTitle: {
-    fontSize: 16,
+    fontSize: FontSize.heading,
     fontWeight: '800',
-    color: '#111b21',
+    color: Colors.textPrimary,
   },
   modalSubtitle: {
-    fontSize: 12,
-    color: '#667781',
+    fontSize: FontSize.body,
+    color: Colors.textSecondary,
   },
   langOption: {
     flexDirection: 'row',
@@ -875,44 +875,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f2f5',
+    borderBottomColor: Colors.borderLight,
   },
   langOptionActive: {
-    backgroundColor: '#e7ffdb',
+    backgroundColor: Colors.primarySubtle,
     paddingHorizontal: 8,
     borderRadius: Radius.md,
   },
   langNative: {
-    fontSize: 15,
+    fontSize: FontSize.titleLarge,
     fontWeight: '700',
-    color: '#111b21',
+    color: Colors.textPrimary,
   },
   langTextActive: {
-    color: '#008069',
+    color: Colors.primary,
     fontWeight: '800',
   },
   langSub: {
-    fontSize: 11,
-    color: '#667781',
+    fontSize: FontSize.label,
+    color: Colors.textSecondary,
   },
   inputLabel: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '700',
-    color: '#667781',
+    color: Colors.textSecondary,
     marginTop: 4,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d7db',
+    borderColor: Colors.border,
     borderRadius: Radius.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 14,
-    color: '#111b21',
-    backgroundColor: '#f8fafc',
+    fontSize: FontSize.title,
+    color: Colors.textPrimary,
+    backgroundColor: Colors.surfaceSecondary,
   },
   modalSubmitBtn: {
-    backgroundColor: '#008069',
+    backgroundColor: Colors.primary,
     paddingVertical: 13,
     borderRadius: Radius.full,
     alignItems: 'center',
@@ -920,8 +920,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   modalSubmitText: {
-    color: '#ffffff',
-    fontSize: 13,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.bodyLarge,
     fontWeight: '800',
   },
   dutyOption: {
@@ -932,21 +932,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: '#e9edef',
+    borderColor: Colors.border,
     marginBottom: 8,
   },
   dutyOptionActive: {
-    borderColor: '#008069',
-    backgroundColor: '#e7ffdb',
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primarySubtle,
   },
   dutyOptionTitle: {
-    fontSize: 14,
+    fontSize: FontSize.title,
     fontWeight: '800',
-    color: '#111b21',
+    color: Colors.textPrimary,
   },
   dutyOptionSub: {
-    fontSize: 11,
-    color: '#667781',
+    fontSize: FontSize.label,
+    color: Colors.textSecondary,
     marginTop: 1,
   },
 });

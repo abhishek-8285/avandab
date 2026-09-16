@@ -1,4 +1,5 @@
 import * as Notifications from 'expo-notifications';
+import { Colors } from '../constants/theme';
 import { Linking, Platform } from 'react-native';
 import { VoiceAnnouncement } from './voiceAnnouncement';
 import { getApiBaseURL } from '../constants/network';
@@ -43,7 +44,7 @@ class MobileNotificationService {
           name: 'Trip & Dispatch Alerts',
           importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#008069',
+          lightColor: Colors.primary,
           sound: 'default',
           enableLights: true,
           enableVibrate: true,
@@ -56,7 +57,7 @@ class MobileNotificationService {
           name: 'Emergency & Safety Alerts',
           importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 500, 250, 500, 250, 500],
-          lightColor: '#EF4444',
+          lightColor: Colors.danger,
           sound: 'default',
           enableLights: true,
           enableVibrate: true,
@@ -69,7 +70,7 @@ class MobileNotificationService {
           name: 'General Updates & Compliance',
           importance: Notifications.AndroidImportance.HIGH,
           vibrationPattern: [0, 200],
-          lightColor: '#25D366',
+          lightColor: Colors.accent,
           sound: 'default',
         });
       }

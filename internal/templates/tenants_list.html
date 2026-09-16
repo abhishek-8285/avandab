@@ -1,4 +1,4 @@
-{{template "page_header.html" (dict "Title" "Platform Commercial Control Center" "Subtitle" "Customer organizations, subscriptions, MRR, and commercial quota governance" "ActionHref" "/tenants/new" "ActionIcon" "add" "ActionLabel" (t "tenants.new"))}}
+{{template "page_header.html" (dict "Title" (t "sy.tenantslist.title") "Subtitle" (t "sy.tenantslist.sub") "ActionHref" "/tenants/new" "ActionIcon" "add" "ActionLabel" (t "tenants.new"))}}
 
 <div class="space-y-5">
     <!-- Commercial KPI Grid -->
@@ -6,51 +6,51 @@
         <!-- Total Orgs -->
         <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-3.5 hover:border-primary/20 transition">
             <div class="flex items-center justify-between gap-2">
-                <span class="text-xs font-bold uppercase tracking-wider text-text-muted">Total Orgs</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-text-muted">{{t "sy.tenantslist.orgs"}}</span>
                 <span class="w-2 h-2 rounded-full bg-primary"></span>
             </div>
             <div class="text-2xl font-bold tabular-nums text-on-surface mt-1.5">{{if .Total}}{{.Total}}{{else}}0{{end}}</div>
-            <div class="text-[11px] text-text-muted mt-0.5">{{if .Active}}{{.Active}}{{else}}0{{end}} active, {{if .Suspended}}{{.Suspended}}{{else}}0{{end}} suspended</div>
+            <div class="text-[11px] text-text-muted mt-0.5">{{if .Active}}{{.Active}}{{else}}0{{end}} {{t "sy.tenantslist.active_w"}} {{if .Suspended}}{{.Suspended}}{{else}}0{{end}} {{t "sy.tenantslist.suspended_w"}}</div>
         </div>
 
         <!-- Active Trials -->
         <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-3.5 hover:border-primary/20 transition">
             <div class="flex items-center justify-between gap-2">
-                <span class="text-xs font-bold uppercase tracking-wider text-text-muted">Active Trials</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-text-muted">{{t "sy.tenantslist.trials"}}</span>
                 <span class="w-2 h-2 rounded-full bg-cyan-500"></span>
             </div>
             <div class="text-2xl font-bold tabular-nums text-cyan-mid mt-1.5">{{if .Trials}}{{.Trials}}{{else}}0{{end}}</div>
-            <div class="text-[11px] text-text-muted mt-0.5">Starter evaluations</div>
+            <div class="text-[11px] text-text-muted mt-0.5">{{t "sy.tenantslist.trials_sub"}}</div>
         </div>
 
         <!-- Paid Subscriptions -->
         <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-3.5 hover:border-primary/20 transition">
             <div class="flex items-center justify-between gap-2">
-                <span class="text-xs font-bold uppercase tracking-wider text-text-muted">Paid Subscriptions</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-text-muted">{{t "sy.tenantslist.paid"}}</span>
                 <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
             </div>
             <div class="text-2xl font-bold tabular-nums text-emerald-mid mt-1.5">{{if .Paid}}{{.Paid}}{{else}}0{{end}}</div>
-            <div class="text-[11px] text-text-muted mt-0.5">Growth &amp; Scale tiers</div>
+            <div class="text-[11px] text-text-muted mt-0.5">{{t "sy.tenantslist.paid_sub"}}</div>
         </div>
 
         <!-- Monthly Recurring Revenue (MRR) -->
         <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-3.5 hover:border-primary/20 transition">
             <div class="flex items-center justify-between gap-2">
-                <span class="text-xs font-bold uppercase tracking-wider text-text-muted">Monthly MRR</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-text-muted">{{t "sy.tenantslist.mrr"}}</span>
                 <span class="w-2 h-2 rounded-full bg-status-success"></span>
             </div>
             <div class="text-2xl font-black tabular-nums text-status-success mt-1.5">₹{{if .TotalMRR}}{{printf "%.0f" .TotalMRR}}{{else}}0{{end}}</div>
-            <div class="text-[11px] text-text-muted mt-0.5">Contracted recurring</div>
+            <div class="text-[11px] text-text-muted mt-0.5">{{t "sy.tenantslist.mrr_sub"}}</div>
         </div>
 
         <!-- Past Due / Near Quota Alerts -->
         <div class="col-span-2 lg:col-span-1 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-3.5 hover:border-primary/20 transition">
             <div class="flex items-center justify-between gap-2">
-                <span class="text-xs font-bold uppercase tracking-wider text-text-muted">Commercial Alerts</span>
+                <span class="text-xs font-bold uppercase tracking-wider text-text-muted">{{t "sy.tenantslist.alerts"}}</span>
                 <span class="w-2 h-2 rounded-full bg-status-alert {{if .CommercialAlerts}}animate-ping{{end}}"></span>
             </div>
             <div class="text-2xl font-bold tabular-nums text-status-alert mt-1.5">{{if .CommercialAlerts}}{{.CommercialAlerts}}{{else}}0{{end}}</div>
-            <div class="text-[11px] text-text-muted mt-0.5">{{if .NearQuotaCount}}{{.NearQuotaCount}}{{else}}0{{end}} near quota, {{if .PastDue}}{{.PastDue}}{{else}}0{{end}} past due</div>
+            <div class="text-[11px] text-text-muted mt-0.5">{{if .NearQuotaCount}}{{.NearQuotaCount}}{{else}}0{{end}} {{t "sy.tenantslist.near_quota"}} {{if .PastDue}}{{.PastDue}}{{else}}0{{end}} {{t "sy.tenantslist.past_due"}}</div>
         </div>
     </div>
 

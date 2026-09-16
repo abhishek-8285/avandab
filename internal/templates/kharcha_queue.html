@@ -7,7 +7,7 @@
         <!-- Receipt or placeholder -->
         {{if .ReceiptURL}}
         <a href="{{nullString .ReceiptURL}}" target="_blank" rel="noopener">
-            <img src="{{nullString .ReceiptURL}}" alt="Expense receipt" width="40" height="40" loading="lazy" decoding="async" class="w-10 h-10 rounded-lg object-cover border border-border-subtle shrink-0 hover:opacity-90 transition" />
+            <img src="{{nullString .ReceiptURL}}" alt="{{t "mo.khaq.receipt_alt"}}" width="40" height="40" loading="lazy" decoding="async" class="w-10 h-10 rounded-lg object-cover border border-border-subtle shrink-0 hover:opacity-90 transition" />
         </a>
         {{else}}
         <div class="w-10 h-10 rounded-lg bg-surface-container grid place-items-center text-text-muted shrink-0">
@@ -34,7 +34,7 @@
             <div class="flex items-center gap-1.5 mt-1 flex-wrap">
                 <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-soft text-emerald-mid dark:text-emerald-400 text-[11px] font-bold">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
-                    VOICE AUDIT
+                    {{t "mo.khaq.voice"}}
                 </span>
                 <span class="text-xs text-text-muted italic truncate">"{{.Description}}"</span>
             </div>
@@ -46,19 +46,19 @@
             <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-status-warning/10 text-status-warning text-[11px] font-bold border border-status-warning/30 cursor-help"
                   title="Claimed {{printf "%.1f" .FuelLitres}}L, Expected {{printf "%.1f" .ExpectedLitres}}L ±{{printf "%.1f" .VariancePct}}% — review at /fuel/audit">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3 shrink-0"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-                AUDIT: NEEDS REVIEW
+                {{t "mo.khaq.needs_review"}}
             </span>
             {{else if eq .AuditStatus "passed"}}
             <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-status-success/10 text-status-success text-[11px] font-bold border border-status-success/30 cursor-help"
                   title="Claimed {{printf "%.1f" .FuelLitres}}L, Expected {{printf "%.1f" .ExpectedLitres}}L ±{{printf "%.1f" .VariancePct}}%">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-                AUDIT PASSED
+                {{t "mo.khaq.audit_passed"}}
             </span>
             {{else if eq .AuditStatus "failed"}}
             <span class="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-status-alert/10 text-status-alert text-[11px] font-bold border border-status-alert/30 cursor-help"
                   title="Claimed {{printf "%.1f" .FuelLitres}}L, Expected {{printf "%.1f" .ExpectedLitres}}L ±{{printf "%.1f" .VariancePct}}%">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3 shrink-0"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
-                AUDIT FAILED
+                {{t "mo.khaq.audit_failed"}}
             </span>
             {{end}}
         </div>
@@ -77,12 +77,12 @@
                 hx-indicator="#spin-{{.ID}}"
                 class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-status-success hover:bg-status-success/90 text-on-primary text-xs font-bold shadow-sm transition">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M20 6 9 17l-5-5"/></svg>
-                APPROVE
+                {{t "mo.khaq.approve"}}
             </button>
             <button
                 onclick="openRejectModal('{{.ID}}', '{{.DriverName}}', '{{.Amount}}')"
                 class="inline-flex items-center px-3.5 py-1.5 rounded-full bg-surface-container-lowest border border-border-subtle hover:bg-status-alert/10 hover:border-status-alert/30 text-secondary hover:text-status-alert text-xs font-bold transition-colors">
-                REJECT
+                {{t "mo.khaq.reject"}}
             </button>
             <div id="spin-{{.ID}}" class="htmx-indicator ml-1">
                 <svg aria-hidden="true" class="animate-spin h-4 w-4 text-text-muted" viewBox="0 0 24 24">
@@ -98,8 +98,8 @@
     <div class="w-12 h-12 rounded-full bg-emerald-soft border border-emerald-line grid place-items-center mb-3">
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
     </div>
-    <p class="text-sm font-medium text-on-surface">All clear — no pending approvals</p>
-    <p class="text-text-muted text-xs mt-1">New requests will appear here automatically.</p>
+    <p class="text-sm font-medium text-on-surface">{{t "mo.khaq.all_clear"}}</p>
+    <p class="text-text-muted text-xs mt-1">{{t "mo.khaq.new_auto"}}</p>
 </div>
 {{end}}
 {{end}}

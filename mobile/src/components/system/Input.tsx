@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet, TextInputProps } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors, Radius, Spacing } from '../../constants/theme';
+import { Colors, Radius, Spacing, FontSize} from '../../constants/theme';
 
 interface Props extends TextInputProps {
   label: string;
@@ -29,7 +29,7 @@ export function Input({ label, icon, error, style, accessibilityLabel, ...rest }
 
 const styles = StyleSheet.create({
   wrap: { gap: 6 },
-  label: { fontSize: 10, fontWeight: '700', color: Colors.textSecondary, letterSpacing: 1, fontFamily: 'monospace' },
+  label: { fontSize: FontSize.small, fontWeight: '700', color: Colors.textSecondary, letterSpacing: 1, fontFamily: 'monospace' },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -40,6 +40,6 @@ const styles = StyleSheet.create({
     height: 44,
   },
   icon: { position: 'absolute', left: 10, zIndex: 1 },
-  input: { flex: 1, paddingHorizontal: 12, fontSize: 13, color: Colors.textPrimary, fontFamily: 'monospace' },
-  error: { fontSize: 10, color: Colors.danger },
+  input: { flex: 1, paddingHorizontal: 12, fontSize: FontSize.bodyLarge, color: Colors.textPrimary, fontFamily: 'monospace' },
+  error: { fontSize: FontSize.small, color: Colors.danger },
 });

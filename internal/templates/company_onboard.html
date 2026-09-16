@@ -7,16 +7,16 @@
                     <div class="flex items-center gap-2 mb-1.5">
                         <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20">
                             <svg aria-hidden="true" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            Fleet Setup Wizard
+                            {{t "sy.onb.wizard"}}
                         </span>
                     </div>
-                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-on-surface font-display">Welcome to Avandab Fleet Management</h1>
-                    <p class="mt-1 text-xs sm:text-sm text-secondary">Set up your company profile and optionally provision your first fleet assets in 3 guided steps.</p>
+                    <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{t "sy.onb.welcome"}}</h1>
+                    <p class="mt-1 text-xs sm:text-sm text-secondary">{{t "sy.onb.sub"}}</p>
                 </div>
                 <div class="flex items-center gap-2 self-start sm:self-auto">
                     <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-status-alert bg-status-alert/10 border border-status-alert/20">
                         <svg aria-hidden="true" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                        Mandatory Compliance Gate
+                        {{t "sy.onb.gate"}}
                     </span>
                 </div>
             </div>
@@ -27,8 +27,8 @@
                     <div class="flex items-center gap-2.5">
                         <span id="step-badge-1" class="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs font-bold bg-primary text-on-primary shrink-0 transition-colors">1</span>
                         <div class="min-w-0">
-                            <div class="text-xs sm:text-sm font-bold text-on-surface truncate">1. Company &amp; Tax</div>
-                            <div class="text-[11px] text-primary hidden sm:block truncate">Compliance &amp; Identity</div>
+                            <div class="text-xs sm:text-sm font-bold text-on-surface truncate">{{t "sy.onb.step1"}}</div>
+                            <div class="text-[11px] text-primary hidden sm:block truncate">{{t "sy.onb.step1_sub"}}</div>
                         </div>
                     </div>
                 </button>
@@ -36,8 +36,8 @@
                     <div class="flex items-center gap-2.5">
                         <span id="step-badge-2" class="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs font-bold bg-surface-container-high text-secondary shrink-0 transition-colors">2</span>
                         <div class="min-w-0">
-                            <div class="text-xs sm:text-sm font-bold text-secondary truncate">2. First Vehicle</div>
-                            <div class="text-[11px] text-text-muted hidden sm:block truncate">Optional Asset</div>
+                            <div class="text-xs sm:text-sm font-bold text-secondary truncate">{{t "sy.onb.step2"}}</div>
+                            <div class="text-[11px] text-text-muted hidden sm:block truncate">{{t "sy.onb.step2_sub"}}</div>
                         </div>
                     </div>
                 </button>
@@ -45,8 +45,8 @@
                     <div class="flex items-center gap-2.5">
                         <span id="step-badge-3" class="w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs font-bold bg-surface-container-high text-secondary shrink-0 transition-colors">3</span>
                         <div class="min-w-0">
-                            <div class="text-xs sm:text-sm font-bold text-secondary truncate">3. First Driver</div>
-                            <div class="text-[11px] text-text-muted hidden sm:block truncate">Optional Staff</div>
+                            <div class="text-xs sm:text-sm font-bold text-secondary truncate">{{t "sy.onb.step3"}}</div>
+                            <div class="text-[11px] text-text-muted hidden sm:block truncate">{{t "sy.onb.step3_sub"}}</div>
                         </div>
                     </div>
                 </button>
@@ -62,9 +62,9 @@
                     <div class="flex items-center justify-between border-b border-border-subtle pb-2 mb-4">
                         <h2 class="text-xs font-bold uppercase tracking-wider text-text-muted flex items-center gap-2">
                             <svg aria-hidden="true" class="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 7v14M21 7v14M6 11h4M6 15h4M14 11h4M14 15h4M9 3h6v4H9z"/></svg>
-                            Step 1: Company Identity &amp; Compliance Details
+                            {{t "sy.onb.s1_title"}}
                         </h2>
-                        <span class="text-[11px] font-semibold text-status-alert">* Required Fields</span>
+                        <span class="text-[11px] font-semibold text-status-alert">{{t "sy.onb.required"}}</span>
                     </div>
 
                     <div class="bg-primary/5 border border-primary/20 rounded-xl p-3.5 sm:p-4 mb-5 flex items-start gap-3">
@@ -72,43 +72,43 @@
                             <svg aria-hidden="true" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                         </div>
                         <div>
-                            <div class="text-xs font-bold text-on-surface">Mandatory Compliance Gate</div>
-                            <div class="text-xs text-secondary mt-0.5">Mandatory compliance for GST e-invoicing and transport operations. Complete your company profile to unlock fleet operations.</div>
+                            <div class="text-xs font-bold text-on-surface">{{t "sy.onb.gate"}}</div>
+                            <div class="text-xs text-secondary mt-0.5">{{t "sy.onb.gate_desc"}}</div>
                         </div>
                     </div>
 
                     <!-- Tax & Legal Operator Classification Selector -->
                     <div class="mb-5">
-                        <label class="block text-xs font-bold text-secondary uppercase tracking-wider mb-2.5">Tax &amp; Legal Operator Classification</label>
+                        <label class="block text-xs font-bold text-secondary uppercase tracking-wider mb-2.5">{{t "sy.onb.tier_label"}}</label>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" id="tier-cards" role="radiogroup" aria-label="Tax and Legal Operator Classification">
                             <!-- Tier 1 -->
                             <div onclick="selectTaxTier(1)" id="tier-card-1" role="radio" aria-checked="true" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectTaxTier(1)}" class="tier-card p-3 rounded-xl border border-primary bg-primary/5 cursor-pointer transition">
                                 <div class="flex items-center gap-2 mb-1">
                                     <span class="w-2 h-2 rounded-full bg-primary shrink-0"></span>
-                                    <span class="text-xs font-bold text-on-surface">Tier 1: GST Enterprise</span>
+                                    <span class="text-xs font-bold text-on-surface">{{t "sy.onb.tier1"}}</span>
                                 </div>
-                                <p class="text-[11px] text-secondary leading-tight">15-char GSTIN • B2B Tax Invoices, IRN &amp; e-Way Bills</p>
-                                <span class="inline-block mt-2 px-2 py-0.5 rounded text-[11px] font-bold bg-primary/10 text-primary border border-primary/20">Full GSTN Integration</span>
+                                <p class="text-[11px] text-secondary leading-tight">{{t "sy.onb.tier1_desc"}}</p>
+                                <span class="inline-block mt-2 px-2 py-0.5 rounded text-[11px] font-bold bg-primary/10 text-primary border border-primary/20">{{t "sy.onb.tier1_badge"}}</span>
                             </div>
 
                             <!-- Tier 2 -->
                             <div onclick="selectTaxTier(2)" id="tier-card-2" role="radio" aria-checked="false" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectTaxTier(2)}" class="tier-card p-3 rounded-xl border border-border-subtle bg-surface-container-low/40 hover:bg-surface-container-low cursor-pointer transition">
                                 <div class="flex items-center gap-2 mb-1">
                                     <span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>
-                                    <span class="text-xs font-bold text-on-surface">Tier 2: Non-GST with PAN</span>
+                                    <span class="text-xs font-bold text-on-surface">{{t "sy.onb.tier2"}}</span>
                                 </div>
-                                <p class="text-[11px] text-secondary leading-tight">10-char PAN • Sec 31(3)(c) Bill of Supply &amp; RCM</p>
-                                <span class="inline-block mt-2 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-300/40">Sec 194C(6) TDS Exempt</span>
+                                <p class="text-[11px] text-secondary leading-tight">{{t "sy.onb.tier2_desc"}}</p>
+                                <span class="inline-block mt-2 px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-300/40">{{t "sy.onb.tier2_badge"}}</span>
                             </div>
 
                             <!-- Tier 3 -->
                             <div onclick="selectTaxTier(3)" id="tier-card-3" role="radio" aria-checked="false" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectTaxTier(3)}" class="tier-card p-3 rounded-xl border border-border-subtle bg-surface-container-low/40 hover:bg-surface-container-low cursor-pointer transition">
                                 <div class="flex items-center gap-2 mb-1">
                                     <span class="w-2 h-2 rounded-full bg-slate-400 shrink-0"></span>
-                                    <span class="text-xs font-bold text-on-surface">Tier 3: Micro Transporter</span>
+                                    <span class="text-xs font-bold text-on-surface">{{t "sy.onb.tier3"}}</span>
                                 </div>
-                                <p class="text-[11px] text-secondary leading-tight">No GST &amp; No PAN • Rule 54(3) Consignment Bilty</p>
-                                <span class="inline-block mt-2 px-2 py-0.5 rounded text-[11px] font-bold bg-surface-container-high text-secondary border border-border-subtle">Rule 54(3) Compliant</span>
+                                <p class="text-[11px] text-secondary leading-tight">{{t "sy.onb.tier3_desc"}}</p>
+                                <span class="inline-block mt-2 px-2 py-0.5 rounded text-[11px] font-bold bg-surface-container-high text-secondary border border-border-subtle">{{t "sy.onb.tier3_badge"}}</span>
                             </div>
                         </div>
                     </div>
@@ -116,42 +116,42 @@
                     <div class="space-y-4">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div class="sm:col-span-2">
-                                <label for="company_name" class="block text-xs font-bold text-secondary mb-1.5">Company / Enterprise Name <span class="text-status-alert">*</span></label>
+                                <label for="company_name" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.company"}} <span class="text-status-alert">*</span></label>
                                 <input aria-label="e.g. Apex Logistics &amp; Transport Corp" autocomplete="organization" type="text" id="company_name" name="company_name" required value="{{if .Settings}}{{.Settings.CompanyName}}{{end}}" placeholder="e.g. Apex Logistics &amp; Transport Corp"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             </div>
 
                             <div>
-                                <label for="gst_number" class="block text-xs font-bold text-secondary mb-1.5">GST / Tax ID (GSTIN) <span class="text-[11px] font-normal text-text-muted">(Tier 1)</span></label>
+                                <label for="gst_number" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.gstin"}} <span class="text-[11px] font-normal text-text-muted">(Tier 1)</span></label>
                                 <input aria-label="27ABCDE1234F1Z5" autocomplete="off" type="text" id="gst_number" name="gst_number" value="{{if .Settings}}{{nullString .Settings.GSTNumber}}{{end}}" placeholder="27ABCDE1234F1Z5" pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]" title="GSTIN format: 27ABCDE1234F1Z5" oninput="onGSTINInput(this.value)"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                                <p class="text-[11px] text-text-muted mt-1">15-digit GSTIN used on Tax Invoices and e-Way bills.</p>
+                                <p class="text-[11px] text-text-muted mt-1">{{t "sy.onb.gstin_hint"}}</p>
                             </div>
 
                             <div>
-                                <label for="pan_number" class="block text-xs font-bold text-secondary mb-1.5">Income Tax PAN Number <span class="text-[11px] font-normal text-text-muted">(Tier 1 &amp; 2)</span></label>
+                                <label for="pan_number" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.pan"}} <span class="text-[11px] font-normal text-text-muted">(Tier 1 &amp; 2)</span></label>
                                 <input aria-label="ABCDE1234F" autocomplete="off" type="text" id="pan_number" name="pan_number" value="{{if .Settings}}{{nullString .Settings.PanNumber}}{{end}}" placeholder="ABCDE1234F" pattern="[A-Z]{5}[0-9]{4}[A-Z]" title="PAN format: ABCDE1234F" oninput="onPANInput(this.value)"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                                <p class="text-[11px] text-text-muted mt-1">10-digit PAN. Auto-extracted from GSTIN or entered for Sec 194C(6) TDS declaration.</p>
+                                <p class="text-[11px] text-text-muted mt-1">{{t "sy.onb.pan_hint"}}</p>
                             </div>
                         </div>
 
                         <!-- Real-time legal helper callout banner -->
-                        <div id="legal-helper-banner" class="rounded-xl p-3.5 border transition bg-primary/5 border-primary/20">
+                        <div id="legal-helper-banner" class="rounded-xl p-3.5 border transition bg-primary/5 border-primary/20" data-t1-title="{{t "sy.onb.t1_title"}}" data-t1-desc="{{t "sy.onb.t1_desc"}}" data-t2-title="{{t "sy.onb.t2_title"}}" data-t2-desc="{{t "sy.onb.t2_desc"}}" data-t3-title="{{t "sy.onb.t3_title"}}" data-t3-desc="{{t "sy.onb.t3_desc"}}">
                             <div class="flex items-start gap-2.5">
                                 <div id="legal-helper-icon" class="p-1 rounded bg-primary/10 text-primary shrink-0 mt-0.5">
                                     <svg aria-hidden="true" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                                 </div>
                                 <div>
-                                    <div id="legal-helper-title" class="text-xs font-bold text-on-surface">Tier 1: GST Registered Enterprise Mode</div>
-                                    <div id="legal-helper-desc" class="text-xs text-secondary mt-0.5">Invoices will issue as standard B2B "TAX INVOICE" with CGST/SGST/IGST breakdown, IRN generation, and e-Way Bill support.</div>
+                                    <div id="legal-helper-title" class="text-xs font-bold text-on-surface">{{t "sy.onb.t1_title"}}</div>
+                                    <div id="legal-helper-desc" class="text-xs text-secondary mt-0.5">{{t "sy.onb.t1_desc"}}</div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label for="currency" class="block text-xs font-bold text-secondary mb-1.5">Operating Currency</label>
+                                <label for="currency" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.currency"}}</label>
                                 <select id="currency" name="currency" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                                     <option value="INR" {{if .Settings}}{{if eq .Settings.Currency "INR"}}selected{{end}}{{else}}selected{{end}}>INR (₹) - Indian Rupee</option>
                                     <option value="USD" {{if .Settings}}{{if eq .Settings.Currency "USD"}}selected{{end}}{{end}}>USD ($) - US Dollar</option>
@@ -164,12 +164,12 @@
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label for="email" class="block text-xs font-bold text-secondary mb-1.5">Primary Contact Email <span class="text-status-alert">*</span></label>
+                                <label for="email" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.email"}} <span class="text-status-alert">*</span></label>
                                 <input aria-label="operations@company.com" autocomplete="email" spellcheck="false" type="email" id="email" name="email" required value="{{if .Settings}}{{nullString .Settings.Email}}{{end}}" placeholder="operations@company.com"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             </div>
                             <div>
-                                <label for="phone" class="block text-xs font-bold text-secondary mb-1.5">Official Phone Number <span class="text-status-alert">*</span></label>
+                                <label for="phone" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.phone"}} <span class="text-status-alert">*</span></label>
                                 <input aria-label="+91 98765 43210" autocomplete="tel" type="tel" id="phone" name="phone" required value="{{if .Settings}}{{nullString .Settings.Phone}}{{end}}" placeholder="+91 98765 43210"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             </div>
@@ -177,20 +177,20 @@
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label for="address" class="block text-xs font-bold text-secondary mb-1.5">Company Headquarter / Hub Address <span class="text-status-alert">*</span></label>
+                                <label for="address" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.address"}} <span class="text-status-alert">*</span></label>
                                 <textarea aria-label="Plot 42, Transport Nagar, Phase 2" id="address" name="address" required rows="3" placeholder="Plot 42, Transport Nagar, Phase 2"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">{{if .Settings}}{{nullString .Settings.Address}}{{end}}</textarea>
                             </div>
                             <div class="space-y-4">
                                 <div>
-                                    <label for="timezone" class="block text-xs font-bold text-secondary mb-1.5">Company Timezone</label>
+                                    <label for="timezone" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.timezone"}}</label>
                                     <select id="timezone" name="timezone" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                                         {{$ctz := ""}}{{if .Settings}}{{$ctz = .Settings.Timezone}}{{end}}
                                         {{template "timezone_options.html" $ctz}}
                                     </select>
                                 </div>
                                 <div>
-                                    <label for="logo" class="block text-xs font-bold text-secondary mb-1.5">Company Logo (Optional)</label>
+                                    <label for="logo" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.logo"}}</label>
                                     <input id="logo" type="file" name="logo" accept="image/png,image/jpeg,image/webp"
                                         class="w-full text-xs text-text-muted file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition cursor-pointer">
                                 </div>
@@ -206,9 +206,9 @@
                     <div class="flex items-center justify-between border-b border-border-subtle pb-2 mb-4">
                         <h2 class="text-xs font-bold uppercase tracking-wider text-text-muted flex items-center gap-2">
                             <svg aria-hidden="true" class="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1 .4-1 1v7c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
-                            Step 2: Add First Fleet Vehicle (Optional)
+                            {{t "sy.onb.s2_title"}}
                         </h2>
-                        <span class="text-[11px] font-medium text-text-muted">You can skip and add later</span>
+                        <span class="text-[11px] font-medium text-text-muted">{{t "sy.onb.skip_later"}}</span>
                     </div>
 
                     <div class="bg-surface-container-low/60 rounded-xl p-4 border border-border-subtle mb-5 flex items-start gap-3">
@@ -216,50 +216,50 @@
                             <svg aria-hidden="true" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
                         </div>
                         <div class="text-xs text-secondary leading-relaxed">
-                            Adding a vehicle now will immediately unlock GPS tracking, trip dispatching, and maintenance scheduling. If your fleet details are not handy, you can skip this step.
+                            {{t "sy.onb.s2_info"}}
                         </div>
                     </div>
 
                     <div class="space-y-4">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label for="vehicle_registration" class="block text-xs font-bold text-secondary mb-1.5">Registration / Plate Number</label>
+                                <label for="vehicle_registration" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.reg_no"}}</label>
                                 <input aria-label="e.g. DL 01 LN 1234" autocomplete="off" id="vehicle_registration" type="text" name="vehicle_registration" placeholder="e.g. DL 01 LN 1234"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                                <p class="text-[11px] text-text-muted mt-1">Official vehicle license plate.</p>
+                                <p class="text-[11px] text-text-muted mt-1">{{t "sy.onb.reg_hint"}}</p>
                             </div>
                             <div>
-                                <label for="vehicle_model" class="block text-xs font-bold text-secondary mb-1.5">Vehicle Model / Fleet Name</label>
+                                <label for="vehicle_model" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.model"}}</label>
                                 <input aria-label="e.g. Tata 407 LPT / Eicher Pro 2049" autocomplete="off" id="vehicle_model" type="text" name="vehicle_model" placeholder="e.g. Tata 407 LPT / Eicher Pro 2049"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                                <p class="text-[11px] text-text-muted mt-1">Make, model or internal fleet number.</p>
+                                <p class="text-[11px] text-text-muted mt-1">{{t "sy.onb.model_hint"}}</p>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             <div>
-                                <label for="vehicle_type" class="block text-xs font-bold text-secondary mb-1.5">Vehicle Type</label>
+                                <label for="vehicle_type" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.vtype"}}</label>
                                 <select id="vehicle_type" name="vehicle_type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                                    <option value="truck">Truck / Heavy Commercial</option>
-                                    <option value="mini_truck" selected>Mini Truck (LCV)</option>
-                                    <option value="pickup">Pickup (1.5T / 2T)</option>
-                                    <option value="tempo">Tempo / 3-Wheeler</option>
-                                    <option value="van">Delivery Van</option>
-                                    <option value="bus">Bus / Staff Transport</option>
+                                    <option value="truck">{{t "sy.onb.v_truck"}}</option>
+                                    <option value="mini_truck" selected>{{t "sy.onb.v_mini"}}</option>
+                                    <option value="pickup">{{t "sy.onb.v_pickup"}}</option>
+                                    <option value="tempo">{{t "sy.onb.v_tempo"}}</option>
+                                    <option value="van">{{t "sy.onb.v_van"}}</option>
+                                    <option value="bus">{{t "sy.onb.v_bus"}}</option>
                                 </select>
                             </div>
                             <div>
-                                <label for="fuel_type" class="block text-xs font-bold text-secondary mb-1.5">Fuel Type</label>
+                                <label for="fuel_type" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.fuel"}}</label>
                                 <select id="fuel_type" name="fuel_type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                                    <option value="diesel" selected>Diesel</option>
-                                    <option value="cng">CNG</option>
-                                    <option value="electric">Electric (EV)</option>
-                                    <option value="petrol">Petrol</option>
-                                    <option value="gas">LPG / Gas</option>
+                                    <option value="diesel" selected>{{t "sy.onb.f_diesel"}}</option>
+                                    <option value="cng">{{t "sy.onb.f_cng"}}</option>
+                                    <option value="electric">{{t "sy.onb.f_ev"}}</option>
+                                    <option value="petrol">{{t "sy.onb.f_petrol"}}</option>
+                                    <option value="gas">{{t "sy.onb.f_gas"}}</option>
                                 </select>
                             </div>
                             <div>
-                                <label for="capacity" class="block text-xs font-bold text-secondary mb-1.5">Payload Capacity (kg)</label>
+                                <label for="capacity" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.capacity"}}</label>
                                 <input aria-label="e.g. 2500" id="capacity" type="number" name="capacity" placeholder="e.g. 2500"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             </div>
@@ -274,9 +274,9 @@
                     <div class="flex items-center justify-between border-b border-border-subtle pb-2 mb-4">
                         <h2 class="text-xs font-bold uppercase tracking-wider text-text-muted flex items-center gap-2">
                             <svg aria-hidden="true" class="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                            Step 3: Add First Fleet Driver (Optional)
+                            {{t "sy.onb.s3_title"}}
                         </h2>
-                        <span class="text-[11px] font-medium text-text-muted">You can skip and add later</span>
+                        <span class="text-[11px] font-medium text-text-muted">{{t "sy.onb.skip_later"}}</span>
                     </div>
 
                     <div class="bg-surface-container-low/60 rounded-xl p-4 border border-border-subtle mb-5 flex items-start gap-3">
@@ -284,19 +284,19 @@
                             <svg aria-hidden="true" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                         </div>
                         <div class="text-xs text-secondary leading-relaxed">
-                            Drivers can be assigned to trips, submit fuel slips (Kharcha), and log digital signatures on proof-of-delivery receipts.
+                            {{t "sy.onb.s3_info"}}
                         </div>
                     </div>
 
                     <div class="space-y-4">
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label for="driver_name" class="block text-xs font-bold text-secondary mb-1.5">Driver Full Name</label>
+                                <label for="driver_name" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.driver_name"}}</label>
                                 <input aria-label="e.g. Ramesh Kumar" autocomplete="off" id="driver_name" type="text" name="driver_name" placeholder="e.g. Ramesh Kumar"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             </div>
                             <div>
-                                <label for="driver_phone" class="block text-xs font-bold text-secondary mb-1.5">Mobile Phone Number</label>
+                                <label for="driver_phone" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.driver_phone"}}</label>
                                 <input aria-label="+91 98765 43210" autocomplete="tel" id="driver_phone" type="tel" name="driver_phone" placeholder="+91 98765 43210"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             </div>
@@ -304,12 +304,12 @@
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
-                                <label for="driver_license" class="block text-xs font-bold text-secondary mb-1.5">Driving License (DL) Number</label>
+                                <label for="driver_license" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.dl"}}</label>
                                 <input aria-label="e.g. DL-1420110012345" autocomplete="off" id="driver_license" type="text" name="driver_license" placeholder="e.g. DL-1420110012345"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm font-data-mono uppercase text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             </div>
                             <div>
-                                <label for="experience" class="block text-xs font-bold text-secondary mb-1.5">Driving Experience (Years)</label>
+                                <label for="experience" class="block text-xs font-bold text-secondary mb-1.5">{{t "sy.onb.exp"}}</label>
                                 <input aria-label="e.g. 4" id="experience" type="number" name="experience" placeholder="e.g. 4" min="0" max="50"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3.5 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             </div>
@@ -322,29 +322,29 @@
             <div class="sticky bottom-0 -mx-5 sm:-mx-8 -mb-5 sm:-mb-8 px-5 sm:px-8 py-3.5 bg-surface-container-lowest/95 backdrop-blur-sm border-t border-border-subtle flex items-center justify-between gap-3 flex-wrap z-10">
                 <div class="flex items-center gap-2 text-xs text-secondary">
                     <svg aria-hidden="true" class="w-4 h-4 text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-                    <span>Complete Step 1 compliance to unlock fleet dashboard.</span>
+                    <span>{{t "sy.onb.footer_note"}}</span>
                 </div>
 
                 <div class="flex items-center gap-2.5">
                     <button type="button" id="prev-btn" onclick="prevStep()" class="hidden px-4 py-2 text-xs font-semibold rounded-lg bg-surface-container-low border border-border-subtle text-on-surface hover:bg-surface-container hover:border-primary/20 transition cursor-pointer">
-                        ← Back
+                        {{t "sy.onb.back"}}
                     </button>
 
                     <button type="submit" id="save-quick-btn" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-surface-container-low border border-border-subtle hover:bg-surface-container hover:border-primary/30 text-on-surface transition cursor-pointer">
-                        <span>Save &amp; Finish</span>
+                        <span>{{t "sy.onb.save_finish"}}</span>
                     </button>
 
                     <a href="/dashboard" class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg text-secondary hover:text-on-surface hover:underline transition cursor-pointer">
-                        <span>Finish later →</span>
+                        <span>{{t "sy.onb.finish_later"}}</span>
                     </a>
 
-                    <button type="button" id="next-btn" onclick="nextStep()" class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold rounded-lg bg-primary text-on-primary shadow-sm hover:bg-primary/90 transition cursor-pointer">
-                        <span>Continue to Vehicle Setup (Optional) →</span>
+                    <button type="button" id="next-btn" data-to-vehicle="{{t "sy.onb.to_vehicle"}}" data-to-driver="{{t "sy.onb.to_driver"}}" onclick="nextStep()" class="inline-flex items-center gap-1.5 px-5 py-2 text-xs font-bold rounded-lg bg-primary text-on-primary shadow-sm hover:bg-primary/90 transition cursor-pointer">
+                        <span>{{t "sy.onb.to_vehicle"}}</span>
                     </button>
 
                     <button type="submit" id="submit-btn" class="hidden inline-flex items-center gap-2 px-6 py-2 text-xs font-bold rounded-lg bg-primary text-on-primary shadow-sm hover:bg-primary/90 transition cursor-pointer">
                         <svg aria-hidden="true" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-5-5"/></svg>
-                        <span>Save &amp; Complete Onboarding</span>
+                        <span>{{t "sy.onb.complete"}}</span>
                     </button>
                 </div>
             </div>
@@ -478,13 +478,13 @@
         if (step === 1) {
             prevBtn.classList.add('hidden');
             nextBtn.classList.remove('hidden');
-            nextBtn.querySelector('span').innerText = "Continue to Vehicle Setup (Optional) →";
+            nextBtn.querySelector('span').innerText = nextBtn.dataset.toVehicle || "Continue to Vehicle Setup (Optional) →";
             if (saveQuickBtn) saveQuickBtn.classList.remove('hidden');
             submitBtn.classList.add('hidden');
         } else if (step === 2) {
             prevBtn.classList.remove('hidden');
             nextBtn.classList.remove('hidden');
-            nextBtn.querySelector('span').innerText = "Continue to Driver Setup (Optional) →";
+            nextBtn.querySelector('span').innerText = nextBtn.dataset.toDriver || "Continue to Driver Setup (Optional) →";
             if (saveQuickBtn) saveQuickBtn.classList.remove('hidden');
             submitBtn.classList.add('hidden');
         } else if (step === 3) {
@@ -543,18 +543,18 @@
         if (gstVal && gstVal.length >= 15) {
             if (card1) card1.className = "tier-card p-3 rounded-xl border border-primary bg-primary/5 cursor-pointer transition shadow-xs";
             if (banner) banner.className = "rounded-xl p-3.5 border transition bg-primary/5 border-primary/20";
-            if (title) title.innerText = "Tier 1: GST Registered Enterprise Mode";
-            if (desc) desc.innerText = "Invoices will issue as standard B2B 'TAX INVOICE' with CGST/SGST/IGST breakdown, IRN generation, and e-Way Bill support.";
+            if (title) title.innerText = (banner && banner.dataset.t1Title) || "Tier 1: GST Registered Enterprise Mode";
+            if (desc) desc.innerText = (banner && banner.dataset.t1Desc) || "Invoices will issue as standard B2B 'TAX INVOICE' with CGST/SGST/IGST breakdown, IRN generation, and e-Way Bill support.";
         } else if (panVal && panVal.length >= 10) {
             if (card2) card2.className = "tier-card p-3 rounded-xl border border-amber-500 bg-amber-500/10 cursor-pointer transition shadow-xs";
             if (banner) banner.className = "rounded-xl p-3.5 border transition bg-amber-500/10 border-amber-500/30";
-            if (title) title.innerText = "Tier 2: Non-GST with PAN (RCM & Bill of Supply)";
-            if (desc) desc.innerText = "Invoices will issue as 'BILL OF SUPPLY / FREIGHT BILL' under Section 31(3)(c) with Reverse Charge (RCM Sec 9(3)). Section 194C(6) TDS declaration applies (0% TDS).";
+            if (title) title.innerText = (banner && banner.dataset.t2Title) || "Tier 2: Non-GST with PAN (RCM & Bill of Supply)";
+            if (desc) desc.innerText = (banner && banner.dataset.t2Desc) || "Invoices will issue as 'BILL OF SUPPLY / FREIGHT BILL' under Section 31(3)(c) with Reverse Charge (RCM Sec 9(3)). Section 194C(6) TDS declaration applies (0% TDS).";
         } else {
             if (card3) card3.className = "tier-card p-3 rounded-xl border border-slate-400 bg-slate-500/10 cursor-pointer transition shadow-xs";
             if (banner) banner.className = "rounded-xl p-3.5 border transition bg-surface-container-high/60 border-border-subtle";
-            if (title) title.innerText = "Tier 3: Micro Transporter (Rule 54(3) Bilty)";
-            if (desc) desc.innerText = "Invoices will issue as 'CONSIGNMENT FREIGHT BILL' under Rule 54(3) CGST Rules. No GSTIN or PAN required to unlock operations.";
+            if (title) title.innerText = (banner && banner.dataset.t3Title) || "Tier 3: Micro Transporter (Rule 54(3) Bilty)";
+            if (desc) desc.innerText = (banner && banner.dataset.t3Desc) || "Invoices will issue as 'CONSIGNMENT FREIGHT BILL' under Rule 54(3) CGST Rules. No GSTIN or PAN required to unlock operations.";
         }
 
         // Keep radio semantics in lockstep with the visual tier selection.

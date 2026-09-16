@@ -1,12 +1,12 @@
 {{define "search_results.html"}}
 <div class="p-4 sm:p-6 max-w-4xl mx-auto space-y-5 text-on-surface">
     <div>
-        <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Search</h1>
+        <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{t "sy.search.title"}}</h1>
         <form method="GET" action="/search" class="mt-4 relative">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-            <input aria-label="Search bookings, trips, vehicles, drivers, customers, invoices" type="text" name="q" value="{{.Query}}" autofocus autocomplete="off"
+            <input aria-label="{{t "sy.search.ph"}}" type="text" name="q" value="{{.Query}}" autofocus autocomplete="off"
                    class="w-full bg-surface-container-low border border-border-subtle rounded-full py-3 pl-11 pr-4 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:bg-surface-container-lowest focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
-                   placeholder="Search bookings, trips, vehicles, drivers, customers, invoices…">
+                   placeholder="{{t "sy.search.ph"}}">
         </form>
     </div>
 
@@ -17,7 +17,7 @@
             <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
                 <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                     <h2 class="text-sm font-bold text-on-surface uppercase tracking-wider font-display">{{.Label}}</h2>
-                    <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{if gt .Total 5}}{{.Total}} matches — showing first 5{{else}}{{.Total}} match{{if ne .Total 1}}es{{end}}{{end}}</span>
+                    <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{if gt .Total 5}}{{.Total}} {{t "sy.search.more"}}{{else}}{{.Total}} {{if ne .Total 1}}{{t "sy.search.match_pl"}}{{else}}{{t "sy.search.match_sg"}}{{end}}{{end}}</span>
                 </div>
                 <div class="divide-y divide-border-subtle">
                     {{range .Rows}}
@@ -35,10 +35,10 @@
             {{end}}
         </div>
         {{else}}
-        {{template "empty_state.html" (dict "Icon" "search" "Title" "No matches found" "Message" (printf "Nothing matches \"%s\" across bookings, trips, vehicles, drivers, customers or invoices." .Query))}}
+        {{template "empty_state.html" (dict "Icon" "search" "Title" (t "sy.search.no_match_title") "Message" (printf (t "sy.search.no_match_fmt") .Query))}}
         {{end}}
     {{else}}
-        {{template "empty_state.html" (dict "Icon" "search" "Title" "Search everything" "Message" "Bookings, trips, vehicles, drivers, customers and invoices — by number, name, registration, GSTIN or phone.")}}
+        {{template "empty_state.html" (dict "Icon" "search" "Title" (t "sy.search.everything") "Message" (t "sy.search.everything_sub"))}}
     {{end}}
 </div>
 {{end}}

@@ -9,9 +9,11 @@ import {
   Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { t } from '../i18n';
+import { useLanguageStore } from '../stores/languageStore';
 import { sosService, SOSTriggerResult } from '../services/sosService';
 import { NotificationService } from '../services/notificationService';
-import { Colors, Font, Radius, Spacing } from '../constants/theme';
+import { Colors, Font, Radius, Spacing, FontSize} from '../constants/theme';
 
 interface SOSButtonProps {
   tripId?: string;
@@ -34,6 +36,7 @@ export function SOSButton({
   onSOSSent,
   style,
 }: SOSButtonProps) {
+  const locale = useLanguageStore((s) => s.locale);
   const [modalVisible, setModalVisible] = useState(false);
   const [sending, setSending] = useState(false);
   const [lastResult, setLastResult] = useState<SOSTriggerResult | null>(null);
@@ -68,23 +71,23 @@ export function SOSButton({
 
       if (result.queued) {
         Alert.alert(
-          'SOS Queued Locally (Offline)',
-          'Your emergency signal was safely saved to the offline queue and will transmit automatically once connectivity is restored.',
-          [{ text: 'OK' }]
+          t('sos.queued_title', 'SOS Queued Locally (Offline)', locale),
+          t('sos.queued_body', 'Your emergency signal was safely saved to the offline queue and will transmit automatically once connectivity is restored.', locale),
+          [{ text: t('sos.ok', 'OK', locale) }]
         );
       } else if (result.success) {
         Alert.alert(
-          'Emergency SOS Dispatched!',
-          'Dispatchers and response teams have received your emergency alert and current GPS location.',
-          [{ text: 'OK' }]
+          t('sos.sent_title', 'Emergency SOS Dispatched!', locale),
+          t('sos.sent_body', 'Dispatchers and response teams have received your emergency alert and current GPS location.', locale),
+          [{ text: t('sos.ok', 'OK', locale) }]
         );
       } else {
-        Alert.alert('SOS Not Sent', (result.error || 'Dispatch failed.') + ' Check your connection — the signal stays queued and will retry automatically.', [{ text: 'OK' }]);
+        Alert.alert(t('sos.failed_title', 'SOS Not Sent', locale), (result.error || 'Dispatch failed.') + ' ' + t('sos.failed_body', 'Check your connection — the signal stays queued and will retry automatically.', locale), [{ text: t('sos.ok', 'OK', locale) }]);
       }
     } catch (err: any) {
       setSending(false);
       setModalVisible(false);
-      Alert.alert('SOS Not Sent', (err.message || 'Unexpected error.') + ' Check your connection — the signal stays queued and will retry automatically.', [{ text: 'OK' }]);
+      Alert.alert(t('sos.failed_title', 'SOS Not Sent', locale), (err.message || 'Unexpected error.') + ' ' + t('sos.failed_body', 'Check your connection — the signal stays queued and will retry automatically.', locale), [{ text: t('sos.ok', 'OK', locale) }]);
     }
   };
 
@@ -95,10 +98,10 @@ export function SOSButton({
         onPress={handlePressSOS}
         activeOpacity={0.8}
         testID="driver-sos-button"
-        accessibilityLabel="Emergency SOS button"
+        accessibilityLabel={t('sos.a11y_button', 'Emergency SOS button', locale)}
         accessibilityRole="button"
       >
-        <MaterialCommunityIcons name="alert-octagon" size={24} color="#FFFFFF" accessible={false} />
+        <MaterialCommunityIcons name="alert-octagon" size={24} color={Colors.textOnPrimary} accessible={false} />
         <Text style={styles.sosButtonText}>SOS</Text>
       </TouchableOpacity>
 
@@ -111,18 +114,18 @@ export function SOSButton({
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.warningIconContainer}>
-              <MaterialCommunityIcons name="shield-alert" size={48} color="#EF4444" accessible={false} />
+              <MaterialCommunityIcons name="shield-alert" size={48} color={Colors.danger} accessible={false} />
             </View>
 
-            <Text style={styles.modalTitle}>Trigger Emergency SOS?</Text>
+            <Text style={styles.modalTitle}>{t('sos.modal_title', 'Trigger Emergency SOS?', locale)}</Text>
             <Text style={styles.modalSubtitle}>
-              This will immediately broadcast your coordinates and panic alert to dispatchers and safety teams.
+              {t('sos.modal_sub', 'This will immediately broadcast your coordinates and panic alert to dispatchers and safety teams.', locale)}
             </Text>
 
             {sending ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#EF4444" />
-                <Text style={styles.loadingText}>Dispatching emergency alert…</Text>
+                <ActivityIndicator size="large" color={Colors.danger} />
+                <Text style={styles.loadingText}>{t('sos.sending', 'Dispatching emergency alert…', locale)}</Text>
               </View>
             ) : (
               <View style={styles.modalActions}>
@@ -131,9 +134,9 @@ export function SOSButton({
                   onPress={() => setModalVisible(false)}
                   testID="sos-cancel-button"
                   accessibilityRole="button"
-                  accessibilityLabel="Cancel emergency SOS"
+                  accessibilityLabel={t('sos.a11y_cancel', 'Cancel emergency SOS', locale)}
                 >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                  <Text style={styles.cancelButtonText}>{t('sos.cancel', 'Cancel', locale)}</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -141,10 +144,10 @@ export function SOSButton({
                   onPress={confirmSOS}
                   testID="sos-confirm-button"
                   accessibilityRole="button"
-                  accessibilityLabel={sending ? 'Dispatching emergency alert…' : 'Send SOS now'}
+                  accessibilityLabel={sending ? t('sos.sending', 'Dispatching emergency alert…', locale) : t('sos.a11y_send', 'Send SOS now', locale)}
                   accessibilityState={{ busy: sending }}
                 >
-                  <Text style={styles.confirmButtonText}>SEND SOS NOW</Text>
+                  <Text style={styles.confirmButtonText}>{t('sos.send', 'SEND SOS NOW', locale)}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -157,14 +160,14 @@ export function SOSButton({
 
 const styles = StyleSheet.create({
   sosButton: {
-    backgroundColor: '#DC2626',
+    backgroundColor: Colors.danger,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: Radius.md,
-    shadowColor: '#DC2626',
+    shadowColor: Colors.danger,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 6,
@@ -172,47 +175,47 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   sosButtonText: {
-    color: '#FFFFFF',
+    color: Colors.textOnPrimary,
     fontWeight: '800',
-    fontSize: 16,
+    fontSize: FontSize.heading,
     letterSpacing: 0.5,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    backgroundColor: Colors.overlayDim,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
   modalContent: {
-    backgroundColor: '#1E293B',
+    backgroundColor: Colors.modalBg,
     borderRadius: Radius.lg,
     padding: 24,
     width: '100%',
     maxWidth: 360,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.modalBorder,
   },
   warningIconContainer: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: Colors.dangerGlow,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: FontSize.banner,
     fontWeight: '700',
-    color: '#F8FAFC',
+    color: Colors.modalTitle,
     textAlign: 'center',
     marginBottom: 8,
   },
   modalSubtitle: {
-    fontSize: 14,
-    color: '#94A3B8',
+    fontSize: FontSize.title,
+    color: Colors.modalSub,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
@@ -223,8 +226,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   loadingText: {
-    color: '#EF4444',
-    fontSize: 14,
+    color: Colors.danger,
+    fontSize: FontSize.title,
     fontWeight: '600',
   },
   modalActions: {
@@ -238,13 +241,13 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: 'center',
     borderRadius: Radius.md,
-    backgroundColor: '#334155',
+    backgroundColor: Colors.modalBorder,
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: '#E2E8F0',
+    color: Colors.modalText,
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: FontSize.title,
   },
   confirmButton: {
     flex: 1.4,
@@ -252,12 +255,12 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: 'center',
     borderRadius: Radius.md,
-    backgroundColor: '#DC2626',
+    backgroundColor: Colors.danger,
     alignItems: 'center',
   },
   confirmButtonText: {
-    color: '#FFFFFF',
+    color: Colors.textOnPrimary,
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: FontSize.title,
   },
 });

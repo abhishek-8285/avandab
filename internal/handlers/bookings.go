@@ -18,6 +18,7 @@ import (
 	"transport-app/internal/domain"
 	entitlementApp "transport-app/internal/entitlement/application"
 	"transport-app/internal/httpx"
+	invoiceapp "transport-app/internal/invoice/application"
 	"transport-app/internal/logging"
 	"transport-app/internal/middleware"
 	"transport-app/internal/repository"
@@ -25,6 +26,8 @@ import (
 	clock "transport-app/internal/shared/clock"
 	id "transport-app/internal/shared/id"
 	uow "transport-app/internal/shared/uow"
+	tripapp "transport-app/internal/trip/application"
+	workflowapp "transport-app/internal/workflow/application"
 )
 
 func bookingActionFailed(h *BookingHandlers, w http.ResponseWriter, r *http.Request, err error, title string) {
@@ -43,14 +46,15 @@ func bookingActionFailed(h *BookingHandlers, w http.ResponseWriter, r *http.Requ
 // BookingHandlers handles booking management.
 type BookingHandlers struct {
 	*App
-	createUC   *bookingapp.CreateBookingUseCase
-	confirmUC  *bookingapp.ConfirmBookingUseCase
-	cancelUC   *bookingapp.CancelBookingUseCase
-	getUC      *bookingapp.GetBookingUseCase
-	listUC     *bookingapp.ListBookingsUseCase
-	updateUC   *bookingapp.UpdateBookingUseCase
-	deleteUC   *bookingapp.DeleteBookingUseCase
-	completeUC *bookingapp.CompleteBookingUseCase
+	createUC      *bookingapp.CreateBookingUseCase
+	confirmUC     *bookingapp.ConfirmBookingUseCase
+	confirmTripUC *workflowapp.ConfirmBookingAndCreateTrip
+	cancelUC      *bookingapp.CancelBookingUseCase
+	getUC         *bookingapp.GetBookingUseCase
+	listUC        *bookingapp.ListBookingsUseCase
+	updateUC      *bookingapp.UpdateBookingUseCase
+	deleteUC      *bookingapp.DeleteBookingUseCase
+	completeUC    *bookingapp.CompleteBookingUseCase
 }
 
 func (h *BookingHandlers) init() {
@@ -71,6 +75,9 @@ func (h *BookingHandlers) init() {
 		h.updateUC = bookingapp.NewUpdateBookingUseCase(uowImpl)
 		h.deleteUC = bookingapp.NewDeleteBookingUseCase(uowImpl)
 		h.completeUC = bookingapp.NewCompleteBookingUseCase(uowImpl, clockImpl)
+		h.confirmTripUC = workflowapp.NewConfirmBookingAndCreateTrip(
+			uowImpl, h.confirmUC, h.cancelUC, tripapp.NewCreateTripUseCase(uowImpl, idGenImpl, clockImpl), invoiceapp.NewGenerateInvoiceUseCase(uowImpl, idGenImpl, clockImpl),
+		)
 	}
 }
 
@@ -345,10 +352,15 @@ func (h *BookingHandlers) Confirm(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	tenantID := shared.TenantIDFromContext(r.Context())
 
-	err := h.confirmUC.Execute(r.Context(), bookingapp.ConfirmBookingCommand{
-		BookingID: bookingagg.BookingID(id),
-		TenantID:  tenantID,
-	})
+	booking, err := h.getUC.Execute(r.Context(), bookingapp.GetBookingQuery{BookingID: bookingagg.BookingID(id), TenantID: tenantID})
+	if err == nil {
+		_, err = h.confirmTripUC.Execute(r.Context(), workflowapp.ConfirmBookingAndCreateTripCommand{
+			BookingID: bookingagg.BookingID(id), TenantID: tenantID,
+			RouteID: booking.RouteID, DepartureTime: booking.PickupDate,
+			IdempotencyKey: "confirm-trip-" + id,
+			CustomerID:     booking.CustomerID,
+		})
+	}
 	if err != nil {
 		bookingActionFailed(h, w, r, err, "Could Not Confirm Booking")
 		return

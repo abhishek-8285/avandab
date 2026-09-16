@@ -1,8 +1,8 @@
 <div class="max-w-full">
     <div class="flex items-start justify-between gap-4 mb-6 flex-wrap">
         <div>
-            <h1 class="text-xl font-semibold text-on-surface font-display m-0">Trip Share Links</h1>
-            <p class="text-sm text-text-muted m-0 mt-0.5">Live customer tracking links generated for active and completed trips.</p>
+            <h1 class="text-xl font-semibold text-on-surface font-display m-0">{{t "sy.shares.title"}}</h1>
+            <p class="text-sm text-text-muted m-0 mt-0.5">{{t "sy.shares.sub"}}</p>
         </div>
     </div>
 
@@ -11,51 +11,51 @@
             <table class="rtable w-full text-left border-collapse">
                 <thead>
                     <tr>
-                        <th class="th-cell">Trip Number</th>
-                        <th class="th-cell">Created By</th>
-                        <th class="th-cell">Created At</th>
-                        <th class="th-cell">Expires At</th>
-                        <th class="th-cell-right" data-numeric>Views</th>
-                        <th class="th-cell">PIN</th>
-                        <th class="th-cell">Status</th>
-                        <th class="th-cell-right">Actions</th>
+                        <th class="th-cell">{{t "sy.shares.th_trip"}}</th>
+                        <th class="th-cell">{{t "sy.shares.th_by"}}</th>
+                        <th class="th-cell">{{t "sy.shares.th_at"}}</th>
+                        <th class="th-cell">{{t "sy.shares.th_exp"}}</th>
+                        <th class="th-cell-right" data-numeric>{{t "sy.shares.th_views"}}</th>
+                        <th class="th-cell">{{t "sy.shares.th_pin"}}</th>
+                        <th class="th-cell">{{t "sy.shares.th_status"}}</th>
+                        <th class="th-cell-right">{{t "sy.shares.th_actions"}}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
                     {{range .Shares}}
                     <tr class="hover:bg-surface-container transition-colors">
-                        <td data-label="Trip Number" class="px-4 py-2.5 text-sm text-on-surface font-semibold whitespace-nowrap">
+                        <td data-label="{{t "sy.shares.th_trip"}}" class="px-4 py-2.5 text-sm text-on-surface font-semibold whitespace-nowrap">
                             <a href="/trips/{{.TripID}}" class="text-primary hover:underline">{{.TripNumber}}</a>
                         </td>
-                        <td data-label="Created By" class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap">
+                        <td data-label="{{t "sy.shares.th_by"}}" class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap">
                             <span class="text-secondary">{{.CreatorName}}</span>
                         </td>
-                        <td data-label="Created At" class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap text-xs text-text-muted">{{datetime .CreatedAt}}</td>
-                        <td data-label="Expires At" class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap text-xs text-text-muted">{{datetime .ExpiresAt}}</td>
-                        <td data-label="Views" class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap text-right" data-numeric>
+                        <td data-label="{{t "sy.shares.th_at"}}" class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap text-xs text-text-muted">{{datetime .CreatedAt}}</td>
+                        <td data-label="{{t "sy.shares.th_exp"}}" class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap text-xs text-text-muted">{{datetime .ExpiresAt}}</td>
+                        <td data-label="{{t "sy.shares.th_views"}}" class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap text-right" data-numeric>
                             <span class="font-medium text-on-surface">{{.ViewCount}}</span>
                         </td>
-                        <td data-label="PIN" class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap">
+                        <td data-label="{{t "sy.shares.th_pin"}}" class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap">
                             {{if .HasPIN}}
-                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-status-warning/10 text-status-warning border border-status-warning/30">Protected</span>
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-status-warning/10 text-status-warning border border-status-warning/30">{{t "sy.shares.protected"}}</span>
                             {{else}}
-                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface-container text-text-muted border border-border-subtle">Open</span>
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface-container text-text-muted border border-border-subtle">{{t "sy.shares.open"}}</span>
                             {{end}}
                         </td>
-                        <td data-label="Status" class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap">
+                        <td data-label="{{t "sy.shares.th_status"}}" class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap">
                             {{if eq .Status "active"}}
-                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-status-success/10 text-status-success border border-status-success/30">Active</span>
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-status-success/10 text-status-success border border-status-success/30">{{t "sy.shares.active"}}</span>
                             {{else if eq .Status "revoked"}}
-                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-status-alert/10 text-status-alert border border-status-alert/30">Revoked</span>
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-status-alert/10 text-status-alert border border-status-alert/30">{{t "sy.shares.revoked"}}</span>
                             {{else}}
-                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface-container text-text-muted border border-border-subtle">Expired</span>
+                            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface-container text-text-muted border border-border-subtle">{{t "sy.shares.expired"}}</span>
                             {{end}}
                         </td>
-                        <td data-label="Actions" class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap text-right">
+                        <td data-label="{{t "sy.shares.th_actions"}}" class="px-4 py-2.5 text-sm text-on-surface whitespace-nowrap text-right">
                             {{if eq .Status "active"}}
-                            <form action="/shares/{{.ID}}/revoke" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to revoke this share link?');">
+                            <form action="/shares/{{.ID}}/revoke" method="POST" class="inline" data-confirm="{{t "sy.shares.confirm"}}" onsubmit="return confirm(this.dataset.confirm || 'Are you sure you want to revoke this share link?');">
                                 <button type="submit" class="inline-flex items-center gap-1.5 rounded-md bg-status-alert text-on-primary px-3 py-1.5 text-xs font-medium hover:opacity-90 transition cursor-pointer">
-                                    Revoke
+                                    {{t "sy.shares.revoke"}}
                                 </button>
                             </form>
                             {{else}}
@@ -66,7 +66,7 @@
                     {{else}}
                     <tr>
                         <td colspan="8" class="py-8 text-center text-text-muted text-sm">
-                            No share links found. You can generate share links from any trip detail page.
+                            {{t "sy.shares.empty"}}
                         </td>
                     </tr>
                     {{end}}

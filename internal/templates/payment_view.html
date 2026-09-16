@@ -1,4 +1,4 @@
-<a href="/payments" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Payments</a>
+<a href="/payments" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> {{t "mo.c.payments"}}</a>
 
 <div class="space-y-5 max-w-[1400px] mx-auto">
     <!-- Hero band -->
@@ -6,18 +6,18 @@
         <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 opacity-80"></div>
         <div class="flex items-start justify-between gap-4 flex-wrap">
             <div class="min-w-0">
-                <p class="text-eyebrow text-text-muted">Payment Receipt</p>
+                <p class="text-eyebrow text-text-muted">{{t "mo.payv.receipt"}}</p>
                 <h1 class="text-xl sm:text-2xl font-black tracking-tight text-on-surface font-data-mono mt-0.5 break-all">{{.Payment.ID}}</h1>
-                <p class="text-sm text-text-muted mt-1">Recorded <span class="time-display" data-utc-time="{{.Payment.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .Payment.CreatedAt}}</span></p>
+                <p class="text-sm text-text-muted mt-1">{{t "mo.payv.recorded"}} <span class="time-display" data-utc-time="{{.Payment.CreatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .Payment.CreatedAt}}</span></p>
             </div>
-            <form method="POST" action="/payments/{{.Payment.ID}}/delete" data-confirm="Are you sure? This cannot be undone." class="inline shrink-0">
-                {{template "btn.html" (dict "Variant" "danger" "Size" "sm" "Type" "submit" "Label" "Delete" "Icon" "delete")}}
+            <form method="POST" action="/payments/{{.Payment.ID}}/delete" data-confirm="{{t "mo.c.confirm_delete"}}" class="inline shrink-0">
+                {{template "btn.html" (dict "Variant" "danger" "Size" "sm" "Type" "submit" "Label" (t "mo.c.delete") "Icon" "delete")}}
             </form>
         </div>
 
         <!-- Amount gradient card -->
         <div class="mt-5 w-full sm:max-w-sm bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl shadow-md p-4 text-white hover:shadow-lg transition">
-            <p class="text-eyebrow text-white/80">Amount Received</p>
+            <p class="text-eyebrow text-white/80">{{t "mo.payv.amount_received"}}</p>
             <p class="text-3xl font-black tracking-tight tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .Payment.Amount}}</p>
         </div>
     </div>
@@ -28,13 +28,13 @@
             <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
                 <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                     <div>
-                        <h3 class="text-sm font-bold text-on-surface">Receipt Details</h3>
-                        <p class="text-xs text-text-muted">Application and audit metadata</p>
+                        <h3 class="text-sm font-bold text-on-surface">{{t "mo.payv.receipt_details"}}</h3>
+                        <p class="text-xs text-text-muted">{{t "mo.payv.app_audit_sub"}}</p>
                     </div>
                 </div>
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 p-5">
                     <div>
-                        <dt class="text-eyebrow text-text-muted">Applied To Invoice</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "mo.payv.applied_to"}}</dt>
                         <dd class="text-sm font-semibold text-on-surface mt-0.5">
                             {{if .Payment.InvoiceID}}
                             <a href="/invoices/{{.Payment.InvoiceID}}" class="text-primary hover:underline font-data-mono text-decoration-none">{{if .Payment.InvoiceNumber}}{{.Payment.InvoiceNumber}}{{else}}{{.Payment.InvoiceID}}{{end}}</a>
@@ -42,11 +42,11 @@
                         </dd>
                     </div>
                     <div>
-                        <dt class="text-eyebrow text-text-muted">Last Updated</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "mo.payv.last_updated"}}</dt>
                         <dd class="text-sm font-semibold text-on-surface mt-0.5 tabular-nums"><span class="time-display" data-utc-time="{{.Payment.UpdatedAt.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .Payment.UpdatedAt}}</span></dd>
                     </div>
                     <div class="sm:col-span-2">
-                        <dt class="text-eyebrow text-text-muted">Remarks</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "mo.c.remarks"}}</dt>
                         <dd class="text-sm font-medium text-on-surface mt-0.5 leading-relaxed">{{nullString .Payment.Remarks}}</dd>
                     </div>
                 </dl>
@@ -59,21 +59,21 @@
             <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
                 <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                     <div>
-                        <h3 class="text-sm font-bold text-on-surface">Receipt Facts</h3>
-                        <p class="text-xs text-text-muted">Method, date and reference trail</p>
+                        <h3 class="text-sm font-bold text-on-surface">{{t "mo.payv.receipt_facts"}}</h3>
+                        <p class="text-xs text-text-muted">{{t "mo.payv.method_sub"}}</p>
                     </div>
                 </div>
                 <dl class="p-5 space-y-3">
                     <div class="flex items-center justify-between gap-3">
-                        <span class="text-xs text-text-muted">Method</span>
+                        <span class="text-xs text-text-muted">{{t "mo.c.method"}}</span>
                         <span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold uppercase tracking-wide text-secondary">{{.Payment.Method}}</span>
                     </div>
                     <div class="flex items-center justify-between gap-3">
-                        <span class="text-xs text-text-muted">Payment Date</span>
+                        <span class="text-xs text-text-muted">{{t "mo.payedit.payment_date"}}</span>
                         <span class="text-sm font-semibold text-on-surface tabular-nums"><span class="time-display" data-utc-time="{{.Payment.PaymentDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .Payment.PaymentDate}}</span></span>
                     </div>
                     <div class="pt-2 border-t border-border-subtle">
-                        <span class="text-xs text-text-muted">Reference / UTR</span>
+                        <span class="text-xs text-text-muted">{{t "mo.payv.ref_utr"}}</span>
                         <p class="text-sm font-semibold text-on-surface font-data-mono mt-0.5 break-all">{{nullString .Payment.Reference}}</p>
                     </div>
                 </dl>
@@ -83,18 +83,18 @@
             <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 h-fit">
                 <h2 class="flex items-center gap-2 text-sm font-bold text-on-surface font-display mb-4">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    Related
+                    {{t "mo.payv.related"}}
                 </h2>
                 {{if .Payment.InvoiceID}}
                 <a href="/invoices/{{.Payment.InvoiceID}}" class="flex items-center justify-between gap-3 rounded-xl border border-border-subtle bg-surface-container-low p-3 hover:bg-surface-container transition-colors text-decoration-none group">
                     <span>
-                        <span class="block text-eyebrow text-secondary">Invoice</span>
+                        <span class="block text-eyebrow text-secondary">{{t "mo.c.invoice"}}</span>
                         <span class="block text-sm font-bold text-primary font-data-mono mt-0.5">{{if .Payment.InvoiceNumber}}{{.Payment.InvoiceNumber}}{{else}}{{.Payment.InvoiceID}}{{end}}</span>
                     </span>
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-primary transition-colors"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                 </a>
                 {{else}}
-                <p class="text-sm text-text-muted">No invoice linked.</p>
+                <p class="text-sm text-text-muted">{{t "mo.payv.no_invoice"}}</p>
                 {{end}}
             </div>
         </aside>

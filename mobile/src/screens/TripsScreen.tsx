@@ -2,8 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View, RefreshControl, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { Colors, Radius, Spacing } from '../constants/theme';
+import { t, type SupportedLocale } from '../i18n';
+import { useLanguageStore } from '../stores/languageStore';
+import { Colors, Radius, Spacing, FontSize} from '../constants/theme';
 import { getApiBaseURL } from '../constants/network';
 import { TripCard, SkeletonLoader } from '../components/TripCard';
 import { StateView } from '../components/system/StateView';
@@ -18,20 +19,23 @@ interface Props {
   onStartNav: (trip: Trip) => void;
 }
 
-function slaLabel(startTime: string): string | null {
+function slaLabel(startTime: string, locale: SupportedLocale): string | null {
   if (!startTime) return null;
   const d = new Date(startTime);
   if (isNaN(d.getTime())) return null;
   const diffMs = d.getTime() - Date.now();
-  if (diffMs <= 0) return 'DEPART NOW';
+  if (diffMs <= 0) return t('trips.depart_now', 'DEPART NOW', locale);
   const mins = Math.floor(diffMs / 60000);
-  if (mins < 60) return `${mins}m left`;
+  const unitMin = t('trips.unit_min', 'm', locale);
+  const unitHr = t('trips.unit_hr', 'h', locale);
+  const left = t('trips.left', 'left', locale);
+  if (mins < 60) return `${mins}${unitMin} ${left}`;
   const hrs = Math.floor(mins / 60);
-  return `${hrs}h ${mins % 60}m left`;
+  return `${hrs}${unitHr} ${mins % 60}${unitMin} ${left}`;
 }
 
 export function TripsScreen({ onStartNav }: Props) {
-  const { t } = useTranslation();
+  const locale = useLanguageStore((s) => s.locale);
   const [tripFilter, setTripFilter] = useState<'active' | 'history'>('active');
   const [actingId, setActingId] = useState<string | null>(null);
   const [, setTick] = useState(0);
@@ -72,7 +76,7 @@ export function TripsScreen({ onStartNav }: Props) {
   const handleAccept = useCallback(
     async (trip: Trip) => {
       if (!canTransition(trip.status, 'ACCEPT')) {
-        Alert.alert('Not allowed', `Cannot accept trip in ${trip.status} state.`);
+        Alert.alert(t('trips.alert_not_allowed', 'Not allowed', locale), t('trips.alert_bad_state', 'Trip is not in an actionable state.', locale));
         return;
       }
       setActingId(trip.id);
@@ -105,24 +109,24 @@ export function TripsScreen({ onStartNav }: Props) {
         queryClient.invalidateQueries({ queryKey: ['trips', driverId, token] });
         onStartNav({ ...trip, status: 'IN_TRANSIT' });
       } catch (e: any) {
-        Alert.alert('Could not accept trip', e?.message || 'Failed to start trip.');
+        Alert.alert(t('trips.alert_accept_failed', 'Could not accept trip', locale), e?.message || t('trips.alert_accept_failed_body', 'Failed to start trip.', locale));
       } finally {
         setActingId(null);
       }
     },
-    [token, driverId, queryClient, onStartNav]
+    [token, driverId, queryClient, onStartNav, locale]
   );
 
   const handleReject = useCallback(
     async (trip: Trip) => {
       if (!canTransition(trip.status, 'CANCEL')) {
-        Alert.alert('Not allowed', `Cannot cancel trip in ${trip.status} state.`);
+        Alert.alert(t('trips.alert_not_allowed', 'Not allowed', locale), t('trips.alert_bad_state', 'Trip is not in an actionable state.', locale));
         return;
       }
-      Alert.alert('Reject trip?', `${trip.tripNumber} · ${trip.origin}→${trip.destination}`, [
-        { text: 'Cancel', style: 'cancel' },
+      Alert.alert(t('trips.alert_reject_title', 'Reject trip?', locale), `${trip.tripNumber} · ${trip.origin}→${trip.destination}`, [
+        { text: t('trips.alert_reject_cancel', 'Cancel', locale), style: 'cancel' },
         {
-          text: 'REJECT',
+          text: t('trip.reject', 'Reject', locale),
           style: 'destructive',
           onPress: async () => {
             setActingId(trip.id);
@@ -152,7 +156,7 @@ export function TripsScreen({ onStartNav }: Props) {
               });
               queryClient.invalidateQueries({ queryKey: ['trips', driverId, token] });
             } catch (e: any) {
-              Alert.alert('Could not reject trip', e?.message || 'Failed to cancel.');
+              Alert.alert(t('trips.alert_reject_failed', 'Could not reject trip', locale), e?.message || t('trips.alert_reject_failed_body', 'Failed to cancel.', locale));
             } finally {
               setActingId(null);
             }
@@ -160,7 +164,7 @@ export function TripsScreen({ onStartNav }: Props) {
         },
       ]);
     },
-    [token, driverId, queryClient]
+    [token, driverId, queryClient, locale]
   );
 
   return (
@@ -173,7 +177,7 @@ export function TripsScreen({ onStartNav }: Props) {
             onPress={() => setTripFilter(f)}
           >
             <Text style={[styles.filterChipText, tripFilter === f && styles.filterChipTextActive]}>
-              {f === 'active' ? 'ACTIVE' : 'HISTORY'}
+              {f === 'active' ? t('trips.chip_active', 'ACTIVE', locale) : t('trips.chip_history', 'HISTORY', locale)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -197,8 +201,8 @@ export function TripsScreen({ onStartNav }: Props) {
               return (
                 <StateView
                   state="empty"
-                  title={tripFilter === 'active' ? 'No active trips' : 'No trip history'}
-                  message={tripFilter === 'active' ? 'You have no dispatched trips. Pull down to refresh.' : 'Completed trips will appear here.'}
+                  title={tripFilter === 'active' ? t('trips.no_active_title', 'No Active Trips', locale) : t('trips.no_history_title', 'No trip history', locale)}
+                  message={tripFilter === 'active' ? t('trips.no_active_desc', 'You have no dispatched trips. Pull down to refresh.', locale) : t('trips.no_history_desc', 'Completed trips will appear here.', locale)}
                   icon={tripFilter === 'active' ? 'truck-outline' : 'history'}
                 />
               );
@@ -206,7 +210,7 @@ export function TripsScreen({ onStartNav }: Props) {
             visibleTrips.forEach((trip) => {
               const d = trip.startTime ? new Date(trip.startTime) : new Date();
               const key = isNaN(d.getTime())
-                ? 'TODAY'
+                ? t('trips.today', 'TODAY', locale)
                 : d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
               if (!grouped[key]) grouped[key] = [];
               grouped[key].push(trip);
@@ -216,7 +220,7 @@ export function TripsScreen({ onStartNav }: Props) {
                 <Text style={styles.dateHeader}>{date}</Text>
                 {group.map((trip) => {
                   const isPending = trip.status === 'PENDING';
-                  const sla = isPending ? slaLabel(trip.startTime) : null;
+                  const sla = isPending ? slaLabel(trip.startTime, locale) : null;
                   const busy = actingId === trip.id;
                   return (
                     <View key={trip.id} style={styles.cardWrap}>
@@ -235,7 +239,7 @@ export function TripsScreen({ onStartNav }: Props) {
                         <View style={styles.actionRow}>
                           <View style={styles.slaPill}>
                             <MaterialCommunityIcons name="clock-outline" size={12} color={Colors.warning} />
-                            <Text style={styles.slaText}>{sla ?? 'NEW ASSIGNMENT'}</Text>
+                            <Text style={styles.slaText}>{sla ?? t('trips.new_assignment', 'NEW ASSIGNMENT', locale)}</Text>
                           </View>
                           <View style={styles.actionBtns}>
                             <TouchableOpacity
@@ -243,7 +247,7 @@ export function TripsScreen({ onStartNav }: Props) {
                               onPress={() => handleReject(trip)}
                               disabled={busy}
                             >
-                              <Text style={styles.rejectText}>{t('trip.reject')}</Text>
+                              <Text style={styles.rejectText}>{t('trip.reject', 'Reject', locale)}</Text>
                             </TouchableOpacity>
                             <TouchableOpacity
                               style={[styles.acceptBtn, busy && { opacity: 0.5 }]}
@@ -251,14 +255,14 @@ export function TripsScreen({ onStartNav }: Props) {
                               disabled={busy}
                             >
                               <MaterialCommunityIcons name="check" size={14} color={Colors.textOnPrimary} />
-                              <Text style={styles.acceptText}>{busy ? '…' : t('trip.accept')}</Text>
+                              <Text style={styles.acceptText}>{busy ? '…' : t('trip.accept', 'Accept', locale)}</Text>
                             </TouchableOpacity>
                           </View>
                         </View>
                       ) : (
                         <TouchableOpacity style={styles.navigateBtn} onPress={() => onStartNav(trip)}>
                           <MaterialCommunityIcons name="navigation" size={14} color={Colors.primary} />
-                          <Text style={styles.navigateText}>NAVIGATE</Text>
+                          <Text style={styles.navigateText}>{t('trips.navigate', 'NAVIGATE', locale)}</Text>
                         </TouchableOpacity>
                       )}
                     </View>
@@ -285,12 +289,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   filterChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  filterChipText: { fontSize: 10, fontWeight: '800', letterSpacing: 1, color: Colors.textSecondary },
+  filterChipText: { fontSize: FontSize.small, fontWeight: '800', letterSpacing: 1, color: Colors.textSecondary },
   filterChipTextActive: { color: Colors.textOnPrimary },
   content: { flex: 1 },
   contentPadding: { padding: Spacing.lg, gap: Spacing.md },
   dateHeader: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '800',
     color: Colors.textMuted,
     letterSpacing: 1,
@@ -326,7 +330,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 9999,
   },
-  slaText: { fontSize: 9, fontWeight: '800', color: Colors.warning, letterSpacing: 0.5 },
+  slaText: { fontSize: FontSize.caption, fontWeight: '800', color: Colors.warning, letterSpacing: 0.5 },
   actionBtns: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   rejectBtn: {
     paddingHorizontal: 12,
@@ -336,7 +340,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     backgroundColor: Colors.surface,
   },
-  rejectText: { fontSize: 10, fontWeight: '800', color: Colors.textSecondary, letterSpacing: 1 },
+  rejectText: { fontSize: FontSize.small, fontWeight: '800', color: Colors.textSecondary, letterSpacing: 1 },
   acceptBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -346,7 +350,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     backgroundColor: Colors.primary,
   },
-  acceptText: { fontSize: 10, fontWeight: '800', color: Colors.textOnPrimary, letterSpacing: 1 },
+  acceptText: { fontSize: FontSize.small, fontWeight: '800', color: Colors.textOnPrimary, letterSpacing: 1 },
   navigateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -360,5 +364,5 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: Radius.md,
     borderBottomRightRadius: Radius.md,
   },
-  navigateText: { fontSize: 10, fontWeight: '800', color: Colors.primary, letterSpacing: 1 },
+  navigateText: { fontSize: FontSize.small, fontWeight: '800', color: Colors.primary, letterSpacing: 1 },
 });

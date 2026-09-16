@@ -1,7 +1,7 @@
-{{template "page_header.html" (dict "Title" "Bookings" "Subtitle" "Manage transport bookings, schedules, and pricing" "ActionHref" "/bookings/new" "ActionIcon" "add" "ActionLabel" "New Booking")}}
-<div class="flex items-center gap-1 p-1 rounded-full bg-surface-container-low border border-border-subtle w-fit mb-4" aria-label="Bookings views">
-    <a href="/bookings/board" class="px-4 py-1.5 rounded-full text-sm font-semibold text-secondary hover:text-on-surface transition-colors">Board</a>
-    <a href="/bookings" aria-current="page" class="px-4 py-1.5 rounded-full text-sm font-semibold bg-surface-container-lowest shadow-xs border border-border-subtle text-on-surface transition-colors">List</a>
+{{template "page_header.html" (dict "Title" (t "bk.list_title") "Subtitle" (t "bk.list_subtitle") "ActionHref" "/bookings/new" "ActionIcon" "add" "ActionLabel" (t "bk.new"))}}
+<div class="flex items-center gap-1 p-1 rounded-full bg-surface-container-low border border-border-subtle w-fit mb-4" aria-label="{{t "bk.views_aria"}}">
+    <a href="/bookings/board" class="px-4 py-1.5 rounded-full text-sm font-semibold text-secondary hover:text-on-surface transition-colors">{{t "bk.view_board"}}</a>
+    <a href="/bookings" aria-current="page" class="px-4 py-1.5 rounded-full text-sm font-semibold bg-surface-container-lowest shadow-xs border border-border-subtle text-on-surface transition-colors">{{t "bk.view_list"}}</a>
 </div>
 {{template "kpi_grid.html" .}}
 
@@ -10,14 +10,14 @@
         "Action" "/bookings"
         "Query" .Query
         "StatusFilter" .StatusFilter
-        "Chips" (chips "All Bookings" "" "Unassigned" "unassigned" "Pending" "pending" "Confirmed" "confirmed" "Completed" "completed" "Cancelled" "cancelled")
+        "Chips" (chips (t "bk.chip_all") "" (t "bk.chip_unassigned") "unassigned" (t "bk.chip_pending") "pending" (t "bk.chip_confirmed") "confirmed" (t "bk.chip_completed") "completed" (t "bk.chip_cancelled") "cancelled")
         "ShowDates" true
         "DateFilterError" .DateFilterError
         "DateFrom" .DateFrom
         "DateTo" .DateTo
         "ShowSearch" true
-        "SearchPlaceholder" "Search bookings, customers…"
-        "Primary" (dict "Variant" "primary" "Size" "sm" "Href" "/bookings/new" "Icon" "add" "Label" "New Booking")
+        "SearchPlaceholder" (t "bk.search_ph")
+        "Primary" (dict "Variant" "primary" "Size" "sm" "Href" "/bookings/new" "Icon" "add" "Label" (t "bk.new"))
     )}}
 
     <!-- Data Table Fragment (Datastar refresh target) -->

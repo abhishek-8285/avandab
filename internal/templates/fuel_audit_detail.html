@@ -6,20 +6,20 @@
         <div class="min-w-0">
             <a href="/fuel/audit" class="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
-                Back to audit queue
+                {{t "mo.ful.back"}}
             </a>
-            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display mt-1">Fuel Claim Audit</h1>
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display mt-1">{{t "mo.ful.title"}}</h1>
             <div class="flex items-center gap-2 flex-wrap mt-1 text-sm text-secondary">
                 <span class="font-semibold text-on-surface">{{.Claim.DriverName}}</span>
                 <span class="text-text-muted">·</span>
-                <span>Trip <span class="font-bold text-primary tabular-nums">{{.Claim.TripNumber}}</span></span>
+                <span>{{t "mo.c.trip"}} <span class="font-bold text-primary tabular-nums">{{.Claim.TripNumber}}</span></span>
                 <span class="text-text-muted">·</span>
                 <span class="uppercase tabular-nums font-medium">{{.Claim.VehicleReg}}</span>
             </div>
         </div>
         <div class="flex items-center gap-3 shrink-0">
             <div class="text-right hidden md:block">
-                <p class="text-eyebrow text-text-muted">Claim amount</p>
+                <p class="text-eyebrow text-text-muted">{{t "mo.ful.claim_amt"}}</p>
                 <p class="text-xl font-black text-on-surface tabular-nums" data-numeric>₹{{priceFormat .Claim.Amount}}</p>
             </div>
             <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold {{auditBadge .Claim.Result}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Claim.Result}}</span>
@@ -29,15 +29,15 @@
     <!-- Claim summary -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4">
-            <p class="text-eyebrow text-text-muted">Claimed Litres</p>
+            <p class="text-eyebrow text-text-muted">{{t "mo.ful.claimed_l"}}</p>
             <p class="text-xl font-black text-on-surface tabular-nums leading-none mt-2" data-numeric>{{if .Claim.FuelLitres}}{{printf "%.1f" .Claim.FuelLitres}} L{{else}}—{{end}}</p>
         </div>
         <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4">
-            <p class="text-eyebrow text-text-muted">Expected (best)</p>
+            <p class="text-eyebrow text-text-muted">{{t "mo.ful.expected_best"}}</p>
             <p class="text-xl font-black text-on-surface tabular-nums leading-none mt-2" data-numeric>{{if gt .Claim.ExpectedBest 0.0}}{{printf "%.1f" .Claim.ExpectedBest}} L{{else}}—{{end}}</p>
         </div>
         <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4">
-            <p class="text-eyebrow text-text-muted">Variance</p>
+            <p class="text-eyebrow text-text-muted">{{t "mo.c.variance"}}</p>
             <p class="text-xl font-black tabular-nums leading-none mt-2
                 {{if eq .Claim.Result "passed"}}text-status-success
                 {{else if eq .Claim.Result "failed"}}text-status-alert
@@ -46,7 +46,7 @@
             </p>
         </div>
         <div class="bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white">
-            <p class="text-eyebrow text-white/70">Amount</p>
+            <p class="text-eyebrow text-white/70">{{t "mo.c.amount"}}</p>
             <p class="text-xl font-black tabular-nums leading-none mt-2" data-numeric>₹{{priceFormat .Claim.Amount}}</p>
         </div>
     </div>
@@ -54,8 +54,8 @@
     <!-- Checks A / B / C -->
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle">
-            <h2 class="text-sm font-bold text-on-surface">Telemetry Checks</h2>
-            <p class="text-xs text-text-muted mt-0.5">How the claimed litres reconcile against sensor and odometer evidence</p>
+            <h2 class="text-sm font-bold text-on-surface">{{t "mo.ful.tele_checks"}}</h2>
+            <p class="text-xs text-text-muted mt-0.5">{{t "mo.ful.how_sub"}}</p>
         </div>
         <div class="divide-y divide-border-subtle">
             <!-- Check A -->
@@ -64,7 +64,7 @@
                     <span class="w-8 h-8 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid text-xs font-black shrink-0">A</span>
                     <div class="min-w-0">
                         <p class="text-sm font-semibold text-on-surface">Level sensor
-                            {{if .Claim.ExpectedLevel}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong dark:text-emerald-300">available</span>{{else}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-text-muted">no evidence</span>{{end}}
+                            {{if .Claim.ExpectedLevel}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong dark:text-emerald-300">available</span>{{else}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-text-muted">{{t "mo.ful.no_evidence"}}</span>{{end}}
                         </p>
                         <p class="text-xs text-text-muted mt-1">
                             Σ refill_detected events in the claim window
@@ -83,7 +83,7 @@
                     <span class="w-8 h-8 rounded-lg bg-violet-soft border border-violet-line grid place-items-center text-violet-mid text-xs font-black shrink-0">B</span>
                     <div class="min-w-0">
                         <p class="text-sm font-semibold text-on-surface">Odometer
-                            {{if .Claim.ExpectedOdo}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong dark:text-emerald-300">available</span>{{else}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-text-muted">no evidence</span>{{end}}
+                            {{if .Claim.ExpectedOdo}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong dark:text-emerald-300">available</span>{{else}}<span class="inline-flex px-2 py-0.5 ml-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-text-muted">{{t "mo.ful.no_evidence"}}</span>{{end}}
                         </p>
                         <p class="text-xs text-text-muted mt-1 tabular-nums">
                             odometer delta {{printf "%.1f" .Claim.OdometerDeltaKm}} km ÷ kmpl {{printf "%.2f" .Claim.KmplUsed}}
@@ -99,8 +99,8 @@
                 <div class="flex items-start gap-3 min-w-0">
                     <span class="w-8 h-8 rounded-lg bg-cyan-soft border border-cyan-line grid place-items-center text-cyan-mid text-xs font-black shrink-0">C</span>
                     <div class="min-w-0">
-                        <p class="text-sm font-semibold text-on-surface">Cross-check</p>
-                        <p class="text-xs text-text-muted mt-1">A vs B must agree within 25% when both are available</p>
+                        <p class="text-sm font-semibold text-on-surface">{{t "mo.ful.crosscheck"}}</p>
+                        <p class="text-xs text-text-muted mt-1">{{t "mo.ful.avsb"}}</p>
                     </div>
                 </div>
                 <span class="inline-flex px-2 py-1 rounded-full border text-[11px] font-bold {{auditBadge .Claim.Result}}">
@@ -114,8 +114,8 @@
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h2 class="text-sm font-bold text-on-surface">Refill Events in Window</h2>
-                <p class="text-xs text-text-muted mt-0.5">refill_detected fuel events that fed Check A</p>
+                <h2 class="text-sm font-bold text-on-surface">{{t "mo.ful.refill_events"}}</h2>
+                <p class="text-xs text-text-muted mt-0.5">{{t "mo.ful.refill_note"}}</p>
             </div>
             {{if .Claim.RefillEvents}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Claim.RefillEvents}}</span>{{end}}
         </div>
@@ -124,19 +124,19 @@
         <table class="rtable w-full text-sm">
             <thead class="bg-surface-container-low">
                 <tr>
-                    <th class="th-cell">Time</th>
-                    <th class="th-cell">Odometer</th>
-                    <th class="th-cell-right">Est. Litres</th>
-                    <th class="th-cell-right">Confidence</th>
+                    <th class="th-cell">{{t "mo.c.time"}}</th>
+                    <th class="th-cell">{{t "mo.ful.odometer"}}</th>
+                    <th class="th-cell-right">{{t "mo.ful.est_l"}}</th>
+                    <th class="th-cell-right">{{t "mo.ful.confidence"}}</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-border-subtle">
                 {{range .Claim.RefillEvents}}
                 <tr class="hover:bg-surface-container-low/50 transition-colors">
-                    <td data-label="Time" class="px-3 py-2 text-xs text-text-muted tabular-nums" data-numeric>{{datetime .OccurredAt}}</td>
-                    <td data-label="Odometer" class="px-3 py-2 text-sm font-semibold text-on-surface tabular-nums" data-numeric>{{printf "%.1f" .OdometerBefore}} → {{printf "%.1f" .OdometerAfter}}</td>
-                    <td data-label="Est. Litres" class="px-3 py-2 text-sm text-right font-bold text-on-surface tabular-nums" data-numeric>{{printf "%.1f" .EstimatedLitres}} L</td>
-                    <td data-label="Confidence" class="px-3 py-2 text-sm text-right text-secondary font-semibold tabular-nums" data-numeric>{{printf "%.0f" .Confidence}}%</td>
+                    <td data-label="{{t "mo.c.time"}}" class="px-3 py-2 text-xs text-text-muted tabular-nums" data-numeric>{{datetime .OccurredAt}}</td>
+                    <td data-label="{{t "mo.ful.odometer"}}" class="px-3 py-2 text-sm font-semibold text-on-surface tabular-nums" data-numeric>{{printf "%.1f" .OdometerBefore}} → {{printf "%.1f" .OdometerAfter}}</td>
+                    <td data-label="{{t "mo.ful.est_l"}}" class="px-3 py-2 text-sm text-right font-bold text-on-surface tabular-nums" data-numeric>{{printf "%.1f" .EstimatedLitres}} L</td>
+                    <td data-label="{{t "mo.ful.confidence"}}" class="px-3 py-2 text-sm text-right text-secondary font-semibold tabular-nums" data-numeric>{{printf "%.0f" .Confidence}}%</td>
                 </tr>
                 {{end}}
             </tbody>
@@ -145,8 +145,8 @@
         {{else}}
         <div class="py-10 text-center">
             <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted mx-auto"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/></svg></div>
-            <p class="text-sm font-medium text-on-surface mt-3">No refill events recorded</p>
-            <p class="text-xs text-text-muted">Nothing matched the claim window</p>
+            <p class="text-sm font-medium text-on-surface mt-3">{{t "mo.ful.no_refill"}}</p>
+            <p class="text-xs text-text-muted">{{t "mo.ful.no_match"}}</p>
         </div>
         {{end}}
     </div>
@@ -156,27 +156,27 @@
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle">
             <h2 class="text-sm font-bold text-on-surface">Admin Verdict</h2>
-            <p class="text-xs text-text-muted mt-0.5">Override the automated result — the decision is recorded in the audit trail</p>
+            <p class="text-xs text-text-muted mt-0.5">{{t "mo.ful.override_note"}}</p>
         </div>
         <form method="POST" action="/fuel/audit/{{.Claim.ExpenseID}}/review" class="p-5 space-y-3">
             <div class="flex items-center gap-5">
                 <label class="inline-flex items-center gap-2 text-sm font-semibold text-on-surface cursor-pointer">
                     <input type="radio" name="verdict" value="passed" required
                            class="accent-status-success w-4 h-4">
-                    Pass
+                    {{t "mo.ful.pass"}}
                 </label>
                 <label class="inline-flex items-center gap-2 text-sm font-semibold text-on-surface cursor-pointer">
                     <input type="radio" name="verdict" value="failed" required
                            class="accent-status-alert w-4 h-4">
-                    Fail
+                    {{t "mo.ful.fail"}}
                 </label>
             </div>
-            <textarea aria-label="Review note (optional)" name="note" rows="2" placeholder="Review note (optional)"
+            <textarea aria-label="{{t "mo.ful.review_note_ph"}}" name="note" rows="2" placeholder="{{t "mo.ful.review_note_ph"}}"
                       class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition resize-none"></textarea>
             <div class="flex justify-end pt-1">
                 <button type="submit"
                         class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition">
-                    Submit Verdict
+                    {{t "mo.ful.submit"}}
                 </button>
             </div>
         </form>
@@ -188,7 +188,7 @@
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xs px-5 py-3 flex items-center gap-3">
         <span class="w-8 h-8 rounded-lg bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></span>
         <p class="text-xs text-text-muted">
-            Reviewed by <strong class="text-secondary">{{nullString .Claim.ReviewedBy}}</strong> on
+            {{t "mo.ful.reviewed_by"}} <strong class="text-secondary">{{nullString .Claim.ReviewedBy}}</strong> on
             <strong class="text-secondary tabular-nums">{{derefTime .Claim.ReviewedAt}}</strong>
             {{if .Claim.ReviewNote}}· note: {{.Claim.ReviewNote}}{{end}}
         </p>

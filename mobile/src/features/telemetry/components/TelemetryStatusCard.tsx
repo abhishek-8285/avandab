@@ -1,4 +1,5 @@
 import React from 'react';
+import { Colors, FontSize} from '../../../constants/theme';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { DutyState } from '../battery/batteryPolicy';
 
@@ -62,7 +63,7 @@ export const TelemetryStatusCard: React.FC<Props> = ({
         disabled={loading}
       >
         {loading ? (
-          <ActivityIndicator color="#ffffff" size="small" />
+          <ActivityIndicator color={Colors.textOnPrimary} size="small" />
         ) : (
           <Text style={styles.btnText}>
             {isTracking ? 'Pause Background Location Tracking' : 'Start Live GPS Telemetry'}
@@ -75,11 +76,11 @@ export const TelemetryStatusCard: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#0f172a',
+    backgroundColor: Colors.mapDark,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: Colors.modalBg,
     marginHorizontal: 16,
     marginVertical: 10,
   },
@@ -93,14 +94,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 16,
+    fontSize: FontSize.heading,
     fontWeight: '700',
-    color: '#f8fafc',
+    color: Colors.textSecondary,
     marginBottom: 2,
   },
   subtitle: {
-    fontSize: 12,
-    color: '#94a3b8',
+    fontSize: FontSize.body,
+    color: Colors.modalSub,
   },
   badge: {
     paddingHorizontal: 8,
@@ -109,28 +110,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   badgeActive: {
-    backgroundColor: '#064e3b',
-    borderColor: '#10b981',
+    backgroundColor: Colors.onboardingOkBg,
+    borderColor: Colors.onboardingOkBorder,
   },
   badgeInactive: {
-    backgroundColor: '#1e293b',
-    borderColor: '#334155',
+    backgroundColor: Colors.modalBg,
+    borderColor: Colors.modalBorder,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   badgeTextActive: {
-    color: '#34d399',
+    color: Colors.accent,
   },
   badgeTextInactive: {
-    color: '#64748b',
+    color: Colors.textSecondary,
   },
   metaRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.modalBg,
     borderRadius: 10,
     padding: 12,
     marginBottom: 12,
@@ -139,22 +140,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   metaLabel: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '700',
-    color: '#64748b',
+    color: Colors.textSecondary,
     marginBottom: 2,
   },
   metaValue: {
-    fontSize: 12,
+    fontSize: FontSize.body,
     fontWeight: '700',
-    color: '#f8fafc',
+    color: Colors.textSecondary,
   },
   metaValueWarn: {
-    color: '#fbbf24',
+    color: Colors.warning,
   },
   sessionText: {
-    fontSize: 10,
-    color: '#64748b',
+    fontSize: FontSize.small,
+    color: Colors.textSecondary,
     marginBottom: 12,
   },
   btn: {
@@ -163,14 +164,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnStart: {
-    backgroundColor: '#0d9488',
+    backgroundColor: Colors.onboardingBtn,
   },
   btnStop: {
-    backgroundColor: '#334155',
+    backgroundColor: Colors.modalBorder,
   },
   btnText: {
-    color: '#ffffff',
-    fontSize: 13,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.bodyLarge,
     fontWeight: '700',
   },
 });

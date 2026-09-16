@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react';
 import { StyleSheet, View, Text, TouchableOpacity, Linking } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors, Font, Radius } from '../constants/theme';
+import { Colors, Font, Radius, FontSize} from '../constants/theme';
 import {
   DEFAULT_DESTINATION_LATITUDE,
   DEFAULT_DESTINATION_LONGITUDE,
@@ -56,7 +56,7 @@ export function LiveDriverTrackingMap({
       padding: 0;
       width: 100%;
       height: 100%;
-      background: #0f172a;
+      background: ${Colors.mapDark};
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
@@ -75,8 +75,8 @@ export function LiveDriverTrackingMap({
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      background: #008069;
-      border: 2px solid #ffffff;
+      background: ${Colors.primary};
+      border: 2px solid ${Colors.surface};
       box-shadow: 0 3px 10px rgba(0,0,0,0.5);
     }
     .truck-pulse {
@@ -98,15 +98,15 @@ export function LiveDriverTrackingMap({
       gap: 4px;
       padding: 3px 8px;
       border-radius: 12px;
-      font-size: 10px;
+      font-size: ${FontSize.small}px;
       font-weight: 800;
-      color: #fff;
+      color: ${Colors.textOnPrimary};
       white-space: nowrap;
       box-shadow: 0 2px 6px rgba(0,0,0,0.4);
       border: 1px solid rgba(255,255,255,0.6);
     }
-    .pin-pickup { background: #059669; }
-    .pin-dest { background: #dc2626; }
+    .pin-pickup { background: ${Colors.successDark}; }
+    .pin-dest { background: ${Colors.danger}; }
   </style>
 </head>
 <body>
@@ -134,7 +134,7 @@ export function LiveDriverTrackingMap({
 
     // Draw route polyline
     var routeLine = L.polyline([pickup, driver, dest], {
-      color: '#008069',
+      color: Colors.primary,
       weight: 5,
       opacity: 0.85,
       dashArray: '8, 6',
@@ -162,7 +162,7 @@ export function LiveDriverTrackingMap({
     // Live Truck Marker
     var truckIcon = L.divIcon({
       className: 'custom-div-icon',
-      html: '<div class="truck-pulse"></div><div class="truck-marker"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2" fill="#ffffff"/><circle cx="7" cy="18" r="2" fill="#ffffff"/></svg></div>',
+      html: '<div class="truck-pulse"></div><div class="truck-marker"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={Colors.surface} stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2" fill={Colors.surface}/><circle cx="7" cy="18" r="2" fill={Colors.surface}/></svg></div>',
       iconSize: [36, 36],
       iconAnchor: [18, 18]
     });
@@ -228,8 +228,8 @@ export function LiveDriverTrackingMap({
         ref={webViewRef}
         originWhitelist={['*']}
         source={{ html: leafletHTML }}
-        style={{ width: '100%', height: height, backgroundColor: '#0f172a' }}
-        containerStyle={{ width: '100%', height: height, backgroundColor: '#0f172a' }}
+        style={{ width: '100%', height: height, backgroundColor: Colors.mapDark }}
+        containerStyle={{ width: '100%', height: height, backgroundColor: Colors.mapDark }}
         javaScriptEnabled={true}
         domStorageEnabled={true}
         scrollEnabled={false}
@@ -244,7 +244,7 @@ export function LiveDriverTrackingMap({
           <Text style={styles.liveText}>LIVE GPS</Text>
         </View>
         <View style={styles.speedPill}>
-          <MaterialCommunityIcons name="speedometer" size={12} color="#ffffff" />
+          <MaterialCommunityIcons name="speedometer" size={12} color={Colors.textOnPrimary} />
           <Text style={styles.speedText}>{speedKmh} KM/H</Text>
         </View>
         <Text style={styles.vehicleText}>{vehicleLabel}</Text>
@@ -258,7 +258,7 @@ export function LiveDriverTrackingMap({
           onPress={handleRecenter}
           accessibilityLabel="Center on Vehicle"
         >
-          <MaterialCommunityIcons name="crosshairs-gps" size={18} color="#008069" />
+          <MaterialCommunityIcons name="crosshairs-gps" size={18} color={Colors.primary} />
           <Text style={styles.recenterBtnText}>RECENTER</Text>
         </TouchableOpacity>
 
@@ -268,7 +268,7 @@ export function LiveDriverTrackingMap({
           onPress={handleExternalNav}
           accessibilityLabel="Turn-by-turn Navigation"
         >
-          <MaterialCommunityIcons name="navigation-variant" size={18} color="#ffffff" />
+          <MaterialCommunityIcons name="navigation-variant" size={18} color={Colors.textOnPrimary} />
           <Text style={styles.navActionBtnText}>TURN-BY-TURN</Text>
         </TouchableOpacity>
       </View>
@@ -281,12 +281,12 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: Radius.lg,
     overflow: 'hidden',
-    backgroundColor: '#0f172a',
+    backgroundColor: Colors.mapDark,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.12)',
     position: 'relative',
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: Colors.textPrimary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
   webView: {
     width: '100%',
     height: '100%',
-    backgroundColor: '#0f172a',
+    backgroundColor: Colors.mapDark,
   },
   topOverlay: {
     position: 'absolute',
@@ -318,11 +318,11 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#25d366',
+    backgroundColor: Colors.accent,
   },
   liveText: {
-    color: '#ffffff',
-    fontSize: 9,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.caption,
     fontWeight: '800',
     letterSpacing: 0.5,
     fontFamily: Font.mono,
@@ -339,15 +339,15 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.15)',
   },
   speedText: {
-    color: '#ffffff',
-    fontSize: 10,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.small,
     fontWeight: '800',
     fontFamily: Font.mono,
   },
   vehicleText: {
     marginLeft: 'auto',
-    color: '#ffffff',
-    fontSize: 10,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.small,
     fontWeight: '800',
     backgroundColor: 'rgba(15, 23, 42, 0.85)',
     paddingHorizontal: 8,
@@ -369,19 +369,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     elevation: 3,
-    shadowColor: '#000',
+    shadowColor: Colors.textPrimary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
   },
   recenterBtnText: {
-    color: '#008069',
-    fontSize: 10,
+    color: Colors.primary,
+    fontSize: FontSize.small,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
@@ -391,15 +391,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#008069',
+    backgroundColor: Colors.primary,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
     elevation: 3,
   },
   navActionBtnText: {
-    color: '#ffffff',
-    fontSize: 11,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.label,
     fontWeight: '800',
     letterSpacing: 0.5,
   },

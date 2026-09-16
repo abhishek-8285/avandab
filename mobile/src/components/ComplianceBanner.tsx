@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { Colors, Font, Radius, Spacing } from '../constants/theme';
+import { t } from '../i18n';
+import { useLanguageStore } from '../stores/languageStore';
+import { Colors, Font, Radius, Spacing, FontSize} from '../constants/theme';
 import { fetchCompliance, type ComplianceResult } from '../services/compliance';
 
 interface ComplianceBannerProps {
@@ -22,7 +23,7 @@ const SCORE_FG: Record<ComplianceResult['score'], string> = {
 };
 
 export function ComplianceBanner({ vehicleId, onPressDetails }: ComplianceBannerProps) {
-  const { t } = useTranslation();
+  const locale = useLanguageStore((s) => s.locale);
   const [result, setResult] = useState<ComplianceResult | null>(null);
 
   useEffect(() => {
@@ -51,14 +52,14 @@ export function ComplianceBanner({ vehicleId, onPressDetails }: ComplianceBanner
       disabled={!onPressDetails}
       accessibilityRole="button"
       accessibilityLiveRegion="polite"
-      accessibilityLabel={t(`compliance.score_${result.score}`)}
+      accessibilityLabel={t(`compliance.score_${result.score}`, `compliance.score_${result.score}`, locale)}
     >
       <Text
         style={[styles.scoreText, { color: SCORE_FG[result.score] }]}
         numberOfLines={1}
         ellipsizeMode="tail"
       >
-        {t(`compliance.score_${result.score}`)}
+        {t(`compliance.score_${result.score}`, `compliance.score_${result.score}`, locale)}
       </Text>
       {result.score === 'amber' && (
         <Text
@@ -66,7 +67,7 @@ export function ComplianceBanner({ vehicleId, onPressDetails }: ComplianceBanner
           numberOfLines={1}
           ellipsizeMode="tail"
         >
-          {`${result.expired.length} expired · ${result.expiringSoon.length} expiring soon`}
+          {`${result.expired.length} ${t('compliance.expired', 'expired', locale)} · ${result.expiringSoon.length} ${t('compliance.expiring_soon', 'expiring soon', locale)}`}
         </Text>
       )}
     </TouchableOpacity>
@@ -84,13 +85,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   scoreText: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '800',
     letterSpacing: 1,
     fontFamily: Font.mono,
   },
   summaryText: {
-    fontSize: 9,
+    fontSize: FontSize.caption,
     fontWeight: '700',
     letterSpacing: 0.5,
     fontFamily: Font.mono,

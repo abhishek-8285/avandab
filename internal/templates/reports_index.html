@@ -2,12 +2,12 @@
     <!-- Header -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div class="min-w-0">
-            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Reports &amp; Analytics Hub</h1>
-            <p class="text-sm text-secondary mt-1">Real-time operational metrics, fleet efficiency, and revenue reports</p>
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{t "mo.repx.title"}}</h1>
+            <p class="text-sm text-secondary mt-1">{{t "mo.repx.hub_sub"}}</p>
         </div>
         <div class="flex items-center gap-2 flex-wrap shrink-0">
             <button onclick="window.print()" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 hover:shadow-sm transition">
-                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>Export / Print
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>{{t "mo.repx.export_print"}}
             </button>
         </div>
     </div>
@@ -23,8 +23,8 @@
                 </div>
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-primary group-hover:translate-x-0.5 transition"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </div>
-            <h2 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">Revenue Analytics</h2>
-            <p class="text-xs text-text-muted mt-1">Monthly breakdowns, payment trends, and income aggregates</p>
+            <h2 class="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">{{t "mo.repx.revenue"}}</h2>
+            <p class="text-xs text-text-muted mt-1">{{t "mo.repx.rev_desc"}}</p>
         </a>
 
         <!-- Trip Report -->
@@ -36,8 +36,8 @@
                 </div>
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-blue-mid group-hover:translate-x-0.5 transition"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </div>
-            <h2 class="text-sm font-bold text-on-surface group-hover:text-blue-mid transition-colors">Trip Performance</h2>
-            <p class="text-xs text-text-muted mt-1">Trip execution logs, departure times, and completion rates</p>
+            <h2 class="text-sm font-bold text-on-surface group-hover:text-blue-mid transition-colors">{{t "mo.repx.trips"}}</h2>
+            <p class="text-xs text-text-muted mt-1">{{t "mo.repx.trp_desc"}}</p>
         </a>
 
         <!-- Driver Report -->
@@ -49,8 +49,8 @@
                 </div>
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-violet-mid group-hover:translate-x-0.5 transition"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </div>
-            <h2 class="text-sm font-bold text-on-surface group-hover:text-violet-mid transition-colors">Driver Roster</h2>
-            <p class="text-xs text-text-muted mt-1">Driver availability, licensing, and active status tracking</p>
+            <h2 class="text-sm font-bold text-on-surface group-hover:text-violet-mid transition-colors">{{t "mo.repx.drivers"}}</h2>
+            <p class="text-xs text-text-muted mt-1">{{t "mo.repx.drv_desc"}}</p>
         </a>
 
         <!-- Vehicle Report -->
@@ -62,8 +62,8 @@
                 </div>
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-emerald-mid group-hover:translate-x-0.5 transition"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </div>
-            <h2 class="text-sm font-bold text-on-surface group-hover:text-emerald-mid transition-colors">Vehicle Fleet Utilization</h2>
-            <p class="text-xs text-text-muted mt-1">Fleet status, capacity allocation, and maintenance records</p>
+            <h2 class="text-sm font-bold text-on-surface group-hover:text-emerald-mid transition-colors">{{t "mo.repx.fleet"}}</h2>
+            <p class="text-xs text-text-muted mt-1">{{t "mo.repx.fleet_desc"}}</p>
         </a>
 
         <!-- Customer Report -->
@@ -75,8 +75,8 @@
                 </div>
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-amber-mid group-hover:translate-x-0.5 transition"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </div>
-            <h2 class="text-sm font-bold text-on-surface group-hover:text-amber-mid transition-colors">Customer Directory</h2>
-            <p class="text-xs text-text-muted mt-1">Account details, company contact profiles, and history</p>
+            <h2 class="text-sm font-bold text-on-surface group-hover:text-amber-mid transition-colors">{{t "mo.repx.customers"}}</h2>
+            <p class="text-xs text-text-muted mt-1">{{t "mo.repx.acct_desc"}}</p>
         </a>
 
         <!-- Pending Payments -->
@@ -88,8 +88,8 @@
                 </div>
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-text-muted group-hover:text-rose-mid group-hover:translate-x-0.5 transition"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
             </div>
-            <h2 class="text-sm font-bold text-on-surface group-hover:text-rose-mid transition-colors">Outstanding Balances</h2>
-            <p class="text-xs text-text-muted mt-1">Unpaid invoice audit, pending balances, and overdue accounts</p>
+            <h2 class="text-sm font-bold text-on-surface group-hover:text-rose-mid transition-colors">{{t "mo.repx.outstanding"}}</h2>
+            <p class="text-xs text-text-muted mt-1">{{t "mo.repx.out_desc"}}</p>
         </a>
     </div>
 </div>

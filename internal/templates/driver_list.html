@@ -1,4 +1,4 @@
-{{template "page_header.html" (dict "Title" "Drivers" "Subtitle" "Manage transport fleet drivers, licenses, and compliance" "ActionHref" "/drivers/new" "ActionIcon" "add" "ActionLabel" "New Driver")}}
+{{template "page_header.html" (dict "Title" (t "fl.drivers") "Subtitle" (t "fl.manage_transport_fleet_drivers_licenses_and") "ActionHref" "/drivers/new" "ActionIcon" "add" "ActionLabel" (t "fl.new_driver"))}}
 {{template "kpi_grid.html" .}}
 
 <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
@@ -6,14 +6,14 @@
         "Action" "/drivers"
         "Query" .Query
         "StatusFilter" .StatusFilter
-        "Chips" (chips "All Drivers" "" "Available" "available" "On Trip" "on_trip" "Leave" "leave" "Inactive" "inactive")
+        "Chips" (chips (t "fl.all_drivers") "" (t "fl.available") "available" (t "fl.on_trip") "on_trip" (t "fl.leave") "leave" (t "fl.inactive") "inactive")
         "ShowDates" true
         "DateFilterError" .DateFilterError
         "DateFrom" .DateFrom
         "DateTo" .DateTo
         "ShowSearch" true
         "SearchPlaceholder" (t "common.search")
-        "Primary" (dict "Label" "New Driver" "Href" "/drivers/new" "Size" "sm" "Icon" "add")
+        "Primary" (dict "Label" (t "fl.new_driver") "Href" "/drivers/new" "Size" "sm" "Icon" "add")
     )}}
 
     <div id="list-table">

@@ -62,6 +62,7 @@ type RouteLeg struct {
 type OptimizedRoute struct {
 	VehicleID string     `json:"vehicle_id"`
 	Legs      []RouteLeg `json:"legs"`
+	Geometry  string     `json:"geometry,omitempty"`
 	TotalKM   float64    `json:"total_km"`
 	TotalMin  float64    `json:"total_min"`
 }

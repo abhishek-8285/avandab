@@ -1,4 +1,4 @@
-{{template "page_header.html" (dict "Title" "Routes" "Subtitle" "Manage transport origin-destination pairs and standard tariffs" "ActionHref" "/routes/new" "ActionIcon" "add" "ActionLabel" "New Route")}}
+{{template "page_header.html" (dict "Title" (t "rt.list_title") "Subtitle" (t "rt.list_sub") "ActionHref" "/routes/new" "ActionIcon" "add" "ActionLabel" (t "rt.new"))}}
 
 {{if .Pagination}}
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5">
@@ -8,7 +8,7 @@
         </div>
         <div class="min-w-0">
             <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{.Pagination.Total}}</div>
-            <div class="text-xs text-secondary font-medium mt-1">Total Routes</div>
+            <div class="text-xs text-secondary font-medium mt-1">{{t "rt.total"}}</div>
         </div>
     </div>
     <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:border-primary/20 transition">
@@ -17,7 +17,7 @@
         </div>
         <div class="min-w-0">
             <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{if .Routes}}{{len .Routes}}{{else}}0{{end}}</div>
-            <div class="text-xs text-secondary font-medium mt-1">On This Page</div>
+            <div class="text-xs text-secondary font-medium mt-1">{{t "rt.on_page"}}</div>
         </div>
     </div>
 </div>
@@ -26,12 +26,12 @@
 <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
     {{template "filter_bar.html" (dict
         "Action" "/routes"
-        "Label" "Search:"
+        "Label" (t "rt.search_label")
         "Query" .Query
         "ShowDates" false
         "ShowSearch" true
-        "SearchPlaceholder" "Filter by source or destination city…"
-        "Primary" (dict "Label" "New Route" "Href" "/routes/new" "Size" "sm" "Icon" "add")
+        "SearchPlaceholder" (t "rt.search_ph")
+        "Primary" (dict "Label" (t "rt.new") "Href" "/routes/new" "Size" "sm" "Icon" "add")
     )}}
 
     <div id="list-table">

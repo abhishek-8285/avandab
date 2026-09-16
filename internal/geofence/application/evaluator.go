@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -141,12 +142,14 @@ func (e *RealtimeEvaluator) EvaluateFix(ctx context.Context, fix TelemetryFix) (
 	routeDest := ""
 	if fix.TripID != nil && *fix.TripID != "" {
 		var status, rSrc, rDst sql.NullString
-		_ = e.db.QueryRowContext(ctx, `
+		if err := e.db.QueryRowContext(ctx, `
 			SELECT t.status, COALESCE(r.source, ''), COALESCE(r.destination, '')
 			FROM trips t
 			LEFT JOIN routes r ON r.id = t.route_id
 			WHERE t.id = $1 AND t.tenant_id = $2`, *fix.TripID, tenantID).
-			Scan(&status, &rSrc, &rDst)
+			Scan(&status, &rSrc, &rDst); err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("load trip context: %w", err)
+		}
 		if status.Valid {
 			tripStatus = status.String
 			routeSource = rSrc.String
@@ -203,6 +206,10 @@ func (e *RealtimeEvaluator) EvaluateFix(ctx context.Context, fix TelemetryFix) (
 	}
 
 	nextState, zoneEvents := engine.Evaluate(currentState, domainFix, zones)
+	// DwellEngine owns transition state, while tenant ownership comes from the
+	// request context. Re-assert it before persistence so a transition cannot
+	// fall through with an empty or stale tenant ID.
+	nextState.TenantID = tenantID
 
 	// 7. Persist state and events with deterministic IDs & Outbox dispatch
 	var emittedEvents []EvaluatedEvent
@@ -212,7 +219,9 @@ func (e *RealtimeEvaluator) EvaluateFix(ctx context.Context, fix TelemetryFix) (
 	}
 
 	// Update engine_state via repository
-	_ = e.stateRepo.Upsert(ctx, nextState)
+	if err := e.stateRepo.Upsert(ctx, nextState); err != nil {
+		return nil, err
+	}
 
 	for _, zev := range zoneEvents {
 		eventID := fmt.Sprintf("geo_%s_%s_%s_%d", fix.VehicleID, zev.Zone.ID, zev.EventType, zev.At.Unix())
@@ -235,15 +244,18 @@ func (e *RealtimeEvaluator) EvaluateFix(ctx context.Context, fix TelemetryFix) (
 		}
 
 		// A. Insert into geofence_events with INSERT OR IGNORE
-		resEvent, _ := e.db.ExecContext(ctx, `
+		resEvent, err := e.db.ExecContext(ctx, `
 			INSERT INTO geofence_events (id, tenant_id, vehicle_id, trip_id, geofence_id, zone_kind, event_type, alert_type, severity, latitude, longitude, details, created_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, 'geofence', $8, $9, $10, $11, $12)
 			ON CONFLICT DO NOTHING
 		`, eventID, tenantID, fix.VehicleID, tripIDStr, zev.Zone.ID, zev.Zone.Kind, zev.EventType, sev, fix.Latitude, fix.Longitude, zev.Details, zev.At.Format("2006-01-02 15:04:05"))
+		if err != nil {
+			return nil, fmt.Errorf("persist geofence event: %w", err)
+		}
 
 		rowsEvent := int64(0)
-		if resEvent != nil {
-			rowsEvent, _ = resEvent.RowsAffected()
+		if rowsEvent, err = resEvent.RowsAffected(); err != nil {
+			return nil, fmt.Errorf("count geofence event insert: %w", err)
 		}
 
 		// B. Insert into outbox_events with INSERT OR IGNORE
@@ -262,22 +274,28 @@ func (e *RealtimeEvaluator) EvaluateFix(ctx context.Context, fix TelemetryFix) (
 			"details":     zev.Details,
 			"occurred_at": zev.At,
 		}
-		payloadBytes, _ := json.Marshal(outboxPayload)
+		payloadBytes, err := json.Marshal(outboxPayload)
+		if err != nil {
+			return nil, fmt.Errorf("encode geofence outbox payload: %w", err)
+		}
 
 		canonicalEventType := "geofence.zone_" + zev.EventType
 		if zev.EventType == domain.EventBreach {
 			canonicalEventType = events.GeofenceZoneBreach
 		}
 
-		resOutbox, _ := e.db.ExecContext(ctx, `
+		resOutbox, err := e.db.ExecContext(ctx, `
 			INSERT INTO outbox_events (id, aggregate_id, aggregate_type, event_type, payload, created_at)
 			VALUES ($1, $2, 'geofence', $3, $4, CURRENT_TIMESTAMP)
 			ON CONFLICT (id) DO NOTHING
 		`, "ob_"+eventID, zev.Zone.ID, canonicalEventType, string(payloadBytes))
+		if err != nil {
+			return nil, fmt.Errorf("persist geofence outbox event: %w", err)
+		}
 
 		rowsOutbox := int64(0)
-		if resOutbox != nil {
-			rowsOutbox, _ = resOutbox.RowsAffected()
+		if rowsOutbox, err = resOutbox.RowsAffected(); err != nil {
+			return nil, fmt.Errorf("count geofence outbox insert: %w", err)
 		}
 
 		// C. Publish to Event Bus if newly inserted
@@ -309,13 +327,15 @@ func (e *RealtimeEvaluator) EvaluateFix(ctx context.Context, fix TelemetryFix) (
 		// D. If stop geofence arrival, transition trip_stops status to arrived
 		if strings.HasPrefix(zev.Zone.ID, "stop_geo_") && (zev.EventType == domain.EventEntering || zev.EventType == domain.EventInside) {
 			stopID := strings.TrimPrefix(zev.Zone.ID, "stop_geo_")
-			_, _ = e.db.ExecContext(ctx, `
+			if _, err := e.db.ExecContext(ctx, `
 				UPDATE trip_stops
 				SET status = 'arrived',
 				    actual_arrival = COALESCE(actual_arrival, $1),
 				    updated_at = CURRENT_TIMESTAMP
 				WHERE id = $2 AND tenant_id = $3 AND status IN ('pending', 'en_route')
-			`, zev.At.Format("2006-01-02 15:04:05"), stopID, tenantID)
+			`, zev.At.Format("2006-01-02 15:04:05"), stopID, tenantID); err != nil {
+				return nil, fmt.Errorf("mark trip stop arrived: %w", err)
+			}
 
 			if (rowsEvent > 0 || rowsOutbox > 0) && e.bus != nil {
 				e.bus.Publish(ctx, events.Event{

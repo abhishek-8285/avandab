@@ -34,6 +34,7 @@
     var board = document.getElementById("board");
     if (!board) return;
 
+    var STR = board.dataset;
     var dragged = null;
 
     board.addEventListener("dragstart", function (ev) {
@@ -59,12 +60,12 @@
 
         if (target === from) return;
         if (rank(target) < rank(from)) {
-          feedback("Backwards move rejected: " + from + " → " + target, true);
+          feedback((STR.errBack || "Backwards move rejected") + ": " + from + " → " + target, true);
           return;
         }
         var tpl = TARGET[target];
         if (!tpl) {
-          feedback("No transition to " + target, true);
+          feedback((STR.errNoTransition || "No transition to") + " " + target, true);
           return;
         }
         fetch(tpl.replace("{id}", encodeURIComponent(id)), {
@@ -74,11 +75,11 @@
           if (r.ok || r.status === 302 || r.status === 303) {
             window.location.reload(); // server-rendered board stays truthful
           } else {
-            feedback("Transition rejected (" + r.status + ")", true);
+            feedback((STR.errRejected || "Transition rejected") + " (" + r.status + ")", true);
             dragged.style.opacity = "";
           }
         }).catch(function () {
-          feedback("Network error", true);
+          feedback(STR.errNetwork || "Network error", true);
           dragged.style.opacity = "";
         });
       });

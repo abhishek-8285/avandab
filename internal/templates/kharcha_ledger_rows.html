@@ -4,20 +4,20 @@
 <table class="rtable min-w-full divide-y divide-border-subtle text-sm">
     <thead class="bg-surface-container-low">
         <tr>
-            <th class="th-cell">Driver</th>
-            <th class="th-cell">Category</th>
-            <th class="th-cell">Trip</th>
-            <th class="th-cell">Description</th>
-            <th class="th-cell-right">Amount</th>
-            <th class="th-cell">Status</th>
-            <th class="th-cell">Date</th>
+            <th class="th-cell">{{t "mo.c.driver"}}</th>
+            <th class="th-cell">{{t "mo.c.category"}}</th>
+            <th class="th-cell">{{t "mo.c.trip"}}</th>
+            <th class="th-cell">{{t "mo.c.description"}}</th>
+            <th class="th-cell-right">{{t "mo.c.amount"}}</th>
+            <th class="th-cell">{{t "mo.c.status"}}</th>
+            <th class="th-cell">{{t "mo.c.date"}}</th>
         </tr>
     </thead>
     <tbody class="divide-y divide-border-subtle">
         {{range .LedgerEntries}}
         <tr class="hover:bg-surface-container-low/50 transition-colors">
-            <td data-label="Driver" class="px-3 py-2 text-sm font-semibold text-on-surface">{{.DriverName}}</td>
-            <td data-label="Category" class="px-3 py-2">
+            <td data-label="{{t "mo.c.driver"}}" class="px-3 py-2 text-sm font-semibold text-on-surface">{{.DriverName}}</td>
+            <td data-label="{{t "mo.c.category"}}" class="px-3 py-2">
                 <span class="inline-flex px-2 py-0.5 rounded-full border text-[11px] font-bold
                     {{if eq .Category "advance"}}bg-blue-soft border-blue-line text-blue-strong dark:text-blue-300
                     {{else if eq .Category "fuel"}}bg-amber-soft border-amber-line text-amber-strong dark:text-amber-300
@@ -28,13 +28,13 @@
                     {{.Category}}
                 </span>
             </td>
-            <td data-label="Trip" class="px-3 py-2 text-xs font-semibold text-primary tabular-nums">{{.TripNumber}}</td>
-            <td data-label="Description" class="px-3 py-2 text-sm text-text-muted max-w-xs truncate">{{.Description}}</td>
-            <td data-label="Amount" class="px-3 py-2 text-sm text-right font-bold text-on-surface tabular-nums" data-numeric>₹{{priceFormat .Amount}}</td>
-            <td data-label="Status" class="px-3 py-2">
+            <td data-label="{{t "mo.c.trip"}}" class="px-3 py-2 text-xs font-semibold text-primary tabular-nums">{{.TripNumber}}</td>
+            <td data-label="{{t "mo.c.description"}}" class="px-3 py-2 text-sm text-text-muted max-w-xs truncate">{{.Description}}</td>
+            <td data-label="{{t "mo.c.amount"}}" class="px-3 py-2 text-sm text-right font-bold text-on-surface tabular-nums" data-numeric>₹{{priceFormat .Amount}}</td>
+            <td data-label="{{t "mo.c.status"}}" class="px-3 py-2">
                 <span class="inline-flex items-center gap-1.5 px-2 py-1 text-[11px] font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
             </td>
-            <td data-label="Date" class="px-3 py-2 text-xs text-text-muted tabular-nums">{{datetime .CreatedAt}}</td>
+            <td data-label="{{t "mo.c.date"}}" class="px-3 py-2 text-xs text-text-muted tabular-nums">{{datetime .CreatedAt}}</td>
         </tr>
         {{end}}
     </tbody>
@@ -43,8 +43,8 @@
 {{else}}
 <div class="py-12 text-center">
     <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted mx-auto"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/></svg></div>
-    <p class="text-sm font-medium text-on-surface mt-3">No expense records found</p>
-    <p class="text-xs text-text-muted">Approved expenses land here in real time</p>
+    <p class="text-sm font-medium text-on-surface mt-3">{{t "mo.kha.no_records"}}</p>
+    <p class="text-xs text-text-muted">{{t "mo.kha.approved_live"}}</p>
 </div>
 {{end}}
 {{end}}
@@ -59,6 +59,6 @@
         <p class="text-sm font-bold text-status-success">Approved — {{.DriverName}}</p>
         <p class="text-xs text-status-success mt-0.5 tabular-nums">₹{{priceFormat .Amount}} · {{.Category}} · {{datetime .CreatedAt}}</p>
     </div>
-    <span class="inline-flex px-2 py-1 rounded-full bg-status-success/10 border border-status-success/20 text-status-success text-[11px] font-bold">Approved</span>
+    <span class="inline-flex px-2 py-1 rounded-full bg-status-success/10 border border-status-success/20 text-status-success text-[11px] font-bold">{{t "mo.kha.approved"}}</span>
 </div>
 {{end}}

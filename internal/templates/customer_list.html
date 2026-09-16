@@ -1,4 +1,4 @@
-{{template "page_header.html" (dict "Title" "Customers" "Subtitle" "Manage enterprise client accounts, GSTIN, and contacts" "ActionHref" "/customers/new" "ActionIcon" "add" "ActionLabel" "New Customer")}}
+{{template "page_header.html" (dict "Title" (t "fl.customers") "Subtitle" (t "fl.manage_enterprise_client_accounts_gstin_and") "ActionHref" "/customers/new" "ActionIcon" "add" "ActionLabel" (t "fl.new_customer"))}}
 
 {{if .Pagination}}
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
@@ -10,7 +10,7 @@
             </div>
             <div class="min-w-0">
                 <div class="text-xl font-black tabular-nums leading-none">{{.Pagination.Total}}</div>
-                <div class="text-xs font-medium text-white/80 mt-1">Total Customers</div>
+                <div class="text-xs font-medium text-white/80 mt-1">{{t "fl.total_customers"}}</div>
             </div>
         </div>
     </div>
@@ -20,7 +20,7 @@
         </div>
         <div class="min-w-0">
             <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{if .Customers}}{{len .Customers}}{{else}}0{{end}}</div>
-            <div class="text-xs text-secondary font-medium mt-1">On This Page · {{.Pagination.Page}} of {{.Pagination.TotalPages}}</div>
+            <div class="text-xs text-secondary font-medium mt-1">{{t "fl.on_this_page"}} · {{.Pagination.Page}} / {{.Pagination.TotalPages}}</div>
         </div>
     </div>
 </div>
@@ -34,8 +34,8 @@
         "Chips" (chips)
         "ShowDates" false
         "ShowSearch" true
-        "SearchPlaceholder" "Search code, name, company, phone, email, contact or internal ID…"
-        "Primary" (dict "Label" "New Customer" "Href" "/customers/new" "Size" "sm" "Icon" "add")
+        "SearchPlaceholder" (t "fl.search_code_name_company_phone_email_contact")
+        "Primary" (dict "Label" (t "fl.new_customer") "Href" "/customers/new" "Size" "sm" "Icon" "add")
     )}}
 
     <!-- Data Table Fragment (Datastar refresh target) -->

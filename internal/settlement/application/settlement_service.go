@@ -85,9 +85,15 @@ func (s *SettlementAppService) CalculateAndCreateSettlement(ctx context.Context,
 
 	// Append immutable ledger entries for driver earnings & deductions
 	tripRef := req.TripID
+	appendLedger := func(entry *domain.LedgerEntry) error {
+		if err := s.repo.AppendLedgerEntry(ctx, tenantID, entry); err != nil {
+			return fmt.Errorf("append settlement ledger entry: %w", err)
+		}
+		return nil
+	}
 
 	// Credit: Gross Trip Earning
-	_ = s.repo.AppendLedgerEntry(ctx, tenantID, &domain.LedgerEntry{
+	if err := appendLedger(&domain.LedgerEntry{
 		ID:            "led_" + uuid.NewString(),
 		TenantID:      tenantID,
 		DriverID:      req.DriverID,
@@ -98,11 +104,13 @@ func (s *SettlementAppService) CalculateAndCreateSettlement(ctx context.Context,
 		ReferenceType: "settlement",
 		ReferenceID:   settlement.ID,
 		Description:   fmt.Sprintf("Trip %s gross fare", req.TripID),
-	})
+	}); err != nil {
+		return nil, err
+	}
 
 	// Debit: Platform Commission
 	if settlement.CommissionAmount > 0 {
-		_ = s.repo.AppendLedgerEntry(ctx, tenantID, &domain.LedgerEntry{
+		if err := appendLedger(&domain.LedgerEntry{
 			ID:            "led_" + uuid.NewString(),
 			TenantID:      tenantID,
 			DriverID:      req.DriverID,
@@ -113,12 +121,14 @@ func (s *SettlementAppService) CalculateAndCreateSettlement(ctx context.Context,
 			ReferenceType: "settlement",
 			ReferenceID:   settlement.ID,
 			Description:   fmt.Sprintf("Platform commission (%.1f%%)", settlement.CommissionRate*100),
-		})
+		}); err != nil {
+			return nil, err
+		}
 	}
 
 	// Credit: Toll Adjustment
 	if settlement.TollAdjustment > 0 {
-		_ = s.repo.AppendLedgerEntry(ctx, tenantID, &domain.LedgerEntry{
+		if err := appendLedger(&domain.LedgerEntry{
 			ID:            "led_" + uuid.NewString(),
 			TenantID:      tenantID,
 			DriverID:      req.DriverID,
@@ -129,12 +139,14 @@ func (s *SettlementAppService) CalculateAndCreateSettlement(ctx context.Context,
 			ReferenceType: "settlement",
 			ReferenceID:   settlement.ID,
 			Description:   "FASTag / Toll reimbursement",
-		})
+		}); err != nil {
+			return nil, err
+		}
 	}
 
 	// Debit: Advance Deduction
 	if settlement.AdvanceDeductions > 0 {
-		_ = s.repo.AppendLedgerEntry(ctx, tenantID, &domain.LedgerEntry{
+		if err := appendLedger(&domain.LedgerEntry{
 			ID:            "led_" + uuid.NewString(),
 			TenantID:      tenantID,
 			DriverID:      req.DriverID,
@@ -145,12 +157,14 @@ func (s *SettlementAppService) CalculateAndCreateSettlement(ctx context.Context,
 			ReferenceType: "settlement",
 			ReferenceID:   settlement.ID,
 			Description:   "Fuel / Cash advance deduction",
-		})
+		}); err != nil {
+			return nil, err
+		}
 	}
 
 	// Debit: TDS Deduction
 	if settlement.TDSAmount > 0 {
-		_ = s.repo.AppendLedgerEntry(ctx, tenantID, &domain.LedgerEntry{
+		if err := appendLedger(&domain.LedgerEntry{
 			ID:            "led_" + uuid.NewString(),
 			TenantID:      tenantID,
 			DriverID:      req.DriverID,
@@ -161,7 +175,9 @@ func (s *SettlementAppService) CalculateAndCreateSettlement(ctx context.Context,
 			ReferenceType: "settlement",
 			ReferenceID:   settlement.ID,
 			Description:   fmt.Sprintf("TDS deduction (Sec 194C %.1f%%)", settlement.TDSRate*100),
-		})
+		}); err != nil {
+			return nil, err
+		}
 	}
 
 	return settlement, nil
@@ -266,7 +282,7 @@ func (s *SettlementAppService) InitiatePayout(ctx context.Context, tenantID, dri
 	}
 
 	// 4. Debit driver ledger for held payout amount
-	_ = s.repo.AppendLedgerEntry(ctx, tenantID, &domain.LedgerEntry{
+	if err := s.repo.AppendLedgerEntry(ctx, tenantID, &domain.LedgerEntry{
 		ID:            "led_" + uuid.NewString(),
 		TenantID:      tenantID,
 		DriverID:      driverID,
@@ -276,7 +292,9 @@ func (s *SettlementAppService) InitiatePayout(ctx context.Context, tenantID, dri
 		ReferenceType: "payout",
 		ReferenceID:   payoutID,
 		Description:   fmt.Sprintf("Disbursement payout %s initiated", payoutID),
-	})
+	}); err != nil {
+		return nil, fmt.Errorf("append payout ledger entry: %w", err)
+	}
 
 	return &PayoutResponse{
 		PayoutID:       payout.ID,
@@ -417,8 +435,11 @@ func (s *SettlementAppService) ProcessProviderWebhook(ctx context.Context, _, pr
 	// 7. Compensating Ledger Entry on Failure or Reversal (strictly exactly ONE compensating credit)
 	if newStatus == domain.PayoutFailed || newStatus == domain.PayoutReversed {
 		hasComp, err := s.repo.HasCompensatingLedgerEntry(ctx, tenantID, "payout_reversal", payout.ID)
-		if err == nil && !hasComp {
-			_ = s.repo.AppendLedgerEntry(ctx, tenantID, &domain.LedgerEntry{
+		if err != nil {
+			return fmt.Errorf("check compensating ledger entry: %w", err)
+		}
+		if !hasComp {
+			if err := s.repo.AppendLedgerEntry(ctx, tenantID, &domain.LedgerEntry{
 				ID:            "led_" + uuid.NewString(),
 				TenantID:      tenantID,
 				DriverID:      payout.DriverID,
@@ -428,12 +449,16 @@ func (s *SettlementAppService) ProcessProviderWebhook(ctx context.Context, _, pr
 				ReferenceType: "payout_reversal",
 				ReferenceID:   payout.ID,
 				Description:   fmt.Sprintf("Compensating credit for %s payout %s", newStatus, payout.ID),
-			})
+			}); err != nil {
+				return fmt.Errorf("append compensating ledger entry: %w", err)
+			}
 		}
 	}
 
 	// 8. Record event in idempotency log
-	_ = s.repo.RecordProviderEvent(ctx, tenantID, "razorpay", providerEventID, data.Event, string(body))
+	if err := s.repo.RecordProviderEvent(ctx, tenantID, "razorpay", providerEventID, data.Event, string(body)); err != nil {
+		return fmt.Errorf("record provider event: %w", err)
+	}
 
 	return nil
 }

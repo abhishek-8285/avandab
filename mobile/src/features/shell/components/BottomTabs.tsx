@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors } from '../../../constants/theme';
+import { Colors, FontSize} from '../../../constants/theme';
 
 type Tab = 'trips' | 'dispatch' | 'paisa';
 export function BottomTabs({ activeTab, onChange }: { activeTab: Tab; onChange: (t: Tab) => void }) {
@@ -24,6 +24,6 @@ export function BottomTabs({ activeTab, onChange }: { activeTab: Tab; onChange: 
 const styles = StyleSheet.create({
   tabContainer: { flexDirection: 'row', backgroundColor: Colors.headerBg, borderTopWidth: 1, borderTopColor: Colors.headerBorder, paddingTop: 6, paddingBottom: 6, height: 58 },
   tab: { flex: 1, paddingVertical: 4, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  tabText: { fontSize: 10, fontWeight: '600', color: Colors.tabInactive, marginTop: 2 },
+  tabText: { fontSize: FontSize.small, fontWeight: '600', color: Colors.tabInactive, marginTop: 2 },
   activeTabText: { color: Colors.tabActive, fontWeight: '700' },
 });

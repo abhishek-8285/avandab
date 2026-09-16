@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/uuid"
 
+	dispatchapp "transport-app/internal/dispatch/application"
 	"transport-app/internal/domain"
 	"transport-app/internal/ewaybill"
 	"transport-app/internal/maintenance"
@@ -16,11 +17,13 @@ import (
 	maintsql "transport-app/internal/maintenance/infrastructure/sql"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
+	tripagg "transport-app/internal/trip/domain/aggregate"
 )
 
 // ToolEnv carries live service dependencies + the acting user.
 type ToolEnv struct {
 	Services *service.Services
+	Dispatch *dispatchapp.Service
 	UserID   string
 	UserName string
 }
@@ -466,6 +469,16 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if err := json.Unmarshal(args, &in); err != nil {
 					return "", err
 				}
+				if env.Dispatch != nil {
+					err := env.Dispatch.AssignDriver(ctx, dispatchapp.AssignDriverCommand{
+						TenantID: shared.TenantIDFromContext(ctx), ActorID: env.UserID,
+						TripID: tripagg.TripID(in.TripID), DriverID: string(in.DriverID),
+					})
+					if err != nil {
+						return "", err
+					}
+					return fmt.Sprintf("Driver %s assigned to trip %s.", in.DriverID, in.TripID), nil
+				}
 				t, err := env.Services.Trips.AssignDriver(ctx, domain.TripID(in.TripID), domain.DriverID(in.DriverID))
 				if err != nil {
 					return "", err
@@ -493,6 +506,16 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				}
 				if err := json.Unmarshal(args, &in); err != nil {
 					return "", err
+				}
+				if env.Dispatch != nil {
+					err := env.Dispatch.AssignVehicle(ctx, dispatchapp.AssignVehicleCommand{
+						TenantID: shared.TenantIDFromContext(ctx), ActorID: env.UserID,
+						TripID: tripagg.TripID(in.TripID), VehicleID: string(in.VehicleID),
+					})
+					if err != nil {
+						return "", err
+					}
+					return fmt.Sprintf("Vehicle %s assigned to trip %s.", in.VehicleID, in.TripID), nil
 				}
 				t, err := env.Services.Trips.AssignVehicle(ctx, domain.TripID(in.TripID), domain.VehicleID(in.VehicleID))
 				if err != nil {

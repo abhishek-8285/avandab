@@ -1,6 +1,6 @@
 {{define "features_admin.html"}}
-<div class="p-4 sm:p-6 max-w-5xl mx-auto text-on-surface">
-    {{template "page_header.html" (dict "Title" "Features" "Subtitle" "Enable or disable product features for your organisation. Changes apply immediately — routes within this request, background jobs within one worker tick.")}}
+<div class="p-4 sm:p-6 max-w-5xl mx-auto text-on-surface" data-msg-fail="{{t "sy.featadm.fail"}}" data-msg-enabled="{{t "sy.featadm.enabled"}}" data-msg-disabled="{{t "sy.featadm.disabled"}}" data-msg-net="{{t "sy.featadm.net"}}">
+    {{template "page_header.html" (dict "Title" (t "sy.featadm.title") "Subtitle" (t "sy.featadm.sub"))}}
 
     <div class="space-y-4">
     {{range $cat := .Order}}
@@ -17,9 +17,9 @@
                         <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-sm font-semibold text-on-surface">{{$f.Name}}</span>
                             {{if eq $f.Tier "addon"}}
-                            <span class="inline-flex px-2 py-0.5 rounded-full text-eyebrow bg-primary/10 text-primary border border-primary/20">Add-on</span>
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-eyebrow bg-primary/10 text-primary border border-primary/20">{{t "sy.featadm.addon"}}</span>
                             {{else}}
-                            <span class="inline-flex px-2 py-0.5 rounded-full text-eyebrow bg-emerald-soft text-emerald-strong border border-emerald-line">Core</span>
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-eyebrow bg-emerald-soft text-emerald-strong border border-emerald-line">{{t "sy.featadm.core"}}</span>
                             {{end}}
                         </div>
                         <p class="text-xs text-text-muted mt-0.5">{{$f.Description}}</p>
@@ -28,7 +28,7 @@
                             onclick="toggleFeature(this)"
                             class="relative inline-flex h-6 w-11 items-center shrink-0 rounded-full transition-colors cursor-pointer border-0 focus:outline-none focus:ring-2 focus:ring-primary/30 {{if $f.Enabled}}bg-primary{{else}}bg-surface-container-high{{end}}"
                             aria-pressed="{{if $f.Enabled}}true{{else}}false{{end}}"
-                            aria-label="Toggle {{$f.Name}}">
+                            aria-label="{{t "sy.featadm.tgl_pre"}} {{$f.Name}}{{t "sy.featadm.tgl_post"}}">
                         <span class="inline-block h-4 w-4 transform rounded-full bg-surface-container-lowest shadow transition-transform {{if $f.Enabled}}translate-x-6{{else}}translate-x-1{{end}}"></span>
                     </button>
                 </div>
@@ -39,7 +39,7 @@
     {{end}}
     </div>
 
-    <p class="mt-4 text-xs text-text-muted">Add-ons are premium features — enable them here once subscribed. Core features are part of every plan and can be switched off to simplify the workspace.</p>
+    <p class="mt-4 text-xs text-text-muted">{{t "sy.featadm.note"}}</p>
 </div>
 
 <script>
@@ -55,7 +55,9 @@ async function toggleFeature(btn) {
             body: JSON.stringify({ feature: feature, enabled: next })
         });
         if (!res.ok) {
-            let msg = 'Toggle failed';
+            var msgHost = document.querySelector('[data-msg-fail]');
+    function featMsg(k, fb) { return (msgHost && msgHost.dataset[k]) || fb; }
+    let msg = featMsg('msgFail', 'Toggle failed');
             try { const p = await res.json(); if (p.message) msg = p.message; } catch (e) {}
             window.FlyToast.show(msg, { tone: 'error' });
             return;
@@ -66,9 +68,9 @@ async function toggleFeature(btn) {
         var knob = btn.querySelector('span');
         knob.classList.toggle('translate-x-6', next);
         knob.classList.toggle('translate-x-1', !next);
-        window.FlyToast.show(next ? 'Feature enabled' : 'Feature disabled', { tone: 'success' });
+        window.FlyToast.show(next ? featMsg('msgEnabled', 'Feature enabled') : featMsg('msgDisabled', 'Feature disabled'), { tone: 'success' });
     } catch (err) {
-        window.FlyToast.show('Network error while toggling feature', { tone: 'error' });
+        window.FlyToast.show(featMsg('msgNet', 'Network error while toggling feature'), { tone: 'error' });
     } finally {
         btn.disabled = false;
     }

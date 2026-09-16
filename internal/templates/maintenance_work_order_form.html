@@ -1,65 +1,65 @@
 <div class="max-w-3xl mx-auto">
     <div class="flex items-start justify-between gap-4 mb-5 flex-wrap">
         <div>
-            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">New Job Card</h1>
-            <p class="text-sm text-secondary mt-1">Open a work order between detection and completion — assignment and progress tracked to close.</p>
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{t "fl.new_job_card_2"}}</h1>
+            <p class="text-sm text-secondary mt-1">{{t "fl.open_a_work_order_between_detection_and_comp"}}</p>
         </div>
     </div>
 
     <form method="POST" action="/maintenance/work-orders" class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h2 class="text-sm font-bold text-on-surface">Job Details</h2>
-                <p class="text-xs text-text-muted mt-0.5">Vehicle and work to be done</p>
+                <h2 class="text-sm font-bold text-on-surface">{{t "fl.job_details"}}</h2>
+                <p class="text-xs text-text-muted mt-0.5">{{t "fl.vehicle_and_work_to_be_done"}}</p>
             </div>
         </div>
         <div class="p-6 space-y-4">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label for="vehicle_id" class="block text-eyebrow text-text-muted mb-1.5">Vehicle ID <span class="text-status-alert">*</span></label>
+                    <label for="vehicle_id" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.vehicle_id"}} <span class="text-status-alert">*</span></label>
                     <input aria-label="e.g. veh-123" autocomplete="off" id="vehicle_id" type="text" name="vehicle_id" value="{{.VehicleID}}" required placeholder="e.g. veh-123"
                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                 </div>
                 <div>
-                    <label for="due_at" class="block text-eyebrow text-text-muted mb-1.5">Due Date</label>
+                    <label for="due_at" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.due_date"}}</label>
                     <input id="due_at" type="date" name="due_at"
                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                 </div>
             </div>
 
             <div>
-                <label for="title" class="block text-eyebrow text-text-muted mb-1.5">Title <span class="text-status-alert">*</span></label>
-                <input aria-label="e.g. Brake pad replacement" autocomplete="off" id="title" type="text" name="title" required placeholder="e.g. Brake pad replacement"
+                <label for="title" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.title"}} <span class="text-status-alert">*</span></label>
+                <input aria-label="{{t "fl.e_g_brake_pad_replacement"}}" autocomplete="off" id="title" type="text" name="title" required placeholder="{{t "fl.e_g_brake_pad_replacement"}}"
                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
             </div>
 
             <div>
-                <label for="description" class="block text-eyebrow text-text-muted mb-1.5">Description</label>
-                <textarea aria-label="Symptoms, findings, parts needed" id="description" name="description" rows="3" placeholder="Symptoms, findings, parts needed…"
+                <label for="description" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.description"}}</label>
+                <textarea aria-label="{{t "fl.symptoms_findings_parts_needed"}}" id="description" name="description" rows="3" placeholder="{{t "fl.symptoms_findings_parts_needed_2"}}"
                           class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"></textarea>
             </div>
 
             <div class="pt-2">
-                <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Assignment & Cost</h3>
+                <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "fl.assignment_cost"}}</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label for="assignee" class="block text-eyebrow text-text-muted mb-1.5">Assignee</label>
+                        <label for="assignee" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.assignee"}}</label>
                         <input aria-label="e.g. Ramesh" autocomplete="off" id="assignee" type="text" name="assignee" placeholder="e.g. Ramesh"
                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
                     <div>
-                        <label for="vendor" class="block text-eyebrow text-text-muted mb-1.5">Vendor</label>
+                        <label for="vendor" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.vendor"}}</label>
                         <input aria-label="e.g. City Garage" autocomplete="off" id="vendor" type="text" name="vendor" placeholder="e.g. City Garage"
                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
                     <div>
-                        <label for="cost_estimate" class="block text-eyebrow text-text-muted mb-1.5">Cost Estimate (₹)</label>
+                        <label for="cost_estimate" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.cost_estimate_rs"}}</label>
                         <input aria-label="e.g. 4500" id="cost_estimate" type="number" step="any" name="cost_estimate" placeholder="e.g. 4500"
                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
                     <div>
-                        <label for="cost_actual" class="block text-eyebrow text-text-muted mb-1.5">Actual Cost (₹)</label>
-                        <input aria-label="Fill on completion" id="cost_actual" type="number" step="any" name="cost_actual" placeholder="Fill on completion"
+                        <label for="cost_actual" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.actual_cost_rs"}}</label>
+                        <input aria-label="{{t "fl.fill_on_completion"}}" id="cost_actual" type="number" step="any" name="cost_actual" placeholder="{{t "fl.fill_on_completion"}}"
                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
                 </div>
@@ -67,8 +67,8 @@
         </div>
 
         <div class="px-6 py-3 border-t border-border-subtle bg-surface-container-low/40 flex justify-end gap-2">
-            <a href="/maintenance" class="inline-flex items-center px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">Cancel</a>
-            <button type="submit" class="inline-flex items-center px-5 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">Open Job Card</button>
+            <a href="/maintenance" class="inline-flex items-center px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">{{t "fl.cancel"}}</a>
+            <button type="submit" class="inline-flex items-center px-5 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">{{t "fl.open_job_card"}}</button>
         </div>
     </form>
 </div>

@@ -1,7 +1,7 @@
 <div class="max-w-3xl mx-auto">
     <div class="mb-4">
-        <h2 class="text-xl font-bold tracking-tight text-on-surface font-display">{{if .Trip}}Edit Trip{{else}}New Trip{{end}}</h2>
-        <p class="text-sm text-secondary mt-1">{{if .Trip}}Update dispatch details for this trip.{{else}}Create a trip from a route and optional booking.{{end}}</p>
+        <h2 class="text-xl font-bold tracking-tight text-on-surface font-display">{{if .Trip}}{{t "tr.edit_title"}}{{else}}{{t "tr.new_title"}}{{end}}</h2>
+        <p class="text-sm text-secondary mt-1">{{if .Trip}}{{t "tr.edit_sub"}}{{else}}{{t "tr.new_sub"}}{{end}}</p>
     </div>
 
     {{if .FlashError}}
@@ -14,27 +14,27 @@
         <div class="p-5 space-y-5">
             <!-- Route & Booking -->
             <section>
-                <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Route &amp; Booking</h3>
+                <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "tr.sec_route_booking"}}</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label for="route_select" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Route *</label>
+                        <label for="route_select" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "tr.label_route"}}</label>
                         <select name="route_id" id="route_select" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                            <option value="">Select Route</option>
+                            <option value="">{{t "tr.select_route"}}</option>
                             {{range .Routes}}
                             <option value="{{.ID}}" {{if or (and $t (eq .ID $t.RouteID)) (eq (printf "%s" .ID) $.SelectedRouteID)}}selected{{end}}>{{.Source}} → {{.Destination}}</option>
                             {{end}}
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Booking</label>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "tr.booking"}}</label>
                         {{if $.SelectedBookingID}}
                         <input type="hidden" name="booking_id" value="{{$.SelectedBookingID}}" />
                         <div class="px-3 py-2.5 bg-surface-container border border-border-subtle rounded-lg text-sm text-on-surface">
-                            Booking: {{$.SelectedBookingID}}
+                            {{t "tr.booking_locked"}}: {{$.SelectedBookingID}}
                         </div>
                         {{else}}
-                        <select name="booking_id" id="booking_select" aria-label="Booking" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                            <option value="">No Booking (Manual Dispatch)</option>
+                        <select name="booking_id" id="booking_select" aria-label="{{t "tr.booking"}}" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
+                            <option value="">{{t "tr.no_booking"}}</option>
                             {{range .Bookings}}
                             <option value="{{.ID}}" data-route="{{.RouteID}}" data-pickup="{{datetime .PickupDate}}">
                                 {{.BookingNumber}} — {{.CustomerName}} ({{.RouteSource}} → {{.RouteDestination}})
@@ -48,21 +48,21 @@
 
             <!-- Assignment -->
             <section>
-                <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Assignment</h3>
+                <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "tr.sec_assignment"}}</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label for="driver_id" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Driver</label>
+                        <label for="driver_id" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "tr.driver"}}</label>
                         <select id="driver_id" name="driver_id" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                            <option value="">Select Driver</option>
+                            <option value="">{{t "tr.select_driver"}}</option>
                             {{range .Drivers}}
                             <option value="{{.ID}}" {{if eq (printf "%s" .ID) $.SelectedDriverID}}selected{{end}}>{{.FirstName}} {{.LastName}} ({{.DriverID}})</option>
                             {{end}}
                         </select>
                     </div>
                     <div>
-                        <label for="vehicle_id" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Vehicle</label>
+                        <label for="vehicle_id" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "tr.vehicle"}}</label>
                         <select id="vehicle_id" name="vehicle_id" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                            <option value="">Select Vehicle</option>
+                            <option value="">{{t "tr.select_vehicle"}}</option>
                             {{range .Vehicles}}
                             <option value="{{.ID}}" {{if eq (printf "%s" .ID) $.SelectedVehicleID}}selected{{end}}>{{.VehicleNumber}} ({{.RegistrationNumber}})</option>
                             {{end}}
@@ -73,15 +73,15 @@
 
             <!-- Schedule -->
             <section>
-                <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Schedule</h3>
+                <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "tr.sec_schedule"}}</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label for="departure_time" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Departure Time *</label>
+                        <label for="departure_time" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "tr.departure"}}</label>
                         <input type="datetime-local" name="departure_time" id="departure_time" value="{{if $t}}{{datetime $t.DepartureTime}}{{else if $.DepartureTime}}{{$.DepartureTime}}{{end}}" required
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
                     <div>
-                        <label for="arrival_time" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Arrival Time</label>
+                        <label for="arrival_time" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "tr.arrival"}}</label>
                         <input id="arrival_time" type="datetime-local" name="arrival_time" value="{{if $t}}{{if $t.ArrivalTime}}{{datetime $t.ArrivalTime}}{{end}}{{end}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
@@ -90,16 +90,16 @@
 
             <!-- Notes -->
             <section>
-                <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Notes</h3>
-                <label for="remarks" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Remarks</label>
+                <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "tr.notes"}}</h3>
+                <label for="remarks" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "tr.remarks"}}</label>
                 <textarea id="remarks" name="remarks" rows="2"
                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">{{if $t}}{{$t.Remarks}}{{end}}</textarea>
             </section>
         </div>
 
         <div class="sticky bottom-0 bg-surface-container-lowest border-t border-border-subtle px-5 py-3 flex justify-end gap-2 flex-wrap">
-            {{template "btn.html" (dict "Variant" "secondary" "Size" "md" "Href" "/trips" "Label" "Cancel" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-border-subtle focus:ring-offset-2")}}
-            {{template "btn.html" (dict "Variant" "primary" "Size" "md" "Type" "submit" "Label" "Save Trip" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2")}}
+            {{template "btn.html" (dict "Variant" "secondary" "Size" "md" "Href" "/trips" "Label" (t "tr.cancel") "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-border-subtle focus:ring-offset-2")}}
+            {{template "btn.html" (dict "Variant" "primary" "Size" "md" "Type" "submit" "Label" (t "tr.save") "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2")}}
         </div>
     </form>
 </div>

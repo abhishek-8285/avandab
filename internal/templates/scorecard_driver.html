@@ -6,10 +6,10 @@
         <div class="min-w-0">
             <a href="/scorecard" class="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
-                Back to leaderboard
+                {{t "fl.back_to_leaderboard"}}
             </a>
             <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display mt-1">{{.Detail.DriverName}}</h1>
-            <p class="text-sm text-secondary mt-1"><span class="tabular-nums font-semibold">{{.Detail.DriverCode}}</span> · 30-day rolling score</p>
+            <p class="text-sm text-secondary mt-1"><span class="tabular-nums font-semibold">{{.Detail.DriverCode}}</span> {{t "fl.n30_day_rolling_score"}}</p>
         </div>
         <div class="flex items-center gap-3 flex-wrap shrink-0">
             {{if .Detail.InsufficientData}}
@@ -18,7 +18,7 @@
                 INSUFFICIENT DATA · {{.Detail.EventCount}} event(s) in window
             </span>
             {{end}}
-            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold {{tierBadge .Detail.Tier}}">{{.Detail.Tier}} TIER</span>
+            <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold {{tierBadge .Detail.Tier}}">{{.Detail.Tier}} {{t "fl.tier"}}</span>
         </div>
     </div>
 
@@ -28,18 +28,18 @@
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r {{if ge .Detail.Score 85.0}}from-emerald-500 to-teal-500{{else if ge .Detail.Score 70.0}}from-blue-500 to-cyan-400{{else}}from-rose-500 to-red-500{{end}} opacity-80"></div>
             <div class="text-center py-2">
                 <div class="text-5xl font-black tracking-tight tabular-nums leading-none {{if ge .Detail.Score 85.0}}text-status-success{{else if ge .Detail.Score 70.0}}text-status-info{{else}}text-status-alert{{end}}" data-numeric>{{printf "%.0f" .Detail.Score}}</div>
-                <div class="text-eyebrow text-text-muted mt-3">Current Score</div>
+                <div class="text-eyebrow text-text-muted mt-3">{{t "fl.current_score"}}</div>
                 <div class="mt-3 h-1.5 w-full bg-surface-container rounded-full overflow-hidden"><div class="h-full rounded-full {{if ge .Detail.Score 85.0}}bg-emerald-500{{else if ge .Detail.Score 70.0}}bg-blue-500{{else}}bg-rose-500{{end}}" style="width: {{printf "%.0f" .Detail.Score}}%"></div></div>
-                <div class="text-xs text-secondary mt-3 tabular-nums">{{.Detail.EventCount}} behaviour event(s) in the 30-day window</div>
+                <div class="text-xs text-secondary mt-3 tabular-nums">{{.Detail.EventCount}} {{t "fl.behaviour_event_s_in_the_30_day_window"}}</div>
             </div>
         </div>
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden lg:col-span-2">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                 <div>
-                    <h2 class="text-sm font-bold text-on-surface">Score History (30-day trend)</h2>
-                    <p class="text-xs text-text-muted">Every recompute appends a row — the audit trail is never deleted</p>
+                    <h2 class="text-sm font-bold text-on-surface">{{t "fl.score_history_30_day_trend"}}</h2>
+                    <p class="text-xs text-text-muted">{{t "fl.every_recompute_appends_a_row_the_audit_trai"}}</p>
                 </div>
-                <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Detail.History}} points</span>
+                <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Detail.History}} {{t "fl.points"}}</span>
             </div>
             <div class="px-5 py-3 max-h-72 overflow-y-auto">
                 {{if .Detail.History}}
@@ -57,7 +57,7 @@
                     {{end}}
                 </div>
                 {{else}}
-                <p class="text-sm text-text-muted">No recomputes yet — scores appear after the first behaviour event or the nightly sweep.</p>
+                <p class="text-sm text-text-muted">{{t "fl.no_recomputes_yet_scores_appear_after_the_fi"}}</p>
                 {{end}}
             </div>
         </div>
@@ -67,30 +67,30 @@
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h2 class="text-sm font-bold text-on-surface">Event Breakdown</h2>
-                <p class="text-xs text-text-muted">Counts and weighted penalty per event type in the window</p>
+                <h2 class="text-sm font-bold text-on-surface">{{t "fl.event_breakdown"}}</h2>
+                <p class="text-xs text-text-muted">{{t "fl.counts_and_weighted_penalty_per_event_type_i"}}</p>
             </div>
-            <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Detail.Breakdown}} types</span>
+            <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Detail.Breakdown}} {{t "fl.types"}}</span>
         </div>
         <div class="overflow-x-auto">
             <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="th-cell">Event Type</th>
-                        <th class="th-cell-right">Count</th>
-                        <th class="th-cell-right">Weighted Penalty</th>
+                        <th class="th-cell">{{t "fl.event_type"}}</th>
+                        <th class="th-cell-right">{{t "fl.count"}}</th>
+                        <th class="th-cell-right">{{t "fl.weighted_penalty"}}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
                     {{range .Detail.Breakdown}}
                     <tr class="hover:bg-surface-container-low/50 transition-colors">
-                        <td data-label="Event Type" class="px-3 py-2 text-sm font-medium text-on-surface capitalize">{{replace .EventType "_" " " -1}}</td>
-                        <td data-label="Count" class="px-3 py-2 text-sm text-right font-bold tabular-nums text-on-surface" data-numeric>{{.Count}}</td>
-                        <td data-label="Weighted Penalty" class="px-3 py-2 text-sm text-right font-semibold tabular-nums text-secondary" data-numeric>{{printf "%.1f" .Penalty}}</td>
+                        <td data-label="{{t "fl.event_type"}}" class="px-3 py-2 text-sm font-medium text-on-surface capitalize">{{replace .EventType "_" " " -1}}</td>
+                        <td data-label="{{t "fl.count"}}" class="px-3 py-2 text-sm text-right font-bold tabular-nums text-on-surface" data-numeric>{{.Count}}</td>
+                        <td data-label="{{t "fl.weighted_penalty"}}" class="px-3 py-2 text-sm text-right font-semibold tabular-nums text-secondary" data-numeric>{{printf "%.1f" .Penalty}}</td>
                     </tr>
                     {{else}}
                     <tr>
-                        <td colspan="3" class="px-4 py-8 text-center text-text-muted text-sm">No behaviour events in the window — score is 100 (cold start).</td>
+                        <td colspan="3" class="px-4 py-8 text-center text-text-muted text-sm">{{t "fl.no_behaviour_events_in_the_window_score_is_1"}}</td>
                     </tr>
                     {{end}}
                 </tbody>
@@ -103,8 +103,8 @@
         <div class="px-5 py-3 border-b border-border-subtle bg-gradient-to-r from-rose-500/[0.06] to-transparent flex items-center gap-2">
             <span class="w-7 h-7 rounded-lg bg-rose-soft border border-rose-line grid place-items-center text-rose-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><circle cx="12" cy="8" r="2"/><path d="M12 12v4"/></svg></span>
             <div>
-                <h2 class="text-sm font-bold text-on-surface">Fraud-Cap Events</h2>
-                <p class="text-xs text-text-muted">Unresolved fuel theft suspicion / odometer rollback cap the score at the fraud ceiling (69). Resolving clears the cap on the next recompute.</p>
+                <h2 class="text-sm font-bold text-on-surface">{{t "fl.fraud_cap_events"}}</h2>
+                <p class="text-xs text-text-muted">{{t "fl.unresolved_fuel_theft_suspicion_odometer_rol"}}</p>
             </div>
         </div>
         <div class="divide-y divide-border-subtle">
@@ -117,14 +117,14 @@
                 {{if .Resolved}}
                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-emerald-line bg-emerald-soft text-[11px] font-bold text-emerald-strong dark:text-emerald-300">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                    RESOLVED
+                    {{t "fl.resolved"}}
                 </span>
                 {{else}}
                 <form method="POST" action="/scorecard/drivers/{{$.Detail.DriverID}}/resolve">
                     <input type="hidden" name="event_id" value="{{.ID}}">
                     <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-status-alert text-on-primary text-sm font-semibold shadow-sm hover:bg-status-alert/90 hover:-translate-y-px transition"
-                            onclick="return confirm('Resolve this fraud event? The fraud cap will lift on the next recompute.')">
-                        Resolve
+                            data-confirm-msg="{{t "fl.resolve_this_fraud_event_the_fraud_cap_will"}}" onclick="return confirm(this.dataset.confirmMsg || 'Resolve this fraud event? The fraud cap will lift on the next recompute.')">
+                        {{t "fl.resolve"}}
                     </button>
                 </form>
                 {{end}}
@@ -132,7 +132,7 @@
             {{else}}
             <div class="px-4 py-10 text-center">
                 <div class="w-10 h-10 rounded-full bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid mx-auto"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
-                <p class="text-sm font-medium text-on-surface mt-3">Clean record</p><p class="text-xs text-text-muted">No fraud events in the window</p>
+                <p class="text-sm font-medium text-on-surface mt-3">{{t "fl.clean_record"}}</p><p class="text-xs text-text-muted">{{t "fl.no_fraud_events_in_the_window"}}</p>
             </div>
             {{end}}
         </div>

@@ -26,7 +26,7 @@ import {
 } from 'expo-speech-recognition';
 import { parseExpenseUtterance, buildExpenseDraft, ExpenseCategory, ParsedExpense } from '../services/speech';
 import { OfflineQueue } from '../services/offlineQueue';
-import { Colors, Font, Spacing } from '../constants/theme';
+import { Colors, Font, Spacing, FontSize} from '../constants/theme';
 import { useLanguageStore } from '../stores/languageStore';
 
 interface VoiceKharchaSheetProps {
@@ -382,7 +382,7 @@ useEffect(() => {
           <View style={styles.sheetHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={styles.headerIconBox}>
-                <MaterialCommunityIcons name="microphone" size={20} color="#008069" accessible={false} />
+                <MaterialCommunityIcons name="microphone" size={20} color={Colors.primary} accessible={false} />
               </View>
               <View>
                 <Text style={styles.headerTitle}>VOICE KHARCHA (आवाज़ से खर्चा)</Text>
@@ -395,7 +395,7 @@ useEffect(() => {
               accessibilityRole="button"
               accessibilityLabel="Close voice expense sheet"
             >
-              <MaterialCommunityIcons name="close" size={22} color="#667781" accessible={false} />
+              <MaterialCommunityIcons name="close" size={22} color={Colors.textSecondary} accessible={false} />
             </TouchableOpacity>
           </View>
 
@@ -412,7 +412,7 @@ useEffect(() => {
                 <MaterialCommunityIcons
                   name={isListening ? 'stop' : 'microphone'}
                   size={36}
-                  color="#ffffff"
+                  color={Colors.textOnPrimary}
                   accessible={false}
                 />
               </TouchableOpacity>
@@ -443,7 +443,7 @@ useEffect(() => {
           {/* Warning when speech contains no expense */}
           {noExpenseWarning && (
             <View style={styles.warningBox}>
-              <MaterialCommunityIcons name="alert-circle-outline" size={18} color="#b45309" accessible={false} />
+              <MaterialCommunityIcons name="alert-circle-outline" size={18} color={Colors.warningText} accessible={false} />
               <Text style={styles.warningText} accessibilityLiveRegion="polite">{noExpenseWarning}</Text>
             </View>
           )}
@@ -453,7 +453,7 @@ useEffect(() => {
             <View style={styles.resultCard}>
               <View style={styles.resultHeader}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <MaterialCommunityIcons name="check-decagram" size={16} color="#008069" accessible={false} />
+                  <MaterialCommunityIcons name="check-decagram" size={16} color={Colors.primary} accessible={false} />
                   <Text style={styles.resultTitle}>RECORDED AUDIO & EXTRACTED DATA</Text>
                 </View>
                 <Text style={styles.originalUtterance} numberOfLines={1} ellipsizeMode="tail">
@@ -472,7 +472,7 @@ useEffect(() => {
                 <MaterialCommunityIcons
                   name={isPlayingAudio ? 'pause-circle' : 'play-circle'}
                   size={22}
-                  color="#008069"
+                  color={Colors.primary}
                   accessible={false}
                 />
                 <View style={{ flex: 1 }}>
@@ -535,7 +535,7 @@ useEffect(() => {
               {/* Discrepancy warning banner if amount was changed manually */}
               {hasDiscrepancy && (
                 <View style={styles.discrepancyBanner}>
-                  <MaterialCommunityIcons name="alert-decagram" size={16} color="#d97706" accessible={false} />
+                  <MaterialCommunityIcons name="alert-decagram" size={16} color={Colors.warningText} accessible={false} />
                   <Text style={styles.discrepancyText} accessibilityLiveRegion="polite">
                     Discrepancy Flag: Spoke ₹{originalSpokenAmount} vs Claimed ₹{currentClaimedAmount}. Ops will audit the voice clip.
                   </Text>
@@ -545,13 +545,13 @@ useEffect(() => {
               {/* Category & Vendor Metadata */}
               <View style={styles.metaRow}>
                 <View style={styles.metaBadge}>
-                  <MaterialCommunityIcons name={getCategoryIcon(categoryInput)} size={14} color="#008069" accessible={false} />
+                  <MaterialCommunityIcons name={getCategoryIcon(categoryInput)} size={14} color={Colors.primary} accessible={false} />
                   <Text style={styles.metaBadgeText}>{categoryInput.toUpperCase()}</Text>
                 </View>
                 {vendorInput ? (
-                  <View style={[styles.metaBadge, { backgroundColor: '#e0f2fe' }]}>
-                    <MaterialCommunityIcons name="store" size={14} color="#0284c7" accessible={false} />
-                    <Text style={[styles.metaBadgeText, { color: '#0284c7' }]} numberOfLines={1} ellipsizeMode="tail">{vendorInput}</Text>
+                  <View style={[styles.metaBadge, { backgroundColor: Colors.infoBg }]}>
+                    <MaterialCommunityIcons name="store" size={14} color={Colors.info} accessible={false} />
+                    <Text style={[styles.metaBadgeText, { color: Colors.info }]} numberOfLines={1} ellipsizeMode="tail">{vendorInput}</Text>
                   </View>
                 ) : null}
               </View>
@@ -568,7 +568,7 @@ useEffect(() => {
                 accessibilityLiveRegion="polite"
               >
                 {saving ? null : (
-                  <MaterialCommunityIcons name="check" size={18} color="#ffffff" accessible={false} />
+                  <MaterialCommunityIcons name="check" size={18} color={Colors.textOnPrimary} accessible={false} />
                 )}
                 <Text style={styles.confirmSaveBtnText}>
                   {saving ? 'Saving…' : 'CONFIRM & ATTACH VOICE TO PASSBOOK'}
@@ -610,7 +610,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheetContainer: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 18,
@@ -622,26 +622,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#f1f5f9',
+    borderBottomColor: Colors.skeleton,
     paddingBottom: 10,
   },
   headerIconBox: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: '#e7ffdb',
+    backgroundColor: Colors.primarySubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 13,
+    fontSize: FontSize.bodyLarge,
     fontWeight: '800',
-    color: '#0f172a',
+    color: Colors.textPrimary,
     letterSpacing: 0.5,
   },
   headerSubtitle: {
-    fontSize: 10,
-    color: '#64748b',
+    fontSize: FontSize.small,
+    color: Colors.textSecondary,
     marginTop: 1,
   },
   micSection: {
@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
     width: 76,
     height: 76,
     borderRadius: 38,
-    backgroundColor: '#e7ffdb',
+    backgroundColor: Colors.primarySubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -660,13 +660,13 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: '#008069',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 4,
   },
   bigMicBtnActive: {
-    backgroundColor: '#ef4444',
+    backgroundColor: Colors.danger,
   },
   listeningStatusBox: {
     alignItems: 'center',
@@ -674,14 +674,14 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   listeningText: {
-    fontSize: 12,
+    fontSize: FontSize.body,
     fontWeight: '800',
-    color: '#008069',
+    color: Colors.primary,
     textAlign: 'center',
   },
   tapToStopHint: {
-    fontSize: 9,
-    color: '#64748b',
+    fontSize: FontSize.caption,
+    color: Colors.textSecondary,
     fontStyle: 'italic',
   },
   waveformContainer: {
@@ -695,12 +695,12 @@ const styles = StyleSheet.create({
     height: 24,
     // Grow upward when scaled, matching the previous height-based visuals.
     transformOrigin: '50% 100%',
-    backgroundColor: '#25d366',
+    backgroundColor: Colors.accent,
     borderRadius: 2,
   },
   tapToSpeakText: {
-    fontSize: 11,
-    color: '#64748b',
+    fontSize: FontSize.label,
+    color: Colors.textSecondary,
     fontWeight: '600',
     marginTop: 6,
   },
@@ -708,24 +708,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#fffbeb',
+    backgroundColor: Colors.warningBg,
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#fef3c7',
+    borderColor: Colors.warningBg,
   },
   warningText: {
-    fontSize: 10,
-    color: '#b45309',
+    fontSize: FontSize.small,
+    color: Colors.warningText,
     flex: 1,
     fontWeight: '600',
   },
   resultCard: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: Colors.surfaceSecondary,
     borderRadius: 12,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: Colors.borderStrong,
     gap: 10,
   },
   resultHeader: {
@@ -734,14 +734,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   resultTitle: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '800',
-    color: '#008069',
+    color: Colors.primary,
     letterSpacing: 0.5,
   },
   originalUtterance: {
-    fontSize: 10,
-    color: '#64748b',
+    fontSize: FontSize.small,
+    color: Colors.textSecondary,
     fontStyle: 'italic',
     maxWidth: '45%',
   },
@@ -749,60 +749,60 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#e7ffdb',
+    backgroundColor: Colors.primarySubtle,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#bbf7d0',
+    borderColor: Colors.primaryBorder,
   },
   audioPlaybackTitle: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '700',
-    color: '#008069',
+    color: Colors.primary,
     marginBottom: 3,
   },
   audioProgressBarBg: {
     height: 3,
-    backgroundColor: '#bbf7d0',
+    backgroundColor: Colors.primaryBorder,
     borderRadius: 1.5,
     overflow: 'hidden',
   },
   audioProgressBarFill: {
     height: '100%',
-    backgroundColor: '#008069',
+    backgroundColor: Colors.primary,
   },
   voiceBadge: {
-    backgroundColor: '#008069',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 6,
     paddingVertical: 3,
     borderRadius: 4,
   },
   voiceBadgeText: {
-    fontSize: 9,
+    fontSize: FontSize.caption,
     fontWeight: '800',
-    color: '#ffffff',
+    color: Colors.textOnPrimary,
   },
   amountDisplayRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#cbd5e1',
+    borderColor: Colors.borderStrong,
   },
   rupeeSymbol: {
-    fontSize: 20,
+    fontSize: FontSize.banner,
     fontWeight: '900',
-    color: '#008069',
+    color: Colors.primary,
   },
   amountInputText: {
-    fontSize: 22,
+    fontSize: FontSize.hero,
     fontWeight: '900',
-    color: '#0f172a',
+    color: Colors.textPrimary,
     flex: 1,
     fontFamily: Font.mono,
   },
@@ -811,31 +811,31 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   adjustPill: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: Colors.skeleton,
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: 6,
   },
   adjustPillText: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '700',
-    color: '#008069',
+    color: Colors.primary,
   },
   discrepancyBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#fffbeb',
+    backgroundColor: Colors.warningBg,
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#fde68a',
+    borderColor: Colors.warningBg,
   },
   discrepancyText: {
-    fontSize: 9.5,
+    fontSize: FontSize.caption + 0.5,
     fontWeight: '700',
-    color: '#b45309',
+    color: Colors.warningText,
     flex: 1,
   },
   metaRow: {
@@ -846,30 +846,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#e7ffdb',
+    backgroundColor: Colors.primarySubtle,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
   metaBadgeText: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '800',
-    color: '#008069',
+    color: Colors.primary,
   },
   confirmSaveBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#008069',
+    backgroundColor: Colors.primary,
     paddingVertical: 12,
     minHeight: 44,
     borderRadius: 8,
     marginTop: 4,
   },
   confirmSaveBtnText: {
-    color: '#ffffff',
-    fontSize: 12,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.body,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
@@ -877,9 +877,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   suggestionsTitle: {
-    fontSize: 9,
+    fontSize: FontSize.caption,
     fontWeight: '800',
-    color: '#64748b',
+    color: Colors.textSecondary,
     letterSpacing: 0.5,
   },
   chipsWrap: {
@@ -888,16 +888,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   suggestionChip: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: Colors.skeleton,
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: Colors.borderStrong,
   },
   suggestionChipText: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '700',
-    color: '#334155',
+    color: Colors.textSecondary,
   },
 });

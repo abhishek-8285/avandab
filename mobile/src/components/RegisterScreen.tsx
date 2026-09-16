@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors, Font, Radius, Spacing } from '../constants/theme';
+import { Colors, Font, Radius, Spacing, FontSize} from '../constants/theme';
 import { getApiBaseURL } from '../constants/network';
 import { useAuthStore } from '../stores/authStore';
 
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.chrome,
   },
   headerLabel: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '700',
     color: Colors.textOnChrome,
     letterSpacing: 2,
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cancelText: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '700',
     color: Colors.textOnChrome,
     letterSpacing: 1,
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
   title: {
-    fontSize: 18,
+    fontSize: FontSize.headingLarge,
     fontWeight: '900',
     color: Colors.textPrimary,
     letterSpacing: 2,
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: FontSize.body,
     color: Colors.textSecondary,
     lineHeight: 18,
   },
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   label: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '700',
     color: Colors.textSecondary,
     letterSpacing: 1,
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     paddingLeft: 34,
     paddingRight: 12,
-    fontSize: 13,
+    fontSize: FontSize.bodyLarge,
     color: Colors.textPrimary,
     fontFamily: Font.mono,
   },
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   },
   submitBtnText: {
     color: Colors.textOnPrimary,
-    fontSize: 12,
+    fontSize: FontSize.body,
     fontWeight: '800',
     letterSpacing: 2,
     fontFamily: Font.mono,
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   loginLinkText: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     color: Colors.textSecondary,
     fontFamily: Font.mono,
     letterSpacing: 0.5,
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   formError: {
-    fontSize: 12,
+    fontSize: FontSize.body,
     color: Colors.danger,
     fontFamily: Font.mono,
     marginBottom: Spacing.md,

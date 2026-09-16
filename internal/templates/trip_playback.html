@@ -1,11 +1,11 @@
 {{define "trip_playback.html"}}
 <div class="space-y-4">
-    <a href="/trips/{{.Trip.ID}}" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Back to Trip {{.Trip.TripNumber}}</a>
+    <a href="/trips/{{.Trip.ID}}" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> {{t "tr.back_to_trip"}} {{.Trip.TripNumber}}</a>
 
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 flex flex-wrap items-center justify-between gap-3">
         <div>
             <h1 class="text-lg font-bold tracking-tight text-on-surface font-display flex items-center gap-2 flex-wrap">
-                Trip Playback
+                {{t "tr.pb_title"}}
                 <span class="font-data-mono text-sm font-normal text-text-muted">{{.Trip.TripNumber}}</span>
                 <span class="status-badge {{statusBadge .Trip.Status}}">{{.Trip.Status}}</span>
             </h1>
@@ -18,55 +18,55 @@
         <div class="flex items-center gap-2">
             <label class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-container-low border border-border-subtle text-[11px] font-medium uppercase tracking-wide cursor-pointer select-none">
                 <input type="checkbox" id="pb-geofence-toggle" checked class="rounded border-border-subtle text-primary focus:ring-primary h-3 w-3 cursor-pointer">
-                <span class="text-primary">Geofences</span>
+                <span class="text-primary">{{t "tr.pb_geofences"}}</span>
             </label>
-            <a href="/trips/{{.Trip.ID}}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-low border border-border-subtle text-xs font-medium text-secondary hover:text-on-surface hover:border-primary/50 transition-colors text-decoration-none">Trip Details</a>
-            <a href="/tracking" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-low border border-border-subtle text-xs font-medium text-secondary hover:text-on-surface hover:border-primary/50 transition-colors text-decoration-none">Live Map</a>
-            <button type="button" id="pb-fit-btn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-semibold hover:bg-primary/90 transition-colors cursor-pointer border-0">Fit Route</button>
+            <a href="/trips/{{.Trip.ID}}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-low border border-border-subtle text-xs font-medium text-secondary hover:text-on-surface hover:border-primary/50 transition-colors text-decoration-none">{{t "tr.pb_details"}}</a>
+            <a href="/tracking" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-low border border-border-subtle text-xs font-medium text-secondary hover:text-on-surface hover:border-primary/50 transition-colors text-decoration-none">{{t "tr.pb_livemap"}}</a>
+            <button type="button" id="pb-fit-btn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-on-primary text-xs font-semibold hover:bg-primary/90 transition-colors cursor-pointer border-0">{{t "tr.pb_fit"}}</button>
         </div>
     </div>
 
-    <div id="playback-shell" class="relative h-[68vh] min-h-[520px] w-full flex flex-col bg-surface-container-low overflow-hidden rounded-2xl border border-border-subtle shadow-sm">
+    <div id="playback-shell" data-msg-loading="{{t "tr.pb_loading"}}" data-msg-nogps="{{t "tr.pb_nogps"}}" data-msg-failed="{{t "tr.pb_failed"}}" data-gpx-big="{{t "tr.pb_gpx_big"}}" data-gpx-bad="{{t "tr.pb_gpx_bad"}}" data-gpx-empty="{{t "tr.pb_gpx_empty"}}" data-gpx-read="{{t "tr.pb_gpx_read"}}" data-tip-stop="{{t "tr.pb_tip_stop"}}" data-tip-start="{{t "tr.pb_legend_start"}}" data-tip-end="{{t "tr.pb_legend_end"}}" data-paged="{{t "tr.pb_paged"}}" class="relative h-[68vh] min-h-[520px] w-full flex flex-col bg-surface-container-low overflow-hidden rounded-2xl border border-border-subtle shadow-sm">
         <div id="playback-map" class="flex-1 min-h-0 w-full relative"></div>
 
         <div id="pb-status" class="absolute inset-0 z-[500] flex items-center justify-center bg-surface-container-lowest/85 backdrop-blur pointer-events-none">
             <div class="text-center space-y-2">
                 <div class="w-8 h-8 mx-auto rounded-full border-2 border-primary/30 border-t-primary animate-spin"></div>
-                <div class="text-xs font-medium text-secondary">Loading trip trail…</div>
+                <div class="text-xs font-medium text-secondary">{{t "tr.pb_loading"}}</div>
                 <div class="text-[11px] font-data-mono text-text-muted" id="pb-status-detail"></div>
             </div>
         </div>
 
         <div class="absolute top-3 left-3 right-3 z-10 pointer-events-none flex flex-wrap gap-2">
             <div class="bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-lg px-3 py-2 shadow-lg pointer-events-auto flex flex-wrap gap-4 text-[11px]">
-                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Points</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-points">—</span></span>
-                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Distance</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-distance">—</span></span>
-                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Duration</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-duration">—</span></span>
-                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Avg</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-avg">—</span></span>
-                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Max</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-max">—</span></span>
-                <span><span class="text-text-muted uppercase tracking-wide font-semibold">Stops</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-stops">—</span></span>
-                <span id="pb-stat-truncated" class="hidden text-amber-mid font-semibold">+ more</span>
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">{{t "tr.pb_points"}}</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-points">—</span></span>
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">{{t "tr.pb_distance"}}</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-distance">—</span></span>
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">{{t "tr.pb_duration"}}</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-duration">—</span></span>
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">{{t "tr.pb_avg"}}</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-avg">—</span></span>
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">{{t "tr.pb_max"}}</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-max">—</span></span>
+                <span><span class="text-text-muted uppercase tracking-wide font-semibold">{{t "tr.pb_stops"}}</span> <span class="font-data-mono font-bold text-on-surface" id="pb-stat-stops">—</span></span>
+                <span id="pb-stat-truncated" class="hidden text-amber-mid font-semibold">{{t "tr.pb_more"}}</span>
             </div>
             <div class="ml-auto bg-surface-container-lowest/95 backdrop-blur border border-border-subtle rounded-lg px-2 py-1.5 shadow-lg pointer-events-auto flex items-center gap-1">
                 <button type="button" id="pb-export-csv" class="px-2 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:border-primary/40 transition-colors cursor-pointer">CSV</button>
                 <button type="button" id="pb-export-gpx" class="px-2 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:border-primary/40 transition-colors cursor-pointer">GPX</button>
-                <label for="pb-gpx-file" class="px-2 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:border-primary/40 transition-colors cursor-pointer" title="Overlay a GPX track for comparison — parsed locally in your browser, never uploaded">Overlay</label>
+                <label for="pb-gpx-file" class="px-2 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:border-primary/40 transition-colors cursor-pointer" title="{{t "tr.pb_overlay_tip"}}">Overlay</label>
                 <input type="file" id="pb-gpx-file" accept=".gpx,application/gpx+xml,text/xml" class="hidden">
-                <span id="pb-gpx-status" class="hidden px-2 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide bg-violet-soft border border-violet-500/20 text-violet-strong cursor-pointer" title="Click to clear the overlay"></span>
+                <span id="pb-gpx-status" class="hidden px-2 py-1 rounded-md text-[11px] font-semibold uppercase tracking-wide bg-violet-soft border border-violet-500/20 text-violet-strong cursor-pointer" title="{{t "tr.pb_clear_tip"}}"></span>
             </div>
         </div>
 
         <div class="absolute bottom-0 left-0 right-0 z-10 bg-surface-container-lowest/95 backdrop-blur border-t border-border-subtle p-3 space-y-3">
             <div class="flex items-center gap-2">
-                <button type="button" id="pb-play" aria-label="Play or pause (Space)" class="h-11 w-11 flex items-center justify-center rounded-full bg-primary text-on-primary hover:bg-primary/90 transition-colors cursor-pointer border-0 shrink-0" title="Play/Pause (Space)">
+                <button type="button" id="pb-play" aria-label="{{t "tr.pb_play"}}" class="h-11 w-11 flex items-center justify-center rounded-full bg-primary text-on-primary hover:bg-primary/90 transition-colors cursor-pointer border-0 shrink-0" title="{{t "tr.pb_play"}}">
                     <svg aria-hidden="true" id="pb-icon-play" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 ml-0.5"><path d="M8 5v14l11-7z"/></svg>
                     <svg aria-hidden="true" id="pb-icon-pause" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 hidden"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
                 </button>
-                <button type="button" id="pb-rewind" aria-label="Restart" class="h-11 w-11 flex items-center justify-center rounded-lg bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface transition-colors cursor-pointer" title="Restart">
+                <button type="button" id="pb-rewind" aria-label="{{t "tr.pb_restart"}}" class="h-11 w-11 flex items-center justify-center rounded-lg bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface transition-colors cursor-pointer" title="{{t "tr.pb_restart"}}">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>
                 </button>
                 <div class="flex-1 min-w-0 space-y-1">
-                    <input type="range" id="pb-scrub" min="0" max="100" value="0" aria-label="Playback position" class="w-full accent-primary cursor-pointer" />
+                    <input type="range" id="pb-scrub" min="0" max="100" value="0" aria-label="{{t "tr.pb_position"}}" class="w-full accent-primary cursor-pointer" />
                     <div class="flex items-center justify-between text-[11px] font-data-mono text-text-muted">
                         <span id="pb-time-start">—</span>
                         <span id="pb-time-current" class="font-semibold text-on-surface">—</span>
@@ -74,7 +74,7 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-1 shrink-0">
-                    <label for="pb-speed" class="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Speed</label>
+                    <label for="pb-speed" class="text-[11px] font-semibold uppercase tracking-wide text-text-muted">{{t "tr.pb_speed"}}</label>
                     <select id="pb-speed" class="bg-surface-container-low border border-border-subtle rounded-md px-1.5 py-1 text-xs font-medium text-on-surface focus:outline-none focus:border-primary cursor-pointer">
                         <option value="1">1×</option>
                         <option value="2">2×</option>
@@ -86,13 +86,13 @@
             </div>
             <div class="flex items-center justify-between text-[11px] gap-2 flex-wrap">
                 <div class="flex items-center gap-2 text-secondary">
-                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#06b6d4"></span>Route</span>
-                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#f59e0b"></span>Stop &gt;5m</span>
-                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#22c55e"></span>Start</span>
-                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#ef4444"></span>End</span>
-                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#8b5cf6"></span>Geofence</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#06b6d4"></span>{{t "tr.pb_legend_route"}}</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#f59e0b"></span>{{t "tr.pb_legend_stop"}}</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#22c55e"></span>{{t "tr.pb_legend_start"}}</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#ef4444"></span>{{t "tr.pb_legend_end"}}</span>
+                    <span class="inline-flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background:#8b5cf6"></span>{{t "tr.pb_legend_geofence"}}</span>
                 </div>
-                <div class="font-data-mono text-text-muted" id="pb-hint">Space play/pause · ←→ step · F fit</div>
+                <div class="font-data-mono text-text-muted" id="pb-hint">{{t "tr.pb_hint"}}</div>
             </div>
         </div>
     </div>
@@ -100,7 +100,7 @@
     <!-- Detention list for this trip -->
     <div id="pb-detentions" class="hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-4 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
-            <h2 class="text-eyebrow text-text-muted">Detention Windows (pickup/drop)</h2>
+            <h2 class="text-eyebrow text-text-muted">{{t "tr.pb_detention"}}</h2>
         </div>
         <div class="p-4">
             <div id="pb-detentions-list" class="space-y-1 text-xs font-data-mono"></div>
@@ -202,6 +202,8 @@
         if(window.ResizeObserver){ var ro=new ResizeObserver(function(){map.invalidateSize();}); ro.observe(map.getContainer()); }
         window.addEventListener('resize', function(){ map.invalidateSize(); });
 
+        var shell=document.getElementById('playback-shell');
+        function pbT(k,f){ return (shell&&shell.dataset&&shell.dataset[k])||f; }
         var statusEl=document.getElementById('pb-status');
         var statusDetail=document.getElementById('pb-status-detail');
         var fitBtn=document.getElementById('pb-fit-btn');
@@ -259,7 +261,7 @@
             if(statTrunc){
                 var expanded = playbackCache.truncatedPages>1;
                 statTrunc.classList.toggle('hidden', !expanded);
-                if(expanded) statTrunc.textContent='paged ×'+playbackCache.truncatedPages;
+                if(expanded) statTrunc.textContent=pbT('paged','paged ×')+playbackCache.truncatedPages;
             }
         }
 
@@ -283,10 +285,10 @@
             stopsLayer.clearLayers();
             (stops||[]).forEach(function(s){
                 L.circleMarker([s.lat,s.lng],{radius:7,color:'#f59e0b',fillColor:'#f59e0b',fillOpacity:0.9,weight:2})
-                 .bindTooltip('Stop '+Math.round(s.duration_seconds/60)+'m · '+fmtTs(s.start_time), {direction:'top'}).addTo(stopsLayer);
+                 .bindTooltip(pbT('tipStop','Stop ')+Math.round(s.duration_seconds/60)+'m · '+fmtTs(s.start_time), {direction:'top'}).addTo(stopsLayer);
             });
-            L.circleMarker(latlngs[0],{radius:6,color:'#22c55e',fillColor:'#22c55e',fillOpacity:1,weight:2}).bindTooltip('Start', {direction:'top'}).addTo(stopsLayer);
-            L.circleMarker(latlngs[latlngs.length-1],{radius:6,color:'#ef4444',fillColor:'#ef4444',fillOpacity:1,weight:2}).bindTooltip('End', {direction:'top'}).addTo(stopsLayer);
+            L.circleMarker(latlngs[0],{radius:6,color:'#22c55e',fillColor:'#22c55e',fillOpacity:1,weight:2}).bindTooltip(pbT('tipStart','Start'), {direction:'top'}).addTo(stopsLayer);
+            L.circleMarker(latlngs[latlngs.length-1],{radius:6,color:'#ef4444',fillColor:'#ef4444',fillOpacity:1,weight:2}).bindTooltip(pbT('tipEnd','End'), {direction:'top'}).addTo(stopsLayer);
             geofenceLayer.clearLayers();
             (geofenceEvents||[]).forEach(function(ev){
                 if(ev.lat==null||ev.lng==null) return;
@@ -430,7 +432,7 @@
             var f=this.files && this.files[0];
             this.value='';
             if(!f) return;
-            if(f.size>5*1024*1024){ setGpxStatus('file too big (5MB)', true); return; }
+            if(f.size>5*1024*1024){ setGpxStatus(pbT('gpxBig','file too big (5MB)'), true); return; }
             var rd=new FileReader();
             rd.onload=function(){
                 var latlngs=[];
@@ -444,14 +446,14 @@
                         var la=parseFloat(pts[i].getAttribute('lat')), ln=parseFloat(pts[i].getAttribute('lon'));
                         if(isFinite(la)&&isFinite(ln)&&Math.abs(la)<=90&&Math.abs(ln)<=180) latlngs.push([la,ln]);
                     }
-                }catch(e){ setGpxStatus('not a GPX file', true); return; }
-                if(latlngs.length<2){ setGpxStatus('no track points', true); return; }
+                }catch(e){ setGpxStatus(pbT('gpxBad','not a GPX file'), true); return; }
+                if(latlngs.length<2){ setGpxStatus(pbT('gpxEmpty','no track points'), true); return; }
                 clearGpxOverlay();
                 gpxOverlay=L.polyline(latlngs,{color:'#8b5cf6',weight:3,opacity:0.9,dashArray:'8 6'}).addTo(map);
                 map.fitBounds(gpxOverlay.getBounds(),{padding:[30,30],maxZoom:16});
-                setGpxStatus(latlngs.length+' pts · clear', false);
+                setGpxStatus(latlngs.length+' pts · '+pbT('gpxClear','clear'), false);
             };
-            rd.onerror=function(){ setGpxStatus('read failed', true); };
+            rd.onerror=function(){ setGpxStatus(pbT('gpxRead','read failed'), true); };
             rd.readAsText(f);
         });
         function setGpxStatus(txt, isErr){
@@ -528,7 +530,7 @@
         }
 
         async function load(){
-            showStatus('Loading trip trail…', tripId);
+            showStatus(pbT('msgLoading','Loading trip trail…'), tripId);
             try{
                 var result=await fetchPlaybackAll();
                 points=result.points||[];
@@ -575,7 +577,7 @@
                     }
                 }
                 if(!points.length){
-                    showStatus('No GPS data for this trip yet', 'Vehicle '+ (vehicleId||'—')+' has no points for trip '+tripId);
+                    showStatus(pbT('msgNogps','No GPS data for this trip yet'), 'Vehicle '+ (vehicleId||'—')+' has no points for trip '+tripId);
                     renderStats();
                     return;
                 }
@@ -590,7 +592,7 @@
                 renderDetentions();
             } catch(err){
                 console.warn('playback load failed', err);
-                showStatus('Failed to load trail', String(err));
+                showStatus(pbT('msgFailed','Failed to load trail'), String(err));
                 // try history fallback
                 try{
                     var r2=await fetch(historyAPI+'?trip_id='+encodeURIComponent(tripId)+'&limit=2000', {headers:{'Accept':'application/json'}, credentials:'same-origin'});
@@ -626,7 +628,7 @@
             if(statTrunc){
                 var expanded = playbackCache.truncatedPages>1;
                 statTrunc.classList.toggle('hidden', !expanded);
-                if(expanded) statTrunc.textContent='paged ×'+playbackCache.truncatedPages;
+                if(expanded) statTrunc.textContent=pbT('paged','paged ×')+playbackCache.truncatedPages;
             }
         }
         load();

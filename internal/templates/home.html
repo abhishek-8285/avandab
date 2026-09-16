@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{.Lang}}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
@@ -423,7 +423,7 @@
     </script>
 </head>
 <body class="bg-background text-on-surface font-sans antialiased overflow-x-hidden has-public-nav">
-    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-primary focus:text-white focus:text-sm focus:font-semibold">Skip to content</a>
+    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-primary focus:text-white focus:text-sm focus:font-semibold">{{t "home.skip"}}</a>
     <!-- Header -->
     {{template "public_header.html" .}}
 
@@ -461,44 +461,44 @@
                   <span class="absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-30" style="animation:heroPing 1.8s cubic-bezier(0,0,0.2,1) infinite"></span>
                   <span class="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span>
                 </span>
-                <span class="text-[11px] sm:text-[11px] font-extrabold tracking-widest text-primary uppercase whitespace-nowrap">Avandab Operations Platform</span>
+                <span class="text-[11px] sm:text-[11px] font-extrabold tracking-widest text-primary uppercase whitespace-nowrap">{{t "home.badge"}}</span>
               </div>
 
               <h1 class="hero-enter d2 font-display text-display font-[800] tracking-[-0.035em] text-on-surface text-balance">
-                Fleet operations<br/>
-                <span class="bg-gradient-to-br from-primary via-primary to-primary bg-clip-text text-transparent" style="filter: saturate(1.1)">managed with</span><br/>
-                clarity and control.
+                {{t "home.h1a"}}<br/>
+                <span class="bg-gradient-to-br from-primary via-primary to-primary bg-clip-text text-transparent" style="filter: saturate(1.1)">{{t "home.h1b"}}</span><br/>
+                {{t "home.h1c"}}
               </h1>
 
               <p class="hero-enter d3 mx-auto lg:mx-0 max-w-[36rem] xl:max-w-[38rem] text-[15px] sm:text-[16px] xl:text-[17px] leading-[1.6] text-secondary font-[450] text-pretty">
-                Replace WhatsApp, spreadsheets and calls with one live cockpit.
-                <span class="text-on-surface font-semibold">Dispatch → track → POD → invoice → paid</span> — no hardware, no bloated workflows.
+                {{t "home.sub"}}
+                <span class="text-on-surface font-semibold">{{t "home.flow"}}</span> {{t "home.sub2"}}
               </p>
 
               <div class="hero-enter d4 flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3 pt-1">
                 <a href="/register" class="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-primary px-6 sm:px-7 py-[12px] sm:py-[13px] text-[14px] font-bold text-on-primary shadow-[0_10px_24px_-12px_var(--color-primary),0_4px_12px_-6px_rgba(0,0,0,0.08)] transition hover:bg-primary/90 hover:shadow-[0_16px_32px_-14px_var(--color-primary)] hover:-translate-y-px active:translate-y-0 whitespace-nowrap">
                   <span class="absolute inset-0 -translate-x-[120%] bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[heroShine_1.1s_ease]" style="animation: none"></span>
-                  <span class="relative">Start free — 10 min setup</span>
+                  <span class="relative">{{t "home.cta_start"}}</span>
                   <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="relative w-4 h-4 transition-transform group-hover:translate-x-[3px]"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                 </a>
                 <a href="#story" class="inline-flex items-center justify-center gap-2 rounded-full border border-border-subtle bg-surface-container-lowest px-6 sm:px-7 py-[12px] sm:py-[13px] text-[14px] font-bold text-on-surface hover:bg-surface-container-low hover:border-border-subtle transition whitespace-nowrap">
                   <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-4 h-4 text-primary"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
-                  See live dispatch
+                  {{t "home.cta_demo"}}
                 </a>
-                <span class="hidden sm:inline-flex text-[11px] font-medium text-text-muted whitespace-nowrap">No card • Cancel anytime</span>
+                <span class="hidden sm:inline-flex text-[11px] font-medium text-text-muted whitespace-nowrap">{{t "home.nocard"}}</span>
               </div>
 
               <div class="hero-enter d4 flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-2 pt-1">
-                <span class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-secondary"><span class="text-emerald-mid font-bold">✓</span> No hardware — runs on smartphones</span>
-                <span class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-secondary"><span class="text-emerald-mid font-bold">✓</span> Hindi + 6 more Indian languages</span>
-                <span class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-secondary"><span class="text-emerald-mid font-bold">✓</span> GST-ready invoicing</span>
+                <span class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-secondary"><span class="text-emerald-mid font-bold">✓</span> {{t "home.f_hw"}}</span>
+                <span class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-secondary"><span class="text-emerald-mid font-bold">✓</span> {{t "home.f_lang"}}</span>
+                <span class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-secondary"><span class="text-emerald-mid font-bold">✓</span> {{t "home.f_gst"}}</span>
               </div>
 
               <div class="hero-enter d4 flex flex-wrap items-center justify-center lg:justify-start gap-2 pt-1">
-                <span class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-container-lowest px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-secondary shadow-sm whitespace-nowrap"><span class="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-emerald-soft text-emerald-mid shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3.5 h-3.5"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 11-7 11S5 14 5 9a7 7 0 0 1 7-7Z"/><circle cx="12" cy="9" r="2.2"/></svg></span>Live GPS</span>
-                <span class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-container-lowest px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-secondary shadow-sm whitespace-nowrap"><span class="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3.5 h-3.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>GST invoicing</span>
-                <span class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-container-lowest px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-secondary shadow-sm whitespace-nowrap"><span class="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-amber-soft text-amber-mid shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3.5 h-3.5"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg></span>Kharcha</span>
-                <span class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-container-lowest px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-secondary shadow-sm whitespace-nowrap"><span class="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3.5 h-3.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3.2"/></svg></span>Customer link</span>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-container-lowest px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-secondary shadow-sm whitespace-nowrap"><span class="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-emerald-soft text-emerald-mid shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3.5 h-3.5"><path d="M12 2a7 7 0 0 1 7 7c0 5-7 11-7 11S5 14 5 9a7 7 0 0 1 7-7Z"/><circle cx="12" cy="9" r="2.2"/></svg></span>{{t "home.chip_gps"}}</span>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-container-lowest px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-secondary shadow-sm whitespace-nowrap"><span class="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3.5 h-3.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></span>{{t "home.chip_gst"}}</span>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-container-lowest px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-secondary shadow-sm whitespace-nowrap"><span class="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-amber-soft text-amber-mid shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3.5 h-3.5"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg></span>{{t "home.chip_kharcha"}}</span>
+                <span class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-surface-container-lowest px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-secondary shadow-sm whitespace-nowrap"><span class="flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-primary/10 text-primary shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" class="w-3.5 h-3.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3.2"/></svg></span>{{t "home.chip_cust"}}</span>
               </div>
             </div>
 
@@ -950,58 +950,59 @@
                 <div class="road-base"></div>
                 <div class="lane-dashes"></div>
             </div>
-            <a href="#benefits" class="story-continue is-hidden" id="story-continue" aria-label="Scroll to see all features">
-                <span class="sc-text">Scroll — 30+ modules ahead</span>
+            <a href="#benefits" class="story-continue is-hidden" id="story-continue" aria-label="{{t "home.story_more"}}"
+               data-sc-more="{{t "home.sc_more"}}" data-sc-ahead="{{t "home.sc_ahead"}}">
+                <span class="sc-text">{{t "home.scroll_more"}}</span>
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
             </a>
         </div>
 
         <div class="story-chapter" data-scene="business">
             <div class="story-card reveal">
-                <div class="step-chip"><b>1</b>First, your world</div>
-                <h2>You move goods from one city to another. That is the whole business.</h2>
-                <p>A customer needs a load carried. Your truck picks it up, a driver takes it there. Simple — until it isn't.</p>
-                <div class="pain-tags"><span>Your trucks</span><span>Your drivers</span><span>Your customers</span></div>
+                <div class="step-chip"><b>1</b>{{t "home.s1_kicker"}}</div>
+                <h2>{{t "home.s1_title"}}</h2>
+                <p>{{t "home.s1_body"}}</p>
+                <div class="pain-tags"><span>{{t "home.s1_c1"}}</span><span>{{t "home.s1_c2"}}</span><span>{{t "home.s1_c3"}}</span></div>
             </div>
         </div>
 
         <div class="story-chapter align-right" data-scene="calls">
             <div class="story-card reveal">
-                <div class="step-chip"><b>2</b>The booking scramble</div>
-                <h2>“Truck chahiye kal subah.” One call becomes ten.</h2>
-                <p>You ring drivers, compare rates, scribble prices on paper scraps and forward addresses on WhatsApp. Every booking lives in five different places — mostly in your head.</p>
-                <div class="pain-tags"><span>Phone calls</span><span>Paper scraps</span><span>All in memory</span></div>
+                <div class="step-chip"><b>2</b>{{t "home.s2_title"}}</div>
+                <h2>{{t "home.s2_sub"}}</h2>
+                <p>{{t "home.s2_body"}}</p>
+                <div class="pain-tags"><span>{{t "home.s2_c1"}}</span><span>{{t "home.s2_c2"}}</span><span>{{t "home.s2_c3"}}</span></div>
             </div>
         </div>
 
         <div class="story-chapter" data-scene="blind">
             <div class="story-card reveal">
-                <div class="step-chip"><b>3</b>“Where is my load?”</div>
-                <h2>The customer asks. You honestly don't know yet.</h2>
-                <p>Until the driver answers his phone, nobody knows if the truck is in traffic, parked at a dhaba, or lost. One truck is easy to track in your head. Twenty is chaos.</p>
-                <div class="pain-tags"><span>No live location</span><span>Repeat follow-ups</span><span>Broken trust</span></div>
+                <div class="step-chip"><b>3</b>{{t "home.s3_quote"}}</div>
+                <h2>{{t "home.s3_title"}}</h2>
+                <p>{{t "home.s3_body"}}</p>
+                <div class="pain-tags"><span>{{t "home.s3_c1"}}</span><span>{{t "home.s3_c2"}}</span><span>{{t "home.s3_c3"}}</span></div>
             </div>
         </div>
 
         <div class="story-chapter align-right" data-scene="papers">
             <div class="story-card reveal">
-                <div class="step-chip"><b>4</b>The month-end mountain</div>
-                <h2>The trip finished — the paperwork didn't.</h2>
-                <p>Invoices wait to be made, fuel receipts vanish, and one payment quietly slips through the cracks. Multiply that by every trip this month.</p>
-                <div class="pain-tags"><span>Pending invoices</span><span>Lost receipts</span><span>Forgotten payments</span></div>
+                <div class="step-chip"><b>4</b>{{t "home.s4_title"}}</div>
+                <h2>{{t "home.s4_sub"}}</h2>
+                <p>{{t "home.s4_body"}}</p>
+                <div class="pain-tags"><span>{{t "home.s4_c1"}}</span><span>{{t "home.s4_c2"}}</span><span>{{t "home.s4_c3"}}</span></div>
             </div>
         </div>
 
         <div class="story-chapter chapter-solved" data-scene="solved">
             <div class="story-card reveal">
-                <div class="step-chip"><b>✓</b>The Avandab way</div>
-                <h2>Avandab puts your transport business on one screen.</h2>
-                <p>Book a trip, assign a driver, share a live tracking link, get paid — each step flows into the next, automatically.</p>
+                <div class="step-chip"><b>✓</b>{{t "home.s5_kicker"}}</div>
+                <h2>{{t "home.s5_title"}}</h2>
+                <p>{{t "home.s5_body"}}</p>
                 <ul class="solved-points">
-                    <li>Dispatch a driver in seconds</li>
-                    <li>Customer watches the trip live</li>
-                    <li>Invoice creates itself after delivery</li>
-                    <li>Every rupee in and out, recorded</li>
+                    <li>{{t "home.s5_f1"}}</li>
+                    <li>{{t "home.s5_f2"}}</li>
+                    <li>{{t "home.s5_f3"}}</li>
+                    <li>{{t "home.s5_f4"}}</li>
                 </ul>
                 <div class="cta-row">
                     <a href="/login" style="background-color: var(--color-primary) !important; color: var(--color-surface-container-lowest) !important;" class="px-7 py-3.5 rounded-full font-bold text-sm shadow-md transition duration-150 flex items-center justify-center gap-2 hover:-translate-y-px">
@@ -1012,7 +1013,7 @@
                         See all features
                     </a>
                 </div>
-                <div class="chapter-continue" aria-hidden="true"><span>Keep scrolling — features & comparison below</span> <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></div>
+                <div class="chapter-continue" aria-hidden="true"><span>{{t "home.keep_scrolling"}}</span> <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></div>
             </div>
         </div>
     </section>
@@ -1026,52 +1027,52 @@
                         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="w-6 h-6"><path d="M3 5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h1v2a1 1 0 0 0 2 0v-2h9v2a1 1 0 0 0 2 0v-2h2a1 1 0 0 0 1-1v-7l-4-4H3Zm11 4h3l2 2v2h-5V9Z"/></svg>
                         Every module. One login.
                     </h2>
-                    <p style="color:var(--color-secondary);font-size:.95rem;margin:.5rem 0 0;">No add-ons, no per-feature pricing — the complete toolkit ships together.</p>
+                    <p style="color:var(--color-secondary);font-size:.95rem;margin:.5rem 0 0;">{{t "home.ben_sub"}}</p>
                 </div>
-                <span class="feat-count">✓ 30+ modules included</span>
+                <span class="feat-count">{{t "home.ben_modules"}}</span>
             </div>
             <div class="feat-groups">
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.62l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>
-                        <h3>Run daily operations</h3>
+                        <h3>{{t "home.g_ops"}}</h3>
                     </div>
-                    <div class="fg-chips"><span>Bookings</span><span>Trips &amp; routes</span><span>Driver management</span><span>Vehicle records</span><span>Customer CRM</span><span>Maintenance scheduler</span></div>
+                    <div class="fg-chips"><span>{{t "home.mod_bookings"}}</span><span>{{t "home.mod_trips"}}</span><span>{{t "home.mod_drivers"}}</span><span>{{t "home.mod_vehicles"}}</span><span>{{t "home.mod_crm"}}</span><span>{{t "home.mod_maint"}}</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div>
-                        <h3>See everything live</h3>
+                        <h3>{{t "home.g_live"}}</h3>
                     </div>
-                    <div class="fg-chips"><span>Live map</span><span>Trip tracking &amp; ETA</span><span>Geofences</span><span>Telemetry devices</span><span>Alerts &amp; ops alerts</span><span>Notifications</span></div>
+                    <div class="fg-chips"><span>{{t "home.mod_map"}}</span><span>{{t "home.mod_track"}}</span><span>{{t "home.mod_geo"}}</span><span>{{t "home.mod_tel"}}</span><span>{{t "home.mod_alerts"}}</span><span>{{t "home.mod_notif"}}</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M6 3h12"/><path d="M6 8h12"/><path d="m6 13 8.5 8"/><path d="M6 13h3"/><path d="M9 13c6.667 0 6.667-10 0-10"/></svg></div>
-                        <h3>Money, closed loop</h3>
+                        <h3>{{t "home.g_money"}}</h3>
                     </div>
-                    <div class="fg-chips"><span>Invoices</span><span>Payment tracking</span><span>Kharcha ledger</span><span>Settlements</span><span>Fuel audit</span><span>PnL reports</span></div>
+                    <div class="fg-chips"><span>{{t "home.mod_inv"}}</span><span>{{t "home.mod_pay"}}</span><span>{{t "home.mod_kharcha"}}</span><span>{{t "home.mod_settle"}}</span><span>{{t "home.mod_fuel"}}</span><span>{{t "home.mod_pnl"}}</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></div>
-                        <h3>Compliance built-in</h3>
+                        <h3>{{t "home.g_comp"}}</h3>
                     </div>
-                    <div class="fg-chips"><span>E-way bill</span><span>FASTag</span><span>Audit trail</span><span>User roles &amp; permissions</span><span>Driver scorecard</span></div>
+                    <div class="fg-chips"><span>{{t "home.mod_ewb"}}</span><span>{{t "home.mod_fastag"}}</span><span>{{t "home.mod_audit"}}</span><span>{{t "home.mod_roles"}}</span><span>{{t "home.mod_score"}}</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-                        <h3>For your customers</h3>
+                        <h3>{{t "home.g_cust"}}</h3>
                     </div>
-                    <div class="fg-chips"><span>Self-service portal</span><span>My Shipments live view</span><span>Direct invoices</span><span>Support access</span></div>
+                    <div class="fg-chips"><span>{{t "home.mod_portal"}}</span><span>{{t "home.mod_ship"}}</span><span>{{t "home.mod_direct"}}</span><span>{{t "home.mod_support"}}</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg></div>
-                        <h3>Extras that compound</h3>
+                        <h3>{{t "home.g_extra"}}</h3>
                     </div>
-                    <div class="fg-chips"><span>Mobile driver app</span><span>E-PoD signatures</span><span>AI assistant</span><span>REST API</span><span>Experiments lab</span><span>Self-host option</span></div>
+                    <div class="fg-chips"><span>{{t "home.mod_app"}}</span><span>{{t "home.mod_epod"}}</span><span>{{t "home.mod_ai"}}</span><span>{{t "home.mod_api"}}</span><span>{{t "home.mod_lab"}}</span><span>{{t "home.mod_self"}}</span></div>
                 </div>
             </div>
         </div>
@@ -1081,52 +1082,55 @@
     <section id="features" class="py-20 border-t border-border-subtle bg-background">
         <div class="max-w-6xl mx-auto px-6">
             <div class="mb-12 space-y-2 text-center sm:text-left reveal">
-                <h2 class="font-display font-bold text-2xl sm:text-3xl text-on-surface">One platform. Four points of view.</h2>
-                <p class="text-secondary text-sm sm:text-base">Everyone in the operation gets exactly the screen they need — nothing more, nothing missing.</p>
+                <h2 class="font-display font-bold text-2xl sm:text-3xl text-on-surface">{{t "home.pov_title"}}</h2>
+                <p class="text-secondary text-sm sm:text-base">{{t "home.pov_sub"}}</p>
             </div>
 
             <div class="feat-groups personas">
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M12 12h.01"/><path d="M12 2a10 10 0 1 0 10 10"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg></div>
-                        <h3>Fleet owner</h3>
+                        <h3>{{t "home.pov_owner"}}</h3>
                     </div>
-                    <p class="fg-desc">Know profit per trip and spot fuel leaks — no spreadsheets, no guessing.</p>
-                    <div class="fg-chips"><span>PnL reports</span><span>Fuel audit</span><span>Driver scorecard</span><span>Settlements</span></div>
+                    <p class="fg-desc">{{t "home.pov_owner_d"}}</p>
+                    <div class="fg-chips"><span>{{t "home.mod_pnl"}}</span><span>{{t "home.mod_fuel"}}</span><span>{{t "home.mod_score"}}</span><span>{{t "home.mod_settle"}}</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></svg></div>
-                        <h3>Dispatch &amp; operations</h3>
+                        <h3>{{t "home.pov_ops"}}</h3>
                     </div>
-                    <p class="fg-desc">Book, assign and track every trip from one board — with alerts when something needs attention.</p>
-                    <div class="fg-chips"><span>Bookings</span><span>Trips &amp; routes</span><span>Live map</span><span>Ops alerts</span></div>
+                    <p class="fg-desc">{{t "home.pov_ops_d"}}</p>
+                    <div class="fg-chips"><span>{{t "home.mod_bookings"}}</span><span>{{t "home.mod_trips"}}</span><span>{{t "home.mod_map"}}</span><span>{{t "home.mod_opsalerts"}}</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M12 18h.01"/></svg></div>
-                        <h3>Drivers</h3>
+                        <h3>{{t "home.pov_driv"}}</h3>
                     </div>
-                    <p class="fg-desc">Trip details on mobile, delivery marked on the spot with a signed proof.</p>
-                    <div class="fg-chips"><span>Mobile driver app</span><span>E-PoD signatures</span><span>Trip status</span></div>
+                    <p class="fg-desc">{{t "home.pov_driv_d"}}</p>
+                    <div class="fg-chips"><span>{{t "home.mod_app"}}</span><span>{{t "home.mod_epod"}}</span><span>{{t "home.mod_status"}}</span></div>
                 </div>
                 <div class="feat-group reveal">
                     <div class="fg-head">
                         <div class="fg-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-                        <h3>Your customers</h3>
+                        <h3>{{t "home.pov_cust"}}</h3>
                     </div>
-                    <p class="fg-desc">Self-serve shipment tracking and invoices — fewer status calls to your office.</p>
-                    <div class="fg-chips"><span>My Shipments portal</span><span>Live tracking link</span><span>Direct invoices</span></div>
+                    <p class="fg-desc">{{t "home.pov_cust_d"}}</p>
+                    <div class="fg-chips"><span>{{t "home.mod_ship2"}}</span><span>{{t "home.mod_link"}}</span><span>{{t "home.mod_direct"}}</span></div>
                 </div>
             </div>
         </div>
     <!-- Interactive Fleet Savings Calculator -->
-    <section id="calculator" class="py-20 border-t border-border-subtle bg-surface-container-low">
+    <section id="calculator" class="py-20 border-t border-border-subtle bg-surface-container-low"
+        data-truck-sg="{{t "home.unit_truck_sg"}}" data-truck-pl="{{t "home.unit_truck_pl"}}" data-km="{{t "home.unit_km"}}"
+        data-lakh="{{t "home.unit_lakh"}}" data-crore="{{t "home.unit_crore"}}" data-permo="{{t "home.unit_permo"}}"
+        data-claim-pre="{{if eq .Lang "hi"}}{{else}}{{t "home.claim_pre"}}{{end}}" data-claim-post="{{t "home.claim_post"}}">
         <div class="max-w-6xl mx-auto px-6">
             <div class="mb-12 space-y-2 text-center sm:text-left reveal">
-                <span class="ecasb-badge">Fleet ROI Calculator</span>
-                <h2 class="font-display font-bold text-2xl sm:text-3xl text-on-surface mt-2">Calculate your fleet's monthly &amp; annual savings</h2>
-                <p class="text-secondary text-sm sm:text-base max-w-2xl">Stop bleeding margin on diesel theft, unauthorized route detours, and unbilled detention. Move the sliders below to see your estimated bottom-line recovery.</p>
+                <span class="ecasb-badge">{{t "home.calc_title"}}</span>
+                <h2 class="font-display font-bold text-2xl sm:text-3xl text-on-surface mt-2">{{t "home.calc_sub"}}</h2>
+                <p class="text-secondary text-sm sm:text-base max-w-2xl">{{t "home.calc_desc"}}</p>
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch reveal">
@@ -1138,15 +1142,15 @@
                             <div class="flex items-center justify-between">
                                 <label for="calc-trucks" class="text-xs font-semibold uppercase tracking-wider text-secondary flex items-center gap-1.5">
                                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-primary shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                                    Active Fleet Size
+                                    {{t "home.calc_fleet"}}
                                 </label>
-                                <span id="calc-trucks-display" class="font-data-mono font-semibold text-base text-primary bg-primary/10 px-3 py-0.5 rounded-full">15 Trucks</span>
+                                <span id="calc-trucks-display" class="font-data-mono font-semibold text-base text-primary bg-primary/10 px-3 py-0.5 rounded-full">{{t "home.calc_trucks_init"}}</span>
                             </div>
                             <input id="calc-trucks" type="range" min="2" max="150" value="15" step="1" class="w-full accent-primary h-2 bg-surface-container rounded-lg cursor-pointer transition">
                             <div class="flex justify-between text-[11px] text-text-muted font-medium">
-                                <span>2 Trucks</span>
-                                <span>50 Trucks</span>
-                                <span>150 Trucks</span>
+                                <span>{{t "home.calc_t2"}}</span>
+                                <span>{{t "home.calc_t50"}}</span>
+                                <span>{{t "home.calc_t150"}}</span>
                             </div>
                         </div>
 
@@ -1155,37 +1159,37 @@
                             <div class="flex items-center justify-between">
                                 <label for="calc-km" class="text-xs font-semibold uppercase tracking-wider text-secondary flex items-center gap-1.5">
                                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-primary shrink-0"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-                                    Avg. Monthly Run Per Truck
+                                    {{t "home.calc_run"}}
                                 </label>
-                                <span id="calc-km-display" class="font-data-mono font-semibold text-base text-primary bg-primary/10 px-3 py-0.5 rounded-full">6,500 km</span>
+                                <span id="calc-km-display" class="font-data-mono font-semibold text-base text-primary bg-primary/10 px-3 py-0.5 rounded-full">{{t "home.calc_km_init"}}</span>
                             </div>
                             <input id="calc-km" type="range" min="2000" max="12000" value="6500" step="500" class="w-full accent-primary h-2 bg-surface-container rounded-lg cursor-pointer transition">
                             <div class="flex justify-between text-[11px] text-text-muted font-medium">
-                                <span>2,000 km</span>
-                                <span>6,500 km</span>
-                                <span>12,000 km</span>
+                                <span>{{t "home.calc_k2"}}</span>
+                                <span>{{t "home.calc_k65"}}</span>
+                                <span>{{t "home.calc_k12"}}</span>
                             </div>
                         </div>
 
                         <!-- Pill checklist -->
                         <div class="border-t border-border-subtle pt-4 space-y-2.5">
-                            <span class="text-[11px] font-semibold uppercase tracking-wider text-text-muted block mb-2">Automated Savings Included</span>
+                            <span class="text-[11px] font-semibold uppercase tracking-wider text-text-muted block mb-2">{{t "home.calc_auto"}}</span>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-on-surface-variant">
                                 <div class="flex items-center gap-2">
                                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 text-status-success shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
-                                    <span>Diesel theft &amp; idling prevention</span>
+                                    <span>{{t "home.calc_s1"}}</span>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 text-status-success shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
-                                    <span>GPS detention &amp; demurrage recovery</span>
+                                    <span>{{t "home.calc_s2"}}</span>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 text-status-success shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
-                                    <span>Automated e-POD invoice clearance</span>
+                                    <span>{{t "home.calc_s3"}}</span>
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4 text-status-success shrink-0"><polyline points="20 6 9 17 4 12"/></svg>
-                                    <span>Driver advance &amp; toll audit reconciliation</span>
+                                    <span>{{t "home.calc_s4"}}</span>
                                 </div>
                             </div>
                         </div>
@@ -1202,26 +1206,26 @@
 
                     <div class="space-y-6 relative z-10" aria-live="polite">
                         <div>
-                            <span class="text-xs font-semibold uppercase tracking-wider text-text-muted">Estimated Annual Bottom-Line Boost</span>
+                            <span class="text-xs font-semibold uppercase tracking-wider text-text-muted">{{t "home.calc_annual"}}</span>
                             <div id="calc-annual-total" class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-primary font-display tracking-tight mt-1">₹18.48 Lakhs</div>
-                            <div class="text-xs text-secondary mt-1 font-medium">Extra cash retained in your transport business every year</div>
+                            <div class="text-xs text-secondary mt-1 font-medium">{{t "home.calc_annual_d"}}</div>
                         </div>
 
                         <div class="border-t border-border-subtle pt-4 space-y-3">
                             <div class="flex justify-between items-center text-sm">
-                                <span class="text-on-surface-variant font-medium">Estimated Monthly Savings:</span>
+                                <span class="text-on-surface-variant font-medium">{{t "home.calc_monthly"}}</span>
                                 <span id="calc-monthly-total" class="font-data-mono font-semibold text-on-surface text-base">₹1,54,000 / mo</span>
                             </div>
                             <div class="flex justify-between items-center text-xs text-text-muted pl-2 border-l-2 border-primary/30">
-                                <span>Diesel &amp; Route Optimization:</span>
+                                <span>{{t "home.calc_diesel"}}</span>
                                 <span id="calc-diesel-total" class="font-data-mono font-semibold text-on-surface">₹69,500</span>
                             </div>
                             <div class="flex justify-between items-center text-xs text-text-muted pl-2 border-l-2 border-emerald-500/30">
-                                <span>Detention &amp; Rapid e-POD Recovery:</span>
+                                <span>{{t "home.calc_det"}}</span>
                                 <span id="calc-detention-total" class="font-data-mono font-semibold text-on-surface">₹75,000</span>
                             </div>
                             <div class="flex justify-between items-center text-xs text-text-muted pl-2 border-l-2 border-amber-500/30">
-                                <span>Dispatcher &amp; Toll Reconcile Hours:</span>
+                                <span>{{t "home.calc_admin"}}</span>
                                 <span id="calc-admin-total" class="font-data-mono font-semibold text-on-surface">₹9,500</span>
                             </div>
                         </div>
@@ -1229,14 +1233,14 @@
 
                     <div class="mt-8 space-y-3 relative z-10">
                         <a id="calc-cta-btn" href="/register" class="w-full inline-flex items-center justify-center gap-2 py-3 px-6 rounded-full bg-primary text-on-primary font-semibold text-sm shadow-md hover:bg-primary/90 hover:-translate-y-0.5 hover:shadow-lg transition text-center">
-                            <span>Claim Your Savings &rarr; Start Free</span>
+                            <span>{{t "home.calc_cta"}}</span>
                         </a>
                         <div class="flex items-center justify-center gap-3 text-[11px] text-text-muted">
-                            <span class="flex items-center gap-1"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3 h-3 text-status-success"><polyline points="20 6 9 17 4 12"/></svg> Free to Start</span>
+                            <span class="flex items-center gap-1"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3 h-3 text-status-success"><polyline points="20 6 9 17 4 12"/></svg> {{t "home.cta_free"}}</span>
                             <span>&bull;</span>
-                            <span class="flex items-center gap-1"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3 h-3 text-status-success"><polyline points="20 6 9 17 4 12"/></svg> No Credit Card</span>
+                            <span class="flex items-center gap-1"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3 h-3 text-status-success"><polyline points="20 6 9 17 4 12"/></svg> {{t "home.cta_nocard"}}</span>
                             <span>&bull;</span>
-                            <span class="flex items-center gap-1"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3 h-3 text-status-success"><polyline points="20 6 9 17 4 12"/></svg> 5 Min Setup</span>
+                            <span class="flex items-center gap-1"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-3 h-3 text-status-success"><polyline points="20 6 9 17 4 12"/></svg> {{t "home.cta_setup"}}</span>
                         </div>
                     </div>
                 </div>
@@ -1248,34 +1252,34 @@
     <section id="comparison" class="py-20 border-t border-border-subtle bg-surface-container-lowest">
         <div class="max-w-6xl mx-auto px-6">
             <div class="mb-12 space-y-2 text-center sm:text-left reveal">
-                <h2 class="font-display font-bold text-2xl sm:text-3xl text-on-surface">How Avandab compares</h2>
-                <p class="text-secondary text-sm sm:text-base">Built for speed, simplicity, and complete operational efficiency.</p>
+                <h2 class="font-display font-bold text-2xl sm:text-3xl text-on-surface">{{t "home.cmp_title"}}</h2>
+                <p class="text-secondary text-sm sm:text-base">{{t "home.cmp_sub"}}</p>
             </div>
 
             <div class="overflow-x-auto ecasb-card overflow-hidden">
                 <table class="w-full text-left border-collapse text-sm">
                     <thead>
                         <tr class="border-b border-border-subtle bg-surface-container-low">
-                            <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Feature</th>
+                            <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">{{t "home.cmp_feature"}}</th>
                             <th class="px-4 py-2.5 text-left text-eyebrow text-primary bg-primary/10">Avandab (avandab.com)</th>
-                            <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Legacy Enterprise SaaS</th>
+                            <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">{{t "home.cmp_legacy"}}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border-subtle">
                         <tr>
-                            <td class="px-4 py-2.5 text-sm font-semibold text-on-surface">Contracts</td>
-                            <td class="px-4 py-2.5 text-sm font-semibold text-primary tabular-nums bg-primary/10">No contract / Flexible</td>
-                            <td class="px-4 py-2.5 text-sm text-text-muted">3–5 Year lock-in agreements</td>
+                            <td class="px-4 py-2.5 text-sm font-semibold text-on-surface">{{t "home.cmp_contracts"}}</td>
+                            <td class="px-4 py-2.5 text-sm font-semibold text-primary tabular-nums bg-primary/10">{{t "home.cmp_nocon"}}</td>
+                            <td class="px-4 py-2.5 text-sm text-text-muted">{{t "home.cmp_lockin"}}</td>
                         </tr>
                         <tr>
-                            <td class="px-4 py-2.5 text-sm font-semibold text-on-surface">Deployment</td>
-                            <td class="px-4 py-2.5 text-sm font-semibold text-primary tabular-nums bg-primary/10">Instant web & cloud ready</td>
-                            <td class="px-4 py-2.5 text-sm text-text-muted">Weeks of hardware installation</td>
+                            <td class="px-4 py-2.5 text-sm font-semibold text-on-surface">{{t "home.cmp_deploy"}}</td>
+                            <td class="px-4 py-2.5 text-sm font-semibold text-primary tabular-nums bg-primary/10">{{t "home.cmp_instant"}}</td>
+                            <td class="px-4 py-2.5 text-sm text-text-muted">{{t "home.cmp_weeks"}}</td>
                         </tr>
                         <tr>
-                            <td class="px-4 py-2.5 text-sm font-semibold text-on-surface">Interface Speed</td>
-                            <td class="px-4 py-2.5 text-sm font-semibold text-primary tabular-nums bg-primary/10">Instant SPA transitions</td>
-                            <td class="px-4 py-2.5 text-sm text-text-muted">Heavy page load latency</td>
+                            <td class="px-4 py-2.5 text-sm font-semibold text-on-surface">{{t "home.cmp_speed"}}</td>
+                            <td class="px-4 py-2.5 text-sm font-semibold text-primary tabular-nums bg-primary/10">{{t "home.cmp_spa"}}</td>
+                            <td class="px-4 py-2.5 text-sm text-text-muted">{{t "home.cmp_heavy"}}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -1290,13 +1294,13 @@
     </div>
 
     <!-- Sticky Mobile Conversion Dock (Visible only on mobile devices) -->
-    <aside id="mobile-sticky-dock" class="md:hidden fixed bottom-0 inset-x-0 z-40 p-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))] bg-surface-container-lowest/95 backdrop-blur-md border-t border-border-subtle shadow-[0_-4px_16px_rgba(0,0,0,0.12)] flex items-center gap-2" aria-label="Quick Mobile Actions">
+    <aside id="mobile-sticky-dock" class="md:hidden fixed bottom-0 inset-x-0 z-40 p-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))] bg-surface-container-lowest/95 backdrop-blur-md border-t border-border-subtle shadow-[0_-4px_16px_rgba(0,0,0,0.12)] flex items-center gap-2" aria-label="{{t "home.dock_label"}}">
         <a href="https://wa.me/918285336507?text=Hi%20Avandab,%20I%20want%20a%20demo%20of%20the%20fleet%20platform" target="_blank" rel="noopener noreferrer" class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm active:scale-[0.98] transition">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 shrink-0"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.29"/></svg>
-            <span>WhatsApp Demo</span>
+            <span>{{t "home.dock_wa"}}</span>
         </a>
         <a href="/register" class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-primary text-on-primary font-semibold text-xs shadow-sm active:scale-[0.98] transition">
-            <span>Start Free</span>
+            <span>{{t "home.dock_start"}}</span>
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
         </a>
     </aside>
@@ -1317,6 +1321,7 @@
             var ctaBtn = document.getElementById('calc-cta-btn');
 
             if (!trucksInput || !kmInput) return;
+            var STR = (document.getElementById('calculator') || {}).dataset || {};
 
             function formatINR(num) {
                 return '₹' + Number(Math.round(num)).toLocaleString('en-IN');
@@ -1326,17 +1331,17 @@
                 var lakhs = num / 100000;
                 if (lakhs >= 100) {
                     var crores = lakhs / 100;
-                    return '₹' + crores.toFixed(2) + ' Crores';
+                    return '₹' + crores.toFixed(2) + ' ' + (STR.crore || 'Crores');
                 }
-                return '₹' + lakhs.toFixed(2) + ' Lakhs';
+                return '₹' + lakhs.toFixed(2) + ' ' + (STR.lakh || 'Lakhs');
             }
 
             function update() {
                 var trucks = parseInt(trucksInput.value, 10) || 15;
                 var km = parseInt(kmInput.value, 10) || 6500;
 
-                trucksDisplay.textContent = trucks + (trucks === 1 ? ' Truck' : ' Trucks');
-                kmDisplay.textContent = km.toLocaleString('en-IN') + ' km';
+                trucksDisplay.textContent = trucks + ' ' + (trucks === 1 ? (STR.truckSg || 'Truck') : (STR.truckPl || 'Trucks'));
+                kmDisplay.textContent = km.toLocaleString('en-IN') + ' ' + (STR.km || 'km');
 
                 // 4.5% diesel savings at ₹95/L and ~4 km/L
                 var dieselMonthly = (trucks * km / 4) * 95 * 0.045;
@@ -1348,13 +1353,15 @@
                 var totalMonthly = dieselMonthly + detentionMonthly + adminMonthly;
                 var totalAnnual = totalMonthly * 12;
 
-                if (monthlyTotal) monthlyTotal.textContent = formatINR(totalMonthly) + ' / mo';
+                if (monthlyTotal) monthlyTotal.textContent = formatINR(totalMonthly) + ' ' + (STR.permo || '/ mo');
                 if (dieselTotal) dieselTotal.textContent = formatINR(dieselMonthly);
                 if (detentionTotal) detentionTotal.textContent = formatINR(detentionMonthly);
                 if (adminTotal) adminTotal.textContent = formatINR(adminMonthly);
                 if (annualTotal) annualTotal.textContent = formatLakhs(totalAnnual);
                 if (ctaBtn) {
-                    ctaBtn.querySelector('span').textContent = 'Claim ' + formatLakhs(totalAnnual) + ' Savings → Start Free';
+                    var pre = ("claimPre" in STR) ? STR.claimPre : "Claim ";
+                    var post = ("claimPost" in STR) ? STR.claimPost : " Savings → Start Free";
+                    ctaBtn.querySelector('span').textContent = pre + formatLakhs(totalAnnual) + post;
                 }
             }
 
@@ -1441,8 +1448,8 @@
                 var io3 = new IntersectionObserver(function (ents) {
                     ents.forEach(function (e) {
                         if (!e.isIntersecting || !scText) return;
-                        if (e.target.dataset.scene === "solved") scText.textContent = "Keep scrolling — features & comparison ↓";
-                        else scText.textContent = "Scroll — 30+ modules ahead";
+                        if (e.target.dataset.scene === "solved") scText.textContent = cont.dataset.scMore || "Keep scrolling — features & comparison ↓";
+                        else scText.textContent = cont.dataset.scAhead || "Scroll — 30+ modules ahead";
                     });
                 }, { rootMargin: "-42% 0px -42% 0px", threshold: 0 });
                 chapters.forEach(function (c) { io3.observe(c); });

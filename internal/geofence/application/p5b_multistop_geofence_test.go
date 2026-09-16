@@ -51,8 +51,15 @@ func setupP5BTestDB(t *testing.T) *sql.DB {
 	_ = goose.SetDialect("sqlite")
 	require.NoError(t, goose.Up(db, migrationsDir))
 
-	_, _ = db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('tenant-1', 'Tenant One', 'tenant-1')`)
-	_, _ = db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('tenant-2', 'Tenant Two', 'tenant-2')`)
+	_, err = db.Exec(`INSERT INTO tenants (id, name, slug) VALUES ('tenant-1', 'Tenant One', 'p5b-tenant-1')
+		ON CONFLICT(id) DO UPDATE SET name = excluded.name, slug = excluded.slug`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO tenants (id, name, slug) VALUES ('tenant-2', 'Tenant Two', 'p5b-tenant-2')
+		ON CONFLICT(id) DO UPDATE SET name = excluded.name, slug = excluded.slug`)
+	require.NoError(t, err)
+	var tenantCount int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM tenants WHERE id IN ('tenant-1', 'tenant-2')`).Scan(&tenantCount))
+	require.Equal(t, 2, tenantCount)
 	_, _ = db.Exec(`INSERT OR IGNORE INTO routes (id, tenant_id, source, destination, distance, standard_fare) VALUES ('rt-1', 'tenant-1', 'Delhi', 'Udaipur', 650, 30000)`)
 	_, _ = db.Exec(`INSERT OR IGNORE INTO drivers (id, driver_id, first_name, last_name, phone, license_number, license_expiry, status, tenant_id) VALUES ('drv-1', 'DRV-1', 'Dev', 'Singh', '9876543210', 'DL-1', date('now','+1 year'), 'available', 'tenant-1')`)
 	_, _ = db.Exec(`INSERT OR IGNORE INTO vehicles (id, registration_number, vehicle_number, vehicle_type, capacity, status, insurance_expiry, fitness_expiry, permit_expiry, tenant_id) VALUES ('veh_p5b_1', 'DL-01-P5B', 'DL-01-P5B', 'truck', 20, 'available', date('now','+1 year'), date('now','+1 year'), date('now','+1 year'), 'tenant-1')`)

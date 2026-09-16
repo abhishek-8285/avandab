@@ -1,12 +1,12 @@
 <div class="space-y-5 max-w-[1600px] mx-auto">
-    {{template "page_header.html" (dict "Title" "Payments" "Subtitle" "View recorded invoice payments and transaction receipts")}}
+    {{template "page_header.html" (dict "Title" (t "mo.c.payments") "Subtitle" (t "mo.pay.subtitle"))}}
     {{template "kpi_grid.html" .}}
 
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden flex flex-col h-full">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h3 class="text-sm font-bold text-on-surface">Payment Receipts</h3>
-                <p class="text-xs text-text-muted">Transaction ledger across all methods</p>
+                <h3 class="text-sm font-bold text-on-surface">{{t "mo.pay.receipts"}}</h3>
+                <p class="text-xs text-text-muted">{{t "mo.pay.ledger_sub"}}</p>
             </div>
             {{if .Pagination}}
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{.Pagination.Total}} total</span>
@@ -17,7 +17,7 @@
             "Action" "/payments"
             "Query" .Query
             "StatusFilter" .StatusFilter
-            "Chips" (chips "All Payments" "" "UPI" "upi" "Bank Transfer" "bank_transfer" "Cash" "cash")
+            "Chips" (chips (t "mo.pay.chip_all") "" "UPI" "upi" (t "mo.payedit.bank_transfer") "bank_transfer" (t "mo.c.cash") "cash")
             "ShowDates" true
             "DateFilterError" .DateFilterError
             "DateFrom" .DateFrom

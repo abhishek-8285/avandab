@@ -1,4 +1,4 @@
-{{template "page_header.html" (dict "Title" "Trips" "Subtitle" "Track transport assignments, departure schedules, and dispatch status" "ActionHref" "/trips/new" "ActionIcon" "add" "ActionLabel" "New Trip")}}
+{{template "page_header.html" (dict "Title" (t "tr.list_title") "Subtitle" (t "tr.list_sub") "ActionHref" "/trips/new" "ActionIcon" "add" "ActionLabel" (t "tr.new"))}}
 
 <div class="space-y-5 max-w-[1600px] mx-auto">
     {{template "kpi_grid.html" .}}
@@ -9,14 +9,14 @@
             "Action" "/trips"
             "Query" .Query
             "StatusFilter" .StatusFilter
-            "Chips" (chips "All Trips" "" "Active" "active" "Draft" "draft" "Scheduled" "scheduled" "Assigned" "assigned" "Started" "started" "Completed" "completed" "Delivered" "delivered" "Cancelled" "cancelled")
+            "Chips" (chips (t "tr.chip_all") "" (t "tr.chip_active") "active" (t "tr.chip_draft") "draft" (t "tr.chip_scheduled") "scheduled" (t "tr.chip_assigned") "assigned" (t "tr.chip_started") "started" (t "tr.chip_completed") "completed" (t "tr.chip_delivered") "delivered" (t "tr.chip_cancelled") "cancelled")
             "ShowDates" true
             "DateFilterError" .DateFilterError
             "DateFrom" .DateFrom
             "DateTo" .DateTo
             "ShowSearch" true
-            "SearchPlaceholder" "Search trips, drivers, routes…"
-            "Primary" (dict "Variant" "primary" "Size" "sm" "Href" "/trips/new" "Icon" "add" "Label" "New Trip")
+            "SearchPlaceholder" (t "tr.search_ph")
+            "Primary" (dict "Variant" "primary" "Size" "sm" "Href" "/trips/new" "Icon" "add" "Label" (t "tr.new"))
         )}}
 
         <!-- Table Fragment (Datastar refresh target) -->

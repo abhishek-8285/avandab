@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Colors, FontSize} from '../../../constants/theme';
 import {
   View,
   Text,
@@ -57,7 +58,7 @@ export const DriverOnboardingScreen: React.FC<Props> = ({ token, user, onComplet
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#0d9488" />
+        <ActivityIndicator size="large" color={Colors.onboardingBtn} />
         <Text style={styles.loadingText}>Syncing onboarding state with Avandab...</Text>
       </SafeAreaView>
     );
@@ -65,7 +66,7 @@ export const DriverOnboardingScreen: React.FC<Props> = ({ token, user, onComplet
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#0a0f1d" />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.onboardingInk} />
       
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Driver Onboarding</Text>
@@ -175,18 +176,18 @@ export const DriverOnboardingScreen: React.FC<Props> = ({ token, user, onComplet
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0a0f1d',
+    backgroundColor: Colors.onboardingInk,
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: '#0a0f1d',
+    backgroundColor: Colors.onboardingInk,
     alignItems: 'center',
     justifyContent: 'center',
   },
   loadingText: {
-    color: '#94a3b8',
+    color: Colors.modalSub,
     marginTop: 12,
-    fontSize: 14,
+    fontSize: FontSize.title,
   },
   header: {
     flexDirection: 'row',
@@ -194,46 +195,46 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 14,
-    backgroundColor: '#0f172a',
+    backgroundColor: Colors.mapDark,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
+    borderBottomColor: Colors.modalBg,
   },
   headerTitle: {
-    color: '#f8fafc',
-    fontSize: 18,
+    color: Colors.textSecondary,
+    fontSize: FontSize.headingLarge,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   headerBadge: {
-    color: '#06b6d4',
-    fontSize: 10,
+    color: Colors.onboardingBorder,
+    fontSize: FontSize.small,
     fontWeight: '800',
     letterSpacing: 1,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: '#083344',
+    backgroundColor: Colors.onboardingBg,
   },
   scrollContent: {
     padding: 16,
     paddingBottom: 40,
   },
   errorCard: {
-    backgroundColor: '#450a0a',
-    borderColor: '#ef4444',
+    backgroundColor: Colors.onboardingErrBg,
+    borderColor: Colors.danger,
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
     marginBottom: 16,
   },
   errorTitle: {
-    color: '#f87171',
+    color: Colors.danger,
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: FontSize.bodyLarge,
     marginBottom: 2,
   },
   errorText: {
-    color: '#fca5a5',
-    fontSize: 12,
+    color: Colors.dangerSoft,
+    fontSize: FontSize.body,
   },
 });

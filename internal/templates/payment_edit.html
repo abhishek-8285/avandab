@@ -1,5 +1,5 @@
 <div class="max-w-3xl mx-auto">
-    <h2 class="text-xl font-semibold mb-4 text-on-surface font-display">Record Payment</h2>
+    <h2 class="text-xl font-semibold mb-4 text-on-surface font-display">{{t "mo.c.record_payment"}}</h2>
 
     {{if .FlashError}}
     <div class="bg-status-alert/10 border border-status-alert/30 text-status-alert px-4 py-3 rounded-xl mb-4">{{.FlashError}}</div>
@@ -9,57 +9,57 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 sm:p-6 space-y-5">
             <!-- Invoice context -->
             <div>
-                <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Invoice</h3>
+                <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "mo.c.invoice"}}</h3>
                 <div class="rounded-xl bg-surface-container-low border border-border-subtle p-4">
                     <dd class="text-sm font-bold text-on-surface font-data-mono">{{.Invoice.InvoiceNumber}}</dd>
-                    <p class="text-sm text-text-muted mt-1">Total: <span class="tabular-nums font-semibold text-on-surface" data-numeric>₹{{printf "%.2f" .Invoice.Total}}</span> · Balance: <span class="tabular-nums font-semibold text-on-surface" data-numeric>₹{{printf "%.2f" .Balance}}</span></p>
+                    <p class="text-sm text-text-muted mt-1">{{t "mo.payedit.total"}} <span class="tabular-nums font-semibold text-on-surface" data-numeric>₹{{printf "%.2f" .Invoice.Total}}</span> {{t "mo.payedit.balance"}} <span class="tabular-nums font-semibold text-on-surface" data-numeric>₹{{printf "%.2f" .Balance}}</span></p>
                 </div>
             </div>
 
             <div>
-                <label for="amount" class="block text-eyebrow text-text-muted mb-1.5">Amount *</label>
+                <label for="amount" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.payedit.amount_req"}}</label>
                 <input autocomplete="off" id="amount" type="number" step="0.01" min="0.01" name="amount" value="{{if gt .Balance 0.0}}{{printf "%.2f" .Balance}}{{end}}" required
                     class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
             </div>
 
             <div>
-                <label for="method" class="block text-eyebrow text-text-muted mb-1.5">Method</label>
+                <label for="method" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.c.method"}}</label>
                 <select id="method" name="method" class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                    <option value="cash">Cash</option>
+                    <option value="cash">{{t "mo.c.cash"}}</option>
                     <option value="upi">UPI</option>
-                    <option value="bank_transfer">Bank Transfer</option>
-                    <option value="cheque">Cheque</option>
+                    <option value="bank_transfer">{{t "mo.payedit.bank_transfer"}}</option>
+                    <option value="cheque">{{t "mo.c.cheque"}}</option>
                     <option value="razorpay">Razorpay (Online)</option>
                 </select>
             </div>
 
             <div>
-                <label for="payment_date" class="block text-eyebrow text-text-muted mb-1.5">Payment Date</label>
+                <label for="payment_date" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.payedit.payment_date"}}</label>
                 <input id="payment_date" type="date" name="payment_date" value="{{date_only .Now}}"
                     class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
             </div>
 
             <div>
-                <label for="reference" class="block text-eyebrow text-text-muted mb-1.5">Reference</label>
+                <label for="reference" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.c.reference"}}</label>
                 <input autocomplete="off" id="reference" type="text" name="reference"
                     class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
             </div>
 
             <div>
-                <label for="remarks" class="block text-eyebrow text-text-muted mb-1.5">Remarks</label>
+                <label for="remarks" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.c.remarks"}}</label>
                 <textarea id="remarks" name="remarks" rows="2"
                     class="block w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"></textarea>
             </div>
 
             <div class="sticky bottom-0 -mx-5 sm:-mx-6 px-5 sm:px-6 py-3 bg-surface-container-lowest border-t border-border-subtle flex justify-end gap-2 flex-wrap">
-                {{template "btn.html" (dict "Variant" "secondary" "Size" "md" "Href" (printf "/invoices/%v" .InvoiceID) "Label" "Cancel")}}
-                <button type="button" id="razorpay-btn" class="inline-flex items-center gap-2 rounded-full bg-status-success text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-status-success/90 hover:-translate-y-px transition cursor-pointer">
+                {{template "btn.html" (dict "Variant" "secondary" "Size" "md" "Href" (printf "/invoices/%v" .InvoiceID) "Label" (t "mo.c.cancel"))}}
+                <button type="button" id="razorpay-btn" data-msg-creating="{{t "mo.payedit.js_creating"}}" data-msg-no-razorpay="{{t "mo.payedit.js_no_razorpay"}}" data-msg-start-fail="{{t "mo.payedit.js_start_fail"}}" data-msg-verify-fail="{{t "mo.payedit.js_verify_fail"}}" data-msg-made-fail="{{t "mo.payedit.js_made_fail"}}" class="inline-flex items-center gap-2 rounded-full bg-status-success text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-status-success/90 hover:-translate-y-px transition cursor-pointer">
                     <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>
                     </svg>
                     Pay Online via Razorpay
                 </button>
-                {{template "btn.html" (dict "Variant" "primary" "Size" "md" "Type" "submit" "Label" "Record Payment")}}
+                {{template "btn.html" (dict "Variant" "primary" "Size" "md" "Type" "submit" "Label" (t "mo.c.record_payment"))}}
             </div>
         </div>
     </form>
@@ -71,7 +71,7 @@ document.getElementById('razorpay-btn').onclick = function(e) {
     e.preventDefault();
     var btn = document.getElementById('razorpay-btn');
     btn.disabled = true;
-    btn.textContent = "Creating order…";
+    btn.textContent = btn.dataset.msgCreating || "Creating order…";
 
     fetch("/api/v1/payments/razorpay-order", {
         method: "POST",
@@ -82,7 +82,7 @@ document.getElementById('razorpay-btn').onclick = function(e) {
             var parsed = {};
             try { parsed = JSON.parse(txt); } catch (_) {}
             if (res.status === 503) {
-                throw new Error("Razorpay is not configured on this server.");
+                throw new Error(btn.dataset.msgNoRazorpay || "Razorpay is not configured on this server.");
             }
             if (!res.ok) {
                 throw new Error((parsed.error || txt || res.status));
@@ -114,11 +114,11 @@ document.getElementById('razorpay-btn').onclick = function(e) {
                         return vres.text().then(function (txt) {
                             var parsed = {};
                             try { parsed = JSON.parse(txt); } catch (_) {}
-                            alert("Payment verification failed (" + vres.status + "): " + (parsed.error || txt || ""));
+                            alert((btn.dataset.msgVerifyFail || "Payment verification failed (") + vres.status + "): " + (parsed.error || txt || ""));
                         });
                     }
                 }).catch(function () {
-                    alert("Payment was made but verification failed — please contact support with your Razorpay Payment ID.");
+                    alert(btn.dataset.msgMadeFail || "Payment was made but verification failed — please contact support with your Razorpay Payment ID.");
                 });
             },
             "modal": {"ondismiss": function () {
@@ -129,7 +129,7 @@ document.getElementById('razorpay-btn').onclick = function(e) {
         var rzp1 = new Razorpay(options);
         rzp1.open();
     }).catch(function (err) {
-        alert("Failed to start payment: " + err.message);
+        alert((btn.dataset.msgStartFail || "Failed to start payment: ") + err.message);
         btn.disabled = false;
         btn.textContent = "💳 Pay Online via Razorpay";
     });

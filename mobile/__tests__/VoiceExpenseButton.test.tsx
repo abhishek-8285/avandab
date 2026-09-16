@@ -19,8 +19,8 @@ describe('VoiceExpenseButton', () => {
     );
 
     fireEvent.press(getByLabelText('Add expense by voice'));
-    fireEvent.changeText(getByPlaceholderText('voice.hint'), 'Diesel ₹2500 at HPCL');
-    fireEvent.press(getByText('expense.submit'));
+    fireEvent.changeText(getByPlaceholderText(/Say your expense/), 'Diesel ₹2500 at HPCL');
+    fireEvent.press(getByText('Submit Expense'));
 
     await waitFor(() => expect(enqueueSpy).toHaveBeenCalledTimes(1));
 
@@ -42,7 +42,7 @@ describe('VoiceExpenseButton', () => {
     );
 
     fireEvent.press(getByLabelText('Add expense by voice'));
-    fireEvent.press(getByText('expense.submit'));
+    fireEvent.press(getByText('Submit Expense'));
 
     expect(enqueueSpy).not.toHaveBeenCalled();
     expect(onSaved).not.toHaveBeenCalled();
@@ -55,7 +55,7 @@ describe('VoiceExpenseButton', () => {
     );
 
     fireEvent.press(getByLabelText('Add expense by voice'));
-    expect(queryByPlaceholderText('voice.hint')).toBeNull();
+    expect(queryByPlaceholderText(/Say your expense/)).toBeNull();
     expect(enqueueSpy).not.toHaveBeenCalled();
   });
 
@@ -68,8 +68,8 @@ describe('VoiceExpenseButton', () => {
     );
 
     fireEvent.press(getByLabelText('Add expense by voice'));
-    fireEvent.changeText(getByPlaceholderText('voice.hint'), 'Toll ₹200 at NHAI');
-    fireEvent.press(getByText('expense.submit'));
+    fireEvent.changeText(getByPlaceholderText(/Say your expense/), 'Toll ₹200 at NHAI');
+    fireEvent.press(getByText('Submit Expense'));
 
     await waitFor(() => expect(alertSpy).toHaveBeenCalled());
     expect(onSaved).not.toHaveBeenCalled();

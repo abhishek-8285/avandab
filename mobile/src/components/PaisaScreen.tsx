@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors, Radius, Spacing, Font } from '../constants/theme';
+import { Colors, Radius, Spacing, Font, FontSize} from '../constants/theme';
 import {
   AdvanceRequest,
   DriverBalance,
@@ -113,12 +113,12 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
   };
 
   const statusChip = {
-    paid: { bg: '#e7ffdb', text: '#008069', label: 'PAID' },
-    approved: { bg: '#e7ffdb', text: '#008069', label: 'APPROVED' },
-    pending: { bg: '#fef3c7', text: '#b45309', label: 'PENDING' },
-    rejected: { bg: '#fee2e2', text: '#dc2626', label: 'REJECTED' },
-    disputed: { bg: '#fee2e2', text: '#dc2626', label: 'DISPUTED' },
-    processing: { bg: '#e0f2fe', text: '#0284c7', label: 'PROCESSING' },
+    paid: { bg: Colors.primarySubtle, text: Colors.primary, label: 'PAID' },
+    approved: { bg: Colors.primarySubtle, text: Colors.primary, label: 'APPROVED' },
+    pending: { bg: Colors.warningBg, text: Colors.warningText, label: 'PENDING' },
+    rejected: { bg: Colors.dangerBg, text: Colors.danger, label: 'REJECTED' },
+    disputed: { bg: Colors.dangerBg, text: Colors.danger, label: 'DISPUTED' },
+    processing: { bg: Colors.infoBg, text: Colors.info, label: 'PROCESSING' },
   } as const;
 
   const quickAmounts = [500, 1000, 2000, 5000];
@@ -138,7 +138,7 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
           <View style={styles.walletCard}>
             <View style={styles.walletHeaderRow}>
               <View style={styles.walletTitleBlock}>
-                <MaterialCommunityIcons name="wallet-outline" size={20} color="#dcf8c6" />
+                <MaterialCommunityIcons name="wallet-outline" size={20} color={Colors.primary} />
                 <Text style={styles.walletLabel}>{t('paisa.wallet_title', 'DRIVER WALLET', locale)}</Text>
               </View>
               <View style={styles.walletBadge}>
@@ -160,7 +160,7 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
                 activeOpacity={0.85}
                 onPress={() => setShowAdvanceForm(!showAdvanceForm)}
               >
-                <MaterialCommunityIcons name="hand-coin" size={16} color="#075e54" />
+                <MaterialCommunityIcons name="hand-coin" size={16} color={Colors.chrome} />
                 <Text style={styles.walletActionBtnPrimaryText}>
                   {showAdvanceForm
                     ? t('paisa.btn_close_form', 'CLOSE FORM', locale)
@@ -173,7 +173,7 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
                 activeOpacity={0.85}
                 onPress={onOpenExpenses}
               >
-                <MaterialCommunityIcons name="receipt" size={16} color="#ffffff" />
+                <MaterialCommunityIcons name="receipt" size={16} color={Colors.textOnPrimary} />
                 <Text style={styles.walletActionBtnSecondaryText}>
                   {t('paisa.btn_expense', 'ADD EXPENSE', locale)}
                 </Text>
@@ -185,7 +185,7 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
           {showAdvanceForm && (
             <View style={styles.formCard}>
               <View style={styles.formHeader}>
-                <MaterialCommunityIcons name="currency-inr" size={18} color="#008069" />
+                <MaterialCommunityIcons name="currency-inr" size={18} color={Colors.primary} />
                 <Text style={styles.formTitle}>{t('paisa.form_title', 'REQUEST ADVANCE', locale)}</Text>
               </View>
 
@@ -206,7 +206,7 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
 
               <TextInput
                 placeholder={t('paisa.amount_placeholder', 'Amount in ₹ (e.g. 1500)', locale)}
-                placeholderTextColor="#8696a0"
+                placeholderTextColor={Colors.textMuted}
                 keyboardType="numeric"
                 value={amount}
                 onChangeText={setAmount}
@@ -214,7 +214,7 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
               />
               <TextInput
                 placeholder={t('paisa.reason_placeholder', 'Reason (e.g. Diesel / Toll / Food)', locale)}
-                placeholderTextColor="#8696a0"
+                placeholderTextColor={Colors.textMuted}
                 value={reason}
                 onChangeText={setReason}
                 style={styles.input}
@@ -225,7 +225,7 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
                 onPress={submitAdvance}
                 disabled={submitting}
               >
-                <MaterialCommunityIcons name="send" size={16} color="#ffffff" />
+                <MaterialCommunityIcons name="send" size={16} color={Colors.textOnPrimary} />
                 <Text style={styles.submitBtnText}>
                   {submitting
                     ? '...'
@@ -237,7 +237,7 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
 
           {/* Advances List */}
           <View style={styles.sectionHeaderRow}>
-            <MaterialCommunityIcons name="history" size={16} color="#667781" />
+            <MaterialCommunityIcons name="history" size={16} color={Colors.textSecondary} />
             <Text style={styles.sectionTitle}>{t('paisa.recent_advances', 'RECENT ADVANCES & FUEL', locale)}</Text>
           </View>
 
@@ -246,8 +246,8 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
               const chip = statusChip[a.status as keyof typeof statusChip] ?? statusChip.pending;
               return (
                 <View key={a.id} style={styles.passbookRow}>
-                  <View style={[styles.passbookIcon, { backgroundColor: '#e7ffdb' }]}>
-                    <MaterialCommunityIcons name="arrow-down-left" size={18} color="#008069" />
+                  <View style={[styles.passbookIcon, { backgroundColor: Colors.primarySubtle }]}>
+                    <MaterialCommunityIcons name="arrow-down-left" size={18} color={Colors.primary} />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.passbookTitle}>{a.reason || 'Trip Advance'}</Text>
@@ -264,8 +264,8 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
             })
           ) : (
             <View style={styles.passbookRow}>
-              <View style={[styles.passbookIcon, { backgroundColor: '#e7ffdb' }]}>
-                <MaterialCommunityIcons name="arrow-down-left" size={18} color="#008069" />
+              <View style={[styles.passbookIcon, { backgroundColor: Colors.primarySubtle }]}>
+                <MaterialCommunityIcons name="arrow-down-left" size={18} color={Colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.passbookTitle}>Trip Fuel & Toll</Text>
@@ -273,15 +273,15 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={styles.passbookAmountPlus}>+₹2,000</Text>
-                <View style={[styles.statusBadge, { backgroundColor: '#e7ffdb' }]}>
-                  <Text style={[styles.statusBadgeText, { color: '#008069' }]}>PAID</Text>
+                <View style={[styles.statusBadge, { backgroundColor: Colors.primarySubtle }]}>
+                  <Text style={[styles.statusBadgeText, { color: Colors.primary }]}>PAID</Text>
                 </View>
               </View>
             </View>
           )}
 
           <View style={[styles.sectionHeaderRow, { marginTop: 16 }]}>
-            <MaterialCommunityIcons name="bank-check" size={16} color="#667781" />
+            <MaterialCommunityIcons name="bank-check" size={16} color={Colors.textSecondary} />
             <Text style={styles.sectionTitle}>{t('paisa.settlement_passbook', 'SETTLEMENT PASSBOOK', locale)}</Text>
           </View>
         </View>
@@ -290,8 +290,8 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
         const chip = statusChip[item.status as keyof typeof statusChip] ?? statusChip.paid;
         return (
           <View style={styles.passbookRow}>
-            <View style={[styles.passbookIcon, { backgroundColor: '#e0f2fe' }]}>
-              <MaterialCommunityIcons name="truck-check" size={18} color="#0284c7" />
+            <View style={[styles.passbookIcon, { backgroundColor: Colors.infoBg }]}>
+              <MaterialCommunityIcons name="truck-check" size={18} color={Colors.info} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.passbookTitle}>Settlement #{item.id}</Text>
@@ -320,16 +320,16 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#efeae2',
+    backgroundColor: Colors.background,
     paddingHorizontal: 12,
     paddingTop: 8,
   },
   walletCard: {
-    backgroundColor: '#075e54',
+    backgroundColor: Colors.chrome,
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: Colors.textPrimary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 4,
@@ -346,8 +346,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   walletLabel: {
-    color: '#dcf8c6',
-    fontSize: 11,
+    color: Colors.primary,
+    fontSize: FontSize.label,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
@@ -358,21 +358,21 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   walletBadgeText: {
-    color: '#25d366',
-    fontSize: 9,
+    color: Colors.accent,
+    fontSize: FontSize.caption,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   walletBalanceText: {
-    color: '#ffffff',
-    fontSize: 34,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.jumbo,
     fontWeight: '900',
     marginTop: 8,
     fontFamily: Font.mono,
   },
   walletSubText: {
-    color: '#dcf8c6',
-    fontSize: 11,
+    color: Colors.primary,
+    fontSize: FontSize.label,
     marginTop: 2,
   },
   walletActionRow: {
@@ -386,13 +386,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#25d366',
+    backgroundColor: Colors.accent,
     paddingVertical: 10,
     borderRadius: 12,
   },
   walletActionBtnPrimaryText: {
-    color: '#075e54',
-    fontSize: 12,
+    color: Colors.chrome,
+    fontSize: FontSize.body,
     fontWeight: '800',
   },
   walletActionBtnSecondary: {
@@ -408,17 +408,17 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.25)',
   },
   walletActionBtnSecondaryText: {
-    color: '#ffffff',
-    fontSize: 12,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.body,
     fontWeight: '800',
   },
   formCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#e9edef',
+    borderColor: Colors.border,
     elevation: 1,
   },
   formHeader: {
@@ -428,9 +428,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   formTitle: {
-    fontSize: 12,
+    fontSize: FontSize.body,
     fontWeight: '800',
-    color: '#111b21',
+    color: Colors.textPrimary,
     letterSpacing: 0.5,
   },
   chipsRow: {
@@ -440,34 +440,34 @@ const styles = StyleSheet.create({
   },
   quickChip: {
     flex: 1,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: Colors.borderLight,
     paddingVertical: 6,
     borderRadius: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: Colors.borderStrong,
   },
   quickChipActive: {
-    backgroundColor: '#e7ffdb',
-    borderColor: '#008069',
+    backgroundColor: Colors.primarySubtle,
+    borderColor: Colors.primary,
   },
   quickChipText: {
-    fontSize: 12,
+    fontSize: FontSize.body,
     fontWeight: '800',
-    color: '#667781',
+    color: Colors.textSecondary,
   },
   quickChipTextActive: {
-    color: '#008069',
+    color: Colors.primary,
   },
   input: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: Colors.surfaceSecondary,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: Colors.borderStrong,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    fontSize: 13,
-    color: '#111b21',
+    fontSize: FontSize.bodyLarge,
+    color: Colors.textPrimary,
     marginBottom: 8,
   },
   submitBtn: {
@@ -475,14 +475,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#008069',
+    backgroundColor: Colors.primary,
     paddingVertical: 10,
     borderRadius: 10,
     marginTop: 4,
   },
   submitBtnText: {
-    color: '#ffffff',
-    fontSize: 12,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.body,
     fontWeight: '800',
   },
   sectionHeaderRow: {
@@ -493,8 +493,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 2,
   },
   sectionTitle: {
-    color: '#667781',
-    fontSize: 11,
+    color: Colors.textSecondary,
+    fontSize: FontSize.label,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
@@ -502,12 +502,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#e9edef',
+    borderColor: Colors.border,
     elevation: 1,
   },
   passbookIcon: {
@@ -518,19 +518,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   passbookTitle: {
-    fontSize: 13,
+    fontSize: FontSize.bodyLarge,
     fontWeight: '700',
-    color: '#111b21',
+    color: Colors.textPrimary,
   },
   passbookSub: {
-    fontSize: 11,
-    color: '#667781',
+    fontSize: FontSize.label,
+    color: Colors.textSecondary,
     marginTop: 2,
   },
   passbookAmountPlus: {
-    fontSize: 14,
+    fontSize: FontSize.title,
     fontWeight: '800',
-    color: '#008069',
+    color: Colors.primary,
   },
   statusBadge: {
     paddingHorizontal: 6,
@@ -539,17 +539,17 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   statusBadgeText: {
-    fontSize: 9,
+    fontSize: FontSize.caption,
     fontWeight: '800',
   },
   emptyCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
   },
   emptyText: {
-    color: '#667781',
-    fontSize: 12,
+    color: Colors.textSecondary,
+    fontSize: FontSize.body,
   },
 });

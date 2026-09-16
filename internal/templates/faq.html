@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>{{if .Title}}{{.Title}} - Avandab{{else}}Frequently Asked Questions - Avandab{{end}}</title>
+    <title>{{if .Title}}{{.Title}} - Avandab{{else}}{{t "sy.faq.tab"}} - Avandab{{end}}</title>
     {{template "seo_head.html" .}}
     <link rel="stylesheet" href="/static/css/fonts.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
     <link rel="stylesheet" href="/static/css/tailwind.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
@@ -35,72 +35,72 @@
     {{template "public_header.html" .}}
 
     <main class="max-w-4xl mx-auto px-4 py-8 sm:py-12">
-        <nav class="mb-6 flex flex-wrap items-center gap-1.5 text-xs" aria-label="Breadcrumb">
-            <a href="/" class="hover:text-primary transition-colors">Home</a>
+        <nav class="mb-6 flex flex-wrap items-center gap-1.5 text-xs" aria-label="{{t "sy.faq.crumb"}}">
+            <a href="/" class="hover:text-primary transition-colors">{{t "sy.faq.home"}}</a>
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3"><path d="m9 18 6-6-6-6"/></svg>
-            <span class="text-primary font-semibold">FAQ</span>
+            <span class="text-primary font-semibold">{{t "sy.faq.faq"}}</span>
         </nav>
 
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-6 sm:p-10 space-y-4">
-        <h1 class="font-display text-3xl font-bold text-on-surface mb-1">Frequently Asked Questions</h1>
-        <p class="text-sm text-text-muted">Short answers to the questions every fleet owner asks. Still stuck? <a href="/contact-us" class="text-primary hover:underline">Contact support</a>.</p>
+        <h1 class="font-display text-3xl font-bold text-on-surface mb-1">{{t "sy.faq.title"}}</h1>
+        <p class="text-sm text-text-muted">{{t "sy.faq.sub_pre"}} <a href="/contact-us" class="text-primary hover:underline">{{t "sy.faq.sub_link"}}</a>{{t "sy.faq.sub_post"}}</p>
 
         <div class="space-y-3 mt-6">
         <details class="faq-item rounded-xl border border-border-subtle p-4">
-            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">How long does setup take?
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">{{t "sy.faq.q1"}}
             <svg aria-hidden="true" class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
-            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Most fleets are operational in about 10 minutes: register, onboard your company, add vehicles and drivers, and create your first booking.</p>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">{{t "sy.faq.a1"}}</p>
         </details>
         <details class="faq-item rounded-xl border border-border-subtle p-4">
-            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">How does trip tracking work?
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">{{t "sy.faq.q2"}}
             <svg aria-hidden="true" class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
-            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Trips move through scheduled, assigned, in-transit and delivered states. Vehicles with GPS hardware report positions live; customers can follow a <a href="/features/dashboard" class="text-primary hover:underline">share link</a> without logging in.</p>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">{{t "sy.faq.a2_pre"}} <a href="/features/dashboard" class="text-primary hover:underline">{{t "sy.faq.a2_link"}}</a> {{t "sy.faq.a2_post"}}</p>
         </details>
         <details class="faq-item rounded-xl border border-border-subtle p-4">
-            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">What is ePOD and how is delivery verified?
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">{{t "sy.faq.q3"}}
             <svg aria-hidden="true" class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
-            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Electronic proof of delivery: the driver uploads a photo or PDF at delivery, optionally verified with a one-time password shared with the consignee.</p>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">{{t "sy.faq.a3"}}</p>
         </details>
         <details class="faq-item rounded-xl border border-border-subtle p-4">
-            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">Can my customers track their shipments?
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">{{t "sy.faq.q4"}}
             <svg aria-hidden="true" class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
-            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Yes. Grant a customer portal access and they see only their own bookings, invoices and trip tracking. Public share links work without login.</p>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">{{t "sy.faq.a4"}}</p>
         </details>
         <details class="faq-item rounded-xl border border-border-subtle p-4">
-            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">Does Avandab handle billing and GST?
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">{{t "sy.faq.q5"}}
             <svg aria-hidden="true" class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
-            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Completed trips generate invoices automatically, including GST breakdown with e-invoice (IRN/QR) support, and payments are recorded against them.</p>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">{{t "sy.faq.a5"}}</p>
         </details>
         <details class="faq-item rounded-xl border border-border-subtle p-4">
-            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">Is my data isolated from other companies?
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">{{t "sy.faq.q6"}}
             <svg aria-hidden="true" class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
-            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Yes. Every record is tenant-scoped and enforced at the middleware layer; users only ever see their own organisation's data.</p>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">{{t "sy.faq.a6"}}</p>
         </details>
         <details class="faq-item rounded-xl border border-border-subtle p-4">
-            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">How is my data protected?
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">{{t "sy.faq.q7"}}
             <svg aria-hidden="true" class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
-            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Data is protected under India's DPDP Act, 2023. See our <a href="/privacy" class="text-primary hover:underline">Privacy Policy</a> for what we collect and why, and <a href="/contact-us" class="text-primary hover:underline">contact us</a> to exercise your rights.</p>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">{{t "sy.faq.a7_pre"}} <a href="/privacy" class="text-primary hover:underline">{{t "sy.faq.a7_link1"}}</a> {{t "sy.faq.a7_mid"}} <a href="/contact-us" class="text-primary hover:underline">{{t "sy.faq.a7_link2"}}</a> {{t "sy.faq.a7_post"}}</p>
         </details>
         <details class="faq-item rounded-xl border border-border-subtle p-4">
-            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">What GPS hardware is supported?
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">{{t "sy.faq.q8"}}
             <svg aria-hidden="true" class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
-            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Standard GPS trackers that report over TCP, plus manual trip updates and GPX file import for vehicles without live hardware.</p>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">{{t "sy.faq.a8"}}</p>
         </details>
         <details class="faq-item rounded-xl border border-border-subtle p-4">
-            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">Is there a driver mobile app?
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">{{t "sy.faq.q9"}}
             <svg aria-hidden="true" class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
-            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Yes. Drivers get trip assignments, navigation, delivery verification and expense logging, with offline support that syncs later.</p>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">{{t "sy.faq.a9"}}</p>
         </details>
         <details class="faq-item rounded-xl border border-border-subtle p-4">
-            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">How do I get support?
+            <summary class="flex items-center justify-between gap-3 font-semibold text-on-surface">{{t "sy.faq.q10"}}
             <svg aria-hidden="true" class="faq-chevron w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg></summary>
-            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">Use the <a href="/contact-us" class="text-primary hover:underline">contact page</a> to raise a ticket and track its status, or reply from your account for billing and operations help.</p>
+            <p class="text-sm text-on-surface-variant leading-relaxed mt-2">{{t "sy.faq.a10_pre"}} <a href="/contact-us" class="text-primary hover:underline">{{t "sy.faq.a10_link"}}</a> {{t "sy.faq.a10_post"}}</p>
         </details>
         </div>
 
         <div class="mt-8 flex flex-wrap gap-3">
-            <a href="/register" class="px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-opacity">Start free — 10 min setup</a>
-            <a href="/contact-us" class="px-5 py-2.5 rounded-xl border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">Ask a question</a>
+            <a href="/register" class="px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:opacity-90 transition-opacity">{{t "sy.faq.cta_start"}}</a>
+            <a href="/contact-us" class="px-5 py-2.5 rounded-xl border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">{{t "sy.faq.cta_ask"}}</a>
         </div>
 
         <p class="text-xs text-text-muted mt-10">&copy; 2026 Avandab Operations Platform. All rights reserved.</p>

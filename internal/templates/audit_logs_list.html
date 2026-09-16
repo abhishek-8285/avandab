@@ -1,4 +1,4 @@
-{{template "page_header.html" (dict "Title" "Audit Logs" "Subtitle" "View security audit trails and data mutation history")}}
+{{template "page_header.html" (dict "Title" (t "sy.audit.title") "Subtitle" (t "sy.audit.sub"))}}
 
 <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm flex flex-col h-full overflow-hidden">
     {{template "filter_bar.html" (dict
@@ -10,7 +10,7 @@
         "DateFrom" .DateFrom
         "DateTo" .DateTo
         "ShowSearch" true
-        "SearchPlaceholder" "Filter audit logs by action or table…"
+        "SearchPlaceholder" (t "sy.audit.search_ph")
     )}}
 
     <!-- Data Table Fragment (Datastar refresh target) -->

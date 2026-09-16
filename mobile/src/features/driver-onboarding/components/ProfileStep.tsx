@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Colors, FontSize} from '../../../constants/theme';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { ProfileFormData } from '../types/onboarding';
 
@@ -35,7 +36,7 @@ export const ProfileStep: React.FC<Props> = ({ initialData, onNext }) => {
         value={name}
         onChangeText={setName}
         placeholder="Enter full name"
-        placeholderTextColor="#64748b"
+        placeholderTextColor={Colors.textSecondary}
       />
 
       <Text style={styles.label}>Mobile Phone (Registered)</Text>
@@ -51,7 +52,7 @@ export const ProfileStep: React.FC<Props> = ({ initialData, onNext }) => {
         value={email}
         onChangeText={setEmail}
         placeholder="Enter email address"
-        placeholderTextColor="#64748b"
+        placeholderTextColor={Colors.textSecondary}
         keyboardType="email-address"
         autoCapitalize="none"
       />
@@ -80,44 +81,44 @@ export const ProfileStep: React.FC<Props> = ({ initialData, onNext }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#0f172a',
+    backgroundColor: Colors.mapDark,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: Colors.modalBg,
   },
   title: {
-    fontSize: 20,
+    fontSize: FontSize.banner,
     fontWeight: '700',
-    color: '#f8fafc',
+    color: Colors.textSecondary,
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 13,
-    color: '#94a3b8',
+    fontSize: FontSize.bodyLarge,
+    color: Colors.modalSub,
     marginBottom: 20,
   },
   label: {
-    fontSize: 12,
+    fontSize: FontSize.body,
     fontWeight: '600',
-    color: '#cbd5e1',
+    color: Colors.textSecondary,
     marginBottom: 6,
     marginTop: 12,
   },
   input: {
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.modalBg,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: '#f8fafc',
-    fontSize: 14,
+    color: Colors.textSecondary,
+    fontSize: FontSize.title,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.modalBorder,
   },
   disabledInput: {
-    backgroundColor: '#090d16',
-    color: '#64748b',
-    borderColor: '#1e293b',
+    backgroundColor: Colors.onboardingInk,
+    color: Colors.textSecondary,
+    borderColor: Colors.modalBg,
   },
   langGrid: {
     flexDirection: 'row',
@@ -130,32 +131,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.modalBg,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.modalBorder,
   },
   langChipActive: {
-    borderColor: '#06b6d4',
-    backgroundColor: '#083344',
+    borderColor: Colors.onboardingBorder,
+    backgroundColor: Colors.onboardingBg,
   },
   langText: {
-    color: '#94a3b8',
-    fontSize: 12,
+    color: Colors.modalSub,
+    fontSize: FontSize.body,
     fontWeight: '600',
   },
   langTextActive: {
-    color: '#38bdf8',
+    color: Colors.onboardingText,
   },
   btn: {
-    backgroundColor: '#0d9488',
+    backgroundColor: Colors.onboardingBtn,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 10,
   },
   btnText: {
-    color: '#ffffff',
-    fontSize: 15,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.titleLarge,
     fontWeight: '700',
   },
 });

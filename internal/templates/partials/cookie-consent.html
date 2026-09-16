@@ -6,18 +6,18 @@
     <div style="flex:1 1 480px;min-width:280px;">
       <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;">
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M12 2a10 10 0 1 0 10 10 4 4 0 0 1-5-5 4 4 0 0 1-5-5"/><path d="M8.5 8.5v.01"/><path d="M16 15.5v.01"/><path d="M12 12v.01"/><path d="M11 17v.01"/><path d="M7 14v.01"/></svg>
-        <strong style="font-size:1rem;color:var(--color-surface-container-low);">We value your privacy</strong>
+        <strong style="font-size:1rem;color:var(--color-surface-container-low);">{{t "ck.title"}}</strong>
       </div>
       <p style="margin:0;font-size:.85rem;line-height:1.5;color:var(--color-border-subtle);">
-        We use essential cookies to operate the site and non-essential cookies (analytics) to improve it.
-        Under the <strong style="color:var(--color-surface-container-low);">Digital Personal Data Protection Act, 2023</strong>, we need your consent for non-essential cookies.
-        You can change your choice anytime.
+        {{t "ck.body1"}}
+        Under the <strong style="color:var(--color-surface-container-low);">Digital Personal Data Protection Act, 2023</strong>{{t "ck.body2"}}
+        {{t "ck.body3"}}
       </p>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;">
-      <a href="/privacy#cookies" data-cookie-settings style="color:var(--color-text-muted);font-size:.8rem;text-decoration:underline;margin-right:.25rem;">Cookie Settings</a>
-      <button id="cookie-reject" style="background:transparent;border:1px solid var(--color-secondary);color:var(--color-border-subtle);padding:.55rem 1rem;border-radius:.5rem;font-size:.85rem;cursor:pointer;font-weight:600;">Reject Non-Essential</button>
-      <button id="cookie-accept" style="background:var(--color-status-info);border:none;color:var(--color-on-surface);padding:.55rem 1.15rem;border-radius:.5rem;font-size:.85rem;cursor:pointer;font-weight:700;">Accept All</button>
+      <a href="/privacy#cookies" data-cookie-settings style="color:var(--color-text-muted);font-size:.8rem;text-decoration:underline;margin-right:.25rem;">{{t "ck.settings"}}</a>
+      <button id="cookie-reject" style="background:transparent;border:1px solid var(--color-secondary);color:var(--color-border-subtle);padding:.55rem 1rem;border-radius:.5rem;font-size:.85rem;cursor:pointer;font-weight:600;">{{t "ck.reject"}}</button>
+      <button id="cookie-accept" style="background:var(--color-status-info);border:none;color:var(--color-on-surface);padding:.55rem 1.15rem;border-radius:.5rem;font-size:.85rem;cursor:pointer;font-weight:700;">{{t "ck.accept"}}</button>
     </div>
   </div>
 </div>

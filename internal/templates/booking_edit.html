@@ -2,8 +2,8 @@
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="relative px-6 py-4 border-b border-border-subtle">
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-violet-500 to-cyan-400 opacity-90"></div>
-            <h2 class="text-base sm:text-lg font-black tracking-tight text-on-surface font-display">{{if .Booking}}Edit Booking{{else}}New Booking{{end}}</h2>
-            <p class="text-xs text-text-muted mt-0.5">Customer, route, schedule and pricing for this shipment</p>
+            <h2 class="text-base sm:text-lg font-black tracking-tight text-on-surface font-display">{{if .Booking}}{{t "bk.edit_title"}}{{else}}{{t "bk.new_title"}}{{end}}</h2>
+            <p class="text-xs text-text-muted mt-0.5">{{t "bk.form_subtitle"}}</p>
         </div>
 
         {{if .FlashError}}
@@ -15,12 +15,12 @@
         <form method="POST" action="/bookings{{if $b}}/{{$b.ID}}/edit{{else}}/new{{end}}">
             <div class="p-6 space-y-5">
                 <section>
-                    <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Shipment</h3>
+                    <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "bk.section_shipment"}}</h3>
                     <div class="space-y-4">
                         <div>
-                            <label for="customer_id" class="block text-eyebrow text-text-muted mb-1.5">Customer *</label>
+                            <label for="customer_id" class="block text-eyebrow text-text-muted mb-1.5">{{t "bk.label_customer"}}</label>
                             <select id="customer_id" name="customer_id" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                                <option value="">Select Customer</option>
+                                <option value="">{{t "bk.select_customer"}}</option>
                                 {{range .Customers}}
                                 <option value="{{.ID}}" {{if and $b (eq .ID $b.CustomerID)}}selected{{end}}>{{.Name}}</option>
                                 {{end}}
@@ -28,9 +28,9 @@
                         </div>
 
                         <div>
-                            <label for="route_id" class="block text-eyebrow text-text-muted mb-1.5">Route *</label>
+                            <label for="route_id" class="block text-eyebrow text-text-muted mb-1.5">{{t "bk.label_route"}}</label>
                             <select id="route_id" name="route_id" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                                <option value="">Select Route</option>
+                                <option value="">{{t "bk.select_route"}}</option>
                                 {{range .Routes}}
                                 <option value="{{.ID}}" {{if and $b (eq .ID $b.RouteID)}}selected{{end}}>{{.Source}} → {{.Destination}}</option>
                                 {{end}}
@@ -40,25 +40,25 @@
                 </section>
 
                 <section>
-                    <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Schedule &amp; Vehicle</h3>
+                    <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "bk.section_schedule"}}</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         <div>
-                            <label for="pickup_date" class="block text-eyebrow text-text-muted mb-1.5">Pickup Date *</label>
+                            <label for="pickup_date" class="block text-eyebrow text-text-muted mb-1.5">{{t "bk.label_pickup"}}</label>
                             <input id="pickup_date" type="date" name="pickup_date" value="{{if $b}}{{date_only $b.PickupDate}}{{end}}" required
                                 class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         </div>
                         <div>
-                            <label for="vehicle_type" class="block text-eyebrow text-text-muted mb-1.5">Vehicle Type</label>
+                            <label for="vehicle_type" class="block text-eyebrow text-text-muted mb-1.5">{{t "bk.label_vehicle_type"}}</label>
                             <select id="vehicle_type" name="vehicle_type" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                                <option value="truck" {{if eq $b.VehicleType "truck"}}selected{{end}}>Truck</option>
-                                <option value="mini_truck" {{if eq $b.VehicleType "mini_truck"}}selected{{end}}>Mini Truck</option>
-                                <option value="van" {{if eq $b.VehicleType "van"}}selected{{end}}>Van</option>
-                                <option value="pickup" {{if eq $b.VehicleType "pickup"}}selected{{end}}>Pickup</option>
-                                <option value="tempo" {{if eq $b.VehicleType "tempo"}}selected{{end}}>Tempo</option>
+                                <option value="truck" {{if eq $b.VehicleType "truck"}}selected{{end}}>{{t "bk.vt_truck"}}</option>
+                                <option value="mini_truck" {{if eq $b.VehicleType "mini_truck"}}selected{{end}}>{{t "bk.vt_mini"}}</option>
+                                <option value="van" {{if eq $b.VehicleType "van"}}selected{{end}}>{{t "bk.vt_van"}}</option>
+                                <option value="pickup" {{if eq $b.VehicleType "pickup"}}selected{{end}}>{{t "bk.vt_pickup"}}</option>
+                                <option value="tempo" {{if eq $b.VehicleType "tempo"}}selected{{end}}>{{t "bk.vt_tempo"}}</option>
                             </select>
                         </div>
                         <div>
-                            <label for="passengers" class="block text-eyebrow text-text-muted mb-1.5">Passengers</label>
+                            <label for="passengers" class="block text-eyebrow text-text-muted mb-1.5">{{t "bk.label_passengers"}}</label>
                             <input id="passengers" type="number" name="passengers" value="{{if $b}}{{$b.Passengers}}{{end}}"
                                 class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         </div>
@@ -66,15 +66,15 @@
                 </section>
 
                 <section>
-                    <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Cargo &amp; Pricing</h3>
+                    <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "bk.section_cargo"}}</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label for="cargo_weight" class="block text-eyebrow text-text-muted mb-1.5">Cargo Weight (kg)</label>
+                            <label for="cargo_weight" class="block text-eyebrow text-text-muted mb-1.5">{{t "bk.label_cargo"}}</label>
                             <input id="cargo_weight" type="number" step="0.1" name="cargo_weight" value="{{if $b}}{{if $b.CargoWeight}}{{$b.CargoWeight}}{{end}}{{end}}"
                                 class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         </div>
                         <div>
-                            <label for="price" class="block text-eyebrow text-text-muted mb-1.5">Price</label>
+                            <label for="price" class="block text-eyebrow text-text-muted mb-1.5">{{t "bk.label_price"}}</label>
                             <input id="price" type="number" step="0.01" name="price" value="{{if $b}}{{$b.Price}}{{end}}"
                                 class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-semibold text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         </div>
@@ -82,15 +82,15 @@
                 </section>
 
                 <section>
-                    <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Notes</h3>
-                    <textarea name="notes" rows="2" aria-label="Notes"
+                    <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "bk.notes"}}</h3>
+                    <textarea name="notes" rows="2" aria-label="{{t "bk.notes"}}"
                         class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">{{if $b}}{{$b.Notes}}{{end}}</textarea>
                 </section>
             </div>
 
             <div class="sticky bottom-0 bg-surface-container-lowest border-t border-border-subtle px-6 py-3 flex justify-end gap-2 flex-wrap">
-                {{template "btn.html" (dict "Variant" "secondary" "Size" "md" "Href" "/bookings" "Label" "Cancel" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-border-subtle focus:ring-offset-2")}}
-                {{template "btn.html" (dict "Variant" "primary" "Size" "md" "Type" "submit" "Label" "Save Booking" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2")}}
+                {{template "btn.html" (dict "Variant" "secondary" "Size" "md" "Href" "/bookings" "Label" (t "bk.cancel") "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-border-subtle focus:ring-offset-2")}}
+                {{template "btn.html" (dict "Variant" "primary" "Size" "md" "Type" "submit" "Label" (t "bk.save") "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2")}}
             </div>
         </form>
     </div>
