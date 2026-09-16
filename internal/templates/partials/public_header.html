@@ -1,7 +1,7 @@
 <header class="header relative">
     <nav class="navigation" aria-label="Primary">
         <div class="navigation-button-container">
-            <button id="mobile-menu-toggle" type="button" class="navigation-button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="mobile-nav-panel">
+            <button id="mobile-menu-toggle" type="button" class="navigation-button" aria-label="{{t "nav.toggle"}}" aria-expanded="false" aria-controls="mobile-nav-panel">
                 <svg aria-hidden="true" id="hamburger-icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
                 <svg aria-hidden="true" id="hamburger-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 hidden"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
             </button>
@@ -23,72 +23,80 @@
             <div class="navigation-body-container">
                 <ul class="navigation-top-menu navigation-top-menu-main">
                     <li class="navigation-top-menu-item">
-                        <button type="button" class="navigation-top-menu-label navigation-top-menu-label-arrow" aria-expanded="false" aria-haspopup="true">Operations</button>
+                        <button type="button" class="navigation-top-menu-label navigation-top-menu-label-arrow" aria-expanded="false" aria-haspopup="true">{{t "nav.ops"}}</button>
                         <ul class="navigation-top-menu-sublist">
-                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/dashboard"><span class="navigation-top-menu-label">Operations Cockpit</span></a></li>
-                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/trips"><span class="navigation-top-menu-label">Live Dispatch</span></a></li>
-                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/routes"><span class="navigation-top-menu-label">Route Optimizer</span></a></li>
-                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/bookings"><span class="navigation-top-menu-label">Bookings</span></a></li>
+                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/dashboard"><span class="navigation-top-menu-label">{{t "nav.cockpit"}}</span></a></li>
+                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/trips"><span class="navigation-top-menu-label">{{t "nav.dispatch"}}</span></a></li>
+                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/routes"><span class="navigation-top-menu-label">{{t "nav.routes"}}</span></a></li>
+                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/bookings"><span class="navigation-top-menu-label">{{t "nav.bookings"}}</span></a></li>
                         </ul>
                     </li>
                     <li class="navigation-top-menu-item">
-                        <button type="button" class="navigation-top-menu-label navigation-top-menu-label-arrow" aria-expanded="false" aria-haspopup="true">Fleet Management</button>
+                        <button type="button" class="navigation-top-menu-label navigation-top-menu-label-arrow" aria-expanded="false" aria-haspopup="true">{{t "nav.fleet"}}</button>
                         <ul class="navigation-top-menu-sublist">
-                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/vehicles"><span class="navigation-top-menu-label">Active Units</span></a></li>
-                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/drivers"><span class="navigation-top-menu-label">Drivers Directory</span></a></li>
-                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/customers"><span class="navigation-top-menu-label">Customer Accounts</span></a></li>
+                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/vehicles"><span class="navigation-top-menu-label">{{t "nav.units"}}</span></a></li>
+                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/drivers"><span class="navigation-top-menu-label">{{t "nav.drivers_dir"}}</span></a></li>
+                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/customers"><span class="navigation-top-menu-label">{{t "nav.customers"}}</span></a></li>
                         </ul>
                     </li>
                     <li class="navigation-top-menu-item">
-                        <button type="button" class="navigation-top-menu-label navigation-top-menu-label-arrow whitespace-nowrap" aria-expanded="false" aria-haspopup="true">Finance &amp; Reports</button>
+                        <button type="button" class="navigation-top-menu-label navigation-top-menu-label-arrow whitespace-nowrap" aria-expanded="false" aria-haspopup="true">{{t "nav.finance"}}</button>
                         <ul class="navigation-top-menu-sublist">
-                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/invoices"><span class="navigation-top-menu-label">Invoices</span></a></li>
-                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/payments"><span class="navigation-top-menu-label">Payments &amp; Receipts</span></a></li>
-                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/reports"><span class="navigation-top-menu-label">Analytics Reports</span></a></li>
+                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/invoices"><span class="navigation-top-menu-label">{{t "nav.invoices"}}</span></a></li>
+                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/payments"><span class="navigation-top-menu-label">{{t "nav.payments"}}</span></a></li>
+                            <li class="navigation-top-menu-item"><a class="navigation-top-menu-link" href="/features/reports"><span class="navigation-top-menu-label">{{t "nav.reports"}}</span></a></li>
                         </ul>
                     </li>
                     <li class="navigation-top-menu-item">
-                        <a class="navigation-top-menu-link" href="/#benefits"><span class="navigation-top-menu-label">Benefits</span></a>
+                        <a class="navigation-top-menu-link" href="/#benefits"><span class="navigation-top-menu-label">{{t "nav.benefits"}}</span></a>
                     </li>
                     <li class="navigation-top-menu-item">
-                        <a class="navigation-top-menu-link" href="/contact-us"><span class="navigation-top-menu-label">Contact Us</span></a>
+                        <a class="navigation-top-menu-link" href="/contact-us"><span class="navigation-top-menu-label">{{t "nav.contact"}}</span></a>
                     </li>
                 </ul>
             </div>
         </div>
 
-        <!-- MOST RIGHT: Login + 3-Way Theme Switcher -->
+        <!-- MOST RIGHT: Language toggle + Login + 3-Way Theme Switcher -->
         <ul class="navigation-top-menu navigation-top-menu-user-actions">
+            <li class="navigation-top-menu-item">
+                <button id="lang-toggle" type="button"
+                    class="login-link-button border-0 bg-transparent cursor-pointer flex items-center gap-1 text-on-surface hover:text-primary transition-colors"
+                    aria-label="{{t "nav.lang_label"}}" title="{{t "nav.lang_label"}}">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    <span id="lang-toggle-label" class="text-xs font-bold">हिंदी</span>
+                </button>
+            </li>
             <li class="navigation-top-menu-item relative" id="theme-menu-wrapper">
                 <button id="theme-menu-btn" type="button"
                     class="login-link-button border-0 bg-transparent cursor-pointer flex items-center gap-1 text-on-surface hover:text-primary transition-colors"
-                    aria-label="Select color mode" title="Color Mode (Day, Night, System)" aria-expanded="false" aria-haspopup="true">
+                    aria-label="{{t "nav.theme_label"}}" title="{{t "nav.theme_title"}}" aria-expanded="false" aria-haspopup="true">
                     <span class="flex items-center justify-center w-5 h-5" data-current-theme-icon>
                         <svg class="w-5 h-5 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
                     </span>
                 </button>
                 <div id="theme-dropdown" class="absolute right-0 top-full mt-2 w-44 bg-surface-container-lowest border border-border-subtle rounded-xl shadow-lg z-50 overflow-hidden hidden p-1 text-on-surface">
                     <div class="px-2.5 py-1.5 text-[11px] font-semibold text-text-muted uppercase tracking-wider border-b border-border-subtle mb-1">
-                        Color Mode
+                        {{t "nav.color_mode"}}
                     </div>
                     <button type="button" data-theme-choice="light" class="w-full text-left px-2.5 py-2 text-xs rounded-lg hover:bg-surface-container-low flex items-center justify-between text-on-surface border-0 bg-transparent cursor-pointer transition-colors">
                         <div class="flex items-center gap-2">
                             <svg class="w-4 h-4 text-amber-500 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
-                            <span class="font-medium">Day (Light)</span>
+                            <span class="font-medium">{{t "nav.day"}}</span>
                         </div>
                         <span class="hidden" data-theme-check="light"><svg aria-hidden="true" class="w-3.5 h-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
                     </button>
                     <button type="button" data-theme-choice="dark" class="w-full text-left px-2.5 py-2 text-xs rounded-lg hover:bg-surface-container-low flex items-center justify-between text-on-surface border-0 bg-transparent cursor-pointer transition-colors">
                         <div class="flex items-center gap-2">
                             <svg class="w-4 h-4 text-blue-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
-                            <span class="font-medium">Night (Dark)</span>
+                            <span class="font-medium">{{t "nav.night"}}</span>
                         </div>
                         <span class="hidden" data-theme-check="dark"><svg aria-hidden="true" class="w-3.5 h-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
                     </button>
                     <button type="button" data-theme-choice="system" class="w-full text-left px-2.5 py-2 text-xs rounded-lg hover:bg-surface-container-low flex items-center justify-between text-on-surface border-0 bg-transparent cursor-pointer transition-colors">
                         <div class="flex items-center gap-2">
                             <svg class="w-4 h-4 text-slate-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
-                            <span class="font-medium">System (Auto)</span>
+                            <span class="font-medium">{{t "nav.system"}}</span>
                         </div>
                         <span class="hidden" data-theme-check="system"><svg aria-hidden="true" class="w-3.5 h-3.5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
                     </button>
@@ -97,58 +105,58 @@
             <li class="navigation-top-menu-item">
                 <a href="/login" class="login-link-button">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 18c1.5-2 3.5-3 5-3s3.5 1 5 3"/></svg>
-                    <span class="hidden sm:inline">Sign In / Login</span><span class="sm:hidden">Login</span>
+                    <span class="hidden sm:inline">{{t "nav.signin"}}</span><span class="sm:hidden"{{t "nav.login"}}/span>
                 </a>
             </li>
         </ul>
     </nav>
 
     <!-- Mobile Navigation Drawer -->
-    <div id="mobile-nav-panel" class="hidden lg:hidden border-b border-border-subtle bg-surface-container-lowest/98 backdrop-blur-xl shadow-2xl px-4 py-5 space-y-4 max-h-[calc(100vh-80px)] overflow-y-auto" role="region" aria-label="Mobile Navigation">
+    <div id="mobile-nav-panel" class="hidden lg:hidden border-b border-border-subtle bg-surface-container-lowest/98 backdrop-blur-xl shadow-2xl px-4 py-5 space-y-4 max-h-[calc(100vh-80px)] overflow-y-auto" role="region" aria-label="{{t "nav.mobile_nav"}}">
         <div class="space-y-4">
             <div>
-                <div class="text-[11px] font-semibold uppercase tracking-wider text-primary mb-2">Operations</div>
+                <div class="text-[11px] font-semibold uppercase tracking-wider text-primary mb-2">{{t "nav.ops"}}</div>
                 <div class="grid grid-cols-2 gap-1.5 text-sm">
-                    <a href="/features/dashboard" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Cockpit</a>
-                    <a href="/features/trips" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Live Dispatch</a>
-                    <a href="/features/routes" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Routes</a>
-                    <a href="/features/bookings" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Bookings</a>
+                    <a href="/features/dashboard" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">{{t "nav.cockpit_short"}}</a>
+                    <a href="/features/trips" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">{{t "nav.dispatch"}}</a>
+                    <a href="/features/routes" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">{{t "nav.routes_short"}}</a>
+                    <a href="/features/bookings" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">{{t "nav.bookings"}}</a>
                 </div>
             </div>
 
             <div class="border-t border-border-subtle pt-3">
-                <div class="text-[11px] font-semibold uppercase tracking-wider text-primary mb-2">Fleet Management</div>
+                <div class="text-[11px] font-semibold uppercase tracking-wider text-primary mb-2">{{t "nav.fleet"}}</div>
                 <div class="grid grid-cols-2 gap-1.5 text-sm">
-                    <a href="/features/vehicles" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Active Units</a>
-                    <a href="/features/drivers" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Drivers Directory</a>
-                    <a href="/features/customers" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Customers</a>
-                    <a href="/features/kharcha" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Kharcha (Ledger)</a>
+                    <a href="/features/vehicles" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">{{t "nav.units"}}</a>
+                    <a href="/features/drivers" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">{{t "nav.drivers_dir"}}</a>
+                    <a href="/features/customers" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">{{t "nav.customers_short"}}</a>
+                    <a href="/features/kharcha" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">{{t "nav.kharcha"}}</a>
                 </div>
             </div>
 
             <div class="border-t border-border-subtle pt-3">
-                <div class="text-[11px] font-semibold uppercase tracking-wider text-primary mb-2">Finance &amp; Reports</div>
+                <div class="text-[11px] font-semibold uppercase tracking-wider text-primary mb-2">{{t "nav.finance"}}</div>
                 <div class="grid grid-cols-2 gap-1.5 text-sm">
-                    <a href="/features/invoices" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Invoices</a>
-                    <a href="/features/payments" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Payments</a>
-                    <a href="/features/reports" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Reports</a>
-                    <a href="/#benefits" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">Benefits</a>
+                    <a href="/features/invoices" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">{{t "nav.invoices"}}</a>
+                    <a href="/features/payments" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">{{t "nav.payments_short"}}</a>
+                    <a href="/features/reports" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">{{t "nav.reports_short"}}</a>
+                    <a href="/#benefits" class="flex items-center gap-1.5 py-1.5 px-2 rounded-lg hover:bg-surface-container-low text-on-surface hover:text-primary transition-colors font-medium">{{t "nav.benefits"}}</a>
                 </div>
             </div>
         </div>
 
         <div class="border-t border-border-subtle pt-4 flex flex-col gap-2">
             <a href="/register" class="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-primary text-on-primary font-semibold text-sm shadow-sm hover:bg-primary/90 transition">
-                Register Fleet (Start Free)
+                {{t "nav.register"}}
             </a>
             <div class="grid grid-cols-2 gap-2">
                 <a href="/contact-us" class="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-border-subtle bg-surface-container-low text-xs font-semibold text-on-surface hover:bg-surface-container transition-colors">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                    Contact Support
+                    {{t "nav.support"}}
                 </a>
                 <a href="https://wa.me/918285336507?text=Hi%20Avandab%20team,%20I%20want%20a%20demo%20for%20my%20fleet" target="_blank" rel="noopener noreferrer" class="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 shrink-0"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.29"/></svg>
-                    WhatsApp Chat
+                    {{t "nav.wa"}}
                 </a>
             </div>
         </div>
@@ -198,6 +206,29 @@
                     setOpen(false);
                 });
             });
+        })();
+        (function () {
+            // Public language toggle: no auth needed — sets the lang cookie the
+            // server reads (templatesFor) and reloads. Label shows the *other*
+            // language: EN while browsing Hindi, हिंदी while browsing English.
+            var btn = document.getElementById('lang-toggle');
+            if (!btn) return;
+            var label = document.getElementById('lang-toggle-label');
+            function current() {
+                var m = document.cookie.match('(^|; )lang=([^;]*)');
+                return m ? decodeURIComponent(m[2]) : 'en';
+            }
+            function paint() {
+                if (label) label.textContent = current() === 'hi' ? 'EN' : 'हिंदी';
+            }
+            btn.addEventListener('click', function () {
+                var next = current() === 'hi' ? 'en' : 'hi';
+                var c = 'lang=' + next + '; path=/; max-age=' + (60 * 60 * 24 * 365) + '; SameSite=Lax';
+                if (location.protocol === 'https:') c += '; Secure';
+                document.cookie = c;
+                location.reload();
+            });
+            paint();
         })();
     </script>
 </header>

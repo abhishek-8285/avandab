@@ -31,4 +31,10 @@ func TestHomeHindiRenders(t *testing.T) {
 	assert.Contains(t, outHI, "मुफ्त शुरू करें")
 	assert.Contains(t, outHI, "<html lang=\"hi\">")
 	assert.NotContains(t, outHI, "Fleet operations")
+	// Shared partials render Hindi too.
+	assert.Contains(t, outHI, "संचालन कॉकपिट")
+	assert.Contains(t, outHI, "सहायता पाएं")
+	assert.Contains(t, outHI, "उपयोग की शर्तें")
+	assert.Contains(t, outHI, "आपकी गोपनीयता हमारे लिए अहम है")
+	assert.Contains(t, outHI, "id=\"lang-toggle\"")
 }
