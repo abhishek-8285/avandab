@@ -165,16 +165,16 @@ var featureRegistry = map[string]FeatureContent{
 		Title:    "Bookings & Requests",
 		Icon:     "description",
 		Eyebrow:  "Sales",
-		Tagline:  "Turn a phone call into a confirmed, billable job in one click.",
+		Tagline:  "Turn a phone call into a confirmed job with a clear ops handoff.",
 		Audience: "For sales teams and customers",
-		Summary:  "Turn customer requests into confirmed, billable jobs.",
-		Lead:     "A request becomes a job with one confirm — and billing follows automatically.",
-		WhatItIs: "Bookings are requests from your customers (or your team) for a shipment. Confirm to reserve capacity, cancel to release it, and let Avandab auto-link the booking to an invoice and a trip so nothing falls through the cracks.",
+		Summary:  "Turn customer requests into confirmed jobs ready for operations.",
+		Lead:     "Confirm demand first, then hand it to operations for trip and billing setup.",
+		WhatItIs: "Bookings are requests from your customers (or your team) for a shipment. Confirm to reserve capacity, cancel to release it, then create the operational trip and invoice from the confirmed booking.",
 		Capabilities: []FeatureCapability{
 			{Icon: "contact_support", Title: "Receive requests", Text: "Customers or your team raise booking requests in one place."},
 			{Icon: "task_alt", Title: "Confirm or cancel", Text: "One click reserves or releases capacity with full status tracking."},
 			{Icon: "history", Title: "Lifecycle tracking", Text: "Follow each booking from request to fulfilled."},
-			{Icon: "receipt_long", Title: "Auto-link billing", Text: "Confirmation can create the linked invoice and trip for you."},
+			{Icon: "receipt_long", Title: "Operational handoff", Text: "Use the confirmed booking to create its trip and linked invoice."},
 		},
 		Benefits: []FeatureBenefit{
 			{Icon: "check_circle", Text: "No lost leads — 100% of requests captured."},
@@ -184,7 +184,7 @@ var featureRegistry = map[string]FeatureContent{
 		Steps: []string{
 			"Sign in and open Bookings",
 			"Review the incoming request",
-			"Confirm it to create a trip and invoice",
+			"Confirm it, then create the trip and invoice from the booking",
 		},
 		UseCases: []string{
 			"Walk-in or phone bookings",
@@ -193,7 +193,7 @@ var featureRegistry = map[string]FeatureContent{
 		},
 		WhoFor: "Sales teams converting demand and operators who need a clean queue to act on.",
 		FAQ: []FAQItem{
-			{Question: "Does confirming a booking create the invoice?", Answer: "Avandab can auto-link the booking to a trip and an invoice so billing starts the moment you confirm."},
+			{Question: "Does confirming a booking create the invoice?", Answer: "No. Confirmation reserves the booking; operations creates the linked trip and invoice in the next workflow step."},
 			{Question: "What if the customer cancels?", Answer: "Cancelling releases the reserved capacity and keeps the booking history intact for reporting."},
 		},
 		Related: []string{"customers", "invoices", "trips"},

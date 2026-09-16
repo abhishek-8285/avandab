@@ -349,6 +349,8 @@ func TestDriverAppService_DispatchOffersAndConcurrency(t *testing.T) {
 	// Register drivers
 	require.NoError(t, svc.RegisterDriver(ctx, tenantID, driverA, "Alpha Driver", "alpha@test.com", "9876543210"))
 	require.NoError(t, svc.RegisterDriver(ctx, tenantID, driverB, "Beta Driver", "beta@test.com", "9876543211"))
+	_, err := db.Exec(`INSERT INTO trips (id, tenant_id, booking_id, status) VALUES ('trip-101', ?, ?, 'scheduled')`, tenantID, bookingID)
+	require.NoError(t, err)
 
 	// Create dispatch offers for same booking
 	offerA, err := svc.CreateDispatchOffer(ctx, tenantID, bookingID, driverA, "veh-001", 15)
@@ -370,6 +372,10 @@ func TestDriverAppService_DispatchOffersAndConcurrency(t *testing.T) {
 	assert.True(t, respA.Success)
 	assert.Equal(t, "ACCEPTED", respA.Status)
 	assert.NotEmpty(t, respA.TripID)
+	assert.Equal(t, "trip-101", respA.TripID)
+	var tripCount int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM trips WHERE tenant_id = ? AND booking_id = ?`, tenantID, bookingID).Scan(&tripCount))
+	assert.Equal(t, 1, tripCount)
 
 	// Idempotency: Driver A sending same command ID returns identical success without error
 	respAIdempotent, err := svc.ProcessDriverCommand(ctx, tenantID, driverA, cmdA)
@@ -494,6 +500,11 @@ func TestDriverAppService_FullTripStateMachineAndPODEnforcement(t *testing.T) {
 
 	// Offer and Accept
 	offer, err := svc.CreateDispatchOffer(ctx, tenantID, bookingID, driverID, "veh-flow", 15)
+	require.NoError(t, err)
+
+	// New workflow seam (commit 20c0660c): booking confirmation creates the
+	// operational trip; ACCEPT_OFFER only assigns driver/vehicle to it.
+	_, err = db.Exec(`INSERT INTO trips (id, tenant_id, booking_id, status) VALUES ('trip-full-flow', ?, ?, 'created')`, tenantID, bookingID)
 	require.NoError(t, err)
 
 	cmdAccept := application.DriverCommandRequest{

@@ -219,13 +219,23 @@ func (s *DriverAppService) executeAcceptOffer(ctx context.Context, tenantID, dri
 		return DriverCommandResponse{}, fmt.Errorf("cancel competing offers: %w", err)
 	}
 
-	// 3. Create / assign Trip
-	tripID := "trip_" + uuid.NewString()
+	// 3. Assign the booking's existing operational trip. Booking confirmation
+	// creates that trip; creating another one here produced duplicate execution
+	// records for the same booking.
+	var tripID string
+	err = tx.QueryRowContext(ctx, `
+		SELECT id FROM trips
+		WHERE tenant_id = $1 AND booking_id = $2
+		  AND status NOT IN ('completed', 'cancelled')
+		ORDER BY created_at DESC LIMIT 1`, tenantID, bookingID).Scan(&tripID)
+	if err != nil {
+		return DriverCommandResponse{}, fmt.Errorf("find booking trip: %w", err)
+	}
 	if _, err = tx.ExecContext(ctx, `
-		INSERT INTO trips (id, tenant_id, booking_id, driver_id, vehicle_id, status, started_at, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, 'assigned', $6, $7, $8)`,
-		tripID, tenantID, bookingID, driverID, vehicleID, now, now, now); err != nil {
-		return DriverCommandResponse{}, fmt.Errorf("create assigned trip: %w", err)
+		UPDATE trips
+		SET driver_id = $1, vehicle_id = $2, status = 'assigned', updated_at = $3
+		WHERE id = $4 AND tenant_id = $5`, driverID, vehicleID, now, tripID, tenantID); err != nil {
+		return DriverCommandResponse{}, fmt.Errorf("assign booking trip: %w", err)
 	}
 
 	if commitErr := tx.Commit(); commitErr != nil {

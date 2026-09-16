@@ -60,6 +60,9 @@ func NewTxManager(getter DBGetter) TxManager {
 // WithTransaction begins a transaction, injects it into the context, runs fn,
 // and commits or rolls back based on fn's outcome.
 func (tm *txManager) WithTransaction(ctx context.Context, fn func(ctx context.Context) error) error {
+	if TxFromContext(ctx) != nil {
+		return fn(ctx)
+	}
 	tx, err := tm.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
