@@ -1109,6 +1109,7 @@ func (a *App) Marketing(w http.ResponseWriter, r *http.Request) {
 				"Title":          "Modern Fleet & Logistics Operations",
 				"SEODescription": "Avandab replaces WhatsApp, spreadsheets and calls with one live cockpit — dispatch, track, e-POD, GST invoice and payments for Indian fleets.",
 				"CanonicalPath":  "/",
+				"Lang":           lang,
 				"NoIndex":        false,
 				"OGType":         "website",
 				"PWAEnabled":     a.Config != nil && a.Config.PWAEnabled,
@@ -1139,6 +1140,7 @@ func (a *App) Marketing(w http.ResponseWriter, r *http.Request) {
 		"Title":          "Modern Fleet & Logistics Operations",
 		"SEODescription": "Avandab replaces WhatsApp, spreadsheets and calls with one live cockpit — dispatch, track, e-POD, GST invoice and payments for Indian fleets.",
 		"CanonicalPath":  "/",
+		"Lang":           lang,
 		"NoIndex":        false,
 		"OGType":         "website",
 	}

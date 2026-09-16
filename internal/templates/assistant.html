@@ -5,11 +5,11 @@
             <div class="flex items-center gap-3 min-w-0">
                 <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/15 grid place-items-center text-sm font-black text-primary shrink-0">A</div>
                 <div class="min-w-0">
-                    <h3 class="text-sm font-bold text-on-surface font-display truncate">AI Operations Assistant</h3>
-                    <p class="text-xs text-text-muted truncate">Ask anything about bookings, trips, drivers, vehicles, invoices, payments or kharcha · AI-generated — verify before acting</p>
+                    <h3 class="text-sm font-bold text-on-surface font-display truncate">{{t "assistant.title"}}</h3>
+                    <p class="text-xs text-text-muted truncate">{{t "assistant.subtitle"}}</p>
                 </div>
             </div>
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-soft border border-emerald-500/20 text-[11px] font-bold tracking-wide uppercase text-emerald-strong dark:text-emerald-300 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>Online</span>
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-soft border border-emerald-500/20 text-[11px] font-bold tracking-wide uppercase text-emerald-strong dark:text-emerald-300 shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>{{t "assistant.online"}}</span>
         </div>
 
         <!-- Messages -->
@@ -17,35 +17,35 @@
             <div class="flex items-start gap-2">
                 <div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center text-sm font-bold shrink-0">A</div>
                 <div class="bg-surface-container-low rounded-2xl rounded-tl-md px-4 py-2 text-sm text-on-surface max-w-[80%]">
-                    Hi {{if .User}}{{.User.Name}}{{else}}there{{end}}! I'm your operations assistant. I can help you with:
+                    {{t "assistant.greet_hi"}} {{if .User}}{{.User.Name}}{{else}}{{t "assistant.greet_there"}}{{end}}! {{t "assistant.greet_body"}}
                     <ul class="list-disc ml-5 mt-1 space-y-0.5">
-                        <li>Quotes and route fares</li>
-                        <li>Creating and tracking bookings</li>
-                        <li>Trip status, driver &amp; vehicle assignment</li>
-                        <li>Invoices, payments, revenue</li>
-                        <li>Kharcha approvals</li>
+                        <li>{{t "assistant.cap_quotes"}}</li>
+                        <li>{{t "assistant.cap_bookings"}}</li>
+                        <li>{{t "assistant.cap_trips"}}</li>
+                        <li>{{t "assistant.cap_billing"}}</li>
+                        <li>{{t "assistant.cap_kharcha"}}</li>
                     </ul>
-                    Try: "What's the fare from Mumbai to Pune?" or "Show pending kharcha expenses"
+                    {{t "assistant.try_prefix"}} "{{t "assistant.try_fare"}}" or "{{t "assistant.try_kharcha"}}"
                 </div>
             </div>
         </div>
 
         <!-- Suggestions -->
         <div id="suggestions" class="px-4 pb-2 flex flex-wrap gap-2">
-            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1 font-semibold transition-colors cursor-pointer">Fare Mumbai to Pune</button>
-            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1 font-semibold transition-colors cursor-pointer">Today's trips</button>
-            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1 font-semibold transition-colors cursor-pointer">Available drivers</button>
-            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1 font-semibold transition-colors cursor-pointer">Pending kharcha</button>
-            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1 font-semibold transition-colors cursor-pointer">Unpaid invoices</button>
+            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1 font-semibold transition-colors cursor-pointer">{{t "assistant.sug_fare"}}</button>
+            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1 font-semibold transition-colors cursor-pointer">{{t "assistant.sug_trips"}}</button>
+            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1 font-semibold transition-colors cursor-pointer">{{t "assistant.sug_drivers"}}</button>
+            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1 font-semibold transition-colors cursor-pointer">{{t "assistant.sug_kharcha"}}</button>
+            <button class="suggestion text-xs bg-status-info/10 text-status-info hover:bg-status-info/20 border border-status-info/30 rounded-full px-3 py-1 font-semibold transition-colors cursor-pointer">{{t "assistant.sug_invoices"}}</button>
         </div>
 
         <!-- Input -->
         <div class="border-t border-border-subtle px-4 py-3 bg-surface-container-lowest">
-            <form id="chat-form" class="flex flex-col sm:flex-row gap-2">
-                <input aria-label="Ask me anything" id="chat-input" type="text" autocomplete="off" placeholder="Ask me anything…"
+            <form id="chat-form" class="flex flex-col sm:flex-row gap-2" data-thinking="{{t "assistant.thinking"}}" data-send="{{t "assistant.send"}}" data-err-request="{{t "assistant.err_request"}}" data-err-unexpected="{{t "assistant.err_unexpected"}}" data-err-prefix="{{t "assistant.err_prefix"}}">
+                <input aria-label="{{t "assistant.input_label"}}" id="chat-input" type="text" autocomplete="off" placeholder="{{t "assistant.input_label"}}…"
                     class="flex-1 w-full bg-surface-container-low border border-border-subtle rounded-full px-4 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                 <button type="submit" class="inline-flex items-center justify-center gap-2 rounded-full bg-primary text-on-primary px-5 py-2.5 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition shrink-0 cursor-pointer border-0">
-                    Send
+                    {{t "assistant.send"}}
                 </button>
             </form>
         </div>
@@ -79,7 +79,7 @@
         busy = b;
         const btn = form.querySelector('button');
         btn.disabled = b;
-        btn.textContent = b ? 'Thinking…' : 'Send';
+        btn.textContent = b ? form.dataset.thinking : form.dataset.send;
     }
 
     form.addEventListener('submit', async (e) => {
@@ -101,12 +101,12 @@
             const textBody = await resp.text();
             let data = null;
             try { data = JSON.parse(textBody); } catch (_) { /* non-JSON (HTML login page, gateway 503, ...) */ }
-            if (!resp.ok) throw new Error((data && data.error) || 'Request failed (' + resp.status + ' ' + resp.statusText + ')');
-            if (!data || typeof data.reply !== 'string') throw new Error('Unexpected server response');
+            if (!resp.ok) throw new Error((data && data.error) || (form.dataset.errRequest + ' (' + resp.status + ' ' + resp.statusText + ')'));
+            if (!data || typeof data.reply !== 'string') throw new Error(form.dataset.errUnexpected);
             addMessage('assistant', data.reply);
             history.push({ role: 'assistant', content: data.reply });
         } catch (err) {
-            addMessage('assistant', 'Error: ' + err.message);
+            addMessage('assistant', form.dataset.errPrefix + err.message);
         }
         setBusy(false);
     });
