@@ -2764,5 +2764,7 @@
   "sy.users.suspended": "निलंबित",
   "sy.users.temp_ph": "अस्थायी पासवर्ड सेट करें",
   "sy.users.title": "उपयोगकर्ता प्रबंधन",
-  "sy.users.total": "कुल खाते"
+  "sy.users.total": "कुल खाते",
+  "mo.ewb.generated": "बनाया गया:",
+  "mo.ful.odo_delta": "ओडोमीटर अंतर (km)"
 }

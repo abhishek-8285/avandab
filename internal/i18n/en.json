@@ -2764,5 +2764,7 @@
   "sy.users.suspended": "Suspended",
   "sy.users.temp_ph": "Set temporary password",
   "sy.users.title": "User Management",
-  "sy.users.total": "Total Accounts"
+  "sy.users.total": "Total Accounts",
+  "mo.ewb.generated": "Generated:",
+  "mo.ful.odo_delta": "Odometer Δ (km)"
 }
