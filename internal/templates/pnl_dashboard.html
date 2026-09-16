@@ -4,23 +4,23 @@
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div class="min-w-0">
             <div class="flex items-center gap-3 flex-wrap">
-                <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Profit &amp; Loss</h1>
+                <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{t "mo.pnl.title"}}</h1>
                 <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-bold tabular-nums text-secondary">{{inDate .From}} → {{inDate .To}}</span>
             </div>
-            <p class="text-sm text-secondary mt-1">Daily P&amp;L snapshots across the selected window</p>
+            <p class="text-sm text-secondary mt-1">{{t "mo.pnl.daily_sub"}}</p>
         </div>
         <div class="flex flex-wrap items-end gap-2 shrink-0">
             <div>
-                <label for="pnl-from" class="block text-eyebrow text-text-muted mb-1">From</label>
+                <label for="pnl-from" class="block text-eyebrow text-text-muted mb-1">{{t "mo.c.from"}}</label>
                 <input type="date" id="pnl-from" class="rounded-lg bg-surface-container-low border border-border-subtle text-sm text-on-surface px-3 py-2 tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" value="{{.From}}">
             </div>
             <div>
-                <label for="pnl-to" class="block text-eyebrow text-text-muted mb-1">To</label>
+                <label for="pnl-to" class="block text-eyebrow text-text-muted mb-1">{{t "mo.c.to"}}</label>
                 <input type="date" id="pnl-to" class="rounded-lg bg-surface-container-low border border-border-subtle text-sm text-on-surface px-3 py-2 tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10" value="{{.To}}">
             </div>
-            <button onclick="loadPNL()" class="inline-flex items-center px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer border-0">Load</button>
+            <button onclick="loadPNL()" class="inline-flex items-center px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer border-0">{{t "mo.pnl.load"}}</button>
             {{if can .User "pnl" "write"}}
-            <button onclick="generatePNL()" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-600 text-white text-sm font-semibold shadow-sm hover:bg-emerald-700 hover:-translate-y-px transition cursor-pointer border-0">Generate Today</button>
+            <button onclick="generatePNL(this)" data-msg-fail="{{t "mo.pnl.js_fail"}}" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-emerald-600 text-white text-sm font-semibold shadow-sm hover:bg-emerald-700 hover:-translate-y-px transition cursor-pointer border-0">{{t "mo.pnl.generate"}}</button>
             {{end}}
         </div>
     </div>
@@ -38,7 +38,7 @@
             </div>
             <div class="mt-3">
                 <div class="text-2xl font-black tracking-tight tabular-nums leading-none" data-numeric>₹{{printf "%.2f" $latest.NetProfit}}</div>
-                <div class="text-xs font-medium text-white/80 mt-1.5">Net Profit · latest day</div>
+                <div class="text-xs font-medium text-white/80 mt-1.5">{{t "mo.pnl.net_latest"}}</div>
             </div>
         </a>
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition duration-200">
@@ -48,7 +48,7 @@
             </div>
             <div class="mt-3">
                 <div class="text-xl font-black tracking-tight tabular-nums text-status-success leading-none" data-numeric>₹{{printf "%.2f" $latest.Revenue}}</div>
-                <div class="text-xs font-medium text-secondary mt-1.5">Revenue · latest day</div>
+                <div class="text-xs font-medium text-secondary mt-1.5">{{t "mo.pnl.rev_latest"}}</div>
             </div>
         </div>
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition duration-200">
@@ -58,7 +58,7 @@
             </div>
             <div class="mt-3">
                 <div class="text-xl font-black tracking-tight tabular-nums text-status-alert leading-none" data-numeric>₹{{printf "%.2f" $latest.Expenses}}</div>
-                <div class="text-xs font-medium text-secondary mt-1.5">Expenses · latest day</div>
+                <div class="text-xs font-medium text-secondary mt-1.5">{{t "mo.pnl.exp_latest"}}</div>
             </div>
         </div>
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition duration-200">
@@ -68,7 +68,7 @@
             </div>
             <div class="mt-3">
                 <div class="text-xl font-black tracking-tight tabular-nums text-amber-mid dark:text-amber-400 leading-none" data-numeric>₹{{printf "%.2f" $latest.DriverPayouts}}</div>
-                <div class="text-xs font-medium text-secondary mt-1.5">Driver Payouts · latest day</div>
+                <div class="text-xs font-medium text-secondary mt-1.5">{{t "mo.pnl.driver_pay"}}</div>
             </div>
         </div>
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition duration-200">
@@ -78,7 +78,7 @@
             </div>
             <div class="mt-3">
                 <div class="text-xl font-black tracking-tight tabular-nums text-cyan-strong dark:text-cyan-400 leading-none" data-numeric>₹{{printf "%.2f" $latest.FuelCosts}}</div>
-                <div class="text-xs font-medium text-secondary mt-1.5">Fuel Costs · latest day</div>
+                <div class="text-xs font-medium text-secondary mt-1.5">{{t "mo.pnl.fuel_latest"}}</div>
             </div>
         </div>
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 hover:shadow-md hover:-translate-y-px transition duration-200">
@@ -88,7 +88,7 @@
             </div>
             <div class="mt-3">
                 <div class="text-xl font-black tracking-tight tabular-nums text-violet-mid dark:text-violet-400 leading-none" data-numeric>{{$latest.TripCount}}</div>
-                <div class="text-xs font-medium text-secondary mt-1.5">Trips · latest day</div>
+                <div class="text-xs font-medium text-secondary mt-1.5">{{t "mo.pnl.trips_latest"}}</div>
             </div>
         </div>
     </div>
@@ -98,8 +98,8 @@
     <div id="pnl-container" class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h2 class="text-sm font-bold text-on-surface">Daily Snapshots</h2>
-                <p class="text-xs text-text-muted">One row per generated day, oldest first</p>
+                <h2 class="text-sm font-bold text-on-surface">{{t "mo.pnl.daily"}}</h2>
+                <p class="text-xs text-text-muted">{{t "mo.pnl.row_note"}}</p>
             </div>
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Snapshots}} days</span>
         </div>
@@ -107,33 +107,33 @@
             <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="th-cell">Date</th>
-                        <th class="th-cell-right">Revenue</th>
-                        <th class="th-cell-right">Expenses</th>
-                        <th class="th-cell-right">Fuel</th>
-                        <th class="th-cell-right">Payouts</th>
-                        <th class="th-cell-right">Net Profit</th>
-                        <th class="th-cell-right">Trips</th>
+                        <th class="th-cell">{{t "mo.c.date"}}</th>
+                        <th class="th-cell-right">{{t "mo.c.revenue"}}</th>
+                        <th class="th-cell-right">{{t "mo.c.expenses"}}</th>
+                        <th class="th-cell-right">{{t "mo.c.fuel"}}</th>
+                        <th class="th-cell-right">{{t "mo.pnl.payouts"}}</th>
+                        <th class="th-cell-right">{{t "mo.pnl.net"}}</th>
+                        <th class="th-cell-right">{{t "mo.c.trips"}}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
                     {{if .Snapshots}}
                     {{range .Snapshots}}
                     <tr class="hover:bg-surface-container-low/50 transition-colors">
-                        <td data-label="Date" class="px-3 py-2 text-sm font-semibold text-on-surface tabular-nums">{{.SnapshotDate}}</td>
-                        <td data-label="Revenue" class="px-3 py-2 text-sm text-right font-semibold tabular-nums text-status-success" data-numeric>₹{{printf "%.2f" .Revenue}}</td>
-                        <td data-label="Expenses" class="px-3 py-2 text-sm text-right font-semibold tabular-nums text-status-alert" data-numeric>₹{{printf "%.2f" .Expenses}}</td>
-                        <td data-label="Fuel" class="px-3 py-2 text-sm text-right tabular-nums text-secondary" data-numeric>₹{{printf "%.2f" .FuelCosts}}</td>
-                        <td data-label="Payouts" class="px-3 py-2 text-sm text-right tabular-nums text-secondary" data-numeric>₹{{printf "%.2f" .DriverPayouts}}</td>
-                        <td data-label="Net Profit" class="px-3 py-2 text-sm text-right font-black tabular-nums {{if gt .NetProfit 0.0}}text-emerald-500{{else}}text-red-500{{end}}" data-numeric>₹{{printf "%.2f" .NetProfit}}</td>
-                        <td data-label="Trips" class="px-3 py-2 text-sm text-right font-bold tabular-nums text-on-surface" data-numeric>{{.TripCount}}</td>
+                        <td data-label="{{t "mo.c.date"}}" class="px-3 py-2 text-sm font-semibold text-on-surface tabular-nums">{{.SnapshotDate}}</td>
+                        <td data-label="{{t "mo.c.revenue"}}" class="px-3 py-2 text-sm text-right font-semibold tabular-nums text-status-success" data-numeric>₹{{printf "%.2f" .Revenue}}</td>
+                        <td data-label="{{t "mo.c.expenses"}}" class="px-3 py-2 text-sm text-right font-semibold tabular-nums text-status-alert" data-numeric>₹{{printf "%.2f" .Expenses}}</td>
+                        <td data-label="{{t "mo.c.fuel"}}" class="px-3 py-2 text-sm text-right tabular-nums text-secondary" data-numeric>₹{{printf "%.2f" .FuelCosts}}</td>
+                        <td data-label="{{t "mo.pnl.payouts"}}" class="px-3 py-2 text-sm text-right tabular-nums text-secondary" data-numeric>₹{{printf "%.2f" .DriverPayouts}}</td>
+                        <td data-label="{{t "mo.pnl.net"}}" class="px-3 py-2 text-sm text-right font-black tabular-nums {{if gt .NetProfit 0.0}}text-emerald-500{{else}}text-red-500{{end}}" data-numeric>₹{{printf "%.2f" .NetProfit}}</td>
+                        <td data-label="{{t "mo.c.trips"}}" class="px-3 py-2 text-sm text-right font-bold tabular-nums text-on-surface" data-numeric>{{.TripCount}}</td>
                     </tr>
                     {{end}}
                     {{else}}
                     <tr><td colspan="7" class="px-4 py-12 text-center">
                         <div class="flex flex-col items-center gap-2">
                             <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 4-6"/></svg></div>
-                            <p class="text-sm font-medium text-on-surface">No P&amp;L snapshots in this range</p><p class="text-xs text-text-muted">Generate today's snapshot or widen the date window</p><button type="button" onclick="generatePNL()" class="mt-1 inline-flex px-3 py-1.5 rounded-full bg-primary text-on-primary text-xs font-bold">Generate Today</button>
+                            <p class="text-sm font-medium text-on-surface">{{t "mo.pnl.no_snap"}}</p><p class="text-xs text-text-muted">{{t "mo.pnl.widen"}}</p><button type="button" onclick="generatePNL(this)" data-msg-fail="{{t "mo.pnl.js_fail"}}" class="mt-1 inline-flex px-3 py-1.5 rounded-full bg-primary text-on-primary text-xs font-bold">{{t "mo.pnl.generate"}}</button>
                         </div>
                     </td></tr>
                     {{end}}
@@ -149,7 +149,7 @@ function loadPNL() {
     const to = document.getElementById('pnl-to').value;
     window.location.href = '/pnl/dashboard?from=' + from + '&to=' + to;
 }
-async function generatePNL() {
+async function generatePNL(btn) {
     const today = new Date().toISOString().split('T')[0];
     const res = await fetch('/api/v1/pnl/generate', {
         method: 'POST',
@@ -157,7 +157,10 @@ async function generatePNL() {
         body: JSON.stringify({ date: today })
     });
     if (res.ok) { location.reload(); }
-    else { alert('Failed to generate PNL'); }
+    else { var failMsg = 'Failed to generate PNL';
+        var failBtn = (btn && btn.dataset && btn.dataset.msgFail) ? btn : document.querySelector('[data-msg-fail]');
+        if (failBtn && failBtn.dataset && failBtn.dataset.msgFail) { failMsg = failBtn.dataset.msgFail; }
+        alert(failMsg); }
 }
 </script>
 {{end}}

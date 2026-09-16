@@ -3,18 +3,18 @@
         "Action" "/telemetry/devices"
         "Query" .Query
         "StatusFilter" .StatusFilter
-        "Chips" (chips "All Devices" "" "Inventory" "inventory" "Assigned" "assigned" "Active" "active" "Retired" "retired" "Quarantined" "quarantined")
+        "Chips" (chips (t "fl.all_devices") "" (t "fl.inventory") "inventory" (t "fl.assigned") "assigned" (t "fl.active_2") "active" (t "fl.retired") "retired" (t "fl.quarantined") "quarantined")
         "ShowDates" true
         "DateFilterError" .DateFilterError
         "DateFrom" .DateFrom
         "DateTo" .DateTo
         "ShowSearch" true
-        "SearchPlaceholder" "Search IMEI, serial, vehicle…"
+        "SearchPlaceholder" (t "fl.search_imei_serial_vehicle")
     )}}
     <div class="px-4 pb-2 border-b border-border-subtle flex items-center gap-3 bg-surface-container-lowest">
-        <span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{.Pagination.Total}} total</span>
+        <span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{.Pagination.Total}} {{t "fl.total"}}</span>
         {{if can .User "telemetry" "update"}}
-        {{template "btn.html" (dict "Label" "Register Devices" "Href" "/telemetry/devices/bulk" "Size" "sm" "Icon" "add")}}
+        {{template "btn.html" (dict "Label" (t "fl.register_devices") "Href" "/telemetry/devices/bulk" "Size" "sm" "Icon" "add")}}
         {{end}}
     </div>
 
@@ -24,11 +24,11 @@
             <thead class="bg-surface-container-low">
                 <tr>
                     <th class="px-3 py-2 text-left text-eyebrow text-text-muted">IMEI</th>
-                    <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Status</th>
-                    <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Vehicle</th>
-                    <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Type</th>
-                    <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Last Seen</th>
-                    <th class="px-3 py-2 text-right text-eyebrow text-text-muted">Actions</th>
+                    <th class="px-3 py-2 text-left text-eyebrow text-text-muted">{{t "fl.status"}}</th>
+                    <th class="px-3 py-2 text-left text-eyebrow text-text-muted">{{t "fl.vehicle"}}</th>
+                    <th class="px-3 py-2 text-left text-eyebrow text-text-muted">{{t "fl.type"}}</th>
+                    <th class="px-3 py-2 text-left text-eyebrow text-text-muted">{{t "fl.last_seen"}}</th>
+                    <th class="px-3 py-2 text-right text-eyebrow text-text-muted">{{t "fl.actions"}}</th>
                 </tr>
             </thead>
             <tbody id="telemetry-device-rows" class="divide-y divide-border-subtle text-sm text-on-surface">

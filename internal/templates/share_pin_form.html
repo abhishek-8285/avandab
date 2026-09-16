@@ -20,14 +20,14 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                 </svg>
             </div>
-            <h1 class="text-xl font-semibold text-on-surface font-display">Protected Trip Share</h1>
-            <p class="text-sm text-text-muted mt-1">Trip {{.TripNumber}} is protected by a PIN</p>
+            <h1 class="text-xl font-semibold text-on-surface font-display">{{t "sy.sharepin.title"}}</h1>
+            <p class="text-sm text-text-muted mt-1">{{t "sy.sharepin.trip_pre"}} {{.TripNumber}} {{t "sy.sharepin.trip_post"}}</p>
         </div>
 
         {{if .IsLocked}}
         <div class="mb-4 p-4 rounded-xl bg-status-alert/10 border border-status-alert/30 text-status-alert text-sm text-center">
-            <p class="font-semibold">Access Locked</p>
-            <p class="mt-1 text-xs">Too many failed attempts. Please try again in {{div .LockSeconds 60}} minute(s).</p>
+            <p class="font-semibold">{{t "sy.sharepin.locked"}}</p>
+            <p class="mt-1 text-xs">{{t "sy.sharepin.lock_pre"}} {{div .LockSeconds 60}} {{t "sy.sharepin.lock_post"}}</p>
         </div>
         {{else}}
             {{if .Error}}
@@ -38,14 +38,14 @@
 
             <form action="/share/{{.Token}}/verify" method="POST" class="space-y-4">
                 <div>
-                    <label for="pin" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Enter 4–6 Digit PIN</label>
+                    <label for="pin" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "sy.sharepin.pin_label"}}</label>
                     <input aria-label="••••" autocomplete="one-time-code" spellcheck="false" type="password" id="pin" name="pin" maxlength="6" pattern="[0-9]{4,6}" inputmode="numeric" required autofocus
                         placeholder="••••"
                         class="w-full px-4 py-3 rounded-lg border border-border-subtle bg-surface-container-low text-on-surface text-center text-2xl tracking-widest font-data-mono focus:outline-none focus:ring-2 focus:ring-primary/10 focus:border-primary transition">
                 </div>
                 <button type="submit"
                     class="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-full bg-primary hover:bg-primary/90 text-on-primary font-semibold text-sm transition shadow-sm hover:-translate-y-px cursor-pointer border-0">
-                    Unlock Live Map
+                    {{t "sy.sharepin.submit"}}
                 </button>
             </form>
         {{end}}

@@ -1,41 +1,41 @@
 {{define "customer_tracking.html"}}
 <!-- reuses booking_list_table.html partial reference for Spec 21 §4 consistency -->
-{{template "page_header.html" (dict "Title" "Shipment Tracking" "Subtitle" "Live status for your shipment")}}
+{{template "page_header.html" (dict "Title" (t "db.tracking_title") "Subtitle" (t "db.tracking_sub"))}}
 {{if false}}{{template "booking_list_table.html" .}}{{end}}
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="lg:col-span-2 bg-surface-container-lowest border border-border-subtle rounded-lg p-6 shadow-sm">
         <div class="flex items-center justify-between mb-4">
-            <h3 class="text-title-md font-semibold text-on-surface font-display">Trip {{.TripNumber}}</h3>
+            <h3 class="text-title-md font-semibold text-on-surface font-display">{{t "db.ct_trip"}} {{.TripNumber}}</h3>
             <span class="status-badge {{statusBadge .Status}}">{{.Status}}</span>
         </div>
         <dl class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
-                <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Trip ID</dt>
+                <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">{{t "db.ct_tripid"}}</dt>
                 <dd class="font-data-mono font-medium text-on-surface mt-0.5" data-numeric>{{.TripID}}</dd>
             </div>
             <div>
-                <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Vehicle</dt>
+                <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">{{t "db.ct_vehicle"}}</dt>
                 <dd class="font-medium text-on-surface mt-0.5">{{.VehicleLabel}}</dd>
             </div>
             <div>
-                <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">ETA Window</dt>
+                <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">{{t "db.ct_eta"}}</dt>
                 <dd class="font-medium text-on-surface tabular-nums mt-0.5" data-numeric>
                     {{if .EtaMin}}{{.EtaMin}} → {{.EtaMax}} <span class="text-xs text-text-muted">({{.EtaMethod}})</span>{{else}}—{{end}}
                 </dd>
             </div>
             <div>
-                <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Last Seen</dt>
+                <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">{{t "db.ct_seen"}}</dt>
                 <dd class="font-medium text-on-surface tabular-nums mt-0.5" data-numeric>{{if .LastSeen}}{{.LastSeen}}{{else}}—{{end}}</dd>
             </div>
             {{if .Lat}}
             <div>
-                <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Location</dt>
+                <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">{{t "db.ct_location"}}</dt>
                 <dd class="font-data-mono text-on-surface mt-0.5" data-numeric>{{.Lat}}, {{.Lng}}</dd>
             </div>
             {{end}}
             <div>
-                <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">Status</dt>
+                <dt class="text-xs font-bold uppercase tracking-wider text-text-muted">{{t "db.ct_status"}}</dt>
                 <dd class="font-medium text-on-surface mt-0.5">{{.Status}}</dd>
             </div>
         </dl>
@@ -47,25 +47,25 @@
         {{end}}
 
         <div class="mt-6 flex gap-3 flex-wrap">
-            <a href="/customer/bookings" class="inline-flex items-center rounded-full bg-surface-container-lowest border border-border-subtle px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">Back to Shipments</a>
-            <a href="/customer/tracking/{{.TripID}}" data-poll-url="/customer/tracking/{{.TripID}}" id="refresh-tracking" class="inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition">Refresh</a>
-            <a href="#feedback" class="ml-auto inline-flex items-center gap-2 rounded-full bg-surface-container-lowest border border-border-subtle px-4 py-2 text-sm font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors">Give Feedback</a>
+            <a href="/customer/bookings" class="inline-flex items-center rounded-full bg-surface-container-lowest border border-border-subtle px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">{{t "db.back_shipments"}}</a>
+            <a href="/customer/tracking/{{.TripID}}" data-poll-url="/customer/tracking/{{.TripID}}" id="refresh-tracking" class="inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition">{{t "db.refresh"}}</a>
+            <a href="#feedback" class="ml-auto inline-flex items-center gap-2 rounded-full bg-surface-container-lowest border border-border-subtle px-4 py-2 text-sm font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors">{{t "db.give_feedback"}}</a>
         </div>
 
         <div class="mt-6 bg-surface-container-low rounded-lg p-4 border border-border-subtle">
-            <h4 class="font-semibold text-sm text-on-surface font-display mb-2">Live Tracking (polls every 30s)</h4>
-            <p class="text-xs text-text-muted">This page auto-refreshes via <code>GET /customer/tracking/{{.TripID}}</code> every 30s when open. Keep this tab open for live updates.</p>
-            <div id="tracking-live-data" class="mt-3 text-xs font-data-mono bg-surface-container-lowest border border-border-subtle rounded p-3">
-                <div>Trip: {{.TripNumber}} | Status: {{.Status}} | Vehicle: {{.VehicleLabel}}</div>
-                <div>ETA: {{if .EtaMin}}{{.EtaMin}} — {{.EtaMax}}{{else}}not available{{end}}</div>
-                <div>Last seen: {{if .LastSeen}}{{.LastSeen}}{{else}}—{{end}}</div>
+            <h4 class="font-semibold text-sm text-on-surface font-display mb-2">{{t "db.live_tracking"}}</h4>
+            <p class="text-xs text-text-muted">{{t "db.ct_poll_pre"}} <code>GET /customer/tracking/{{.TripID}}</code> {{t "db.ct_poll_post"}}</p>
+            <div id="tracking-live-data" data-l-trip="{{t "db.live_trip"}}" data-l-status="{{t "db.live_status"}}" data-l-vehicle="{{t "db.live_vehicle"}}" data-l-eta="{{t "db.live_eta"}}" data-l-na="{{t "db.na"}}" data-l-seen="{{t "db.live_seen"}}" data-l-of="{{t "db.ct_of"}}" data-l-stopsdone="{{t "db.ct_stopsdone"}}" class="mt-3 text-xs font-data-mono bg-surface-container-lowest border border-border-subtle rounded p-3">
+                <div>{{t "db.live_trip"}}: {{.TripNumber}} | {{t "db.live_status"}}: {{.Status}} | {{t "db.live_vehicle"}}: {{.VehicleLabel}}</div>
+                <div>{{t "db.live_eta"}}: {{if .EtaMin}}{{.EtaMin}} — {{.EtaMax}}{{else}}{{t "db.na"}}{{end}}</div>
+                <div>{{t "db.live_seen"}}: {{if .LastSeen}}{{.LastSeen}}{{else}}—{{end}}</div>
             </div>
         </div>
     </div>
 
     <div class="bg-surface-container-lowest border border-border-subtle rounded-2xl p-6 shadow-sm" id="feedback">
-        <h3 class="text-title-md font-semibold text-on-surface font-display mb-2">Trip Feedback</h3>
-        <p class="text-sm text-text-muted mb-4">Rate your experience for trip {{.TripNumber}}.</p>
+        <h3 class="text-title-md font-semibold text-on-surface font-display mb-2">{{t "db.ct_feedback"}}</h3>
+        <p class="text-sm text-text-muted mb-4">{{t "db.ct_rate"}} {{.TripNumber}}.</p>
         {{template "trip_feedback.html" .}}
     </div>
 </div>
@@ -79,10 +79,11 @@
             .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
             .then(function(data){
                 var el = document.getElementById("tracking-live-data");
+                function liveT(k,f){ return (el&&el.dataset&&el.dataset[k])||f; }
                 if(el && data){
-                    el.innerHTML = "<div>Trip: "+(data.trip_number||tripId)+" | Status: "+(data.status||"")+" | Vehicle: "+(data.vehicle_label||"")+"</div>"+
-                        "<div>ETA: "+(data.eta_min||"—")+" — "+(data.eta_max||"—")+" ("+(data.eta_method||"")+")</div>"+
-                        "<div>Last seen: "+(data.last_seen||"—")+"</div>";
+                    el.innerHTML = "<div>"+liveT("lTrip","Trip")+": "+(data.trip_number||tripId)+" | "+liveT("lStatus","Status")+": "+(data.status||"")+" | "+liveT("lVehicle","Vehicle")+": "+(data.vehicle_label||"")+"</div>"+
+                        "<div>"+liveT("lEta","ETA")+": "+(data.eta_min||liveT("lNa","not available"))+" — "+(data.eta_max||"—")+" ("+(data.eta_method||"")+")</div>"+
+                        "<div>"+liveT("lSeen","Last seen")+": "+(data.last_seen||"—")+"</div>";
                 }
                 if(data.stops && data.stops.length > 0){
                     var total = data.stops.length;
@@ -91,7 +92,7 @@
                     var pBar = document.getElementById("multistop-progress-bar");
                     if(pBar) pBar.style.width = Math.round(pct) + "%";
                     var sumEl = document.getElementById("multistop-summary");
-                    if(sumEl) sumEl.textContent = completed + " of " + total + " stops complete";
+                    if(sumEl) sumEl.textContent = completed + liveT("lOf"," of ") + total + liveT("lStopsdone"," stops complete");
                 }
             })
             .catch(function(){});

@@ -1,4 +1,4 @@
-<a href="/trips" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Trips</a>
+<a href="/trips" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> {{t "tr.back"}}</a>
 
 <div class="space-y-5 max-w-[1600px] mx-auto">
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
@@ -20,29 +20,29 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2 flex-wrap shrink-0">
-                    <a href="/trips/{{.Trip.ID}}/playback" hx-boost="false" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 hover:shadow-sm transition text-decoration-none" title="Replay where the vehicle went"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><polygon points="5 3 19 12 5 21 5 3"/><circle cx="12" cy="12" r="10" opacity="0.15"/></svg> Playback</a>
-                    {{template "btn.html" (dict "Label" "Edit" "Href" (printf "/trips/%s/edit" .Trip.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit")}}
+                    <a href="/trips/{{.Trip.ID}}/playback" hx-boost="false" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 hover:shadow-sm transition text-decoration-none" title="{{t "tr.playback_tip"}}"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><polygon points="5 3 19 12 5 21 5 3"/><circle cx="12" cy="12" r="10" opacity="0.15"/></svg> {{t "tr.playback"}}</a>
+                    {{template "btn.html" (dict "Label" (t "tr.edit") "Href" (printf "/trips/%s/edit" .Trip.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit")}}
                 </div>
             </div>
 
             <dl class="grid grid-cols-2 lg:grid-cols-4 gap-3 px-5 pt-4 pb-5 mt-3 border-t border-border-subtle">
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-eyebrow text-text-muted">Departure</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "tr.departure_dt"}}</dt>
                     <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{datetime .Trip.DepartureTime}}</dd>
                 </div>
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-eyebrow text-text-muted">Arrival</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "tr.arrival_dt"}}</dt>
                     <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{if .Trip.ArrivalTime}}{{datetime .Trip.ArrivalTime}}{{else}}—{{end}}</dd>
                 </div>
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-eyebrow text-text-muted">Duration</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "tr.duration"}}</dt>
                     <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{if .Duration}}{{.Duration}}{{else}}—{{end}}</dd>
                 </div>
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-eyebrow text-text-muted">{{if .PnL.TripID}}Est. Margin{{else}}Customer Fare{{end}}</dt>
+                    <dt class="text-eyebrow text-text-muted">{{if .PnL.TripID}}{{t "tr.margin_hdr"}}{{else}}{{t "tr.fare_hdr"}}{{end}}</dt>
                     <dd class="text-base font-black mt-1 tabular-nums {{if .PnL.TripID}}{{if .PnL.MarginAvailable}}{{if .PnL.LowMargin}}text-status-alert{{else}}text-status-success{{end}}{{else}}text-on-surface{{end}}{{else}}text-primary{{end}}" data-numeric>
                         {{if .PnL.TripID}}
-                            {{if .PnL.MarginAvailable}}₹{{printf "%.0f–%.0f" .PnL.MarginLow .PnL.MarginHigh}}{{else}}Pending{{end}}
+                            {{if .PnL.MarginAvailable}}₹{{printf "%.0f–%.0f" .PnL.MarginLow .PnL.MarginHigh}}{{else}}{{t "tr.pending"}}{{end}}
                         {{else if .Booking}}
                             ₹{{printf "%.2f" .Booking.Price}}
                         {{else}}—{{end}}
@@ -61,24 +61,24 @@
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                 <div>
-                    <h3 class="text-sm font-bold text-on-surface">Shipment Details</h3>
-                    <p class="text-xs text-text-muted">Linked booking, crew and route</p>
+                    <h3 class="text-sm font-bold text-on-surface">{{t "tr.shipment_details"}}</h3>
+                    <p class="text-xs text-text-muted">{{t "tr.shipment_sub"}}</p>
                 </div>
-                <span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{if .Trip.DriverID}}Crew assigned{{else}}Unassigned{{end}}</span>
+                <span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{if .Trip.DriverID}}{{t "tr.crew_on"}}{{else}}{{t "tr.unassigned"}}{{end}}</span>
             </div>
             <div class="p-5">
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-eyebrow text-text-muted">Booking</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "tr.booking"}}</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">
                         {{with .Booking}}
                         <a href="/bookings/{{.ID}}" class="text-primary hover:underline font-data-mono font-bold text-decoration-none">{{.BookingNumber}}</a>
-                        <span class="text-text-muted">· status {{.Status}}</span>
-                        {{else}}<span class="text-text-muted">No booking linked</span>{{end}}
+                        <span class="text-text-muted">· {{t "tr.status_word"}} {{.Status}}</span>
+                        {{else}}<span class="text-text-muted">{{t "tr.no_booking"}}</span>{{end}}
                     </dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-eyebrow text-text-muted">Customer</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "tr.customer"}}</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">
                         {{with .Booking}}{{if .CustomerName}}
                         <a href="/customers/{{.CustomerID}}" class="hover:text-primary transition-colors text-decoration-none">{{.CustomerName}}</a>
@@ -86,24 +86,24 @@
                     </dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-eyebrow text-text-muted">Driver</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "tr.driver"}}</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">
                         {{if .Trip.DriverID}}
                         <a href="/drivers/{{.Trip.DriverID}}" class="hover:text-primary transition-colors text-decoration-none">{{if .Trip.DriverFirstName}}{{.Trip.DriverFirstName}} {{.Trip.DriverLastName}}{{else}}{{.Trip.DriverDisplayID}}{{end}}</a>
-                        {{else}}<span class="text-text-muted">Unassigned</span>{{end}}
+                        {{else}}<span class="text-text-muted">{{t "tr.unassigned"}}</span>{{end}}
                     </dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-eyebrow text-text-muted">Vehicle</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "tr.vehicle"}}</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">
                         {{if .Trip.VehicleID}}
                         <a href="/vehicles/{{.Trip.VehicleID}}" class="hover:text-primary transition-colors text-decoration-none font-data-mono font-bold tabular-nums">{{.Trip.VehicleRegistrationNumber}}</a>
                         <span class="text-text-muted text-xs">· {{.Trip.VehicleNumber}}</span>
-                        {{else}}<span class="text-text-muted">Unassigned</span>{{end}}
+                        {{else}}<span class="text-text-muted">{{t "tr.unassigned"}}</span>{{end}}
                     </dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-eyebrow text-text-muted">Route</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "tr.route"}}</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">
                         {{if .Trip.RouteID}}<a href="/routes/{{.Trip.RouteID}}" class="hover:text-primary transition-colors text-decoration-none">{{end}}
                         {{.Trip.RouteSource}} → {{.Trip.RouteDestination}}{{if .Trip.RouteID}}</a>{{end}}
@@ -111,13 +111,13 @@
                 </div>
                 {{with .Booking}}{{if or .CargoWeight .Passengers}}
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-eyebrow text-text-muted">Cargo / Passengers</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "tr.cargo_pax"}}</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1 tabular-nums" data-numeric>{{if .CargoWeight}}{{.CargoWeight}} kg{{end}}{{if and .CargoWeight .Passengers}} · {{end}}{{if .Passengers}}{{.Passengers}} pax{{end}}</dd>
                 </div>
                 {{end}}{{end}}
                 {{if .Trip.Remarks}}
                 <div class="sm:col-span-2">
-                    <dt class="text-eyebrow text-text-muted">Remarks</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "tr.remarks"}}</dt>
                     <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed">{{.Trip.Remarks}}</dd>
                 </div>
                 {{end}}
@@ -126,13 +126,13 @@
             {{if .PODOTP}}
             <section class="mt-6 pt-5 border-t border-border-subtle">
                 <div class="flex items-center gap-3 flex-wrap">
-                    <h3 class="text-title-md font-semibold text-on-surface font-display">Delivery OTP</h3>
+                    <h3 class="text-title-md font-semibold text-on-surface font-display">{{t "tr.otp_title"}}</h3>
                     <span class="px-3 py-1 rounded-lg border border-primary/30 bg-primary/10 text-primary font-data-mono text-lg font-black tracking-[0.3em] select-all tabular-nums" data-numeric>{{.PODOTP}}</span>
-                    <span class="text-xs text-text-muted">Read this code to the consignee at delivery — the driver must type it back to complete the e-POD. Valid 48h.</span>
+                    <span class="text-xs text-text-muted">{{t "tr.otp_hint"}}</span>
                     <form method="post" action="/trips/{{.Trip.ID}}/send-pod-otp" class="inline">
-                        <button type="submit" class="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-container-lowest px-3 py-1.5 text-xs font-semibold text-on-surface hover:bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-border-subtle">Send by SMS</button>
+                        <button type="submit" class="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-container-lowest px-3 py-1.5 text-xs font-semibold text-on-surface hover:bg-surface-container-low focus:outline-none focus:ring-2 focus:ring-border-subtle">{{t "tr.send_sms"}}</button>
                     </form>
-                    {{if not .SMSEnabled}}<span class="text-[11px] text-text-muted">(SMS channel not configured — relay manually)</span>{{end}}
+                    {{if not .SMSEnabled}}<span class="text-[11px] text-text-muted">{{t "tr.sms_off"}}</span>{{end}}
                 </div>
                 {{if .FlashMsg}}
                 <div class="mt-3 text-xs font-medium rounded-md px-3 py-2 {{if .FlashOK}}bg-status-success/10 text-status-success{{else}}bg-status-alert/10 text-status-alert{{end}}">{{.FlashMsg}}</div>
@@ -143,17 +143,17 @@
             {{if .PnL.TripID}}
             <section class="mt-6 pt-5 border-t border-border-subtle" aria-labelledby="trip-pnl-heading">
                 <div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
-                    <h3 id="trip-pnl-heading" class="text-sm font-bold text-on-surface font-display">Live Trip P&amp;L</h3>
-                    {{if .PnL.MarginAvailable}}{{if .PnL.LowMargin}}<span class="inline-flex px-2 py-1 rounded-full bg-status-alert/10 border border-status-alert/15 text-[11px] font-bold text-status-alert">Margin risk above 10%</span>{{end}}{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-status-warning/10 border border-status-warning/15 text-[11px] font-bold text-status-warning">Pending fuel verification</span>{{end}}
+                    <h3 id="trip-pnl-heading" class="text-sm font-bold text-on-surface font-display">{{t "tr.pnl"}}</h3>
+                    {{if .PnL.MarginAvailable}}{{if .PnL.LowMargin}}<span class="inline-flex px-2 py-1 rounded-full bg-status-alert/10 border border-status-alert/15 text-[11px] font-bold text-status-alert">{{t "tr.margin_risk"}}</span>{{end}}{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-status-warning/10 border border-status-warning/15 text-[11px] font-bold text-status-warning">{{t "tr.pending_fuel"}}</span>{{end}}
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-eyebrow text-text-muted">Quoted fare</dt><dd class="text-sm font-bold text-on-surface tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .PnL.QuotedFare}}</dd></div>
-                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-eyebrow text-text-muted">Fuel cost (estimated)</dt><dd class="text-sm font-bold text-on-surface tabular-nums mt-1" data-numeric>{{if .PnL.MarginAvailable}}₹{{printf "%.2f–%.2f" .PnL.FuelCostLow .PnL.FuelCostHigh}}{{else}}Pending{{end}}</dd></div>
-                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-eyebrow text-text-muted">Tolls</dt><dd class="text-sm font-bold text-on-surface tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .PnL.TollCost}}</dd></div>
-                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-eyebrow text-text-muted">Approved kharcha</dt><dd class="text-sm font-bold text-on-surface tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .PnL.KharchaApproved}}</dd></div>
-                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-eyebrow text-text-muted">Estimated margin</dt><dd class="text-sm font-black tabular-nums mt-1 {{if .PnL.LowMargin}}text-status-alert{{else}}text-status-success{{end}}" data-numeric>{{if .PnL.MarginAvailable}}{{printf "%.2f–%.2f" .PnL.MarginLow .PnL.MarginHigh}} ({{printf "%.1f" .PnL.MarginPercentage}}%){{else}}Pending verification{{end}}</dd></div>
+                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-eyebrow text-text-muted">{{t "tr.quoted_fare"}}</dt><dd class="text-sm font-bold text-on-surface tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .PnL.QuotedFare}}</dd></div>
+                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-eyebrow text-text-muted">{{t "tr.fuel_cost"}}</dt><dd class="text-sm font-bold text-on-surface tabular-nums mt-1" data-numeric>{{if .PnL.MarginAvailable}}₹{{printf "%.2f–%.2f" .PnL.FuelCostLow .PnL.FuelCostHigh}}{{else}}{{t "tr.pending"}}{{end}}</dd></div>
+                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-eyebrow text-text-muted">{{t "tr.tolls"}}</dt><dd class="text-sm font-bold text-on-surface tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .PnL.TollCost}}</dd></div>
+                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-eyebrow text-text-muted">{{t "tr.kharcha_approved"}}</dt><dd class="text-sm font-bold text-on-surface tabular-nums mt-1" data-numeric>₹{{printf "%.2f" .PnL.KharchaApproved}}</dd></div>
+                    <div class="rounded-xl bg-surface-container-low p-3"><dt class="text-eyebrow text-text-muted">{{t "tr.est_margin"}}</dt><dd class="text-sm font-black tabular-nums mt-1 {{if .PnL.LowMargin}}text-status-alert{{else}}text-status-success{{end}}" data-numeric>{{if .PnL.MarginAvailable}}{{printf "%.2f–%.2f" .PnL.MarginLow .PnL.MarginHigh}} ({{printf "%.1f" .PnL.MarginPercentage}}%){{else}}{{t "tr.pending_verif"}}{{end}}</dd></div>
                 </div>
-                <p class="text-xs text-text-muted mt-3">Fuel consumed estimate: {{printf "%.1f" .PnL.FuelConsumedLiters}} L · Confidence: {{.PnL.Confidence}}</p>
+                <p class="text-xs text-text-muted mt-3">{{t "tr.fuel_used"}}: {{printf "%.1f" .PnL.FuelConsumedLiters}} L · {{t "tr.confidence"}}: {{.PnL.Confidence}}</p>
             </section>
             {{end}}
             </div>
@@ -164,39 +164,39 @@
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                 <h3 class="flex items-center gap-2 text-sm font-bold text-on-surface">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    Execution Timeline
+                    {{t "tr.timeline"}}
                 </h3>
-                <span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">Lifecycle</span>
+                <span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{t "tr.lifecycle_badge"}}</span>
             </div>
             <div class="p-5">
             {{if eq .Trip.Status "cancelled"}}
-            <div class="p-3 rounded-md bg-status-alert/10 border border-status-alert/30 text-xs text-status-alert mb-5"><strong>Trip cancelled.</strong> Lifecycle steps below are historical.</div>
+            <div class="p-3 rounded-md bg-status-alert/10 border border-status-alert/30 text-xs text-status-alert mb-5"><strong>{{t "tr.cancelled_strong"}}</strong> {{t "tr.cancelled_hist"}}</div>
             {{end}}
             <ol class="relative ml-2 border-l-2 border-border-subtle space-y-6">
                 <li class="pl-6 relative">
                     <span class="absolute -left-[9px] top-1 w-3.5 h-3.5 rounded-full border-2 {{if .Trip.StartedAt}}bg-status-success border-status-success{{else}}bg-surface-container-lowest border-border-subtle{{end}}"></span>
-                    <p class="text-sm font-semibold {{if .Trip.StartedAt}}text-on-surface{{else}}text-text-muted{{end}}">Started</p>
-                    <p class="text-xs text-text-muted tabular-nums">{{if .Trip.StartedAt}}{{datetime .Trip.StartedAt}}{{else}}Waiting for dispatch{{end}}</p>
+                    <p class="text-sm font-semibold {{if .Trip.StartedAt}}text-on-surface{{else}}text-text-muted{{end}}">{{t "tr.tl_started"}}</p>
+                    <p class="text-xs text-text-muted tabular-nums">{{if .Trip.StartedAt}}{{datetime .Trip.StartedAt}}{{else}}{{t "tr.waiting_dispatch"}}{{end}}</p>
                 </li>
                 <li class="pl-6 relative">
                     <span class="absolute -left-[9px] top-1 w-3.5 h-3.5 rounded-full border-2 {{if .Trip.ReachedPickupAt}}bg-status-success border-status-success{{else}}bg-surface-container-lowest border-border-subtle{{end}}"></span>
-                    <p class="text-sm font-semibold {{if .Trip.ReachedPickupAt}}text-on-surface{{else}}text-text-muted{{end}}">Reached Pickup</p>
+                    <p class="text-sm font-semibold {{if .Trip.ReachedPickupAt}}text-on-surface{{else}}text-text-muted{{end}}">{{t "tr.tl_pickup"}}</p>
                     <p class="text-xs text-text-muted tabular-nums">{{if .Trip.ReachedPickupAt}}{{datetime .Trip.ReachedPickupAt}}{{else}}—{{end}}</p>
                 </li>
                 <li class="pl-6 relative">
                     <span class="absolute -left-[9px] top-1 w-3.5 h-3.5 rounded-full border-2 {{if .Trip.InTransitAt}}bg-primary border-primary{{else}}bg-surface-container-lowest border-border-subtle{{end}}"></span>
-                    <p class="text-sm font-semibold {{if .Trip.InTransitAt}}text-on-surface{{else}}text-text-muted{{end}}">In Transit</p>
+                    <p class="text-sm font-semibold {{if .Trip.InTransitAt}}text-on-surface{{else}}text-text-muted{{end}}">{{t "tr.tl_transit"}}</p>
                     <p class="text-xs text-text-muted tabular-nums">{{if .Trip.InTransitAt}}{{datetime .Trip.InTransitAt}}{{else}}—{{end}}</p>
                 </li>
                 <li class="pl-6 relative">
                     <span class="absolute -left-[9px] top-1 w-3.5 h-3.5 rounded-full border-2 {{if .Trip.DeliveredAt}}bg-status-success border-status-success{{else}}bg-surface-container-lowest border-border-subtle{{end}}"></span>
-                    <p class="text-sm font-semibold {{if .Trip.DeliveredAt}}text-on-surface{{else}}text-text-muted{{end}}">Delivered</p>
+                    <p class="text-sm font-semibold {{if .Trip.DeliveredAt}}text-on-surface{{else}}text-text-muted{{end}}">{{t "tr.tl_delivered"}}</p>
                     <p class="text-xs text-text-muted tabular-nums">{{if .Trip.DeliveredAt}}{{datetime .Trip.DeliveredAt}}{{else}}—{{end}}</p>
                 </li>
                 <li class="pl-6 relative">
                     <span class="absolute -left-[9px] top-1 w-3.5 h-3.5 rounded-full border-2 {{if .Trip.CompletedAt}}bg-status-success border-status-success{{else}}bg-surface-container-lowest border-border-subtle{{end}}"></span>
-                    <p class="text-sm font-semibold {{if .Trip.CompletedAt}}text-on-surface{{else}}text-text-muted{{end}}">Completed</p>
-                    <p class="text-xs text-text-muted tabular-nums">{{if .Trip.CompletedAt}}{{datetime .Trip.CompletedAt}}{{else}}Invoice is generated automatically on completion{{end}}</p>
+                    <p class="text-sm font-semibold {{if .Trip.CompletedAt}}text-on-surface{{else}}text-text-muted{{end}}">{{t "tr.tl_completed"}}</p>
+                    <p class="text-xs text-text-muted tabular-nums">{{if .Trip.CompletedAt}}{{datetime .Trip.CompletedAt}}{{else}}{{t "tr.invoice_auto"}}{{end}}</p>
                 </li>
             </ol>
             </div>
@@ -205,16 +205,16 @@
         <!-- Proof of Delivery — OTP state + attached photos -->
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
-                <h3 class="text-sm font-bold text-on-surface">Proof of Delivery</h3>
+                <h3 class="text-sm font-bold text-on-surface">{{t "tr.pod"}}</h3>
                 {{if and .Trip.DeliveredAt (gt (len .PODFiles) 0)}}<span class="inline-flex px-2 py-0.5 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong">Complete · {{len .PODFiles}} photo{{if gt (len .PODFiles) 1}}s{{end}}</span>
                 {{else if gt (len .PODFiles) 0}}<span class="inline-flex px-2 py-0.5 rounded-full bg-blue-soft border border-blue-line text-[11px] font-bold text-blue-strong">{{len .PODFiles}} photo{{if gt (len .PODFiles) 1}}s{{end}} · awaiting delivery</span>
-                {{else}}<span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container text-[11px] font-bold text-text-muted border border-border-subtle">No photos yet</span>{{end}}
+                {{else}}<span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container text-[11px] font-bold text-text-muted border border-border-subtle">{{t "tr.pod_none"}}</span>{{end}}
             </div>
             <div class="p-5">
             <ul class="space-y-2 text-sm">
-                <li class="flex items-center gap-2">{{if .Trip.DeliveredAt}}<span class="text-emerald-mid">✓</span><span class="font-medium text-on-surface">Delivered <span class="text-text-muted tabular-nums">{{datetime .Trip.DeliveredAt}}</span></span>{{else}}<span class="text-text-muted">○</span><span class="text-text-muted">Not delivered yet</span>{{end}}</li>
-                <li class="flex items-center gap-2">{{if .PODOTP}}<span class="text-emerald-mid">✓</span><span class="font-medium text-on-surface">Delivery OTP issued</span>{{else}}<span class="text-text-muted">○</span><span class="text-text-muted">No OTP issued</span>{{end}}</li>
-                <li class="flex items-center gap-2">{{if gt (len .PODFiles) 0}}<span class="text-emerald-mid">✓</span><span class="font-medium text-on-surface">{{len .PODFiles}} POD photo{{if gt (len .PODFiles) 1}}s{{end}} attached</span>{{else}}<span class="text-text-muted">○</span><span class="text-text-muted">No POD photos attached</span>{{end}}</li>
+                <li class="flex items-center gap-2">{{if .Trip.DeliveredAt}}<span class="text-emerald-mid">✓</span><span class="font-medium text-on-surface">{{t "tr.tl_delivered"}} <span class="text-text-muted tabular-nums">{{datetime .Trip.DeliveredAt}}</span></span>{{else}}<span class="text-text-muted">○</span><span class="text-text-muted">{{t "tr.not_delivered"}}</span>{{end}}</li>
+                <li class="flex items-center gap-2">{{if .PODOTP}}<span class="text-emerald-mid">✓</span><span class="font-medium text-on-surface">{{t "tr.otp_issued"}}</span>{{else}}<span class="text-text-muted">○</span><span class="text-text-muted">{{t "tr.no_otp"}}</span>{{end}}</li>
+                <li class="flex items-center gap-2">{{if gt (len .PODFiles) 0}}<span class="text-emerald-mid">✓</span><span class="font-medium text-on-surface">{{len .PODFiles}} POD photo{{if gt (len .PODFiles) 1}}s{{end}} attached</span>{{else}}<span class="text-text-muted">○</span><span class="text-text-muted">{{t "tr.no_pod_photos"}}</span>{{end}}</li>
             </ul>
             {{if .PODFiles}}
             <div class="grid grid-cols-3 sm:grid-cols-4 gap-2 mt-4">
@@ -227,9 +227,9 @@
             </div>
             {{end}}
             <form method="post" action="/trips/{{.Trip.ID}}/pod" enctype="multipart/form-data" class="mt-4 flex items-center gap-2 flex-wrap">
-                <input type="file" name="file" accept="image/*,.pdf" aria-label="Attach POD photo" required class="text-sm text-secondary file:mr-3 file:px-4 file:py-2 file:rounded-full file:border file:border-border-subtle file:bg-surface-container-low file:text-sm file:font-semibold file:text-on-surface hover:file:bg-surface-container transition-colors">
-                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 transition">Attach photo</button>
-                <span class="text-xs text-text-muted">Max 25MB · JPG/PNG/PDF</span>
+                <input type="file" name="file" accept="image/*,.pdf" aria-label="{{t "tr.pod_aria"}}" required class="text-sm text-secondary file:mr-3 file:px-4 file:py-2 file:rounded-full file:border file:border-border-subtle file:bg-surface-container-low file:text-sm file:font-semibold file:text-on-surface hover:file:bg-surface-container transition-colors">
+                <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 transition">{{t "tr.attach"}}</button>
+                <span class="text-xs text-text-muted">{{t "tr.pod_limit"}}</span>
             </form>
             </div>
         </section>
@@ -238,12 +238,12 @@
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 flex-wrap">
                 <div class="flex items-center gap-2">
-                    <h3 class="text-sm font-bold text-on-surface">Trip Expenses (Kharcha)</h3>
-                    {{if .Kharcha}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Kharcha}} entries</span>{{end}}
+                    <h3 class="text-sm font-bold text-on-surface">{{t "tr.kharcha_title"}}</h3>
+                    {{if .Kharcha}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Kharcha}} {{t "tr.entries"}}</span>{{end}}
                 </div>
                 <div class="flex items-center gap-3">
-                    {{if .Kharcha}}<span class="text-sm font-bold text-on-surface tabular-nums" data-numeric>₹{{printf "%.2f" .KharchaTotal}} <span class="text-xs font-normal text-text-muted">recorded</span></span>{{end}}
-                    <a href="/kharcha/ledger" class="text-xs font-semibold text-primary hover:underline text-decoration-none">Full ledger →</a>
+                    {{if .Kharcha}}<span class="text-sm font-bold text-on-surface tabular-nums" data-numeric>₹{{printf "%.2f" .KharchaTotal}} <span class="text-xs font-normal text-text-muted">{{t "tr.recorded"}}</span></span>{{end}}
+                    <a href="/kharcha/ledger" class="text-xs font-semibold text-primary hover:underline text-decoration-none">{{t "tr.full_ledger"}}</a>
                 </div>
             </div>
             <div class="p-5">
@@ -253,7 +253,7 @@
                 <div class="flex items-center justify-between gap-3 py-2.5">
                     <div class="min-w-0 flex items-center gap-2.5">
                         <span class="px-2 py-0.5 rounded-full text-[11px] font-bold bg-surface-container-low border border-border-subtle capitalize shrink-0">{{.Category}}</span>
-                        <p class="text-sm text-on-surface truncate">{{if .Description}}{{.Description}}{{else}}<span class="text-text-muted">No description</span>{{end}}</p>
+                        <p class="text-sm text-on-surface truncate">{{if .Description}}{{.Description}}{{else}}<span class="text-text-muted">{{t "tr.no_desc"}}</span>{{end}}</p>
                     </div>
                     <span class="flex items-center gap-3 shrink-0">
                         <span class="text-xs text-text-muted tabular-nums">{{datetime .CreatedAt}}</span>
@@ -264,7 +264,7 @@
                 {{end}}
             </div>
             {{else}}
-            <p class="text-sm text-text-muted">No expenses recorded for this trip yet.</p>
+            <p class="text-sm text-text-muted">{{t "tr.no_kharcha"}}</p>
             {{end}}
             </div>
         </section>
@@ -279,15 +279,15 @@
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                 <h2 class="flex items-center gap-2 text-sm font-bold text-on-surface">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    Billing
+                    {{t "tr.billing"}}
                 </h2>
                 <span class="status-badge inline-flex px-2 py-1 text-[11px] font-bold rounded-full {{statusBadge .PaymentStatus}}">{{.PaymentStatus}}</span>
             </div>
             <div class="p-5 space-y-4">
                 <div class="bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white hover:shadow-lg transition">
-                    <div class="text-eyebrow text-white/80">Invoice Total</div>
+                    <div class="text-eyebrow text-white/80">{{t "tr.invoice_total"}}</div>
                     <div class="text-2xl font-black tabular-nums leading-tight mt-1">₹{{printf "%.2f" .Total}}</div>
-                    <a href="/invoices/{{.ID}}" class="text-xs font-semibold text-white/90 hover:text-white hover:underline text-decoration-none mt-2 inline-block">{{.InvoiceNumber}} · View invoice →</a>
+                    <a href="/invoices/{{.ID}}" class="text-xs font-semibold text-white/90 hover:text-white hover:underline text-decoration-none mt-2 inline-block">{{.InvoiceNumber}} · {{t "tr.view_invoice"}}</a>
                 </div>
             </div>
         </div>
@@ -296,83 +296,83 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden h-fit">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                <h2 class="text-sm font-bold text-on-surface">Actions</h2>
+                <h2 class="text-sm font-bold text-on-surface">{{t "tr.actions"}}</h2>
             </div>
             <div class="p-5 flex flex-col gap-2 items-stretch">
                 {{if eq .Trip.Status "draft"}}
                 <form method="POST" action="/trips/{{.Trip.ID}}/schedule">
-                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Schedule" "Class" "min-h-[44px] w-full")}}
+                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" (t "tr.schedule") "Class" "min-h-[44px] w-full")}}
                 </form>
-                <form method="POST" action="/trips/{{.Trip.ID}}/delete" data-confirm="Are you sure? This cannot be undone.">
-                    {{template "btn.html" (dict "Variant" "danger" "Size" "sm" "Type" "submit" "Label" "Delete" "Class" "min-h-[44px] focus-visible:ring-status-alert w-full")}}
+                <form method="POST" action="/trips/{{.Trip.ID}}/delete" data-confirm="{{t "tr.confirm_delete"}}">
+                    {{template "btn.html" (dict "Variant" "danger" "Size" "sm" "Type" "submit" "Label" (t "tr.delete") "Class" "min-h-[44px] focus-visible:ring-status-alert w-full")}}
                 </form>
                 {{end}}
 
                 {{if eq .Trip.Status "scheduled"}}
                 <form method="POST" action="/trips/{{.Trip.ID}}/assign-driver" class="flex items-center gap-1 flex-wrap" data-post>
-                    <select name="driver_id" aria-label="Driver" class="flex-1 min-w-[8rem] bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 transition-colors">
+                    <select name="driver_id" aria-label="{{t "tr.driver"}}" class="flex-1 min-w-[8rem] bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 transition-colors">
                         {{range .AvailableDrivers}}
                         <option value="{{.ID}}">{{.FirstName}} {{.LastName}}</option>
                         {{end}}
                     </select>
-                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Assign Driver" "Class" "min-h-[44px]")}}
+                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" (t "tr.assign_driver") "Class" "min-h-[44px]")}}
                 </form>
                 <form method="POST" action="/trips/{{.Trip.ID}}/assign-vehicle" class="flex items-center gap-1 flex-wrap">
-                    <select name="vehicle_id" aria-label="Vehicle" class="flex-1 min-w-[8rem] bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 transition-colors">
+                    <select name="vehicle_id" aria-label="{{t "tr.vehicle"}}" class="flex-1 min-w-[8rem] bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 transition-colors">
                         {{range .AvailableVehicles}}
                         <option value="{{.ID}}">{{.VehicleNumber}} ({{.RegistrationNumber}})</option>
                         {{end}}
                     </select>
-                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Assign Vehicle" "Class" "min-h-[44px]")}}
+                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" (t "tr.assign_vehicle") "Class" "min-h-[44px]")}}
                 </form>
                 {{end}}
 
                 {{if eq .Trip.Status "assigned"}}
                 <form method="POST" action="/trips/{{.Trip.ID}}/start">
-                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Start Trip" "Class" "min-h-[44px] w-full")}}
+                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" (t "tr.start") "Class" "min-h-[44px] w-full")}}
                 </form>
                 {{end}}
 
                 {{if eq .Trip.Status "started"}}
                 <form method="POST" action="/trips/{{.Trip.ID}}/reach-pickup">
-                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Reach Pickup" "Class" "min-h-[44px] w-full")}}
+                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" (t "tr.reach_pickup") "Class" "min-h-[44px] w-full")}}
                 </form>
                 {{end}}
 
                 {{if eq .Trip.Status "reached_pickup"}}
                 <form method="POST" action="/trips/{{.Trip.ID}}/in-transit">
-                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "In Transit" "Class" "min-h-[44px] w-full")}}
+                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" (t "tr.in_transit") "Class" "min-h-[44px] w-full")}}
                 </form>
                 {{end}}
 
                 {{if eq .Trip.Status "in_transit"}}
                 <form method="POST" action="/trips/{{.Trip.ID}}/deliver">
-                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Deliver" "Class" "min-h-[44px] w-full")}}
+                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" (t "tr.deliver") "Class" "min-h-[44px] w-full")}}
                 </form>
                 {{end}}
 
                 {{if eq .Trip.Status "delivered"}}
                 <form method="POST" action="/trips/{{.Trip.ID}}/complete" class="space-y-3 rounded-xl border border-border-subtle bg-surface-container-low p-3">
                     <p class="text-eyebrow text-text-muted">Trip Close (SOP ZMOTM_MMS)</p>
-                    {{template "field.html" (dict "Label" "Close Odometer (km)" "Name" "close_odometer" "Type" "number" "Placeholder" "e.g. 125400" "Hint" "Counter reading at close")}}
+                    {{template "field.html" (dict "Label" (t "tr.close_odo") "Name" "close_odometer" "Type" "number" "Placeholder" "e.g. 125400" "Hint" (t "tr.close_odo_hint"))}}
                     <label class="flex items-center gap-2 text-sm font-semibold text-on-surface cursor-pointer">
                         <input type="checkbox" name="breakdown" value="1" class="w-4 h-4 accent-[var(--color-status-alert)]">
-                        Breakdown — file outstanding notification
+                        {{t "tr.breakdown"}}
                     </label>
-                    {{template "field.html" (dict "Label" "Breakdown Note" "Name" "breakdown_note" "Placeholder" "What failed, where")}}
-                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" "Complete Trip" "Class" "min-h-[44px] w-full")}}
+                    {{template "field.html" (dict "Label" (t "tr.breakdown_note") "Name" "breakdown_note" "Placeholder" (t "tr.breakdown_ph"))}}
+                    {{template "btn.html" (dict "Variant" "primary" "Size" "sm" "Type" "submit" "Label" (t "tr.complete_trip") "Class" "min-h-[44px] w-full")}}
                 </form>
                 {{end}}
                 {{if and (eq .Trip.Status "completed") .Trip.CloseOdometer}}
                 <div class="rounded-xl border border-border-subtle bg-surface-container-low p-3">
-                    <p class="text-eyebrow text-text-muted">Close Reading</p>
+                    <p class="text-eyebrow text-text-muted">{{t "tr.close_reading"}}</p>
                     <p class="text-sm font-semibold text-on-surface tabular-nums" data-numeric>{{print .Trip.CloseOdometer}} km</p>
                 </div>
                 {{end}}
 
                 {{if or (eq .Trip.Status "scheduled") (eq .Trip.Status "assigned") (eq .Trip.Status "started") (eq .Trip.Status "reached_pickup") (eq .Trip.Status "in_transit") (eq .Trip.Status "delivered")}}
                 <form method="POST" action="/trips/{{.Trip.ID}}/cancel">
-                    {{template "btn.html" (dict "Variant" "danger" "Size" "sm" "Type" "submit" "Label" "Cancel" "Class" "min-h-[44px] focus-visible:ring-status-alert w-full")}}
+                    {{template "btn.html" (dict "Variant" "danger" "Size" "sm" "Type" "submit" "Label" (t "tr.cancel") "Class" "min-h-[44px] focus-visible:ring-status-alert w-full")}}
                 </form>
                 {{end}}
             </div>

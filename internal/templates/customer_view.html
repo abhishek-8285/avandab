@@ -1,4 +1,4 @@
-<a href="/customers" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Customers</a>
+<a href="/customers" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> {{t "fl.customers"}}</a>
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
     <div class="lg:col-span-2 space-y-4">
@@ -19,25 +19,25 @@
                     </div>
                     <p class="text-sm text-text-muted mt-1.5 flex flex-wrap items-center gap-2">
                         {{if .Customer.Company}}<span class="font-medium text-secondary">{{nullString .Customer.Company}}</span><span>·</span>{{end}}
-                        <span class="tabular-nums">Since {{datetime .Customer.CreatedAt}}</span>
+                        <span class="tabular-nums">{{t "fl.since"}} {{datetime .Customer.CreatedAt}}</span>
                         {{if .Customer.CustomerCode}}<span>·</span><span class="font-data-mono tabular-nums text-primary font-semibold">{{.Customer.CustomerCode}}</span>{{end}}
                     </p>
                     {{if and .Customer.InternalID (ne (nullString .Customer.InternalID) .Customer.CustomerCode)}}<p class="text-xs font-data-mono tabular-nums text-text-muted mt-1">Ref: {{nullString .Customer.InternalID}}</p>{{end}}
                 </div>
                 <div class="hidden sm:flex items-center gap-2 shrink-0 self-start">
-                    {{template "btn.html" (dict "Label" "Statement (Khata)" "Href" (printf "/customers/%s/statement" .Customer.ID) "Variant" "secondary" "Size" "sm" "Icon" "receipt")}}
-                    {{template "btn.html" (dict "Label" "Consolidate Invoices" "Href" (printf "/customers/%s/statement#unbilled-trips" .Customer.ID) "Variant" "primary" "Size" "sm" "Icon" "add")}}
-                    {{template "btn.html" (dict "Label" "Edit" "Href" (printf "/customers/%s/edit" .Customer.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit")}}
+                    {{template "btn.html" (dict "Label" (t "fl.statement_khata") "Href" (printf "/customers/%s/statement" .Customer.ID) "Variant" "secondary" "Size" "sm" "Icon" "receipt")}}
+                    {{template "btn.html" (dict "Label" (t "fl.consolidate_invoices") "Href" (printf "/customers/%s/statement#unbilled-trips" .Customer.ID) "Variant" "primary" "Size" "sm" "Icon" "add")}}
+                    {{template "btn.html" (dict "Label" (t "fl.edit") "Href" (printf "/customers/%s/edit" .Customer.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit")}}
                 </div>
             </div>
 
             <dl class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5 pt-5 border-t border-border-subtle">
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-eyebrow text-text-muted">Phone</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "fl.phone"}}</dt>
                     <dd class="text-sm font-bold text-primary font-data-mono tabular-nums mt-1" data-numeric>{{.Customer.Phone}}</dd>
                 </div>
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-eyebrow text-text-muted">Email</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "fl.email"}}</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1 break-all">{{nullString .Customer.Email}}</dd>
                 </div>
                 <div class="rounded-xl bg-surface-container-low p-3">
@@ -45,7 +45,7 @@
                     <dd class="text-sm font-semibold text-on-surface font-data-mono uppercase tabular-nums mt-1 break-all" data-numeric>{{nullString .Customer.GST}}</dd>
                 </div>
                 <div class="rounded-xl bg-surface-container-low p-3">
-                    <dt class="text-eyebrow text-text-muted">Terms</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "fl.terms"}}</dt>
                     <dd class="text-sm font-bold text-on-surface tabular-nums mt-1">{{if .Customer.PaymentTermsDays}}Net {{.Customer.PaymentTermsDays}}{{else}}Due now{{end}}</dd>
                 </div>
             </dl>
@@ -54,43 +54,43 @@
         <!-- Identity & Contact -->
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between">
-                <h3 class="text-sm font-bold text-on-surface">Account Details</h3>
+                <h3 class="text-sm font-bold text-on-surface">{{t "fl.account_details"}}</h3>
                 <span class="text-xs font-data-mono tabular-nums text-text-muted">{{.Customer.CustomerCode}}</span>
             </div>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 p-5">
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-eyebrow text-text-muted">Contact Person</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "fl.contact_person"}}</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">{{if .Customer.ContactPerson}}{{nullString .Customer.ContactPerson}}{{else}}—{{end}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-eyebrow text-text-muted">Company</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "fl.company"}}</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">{{if .Customer.Company}}{{nullString .Customer.Company}}{{else}}—{{end}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-eyebrow text-text-muted">Internal ID (ERP)</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "fl.internal_id_erp"}}</dt>
                     <dd class="text-sm font-data-mono tabular-nums text-on-surface mt-1">{{if .Customer.InternalID}}{{nullString .Customer.InternalID}}{{else}}—{{end}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-eyebrow text-text-muted">Title</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "fl.title"}}</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">{{if .Customer.Title}}{{nullString .Customer.Title}}{{else}}—{{end}}</dd>
                 </div>
                 <div class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <dt class="text-eyebrow text-text-muted">Delivery / Primary Address</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "fl.delivery_primary_address"}}</dt>
                         <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed whitespace-pre-wrap">{{if .Customer.Address}}{{nullString .Customer.Address}}{{else}}—{{end}}</dd>
                     </div>
                     <div>
-                        <dt class="text-eyebrow text-text-muted">Billing Address</dt>
-                        <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed whitespace-pre-wrap">{{if .Customer.BillingAddress}}{{nullString .Customer.BillingAddress}}{{else}}<span class="text-text-muted">Same as delivery</span>{{end}}</dd>
+                        <dt class="text-eyebrow text-text-muted">{{t "fl.billing_address"}}</dt>
+                        <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed whitespace-pre-wrap">{{if .Customer.BillingAddress}}{{nullString .Customer.BillingAddress}}{{else}}<span class="text-text-muted">{{t "fl.same_as_delivery"}}</span>{{end}}</dd>
                     </div>
                 </div>
                 {{if .Customer.Notes}}<div class="sm:col-span-2 pt-2 border-t border-border-subtle">
-                    <dt class="text-eyebrow text-text-muted">Notes</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "fl.notes"}}</dt>
                     <dd class="text-sm text-secondary mt-1 leading-relaxed whitespace-pre-wrap">{{nullString .Customer.Notes}}</dd>
                 </div>{{end}}
                 {{if and .Customer.Meta (ne .Customer.Meta "{}")}}<div class="sm:col-span-2">
                     <details class="rounded-lg border border-border-subtle bg-surface-container-low/50 px-3 py-2">
-                        <summary class="text-xs font-bold text-secondary cursor-pointer">Additional data</summary>
+                        <summary class="text-xs font-bold text-secondary cursor-pointer">{{t "fl.additional_data"}}</summary>
                         <pre class="text-xs font-data-mono text-on-surface mt-2 whitespace-pre-wrap break-all">{{.Customer.Meta}}</pre>
                     </details>
                 </div>{{end}}
@@ -101,10 +101,10 @@
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 flex-wrap">
                 <div class="flex items-center gap-3">
-                    <h3 class="text-sm font-bold text-on-surface">Recent Bookings</h3>
+                    <h3 class="text-sm font-bold text-on-surface">{{t "fl.recent_bookings"}}</h3>
                     {{if .RecentBookings}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .RecentBookings}}</span>{{end}}
                 </div>
-                <a href="/bookings/new?customer_id={{.Customer.ID}}" class="text-xs font-semibold text-primary hover:underline text-decoration-none">New booking →</a>
+                <a href="/bookings/new?customer_id={{.Customer.ID}}" class="text-xs font-semibold text-primary hover:underline text-decoration-none">{{t "fl.new_booking"}}</a>
             </div>
             {{if .RecentBookings}}
             <div class="divide-y divide-border-subtle px-5 py-1">
@@ -122,7 +122,7 @@
                 {{end}}
             </div>
             {{else}}
-            <p class="p-5 text-sm text-text-muted">No bookings for this customer yet. <a href="/bookings/new?customer_id={{.Customer.ID}}" class="text-primary hover:underline">Create one</a>.</p>
+            <p class="p-5 text-sm text-text-muted">{{t "fl.no_bookings_for_this_customer_yet"}} <a href="/bookings/new?customer_id={{.Customer.ID}}" class="text-primary hover:underline">{{t "fl.create_one"}}</a>.</p>
             {{end}}
         </section>
     </div>
@@ -133,15 +133,15 @@
             <div class="px-5 py-3 border-b border-border-subtle">
                 <h2 class="flex items-center gap-2 text-sm font-bold text-on-surface">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                    Actions
+                    {{t "fl.actions"}}
                 </h2>
             </div>
             <div class="p-4 flex flex-col gap-2 items-stretch">
-                {{template "btn.html" (dict "Label" "Statement of Account (Khata)" "Href" (printf "/customers/%s/statement" .Customer.ID) "Variant" "secondary" "Size" "sm" "Icon" "receipt" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-border-subtle focus:ring-offset-2 w-full")}}
-                {{template "btn.html" (dict "Label" "Consolidate Unbilled Trips" "Href" (printf "/customers/%s/statement#unbilled-trips" .Customer.ID) "Variant" "primary" "Size" "sm" "Icon" "add" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 w-full")}}
-                {{template "btn.html" (dict "Label" "Edit Customer" "Href" (printf "/customers/%s/edit" .Customer.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-border-subtle focus:ring-offset-2 w-full")}}
-                <form method="post" action="/customers/{{.Customer.ID}}/delete" onsubmit="return confirm('Delete customer {{.Customer.Name}}? This cannot be undone.')">
-                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-full bg-white border border-red-200 text-red-strong text-sm font-semibold px-4 py-2 min-h-[44px] hover:bg-red-50 transition-colors">Delete Customer</button>
+                {{template "btn.html" (dict "Label" (t "fl.statement_of_account_khata") "Href" (printf "/customers/%s/statement" .Customer.ID) "Variant" "secondary" "Size" "sm" "Icon" "receipt" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-border-subtle focus:ring-offset-2 w-full")}}
+                {{template "btn.html" (dict "Label" (t "fl.consolidate_unbilled_trips") "Href" (printf "/customers/%s/statement#unbilled-trips" .Customer.ID) "Variant" "primary" "Size" "sm" "Icon" "add" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 w-full")}}
+                {{template "btn.html" (dict "Label" (t "fl.edit_customer") "Href" (printf "/customers/%s/edit" .Customer.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit" "Class" "min-h-[44px] focus:outline-none focus:ring-2 focus:ring-border-subtle focus:ring-offset-2 w-full")}}
+                <form method="post" action="/customers/{{.Customer.ID}}/delete" data-confirm-tpl="{{t "fl.delete_customer_name_this_cannot_be_undone"}}" data-confirm-name="{{.Customer.Name}}" onsubmit="return confirm((this.dataset.confirmTpl || 'Delete customer {name}? This cannot be undone.').replace('{name}', this.dataset.confirmName))">
+                    <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-full bg-white border border-red-200 text-red-strong text-sm font-semibold px-4 py-2 min-h-[44px] hover:bg-red-50 transition-colors">{{t "fl.delete_customer"}}</button>
                 </form>
             </div>
         </div>
@@ -150,7 +150,7 @@
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                 <div class="flex items-center gap-2">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    <h2 class="text-sm font-bold text-on-surface">Invoices</h2>
+                    <h2 class="text-sm font-bold text-on-surface">{{t "fl.invoices"}}</h2>
                 </div>
                 {{if .RecentInvoices}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .RecentInvoices}}</span>{{end}}
             </div>
@@ -166,13 +166,13 @@
                 </a>
                 {{end}}
                 <a href="/customers/{{.Customer.ID}}/statement" class="block text-center text-xs font-semibold text-primary hover:underline pt-1">
-                    View Statement & Full Ledger →
+                    {{t "fl.view_statement_full_ledger"}}
                 </a>
             </div>
             {{else}}
             <div class="p-4 text-center">
-                <p class="text-sm text-text-muted mb-2">No invoices yet.</p>
-                <a href="/customers/{{.Customer.ID}}/statement#unbilled-trips" class="text-xs font-semibold text-primary hover:underline">Check unbilled trips →</a>
+                <p class="text-sm text-text-muted mb-2">{{t "fl.no_invoices_yet"}}</p>
+                <a href="/customers/{{.Customer.ID}}/statement#unbilled-trips" class="text-xs font-semibold text-primary hover:underline">{{t "fl.check_unbilled_trips"}}</a>
             </div>
             {{end}}
         </div>
@@ -181,14 +181,14 @@
             <div class="px-5 py-3 border-b border-border-subtle">
                 <h2 class="flex items-center gap-2 text-sm font-bold text-on-surface">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                    At a Glance
+                    {{t "fl.at_a_glance"}}
                 </h2>
             </div>
             <dl class="p-4 space-y-3">
-                <div class="flex justify-between gap-3"><dt class="text-eyebrow text-text-muted">Code</dt><dd class="text-xs font-data-mono font-semibold tabular-nums">{{.Customer.CustomerCode}}</dd></div>
-                {{if and .Customer.InternalID (ne (nullString .Customer.InternalID) .Customer.CustomerCode)}}<div class="flex justify-between gap-3"><dt class="text-eyebrow text-text-muted">Reference</dt><dd class="text-xs font-data-mono tabular-nums">{{nullString .Customer.InternalID}}</dd></div>{{end}}
-                <div class="flex justify-between gap-3"><dt class="text-eyebrow text-text-muted">Since</dt><dd class="text-xs tabular-nums">{{datetime .Customer.CreatedAt}}</dd></div>
-                {{if .Customer.PhotoURL}}<div class="pt-2 border-t border-border-subtle"><img src="{{nullString .Customer.PhotoURL}}" alt="customer logo" class="w-full rounded-xl object-cover border border-border-subtle max-h-32"></div>{{end}}
+                <div class="flex justify-between gap-3"><dt class="text-eyebrow text-text-muted">{{t "fl.code"}}</dt><dd class="text-xs font-data-mono font-semibold tabular-nums">{{.Customer.CustomerCode}}</dd></div>
+                {{if and .Customer.InternalID (ne (nullString .Customer.InternalID) .Customer.CustomerCode)}}<div class="flex justify-between gap-3"><dt class="text-eyebrow text-text-muted">{{t "fl.reference"}}</dt><dd class="text-xs font-data-mono tabular-nums">{{nullString .Customer.InternalID}}</dd></div>{{end}}
+                <div class="flex justify-between gap-3"><dt class="text-eyebrow text-text-muted">{{t "fl.since"}}</dt><dd class="text-xs tabular-nums">{{datetime .Customer.CreatedAt}}</dd></div>
+                {{if .Customer.PhotoURL}}<div class="pt-2 border-t border-border-subtle"><img src="{{nullString .Customer.PhotoURL}}" alt="{{t "fl.customer_logo"}}" class="w-full rounded-xl object-cover border border-border-subtle max-h-32"></div>{{end}}
             </dl>
         </div>
 
@@ -196,25 +196,25 @@
             <div class="px-5 py-3 border-b border-border-subtle">
                 <h2 class="flex items-center gap-2 text-sm font-bold text-on-surface">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 text-primary"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    Portal Access
+                    {{t "fl.portal_access"}}
                 </h2>
             </div>
             <form method="post" action="{{printf "/customers/%s/portal-users" .Customer.ID}}" class="p-4 space-y-3">
-                <p class="text-xs text-secondary">Creates a shipper login (customer role) linked to this customer. Existing users are linked as-is.</p>
+                <p class="text-xs text-secondary">{{t "fl.creates_a_shipper_login_customer_role_linked"}}</p>
                 <div>
-                    <label for="portal-email" class="block text-eyebrow text-text-muted">Email</label>
+                    <label for="portal-email" class="block text-eyebrow text-text-muted">{{t "fl.email"}}</label>
                     <input autocomplete="email" spellcheck="false" id="portal-email" name="email" type="email" required class="mt-1 w-full rounded-lg border border-border-subtle bg-surface-container-low px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                 </div>
                 <div>
-                    <label for="portal-phone" class="block text-eyebrow text-text-muted">Phone</label>
+                    <label for="portal-phone" class="block text-eyebrow text-text-muted">{{t "fl.phone"}}</label>
                     <input autocomplete="tel" id="portal-phone" name="phone" type="tel" required class="mt-1 w-full rounded-lg border border-border-subtle bg-surface-container-low px-3 py-2 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                 </div>
                 <div>
-                    <label for="portal-password" class="block text-eyebrow text-text-muted">Initial Password</label>
+                    <label for="portal-password" class="block text-eyebrow text-text-muted">{{t "fl.initial_password"}}</label>
                     <input autocomplete="new-password" id="portal-password" name="password" type="password" minlength="8" required class="mt-1 w-full rounded-lg border border-border-subtle bg-surface-container-low px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                    <span class="text-[11px] text-secondary mt-1 block">Ignored when linking an existing user.</span>
+                    <span class="text-[11px] text-secondary mt-1 block">{{t "fl.ignored_when_linking_an_existing_user"}}</span>
                 </div>
-                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-full bg-primary text-on-primary text-sm font-semibold px-4 py-2 min-h-[44px] shadow-sm hover:bg-primary/90 hover:-translate-y-px transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">Grant Portal Access</button>
+                <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-full bg-primary text-on-primary text-sm font-semibold px-4 py-2 min-h-[44px] shadow-sm hover:bg-primary/90 hover:-translate-y-px transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">{{t "fl.grant_portal_access"}}</button>
             </form>
         </div>
     </aside>

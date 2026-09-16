@@ -2,26 +2,26 @@
     <!-- Report Title and Actions -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div class="min-w-0">
-            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Trip Performance Report</h1>
-            <p class="text-sm text-secondary mt-1">Operational summary, status breakdown, and detailed trip dispatch logs</p>
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{t "mo.rep.trp_title"}}</h1>
+            <p class="text-sm text-secondary mt-1">{{t "mo.rep.trp_desc"}}</p>
         </div>
         <div class="flex items-center gap-2 flex-wrap shrink-0">
             {{if can .User "reports" "read"}}
             <div class="flex items-center gap-2 print:hidden">
                 <a href="/reports/trips.csv{{if .QueryString}}?{{.QueryString}}{{end}}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Export CSV
+                    {{t "mo.c.export_csv"}}
                 </a>
                 {{if .ShowPDFExport}}
                 <a href="/reports/trips.pdf{{if .QueryString}}?{{.QueryString}}{{end}}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-status-alert text-on-primary text-sm font-semibold shadow-sm hover:bg-status-alert/90 hover:-translate-y-px transition">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                    Export PDF
+                    {{t "mo.c.export_pdf"}}
                 </a>
                 {{end}}
             </div>
             {{end}}
             <button onclick="window.print()" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 hover:shadow-sm transition">
-                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>Print Report
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>{{t "mo.c.print_report"}}
             </button>
         </div>
     </div>
@@ -35,7 +35,7 @@
             </div>
             <div class="mt-4">
                 <div class="text-3xl font-black tracking-tight tabular-nums text-on-surface" data-numeric>{{.TotalTrips}}</div>
-                <div class="text-sm font-medium text-secondary mt-1">Total Filtered Trips</div>
+                <div class="text-sm font-medium text-secondary mt-1">{{t "mo.rep.total_filt"}}</div>
             </div>
         </div>
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition duration-200">
@@ -44,11 +44,11 @@
                 <div class="w-10 h-10 rounded-xl bg-blue-soft border border-blue-line grid place-items-center text-blue-mid">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>
                 </div>
-                <span class="inline-flex items-center px-2 py-1 rounded-full bg-blue-soft border border-blue-line text-[11px] font-bold uppercase tracking-wide text-blue-strong dark:text-blue-300">Scheduled</span>
+                <span class="inline-flex items-center px-2 py-1 rounded-full bg-blue-soft border border-blue-line text-[11px] font-bold uppercase tracking-wide text-blue-strong dark:text-blue-300">{{t "mo.rep.scheduled"}}</span>
             </div>
             <div class="mt-4">
                 <div class="text-3xl font-black tracking-tight tabular-nums text-status-info" data-numeric>{{index .StatusCounts "scheduled"}}</div>
-                <div class="text-sm font-medium text-secondary mt-1">Today Scheduled</div>
+                <div class="text-sm font-medium text-secondary mt-1">{{t "mo.rep.today_sched"}}</div>
             </div>
         </div>
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition duration-200">
@@ -57,11 +57,11 @@
                 <div class="w-10 h-10 rounded-xl bg-amber-soft border border-amber-line grid place-items-center text-amber-mid">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><circle cx="12" cy="8" r="2"/><path d="M12 12v4"/></svg>
                 </div>
-                <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-bold uppercase tracking-wide text-amber-strong dark:text-amber-300"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>In motion</span>
+                <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-bold uppercase tracking-wide text-amber-strong dark:text-amber-300"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>{{t "mo.rep.in_motion"}}</span>
             </div>
             <div class="mt-4">
                 <div class="text-3xl font-black tracking-tight tabular-nums text-status-warning" data-numeric>{{index .StatusCounts "started"}}</div>
-                <div class="text-sm font-medium text-secondary mt-1">Today In-Progress</div>
+                <div class="text-sm font-medium text-secondary mt-1">{{t "mo.rep.today_prog"}}</div>
             </div>
         </div>
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition duration-200">
@@ -70,11 +70,11 @@
                 <div class="w-10 h-10 rounded-xl bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
                 </div>
-                <span class="inline-flex items-center px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold uppercase tracking-wide text-emerald-strong dark:text-emerald-300">Done</span>
+                <span class="inline-flex items-center px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold uppercase tracking-wide text-emerald-strong dark:text-emerald-300">{{t "mo.rep.done"}}</span>
             </div>
             <div class="mt-4">
                 <div class="text-3xl font-black tracking-tight tabular-nums text-status-success" data-numeric>{{index .StatusCounts "completed"}}</div>
-                <div class="text-sm font-medium text-secondary mt-1">Today Completed</div>
+                <div class="text-sm font-medium text-secondary mt-1">{{t "mo.rep.today_done"}}</div>
             </div>
         </div>
     </div>
@@ -82,24 +82,24 @@
     <!-- Filter Toolbar -->
     <form method="GET" action="/reports/trips" class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm px-4 py-3 flex flex-col sm:flex-row sm:items-end gap-3 flex-wrap">
         <div class="flex-1 min-w-[12rem]">
-            <label for="trips-q" class="block text-eyebrow text-text-muted mb-1.5">Search</label>
-            <input aria-label="Search by trip number, driver, vehicle" autocomplete="off" type="text" id="trips-q" name="q" value="{{.Query}}" placeholder="Search by trip number, driver, vehicle…"
+            <label for="trips-q" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.c.search"}}</label>
+            <input aria-label="Search by trip number, driver, vehicle" autocomplete="off" type="text" id="trips-q" name="q" value="{{.Query}}" placeholder="{{t "mo.rep.trp_search_ph"}}"
                 class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
         </div>
         <div class="w-full sm:w-48">
-            <label for="trips-status" class="block text-eyebrow text-text-muted mb-1.5">Status</label>
+            <label for="trips-status" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.c.status"}}</label>
             <select id="trips-status" name="status" class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                <option value="">All Statuses</option>
-                <option value="draft" {{if eq .StatusFilter "draft"}}selected{{end}}>Draft</option>
-                <option value="scheduled" {{if eq .StatusFilter "scheduled"}}selected{{end}}>Scheduled</option>
-                <option value="assigned" {{if eq .StatusFilter "assigned"}}selected{{end}}>Assigned</option>
-                <option value="started" {{if eq .StatusFilter "started"}}selected{{end}}>Started</option>
-                <option value="completed" {{if eq .StatusFilter "completed"}}selected{{end}}>Completed</option>
-                <option value="cancelled" {{if eq .StatusFilter "cancelled"}}selected{{end}}>Cancelled</option>
+                <option value="">{{t "mo.c.all_statuses"}}</option>
+                <option value="draft" {{if eq .StatusFilter "draft"}}selected{{end}}>{{t "mo.rep.draft"}}</option>
+                <option value="scheduled" {{if eq .StatusFilter "scheduled"}}selected{{end}}>{{t "mo.rep.scheduled"}}</option>
+                <option value="assigned" {{if eq .StatusFilter "assigned"}}selected{{end}}>{{t "mo.rep.assigned"}}</option>
+                <option value="started" {{if eq .StatusFilter "started"}}selected{{end}}>{{t "mo.rep.started"}}</option>
+                <option value="completed" {{if eq .StatusFilter "completed"}}selected{{end}}>{{t "mo.c.completed"}}</option>
+                <option value="cancelled" {{if eq .StatusFilter "cancelled"}}selected{{end}}>{{t "mo.c.cancelled"}}</option>
             </select>
         </div>
         <button type="submit" class="inline-flex items-center justify-center gap-2 self-stretch sm:self-auto px-5 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition">
-            Filter Report
+            {{t "mo.c.filter_report"}}
         </button>
     </form>
 
@@ -107,8 +107,8 @@
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h2 class="text-sm font-bold text-on-surface">Dispatch Log</h2>
-                <p class="text-xs text-text-muted">Trips matching the current filter</p>
+                <h2 class="text-sm font-bold text-on-surface">{{t "mo.rep.dispatch_log"}}</h2>
+                <p class="text-xs text-text-muted">{{t "mo.rep.trp_match"}}</p>
             </div>
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{.TotalTrips}} trips</span>
         </div>
@@ -116,36 +116,36 @@
             <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="th-cell">Trip Number</th>
-                        <th class="th-cell">Assigned Driver</th>
-                        <th class="th-cell">Vehicle Reg</th>
-                        <th class="th-cell">Route Details</th>
-                        <th class="th-cell">Status</th>
-                        <th class="th-cell-right">Departure Time</th>
+                        <th class="th-cell">{{t "mo.rep.trip_no"}}</th>
+                        <th class="th-cell">{{t "mo.rep.asg_drv"}}</th>
+                        <th class="th-cell">{{t "mo.rep.veh_reg"}}</th>
+                        <th class="th-cell">{{t "mo.rep.route_det"}}</th>
+                        <th class="th-cell">{{t "mo.c.status"}}</th>
+                        <th class="th-cell-right">{{t "mo.rep.dep_time"}}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
                     {{if .Trips}}
                     {{range .Trips}}
                     <tr class="hover:bg-surface-container-low/50 transition-colors">
-                        <td data-label="Trip Number" class="px-3 py-2 text-sm font-bold text-primary tabular-nums">{{.TripNumber}}</td>
-                        <td data-label="Assigned Driver" class="px-3 py-2 text-sm text-on-surface">
-                            {{if .DriverFirstName}}<span class="font-medium">{{.DriverFirstName}} {{.DriverLastName}}</span>{{else}}<span class="text-text-muted">Unassigned</span>{{end}}
+                        <td data-label="{{t "mo.rep.trip_no"}}" class="px-3 py-2 text-sm font-bold text-primary tabular-nums">{{.TripNumber}}</td>
+                        <td data-label="{{t "mo.rep.asg_drv"}}" class="px-3 py-2 text-sm text-on-surface">
+                            {{if .DriverFirstName}}<span class="font-medium">{{.DriverFirstName}} {{.DriverLastName}}</span>{{else}}<span class="text-text-muted">{{t "mo.rep.unassigned"}}</span>{{end}}
                         </td>
-                        <td data-label="Vehicle Reg" class="px-3 py-2 text-sm text-on-surface">
-                            {{if .VehicleRegistration}}<span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container border border-border-subtle text-xs font-semibold tabular-nums">{{.VehicleRegistration}}</span>{{else}}<span class="text-text-muted">Unassigned</span>{{end}}
+                        <td data-label="{{t "mo.rep.veh_reg"}}" class="px-3 py-2 text-sm text-on-surface">
+                            {{if .VehicleRegistration}}<span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container border border-border-subtle text-xs font-semibold tabular-nums">{{.VehicleRegistration}}</span>{{else}}<span class="text-text-muted">{{t "mo.rep.unassigned"}}</span>{{end}}
                         </td>
-                        <td data-label="Route Details" class="px-3 py-2 text-sm"><span class="font-medium text-on-surface">{{.RouteSource}}</span> <span class="text-text-muted">&rarr;</span> <span class="font-medium text-on-surface">{{.RouteDestination}}</span></td>
-                        <td data-label="Status" class="px-3 py-2 text-sm">
+                        <td data-label="{{t "mo.rep.route_det"}}" class="px-3 py-2 text-sm"><span class="font-medium text-on-surface">{{.RouteSource}}</span> <span class="text-text-muted">&rarr;</span> <span class="font-medium text-on-surface">{{.RouteDestination}}</span></td>
+                        <td data-label="{{t "mo.c.status"}}" class="px-3 py-2 text-sm">
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                         </td>
-                        <td data-label="Departure Time" class="px-3 py-2 text-sm text-secondary tabular-nums text-right" data-numeric>{{datetime .DepartureTime}}</td>
+                        <td data-label="{{t "mo.rep.dep_time"}}" class="px-3 py-2 text-sm text-secondary tabular-nums text-right" data-numeric>{{datetime .DepartureTime}}</td>
                     </tr>
                     {{end}}
                     {{else}}
                     <tr>
                         <td colspan="6" class="py-12 text-center">
-                            {{template "empty_state.html" (dict "Icon" "directions_bus" "Title" "No trips found" "Message" "No trips match the current filter criteria.")}}
+                            {{template "empty_state.html" (dict "Icon" "directions_bus" "Title" (t "mo.rep.no_trp_title") "Message" (t "mo.rep.no_trp_msg"))}}
                         </td>
                     </tr>
                     {{end}}

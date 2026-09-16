@@ -4,42 +4,42 @@
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div class="min-w-0">
             <div class="flex items-center gap-3 flex-wrap">
-                <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Operations Command</h1>
+                <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{t "db.ops_command"}}</h1>
                 <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-soft border border-emerald-500/20 text-[11px] font-bold tracking-wide uppercase text-emerald-strong dark:text-emerald-300">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> {{t "db.live"}}
                 </span>
                 <span id="dash-live-stamp" class="text-xs text-text-muted tabular-nums"> updated just now • SSE active</span>
             </div>
-            <p class="text-sm text-secondary mt-1">Real-time fleet, trips and revenue — auto-refreshes every 5s. <span class="hidden sm:inline">Click any KPI to drill down.</span></p>
+            <p class="text-sm text-secondary mt-1">{{t "db.hero_sub"}} <span class="hidden sm:inline">{{t "db.hero_drill"}}</span></p>
         </div>
         <div class="flex items-center gap-2 flex-wrap shrink-0">
             <a href="/bookings/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:shadow-md hover:-translate-y-px transition">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 5v14M5 12h14"/></svg>
-                New Booking
+                {{t "db.new_booking"}}
             </a>
             <a href="/trips/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 hover:shadow-sm transition">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg>
-                Dispatch Trip
+                {{t "db.dispatch_trip"}}
             </a>
             <div class="relative" id="dash-more-wrap">
-                <button id="dash-more-btn" type="button" aria-expanded="false" aria-haspopup="true" aria-label="More actions" class="w-9 h-9 grid place-items-center rounded-full bg-surface-container-lowest border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors">
+                <button id="dash-more-btn" type="button" aria-expanded="false" aria-haspopup="true" aria-label="{{t "db.more_actions"}}" class="w-9 h-9 grid place-items-center rounded-full bg-surface-container-lowest border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
                 </button>
                 <div id="dash-more-menu" class="absolute right-0 top-full mt-2 w-52 bg-surface-container-lowest border border-border-subtle rounded-xl shadow-xl p-1 hidden z-30">
-                    <a href="/vehicles/new" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-surface-container-low">+ Add Vehicle</a>
-                    <a href="/drivers/new" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-surface-container-low">+ Add Driver</a>
-                    <a href="/maintenance" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-surface-container-low">Open Maintenance</a>
-                    <a href="/alerts" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-surface-container-low">View Alerts</a>
-                    <a href="/reports" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-surface-container-low">View Reports</a>
+                    <a href="/vehicles/new" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-surface-container-low">+ {{t "db.add_vehicle"}}</a>
+                    <a href="/drivers/new" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-surface-container-low">+ {{t "db.add_driver"}}</a>
+                    <a href="/maintenance" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-surface-container-low">{{t "db.open_maint"}}</a>
+                    <a href="/alerts" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-surface-container-low">{{t "db.view_alerts"}}</a>
+                    <a href="/reports" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg hover:bg-surface-container-low">{{t "db.view_reports"}}</a>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Dashboard tabs — Today (operate) vs Trends (review). JS-only toggle, no reload. -->
-    <div class="flex items-center gap-1 p-1 rounded-full bg-surface-container-low border border-border-subtle w-fit" role="tablist" aria-label="Dashboard views">
-        <button id="dash-tabbtn-today" type="button" role="tab" aria-selected="true" data-dashtab-btn="today" class="px-4 py-1.5 rounded-full text-sm font-semibold bg-surface-container-lowest shadow-xs border border-border-subtle text-on-surface transition-colors">Today</button>
-        <button id="dash-tabbtn-trends" type="button" role="tab" aria-selected="false" data-dashtab-btn="trends" class="px-4 py-1.5 rounded-full text-sm font-semibold text-secondary hover:text-on-surface transition-colors">Trends</button>
+    <div class="flex items-center gap-1 p-1 rounded-full bg-surface-container-low border border-border-subtle w-fit" role="tablist" aria-label="{{t "db.views_aria"}}">
+        <button id="dash-tabbtn-today" type="button" role="tab" aria-selected="true" data-dashtab-btn="today" class="px-4 py-1.5 rounded-full text-sm font-semibold bg-surface-container-lowest shadow-xs border border-border-subtle text-on-surface transition-colors">{{t "db.tab_today"}}</button>
+        <button id="dash-tabbtn-trends" type="button" role="tab" aria-selected="false" data-dashtab-btn="trends" class="px-4 py-1.5 rounded-full text-sm font-semibold text-secondary hover:text-on-surface transition-colors">{{t "db.tab_trends"}}</button>
     </div>
 
     <!-- KPI HERO — 4 premium cards with gradient accents -->
@@ -51,12 +51,12 @@
                 <div class="w-10 h-10 rounded-xl bg-primary/10 border border-primary/10 grid place-items-center text-primary group-hover:bg-primary group-hover:text-on-primary transition-colors">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>
                 </div>
-                {{if gt .Stats.DeltaYesterday 0}}<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong">▲ +{{.Stats.DeltaYesterday}} vs yesterday</span>{{else if lt .Stats.DeltaYesterday 0}}<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-soft border border-red-line text-[11px] font-bold text-red-mid">▼ {{mul .Stats.DeltaYesterday -1}} vs yesterday</span>{{else}}<span class="inline-flex items-center px-2 py-1 rounded-full bg-surface-container-low border border-border-subtle text-[11px] font-medium text-text-muted">— vs yesterday</span>{{end}}
+                {{if gt .Stats.DeltaYesterday 0}}<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong">▲ +{{.Stats.DeltaYesterday}} {{t "db.vs_yesterday"}}</span>{{else if lt .Stats.DeltaYesterday 0}}<span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-soft border border-red-line text-[11px] font-bold text-red-mid">▼ {{mul .Stats.DeltaYesterday -1}} {{t "db.vs_yesterday"}}</span>{{else}}<span class="inline-flex items-center px-2 py-1 rounded-full bg-surface-container-low border border-border-subtle text-[11px] font-medium text-text-muted">— {{t "db.vs_yesterday"}}</span>{{end}}
             </div>
             <div class="mt-4">
                 <div id="kpi-today" class="text-stat text-primary tabular-nums text-3xl font-black tracking-tight">{{.Stats.TodaysTripsCount}}</div>
-                <div class="text-sm font-medium text-secondary mt-1">Today's Trips</div>
-                <div class="mt-3 flex items-center gap-2 text-xs text-text-muted"><span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span> live today</div>
+                <div class="text-sm font-medium text-secondary mt-1">{{t "db.kpi_today"}}</div>
+                <div class="mt-3 flex items-center gap-2 text-xs text-text-muted"><span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span> {{t "db.live_today"}}</div>
             </div>
         </a>
 
@@ -67,11 +67,11 @@
                 <div class="w-10 h-10 rounded-xl bg-amber-soft border border-amber-line grid place-items-center text-amber-mid group-hover:bg-amber-500 group-hover:text-white transition-colors">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><circle cx="12" cy="8" r="2"/><path d="M12 12v4"/></svg>
                 </div>
-                <span class="text-eyebrow px-2 py-1 rounded-full bg-amber-soft text-amber-strong border border-amber-line">In motion</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-amber-soft text-amber-strong border border-amber-line">{{t "db.in_motion"}}</span>
             </div>
             <div class="mt-4">
                 <div id="kpi-active" class="text-stat text-status-warning tabular-nums text-3xl font-black tracking-tight">{{.Stats.ActiveTripsCount}}</div>
-                <div class="text-sm font-medium text-secondary mt-1">Active Trips</div>
+                <div class="text-sm font-medium text-secondary mt-1">{{t "db.kpi_active"}}</div>
                 <div class="mt-3 h-1.5 w-full bg-surface-container rounded-full overflow-hidden"><div id="kpi-active-bar" class="h-full bg-amber-500 rounded-full" style="width: {{if gt .Stats.TodaysTripsCount 0}}{{div (mul .Stats.ActiveTripsCount 100) .Stats.TodaysTripsCount}}%{{else}}0%{{end}}"></div></div>
             </div>
         </a>
@@ -83,12 +83,12 @@
                 <div class="w-10 h-10 rounded-xl bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>
                 </div>
-                <span class="text-eyebrow px-2 py-1 rounded-full bg-emerald-soft text-emerald-strong border border-emerald-line">Done</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-emerald-soft text-emerald-strong border border-emerald-line">{{t "db.done"}}</span>
             </div>
             <div class="mt-4">
                 <div id="kpi-completed" class="text-stat text-status-success tabular-nums text-3xl font-black tracking-tight">{{.Stats.CompletedTripsCount}}</div>
-                <div class="text-sm font-medium text-secondary mt-1">Completed Trips</div>
-                <div class="mt-3 text-xs text-text-muted">Today • <span class="text-primary font-semibold cursor-pointer hover:underline" onclick="event.stopPropagation(); location.href='/trips'" role="link" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation(); location.href='/trips'}">View all →</span></div>
+                <div class="text-sm font-medium text-secondary mt-1">{{t "db.kpi_completed"}}</div>
+                <div class="mt-3 text-xs text-text-muted">Today • <span class="text-primary font-semibold cursor-pointer hover:underline" onclick="event.stopPropagation(); location.href='/trips'" role="link" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.stopPropagation(); location.href='/trips'}">{{t "db.view_all"}}</span></div>
             </div>
         </a>
 
@@ -99,12 +99,12 @@
                 <div class="w-10 h-10 rounded-xl bg-rose-soft border border-rose-line grid place-items-center text-rose-mid group-hover:bg-rose-500 group-hover:text-white transition-colors">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/><path d="M9 9l6 6"/></svg>
                 </div>
-                {{if gt .Stats.CancelledTripsCount 0}}<span class="text-eyebrow px-2 py-1 rounded-full bg-rose-soft text-rose-strong border border-rose-line">Needs review</span>{{else}}<span class="text-eyebrow px-2 py-1 rounded-full bg-emerald-soft text-emerald-strong border border-emerald-line">Clear</span>{{end}}
+                {{if gt .Stats.CancelledTripsCount 0}}<span class="text-eyebrow px-2 py-1 rounded-full bg-rose-soft text-rose-strong border border-rose-line">{{t "db.needs_review"}}</span>{{else}}<span class="text-eyebrow px-2 py-1 rounded-full bg-emerald-soft text-emerald-strong border border-emerald-line">{{t "db.clear_badge"}}</span>{{end}}
             </div>
             <div class="mt-4">
                 <div id="kpi-cancelled" class="text-stat text-status-alert tabular-nums text-3xl font-black tracking-tight">{{.Stats.CancelledTripsCount}}</div>
-                <div class="text-sm font-medium text-secondary mt-1">Cancelled Trips</div>
-                <div id="kpi-cancel-pct" class="mt-3 text-xs text-text-muted">{{if gt .Stats.TodaysTripsCount 0}}{{div (mul .Stats.CancelledTripsCount 100) .Stats.TodaysTripsCount}}% of today{{else}}no trips today{{end}}</div>
+                <div class="text-sm font-medium text-secondary mt-1">{{t "db.kpi_cancelled"}}</div>
+                <div id="kpi-cancel-pct" class="mt-3 text-xs text-text-muted">{{if gt .Stats.TodaysTripsCount 0}}{{div (mul .Stats.CancelledTripsCount 100) .Stats.TodaysTripsCount}}% {{t "db.of_today"}}{{else}}{{t "db.no_trips_today"}}{{end}}</div>
             </div>
         </a>
     </div>
@@ -117,7 +117,7 @@
             </div>
             <div class="min-w-0">
                 <div id="kpi-vehicles" class="text-xl font-bold tabular-nums text-on-surface leading-none">{{.Stats.AvailableVehiclesCount}}</div>
-                <div class="text-xs text-secondary font-medium mt-1">Available Vehicles</div>
+                <div class="text-xs text-secondary font-medium mt-1">{{t "db.avail_vehicles"}}</div>
             </div>
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted ml-auto shrink-0"><path d="M9 18l6-6-6-6"/></svg>
         </a>
@@ -127,7 +127,7 @@
             </div>
             <div class="min-w-0">
                 <div id="kpi-drivers" class="text-xl font-bold tabular-nums text-on-surface leading-none">{{.Stats.AvailableDriversCount}}</div>
-                <div class="text-xs text-secondary font-medium mt-1">Available Drivers</div>
+                <div class="text-xs text-secondary font-medium mt-1">{{t "db.avail_drivers"}}</div>
             </div>
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted ml-auto shrink-0"><path d="M9 18l6-6-6-6"/></svg>
         </a>
@@ -137,7 +137,7 @@
             </div>
             <div class="min-w-0">
                 <div id="kpi-pending" class="text-xl font-bold tabular-nums text-on-surface leading-none">{{.Stats.PendingPaymentsCount}}</div>
-                <div class="text-xs text-secondary font-medium mt-1">Pending Payments</div>
+                <div class="text-xs text-secondary font-medium mt-1">{{t "db.pending_payments"}}</div>
             </div>
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-text-muted ml-auto shrink-0"><path d="M9 18l6-6-6-6"/></svg>
         </a>
@@ -147,7 +147,7 @@
             </div>
             <div class="min-w-0">
                 <div id="kpi-revenue" class="text-xl font-black tabular-nums leading-none">{{printf "₹%.2f" .Stats.MonthlyRevenue}}</div>
-                <div class="text-xs font-medium text-white/80 mt-1">Monthly Revenue</div>
+                <div class="text-xs font-medium text-white/80 mt-1">{{t "db.monthly_revenue"}}</div>
             </div>
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-white/70 ml-auto shrink-0"><path d="M9 18l6-6-6-6"/></svg>
         </a>
@@ -158,68 +158,68 @@
     <div id="dash-sec-attention" data-dashtab="today" class="bg-surface-container-lowest rounded-2xl border border-amber-500/20 shadow-xs p-4">
         <div class="flex items-center gap-2 mb-3">
             <span class="w-7 h-7 rounded-lg bg-amber-soft border border-amber-line grid place-items-center text-amber-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
-            <h2 class="text-title-sm font-bold text-on-surface">Needs attention</h2>
+            <h2 class="text-title-sm font-bold text-on-surface">{{t "db.attention"}}</h2>
             <span id="att-total" class="px-2 py-0.5 rounded-full bg-amber-soft border border-amber-line text-xs font-bold tabular-nums text-amber-strong">{{.Stats.Attention.Total}}</span>
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
             {{if gt .Stats.Attention.UnassignedBookings 0}}
             <a href="/bookings?status=unassigned" data-drill="attention-unassigned" class="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2.5 hover:bg-amber-500/[0.1] transition-colors">
                 <span id="att-unassigned" class="text-xl font-black tabular-nums text-amber-strong">{{.Stats.Attention.UnassignedBookings}}</span>
-                <span class="text-xs font-semibold text-secondary leading-tight">Unassigned<br>bookings</span>
+                <span class="text-xs font-semibold text-secondary leading-tight">{{t "db.att_unassigned"}}<br>{{t "db.att_unassigned_sub"}}</span>
             </a>
             {{end}}
             {{if gt .Stats.Attention.MaintenanceDue 0}}
             <a href="/maintenance" data-drill="attention-maintenance" class="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2.5 hover:bg-amber-500/[0.1] transition-colors">
                 <span id="att-due" class="text-xl font-black tabular-nums text-amber-strong">{{.Stats.Attention.MaintenanceDue}}</span>
-                <span class="text-xs font-semibold text-secondary leading-tight">Maintenance<br>due</span>
+                <span class="text-xs font-semibold text-secondary leading-tight">{{t "db.att_maint"}}<br>{{t "db.att_maint_sub"}}</span>
             </a>
             {{end}}
             {{if gt .Stats.Attention.OpenWorkOrders 0}}
             <a href="/maintenance" data-drill="attention-workorders" class="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2.5 hover:bg-amber-500/[0.1] transition-colors">
                 <span id="att-wo" class="text-xl font-black tabular-nums text-amber-strong">{{.Stats.Attention.OpenWorkOrders}}</span>
-                <span class="text-xs font-semibold text-secondary leading-tight">Open job<br>cards</span>
+                <span class="text-xs font-semibold text-secondary leading-tight">{{t "db.att_jobs"}}<br>{{t "db.att_jobs_sub"}}</span>
             </a>
             {{end}}
             {{if gt .Stats.Attention.GarageVehicles 0}}
             <a href="/vehicles?status=maintenance" data-drill="attention-garage" class="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2.5 hover:bg-amber-500/[0.1] transition-colors">
                 <span id="att-garage" class="text-xl font-black tabular-nums text-amber-strong">{{.Stats.Attention.GarageVehicles}}</span>
-                <span class="text-xs font-semibold text-secondary leading-tight">Vehicles in<br>garage</span>
+                <span class="text-xs font-semibold text-secondary leading-tight">{{t "db.att_garage"}}<br>{{t "db.att_garage_sub"}}</span>
             </a>
             {{end}}
             {{if gt .Stats.Attention.OpenAlerts 0}}
             <a href="/alerts?status=open" data-drill="attention-alerts" class="flex items-center gap-2.5 rounded-xl border border-rose-500/20 bg-rose-500/[0.05] px-3 py-2.5 hover:bg-rose-500/[0.1] transition-colors">
                 <span id="att-alerts" class="text-xl font-black tabular-nums text-rose-strong">{{.Stats.Attention.OpenAlerts}}</span>
-                <span class="text-xs font-semibold text-secondary leading-tight">Open<br>alerts</span>
+                <span class="text-xs font-semibold text-secondary leading-tight">{{t "db.att_alerts"}}<br>{{t "db.att_alerts_sub"}}</span>
             </a>
             {{end}}
             {{if gt .Stats.Attention.ActiveDTCs 0}}
             <a href="/maintenance/dtc" data-drill="attention-dtc" class="flex items-center gap-2.5 rounded-xl border border-rose-500/20 bg-rose-500/[0.05] px-3 py-2.5 hover:bg-rose-500/[0.1] transition-colors">
                 <span id="att-dtc" class="text-xl font-black tabular-nums text-rose-strong">{{.Stats.Attention.ActiveDTCs}}</span>
-                <span class="text-xs font-semibold text-secondary leading-tight">Active DTC<br>faults</span>
+                <span class="text-xs font-semibold text-secondary leading-tight">{{t "db.att_dtc"}}<br>{{t "db.att_dtc_sub"}}</span>
             </a>
             {{end}}
             {{if and (gt .Stats.Attention.ExpiringEwaybills 0) $.FeatureEwaybill}}
             <a href="/ewaybill" data-drill="attention-ewaybill" class="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2.5 hover:bg-amber-500/[0.1] transition-colors">
                 <span id="att-ewb" class="text-xl font-black tabular-nums text-amber-strong">{{.Stats.Attention.ExpiringEwaybills}}</span>
-                <span class="text-xs font-semibold text-secondary leading-tight">EWBs<br>expiring</span>
+                <span class="text-xs font-semibold text-secondary leading-tight">{{t "db.att_ewb"}}<br>{{t "db.att_ewb_sub"}}</span>
             </a>
             {{end}}
             {{if gt .Stats.Attention.PendingKharcha 0}}
             <a href="/kharcha/pending" data-drill="attention-kharcha" class="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2.5 hover:bg-amber-500/[0.1] transition-colors">
                 <span id="att-kharcha" class="text-xl font-black tabular-nums text-amber-strong">{{.Stats.Attention.PendingKharcha}}</span>
-                <span class="text-xs font-semibold text-secondary leading-tight">Kharcha<br>approvals</span>
+                <span class="text-xs font-semibold text-secondary leading-tight">{{t "db.att_kharcha"}}<br>{{t "db.att_kharcha_sub"}}</span>
             </a>
             {{end}}
             {{if and (gt .Stats.Attention.LowFastag 0) $.FeatureFastag}}
             <a href="/fastag" data-drill="attention-fastag" class="flex items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2.5 hover:bg-amber-500/[0.1] transition-colors">
                 <span id="att-fastag" class="text-xl font-black tabular-nums text-amber-strong">{{.Stats.Attention.LowFastag}}</span>
-                <span class="text-xs font-semibold text-secondary leading-tight">Low FASTag<br>balance</span>
+                <span class="text-xs font-semibold text-secondary leading-tight">{{t "db.att_fastag"}}<br>{{t "db.att_fastag_sub"}}</span>
             </a>
             {{end}}
             {{if .PendingAgentActions}}
             <a href="/agent-actions" data-drill="attention-agent" class="flex items-center gap-2.5 rounded-xl border border-violet-500/20 bg-violet-500/[0.05] px-3 py-2.5 hover:bg-violet-500/[0.1] transition-colors">
                 <span class="text-xl font-black tabular-nums text-violet-strong">{{.PendingAgentActions}}</span>
-                <span class="text-xs font-semibold text-secondary leading-tight">Agent actions<br>awaiting you</span>
+                <span class="text-xs font-semibold text-secondary leading-tight">{{t "db.att_agent"}}<br>{{t "db.att_agent_sub"}}</span>
             </a>
             {{end}}
         </div>
@@ -227,21 +227,21 @@
     {{else}}
     <div class="bg-surface-container-lowest rounded-xl border border-emerald-500/20 shadow-xs px-4 py-3 flex items-center gap-2.5">
         <span class="w-7 h-7 rounded-lg bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid shrink-0"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></span>
-        <p class="text-sm font-medium text-on-surface">All clear <span class="text-text-muted font-normal">— no backlogs need attention</span></p>
+        <p class="text-sm font-medium text-on-surface">{{t "db.all_clear"}} <span class="text-text-muted font-normal">{{t "db.all_clear_sub"}}</span></p>
     </div>
     {{end}}
 
     <!-- Ops quick actions strip -->
     <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs px-4 py-3 flex flex-wrap items-center gap-2">
-        <span class="text-xs font-bold tracking-wider uppercase text-text-muted mr-1">Quick actions</span>
-        <a href="/bookings/new" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container border border-border-subtle text-xs font-semibold hover:bg-surface-container-high transition-colors">+ Booking</a>
-        <a href="/trips/new" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container border border-border-subtle text-xs font-semibold hover:bg-surface-container-high transition-colors">+ Trip</a>
-        <a href="/vehicles/new" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container border border-border-subtle text-xs font-semibold hover:bg-surface-container-high transition-colors">+ Vehicle</a>
-        <a href="/drivers/new" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container border border-border-subtle text-xs font-semibold hover:bg-surface-container-high transition-colors">+ Driver</a>
+        <span class="text-xs font-bold tracking-wider uppercase text-text-muted mr-1">{{t "db.quick_actions"}}</span>
+        <a href="/bookings/new" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container border border-border-subtle text-xs font-semibold hover:bg-surface-container-high transition-colors">+ {{t "db.quick_booking"}}</a>
+        <a href="/trips/new" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container border border-border-subtle text-xs font-semibold hover:bg-surface-container-high transition-colors">+ {{t "db.quick_trip"}}</a>
+        <a href="/vehicles/new" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container border border-border-subtle text-xs font-semibold hover:bg-surface-container-high transition-colors">+ {{t "db.quick_vehicle"}}</a>
+        <a href="/drivers/new" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container border border-border-subtle text-xs font-semibold hover:bg-surface-container-high transition-colors">+ {{t "db.quick_driver"}}</a>
         <span class="ml-auto flex items-center gap-2 text-xs">
-            <span class="hidden sm:inline text-text-muted">Auto-refresh</span>
+            <span class="hidden sm:inline text-text-muted">{{t "db.auto_refresh"}}</span>
             <span id="dash-refresh-dot" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <button id="dash-refresh-btn" type="button" class="px-3 py-1.5 rounded-full bg-primary text-on-primary text-xs font-semibold hover:bg-primary/90 transition-colors">Refresh</button>
+            <button id="dash-refresh-btn" type="button" class="px-3 py-1.5 rounded-full bg-primary text-on-primary text-xs font-semibold hover:bg-primary/90 transition-colors">{{t "db.refresh"}}</button>
         </span>
     </div>
 
@@ -250,8 +250,8 @@
         <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                 <div>
-                    <h2 class="text-title-sm font-bold text-on-surface">Revenue · Last 30 Days</h2>
-                    <p class="text-xs text-text-muted">Daily collected revenue</p>
+                    <h2 class="text-title-sm font-bold text-on-surface">{{t "db.chart_revenue"}}</h2>
+                    <p class="text-xs text-text-muted">{{t "db.chart_revenue_sub"}}</p>
                 </div>
                 <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-soft text-emerald-strong border border-emerald-line text-[11px] font-bold uppercase tracking-wide">INR</span>
             </div>
@@ -259,31 +259,31 @@
                 <canvas id="chart-revenue"></canvas>
                 <div id="chart-revenue-empty" class="hidden absolute inset-0 items-center justify-center flex-col gap-2 text-center p-4">
                     <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 4-6"/></svg></div>
-                    <p class="text-sm font-medium text-text-muted">No revenue data yet</p><p class="text-xs text-text-muted">Revenue will appear after first paid invoice</p>
+                    <p class="text-sm font-medium text-text-muted">{{t "db.no_revenue"}}</p><p class="text-xs text-text-muted">{{t "db.no_revenue_hint"}}</p>
                 </div>
             </div>
         </div>
         <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                 <div>
-                    <h2 class="text-title-sm font-bold text-on-surface">Trips by Status</h2>
-                    <p class="text-xs text-text-muted">Distribution today</p>
+                    <h2 class="text-title-sm font-bold text-on-surface">{{t "db.chart_status"}}</h2>
+                    <p class="text-xs text-text-muted">{{t "db.chart_status_sub"}}</p>
                 </div>
-                <a href="/trips" class="text-xs font-semibold text-primary hover:underline">View trips →</a>
+                <a href="/trips" class="text-xs font-semibold text-primary hover:underline">{{t "db.view_trips"}}</a>
             </div>
             <div class="p-4 h-56 relative">
                 <canvas id="chart-status"></canvas>
                 <div id="chart-status-empty" class="hidden absolute inset-0 items-center justify-center flex-col gap-2 text-center p-4">
                     <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg></div>
-                    <p class="text-sm font-medium text-text-muted">No trips today</p>
+                    <p class="text-sm font-medium text-text-muted">{{t "db.no_trips"}}</p>
                 </div>
             </div>
         </div>
         <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                 <div>
-                    <h2 class="text-title-sm font-bold text-on-surface">Bookings · Last 30 Days</h2>
-                    <p class="text-xs text-text-muted">Daily bookings by pickup date</p>
+                    <h2 class="text-title-sm font-bold text-on-surface">{{t "db.chart_bookings"}}</h2>
+                    <p class="text-xs text-text-muted">{{t "db.chart_bookings_sub"}}</p>
                 </div>
                 <span class="inline-flex items-center px-2 py-1 rounded-full bg-blue-soft text-blue-strong border border-blue-line text-[11px] font-bold uppercase tracking-wide">30D</span>
             </div>
@@ -291,7 +291,7 @@
                 <canvas id="chart-bookings"></canvas>
                 <div id="chart-bookings-empty" class="hidden absolute inset-0 items-center justify-center flex-col gap-2 text-center p-4">
                     <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 11h-6"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-                    <p class="text-sm font-medium text-text-muted">No bookings yet</p>
+                    <p class="text-sm font-medium text-text-muted">{{t "db.no_bookings"}}</p>
                 </div>
             </div>
         </div>
@@ -303,7 +303,7 @@
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between bg-gradient-to-r from-rose-500/[0.06] to-transparent">
                 <div class="flex items-center gap-2">
                     <span class="w-7 h-7 rounded-lg bg-rose-soft border border-rose-line grid place-items-center text-rose-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg></span>
-                    <h2 class="text-title-sm font-bold text-on-surface">Overdue Trips</h2>
+                    <h2 class="text-title-sm font-bold text-on-surface">{{t "db.overdue"}}</h2>
                 </div>
                 <span id="badge-overdue" class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-rose-500 text-white text-xs font-bold tabular-nums">{{len .Stats.OverdueTrips}}</span>
             </div>
@@ -315,7 +315,7 @@
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between bg-gradient-to-r from-amber-500/[0.07] to-transparent">
                 <div class="flex items-center gap-2">
                     <span class="w-7 h-7 rounded-lg bg-amber-soft border border-amber-line grid place-items-center text-amber-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></span>
-                    <h2 class="text-title-sm font-bold text-on-surface">Idle Vehicles</h2>
+                    <h2 class="text-title-sm font-bold text-on-surface">{{t "db.idle"}}</h2>
                 </div>
                 <span id="badge-idle" class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-amber-500 text-white text-xs font-bold tabular-nums">{{len .Stats.IdleVehicles}}</span>
             </div>
@@ -327,7 +327,7 @@
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between bg-gradient-to-r from-blue-500/[0.06] to-transparent">
                 <div class="flex items-center gap-2">
                     <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg></span>
-                    <h2 class="text-title-sm font-bold text-on-surface">Pending Payments</h2>
+                    <h2 class="text-title-sm font-bold text-on-surface">{{t "db.pending_payments"}}</h2>
                 </div>
                 <span id="badge-pending" class="inline-flex items-center justify-center min-w-6 h-6 px-2 rounded-full bg-blue-600 text-white text-xs font-bold tabular-nums">{{.Stats.PendingPaymentsCount}}</span>
             </div>
@@ -341,27 +341,27 @@
     <div id="dash-sec-upcoming" data-dashtab="today" class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-4 border-b border-border-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-                <h2 class="text-title-sm font-bold text-on-surface">Upcoming Trips</h2>
-                <span id="badge-upcoming" class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Stats.UpcomingTrips}} today</span>
+                <h2 class="text-title-sm font-bold text-on-surface">{{t "db.upcoming"}}</h2>
+                <span id="badge-upcoming" class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Stats.UpcomingTrips}} {{t "db.today"}}</span>
             </div>
             <div class="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto">
                 <div class="relative flex-1 min-w-0 sm:flex-none">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                    <input aria-label="Filter trips, driver, route" autocomplete="off" id="upcoming-search" type="text" placeholder="Filter trips, driver, route…" class="w-full sm:w-64 pl-9 pr-3 py-2 rounded-full bg-surface-container-low border border-border-subtle text-sm placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
+                    <input aria-label="{{t "db.filter_aria"}}" autocomplete="off" id="upcoming-search" type="text" placeholder="{{t "db.filter_ph"}}" class="w-full sm:w-64 pl-9 pr-3 py-2 rounded-full bg-surface-container-low border border-border-subtle text-sm placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10">
                 </div>
                 <div class="flex items-center gap-2 w-full sm:w-auto">
-                    <select id="upcoming-status" aria-label="Filter by status" class="flex-1 sm:flex-none px-3 py-2 rounded-full bg-surface-container-low border border-border-subtle text-xs font-medium focus:outline-none focus:border-primary">
-                        <option value="">All status</option>
-                        <option value="scheduled">Scheduled</option>
-                        <option value="assigned">Assigned</option>
-                        <option value="started">Started</option>
-                        <option value="reached_pickup">Reached pickup</option>
-                        <option value="in_transit">In transit</option>
-                        <option value="delivered">Delivered</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
+                    <select id="upcoming-status" aria-label="{{t "db.filter_status_aria"}}" class="flex-1 sm:flex-none px-3 py-2 rounded-full bg-surface-container-low border border-border-subtle text-xs font-medium focus:outline-none focus:border-primary">
+                        <option value="">{{t "db.all_status"}}</option>
+                        <option value="scheduled">{{t "db.st_scheduled"}}</option>
+                        <option value="assigned">{{t "db.st_assigned"}}</option>
+                        <option value="started">{{t "db.st_started"}}</option>
+                        <option value="reached_pickup">{{t "db.st_reached_pickup"}}</option>
+                        <option value="in_transit">{{t "db.st_in_transit"}}</option>
+                        <option value="delivered">{{t "db.st_delivered"}}</option>
+                        <option value="completed">{{t "db.st_completed"}}</option>
+                        <option value="cancelled">{{t "db.st_cancelled"}}</option>
                     </select>
-                    <a href="/trips" class="inline-flex items-center justify-center gap-1 px-4 py-2 rounded-full bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-colors shrink-0">View All →</a>
+                    <a href="/trips" class="inline-flex items-center justify-center gap-1 px-4 py-2 rounded-full bg-primary text-on-primary text-xs font-bold hover:bg-primary/90 transition-colors shrink-0">{{t "db.view_all_caps"}}</a>
                 </div>
             </div>
         </div>
@@ -374,13 +374,13 @@
             <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Trip #</th>
-                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Driver</th>
-                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Vehicle</th>
-                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Route</th>
-                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Departure</th>
-                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Status</th>
-                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Action</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">{{t "db.th_trip"}}</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">{{t "db.th_driver"}}</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">{{t "db.th_vehicle"}}</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">{{t "db.th_route"}}</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">{{t "db.th_departure"}}</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">{{t "db.th_status"}}</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">{{t "db.th_action"}}</th>
                     </tr>
                 </thead>
                 <tbody id="upcoming-tbody" class="divide-y divide-border-subtle">
@@ -394,17 +394,17 @@
     <div id="dash-sec-recents" data-dashtab="trends" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between">
-                <h2 class="text-title-sm font-bold text-on-surface">Recent Bookings</h2>
-                <a href="/bookings" class="text-xs font-semibold text-primary hover:underline">View all →</a>
+                <h2 class="text-title-sm font-bold text-on-surface">{{t "db.recent_bookings"}}</h2>
+                <a href="/bookings" class="text-xs font-semibold text-primary hover:underline">{{t "db.view_all"}}</a>
             </div>
             <div class="overflow-x-auto">
                 <table class="rtable min-w-full divide-y divide-border-subtle">
                     <thead class="bg-surface-container-low">
                         <tr>
-                            <th class="px-4 py-2 text-left text-eyebrow text-text-muted">Booking #</th>
-                            <th class="px-4 py-2 text-left text-eyebrow text-text-muted">Customer</th>
-                            <th class="px-4 py-2 text-left text-eyebrow text-text-muted">Pickup</th>
-                            <th class="px-4 py-2 text-right text-eyebrow text-text-muted">Price</th>
+                            <th class="px-4 py-2 text-left text-eyebrow text-text-muted">{{t "db.th_booking"}}</th>
+                            <th class="px-4 py-2 text-left text-eyebrow text-text-muted">{{t "db.th_customer"}}</th>
+                            <th class="px-4 py-2 text-left text-eyebrow text-text-muted">{{t "db.th_pickup"}}</th>
+                            <th class="px-4 py-2 text-right text-eyebrow text-text-muted">{{t "db.th_price"}}</th>
                         </tr>
                     </thead>
                     <tbody id="tbl-bookings" class="divide-y divide-border-subtle">
@@ -416,17 +416,17 @@
 
         <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden flex flex-col">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between">
-                <h2 class="text-title-sm font-bold text-on-surface">Recent Payments</h2>
-                <a href="/payments" class="text-xs font-semibold text-primary hover:underline">View all →</a>
+                <h2 class="text-title-sm font-bold text-on-surface">{{t "db.recent_payments"}}</h2>
+                <a href="/payments" class="text-xs font-semibold text-primary hover:underline">{{t "db.view_all"}}</a>
             </div>
             <div class="overflow-x-auto">
                 <table class="rtable min-w-full divide-y divide-border-subtle">
                     <thead class="bg-surface-container-low">
                         <tr>
-                            <th class="px-4 py-2 text-left text-eyebrow text-text-muted">Invoice</th>
-                            <th class="px-4 py-2 text-right text-eyebrow text-text-muted">Amount</th>
-                            <th class="px-4 py-2 text-left text-eyebrow text-text-muted">Method</th>
-                            <th class="px-4 py-2 text-left text-eyebrow text-text-muted">Date</th>
+                            <th class="px-4 py-2 text-left text-eyebrow text-text-muted">{{t "db.th_invoice"}}</th>
+                            <th class="px-4 py-2 text-right text-eyebrow text-text-muted">{{t "db.th_amount"}}</th>
+                            <th class="px-4 py-2 text-left text-eyebrow text-text-muted">{{t "db.th_method"}}</th>
+                            <th class="px-4 py-2 text-left text-eyebrow text-text-muted">{{t "db.th_date"}}</th>
                         </tr>
                     </thead>
                     <tbody id="tbl-payments" class="divide-y divide-border-subtle">
@@ -440,8 +440,8 @@
     <!-- Recent Activity — timeline -->
     <div id="dash-sec-activity" data-dashtab="trends" class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between">
-            <h2 class="text-title-sm font-bold text-on-surface">Recent Activity</h2>
-            <a href="/audit-logs" class="text-xs font-semibold text-primary hover:underline">Audit log →</a>
+            <h2 class="text-title-sm font-bold text-on-surface">{{t "db.recent_activity"}}</h2>
+            <a href="/audit-logs" class="text-xs font-semibold text-primary hover:underline">{{t "db.audit_log"}}</a>
         </div>
         <div id="feed-activity" class="p-5">
             {{template "dash_activity_items.html" .}}
@@ -458,15 +458,15 @@
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div class="min-w-0">
             <div class="flex items-center gap-3 flex-wrap">
-                <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Operations Command</h1>
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-bold tracking-wide uppercase text-text-muted">Classic view</span>
+                <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{t "db.ops_command"}}</h1>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container border border-border-subtle text-[11px] font-bold tracking-wide uppercase text-text-muted">{{t "db.classic"}}</span>
                 <span id="dash-live-stamp-a" class="text-xs text-text-muted tabular-nums"> live</span>
             </div>
-            <p class="text-sm text-secondary mt-1">Fleet, trips and revenue — <a href="/dashboard?variant=b" class="text-primary font-semibold hover:underline">Switch to Command view →</a></p>
+            <p class="text-sm text-secondary mt-1">{{t "db.classic_sub"}} <a href="/dashboard?variant=b" class="text-primary font-semibold hover:underline">{{t "db.switch_command"}}</a></p>
         </div>
         <div class="flex items-center gap-2 flex-wrap shrink-0">
-            <a href="/bookings/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 transition">+ New Booking</a>
-            <a href="/trips/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold hover:bg-surface-container-low transition">+ Dispatch</a>
+            <a href="/bookings/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 transition">+ {{t "db.new_booking"}}</a>
+            <a href="/trips/new" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold hover:bg-surface-container-low transition">+ {{t "db.dispatch_trip"}}</a>
         </div>
     </div>
     <!-- Hero KPIs — premium (with text-stat for test compat) -->
@@ -475,35 +475,35 @@
             <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary to-violet-500"></div>
             <div class="flex items-start justify-between">
                 <div class="w-10 h-10 rounded-xl bg-primary/10 border border-primary/10 grid place-items-center text-primary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg></div>
-                {{if gt $dy 0}}<span class="px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong">▲ +{{$dy}} vs yesterday</span>{{else if lt $dy 0}}<span class="px-2 py-1 rounded-full bg-rose-soft border border-rose-line text-[11px] font-bold text-rose-mid">▼ {{mul $dy -1}} vs yesterday</span>{{else}}<span class="px-2 py-1 rounded-full bg-surface-container border text-[11px] font-medium text-text-muted">— vs yesterday</span>{{end}}
+                {{if gt $dy 0}}<span class="px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong">▲ +{{$dy}} {{t "db.vs_yesterday"}}</span>{{else if lt $dy 0}}<span class="px-2 py-1 rounded-full bg-rose-soft border border-rose-line text-[11px] font-bold text-rose-mid">▼ {{mul $dy -1}} {{t "db.vs_yesterday"}}</span>{{else}}<span class="px-2 py-1 rounded-full bg-surface-container border text-[11px] font-medium text-text-muted">— {{t "db.vs_yesterday"}}</span>{{end}}
             </div>
-            <div class="mt-4"><div class="text-stat text-primary tabular-nums text-3xl font-black">{{.Stats.TodaysTripsCount}}</div><div class="text-sm font-medium text-secondary mt-1">Today's Trips</div></div>
+            <div class="mt-4"><div class="text-stat text-primary tabular-nums text-3xl font-black">{{.Stats.TodaysTripsCount}}</div><div class="text-sm font-medium text-secondary mt-1">{{t "db.kpi_today"}}</div></div>
         </div>
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5">
             <div class="w-10 h-10 rounded-xl bg-amber-soft border border-amber-line grid place-items-center text-amber-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg></div>
-            <div class="mt-4"><div class="text-stat text-status-warning tabular-nums text-3xl font-black">{{.Stats.ActiveTripsCount}}</div><div class="text-sm font-medium text-secondary mt-1">Active Trips</div></div>
+            <div class="mt-4"><div class="text-stat text-status-warning tabular-nums text-3xl font-black">{{.Stats.ActiveTripsCount}}</div><div class="text-sm font-medium text-secondary mt-1">{{t "db.kpi_active"}}</div></div>
         </div>
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5">
             <div class="w-10 h-10 rounded-xl bg-emerald-soft grid place-items-center text-emerald-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
-            <div class="mt-4"><div class="text-stat text-status-success tabular-nums text-3xl font-black">{{.Stats.CompletedTripsCount}}</div><div class="text-sm font-medium text-secondary mt-1">Completed Trips</div></div>
+            <div class="mt-4"><div class="text-stat text-status-success tabular-nums text-3xl font-black">{{.Stats.CompletedTripsCount}}</div><div class="text-sm font-medium text-secondary mt-1">{{t "db.kpi_completed"}}</div></div>
         </div>
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5">
             <div class="w-10 h-10 rounded-xl bg-rose-soft grid place-items-center text-rose-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/></svg></div>
-            <div class="mt-4"><div class="text-stat text-status-alert tabular-nums text-3xl font-black">{{.Stats.CancelledTripsCount}}</div><div class="text-sm font-medium text-secondary mt-1">Cancelled Trips</div></div>
+            <div class="mt-4"><div class="text-stat text-status-alert tabular-nums text-3xl font-black">{{.Stats.CancelledTripsCount}}</div><div class="text-sm font-medium text-secondary mt-1">{{t "db.kpi_cancelled"}}</div></div>
         </div>
     </div>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4"><div class="w-9 h-9 rounded-lg bg-blue-soft grid place-items-center text-blue-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></div><div><div class="text-xl font-bold tabular-nums">{{.Stats.AvailableVehiclesCount}}</div><div class="text-xs text-secondary font-medium">Available Vehicles</div></div></div>
-        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4"><div class="w-9 h-9 rounded-lg bg-violet-soft grid place-items-center text-violet-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div><div class="text-xl font-bold tabular-nums">{{.Stats.AvailableDriversCount}}</div><div class="text-xs text-secondary font-medium">Available Drivers</div></div></div>
-        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4"><div class="w-9 h-9 rounded-lg bg-amber-soft grid place-items-center text-amber-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/></svg></div><div><div class="text-xl font-bold tabular-nums">{{.Stats.PendingPaymentsCount}}</div><div class="text-xs text-secondary font-medium">Pending Payments</div></div></div>
-        <div class="flex items-center gap-4 bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white"><div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div><div class="text-xl font-black tabular-nums">{{printf "₹%.2f" .Stats.MonthlyRevenue}}</div><div class="text-xs font-medium text-white/80">Monthly Revenue</div></div></div>
+        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4"><div class="w-9 h-9 rounded-lg bg-blue-soft grid place-items-center text-blue-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></div><div><div class="text-xl font-bold tabular-nums">{{.Stats.AvailableVehiclesCount}}</div><div class="text-xs text-secondary font-medium">{{t "db.avail_vehicles"}}</div></div></div>
+        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4"><div class="w-9 h-9 rounded-lg bg-violet-soft grid place-items-center text-violet-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div><div><div class="text-xl font-bold tabular-nums">{{.Stats.AvailableDriversCount}}</div><div class="text-xs text-secondary font-medium">{{t "db.avail_drivers"}}</div></div></div>
+        <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4"><div class="w-9 h-9 rounded-lg bg-amber-soft grid place-items-center text-amber-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/></svg></div><div><div class="text-xl font-bold tabular-nums">{{.Stats.PendingPaymentsCount}}</div><div class="text-xs text-secondary font-medium">{{t "db.pending_payments"}}</div></div></div>
+        <div class="flex items-center gap-4 bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white"><div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div><div><div class="text-xl font-black tabular-nums">{{printf "₹%.2f" .Stats.MonthlyRevenue}}</div><div class="text-xs font-medium text-white/80">{{t "db.monthly_revenue"}}</div></div></div>
     </div>
 
     <!-- Upcoming Trips -->
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-4 py-3 border-b border-border-subtle flex justify-between items-center">
-            <h2 class="text-title-sm font-bold text-on-surface">Upcoming Trips</h2>
-            <a href="/trips" class="text-sm text-primary hover:underline font-medium">View All</a>
+            <h2 class="text-title-sm font-bold text-on-surface">{{t "db.upcoming"}}</h2>
+            <a href="/trips" class="text-sm text-primary hover:underline font-medium">{{t "db.view_all_plain"}}</a>
         </div>
         <!-- Mobile cards -->
         <div class="sm:hidden divide-y divide-border-subtle">
@@ -517,30 +517,30 @@
             </div>
             {{end}}
             {{else}}
-            <div class="px-4 py-10 text-center text-sm text-text-muted">No upcoming trips</div>
+            <div class="px-4 py-10 text-center text-sm text-text-muted">{{t "db.no_upcoming"}}</div>
             {{end}}
         </div>
         <div class="hidden sm:block overflow-x-auto">
             <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Trip #</th>
-                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Driver</th>
-                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Vehicle</th>
-                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Route</th>
-                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Departure</th>
-                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Status</th>
+                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">{{t "db.th_trip"}}</th>
+                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">{{t "db.th_driver"}}</th>
+                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">{{t "db.th_vehicle"}}</th>
+                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">{{t "db.th_route"}}</th>
+                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">{{t "db.th_departure"}}</th>
+                        <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">{{t "db.th_status"}}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
                     {{range .Stats.UpcomingTrips}}
                     <tr class="hover:bg-surface-container-low/50">
-                        <td data-label="Trip #" class="px-4 py-2.5 text-sm font-bold text-primary">{{.TripNumber}}</td>
-                        <td data-label="Driver" class="px-4 py-2.5 text-sm font-medium">{{nullString .DriverFirstName}} {{nullString .DriverLastName}}</td>
-                        <td data-label="Vehicle" class="px-4 py-2.5 text-sm">{{nullString .VehicleRegistration}}</td>
-                        <td data-label="Route" class="px-4 py-2.5 text-sm">{{.RouteSource}} → {{.RouteDestination}}</td>
-                        <td data-label="Departure" class="px-4 py-2.5 text-sm tabular-nums"><span class="time-display" data-utc-time="{{.DepartureTime.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .DepartureTime}}</span></td>
-                        <td data-label="Status" class="px-4 py-2.5 text-sm"><span class="px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}">{{.Status}}</span></td>
+                        <td data-label="{{t "db.th_trip"}}" class="px-4 py-2.5 text-sm font-bold text-primary">{{.TripNumber}}</td>
+                        <td data-label="{{t "db.th_driver"}}" class="px-4 py-2.5 text-sm font-medium">{{nullString .DriverFirstName}} {{nullString .DriverLastName}}</td>
+                        <td data-label="{{t "db.th_vehicle"}}" class="px-4 py-2.5 text-sm">{{nullString .VehicleRegistration}}</td>
+                        <td data-label="{{t "db.th_route"}}" class="px-4 py-2.5 text-sm">{{.RouteSource}} → {{.RouteDestination}}</td>
+                        <td data-label="{{t "db.th_departure"}}" class="px-4 py-2.5 text-sm tabular-nums"><span class="time-display" data-utc-time="{{.DepartureTime.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .DepartureTime}}</span></td>
+                        <td data-label="{{t "db.th_status"}}" class="px-4 py-2.5 text-sm"><span class="px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}">{{.Status}}</span></td>
                     </tr>
                     {{end}}
                 </tbody>
@@ -551,24 +551,24 @@
     <!-- Recent Bookings and Payments -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
-            <div class="px-4 py-3 border-b border-border-subtle"><h2 class="text-title-sm font-bold text-on-surface">Recent Bookings</h2></div>
+            <div class="px-4 py-3 border-b border-border-subtle"><h2 class="text-title-sm font-bold text-on-surface">{{t "db.recent_bookings"}}</h2></div>
             <div class="overflow-x-auto">
                 <table class="rtable min-w-full divide-y divide-border-subtle">
                     <thead class="bg-surface-container-low">
                         <tr>
-                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Booking #</th>
-                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Customer</th>
-                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Pickup</th>
-                            <th class="px-4 py-2 text-right text-xs font-bold tracking-wider uppercase text-text-muted">Price</th>
+                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">{{t "db.th_booking"}}</th>
+                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">{{t "db.th_customer"}}</th>
+                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">{{t "db.th_pickup"}}</th>
+                            <th class="px-4 py-2 text-right text-xs font-bold tracking-wider uppercase text-text-muted">{{t "db.th_price"}}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border-subtle">
                         {{range .Stats.RecentBookings}}
                         <tr class="hover:bg-surface-container-low/50">
-                            <td data-label="Booking #" class="px-4 py-2.5 text-sm font-bold text-primary">{{.BookingNumber}}</td>
-                            <td data-label="Customer" class="px-4 py-2.5 text-sm">{{.CustomerName}}</td>
-                            <td data-label="Pickup" class="px-4 py-2.5 text-sm tabular-nums"><span class="time-display" data-utc-time="{{.PickupDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PickupDate}}</span></td>
-                            <td data-label="Price" class="px-4 py-2.5 text-sm tabular-nums text-right font-semibold">{{printf "%.2f" .Price}}</td>
+                            <td data-label="{{t "db.th_booking"}}" class="px-4 py-2.5 text-sm font-bold text-primary">{{.BookingNumber}}</td>
+                            <td data-label="{{t "db.th_customer"}}" class="px-4 py-2.5 text-sm">{{.CustomerName}}</td>
+                            <td data-label="{{t "db.th_pickup"}}" class="px-4 py-2.5 text-sm tabular-nums"><span class="time-display" data-utc-time="{{.PickupDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PickupDate}}</span></td>
+                            <td data-label="{{t "db.th_price"}}" class="px-4 py-2.5 text-sm tabular-nums text-right font-semibold">{{printf "%.2f" .Price}}</td>
                         </tr>
                         {{end}}
                     </tbody>
@@ -577,24 +577,24 @@
         </div>
 
         <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
-            <div class="px-4 py-3 border-b border-border-subtle"><h2 class="text-title-sm font-bold text-on-surface">Recent Payments</h2></div>
+            <div class="px-4 py-3 border-b border-border-subtle"><h2 class="text-title-sm font-bold text-on-surface">{{t "db.recent_payments"}}</h2></div>
             <div class="overflow-x-auto">
                 <table class="rtable min-w-full divide-y divide-border-subtle">
                     <thead class="bg-surface-container-low">
                         <tr>
-                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Invoice</th>
-                            <th class="px-4 py-2 text-right text-xs font-bold tracking-wider uppercase text-text-muted">Amount</th>
-                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Method</th>
-                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">Date</th>
+                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">{{t "db.th_invoice"}}</th>
+                            <th class="px-4 py-2 text-right text-xs font-bold tracking-wider uppercase text-text-muted">{{t "db.th_amount"}}</th>
+                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">{{t "db.th_method"}}</th>
+                            <th class="px-4 py-2 text-left text-xs font-bold tracking-wider uppercase text-text-muted">{{t "db.th_date"}}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-border-subtle">
                         {{range .Stats.RecentPayments}}
                         <tr class="hover:bg-surface-container-low/50">
-                            <td data-label="Invoice" class="px-4 py-2.5 text-sm font-bold text-primary">{{.InvoiceNumber}}</td>
-                            <td data-label="Amount" class="px-4 py-2.5 text-sm tabular-nums text-right font-semibold">{{printf "%.2f" .Amount}}</td>
-                            <td data-label="Method" class="px-4 py-2.5 text-sm">{{.Method}}</td>
-                            <td data-label="Date" class="px-4 py-2.5 text-sm tabular-nums"><span class="time-display" data-utc-time="{{.PaymentDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PaymentDate}}</span></td>
+                            <td data-label="{{t "db.th_invoice"}}" class="px-4 py-2.5 text-sm font-bold text-primary">{{.InvoiceNumber}}</td>
+                            <td data-label="{{t "db.th_amount"}}" class="px-4 py-2.5 text-sm tabular-nums text-right font-semibold">{{printf "%.2f" .Amount}}</td>
+                            <td data-label="{{t "db.th_method"}}" class="px-4 py-2.5 text-sm">{{.Method}}</td>
+                            <td data-label="{{t "db.th_date"}}" class="px-4 py-2.5 text-sm tabular-nums"><span class="time-display" data-utc-time="{{.PaymentDate.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .PaymentDate}}</span></td>
                         </tr>
                         {{end}}
                     </tbody>
@@ -605,7 +605,7 @@
 
     <!-- Recent Activity -->
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
-        <div class="px-4 py-3 border-b border-border-subtle"><h2 class="text-title-sm font-bold text-on-surface">Recent Activity</h2></div>
+        <div class="px-4 py-3 border-b border-border-subtle"><h2 class="text-title-sm font-bold text-on-surface">{{t "db.recent_activity"}}</h2></div>
         <div class="p-4">
             <ul class="space-y-2">
                 {{range .Stats.RecentActivity}}

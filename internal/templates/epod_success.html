@@ -5,9 +5,9 @@
         <div class="w-16 h-16 rounded-full bg-status-success/10 flex items-center justify-center mx-auto mb-5">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
         </div>
-        <h2 class="text-xl font-semibold text-on-surface font-display">Delivery Confirmed!</h2>
+        <h2 class="text-xl font-semibold text-on-surface font-display">{{t "mo.epd.confirmed_title"}}</h2>
         <p class="text-sm text-text-muted mt-2">
-            Trip <span class="font-data-mono font-semibold text-on-surface tabular-nums">{{.TripNumber}}</span> delivered &amp; recorded successfully.
+            {{t "mo.c.trip"}} <span class="font-data-mono font-semibold text-on-surface tabular-nums">{{.TripNumber}}</span> {{t "mo.epd.delivered"}}
         </p>
 
         <!-- Auto-triggered actions -->
@@ -16,23 +16,23 @@
                 <span class="w-5 h-5 rounded-full bg-status-success/10 flex items-center justify-center shrink-0">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M20 6 9 17l-5-5"/></svg>
                 </span>
-                Trip status → <strong>Delivered</strong>
+                {{t "mo.epd.trip_status"}} <strong>{{t "mo.epd.delivered_badge"}}</strong>
             </div>
             <div class="flex items-center gap-3 text-xs text-secondary">
                 <span class="w-5 h-5 rounded-full bg-status-success/10 flex items-center justify-center shrink-0">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M20 6 9 17l-5-5"/></svg>
                 </span>
-                e-POD captured &amp; saved
+                {{t "mo.epd.captured"}}
             </div>
             <div class="flex items-center gap-3 text-xs text-secondary">
                 <span class="w-5 h-5 rounded-full bg-status-success/10 flex items-center justify-center shrink-0">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M20 6 9 17l-5-5"/></svg>
                 </span>
-                Fleet owner notified
+                {{t "mo.epd.owner_notified"}}
             </div>
         </div>
 
-        {{template "btn.html" (dict "Label" "View Next Trip" "Href" "/driver/trips" "Icon" "arrow_forward" "Class" "mt-6 w-full")}}
+        {{template "btn.html" (dict "Label" (t "mo.epd.next_trip") "Href" "/driver/trips" "Icon" "arrow_forward" "Class" "mt-6 w-full")}}
     </div>
 </div>
 {{end}}

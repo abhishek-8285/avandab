@@ -1,41 +1,41 @@
 {{range .Devices}}
 <tr class="hover:bg-surface-container-low/60 transition-colors group">
     <td data-label="IMEI" class="px-3 py-2 text-sm font-data-mono font-bold text-primary tabular-nums whitespace-nowrap">{{.IMEI}}</td>
-    <td data-label="Status" class="px-3 py-2 text-sm text-on-surface whitespace-nowrap">
+    <td data-label="{{t "fl.status"}}" class="px-3 py-2 text-sm text-on-surface whitespace-nowrap">
         {{if eq .Status "active"}}
-        {{template "status_dot.html" (dict "Tone" "success" "Label" "Active")}}
+        {{template "status_dot.html" (dict "Tone" "success" "Label" (t "fl.active_2"))}}
         {{else if eq .Status "assigned"}}
-        {{template "status_dot.html" (dict "Tone" "info" "Label" "Assigned")}}
+        {{template "status_dot.html" (dict "Tone" "info" "Label" (t "fl.assigned"))}}
         {{else if eq .Status "inventory"}}
-        {{template "status_dot.html" (dict "Tone" "neutral" "Label" "Inventory")}}
+        {{template "status_dot.html" (dict "Tone" "neutral" "Label" (t "fl.inventory"))}}
         {{else if eq .Status "retired"}}
-        {{template "status_dot.html" (dict "Tone" "alert" "Label" "Retired")}}
+        {{template "status_dot.html" (dict "Tone" "alert" "Label" (t "fl.retired"))}}
         {{else if eq .Status "quarantined"}}
-        {{template "status_dot.html" (dict "Tone" "warning" "Label" "Quarantined")}}
+        {{template "status_dot.html" (dict "Tone" "warning" "Label" (t "fl.quarantined"))}}
         {{else}}
         {{template "status_dot.html" (dict "Tone" "neutral" "Label" .Status)}}
         {{end}}
     </td>
-    <td data-label="Vehicle" class="px-3 py-2 text-xs font-data-mono text-secondary">{{nullString .VehicleID}}</td>
-    <td data-label="Type" class="px-3 py-2"><span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-secondary">{{.DeviceType}}</span></td>
-    <td data-label="Last Seen" class="px-3 py-2 text-xs text-secondary tabular-nums whitespace-nowrap">{{derefTime .LastSeenAt}}</td>
-    <td data-label="Actions" class="px-3 py-2 text-right whitespace-nowrap">
+    <td data-label="{{t "fl.vehicle"}}" class="px-3 py-2 text-xs font-data-mono text-secondary">{{nullString .VehicleID}}</td>
+    <td data-label="{{t "fl.type"}}" class="px-3 py-2"><span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold text-secondary">{{.DeviceType}}</span></td>
+    <td data-label="{{t "fl.last_seen"}}" class="px-3 py-2 text-xs text-secondary tabular-nums whitespace-nowrap">{{derefTime .LastSeenAt}}</td>
+    <td data-label="{{t "fl.actions"}}" class="px-3 py-2 text-right whitespace-nowrap">
         {{if can $.User "telemetry" "update"}}
         {{if eq .Status "inventory"}}
         <form method="POST" action="/telemetry/devices/{{.IMEI}}/assign" class="inline-flex items-center gap-1" hx-post="/telemetry/devices/{{.IMEI}}/assign" hx-target="#telemetry-device-rows" hx-swap="innerMorph" hx-indicator="closest form">
-            <input aria-label="vehicle id" type="hidden" name="vehicle_id" value="{{nullString .VehicleID}}" class="w-28 bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1 text-xs font-data-mono text-on-surface" placeholder="vehicle id">
-            <button type="submit" class="inline-flex items-center rounded-full bg-primary text-on-primary px-2.5 py-1 text-[11px] font-bold hover:bg-primary/90 transition">Assign</button>
+            <input aria-label="{{t "fl.vehicle_id_2"}}" type="hidden" name="vehicle_id" value="{{nullString .VehicleID}}" class="w-28 bg-surface-container-low border border-border-subtle rounded-lg px-2 py-1 text-xs font-data-mono text-on-surface" placeholder="{{t "fl.vehicle_id_2"}}">
+            <button type="submit" class="inline-flex items-center rounded-full bg-primary text-on-primary px-2.5 py-1 text-[11px] font-bold hover:bg-primary/90 transition">{{t "fl.assign"}}</button>
         </form>
         {{else if eq .Status "assigned"}}
         <form method="POST" action="/telemetry/devices/{{.IMEI}}/activate" class="inline" hx-post="/telemetry/devices/{{.IMEI}}/activate" hx-target="#telemetry-device-rows" hx-swap="innerMorph" hx-indicator="closest form">
-            <button type="submit" class="text-primary hover:underline font-bold text-xs">Activate</button>
+            <button type="submit" class="text-primary hover:underline font-bold text-xs">{{t "fl.activate"}}</button>
         </form>
         <form method="POST" action="/telemetry/devices/{{.IMEI}}/retire" class="inline ml-2" hx-post="/telemetry/devices/{{.IMEI}}/retire" hx-target="#telemetry-device-rows" hx-swap="innerMorph" hx-indicator="closest form">
-            <button type="submit" class="text-status-alert hover:underline font-bold text-xs">Retire</button>
+            <button type="submit" class="text-status-alert hover:underline font-bold text-xs">{{t "fl.retire"}}</button>
         </form>
         {{else if eq .Status "active"}}
         <form method="POST" action="/telemetry/devices/{{.IMEI}}/retire" class="inline" hx-post="/telemetry/devices/{{.IMEI}}/retire" hx-target="#telemetry-device-rows" hx-swap="innerMorph" hx-indicator="closest form">
-            <button type="submit" class="text-status-alert hover:underline font-bold text-xs">Retire</button>
+            <button type="submit" class="text-status-alert hover:underline font-bold text-xs">{{t "fl.retire"}}</button>
         </form>
         {{end}}
         {{end}}
@@ -48,8 +48,8 @@
             <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><circle cx="12" cy="12" r="3"/><path d="M12 2v4"/><path d="M12 18v4"/><path d="M2 12h4"/><path d="M18 12h4"/><path d="M4.9 4.9 7.8 7.8"/><path d="M16.2 7.8 19.1 4.9"/><path d="M4.9 19.1 7.8 16.2"/><path d="M16.2 16.2 19.1 19.1"/></svg>
             </div>
-            <p class="text-sm font-medium text-on-surface mt-1">No devices found</p>
-            <p class="text-xs text-text-muted">Nothing matches the current filters.</p>
+            <p class="text-sm font-medium text-on-surface mt-1">{{t "fl.no_devices_found"}}</p>
+            <p class="text-xs text-text-muted">{{t "fl.nothing_matches_the_current_filters"}}</p>
         </div>
     </td>
 </tr>

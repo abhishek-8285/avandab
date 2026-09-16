@@ -2,26 +2,25 @@
     <!-- Hero Identity Band -->
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div class="flex items-start gap-3 min-w-0">
-            <a href="/ewaybill" class="w-9 h-9 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container transition-colors shrink-0" aria-label="Back to e-way bills">
+            <a href="/ewaybill" class="w-9 h-9 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container transition-colors shrink-0" aria-label="{{t "mo.ewb.back"}}">
                 <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
             </a>
             <div class="min-w-0">
-                <p class="text-eyebrow text-text-muted">E-Way Bill · GST e-Permit</p>
+                <p class="text-eyebrow text-text-muted">{{t "mo.ewb.title"}}</p>
                 <div class="flex items-center gap-2.5 flex-wrap mt-0.5">
                     <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-on-surface font-data-mono tabular-nums truncate">{{.EWayBill.EwbNumber}}</h1>
                     {{if eq .EWayBill.Status "active"}}
-                    <span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold uppercase tracking-wide text-emerald-strong dark:text-emerald-300">Active</span>
+                    <span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold uppercase tracking-wide text-emerald-strong dark:text-emerald-300">{{t "mo.c.active"}}</span>
                     {{else if eq .EWayBill.Status "cancelled"}}
-                    <span class="inline-flex px-2 py-1 rounded-full bg-rose-soft border border-rose-line text-[11px] font-bold uppercase tracking-wide text-rose-strong dark:text-rose-300">Cancelled</span>
+                    <span class="inline-flex px-2 py-1 rounded-full bg-rose-soft border border-rose-line text-[11px] font-bold uppercase tracking-wide text-rose-strong dark:text-rose-300">{{t "mo.c.cancelled"}}</span>
                     {{else if eq .EWayBill.Status "expired"}}
-                    <span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-bold uppercase tracking-wide text-amber-strong dark:text-amber-300">Expired</span>
+                    <span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-bold uppercase tracking-wide text-amber-strong dark:text-amber-300">{{t "mo.c.expired"}}</span>
                     {{end}}
                 </div>
                 <p class="text-sm text-secondary mt-1">
-                    Trip: <a href="/trips/{{.EWayBill.TripID}}" class="font-data-mono text-primary hover:underline font-semibold">{{.EWayBill.TripID}}</a> |
-                    Generated: <span class="tabular-nums"><time datetime="{{.EWayBill.CreatedAt.Format "2006-01-02T15:04"}}">{{.EWayBill.CreatedAt.Format "02 Jan 2006 15:04"}}</time></span> | Mode: <span class="font-semibold">{{.EWayBill.GenMode}}</span>
+                    {{t "mo.ewb.trip_label"}} <a href="/trips/{{.EWayBill.TripID}}" class="font-data-mono text-primary hover:underline font-semibold">{{.EWayBill.TripID}}</a> | {{t "mo.ewb.generated"}} <span class="tabular-nums"><time datetime="{{.EWayBill.CreatedAt.Format "2006-01-02T15:04"}}">{{.EWayBill.CreatedAt.Format "02 Jan 2006 15:04"}}</time></span> {{t "mo.ewb.mode"}} <span class="font-semibold">{{.EWayBill.GenMode}}</span>
                 </p>
             </div>
         </div>
@@ -30,17 +29,17 @@
                 {{if not .EWayBill.VehicleNumber}}
                 <button onclick="document.getElementById('part-b-modal').classList.remove('hidden')"
                         class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">
-                    Attach Part-B
+                    {{t "mo.ewb.attach_b"}}
                 </button>
                 {{else}}
                 <button onclick="document.getElementById('extend-modal').classList.remove('hidden')"
                         class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 transition cursor-pointer">
-                    Extend Validity
+                    {{t "mo.ewb.extend_btn"}}
                 </button>
                 {{end}}
                 <button onclick="document.getElementById('cancel-modal').classList.remove('hidden')"
                         class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-status-alert text-on-primary text-sm font-semibold shadow-sm hover:opacity-90 transition cursor-pointer">
-                    Cancel EWB
+                    {{t "mo.ewb.cancel_btn"}}
                 </button>
             {{else if eq .EWayBill.Status "cancelled"}}
                 <span class="inline-flex px-3 py-1 rounded-full bg-rose-soft border border-rose-line text-xs font-bold text-rose-strong dark:text-rose-300">
@@ -48,7 +47,7 @@
                 </span>
             {{else if eq .EWayBill.Status "expired"}}
                 <span class="inline-flex px-3 py-1 rounded-full bg-amber-soft border border-amber-line text-xs font-bold text-amber-strong dark:text-amber-300">
-                    Expired
+                    {{t "mo.c.expired"}}
                 </span>
             {{end}}
         </div>
@@ -59,33 +58,33 @@
         <!-- Part-A Card -->
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden lg:col-span-2">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
-                <h2 class="text-sm font-bold text-on-surface">Part-A Consignment Details</h2>
-                <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">Valid Until: <time datetime="{{.EWayBill.ValidUntil.Format "2006-01-02T15:04"}}">{{.EWayBill.ValidUntil.Format "02 Jan 15:04"}}</time></span>
+                <h2 class="text-sm font-bold text-on-surface">{{t "mo.ewb.parta"}}</h2>
+                <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{t "mo.ewb.valid_until"}} <time datetime="{{.EWayBill.ValidUntil.Format "2006-01-02T15:04"}}">{{.EWayBill.ValidUntil.Format "02 Jan 15:04"}}</time></span>
             </div>
             <div class="p-5">
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
                     <div>
-                        <dt class="text-eyebrow text-text-muted">From Place</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "mo.ewb.from_place"}}</dt>
                         <dd class="font-semibold text-on-surface mt-0.5">{{.EWayBill.FromPlace}} ({{.EWayBill.FromStateCode}})</dd>
                     </div>
                     <div>
-                        <dt class="text-eyebrow text-text-muted">To Place</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "mo.ewb.to_place"}}</dt>
                         <dd class="font-semibold text-on-surface mt-0.5">{{.EWayBill.ToPlace}} ({{.EWayBill.ToStateCode}})</dd>
                     </div>
                     <div>
-                        <dt class="text-eyebrow text-text-muted">Distance</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "mo.ewb.distance"}}</dt>
                         <dd class="font-data-mono font-semibold text-on-surface tabular-nums mt-0.5" data-numeric>{{.EWayBill.Distance}} km</dd>
                     </div>
                     <div>
-                        <dt class="text-eyebrow text-text-muted">Goods Value</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "mo.ewb.goods_value"}}</dt>
                         <dd class="font-data-mono font-bold text-on-surface tabular-nums mt-0.5" data-numeric>₹{{printf "%.2f" .EWayBill.GoodsValue}}</dd>
                     </div>
                     <div>
-                        <dt class="text-eyebrow text-text-muted">Doc Type / Number</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "mo.ewb.doc_type_no"}}</dt>
                         <dd class="font-semibold text-on-surface tabular-nums mt-0.5">{{.EWayBill.DocType}} - {{.EWayBill.DocNo}}</dd>
                     </div>
                     <div>
-                        <dt class="text-eyebrow text-text-muted">Doc Date</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "mo.ewb.doc_date"}}</dt>
                         <dd class="font-semibold text-on-surface tabular-nums mt-0.5">{{.EWayBill.DocDate}}</dd>
                     </div>
                 </dl>
@@ -95,14 +94,14 @@
         <!-- Part-B & Extension Card -->
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
-                <h2 class="text-sm font-bold text-on-surface">Part-B Transport &amp; Extensions</h2>
+                <h2 class="text-sm font-bold text-on-surface">{{t "mo.ewb.partb"}}</h2>
             </div>
             <div class="p-5">
                 <dl class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-x-6 gap-y-4 text-sm">
                     <div>
-                        <dt class="text-eyebrow text-text-muted">Vehicle Number</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "mo.ewb.vehicle_no"}}</dt>
                         <dd class="font-data-mono font-bold text-primary tabular-nums mt-0.5">
-                            {{if .EWayBill.VehicleNumber}}{{.EWayBill.VehicleNumber}}{{else}}<span class="text-status-warning font-sans">Not Attached</span>{{end}}
+                            {{if .EWayBill.VehicleNumber}}{{.EWayBill.VehicleNumber}}{{else}}<span class="text-status-warning font-sans">{{t "mo.ewb.not_attached"}}</span>{{end}}
                         </dd>
                     </div>
                     <div>
@@ -112,11 +111,11 @@
                         </dd>
                     </div>
                     <div>
-                        <dt class="text-eyebrow text-text-muted">Extensions Used</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "mo.ewb.ext_used"}}</dt>
                         <dd class="font-data-mono font-bold text-on-surface tabular-nums mt-0.5" data-numeric>{{.EWayBill.ExtensionCount}} / 1 permitted</dd>
                     </div>
                     <div>
-                        <dt class="text-eyebrow text-text-muted">Status</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "mo.c.status"}}</dt>
                         <dd class="font-semibold text-on-surface capitalize mt-0.5">{{.EWayBill.Status}}</dd>
                     </div>
                 </dl>
@@ -127,17 +126,17 @@
     <!-- Lifecycle Audit Events -->
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
-            <h2 class="text-sm font-bold text-on-surface">Lifecycle Audit Events</h2>
+            <h2 class="text-sm font-bold text-on-surface">{{t "mo.ewb.lifecycle_events"}}</h2>
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Events}}</span>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-border-subtle text-sm tabular-nums">
                 <thead class="bg-surface-container-low text-text-muted text-[11px] uppercase font-bold tracking-wider">
                     <tr>
-                        <th class="th-cell">Timestamp</th>
-                        <th class="th-cell">Event Type</th>
-                        <th class="th-cell">Payload / Details</th>
-                        <th class="th-cell">Actor</th>
+                        <th class="th-cell">{{t "mo.ewb.timestamp"}}</th>
+                        <th class="th-cell">{{t "mo.ewb.event_type"}}</th>
+                        <th class="th-cell">{{t "mo.ewb.payload"}}</th>
+                        <th class="th-cell">{{t "mo.ewb.actor"}}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
@@ -151,7 +150,7 @@
                                 {{else if eq .EventType "PART_B_ADDED"}}
                                 <span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-bold text-emerald-strong dark:text-emerald-300">PART_B_ADDED</span>
                                 {{else if eq .EventType "EXTENDED"}}
-                                <span class="inline-flex px-2 py-1 rounded-full bg-blue-soft border border-blue-line text-[11px] font-bold text-blue-strong dark:text-blue-300">EXTENDED</span>
+                                <span class="inline-flex px-2 py-1 rounded-full bg-blue-soft border border-blue-line text-[11px] font-bold text-blue-strong dark:text-blue-300">{{t "mo.ewb.extended_badge"}}</span>
                                 {{else if eq .EventType "EXTENSION_DENIED"}}
                                 <span class="inline-flex px-2 py-1 rounded-full bg-rose-soft border border-rose-line text-[11px] font-bold text-rose-strong dark:text-rose-300">EXTENSION_DENIED</span>
                                 {{else if eq .EventType "CANCELLED"}}
@@ -169,7 +168,7 @@
                             <td colspan="4" class="px-4 py-12 text-center">
                                 <div class="flex flex-col items-center gap-2">
                                     <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>
-                                    <p class="text-sm font-medium text-on-surface">No events recorded.</p>
+                                    <p class="text-sm font-medium text-on-surface">{{t "mo.ewb.no_events"}}</p>
                                 </div>
                             </td>
                         </tr>
@@ -183,14 +182,14 @@
     <div id="part-b-modal" class="hidden fixed inset-0 z-50 bg-on-surface/50 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-surface-container-lowest rounded-2xl max-w-md w-full p-6 shadow-xl border border-border-subtle space-y-4">
             <div class="flex justify-between items-center pb-3 border-b border-border-subtle">
-                <h2 class="text-sm font-bold text-on-surface">Attach Part-B Vehicle</h2>
-                <button onclick="document.getElementById('part-b-modal').classList.add('hidden')" class="w-8 h-8 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-text-muted hover:text-on-surface hover:bg-surface-container transition-colors" aria-label="Close modal">
+                <h2 class="text-sm font-bold text-on-surface">{{t "mo.ewb.attach_vehicle"}}</h2>
+                <button onclick="document.getElementById('part-b-modal').classList.add('hidden')" class="w-8 h-8 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-text-muted hover:text-on-surface hover:bg-surface-container transition-colors" aria-label="{{t "mo.c.close_modal"}}">
                     <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
                 </button>
             </div>
             <form method="POST" action="/ewaybill/{{.EWayBill.EwbNumber}}/part-b" class="space-y-4">
                 <div>
-                    <label for="vehicle_number" class="block text-eyebrow text-secondary mb-1.5">Vehicle Registration Number</label>
+                    <label for="vehicle_number" class="block text-eyebrow text-secondary mb-1.5">{{t "mo.ewb.veh_reg_no"}}</label>
                     <input aria-label="e.g. MH12AB1234" autocomplete="off" id="vehicle_number" type="text" name="vehicle_number" required placeholder="e.g. MH12AB1234"
                            class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition" />
                 </div>
@@ -202,9 +201,9 @@
                 <div class="flex justify-end gap-2 pt-2 border-t border-border-subtle flex-wrap">
                     <button type="button" onclick="document.getElementById('part-b-modal').classList.add('hidden')"
                             class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">
-                        Cancel
+                        {{t "mo.c.cancel"}}
                     </button>
-                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">Attach Part-B</button>
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">{{t "mo.ewb.attach_b"}}</button>
                 </div>
             </form>
         </div>
@@ -213,8 +212,8 @@
     <div id="extend-modal" class="hidden fixed inset-0 z-50 bg-on-surface/50 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-surface-container-lowest rounded-2xl max-w-md w-full p-6 shadow-xl border border-border-subtle space-y-4">
             <div class="flex justify-between items-center pb-3 border-b border-border-subtle">
-                <h2 class="text-sm font-bold text-on-surface">Extend E-Way Bill Validity</h2>
-                <button onclick="document.getElementById('extend-modal').classList.add('hidden')" class="w-8 h-8 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-text-muted hover:text-on-surface hover:bg-surface-container transition-colors" aria-label="Close modal">
+                <h2 class="text-sm font-bold text-on-surface">{{t "mo.ewb.extend_title"}}</h2>
+                <button onclick="document.getElementById('extend-modal').classList.add('hidden')" class="w-8 h-8 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-text-muted hover:text-on-surface hover:bg-surface-container transition-colors" aria-label="{{t "mo.c.close_modal"}}">
                     <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
                 </button>
             </div>
@@ -224,20 +223,20 @@
                     {{/* id must be unique per page: the cancel modal below has
                          its own `reason` select, and two elements sharing
                          id="reason" makes label/for resolve to the wrong one. */}}
-                    <label for="reason-extend" class="block text-eyebrow text-secondary mb-1.5">Reason for Extension</label>
+                    <label for="reason-extend" class="block text-eyebrow text-secondary mb-1.5">{{t "mo.ewb.ext_reason"}}</label>
                     <select id="reason-extend" name="reason" required class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                        <option value="traffic_delay">Traffic congestion / Road blockage</option>
-                        <option value="vehicle_breakdown">Vehicle breakdown / Transshipment</option>
-                        <option value="unloading_queue">Consignee unloading queue</option>
-                        <option value="natural_calamity">Natural calamity / Weather</option>
+                        <option value="traffic_delay">{{t "mo.ewb.reason_traffic"}}</option>
+                        <option value="vehicle_breakdown">{{t "mo.ewb.reason_breakdown"}}</option>
+                        <option value="unloading_queue">{{t "mo.ewb.consignee_queue"}}</option>
+                        <option value="natural_calamity">{{t "mo.ewb.reason_calamity"}}</option>
                     </select>
                 </div>
                 <div class="flex justify-end gap-2 pt-4 border-t border-border-subtle flex-wrap">
                     <button type="button" onclick="document.getElementById('extend-modal').classList.add('hidden')"
                             class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">
-                        Cancel
+                        {{t "mo.c.cancel"}}
                     </button>
-                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">Request Extension</button>
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">{{t "mo.ewb.req_ext"}}</button>
                 </div>
             </form>
         </div>
@@ -246,27 +245,27 @@
     <div id="cancel-modal" class="hidden fixed inset-0 z-50 bg-on-surface/50 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-surface-container-lowest rounded-2xl max-w-md w-full p-6 shadow-xl border border-border-subtle space-y-4">
             <div class="flex justify-between items-center pb-3 border-b border-border-subtle">
-                <h2 class="text-sm font-bold text-status-alert">Cancel E-Way Bill</h2>
-                <button onclick="document.getElementById('cancel-modal').classList.add('hidden')" class="w-8 h-8 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-text-muted hover:text-on-surface hover:bg-surface-container transition-colors" aria-label="Close modal">
+                <h2 class="text-sm font-bold text-status-alert">{{t "mo.ewb.cancel_title"}}</h2>
+                <button onclick="document.getElementById('cancel-modal').classList.add('hidden')" class="w-8 h-8 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-text-muted hover:text-on-surface hover:bg-surface-container transition-colors" aria-label="{{t "mo.c.close_modal"}}">
                     <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
                 </button>
             </div>
             <form method="POST" action="/ewaybill/{{.EWayBill.EwbNumber}}/cancel" class="space-y-4">
                 <div>
-                    <label for="reason-cancel" class="block text-eyebrow text-secondary mb-1.5">Cancellation Reason</label>
+                    <label for="reason-cancel" class="block text-eyebrow text-secondary mb-1.5">{{t "mo.ewb.cancel_reason"}}</label>
                     <select id="reason-cancel" name="reason" required class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                        <option value="order_cancelled">Order Cancelled by Customer</option>
-                        <option value="data_entry_mistake">Data Entry Mistake</option>
-                        <option value="duplicate">Duplicate Generation</option>
-                        <option value="other">Other</option>
+                        <option value="order_cancelled">{{t "mo.ewb.reason_order"}}</option>
+                        <option value="data_entry_mistake">{{t "mo.ewb.reason_entry"}}</option>
+                        <option value="duplicate">{{t "mo.ewb.reason_dup"}}</option>
+                        <option value="other">{{t "mo.c.other"}}</option>
                     </select>
                 </div>
                 <div class="flex justify-end gap-2 pt-4 border-t border-border-subtle flex-wrap">
                     <button type="button" onclick="document.getElementById('cancel-modal').classList.add('hidden')"
                             class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">
-                        Dismiss
+                        {{t "mo.c.dismiss"}}
                     </button>
-                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-status-alert text-on-primary text-sm font-semibold shadow-sm hover:opacity-90 transition cursor-pointer">Confirm Cancellation</button>
+                    <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-status-alert text-on-primary text-sm font-semibold shadow-sm hover:opacity-90 transition cursor-pointer">{{t "mo.ewb.confirm_cancel"}}</button>
                 </div>
             </form>
         </div>

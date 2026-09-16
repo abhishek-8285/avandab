@@ -1,33 +1,33 @@
 <div class="space-y-5 max-w-[1600px] mx-auto">
-    {{template "page_header.html" (dict "Title" "Driver Settlements" "Subtitle" "Driver payout calculations, rate models, Section 194C TDS, and settlement ledger")}}
+    {{template "page_header.html" (dict "Title" (t "mo.stl.title") "Subtitle" (t "mo.stl.subtitle"))}}
 
     <!-- Summary Cards -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {{template "stat_card.html" (dict "Value" (printf "₹%.2f" .TotalPending) "Label" "Total Pending Payouts" "Accent" "warning")}}
-        {{template "stat_card.html" (dict "Value" (printf "₹%.2f" .TotalPaid) "Label" "Total Paid Payouts" "Accent" "success")}}
-        {{template "stat_card.html" (dict "Value" (printf "₹%.2f" .AvgPayout) "Label" "Average Net Payout" "Accent" "primary")}}
-        {{template "stat_card.html" (dict "Value" .TotalCount "Label" "Settlements In View" "Accent" "neutral")}}
+        {{template "stat_card.html" (dict "Value" (printf "₹%.2f" .TotalPending) "Label" (t "mo.stl.pending_total") "Accent" "warning")}}
+        {{template "stat_card.html" (dict "Value" (printf "₹%.2f" .TotalPaid) "Label" (t "mo.stl.paid_total") "Accent" "success")}}
+        {{template "stat_card.html" (dict "Value" (printf "₹%.2f" .AvgPayout) "Label" (t "mo.stl.avg_net") "Accent" "primary")}}
+        {{template "stat_card.html" (dict "Value" .TotalCount "Label" (t "mo.stl.in_view") "Accent" "neutral")}}
     </div>
 
     <!-- Filter Toolbar & Generate Form -->
     {{template "filter_bar.html" (dict
         "Action" "/settlements"
         "StatusFilter" .StatusFilter
-        "Chips" (chips "All" "" "Pending" "pending" "Paid" "paid" "Disputed" "disputed")
+        "Chips" (chips "All" "" (t "mo.c.pending") "pending" (t "mo.c.paid") "paid" "Disputed" "disputed")
         "ShowDates" true
         "DateFilterError" .DateFilterError
         "DateFrom" .DateFrom
         "DateTo" .DateTo
-        "Label" "Status:"
+        "Label" (t "mo.stl.status_label")
     )}}
 
     {{if can .User "settlements" "write"}}
     <div class="flex justify-end">
         <form method="POST" action="/settlements/generate" class="flex items-center gap-2 flex-wrap">
-            <input aria-label="Enter Trip ID to generate" autocomplete="off" type="text" name="trip_id" placeholder="Enter Trip ID to generate" required class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition w-full sm:w-auto" />
+            <input aria-label="{{t "mo.stl.enter_trip"}}" autocomplete="off" type="text" name="trip_id" placeholder="{{t "mo.stl.enter_trip"}}" required class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition w-full sm:w-auto" />
             <button type="submit" class="inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/></svg>
-                Generate Settlement
+                {{t "mo.stl.generate"}}
             </button>
         </form>
     </div>
@@ -37,8 +37,8 @@
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden" id="list-table">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h3 class="text-sm font-bold text-on-surface">Settlement Ledger</h3>
-                <p class="text-xs text-text-muted">Gross fare, deductions, TDS and net payout per trip</p>
+                <h3 class="text-sm font-bold text-on-surface">{{t "mo.stl.ledger"}}</h3>
+                <p class="text-xs text-text-muted">{{t "mo.stl.page_sub"}}</p>
             </div>
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{.TotalCount}} total</span>
         </div>
@@ -48,38 +48,38 @@
             <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Trip / ID</th>
-                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Driver</th>
-                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Gross Fare (₹)</th>
-                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Advances (₹)</th>
-                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Deductions (₹)</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">{{t "mo.stl.trip_id"}}</th>
+                        <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">{{t "mo.c.driver"}}</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">{{t "mo.stl.gross"}}</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">{{t "mo.stl.advances"}}</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">{{t "mo.stl.deductions"}}</th>
                         <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">TDS</th>
-                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Net Payout (₹)</th>
-                        <th class="px-4 py-2.5 text-center text-eyebrow text-text-muted">Status</th>
-                        <th class="px-4 py-2.5 text-center text-eyebrow text-text-muted">Actions</th>
+                        <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">{{t "mo.stl.net"}}</th>
+                        <th class="px-4 py-2.5 text-center text-eyebrow text-text-muted">{{t "mo.c.status"}}</th>
+                        <th class="px-4 py-2.5 text-center text-eyebrow text-text-muted">{{t "mo.c.actions"}}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
                     {{range .Settlements}}
                     <tr class="hover:bg-surface-container-low/50 transition-colors group">
-                        <td data-label="Trip / ID" class="px-3 py-2 whitespace-nowrap">
+                        <td data-label="{{t "mo.stl.trip_id"}}" class="px-3 py-2 whitespace-nowrap">
                             <a href="/settlements/{{.ID}}" class="text-sm font-bold text-primary hover:underline tabular-nums">{{.TripID}}</a>
                             <span class="block text-xs text-text-muted font-data-mono">{{.ID}}</span>
                         </td>
-                        <td data-label="Driver" class="px-3 py-2 text-sm font-medium text-on-surface">{{.DriverID}}</td>
-                        <td data-label="Gross Fare (₹)" class="px-3 py-2 text-sm text-right tabular-nums text-on-surface whitespace-nowrap" data-numeric>₹{{printf "%.2f" .GrossFare}}</td>
-                        <td data-label="Advances (₹)" class="px-3 py-2 text-sm text-right tabular-nums font-semibold text-status-warning whitespace-nowrap" data-numeric>{{if gt .AdvancesKharcha 0.0}}-₹{{printf "%.2f" .AdvancesKharcha}}{{else}}₹0.00{{end}}</td>
-                        <td data-label="Deductions (₹)" class="px-3 py-2 text-sm text-right tabular-nums font-semibold text-status-alert whitespace-nowrap" data-numeric>{{if gt .Deductions 0.0}}-₹{{printf "%.2f" .Deductions}}{{else}}₹0.00{{end}}</td>
+                        <td data-label="{{t "mo.c.driver"}}" class="px-3 py-2 text-sm font-medium text-on-surface">{{.DriverID}}</td>
+                        <td data-label="{{t "mo.stl.gross"}}" class="px-3 py-2 text-sm text-right tabular-nums text-on-surface whitespace-nowrap" data-numeric>₹{{printf "%.2f" .GrossFare}}</td>
+                        <td data-label="{{t "mo.stl.advances"}}" class="px-3 py-2 text-sm text-right tabular-nums font-semibold text-status-warning whitespace-nowrap" data-numeric>{{if gt .AdvancesKharcha 0.0}}-₹{{printf "%.2f" .AdvancesKharcha}}{{else}}₹0.00{{end}}</td>
+                        <td data-label="{{t "mo.stl.deductions"}}" class="px-3 py-2 text-sm text-right tabular-nums font-semibold text-status-alert whitespace-nowrap" data-numeric>{{if gt .Deductions 0.0}}-₹{{printf "%.2f" .Deductions}}{{else}}₹0.00{{end}}</td>
                         <td data-label="TDS" class="px-3 py-2 text-sm text-right tabular-nums text-text-muted whitespace-nowrap" data-numeric>{{if gt .TDSAmount 0.0}}-₹{{printf "%.2f" .TDSAmount}} ({{printf "%.1f" .TDSRate}}%){{else}}₹0.00{{end}}</td>
-                        <td data-label="Net Payout (₹)" class="px-3 py-2 text-sm text-right tabular-nums font-black text-on-surface whitespace-nowrap" data-numeric>₹{{printf "%.2f" .NetPayout}}</td>
-                        <td data-label="Status" class="px-3 py-2 text-center">
+                        <td data-label="{{t "mo.stl.net"}}" class="px-3 py-2 text-sm text-right tabular-nums font-black text-on-surface whitespace-nowrap" data-numeric>₹{{printf "%.2f" .NetPayout}}</td>
+                        <td data-label="{{t "mo.c.status"}}" class="px-3 py-2 text-center">
                             <span class="inline-flex items-center px-2 py-1 rounded-full text-[11px] font-bold uppercase tracking-wide {{if eq .Status "paid"}}bg-status-success/10 border border-status-success/15 text-status-success{{else if eq .Status "pending"}}bg-status-warning/10 border border-status-warning/15 text-status-warning{{else if eq .Status "disputed"}}bg-status-alert/10 border border-status-alert/15 text-status-alert{{else}}bg-status-info/10 border border-status-info/15 text-status-info{{end}}">
                                 {{.Status}}
                             </span>
                         </td>
-                        <td data-label="Actions" class="px-3 py-2 text-center whitespace-nowrap">
+                        <td data-label="{{t "mo.c.actions"}}" class="px-3 py-2 text-center whitespace-nowrap">
                             <a href="/settlements/{{.ID}}" class="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80 px-2.5 py-1 rounded-full hover:bg-primary/10 transition-colors">
-                                View
+                                {{t "mo.c.view"}}
                                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                             </a>
                         </td>
@@ -90,7 +90,7 @@
         </div>
         {{else}}
         <div class="py-12 text-center">
-            {{template "empty_state.html" (dict "Title" "No settlements found" "Message" "Generate settlements for completed trips to see payouts here." "Icon" "account_balance_wallet")}}
+            {{template "empty_state.html" (dict "Title" (t "mo.stl.empty_title") "Message" (t "mo.stl.empty_msg") "Icon" "account_balance_wallet")}}
         </div>
         {{end}}
     </div>

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trip {{.TripNumber}} Tracking · Avandab</title>
+    <title>{{t "sy.share.trip"}} {{.TripNumber}} {{t "sy.share.tracking"}} · Avandab</title>
     <meta name="description" content="Live trip tracking share — Avandab">
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#2563eb">
@@ -31,19 +31,19 @@
                 </div>
                 <div>
                     <div class="flex items-center gap-2">
-                        <h1 class="text-base sm:text-lg font-bold text-on-surface m-0">Trip {{.TripNumber}}</h1>
+                        <h1 class="text-base sm:text-lg font-bold text-on-surface m-0">{{t "sy.share.trip"}} {{.TripNumber}}</h1>
                         <span id="trip-status-badge" class="px-2 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/15 capitalize">{{.TripStatus}}</span>
                     </div>
-                    <p class="text-xs text-text-muted m-0">Live Share Link · <span id="last-updated-text">Connecting…</span></p>
+                    <p class="text-xs text-text-muted m-0">{{t "sy.share.live"}} · <span id="last-updated-text" data-updated="{{t "sy.share.updated"}}" data-connerr="{{t "sy.share.connerr"}}">{{t "sy.share.connecting"}}</span></p>
                 </div>
             </div>
             <div class="flex flex-wrap items-center gap-3 text-xs">
                 <div id="eta-card" class="hidden sm:flex items-center gap-2 bg-surface-container-lowest px-3 py-1.5 rounded-full border border-border-subtle shadow-xs">
-                    <span class="text-text-muted font-medium">ETA:</span>
+                    <span class="text-text-muted font-medium">{{t "sy.share.eta"}}</span>
                     <span id="eta-value" class="font-bold text-on-surface tabular-nums">—</span>
                 </div>
                 <div class="flex items-center gap-2 bg-surface-container-lowest px-3 py-1.5 rounded-full border border-border-subtle shadow-xs">
-                    <span class="text-text-muted font-medium">Vehicle:</span>
+                    <span class="text-text-muted font-medium">{{t "sy.share.vehicle"}}</span>
                     <span id="vehicle-label" class="font-semibold text-on-surface tabular-nums">—</span>
                 </div>
             </div>
@@ -51,23 +51,23 @@
     </header>
 
     <!-- Main Content -->
-    <main class="flex-1 flex flex-col max-w-7xl w-full mx-auto p-4 sm:p-6 gap-4">
+    <main class="flex-1 flex flex-col max-w-7xl w-full mx-auto p-4 sm:p-6 gap-4" id="share-main" data-expired="{{t "sy.share.expired"}}">
         <!-- Live Status Metrics Banner -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-sm p-3 hover:shadow-md transition">
-                <div class="text-[11px] text-secondary font-medium">Speed</div>
+                <div class="text-[11px] text-secondary font-medium">{{t "sy.share.speed"}}</div>
                 <div id="metric-speed" class="text-lg font-bold text-on-surface tabular-nums mt-0.5">—</div>
             </div>
             <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-sm p-3 hover:shadow-md transition">
-                <div class="text-[11px] text-secondary font-medium">Fuel Level</div>
+                <div class="text-[11px] text-secondary font-medium">{{t "sy.share.fuel"}}</div>
                 <div id="metric-fuel" class="text-lg font-bold text-on-surface tabular-nums mt-0.5">—</div>
             </div>
             <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-sm p-3 hover:shadow-md transition">
-                <div class="text-[11px] text-secondary font-medium">Odometer</div>
+                <div class="text-[11px] text-secondary font-medium">{{t "sy.share.odo"}}</div>
                 <div id="metric-odometer" class="text-lg font-bold text-on-surface tabular-nums mt-0.5">—</div>
             </div>
             <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-sm p-3 hover:shadow-md transition">
-                <div class="text-[11px] text-secondary font-medium">Last Seen</div>
+                <div class="text-[11px] text-secondary font-medium">{{t "sy.share.lastseen"}}</div>
                 <div id="metric-last-seen" class="text-lg font-bold text-on-surface tabular-nums mt-0.5">—</div>
             </div>
         </div>
@@ -80,16 +80,16 @@
                     <div>
                         <h2 class="text-sm font-bold text-on-surface m-0 flex items-center gap-2">
                             <span class="w-2 h-2 rounded-full bg-blue-600 animate-pulse"></span>
-                            Shipment Milestones
+                            {{t "sy.share.milestones"}}
                         </h2>
-                        <p class="text-[11px] text-text-muted m-0">Live customer tracking updates</p>
+                        <p class="text-[11px] text-text-muted m-0">{{t "sy.share.milestones_sub"}}</p>
                     </div>
                     <span id="cx-driver-badge" class="hidden text-xs bg-surface-container px-2.5 py-1 rounded-full text-secondary font-medium"></span>
                 </div>
 
                 <!-- Vertical Milestone List Container -->
-                <div id="timeline-container" class="flex-1 overflow-y-auto py-3 space-y-4 pr-1">
-                    <div class="text-xs text-text-muted italic py-4 text-center">Loading shipment milestones…</div>
+                <div id="timeline-container" class="flex-1 overflow-y-auto py-3 space-y-4 pr-1" data-st-upcoming="{{t "sy.share.st_upcoming"}}" data-st-completed="{{t "sy.share.st_completed"}}" data-st-transit="{{t "sy.share.st_transit"}}" data-pending="{{t "sy.share.pending_cp"}}" data-driver-pre="{{t "sy.share.driver_pre"}}" data-pop-trip="{{t "sy.share.pop_trip"}}" data-pop-vehicle="{{t "sy.share.pop_vehicle"}}">
+                    <div class="text-xs text-text-muted italic py-4 text-center">{{t "sy.share.loading"}}</div>
                 </div>
             </div>
 
@@ -202,7 +202,8 @@
             } else if (data.eta) {
                 setText('eta-value', fmtTime(data.eta));
             }
-            setText('last-updated-text', 'Updated ' + new Date().toLocaleTimeString());
+            var luEl = document.getElementById('last-updated-text');
+            setText('last-updated-text', ((luEl && luEl.dataset.updated) || 'Updated') + ' ' + new Date().toLocaleTimeString());
         }
 
         function updateShareMarker(data) {
@@ -213,7 +214,8 @@
                 marker.setIcon(markerIcon(data.speed || 0));
             } else {
                 marker = L.marker(latlng, { icon: markerIcon(data.speed || 0) });
-                marker.bindPopup('<b>Trip ' + (data.trip_number || '') + '</b><br>Vehicle: ' + (data.vehicle_label || '—'));
+                var tlc = document.getElementById('timeline-container');
+                marker.bindPopup('<b>' + ((tlc && tlc.dataset.popTrip) || 'Trip') + ' ' + (data.trip_number || '') + '</b><br>' + ((tlc && tlc.dataset.popVehicle) || 'Vehicle: ') + (data.vehicle_label || '—'));
                 marker.addTo(map);
             }
             if (!hasCentered) {
@@ -248,23 +250,25 @@
                 var badgeColor = 'bg-surface-container border-border text-text-muted';
                 var dotColor = 'bg-border';
                 var pulse = '';
-                var statusLabel = 'Upcoming';
+                var tlc2 = document.getElementById('timeline-container');
+                function tlcStr(k, fb) { return (tlc2 && tlc2.dataset[k]) || fb; }
+                var statusLabel = tlcStr('stUpcoming', 'Upcoming');
                 var statusBadgeClass = 'bg-surface-container text-text-muted border-border-subtle';
 
                 if (m.status === 'completed') {
                     badgeColor = 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600';
                     dotColor = 'bg-emerald-500';
-                    statusLabel = 'Completed';
+                    statusLabel = tlcStr('stCompleted', 'Completed');
                     statusBadgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300';
                 } else if (m.status === 'in_progress') {
                     badgeColor = 'bg-blue-500/15 border-blue-500 text-blue-600';
                     dotColor = 'bg-blue-600';
                     pulse = '<span class="absolute -inset-1 rounded-full bg-blue-400 opacity-60 animate-ping"></span>';
-                    statusLabel = 'In-Transit';
+                    statusLabel = tlcStr('stTransit', 'In-Transit');
                     statusBadgeClass = 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300';
                 }
 
-                var timeStr = m.timestamp ? (fmtTime(m.timestamp) + (fmtDate(m.timestamp) ? ' · ' + fmtDate(m.timestamp) : '')) : 'Pending checkpoint';
+                var timeStr = m.timestamp ? (fmtTime(m.timestamp) + (fmtDate(m.timestamp) ? ' · ' + fmtDate(m.timestamp) : '')) : tlcStr('pending', 'Pending checkpoint');
 
                 html += '<div class="relative flex items-start gap-3">' +
                     (!isLast ? '<div class="absolute left-3.5 top-6 bottom-0 w-0.5 ' + (m.status === 'completed' ? 'bg-emerald-400' : 'bg-border-subtle') + '"></div>' : '') +
@@ -290,7 +294,8 @@
             fetch(dataEndpoint, { headers: { 'Accept': 'application/json' }, credentials: 'same-origin' })
                 .then(function (res) {
                     if (res.status === 410) {
-                        alert('This share link has expired or been revoked.');
+                        var shareMain = document.getElementById('share-main');
+                        alert((shareMain && shareMain.dataset.expired) || 'This share link has expired or been revoked.');
                         window.location.reload();
                         return null;
                     }
@@ -307,7 +312,7 @@
                 })
                 .catch(function (err) {
                     var lastUpd = document.getElementById('last-updated-text');
-                    if (lastUpd) lastUpd.textContent = 'Connection error: ' + err.message;
+                    if (lastUpd) lastUpd.textContent = ((lastUpd.dataset.connerr) || 'Connection error: ') + err.message;
                 });
 
             // 2. Fetch milestone timeline
@@ -328,7 +333,7 @@
                         if (tData.driver_name) {
                             var drvBadge = document.getElementById('cx-driver-badge');
                             if (drvBadge) {
-                                drvBadge.textContent = 'Driver: ' + tData.driver_name + (tData.driver_phone ? ' (' + tData.driver_phone + ')' : '');
+                                drvBadge.textContent = tlcStr('driverPre', 'Driver: ') + tData.driver_name + (tData.driver_phone ? ' (' + tData.driver_phone + ')' : '');
                                 drvBadge.classList.remove('hidden');
                             }
                         }

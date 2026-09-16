@@ -1,4 +1,4 @@
-<a href="/drivers" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> Drivers</a>
+<a href="/drivers" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> {{t "fl.drivers"}}</a>
 
 <div class="space-y-5 max-w-[1600px] mx-auto">
 
@@ -7,7 +7,7 @@
     <div class="p-5 pt-6">
         <div class="flex items-start justify-between gap-4 flex-wrap">
             <div class="min-w-0">
-                <p class="text-eyebrow text-text-muted">Driver Profile</p>
+                <p class="text-eyebrow text-text-muted">{{t "fl.driver_profile"}}</p>
                 <div class="flex items-center gap-3 flex-wrap mt-0.5">
                     <h1 class="text-2xl font-bold tracking-tight text-on-surface font-display">{{.Driver.FirstName}} {{.Driver.LastName}}</h1>
                     <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold rounded-full {{statusBadge .Driver.Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Driver.Status}}</span>
@@ -15,33 +15,33 @@
                 <div class="flex items-center gap-2 mt-2 flex-wrap text-xs">
                     <span class="inline-flex px-2 py-1 rounded-full bg-surface-container border border-border-subtle font-semibold text-secondary tabular-nums">DRV-{{.Driver.DriverID}}</span>
                     <span class="inline-flex px-2 py-1 rounded-full bg-surface-container border border-border-subtle font-medium text-secondary tabular-nums">{{.Driver.Phone}}</span>
-                    {{if .Driver.ExperienceYears}}<span class="inline-flex px-2 py-1 rounded-full bg-surface-container border border-border-subtle font-medium text-secondary tabular-nums">{{.Driver.ExperienceYears}} yrs experience</span>{{end}}
+                    {{if .Driver.ExperienceYears}}<span class="inline-flex px-2 py-1 rounded-full bg-surface-container border border-border-subtle font-medium text-secondary tabular-nums">{{.Driver.ExperienceYears}} {{t "fl.yrs_experience"}}</span>{{end}}
                 </div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
-                {{template "btn.html" (dict "Label" "Edit" "Href" (printf "/drivers/%s/edit" .Driver.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit")}}
-                <form method="POST" action="/drivers/{{.Driver.ID}}/delete" data-confirm="Are you sure? This cannot be undone." class="inline">
-                    {{template "btn.html" (dict "Label" "Delete" "Type" "submit" "Variant" "danger" "Size" "sm" "Icon" "delete")}}
+                {{template "btn.html" (dict "Label" (t "fl.edit") "Href" (printf "/drivers/%s/edit" .Driver.ID) "Variant" "secondary" "Size" "sm" "Icon" "edit")}}
+                <form method="POST" action="/drivers/{{.Driver.ID}}/delete" data-confirm="{{t "fl.are_you_sure_this_cannot_be_undone"}}" class="inline">
+                    {{template "btn.html" (dict "Label" (t "fl.delete") "Type" "submit" "Variant" "danger" "Size" "sm" "Icon" "delete")}}
                 </form>
             </div>
         </div>
 
         <dl class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5 pt-5 border-t border-border-subtle">
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-eyebrow text-text-muted">Status</dt>
+                <dt class="text-eyebrow text-text-muted">{{t "fl.status"}}</dt>
                 <dd class="mt-1"><span class="status-badge {{statusBadge .Driver.Status}}">{{.Driver.Status}}</span></dd>
             </div>
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-eyebrow text-text-muted">Phone</dt>
+                <dt class="text-eyebrow text-text-muted">{{t "fl.phone"}}</dt>
                 <dd class="text-sm font-semibold text-on-surface font-data-mono mt-1 tabular-nums" data-numeric>{{.Driver.Phone}}</dd>
             </div>
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-eyebrow text-text-muted">License Expiry</dt>
+                <dt class="text-eyebrow text-text-muted">{{t "fl.license_expiry"}}</dt>
                 <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{date_only .Driver.LicenseExpiry}}</dd>
             </div>
             <div class="rounded-xl bg-surface-container-low p-3">
-                <dt class="text-eyebrow text-text-muted">Experience</dt>
-                <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{.Driver.ExperienceYears}} years</dd>
+                <dt class="text-eyebrow text-text-muted">{{t "fl.experience"}}</dt>
+                <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{.Driver.ExperienceYears}} {{t "fl.years"}}</dd>
             </div>
         </dl>
     </div>
@@ -51,28 +51,28 @@
     <div class="lg:col-span-2 space-y-4">
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle">
-                <h2 class="text-sm font-bold text-on-surface">Details</h2>
+                <h2 class="text-sm font-bold text-on-surface">{{t "fl.details"}}</h2>
             </div>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 p-5">
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-eyebrow text-text-muted">Email</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "fl.email"}}</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1 break-all">{{nullString .Driver.Email}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-eyebrow text-text-muted">License Number</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "fl.license_number"}}</dt>
                     <dd class="font-data-mono text-sm font-semibold text-on-surface mt-1">{{.Driver.LicenseNumber}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-eyebrow text-text-muted">Emergency Contact</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "fl.emergency_contact"}}</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1 tabular-nums">{{nullString .Driver.EmergencyContactName}} / {{nullString .Driver.EmergencyContactPhone}}</dd>
                 </div>
                 <div class="border-b border-border-subtle pb-2">
-                    <dt class="text-eyebrow text-text-muted">Address</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "fl.address"}}</dt>
                     <dd class="text-sm font-semibold text-on-surface mt-1">{{nullString .Driver.Address}}</dd>
                 </div>
                 {{with nullString .Driver.Notes}}
                 <div class="sm:col-span-2">
-                    <dt class="text-eyebrow text-text-muted">Notes</dt>
+                    <dt class="text-eyebrow text-text-muted">{{t "fl.notes"}}</dt>
                     <dd class="text-sm font-medium text-on-surface mt-1 leading-relaxed">{{.}}</dd>
                 </div>
                 {{end}}
@@ -81,7 +81,7 @@
 
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
-                <h2 class="text-sm font-bold text-on-surface">Recent Trips</h2>
+                <h2 class="text-sm font-bold text-on-surface">{{t "fl.recent_trips"}}</h2>
                 {{if .RecentTrips}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .RecentTrips}}</span>{{end}}
             </div>
             <div class="p-2">
@@ -98,7 +98,7 @@
                     {{end}}
                 </div>
                 {{else}}
-                <p class="text-sm text-text-muted px-3 py-4">No trips assigned to this driver yet.</p>
+                <p class="text-sm text-text-muted px-3 py-4">{{t "fl.no_trips_assigned_to_this_driver_yet"}}</p>
                 {{end}}
             </div>
         </section>
@@ -107,7 +107,7 @@
     <div class="space-y-4">
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 bg-gradient-to-r from-emerald-500/[0.06] to-transparent">
-                <h2 class="text-sm font-bold text-on-surface">Safety Scorecard</h2>
+                <h2 class="text-sm font-bold text-on-surface">{{t "fl.safety_scorecard"}}</h2>
             </div>
             <div class="p-5">
                 {{if .Tier.Valid}}
@@ -115,18 +115,18 @@
                     <div class="text-4xl font-black tracking-tight tabular-nums {{if eq .Tier.String "A"}}text-status-success{{else if eq .Tier.String "C"}}text-status-alert{{else}}text-status-warning{{end}}" data-numeric>{{if .Score.Valid}}{{printf "%.0f" .Score.Float64}}{{else}}–{{end}}</div>
                     <div>
                         <span class="inline-flex px-2.5 py-1 text-xs font-bold rounded-full border {{if eq .Tier.String "A"}}bg-status-success/10 text-status-success border-status-success/20{{else if eq .Tier.String "C"}}bg-status-alert/10 text-status-alert border-status-alert/20{{else}}bg-status-warning/10 text-status-warning border-status-warning/20{{end}}">TIER {{.Tier.String}}</span>
-                        <p class="text-xs text-text-muted mt-1.5"><a href="/scorecard" class="text-primary hover:underline">View leaderboard →</a></p>
+                        <p class="text-xs text-text-muted mt-1.5"><a href="/scorecard" class="text-primary hover:underline">{{t "fl.view_leaderboard"}}</a></p>
                     </div>
                 </div>
                 {{else}}
-                <p class="text-sm text-text-muted">No score yet — computed nightly from behaviour events.</p>
+                <p class="text-sm text-text-muted">{{t "fl.no_score_yet_computed_nightly_from_behaviour"}}</p>
                 {{end}}
             </div>
         </div>
 
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
-                <h2 class="text-sm font-bold text-on-surface">Uploaded Documents</h2>
+                <h2 class="text-sm font-bold text-on-surface">{{t "fl.uploaded_documents"}}</h2>
                 {{if .Files}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Files}}</span>{{end}}
             </div>
             <div class="p-5">
@@ -143,7 +143,7 @@
                     {{end}}
                 </ul>
                 {{else}}
-                <p class="text-sm text-text-muted">No documents uploaded.</p>
+                <p class="text-sm text-text-muted">{{t "fl.no_documents_uploaded"}}</p>
                 {{end}}
             </div>
         </div>
@@ -153,7 +153,7 @@
 <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
     <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2 bg-gradient-to-r from-blue-500/[0.06] to-transparent">
         <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/></svg></span>
-        <h2 class="text-sm font-bold text-on-surface">Recent Behaviour Events</h2>
+        <h2 class="text-sm font-bold text-on-surface">{{t "fl.recent_behaviour_events"}}</h2>
     </div>
         <div class="p-2">
             {{if .BehaviourEvents}}
@@ -167,9 +167,9 @@
                     <span class="flex items-center gap-2 shrink-0">
                         <span class="text-xs text-text-muted tabular-nums">{{if .CreatedAt.Valid}}<time datetime="{{.CreatedAt.Time.Format "2006-01-02"}}">{{.CreatedAt.Time.Format "02-01-2006"}}</time>{{end}}</span>
                         {{if .Resolved}}
-                        <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold bg-status-success/10 text-status-success border border-status-success/20">resolved</span>
+                        <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold bg-status-success/10 text-status-success border border-status-success/20">{{t "fl.resolved_3"}}</span>
                         {{else}}
-                        <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold bg-status-warning/10 text-status-warning border border-status-warning/20">open</span>
+                        <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold bg-status-warning/10 text-status-warning border border-status-warning/20">{{t "fl.open_2"}}</span>
                         {{end}}
                     </span>
                 </div>
@@ -178,7 +178,7 @@
             {{else}}
             <div class="px-4 py-8 text-center">
                 <div class="w-10 h-10 rounded-full bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid mx-auto"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg></div>
-                <p class="text-sm font-medium text-on-surface mt-3">Clean record</p><p class="text-xs text-text-muted">No behaviour events.</p>
+                <p class="text-sm font-medium text-on-surface mt-3">{{t "fl.clean_record"}}</p><p class="text-xs text-text-muted">{{t "fl.no_behaviour_events"}}</p>
             </div>
             {{end}}
         </div>

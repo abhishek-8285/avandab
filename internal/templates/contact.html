@@ -9,10 +9,10 @@
 <section class="mb-12 text-center md:text-left">
     <div class="inline-flex items-center gap-2 text-primary text-xs font-bold uppercase tracking-wider mb-4">
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M3 11h3a8 8 0 0 1 8 8v3"/><path d="M11.6 16.8a3 3 0 1 1-5.8 1.8"/><path d="M18 12a6 6 0 0 0-6-6H6"/><circle cx="12" cy="12" r="2"/></svg>
-        Avandab Support &amp; Inquiries
+        {{t "sy.contact.kicker"}}
     </div>
-     <h1 class="font-display text-2xl sm:text-3xl font-bold text-on-surface mb-4 tracking-tight">Get in Touch with Our Team</h1>
-      <p class="text-sm text-on-surface-variant leading-relaxed max-w-2xl mx-auto md:mx-0">Have a question about our fleet operations, route dispatches, or enterprise pricing? Submit your inquiry or track an existing ticket below.</p>
+     <h1 class="font-display text-2xl sm:text-3xl font-bold text-on-surface mb-4 tracking-tight">{{t "sy.contact.title"}}</h1>
+      <p class="text-sm text-on-surface-variant leading-relaxed max-w-2xl mx-auto md:mx-0">{{t "sy.contact.sub"}}</p>
       <p class="text-xs text-on-surface-variant leading-relaxed max-w-2xl mx-auto md:mx-0 mt-3 border border-border-subtle rounded-xl p-3 bg-surface-container-lowest">Consumer complaints: acknowledged within 48 hours with a copy of the recorded complaint, redressed within 1 month. Grievance Officer: <a class="text-primary hover:underline" href="mailto:grievance@avandab.com">grievance@avandab.com</a> · <a class="text-primary hover:underline" href="tel:+918285336507">+91 8285336507</a> (Mon–Sat). Also via <a class="text-primary hover:underline" href="https://consumerhelpline.gov.in" target="_blank" rel="noopener">National Consumer Helpline</a>. Data-privacy requests: ack 3 business days, response 30 days — see <a class="text-primary hover:underline" href="/privacy">Privacy Policy</a>.</p>
 </section>
 
@@ -22,8 +22,8 @@
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
     </div>
     <div class="min-w-0">
-        <h3 class="text-sm font-bold text-amber-900 dark:text-amber-200">You came from an error page</h3>
-        <p class="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">We’ve pre-filled your support request with the error reference. Our team will use it to trace logs. <span class="font-data-mono font-semibold">Ref: {{.ErrorRef}}</span>{{if .ErrorAbout}} · {{.ErrorAbout}}{{end}}</p>
+        <h3 class="text-sm font-bold text-amber-900 dark:text-amber-200">{{t "sy.contact.from_error"}}</h3>
+        <p class="text-xs text-amber-800/80 dark:text-amber-300/80 mt-0.5">{{t "sy.contact.prefill_pre"}} <span class="font-data-mono font-semibold">Ref: {{.ErrorRef}}</span>{{if .ErrorAbout}} · {{.ErrorAbout}}{{end}}</p>
     </div>
 </div>
 {{end}}
@@ -36,14 +36,14 @@
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
         </div>
         <div>
-            <h4 class="font-display font-semibold text-base text-status-success">Inquiry Submitted Successfully!</h4>
+            <h4 class="font-display font-semibold text-base text-status-success">{{t "sy.contact.success"}}</h4>
             <p class="text-xs text-status-success mt-0.5">
-                Your reference ticket number is <strong class="font-data-mono font-bold underline">{{.SubmittedNum}}</strong>. Save this number to check your status updates anytime. We acknowledge within 48 hours and share a copy of the recorded complaint below — redress within 1 month.
+                {{t "sy.contact.ref_pre"}} <strong class="font-data-mono font-bold underline">{{.SubmittedNum}}</strong>. {{t "sy.contact.ref_post"}} We acknowledge within 48 hours and share a copy of the recorded complaint below — redress within 1 month.
             </p>
         </div>
     </div>
     <a href="/contact-us?ticket={{.SubmittedNum}}{{if .SubmittedEmail}}&amp;email={{.SubmittedEmail}}{{end}}" class="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full bg-status-success text-on-primary font-semibold text-sm shadow-sm hover:bg-status-success/90 hover:-translate-y-px transition shrink-0">
-        View Ticket Status
+        {{t "sy.contact.view_ticket"}}
     </a>
 </div>
 {{end}}
@@ -54,54 +54,54 @@
 <div class="lg:col-span-7 bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm p-6 md:p-8">
 <div class="flex items-center gap-2 mb-6 border-b border-border-subtle pb-4 text-primary">
 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-<h2 class="text-lg font-semibold text-on-surface font-display m-0">Submit an Operational Inquiry</h2>
+<h2 class="text-lg font-semibold text-on-surface font-display m-0">{{t "sy.contact.form_title"}}</h2>
 </div>
-<p class="text-sm text-on-surface-variant leading-relaxed mb-6">Fill in the details below and our logistics support team will respond promptly.</p>
+<p class="text-sm text-on-surface-variant leading-relaxed mb-6">{{t "sy.contact.form_sub"}}</p>
 <form class="space-y-4" method="POST" action="/contact-us/submit">
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 <div>
-<label for="contact-name" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Your Full Name *</label>
+<label for="contact-name" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "sy.contact.name"}}</label>
 <input aria-label="Alex Morgan" autocomplete="name" id="contact-name" name="name" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition placeholder:text-text-muted" required="" type="text" placeholder="Alex Morgan">
 </div>
 <div>
-<label for="contact-email" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Email Address *</label>
+<label for="contact-email" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "sy.contact.email"}}</label>
 <input aria-label="alex@company.com" autocomplete="email" spellcheck="false" id="contact-email" name="email" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition placeholder:text-text-muted" required="" type="email" placeholder="alex@company.com">
 </div>
 </div>
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 <div>
-<label for="contact-phone" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Phone Number</label>
+<label for="contact-phone" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "sy.contact.phone"}}</label>
 <input aria-label="+91 8285336507" autocomplete="tel" id="contact-phone" name="phone" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition placeholder:text-text-muted" type="tel" placeholder="+91 8285336507">
 </div>
 <div>
-<label for="contact-company" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Company / Organization</label>
+<label for="contact-company" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "sy.contact.company"}}</label>
 <input aria-label="Fleet Logistics LLC" autocomplete="organization" id="contact-company" name="company_name" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition placeholder:text-text-muted" type="text" placeholder="Fleet Logistics LLC">
 </div>
 </div>
 <div>
-<label for="contact-category" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Inquiry Category *</label>
+<label for="contact-category" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "sy.contact.category"}}</label>
 <select id="contact-category" name="category" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition" required="">
-<option value="">Select a category</option>
-<option value="support" {{if eq .ErrorAbout "error-page"}}selected{{end}}>General Support</option>
-<option value="fleet">Fleet Carrier Onboarding</option>
-<option value="quote">Shipper &amp; Load Quotation</option>
-<option value="billing">Billing &amp; Invoicing Issue</option>
-<option value="api">API &amp; Integration Support</option>
+<option value="">{{t "sy.contact.cat_pick"}}</option>
+<option value="support" {{if eq .ErrorAbout "error-page"}}selected{{end}}>{{t "sy.contact.cat_support"}}</option>
+<option value="fleet">{{t "sy.contact.cat_fleet"}}</option>
+<option value="quote">{{t "sy.contact.cat_quote"}}</option>
+<option value="billing">{{t "sy.contact.cat_billing"}}</option>
+<option value="api">{{t "sy.contact.cat_api"}}</option>
 </select>
 </div>
 <div>
-<label for="contact-subject" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Subject *</label>
-<input aria-label="Brief subject of inquiry" autocomplete="off" id="contact-subject" name="subject" value="{{.PrefillSubject}}" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition placeholder:text-text-muted" required="" type="text" placeholder="Brief subject of inquiry">
+<label for="contact-subject" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "sy.contact.subject"}}</label>
+<input aria-label="{{t "sy.contact.subject_ph"}}" autocomplete="off" id="contact-subject" name="subject" value="{{.PrefillSubject}}" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition placeholder:text-text-muted" required="" type="text" placeholder="{{t "sy.contact.subject_ph"}}">
 </div>
 <div>
-<label for="contact-message" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Detailed Message *</label>
-<textarea aria-label="Describe your request in detail" id="contact-message" name="message" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition placeholder:text-text-muted" required="" rows="4" placeholder="Describe your request in detail…">{{.PrefillMessage}}</textarea>
+<label for="contact-message" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "sy.contact.message"}}</label>
+<textarea aria-label="{{t "sy.contact.message_ph"}}" id="contact-message" name="message" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition placeholder:text-text-muted" required="" rows="4" placeholder="{{t "sy.contact.message_ph"}}">{{.PrefillMessage}}</textarea>
 {{if .ErrorRef}}<input type="hidden" name="error_ref" value="{{.ErrorRef}}">{{end}}
 </div>
 <div class="pt-4">
 <button class="inline-flex justify-center items-center gap-2 w-full md:w-auto rounded-full bg-primary text-on-primary px-5 py-2.5 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer border-0" type="submit">
 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
-                            Submit Inquiry &amp; Generate Ticket
+                            {{t "sy.contact.submit"}}
                         </button>
 </div>
 </form>
@@ -112,16 +112,16 @@
 <div id="track-status-section" class="bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm p-6 scroll-mt-24">
 <div class="flex items-center gap-2 mb-4 text-primary">
 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
-<h3 class="text-lg font-semibold text-on-surface font-display m-0">Check Contact Ticket Status</h3>
+<h3 class="text-lg font-semibold text-on-surface font-display m-0">{{t "sy.contact.track_title"}}</h3>
 </div>
-<p class="text-sm text-on-surface-variant leading-relaxed mb-4">Track real-time progress of your submitted support ticket.</p>
+<p class="text-sm text-on-surface-variant leading-relaxed mb-4">{{t "sy.contact.track_sub"}}</p>
 <form method="GET" action="/contact-us" class="flex flex-col sm:flex-row gap-2">
-<label for="search-ticket" class="sr-only">Ticket ID</label>
-<input aria-label="Ticket ID (e.g. TKT-123)" autocomplete="off" id="search-ticket" name="ticket" value="{{.SearchQuery}}" class="flex-grow w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition placeholder:text-text-muted" placeholder="Ticket ID (e.g. TKT-123)" type="text">
-<label for="search-email" class="sr-only">Submission Email</label>
-<input aria-label="Email used at submission" autocomplete="email" spellcheck="false" id="search-email" name="email" value="{{.SearchEmail}}" class="flex-grow w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition placeholder:text-text-muted" placeholder="Email used at submission" type="email">
+<label for="search-ticket" class="sr-only">{{t "sy.contact.ticket_id"}}</label>
+<input aria-label="{{t "sy.contact.ticket_ph"}}" autocomplete="off" id="search-ticket" name="ticket" value="{{.SearchQuery}}" class="flex-grow w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition placeholder:text-text-muted" placeholder="{{t "sy.contact.ticket_ph"}}" type="text">
+<label for="search-email" class="sr-only">{{t "sy.contact.sub_email"}}</label>
+<input aria-label="{{t "sy.contact.email_ph"}}" autocomplete="email" spellcheck="false" id="search-email" name="email" value="{{.SearchEmail}}" class="flex-grow w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition placeholder:text-text-muted" placeholder="{{t "sy.contact.email_ph"}}" type="email">
 <button type="submit" class="inline-flex items-center justify-center gap-1 rounded-full border border-border-subtle bg-surface-container-lowest text-secondary px-4 py-2.5 text-sm font-semibold hover:bg-surface-container-low hover:text-on-surface transition cursor-pointer shrink-0">
-<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> Check
+<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg> {{t "sy.contact.check"}}
                         </button>
 </form>
 
@@ -129,29 +129,29 @@
 <div class="mt-4 bg-surface-container-low border border-border-subtle rounded-xl p-4 space-y-3">
     <div class="flex items-center justify-between border-b border-border-subtle pb-2">
         <div>
-            <span class="block text-[11px] font-bold uppercase tracking-wider text-text-muted">Ticket Number</span>
+            <span class="block text-[11px] font-bold uppercase tracking-wider text-text-muted">{{t "sy.contact.ticket_no"}}</span>
             <div class="font-data-mono font-bold text-sm text-primary tabular-nums">{{.Ticket.TicketNumber}}</div>
         </div>
         <div>
             {{if eq .Ticket.Status "pending"}}
-            <span class="px-2 py-0.5 text-xs bg-status-warning/10 border border-status-warning/20 text-status-warning font-bold rounded-full">Pending Review</span>
+            <span class="px-2 py-0.5 text-xs bg-status-warning/10 border border-status-warning/20 text-status-warning font-bold rounded-full">{{t "sy.contact.st_pending"}}</span>
             {{else if eq .Ticket.Status "in_progress"}}
-            <span class="px-2 py-0.5 text-xs bg-status-info/10 border border-status-info/20 text-status-info font-bold rounded-full">In Progress</span>
+            <span class="px-2 py-0.5 text-xs bg-status-info/10 border border-status-info/20 text-status-info font-bold rounded-full">{{t "sy.contact.st_progress"}}</span>
             {{else if eq .Ticket.Status "resolved"}}
-            <span class="px-2 py-0.5 text-xs bg-status-success/10 border border-status-success/20 text-status-success font-bold rounded-full">Resolved</span>
+            <span class="px-2 py-0.5 text-xs bg-status-success/10 border border-status-success/20 text-status-success font-bold rounded-full">{{t "sy.contact.st_resolved"}}</span>
             {{else}}
-            <span class="px-2 py-0.5 text-xs bg-surface-container border border-border-subtle text-on-surface-variant font-bold rounded-full">Closed</span>
+            <span class="px-2 py-0.5 text-xs bg-surface-container border border-border-subtle text-on-surface-variant font-bold rounded-full">{{t "sy.contact.st_closed"}}</span>
             {{end}}
         </div>
     </div>
     <div class="space-y-1 text-xs text-on-surface-variant">
-        <div class="flex justify-between"><span class="font-semibold">Submitted By:</span> <span>{{.Ticket.Name}}</span></div>
-        <div class="flex justify-between"><span class="font-semibold">Subject:</span> <span>{{.Ticket.Subject}}</span></div>
-        <div class="flex justify-between"><span class="font-semibold">Category:</span> <span>{{.Ticket.Category}}</span></div>
-        <div class="pt-1"><span class="font-semibold">Complaint as recorded:</span><p class="mt-1 whitespace-pre-wrap border border-border-subtle rounded-lg p-2 bg-surface-container-lowest">{{.Ticket.Message}}</p></div>
+        <div class="flex justify-between"><span class="font-semibold">{{t "sy.contact.submitted_by"}}</span> <span>{{.Ticket.Name}}</span></div>
+        <div class="flex justify-between"><span class="font-semibold">{{t "sy.contact.f_subject"}}</span> <span>{{.Ticket.Subject}}</span></div>
+        <div class="flex justify-between"><span class="font-semibold">{{t "sy.contact.f_category"}}</span> <span>{{.Ticket.Category}}</span></div>
+        <div class="pt-1"><span class="font-semibold">{{t "sy.contact.recorded"}}</span><p class="mt-1 whitespace-pre-wrap border border-border-subtle rounded-lg p-2 bg-surface-container-lowest">{{.Ticket.Message}}</p></div>
         <div class="flex flex-wrap items-center gap-2 pt-2">
-            <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('ticket-copy-{{.Ticket.TicketNumber}}').innerText)" class="px-3 py-1.5 rounded-full border border-border-subtle text-xs font-semibold hover:bg-surface-container-low transition cursor-pointer">Copy complaint</button>
-            <button type="button" onclick="window.print()" class="px-3 py-1.5 rounded-full border border-border-subtle text-xs font-semibold hover:bg-surface-container-low transition cursor-pointer">Print</button>
+            <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('ticket-copy-{{.Ticket.TicketNumber}}').innerText)" class="px-3 py-1.5 rounded-full border border-border-subtle text-xs font-semibold hover:bg-surface-container-low transition cursor-pointer">{{t "sy.contact.copy"}}</button>
+            <button type="button" onclick="window.print()" class="px-3 py-1.5 rounded-full border border-border-subtle text-xs font-semibold hover:bg-surface-container-low transition cursor-pointer">{{t "sy.contact.print"}}</button>
         </div>
         <div id="ticket-copy-{{.Ticket.TicketNumber}}" class="sr-only">Ticket {{.Ticket.TicketNumber}} · {{.Ticket.Name}} · {{.Ticket.Subject}} · {{.Ticket.Category}} · {{.Ticket.Message}}</div>
         {{if .SLAState}}<p class="pt-1 font-semibold">{{if eq .SLAState "ack-overdue"}}⚠ Acknowledgement overdue (due {{.SLAAckDue}}). Write to grievance@avandab.com quoting {{.Ticket.TicketNumber}}.{{else if eq .SLAState "redress-overdue"}}⚠ Redress overdue (due {{.SLARedressDue}}). Escalate to grievance@avandab.com or https://consumerhelpline.gov.in quoting {{.Ticket.TicketNumber}}.{{else if eq .SLAState "redressed"}}✓ Redressed{{if .SLAAckAt}} (acknowledged {{.SLAAckAt}}){{end}}. Reopen via a new inquiry if unresolved.{{else}}On track{{if .SLAAckAt}} — acknowledged {{.SLAAckAt}}{{end}} — redress due {{.SLARedressDue}}.{{end}}</p>{{end}}
@@ -164,7 +164,7 @@
 <div class="bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm p-6 space-y-6">
     <div class="flex items-center gap-2 border-b border-border-subtle pb-3 text-primary">
         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 shrink-0"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 16c0 3-2 3-2 3-2 0-2-3-2-3s2-1.5 2-3.5c0-1 .23-2 .66-2.85"/></svg>
-        <h3 class="text-lg font-semibold text-on-surface font-display m-0">Official Department Directory</h3>
+        <h3 class="text-lg font-semibold text-on-surface font-display m-0">{{t "sy.contact.directory"}}</h3>
     </div>
 
     <!-- Direct WhatsApp & Phone Hotlines -->
@@ -175,9 +175,9 @@
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
             </div>
             <div>
-                <div class="text-eyebrow text-text-muted">24/7 Fleet Dispatch Hotline</div>
+                <div class="text-eyebrow text-text-muted">{{t "sy.contact.hotline"}}</div>
                 <div class="font-data-mono text-sm font-bold text-primary mt-0.5">+91 8285336507</div>
-                <div class="text-[11px] text-text-muted">Tap to call emergency transport</div>
+                <div class="text-[11px] text-text-muted">{{t "sy.contact.hotline_sub"}}</div>
             </div>
         </a>
 
@@ -187,9 +187,9 @@
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.29"/></svg>
             </div>
             <div>
-                <div class="text-eyebrow text-emerald-strong dark:text-emerald-400">Instant WhatsApp Support</div>
+                <div class="text-eyebrow text-emerald-strong dark:text-emerald-400">{{t "sy.contact.wa"}}</div>
                 <div class="font-data-mono text-sm font-bold text-emerald-mid dark:text-emerald-400 mt-0.5">+91 8285336507</div>
-                <div class="text-[11px] text-text-muted">Chat directly with dispatch team</div>
+                <div class="text-[11px] text-text-muted">{{t "sy.contact.wa_sub"}}</div>
             </div>
         </a>
     </div>
@@ -198,30 +198,30 @@
     <div class="space-y-4 text-xs">
         <!-- 1. Operations & Dispatch -->
         <div class="border-t border-border-subtle pt-3">
-            <div class="text-[11px] font-black uppercase tracking-wider text-primary mb-2">🚚 Fleet Operations, Tracking &amp; Telemetry</div>
+            <div class="text-[11px] font-black uppercase tracking-wider text-primary mb-2">{{t "sy.contact.dept_ops"}}</div>
             <div class="space-y-2">
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">Trip Assignments &amp; Routes:</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_assign"}}</span>
                     <a href="mailto:dispatch@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">dispatch@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">Live Tracking &amp; ETA:</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_tracking"}}</span>
                     <a href="mailto:tracking@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">tracking@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">Digital Proof of Delivery (e-POD):</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_epod"}}</span>
                     <a href="mailto:epod@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">epod@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">FASTag Toll Disputes:</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_fastag"}}</span>
                     <a href="mailto:fastag@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">fastag@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">Diesel Logs &amp; Fuel Audits:</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_fuel"}}</span>
                     <a href="mailto:fuel@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">fuel@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">Workshop &amp; Maintenance:</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_workshop"}}</span>
                     <a href="mailto:maintenance@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">maintenance@avandab.com</a>
                 </div>
             </div>
@@ -229,14 +229,14 @@
 
         <!-- 2. Billing & Finance -->
         <div class="border-t border-border-subtle pt-3">
-            <div class="text-[11px] font-black uppercase tracking-wider text-emerald-mid dark:text-emerald-400 mb-2">💰 Billing, GST Invoices &amp; Accounts</div>
+            <div class="text-[11px] font-black uppercase tracking-wider text-emerald-mid dark:text-emerald-400 mb-2">{{t "sy.contact.dept_billing"}}</div>
             <div class="space-y-2">
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">GST Invoices &amp; Razorpay Pay:</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_gst"}}</span>
                     <a href="mailto:billing@avandab.com" class="font-data-mono font-semibold text-emerald-mid dark:text-emerald-400 hover:underline">billing@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">Ledger, Khata &amp; Settlements:</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_ledger"}}</span>
                     <a href="mailto:accounts@avandab.com" class="font-data-mono font-semibold text-emerald-mid dark:text-emerald-400 hover:underline">accounts@avandab.com</a>
                 </div>
             </div>
@@ -244,22 +244,22 @@
 
         <!-- 3. Support, Claims & Emergency -->
         <div class="border-t border-border-subtle pt-3">
-            <div class="text-[11px] font-black uppercase tracking-wider text-red-mid dark:text-red-400 mb-2">🚨 Customer Care, Claims &amp; 24/7 SOS Radar</div>
+            <div class="text-[11px] font-black uppercase tracking-wider text-red-mid dark:text-red-400 mb-2">{{t "sy.contact.dept_care"}}</div>
             <div class="space-y-2">
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">General Support &amp; Helpdesk:</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_helpdesk"}}</span>
                     <a href="mailto:support@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">support@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">24/7 Highway SOS &amp; Breakdown:</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_sos"}}</span>
                     <a href="mailto:sos@avandab.com" class="font-data-mono font-bold text-red-mid dark:text-red-400 hover:underline">sos@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">Driver Welfare &amp; Highway Help:</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_welfare"}}</span>
                     <a href="mailto:driver-help@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">driver-help@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">Cargo Damage &amp; Claims:</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_claims"}}</span>
                     <a href="mailto:claims@avandab.com" class="font-data-mono font-semibold text-red-mid dark:text-red-400 hover:underline">claims@avandab.com</a>
                 </div>
             </div>
@@ -267,30 +267,30 @@
 
         <!-- 4. Legal & Corporate -->
         <div class="border-t border-border-subtle pt-3">
-            <div class="text-[11px] font-black uppercase tracking-wider text-secondary mb-2">⚖️ Legal, Sales &amp; Executive</div>
+            <div class="text-[11px] font-black uppercase tracking-wider text-secondary mb-2">{{t "sy.contact.dept_legal"}}</div>
             <div class="space-y-2">
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">Corporate Freight Contracts:</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_contracts"}}</span>
                     <a href="mailto:sales@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">sales@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">Transporter &amp; Fleet KYC:</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_kyc"}}</span>
                     <a href="mailto:onboarding@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">onboarding@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">GST &amp; E-Way Bill Compliance:</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_compliance"}}</span>
                     <a href="mailto:compliance@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">compliance@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">Legal, Contracts &amp; Privacy:</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_legal"}}</span>
                     <a href="mailto:legal@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">legal@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">Platform Security &amp; Vulnerabilities:</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_security"}}</span>
                     <a href="mailto:security@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">security@avandab.com</a>
                 </div>
                 <div class="flex justify-between items-center py-1">
-                    <span class="text-on-surface-variant">Founder &amp; Executive Office:</span>
+                    <span class="text-on-surface-variant">{{t "sy.contact.row_founder"}}</span>
                     <a href="mailto:abhishek@avandab.com" class="font-data-mono font-semibold text-primary hover:underline">abhishek@avandab.com</a>
                 </div>
             </div>
@@ -300,12 +300,12 @@
 
 <!-- Quick Links -->
 <div class="bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm p-6">
-<h3 class="text-lg font-semibold text-on-surface font-display mb-4">Quick Support</h3>
+<h3 class="text-lg font-semibold text-on-surface font-display mb-4">{{t "sy.contact.quick"}}</h3>
 <ul class="space-y-3 text-sm text-on-surface-variant">
-  <li class=""><a class="text-primary hover:underline flex items-center gap-1" href="/features/dashboard"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg> Help Center</a></li>
-  <li class=""><a class="text-primary hover:underline flex items-center gap-1" href="/features/invoices"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg> Invoices &amp; Receipts</a></li>
-  <li class=""><a class="text-primary hover:underline flex items-center gap-1" href="/features/audit-logs"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg> Audit Logs</a></li>
-  <li class=""><a class="text-primary hover:underline flex items-center gap-1" href="/features/settings"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg> Contact Admin</a></li>
+  <li class=""><a class="text-primary hover:underline flex items-center gap-1" href="/features/dashboard"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg> {{t "sy.contact.q_help"}}</a></li>
+  <li class=""><a class="text-primary hover:underline flex items-center gap-1" href="/features/invoices"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg> {{t "sy.contact.q_invoices"}}</a></li>
+  <li class=""><a class="text-primary hover:underline flex items-center gap-1" href="/features/audit-logs"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg> {{t "sy.contact.q_audit"}}</a></li>
+  <li class=""><a class="text-primary hover:underline flex items-center gap-1" href="/features/settings"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg> {{t "sy.contact.q_admin"}}</a></li>
 </ul>
 </div>
 </div>

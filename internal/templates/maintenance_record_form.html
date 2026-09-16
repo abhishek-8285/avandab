@@ -1,27 +1,27 @@
 <div class="max-w-3xl mx-auto">
     <div class="flex items-start justify-between gap-4 mb-5 flex-wrap">
         <div>
-            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Record Maintenance Work</h1>
-            <p class="text-sm text-secondary mt-1">Log completed servicing, update vehicle maintenance history, and clear due blockers.</p>
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{t "fl.record_maintenance_work"}}</h1>
+            <p class="text-sm text-secondary mt-1">{{t "fl.log_completed_servicing_update_vehicle_maint"}}</p>
         </div>
     </div>
 
     <form method="POST" action="/maintenance/records" class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h2 class="text-sm font-bold text-on-surface">Work Details</h2>
-                <p class="text-xs text-text-muted mt-0.5">Vehicle, service and when it was performed</p>
+                <h2 class="text-sm font-bold text-on-surface">{{t "fl.work_details"}}</h2>
+                <p class="text-xs text-text-muted mt-0.5">{{t "fl.vehicle_service_and_when_it_was_performed"}}</p>
             </div>
         </div>
         <div class="p-6 space-y-4">
             <div>
-                <label for="vehicle_id" class="block text-eyebrow text-text-muted mb-1.5">Vehicle ID <span class="text-status-alert">*</span></label>
+                <label for="vehicle_id" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.vehicle_id"}} <span class="text-status-alert">*</span></label>
                 <input aria-label="e.g. veh-123" autocomplete="off" id="vehicle_id" type="text" name="vehicle_id" value="{{.VehicleID}}" required placeholder="e.g. veh-123"
                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
             </div>
 
             <div>
-                <label for="service_type" class="block text-eyebrow text-text-muted mb-1.5">Service Type <span class="text-status-alert">*</span></label>
+                <label for="service_type" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.service_type"}} <span class="text-status-alert">*</span></label>
                 <select id="service_type" name="service_type" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     {{range .ServiceTypes}}
                     <option value="{{.}}">{{.}}</option>
@@ -31,27 +31,27 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label for="performed_at" class="block text-eyebrow text-text-muted mb-1.5">Date Performed <span class="text-status-alert">*</span></label>
+                    <label for="performed_at" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.date_performed"}} <span class="text-status-alert">*</span></label>
                     <input id="performed_at" type="date" name="performed_at" required
                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                 </div>
                 <div>
-                    <label for="odometer_km" class="block text-eyebrow text-text-muted mb-1.5">Odometer (km)</label>
+                    <label for="odometer_km" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.odometer_km"}}</label>
                     <input aria-label="e.g. 45200" id="odometer_km" type="number" step="any" name="odometer_km" placeholder="e.g. 45200"
                            class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                 </div>
             </div>
 
             <div class="pt-2">
-                <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Cost &amp; Vendor</h3>
+                <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "fl.cost_amp_vendor"}}</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label for="cost" class="block text-eyebrow text-text-muted mb-1.5">Cost (₹)</label>
+                        <label for="cost" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.cost_rs"}}</label>
                         <input aria-label="e.g. 3500" id="cost" type="number" step="any" name="cost" placeholder="e.g. 3500"
                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
                     <div>
-                        <label for="vendor" class="block text-eyebrow text-text-muted mb-1.5">Vendor / Workshop</label>
+                        <label for="vendor" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.vendor_workshop"}}</label>
                         <input aria-label="e.g. Tata Authorized Service" autocomplete="off" id="vendor" type="text" name="vendor" placeholder="e.g. Tata Authorized Service"
                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
@@ -59,15 +59,15 @@
             </div>
 
             <div class="pt-1">
-                <label for="notes" class="block text-eyebrow text-text-muted mb-1.5">Notes / Description</label>
-                <textarea aria-label="Details of parts replaced, oil grade, warranty notes" id="notes" name="notes" rows="3" placeholder="Details of parts replaced, oil grade, warranty notes…"
+                <label for="notes" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.notes_description"}}</label>
+                <textarea aria-label="{{t "fl.details_of_parts_replaced_oil_grade_warranty"}}" id="notes" name="notes" rows="3" placeholder="{{t "fl.details_of_parts_replaced_oil_grade_warranty_2"}}"
                           class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition resize-none"></textarea>
             </div>
         </div>
 
         <div class="px-6 py-3 border-t border-border-subtle bg-surface-container-low/40 flex justify-end gap-2">
-            <a href="/maintenance" class="inline-flex items-center px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">Cancel</a>
-            <button type="submit" class="inline-flex items-center px-5 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">Record Maintenance Work</button>
+            <a href="/maintenance" class="inline-flex items-center px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">{{t "fl.cancel"}}</a>
+            <button type="submit" class="inline-flex items-center px-5 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">{{t "fl.record_maintenance_work"}}</button>
         </div>
     </form>
 </div>

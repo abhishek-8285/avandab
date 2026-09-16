@@ -1,4 +1,4 @@
-{{template "page_header.html" (dict "Title" "User Management" "Subtitle" "Manage staff system access and roles" "ActionHref" "/users/new" "ActionIcon" "add" "ActionLabel" "New User")}}
+{{template "page_header.html" (dict "Title" (t "sy.users.title") "Subtitle" (t "sy.users.subtitle") "ActionHref" "/users/new" "ActionIcon" "add" "ActionLabel" (t "sy.users.new_user"))}}
 
 <div class="space-y-4">
     <!-- Compact stat row (totals only — per-status counts need a handler TODO) -->
@@ -9,7 +9,7 @@
             </div>
             <div class="min-w-0">
                 <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{if .Pagination}}{{.Pagination.Total}}{{else}}0{{end}}</div>
-                <div class="text-xs text-secondary font-medium mt-1">Total Accounts</div>
+                <div class="text-xs text-secondary font-medium mt-1">{{t "sy.users.total"}}</div>
             </div>
         </div>
         <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition">
@@ -18,7 +18,7 @@
             </div>
             <div class="min-w-0">
                 <div class="text-xl font-bold tabular-nums text-on-surface leading-none">{{len .Users}}</div>
-                <div class="text-xs text-secondary font-medium mt-1">On This Page</div>
+                <div class="text-xs text-secondary font-medium mt-1">{{t "sy.users.on_page"}}</div>
             </div>
         </div>
         <div class="col-span-2 lg:col-span-1 flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition">
@@ -26,8 +26,8 @@
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             </div>
             <div class="min-w-0">
-                <div class="text-sm font-bold text-on-surface truncate">{{if .Query}}“{{.Query}}”{{else if .StatusFilter}}{{.StatusFilter}}{{else}}All Accounts{{end}}</div>
-                <div class="text-xs text-secondary font-medium mt-1">Current Filter</div>
+                <div class="text-sm font-bold text-on-surface truncate">{{if .Query}}“{{.Query}}”{{else if .StatusFilter}}{{.StatusFilter}}{{else}}{{t "sy.users.all_accounts"}}{{end}}</div>
+                <div class="text-xs text-secondary font-medium mt-1">{{t "sy.users.current_filter"}}</div>
             </div>
         </div>
     </div>
@@ -37,14 +37,14 @@
             "Action" "/users"
             "Query" .Query
             "StatusFilter" .StatusFilter
-            "Chips" (chips "All Accounts" "" "Active" "active" "Inactive" "inactive" "Suspended" "suspended")
+            "Chips" (chips (t "sy.users.all_accounts") "" (t "sy.users.active") "active" (t "sy.users.inactive") "inactive" (t "sy.users.suspended") "suspended")
             "ShowDates" true
             "DateFilterError" .DateFilterError
             "DateFrom" .DateFrom
             "DateTo" .DateTo
             "ShowSearch" true
-            "SearchPlaceholder" "Search user or email…"
-            "Primary" (dict "Variant" "primary" "Size" "sm" "Href" "/users/new" "Icon" "add" "Label" "New User" "Class" "rounded-full shadow-sm")
+            "SearchPlaceholder" (t "sy.users.search_ph")
+            "Primary" (dict "Variant" "primary" "Size" "sm" "Href" "/users/new" "Icon" "add" "Label" (t "sy.users.new_user") "Class" "rounded-full shadow-sm")
         )}}
 
         <!-- Data Table Fragment (Datastar refresh target) -->

@@ -19,10 +19,10 @@
         <div class="absolute -left-16 bottom-0 h-56 w-56 rounded-full bg-primary/5 blur-3xl"></div>
         <div class="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:grid lg:grid-cols-2 lg:gap-12 lg:px-8 lg:py-24">
             <div class="flex flex-col justify-center">
-                <nav class="mb-6 flex items-center gap-1 text-sm text-text-muted" aria-label="Breadcrumb">
-                    <a href="/" class="hover:text-primary">Home</a>
+                <nav class="mb-6 flex items-center gap-1 text-sm text-text-muted" aria-label="{{t "sy.feat.crumb_aria"}}">
+                    <a href="/" class="hover:text-primary">{{t "sy.feat.crumb_home"}}</a>
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
-                    <a href="/features" class="hover:text-primary">Features</a>
+                    <a href="/features" class="hover:text-primary">{{t "sy.feat.crumb_features"}}</a>
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
                     <span class="text-primary" aria-current="page">{{.Feature.Title}}</span>
                 </nav>
@@ -37,20 +37,20 @@
                 <p class="mt-2 text-sm font-medium text-text-muted">{{.Feature.Audience}}</p>
                 <div class="mt-8 flex flex-wrap items-center gap-3">
                     <a href="/login" class="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-on-primary shadow-sm transition hover:bg-primary/90 hover:-translate-y-px hover:shadow-md">
-                        Sign in <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        {{t "sy.feat.signin"}} <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                     </a>
                     <a href="/register" class="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-container-lowest px-6 py-3 text-sm font-semibold text-primary shadow-sm transition hover:bg-background hover:-translate-y-px hover:shadow-md">
-                        Start free
+                        {{t "sy.feat.start_free"}}
                     </a>
                     <a href="https://wa.me/918285336507?text=Hi%20Avandab,%20I%20want%20a%20demo%20of%20{{.Feature.Title}}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 py-2 px-3.5 rounded-full bg-emerald-soft border border-emerald-500/20 text-xs font-semibold text-emerald-strong dark:text-emerald-300 hover:bg-emerald-500/20 transition-colors">
                         <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5 text-emerald-mid shrink-0"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.29"/></svg>
-                        WhatsApp Demo
+                        {{t "sy.feat.wa_demo"}}
                     </a>
                 </div>
                 <div class="mt-6 flex flex-wrap gap-2">
-                    <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-container-lowest px-3 py-1 text-xs font-medium text-on-surface-variant shadow-sm ring-1 ring-border-subtle"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/></svg>GST-ready invoicing</span>
-                    <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-container-lowest px-3 py-1 text-xs font-medium text-on-surface-variant shadow-sm ring-1 ring-border-subtle"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Bank-grade encryption</span>
-                    <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-container-lowest px-3 py-1 text-xs font-medium text-on-surface-variant shadow-sm ring-1 ring-border-subtle"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-2.8a.5.5 0 0 0-.45-.3H3a.5.5 0 0 0-.45.3L1.14 12.2a1.5 1.5 0 0 0 0 1.6L2.6 16.6A.5.5 0 0 0 3.05 17H18"/></svg>Made for Indian fleets</span>
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-container-lowest px-3 py-1 text-xs font-medium text-on-surface-variant shadow-sm ring-1 ring-border-subtle"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/></svg>{{t "sy.feat.chip_gst"}}</span>
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-container-lowest px-3 py-1 text-xs font-medium text-on-surface-variant shadow-sm ring-1 ring-border-subtle"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>{{t "sy.feat.chip_sec"}}</span>
+                    <span class="inline-flex items-center gap-1.5 rounded-full bg-surface-container-lowest px-3 py-1 text-xs font-medium text-on-surface-variant shadow-sm ring-1 ring-border-subtle"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-2.8a.5.5 0 0 0-.45-.3H3a.5.5 0 0 0-.45.3L1.14 12.2a1.5 1.5 0 0 0 0 1.6L2.6 16.6A.5.5 0 0 0 3.05 17H18"/></svg>{{t "sy.feat.chip_made"}}</span>
                 </div>
             </div>
 
@@ -730,7 +730,7 @@
                         </style>
                         <div class="space-y-2.5">
                           <div class="flex items-center justify-between gap-2">
-                            <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-soft px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-strong ring-1 ring-amber-500/20"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>DPDPA-aligned</span>
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-amber-soft px-2.5 py-1 text-[11px] font-bold tracking-wide text-amber-strong ring-1 ring-amber-500/20"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>{{t "sy.feat.proof_dpdpa"}}</span>
                             <button class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-background px-2.5 py-1 text-[11px] font-semibold text-on-surface shadow-sm"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="h-3 w-3"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export</button>
                           </div>
                           <div class="relative rounded-xl border border-border-subtle bg-background p-3 pl-8">
@@ -1117,22 +1117,22 @@
     <!-- Social proof bar -->
     <div class="border-b border-border-subtle bg-surface-container-lowest">
         <div class="mx-auto flex max-w-6xl flex-wrap items-center justify-center gap-x-8 gap-y-2 px-4 py-3 text-xs font-medium text-secondary sm:justify-start">
-            <span class="flex items-center gap-1.5"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>GST-compliant</span>
-            <span class="flex items-center gap-1.5"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>AES-256 encryption</span>
-            <span class="flex items-center gap-1.5"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>DPDPA-aligned</span>
-            <span class="flex items-center gap-1.5"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>Data hosted in India</span>
+            <span class="flex items-center gap-1.5"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>{{t "sy.feat.proof_gst"}}</span>
+            <span class="flex items-center gap-1.5"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>{{t "sy.feat.proof_aes"}}</span>
+            <span class="flex items-center gap-1.5"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>{{t "sy.feat.proof_dpdpa"}}</span>
+            <span class="flex items-center gap-1.5"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>{{t "sy.feat.proof_india"}}</span>
         </div>
     </div>
 
     <!-- Sticky anchor nav (scroll-spy) -->
     <div class="sticky top-20 z-40 border-b border-border-subtle/60 bg-surface-container-lowest/85 shadow-sm backdrop-blur-md">
         <nav id="feat-section-nav" class="mx-auto flex max-w-6xl items-center gap-1 overflow-x-auto px-4 py-2 text-sm [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:px-6 lg:px-8" aria-label="Page sections">
-            <a href="#overview" class="feat-anchor whitespace-nowrap rounded-full px-3.5 py-1.5 font-medium">Overview</a>
-            <a href="#capabilities" class="feat-anchor whitespace-nowrap rounded-full px-3.5 py-1.5 font-medium">What it does</a>
-            <a href="#benefits" class="feat-anchor whitespace-nowrap rounded-full px-3.5 py-1.5 font-medium">Why it matters</a>
-            <a href="#how-it-works" class="feat-anchor whitespace-nowrap rounded-full px-3.5 py-1.5 font-medium">How it works</a>
-            {{if .Feature.UseCases}}<a href="#usecases" class="feat-anchor whitespace-nowrap rounded-full px-3.5 py-1.5 font-medium">Use cases</a>{{end}}
-            <a href="#faq" class="feat-anchor whitespace-nowrap rounded-full px-3.5 py-1.5 font-medium">FAQ</a>
+            <a href="#overview" class="feat-anchor whitespace-nowrap rounded-full px-3.5 py-1.5 font-medium">{{t "sy.feat.nav_overview"}}</a>
+            <a href="#capabilities" class="feat-anchor whitespace-nowrap rounded-full px-3.5 py-1.5 font-medium">{{t "sy.feat.nav_what"}}</a>
+            <a href="#benefits" class="feat-anchor whitespace-nowrap rounded-full px-3.5 py-1.5 font-medium">{{t "sy.feat.nav_why"}}</a>
+            <a href="#how-it-works" class="feat-anchor whitespace-nowrap rounded-full px-3.5 py-1.5 font-medium">{{t "sy.feat.nav_how"}}</a>
+            {{if .Feature.UseCases}}<a href="#usecases" class="feat-anchor whitespace-nowrap rounded-full px-3.5 py-1.5 font-medium">{{t "sy.feat.nav_use"}}</a>{{end}}
+            <a href="#faq" class="feat-anchor whitespace-nowrap rounded-full px-3.5 py-1.5 font-medium">{{t "sy.feat.nav_faq"}}</a>
         </nav>
     </div>
 
@@ -1140,7 +1140,7 @@
         <!-- Overview -->
         <section id="overview" class="scroll-mt-[8.5rem] py-16 sm:py-20">
             <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-                <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">What {{.Feature.Title}} is</h2>
+                <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">{{t "sy.feat.what_pre"}} {{.Feature.Title}} {{t "sy.feat.what_post"}}</h2>
                 <p class="mt-5 border-l-4 border-primary bg-surface-container-lowest py-5 pl-5 pr-4 text-lg leading-relaxed text-on-surface-variant shadow-sm rounded-r-xl">
                     {{.Feature.WhatItIs}}
                 </p>
@@ -1160,8 +1160,8 @@
         <section id="capabilities" class="scroll-mt-[8.5rem] bg-background py-16 sm:py-20">
             <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
                 <div class="max-w-2xl">
-                    <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">What you can do</h2>
-                    <p class="mt-3 text-secondary">The practical capabilities that make {{.Feature.Title}} part of your daily workflow.</p>
+                    <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">{{t "sy.feat.cap_title"}}</h2>
+                    <p class="mt-3 text-secondary">{{t "sy.feat.cap_pre"}} {{.Feature.Title}} {{t "sy.feat.cap_post"}}</p>
                 </div>
                 <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     {{range .Feature.Capabilities}}
@@ -1181,8 +1181,8 @@
         <section id="benefits" class="scroll-mt-[8.5rem] py-16 sm:py-20">
             <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
                 <div class="max-w-2xl">
-                    <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">Why it matters</h2>
-                    <p class="mt-3 text-secondary">The outcomes your business feels once {{.Feature.Title}} is running.</p>
+                    <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">{{t "sy.feat.ben_title"}}</h2>
+                    <p class="mt-3 text-secondary">{{t "sy.feat.ben_pre"}} {{.Feature.Title}} {{t "sy.feat.ben_post"}}</p>
                 </div>
                 <div class="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                     {{range .Feature.Benefits}}
@@ -1199,8 +1199,8 @@
         {{if .Feature.Steps}}
         <section id="how-it-works" class="scroll-mt-[8.5rem] bg-background py-16 sm:py-20">
             <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-                <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">How to get started</h2>
-                <p class="mt-3 text-secondary">From sign-in to value in {{len .Feature.Steps}} simple steps.</p>
+                <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">{{t "sy.feat.how_title"}}</h2>
+                <p class="mt-3 text-secondary">{{t "sy.feat.how_pre"}} {{len .Feature.Steps}} {{t "sy.feat.how_post"}}</p>
                 <div class="mt-10 space-y-0">
                     {{range $i, $s := .Feature.Steps}}
                     <div class="relative flex items-start gap-4 {{if ne $i 0}}pt-8{{end}}">
@@ -1222,21 +1222,21 @@
         <section class="bg-primary py-14">
             <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
                 <div class="text-center">
-                    <h2 class="text-2xl font-bold text-on-primary sm:text-3xl" style="font-family:'Outfit',sans-serif">The problem fleet operators face</h2>
-                    <p class="mt-2 text-on-primary/70">Industry data that explains why digital fleet tools are no longer optional.</p>
+                    <h2 class="text-2xl font-bold text-on-primary sm:text-3xl" style="font-family:'Outfit',sans-serif">{{t "sy.feat.problem"}}</h2>
+                    <p class="mt-2 text-on-primary/70">{{t "sy.feat.problem_sub"}}</p>
                 </div>
                 <div class="mt-10 grid gap-6 sm:grid-cols-3">
                     <div class="rounded-2xl bg-surface-container-lowest/10 p-6 text-center backdrop-blur-sm">
                         <div class="text-4xl font-bold text-on-primary">82%</div>
-                        <p class="mt-2 text-sm text-on-primary/70">of Indian fleet operators still rely on manual logs and WhatsApp for operations</p>
+                        <p class="mt-2 text-sm text-on-primary/70">{{t "sy.feat.stat1"}}</p>
                     </div>
                     <div class="rounded-2xl bg-surface-container-lowest/10 p-6 text-center backdrop-blur-sm">
                         <div class="text-4xl font-bold text-on-primary">8–15%</div>
-                        <p class="mt-2 text-sm text-on-primary/70">of monthly fuel spend is lost to pilferage in unmonitored fleets</p>
+                        <p class="mt-2 text-sm text-on-primary/70">{{t "sy.feat.stat2"}}</p>
                     </div>
                     <div class="rounded-2xl bg-surface-container-lowest/10 p-6 text-center backdrop-blur-sm">
                         <div class="text-4xl font-bold text-on-primary">30%</div>
-                        <p class="mt-2 text-sm text-on-primary/70">average operational cost reduction reported by fleets using management software</p>
+                        <p class="mt-2 text-sm text-on-primary/70">{{t "sy.feat.stat3"}}</p>
                     </div>
                 </div>
             </div>
@@ -1245,52 +1245,52 @@
         <!-- Old Way vs Avandab Way -->
         <section class="py-16 sm:py-20">
             <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-                <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">The old way vs. the Avandab way</h2>
-                <p class="mt-3 text-secondary">How {{.Feature.Title}} changes your daily workflow.</p>
+                <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">{{t "sy.feat.vs_title"}}</h2>
+                <p class="mt-3 text-secondary">{{t "sy.feat.vs_pre"}} {{.Feature.Title}} {{t "sy.feat.vs_post"}}</p>
                 <div class="mt-10 overflow-hidden rounded-2xl border border-border-subtle shadow-sm">
                     <div class="grid grid-cols-2 bg-on-surface text-sm font-semibold text-on-primary">
-                        <div class="px-6 py-4">The old way</div>
-                        <div class="px-6 py-4 bg-primary">The Avandab way</div>
+                        <div class="px-6 py-4">{{t "sy.feat.old_way"}}</div>
+                        <div class="px-6 py-4 bg-primary">{{t "sy.feat.new_way"}}</div>
                     </div>
                     <div class="divide-y divide-border-subtle bg-surface-container-lowest">
                         <div class="grid grid-cols-2 text-sm">
                             <div class="flex items-start gap-3 px-6 py-4 text-text-muted">
                                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                                <span>Spreadsheets and WhatsApp for dispatch</span>
+                                <span>{{t "sy.feat.old1"}}</span>
                             </div>
                             <div class="flex items-start gap-3 px-6 py-4 text-on-surface-variant">
                                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-                                <span>One live dashboard with real-time tracking</span>
+                                <span>{{t "sy.feat.new1"}}</span>
                             </div>
                         </div>
                         <div class="grid grid-cols-2 text-sm">
                             <div class="flex items-start gap-3 px-6 py-4 text-text-muted">
                                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                                <span>Manual invoice generation and email</span>
+                                <span>{{t "sy.feat.old2"}}</span>
                             </div>
                             <div class="flex items-start gap-3 px-6 py-4 text-on-surface-variant">
                                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-                                <span>Auto-generated GST-compliant invoices with EWB</span>
+                                <span>{{t "sy.feat.new2"}}</span>
                             </div>
                         </div>
                         <div class="grid grid-cols-2 text-sm">
                             <div class="flex items-start gap-3 px-6 py-4 text-text-muted">
                                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                                <span>Cash-based expense tracking with no audit trail</span>
+                                <span>{{t "sy.feat.old3"}}</span>
                             </div>
                             <div class="flex items-start gap-3 px-6 py-4 text-on-surface-variant">
                                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-                                <span>Digital kharcha with proof and trip reconciliation</span>
+                                <span>{{t "sy.feat.new3"}}</span>
                             </div>
                         </div>
                         <div class="grid grid-cols-2 text-sm">
                             <div class="flex items-start gap-3 px-6 py-4 text-text-muted">
                                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                                <span>Phone calls to check delivery status</span>
+                                <span>{{t "sy.feat.old4"}}</span>
                             </div>
                             <div class="flex items-start gap-3 px-6 py-4 text-on-surface-variant">
                                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-                                <span>Customer-facing tracking with live ETAs</span>
+                                <span>{{t "sy.feat.new4"}}</span>
                             </div>
                         </div>
                     </div>
@@ -1306,12 +1306,12 @@
                         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                     </span>
                     <div>
-                        <p class="text-xs font-semibold uppercase tracking-wide text-text-muted">Who it's for</p>
+                        <p class="text-xs font-semibold uppercase tracking-wide text-text-muted">{{t "sy.feat.whofor"}}</p>
                         <p class="text-lg font-semibold text-on-surface">{{.Feature.WhoFor}}</p>
                     </div>
                 </div>
                 <a href="/register" class="inline-flex flex-none items-center gap-2 rounded-full bg-primary px-5 py-3 text-sm font-semibold text-on-primary transition hover:bg-primary/90 hover:-translate-y-px hover:shadow-md">
-                    Start free <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    {{t "sy.feat.start_free"}} <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                 </a>
             </div>
         </section>
@@ -1320,8 +1320,8 @@
         {{if .Feature.UseCases}}
         <section id="usecases" class="scroll-mt-[8.5rem] bg-background py-16 sm:py-20">
             <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-                <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">Common use cases</h2>
-                <p class="mt-3 text-secondary">Where {{.Feature.Title}} earns its place in a real fleet.</p>
+                <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">{{t "sy.feat.use_title"}}</h2>
+                <p class="mt-3 text-secondary">{{t "sy.feat.use_pre"}} {{.Feature.Title}} {{t "sy.feat.use_post"}}</p>
                 <ul class="mt-8 grid gap-4 sm:grid-cols-2">
                     {{range .Feature.UseCases}}
                     <li class="flex items-start gap-3 rounded-2xl border border-border-subtle bg-surface-container-lowest p-5 shadow-sm">
@@ -1337,7 +1337,7 @@
         <!-- FAQ -->
         <section id="faq" class="scroll-mt-[8.5rem] py-16 sm:py-20">
             <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-                <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">Frequently asked questions</h2>
+                <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">{{t "sy.feat.faq_title"}}</h2>
                 <div class="mt-8 space-y-4">
                     {{range .Feature.FAQ}}
                     <details class="group rounded-2xl border border-border-subtle bg-surface-container-lowest shadow-sm [&_summary::-webkit-details-marker]:hidden">
@@ -1350,38 +1350,38 @@
                     {{end}}
                     <details class="group rounded-2xl border border-border-subtle bg-surface-container-lowest shadow-sm [&_summary::-webkit-details-marker]:hidden">
                         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 p-5 font-semibold text-on-surface">
-                            <span>How long does setup take?</span>
+                            <span>{{t "sy.feat.fq1"}}</span>
                             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
                         </summary>
-                        <div class="px-5 pb-5 text-sm leading-relaxed text-secondary">Most teams are running in the same day. Add your vehicles and drivers, and start creating trips — no hardware or training required to begin.</div>
+                        <div class="px-5 pb-5 text-sm leading-relaxed text-secondary">{{t "sy.feat.fa1"}}</div>
                     </details>
                     <details class="group rounded-2xl border border-border-subtle bg-surface-container-lowest shadow-sm [&_summary::-webkit-details-marker]:hidden">
                         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 p-5 font-semibold text-on-surface">
-                            <span>Is my data secure?</span>
+                            <span>{{t "sy.feat.fq2"}}</span>
                             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
                         </summary>
-                        <div class="px-5 pb-5 text-sm leading-relaxed text-secondary">Data is encrypted in transit and at rest (AES-256), access is role-based, and every meaningful action is recorded in append-only audit logs. Data is hosted in India.</div>
+                        <div class="px-5 pb-5 text-sm leading-relaxed text-secondary">{{t "sy.feat.fa2"}}</div>
                     </details>
                     <details class="group rounded-2xl border border-border-subtle bg-surface-container-lowest shadow-sm [&_summary::-webkit-details-marker]:hidden">
                         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 p-5 font-semibold text-on-surface">
-                            <span>Do drivers need a smartphone?</span>
+                            <span>{{t "sy.feat.fq3"}}</span>
                             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
                         </summary>
-                        <div class="px-5 pb-5 text-sm leading-relaxed text-secondary">The web app works on any device with a browser. Drivers can use the mobile app for e-POD and status updates from any Android phone.</div>
+                        <div class="px-5 pb-5 text-sm leading-relaxed text-secondary">{{t "sy.feat.fa3"}}</div>
                     </details>
                     <details class="group rounded-2xl border border-border-subtle bg-surface-container-lowest shadow-sm [&_summary::-webkit-details-marker]:hidden">
                         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 p-5 font-semibold text-on-surface">
-                            <span>Is this actually GST-compliant?</span>
+                            <span>{{t "sy.feat.fq4"}}</span>
                             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
                         </summary>
-                        <div class="px-5 pb-5 text-sm leading-relaxed text-secondary">Invoices carry your company's GSTIN and tax details. Line items follow GST structure so your accountant can file without reformatting. CGST/SGST for in-state, IGST for inter-state.</div>
+                        <div class="px-5 pb-5 text-sm leading-relaxed text-secondary">{{t "sy.feat.fa4"}}</div>
                     </details>
                     <details class="group rounded-2xl border border-border-subtle bg-surface-container-lowest shadow-sm [&_summary::-webkit-details-marker]:hidden">
                         <summary class="flex cursor-pointer list-none items-center justify-between gap-4 p-5 font-semibold text-on-surface">
-                            <span>Can we start with just 5–10 vehicles?</span>
+                            <span>{{t "sy.feat.fq5"}}</span>
                             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m9 18 6-6-6-6"/></svg>
                         </summary>
-                        <div class="px-5 pb-5 text-sm leading-relaxed text-secondary">Avandab scales from a handful of vehicles to hundreds. Start with a pilot, prove the value, and expand — no long-term contracts required.</div>
+                        <div class="px-5 pb-5 text-sm leading-relaxed text-secondary">{{t "sy.feat.fa5"}}</div>
                     </details>
                 </div>
             </div>
@@ -1390,28 +1390,28 @@
         <!-- Why choose -->
         <section class="bg-background py-16 sm:py-20">
             <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-                <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">Why teams choose Avandab</h2>
-                <p class="mt-3 text-secondary">Built for the way Indian transport businesses actually run.</p>
+                <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">{{t "sy.feat.why_title"}}</h2>
+                <p class="mt-3 text-secondary">{{t "sy.feat.why_sub"}}</p>
                 <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     <div class="rounded-2xl border border-border-subtle bg-surface-container-lowest p-6 shadow-sm">
                         <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/></svg></span>
-                        <h3 class="mt-4 text-title-md font-semibold text-on-surface">GST-ready invoicing</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-secondary">Professional, compliant invoices generated from completed trips.</p>
+                        <h3 class="mt-4 text-title-md font-semibold text-on-surface">{{t "sy.feat.why1t"}}</h3>
+                        <p class="mt-1.5 text-sm leading-relaxed text-secondary">{{t "sy.feat.why1d"}}</p>
                     </div>
                     <div class="rounded-2xl border border-border-subtle bg-surface-container-lowest p-6 shadow-sm">
                         <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-                        <h3 class="mt-4 text-title-md font-semibold text-on-surface">Bank-grade security</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-secondary">Encryption in transit and at rest with role-based access control.</p>
+                        <h3 class="mt-4 text-title-md font-semibold text-on-surface">{{t "sy.feat.why2t"}}</h3>
+                        <p class="mt-1.5 text-sm leading-relaxed text-secondary">{{t "sy.feat.why2d"}}</p>
                     </div>
                     <div class="rounded-2xl border border-border-subtle bg-surface-container-lowest p-6 shadow-sm">
                         <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></span>
-                        <h3 class="mt-4 text-title-md font-semibold text-on-surface">DPDPA-aligned trails</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-secondary">Append-only audit logs so every action is traceable.</p>
+                        <h3 class="mt-4 text-title-md font-semibold text-on-surface">{{t "sy.feat.why3t"}}</h3>
+                        <p class="mt-1.5 text-sm leading-relaxed text-secondary">{{t "sy.feat.why3d"}}</p>
                     </div>
                     <div class="rounded-2xl border border-border-subtle bg-surface-container-lowest p-6 shadow-sm">
                         <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-2.8a.5.5 0 0 0-.45-.3H3a.5.5 0 0 0-.45.3L1.14 12.2a1.5 1.5 0 0 0 0 1.6L2.6 16.6A.5.5 0 0 0 3.05 17H18"/></svg></span>
-                        <h3 class="mt-4 text-title-md font-semibold text-on-surface">Driver mobile app</h3>
-                        <p class="mt-1.5 text-sm leading-relaxed text-secondary">e-POD and live status updates from the road, on any phone.</p>
+                        <h3 class="mt-4 text-title-md font-semibold text-on-surface">{{t "sy.feat.why4t"}}</h3>
+                        <p class="mt-1.5 text-sm leading-relaxed text-secondary">{{t "sy.feat.why4d"}}</p>
                     </div>
                 </div>
             </div>
@@ -1421,8 +1421,8 @@
         {{if .RelatedFeatures}}
         <section class="py-16 sm:py-20">
             <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-                <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">Explore related features</h2>
-                <p class="mt-3 text-secondary">See how {{.Feature.Title}} connects to the rest of Avandab.</p>
+                <h2 class="text-2xl font-bold text-on-surface sm:text-3xl" style="font-family:'Outfit',sans-serif">{{t "sy.feat.rel_title"}}</h2>
+                <p class="mt-3 text-secondary">{{t "sy.feat.rel_pre"}} {{.Feature.Title}} {{t "sy.feat.rel_post"}}</p>
                 <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                     {{range .RelatedFeatures}}
                     <a href="/features/{{.Slug}}" class="group flex items-center gap-4 rounded-2xl border border-border-subtle bg-surface-container-lowest p-5 shadow-sm transition duration-250 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
@@ -1445,18 +1445,18 @@
         <section class="relative overflow-hidden bg-gradient-to-br from-primary to-primary py-16">
             <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(circle at 20% 20%, white 1px, transparent 1px); background-size: 22px 22px;" aria-hidden="true"></div>
             <div class="relative mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8">
-                <h2 class="text-3xl font-bold text-on-primary sm:text-4xl" style="font-family:'Outfit',sans-serif">Ready to see {{.Feature.Title}} in action?</h2>
-                <p class="mx-auto mt-4 max-w-2xl text-lg text-on-primary/80">Spin up your Avandab workspace and put this feature to work on your very next trip.</p>
+                <h2 class="text-3xl font-bold text-on-primary sm:text-4xl" style="font-family:'Outfit',sans-serif">{{t "sy.feat.cta_pre"}} {{.Feature.Title}} {{t "sy.feat.cta_post"}}</h2>
+                <p class="mx-auto mt-4 max-w-2xl text-lg text-on-primary/80">{{t "sy.feat.cta_sub"}}</p>
                 <div class="mt-8 flex flex-wrap justify-center gap-3">
                     <a href="/register" class="inline-flex items-center gap-2 rounded-full bg-surface-container-lowest px-6 py-3 text-sm font-semibold text-primary shadow-sm transition hover:bg-primary/10 hover:-translate-y-px hover:shadow-md">
-                        Create your workspace <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                        {{t "sy.feat.cta_create"}} <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
                     </a>
                     <a href="https://wa.me/918285336507?text=Hi%20Avandab,%20I%20want%20a%20demo%20of%20{{.Feature.Title}}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 hover:-translate-y-px">
                         <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.29"/></svg>
-                        WhatsApp Demo
+                        {{t "sy.feat.wa_demo"}}
                     </a>
                     <a href="/contact-us" class="inline-flex items-center gap-2 rounded-full border border-on-primary/30 px-6 py-3 text-sm font-semibold text-on-primary transition hover:bg-surface-container-lowest/10 hover:-translate-y-px">
-                        Talk to sales
+                        {{t "sy.feat.cta_talk"}}
                     </a>
                 </div>
             </div>
@@ -1468,13 +1468,13 @@
     </div>
 
     <!-- Sticky Mobile Conversion Dock (Visible only on mobile devices) -->
-    <aside id="mobile-sticky-dock" class="md:hidden fixed bottom-0 inset-x-0 z-40 p-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))] bg-surface-container-lowest/95 backdrop-blur-md border-t border-border-subtle shadow-[0_-4px_16px_rgba(0,0,0,0.12)] flex items-center gap-2" aria-label="Quick Mobile Actions">
+    <aside id="mobile-sticky-dock" class="md:hidden fixed bottom-0 inset-x-0 z-40 p-2.5 pb-[calc(0.625rem+env(safe-area-inset-bottom,0px))] bg-surface-container-lowest/95 backdrop-blur-md border-t border-border-subtle shadow-[0_-4px_16px_rgba(0,0,0,0.12)] flex items-center gap-2" aria-label="{{t "sy.feat.dock_aria"}}">
         <a href="https://wa.me/918285336507?text=Hi%20Avandab,%20I%20want%20a%20demo%20of%20the%20fleet%20platform" target="_blank" rel="noopener noreferrer" class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-sm active:scale-[0.98] transition">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 shrink-0"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 0 1 2.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.41-1.75-.14-.25-.02-.39.11-.51.11-.11.25-.29.37-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.88.86-.88 2.1 0 1.24.9 2.44 1.03 2.61.13.17 1.77 2.7 4.29 3.78.6.26 1.07.41 1.43.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.1-.22-.16-.47-.29"/></svg>
-            <span>WhatsApp Demo</span>
+            <span>{{t "sy.feat.wa_demo"}}</span>
         </a>
         <a href="/register" class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-primary text-on-primary font-semibold text-xs shadow-sm active:scale-[0.98] transition">
-            <span>Start Free</span>
+            <span>{{t "sy.feat.start_free_cap"}}</span>
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 shrink-0"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
         </a>
     </aside>

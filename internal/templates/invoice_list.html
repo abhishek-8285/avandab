@@ -1,12 +1,12 @@
 <div class="space-y-5 max-w-[1600px] mx-auto">
-    {{template "page_header.html" (dict "Title" "Invoices" "Subtitle" "Track customer billings, GST breakdown, and payment receipts")}}
+    {{template "page_header.html" (dict "Title" (t "mo.inv.title") "Subtitle" (t "mo.inv.subtitle"))}}
     {{template "kpi_grid.html" .}}
 
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden flex flex-col h-full">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h3 class="text-sm font-bold text-on-surface">Invoice Register</h3>
-                <p class="text-xs text-text-muted">Billing ledger with GST and payment status</p>
+                <h3 class="text-sm font-bold text-on-surface">{{t "mo.inv.register"}}</h3>
+                <p class="text-xs text-text-muted">{{t "mo.inv.register_sub"}}</p>
             </div>
             {{if .Pagination}}
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{.Pagination.Total}} total</span>
@@ -17,13 +17,13 @@
             "Action" "/invoices"
             "Query" .Query
             "StatusFilter" .StatusFilter
-            "Chips" (chips "All Invoices" "" "Outstanding" "open" "Pending" "pending" "Paid" "paid" "Partial" "partially_paid")
+            "Chips" (chips (t "mo.inv.chip_all") "" (t "mo.inv.chip_outstanding") "open" (t "mo.c.pending") "pending" (t "mo.c.paid") "paid" (t "mo.inv.chip_partial") "partially_paid")
             "ShowDates" true
             "DateFilterError" .DateFilterError
             "DateFrom" .DateFrom
             "DateTo" .DateTo
             "ShowSearch" true
-            "SearchPlaceholder" "Search invoice…"
+            "SearchPlaceholder" (t "mo.inv.search_ph")
         )}}
 
         <!-- Data Table Fragment (Datastar refresh target) -->

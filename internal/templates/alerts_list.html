@@ -2,15 +2,15 @@
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="min-w-0">
-            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Operational Alerts</h1>
-            <p class="text-sm text-secondary mt-1">Real-time exception alerts, deduplicated event streams, and automated escalations.</p>
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{t "sy.alerts.title"}}</h1>
+            <p class="text-sm text-secondary mt-1">{{t "sy.alerts.sub"}}</p>
         </div>
         <div class="flex items-center gap-2 flex-wrap shrink-0">
-            <span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Alerts}} in view</span>
+            <span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Alerts}} {{t "sy.alerts.in_view"}}</span>
             <form method="POST" action="/alerts/mark-all-read">
                 <button type="submit" class="inline-flex items-center gap-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors cursor-pointer px-4 py-2">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M18 6 7 17 2 12"/><path d="M22 6 12 17 7 12"/></svg>
-                    Mark All Acknowledged
+                    {{t "sy.alerts.ack_all"}}
                 </button>
             </form>
         </div>
@@ -20,9 +20,9 @@
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         {{template "filter_bar.html" (dict
             "Action" "/alerts"
-            "Label" "Status:"
+            "Label" (t "sy.alerts.status_label")
             "StatusFilter" .CurrentStatus
-            "Chips" (chips "Open" "open" "Acknowledged" "acknowledged" "Resolved" "resolved" "All Alerts" "all")
+            "Chips" (chips (t "sy.alerts.chip_open") "open" (t "sy.alerts.chip_ack") "acknowledged" (t "sy.alerts.chip_resolved") "resolved" (t "sy.alerts.chip_all") "all")
             "ShowDates" false
             "ShowSearch" false
         )}}
@@ -30,21 +30,21 @@
             <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Severity</th>
-                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Alert Details</th>
-                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Source &amp; Type</th>
-                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Entity</th>
-                        <th class="px-3 py-2 text-right text-eyebrow text-text-muted">Occurrences</th>
-                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Last Seen</th>
-                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Status</th>
-                        <th class="px-3 py-2 text-right text-eyebrow text-text-muted">Actions</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">{{t "sy.alerts.th_sev"}}</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">{{t "sy.alerts.th_details"}}</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">{{t "sy.alerts.th_source"}}</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">{{t "sy.alerts.th_entity"}}</th>
+                        <th class="px-3 py-2 text-right text-eyebrow text-text-muted">{{t "sy.alerts.th_occ"}}</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">{{t "sy.alerts.th_last"}}</th>
+                        <th class="px-3 py-2 text-left text-eyebrow text-text-muted">{{t "sy.alerts.th_status"}}</th>
+                        <th class="px-3 py-2 text-right text-eyebrow text-text-muted">{{t "sy.alerts.th_actions"}}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
                     {{if .Alerts}}
                         {{range .Alerts}}
                         <tr class="hover:bg-surface-container-low/60 transition-colors" id="alert-row-{{.ID}}">
-                            <td data-label="Severity" class="px-3 py-2 whitespace-nowrap">
+                            <td data-label="{{t "sy.alerts.th_sev"}}" class="px-3 py-2 whitespace-nowrap">
                                 {{if eq .Severity "blocker"}}
                                     <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-status-alert text-on-primary">
                                         <span class="w-1.5 h-1.5 rounded-full bg-on-primary animate-pulse"></span>
@@ -67,23 +67,23 @@
                                     </span>
                                 {{end}}
                             </td>
-                            <td data-label="Alert Details" class="px-3 py-2 max-w-md">
+                            <td data-label="{{t "sy.alerts.th_details"}}" class="px-3 py-2 max-w-md">
                                 <div class="font-semibold text-sm text-on-surface truncate">{{.Title}}</div>
                                 <div class="text-xs text-text-muted mt-0.5 line-clamp-2">{{.Message}}</div>
                             </td>
-                            <td data-label="Source & Type" class="px-3 py-2 whitespace-nowrap">
+                            <td data-label="{{t "sy.alerts.th_source"}}" class="px-3 py-2 whitespace-nowrap">
                                 <span class="font-medium text-xs text-on-surface">{{.Source}}</span>
                                 <div class="text-xs text-text-muted font-data-mono mt-0.5">{{.AlertType}}</div>
                             </td>
-                            <td data-label="Entity" class="px-3 py-2 whitespace-nowrap text-xs">
+                            <td data-label="{{t "sy.alerts.th_entity"}}" class="px-3 py-2 whitespace-nowrap text-xs">
                                 {{if .EntityID}}
-                                    <span class="font-medium text-on-surface capitalize">{{if .EntityType}}{{.EntityType}}{{else}}Entity{{end}}:</span>
+                                    <span class="font-medium text-on-surface capitalize">{{if .EntityType}}{{.EntityType}}{{else}}{{t "sy.alerts.entity_fb"}}{{end}}:</span>
                                     <span class="font-data-mono font-semibold text-primary">{{.EntityID}}</span>
                                 {{else}}
-                                    <span class="text-text-muted">Global</span>
+                                    <span class="text-text-muted">{{t "sy.alerts.global"}}</span>
                                 {{end}}
                             </td>
-                            <td data-label="Occurrences" class="px-3 py-2 text-right whitespace-nowrap tabular-nums" data-numeric>
+                            <td data-label="{{t "sy.alerts.th_occ"}}" class="px-3 py-2 text-right whitespace-nowrap tabular-nums" data-numeric>
                                 {{if gt .Occurrences 1}}
                                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold tabular-nums bg-surface-container text-on-surface border border-border-subtle">
                                         ×{{.Occurrences}}
@@ -92,10 +92,10 @@
                                     <span class="text-xs text-text-muted tabular-nums">×1</span>
                                 {{end}}
                             </td>
-                            <td data-label="Last Seen" class="px-3 py-2 whitespace-nowrap text-xs text-text-muted tabular-nums">
+                            <td data-label="{{t "sy.alerts.th_last"}}" class="px-3 py-2 whitespace-nowrap text-xs text-text-muted tabular-nums">
                                 <span class="time-display" data-utc-time="{{.LastSeenAt.Format "2006-01-02T15:04:05Z07:00"}}">{{datetime .LastSeenAt}}</span>
                             </td>
-                            <td data-label="Status" class="px-3 py-2 whitespace-nowrap">
+                            <td data-label="{{t "sy.alerts.th_status"}}" class="px-3 py-2 whitespace-nowrap">
                                 <span id="alert-status-{{.ID}}" class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold
                                     {{if eq .Status "open"}}bg-rose-soft text-rose-strong dark:text-rose-300 border border-rose-line
                                     {{else if eq .Status "acknowledged"}}bg-blue-soft text-blue-strong dark:text-blue-300 border border-blue-line
@@ -105,19 +105,19 @@
                                     {{.Status}}
                                 </span>
                             </td>
-                            <td data-label="Actions" class="px-3 py-2 whitespace-nowrap text-right">
+                            <td data-label="{{t "sy.alerts.th_actions"}}" class="px-3 py-2 whitespace-nowrap text-right">
                                 <div class="flex items-center justify-end gap-1.5">
                                     {{if eq .Status "open"}}
                                         <form method="POST" action="/alerts/{{.ID}}/ack">
                                             <button type="submit" class="inline-flex px-2.5 py-1 rounded-full bg-blue-soft hover:bg-blue-500/20 text-blue-strong dark:text-blue-300 text-[11px] font-bold transition cursor-pointer border border-blue-line">
-                                                Ack
+                                                {{t "sy.alerts.ack"}}
                                             </button>
                                         </form>
                                     {{end}}
                                     {{if or (eq .Status "open") (eq .Status "acknowledged") (eq .Status "escalated")}}
                                         <form method="POST" action="/alerts/{{.ID}}/resolve">
                                             <button type="submit" class="inline-flex px-2.5 py-1 rounded-full bg-emerald-soft hover:bg-emerald-500/20 text-emerald-strong dark:text-emerald-300 text-[11px] font-bold transition cursor-pointer border border-emerald-line">
-                                                Resolve
+                                                {{t "sy.alerts.resolve"}}
                                             </button>
                                         </form>
                                     {{end}}
@@ -132,8 +132,8 @@
                                     <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted">
                                         <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                                     </div>
-                                    <p class="text-sm font-medium text-on-surface mt-1">No alerts found</p>
-                                    <p class="text-xs text-text-muted">Nothing matches this filter.</p>
+                                    <p class="text-sm font-medium text-on-surface mt-1">{{t "sy.alerts.empty"}}</p>
+                                    <p class="text-xs text-text-muted">{{t "sy.alerts.empty_sub"}}</p>
                                 </div>
                             </td>
                         </tr>

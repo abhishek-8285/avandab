@@ -2,33 +2,33 @@
     <table class="rtable min-w-full divide-y divide-border-subtle text-sm text-on-surface">
         <thead class="bg-surface-container-low">
             <tr>
-                <th class="th-cell">Timestamp</th>
-                <th class="th-cell">Vehicle / Tag</th>
-                <th class="th-cell">Toll Plaza</th>
-                <th class="th-cell-right">Amount</th>
-                <th class="th-cell">Trip Matched</th>
-                <th class="th-cell">Status</th>
+                <th class="th-cell">{{t "mo.ewb.timestamp"}}</th>
+                <th class="th-cell">{{t "mo.ftg.veh_tag"}}</th>
+                <th class="th-cell">{{t "mo.ftg.plaza"}}</th>
+                <th class="th-cell-right">{{t "mo.c.amount"}}</th>
+                <th class="th-cell">{{t "mo.ftg.trip_matched"}}</th>
+                <th class="th-cell">{{t "mo.c.status"}}</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-border-subtle">
             {{range .}}
             <tr class="hover:bg-surface-container-low/50 transition-colors">
-                <td data-label="Timestamp" class="px-3 py-2 text-xs text-text-muted tabular-nums whitespace-nowrap">{{.TxnTimeStr}}</td>
-                <td data-label="Vehicle / Tag" class="px-3 py-2 text-sm font-bold text-on-surface tabular-nums">{{.VehicleNumber}} <span class="text-xs font-normal text-text-muted font-data-mono">({{.TagID}})</span></td>
-                <td data-label="Toll Plaza" class="px-3 py-2 text-sm text-on-surface">{{.PlazaName}} <span class="text-xs text-text-muted">({{.PlazaID}})</span></td>
-                <td data-label="Amount" class="px-3 py-2 text-sm font-bold text-primary tabular-nums text-right" data-numeric>₹{{printf "%.2f" .Amount}}</td>
-                <td data-label="Trip Matched" class="px-3 py-2 text-sm">
+                <td data-label="{{t "mo.ewb.timestamp"}}" class="px-3 py-2 text-xs text-text-muted tabular-nums whitespace-nowrap">{{.TxnTimeStr}}</td>
+                <td data-label="{{t "mo.ftg.veh_tag"}}" class="px-3 py-2 text-sm font-bold text-on-surface tabular-nums">{{.VehicleNumber}} <span class="text-xs font-normal text-text-muted font-data-mono">({{.TagID}})</span></td>
+                <td data-label="{{t "mo.ftg.plaza"}}" class="px-3 py-2 text-sm text-on-surface">{{.PlazaName}} <span class="text-xs text-text-muted">({{.PlazaID}})</span></td>
+                <td data-label="{{t "mo.c.amount"}}" class="px-3 py-2 text-sm font-bold text-primary tabular-nums text-right" data-numeric>₹{{printf "%.2f" .Amount}}</td>
+                <td data-label="{{t "mo.ftg.trip_matched"}}" class="px-3 py-2 text-sm">
                     {{if .TripID}}
                         <a href="/trips/{{.TripID}}" class="text-primary hover:underline font-bold tabular-nums">{{.TripID}}</a>
                     {{else}}
-                        <span class="text-xs text-text-muted">Unassigned</span>
+                        <span class="text-xs text-text-muted">{{t "mo.rep.unassigned"}}</span>
                     {{end}}
                 </td>
-                <td data-label="Status" class="px-3 py-2">
+                <td data-label="{{t "mo.c.status"}}" class="px-3 py-2">
                     {{if .Reconciled}}
-                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-soft border border-emerald-line text-emerald-strong dark:text-emerald-300"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>Reconciled</span>
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-soft border border-emerald-line text-emerald-strong dark:text-emerald-300"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{t "mo.ftg.reconciled"}}</span>
                     {{else}}
-                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-soft border border-amber-line text-amber-strong dark:text-amber-300"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-pulse"></span>Pending</span>
+                        <span class="inline-flex items-center gap-1.5 px-2 py-0.5 text-[11px] font-bold rounded-full bg-amber-soft border border-amber-line text-amber-strong dark:text-amber-300"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60 animate-pulse"></span>{{t "mo.c.pending"}}</span>
                     {{end}}
                 </td>
             </tr>
@@ -37,8 +37,8 @@
                 <td colspan="6" class="px-4 py-12 text-center">
                     <div class="flex flex-col items-center gap-2">
                         <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg></div>
-                        <p class="text-sm font-medium text-on-surface">No FASTag transactions found</p>
-                        <p class="text-xs text-text-muted">Toll deductions appear here as the provider reports them</p>
+                        <p class="text-sm font-medium text-on-surface">{{t "mo.ftg.no_txn"}}</p>
+                        <p class="text-xs text-text-muted">{{t "mo.ftg.txn_note"}}</p>
                     </div>
                 </td>
             </tr>

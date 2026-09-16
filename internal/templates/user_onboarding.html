@@ -1,7 +1,7 @@
 {{ define "user_onboarding.html" }}
 <div class="max-w-3xl mx-auto pt-6 pb-12">
     <div class="mb-5">
-        <a href="/dashboard" class="w-10 h-10 rounded-full border border-border-subtle bg-surface-container-lowest hover:bg-surface-container-low flex items-center justify-center text-on-surface transition-colors inline-flex" aria-label="Go to Dashboard">
+        <a href="/dashboard" class="w-10 h-10 rounded-full border border-border-subtle bg-surface-container-lowest hover:bg-surface-container-low flex items-center justify-center text-on-surface transition-colors inline-flex" aria-label="{{t "sy.onboard.go_dash"}}">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
         </a>
     </div>
@@ -9,9 +9,9 @@
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-6 sm:px-10 pt-8 pb-5 text-center border-b border-border-subtle">
             <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">
-                Welcome, {{if .UserDetail}}{{.UserDetail.Name}}{{else if .User}}{{.User.Name}}{{else}}there{{end}}!
+                {{t "sy.onboard.welcome_pre"}}{{if .UserDetail}}{{.UserDetail.Name}}{{else if .User}}{{.User.Name}}{{else}}{{t "sy.onboard.someone"}}{{end}}{{t "sy.onboard.welcome_post"}}
             </h1>
-            <p class="text-sm text-secondary mt-1">Please complete your profile details to unlock full access.</p>
+            <p class="text-sm text-secondary mt-1">{{t "sy.onboard.sub"}}</p>
         </div>
 
         <div class="p-6 sm:p-10">
@@ -19,21 +19,21 @@
 
             <!-- Contact Details: the actual phone gate. Saves via POST /user/onboard. -->
             <form method="POST" action="/user/onboard" class="mb-8 p-4 bg-surface-container-low/60 border border-border-subtle rounded-xl space-y-3">
-                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1">Contact Details</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1">{{t "sy.onboard.contact"}}</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                        <label for="name" class="block text-xs font-semibold text-secondary mb-1">Full Name</label>
-                        <input aria-label="Your full name" autocomplete="name" id="name" type="text" name="name" value="{{if .UserDetail}}{{.UserDetail.Name}}{{end}}" placeholder="Your full name"
+                        <label for="name" class="block text-xs font-semibold text-secondary mb-1">{{t "sy.onboard.name"}}</label>
+                        <input aria-label="{{t "sy.onboard.name_ph"}}" autocomplete="name" id="name" type="text" name="name" value="{{if .UserDetail}}{{.UserDetail.Name}}{{end}}" placeholder="{{t "sy.onboard.name_ph"}}"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
                     <div>
-                        <label for="phone" class="block text-xs font-semibold text-secondary mb-1">Mobile Phone Number <span class="text-status-alert">*</span></label>
+                        <label for="phone" class="block text-xs font-semibold text-secondary mb-1">{{t "sy.onboard.phone"}} <span class="text-status-alert">*</span></label>
                         <input aria-label="+91 98765 43210" autocomplete="tel" id="phone" type="tel" name="phone" required value="{{if .UserDetail}}{{nullString .UserDetail.Phone}}{{end}}" placeholder="+91 98765 43210"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                     </div>
                 </div>
                 <div>
-                    <label for="timezone" class="block text-xs font-semibold text-secondary mb-1">Timezone</label>
+                    <label for="timezone" class="block text-xs font-semibold text-secondary mb-1">{{t "sy.onboard.timezone"}}</label>
                     <select id="timezone" name="timezone"
                         class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                         {{$tz := ""}}{{if .UserDetail}}{{$tz = .UserDetail.Timezone}}{{end}}
@@ -41,7 +41,7 @@
                     </select>
                 </div>
                 <button type="submit" class="w-full py-2.5 px-6 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 transition cursor-pointer">
-                    Save &amp; Continue
+                    {{t "sy.onboard.save_continue"}}
                 </button>
             </form>
 
@@ -56,41 +56,41 @@
                 {{if .UserDetail.EmailVerifiedAt}}{{$everified = true}}{{end}}
             {{end}}
             <div class="mb-8">
-                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Your Details</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "sy.onboard.your_details"}}</h2>
                 <div class="space-y-2.5">
                     <div class="flex items-center justify-between p-4 bg-surface-container-low/70 border border-border-subtle rounded-xl">
                         <div class="min-w-0">
-                            <div class="text-sm font-semibold text-on-surface">Mobile Phone Number</div>
-                            <div class="text-xs text-secondary truncate">{{if $uphone}}{{$uphone}}{{else}}Not provided — add it above{{end}}</div>
+                            <div class="text-sm font-semibold text-on-surface">{{t "sy.onboard.phone"}}</div>
+                            <div class="text-xs text-secondary truncate">{{if $uphone}}{{$uphone}}{{else}}{{t "sy.onboard.not_provided_add"}}{{end}}</div>
                         </div>
-                        {{if $uphone}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-semibold text-emerald-strong dark:text-emerald-300 shrink-0">Completed</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong shrink-0">Pending</span>{{end}}
+                        {{if $uphone}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-semibold text-emerald-strong dark:text-emerald-300 shrink-0">{{t "sy.onboard.completed"}}</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong shrink-0">{{t "sy.onboard.pending"}}</span>{{end}}
                     </div>
                     <div class="flex items-center justify-between p-4 bg-surface-container-low/70 border border-border-subtle rounded-xl">
                         <div class="min-w-0">
-                            <div class="text-sm font-semibold text-on-surface">Full Name</div>
-                            <div class="text-xs text-secondary truncate">{{if $uname}}{{$uname}}{{else}}Not provided{{end}}</div>
+                            <div class="text-sm font-semibold text-on-surface">{{t "sy.onboard.name"}}</div>
+                            <div class="text-xs text-secondary truncate">{{if $uname}}{{$uname}}{{else}}{{t "sy.onboard.not_provided"}}{{end}}</div>
                         </div>
-                        {{if $uname}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-semibold text-emerald-strong dark:text-emerald-300 shrink-0">Completed</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong shrink-0">Pending</span>{{end}}
+                        {{if $uname}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-semibold text-emerald-strong dark:text-emerald-300 shrink-0">{{t "sy.onboard.completed"}}</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong shrink-0">{{t "sy.onboard.pending"}}</span>{{end}}
                     </div>
                     <div class="flex items-center justify-between p-4 bg-surface-container-low/70 border border-border-subtle rounded-xl">
                         <div class="min-w-0">
-                            <div class="text-sm font-semibold text-on-surface">Timezone</div>
-                            <div class="text-xs text-secondary truncate">{{if $utz}}{{$utz}}{{else}}Not set{{end}}</div>
+                            <div class="text-sm font-semibold text-on-surface">{{t "sy.onboard.timezone"}}</div>
+                            <div class="text-xs text-secondary truncate">{{if $utz}}{{$utz}}{{else}}{{t "sy.onboard.not_set"}}{{end}}</div>
                         </div>
-                        {{if $utz}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-semibold text-emerald-strong dark:text-emerald-300 shrink-0">Completed</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong shrink-0">Pending</span>{{end}}
+                        {{if $utz}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-semibold text-emerald-strong dark:text-emerald-300 shrink-0">{{t "sy.onboard.completed"}}</span>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong shrink-0">{{t "sy.onboard.pending"}}</span>{{end}}
                     </div>
                     <div class="flex items-center justify-between p-4 bg-surface-container-low/70 border border-border-subtle rounded-xl">
                         <div class="min-w-0">
-                            <div class="text-sm font-semibold text-on-surface">Email Address</div>
-                            <div class="text-xs text-secondary truncate">{{if $uemail}}{{$uemail}}{{else}}Not available{{end}}</div>
+                            <div class="text-sm font-semibold text-on-surface">{{t "sy.onboard.email_addr"}}</div>
+                            <div class="text-xs text-secondary truncate">{{if $uemail}}{{$uemail}}{{else}}{{t "sy.onboard.not_available"}}{{end}}</div>
                         </div>
-                        {{if $everified}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-semibold text-emerald-strong dark:text-emerald-300 shrink-0">Verified</span>{{else if $uemail}}<form method="POST" action="/user/send-verification"><button type="submit" class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong hover:bg-amber-500/20 transition-colors shrink-0 cursor-pointer">Verify email</button></form>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong shrink-0">Pending</span>{{end}}
+                        {{if $everified}}<span class="inline-flex px-2 py-1 rounded-full bg-emerald-soft border border-emerald-line text-[11px] font-semibold text-emerald-strong dark:text-emerald-300 shrink-0">{{t "sy.onboard.verified"}}</span>{{else if $uemail}}<form method="POST" action="/user/send-verification"><button type="submit" class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong hover:bg-amber-500/20 transition-colors shrink-0 cursor-pointer">{{t "sy.onboard.verify_email"}}</button></form>{{else}}<span class="inline-flex px-2 py-1 rounded-full bg-amber-soft border border-amber-line text-[11px] font-semibold text-amber-strong shrink-0">{{t "sy.onboard.pending"}}</span>{{end}}
                     </div>
                 </div>
             </div>
 
             <a href="/dashboard" class="w-full py-3 px-6 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition inline-flex items-center justify-center gap-2 text-decoration-none">
-                Continue
+                {{t "sy.onboard.continue"}}
             </a>
         </div>
     </div>

@@ -2,8 +2,8 @@
     <!-- Premium Header -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div class="min-w-0">
-            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">E-Way Bills</h1>
-            <p class="text-sm text-secondary mt-1">Fleet-wide GST statutory transport permits &amp; lifecycle compliance</p>
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{t "mo.ewb.heading"}}</h1>
+            <p class="text-sm text-secondary mt-1">{{t "mo.ewb.page_sub"}}</p>
         </div>
         <div class="flex items-center gap-2 flex-wrap shrink-0">
             <button onclick="document.getElementById('new-ewb-modal').classList.remove('hidden')"
@@ -11,7 +11,7 @@
                 <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
-                Generate Part-A
+                {{t "mo.ewb.gen_parta"}}
             </button>
         </div>
     </div>
@@ -24,7 +24,7 @@
             </div>
             <div class="min-w-0">
                 <div class="text-xl font-bold tabular-nums text-on-surface leading-none" data-numeric>{{.Stats.Total}}</div>
-                <div class="text-xs text-secondary font-medium mt-1">Total EWBs</div>
+                <div class="text-xs text-secondary font-medium mt-1">{{t "mo.ewb.total"}}</div>
             </div>
         </div>
         <div class="flex items-center gap-3 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition">
@@ -33,7 +33,7 @@
             </div>
             <div class="min-w-0">
                 <div class="text-xl font-bold tabular-nums text-on-surface leading-none" data-numeric>{{.Stats.Active}}</div>
-                <div class="text-xs text-secondary font-medium mt-1">Active</div>
+                <div class="text-xs text-secondary font-medium mt-1">{{t "mo.c.active"}}</div>
             </div>
         </div>
         <div class="flex items-center gap-3 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition">
@@ -42,7 +42,7 @@
             </div>
             <div class="min-w-0">
                 <div class="text-xl font-bold tabular-nums text-on-surface leading-none" data-numeric>{{.Stats.PartAOnly}}</div>
-                <div class="text-xs text-secondary font-medium mt-1">Part-A Only</div>
+                <div class="text-xs text-secondary font-medium mt-1">{{t "mo.ewb.parta_only"}}</div>
             </div>
         </div>
         <div class="flex items-center gap-3 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition">
@@ -51,7 +51,7 @@
             </div>
             <div class="min-w-0">
                 <div class="text-xl font-bold tabular-nums text-on-surface leading-none" data-numeric>{{.Stats.Extended}}</div>
-                <div class="text-xs text-secondary font-medium mt-1">Extended</div>
+                <div class="text-xs text-secondary font-medium mt-1">{{t "mo.ewb.extended"}}</div>
             </div>
         </div>
         <div class="flex items-center gap-3 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition">
@@ -60,7 +60,7 @@
             </div>
             <div class="min-w-0">
                 <div class="text-xl font-bold tabular-nums text-on-surface leading-none" data-numeric>{{.Stats.Cancelled}}</div>
-                <div class="text-xs text-secondary font-medium mt-1">Cancelled</div>
+                <div class="text-xs text-secondary font-medium mt-1">{{t "mo.c.cancelled"}}</div>
             </div>
         </div>
         <div class="flex items-center gap-3 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition">
@@ -69,7 +69,7 @@
             </div>
             <div class="min-w-0">
                 <div class="text-xl font-bold tabular-nums text-on-surface leading-none" data-numeric>{{.Stats.Expired}}</div>
-                <div class="text-xs text-secondary font-medium mt-1">Expired</div>
+                <div class="text-xs text-secondary font-medium mt-1">{{t "mo.c.expired"}}</div>
             </div>
         </div>
     </div>
@@ -78,12 +78,12 @@
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex flex-col sm:flex-row justify-between items-center gap-3">
             <div class="flex items-center gap-3">
-                <h2 class="text-sm font-bold text-on-surface">Registered E-Way Bills</h2>
+                <h2 class="text-sm font-bold text-on-surface">{{t "mo.ewb.registered"}}</h2>
                 <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .EWayBills}}</span>
             </div>
             <div class="relative w-full sm:w-auto">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                <input aria-label="Filter by EWB or Trip" autocomplete="off" type="text" placeholder="Filter by EWB or Trip…" id="filter-input"
+                <input aria-label="{{t "mo.ewb.filter_ph"}}" autocomplete="off" type="text" placeholder="{{t "mo.ewb.filter_ph_ellipsis"}}" id="filter-input"
                        onkeyup="filterTable()"
                        class="w-full sm:w-56 pl-9 pr-3 py-2 rounded-full bg-surface-container-low border border-border-subtle text-xs text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition" />
             </div>
@@ -92,15 +92,15 @@
             <table class="rtable min-w-full divide-y divide-border-subtle text-sm tabular-nums" id="ewb-table">
                 <thead class="bg-surface-container-low text-text-muted text-[11px] uppercase font-bold tracking-wider">
                     <tr>
-                        <th class="th-cell">EWB Number</th>
-                        <th class="th-cell">Trip</th>
-                        <th class="th-cell">Vehicle (Part-B)</th>
-                        <th class="th-cell">Route (From → To)</th>
-                        <th class="th-cell-right">Goods Value</th>
-                        <th class="th-cell text-center">Status</th>
-                        <th class="th-cell">Valid Until</th>
-                        <th class="th-cell text-center">Ext.</th>
-                        <th class="th-cell text-center">Actions</th>
+                        <th class="th-cell">{{t "mo.ewb.ewb_no"}}</th>
+                        <th class="th-cell">{{t "mo.c.trip"}}</th>
+                        <th class="th-cell">{{t "mo.ewb.vehicle_b"}}</th>
+                        <th class="th-cell">{{t "mo.ewb.route"}}</th>
+                        <th class="th-cell-right">{{t "mo.ewb.goods_value"}}</th>
+                        <th class="th-cell text-center">{{t "mo.c.status"}}</th>
+                        <th class="th-cell">{{t "mo.ewb.valid_until_col"}}</th>
+                        <th class="th-cell text-center">{{t "mo.ewb.ext_short"}}</th>
+                        <th class="th-cell text-center">{{t "mo.c.actions"}}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle" id="ewb-rows">
@@ -113,8 +113,8 @@
                             <td colspan="9" class="px-4 py-12 text-center">
                                 <div class="flex flex-col items-center gap-2">
                                     <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
-                                    <p class="text-sm font-medium text-on-surface">No E-Way Bills registered yet.</p>
-                                    <p class="text-xs text-text-muted">Click "Generate Part-A" or confirm trips above ₹50,000 to auto-generate.</p>
+                                    <p class="text-sm font-medium text-on-surface">{{t "mo.ewb.no_ewb"}}</p>
+                                    <p class="text-xs text-text-muted">{{t "mo.ewb.auto_note"}}</p>
                                 </div>
                             </td>
                         </tr>
@@ -128,37 +128,37 @@
     <div id="new-ewb-modal" class="hidden fixed inset-0 z-50 bg-on-surface/50 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-surface-container-lowest rounded-2xl max-w-lg w-full p-6 shadow-xl border border-border-subtle space-y-4">
             <div class="flex justify-between items-center pb-3 border-b border-border-subtle">
-                <h2 class="text-sm font-bold text-on-surface">Generate E-Way Bill (Part-A)</h2>
-                <button onclick="document.getElementById('new-ewb-modal').classList.add('hidden')" class="w-8 h-8 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-text-muted hover:text-on-surface hover:bg-surface-container transition-colors" aria-label="Close modal">
+                <h2 class="text-sm font-bold text-on-surface">{{t "mo.ewb.gen_title"}}</h2>
+                <button onclick="document.getElementById('new-ewb-modal').classList.add('hidden')" class="w-8 h-8 grid place-items-center rounded-full bg-surface-container-low border border-border-subtle text-text-muted hover:text-on-surface hover:bg-surface-container transition-colors" aria-label="{{t "mo.c.close_modal"}}">
                     <svg aria-hidden="true" class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M18 6 6 18M6 6l12 12"/></svg>
                 </button>
             </div>
             <form method="POST" action="/ewaybill/new" class="space-y-4">
                 <div>
-                    <label for="trip_id" class="block text-eyebrow text-secondary mb-1.5">Select Active Trip</label>
+                    <label for="trip_id" class="block text-eyebrow text-secondary mb-1.5">{{t "mo.ewb.select_trip"}}</label>
                     <select id="trip_id" name="trip_id" required class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                        <option value="">-- Choose a trip --</option>
+                        <option value="">{{t "mo.ewb.choose_trip"}}</option>
                         {{range .Trips}}
                         <option value="{{.ID}}">{{.TripNumber}} (Route: {{.Source}} → {{.Destination}})</option>
                         {{end}}
                     </select>
                 </div>
                 <div>
-                    <label for="goods_value" class="block text-eyebrow text-secondary mb-1.5">Goods Value (₹) [Optional override]</label>
-                    <input aria-label="Leave empty to use booking fare" autocomplete="off" id="goods_value" type="number" step="0.01" name="goods_value" placeholder="Leave empty to use booking fare"
+                    <label for="goods_value" class="block text-eyebrow text-secondary mb-1.5">{{t "mo.ewb.goods_override"}}</label>
+                    <input aria-label="{{t "mo.ewb.fare_note"}}" autocomplete="off" id="goods_value" type="number" step="0.01" name="goods_value" placeholder="{{t "mo.ewb.fare_note"}}"
                            class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition" />
                 </div>
                 <div class="flex items-center gap-2 pt-1">
                     <input type="checkbox" name="force" id="force-check" value="true" class="rounded text-primary focus:ring-primary" />
-                    <label for="force-check" class="text-xs text-text-muted">Force generate even if goods value ≤ ₹50,000</label>
+                    <label for="force-check" class="text-xs text-text-muted">{{t "mo.ewb.force"}}</label>
                 </div>
                 <div class="flex justify-end gap-2 pt-4 border-t border-border-subtle flex-wrap">
                     <button type="button" onclick="document.getElementById('new-ewb-modal').classList.add('hidden')"
                             class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">
-                        Cancel
+                        {{t "mo.c.cancel"}}
                     </button>
                     <button type="submit" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">
-                        Generate Part-A
+                        {{t "mo.ewb.gen_parta"}}
                     </button>
                 </div>
             </form>

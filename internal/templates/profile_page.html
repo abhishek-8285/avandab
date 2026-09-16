@@ -2,10 +2,10 @@
 <div class="max-w-5xl mx-auto space-y-5">
     <header class="flex items-start justify-between gap-4 flex-wrap">
         <div class="min-w-0">
-            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">My Profile</h1>
-            <p class="text-sm text-secondary mt-1">Manage your personal information and account settings.</p>
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{t "sy.profile.title"}}</h1>
+            <p class="text-sm text-secondary mt-1">{{t "sy.profile.sub"}}</p>
         </div>
-        {{template "btn.html" (dict "Variant" "primary" "Label" "Change Password" "Href" "/change-password" "Icon" "key" "Class" "shrink-0 rounded-full shadow-sm")}}
+        {{template "btn.html" (dict "Variant" "primary" "Label" (t "sy.pw.title") "Href" "/change-password" "Icon" "key" "Class" "shrink-0 rounded-full shadow-sm")}}
     </header>
 
     {{if .FlashSuccess}}{{template "alert.html" (dict "Tone" "success" "Message" .FlashSuccess)}}{{end}}
@@ -16,8 +16,8 @@
         <div class="lg:col-span-2 min-w-0">
             <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
                 <div class="px-5 py-3 border-b border-border-subtle">
-                    <h2 class="text-sm font-bold text-on-surface">Personal Information</h2>
-                    <p class="text-xs text-text-muted">Update your identity and contact details</p>
+                    <h2 class="text-sm font-bold text-on-surface">{{t "sy.profile.personal"}}</h2>
+                    <p class="text-xs text-text-muted">{{t "sy.profile.personal_sub"}}</p>
                 </div>
 
                 <form method="POST" action="/profile" class="p-5 space-y-5">
@@ -27,71 +27,71 @@
                         </div>
                         <div class="min-w-0">
                             <div class="font-display text-title-md font-bold text-on-surface truncate">{{if $u}}{{$u.Name}}{{else}}—{{end}}</div>
-                            <div class="text-xs text-secondary capitalize mt-0.5">{{if and $u $u.Role}}{{$u.Role.Name}}{{else}}Member{{end}}</div>
+                            <div class="text-xs text-secondary capitalize mt-0.5">{{if and $u $u.Role}}{{$u.Role.Name}}{{else}}{{t "sy.profile.member"}}{{end}}</div>
                             <div class="text-xs text-text-muted mt-0.5 truncate">{{if $u}}{{$u.Email}}{{end}}</div>
                         </div>
                     </div>
 
                     <div>
-                        <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Editable Details</h3>
+                        <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "sy.profile.editable"}}</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
                             <div class="flex flex-col gap-1">
-                                <label for="profile-name" class="block text-xs font-bold text-secondary mb-1">Full Name <span class="text-status-alert">*</span></label>
-                                <input aria-label="Enter your full name" autocomplete="name" name="name" id="profile-name"
+                                <label for="profile-name" class="block text-xs font-bold text-secondary mb-1">{{t "sy.profile.name"}} <span class="text-status-alert">*</span></label>
+                                <input aria-label="{{t "sy.profile.name_ph"}}" autocomplete="name" name="name" id="profile-name"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
                                     type="text"
                                     value="{{if $u}}{{$u.Name}}{{end}}"
-                                    placeholder="Enter your full name"
+                                    placeholder="{{t "sy.profile.name_ph"}}"
                                     required/>
                             </div>
                             <div class="flex flex-col gap-1">
-                                <label for="profile-phone" class="block text-xs font-bold text-secondary mb-1">Phone Number</label>
-                                <input aria-label="e.g. +91 98765 43210" autocomplete="tel" name="phone" id="profile-phone"
+                                <label for="profile-phone" class="block text-xs font-bold text-secondary mb-1">{{t "sy.profile.phone"}}</label>
+                                <input aria-label="{{t "sy.profile.phone_ph"}}" autocomplete="tel" name="phone" id="profile-phone"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm tabular-nums text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
                                     type="tel"
                                     value="{{if $u}}{{nullString $u.Phone}}{{end}}"
-                                    placeholder="e.g. +91 98765 43210"/>
+                                    placeholder="{{t "sy.profile.phone_ph"}}"/>
                             </div>
                         </div>
                     </div>
 
                     <div>
-                        <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Managed by Admin</h3>
+                        <h3 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "sy.profile.managed"}}</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
                             <div class="flex flex-col gap-1">
-                                <label for="profile-role" class="block text-xs font-bold text-secondary mb-1">Role</label>
+                                <label for="profile-role" class="block text-xs font-bold text-secondary mb-1">{{t "sy.profile.role"}}</label>
                                 <input autocomplete="off" id="profile-role"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface cursor-not-allowed capitalize opacity-70"
                                     disabled type="text"
                                     value="{{if and $u $u.Role}}{{$u.Role.Name}}{{else}}—{{end}}"/>
-                                <span class="text-[11px] text-text-muted mt-0.5">Role is managed by an administrator.</span>
+                                <span class="text-[11px] text-text-muted mt-0.5">{{t "sy.profile.role_hint"}}</span>
                             </div>
                             <div class="flex flex-col gap-1">
-                                <label for="profile-email" class="block text-xs font-bold text-secondary mb-1">Email Address</label>
+                                <label for="profile-email" class="block text-xs font-bold text-secondary mb-1">{{t "sy.profile.email"}}</label>
                                 <input autocomplete="email" spellcheck="false" id="profile-email"
                                     class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface cursor-not-allowed opacity-70"
                                     disabled type="email"
                                     value="{{if $u}}{{$u.Email}}{{end}}"/>
-                                <span class="text-[11px] text-text-muted mt-0.5">Email cannot be changed. Contact admin if needed.</span>
+                                <span class="text-[11px] text-text-muted mt-0.5">{{t "sy.profile.email_hint"}}</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="flex flex-col gap-1">
                         <label for="profile-timezone" class="block text-xs font-bold text-secondary mb-1 flex items-center justify-between">
-                            <span>User Timezone</span>
-                            <span class="text-xs normal-case text-primary font-semibold cursor-pointer hover:underline" id="btn-detect-tz">⚡ Auto-detect</span>
+                            <span>{{t "sy.profile.timezone"}}</span>
+                            <span class="text-xs normal-case text-primary font-semibold cursor-pointer hover:underline" id="btn-detect-tz">{{t "sy.profile.autodetect"}}</span>
                         </label>
                         <select name="timezone" id="profile-timezone"
                             class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             {{template "timezone_options.html" $u.Timezone}}
                         </select>
-                        <span class="text-[11px] text-text-muted mt-0.5">Select your local operational timezone to align schedules, trip departure times, and logs.</span>
+                        <span class="text-[11px] text-text-muted mt-0.5">{{t "sy.profile.tz_hint"}}</span>
                     </div>
 
                     <div class="sticky bottom-0 -mx-5 px-5 py-3 bg-surface-container-lowest border-t border-border-subtle flex items-center gap-3 flex-wrap">
-                        {{template "btn.html" (dict "Variant" "primary" "Label" "Save Changes" "Type" "submit" "Icon" "save" "Class" "cursor-pointer shadow-sm")}}
-                        <a href="/profile" class="text-text-muted hover:text-on-surface text-sm font-semibold transition-colors text-decoration-none">Cancel</a>
+                        {{template "btn.html" (dict "Variant" "primary" "Label" (t "sy.profile.save") "Type" "submit" "Icon" "save" "Class" "cursor-pointer shadow-sm")}}
+                        <a href="/profile" class="text-text-muted hover:text-on-surface text-sm font-semibold transition-colors text-decoration-none">{{t "sy.profile.cancel"}}</a>
                     </div>
                 </form>
             </section>
@@ -102,7 +102,7 @@
             <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
                 <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                    <h2 class="text-sm font-bold text-on-surface">Local Time Alignment</h2>
+                    <h2 class="text-sm font-bold text-on-surface">{{t "sy.profile.local_time"}}</h2>
                 </div>
                 <div class="p-5 text-center">
                     <div class="text-2xl font-black font-data-mono text-primary tracking-wider tabular-nums" id="tz-clock">--:--:--</div>
@@ -113,23 +113,23 @@
 
             <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
                 <div class="px-5 py-3 border-b border-border-subtle">
-                    <h2 class="text-sm font-bold text-on-surface">Account Details</h2>
+                    <h2 class="text-sm font-bold text-on-surface">{{t "sy.profile.acct"}}</h2>
                 </div>
                 <dl class="p-5 space-y-3">
                     <div>
-                        <dt class="text-eyebrow text-text-muted">Account ID</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "sy.profile.acct_id"}}</dt>
                         <dd class="mt-1"><p class="font-data-mono text-xs text-text-muted bg-surface-container-low px-2 py-1.5 rounded break-all select-all">{{if $u}}{{$u.ID}}{{else}}—{{end}}</p></dd>
                     </div>
                     <div class="border-t border-border-subtle pt-3">
-                        <dt class="text-eyebrow text-text-muted">Account Status</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "sy.profile.acct_status"}}</dt>
                         <dd class="mt-1">
                             {{if $u}}
                                 {{if eq (printf "%s" $u.Status) "active"}}
-                                    {{template "badge.html" (dict "Tone" "success" "Label" "Active")}}
+                                    {{template "badge.html" (dict "Tone" "success" "Label" (t "sy.users.active"))}}
                                 {{else if eq (printf "%s" $u.Status) "inactive"}}
-                                    {{template "badge.html" (dict "Tone" "neutral" "Label" "Inactive")}}
+                                    {{template "badge.html" (dict "Tone" "neutral" "Label" (t "sy.users.inactive"))}}
                                 {{else if eq (printf "%s" $u.Status) "suspended"}}
-                                    {{template "badge.html" (dict "Tone" "alert" "Label" "Suspended")}}
+                                    {{template "badge.html" (dict "Tone" "alert" "Label" (t "sy.users.suspended"))}}
                                 {{else}}
                                     {{template "badge.html" (dict "Tone" "neutral" "Label" $u.Status)}}
                                 {{end}}
@@ -137,13 +137,13 @@
                         </dd>
                     </div>
                     <div class="border-t border-border-subtle pt-3">
-                        <dt class="text-eyebrow text-text-muted">Member Since</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "sy.profile.member_since"}}</dt>
                         <dd class="mt-1 text-sm font-semibold text-on-surface tabular-nums">{{if $u}}{{datetime $u.CreatedAt}}{{else}}—{{end}}</dd>
                     </div>
                     <div class="border-t border-border-subtle pt-3">
-                        <dt class="text-eyebrow text-text-muted">Last Login</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "sy.profile.last_login"}}</dt>
                         <dd class="mt-1 text-sm font-semibold text-on-surface tabular-nums">
-                            {{if and $u $u.LastLoginAt}}{{datetime $u.LastLoginAt}}{{else}}<span class="text-text-muted font-medium">Not recorded</span>{{end}}
+                            {{if and $u $u.LastLoginAt}}{{datetime $u.LastLoginAt}}{{else}}<span class="text-text-muted font-medium">{{t "sy.profile.not_recorded"}}</span>{{end}}
                         </dd>
                     </div>
                 </dl>
@@ -151,11 +151,11 @@
 
             <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
                 <div class="px-5 py-3 border-b border-border-subtle">
-                    <h2 class="text-sm font-bold text-on-surface">Security</h2>
+                    <h2 class="text-sm font-bold text-on-surface">{{t "sy.profile.security"}}</h2>
                 </div>
                 <div class="p-5 space-y-3">
-                    <p class="text-sm text-text-muted">Keep your account secure by using a strong, unique password.</p>
-                    {{template "btn.html" (dict "Variant" "secondary" "Label" "Change Password" "Href" "/change-password" "Icon" "key" "Class" "w-full")}}
+                    <p class="text-sm text-text-muted">{{t "sy.profile.security_sub"}}</p>
+                    {{template "btn.html" (dict "Variant" "secondary" "Label" (t "sy.pw.title") "Href" "/change-password" "Icon" "key" "Class" "w-full")}}
                 </div>
             </section>
         </div>

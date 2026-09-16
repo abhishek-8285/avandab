@@ -2,62 +2,62 @@
     <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display mb-5">{{t "tenants.new"}}</h1>
 
     {{if .FlashError}}{{template "alert.html" (dict "Tone" "error" "Message" .FlashError)}}{{end}}
-    {{if not .MultiTenantOn}}{{template "alert.html" (dict "Tone" "info" "Message" "Multi-tenant resolver is currently off — provisioning is disabled until MULTI_TENANT_ENABLED=true.")}}{{end}}
+    {{if not .MultiTenantOn}}{{template "alert.html" (dict "Tone" "info" "Message" (t "sy.tenants.mt_off"))}}{{end}}
 
     <form method="POST" action="/tenants/new">
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden p-5 space-y-5">
             <div>
-                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Organization</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "sy.tenants.org"}}</h2>
                 <div class="space-y-4">
                     {{template "field.html" (dict
-                        "Label" "Organization Name"
+                        "Label" (t "sy.tenants.org_name")
                         "Required" "true"
                         "Type" "text"
                         "Name" "name"
                         "Value" .Form.Name
                     )}}
                     {{template "field.html" (dict
-                        "Label" "Slug"
+                        "Label" (t "sy.tenants.slug")
                         "Required" "true"
                         "Type" "text"
                         "Name" "slug"
                         "Value" .Form.Slug
                         "Pattern" "[a-z0-9]+(-[a-z0-9]+)*"
-                        "Title" "Lowercase letters, digits and hyphens"
-                        "Hint" "Auto-suggested from the name — editable. Lowercase letters/digits separated by single hyphens, max 40 characters. Becomes the tenant ID."
+                        "Title" (t "sy.tenants.slug_title")
+                        "Hint" (t "sy.tenants.slug_hint")
                     )}}
                 </div>
             </div>
 
             <div>
-                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Org Admin Account</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "sy.tenants.admin_acct"}}</h2>
                 <div class="space-y-4">
                     {{template "field.html" (dict
-                        "Label" "Admin Email"
+                        "Label" (t "sy.tenants.admin_email")
                         "Required" "true"
                         "Type" "email"
                         "Name" "email"
                         "Value" .Form.Email
                     )}}
                     {{template "field.html" (dict
-                        "Label" "Admin Name"
+                        "Label" (t "sy.tenants.admin_name")
                         "Required" "true"
                         "Type" "text"
                         "Name" "admin_name"
                         "Value" .Form.AdminName
                     )}}
                     {{template "field.html" (dict
-                        "Label" "Admin Password"
+                        "Label" (t "sy.tenants.admin_pw")
                         "Required" "true"
                         "Type" "password"
                         "Name" "password"
-                        "Hint" "Minimum 12 characters. Share securely — the admin signs in with this password."
+                        "Hint" (t "sy.tenants.pw_hint")
                     )}}
                 </div>
             </div>
 
             <div class="sticky bottom-0 -mx-5 px-5 py-3 bg-surface-container-lowest border-t border-border-subtle flex justify-end gap-2 flex-wrap">
-                {{template "btn.html" (dict "Variant" "secondary" "Label" "Cancel" "Href" "/tenants" "Class" "min-h-[44px]")}}
+                {{template "btn.html" (dict "Variant" "secondary" "Label" (t "sy.common.cancel") "Href" "/tenants" "Class" "min-h-[44px]")}}
                 {{template "btn.html" (dict "Variant" "primary" "Label" (t "tenants.new") "Type" "submit" "Class" "min-h-[44px] shadow-sm")}}
             </div>
         </div>

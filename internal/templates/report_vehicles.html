@@ -2,20 +2,20 @@
     <!-- Header -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div class="min-w-0">
-            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Vehicle Fleet Report</h1>
-            <p class="text-sm text-secondary mt-1">Fleet availability, vehicle specifications, and capacity audit</p>
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{t "mo.rep.veh_title"}}</h1>
+            <p class="text-sm text-secondary mt-1">{{t "mo.rep.veh_desc"}}</p>
         </div>
         <div class="flex items-center gap-2 flex-wrap shrink-0">
             {{if can .User "reports" "read"}}
             <div class="flex items-center gap-2 print:hidden">
                 <a href="/reports/vehicles.csv{{if .QueryString}}?{{.QueryString}}{{end}}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Export CSV
+                    {{t "mo.c.export_csv"}}
                 </a>
             </div>
             {{end}}
             <button onclick="window.print()" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 hover:shadow-sm transition">
-                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>Print Report
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>{{t "mo.c.print_report"}}
             </button>
         </div>
     </div>
@@ -29,7 +29,7 @@
             </div>
             <div class="mt-4">
                 <div class="text-3xl font-black tracking-tight tabular-nums text-on-surface" data-numeric>{{.TotalVehicles}}</div>
-                <div class="text-sm font-medium text-secondary mt-1">Total Fleet Vehicles</div>
+                <div class="text-sm font-medium text-secondary mt-1">{{t "mo.rep.total_veh"}}</div>
             </div>
         </div>
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition duration-200">
@@ -39,7 +39,7 @@
             </div>
             <div class="mt-4">
                 <div class="text-3xl font-black tracking-tight tabular-nums text-status-success" data-numeric>{{.AvailableVehicles}}</div>
-                <div class="text-sm font-medium text-secondary mt-1">Available Fleet</div>
+                <div class="text-sm font-medium text-secondary mt-1">{{t "mo.rep.avail_fleet"}}</div>
             </div>
         </div>
     </div>
@@ -47,22 +47,22 @@
     <!-- Filters -->
     <form method="GET" action="/reports/vehicles" class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm px-4 py-3 flex flex-col sm:flex-row sm:items-end gap-3 flex-wrap">
         <div class="flex-1 min-w-[12rem]">
-            <label for="vehicles-q" class="block text-eyebrow text-text-muted mb-1.5">Search</label>
-            <input aria-label="Search by registration number, vehicle number" autocomplete="off" type="text" id="vehicles-q" name="q" value="{{.Query}}" placeholder="Search by registration number, vehicle number…"
+            <label for="vehicles-q" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.c.search"}}</label>
+            <input aria-label="Search by registration number, vehicle number" autocomplete="off" type="text" id="vehicles-q" name="q" value="{{.Query}}" placeholder="{{t "mo.rep.veh_search_ph"}}"
                 class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
         </div>
         <div class="w-full sm:w-48">
-            <label for="vehicles-status" class="block text-eyebrow text-text-muted mb-1.5">Status</label>
+            <label for="vehicles-status" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.c.status"}}</label>
             <select id="vehicles-status" name="status" class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                <option value="">All Statuses</option>
-                <option value="available" {{if eq .StatusFilter "available"}}selected{{end}}>Available</option>
-                <option value="running" {{if eq .StatusFilter "running"}}selected{{end}}>Running</option>
-                <option value="maintenance" {{if eq .StatusFilter "maintenance"}}selected{{end}}>Maintenance</option>
-                <option value="inactive" {{if eq .StatusFilter "inactive"}}selected{{end}}>Inactive</option>
+                <option value="">{{t "mo.c.all_statuses"}}</option>
+                <option value="available" {{if eq .StatusFilter "available"}}selected{{end}}>{{t "mo.c.available"}}</option>
+                <option value="running" {{if eq .StatusFilter "running"}}selected{{end}}>{{t "mo.rep.running"}}</option>
+                <option value="maintenance" {{if eq .StatusFilter "maintenance"}}selected{{end}}>{{t "mo.rep.maintenance"}}</option>
+                <option value="inactive" {{if eq .StatusFilter "inactive"}}selected{{end}}>{{t "mo.c.inactive"}}</option>
             </select>
         </div>
         <button type="submit" class="inline-flex items-center justify-center gap-2 self-stretch sm:self-auto px-5 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition">
-            Filter Report
+            {{t "mo.c.filter_report"}}
         </button>
     </form>
 
@@ -70,8 +70,8 @@
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h2 class="text-sm font-bold text-on-surface">Fleet Register</h2>
-                <p class="text-xs text-text-muted">Vehicles matching the current filter</p>
+                <h2 class="text-sm font-bold text-on-surface">{{t "mo.rep.fleet_reg"}}</h2>
+                <p class="text-xs text-text-muted">{{t "mo.rep.veh_match"}}</p>
             </div>
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Vehicles}} shown</span>
         </div>
@@ -79,22 +79,22 @@
             <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="th-cell">Reg Number</th>
-                        <th class="th-cell">Vehicle #</th>
-                        <th class="th-cell">Type</th>
-                        <th class="th-cell-right">Capacity</th>
-                        <th class="th-cell">Status</th>
+                        <th class="th-cell">{{t "mo.rep.reg_no"}}</th>
+                        <th class="th-cell">{{t "mo.rep.vehicle_no"}}</th>
+                        <th class="th-cell">{{t "mo.c.type"}}</th>
+                        <th class="th-cell-right">{{t "mo.rep.capacity"}}</th>
+                        <th class="th-cell">{{t "mo.c.status"}}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
                     {{if .Vehicles}}
                     {{range .Vehicles}}
                     <tr class="hover:bg-surface-container-low/50 transition-colors">
-                        <td data-label="Reg Number" class="px-3 py-2 text-sm font-bold text-primary tabular-nums">{{.RegistrationNumber}}</td>
-                        <td data-label="Vehicle #" class="px-3 py-2 text-sm tabular-nums text-secondary">{{.VehicleNumber}}</td>
-                        <td data-label="Type" class="px-3 py-2 text-sm capitalize text-on-surface">{{.VehicleType}}</td>
-                        <td data-label="Capacity" class="px-3 py-2 text-sm text-right font-semibold tabular-nums text-on-surface" data-numeric>{{.Capacity}}</td>
-                        <td data-label="Status" class="px-3 py-2 text-sm">
+                        <td data-label="{{t "mo.rep.reg_no"}}" class="px-3 py-2 text-sm font-bold text-primary tabular-nums">{{.RegistrationNumber}}</td>
+                        <td data-label="{{t "mo.rep.vehicle_no"}}" class="px-3 py-2 text-sm tabular-nums text-secondary">{{.VehicleNumber}}</td>
+                        <td data-label="{{t "mo.c.type"}}" class="px-3 py-2 text-sm capitalize text-on-surface">{{.VehicleType}}</td>
+                        <td data-label="{{t "mo.rep.capacity"}}" class="px-3 py-2 text-sm text-right font-semibold tabular-nums text-on-surface" data-numeric>{{.Capacity}}</td>
+                        <td data-label="{{t "mo.c.status"}}" class="px-3 py-2 text-sm">
                             <span class="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-bold rounded-full {{statusBadge .Status}}"><span class="w-1.5 h-1.5 rounded-full bg-current opacity-60"></span>{{.Status}}</span>
                         </td>
                     </tr>
@@ -102,7 +102,7 @@
                     {{else}}
                     <tr>
                         <td colspan="5" class="py-12 text-center">
-                            {{template "empty_state.html" (dict "Icon" "local_shipping" "Title" "No vehicles found" "Message" "No vehicles match the current criteria.")}}
+                            {{template "empty_state.html" (dict "Icon" "local_shipping" "Title" (t "mo.rep.no_veh_title") "Message" (t "mo.rep.no_veh_msg"))}}
                         </td>
                     </tr>
                     {{end}}

@@ -1,5 +1,5 @@
 {{$s := .Settlement}}
-{{template "page_header.html" (dict "Title" "Driver Settlement Payout" "Subtitle" (printf "Trip #%s · Settlement #%s" $s.TripID $s.ID) "ActionHref" "/settlements" "ActionLabel" "Back to Settlements" "ActionIcon" "arrow_back")}}
+{{template "page_header.html" (dict "Title" (t "mo.stlv.title") "Subtitle" (printf "Trip #%s · Settlement #%s" $s.TripID $s.ID) "ActionHref" "/settlements" "ActionLabel" (t "mo.stlv.back_list") "ActionIcon" "arrow_back")}}
 
 <div class="space-y-5 max-w-[1400px] mx-auto">
     <!-- Hero band -->
@@ -14,16 +14,16 @@
                     </span>
                 </div>
                 <p class="text-sm text-text-muted mt-1 flex items-center gap-2 flex-wrap">
-                    <span>Trip <a href="/trips/{{$s.TripID}}" class="font-bold text-primary hover:underline tabular-nums">{{$s.TripID}}</a></span>
+                    <span>{{t "mo.c.trip"}} <a href="/trips/{{$s.TripID}}" class="font-bold text-primary hover:underline tabular-nums">{{$s.TripID}}</a></span>
                     <span class="text-text-muted">·</span>
-                    <span>Driver <span class="font-semibold text-on-surface">{{$s.DriverID}}</span></span>
+                    <span>{{t "mo.c.driver"}} <span class="font-semibold text-on-surface">{{$s.DriverID}}</span></span>
                     <span class="text-text-muted">·</span>
-                    <span>Rate Model <span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold uppercase tracking-wide text-primary">{{$s.RateModel}}</span></span>
+                    <span>{{t "mo.stlv.rate_model"}} <span class="inline-flex px-2 py-0.5 rounded-full bg-surface-container border border-border-subtle text-[11px] font-semibold uppercase tracking-wide text-primary">{{$s.RateModel}}</span></span>
                 </p>
             </div>
             <!-- Amount gradient card -->
             <div class="w-full sm:max-w-xs bg-gradient-to-br from-primary to-violet-600 rounded-xl shadow-md p-4 text-white hover:shadow-lg transition shrink-0">
-                <p class="text-eyebrow text-white/80">Net Payout</p>
+                <p class="text-eyebrow text-white/80">{{t "mo.stlv.net"}}</p>
                 <p class="text-3xl font-black tracking-tight tabular-nums mt-1" data-numeric>₹{{printf "%.2f" $s.NetPayout}}</p>
                 <p class="text-xs font-medium text-white/80 mt-1">TDS {{printf "%.1f" $s.TDSRate}}% · Sec 194C</p>
             </div>
@@ -37,8 +37,8 @@
             <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
                 <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                     <div>
-                        <h2 class="text-sm font-bold text-on-surface">Financial Ledger Items</h2>
-                        <p class="text-xs text-text-muted">Line-by-line payout calculation</p>
+                        <h2 class="text-sm font-bold text-on-surface">{{t "mo.stlv.ledger_items"}}</h2>
+                        <p class="text-xs text-text-muted">{{t "mo.stlv.line_sub"}}</p>
                     </div>
                     {{if .Lines}}
                     <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Lines}} lines</span>
@@ -48,30 +48,30 @@
                     <table class="rtable min-w-full divide-y divide-border-subtle">
                         <thead class="bg-surface-container-low">
                             <tr>
-                                <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Type</th>
-                                <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">Description / Reference</th>
-                                <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">Amount (INR)</th>
+                                <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">{{t "mo.c.type"}}</th>
+                                <th class="px-4 py-2.5 text-left text-eyebrow text-text-muted">{{t "mo.stlv.desc_ref"}}</th>
+                                <th class="px-4 py-2.5 text-right text-eyebrow text-text-muted">{{t "mo.stlv.amount_inr"}}</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-border-subtle">
                             {{range .Lines}}
                             <tr class="hover:bg-surface-container-low/50 transition-colors">
-                                <td data-label="Type" class="px-3 py-2">
+                                <td data-label="{{t "mo.c.type"}}" class="px-3 py-2">
                                     <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-data-mono font-semibold uppercase tracking-wide {{if eq .LineType "gross_fare"}}bg-status-success/10 border border-status-success/15 text-status-success{{else if eq .LineType "advances"}}bg-status-warning/10 border border-status-warning/15 text-status-warning{{else if eq .LineType "deduction"}}bg-status-alert/10 border border-status-alert/15 text-status-alert{{else if eq .LineType "tds"}}bg-secondary-container border border-primary/15 text-primary{{else}}bg-surface-container border border-border-subtle text-secondary{{end}}">
                                         {{.LineType}}
                                     </span>
                                 </td>
-                                <td data-label="Description / Reference" class="px-3 py-2 text-sm text-on-surface">
+                                <td data-label="{{t "mo.stlv.desc_ref"}}" class="px-3 py-2 text-sm text-on-surface">
                                     {{.Label}}
                                     {{if .RefID}}<span class="text-xs text-text-muted font-data-mono block">Ref: {{.RefID}}</span>{{end}}
                                 </td>
-                                <td data-label="Amount (INR)" class="px-3 py-2 text-sm text-right tabular-nums font-bold whitespace-nowrap {{if gt .Amount 0.0}}text-status-success{{else}}text-status-alert{{end}}" data-numeric>
+                                <td data-label="{{t "mo.stlv.amount_inr"}}" class="px-3 py-2 text-sm text-right tabular-nums font-bold whitespace-nowrap {{if gt .Amount 0.0}}text-status-success{{else}}text-status-alert{{end}}" data-numeric>
                                     {{if gt .Amount 0.0}}+₹{{printf "%.2f" .Amount}}{{else}}₹{{printf "%.2f" .Amount}}{{end}}
                                 </td>
                             </tr>
                             {{else}}
                             <tr>
-                                <td colspan="3" class="px-4 py-12 text-center text-text-muted text-sm">No individual line items registered.</td>
+                                <td colspan="3" class="px-4 py-12 text-center text-text-muted text-sm">{{t "mo.stlv.no_items"}}</td>
                             </tr>
                             {{end}}
                         </tbody>
@@ -83,17 +83,17 @@
             <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
                 <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                     <div>
-                        <h2 class="text-sm font-bold text-on-surface">Settlement Information</h2>
-                        <p class="text-xs text-text-muted">Calculation basis and lifecycle timestamps</p>
+                        <h2 class="text-sm font-bold text-on-surface">{{t "mo.stlv.info"}}</h2>
+                        <p class="text-xs text-text-muted">{{t "mo.stlv.calc_sub"}}</p>
                     </div>
                 </div>
                 <dl class="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4 p-5 text-sm">
                     <div>
-                        <dt class="text-eyebrow text-text-muted">Driver ID</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "mo.stlv.driver_id"}}</dt>
                         <dd class="mt-0.5 font-semibold text-on-surface tabular-nums">{{$s.DriverID}}</dd>
                     </div>
                     <div>
-                        <dt class="text-eyebrow text-text-muted">Trip ID</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "mo.stlv.trip_id"}}</dt>
                         <dd class="mt-0.5"><a href="/trips/{{$s.TripID}}" class="font-semibold text-primary hover:underline tabular-nums">{{$s.TripID}}</a></dd>
                     </div>
                     <div>
@@ -101,7 +101,7 @@
                         <dd class="mt-0.5 font-semibold text-on-surface tabular-nums">{{printf "%.1f" $s.TDSRate}}% (Sec 194C)</dd>
                     </div>
                     <div>
-                        <dt class="text-eyebrow text-text-muted">Created At</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "mo.stlv.created"}}</dt>
                         <dd class="mt-0.5 font-semibold text-on-surface tabular-nums">{{formatDateTime $s.CreatedAt}}</dd>
                     </div>
                 </dl>
@@ -109,11 +109,11 @@
                 {{if $s.PaymentRef}}
                 <div class="px-5 pb-5 grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
                     <div>
-                        <dt class="text-eyebrow text-text-muted">Payment Reference</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "mo.stlv.pay_ref"}}</dt>
                         <dd class="mt-0.5 font-data-mono font-semibold text-on-surface break-all">{{nullString $s.PaymentRef}}</dd>
                     </div>
                     <div>
-                        <dt class="text-eyebrow text-text-muted">Paid Timestamp</dt>
+                        <dt class="text-eyebrow text-text-muted">{{t "mo.stlv.paid_ts"}}</dt>
                         <dd class="mt-0.5 font-semibold text-on-surface tabular-nums">{{if $s.PaidAt}}{{formatDateTime $s.PaidAt}}{{else}}N/A{{end}}</dd>
                     </div>
                 </div>
@@ -121,7 +121,7 @@
 
                 {{if $s.DisputeReason}}
                 <div class="mx-5 mb-5 p-3 rounded-xl bg-status-alert/10 border border-status-alert/20 text-xs">
-                    <span class="font-bold text-status-alert block">Dispute Reason:</span>
+                    <span class="font-bold text-status-alert block">{{t "mo.stlv.dispute_reason"}}</span>
                     <span class="text-on-surface">{{nullString $s.DisputeReason}}</span>
                 </div>
                 {{end}}
@@ -134,21 +134,21 @@
             <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
                 <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                     <div>
-                        <h2 class="text-sm font-bold text-on-surface">Payout Summary</h2>
-                        <p class="text-xs text-text-muted">Gross to net waterfall</p>
+                        <h2 class="text-sm font-bold text-on-surface">{{t "mo.stlv.summary"}}</h2>
+                        <p class="text-xs text-text-muted">{{t "mo.stlv.waterfall"}}</p>
                     </div>
                 </div>
                 <div class="p-5 space-y-3">
                     <div class="flex justify-between items-center gap-3">
-                        <span class="text-xs text-text-muted">Gross Fare</span>
+                        <span class="text-xs text-text-muted">{{t "mo.stlv.gross"}}</span>
                         <span class="text-sm font-semibold text-on-surface tabular-nums whitespace-nowrap">₹{{printf "%.2f" $s.GrossFare}}</span>
                     </div>
                     <div class="flex justify-between items-center gap-3">
-                        <span class="text-xs text-text-muted">Advances / Kharcha</span>
+                        <span class="text-xs text-text-muted">{{t "mo.stlv.adv_kha"}}</span>
                         <span class="text-sm font-semibold text-status-warning tabular-nums whitespace-nowrap">{{if gt $s.AdvancesKharcha 0.0}}-₹{{printf "%.2f" $s.AdvancesKharcha}}{{else}}₹0.00{{end}}</span>
                     </div>
                     <div class="flex justify-between items-center gap-3">
-                        <span class="text-xs text-text-muted">Approved Deductions</span>
+                        <span class="text-xs text-text-muted">{{t "mo.stlv.appr_ded"}}</span>
                         <span class="text-sm font-semibold text-status-alert tabular-nums whitespace-nowrap">{{if gt $s.Deductions 0.0}}-₹{{printf "%.2f" $s.Deductions}}{{else}}₹0.00{{end}}</span>
                     </div>
                     <div class="flex justify-between items-center gap-3">
@@ -156,7 +156,7 @@
                         <span class="text-sm font-semibold text-text-muted tabular-nums whitespace-nowrap">{{if gt $s.TDSAmount 0.0}}-₹{{printf "%.2f" $s.TDSAmount}}{{else}}₹0.00{{end}}</span>
                     </div>
                     <div class="border-t border-border-subtle pt-3 flex justify-between items-center gap-3">
-                        <span class="text-xs font-bold uppercase tracking-wider text-text-muted">Net Payout</span>
+                        <span class="text-xs font-bold uppercase tracking-wider text-text-muted">{{t "mo.stlv.net"}}</span>
                         <span class="font-black text-xl text-primary tabular-nums whitespace-nowrap" data-numeric>₹{{printf "%.2f" $s.NetPayout}}</span>
                     </div>
                 </div>
@@ -166,8 +166,8 @@
             <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
                 <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
                     <div>
-                        <h2 class="text-sm font-bold text-on-surface">Settlement Actions</h2>
-                        <p class="text-xs text-text-muted">Lifecycle transitions</p>
+                        <h2 class="text-sm font-bold text-on-surface">{{t "mo.stlv.actions"}}</h2>
+                        <p class="text-xs text-text-muted">{{t "mo.stlv.lifecycle"}}</p>
                     </div>
                 </div>
 
@@ -176,25 +176,25 @@
                     {{if can .User "settlements" "approve"}}
                     <form method="POST" action="/settlements/{{$s.ID}}/mark-paid" class="space-y-3">
                         <div>
-                            <label for="payment_ref" class="block text-eyebrow text-text-muted mb-1.5">Payment Reference / UTR #</label>
+                            <label for="payment_ref" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.stlv.pay_ref_utr"}}</label>
                             <input aria-label="e.g. UTR-987654321" autocomplete="off" id="payment_ref" type="text" name="payment_ref" placeholder="e.g. UTR-987654321" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition" />
                         </div>
                         <div>
-                            <label for="mode" class="block text-eyebrow text-text-muted mb-1.5">Payment Mode</label>
+                            <label for="mode" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.stlv.pay_mode"}}</label>
                             <select id="mode" name="mode" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                                <option value="bank_transfer">Bank Transfer (NEFT/RTGS/IMPS)</option>
+                                <option value="bank_transfer">{{t "mo.stlv.bank_mode"}}</option>
                                 <option value="upi">UPI</option>
-                                <option value="cheque">Cheque</option>
-                                <option value="cash">Cash</option>
+                                <option value="cheque">{{t "mo.c.cheque"}}</option>
+                                <option value="cash">{{t "mo.c.cash"}}</option>
                             </select>
                         </div>
                         <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-full bg-status-success text-on-primary py-2 px-4 text-sm font-semibold shadow-sm hover:bg-status-success/90 hover:-translate-y-px transition cursor-pointer">
                             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
-                            Mark as Paid
+                            {{t "mo.stlv.mark_paid"}}
                         </button>
                     </form>
                     {{else}}
-                    <p class="text-xs text-text-muted">Settlement payout is pending approval.</p>
+                    <p class="text-xs text-text-muted">{{t "mo.stlv.pending_note"}}</p>
                     {{end}}
                 {{else if eq $s.Status "paid"}}
                     <div class="space-y-3">
@@ -208,10 +208,10 @@
                             </button>
                         </form>
                         <form method="POST" action="/settlements/{{$s.ID}}/dispute" class="pt-2 border-t border-border-subtle space-y-2">
-                            <label for="reason" class="block text-eyebrow text-text-muted mb-1.5">Dispute Payout</label>
-                            <input aria-label="Reason for dispute" autocomplete="off" id="reason" type="text" name="reason" placeholder="Reason for dispute" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition" />
+                            <label for="reason" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.stlv.dispute_payout"}}</label>
+                            <input aria-label="{{t "mo.stlv.reason_ph"}}" autocomplete="off" id="reason" type="text" name="reason" placeholder="{{t "mo.stlv.reason_ph"}}" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition" />
                             <button type="submit" class="w-full inline-flex items-center justify-center gap-2 rounded-full border border-status-alert/30 bg-status-alert/10 text-status-alert px-3 py-2 text-xs font-semibold hover:bg-status-alert/20 transition cursor-pointer">
-                                Raise Dispute
+                                {{t "mo.stlv.dispute"}}
                             </button>
                         </form>
                     </div>
@@ -225,7 +225,7 @@
                         </button>
                     </form>
                 {{else}}
-                    <p class="text-xs text-text-muted">No pending actions for this settlement.</p>
+                    <p class="text-xs text-text-muted">{{t "mo.stlv.no_actions"}}</p>
                 {{end}}
                 </div>
             </div>

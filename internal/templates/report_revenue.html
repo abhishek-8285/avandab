@@ -2,19 +2,19 @@
     <!-- Header -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div class="min-w-0">
-            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Revenue Report</h1>
-            <p class="text-sm text-secondary mt-1">Monthly breakdown and cumulative business earnings summary</p>
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{t "mo.rep.rev_title"}}</h1>
+            <p class="text-sm text-secondary mt-1">{{t "mo.rep.rev_desc"}}</p>
         </div>
         {{if can .User "reports" "read"}}
         <div class="flex items-center gap-2 print:hidden flex-wrap shrink-0">
             <a href="/reports/revenue.csv{{if .QueryString}}?{{.QueryString}}{{end}}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Export CSV
+                {{t "mo.c.export_csv"}}
             </a>
             {{if .ShowPDFExport}}
             <a href="/reports/revenue.pdf{{if .QueryString}}?{{.QueryString}}{{end}}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-status-alert text-on-primary text-sm font-semibold shadow-sm hover:bg-status-alert/90 hover:-translate-y-px transition">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                Export PDF
+                {{t "mo.c.export_pdf"}}
             </a>
             {{end}}
         </div>
@@ -32,7 +32,7 @@
             </div>
             <div class="mt-4">
                 <div class="text-3xl font-black tracking-tight tabular-nums" data-numeric>₹{{printf "%.2f" .TotalRevenue}}</div>
-                <div class="text-sm font-medium text-white/80 mt-1">Total Cumulative Revenue</div>
+                <div class="text-sm font-medium text-white/80 mt-1">{{t "mo.rep.total_rev"}}</div>
             </div>
         </div>
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition duration-200">
@@ -42,7 +42,7 @@
             </div>
             <div class="mt-4">
                 <div class="text-3xl font-black tracking-tight tabular-nums text-on-surface" data-numeric>{{len .MonthlyRevenue}}</div>
-                <div class="text-sm font-medium text-secondary mt-1">Months Reported</div>
+                <div class="text-sm font-medium text-secondary mt-1">{{t "mo.rep.months_rep"}}</div>
             </div>
         </div>
     </div>
@@ -51,8 +51,8 @@
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h2 class="text-sm font-bold text-on-surface">Monthly Breakdown</h2>
-                <p class="text-xs text-text-muted">Collected revenue grouped by month</p>
+                <h2 class="text-sm font-bold text-on-surface">{{t "mo.rep.monthly"}}</h2>
+                <p class="text-xs text-text-muted">{{t "mo.rep.rev_sub"}}</p>
             </div>
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .MonthlyRevenue}} months</span>
         </div>
@@ -60,21 +60,21 @@
             <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="th-cell">Month</th>
-                        <th class="th-cell-right w-1/3">Revenue (₹)</th>
+                        <th class="th-cell">{{t "mo.rep.month"}}</th>
+                        <th class="th-cell-right w-1/3">{{t "mo.rep.revenue_inr"}}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
                     {{range .MonthlyRevenue}}
                     <tr class="hover:bg-surface-container-low/50 transition-colors">
-                        <td data-label="Month" class="px-3 py-2 text-sm font-semibold text-on-surface tabular-nums">{{.Month}}</td>
-                        <td data-label="Revenue (₹)" class="px-3 py-2 text-sm text-right font-semibold tabular-nums text-on-surface" data-numeric>₹{{printf "%.2f" .Total}}</td>
+                        <td data-label="{{t "mo.rep.month"}}" class="px-3 py-2 text-sm font-semibold text-on-surface tabular-nums">{{.Month}}</td>
+                        <td data-label="{{t "mo.rep.revenue_inr"}}" class="px-3 py-2 text-sm text-right font-semibold tabular-nums text-on-surface" data-numeric>₹{{printf "%.2f" .Total}}</td>
                     </tr>
                     {{else}}
                     <tr><td colspan="2" class="px-4 py-12 text-center">
                         <div class="flex flex-col items-center gap-2">
                             <div class="w-12 h-12 rounded-2xl bg-surface-container grid place-items-center text-text-muted"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-6 h-6"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 4-6"/></svg></div>
-                            <p class="text-sm font-medium text-on-surface">No revenue recorded yet</p><p class="text-xs text-text-muted">Months appear after the first paid invoice</p>
+                            <p class="text-sm font-medium text-on-surface">{{t "mo.rep.no_rev"}}</p><p class="text-xs text-text-muted">{{t "mo.rep.months_note"}}</p>
                         </div>
                     </td></tr>
                     {{end}}
@@ -82,7 +82,7 @@
                 {{if .MonthlyRevenue}}
                 <tfoot class="bg-surface-container-low border-t border-border-subtle">
                     <tr>
-                        <td class="px-3 py-2.5 text-eyebrow text-text-muted">Total Cumulative Revenue</td>
+                        <td class="px-3 py-2.5 text-eyebrow text-text-muted">{{t "mo.rep.total_rev"}}</td>
                         <td class="px-3 py-2.5 text-sm text-right font-black tabular-nums text-primary" data-numeric>₹{{printf "%.2f" .TotalRevenue}}</td>
                     </tr>
                 </tfoot>

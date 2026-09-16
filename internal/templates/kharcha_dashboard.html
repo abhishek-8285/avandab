@@ -5,21 +5,21 @@
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="min-w-0">
             <div class="flex items-center gap-3 flex-wrap">
-                <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Kharcha Ledger</h1>
+                <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{t "mo.kha.title"}}</h1>
                 <span id="queue-live-pill" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-soft border border-emerald-500/20 text-[11px] font-bold tracking-wide uppercase text-emerald-strong dark:text-emerald-300 cursor-default"
                       hx-get="/kharcha/pending"
                       hx-trigger="every 30s"
                       hx-target="#kharcha-queue"
                       hx-swap="innerMorph">
-                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Live
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> {{t "mo.kha.live"}}
                 </span>
             </div>
-            <p class="text-sm text-secondary mt-1">Driver advance &amp; expense approvals · real-time settlement deduction</p>
+            <p class="text-sm text-secondary mt-1">{{t "mo.kha.page_sub"}}</p>
         </div>
         <button onclick="document.getElementById('new-expense-form').classList.toggle('hidden')"
                 class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer shrink-0">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-            New Expense
+            {{t "mo.kha.new"}}
         </button>
     </div>
 
@@ -27,69 +27,69 @@
     <div id="new-expense-form" class="hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h2 class="text-sm font-bold text-on-surface">New Expense</h2>
-                <p class="text-xs text-text-muted">Logged against an active trip · audited automatically when fuel</p>
+                <h2 class="text-sm font-bold text-on-surface">{{t "mo.kha.new"}}</h2>
+                <p class="text-xs text-text-muted">{{t "mo.kha.logged_note"}}</p>
             </div>
         </div>
         <form method="POST" action="/kharcha/create" class="p-5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div>
-                <label for="expense-trip-id" class="block text-eyebrow text-text-muted mb-1.5">Trip</label>
+                <label for="expense-trip-id" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.c.trip"}}</label>
                 <select id="expense-trip-id" name="trip_id" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                    <option value="">Select active trip</option>
+                    <option value="">{{t "mo.kha.select_trip"}}</option>
                     {{range .ActiveTrips}}
                     <option value="{{.ID}}">{{.TripNumber}}</option>
                     {{end}}
                 </select>
             </div>
             <div>
-                <label for="expense-driver-id" class="block text-eyebrow text-text-muted mb-1.5">Driver</label>
+                <label for="expense-driver-id" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.c.driver"}}</label>
                 <select id="expense-driver-id" name="driver_id" required class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                    <option value="">Select driver</option>
+                    <option value="">{{t "mo.kha.select_driver"}}</option>
                     {{range .Drivers}}
                     <option value="{{.ID}}">{{.FirstName}} {{.LastName}}</option>
                     {{end}}
                 </select>
             </div>
             <div>
-                <label for="expense-category" class="block text-eyebrow text-text-muted mb-1.5">Category</label>
+                <label for="expense-category" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.c.category"}}</label>
                 <select name="category" id="expense-category" onchange="toggleFuelLitres()"
                         class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                    <option value="advance">Advance</option>
-                    <option value="fuel">Fuel</option>
-                    <option value="toll">Toll</option>
-                    <option value="food">Food</option>
-                    <option value="repair">Repair</option>
+                    <option value="advance">{{t "mo.kha.advance"}}</option>
+                    <option value="fuel">{{t "mo.c.fuel"}}</option>
+                    <option value="toll">{{t "mo.kha.toll"}}</option>
+                    <option value="food">{{t "mo.kha.food"}}</option>
+                    <option value="repair">{{t "mo.kha.repair"}}</option>
                     <option value="rto">RTO</option>
-                    <option value="tyre">Tyre</option>
-                    <option value="bhatta">Bhatta (Daily Allowance)</option>
-                    <option value="other">Other</option>
+                    <option value="tyre">{{t "mo.kha.tyre"}}</option>
+                    <option value="bhatta">{{t "mo.kha.bhatta"}}</option>
+                    <option value="other">{{t "mo.c.other"}}</option>
                 </select>
             </div>
             <div>
-                <label for="expense-amount" class="block text-eyebrow text-text-muted mb-1.5">Amount (₹)</label>
+                <label for="expense-amount" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.c.amount_inr"}}</label>
                 <input autocomplete="off" type="number" id="expense-amount" step="0.01" min="0" name="amount" required
                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
             </div>
             <div>
-                <label for="expense-desc" class="block text-eyebrow text-text-muted mb-1.5">Description</label>
+                <label for="expense-desc" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.c.description"}}</label>
                 <input aria-label="e.g. Diesel top-up at NH48" autocomplete="off" type="text" id="expense-desc" name="description" placeholder="e.g. Diesel top-up at NH48"
                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
             </div>
             <div>
-                <label for="expense-receipt" class="block text-eyebrow text-text-muted mb-1.5">Receipt URL</label>
+                <label for="expense-receipt" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.kha.receipt_url"}}</label>
                 <input aria-label="/files/" autocomplete="off" type="text" id="expense-receipt" name="receipt_url" placeholder="/files/…"
                        class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
             </div>
             <div id="fuel-litres-field" class="hidden md:col-span-3">
-                <label for="expense-fuel-litres" class="block text-eyebrow text-text-muted mb-1.5">Fuel Litres</label>
-                <input aria-label="Litres purchased — used for fuel audit reconciliation" type="number" id="expense-fuel-litres" step="0.1" min="0" name="fuel_litres" placeholder="Litres purchased — used for fuel audit reconciliation"
+                <label for="expense-fuel-litres" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.kha.fuel_litres"}}</label>
+                <input aria-label="{{t "mo.kha.litres_ph"}}" type="number" id="expense-fuel-litres" step="0.1" min="0" name="fuel_litres" placeholder="{{t "mo.kha.litres_ph"}}"
                        class="w-full max-w-xs bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface tabular-nums placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                 <p class="text-xs text-text-muted mt-1">Captured for the fuel audit flow (Spec 03). Audit runs automatically after submission.</p>
             </div>
             <div class="md:col-span-3 flex justify-end pt-1">
                 <button type="submit"
                         class="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">
-                    Create Expense
+                    {{t "mo.kha.create"}}
                 </button>
             </div>
         </form>
@@ -104,12 +104,12 @@
                 <div class="w-10 h-10 rounded-xl bg-amber-soft border border-amber-line grid place-items-center text-amber-mid group-hover:bg-amber-500 group-hover:text-white transition-colors">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
                 </div>
-                <span class="text-eyebrow px-2 py-1 rounded-full bg-amber-soft text-amber-strong border border-amber-line">Awaiting approval</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-amber-soft text-amber-strong border border-amber-line">{{t "mo.kha.awaiting"}}</span>
             </div>
             <div class="mt-4">
                 <div id="kpi-pending-count" class="text-stat text-status-warning tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.Stats.PendingCount}}</div>
-                <div class="text-sm font-medium text-secondary mt-1">Pending</div>
-                <div class="mt-3 flex items-center gap-2 text-xs text-text-muted"><span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> queue refreshes every 30s</div>
+                <div class="text-sm font-medium text-secondary mt-1">{{t "mo.c.pending"}}</div>
+                <div class="mt-3 flex items-center gap-2 text-xs text-text-muted"><span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span> {{t "mo.kha.refresh_note"}}</div>
             </div>
         </div>
 
@@ -120,12 +120,12 @@
                 <div class="w-10 h-10 rounded-xl bg-emerald-soft border border-emerald-line grid place-items-center text-emerald-mid group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                 </div>
-                <span class="text-eyebrow px-2 py-1 rounded-full bg-emerald-soft text-emerald-strong border border-emerald-line">Cleared</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-emerald-soft text-emerald-strong border border-emerald-line">{{t "mo.kha.cleared"}}</span>
             </div>
             <div class="mt-4">
                 <div class="text-stat text-status-success tabular-nums text-3xl font-black tracking-tight" data-numeric>{{.Stats.ApprovedToday}}</div>
-                <div class="text-sm font-medium text-secondary mt-1">Approved Today</div>
-                <div class="mt-3 text-xs text-text-muted">Since midnight · auto-settled against trips</div>
+                <div class="text-sm font-medium text-secondary mt-1">{{t "mo.kha.approved_today"}}</div>
+                <div class="mt-3 text-xs text-text-muted">{{t "mo.kha.since_midnight"}}</div>
             </div>
         </div>
 
@@ -136,12 +136,12 @@
                 <div class="w-10 h-10 rounded-xl bg-white/15 border border-white/20 grid place-items-center text-white">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><line x1="12" x2="12" y1="2" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 </div>
-                <span class="text-eyebrow px-2 py-1 rounded-full bg-white/15 text-white border border-white/20">This month</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-white/15 text-white border border-white/20">{{t "mo.kha.this_month"}}</span>
             </div>
             <div class="mt-4">
                 <div class="text-stat tabular-nums text-3xl font-black tracking-tight" data-numeric>₹{{priceFormat .Stats.MonthTotal}}</div>
-                <div class="text-sm font-medium text-white/80 mt-1">Month Total</div>
-                <div class="mt-3 text-xs text-white/70">All categories · calendar month to date</div>
+                <div class="text-sm font-medium text-white/80 mt-1">{{t "mo.kha.month_total"}}</div>
+                <div class="mt-3 text-xs text-white/70">{{t "mo.kha.all_cat_sub"}}</div>
             </div>
         </div>
 
@@ -152,12 +152,12 @@
                 <div class="w-10 h-10 rounded-xl bg-rose-soft border border-rose-line grid place-items-center text-rose-mid group-hover:bg-rose-500 group-hover:text-white transition-colors">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
                 </div>
-                <span class="text-eyebrow px-2 py-1 rounded-full bg-rose-soft text-rose-strong border border-rose-line">Outstanding</span>
+                <span class="text-eyebrow px-2 py-1 rounded-full bg-rose-soft text-rose-strong border border-rose-line">{{t "mo.inv.chip_outstanding"}}</span>
             </div>
             <div class="mt-4">
                 <div class="text-stat text-status-alert tabular-nums text-3xl font-black tracking-tight" data-numeric>₹{{priceFormat .Stats.UnsettledTotal}}</div>
-                <div class="text-sm font-medium text-secondary mt-1">Unsettled</div>
-                <div class="mt-3 text-xs text-text-muted">Outstanding balance across drivers</div>
+                <div class="text-sm font-medium text-secondary mt-1">{{t "mo.kha.unsettled"}}</div>
+                <div class="mt-3 text-xs text-text-muted">{{t "mo.kha.out_sub"}}</div>
             </div>
         </div>
     </div>
@@ -167,7 +167,7 @@
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div class="flex items-center gap-2">
                 <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></span>
-                <h2 class="text-sm font-bold text-on-surface">Active Trips</h2>
+                <h2 class="text-sm font-bold text-on-surface">{{t "mo.kha.active_trips"}}</h2>
             </div>
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .ActiveTrips}} in transit</span>
         </div>
@@ -190,7 +190,7 @@
             {{else}}
             <div class="px-4 py-10 text-center">
                 <div class="w-10 h-10 rounded-full bg-surface-container grid place-items-center text-text-muted mx-auto"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg></div>
-                <p class="text-sm font-medium text-on-surface mt-3">No trips in transit</p><p class="text-xs text-text-muted">Expenses attach to active trips once dispatched</p>
+                <p class="text-sm font-medium text-on-surface mt-3">{{t "mo.kha.no_trips"}}</p><p class="text-xs text-text-muted">{{t "mo.kha.attach_note"}}</p>
             </div>
             {{end}}
         </div>
@@ -200,10 +200,10 @@
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between flex-wrap gap-3">
             <div class="flex items-center gap-3">
-                <h2 class="text-sm font-bold text-on-surface">Pending Approvals</h2>
+                <h2 class="text-sm font-bold text-on-surface">{{t "mo.kha.pending_approvals"}}</h2>
                 <span id="kharcha-queue-count" class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .PendingExpenses}} waiting</span>
             </div>
-            <p class="text-xs text-text-muted">Approve or reject driver expense requests</p>
+            <p class="text-xs text-text-muted">{{t "mo.kha.approve_sub"}}</p>
         </div>
         <div id="kharcha-queue" class="divide-y divide-border-subtle">
             {{template "kharcha_queue.html" .}}
@@ -214,11 +214,11 @@
     <div class="bg-surface-container-lowest rounded-2xl shadow-sm border border-border-subtle overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between flex-wrap gap-3">
             <div class="flex items-center gap-3">
-                <h2 class="text-sm font-bold text-on-surface">Kharcha Ledger</h2>
+                <h2 class="text-sm font-bold text-on-surface">{{t "mo.kha.title"}}</h2>
                 <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .LedgerEntries}} entries</span>
             </div>
             <div class="flex items-center gap-2">
-                <label for="ledger-trip-filter" class="sr-only">Filter by Trip</label>
+                <label for="ledger-trip-filter" class="sr-only">{{t "mo.kha.filter_trip"}}</label>
                 <select id="ledger-trip-filter"
                         name="trip_id"
                         hx-get="/kharcha/ledger"
@@ -227,7 +227,7 @@
                         hx-swap="innerMorph"
                         hx-include="#ledger-trip-filter"
                         class="bg-surface-container-low border border-border-subtle rounded-full px-3 py-2 text-xs font-medium text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition cursor-pointer">
-                    <option value="">All Trips</option>
+                    <option value="">{{t "mo.kha.all_trips"}}</option>
                     {{range .ActiveTrips}}
                     <option value="{{.ID}}">{{.TripNumber}}</option>
                     {{end}}
@@ -244,23 +244,23 @@
 <div id="reject-modal" class="fixed inset-0 z-50 hidden items-center justify-center p-4">
     <div id="reject-backdrop" class="absolute inset-0 bg-on-surface/50 backdrop-blur-sm" onclick="closeRejectModal()"></div>
     <div class="relative bg-surface-container-lowest rounded-2xl w-full max-w-md p-6 shadow-xl animate-fade-in border border-border-subtle">
-        <h2 class="text-lg font-extrabold text-on-surface">Reject Expense</h2>
+        <h2 class="text-lg font-extrabold text-on-surface">{{t "mo.kha.reject_title"}}</h2>
         <p class="text-sm text-text-muted mt-1">
             Rejecting <strong id="reject-amount" class="text-on-surface tabular-nums"></strong> from <strong id="reject-driver" class="text-on-surface"></strong>
         </p>
         <form id="reject-form" method="POST" class="mt-4">
-            <label for="reject-reason" class="sr-only">Reason for rejection</label>
+            <label for="reject-reason" class="sr-only">{{t "mo.kha.reject_reason"}}</label>
             <textarea aria-label="Reason for rejection (required)" name="reason" id="reject-reason" rows="3"
                       class="w-full bg-surface-container-low border border-border-subtle rounded-lg p-3 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 resize-none"
-                      placeholder="Reason for rejection (required)…" required></textarea>
+                      placeholder="{{t "mo.kha.reason_ph"}}" required></textarea>
             <div class="flex justify-end gap-2 mt-4">
                 <button type="button" onclick="closeRejectModal()"
                         class="px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-secondary hover:bg-surface-container-low transition-colors">
-                    Cancel
+                    {{t "mo.c.cancel"}}
                 </button>
                 <button type="submit"
                         class="px-5 py-2 rounded-full bg-status-alert hover:bg-status-alert/90 text-on-primary text-sm font-bold shadow-sm transition">
-                    Reject Expense
+                    {{t "mo.kha.reject_title"}}
                 </button>
             </div>
         </form>

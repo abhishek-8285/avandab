@@ -2,7 +2,7 @@
     <div class="flex items-start justify-between gap-4 flex-wrap">
         <div>
             <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{if .Driver}}Edit Driver{{else}}New Driver{{end}}</h1>
-            <p class="text-sm text-secondary mt-1">Driver profile, license, and emergency contact details.</p>
+            <p class="text-sm text-secondary mt-1">{{t "fl.driver_profile_license_and_emergency_contact"}}</p>
         </div>
     </div>
 
@@ -15,52 +15,52 @@
     <form method="POST" action="/drivers{{if $driver}}/{{$driver.ID}}/edit{{else}}/new{{end}}" class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="p-6 space-y-6">
             <section>
-                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Profile</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "fl.profile"}}</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {{template "field.html" (dict "Label" "First Name" "Name" "first_name" "Value" (and $driver $driver.FirstName) "Required" "true")}}
-                    {{template "field.html" (dict "Label" "Last Name" "Name" "last_name" "Value" (and $driver $driver.LastName) "Required" "true")}}
-                    {{template "field.html" (dict "Label" "Phone" "Name" "phone" "Type" "tel" "Value" (and $driver $driver.Phone) "Required" "true" "Pattern" `(\+?91[\s-]?|0)?[6-9][0-9]{4}[\s-]?[0-9]{5}` "Title" "Indian mobile: 9876543210 or +91 98765 43210")}}
-                    {{template "field.html" (dict "Label" "Email" "Name" "email" "Type" "email" "Value" (and $driver (nullString $driver.Email)))}}
+                    {{template "field.html" (dict "Label" (t "fl.first_name") "Name" "first_name" "Value" (and $driver $driver.FirstName) "Required" "true")}}
+                    {{template "field.html" (dict "Label" (t "fl.last_name") "Name" "last_name" "Value" (and $driver $driver.LastName) "Required" "true")}}
+                    {{template "field.html" (dict "Label" (t "fl.phone") "Name" "phone" "Type" "tel" "Value" (and $driver $driver.Phone) "Required" "true" "Pattern" `(\+?91[\s-]?|0)?[6-9][0-9]{4}[\s-]?[0-9]{5}` "Title" (t "fl.indian_mobile_9876543210_or_91_98765_43210"))}}
+                    {{template "field.html" (dict "Label" (t "fl.email") "Name" "email" "Type" "email" "Value" (and $driver (nullString $driver.Email)))}}
                 </div>
                 <div class="mt-4">
-                    <label for="address" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Address</label>
+                    <label for="address" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "fl.address"}}</label>
                     <textarea id="address" name="address" rows="2"
                         class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">{{if $driver}}{{nullString $driver.Address}}{{end}}</textarea>
                 </div>
             </section>
 
             <section>
-                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">License &amp; Compliance</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "fl.license_amp_compliance"}}</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {{template "field.html" (dict "Label" "License Number" "Name" "license_number" "Value" (and $driver $driver.LicenseNumber) "Required" "true")}}
-                    {{template "field.html" (dict "Label" "License Expiry" "Name" "license_expiry" "Type" "date" "Value" (and $driver (date_only $driver.LicenseExpiry)) "Required" "true")}}
-                    {{template "field.html" (dict "Label" "Experience (years)" "Name" "experience" "Type" "number" "Value" (and $driver $driver.ExperienceYears))}}
+                    {{template "field.html" (dict "Label" (t "fl.license_number") "Name" "license_number" "Value" (and $driver $driver.LicenseNumber) "Required" "true")}}
+                    {{template "field.html" (dict "Label" (t "fl.license_expiry") "Name" "license_expiry" "Type" "date" "Value" (and $driver (date_only $driver.LicenseExpiry)) "Required" "true")}}
+                    {{template "field.html" (dict "Label" (t "fl.experience_years") "Name" "experience" "Type" "number" "Value" (and $driver $driver.ExperienceYears))}}
                 </div>
             </section>
 
             <section>
-                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Emergency Contact</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "fl.emergency_contact"}}</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {{template "field.html" (dict "Label" "Emergency Contact Name" "Name" "emergency_contact_name" "Value" (and $driver (nullString $driver.EmergencyContactName)))}}
-                    {{template "field.html" (dict "Label" "Emergency Contact Phone" "Name" "emergency_contact_phone" "Type" "tel" "Value" (and $driver (nullString $driver.EmergencyContactPhone)))}}
+                    {{template "field.html" (dict "Label" (t "fl.emergency_contact_name") "Name" "emergency_contact_name" "Value" (and $driver (nullString $driver.EmergencyContactName)))}}
+                    {{template "field.html" (dict "Label" (t "fl.emergency_contact_phone") "Name" "emergency_contact_phone" "Type" "tel" "Value" (and $driver (nullString $driver.EmergencyContactPhone)))}}
                 </div>
             </section>
 
             <section>
-                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Status &amp; Notes</h2>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">{{t "fl.status_amp_notes"}}</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-none sm:max-w-md">
                     <div>
-                        <label for="status" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Status</label>
+                        <label for="status" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "fl.status"}}</label>
                         <select id="status" name="status" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                            <option value="available" {{if and $driver (eq $driver.Status "available")}}selected{{end}}>Available</option>
-                            <option value="on_trip" {{if and $driver (eq $driver.Status "on_trip")}}selected{{end}}>On Trip</option>
-                            <option value="leave" {{if and $driver (eq $driver.Status "leave")}}selected{{end}}>Leave</option>
-                            <option value="inactive" {{if and $driver (eq $driver.Status "inactive")}}selected{{end}}>Inactive</option>
+                            <option value="available" {{if and $driver (eq $driver.Status "available")}}selected{{end}}>{{t "fl.available"}}</option>
+                            <option value="on_trip" {{if and $driver (eq $driver.Status "on_trip")}}selected{{end}}>{{t "fl.on_trip"}}</option>
+                            <option value="leave" {{if and $driver (eq $driver.Status "leave")}}selected{{end}}>{{t "fl.leave"}}</option>
+                            <option value="inactive" {{if and $driver (eq $driver.Status "inactive")}}selected{{end}}>{{t "fl.inactive"}}</option>
                         </select>
                     </div>
                 </div>
                 <div class="mt-4">
-                    <label for="notes" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Notes</label>
+                    <label for="notes" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "fl.notes"}}</label>
                     <textarea id="notes" name="notes" rows="2"
                         class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">{{if $driver}}{{nullString $driver.Notes}}{{end}}</textarea>
                 </div>
@@ -68,8 +68,8 @@
         </div>
 
         <div class="sticky bottom-0 bg-surface-container-lowest border-t border-border-subtle px-6 py-3 flex justify-end gap-2 flex-wrap">
-            <a href="/drivers" class="inline-flex items-center justify-center rounded-full bg-surface-container-lowest border border-border-subtle px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors text-decoration-none">Cancel</a>
-            <button type="submit" class="inline-flex items-center justify-center rounded-full bg-primary text-on-primary px-5 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">Save Driver</button>
+            <a href="/drivers" class="inline-flex items-center justify-center rounded-full bg-surface-container-lowest border border-border-subtle px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors text-decoration-none">{{t "fl.cancel"}}</a>
+            <button type="submit" class="inline-flex items-center justify-center rounded-full bg-primary text-on-primary px-5 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer">{{t "fl.save_driver"}}</button>
         </div>
     </form>
 </div>

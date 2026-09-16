@@ -5,7 +5,7 @@
     <form method="POST" action="/customer/feedback" class="space-y-4 bg-surface-container-lowest border border-border-subtle rounded-2xl p-6 shadow-sm">
         <input type="hidden" name="trip_id" value="{{if .TripID}}{{.TripID}}{{else}}{{if .Trip}}{{if .Trip.ID}}{{.Trip.ID}}{{end}}{{end}}{{end}}" />
         <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Rating</label>
+            <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "tr.fb_rating"}}</label>
             <div class="flex items-center gap-1" id="star-rating">
                 <label class="flex items-center gap-1 cursor-pointer">
                     <input type="radio" name="rating" value="1" class="sr-only peer" required />
@@ -27,34 +27,34 @@
                     <input type="radio" name="rating" value="5" class="sr-only peer" />
                     <span class="text-2xl peer-checked:text-primary text-border-subtle hover:text-primary/70 transition-colors">★</span>
                 </label>
-                <span class="ml-2 text-xs text-text-muted">Select 1–5 stars</span>
+                <span class="ml-2 text-xs text-text-muted">{{t "tr.fb_hint"}}</span>
             </div>
             <div class="mt-1 flex gap-1 text-xs text-text-muted">
-                <span>★ = Poor</span>
+                <span>{{t "tr.fb_poor"}}</span>
                 <span class="mx-1">·</span>
-                <span>★★★★★ = Excellent</span>
+                <span>{{t "tr.fb_excellent"}}</span>
             </div>
         </div>
 
         <div>
-            <label for="fb-comment" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Comment (optional)</label>
-            <textarea aria-label="How was your delivery experience? Any issues with timing, handling, or driver communication?" id="fb-comment" name="comment" rows="4" maxlength="2000" placeholder="How was your delivery experience? Any issues with timing, handling, or driver communication?" class="w-full bg-surface-container-low border border-border-subtle rounded-md py-2 px-3 text-sm text-on-surface placeholder-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition"></textarea>
-            <p class="text-[11px] text-text-muted mt-1">Max 2000 characters. Your feedback is linked to trip {{if .TripID}}{{.TripID}}{{else}}—{{end}} and visible to ops.</p>
+            <label for="fb-comment" class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "tr.fb_comment"}}</label>
+            <textarea aria-label="{{t "tr.fb_ph"}}" id="fb-comment" name="comment" rows="4" maxlength="2000" placeholder="{{t "tr.fb_ph"}}" class="w-full bg-surface-container-low border border-border-subtle rounded-md py-2 px-3 text-sm text-on-surface placeholder-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition"></textarea>
+            <p class="text-[11px] text-text-muted mt-1">{{t "tr.fb_link_pre"}} {{if .TripID}}{{.TripID}}{{else}}—{{end}} {{t "tr.fb_link_post"}}</p>
         </div>
 
         <div class="flex items-center gap-3 pt-2">
             <button type="submit" class="inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2 text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition focus:outline-none focus:ring-2 focus:ring-primary/30">
-                Submit Feedback
+                {{t "tr.fb_submit"}}
             </button>
-            <a href="/customer/bookings" class="inline-flex items-center rounded-full bg-surface-container-lowest border border-border-subtle px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">Cancel</a>
+            <a href="/customer/bookings" class="inline-flex items-center rounded-full bg-surface-container-lowest border border-border-subtle px-4 py-2 text-sm font-semibold text-on-surface hover:bg-surface-container-low transition-colors">{{t "tr.cancel"}}</a>
         </div>
 
-        <p class="text-[11px] text-text-muted">By submitting, you agree your rating is stored in <code>trip_feedback</code> per Spec 21 §3.</p>
+        <p class="text-[11px] text-text-muted">{{t "tr.fb_consent_pre"}} <code>trip_feedback</code> {{t "tr.fb_consent_post"}}</p>
     </form>
 
     <!-- Alternate JSON submission example (for API clients) -->
     <div class="mt-6 p-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs">
-        <h4 class="text-xs font-semibold text-on-surface mb-2">API Example</h4>
+        <h4 class="text-xs font-semibold text-on-surface mb-2">{{t "tr.fb_api"}}</h4>
         <pre class="text-[11px] font-data-mono bg-surface-container-lowest border border-border-subtle rounded p-3 overflow-x-auto">POST /customer/feedback
 Content-Type: application/json
 

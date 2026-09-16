@@ -22,9 +22,9 @@
                 <div class="flex items-center gap-1.5">
                     <span class="text-sm font-bold text-on-surface truncate">{{.Name}}</span>
                     {{if eq .Kind "restricted"}}
-                    <span class="shrink-0 text-[11px] px-1.5 py-0.5 rounded-full font-data-mono font-bold bg-amber-soft text-amber-strong dark:text-amber-400 border border-amber-500/20">ALERT</span>
+                    <span class="shrink-0 text-[11px] px-1.5 py-0.5 rounded-full font-data-mono font-bold bg-amber-soft text-amber-strong dark:text-amber-400 border border-amber-500/20">{{t "fl.alert"}}</span>
                     {{else if eq .Kind "no_entry"}}
-                    <span class="shrink-0 text-[11px] px-1.5 py-0.5 rounded-full font-data-mono font-bold bg-rose-soft text-rose-strong dark:text-rose-400 border border-rose-500/20">NO ENTRY</span>
+                    <span class="shrink-0 text-[11px] px-1.5 py-0.5 rounded-full font-data-mono font-bold bg-rose-soft text-rose-strong dark:text-rose-400 border border-rose-500/20">{{t "fl.no_entry"}}</span>
                     {{end}}
                 </div>
                 <div class="text-[11px] text-text-muted truncate">
@@ -43,27 +43,27 @@
         {{if eq .Kind "pickup"}}
         <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-soft text-emerald-strong dark:text-emerald-300 border border-emerald-line">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-            Pickup
+            {{t "fl.pickup"}}
         </span>
         {{else if eq .Kind "drop"}}
         <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-cyan-soft text-cyan-strong dark:text-cyan-300 border border-cyan-line">
             <span class="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>
-            Drop
+            {{t "fl.drop"}}
         </span>
         {{else if eq .Kind "depot"}}
         <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-soft text-blue-strong dark:text-blue-300 border border-blue-line">
             <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-            Depot / Hub
+            {{t "fl.depot_hub"}}
         </span>
         {{else if eq .Kind "restricted"}}
         <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-soft text-amber-strong dark:text-amber-300 border border-amber-line">
             <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-            Restricted
+            {{t "fl.restricted"}}
         </span>
         {{else}}
         <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-soft text-rose-strong dark:text-rose-300 border border-rose-line">
             <span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
-            No Entry
+            {{t "fl.no_entry_2"}}
         </span>
         {{end}}
     </td>
@@ -90,7 +90,7 @@
             {{.RouteName}}
         </span>
         {{else}}
-        <span class="text-xs text-text-muted italic">All Routes (Global)</span>
+        <span class="text-xs text-text-muted italic">{{t "fl.all_routes_global"}}</span>
         {{end}}
     </td>
 
@@ -104,12 +104,12 @@
         {{if .IsActive}}
         <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-soft text-emerald-strong dark:text-emerald-300 border border-emerald-line">
             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            Active
+            {{t "fl.active_2"}}
         </span>
         {{else}}
         <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium bg-surface-container text-text-muted border border-border-subtle">
             <span class="w-1.5 h-1.5 rounded-full bg-text-muted"></span>
-            Disabled
+            {{t "fl.disabled"}}
         </span>
         {{end}}
     </td>
@@ -117,13 +117,13 @@
     <td class="px-3 py-2 text-right whitespace-nowrap">
         <div class="flex items-center justify-end gap-1">
             {{if can $.User "geofences" "update"}}
-            <a href="/geofences/{{.ID}}/edit" aria-label="Edit Geofence" class="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-surface-container transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center" title="Edit Geofence">
+            <a href="/geofences/{{.ID}}/edit" aria-label="{{t "fl.edit_geofence"}}" class="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-surface-container transition-colors min-h-[44px] min-w-[44px] inline-flex items-center justify-center" title="{{t "fl.edit_geofence"}}">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </a>
             {{end}}
             {{if can $.User "geofences" "delete"}}
-            <form method="POST" action="/geofences/{{.ID}}/delete" data-confirm="Are you sure? This cannot be undone." class="inline-flex" onsubmit="return confirm('Delete geofence {{.Name}}?')">
-                <button type="submit" aria-label="Delete Geofence" class="p-1.5 rounded-lg text-secondary hover:text-status-alert hover:bg-surface-container transition-colors cursor-pointer border-0 bg-transparent min-h-[44px] min-w-[44px] inline-flex items-center justify-center" title="Delete Geofence">
+            <form method="POST" action="/geofences/{{.ID}}/delete" data-confirm="{{t "fl.are_you_sure_this_cannot_be_undone"}}" class="inline-flex" data-confirm-tpl="{{t "fl.delete_geofence_name"}}" data-confirm-name="{{.Name}}" onsubmit="return confirm((this.dataset.confirmTpl || 'Delete geofence {name}?').replace('{name}', this.dataset.confirmName))">
+                <button type="submit" aria-label="{{t "fl.delete_geofence"}}" class="p-1.5 rounded-lg text-secondary hover:text-status-alert hover:bg-surface-container transition-colors cursor-pointer border-0 bg-transparent min-h-[44px] min-w-[44px] inline-flex items-center justify-center" title="{{t "fl.delete_geofence"}}">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                 </button>
             </form>

@@ -1,23 +1,23 @@
 {{define "customer_invoices.html"}}
 <!-- reuses booking_list_table partial pattern per Spec 21 §4 (shipper scoped) — booking_list_table.html -->
-{{template "page_header.html" (dict "Title" "My Invoices" "Subtitle" "Your invoices, payment status, and receipts")}}
+{{template "page_header.html" (dict "Title" (t "fl.my_invoices") "Subtitle" (t "fl.your_invoices_payment_status_and_receipts"))}}
 
 <div class="bg-surface-container-lowest border border-border-subtle rounded-2xl shadow-sm flex flex-col h-full overflow-hidden">
     <!-- Sticky Filter Bar -->
     <form method="GET" action="/customer/invoices" class="px-4 py-2.5 border-b border-border-subtle flex flex-wrap items-center gap-2 bg-surface-container-lowest sticky top-0 z-10">
-        <span class="text-xs font-medium text-secondary mr-2">Filters:</span>
-        <a href="/customer/invoices" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter ""}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">All Invoices</a>
-        <a href="/customer/invoices?status=pending" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "pending"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Pending</a>
-        <a href="/customer/invoices?status=paid" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "paid"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Paid</a>
-        <a href="/customer/invoices?status=partially_paid" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "partially_paid"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">Partial</a>
+        <span class="text-xs font-medium text-secondary mr-2">{{t "fl.filters"}}</span>
+        <a href="/customer/invoices" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter ""}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">{{t "fl.all_invoices"}}</a>
+        <a href="/customer/invoices?status=pending" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "pending"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">{{t "fl.pending"}}</a>
+        <a href="/customer/invoices?status=paid" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "paid"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">{{t "fl.paid"}}</a>
+        <a href="/customer/invoices?status=partially_paid" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq .StatusFilter "partially_paid"}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">{{t "fl.partial"}}</a>
 
         <div class="ml-auto flex items-center gap-2">
             <div class="relative min-w-50">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                <input aria-label="Search invoice" autocomplete="off" type="text" name="q" value="{{.Query}}" placeholder="Search invoice…"
+                <input aria-label="{{t "fl.search_invoice"}}" autocomplete="off" type="text" name="q" value="{{.Query}}" placeholder="{{t "fl.search_invoice_2"}}"
                     class="bg-surface-container-low border border-border-subtle rounded-md pl-9 pr-4 py-2 text-sm text-on-surface placeholder:text-text-muted w-full focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition">
             </div>
-            {{template "btn.html" (dict "Label" "Search" "Type" "submit" "Size" "sm")}}
+            {{template "btn.html" (dict "Label" (t "fl.search") "Type" "submit" "Size" "sm")}}
         </div>
     </form>
 

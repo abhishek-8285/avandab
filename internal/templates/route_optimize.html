@@ -1,38 +1,38 @@
-{{template "page_header.html" (dict "Title" "Route Optimization" "Subtitle" "VRP solver — mock + OSRM (Spec 18 Wave A)" "ActionHref" "/routes" "ActionLabel" "Back to Routes")}}
+{{template "page_header.html" (dict "Title" (t "rt.opt_title") "Subtitle" (t "rt.opt_sub") "ActionHref" "/routes" "ActionLabel" (t "rt.back"))}}
 
 <div class="space-y-5 max-w-[1600px] mx-auto">
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
   <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
     <div class="px-5 py-3 border-b border-border-subtle">
-      <h3 class="text-sm font-bold text-on-surface">Create Optimization Job</h3>
+      <h3 class="text-sm font-bold text-on-surface">{{t "rt.opt_create"}}</h3>
       <p class="text-xs text-text-muted mt-0.5">Provider: <span class="font-data-mono">{{.RoutingProvider}}</span> (configure via <span class="font-data-mono">ROUTING_PROVIDER=mock|osrm-public|osrm-selfhost</span> and <span class="font-data-mono">OSRM_URL</span>). Max 50 shipments.</p>
     </div>
     <div class="p-5">
       {{if .Vehicles}}
       <div class="mb-4 p-3 rounded-xl bg-surface-container-low border border-border-subtle">
-        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Load Vehicle from Fleet Master</label>
+        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "rt.opt_load"}}</label>
         <div class="flex items-center gap-2">
-          <select id="fleet-veh-select" aria-label="Load vehicle from fleet master" class="flex-1 bg-surface-container-lowest border border-border-subtle rounded-lg px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary transition">
+          <select id="fleet-veh-select" aria-label="{{t "rt.opt_load"}}" class="flex-1 bg-surface-container-lowest border border-border-subtle rounded-lg px-3 py-2 text-sm text-on-surface focus:outline-none focus:border-primary transition">
             {{range .Vehicles}}
             <option value="{{.ID}}" data-cap="{{.Capacity}}">{{.RegistrationNumber}} ({{if .Model}}{{.Model}}{{else}}Capacity: {{.Capacity}}kg{{end}})</option>
             {{end}}
           </select>
           <button type="button" onclick="loadSelectedVehicle()" class="px-3 py-2 rounded-lg bg-surface-container border border-border-subtle text-xs font-semibold text-on-surface hover:bg-surface-container-high transition cursor-pointer">
-            Use Vehicle
+            {{t "rt.opt_use"}}
           </button>
         </div>
       </div>
       {{end}}
 
-      <form id="optimize-form" onsubmit="return submitOptimize(event)" class="space-y-3">
-        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Shipments JSON <span class="text-text-muted normal-case tracking-normal">(array of {id, latitude, longitude})</span>
+      <form id="optimize-form" data-i18n-solving="{{t "rt.js_solving"}}" data-i18n-badjson="{{t "rt.js_badjson"}}" data-i18n-failed="{{t "rt.js_failed"}}" data-i18n-loaded="{{t "rt.js_loaded"}}" onsubmit="return submitOptimize(event)" class="space-y-3">
+        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "rt.opt_shipments"}} <span class="text-text-muted normal-case tracking-normal">(array of {id, latitude, longitude})</span>
           <textarea name="shipments" rows="5" class="mt-1 w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition font-data-mono" placeholder='[{"id":"s1","latitude":19.076,"longitude":72.877},{"id":"s2","latitude":19.218,"longitude":72.978}]'>[{"id":"s1","latitude":19.076,"longitude":72.877},{"id":"s2","latitude":19.218,"longitude":72.978}]</textarea>
         </label>
-        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">Vehicles JSON
+        <label class="block text-xs font-bold uppercase tracking-wider text-secondary mb-1.5">{{t "rt.opt_vehicles"}}
           <textarea name="vehicles" id="vehicles-json-input" rows="3" class="mt-1 w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition font-data-mono" placeholder='[{"id":"v1","start_lat":19.076,"start_lng":72.877,"capacity":100}]'>[{"id":"v1","start_lat":19.076,"start_lng":72.877,"capacity":100}]</textarea>
         </label>
         <div class="flex items-center gap-2 pt-1">
-          {{template "btn.html" (dict "Label" "Optimize" "Type" "submit" "Icon" "route")}}
+          {{template "btn.html" (dict "Label" (t "rt.optimize") "Type" "submit" "Icon" "route")}}
           <span id="optimize-status" class="text-xs text-text-muted"></span>
         </div>
       </form>
@@ -42,23 +42,23 @@
 
   <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden flex flex-col">
     <div class="px-5 py-3 border-b border-border-subtle">
-      <h3 class="text-sm font-bold text-on-surface">Recent Jobs</h3>
+      <h3 class="text-sm font-bold text-on-surface">{{t "rt.recent_jobs"}}</h3>
     </div>
     <div class="p-4">
-      <div id="jobs-list" class="text-xs text-text-muted">Loading…</div>
+      <div id="jobs-list" class="text-xs text-text-muted">{{t "rt.loading"}}</div>
     </div>
   </div>
 </div>
 
 <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
   <div class="px-5 py-3 border-b border-border-subtle">
-    <h3 class="text-sm font-bold text-on-surface">How it works</h3>
+    <h3 class="text-sm font-bold text-on-surface">{{t "rt.how"}}</h3>
   </div>
   <ul class="p-5 pt-4 text-xs text-text-muted list-disc ml-4 space-y-1">
-    <li><span class="font-data-mono">mock</span>: greedy nearest-neighbor, zero deps, deterministic.</li>
-    <li><span class="font-data-mono">osrm-public</span>: <span class="font-data-mono">http://router.project-osrm.org</span> table API + greedy assignment, falls back to mock on error/rate-limit.</li>
-    <li><span class="font-data-mono">osrm-selfhost</span>: <span class="font-data-mono">OSRM_URL</span> (e.g. <span class="font-data-mono">http://osrm.internal:5000</span>), docs in <span class="font-data-mono">docs/ops/osrm-setup.md</span>.</li>
-    <li>Jobs are tenant-scoped and stored in <span class="font-data-mono">route_optimization_jobs</span> (migration 00066).</li>
+    <li><span class="font-data-mono">mock</span>: {{t "rt.how_mock"}}</li>
+    <li><span class="font-data-mono">osrm-public</span>: <span class="font-data-mono">http://router.project-osrm.org</span> {{t "rt.how_osrm_pub"}}</li>
+    <li><span class="font-data-mono">osrm-selfhost</span>: <span class="font-data-mono">OSRM_URL</span> ({{t "rt.how_osrm_self"}} <span class="font-data-mono">http://osrm.internal:5000</span>), docs in <span class="font-data-mono">docs/ops/osrm-setup.md</span>.</li>
+    <li>{{t "rt.how_jobs"}} <span class="font-data-mono">route_optimization_jobs</span> (migration 00066).</li>
   </ul>
 </div>
 </div>
@@ -79,21 +79,23 @@ function loadSelectedVehicle() {
 async function submitOptimize(e){
   e.preventDefault();
   const status = document.getElementById('optimize-status');
+  const form = document.getElementById('optimize-form');
+  const ozT = function(k,f){ return (form&&form.dataset&&form.dataset[k])||f; };
   const out = document.getElementById('optimize-result');
-  status.textContent = 'Solving…';
+  status.textContent = ozT('i18nSolving','Solving…');
   out.classList.add('hidden');
   let shipments, vehicles;
   try {
     shipments = JSON.parse(e.target.shipments.value);
     vehicles = JSON.parse(e.target.vehicles.value);
-  } catch(err){ status.textContent='Invalid JSON: '+err.message; return false; }
+  } catch(err){ status.textContent=ozT('i18nBadjson','Invalid JSON: ')+err.message; return false; }
   const res = await fetch('/routes/optimize/jobs', {
     method:'POST',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify({shipments, vehicles})
   });
   const data = await res.json();
-  if(!res.ok){ status.textContent = data.error || 'Failed'; out.textContent = JSON.stringify(data,null,2); out.classList.remove('hidden'); return false; }
+  if(!res.ok){ status.textContent = data.error || ozT('i18nFailed','Failed'); out.textContent = JSON.stringify(data,null,2); out.classList.remove('hidden'); return false; }
   status.textContent = 'Completed ('+ (data.provider||'') +') in '+(data.result?data.result.solve_time_ms:'?')+'ms';
   out.textContent = JSON.stringify(data.result,null,2);
   out.classList.remove('hidden');
@@ -107,7 +109,7 @@ async function loadJobs(){
     if(res.ok){ el.innerHTML = await res.text(); return; }
     const data = await res.json();
     el.textContent = JSON.stringify(data,null,2);
-  }catch(err){ el.textContent = 'Failed to load jobs'; }
+  }catch(err){ el.textContent = ozT('i18nLoaded','Failed to load jobs'); }
 }
 loadJobs();
 </script>

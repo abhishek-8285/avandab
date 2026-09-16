@@ -2,20 +2,20 @@
     <!-- Header -->
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div class="min-w-0">
-            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">Customer Directory Report</h1>
-            <p class="text-sm text-secondary mt-1">Customer profiles, corporate account details, and contact directory</p>
+            <h1 class="text-[22px] sm:text-2xl font-bold tracking-tight text-on-surface font-display">{{t "mo.rep.cust_title"}}</h1>
+            <p class="text-sm text-secondary mt-1">{{t "mo.rep.cust_desc"}}</p>
         </div>
         <div class="flex items-center gap-2 flex-wrap shrink-0">
             {{if can .User "reports" "read"}}
             <div class="flex items-center gap-2 print:hidden">
                 <a href="/reports/customers.csv{{if .QueryString}}?{{.QueryString}}{{end}}" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Export CSV
+                    {{t "mo.c.export_csv"}}
                 </a>
             </div>
             {{end}}
             <button onclick="window.print()" class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-container-lowest border border-border-subtle text-sm font-semibold text-on-surface hover:bg-surface-container-low hover:border-primary/20 hover:shadow-sm transition">
-                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>Print Report
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>{{t "mo.c.print_report"}}
             </button>
         </div>
     </div>
@@ -29,7 +29,7 @@
             </div>
             <div class="mt-4">
                 <div class="text-3xl font-black tracking-tight tabular-nums text-on-surface" data-numeric>{{.TotalCustomers}}</div>
-                <div class="text-sm font-medium text-secondary mt-1">Total Registered Accounts</div>
+                <div class="text-sm font-medium text-secondary mt-1">{{t "mo.rep.total_accts"}}</div>
             </div>
         </div>
         <div class="group relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5 hover:shadow-md hover:-translate-y-px transition duration-200">
@@ -39,7 +39,7 @@
             </div>
             <div class="mt-4">
                 <div class="text-3xl font-black tracking-tight tabular-nums text-on-surface" data-numeric>{{len .Customers}}</div>
-                <div class="text-sm font-medium text-secondary mt-1">Showing This Page</div>
+                <div class="text-sm font-medium text-secondary mt-1">{{t "mo.rep.showing"}}</div>
             </div>
         </div>
     </div>
@@ -47,12 +47,12 @@
     <!-- Search Toolbar -->
     <form method="GET" action="/reports/customers" class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm px-4 py-3 flex flex-col sm:flex-row sm:items-end gap-3 flex-wrap">
         <div class="flex-1 min-w-[12rem]">
-            <label for="customers-q" class="block text-eyebrow text-text-muted mb-1.5">Search</label>
-            <input aria-label="Search by customer name, company, email, phone" autocomplete="off" type="text" id="customers-q" name="q" value="{{.Query}}" placeholder="Search by customer name, company, email, phone…"
+            <label for="customers-q" class="block text-eyebrow text-text-muted mb-1.5">{{t "mo.c.search"}}</label>
+            <input aria-label="Search by customer name, company, email, phone" autocomplete="off" type="text" id="customers-q" name="q" value="{{.Query}}" placeholder="{{t "mo.rep.cust_search_ph"}}"
                 class="w-full rounded-lg bg-surface-container-low border border-border-subtle px-3 py-2 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
         </div>
         <button type="submit" class="inline-flex items-center justify-center gap-2 self-stretch sm:self-auto px-5 py-2 rounded-full bg-primary text-on-primary text-sm font-semibold shadow-sm hover:bg-primary/90 hover:-translate-y-px transition">
-            Filter Report
+            {{t "mo.c.filter_report"}}
         </button>
     </form>
 
@@ -60,8 +60,8 @@
     <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
         <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
             <div>
-                <h2 class="text-sm font-bold text-on-surface">Directory</h2>
-                <p class="text-xs text-text-muted">Customers matching the current search</p>
+                <h2 class="text-sm font-bold text-on-surface">{{t "mo.rep.directory"}}</h2>
+                <p class="text-xs text-text-muted">{{t "mo.rep.cust_match"}}</p>
             </div>
             <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .Customers}} shown</span>
         </div>
@@ -69,26 +69,26 @@
             <table class="rtable min-w-full divide-y divide-border-subtle">
                 <thead class="bg-surface-container-low">
                     <tr>
-                        <th class="th-cell">Customer Name</th>
-                        <th class="th-cell">Company / Org</th>
-                        <th class="th-cell">Email Address</th>
-                        <th class="th-cell">Phone Number</th>
+                        <th class="th-cell">{{t "mo.rep.cust_name"}}</th>
+                        <th class="th-cell">{{t "mo.rep.company"}}</th>
+                        <th class="th-cell">{{t "mo.rep.email"}}</th>
+                        <th class="th-cell">{{t "mo.rep.phone"}}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border-subtle">
                     {{if .Customers}}
                     {{range .Customers}}
                     <tr class="hover:bg-surface-container-low/50 transition-colors">
-                        <td data-label="Customer Name" class="px-3 py-2 text-sm font-semibold text-on-surface">{{.Name}}</td>
-                        <td data-label="Company / Org" class="px-3 py-2 text-sm text-secondary">{{nullString .Company}}</td>
-                        <td data-label="Email Address" class="px-3 py-2 text-sm tabular-nums text-on-surface">{{.Email}}</td>
-                        <td data-label="Phone Number" class="px-3 py-2 text-sm tabular-nums text-secondary" data-numeric>{{.Phone}}</td>
+                        <td data-label="{{t "mo.rep.cust_name"}}" class="px-3 py-2 text-sm font-semibold text-on-surface">{{.Name}}</td>
+                        <td data-label="{{t "mo.rep.company"}}" class="px-3 py-2 text-sm text-secondary">{{nullString .Company}}</td>
+                        <td data-label="{{t "mo.rep.email"}}" class="px-3 py-2 text-sm tabular-nums text-on-surface">{{.Email}}</td>
+                        <td data-label="{{t "mo.rep.phone"}}" class="px-3 py-2 text-sm tabular-nums text-secondary" data-numeric>{{.Phone}}</td>
                     </tr>
                     {{end}}
                     {{else}}
                     <tr>
                         <td colspan="4" class="py-12 text-center">
-                            {{template "empty_state.html" (dict "Icon" "groups" "Title" "No customers found" "Message" "No customers match the current criteria.")}}
+                            {{template "empty_state.html" (dict "Icon" "groups" "Title" (t "mo.rep.no_cust_title") "Message" (t "mo.rep.no_cust_msg"))}}
                         </td>
                     </tr>
                     {{end}}
