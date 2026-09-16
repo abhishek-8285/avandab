@@ -297,6 +297,10 @@ func TestPhase7_CustomerBookingWorkflow(t *testing.T) {
 	assert.Equal(t, "confirmed", trackingAfterOffer.Status)
 
 	// Driver accepts offer -> Trip created
+	// New workflow seam: confirmation creates the operational trip; ACCEPT
+	// only assigns driver/vehicle. Seed the confirmation-created row here.
+	_, err = db.Exec(`INSERT INTO trips (id, tenant_id, booking_id, driver_id, vehicle_id, status) VALUES ('trip-cust-flow', ?, ?, '', '', 'created')`, tenantID, bookResp1.BookingID)
+	require.NoError(t, err)
 	cmdAccept := driverApp.DriverCommandRequest{
 		CommandID: "cmd-accept-cust-trip",
 		Type:      "ACCEPT_OFFER",
