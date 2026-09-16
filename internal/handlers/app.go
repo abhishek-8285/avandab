@@ -28,6 +28,7 @@ import (
 	fuelapp "transport-app/internal/fuel/application"
 	"transport-app/internal/i18n"
 	"transport-app/internal/operations/notifications"
+	"transport-app/internal/podsign"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 	"transport-app/internal/sto"
@@ -82,6 +83,16 @@ type App struct {
 
 	// Turnstile validates Cloudflare Turnstile bot verification.
 	Turnstile auth.TurnstileVerifier
+
+	// PODSigner issues short-lived HMAC signatures for public POD asset
+	// URLs (/uploads/pod/*). Nil = unsigned URLs (dev/legacy); when set,
+	// handlers sign every POD/signature URL before rendering or returning
+	// it, and the public mount only serves verified requests. See audit
+	// 2026-09-16.
+	PODSigner *podsign.Signer
+	// podSignURL rewrites a stored POD URL into a signed, time-boxed URL.
+	// Set by NewApp; nil-safe so tests and legacy wiring keep working.
+	podSignURL func(rawURL string) string
 
 	// Handler groups
 	Auth       *AuthHandlers
@@ -189,6 +200,31 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 
 	app.Experiments = experiments.NewRecorder(db)
 	app.Turnstile = auth.NewTurnstileVerifier(cfg.Turnstile.SecretKey)
+
+	// POD asset URLs served to anonymous viewers are signed so a leaked link
+	// stops working after the TTL. A too-short/absent secret is logged and
+	// left nil: the public mount then 404s unsigned requests, which fails
+	// closed instead of crashing.
+	if signer, err := podsign.New([]byte(cfg.CookieSecret), podsign.DefaultTTL); err == nil {
+		app.PODSigner = signer
+	} else {
+		slog.Error("POD signing disabled: CookieSecret too short; public POD URLs will be unsigned and blocked", "error", err)
+	}
+
+	// podSignURL rewrites a stored /uploads/pod/<filename> URL into a
+	// short-lived signed URL. It is nil-safe: with no signer configured the
+	// raw path is returned unchanged so internal/admin pages keep working,
+	// while the public mount still rejects unsigned requests.
+	app.podSignURL = func(rawURL string) string {
+		if app.PODSigner == nil || rawURL == "" {
+			return rawURL
+		}
+		signed, err := app.PODSigner.Sign(rawURL)
+		if err != nil {
+			return rawURL
+		}
+		return signed
+	}
 
 	app.Auth = &AuthHandlers{App: app}
 	app.OTP = &OTPHandlers{App: app}

@@ -1563,8 +1563,8 @@ func (h *TripHandlers) SubmitStopPOD(w http.ResponseWriter, r *http.Request) {
 			"status":        "pod_verified",
 			"stop_id":       stopID,
 			"trip_id":       tripID,
-			"pod_url":       podURL,
-			"signature_url": signatureURL,
+			"pod_url":       h.podSignedURL(podURL),
+			"signature_url": h.podSignedURL(signatureURL),
 			"epod_url":      "/epod/" + tripID,
 		})
 		return
@@ -1687,10 +1687,13 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			http.Error(w, "e-POD Certificate not found for trip: "+tripID, http.StatusNotFound)
+			http.Error(w, "e-POD Certificate not found", http.StatusNotFound)
 			return
 		}
-		http.Error(w, "Failed to load trip: "+err.Error(), http.StatusInternalServerError)
+		// Public, login-free endpoint: log the detail server-side, return a
+		// generic message so DB internals never reach an anonymous caller.
+		slog.Error("epod certificate load failed", "trip_id", tripID, "error", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -1711,21 +1714,13 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 		`, driverID.String, driverID.String).Scan(&driverName, &driverPhone)
 	}
 
-	// Lookup company settings / name & logo
-	companyName := "FlyFleet Logistics"
+	// Lookup company settings / name & logo. Security: company_settings is
+	// global (id=1 is the bootstrap row) — pulling it onto a tenant-scoped
+	// public page leaks other tenants' branding. Prefer the trip's tenant;
+	// fall back to a neutral default instead of the global row.
+	companyName := "Avandab Logistics"
 	companyLogo := ""
-	var cName, cLogo sql.NullString
-	if err := h.App.DB.QueryRowContext(r.Context(), `
-		SELECT COALESCE(company_name, ''), COALESCE(logo_path, '') FROM company_settings WHERE id = 1 LIMIT 1
-	`).Scan(&cName, &cLogo); err == nil {
-		if cName.Valid && cName.String != "" {
-			companyName = cName.String
-		}
-		if cLogo.Valid && cLogo.String != "" {
-			companyLogo = cLogo.String
-		}
-	}
-	if companyName == "FlyFleet Logistics" && tenantID != "" {
+	if tenantID != "" {
 		var tName sql.NullString
 		if err := h.App.DB.QueryRowContext(r.Context(), `SELECT COALESCE(name, '') FROM tenants WHERE id = $1`, tenantID).Scan(&tName); err == nil && tName.Valid && tName.String != "" {
 			companyName = tName.String
@@ -1890,31 +1885,33 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 	}
 
 	view := EPODReceiptView{
-		Lang:              langOf(r),
-		TripID:            resolvedTripID,
-		TripNumber:        tripNumber,
-		Status:            status,
-		CompanyName:       companyName,
-		CompanyLogo:       companyLogo,
-		VehicleReg:        vehicleReg,
-		DriverName:        driverName,
-		DriverPhone:       driverPhone,
-		DepartureTime:     departureTime.Format("02 Jan 2006, 15:04"),
-		DeliveredAt:       delivTimestamp,
-		StopSequence:      stopSeq,
-		StopType:          stopType,
-		LocationName:      locName,
-		Address:           addr,
-		ConsigneeName:     finalConsName,
-		ConsigneePhone:    finalConsPhone,
-		ConsigneeEmail:    consEmail,
+		Lang:          langOf(r),
+		TripID:        resolvedTripID,
+		TripNumber:    tripNumber,
+		Status:        status,
+		CompanyName:   companyName,
+		CompanyLogo:   companyLogo, // tenant-scoped branding only; global row no longer read
+		VehicleReg:    vehicleReg,
+		DriverName:    driverName,
+		DriverPhone:   maskPhone(driverPhone),
+		DepartureTime: departureTime.Format("02 Jan 2006, 15:04"),
+		DeliveredAt:   delivTimestamp,
+		StopSequence:  stopSeq,
+		StopType:      stopType,
+		LocationName:  locName,
+		Address:       addr,
+		ConsigneeName: finalConsName,
+		// Public, login-free page: mask contact details to the tail so anyone
+		// with the link can confirm identity match without harvesting PII.
+		ConsigneePhone:    maskPhone(finalConsPhone),
+		ConsigneeEmail:    maskEmail(consEmail),
 		OTPRequired:       true,
 		OTPVerified:       finalOTPVerified,
 		OTPVerifiedAt:     finalOTPVerifiedAt,
 		PODRequired:       true,
 		PODVerified:       finalPODURL != "" || finalSigURL != "" || finalOTPVerified,
-		PODURL:            finalPODURL,
-		SignatureURL:      finalSigURL,
+		PODURL:            h.podSignedURL(finalPODURL),
+		SignatureURL:      h.podSignedURL(finalSigURL),
 		Notes:             finalNotes,
 		VerificationHash:  verHash,
 		CertificateNumber: certNumber,

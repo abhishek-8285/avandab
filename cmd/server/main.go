@@ -62,6 +62,7 @@ import (
 	"transport-app/internal/operations/health"
 	"transport-app/internal/operations/notifications"
 	"transport-app/internal/pnl"
+	"transport-app/internal/podsign"
 	"transport-app/internal/rag"
 	"transport-app/internal/realtime"
 	"transport-app/internal/repository/sqlite"
@@ -1034,6 +1035,11 @@ func main() {
 		r.With(middleware.ResourcePermission(authSvc, "routes", "create")).Post("/api/v1/routes/optimize", app.Routes.Optimize)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "read")).Get("/api/v1/routes/optimize/jobs", app.Routes.OptimizeJobs)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "read")).Get("/api/v1/routes/optimize/jobs/{jobID}", app.Routes.OptimizeJobStatus)
+		// Dispatch planner API (Spec D2 §4) — tenant-scoped, permission-gated
+		dispatchAPI := &handlers.DispatchHandlers{
+			App: app, Planner: dispatchapp.NewPlannerService(database, nil), Tuner: dispatchapp.NewTunerService(database),
+		}
+		r.Route("/api/v1/dispatch", dispatchAPI.Routes)
 		r.Get("/api/v1/hsn-sac/search", app.Invoices.SearchHSNSAC)
 		r.Get("/api/v1/drivers/me", app.Drivers.GetMe)
 		r.Put("/api/v1/drivers/me", app.Drivers.UpdateMe)
@@ -1255,11 +1261,41 @@ func main() {
 
 	// Uploaded files (pod photos, signatures, company logos, documents)
 	uploadsServer := http.FileServer(http.Dir(cfg.UploadDir))
-	r.Handle("/uploads/pod/*", http.StripPrefix("/uploads/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Cache-Control", "public, max-age=86400")
+
+	// POD assets (proof-of-delivery photos and consignee signatures) are the
+	// one upload class served to ANAUTHENTICATED callers: the public e-POD
+	// certificate page (PublicEPODCertificate -> epod_receipt.html) renders
+	// them to a consignee who only knows the trip link.
+	//
+	// Audit 2026-09-16: this route previously had no auth at all, so a leaked
+	// or shared URL (/uploads/pod/<uuid>.jpg) stayed readable forever with no
+	// audit trail. It is now gated on a short-lived HMAC signature that the
+	// application issues per viewer. Unsigned requests get 404, not the file.
+	podSigner, err := podsign.New([]byte(cfg.CookieSecret), podsign.DefaultTTL)
+	if err != nil {
+		logger.Error("POD signing secret too short; refusing to start without valid secret", "error", err)
+		os.Exit(1)
+	}
+	// NOTE: no StripPrefix on this mount. The handler serves the file itself
+	// via filepath.Join(uploadDir, "pod", filename) and the signer validates
+	// the FULL request path (/uploads/pod/<filename>). Stripping /uploads/
+	// here would make r.URL.Path "pod/<file>", which the signer correctly
+	// rejects as a multi-element path — breaking every signed request.
+	r.Handle("/uploads/pod/*", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		filename, sigErr := podSigner.Verify(r.URL.Path, r.URL.RawQuery)
+		if sigErr != nil {
+			// Fail closed: never reveal whether a file exists.
+			w.Header().Set("Cache-Control", "no-store")
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Cache-Control", "private, no-cache")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		uploadsServer.ServeHTTP(w, r)
-	})))
+		// Only the verified filename is ever served — the signer rejects any
+		// path containing a separator or traversal sequence, so this cannot
+		// escape the pod directory.
+		http.ServeFile(w, r, filepath.Join(cfg.UploadDir, "pod", filename))
+	}))
 	r.With(middleware.RequireAuth(authStore, tenantResolver)).Handle("/uploads/*", http.StripPrefix("/uploads/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "private, no-cache")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -1348,17 +1384,21 @@ func main() {
 			r.With(middleware.RateLimitDistributed(appCache, 30)).Get("/api/v1/share/{token}/timeline", app.Share.ShareTimeline)
 		})
 
-		// Public Digital e-POD Certificate Viewer (login-free)
+		// Public Digital e-POD Certificate Viewer (login-free) — rate-limited:
+		// trip IDs are UUIDs but each hit joins trip_stops + PII, so cap guessing.
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.ContentSecurityPolicy(cfg.LiveMap.CSPEnabled))
+			r.Use(middleware.RateLimitDistributed(appCache, 30))
 			r.Get("/epod/{tripId}", app.Trips.PublicEPODCertificate)
 			r.Get("/epod/{tripId}/stops/{stopId}", app.Trips.PublicEPODCertificate)
 		})
 
-		// Public Digital Freight Invoice Payment Portal (Spec 11 §5.1) — login-free
+		// Public Digital Freight Invoice Payment Portal (Spec 11 §5.1) — login-free.
+		// GET is rate-limited too: the page renders customer PII and invoice
+		// totals keyed by invoice ID, so cap bulk enumeration.
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.ContentSecurityPolicy(cfg.LiveMap.CSPEnabled))
-			r.Get("/pay/{invoiceId}", app.Payments.PublicPay)
+			r.With(middleware.RateLimitDistributed(appCache, 30)).Get("/pay/{invoiceId}", app.Payments.PublicPay)
 			r.With(middleware.RateLimitDistributed(appCache, 20)).Post("/pay/{invoiceId}/razorpay/order", app.Payments.PublicRazorpayOrder)
 			r.With(middleware.RateLimitDistributed(appCache, 20)).Post("/pay/{invoiceId}/razorpay/verify", app.Payments.PublicRazorpayVerify)
 		})
@@ -1427,10 +1467,14 @@ func main() {
 			r.Route("/vehicles", app.Vehicles.Routes)
 
 			// Customers
-			r.Route("/customers", app.Customers.Routes)
-
-			// Routes
+			r.Route("/customers", app.Customers.Routes) // Routes
 			r.Route("/routes", app.Routes.Routes)
+
+			// Dispatch planner (multi-route dispatch — Spec D2 §4)
+			dispatchWeb := &handlers.DispatchHandlers{
+				App: app, Planner: dispatchapp.NewPlannerService(database, nil), Tuner: dispatchapp.NewTunerService(database),
+			}
+			r.Route("/dispatch", dispatchWeb.Routes)
 
 			// Bookings
 			r.Route("/bookings", app.Bookings.Routes)
