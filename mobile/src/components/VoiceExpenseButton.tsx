@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useTranslation } from 'react-i18next';
-import { Colors, Font, Radius, Spacing } from '../constants/theme';
+import { t } from '../i18n';
+import { useLanguageStore } from '../stores/languageStore';
+import { Colors, Font, Radius, Spacing, FontSize} from '../constants/theme';
 import { buildExpenseDraft, parseExpenseUtterance } from '../services/speech';
 import { OfflineQueue } from '../services/offlineQueue';
 
@@ -13,7 +14,7 @@ interface VoiceExpenseButtonProps {
 }
 
 export function VoiceExpenseButton({ tripId, onSaved, disabled = false }: VoiceExpenseButtonProps) {
-  const { t } = useTranslation();
+  const locale = useLanguageStore((s) => s.locale);
   const [panelOpen, setPanelOpen] = useState(false);
   const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
@@ -27,14 +28,14 @@ export function VoiceExpenseButton({ tripId, onSaved, disabled = false }: VoiceE
       const draft = buildExpenseDraft(trimmed, tripId ?? '', new Date());
       await OfflineQueue.enqueueExpense(draft);
       Alert.alert(
-        t('expense.title'),
-        `${t('voice.parsed_amount')}: ${draft.amount} · ${t('voice.parsed_vendor')}: ${parsed.vendor ?? '-'}`
+        t('expense.title', 'Log Expense', locale),
+        `${t('voice.parsed_amount', 'Amount detected', locale)}: ${draft.amount} · ${t('voice.parsed_vendor', 'Vendor detected', locale)}: ${parsed.vendor ?? '-'}`
       );
       setText('');
       setPanelOpen(false);
       onSaved?.();
     } catch {
-      Alert.alert(t('expense.title'), 'Could not save expense. Please try again.');
+      Alert.alert(t('expense.title', 'Log Expense', locale), t('expense.save_failed', 'Could not save expense. Please try again.', locale));
     } finally {
       setSaving(false);
     }
@@ -50,7 +51,7 @@ export function VoiceExpenseButton({ tripId, onSaved, disabled = false }: VoiceE
         onPress={() => setPanelOpen((o) => !o)}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel={panelOpen ? 'Close voice expense entry' : 'Add expense by voice'}
+        accessibilityLabel={panelOpen ? t('voice.a11y_close', 'Close voice expense entry', locale) : t('voice.a11y_open', 'Add expense by voice', locale)}
         accessibilityState={{ expanded: panelOpen }}
       >
         <MaterialCommunityIcons name="microphone" size={26} color={Colors.textOnPrimary} accessible={false} />
@@ -60,25 +61,25 @@ export function VoiceExpenseButton({ tripId, onSaved, disabled = false }: VoiceE
         <View style={styles.panel}>
           <TextInput
             style={styles.input}
-            placeholder={t('voice.hint')}
+            placeholder={t('voice.hint', 'Say your expense, e.g. "Diesel ₹2500 at HPCL"', locale)}
             placeholderTextColor={Colors.textMuted}
             value={text}
             onChangeText={setText}
             multiline
-            accessibilityLabel="Voice expense description"
+            accessibilityLabel={t('voice.a11y_input', 'Voice expense description', locale)}
           />
           <TouchableOpacity
             style={[styles.confirmBtn, saving && { opacity: 0.6 }]}
             onPress={handleConfirm}
             disabled={saving}
             accessibilityRole="button"
-            accessibilityLabel="Save voice expense"
+            accessibilityLabel={t('voice.a11y_save', 'Save voice expense', locale)}
             accessibilityState={{ disabled: saving }}
           >
             {saving ? (
-              <Text style={styles.confirmText} accessibilityLiveRegion="polite">Saving…</Text>
+              <Text style={styles.confirmText} accessibilityLiveRegion="polite">{t('voice.saving', 'Saving…', locale)}</Text>
             ) : (
-              <Text style={styles.confirmText}>{t('expense.submit')}</Text>
+              <Text style={styles.confirmText}>{t('expense.submit', 'Submit Expense', locale)}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.xs,
     color: Colors.textPrimary,
-    fontSize: 12,
+    fontSize: FontSize.body,
   },
   confirmBtn: {
     backgroundColor: Colors.primary,
@@ -129,7 +130,7 @@ const styles = StyleSheet.create({
   },
   confirmText: {
     color: Colors.textOnPrimary,
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '800',
     letterSpacing: 1.5,
     fontFamily: Font.mono,

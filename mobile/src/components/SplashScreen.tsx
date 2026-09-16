@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, Text, View, Animated, StatusBar } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Font, Radius } from '../constants/theme';
+import { Colors, Font, Radius, FontSize} from '../constants/theme';
 
 interface SplashScreenProps {
   onFinish: () => void;
@@ -50,7 +50,7 @@ export function SplashScreen({ onFinish }: SplashScreenProps) {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#075e54" />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.chrome} />
 
       <View style={styles.content}>
         <Animated.View
@@ -62,7 +62,7 @@ export function SplashScreen({ onFinish }: SplashScreenProps) {
             },
           ]}
         >
-          <MaterialCommunityIcons name="truck-fast" size={54} color="#008069" />
+          <MaterialCommunityIcons name="truck-fast" size={54} color={Colors.primary} />
         </Animated.View>
 
         <Animated.View
@@ -88,7 +88,7 @@ export function SplashScreen({ onFinish }: SplashScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#075e54',
+    backgroundColor: Colors.chrome,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -100,9 +100,9 @@ const styles = StyleSheet.create({
     width: 92,
     height: 92,
     borderRadius: Radius.lg,
-    backgroundColor: '#e7ffdb',
+    backgroundColor: Colors.primarySubtle,
     borderWidth: 2,
-    borderColor: '#25d366',
+    borderColor: Colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
@@ -112,8 +112,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   brandTitle: {
-    color: '#ffffff',
-    fontSize: 26,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.displayLarge,
     fontWeight: '900',
     letterSpacing: 4,
     fontFamily: Font.mono,
@@ -121,19 +121,19 @@ const styles = StyleSheet.create({
   divider: {
     width: 44,
     height: 2,
-    backgroundColor: '#25d366',
+    backgroundColor: Colors.accent,
     marginVertical: 8,
   },
   brandSubtitle: {
-    color: '#dcf8c6',
-    fontSize: 12,
+    color: Colors.primary,
+    fontSize: FontSize.body,
     fontWeight: '800',
     letterSpacing: 3,
     fontFamily: Font.mono,
   },
   versionTag: {
     color: 'rgba(255,255,255,0.7)',
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '700',
     letterSpacing: 1,
     fontFamily: Font.mono,

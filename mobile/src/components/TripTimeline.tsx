@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors, Font, Radius, Spacing } from '../constants/theme';
+import { Colors, Font, Radius, Spacing, FontSize} from '../constants/theme';
 import { Trip } from '../types/api';
 
 const STAGES: { key: Trip['status']; label: string; icon: string }[] = [
@@ -42,7 +42,7 @@ export function TripTimeline({ trip }: { trip?: Trip | null }) {
                   <MaterialCommunityIcons
                     name={done ? 'check' : (iconName as any)}
                     size={14}
-                    color={done || active ? '#fff' : Colors.textMuted}
+                    color={done || active ? Colors.textOnPrimary : Colors.textMuted}
                     accessible={false}
                   />
                 </View>
@@ -72,7 +72,7 @@ export function TripTimeline({ trip }: { trip?: Trip | null }) {
           return (
             <View key={s.key} style={styles.stage}>
               <View style={[styles.dot, done && styles.dotDone, active && styles.dotActive]}>
-                <MaterialCommunityIcons name={s.icon as any} size={14} color={done ? '#fff' : Colors.textMuted} accessible={false} />
+                <MaterialCommunityIcons name={s.icon as any} size={14} color={done ? Colors.textOnPrimary : Colors.textMuted} accessible={false} />
               </View>
               <Text style={[styles.label, done && styles.labelDone]} numberOfLines={1} ellipsizeMode="tail">{s.label}</Text>
               {i < STAGES.length - 1 && <View style={[styles.connector, done && styles.connectorDone]} />}
@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderLight,
     gap: Spacing.sm,
   },
-  title: { fontSize: 10, fontWeight: '800', color: Colors.textMuted, letterSpacing: 1, fontFamily: Font.mono },
+  title: { fontSize: FontSize.small, fontWeight: '800', color: Colors.textMuted, letterSpacing: 1, fontFamily: Font.mono },
   row: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   stage: { flex: 1, alignItems: 'center', position: 'relative' },
   dot: {
@@ -109,9 +109,9 @@ const styles = StyleSheet.create({
   },
   dotDone: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   dotActive: { borderWidth: 2, borderColor: Colors.primary },
-  label: { fontSize: 9, fontWeight: '700', color: Colors.textMuted, letterSpacing: 0.5, marginTop: 6, fontFamily: Font.mono },
+  label: { fontSize: FontSize.caption, fontWeight: '700', color: Colors.textMuted, letterSpacing: 0.5, marginTop: 6, fontFamily: Font.mono },
   labelDone: { color: Colors.textPrimary },
   connector: { position: 'absolute', top: 14, left: '60%', right: '-40%', height: 2, backgroundColor: Colors.border },
   connectorDone: { backgroundColor: Colors.primary },
-  hint: { fontSize: 10, color: Colors.textMuted, fontFamily: Font.mono },
+  hint: { fontSize: FontSize.small, color: Colors.textMuted, fontFamily: Font.mono },
 });

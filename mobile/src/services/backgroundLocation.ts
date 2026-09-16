@@ -1,4 +1,5 @@
 import * as TaskManager from 'expo-task-manager';
+import { Colors } from '../constants/theme';
 import * as Location from 'expo-location';
 import { DB } from './storage';
 import { MQTT } from './mqtt';
@@ -93,7 +94,7 @@ export const BackgroundGPS = {
         foregroundService: {
           notificationTitle: 'Avandab trip tracking active',
           notificationBody: 'Sharing live position for your assigned trip.',
-          notificationColor: '#00685f',
+          notificationColor: Colors.primary,
           killServiceOnDestroy: false,
         },
       });

@@ -18,7 +18,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SOSButton } from './SOSButton';
 import { LiveDriverTrackingMap } from './LiveDriverTrackingMap';
 import { Telemetry } from '../services/telemetry';
-import { Colors, Font, Radius, Spacing } from '../constants/theme';
+import { Colors, Font, Radius, Spacing, FontSize} from '../constants/theme';
 import { Trip } from '../types/api';
 import { useLanguageStore } from '../stores/languageStore';
 import { t } from '../i18n';
@@ -118,8 +118,8 @@ export function ActiveNavigationScreen({
       case 'TO_PICKUP':
         return {
           badge: 'STEP 1: EN ROUTE TO LOADING',
-          badgeBg: '#fef3c7',
-          badgeText: '#b45309',
+          badgeBg: Colors.warningBg,
+          badgeText: Colors.warningText,
           targetLabel: 'PICKUP WAREHOUSE',
           targetAddress: origin,
           subInfo: 'Terminal 4 Bay 2 • 18 Tons Steel Coils',
@@ -131,8 +131,8 @@ export function ActiveNavigationScreen({
       case 'IN_TRANSIT':
         return {
           badge: 'STEP 2: HIGHWAY TRANSIT',
-          badgeBg: '#e7ffdb',
-          badgeText: '#008069',
+          badgeBg: Colors.primarySubtle,
+          badgeText: Colors.primary,
           targetLabel: 'DELIVERY DESTINATION',
           targetAddress: destination,
           subInfo: `Mumbai-Pune Expressway • ~${intlNum(128)} KM (${intlNum(3)}h ${intlNum(15)}m)`,
@@ -144,8 +144,8 @@ export function ActiveNavigationScreen({
       case 'AT_DESTINATION':
         return {
           badge: 'STEP 3: UNLOADING & e-POD',
-          badgeBg: '#e0f2fe',
-          badgeText: '#0284c7',
+          badgeBg: Colors.infoBg,
+          badgeText: Colors.info,
           targetLabel: 'RECEIVING DOCK',
           targetAddress: destination,
           subInfo: 'Gate 3 Receiving Bay • Tata AutoComp Systems',
@@ -197,7 +197,7 @@ export function ActiveNavigationScreen({
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="light-content" backgroundColor="#075e54" />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.chrome} />
 
       {/* Clean Compact Header */}
       <View style={styles.header}>
@@ -209,7 +209,7 @@ export function ActiveNavigationScreen({
             accessibilityLabel="Go back"
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <MaterialCommunityIcons name="arrow-left" size={22} color="#ffffff" accessible={false} />
+            <MaterialCommunityIcons name="arrow-left" size={22} color={Colors.textOnPrimary} accessible={false} />
           </TouchableOpacity>
           <View>
             <Text style={styles.headerTitle} numberOfLines={1} ellipsizeMode="tail">#{tripNumber}</Text>
@@ -224,7 +224,7 @@ export function ActiveNavigationScreen({
             accessibilityLabel="Go back"
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <MaterialCommunityIcons name="arrow-left" size={22} color="#ffffff" accessible={false} />
+            <MaterialCommunityIcons name="arrow-left" size={22} color={Colors.textOnPrimary} accessible={false} />
           </TouchableOpacity>
         </View>
 
@@ -253,7 +253,7 @@ export function ActiveNavigationScreen({
         >
           <View style={[styles.stepCircle, maxUnlockedStage > 1 ? styles.stepCircleDone : (stage === 'TO_PICKUP' ? styles.stepCircleActive : null)]}>
             {maxUnlockedStage > 1 ? (
-              <MaterialCommunityIcons name="check" size={11} color="#ffffff" accessible={false} />
+              <MaterialCommunityIcons name="check" size={11} color={Colors.textOnPrimary} accessible={false} />
             ) : (
               <Text style={styles.stepNum}>1</Text>
             )}
@@ -275,7 +275,7 @@ export function ActiveNavigationScreen({
         >
           <View style={[styles.stepCircle, maxUnlockedStage > 2 ? styles.stepCircleDone : (stage === 'IN_TRANSIT' ? styles.stepCircleActive : (maxUnlockedStage < 2 ? styles.stepCircleLocked : null))]}>
             {maxUnlockedStage > 2 ? (
-              <MaterialCommunityIcons name="check" size={11} color="#ffffff" accessible={false} />
+              <MaterialCommunityIcons name="check" size={11} color={Colors.textOnPrimary} accessible={false} />
             ) : maxUnlockedStage < 2 ? (
               <MaterialCommunityIcons name="lock" size={9} color="rgba(255,255,255,0.4)" accessible={false} />
             ) : (
@@ -320,7 +320,7 @@ export function ActiveNavigationScreen({
       >
         {expenseSavedMsg && (
           <View style={styles.toast} accessibilityLiveRegion="polite">
-            <MaterialCommunityIcons name="check-circle" size={16} color="#008069" accessible={false} />
+            <MaterialCommunityIcons name="check-circle" size={16} color={Colors.primary} accessible={false} />
             <Text style={styles.toastText}>Expense saved to passbook!</Text>
           </View>
         )}
@@ -347,12 +347,12 @@ export function ActiveNavigationScreen({
             activeOpacity={0.88}
             onPress={() => launchNavigation(currentContent.navTarget)}
           >
-            <MaterialCommunityIcons name="google-maps" size={22} color="#ffffff" accessible={false} />
+            <MaterialCommunityIcons name="google-maps" size={22} color={Colors.textOnPrimary} accessible={false} />
             <View style={{ flex: 1 }}>
               <Text style={styles.mapsCTATitle}>{currentContent.navBtn}</Text>
               <Text style={styles.mapsCTASub}>Live voice directions</Text>
             </View>
-            <MaterialCommunityIcons name="chevron-right" size={22} color="#ffffff" accessible={false} />
+            <MaterialCommunityIcons name="chevron-right" size={22} color={Colors.textOnPrimary} accessible={false} />
           </TouchableOpacity>
         </View>
 
@@ -377,7 +377,7 @@ export function ActiveNavigationScreen({
             accessibilityRole="button"
             accessibilityLabel="Add highway expense"
           >
-            <MaterialCommunityIcons name="gas-station" size={18} color="#008069" accessible={false} />
+            <MaterialCommunityIcons name="gas-station" size={18} color={Colors.primary} accessible={false} />
             <Text style={styles.actionPillText}>+ Kharcha</Text>
           </TouchableOpacity>
 
@@ -388,7 +388,7 @@ export function ActiveNavigationScreen({
             accessibilityRole="button"
             accessibilityLabel="Call dispatch hub"
           >
-            <MaterialCommunityIcons name="phone" size={18} color="#0284c7" accessible={false} />
+            <MaterialCommunityIcons name="phone" size={18} color={Colors.info} accessible={false} />
             <Text style={styles.actionPillText}>Call Hub</Text>
           </TouchableOpacity>
 
@@ -399,7 +399,7 @@ export function ActiveNavigationScreen({
             accessibilityRole="button"
             accessibilityLabel="View GST E-Way Bill"
           >
-            <MaterialCommunityIcons name="shield-check" size={18} color="#008069" accessible={false} />
+            <MaterialCommunityIcons name="shield-check" size={18} color={Colors.primary} accessible={false} />
             <Text style={styles.actionPillText}>E-Way Bill</Text>
           </TouchableOpacity>
         </View>
@@ -409,7 +409,7 @@ export function ActiveNavigationScreen({
           <Text style={styles.cardHeader}>CORRIDOR TIMELINE</Text>
 
           <View style={styles.routeRow}>
-            <View style={[styles.dot, { backgroundColor: maxUnlockedStage > 1 ? '#008069' : '#f59e0b' }]} />
+            <View style={[styles.dot, { backgroundColor: maxUnlockedStage > 1 ? Colors.primary : Colors.warning }]} />
             <View style={styles.routeDetails}>
               <Text style={styles.routeCity} numberOfLines={1} ellipsizeMode="tail">JNPT Port, Navi Mumbai</Text>
               <Text style={styles.routeStatus} numberOfLines={1} ellipsizeMode="tail">
@@ -421,7 +421,7 @@ export function ActiveNavigationScreen({
           <View style={styles.line} />
 
           <View style={styles.routeRow}>
-            <View style={[styles.dot, { backgroundColor: maxUnlockedStage >= 3 ? '#0284c7' : '#94a3b8' }]} />
+            <View style={[styles.dot, { backgroundColor: maxUnlockedStage >= 3 ? Colors.info : Colors.modalSub }]} />
             <View style={styles.routeDetails}>
               <Text style={styles.routeCity} numberOfLines={1} ellipsizeMode="tail">Chakan MIDC, Pune</Text>
               <Text style={styles.routeStatus} numberOfLines={1} ellipsizeMode="tail">
@@ -441,7 +441,7 @@ export function ActiveNavigationScreen({
           accessibilityRole="button"
           accessibilityLabel={currentContent.footerBtn}
         >
-          <MaterialCommunityIcons name={currentContent.footerIcon as any} size={20} color="#ffffff" accessible={false} />
+          <MaterialCommunityIcons name={currentContent.footerIcon as any} size={20} color={Colors.textOnPrimary} accessible={false} />
           <Text style={styles.stickyBtnText}>{currentContent.footerBtn}</Text>
         </TouchableOpacity>
       </View>
@@ -466,7 +466,7 @@ export function ActiveNavigationScreen({
                 accessibilityLabel="Close expense form"
                 hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               >
-                <MaterialCommunityIcons name="close" size={22} color="#667781" accessible={false} />
+                <MaterialCommunityIcons name="close" size={22} color={Colors.textSecondary} accessible={false} />
               </TouchableOpacity>
             </View>
 
@@ -492,7 +492,7 @@ export function ActiveNavigationScreen({
               style={styles.amountInput}
               keyboardType="decimal-pad"
               placeholder="e.g. ₹1500"
-              placeholderTextColor="#94a3b8"
+              placeholderTextColor={Colors.modalSub}
               accessibilityLabel="Expense amount in rupees"
               autoComplete="off"
               textContentType="none"
@@ -532,10 +532,10 @@ export function ActiveNavigationScreen({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#075e54',
+    backgroundColor: Colors.chrome,
   },
   header: {
-    backgroundColor: '#075e54',
+    backgroundColor: Colors.chrome,
     paddingHorizontal: 16,
     paddingVertical: 10,
     flexDirection: 'row',
@@ -556,13 +556,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: FontSize.heading,
     fontWeight: '800',
-    color: '#ffffff',
+    color: Colors.textOnPrimary,
   },
   headerSubtitle: {
-    fontSize: 11,
-    color: '#dcf8c6',
+    fontSize: FontSize.label,
+    color: Colors.primary,
     fontWeight: '600',
   },
   headerRight: {
@@ -570,7 +570,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   stepperBar: {
-    backgroundColor: '#004c3f',
+    backgroundColor: Colors.chromeDark,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -585,7 +585,7 @@ const styles = StyleSheet.create({
   },
   stepItemActive: {
     borderBottomWidth: 2,
-    borderBottomColor: '#25d366',
+    borderBottomColor: Colors.accent,
   },
   stepCircle: {
     width: 16,
@@ -596,26 +596,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepCircleActive: {
-    backgroundColor: '#25d366',
+    backgroundColor: Colors.accent,
   },
   stepCircleDone: {
-    backgroundColor: '#008069',
+    backgroundColor: Colors.primary,
   },
   stepCircleLocked: {
     backgroundColor: 'rgba(255,255,255,0.1)',
   },
   stepNum: {
-    fontSize: 9,
+    fontSize: FontSize.caption,
     fontWeight: '800',
-    color: '#ffffff',
+    color: Colors.textOnPrimary,
   },
   stepText: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '700',
     color: 'rgba(255,255,255,0.7)',
   },
   stepTextActive: {
-    color: '#ffffff',
+    color: Colors.textOnPrimary,
   },
   stepTextLocked: {
     color: 'rgba(255,255,255,0.4)',
@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
   },
   body: {
     flex: 1,
-    backgroundColor: '#efeae2',
+    backgroundColor: Colors.background,
   },
   scrollContent: {
     padding: 14,
@@ -637,19 +637,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#e7ffdb',
+    backgroundColor: Colors.primarySubtle,
     padding: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#25d366',
+    borderColor: Colors.accent,
   },
   toastText: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '700',
-    color: '#008069',
+    color: Colors.primary,
   },
   heroCard: {
-    backgroundColor: '#075e54',
+    backgroundColor: Colors.chrome,
     borderRadius: 14,
     padding: 16,
     elevation: 3,
@@ -665,7 +665,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   badgeText: {
-    fontSize: 9,
+    fontSize: FontSize.caption,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
@@ -682,30 +682,30 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#25d366',
+    backgroundColor: Colors.accent,
   },
   liveSpeedText: {
-    color: '#ffffff',
-    fontSize: 12,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.body,
     fontWeight: '900',
     fontFamily: Font.mono,
   },
   targetLabel: {
-    color: '#dcf8c6',
-    fontSize: 9,
+    color: Colors.primary,
+    fontSize: FontSize.caption,
     fontWeight: '800',
     letterSpacing: 0.5,
     marginTop: 10,
   },
   targetAddress: {
-    color: '#ffffff',
-    fontSize: 17,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.section,
     fontWeight: '800',
     marginTop: 2,
   },
   subInfoText: {
-    color: '#dcf8c6',
-    fontSize: 11,
+    color: Colors.primary,
+    fontSize: FontSize.label,
     marginTop: 2,
     marginBottom: 14,
   },
@@ -713,22 +713,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#008069',
+    backgroundColor: Colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#25d366',
+    borderColor: Colors.accent,
   },
   mapsCTATitle: {
-    color: '#ffffff',
-    fontSize: 11,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.label,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   mapsCTASub: {
-    color: '#dcf8c6',
-    fontSize: 9,
+    color: Colors.primary,
+    fontSize: FontSize.caption,
   },
   actionRow: {
     flexDirection: 'row',
@@ -740,30 +740,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     paddingVertical: 10,
     minHeight: 44,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: Colors.borderStrong,
     elevation: 1,
   },
   actionPillText: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '700',
-    color: '#1e293b',
+    color: Colors.textPrimary,
   },
   routeCard: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: Colors.borderStrong,
   },
   cardHeader: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '800',
-    color: '#64748b',
+    color: Colors.textSecondary,
     letterSpacing: 0.5,
     marginBottom: 10,
   },
@@ -781,19 +781,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   routeCity: {
-    fontSize: 13,
+    fontSize: FontSize.bodyLarge,
     fontWeight: '800',
-    color: '#0f172a',
+    color: Colors.textPrimary,
   },
   routeStatus: {
-    fontSize: 10,
-    color: '#64748b',
+    fontSize: FontSize.small,
+    color: Colors.textSecondary,
     marginTop: 1,
   },
   line: {
     width: 2,
     height: 14,
-    backgroundColor: '#cbd5e1',
+    backgroundColor: Colors.borderStrong,
     marginLeft: 4,
     marginVertical: 3,
   },
@@ -802,11 +802,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     paddingHorizontal: 14,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
+    borderTopColor: Colors.borderStrong,
     elevation: 8,
   },
   stickyBtn: {
@@ -814,13 +814,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#008069',
+    backgroundColor: Colors.primary,
     paddingVertical: 12,
     borderRadius: 10,
   },
   stickyBtnText: {
-    color: '#ffffff',
-    fontSize: 12,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.body,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
@@ -830,7 +830,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     padding: 18,
@@ -843,9 +843,9 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   modalTitle: {
-    fontSize: 14,
+    fontSize: FontSize.title,
     fontWeight: '800',
-    color: '#0f172a',
+    color: Colors.textPrimary,
   },
   chipsRow: {
     flexDirection: 'row',
@@ -855,33 +855,33 @@ const styles = StyleSheet.create({
   chip: {
     flex: 1,
     paddingVertical: 6,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: Colors.skeleton,
     borderRadius: 6,
     alignItems: 'center',
   },
   chipActive: {
-    backgroundColor: '#e7ffdb',
+    backgroundColor: Colors.primarySubtle,
     borderWidth: 1,
-    borderColor: '#25d366',
+    borderColor: Colors.accent,
   },
   chipText: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '700',
-    color: '#64748b',
+    color: Colors.textSecondary,
   },
   chipTextActive: {
-    color: '#008069',
+    color: Colors.primary,
   },
   amountInput: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: Colors.surfaceSecondary,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 16,
+    fontSize: FontSize.heading,
     fontWeight: '800',
-    color: '#0f172a',
+    color: Colors.textPrimary,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: Colors.borderStrong,
   },
   quickPills: {
     flexDirection: 'row',
@@ -891,25 +891,25 @@ const styles = StyleSheet.create({
   pill: {
     flex: 1,
     paddingVertical: 5,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: Colors.skeleton,
     borderRadius: 5,
     alignItems: 'center',
   },
   pillText: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '700',
-    color: '#008069',
+    color: Colors.primary,
   },
   modalBtn: {
-    backgroundColor: '#008069',
+    backgroundColor: Colors.primary,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 14,
   },
   modalBtnText: {
-    color: '#ffffff',
-    fontSize: 12,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.body,
     fontWeight: '800',
   },
 });

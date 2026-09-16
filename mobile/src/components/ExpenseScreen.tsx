@@ -14,7 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { Colors, Font, Radius, Spacing } from '../constants/theme';
+import { Colors, Font, Radius, Spacing, FontSize} from '../constants/theme';
 import { getApiBaseURL } from '../constants/network';
 import { useAuthStore } from '../stores/authStore';
 import { OfflineQueue } from '../services/offlineQueue';
@@ -354,7 +354,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.chrome,
   },
   headerLabel: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '700',
     color: Colors.textOnChrome,
     letterSpacing: 2,
@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   },
   titleSection: { marginBottom: Spacing.lg },
   title: {
-    fontSize: 18,
+    fontSize: FontSize.headingLarge,
     fontWeight: '900',
     color: Colors.textPrimary,
     letterSpacing: 2,
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
   },
   titleUnderline: { width: 28, height: 2, backgroundColor: Colors.primary, marginTop: 6, marginBottom: 8 },
   subtitle: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     color: Colors.textSecondary,
     fontWeight: '700',
     letterSpacing: 1,
@@ -406,27 +406,27 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   cardHeader: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '800',
     color: Colors.textPrimary,
     letterSpacing: 1.5,
     fontFamily: Font.mono,
   },
   cardMeta: {
-    fontSize: 9,
+    fontSize: FontSize.caption,
     fontWeight: '700',
     color: Colors.textMuted,
     letterSpacing: 1,
     fontFamily: Font.mono,
   },
   cardMetaSuccess: {
-    fontSize: 9,
+    fontSize: FontSize.caption,
     fontWeight: '700',
     color: Colors.success,
     letterSpacing: 1,
     fontFamily: Font.mono,
   },
-  cardSubtitle: { fontSize: 12, color: Colors.textSecondary, lineHeight: 18, marginBottom: Spacing.md },
+  cardSubtitle: { fontSize: FontSize.body, color: Colors.textSecondary, lineHeight: 18, marginBottom: Spacing.md },
   typeRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   typeBtn: {
     flex: 1,
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   },
   typeBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primaryDark },
   typeBtnText: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '800',
     color: Colors.textSecondary,
     letterSpacing: 1,
@@ -450,7 +450,7 @@ const styles = StyleSheet.create({
   typeBtnTextActive: { color: Colors.textOnPrimary },
   formGroup: { marginBottom: Spacing.md },
   label: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '800',
     color: Colors.textSecondary,
     letterSpacing: 1,
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 13,
+    fontSize: FontSize.bodyLarge,
     color: Colors.textPrimary,
     backgroundColor: Colors.surfaceSecondary,
   },
@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   secondaryBtnText: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '800',
     color: Colors.textSecondary,
     letterSpacing: 1,
@@ -500,7 +500,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   receiptBtnText: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '800',
     color: Colors.primary,
     letterSpacing: 1,
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
   submitBtnDisabled: { opacity: 0.5, backgroundColor: Colors.border },
   submitBtnText: {
     color: Colors.textOnPrimary,
-    fontSize: 12,
+    fontSize: FontSize.body,
     fontWeight: '800',
     letterSpacing: 2,
     fontFamily: Font.mono,

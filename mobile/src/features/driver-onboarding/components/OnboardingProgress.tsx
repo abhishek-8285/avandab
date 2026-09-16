@@ -1,4 +1,5 @@
 import React from 'react';
+import { Colors, FontSize} from '../../../constants/theme';
 import { View, Text, StyleSheet } from 'react-native';
 import { OnboardingStepName } from '../types/onboarding';
 
@@ -73,9 +74,9 @@ const styles = StyleSheet.create({
   container: {
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#0f172a',
+    backgroundColor: Colors.mapDark,
     borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
+    borderBottomColor: Colors.modalBg,
   },
   stepsRow: {
     flexDirection: 'row',
@@ -91,36 +92,36 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.modalBg,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
     borderWidth: 1.5,
-    borderColor: '#334155',
+    borderColor: Colors.modalBorder,
   },
   circleDone: {
-    backgroundColor: '#059669',
-    borderColor: '#10b981',
+    backgroundColor: Colors.successDark,
+    borderColor: Colors.onboardingOkBorder,
   },
   circleCurrent: {
-    borderColor: '#06b6d4',
-    backgroundColor: '#083344',
+    borderColor: Colors.onboardingBorder,
+    backgroundColor: Colors.onboardingBg,
   },
   circleText: {
-    color: '#64748b',
-    fontSize: 12,
+    color: Colors.textSecondary,
+    fontSize: FontSize.body,
     fontWeight: '700',
   },
   circleTextActive: {
-    color: '#ffffff',
+    color: Colors.textOnPrimary,
   },
   stepLabel: {
-    fontSize: 10,
-    color: '#64748b',
+    fontSize: FontSize.small,
+    color: Colors.textSecondary,
     fontWeight: '600',
   },
   stepLabelActive: {
-    color: '#f8fafc',
+    color: Colors.textSecondary,
   },
   connector: {
     position: 'absolute',
@@ -128,10 +129,10 @@ const styles = StyleSheet.create({
     left: '65%',
     right: '-35%',
     height: 2,
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.modalBg,
     zIndex: -1,
   },
   connectorDone: {
-    backgroundColor: '#059669',
+    backgroundColor: Colors.successDark,
   },
 });

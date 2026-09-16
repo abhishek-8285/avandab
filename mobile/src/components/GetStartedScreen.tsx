@@ -11,7 +11,7 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView, StatusBar } from 
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors, Font, Radius, Spacing } from '../constants/theme';
+import { Colors, Font, Radius, Spacing, FontSize} from '../constants/theme';
 
 interface GetStartedScreenProps {
   onGetStarted: () => void;
@@ -211,11 +211,11 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#22c55e',
+    backgroundColor: Colors.accent,
   },
   statusText: {
     color: Colors.textOnChrome,
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '800',
     letterSpacing: 1.2,
     fontFamily: Font.mono,
@@ -229,8 +229,8 @@ const styles = StyleSheet.create({
     borderRadius: 9999,
   },
   statusLiveText: {
-    color: '#22c55e',
-    fontSize: 9,
+    color: Colors.accent,
+    fontSize: FontSize.caption,
     fontWeight: '800',
     letterSpacing: 1,
     fontFamily: Font.mono,
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     paddingVertical: 12,
     paddingHorizontal: Spacing.md,
-    shadowColor: '#000',
+    shadowColor: Colors.textPrimary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.18,
     shadowRadius: 8,
@@ -265,15 +265,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.12)',
   },
   heroStatValue: {
-    color: '#ffffff',
-    fontSize: 16,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.heading,
     fontWeight: '900',
     fontFamily: Font.mono,
     letterSpacing: 0.5,
   },
   heroStatLabel: {
     color: 'rgba(255,255,255,0.65)',
-    fontSize: 9,
+    fontSize: FontSize.caption,
     fontWeight: '700',
     letterSpacing: 1,
     marginTop: 2,
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
     marginTop: -12,
-    shadowColor: '#0f172a',
+    shadowColor: Colors.mapDark,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
@@ -298,7 +298,7 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   headline: {
-    fontSize: 24,
+    fontSize: FontSize.display,
     fontWeight: '900',
     color: Colors.textPrimary,
     letterSpacing: 1.5,
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   description: {
-    fontSize: 13.5,
+    fontSize: FontSize.bodyLarge + 0.5,
     color: Colors.textSecondary,
     lineHeight: 21,
     marginBottom: Spacing.lg,
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   },
   featureText: {
     flex: 1,
-    fontSize: 13,
+    fontSize: FontSize.bodyLarge,
     color: Colors.textPrimary,
     fontWeight: '600',
     lineHeight: 18,
@@ -378,14 +378,14 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: Colors.textOnPrimary,
-    fontSize: 14,
+    fontSize: FontSize.title,
     fontWeight: '800',
     letterSpacing: 1.5,
     fontFamily: Font.mono,
   },
   primaryButtonArrow: {
     color: Colors.textOnPrimary,
-    fontSize: 16,
+    fontSize: FontSize.heading,
     fontWeight: '700',
     marginLeft: 2,
   },
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   signInText: {
-    fontSize: 13,
+    fontSize: FontSize.bodyLarge,
     color: Colors.textSecondary,
     fontFamily: Font.mono,
     letterSpacing: 0.3,
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
   },
   qrDemoTextDev: {
     color: Colors.textMuted,
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '700',
     letterSpacing: 1,
     fontFamily: Font.mono,

@@ -4,6 +4,7 @@ import { DeliveryVerificationScreen } from '../src/components/DeliveryVerificati
 import { OfflineQueue } from '../src/services/offlineQueue';
 import { resetSQLiteMockState } from '../jest/setup';
 import { useAuthStore } from '../src/stores/authStore';
+import { useLanguageStore } from '../src/stores/languageStore';
 
 const globalFetch = global.fetch;
 
@@ -22,6 +23,19 @@ describe('DeliveryVerificationScreen', () => {
 
   afterEach(() => {
     global.fetch = globalFetch;
+  });
+
+  test('renders Hindi header and progress strip when locale is hi', async () => {
+    await useLanguageStore.getState().setLanguage('hi');
+    try {
+      const { getByText } = render(
+        <DeliveryVerificationScreen tripId="trip_hi" onComplete={jest.fn()} onBack={jest.fn()} />
+      );
+      expect(getByText('डिलीवरी प्रमाण (e-POD)')).toBeTruthy();
+      expect(getByText('0/3 प्रमाण लगे')).toBeTruthy();
+    } finally {
+      await useLanguageStore.getState().setLanguage('en');
+    }
   });
 
   test('submits multipart form to /api/v1/trips/{tripId}/deliver-pod on confirm with OTP', async () => {

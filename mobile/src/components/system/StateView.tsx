@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors, Spacing } from '../../constants/theme';
+import { Colors, Spacing, FontSize} from '../../constants/theme';
 import { Card } from './Card';
 type State = 'loading' | 'empty' | 'error' | 'offline';
 export function StateView({ state, title, message, icon, onRetry }: { state: State; title?: string; message?: string; icon?: string; onRetry?: () => void }) {
@@ -13,7 +13,7 @@ export function StateView({ state, title, message, icon, onRetry }: { state: Sta
 const styles = StyleSheet.create({
   center: { padding: Spacing.xl, alignItems: 'center' }, card: { alignItems: 'center', paddingVertical: 32 },
   iconBox: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  title: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary, textAlign: 'center' }, message: { fontSize: 12, color: Colors.textSecondary, textAlign: 'center', marginTop: 8, lineHeight: 18 },
-  retryBtn: { marginTop: 12, backgroundColor: Colors.primary, paddingHorizontal: 16, minHeight: 44, justifyContent: 'center', borderRadius: 8 }, retryText: { color: Colors.textOnPrimary, fontSize: 12, fontWeight: '700' },
-  loadingText: { fontSize: 12, color: Colors.textSecondary, marginTop: 8 },
+  title: { fontSize: FontSize.title, fontWeight: '700', color: Colors.textPrimary, textAlign: 'center' }, message: { fontSize: FontSize.body, color: Colors.textSecondary, textAlign: 'center', marginTop: 8, lineHeight: 18 },
+  retryBtn: { marginTop: 12, backgroundColor: Colors.primary, paddingHorizontal: 16, minHeight: 44, justifyContent: 'center', borderRadius: 8 }, retryText: { color: Colors.textOnPrimary, fontSize: FontSize.body, fontWeight: '700' },
+  loadingText: { fontSize: FontSize.body, color: Colors.textSecondary, marginTop: 8 },
 });

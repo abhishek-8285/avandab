@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Colors, FontSize} from '../../../constants/theme';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { OwnershipType } from '../types/onboarding';
 
@@ -57,41 +58,41 @@ export const OwnershipStep: React.FC<Props> = ({ onSelect }) => {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#0f172a',
+    backgroundColor: Colors.mapDark,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: Colors.modalBg,
   },
   title: {
-    fontSize: 20,
+    fontSize: FontSize.banner,
     fontWeight: '700',
-    color: '#f8fafc',
+    color: Colors.textSecondary,
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 13,
-    color: '#94a3b8',
+    fontSize: FontSize.bodyLarge,
+    color: Colors.modalSub,
     marginBottom: 20,
   },
   optionCard: {
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.modalBg,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1.5,
-    borderColor: '#334155',
+    borderColor: Colors.modalBorder,
   },
   optionCardActive: {
-    borderColor: '#06b6d4',
-    backgroundColor: '#083344',
+    borderColor: Colors.onboardingBorder,
+    backgroundColor: Colors.onboardingBg,
   },
   optionHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
   optionIcon: {
-    fontSize: 24,
+    fontSize: FontSize.display,
     marginRight: 12,
     marginTop: 2,
   },
@@ -99,29 +100,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   optionTitle: {
-    fontSize: 16,
+    fontSize: FontSize.heading,
     fontWeight: '700',
-    color: '#f8fafc',
+    color: Colors.textSecondary,
     marginBottom: 4,
   },
   optionTitleActive: {
-    color: '#38bdf8',
+    color: Colors.onboardingText,
   },
   optionDesc: {
-    fontSize: 12,
-    color: '#94a3b8',
+    fontSize: FontSize.body,
+    color: Colors.modalSub,
     lineHeight: 18,
   },
   btn: {
-    backgroundColor: '#0d9488',
+    backgroundColor: Colors.onboardingBtn,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginTop: 12,
   },
   btnText: {
-    color: '#ffffff',
-    fontSize: 15,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.titleLarge,
     fontWeight: '700',
   },
 });

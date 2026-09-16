@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Colors, FontSize} from '../../../constants/theme';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { BankAccountFormData } from '../types/onboarding';
 import { validateIFSC, validateAccountNumber } from '../schemas/onboardingSchemas';
@@ -60,7 +61,7 @@ export const BankDetailsStep: React.FC<Props> = ({
         value={holder}
         onChangeText={setHolder}
         placeholder="e.g. Rajesh Kumar"
-        placeholderTextColor="#64748b"
+        placeholderTextColor={Colors.textSecondary}
       />
 
       <Text style={styles.label}>Bank Account Number</Text>
@@ -69,7 +70,7 @@ export const BankDetailsStep: React.FC<Props> = ({
         value={accNum}
         onChangeText={setAccNum}
         placeholder="Enter bank account number"
-        placeholderTextColor="#64748b"
+        placeholderTextColor={Colors.textSecondary}
         keyboardType="numeric"
         secureTextEntry
       />
@@ -80,7 +81,7 @@ export const BankDetailsStep: React.FC<Props> = ({
         value={confirmAcc}
         onChangeText={setConfirmAcc}
         placeholder="Re-enter bank account number"
-        placeholderTextColor="#64748b"
+        placeholderTextColor={Colors.textSecondary}
         keyboardType="numeric"
       />
 
@@ -90,7 +91,7 @@ export const BankDetailsStep: React.FC<Props> = ({
         value={ifsc}
         onChangeText={(t) => setIfsc(t.toUpperCase())}
         placeholder="e.g. SBIN0001234"
-        placeholderTextColor="#64748b"
+        placeholderTextColor={Colors.textSecondary}
         autoCapitalize="characters"
       />
 
@@ -100,7 +101,7 @@ export const BankDetailsStep: React.FC<Props> = ({
         value={bankName}
         onChangeText={setBankName}
         placeholder="e.g. State Bank of India"
-        placeholderTextColor="#64748b"
+        placeholderTextColor={Colors.textSecondary}
       />
 
       <View style={styles.btnRow}>
@@ -117,40 +118,40 @@ export const BankDetailsStep: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#0f172a',
+    backgroundColor: Colors.mapDark,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: Colors.modalBg,
   },
   title: {
-    fontSize: 20,
+    fontSize: FontSize.banner,
     fontWeight: '700',
-    color: '#f8fafc',
+    color: Colors.textSecondary,
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 13,
-    color: '#94a3b8',
+    fontSize: FontSize.bodyLarge,
+    color: Colors.modalSub,
     marginBottom: 16,
     lineHeight: 18,
   },
   label: {
-    fontSize: 12,
+    fontSize: FontSize.body,
     fontWeight: '600',
-    color: '#cbd5e1',
+    color: Colors.textSecondary,
     marginBottom: 6,
     marginTop: 10,
   },
   input: {
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.modalBg,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: '#f8fafc',
-    fontSize: 14,
+    color: Colors.textSecondary,
+    fontSize: FontSize.title,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.modalBorder,
   },
   btnRow: {
     flexDirection: 'row',
@@ -159,28 +160,28 @@ const styles = StyleSheet.create({
   },
   btnSecondary: {
     flex: 1,
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.modalBg,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.modalBorder,
   },
   btnSecondaryText: {
-    color: '#94a3b8',
-    fontSize: 14,
+    color: Colors.modalSub,
+    fontSize: FontSize.title,
     fontWeight: '600',
   },
   btnPrimary: {
     flex: 2,
-    backgroundColor: '#0d9488',
+    backgroundColor: Colors.onboardingBtn,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
   },
   btnPrimaryText: {
-    color: '#ffffff',
-    fontSize: 14,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.title,
     fontWeight: '700',
   },
 });

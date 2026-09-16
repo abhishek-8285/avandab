@@ -1,15 +1,15 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Colors, Font, Radius } from '../constants/theme';
+import { Colors, Font, Radius, FontSize} from '../constants/theme';
 import { useSyncStore, type SyncStatus } from '../stores/syncStore';
 import { useLanguageStore } from '../stores/languageStore';
 import { t } from '../i18n';
 
 const STATUS_COLOR: Record<SyncStatus, string> = {
-  online_synced: '#25d366',
-  syncing: '#00a884',
-  offline_saved: '#f59e0b',
-  error: '#ef4444',
+  online_synced: Colors.accent,
+  syncing: Colors.success,
+  offline_saved: Colors.warning,
+  error: Colors.danger,
 };
 
 const STATUS_FALLBACKS: Record<SyncStatus, string> = {
@@ -27,7 +27,7 @@ export function SyncStatusBar() {
 
   return (
     <View style={styles.bar} accessibilityLabel={label} accessibilityRole="text" accessibilityLiveRegion="polite">
-      <View style={[styles.dot, { backgroundColor: STATUS_COLOR[status] ?? '#25d366' }]} />
+      <View style={[styles.dot, { backgroundColor: STATUS_COLOR[status] ?? Colors.accent }]} />
       <Text style={styles.label} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
     </View>
   );
@@ -52,8 +52,8 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   label: {
-    color: '#ffffff',
-    fontSize: 10,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.small,
     fontWeight: '700',
   },
 });

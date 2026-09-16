@@ -1,4 +1,5 @@
 import React from 'react';
+import { Colors, FontSize} from '../../../constants/theme';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { DocumentCategory, DocumentUploadTask } from '../types/document';
 
@@ -70,7 +71,7 @@ export const DocumentUploadCard: React.FC<Props> = ({
           disabled={isBusy}
         >
           {isBusy ? (
-            <ActivityIndicator size="small" color="#f8fafc" />
+            <ActivityIndicator size="small" color={Colors.textSecondary} />
           ) : (
             <Text style={styles.actionBtnText}>📷 Camera Scan</Text>
           )}
@@ -90,11 +91,11 @@ export const DocumentUploadCard: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#0f172a',
+    backgroundColor: Colors.mapDark,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: Colors.modalBg,
     marginBottom: 12,
   },
   headerRow: {
@@ -108,64 +109,64 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   title: {
-    fontSize: 15,
+    fontSize: FontSize.titleLarge,
     fontWeight: '700',
-    color: '#f8fafc',
+    color: Colors.textSecondary,
     marginBottom: 2,
   },
   desc: {
-    fontSize: 12,
-    color: '#94a3b8',
+    fontSize: FontSize.body,
+    color: Colors.modalSub,
     lineHeight: 16,
   },
   badge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.modalBg,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.modalBorder,
   },
   badgeSuccess: {
-    backgroundColor: '#064e3b',
-    borderColor: '#10b981',
+    backgroundColor: Colors.onboardingOkBg,
+    borderColor: Colors.onboardingOkBorder,
   },
   badgeProgress: {
-    backgroundColor: '#083344',
-    borderColor: '#06b6d4',
+    backgroundColor: Colors.onboardingBg,
+    borderColor: Colors.onboardingBorder,
   },
   badgeError: {
-    backgroundColor: '#450a0a',
-    borderColor: '#ef4444',
+    backgroundColor: Colors.onboardingErrBg,
+    borderColor: Colors.danger,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: Colors.modalSub,
   },
   badgeTextSuccess: {
-    color: '#34d399',
+    color: Colors.accent,
   },
   badgeTextProgress: {
-    color: '#38bdf8',
+    color: Colors.onboardingText,
   },
   badgeTextError: {
-    color: '#f87171',
+    color: Colors.danger,
   },
   progressContainer: {
     height: 4,
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.modalBg,
     borderRadius: 2,
     overflow: 'hidden',
     marginBottom: 10,
   },
   progressBar: {
     height: '100%',
-    backgroundColor: '#06b6d4',
+    backgroundColor: Colors.onboardingBorder,
   },
   errorText: {
-    fontSize: 11,
-    color: '#f87171',
+    fontSize: FontSize.label,
+    color: Colors.danger,
     marginBottom: 10,
   },
   btnRow: {
@@ -174,28 +175,28 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
-    backgroundColor: '#0d9488',
+    backgroundColor: Colors.onboardingBtn,
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
   },
   actionBtnText: {
-    color: '#ffffff',
-    fontSize: 12,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.body,
     fontWeight: '700',
   },
   actionBtnSecondary: {
     flex: 1,
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.modalBg,
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.modalBorder,
   },
   actionBtnSecondaryText: {
-    color: '#cbd5e1',
-    fontSize: 12,
+    color: Colors.textSecondary,
+    fontSize: FontSize.body,
     fontWeight: '600',
   },
   btnDisabled: {

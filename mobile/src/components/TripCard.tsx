@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity, Linking } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors, Font, Radius, Spacing } from '../constants/theme';
+import { Colors, Font, Radius, Spacing, FontSize} from '../constants/theme';
 import { useLanguageStore } from '../stores/languageStore';
 import { NotificationService } from '../services/notificationService';
 import { t } from '../i18n';
@@ -61,27 +61,27 @@ const TripCardBase: React.FC<TripCardProps> = ({
     switch (status) {
       case 'IN_TRANSIT':
         return {
-          bg: '#e7ffdb',
-          text: '#008069',
+          bg: Colors.primarySubtle,
+          text: Colors.primary,
           label: t('duty.available', 'IN TRANSIT', locale),
-          dot: '#25d366',
+          dot: Colors.accent,
         };
       case 'PENDING':
         return {
-          bg: '#fef3c7',
-          text: '#b45309',
+          bg: Colors.warningBg,
+          text: Colors.warningText,
           label: t('duty.break', 'READY', locale),
-          dot: '#f59e0b',
+          dot: Colors.warning,
         };
       case 'COMPLETED':
         return {
-          bg: '#e0f2fe',
-          text: '#0284c7',
+          bg: Colors.infoBg,
+          text: Colors.info,
           label: t('docs.under_review', 'DELIVERED', locale),
-          dot: '#0284c7',
+          dot: Colors.info,
         };
       default:
-        return { bg: '#fee2e2', text: '#dc2626', label: status, dot: '#dc2626' };
+        return { bg: Colors.dangerBg, text: Colors.danger, label: status, dot: Colors.danger };
     }
   };
 
@@ -98,7 +98,7 @@ const TripCardBase: React.FC<TripCardProps> = ({
       <View style={styles.header}>
         <View style={styles.tripIdBlock}>
           <View style={styles.iconCircle}>
-            <MaterialCommunityIcons name="truck-delivery" size={16} color="#008069" accessible={false} />
+            <MaterialCommunityIcons name="truck-delivery" size={16} color={Colors.primary} accessible={false} />
           </View>
           <View>
             <Text style={styles.tripNumber} numberOfLines={1} ellipsizeMode="tail" accessibilityLabel={`Trip ${tripNumber}`}>#{tripNumber}</Text>
@@ -115,12 +115,12 @@ const TripCardBase: React.FC<TripCardProps> = ({
       {/* Driver & Vehicle Plate Row */}
       <View style={styles.driverRow}>
         <View style={styles.driverPill}>
-          <MaterialCommunityIcons name="account-tie" size={14} color="#667781" accessible={false} />
+          <MaterialCommunityIcons name="account-tie" size={14} color={Colors.textSecondary} accessible={false} />
           <Text style={styles.driverName} numberOfLines={1} ellipsizeMode="tail">{driverName || t('profile.driver_id', 'Driver', locale)}</Text>
         </View>
         {vehiclePlate ? (
           <View style={styles.plateChip}>
-            <MaterialCommunityIcons name="car-traction-control" size={13} color="#008069" accessible={false} />
+            <MaterialCommunityIcons name="car-traction-control" size={13} color={Colors.primary} accessible={false} />
             <Text style={styles.plateText}>{vehiclePlate}</Text>
           </View>
         ) : null}
@@ -178,7 +178,7 @@ const TripCardBase: React.FC<TripCardProps> = ({
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             onPress={() => Linking.openURL('tel:+919876543210').catch(() => {})}
           >
-            <MaterialCommunityIcons name="phone" size={17} color="#008069" />
+            <MaterialCommunityIcons name="phone" size={17} color={Colors.primary} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -192,7 +192,7 @@ const TripCardBase: React.FC<TripCardProps> = ({
               Linking.openURL(`https://wa.me/919876543210?text=${text}`).catch(() => {});
             }}
           >
-            <MaterialCommunityIcons name="whatsapp" size={19} color="#25d366" />
+            <MaterialCommunityIcons name="whatsapp" size={19} color={Colors.accent} />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -210,7 +210,7 @@ const TripCardBase: React.FC<TripCardProps> = ({
               }).catch(() => {});
             }}
           >
-            <MaterialCommunityIcons name="bell-ring-outline" size={17} color="#008069" />
+            <MaterialCommunityIcons name="bell-ring-outline" size={17} color={Colors.primary} />
           </TouchableOpacity>
         </View>
 
@@ -222,7 +222,7 @@ const TripCardBase: React.FC<TripCardProps> = ({
           accessibilityLabel="Start map navigation"
           hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
         >
-          <MaterialCommunityIcons name="navigation-variant" size={16} color="#ffffff" accessible={false} />
+          <MaterialCommunityIcons name="navigation-variant" size={16} color={Colors.textOnPrimary} accessible={false} />
           <Text style={styles.navigateBtnText}>{t('trips.start_map', 'START MAP', locale)}</Text>
         </TouchableOpacity>
       </View>
@@ -234,30 +234,30 @@ export const SkeletonLoader = () => (
   <View style={[styles.card, { gap: 10 }]}>
     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#f1f5f9' }} />
+        <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.skeleton }} />
         <View style={{ gap: 4 }}>
-          <View style={{ width: 90, height: 14, borderRadius: 4, backgroundColor: '#e2e8f0' }} />
-          <View style={{ width: 60, height: 10, borderRadius: 4, backgroundColor: '#f1f5f9' }} />
+          <View style={{ width: 90, height: 14, borderRadius: 4, backgroundColor: Colors.borderStrong }} />
+          <View style={{ width: 60, height: 10, borderRadius: 4, backgroundColor: Colors.skeleton }} />
         </View>
       </View>
-      <View style={{ width: 65, height: 20, borderRadius: 10, backgroundColor: '#f1f5f9' }} />
+      <View style={{ width: 65, height: 20, borderRadius: 10, backgroundColor: Colors.skeleton }} />
     </View>
 
     <View style={{ flexDirection: 'row', gap: 6, marginVertical: 4 }}>
-      <View style={{ width: 80, height: 14, borderRadius: 4, backgroundColor: '#f1f5f9' }} />
-      <View style={{ width: 100, height: 14, borderRadius: 4, backgroundColor: '#f1f5f9' }} />
+      <View style={{ width: 80, height: 14, borderRadius: 4, backgroundColor: Colors.skeleton }} />
+      <View style={{ width: 100, height: 14, borderRadius: 4, backgroundColor: Colors.skeleton }} />
     </View>
 
-    <View style={{ height: 1, backgroundColor: '#f1f5f9', marginVertical: 4 }} />
+    <View style={{ height: 1, backgroundColor: Colors.skeleton, marginVertical: 4 }} />
 
     <View style={{ gap: 8 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#e2e8f0' }} />
-        <View style={{ width: '70%', height: 12, borderRadius: 4, backgroundColor: '#f1f5f9' }} />
+        <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.borderStrong }} />
+        <View style={{ width: '70%', height: 12, borderRadius: 4, backgroundColor: Colors.skeleton }} />
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-        <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#cbd5e1' }} />
-        <View style={{ width: '55%', height: 12, borderRadius: 4, backgroundColor: '#f1f5f9' }} />
+        <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.borderStrong }} />
+        <View style={{ width: '55%', height: 12, borderRadius: 4, backgroundColor: Colors.skeleton }} />
       </View>
     </View>
   </View>
@@ -265,22 +265,22 @@ export const SkeletonLoader = () => (
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: Colors.surface,
     borderRadius: 14,
     padding: 14,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#e9edef',
-    shadowColor: '#000000',
+    borderColor: Colors.border,
+    shadowColor: Colors.textPrimary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 3,
     elevation: 2,
   },
   cardActiveBorder: {
-    borderColor: '#25d366',
+    borderColor: Colors.accent,
     borderLeftWidth: 4,
-    borderLeftColor: '#008069',
+    borderLeftColor: Colors.primary,
   },
   header: {
     flexDirection: 'row',
@@ -296,18 +296,18 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#e7ffdb',
+    backgroundColor: Colors.primarySubtle,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tripNumber: {
-    fontSize: 15,
+    fontSize: FontSize.titleLarge,
     fontWeight: '800',
-    color: '#111b21',
+    color: Colors.textPrimary,
   },
   subMeta: {
-    fontSize: 10,
-    color: '#667781',
+    fontSize: FontSize.small,
+    color: Colors.textSecondary,
     fontWeight: '500',
     marginTop: 1,
   },
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '800',
   },
   driverRow: {
@@ -340,28 +340,28 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   driverName: {
-    fontSize: 12,
+    fontSize: FontSize.body,
     fontWeight: '600',
-    color: '#667781',
+    color: Colors.textSecondary,
   },
   plateChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: Colors.borderLight,
     paddingHorizontal: 7,
     paddingVertical: 3,
     borderRadius: 6,
   },
   plateText: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '800',
-    color: '#111b21',
+    color: Colors.textPrimary,
     fontFamily: Font.mono,
   },
   divider: {
     height: 1,
-    backgroundColor: '#f0f2f5',
+    backgroundColor: Colors.borderLight,
     marginVertical: 10,
   },
   routeContainer: {
@@ -381,42 +381,42 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   routeDotOrigin: {
-    backgroundColor: '#e7ffdb',
+    backgroundColor: Colors.primarySubtle,
   },
   innerDotOrigin: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#008069',
+    backgroundColor: Colors.primary,
   },
   routeDotDest: {
-    backgroundColor: '#fee2e2',
+    backgroundColor: Colors.dangerBg,
   },
   innerDotDest: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#ef4444',
+    backgroundColor: Colors.danger,
   },
   locationBlock: {
     flex: 1,
   },
   locationLabel: {
-    fontSize: 9,
+    fontSize: FontSize.caption,
     fontWeight: '700',
-    color: '#8696a0',
+    color: Colors.textMuted,
     letterSpacing: 0.5,
   },
   locationText: {
-    fontSize: 13,
+    fontSize: FontSize.bodyLarge,
     fontWeight: '700',
-    color: '#111b21',
+    color: Colors.textPrimary,
     marginTop: 1,
   },
   routeConnectorLine: {
     width: 2,
     height: 14,
-    backgroundColor: '#cbd5e1',
+    backgroundColor: Colors.borderStrong,
     marginLeft: 6,
     marginVertical: 1,
   },
@@ -427,42 +427,42 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: '#f0f2f5',
+    borderTopColor: Colors.borderLight,
   },
   cargoChip: {
-    backgroundColor: '#f8fafc',
+    backgroundColor: Colors.surfaceSecondary,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: Colors.borderStrong,
   },
   weightText: {
-    fontSize: 12,
+    fontSize: FontSize.body,
     fontWeight: '700',
-    color: '#475569',
+    color: Colors.textSecondary,
   },
   routeStatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#e0f2fe',
+    backgroundColor: Colors.infoBg,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#bae6fd',
+    borderColor: Colors.infoBorder,
   },
   statusPulseDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#0284c7',
+    backgroundColor: Colors.info,
   },
   routeStatusLabel: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '800',
-    color: '#0284c7',
+    color: Colors.info,
     letterSpacing: 0.5,
   },
   actionStrip: {
@@ -481,9 +481,9 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 19,
-    backgroundColor: '#e7ffdb',
+    backgroundColor: Colors.primarySubtle,
     borderWidth: 1,
-    borderColor: '#bbf7d0',
+    borderColor: Colors.primaryBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -493,18 +493,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: '#008069',
+    backgroundColor: Colors.primary,
     height: 38,
     borderRadius: 19,
-    shadowColor: '#008069',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3,
     elevation: 3,
   },
   navigateBtnText: {
-    color: '#ffffff',
-    fontSize: 12,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.body,
     fontWeight: '800',
     letterSpacing: 0.5,
   },

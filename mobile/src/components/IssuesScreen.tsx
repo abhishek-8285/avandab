@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, ScrollView, TextInput, Activi
 import { StatusBar } from 'expo-status-bar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Colors, Font, Radius, Spacing } from '../constants/theme';
+import { Colors, Font, Radius, Spacing, FontSize} from '../constants/theme';
 import { getApiBaseURL } from '../constants/network';
 import { useAuthStore } from '../stores/authStore';
 
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.chrome,
   },
   headerLabel: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '700',
     color: Colors.textOnChrome,
     letterSpacing: 2,
@@ -246,7 +246,7 @@ const styles = StyleSheet.create({
   },
   content: { padding: Spacing.lg, gap: Spacing.sm },
   sectionLabel: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '800',
     color: Colors.textSecondary,
     letterSpacing: 1,
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   },
   chipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   chipText: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     fontWeight: '800',
     letterSpacing: 0.5,
     color: Colors.textSecondary,
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
     minHeight: 90,
     textAlignVertical: 'top',
     color: Colors.textPrimary,
-    fontSize: 13,
+    fontSize: FontSize.bodyLarge,
   },
   photoBtn: {
     flexDirection: 'row',
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   photoBtnText: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '800',
     letterSpacing: 1,
     color: Colors.primary,
@@ -311,18 +311,18 @@ const styles = StyleSheet.create({
   },
   submitText: {
     color: Colors.textOnPrimary,
-    fontSize: 12,
+    fontSize: FontSize.body,
     fontWeight: '800',
     letterSpacing: 1.5,
     fontFamily: Font.mono,
   },
   tripRef: {
-    fontSize: 10,
+    fontSize: FontSize.small,
     color: Colors.textMuted,
     textAlign: 'center',
     fontFamily: Font.mono,
   },
-  empty: { fontSize: 12, color: Colors.textMuted },
+  empty: { fontSize: FontSize.body, color: Colors.textMuted },
   issueRow: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.sm,
@@ -330,9 +330,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.borderLight,
     padding: Spacing.md,
   },
-  issueMsg: { fontSize: 12, color: Colors.textPrimary, fontWeight: '600' },
+  issueMsg: { fontSize: FontSize.body, color: Colors.textPrimary, fontWeight: '600' },
   issueMeta: {
-    fontSize: 9,
+    fontSize: FontSize.caption,
     color: Colors.textMuted,
     fontFamily: Font.mono,
     marginTop: 3,

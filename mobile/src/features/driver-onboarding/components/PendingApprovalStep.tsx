@@ -1,4 +1,5 @@
 import React from 'react';
+import { Colors, FontSize} from '../../../constants/theme';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { OnboardingState } from '../types/onboarding';
 
@@ -107,7 +108,7 @@ export const PendingApprovalStep: React.FC<Props> = ({
       ) : isSubmitted ? (
         <TouchableOpacity style={styles.btnRefresh} onPress={onRefresh} disabled={submitting}>
           {submitting ? (
-            <ActivityIndicator color="#ffffff" />
+            <ActivityIndicator color={Colors.textOnPrimary} />
           ) : (
             <Text style={styles.btnRefreshText}>Check Verification Status 🔄</Text>
           )}
@@ -119,7 +120,7 @@ export const PendingApprovalStep: React.FC<Props> = ({
           disabled={submitting}
         >
           {submitting ? (
-            <ActivityIndicator color="#ffffff" />
+            <ActivityIndicator color={Colors.textOnPrimary} />
           ) : (
             <Text style={styles.btnSubmitText}>Submit for Verification →</Text>
           )}
@@ -131,21 +132,21 @@ export const PendingApprovalStep: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#0f172a',
+    backgroundColor: Colors.mapDark,
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: Colors.modalBg,
   },
   title: {
-    fontSize: 20,
+    fontSize: FontSize.banner,
     fontWeight: '700',
-    color: '#f8fafc',
+    color: Colors.textSecondary,
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 13,
-    color: '#94a3b8',
+    fontSize: FontSize.bodyLarge,
+    color: Colors.modalSub,
     marginBottom: 16,
     lineHeight: 18,
   },
@@ -153,25 +154,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderRadius: 12,
     padding: 16,
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.modalBg,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.modalBorder,
     marginBottom: 20,
   },
   bannerApproved: {
-    backgroundColor: '#064e3b',
-    borderColor: '#10b981',
+    backgroundColor: Colors.onboardingOkBg,
+    borderColor: Colors.onboardingOkBorder,
   },
   bannerSubmitted: {
-    backgroundColor: '#083344',
-    borderColor: '#06b6d4',
+    backgroundColor: Colors.onboardingBg,
+    borderColor: Colors.onboardingBorder,
   },
   bannerRejected: {
-    backgroundColor: '#450a0a',
-    borderColor: '#ef4444',
+    backgroundColor: Colors.onboardingErrBg,
+    borderColor: Colors.danger,
   },
   statusIcon: {
-    fontSize: 24,
+    fontSize: FontSize.display,
     marginRight: 12,
     marginTop: 2,
   },
@@ -179,26 +180,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statusHeadline: {
-    fontSize: 15,
+    fontSize: FontSize.titleLarge,
     fontWeight: '700',
-    color: '#f8fafc',
+    color: Colors.textSecondary,
     marginBottom: 4,
   },
   statusSubtext: {
-    fontSize: 12,
-    color: '#cbd5e1',
+    fontSize: FontSize.body,
+    color: Colors.textSecondary,
     lineHeight: 17,
   },
   sectionHeader: {
-    fontSize: 14,
+    fontSize: FontSize.title,
     fontWeight: '700',
-    color: '#94a3b8',
+    color: Colors.modalSub,
     marginBottom: 10,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
   checklist: {
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.modalBg,
     borderRadius: 12,
     padding: 14,
     gap: 12,
@@ -210,55 +211,55 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   checkIcon: {
-    fontSize: 12,
+    fontSize: FontSize.body,
     marginRight: 8,
   },
   checkText: {
     flex: 1,
-    fontSize: 13,
-    color: '#f8fafc',
+    fontSize: FontSize.bodyLarge,
+    color: Colors.textSecondary,
     fontWeight: '500',
   },
   editBtn: {
-    color: '#38bdf8',
-    fontSize: 12,
+    color: Colors.onboardingText,
+    fontSize: FontSize.body,
     fontWeight: '700',
     paddingHorizontal: 8,
     paddingVertical: 4,
   },
   btnLaunch: {
-    backgroundColor: '#059669',
+    backgroundColor: Colors.successDark,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
   },
   btnLaunchText: {
-    color: '#ffffff',
-    fontSize: 15,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.titleLarge,
     fontWeight: '700',
   },
   btnRefresh: {
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.modalBg,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.modalBorder,
   },
   btnRefreshText: {
-    color: '#f8fafc',
-    fontSize: 14,
+    color: Colors.textSecondary,
+    fontSize: FontSize.title,
     fontWeight: '600',
   },
   btnSubmit: {
-    backgroundColor: '#0d9488',
+    backgroundColor: Colors.onboardingBtn,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
   },
   btnSubmitText: {
-    color: '#ffffff',
-    fontSize: 15,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.titleLarge,
     fontWeight: '700',
   },
 });

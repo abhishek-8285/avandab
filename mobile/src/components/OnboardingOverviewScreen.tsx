@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { Image } from 'expo-image';
 import { StatusBar } from 'expo-status-bar';
-import { Colors, Font, Radius, Spacing } from '../constants/theme';
+import { Colors, Font, Radius, Spacing, FontSize} from '../constants/theme';
 
 interface OnboardingOverviewScreenProps {
   onNext: () => void;
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.chrome,
   },
   headerLabel: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '700',
     color: Colors.textOnChrome,
     letterSpacing: 2,
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
   },
   skipText: {
-    fontSize: 11,
+    fontSize: FontSize.label,
     fontWeight: '700',
     color: Colors.textOnChrome,
     letterSpacing: 1,
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xxl,
   },
   headline: {
-    fontSize: 20,
+    fontSize: FontSize.banner,
     fontWeight: '900',
     color: Colors.textPrimary,
     letterSpacing: 2,
@@ -146,7 +146,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   description: {
-    fontSize: 13,
+    fontSize: FontSize.bodyLarge,
     color: Colors.textSecondary,
     lineHeight: 20,
     marginBottom: Spacing.xl,
@@ -180,14 +180,14 @@ const styles = StyleSheet.create({
   },
   nextButtonText: {
     color: Colors.textOnPrimary,
-    fontSize: 12,
+    fontSize: FontSize.body,
     fontWeight: '800',
     letterSpacing: 1.5,
     fontFamily: Font.mono,
   },
   nextArrow: {
     color: Colors.textOnPrimary,
-    fontSize: 14,
+    fontSize: FontSize.title,
     fontWeight: '700',
   },
 });

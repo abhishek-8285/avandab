@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import QRCode from 'react-native-qrcode-svg';
-import { Colors, Font, Spacing, Radius } from '../constants/theme';
+import { Colors, Font, Spacing, Radius, FontSize} from '../constants/theme';
 
 type Tab = 'scan' | 'generate';
 
@@ -89,7 +89,7 @@ export function QRDemoScreen() {
           </View>
           <View style={styles.qrCenter}>
             <View style={styles.qrBox}>
-              <QRCode value={value || ' '} size={220} color={Colors.textPrimary} backgroundColor="#ffffff" />
+              <QRCode value={value || ' '} size={220} color={Colors.textPrimary} backgroundColor={Colors.surface} />
             </View>
             <Text style={styles.cardBody}>Scan this with another device</Text>
           </View>
@@ -102,23 +102,23 @@ export function QRDemoScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: { backgroundColor: Colors.chrome, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
-  headerTitle: { color: Colors.textOnChrome, fontSize: 18, fontWeight: '900', letterSpacing: 2, fontFamily: Font.mono },
+  headerTitle: { color: Colors.textOnChrome, fontSize: FontSize.headingLarge, fontWeight: '900', letterSpacing: 2, fontFamily: Font.mono },
   tabRow: { flexDirection: 'row', backgroundColor: Colors.surface, borderBottomWidth: 1, borderBottomColor: Colors.borderLight },
   tab: { flex: 1, paddingVertical: Spacing.md, alignItems: 'center' },
   tabActive: { borderBottomWidth: 2, borderBottomColor: Colors.primary },
-  tabText: { fontSize: 11, fontWeight: '700', color: Colors.textSecondary, letterSpacing: 1.5, fontFamily: Font.mono },
+  tabText: { fontSize: FontSize.label, fontWeight: '700', color: Colors.textSecondary, letterSpacing: 1.5, fontFamily: Font.mono },
   tabTextActive: { color: Colors.primary, fontWeight: '800' },
   body: { flex: 1, padding: Spacing.lg, gap: Spacing.md },
   card: { backgroundColor: Colors.surface, borderRadius: Radius.md, padding: Spacing.lg, borderWidth: 1, borderColor: Colors.borderLight },
-  cardTitle: { fontSize: 12, fontWeight: '800', color: Colors.textPrimary, letterSpacing: 1.5, fontFamily: Font.mono, marginBottom: 6 },
-  cardBody: { fontSize: 12, color: Colors.textSecondary, lineHeight: 18 },
+  cardTitle: { fontSize: FontSize.body, fontWeight: '800', color: Colors.textPrimary, letterSpacing: 1.5, fontFamily: Font.mono, marginBottom: 6 },
+  cardBody: { fontSize: FontSize.body, color: Colors.textSecondary, lineHeight: 18 },
   btn: { backgroundColor: Colors.primary, paddingVertical: 12, borderRadius: Radius.sm, alignItems: 'center', marginTop: Spacing.md },
-  btnText: { color: Colors.textOnPrimary, fontSize: 11, fontWeight: '800', letterSpacing: 1.5, fontFamily: Font.mono },
+  btnText: { color: Colors.textOnPrimary, fontSize: FontSize.label, fontWeight: '800', letterSpacing: 1.5, fontFamily: Font.mono },
   cameraWrap: { height: 320, borderRadius: Radius.md, overflow: 'hidden', backgroundColor: Colors.chrome, justifyContent: 'center', alignItems: 'center' },
   scanTarget: { width: 200, height: 200, borderWidth: 2, borderColor: Colors.primary, borderRadius: Radius.sm },
-  scanHint: { color: '#ffffff', fontSize: 11, fontWeight: '800', letterSpacing: 1, marginTop: 12, fontFamily: Font.mono },
-  scannedText: { fontSize: 12, color: Colors.textPrimary, fontFamily: Font.mono, flexWrap: 'wrap' },
-  input: { backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.sm, padding: 10, fontSize: 13, color: Colors.textPrimary, fontFamily: Font.mono },
+  scanHint: { color: Colors.textOnPrimary, fontSize: FontSize.label, fontWeight: '800', letterSpacing: 1, marginTop: 12, fontFamily: Font.mono },
+  scannedText: { fontSize: FontSize.body, color: Colors.textPrimary, fontFamily: Font.mono, flexWrap: 'wrap' },
+  input: { backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.sm, padding: 10, fontSize: FontSize.bodyLarge, color: Colors.textPrimary, fontFamily: Font.mono },
   qrCenter: { alignItems: 'center', gap: Spacing.md, marginTop: Spacing.md },
-  qrBox: { padding: 16, backgroundColor: '#ffffff', borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.borderLight },
+  qrBox: { padding: 16, backgroundColor: Colors.surface, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.borderLight },
 });

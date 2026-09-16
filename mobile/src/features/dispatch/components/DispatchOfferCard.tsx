@@ -1,4 +1,5 @@
 import React from 'react';
+import { Colors, FontSize} from '../../../constants/theme';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { DispatchOffer } from '../types/dispatch';
 
@@ -76,11 +77,11 @@ export const DispatchOfferCard: React.FC<Props> = ({
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#0f172a',
+    backgroundColor: Colors.mapDark,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: Colors.modalBg,
     marginHorizontal: 16,
     marginVertical: 8,
   },
@@ -91,23 +92,23 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   badge: {
-    backgroundColor: '#083344',
+    backgroundColor: Colors.onboardingBg,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#06b6d4',
+    borderColor: Colors.onboardingBorder,
   },
   badgeText: {
-    fontSize: 9,
+    fontSize: FontSize.caption,
     fontWeight: '800',
-    color: '#38bdf8',
+    color: Colors.onboardingText,
     letterSpacing: 0.5,
   },
   bookingId: {
-    fontSize: 12,
+    fontSize: FontSize.body,
     fontWeight: '700',
-    color: '#64748b',
+    color: Colors.textSecondary,
   },
   routeContainer: {
     marginBottom: 14,
@@ -123,27 +124,27 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   dotOrigin: {
-    backgroundColor: '#10b981',
+    backgroundColor: Colors.onboardingOkBorder,
   },
   dotDest: {
-    backgroundColor: '#3b82f6',
+    backgroundColor: Colors.info,
   },
   routeLine: {
     width: 2,
     height: 12,
-    backgroundColor: '#334155',
+    backgroundColor: Colors.modalBorder,
     marginLeft: 3,
     marginVertical: 2,
   },
   routeText: {
-    fontSize: 14,
+    fontSize: FontSize.title,
     fontWeight: '600',
-    color: '#f8fafc',
+    color: Colors.textSecondary,
   },
   detailsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.modalBg,
     borderRadius: 10,
     padding: 10,
     marginBottom: 14,
@@ -152,20 +153,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   detailLabel: {
-    fontSize: 9,
+    fontSize: FontSize.caption,
     fontWeight: '700',
-    color: '#64748b',
+    color: Colors.textSecondary,
     marginBottom: 2,
   },
   detailValue: {
-    fontSize: 12,
+    fontSize: FontSize.body,
     fontWeight: '700',
-    color: '#f8fafc',
+    color: Colors.textSecondary,
   },
   detailValueHighlight: {
-    fontSize: 14,
+    fontSize: FontSize.title,
     fontWeight: '800',
-    color: '#34d399',
+    color: Colors.accent,
   },
   btnRow: {
     flexDirection: 'row',
@@ -178,21 +179,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   btnAccept: {
-    backgroundColor: '#0d9488',
+    backgroundColor: Colors.onboardingBtn,
   },
   btnAcceptText: {
-    color: '#ffffff',
-    fontSize: 13,
+    color: Colors.textOnPrimary,
+    fontSize: FontSize.bodyLarge,
     fontWeight: '700',
   },
   btnReject: {
-    backgroundColor: '#1e293b',
+    backgroundColor: Colors.modalBg,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: Colors.modalBorder,
   },
   btnRejectText: {
-    color: '#94a3b8',
-    fontSize: 13,
+    color: Colors.modalSub,
+    fontSize: FontSize.bodyLarge,
     fontWeight: '600',
   },
 });
