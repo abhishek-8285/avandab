@@ -20,7 +20,7 @@
     <div class="text-xs text-secondary mt-1">Vehicles used</div>
   </div>
   <div class="bg-surface-container-lowest rounded-xl border border-border-subtle p-4">
-    <div class="text-xl font-semibold tabular-nums {{if gt .Extra.Run.KPI.UnassignedCount 0}}text-red-600{{else}}text-on-surface{{end}} leading-none">{{.Extra.Run.KPI.UnassignedCount}}</div>
+    <div class="text-xl font-semibold tabular-nums {{if gt .Extra.Run.KPI.UnassignedCount 0}}text-red-mid{{else}}text-on-surface{{end}} leading-none">{{.Extra.Run.KPI.UnassignedCount}}</div>
     <div class="text-xs text-secondary mt-1">Unassigned</div>
   </div>
 </div>
@@ -53,7 +53,7 @@
             <form method="post" action="/dispatch/runs/{{$.Extra.Run.ID}}/tune">
               <input type="hidden" name="op" value="unassign">
               <input type="hidden" name="route_id" value="{{.ID}}">
-              <button type="submit" class="text-xs px-2 py-0.5 rounded border border-border-subtle text-text-muted hover:border-red-400 hover:text-red-500 transition" title="Unassign all stops of this route">Clear</button>
+              <button type="submit" class="text-xs px-2 py-0.5 rounded border border-border-subtle text-text-muted hover:border-red-line hover:text-red-mid transition" title="Unassign all stops of this route">Clear</button>
             </form>
           </div>
         </div>
@@ -66,7 +66,7 @@
               <form method="post" action="/dispatch/runs/{{$.Extra.Run.ID}}/tune" class="inline-flex items-center gap-1">
                 <input type="hidden" name="op" value="unassign">
                 <input type="hidden" name="stop_id" value="{{.ID}}">
-                <button type="submit" class="text-text-muted hover:text-red-500 transition" title="Unassign stop">✕</button>
+                <button type="submit" class="text-text-muted hover:text-red-mid transition" title="Unassign stop">✕</button>
               </form>
             </span>
           </li>

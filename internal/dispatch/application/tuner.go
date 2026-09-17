@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -416,10 +417,13 @@ func (s *TunerService) resequenceAndKPI(ctx context.Context, tx *sql.Tx, tenantI
 			kpi.TotalKM += d
 			kpi.TotalMin += dur
 			kpi.TotalCost += d + dur
+			// ETA computed in Go: sqlite datetime() has no PG equivalent and
+			// both drivers bind time.Time (sqlite DATETIME, pg TIMESTAMPTZ).
+			eta := time.Now().Add(time.Duration(kpi.TotalMin * float64(time.Minute)))
 			if _, err := tx.ExecContext(ctx,
-				`UPDATE planned_stops SET seq=?, planned_duration_min=?, planned_eta=datetime('now', '+' || CAST(? AS INTEGER) || ' minutes')
-				 WHERE id=? AND tenant_id=?`,
-				i+1, dur, int(kpi.TotalMin), l.id, string(tenantID)); err != nil {
+				`UPDATE planned_stops SET seq=?, planned_duration_min=?, planned_eta=?
+			 WHERE id=? AND tenant_id=?`,
+				i+1, dur, eta, l.id, string(tenantID)); err != nil {
 				return nil, fmt.Errorf("reseq stop: %w", err)
 			}
 			curLat, curLng = l.lat, l.lng
