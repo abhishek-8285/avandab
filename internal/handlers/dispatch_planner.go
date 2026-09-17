@@ -209,7 +209,8 @@ func (h *DispatchHandlers) TuneRun(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]interface{}{"run_id": runID, "kpi": kpi})
 		return
 	}
-	http.Redirect(w, r, "/dispatch/runs/"+runID, http.StatusSeeOther)
+	target := safeRedirect(r, "/dispatch/runs/"+runID, "/dispatch")
+	http.Redirect(w, r, target, http.StatusSeeOther) //nolint:gosec // G710: safeRedirect returns only same-origin paths (see redirect_test.go)
 }
 
 // PlanRun — POST /dispatch/runs/{runID}/plan (solve + persist).
@@ -229,5 +230,6 @@ func (h *DispatchHandlers) PlanRun(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]interface{}{"run_id": runID, "kpi": kpi})
 		return
 	}
-	http.Redirect(w, r, "/dispatch/runs/"+runID, http.StatusSeeOther)
+	target := safeRedirect(r, "/dispatch/runs/"+runID, "/dispatch")
+	http.Redirect(w, r, target, http.StatusSeeOther) //nolint:gosec // G710: safeRedirect returns only same-origin paths (see redirect_test.go)
 }
