@@ -1,9 +1,11 @@
-const CACHE_NAME = 'avandab-v3';
-const STATIC_CACHE = 'avandab-static-v3';
+const CACHE_NAME = 'avandab-v4';
+const STATIC_CACHE = 'avandab-static-v4';
 
-// Assets to pre-cache on install (shell). Runtime requests carry ?v= query
-// strings, so lookups use ignoreSearch (see cacheFirst) — bare paths here
-// still match versioned requests.
+// Assets to pre-cache on install (shell). Requests carry ?v= query strings
+// and the cache key INCLUDES the query — otherwise version bumps never
+// bust the cache and users stay stuck on stale CSS/JS after every deploy
+// (stale app.css kept both hamburger icons visible despite the fix being
+// live on the network). Never use ignoreSearch here.
 const PRECACHE_ASSETS = [
   '/static/css/tailwind.css',
   '/static/css/app.css',
@@ -83,9 +85,10 @@ self.addEventListener('fetch', (event) => {
   // Do NOT cache SSE streams or API responses.
 });
 
-// Cache-first: try cache, fall back to network, update cache
+// Cache-first: try exact-match cache (query included, so ?v= bumps bust
+// it), fall back to network, update cache.
 async function cacheFirst(request, cacheName) {
-  const cached = await caches.match(request, { ignoreSearch: true });
+  const cached = await caches.match(request);
   if (cached) return cached;
 
   try {
