@@ -2755,5 +2755,10 @@
   "fl.derived_from": "से लिया गया",
   "fl.enter_gst": "निकालने के लिए GST लिखें",
   "mo.pay.label": "₹{amt} अभी Razorpay से पे करें",
-  "mo.pay.start_fail": "चेकआउट शुरू नहीं हुआ: "
+  "mo.pay.start_fail": "चेकआउट शुरू नहीं हुआ: ",
+  "tr.rollup_title": "फ्यूल और दूरी",
+  "tr.kmpl": "KMPL",
+  "tr.avg_speed": "औसत गति",
+  "tr.max_speed": "अधिकतम गति",
+  "tr.anomalies": "फ्यूल अलर्ट"
 }
