@@ -426,8 +426,8 @@ func (h *PaymentHandlers) loadPublicPayData(ctx context.Context, invoiceID strin
 		CustomerCompany:    custComp.String,
 		CustomerGSTIN:      custGst.String,
 		CustomerAddress:    custAddressFinal,
-		CustomerPhone:      custPhone.String,
-		CustomerEmail:      custEmail.String,
+		CustomerPhone:      maskPhone(custPhone.String),
+		CustomerEmail:      maskEmail(custEmail.String),
 		Subtotal:           subtotal,
 		Tax:                tax,
 		CGST:               cgst,
@@ -443,7 +443,11 @@ func (h *PaymentHandlers) loadPublicPayData(ctx context.Context, invoiceID strin
 		DueDate:            dueDateStr,
 		IRN:                irnNull.String,
 		SignedQR:           qrNull.String,
-		TenantID:           tenantID,
+		// Security hygiene: the internal tenant ID is an operational identifier,
+		// not something a customer payment page needs. Internal IDs (customer_id,
+		// booking_id, trip_id) stay because the payment flow references them,
+		// but the tenant registry key never leaves the perimeter.
+		TenantID:           "",
 	}
 
 	// Load Line Items
