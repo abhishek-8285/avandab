@@ -1338,9 +1338,9 @@ func main() {
 		}
 		r.Get("/llms.txt", llmsHandler)
 		r.Head("/llms.txt", llmsHandler)
-		r.Get("/login", app.Auth.LoginPage)
+		r.With(middleware.NoStore).Get("/login", app.Auth.LoginPage)
 		r.With(middleware.RateLimitDistributed(appCache, 10)).Post("/login", app.Auth.Login)
-		r.Get("/register", app.Auth.RegisterPage)
+		r.With(middleware.NoStore).Get("/register", app.Auth.RegisterPage)
 		r.With(middleware.RateLimitDistributed(appCache, 10)).Post("/register", app.Auth.Register)
 
 		// Google OAuth — public by design (AGENTS.md rule 5 exception, same
@@ -1592,7 +1592,7 @@ func main() {
 			r.Get("/profile", app.Auth.ProfilePage)
 			r.Post("/profile", app.Auth.UpdateProfile)
 			// DPDP consent notice (HTML page half of the consent ledger).
-			r.Get("/consent", app.Auth.ConsentNoticePage)
+			r.With(middleware.NoStore).Get("/consent", app.Auth.ConsentNoticePage)
 			r.Post("/consent", app.Auth.ConsentGrantForm)
 			r.Get("/change-password", app.Auth.ChangePasswordPage)
 			// Rate-limited: prevents unlimited old-password guessing inside

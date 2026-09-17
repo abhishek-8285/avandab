@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+	dispatchapp "transport-app/internal/dispatch/application"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -719,6 +720,29 @@ func TestAllTemplatesRender(t *testing.T) {
 					IsSelected:    true,
 				},
 			},
+		}},
+
+		// ---- Dispatch planner (D2) ----
+		{"dispatch_runs", "dispatch_runs.html", PageData{
+			Title: "Dispatch Planner", User: user,
+			Extra: map[string]interface{}{"Runs": []dispatchapp.RunSummary{
+				{ID: "run-1", Status: "planned", Source: "orders", CreatedAt: now.Format(time.RFC3339),
+					KPI: dispatchapp.PlanKPI{TotalKM: 42.5, TotalMin: 90, TotalCost: 132.5, VehiclesUsed: 2}},
+			}},
+		}},
+		{"dispatch_run_new", "dispatch_run_new.html", PageData{
+			Title: "New Planner Run", User: user, Extra: map[string]interface{}{},
+		}},
+		{"dispatch_run_detail", "dispatch_run_detail.html", PageData{
+			Title: "Planner Run run-1", User: user,
+			Extra: map[string]interface{}{"Run": dispatchapp.RunDetail{
+				ID: "run-1", Status: "planned", Source: "orders",
+				KPI:   dispatchapp.PlanKPI{TotalKM: 42.5, TotalMin: 90, TotalCost: 132.5, VehiclesUsed: 2, UnassignedCount: 1},
+				Stops: []dispatchapp.StopView{{ID: "st-1", Type: "dropoff", Address: "Andheri", Lat: 19.1, Lng: 72.8, Status: "unassigned", Seq: 1}},
+				Routes: []dispatchapp.RouteView{{ID: "pr-1", VehicleID: "veh-1", Seq: 1, Stops: []dispatchapp.StopView{
+					{ID: "st-2", Type: "pickup", Address: "Depot", Lat: 18.5, Lng: 73.8, Status: "pending", Seq: 1, PlannedETA: &now},
+				}}},
+			}},
 		}},
 
 		// ---- Layouts ----

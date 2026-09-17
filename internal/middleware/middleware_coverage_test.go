@@ -384,6 +384,18 @@ func TestSecurityHeaders_PreservesNextHeader(t *testing.T) {
 	assert.NotEmpty(t, rr.Header().Get("X-Content-Type-Options"))
 }
 
+func TestNoStore_SetsCacheControl(t *testing.T) {
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	handler := NoStore(next)
+	req := httptest.NewRequest("GET", "/login", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, "no-store, max-age=0", rr.Header().Get("Cache-Control"))
+	assert.Equal(t, http.StatusOK, rr.Code)
+}
+
 // ---------------------------------------------------------------------------
 // ContentSecurityPolicy
 // ---------------------------------------------------------------------------

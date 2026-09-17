@@ -1,0 +1,29 @@
+{{template "page_header.html" (dict "Title" "Dispatch Planner" "Subtitle" "Multi-route planning: select orders, solve, review the plan" "ActionHref" "/dispatch/new" "ActionLabel" "New Run")}}
+
+<div class="space-y-5 max-w-[1600px] mx-auto">
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+  <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between">
+    <h3 class="text-sm font-semibold text-on-surface">Planner Runs</h3>
+    <span class="text-xs text-text-muted">last 20</span>
+  </div>
+  <div class="divide-y divide-border-subtle">
+    {{if not .Extra.Runs}}
+      <div class="px-5 py-8 text-center text-sm text-text-muted">No planner runs yet — create one from bookings or adhoc stops.</div>
+    {{end}}
+    {{range .Extra.Runs}}
+    <a href="/dispatch/runs/{{.ID}}" class="block px-5 py-3 hover:bg-surface-container-low transition">
+      <div class="flex items-center justify-between gap-4">
+        <div class="min-w-0">
+          <span class="font-data-mono text-xs text-secondary">{{.ID}}</span>
+          <span class="ml-2 text-xs px-1.5 py-0.5 rounded bg-surface-container-low border border-border-subtle text-on-surface">{{.Status}}</span>
+          <span class="ml-1 text-xs text-text-muted">{{.Source}}</span>
+        </div>
+        <div class="text-xs text-secondary tabular-nums shrink-0">
+          {{printf "%.1f" .KPI.TotalKM}} km · {{.KPI.VehiclesUsed}} vehicles · {{.KPI.UnassignedCount}} unassigned
+        </div>
+      </div>
+    </a>
+    {{end}}
+  </div>
+</div>
+</div>

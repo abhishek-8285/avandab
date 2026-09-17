@@ -447,7 +447,7 @@ func (h *PaymentHandlers) loadPublicPayData(ctx context.Context, invoiceID strin
 		// not something a customer payment page needs. Internal IDs (customer_id,
 		// booking_id, trip_id) stay because the payment flow references them,
 		// but the tenant registry key never leaves the perimeter.
-		TenantID:           "",
+		TenantID: "",
 	}
 
 	// Load Line Items

@@ -1,0 +1,97 @@
+{{template "page_header.html" (dict "Title" (printf "Run %s" .Extra.Run.ID) "Subtitle" .Extra.Run.Status "ActionHref" "/dispatch" "ActionLabel" "Back")}}
+
+<div class="space-y-5 max-w-[1600px] mx-auto">
+
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-3">
+  <div class="bg-surface-container-lowest rounded-xl border border-border-subtle p-4">
+    <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">{{printf "%.1f" .Extra.Run.KPI.TotalKM}}</div>
+    <div class="text-xs text-secondary mt-1">Total km</div>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl border border-border-subtle p-4">
+    <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">{{printf "%.0f" .Extra.Run.KPI.TotalMin}}</div>
+    <div class="text-xs text-secondary mt-1">Total min</div>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl border border-border-subtle p-4">
+    <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">{{printf "%.1f" .Extra.Run.KPI.TotalCost}}</div>
+    <div class="text-xs text-secondary mt-1">Cost index</div>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl border border-border-subtle p-4">
+    <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">{{.Extra.Run.KPI.VehiclesUsed}}</div>
+    <div class="text-xs text-secondary mt-1">Vehicles used</div>
+  </div>
+  <div class="bg-surface-container-lowest rounded-xl border border-border-subtle p-4">
+    <div class="text-xl font-semibold tabular-nums {{if gt .Extra.Run.KPI.UnassignedCount 0}}text-red-600{{else}}text-on-surface{{end}} leading-none">{{.Extra.Run.KPI.UnassignedCount}}</div>
+    <div class="text-xs text-secondary mt-1">Unassigned</div>
+  </div>
+</div>
+
+<div class="flex gap-2">
+  <form method="post" action="/dispatch/runs/{{.Extra.Run.ID}}/plan">
+    <button type="submit" class="px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-semibold hover:opacity-90 transition"
+      {{if eq .Extra.Run.Status "dispatched"}}disabled{{end}}>Solve / Re-solve</button>
+  </form>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+  <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between">
+      <h3 class="text-sm font-semibold text-on-surface">Routes</h3>
+      <form method="post" action="/dispatch/runs/{{.Extra.Run.ID}}/tune">
+        <input type="hidden" name="op" value="merge">
+        <button type="submit" class="text-xs px-2.5 py-1 rounded-lg border border-border-subtle hover:border-primary transition">Merge all</button>
+      </form>
+    </div>
+    <div class="divide-y divide-border-subtle">
+      {{if not .Extra.Run.Routes}}
+        <div class="px-5 py-6 text-center text-sm text-text-muted">No plan yet — hit Solve.</div>
+      {{end}}
+      {{range .Extra.Run.Routes}}
+      <div class="px-5 py-3">
+        <div class="flex items-center justify-between mb-1.5">
+          <div class="text-xs font-semibold text-on-surface">Route {{.Seq}} · <span class="font-data-mono text-secondary">{{if .VehicleID}}{{.VehicleID}}{{else}}unassigned vehicle{{end}}</span></div>
+          <div class="flex gap-1.5">
+            <form method="post" action="/dispatch/runs/{{$.Extra.Run.ID}}/tune">
+              <input type="hidden" name="op" value="unassign">
+              <input type="hidden" name="route_id" value="{{.ID}}">
+              <button type="submit" class="text-xs px-2 py-0.5 rounded border border-border-subtle text-text-muted hover:border-red-400 hover:text-red-500 transition" title="Unassign all stops of this route">Clear</button>
+            </form>
+          </div>
+        </div>
+        <ol class="text-xs text-secondary space-y-1">
+          {{range .Stops}}
+          <li class="flex justify-between gap-2 items-center">
+            <span>{{.Seq}}. {{.Address}}</span>
+            <span class="flex items-center gap-1.5 shrink-0">
+              <span class="text-text-muted">{{.Type}} · {{.Status}}</span>
+              <form method="post" action="/dispatch/runs/{{$.Extra.Run.ID}}/tune" class="inline-flex items-center gap-1">
+                <input type="hidden" name="op" value="unassign">
+                <input type="hidden" name="stop_id" value="{{.ID}}">
+                <button type="submit" class="text-text-muted hover:text-red-500 transition" title="Unassign stop">✕</button>
+              </form>
+            </span>
+          </li>
+          {{end}}
+        </ol>
+      </div>
+      {{end}}
+    </div>
+  </div>
+
+  <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+    <div class="px-5 py-3 border-b border-border-subtle">
+      <h3 class="text-sm font-semibold text-on-surface">Unassigned stops</h3>
+    </div>
+    <div class="divide-y divide-border-subtle">
+      {{if not .Extra.Run.Stops}}
+        <div class="px-5 py-6 text-center text-sm text-text-muted">All stops routed.</div>
+      {{end}}
+      {{range .Extra.Run.Stops}}
+      <div class="px-5 py-2.5 text-xs flex justify-between gap-2">
+        <span class="text-on-surface">{{.Address}}</span>
+        <span class="text-text-muted shrink-0">{{.Type}} · ({{printf "%.4f" .Lat}}, {{printf "%.4f" .Lng}})</span>
+      </div>
+      {{end}}
+    </div>
+  </div>
+</div>
+</div>

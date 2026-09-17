@@ -8,6 +8,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 const countOpenDispatchExceptions = `-- name: CountOpenDispatchExceptions :one
@@ -179,7 +180,29 @@ type CreatePlannedStopParams struct {
 	Status          string          `json:"status"`
 }
 
-func (q *Queries) CreatePlannedStop(ctx context.Context, arg CreatePlannedStopParams) (PlannedStop, error) {
+type CreatePlannedStopRow struct {
+	ID                 string          `json:"id"`
+	TenantID           string          `json:"tenant_id"`
+	RouteID            string          `json:"route_id"`
+	Seq                int64           `json:"seq"`
+	BookingID          sql.NullString  `json:"booking_id"`
+	SourceType         string          `json:"source_type"`
+	Address            string          `json:"address"`
+	Lat                float64         `json:"lat"`
+	Lng                float64         `json:"lng"`
+	TimeWindowStart    sql.NullTime    `json:"time_window_start"`
+	TimeWindowEnd      sql.NullTime    `json:"time_window_end"`
+	Demand             sql.NullFloat64 `json:"demand"`
+	Skills             sql.NullString  `json:"skills"`
+	Status             string          `json:"status"`
+	PlannedEta         sql.NullTime    `json:"planned_eta"`
+	ActualEta          sql.NullTime    `json:"actual_eta"`
+	PlannedDurationMin sql.NullFloat64 `json:"planned_duration_min"`
+	ActualDurationMin  sql.NullFloat64 `json:"actual_duration_min"`
+	CreatedAt          time.Time       `json:"created_at"`
+}
+
+func (q *Queries) CreatePlannedStop(ctx context.Context, arg CreatePlannedStopParams) (CreatePlannedStopRow, error) {
 	row := q.db.QueryRowContext(ctx, createPlannedStop,
 		arg.ID,
 		arg.TenantID,
@@ -196,7 +219,7 @@ func (q *Queries) CreatePlannedStop(ctx context.Context, arg CreatePlannedStopPa
 		arg.Skills,
 		arg.Status,
 	)
-	var i PlannedStop
+	var i CreatePlannedStopRow
 	err := row.Scan(
 		&i.ID,
 		&i.TenantID,
@@ -492,15 +515,37 @@ type ListPlannedStopsByRouteParams struct {
 	TenantID string `json:"tenant_id"`
 }
 
-func (q *Queries) ListPlannedStopsByRoute(ctx context.Context, arg ListPlannedStopsByRouteParams) ([]PlannedStop, error) {
+type ListPlannedStopsByRouteRow struct {
+	ID                 string          `json:"id"`
+	TenantID           string          `json:"tenant_id"`
+	RouteID            string          `json:"route_id"`
+	Seq                int64           `json:"seq"`
+	BookingID          sql.NullString  `json:"booking_id"`
+	SourceType         string          `json:"source_type"`
+	Address            string          `json:"address"`
+	Lat                float64         `json:"lat"`
+	Lng                float64         `json:"lng"`
+	TimeWindowStart    sql.NullTime    `json:"time_window_start"`
+	TimeWindowEnd      sql.NullTime    `json:"time_window_end"`
+	Demand             sql.NullFloat64 `json:"demand"`
+	Skills             sql.NullString  `json:"skills"`
+	Status             string          `json:"status"`
+	PlannedEta         sql.NullTime    `json:"planned_eta"`
+	ActualEta          sql.NullTime    `json:"actual_eta"`
+	PlannedDurationMin sql.NullFloat64 `json:"planned_duration_min"`
+	ActualDurationMin  sql.NullFloat64 `json:"actual_duration_min"`
+	CreatedAt          time.Time       `json:"created_at"`
+}
+
+func (q *Queries) ListPlannedStopsByRoute(ctx context.Context, arg ListPlannedStopsByRouteParams) ([]ListPlannedStopsByRouteRow, error) {
 	rows, err := q.db.QueryContext(ctx, listPlannedStopsByRoute, arg.RouteID, arg.TenantID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []PlannedStop
+	var items []ListPlannedStopsByRouteRow
 	for rows.Next() {
-		var i PlannedStop
+		var i ListPlannedStopsByRouteRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.TenantID,
@@ -550,15 +595,37 @@ type ListPlannedStopsByRunParams struct {
 	TenantID string `json:"tenant_id"`
 }
 
-func (q *Queries) ListPlannedStopsByRun(ctx context.Context, arg ListPlannedStopsByRunParams) ([]PlannedStop, error) {
+type ListPlannedStopsByRunRow struct {
+	ID                 string          `json:"id"`
+	TenantID           string          `json:"tenant_id"`
+	RouteID            string          `json:"route_id"`
+	Seq                int64           `json:"seq"`
+	BookingID          sql.NullString  `json:"booking_id"`
+	SourceType         string          `json:"source_type"`
+	Address            string          `json:"address"`
+	Lat                float64         `json:"lat"`
+	Lng                float64         `json:"lng"`
+	TimeWindowStart    sql.NullTime    `json:"time_window_start"`
+	TimeWindowEnd      sql.NullTime    `json:"time_window_end"`
+	Demand             sql.NullFloat64 `json:"demand"`
+	Skills             sql.NullString  `json:"skills"`
+	Status             string          `json:"status"`
+	PlannedEta         sql.NullTime    `json:"planned_eta"`
+	ActualEta          sql.NullTime    `json:"actual_eta"`
+	PlannedDurationMin sql.NullFloat64 `json:"planned_duration_min"`
+	ActualDurationMin  sql.NullFloat64 `json:"actual_duration_min"`
+	CreatedAt          time.Time       `json:"created_at"`
+}
+
+func (q *Queries) ListPlannedStopsByRun(ctx context.Context, arg ListPlannedStopsByRunParams) ([]ListPlannedStopsByRunRow, error) {
 	rows, err := q.db.QueryContext(ctx, listPlannedStopsByRun, arg.RunID, arg.TenantID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []PlannedStop
+	var items []ListPlannedStopsByRunRow
 	for rows.Next() {
-		var i PlannedStop
+		var i ListPlannedStopsByRunRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.TenantID,
@@ -825,14 +892,36 @@ type UpdatePlannedStopEtaParams struct {
 	TenantID           string          `json:"tenant_id"`
 }
 
-func (q *Queries) UpdatePlannedStopEta(ctx context.Context, arg UpdatePlannedStopEtaParams) (PlannedStop, error) {
+type UpdatePlannedStopEtaRow struct {
+	ID                 string          `json:"id"`
+	TenantID           string          `json:"tenant_id"`
+	RouteID            string          `json:"route_id"`
+	Seq                int64           `json:"seq"`
+	BookingID          sql.NullString  `json:"booking_id"`
+	SourceType         string          `json:"source_type"`
+	Address            string          `json:"address"`
+	Lat                float64         `json:"lat"`
+	Lng                float64         `json:"lng"`
+	TimeWindowStart    sql.NullTime    `json:"time_window_start"`
+	TimeWindowEnd      sql.NullTime    `json:"time_window_end"`
+	Demand             sql.NullFloat64 `json:"demand"`
+	Skills             sql.NullString  `json:"skills"`
+	Status             string          `json:"status"`
+	PlannedEta         sql.NullTime    `json:"planned_eta"`
+	ActualEta          sql.NullTime    `json:"actual_eta"`
+	PlannedDurationMin sql.NullFloat64 `json:"planned_duration_min"`
+	ActualDurationMin  sql.NullFloat64 `json:"actual_duration_min"`
+	CreatedAt          time.Time       `json:"created_at"`
+}
+
+func (q *Queries) UpdatePlannedStopEta(ctx context.Context, arg UpdatePlannedStopEtaParams) (UpdatePlannedStopEtaRow, error) {
 	row := q.db.QueryRowContext(ctx, updatePlannedStopEta,
 		arg.PlannedEta,
 		arg.PlannedDurationMin,
 		arg.ID,
 		arg.TenantID,
 	)
-	var i PlannedStop
+	var i UpdatePlannedStopEtaRow
 	err := row.Scan(
 		&i.ID,
 		&i.TenantID,
@@ -872,9 +961,31 @@ type UpdatePlannedStopStatusParams struct {
 	TenantID string `json:"tenant_id"`
 }
 
-func (q *Queries) UpdatePlannedStopStatus(ctx context.Context, arg UpdatePlannedStopStatusParams) (PlannedStop, error) {
+type UpdatePlannedStopStatusRow struct {
+	ID                 string          `json:"id"`
+	TenantID           string          `json:"tenant_id"`
+	RouteID            string          `json:"route_id"`
+	Seq                int64           `json:"seq"`
+	BookingID          sql.NullString  `json:"booking_id"`
+	SourceType         string          `json:"source_type"`
+	Address            string          `json:"address"`
+	Lat                float64         `json:"lat"`
+	Lng                float64         `json:"lng"`
+	TimeWindowStart    sql.NullTime    `json:"time_window_start"`
+	TimeWindowEnd      sql.NullTime    `json:"time_window_end"`
+	Demand             sql.NullFloat64 `json:"demand"`
+	Skills             sql.NullString  `json:"skills"`
+	Status             string          `json:"status"`
+	PlannedEta         sql.NullTime    `json:"planned_eta"`
+	ActualEta          sql.NullTime    `json:"actual_eta"`
+	PlannedDurationMin sql.NullFloat64 `json:"planned_duration_min"`
+	ActualDurationMin  sql.NullFloat64 `json:"actual_duration_min"`
+	CreatedAt          time.Time       `json:"created_at"`
+}
+
+func (q *Queries) UpdatePlannedStopStatus(ctx context.Context, arg UpdatePlannedStopStatusParams) (UpdatePlannedStopStatusRow, error) {
 	row := q.db.QueryRowContext(ctx, updatePlannedStopStatus, arg.Status, arg.ID, arg.TenantID)
-	var i PlannedStop
+	var i UpdatePlannedStopStatusRow
 	err := row.Scan(
 		&i.ID,
 		&i.TenantID,
