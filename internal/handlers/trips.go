@@ -36,6 +36,7 @@ import (
 	invoicesql "transport-app/internal/invoice/infrastructure/persistence/sql"
 	"transport-app/internal/middleware"
 	"transport-app/internal/pnl"
+	"transport-app/internal/privacy"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 	clock "transport-app/internal/shared/clock"
@@ -1563,8 +1564,8 @@ func (h *TripHandlers) SubmitStopPOD(w http.ResponseWriter, r *http.Request) {
 			"status":        "pod_verified",
 			"stop_id":       stopID,
 			"trip_id":       tripID,
-			"pod_url":       h.podSignedURL(podURL),
-			"signature_url": h.podSignedURL(signatureURL),
+			"pod_url":       h.PODSigner.SignURLOrRaw(podURL),
+			"signature_url": h.PODSigner.SignURLOrRaw(signatureURL),
 			"epod_url":      "/epod/" + tripID,
 		})
 		return
@@ -1893,7 +1894,7 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 		CompanyLogo:   companyLogo, // tenant-scoped branding only; global row no longer read
 		VehicleReg:    vehicleReg,
 		DriverName:    driverName,
-		DriverPhone:   maskPhone(driverPhone),
+		DriverPhone:   privacy.MaskPhone(driverPhone),
 		DepartureTime: departureTime.Format("02 Jan 2006, 15:04"),
 		DeliveredAt:   delivTimestamp,
 		StopSequence:  stopSeq,
@@ -1903,15 +1904,15 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 		ConsigneeName: finalConsName,
 		// Public, login-free page: mask contact details to the tail so anyone
 		// with the link can confirm identity match without harvesting PII.
-		ConsigneePhone:    maskPhone(finalConsPhone),
-		ConsigneeEmail:    maskEmail(consEmail),
+		ConsigneePhone:    privacy.MaskPhone(finalConsPhone),
+		ConsigneeEmail:    privacy.MaskEmail(consEmail),
 		OTPRequired:       true,
 		OTPVerified:       finalOTPVerified,
 		OTPVerifiedAt:     finalOTPVerifiedAt,
 		PODRequired:       true,
 		PODVerified:       finalPODURL != "" || finalSigURL != "" || finalOTPVerified,
-		PODURL:            h.podSignedURL(finalPODURL),
-		SignatureURL:      h.podSignedURL(finalSigURL),
+		PODURL:            h.PODSigner.SignURLOrRaw(finalPODURL),
+		SignatureURL:      h.PODSigner.SignURLOrRaw(finalSigURL),
 		Notes:             finalNotes,
 		VerificationHash:  verHash,
 		CertificateNumber: certNumber,

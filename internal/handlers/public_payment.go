@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	paymentapp "transport-app/internal/payment/application"
+	"transport-app/internal/privacy"
 	"transport-app/internal/shared"
 )
 
@@ -426,8 +427,8 @@ func (h *PaymentHandlers) loadPublicPayData(ctx context.Context, invoiceID strin
 		CustomerCompany:    custComp.String,
 		CustomerGSTIN:      custGst.String,
 		CustomerAddress:    custAddressFinal,
-		CustomerPhone:      maskPhone(custPhone.String),
-		CustomerEmail:      maskEmail(custEmail.String),
+		CustomerPhone:      privacy.MaskPhone(custPhone.String),
+		CustomerEmail:      privacy.MaskEmail(custEmail.String),
 		Subtotal:           subtotal,
 		Tax:                tax,
 		CGST:               cgst,

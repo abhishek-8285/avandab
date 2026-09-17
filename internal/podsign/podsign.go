@@ -96,6 +96,21 @@ func (s *Signer) Sign(podURL string) (string, error) {
 	return "/uploads/pod/" + filename + "?" + q.Encode(), nil
 }
 
+// SignURLOrRaw signs rawURL with s, returning rawURL unchanged when s is nil,
+// rawURL is empty, or signing fails. Nil-safe so pages and tests keep working
+// without a configured signer, while the public mount still rejects unsigned
+// requests.
+func (s *Signer) SignURLOrRaw(rawURL string) string {
+	if s == nil || rawURL == "" {
+		return rawURL
+	}
+	signed, err := s.Sign(rawURL)
+	if err != nil {
+		return rawURL
+	}
+	return signed
+}
+
 // Verify checks a request path+query against the signing key. It returns the
 // validated filename on success so callers can serve exactly that file and
 // nothing else.

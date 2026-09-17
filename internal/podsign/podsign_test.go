@@ -121,3 +121,20 @@ func TestSign_AcceptsBareFilenameAndPath(t *testing.T) {
 		t.Fatalf("bare filename round trip: %v", err)
 	}
 }
+
+func TestSignURLOrRaw_NilSafePassthrough(t *testing.T) {
+	var nilSigner *Signer
+	if got := nilSigner.SignURLOrRaw("/uploads/pod/a.jpg"); got != "/uploads/pod/a.jpg" {
+		t.Fatalf("nil signer: got %q, want passthrough", got)
+	}
+	now := time.Date(2026, 9, 16, 12, 0, 0, 0, time.UTC)
+	s := newSigner(t, 6*time.Hour, now)
+	if got := s.SignURLOrRaw(""); got != "" {
+		t.Fatalf("empty input: got %q, want empty", got)
+	}
+	signed := s.SignURLOrRaw("/uploads/pod/a.jpg")
+	u, _ := url.Parse(signed)
+	if _, err := s.Verify(u.Path, u.RawQuery); err != nil {
+		t.Fatalf("signed output must verify: %v", err)
+	}
+}

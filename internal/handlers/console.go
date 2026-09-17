@@ -508,3 +508,8 @@ func writeAuditLog(r *http.Request, db *sql.DB, action, table, recordID string, 
 		VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
 		uuid.NewString(), contextUserID(r), action, table, recordID, string(blob))
 }
+
+// WriteAuditLog exposes writeAuditLog for vertical-slice presentation packages.
+func WriteAuditLog(r *http.Request, db *sql.DB, action, table, recordID string, newValues any) {
+	writeAuditLog(r, db, action, table, recordID, newValues)
+}

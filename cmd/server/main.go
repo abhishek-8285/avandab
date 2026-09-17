@@ -36,6 +36,7 @@ import (
 	"transport-app/internal/auth"
 	"transport-app/internal/config"
 	dispatchapp "transport-app/internal/dispatch/application"
+	dispatchweb "transport-app/internal/dispatch/presentation/web/handlers"
 	"transport-app/internal/domain"
 	"transport-app/internal/ewaybill"
 	fastag "transport-app/internal/fastag"
@@ -1036,7 +1037,7 @@ func main() {
 		r.With(middleware.ResourcePermission(authSvc, "routes", "read")).Get("/api/v1/routes/optimize/jobs", app.Routes.OptimizeJobs)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "read")).Get("/api/v1/routes/optimize/jobs/{jobID}", app.Routes.OptimizeJobStatus)
 		// Dispatch planner API (Spec D2 §4) — tenant-scoped, permission-gated
-		dispatchAPI := &handlers.DispatchHandlers{
+		dispatchAPI := &dispatchweb.DispatchHandlers{
 			App: app, Planner: dispatchapp.NewPlannerService(database, nil), Tuner: dispatchapp.NewTunerService(database),
 		}
 		r.Route("/api/v1/dispatch", dispatchAPI.Routes)
@@ -1471,7 +1472,7 @@ func main() {
 			r.Route("/routes", app.Routes.Routes)
 
 			// Dispatch planner (multi-route dispatch — Spec D2 §4)
-			dispatchWeb := &handlers.DispatchHandlers{
+			dispatchWeb := &dispatchweb.DispatchHandlers{
 				App: app, Planner: dispatchapp.NewPlannerService(database, nil), Tuner: dispatchapp.NewTunerService(database),
 			}
 			r.Route("/dispatch", dispatchWeb.Routes)

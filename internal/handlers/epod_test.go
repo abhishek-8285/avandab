@@ -248,15 +248,6 @@ func TestPublicEPODCertificate_RenderHTMLAndJSON(t *testing.T) {
 	// asset URLs, not raw /uploads/pod/ paths (audit 2026-09-16).
 	if signer, err := podsign.New([]byte("epod-test-secret-32bytes-ok!!!!!!"), podsign.DefaultTTL); err == nil {
 		app.PODSigner = signer
-		app.podSignURL = func(rawURL string) string {
-			if app.PODSigner == nil || rawURL == "" {
-				return rawURL
-			}
-			if signed, err := app.PODSigner.Sign(rawURL); err == nil {
-				return signed
-			}
-			return rawURL
-		}
 	}
 	h := &TripHandlers{App: app}
 

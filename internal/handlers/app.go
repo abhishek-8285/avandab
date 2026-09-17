@@ -90,9 +90,6 @@ type App struct {
 	// it, and the public mount only serves verified requests. See audit
 	// 2026-09-16.
 	PODSigner *podsign.Signer
-	// podSignURL rewrites a stored POD URL into a signed, time-boxed URL.
-	// Set by NewApp; nil-safe so tests and legacy wiring keep working.
-	podSignURL func(rawURL string) string
 
 	// Handler groups
 	Auth       *AuthHandlers
@@ -209,21 +206,6 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 		app.PODSigner = signer
 	} else {
 		slog.Error("POD signing disabled: CookieSecret too short; public POD URLs will be unsigned and blocked", "error", err)
-	}
-
-	// podSignURL rewrites a stored /uploads/pod/<filename> URL into a
-	// short-lived signed URL. It is nil-safe: with no signer configured the
-	// raw path is returned unchanged so internal/admin pages keep working,
-	// while the public mount still rejects unsigned requests.
-	app.podSignURL = func(rawURL string) string {
-		if app.PODSigner == nil || rawURL == "" {
-			return rawURL
-		}
-		signed, err := app.PODSigner.Sign(rawURL)
-		if err != nil {
-			return rawURL
-		}
-		return signed
 	}
 
 	app.Auth = &AuthHandlers{App: app}
@@ -597,6 +579,21 @@ func isDatastarRequest(r *http.Request) bool {
 	return r.Header.Get(datastarRequestHeader) == "true" ||
 		r.Header.Get("HX-Request") == "true" ||
 		r.URL.Query().Get("_fragment") == "true"
+}
+
+// SessionOf exposes the session user for vertical-slice presentation
+// packages, which cannot reach getUserFromContext.
+func SessionOf(a *App, r *http.Request) *auth.SessionData {
+	session, _ := a.getUserFromContext(r)
+	return session
+}
+
+// IsDatastarRequest exposes isDatastarRequest for vertical-slice packages.
+func IsDatastarRequest(r *http.Request) bool { return isDatastarRequest(r) }
+
+// RenderPage exposes renderPage for vertical-slice presentation packages.
+func (a *App) RenderPage(w http.ResponseWriter, r *http.Request, name string, data PageData) {
+	a.renderPage(w, r, name, data)
 }
 
 // Indian display convention: DD-MM-YYYY. Input controls stay ISO (YYYY-MM-DD)

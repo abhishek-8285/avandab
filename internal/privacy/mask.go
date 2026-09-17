@@ -1,11 +1,11 @@
-package handlers
+package privacy
 
 import "strings"
 
-// maskPhone reveals only the last 4 digits of a phone number on public,
+// MaskPhone reveals only the last 4 digits of a phone number on public,
 // login-free pages (ePOD certificate, public pay). Empty input stays empty.
 // 10+ digits: "••••••1234". Shorter values are fully masked when non-empty.
-func maskPhone(p string) string {
+func MaskPhone(p string) string {
 	p = strings.TrimSpace(p)
 	if p == "" {
 		return ""
@@ -22,9 +22,9 @@ func maskPhone(p string) string {
 	return "••••••" + digits[len(digits)-4:]
 }
 
-// maskEmail reveals the first character of the local part and the full
+// MaskEmail reveals the first character of the local part and the full
 // domain: "a***@example.com". Unparseable or short inputs collapse to "•••".
-func maskEmail(e string) string {
+func MaskEmail(e string) string {
 	e = strings.TrimSpace(e)
 	if e == "" {
 		return ""

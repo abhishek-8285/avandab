@@ -230,6 +230,9 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
+// WriteJSON exposes writeJSON for vertical-slice presentation packages.
+func WriteJSON(w http.ResponseWriter, status int, v interface{}) { writeJSON(w, status, v) }
+
 func (h *RouteHandlers) List(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
 	pp := parsePaginationParams(r)

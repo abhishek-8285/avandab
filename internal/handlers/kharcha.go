@@ -443,6 +443,6 @@ func (h *KharchaHandlers) DeliverWithPOD(w http.ResponseWriter, r *http.Request)
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"trip_number": tripNum,
 		"status":      "delivered",
-		"pod_url":     h.podSignedURL(podPhotoURL),
+		"pod_url":     h.PODSigner.SignURLOrRaw(podPhotoURL),
 	})
 }
