@@ -46,8 +46,8 @@ type Device struct {
 	UpdatedAt        time.Time
 }
 
-// DeviceStore provides raw-SQL persistence for telemetry_devices,
-// device_quarantine, and provider_poll_state. All queries pick up the active
+// DeviceStore provides raw-SQL persistence for telemetry_devices and
+// device_quarantine. All queries pick up the active
 // transaction from context via repository.TxFromContext when present.
 type DeviceStore struct {
 	db *sql.DB

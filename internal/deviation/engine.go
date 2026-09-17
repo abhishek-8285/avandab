@@ -134,12 +134,18 @@ func (e *Engine) ProcessTelemetry(ctx context.Context, pt TelemetryPoint) (Devia
 		details := fmt.Sprintf("Vehicle #%s deviating by %.2f km from planned route (%s → %s)",
 			trip.VehicleID, distKM, corridor.Source, corridor.Dest)
 
-		// A. Persist into telemetry_alerts idempotently
-		resAlert, _ := e.db.ExecContext(ctx, `
+		// A. Persist into telemetry_alerts idempotently. Errors are LOUD
+		// (never `_ =`): a silent skip loses the device-layer record while
+		// the bus event below still fires, splitting the two rails.
+		resAlert, errAlert := e.db.ExecContext(ctx, `
 			INSERT INTO telemetry_alerts (id, trip_id, vehicle_id, driver_id, alert_type, severity, details, latitude, longitude, resolved, created_at)
 			VALUES ($1, $2, $3, $4, 'gps_deviation', 'critical', $5, $6, $7, 0, $8)
 			ON CONFLICT (id) DO NOTHING
 		`, alertID, trip.ID, trip.VehicleID, trip.DriverID, details, pt.Latitude, pt.Longitude, pt.Timestamp.Format("2006-01-02 15:04:05"))
+		if errAlert != nil {
+			e.logger.Warn("gps_deviation telemetry_alerts persist failed",
+				"alert_id", alertID, "trip_id", trip.ID, "error", errAlert)
+		}
 
 		rowsAlert := int64(0)
 		if resAlert != nil {
@@ -167,11 +173,15 @@ func (e *Engine) ProcessTelemetry(ctx context.Context, pt TelemetryPoint) (Devia
 		}
 		payloadBytes, _ := json.Marshal(outboxPayload)
 
-		resOutbox, _ := e.db.ExecContext(ctx, `
+		resOutbox, errOutbox := e.db.ExecContext(ctx, `
 			INSERT INTO outbox_events (id, aggregate_id, aggregate_type, event_type, payload, created_at)
 			VALUES ($1, $2, 'trip', $3, $4, CURRENT_TIMESTAMP)
 			ON CONFLICT (id) DO NOTHING
 		`, "ob_"+alertID, trip.ID, events.GPSDeviationAlert, string(payloadBytes))
+		if errOutbox != nil {
+			e.logger.Warn("gps_deviation outbox persist failed",
+				"alert_id", alertID, "trip_id", trip.ID, "error", errOutbox)
+		}
 
 		rowsOutbox := int64(0)
 		if resOutbox != nil {

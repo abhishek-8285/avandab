@@ -18,6 +18,7 @@ import (
 	"transport-app/internal/auth"
 	"transport-app/internal/domain"
 	driverapp "transport-app/internal/driver/application"
+	"transport-app/internal/integration/accounting"
 	"transport-app/internal/middleware"
 	"transport-app/internal/shared"
 	clock "transport-app/internal/shared/clock"
@@ -384,7 +385,7 @@ func (h *SettingsHandlers) Index(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "settings.html", PageData{
 		Title: "Settings",
 		User:  session,
-		Extra: map[string]interface{}{"Settings": settings},
+		Extra: map[string]interface{}{"Settings": settings, "Accounting": accounting.GetSetting(r.Context(), h.DB)},
 	})
 }
 
@@ -454,6 +455,15 @@ func (h *SettingsHandlers) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	if gstNumber != "" && len(gstNumber) == 15 && panNumber == "" {
 		panNumber = gstNumber[2:12]
+	}
+
+	// Tenant accounting choice (00161): same form, tenant-isolated row.
+	// Invalid provider fails the save loudly, never silently ignored.
+	if accProvider := strings.TrimSpace(r.PostFormValue("accounting_provider")); accProvider != "" {
+		if _, err := accounting.SaveSetting(r.Context(), h.DB, accProvider, r.PostFormValue("accounting_endpoint")); err != nil {
+			h.failPage(w, r, err, http.StatusBadRequest, "Could Not Save Accounting Settings")
+			return
+		}
 	}
 
 	_, err = h.Services.Settings.UpdateSettings(

@@ -105,22 +105,6 @@ type TelemetrySessionRecord struct {
 	PositionsCount  int
 }
 
-type TelemetryEventRecord struct {
-	ID            string
-	TenantID      string
-	SessionID     string
-	ClientEventID string
-	OccurredAt    time.Time
-	ReceivedAt    time.Time
-	Latitude      float64
-	Longitude     float64
-	Speed         float64
-	Accuracy      *float64
-	Heading       *float64
-	Altitude      *float64
-	RawPayload    string
-}
-
 type VehicleLatestPositionRecord struct {
 	TenantID   string
 	VehicleID  string
@@ -134,20 +118,6 @@ type VehicleLatestPositionRecord struct {
 	OccurredAt time.Time
 	ReceivedAt time.Time
 	Source     string
-}
-
-type AuditEventRecord struct {
-	ID          string
-	TenantID    string
-	ActorUserID *string
-	EntityType  string
-	EntityID    string
-	Action      string
-	OldState    *string
-	NewState    *string
-	Reason      *string
-	RequestID   *string
-	CreatedAt   time.Time
 }
 
 type VerificationAttemptRecord struct {

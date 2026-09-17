@@ -306,8 +306,7 @@ func (r *SQLCustomerRepository) GetCustomerTrackingProjection(ctx context.Contex
 		p.Driver = &d
 
 		// Live GPS Tracking point (latest telemetry snapshot for the vehicle;
-		// driver_vehicle_latest_positions was dropped in 00108; snapshots
-		// carry no tenant, so scope through the tenant's vehicles row).
+		// snapshots carry no tenant, so scope through the tenant's vehicles row).
 		var pos domain.LiveTrackingPoint
 		var speed, heading sql.NullFloat64
 		var posTime time.Time

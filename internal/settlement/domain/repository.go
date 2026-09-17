@@ -12,6 +12,10 @@ type SettlementRepository interface {
 
 	// Ledger
 	AppendLedgerEntry(ctx context.Context, tenantID string, entry *LedgerEntry) error
+	// ListLedgerEntryTypes returns the entry types already stored for one
+	// money movement (reference_type + reference_id). Crash-partial recovery
+	// backfills only the missing types — never blind re-appends.
+	ListLedgerEntryTypes(ctx context.Context, tenantID, referenceType, referenceID string) ([]EntryType, error)
 	HasCompensatingLedgerEntry(ctx context.Context, tenantID, referenceType, referenceID string) (bool, error)
 	GetDriverBalance(ctx context.Context, tenantID, driverID string) (float64, error)
 	GetDriverWallet(ctx context.Context, tenantID, driverID string) (*DriverWallet, error)

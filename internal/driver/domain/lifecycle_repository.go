@@ -35,13 +35,11 @@ type TelemetrySessionRepository interface {
 	StartSession(ctx context.Context, tenantID string, sess TelemetrySessionRecord) error
 	GetActiveSession(ctx context.Context, tenantID, driverID string) (*TelemetrySessionRecord, error)
 	EndSession(ctx context.Context, tenantID, sessionID string, endReason string, endedAt time.Time) error
-	IngestEvent(ctx context.Context, tenantID string, evt TelemetryEventRecord) error
 	UpsertLatestPosition(ctx context.Context, tenantID string, pos VehicleLatestPositionRecord) error
 	GetLatestPosition(ctx context.Context, tenantID, vehicleID string) (*VehicleLatestPositionRecord, error)
 }
 
 type AuditRepository interface {
-	RecordAuditEvent(ctx context.Context, tenantID string, evt AuditEventRecord) error
 	RecordVerificationAttempt(ctx context.Context, tenantID string, attempt VerificationAttemptRecord) error
 }
 

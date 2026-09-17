@@ -144,8 +144,21 @@ func (h *ComplianceHandlers) getDashboardData(r *http.Request) (ComplianceDashbo
 	data.BlockedDrivers = []BlockedEntity{}
 	data.BlockedVehicles = []BlockedEntity{}
 
+	// Tenant isolation: org callers see only their own fleet. Bootstrap
+	// ('1'/empty: single-tenant deploys + platform views) keeps global.
+	tid := shared.TenantIDFromContext(ctx)
+	scoped := tid != "" && tid != shared.DefaultTenant //nolint:tenant-default // bootstrap-vs-org branching, not a data fallback
+	var tArg []any
+	if scoped {
+		tArg = append(tArg, string(tid))
+	}
+
 	// Drivers metrics
-	rows, err := db.QueryContext(ctx, `SELECT id, license_expiry, status, blocked, COALESCE(blocked_reason,'') FROM drivers`)
+	driversQ := `SELECT id, license_expiry, status, blocked, COALESCE(blocked_reason,'') FROM drivers`
+	if scoped {
+		driversQ += ` WHERE tenant_id = $1`
+	}
+	rows, err := db.QueryContext(ctx, driversQ, tArg...)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -180,7 +193,11 @@ func (h *ComplianceHandlers) getDashboardData(r *http.Request) (ComplianceDashbo
 	}
 
 	// Vehicles metrics
-	vRows, err := db.QueryContext(ctx, `SELECT id, insurance_expiry, fitness_expiry, permit_expiry, COALESCE(CAST(puc_expiry AS TEXT), ''), status, blocked, COALESCE(blocked_reason,'') FROM vehicles`)
+	vehiclesQ := `SELECT id, insurance_expiry, fitness_expiry, permit_expiry, COALESCE(CAST(puc_expiry AS TEXT), ''), status, blocked, COALESCE(blocked_reason,'') FROM vehicles`
+	if scoped {
+		vehiclesQ += ` WHERE tenant_id = $1`
+	}
+	vRows, err := db.QueryContext(ctx, vehiclesQ, tArg...)
 	if err == nil {
 		defer vRows.Close()
 		for vRows.Next() {
@@ -225,10 +242,17 @@ func (h *ComplianceHandlers) getDashboardData(r *http.Request) (ComplianceDashbo
 		}
 	}
 
-	// Pending documents count
+	// Pending documents count (tenant-scoped via owner entity: the vault
+	// tables carry no tenant_id of their own).
+	ddocQ := `SELECT count(*) FROM driver_documents WHERE status = 'pending_review'`
+	vdocQ := `SELECT count(*) FROM vehicle_documents WHERE status = 'pending_review'`
+	if scoped {
+		ddocQ += ` AND driver_id IN (SELECT id FROM drivers WHERE tenant_id = $1)`
+		vdocQ += ` AND vehicle_id IN (SELECT id FROM vehicles WHERE tenant_id = $1)`
+	}
 	var dPending, vPending int
-	_ = db.QueryRowContext(ctx, `SELECT count(*) FROM driver_documents WHERE status = 'pending_review'`).Scan(&dPending)
-	_ = db.QueryRowContext(ctx, `SELECT count(*) FROM vehicle_documents WHERE status = 'pending_review'`).Scan(&vPending)
+	_ = db.QueryRowContext(ctx, ddocQ, tArg...).Scan(&dPending)
+	_ = db.QueryRowContext(ctx, vdocQ, tArg...).Scan(&vPending)
 	data.DocumentsPending = dPending + vPending
 
 	return data, nil

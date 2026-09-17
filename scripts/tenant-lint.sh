@@ -11,7 +11,7 @@ ALLOWLIST="tenants|permissions|roles|role_permissions|migrations|schema_migratio
 # Tenant tables — split into STRICT (8 core, hard error) and EXTENDED (51 total, warnings until hardened).
 # 00103/00104 cover 51; keep in sync with db/migrations/00103*.sql header list.
 STRICT_TABLES=(bookings trips drivers vehicles invoices payments customers routes)
-TENANT_TABLES=(alerts bookings company_config credit_debit_notes customers device_quarantine dispatch_overrides dispatches driver_advance_requests driver_expenses driver_issues drivers engine_state error_reports eta_history eta_history_monthly experiment_assignments experiment_events experiments_spec16 fastag_tags fastag_transactions feature_flags founder_audit founder_signals fuel_prices geofence_events geofences incidents invoice_line_items invoice_sequences invoices maintenance_records money_ledger note_sequences offline_sync_log ops_alerts payments pnl_daily provider_poll_state route_optimization_jobs routes telemetry_devices telemetry_positions telemetry_raw_events trip_detentions trip_feedback trips users vehicle_geofences vehicle_latest_position vehicles)
+TENANT_TABLES=(alerts bookings company_config credit_debit_notes customers device_quarantine dispatch_overrides dispatches driver_advance_requests driver_expenses driver_issues drivers engine_state error_reports eta_history eta_history_monthly experiment_assignments experiment_events experiments_spec16 fastag_tags fastag_transactions feature_flags founder_audit founder_signals fuel_prices geofence_events geofences incidents invoice_line_items invoice_sequences invoices maintenance_records money_ledger note_sequences ops_alerts payments pnl_daily route_optimization_jobs routes telemetry_devices telemetry_positions telemetry_raw_events trip_detentions trip_feedback trips users vehicle_geofences vehicle_latest_position vehicles)
 
 # ── 1) SQL query check: db/query/*.sql ──────────────────────────────────────
 # Hard errors only for STRICT core (8); extended 51 are warnings until hardened.
@@ -114,7 +114,7 @@ GO_FILES=$(grep -lE 'QueryRowContext|QueryContext|ExecContext' internal/service 
 # Further filter to those that actually mention a tenant table in SQL (51 tables)
 FILTERED=""
 for f in $GO_FILES; do
-  if grep -qiE 'FROM[[:space:]]+(alerts|bookings|company_config|credit_debit_notes|customers|device_quarantine|dispatch_overrides|dispatches|driver_advance_requests|driver_expenses|driver_issues|drivers|engine_state|error_reports|eta_history|experiment_assignments|fastag|feature_flags|founder|fuel_prices|geofence|incidents|invoice_line|invoice_seq|invoices|maintenance|money_ledger|note_seq|offline_sync|ops_alerts|payments|pnl_daily|provider_poll|route_optimization|routes|telemetry|trip_detentions|trip_feedback|trips|users|vehicle_)' "$f" 2>/dev/null; then
+  if grep -qiE 'FROM[[:space:]]+(alerts|bookings|company_config|credit_debit_notes|customers|device_quarantine|dispatch_overrides|dispatches|driver_advance_requests|driver_expenses|driver_issues|drivers|engine_state|error_reports|eta_history|experiment_assignments|fastag|feature_flags|founder|fuel_prices|geofence|incidents|invoice_line|invoice_seq|invoices|maintenance|money_ledger|note_seq|ops_alerts|payments|pnl_daily|route_optimization|routes|telemetry|trip_detentions|trip_feedback|trips|users|vehicle_)' "$f" 2>/dev/null; then
     FILTERED="$FILTERED $f"
   fi
 done

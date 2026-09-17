@@ -103,13 +103,7 @@ func (s *DriverAppService) RegisterDriver(ctx context.Context, tenantID, driverI
 			return err
 		}
 
-		return s.repo.RecordAuditEvent(txCtx, tenantID, domain.AuditEventRecord{
-			ID:         uuid.NewString(),
-			TenantID:   tenantID,
-			EntityType: "driver",
-			EntityID:   driverID,
-			Action:     "registered",
-		})
+		return nil
 	})
 }
 
@@ -188,8 +182,8 @@ func (s *DriverAppService) GetOnboardingState(ctx context.Context, tenantID, dri
 
 // OnboardingFunnelDTO is the drop-off snapshot: where in-progress drivers are
 // stuck right now, plus terminal counts. Derived from driver_onboarding alone
-// (no new event writes); per-step history lives in audit_events if durations
-// are ever needed.
+// (no new event writes); per-step history would need a dedicated reader —
+// audit_events was dropped in 00162 as write-only.
 type OnboardingFunnelDTO struct {
 	TenantID    string         `json:"tenant_id"`
 	Started     int            `json:"started"`
@@ -286,13 +280,7 @@ func (s *DriverAppService) SubmitLicense(ctx context.Context, tenantID, driverID
 			return err
 		}
 
-		return s.repo.RecordAuditEvent(txCtx, tenantID, domain.AuditEventRecord{
-			ID:         uuid.NewString(),
-			TenantID:   tenantID,
-			EntityType: "driver_license",
-			EntityID:   licID,
-			Action:     "submitted",
-		})
+		return nil
 	})
 }
 
@@ -308,13 +296,7 @@ func (s *DriverAppService) SubmitDocument(ctx context.Context, tenantID, driverI
 			return err
 		}
 
-		return s.repo.RecordAuditEvent(txCtx, tenantID, domain.AuditEventRecord{
-			ID:         uuid.NewString(),
-			TenantID:   tenantID,
-			EntityType: "driver_document",
-			EntityID:   docID,
-			Action:     "submitted",
-		})
+		return nil
 	})
 	return docID, err
 }
@@ -348,13 +330,7 @@ func (s *DriverAppService) ClaimVehicle(ctx context.Context, tenantID, driverID,
 			return err
 		}
 
-		return s.repo.RecordAuditEvent(txCtx, tenantID, domain.AuditEventRecord{
-			ID:         uuid.NewString(),
-			TenantID:   tenantID,
-			EntityType: "vehicle_claim",
-			EntityID:   claimID,
-			Action:     "claim_submitted",
-		})
+		return nil
 	})
 	return claimID, err
 }
@@ -395,13 +371,7 @@ func (s *DriverAppService) SubmitPayoutAccount(ctx context.Context, tenantID, dr
 			return err
 		}
 
-		return s.repo.RecordAuditEvent(txCtx, tenantID, domain.AuditEventRecord{
-			ID:         uuid.NewString(),
-			TenantID:   tenantID,
-			EntityType: "driver_payout_account",
-			EntityID:   accID,
-			Action:     "submitted",
-		})
+		return nil
 	})
 	return accID, err
 }
@@ -425,13 +395,7 @@ func (s *DriverAppService) SubmitForVerification(ctx context.Context, tenantID, 
 			return err
 		}
 
-		return s.repo.RecordAuditEvent(txCtx, tenantID, domain.AuditEventRecord{
-			ID:         uuid.NewString(),
-			TenantID:   tenantID,
-			EntityType: "driver_onboarding",
-			EntityID:   driverID,
-			Action:     "submitted_for_verification",
-		})
+		return nil
 	})
 }
 
@@ -440,35 +404,23 @@ func (s *DriverAppService) SubmitForVerification(ctx context.Context, tenantID, 
 func (s *DriverAppService) ReviewDriverLicense(ctx context.Context, tenantID, licenseID, reviewerID string, approve bool, reason string) error {
 	return s.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		status := "verified"
-		action := "license_verified"
 		if !approve {
 			status = "rejected"
-			action = "license_rejected"
 		}
 
 		if err := s.repo.VerifyLicense(txCtx, tenantID, licenseID, status, reviewerID); err != nil {
 			return err
 		}
 
-		return s.repo.RecordAuditEvent(txCtx, tenantID, domain.AuditEventRecord{
-			ID:          uuid.NewString(),
-			TenantID:    tenantID,
-			ActorUserID: &reviewerID,
-			EntityType:  "driver_license",
-			EntityID:    licenseID,
-			Action:      action,
-			Reason:      &reason,
-		})
+		return nil
 	})
 }
 
 func (s *DriverAppService) ReviewVehicleClaim(ctx context.Context, tenantID, claimID, reviewerID string, approve bool, reason string) error {
 	return s.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		status := "approved"
-		action := "vehicle_claim_approved"
 		if !approve {
 			status = "rejected"
-			action = "vehicle_claim_rejected"
 		}
 
 		if err := s.repo.ReviewClaim(txCtx, tenantID, claimID, status, reviewerID, reason); err != nil {
@@ -524,15 +476,7 @@ func (s *DriverAppService) ReviewVehicleClaim(ctx context.Context, tenantID, cla
 			}
 		}
 
-		return s.repo.RecordAuditEvent(txCtx, tenantID, domain.AuditEventRecord{
-			ID:          uuid.NewString(),
-			TenantID:    tenantID,
-			ActorUserID: &reviewerID,
-			EntityType:  "vehicle_claim",
-			EntityID:    claimID,
-			Action:      action,
-			Reason:      &reason,
-		})
+		return nil
 	})
 }
 
@@ -568,14 +512,7 @@ func (s *DriverAppService) AssignVehicleToDriver(ctx context.Context, tenantID, 
 			return err
 		}
 
-		return s.repo.RecordAuditEvent(txCtx, tenantID, domain.AuditEventRecord{
-			ID:          uuid.NewString(),
-			TenantID:    tenantID,
-			ActorUserID: &assignerID,
-			EntityType:  "driver_vehicle_assignment",
-			EntityID:    asgID,
-			Action:      "assigned",
-		})
+		return nil
 	})
 	return asgID, err
 }
@@ -586,13 +523,7 @@ func (s *DriverAppService) EndDriverAssignment(ctx context.Context, tenantID, dr
 			return err
 		}
 
-		return s.repo.RecordAuditEvent(txCtx, tenantID, domain.AuditEventRecord{
-			ID:         uuid.NewString(),
-			TenantID:   tenantID,
-			EntityType: "driver_vehicle_assignment",
-			EntityID:   assignmentID,
-			Action:     "ended",
-		})
+		return nil
 	})
 }
 

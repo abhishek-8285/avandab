@@ -9,8 +9,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-
-	"transport-app/internal/driver/domain"
 )
 
 type DispatchOfferDTO struct {
@@ -355,21 +353,6 @@ func (s *DriverAppService) executeTripTransition(ctx context.Context, tenantID, 
 		nextStatus, now, tenantID, tripID)
 	if err != nil {
 		return DriverCommandResponse{}, fmt.Errorf("failed updating trip state: %w", err)
-	}
-
-	// Record audit event
-	if err := s.repo.RecordAuditEvent(ctx, tenantID, domain.AuditEventRecord{
-		ID:          uuid.NewString(),
-		TenantID:    tenantID,
-		ActorUserID: &driverID,
-		EntityType:  "trip",
-		EntityID:    tripID,
-		Action:      cmdType,
-		OldState:    &currentStatus,
-		NewState:    &nextStatus,
-		CreatedAt:   now,
-	}); err != nil {
-		return DriverCommandResponse{}, fmt.Errorf("record trip transition audit: %w", err)
 	}
 
 	return DriverCommandResponse{

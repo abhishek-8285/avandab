@@ -76,8 +76,10 @@ svg.icon,
   flex-shrink: 0;
 }
 
-/* SVG Rendering Guarantees */
-svg {
+/* SVG Rendering Guarantees — :not(.hidden) so Tailwind's layered
+   `.hidden{display:none}` still hides SVGs (e.g. hamburger close icon).
+   Unlayered author CSS otherwise beats all layered utilities. */
+svg:not(.hidden) {
   display: inline-block;
   vertical-align: middle;
 }

@@ -64,6 +64,12 @@ func (s *SettlementAppService) CalculateAndCreateSettlement(ctx context.Context,
 	// 1. Idempotency / Concurrency Guard: Check if settlement already exists
 	existing, err := s.repo.GetSettlementByTripID(ctx, tenantID, req.TripID)
 	if err == nil && existing != nil {
+		// Crash-partial recovery: a header committed but ledger appends
+		// never landed (crash between the two) leaves the wallet
+		// understated, and this early return would keep it that way.
+		// Heal only our own headers (set_ prefix) with no legacy
+		// breakdown - legacy-owned rows must never gain wallet entries.
+		s.backfillOwnLedger(ctx, tenantID, existing)
 		return existing, nil
 	}
 
@@ -83,104 +89,116 @@ func (s *SettlementAppService) CalculateAndCreateSettlement(ctx context.Context,
 		return nil, fmt.Errorf("failed creating settlement: %w", err)
 	}
 
-	// Append immutable ledger entries for driver earnings & deductions
-	tripRef := req.TripID
-	appendLedger := func(entry *domain.LedgerEntry) error {
-		if err := s.repo.AppendLedgerEntry(ctx, tenantID, entry); err != nil {
+	// Append immutable ledger entries for driver earnings & deductions.
+	// Single builder for create + backfill paths so both write identical sets.
+	if err := s.appendSettlementLedger(ctx, tenantID, ledgerAmounts{
+		driverID: req.DriverID, tripID: req.TripID, settlementID: settlement.ID,
+		gross: settlement.GrossFare, commission: settlement.CommissionAmount,
+		commissionRate: settlement.CommissionRate, toll: settlement.TollAdjustment,
+		advance: settlement.AdvanceDeductions, tds: settlement.TDSAmount,
+		tdsRate: settlement.TDSRate,
+	}, nil); err != nil {
+		return nil, err
+	}
+
+	return settlement, nil
+}
+
+// ledgerAmounts carries one settlement's money movement for ledger writes.
+type ledgerAmounts struct {
+	driverID, tripID, settlementID                   string
+	gross, commission, commissionRate, toll, advance float64
+	tds, tdsRate                                     float64
+}
+
+// expectedEntryTypes mirrors the append predicates below so backfill and
+// create paths can never drift apart.
+func (a ledgerAmounts) expectedEntryTypes() []domain.EntryType {
+	var out []domain.EntryType
+	if a.gross > 0 {
+		out = append(out, domain.EntryTripEarning)
+	}
+	if a.commission > 0 {
+		out = append(out, domain.EntryCommission)
+	}
+	if a.toll > 0 {
+		out = append(out, domain.EntryTollAdjustment)
+	}
+	if a.advance > 0 {
+		out = append(out, domain.EntryAdvanceDeduction)
+	}
+	if a.tds > 0 {
+		out = append(out, domain.EntryPenalty) // tax withhold
+	}
+	return out
+}
+
+// appendSettlementLedger writes every expected entry except those in have
+// (empty on create; stored types on backfill). Predicates live in exactly
+// one place — expectedEntryTypes above.
+func (s *SettlementAppService) appendSettlementLedger(ctx context.Context, tenantID string, a ledgerAmounts, have map[domain.EntryType]bool) error {
+	appendOne := func(typ domain.EntryType, amount float64, desc string) error {
+		if have[typ] {
+			return nil
+		}
+		if err := s.repo.AppendLedgerEntry(ctx, tenantID, &domain.LedgerEntry{
+			ID:            "led_" + uuid.NewString(),
+			TenantID:      tenantID,
+			DriverID:      a.driverID,
+			TripID:        &a.tripID,
+			EntryType:     typ,
+			Amount:        amount,
+			Currency:      "INR",
+			ReferenceType: "settlement",
+			ReferenceID:   a.settlementID,
+			Description:   desc,
+		}); err != nil {
 			return fmt.Errorf("append settlement ledger entry: %w", err)
 		}
 		return nil
 	}
 
 	// Credit: Gross Trip Earning
-	if err := appendLedger(&domain.LedgerEntry{
-		ID:            "led_" + uuid.NewString(),
-		TenantID:      tenantID,
-		DriverID:      req.DriverID,
-		TripID:        &tripRef,
-		EntryType:     domain.EntryTripEarning,
-		Amount:        settlement.GrossFare,
-		Currency:      "INR",
-		ReferenceType: "settlement",
-		ReferenceID:   settlement.ID,
-		Description:   fmt.Sprintf("Trip %s gross fare", req.TripID),
-	}); err != nil {
-		return nil, err
+	if a.gross > 0 {
+		if err := appendOne(domain.EntryTripEarning, a.gross,
+			fmt.Sprintf("Trip %s gross fare", a.tripID)); err != nil {
+			return err
+		}
 	}
 
 	// Debit: Platform Commission
-	if settlement.CommissionAmount > 0 {
-		if err := appendLedger(&domain.LedgerEntry{
-			ID:            "led_" + uuid.NewString(),
-			TenantID:      tenantID,
-			DriverID:      req.DriverID,
-			TripID:        &tripRef,
-			EntryType:     domain.EntryCommission,
-			Amount:        -settlement.CommissionAmount,
-			Currency:      "INR",
-			ReferenceType: "settlement",
-			ReferenceID:   settlement.ID,
-			Description:   fmt.Sprintf("Platform commission (%.1f%%)", settlement.CommissionRate*100),
-		}); err != nil {
-			return nil, err
+	if a.commission > 0 {
+		if err := appendOne(domain.EntryCommission, -a.commission,
+			fmt.Sprintf("Platform commission (%.1f%%)", a.commissionRate*100)); err != nil {
+			return err
 		}
 	}
 
 	// Credit: Toll Adjustment
-	if settlement.TollAdjustment > 0 {
-		if err := appendLedger(&domain.LedgerEntry{
-			ID:            "led_" + uuid.NewString(),
-			TenantID:      tenantID,
-			DriverID:      req.DriverID,
-			TripID:        &tripRef,
-			EntryType:     domain.EntryTollAdjustment,
-			Amount:        settlement.TollAdjustment,
-			Currency:      "INR",
-			ReferenceType: "settlement",
-			ReferenceID:   settlement.ID,
-			Description:   "FASTag / Toll reimbursement",
-		}); err != nil {
-			return nil, err
+	if a.toll > 0 {
+		if err := appendOne(domain.EntryTollAdjustment, a.toll,
+			"FASTag / Toll reimbursement"); err != nil {
+			return err
 		}
 	}
 
 	// Debit: Advance Deduction
-	if settlement.AdvanceDeductions > 0 {
-		if err := appendLedger(&domain.LedgerEntry{
-			ID:            "led_" + uuid.NewString(),
-			TenantID:      tenantID,
-			DriverID:      req.DriverID,
-			TripID:        &tripRef,
-			EntryType:     domain.EntryAdvanceDeduction,
-			Amount:        -settlement.AdvanceDeductions,
-			Currency:      "INR",
-			ReferenceType: "settlement",
-			ReferenceID:   settlement.ID,
-			Description:   "Fuel / Cash advance deduction",
-		}); err != nil {
-			return nil, err
+	if a.advance > 0 {
+		if err := appendOne(domain.EntryAdvanceDeduction, -a.advance,
+			"Fuel / Cash advance deduction"); err != nil {
+			return err
 		}
 	}
 
 	// Debit: TDS Deduction
-	if settlement.TDSAmount > 0 {
-		if err := appendLedger(&domain.LedgerEntry{
-			ID:            "led_" + uuid.NewString(),
-			TenantID:      tenantID,
-			DriverID:      req.DriverID,
-			TripID:        &tripRef,
-			EntryType:     domain.EntryPenalty, // tax withhold
-			Amount:        -settlement.TDSAmount,
-			Currency:      "INR",
-			ReferenceType: "settlement",
-			ReferenceID:   settlement.ID,
-			Description:   fmt.Sprintf("TDS deduction (Sec 194C %.1f%%)", settlement.TDSRate*100),
-		}); err != nil {
-			return nil, err
+	if a.tds > 0 {
+		if err := appendOne(domain.EntryPenalty, -a.tds,
+			fmt.Sprintf("TDS deduction (Sec 194C %.1f%%)", a.tdsRate*100)); err != nil {
+			return err
 		}
 	}
 
-	return settlement, nil
+	return nil
 }
 
 // warnIfLegacySettlement performs the gap-2 dual-write cross-check: a single
@@ -202,6 +220,68 @@ func (s *SettlementAppService) warnIfLegacySettlement(ctx context.Context, tripI
 		slog.Default().Warn("settlement dual-write: legacy trip-close breakdown exists, reusing single settlement row",
 			"trip_id", tripID)
 	}
+}
+
+// backfillOwnLedger heals crash-partials: a wallet-rail header (set_ prefix)
+// whose ledger appends never landed. Fail-open throughout — any uncertainty
+// returns without writing, so this can never duplicate money, only skip:
+//   - non-set_ headers: owned by legacy/bridge flows, never ours.
+//   - legacy breakdown present: legacy owns the trip, reuse as-is.
+//   - list error: unknown state, skip (logged).
+//
+// Concurrent backfills share a tiny duplicate window (no unique constraint
+// on entry types — legacy writes two PENALTY rows, so none can exist);
+// entries stay individually visible in the ledger, never silent.
+func (s *SettlementAppService) backfillOwnLedger(ctx context.Context, tenantID string, existing *domain.Settlement) {
+	if existing == nil || !strings.HasPrefix(existing.ID, "set_") {
+		println("DBG EARLY RETURN")
+		return
+	}
+	legacy, err := s.repo.HasLegacySettlementLines(ctx, existing.TripID)
+	println("DBG legacy=", legacy, "err=", err != nil)
+	if err == nil && legacy {
+		return
+	}
+	stored, err := s.repo.ListLedgerEntryTypes(ctx, tenantID, "settlement", existing.ID)
+	if err != nil {
+		slog.Default().Warn("settlement backfill cross-check unavailable, skipping",
+			"trip_id", existing.TripID, "error", err)
+		return
+	}
+	have := make(map[domain.EntryType]bool, len(stored))
+	for _, t := range stored {
+		have[t] = true
+	}
+	complete := true
+	want := ledgerAmounts{
+		driverID: existing.DriverID, tripID: existing.TripID, settlementID: existing.ID,
+		gross: existing.GrossFare, commission: existing.CommissionAmount,
+		commissionRate: existing.CommissionRate, toll: existing.TollAdjustment,
+		advance: existing.AdvanceDeductions, tds: existing.TDSAmount,
+		tdsRate: existing.TDSRate,
+	}.expectedEntryTypes()
+	for _, t := range want {
+		if !have[t] {
+			complete = false
+			break
+		}
+	}
+	if complete {
+		return
+	}
+	if err := s.appendSettlementLedger(ctx, tenantID, ledgerAmounts{
+		driverID: existing.DriverID, tripID: existing.TripID, settlementID: existing.ID,
+		gross: existing.GrossFare, commission: existing.CommissionAmount,
+		commissionRate: existing.CommissionRate, toll: existing.TollAdjustment,
+		advance: existing.AdvanceDeductions, tds: existing.TDSAmount,
+		tdsRate: existing.TDSRate,
+	}, have); err != nil {
+		slog.Default().Error("settlement ledger backfill failed",
+			"trip_id", existing.TripID, "settlement_id", existing.ID, "error", err)
+		return
+	}
+	slog.Default().Info("settlement ledger backfilled after partial write",
+		"trip_id", existing.TripID, "settlement_id", existing.ID)
 }
 
 func (s *SettlementAppService) GetDriverWallet(ctx context.Context, tenantID, driverID string) (*domain.DriverWallet, error) {
