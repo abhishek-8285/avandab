@@ -1,0 +1,25 @@
+{{template "page_header.html" (dict "Title" "New Planner Run" "Subtitle" "Select bookings or enter adhoc stops" "ActionHref" "/dispatch" "ActionLabel" "Back")}}
+
+<div class="max-w-3xl mx-auto px-4 py-6">
+<form method="post" action="/dispatch/runs" class="space-y-4 bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-5">
+  <div>
+    <label class="block text-xs font-semibold uppercase tracking-wider text-secondary mb-1.5">Source</label>
+    <select name="source" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface">
+      <option value="orders">orders (from bookings)</option>
+      <option value="adhoc">adhoc (manual stops)</option>
+    </select>
+  </div>
+
+  <div>
+    <label class="block text-xs font-semibold uppercase tracking-wider text-secondary mb-1.5">Booking IDs <span class="text-text-muted normal-case tracking-normal">(comma or newline separated; coords resolved from facility links)</span></label>
+    <textarea name="booking_ids" rows="2" class="mt-1 w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-data-mono text-on-surface" placeholder="bkg-101, bkg-102"></textarea>
+  </div>
+
+  <div>
+    <label class="block text-xs font-semibold uppercase tracking-wider text-secondary mb-1.5">Adhoc stops <span class="text-text-muted normal-case tracking-normal">(JSON array of {address, lat, lng, demand?, type?})</span></label>
+    <textarea name="stops" rows="5" class="mt-1 w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-data-mono text-on-surface" placeholder='[{"address":"Andheri East","lat":19.1136,"lng":72.8697},{"address":"BKC","lat":19.0669,"lng":72.8692,"demand":2}]'>[]</textarea>
+  </div>
+
+  <button type="submit" class="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-primary text-on-primary text-sm font-semibold hover:opacity-90 transition">Create Run</button>
+</form>
+</div>

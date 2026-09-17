@@ -19,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"transport-app/internal/config"
+	"transport-app/internal/podsign"
 	"transport-app/internal/shared"
 	tripagg "transport-app/internal/trip/domain/aggregate"
 	triprepo "transport-app/internal/trip/infrastructure/persistence/sql"
@@ -242,6 +243,12 @@ func TestPublicEPODCertificate_RenderHTMLAndJSON(t *testing.T) {
 		DB:        db,
 		Templates: tmpl,
 	}
+	// Wire the POD signer exactly like NewApp does, so this test asserts the
+	// real production behaviour: public e-POD pages emit signature-gated
+	// asset URLs, not raw /uploads/pod/ paths (audit 2026-09-16).
+	if signer, err := podsign.New([]byte("epod-test-secret-32bytes-ok!!!!!!"), podsign.DefaultTTL); err == nil {
+		app.PODSigner = signer
+	}
 	h := &TripHandlers{App: app}
 
 	tripID := "trip_epod_public_1"
@@ -325,10 +332,20 @@ func TestPublicEPODCertificate_RenderHTMLAndJSON(t *testing.T) {
 	assert.Contains(t, bodyStr, "Rajesh Kumar", "Must contain driver name")
 	assert.Contains(t, bodyStr, "Bengaluru Electronic City Terminal", "Must contain location")
 	assert.Contains(t, bodyStr, "Amit Patel", "Must contain consignee name")
-	assert.Contains(t, bodyStr, "9123456780", "Must contain consignee phone")
+	// Security ratchet (PII masking): the public certificate shows masked
+	// contacts — full digits/emails must never appear on a login-free page.
+	assert.Contains(t, bodyStr, "\u2022\u2022\u2022\u2022\u2022\u20226780", "Consignee phone must be masked to last 4")
+	assert.NotContains(t, bodyStr, "9123456780", "Full consignee phone must not leak")
+	assert.Contains(t, bodyStr, "a***@example.com", "Consignee email must be masked")
+	assert.NotContains(t, bodyStr, "amit.patel@example.com", "Full consignee email must not leak")
+	assert.NotContains(t, bodyStr, "9876543210", "Full driver phone must not leak")
 	assert.Contains(t, bodyStr, "OTP Verified", "Must contain verified OTP badge")
-	assert.Contains(t, bodyStr, "/uploads/pod/consignee_signature.png", "Must contain signature image url")
-	assert.Contains(t, bodyStr, "/uploads/pod/delivery_cargo_proof.jpg", "Must contain cargo photo url")
+	// Public e-POD page must emit SIGNED asset URLs: the raw /uploads/pod/
+	// path alone is an anonymous-readable leak and the mount now 404s it.
+	// Assert the signature is present so a regression to raw URLs fails.
+	assert.Contains(t, bodyStr, "/uploads/pod/consignee_signature.png?exp=", "Signature URL must be signed")
+	assert.Contains(t, bodyStr, "&amp;sig=", "Signature URL must carry an HMAC signature")
+	assert.Contains(t, bodyStr, "/uploads/pod/delivery_cargo_proof.jpg?exp=", "Cargo photo URL must be signed")
 	assert.Contains(t, bodyStr, "Print / Download PDF", "Must contain print button")
 	assert.Contains(t, bodyStr, "Digital Verification Seal", "Must contain security seal hash")
 
@@ -349,8 +366,10 @@ func TestPublicEPODCertificate_RenderHTMLAndJSON(t *testing.T) {
 	assert.Equal(t, "Rajesh Kumar", jsonView.DriverName)
 	assert.Equal(t, "Amit Patel", jsonView.ConsigneeName)
 	assert.True(t, jsonView.OTPVerified)
-	assert.Equal(t, "/uploads/pod/delivery_cargo_proof.jpg", jsonView.PODURL)
-	assert.Equal(t, "/uploads/pod/consignee_signature.png", jsonView.SignatureURL)
+	// JSON view must also carry signed asset URLs, not raw /uploads/pod/.
+	assert.Contains(t, jsonView.PODURL, "/uploads/pod/delivery_cargo_proof.jpg?exp=", "JSON PODURL must be signed")
+	assert.Contains(t, jsonView.PODURL, "&sig=", "JSON PODURL must carry a signature")
+	assert.Contains(t, jsonView.SignatureURL, "/uploads/pod/consignee_signature.png?exp=", "JSON SignatureURL must be signed")
 	assert.NotEmpty(t, jsonView.VerificationHash)
 
 	// 3. Test 404 for unknown trip

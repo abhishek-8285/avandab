@@ -28,6 +28,7 @@ import (
 	fuelapp "transport-app/internal/fuel/application"
 	"transport-app/internal/i18n"
 	"transport-app/internal/operations/notifications"
+	"transport-app/internal/podsign"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 	"transport-app/internal/sto"
@@ -82,6 +83,13 @@ type App struct {
 
 	// Turnstile validates Cloudflare Turnstile bot verification.
 	Turnstile auth.TurnstileVerifier
+
+	// PODSigner issues short-lived HMAC signatures for public POD asset
+	// URLs (/uploads/pod/*). Nil = unsigned URLs (dev/legacy); when set,
+	// handlers sign every POD/signature URL before rendering or returning
+	// it, and the public mount only serves verified requests. See audit
+	// 2026-09-16.
+	PODSigner *podsign.Signer
 
 	// Handler groups
 	Auth       *AuthHandlers
@@ -190,6 +198,16 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	app.Experiments = experiments.NewRecorder(db)
 	app.Turnstile = auth.NewTurnstileVerifier(cfg.Turnstile.SecretKey)
 
+	// POD asset URLs served to anonymous viewers are signed so a leaked link
+	// stops working after the TTL. A too-short/absent secret is logged and
+	// left nil: the public mount then 404s unsigned requests, which fails
+	// closed instead of crashing.
+	if signer, err := podsign.New([]byte(cfg.CookieSecret), podsign.DefaultTTL); err == nil {
+		app.PODSigner = signer
+	} else {
+		slog.Error("POD signing disabled: CookieSecret too short; public POD URLs will be unsigned and blocked", "error", err)
+	}
+
 	app.Auth = &AuthHandlers{App: app}
 	app.OTP = &OTPHandlers{App: app}
 	app.Dashboard = &DashboardHandlers{App: app}
@@ -273,8 +291,9 @@ func parseTemplates(authSrv auth.AuthorizationService) (*template.Template, erro
 }
 
 func parseTemplatesLang(authSrv auth.AuthorizationService, lang string) (*template.Template, error) {
+	nlang := i18n.Normalize(lang)
 	tmpl := template.New("").Funcs(template.FuncMap{
-		"t": func(key string) string { return i18n.T(lang, key) },
+		"t": func(key string) string { return i18n.T(nlang, key) },
 		"can": func(user interface{}, resource string, action string) bool {
 			if user == nil {
 				return false
@@ -484,30 +503,33 @@ func parseTemplatesLang(authSrv auth.AuthorizationService, lang string) (*templa
 //     unstyled badge.
 func statusBadgeClass(status interface{}) string {
 	s := fmt.Sprintf("%v", status)
-	classes := map[string]string{
-		"pending":        "badge-warning",
-		"confirmed":      "badge-info",
-		"completed":      "badge-success",
-		"cancelled":      "badge-alert",
-		"draft":          "badge-neutral",
-		"scheduled":      "badge-accent",
-		"assigned":       "badge-accent",
-		"started":        "badge-warning",
-		"reached_pickup": "badge-info",
-		"in_transit":     "badge-accent",
-		"delivered":      "badge-success",
-		"available":      "badge-success",
-		"on_trip":        "badge-warning",
-		"maintenance":    "badge-warning",
-		"running":        "badge-info",
-		"inactive":       "badge-neutral",
-		"paid":           "badge-success",
-		"partially_paid": "badge-warning",
-	}
-	if cls, ok := classes[s]; ok {
+	if cls, ok := statusBadgeClasses[s]; ok {
 		return cls
 	}
 	return "badge-neutral"
+}
+
+// statusBadgeClasses is package-level so hot table renders don't allocate
+// a map per badge.
+var statusBadgeClasses = map[string]string{
+	"pending":        "badge-warning",
+	"confirmed":      "badge-info",
+	"completed":      "badge-success",
+	"cancelled":      "badge-alert",
+	"draft":          "badge-neutral",
+	"scheduled":      "badge-accent",
+	"assigned":       "badge-accent",
+	"started":        "badge-warning",
+	"reached_pickup": "badge-info",
+	"in_transit":     "badge-accent",
+	"delivered":      "badge-success",
+	"available":      "badge-success",
+	"on_trip":        "badge-warning",
+	"maintenance":    "badge-warning",
+	"running":        "badge-info",
+	"inactive":       "badge-neutral",
+	"paid":           "badge-success",
+	"partially_paid": "badge-warning",
 }
 
 // tmplNums coerces template arithmetic operands. Returns float values plus
@@ -557,6 +579,21 @@ func isDatastarRequest(r *http.Request) bool {
 	return r.Header.Get(datastarRequestHeader) == "true" ||
 		r.Header.Get("HX-Request") == "true" ||
 		r.URL.Query().Get("_fragment") == "true"
+}
+
+// SessionOf exposes the session user for vertical-slice presentation
+// packages, which cannot reach getUserFromContext.
+func SessionOf(a *App, r *http.Request) *auth.SessionData {
+	session, _ := a.getUserFromContext(r)
+	return session
+}
+
+// IsDatastarRequest exposes isDatastarRequest for vertical-slice packages.
+func IsDatastarRequest(r *http.Request) bool { return isDatastarRequest(r) }
+
+// RenderPage exposes renderPage for vertical-slice presentation packages.
+func (a *App) RenderPage(w http.ResponseWriter, r *http.Request, name string, data PageData) {
+	a.renderPage(w, r, name, data)
 }
 
 // Indian display convention: DD-MM-YYYY. Input controls stay ISO (YYYY-MM-DD)
@@ -761,7 +798,7 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 		return
 	}
 
-	contentTmpl := a.Templates.Lookup(name)
+	contentTmpl := a.templatesFor(r).Lookup(name)
 	if contentTmpl == nil {
 		a.renderError(w, http.StatusNotFound, "Page Not Found", fmt.Sprintf("Template %q could not be located.", name), data.User)
 		return
@@ -799,6 +836,7 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 	}
 
 	templateData := buildTemplateData(data)
+	templateData["Lang"] = langOf(r)
 
 	// Per-org feature snapshot for nav visibility + upsell locks.
 	// Cached 60s/tenant in App.Cache (renderPage is the hottest read path);
@@ -887,10 +925,12 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 		OGImage        string
 		OGType         string
 		SEOJSONLD      template.HTML
+		Lang           string
 	}{
 		Title:   data.Title,
 		Content: template.HTML(buf.String()),
 		User:    data.User,
+		Lang:    langOf(r),
 		Query: func() string {
 			if q, ok := templateData["Query"].(string); ok {
 				return q
@@ -925,25 +965,27 @@ func (a *App) renderPage(w http.ResponseWriter, r *http.Request, name string, da
 }
 
 // renderAuthPage renders a full page with the auth layout (no sidebar).
-func (a *App) renderAuthPage(w http.ResponseWriter, name string, data PageData) {
+func (a *App) renderAuthPage(w http.ResponseWriter, r *http.Request, name string, data PageData) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
 	w.Header().Set("Pragma", "no-cache")
 	w.Header().Set("Expires", "0")
 
-	authLayout := a.Templates.Lookup("auth_layout.html")
+	tmplSet := a.templatesFor(r)
+	authLayout := tmplSet.Lookup("auth_layout.html")
 	if authLayout == nil {
 		http.Error(w, "auth layout template not found", http.StatusInternalServerError)
 		return
 	}
 
-	contentTmpl := a.Templates.Lookup(name)
+	contentTmpl := tmplSet.Lookup(name)
 	if contentTmpl == nil {
 		http.Error(w, fmt.Sprintf("template %q not found", name), http.StatusInternalServerError)
 		return
 	}
 
 	templateData := buildTemplateData(data)
+	templateData["Lang"] = langOf(r)
 
 	var buf strings.Builder
 	if err := contentTmpl.Execute(&buf, templateData); err != nil {
@@ -965,10 +1007,12 @@ func (a *App) renderAuthPage(w http.ResponseWriter, name string, data PageData) 
 		OGImage        string
 		OGType         string
 		SEOJSONLD      template.HTML
+		Lang           string
 	}{
 		Title:          data.Title,
 		Content:        template.HTML(buf.String()),
 		User:           data.User,
+		Lang:           langOf(r),
 		FlashError:     data.FlashError,
 		FlashSuccess:   data.FlashSuccess,
 		Version:        AppVersion,
@@ -989,6 +1033,16 @@ func (a *App) renderAuthPage(w http.ResponseWriter, name string, data PageData) 
 // renderFragment renders a fragment or template safely.
 // templatesFor picks the template set for the request's language cookie.
 // A nil request (error-render paths) falls back to the default set.
+// langOf returns "hi" when the request carries the Hindi cookie, else "en".
+func langOf(r *http.Request) string {
+	if r != nil {
+		if c, err := r.Cookie("lang"); err == nil && i18n.Normalize(c.Value) == "hi" {
+			return "hi"
+		}
+	}
+	return "en"
+}
+
 func (a *App) templatesFor(r *http.Request) *template.Template {
 	if r != nil {
 		if c, err := r.Cookie("lang"); err == nil && i18n.Normalize(c.Value) == "hi" && a.TemplatesHI != nil {
@@ -1014,13 +1068,14 @@ func (a *App) SetLang(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, next, http.StatusSeeOther)
 }
 
-func (a *App) renderFragment(w http.ResponseWriter, name string, data interface{}) {
+func (a *App) renderFragment(w http.ResponseWriter, r *http.Request, name string, data interface{}) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	tmpl := a.Templates.Lookup(name)
+	tmplSet := a.templatesFor(r)
+	tmpl := tmplSet.Lookup(name)
 	if tmpl == nil {
 		// Fallback: strip _table suffix if present and attempt main template lookup
 		fallbackName := strings.Replace(name, "_table.html", ".html", 1)
-		tmpl = a.Templates.Lookup(fallbackName)
+		tmpl = tmplSet.Lookup(fallbackName)
 	}
 	if tmpl == nil {
 		http.Error(w, fmt.Sprintf("template %q not found", name), http.StatusInternalServerError)
@@ -1040,7 +1095,7 @@ func (a *App) renderFragment(w http.ResponseWriter, name string, data interface{
 // renderForm renders a form template (full page or fragment).
 func (a *App) renderForm(w http.ResponseWriter, r *http.Request, name string, data PageData) {
 	if isDatastarRequest(r) {
-		a.renderFragment(w, name, data)
+		a.renderFragment(w, r, name, data)
 		return
 	}
 	a.renderPage(w, r, name, data)
@@ -1088,43 +1143,36 @@ func seoFAQJSONLD(faq []FAQItem) template.HTML {
 
 // Marketing renders the landing homepage using an in-memory cache with TTL.
 func (a *App) Marketing(w http.ResponseWriter, r *http.Request) {
-	lang := "en"
-	if c, err := r.Cookie("lang"); err == nil && i18n.Normalize(c.Value) == "hi" {
-		lang = "hi"
-	}
+	lang := langOf(r)
 	key := homeCacheKey(lang, AppVersion)
+
+	// Fast path under read lock; render happens outside any lock so one
+	// cold/TTL-expiry render never blocks concurrent home hits.
 	homeCacheMu.Lock()
 	if cachedHomeHTML == nil {
 		cachedHomeHTML = map[string][]byte{}
 		cachedHomeAt = map[string]time.Time{}
 	}
-	_, ok := cachedHomeHTML[key]
+	pageHTML, ok := cachedHomeHTML[key]
 	cachedAt, okAt := cachedHomeAt[key]
+	homeCacheMu.Unlock()
 	if !ok || !okAt || time.Since(cachedAt) > homeCacheTTL {
 		tmpl := a.templatesFor(r).Lookup("home.html")
 		if tmpl != nil {
 			var buf bytes.Buffer
-			data := map[string]interface{}{
-				"Version":        AppVersion,
-				"Title":          "Modern Fleet & Logistics Operations",
-				"SEODescription": "Avandab replaces WhatsApp, spreadsheets and calls with one live cockpit — dispatch, track, e-POD, GST invoice and payments for Indian fleets.",
-				"CanonicalPath":  "/",
-				"Lang":           lang,
-				"NoIndex":        false,
-				"OGType":         "website",
-				"PWAEnabled":     a.Config != nil && a.Config.PWAEnabled,
-			}
-			if err := tmpl.Execute(&buf, data); err == nil {
+			if err := tmpl.Execute(&buf, a.homeData(lang)); err == nil {
+				homeCacheMu.Lock()
 				cachedHomeHTML[key] = buf.Bytes()
 				cachedHomeAt[key] = time.Now()
+				pageHTML = cachedHomeHTML[key]
+				homeCacheMu.Unlock()
 			}
 		}
 	}
-	pageHTML := cachedHomeHTML[key]
-	homeCacheMu.Unlock()
-
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "public, max-age=0, must-revalidate")
+	// The cached page varies by language cookie — shared caches must key on it.
+	w.Header().Set("Vary", "Cookie")
 	if len(pageHTML) > 0 {
 		_, _ = w.Write(pageHTML)
 		return
@@ -1135,7 +1183,15 @@ func (a *App) Marketing(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "home template not found", http.StatusInternalServerError)
 		return
 	}
-	data := map[string]interface{}{
+	if err := tmpl.Execute(w, a.homeData(lang)); err != nil {
+		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
+	}
+}
+
+// homeData builds the data map for home.html so the cached and fallback
+// render paths can never drift apart.
+func (a *App) homeData(lang string) map[string]interface{} {
+	return map[string]interface{}{
 		"Version":        AppVersion,
 		"Title":          "Modern Fleet & Logistics Operations",
 		"SEODescription": "Avandab replaces WhatsApp, spreadsheets and calls with one live cockpit — dispatch, track, e-POD, GST invoice and payments for Indian fleets.",
@@ -1143,9 +1199,7 @@ func (a *App) Marketing(w http.ResponseWriter, r *http.Request) {
 		"Lang":           lang,
 		"NoIndex":        false,
 		"OGType":         "website",
-	}
-	if err := tmpl.Execute(w, data); err != nil {
-		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
+		"PWAEnabled":     a.Config != nil && a.Config.PWAEnabled,
 	}
 }
 
@@ -1178,6 +1232,7 @@ func (a *App) PolicyPage(w http.ResponseWriter, r *http.Request, name string) {
 		"NoIndex":        false,
 		"OGType":         "website",
 		"PWAEnabled":     a.Config != nil && a.Config.PWAEnabled,
+		"Lang":           langOf(r),
 	}
 	if err := tmpl.Execute(w, data); err != nil {
 		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
@@ -1435,7 +1490,7 @@ func (a *App) renderErrorInfo(w http.ResponseWriter, r *http.Request, info Error
 	fallback := fmt.Sprintf("<!DOCTYPE html><html><head><title>%d - %s</title></head><body><h1>%d - %s</h1><p>%s</p><p><small>Error ID: %s | Request ID: %s</small></p></body></html>",
 		info.StatusCode, escapedTitle, info.StatusCode, escapedTitle, escapedMessage, info.ErrorCode, info.RequestID)
 
-	errTmpl := a.Templates.Lookup("error.html")
+	errTmpl := a.templatesFor(r).Lookup("error.html")
 	if errTmpl == nil {
 		_, _ = w.Write([]byte(fallback))
 		return
@@ -1495,6 +1550,7 @@ func (a *App) renderErrorInfo(w http.ResponseWriter, r *http.Request, info Error
 		OGImage        string
 		OGType         string
 		SEOJSONLD      template.HTML
+		Lang           string
 	}{
 		Title:          info.Title,
 		Content:        template.HTML(buf.String()),
@@ -1506,6 +1562,7 @@ func (a *App) renderErrorInfo(w http.ResponseWriter, r *http.Request, info Error
 		CanonicalPath:  "",
 		NoIndex:        true,
 		SEODescription: "An error occurred — Avandab Operations Platform",
+		Lang:           langOf(r),
 	}); err != nil {
 		slog.Error("error layout execution failed", "statusCode", info.StatusCode, "title", info.Title, "error", err)
 		_, _ = w.Write([]byte(fallback))

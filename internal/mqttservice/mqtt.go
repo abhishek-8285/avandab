@@ -72,9 +72,12 @@ func (b *MQTTBroker) subscribeTelemetry() {
 	b.client.Subscribe("avandab/telemetry/drivers/+/gps", 1, logOnlyHandler)
 }
 
-// logOnlyHandler logs a message without processing it.
+// logOnlyHandler acknowledges a message without logging its payload.
+// It previously logged the raw topic+payload, which on the legacy driver
+// GPS topic emitted every driver's live lat/lng to stdout on each publish
+// — a DPDP exposure with no operational value (audit 2026-09-17).
 func logOnlyHandler(_ mqtt.Client, m mqtt.Message) {
-	log.Printf("[MQTT LEGACY] %s: %s", m.Topic(), string(m.Payload()))
+	_ = m
 }
 
 // asPahoHandler adapts a TelemetryHandler to Paho's message callback signature.

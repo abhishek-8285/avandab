@@ -114,7 +114,7 @@ func (h *EWayBillHandlers) GetForTrip(w http.ResponseWriter, r *http.Request) {
 		"TripID":   tripID,
 		"EWayBill": record,
 	}
-	h.renderFragment(w, "ewaybill_card.html", data)
+	h.renderFragment(w, r, "ewaybill_card.html", data)
 }
 
 // AttachPartB attaches a vehicle to an existing EWB.
@@ -339,7 +339,7 @@ func (h *EWayBillHandlers) List(w http.ResponseWriter, r *http.Request) {
 
 func (h *EWayBillHandlers) TableFragment(w http.ResponseWriter, r *http.Request) {
 	items := h.queryEWBItems(r.Context())
-	h.renderFragment(w, "ewaybill_row.html", map[string]interface{}{
+	h.renderFragment(w, r, "ewaybill_row.html", map[string]interface{}{
 		"EWayBills": items,
 	})
 }

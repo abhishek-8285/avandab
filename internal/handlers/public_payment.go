@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	paymentapp "transport-app/internal/payment/application"
+	"transport-app/internal/privacy"
 	"transport-app/internal/shared"
 )
 
@@ -103,6 +104,7 @@ type PublicPayData struct {
 	IsPaid        bool                        `json:"is_paid"`
 	Success       bool                        `json:"success"`
 	ErrorMessage  string                      `json:"error_message,omitempty"`
+	Lang          string                      `json:"-"`
 }
 
 // PublicPay renders the customer-facing invoice payment page (GET /pay/{invoiceId}).
@@ -139,7 +141,8 @@ func (h *PaymentHandlers) PublicPay(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.renderPublicPaymentTemplate(w, "invoice_pay.html", data)
+	data.Lang = langOf(r)
+	h.renderPublicPaymentTemplate(w, r, "invoice_pay.html", data)
 }
 
 // PublicRazorpayOrder creates a server-side Razorpay order for the invoice balance (POST /pay/{invoiceId}/razorpay/order).
@@ -424,8 +427,8 @@ func (h *PaymentHandlers) loadPublicPayData(ctx context.Context, invoiceID strin
 		CustomerCompany:    custComp.String,
 		CustomerGSTIN:      custGst.String,
 		CustomerAddress:    custAddressFinal,
-		CustomerPhone:      custPhone.String,
-		CustomerEmail:      custEmail.String,
+		CustomerPhone:      privacy.MaskPhone(custPhone.String),
+		CustomerEmail:      privacy.MaskEmail(custEmail.String),
 		Subtotal:           subtotal,
 		Tax:                tax,
 		CGST:               cgst,
@@ -441,7 +444,11 @@ func (h *PaymentHandlers) loadPublicPayData(ctx context.Context, invoiceID strin
 		DueDate:            dueDateStr,
 		IRN:                irnNull.String,
 		SignedQR:           qrNull.String,
-		TenantID:           tenantID,
+		// Security hygiene: the internal tenant ID is an operational identifier,
+		// not something a customer payment page needs. Internal IDs (customer_id,
+		// booking_id, trip_id) stay because the payment flow references them,
+		// but the tenant registry key never leaves the perimeter.
+		TenantID: "",
 	}
 
 	// Load Line Items
@@ -571,7 +578,7 @@ func (h *PaymentHandlers) loadPublicPayData(ctx context.Context, invoiceID strin
 	}, nil
 }
 
-func (h *PaymentHandlers) renderPublicPaymentTemplate(w http.ResponseWriter, name string, data interface{}) {
+func (h *PaymentHandlers) renderPublicPaymentTemplate(w http.ResponseWriter, r *http.Request, name string, data interface{}) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 
@@ -579,7 +586,7 @@ func (h *PaymentHandlers) renderPublicPaymentTemplate(w http.ResponseWriter, nam
 		http.Error(w, "templates not initialized", http.StatusInternalServerError)
 		return
 	}
-	tmpl := h.App.Templates.Lookup(name)
+	tmpl := h.App.templatesFor(r).Lookup(name)
 	if tmpl == nil {
 		http.Error(w, fmt.Sprintf("template %q not found", name), http.StatusInternalServerError)
 		return

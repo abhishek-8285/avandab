@@ -65,7 +65,7 @@ func (h *GeofenceHandlers) List(w http.ResponseWriter, r *http.Request) {
 	flash := readFlashCookies(r, w)
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "geofence_row.html", map[string]interface{}{
+		h.renderFragment(w, r, "geofence_row.html", map[string]interface{}{
 			"Zones": zones, "User": session,
 		})
 		return

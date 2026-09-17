@@ -42,7 +42,7 @@
       if (!card) return;
       dragged = card;
       card.style.opacity = "0.5";
-      try { ev.dataTransfer.setData("text/plain", card.dataset.id); } catch (e) {}
+      try { ev.dataTransfer.setData("text/plain", card.dataset.id); } catch (e) { console.warn("board drag data failed", e); }
     });
 
     board.addEventListener("dragend", function () {
@@ -94,13 +94,13 @@
           es = new EventSource("/api/v1/telemetry/stream");
           es.addEventListener("telemetry", function (ev) {
             var msg;
-            try { msg = JSON.parse(ev.data); } catch (e) { return; }
+            try { msg = JSON.parse(ev.data); } catch (e) { console.warn("board telemetry parse failed", e); return; }
             if (msg && msg.booking_id) {
               window.location.reload();
             }
           });
           es.onerror = function () { disconnectSSE(); };
-        } catch (e) {}
+        } catch (e) { console.warn("board SSE connect failed", e); }
       }
       function disconnectSSE() {
         if (es) { es.close(); es = null; }

@@ -327,6 +327,7 @@ func HasPermission(roleID int64, resource string, action string) bool {
 		"vehicles":  {1: true, 6: true, 2: true, 3: false, 4: false, 5: true},
 		"customers": {1: true, 6: true, 2: true, 3: false, 4: false, 5: false},
 		"routes":    {1: true, 6: true, 2: true, 3: false, 4: false, 5: true},
+		"dispatch":  {1: true, 6: true, 2: true, 3: false, 4: false, 5: false},
 		"bookings":  {1: true, 6: true, 2: true, 3: false, 4: false, 5: false},
 		"trips":     {1: true, 6: true, 2: true, 3: false, 4: false, 5: true},
 		"invoices":  {1: true, 6: true, 2: false, 3: true, 4: false, 5: false},
@@ -338,6 +339,8 @@ func HasPermission(roleID int64, resource string, action string) bool {
 		readResources := map[string]bool{
 			"drivers": true, "vehicles": true, "customers": true, "routes": true,
 			"bookings": true, "trips": true, "invoices": true, "payments": true, "reports": true,
+			// NOTE: "dispatch" deliberately absent — viewer role must not reach
+			// the planner (dispatch:read granted to roles 1/2/6 via migration only).
 		}
 		if readResources[resource] && action == "read" {
 			return true

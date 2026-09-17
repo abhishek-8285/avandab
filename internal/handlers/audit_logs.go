@@ -69,7 +69,7 @@ func (h *AuditLogHandlers) List(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "audit_logs_list_table.html", extra)
+		h.renderFragment(w, r, "audit_logs_list_table.html", extra)
 		return
 	}
 

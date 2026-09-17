@@ -115,6 +115,7 @@ func TestTrackingLayout_MapAssetsConditional(t *testing.T) {
 			OGImage        string
 			OGType         string
 			SEOJSONLD      template.HTML
+			Lang           string
 		}{
 			Title: "X", Content: template.HTML("<p>x</p>"), User: nil,
 			Notifications: nil, UnreadCount: 0, HasUnread: false,

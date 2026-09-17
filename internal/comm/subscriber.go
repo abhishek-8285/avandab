@@ -249,9 +249,21 @@ func (s *EventSubscriber) HandlePODEvent(ctx context.Context, e events.Event) er
 		return nil
 	}
 
+	// Customer-facing receipt links must point at the public e-POD
+	// certificate page (/epod/{tripID}), not the raw /uploads/pod/<file>
+	// asset URL. The asset mount is now signature-gated (audit 2026-09-16),
+	// so a raw stored URL would 404 for the customer. The certificate page
+	// is the intended human destination anyway: it renders the POD photo
+	// and signature with masked contacts, and it issues its own signed
+	// asset links per viewer.
+	ePodURL := podURL
+	if tripID != "" {
+		ePodURL = "/epod/" + tripID
+	}
+
 	// 1. Enqueue Email receipt if email is present
 	if customerEmail != "" {
-		if _, err := EnqueuePODEmail(ctx, s.db, tenantID, customerEmail, tripNumber, podURL, nil); err != nil {
+		if _, err := EnqueuePODEmail(ctx, s.db, tenantID, customerEmail, tripNumber, ePodURL, nil); err != nil {
 			s.logger.Error("comm event subscriber: failed to enqueue POD receipt email",
 				"trip_id", tripID, "recipient", customerEmail, "error", err)
 		} else {
@@ -262,7 +274,7 @@ func (s *EventSubscriber) HandlePODEvent(ctx context.Context, e events.Event) er
 
 	// 2. Enqueue WhatsApp delivery completion message if phone is present
 	if customerPhone != "" {
-		if _, err := EnqueuePODWhatsApp(ctx, s.db, tenantID, customerPhone, tripNumber, podURL); err != nil {
+		if _, err := EnqueuePODWhatsApp(ctx, s.db, tenantID, customerPhone, tripNumber, ePodURL); err != nil {
 			s.logger.Error("comm event subscriber: failed to enqueue POD receipt WhatsApp",
 				"trip_id", tripID, "recipient", customerPhone, "error", err)
 		} else {

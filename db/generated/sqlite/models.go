@@ -146,22 +146,24 @@ type AuditLog struct {
 }
 
 type Booking struct {
-	ID             string          `json:"id"`
-	BookingNumber  string          `json:"booking_number"`
-	CustomerID     string          `json:"customer_id"`
-	PickupDate     time.Time       `json:"pickup_date"`
-	RouteID        string          `json:"route_id"`
-	VehicleType    string          `json:"vehicle_type"`
-	Passengers     int64           `json:"passengers"`
-	CargoWeight    sql.NullFloat64 `json:"cargo_weight"`
-	Price          float64         `json:"price"`
-	Notes          sql.NullString  `json:"notes"`
-	Status         string          `json:"status"`
-	CreatedAt      time.Time       `json:"created_at"`
-	UpdatedAt      time.Time       `json:"updated_at"`
-	TenantID       string          `json:"tenant_id"`
-	Version        int64           `json:"version"`
-	IdempotencyKey sql.NullString  `json:"idempotency_key"`
+	ID               string          `json:"id"`
+	BookingNumber    string          `json:"booking_number"`
+	CustomerID       string          `json:"customer_id"`
+	PickupDate       time.Time       `json:"pickup_date"`
+	RouteID          string          `json:"route_id"`
+	VehicleType      string          `json:"vehicle_type"`
+	Passengers       int64           `json:"passengers"`
+	CargoWeight      sql.NullFloat64 `json:"cargo_weight"`
+	Price            float64         `json:"price"`
+	Notes            sql.NullString  `json:"notes"`
+	Status           string          `json:"status"`
+	CreatedAt        time.Time       `json:"created_at"`
+	UpdatedAt        time.Time       `json:"updated_at"`
+	TenantID         string          `json:"tenant_id"`
+	Version          int64           `json:"version"`
+	IdempotencyKey   sql.NullString  `json:"idempotency_key"`
+	PickupFacilityID sql.NullString  `json:"pickup_facility_id"`
+	DropFacilityID   sql.NullString  `json:"drop_facility_id"`
 }
 
 type BreachIncident struct {
@@ -1542,6 +1544,7 @@ type PlannedStop struct {
 	PlannedDurationMin sql.NullFloat64 `json:"planned_duration_min"`
 	ActualDurationMin  sql.NullFloat64 `json:"actual_duration_min"`
 	CreatedAt          time.Time       `json:"created_at"`
+	RunID              sql.NullString  `json:"run_id"`
 }
 
 type PlannerRun struct {

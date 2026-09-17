@@ -433,3 +433,8 @@ func safeRedirect(r *http.Request, target, fallback string) string {
 	}
 	return out
 }
+
+// SafeRedirect exposes safeRedirect for vertical-slice presentation packages.
+func SafeRedirect(r *http.Request, target, fallback string) string {
+	return safeRedirect(r, target, fallback)
+}

@@ -156,7 +156,9 @@ which always allocate head-ward from the maximum above.
 | 00156 | `contact_submissions.acknowledged_at` NULL (first admin touch) for E-Commerce Amendment 2026 48h-ack SLA; reuses `users:manage` admin gate, no new permission; PG port in `migrations_pg/` | Consumer grievance ack |
 | 00157 | Dispatcher workflow: `planner_runs` → `planned_routes` → `planned_stops` + `dispatch_exceptions` (tenant-scope FK triggers via 00103 rule; sqlite + `migrations_pg/` ports; docs/design/dispatcher-route-planner) | Dispatcher Workflow + Best Route Planner (D2) |
 | 00158 | Remove orphaned `engine_state` rows before strict tenant-scoped geofence state persistence (sqlite + `migrations_pg/` ports) | Operational Workflow Architecture |
-| 00158+ | future specs | reserved |
+| 00159 | `bookings.pickup_facility_id` / `drop_facility_id` → facilities(00145) so the dispatch planner resolves stop coords (trigger-based FK per 00103 rule; sqlite + `migrations_pg/` ports) | Dispatcher Workflow (D2) §2 |
+| 00160 | `planned_stops.run_id` direct run linkage (00157 linked stops to runs only via planned_routes; unassigned stops had no owner — draft runs cross-contaminated; trigger-based FK per 00103 rule) | Dispatcher Workflow (D2) §2 |
+| 00160+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

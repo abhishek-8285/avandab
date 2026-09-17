@@ -120,7 +120,7 @@ func (h *BookingHandlers) List(w http.ResponseWriter, r *http.Request) {
 	pd.To = pp.DateTo
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "booking_list_table.html", map[string]interface{}{
+		h.renderFragment(w, r, "booking_list_table.html", map[string]interface{}{
 			"Bookings":     res.Bookings,
 			"Pagination":   pd,
 			"Query":        pp.Query,

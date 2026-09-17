@@ -48,7 +48,7 @@ func (h *UserHandlers) List(w http.ResponseWriter, r *http.Request) {
 	pd.To = pp.DateTo
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "user_list_table.html", map[string]interface{}{
+		h.renderFragment(w, r, "user_list_table.html", map[string]interface{}{
 			"Users":        list,
 			"Pagination":   pd,
 			"Query":        pp.Query,

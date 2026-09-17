@@ -565,7 +565,11 @@ func TestEventSubscriber_HandlesAllDomainEvents(t *testing.T) {
 	}
 	require.NoError(t, db.QueryRow(`SELECT recipient, payload_json FROM comm_outbox WHERE channel = 'whatsapp' AND template = 'pod_receipt'`).Scan(&podWARow.Recipient, &podWARow.Payload))
 	assert.Equal(t, "+919811122233", podWARow.Recipient)
-	assert.Contains(t, podWARow.Payload, "✅ Avandab Delivery Completed: Trip #TRP-101 has been delivered. View your digital e-POD receipt: https://epod.test/1.jpg")
+	// Customer receipts link to the public e-POD certificate page, never the
+	// raw /uploads/pod/ asset: that mount is signature-gated (audit
+	// 2026-09-16), so a raw link would 404 for the customer.
+	assert.Contains(t, podWARow.Payload, "✅ Avandab Delivery Completed: Trip #TRP-101 has been delivered. View your digital e-POD receipt: /epod/trp-1")
+	assert.NotContains(t, podWARow.Payload, "https://epod.test/1.jpg", "receipt must not embed the raw asset URL")
 
 	// 6. Test Auth password reset & welcome events (Email)
 	err = sub.HandleAuthEvent(ctx, events.Event{

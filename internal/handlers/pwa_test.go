@@ -231,7 +231,7 @@ func TestPWAOnAuthPages(t *testing.T) {
 	r, app, _ := setupPWATestRouter(t, true)
 
 	r.Get("/login", func(w http.ResponseWriter, req *http.Request) {
-		app.renderAuthPage(w, "login_form.html", PageData{
+		app.renderAuthPage(w, req, "login_form.html", PageData{
 			Title: "Login",
 		})
 	})

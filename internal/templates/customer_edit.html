@@ -75,7 +75,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label for="logo" class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.logo"}}</label>
-                        {{if $c}}{{if $c.PhotoURL}}<img id="photo_preview" src="{{nullString $c.PhotoURL}}" alt="logo" class="h-12 w-12 rounded-lg object-cover border border-border-subtle mb-2">{{else}}<div id="photo_preview" class="h-12 w-12 rounded-lg bg-surface-container-low border border-dashed border-border-subtle grid place-items-center text-text-muted text-xs mb-2">{{t "fl.no_img"}}</div>{{end}}{{else}}<div id="photo_preview" class="h-12 w-12 rounded-lg bg-surface-container-low border border-dashed border-border-subtle grid place-items-center text-text-muted text-xs mb-2">{{t "fl.no_img"}}</div>{{end}}
+                        {{if and $c $c.PhotoURL}}<img id="photo_preview" src="{{nullString $c.PhotoURL}}" alt="logo" class="h-12 w-12 rounded-lg object-cover border border-border-subtle mb-2">{{else}}<div id="photo_preview" class="h-12 w-12 rounded-lg bg-surface-container-low border border-dashed border-border-subtle grid place-items-center text-text-muted text-xs mb-2">{{t "fl.no_img"}}</div>{{end}}
                         <input type="file" name="logo" id="logo" accept="image/png,image/jpeg,image/webp,image/gif"
                             class="w-full text-sm text-text-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 transition cursor-pointer">
                         <input type="hidden" name="photo_url" value="{{if $c}}{{nullString $c.PhotoURL}}{{end}}">
@@ -84,7 +84,7 @@
                     <div>
                         <label class="block text-eyebrow text-text-muted mb-1.5">{{t "fl.gst_state"}} <span class="font-normal normal-case tracking-normal">{{t "fl.auto_from_gstin"}}</span></label>
                         <div class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm font-data-mono tabular-nums text-on-surface">
-                            {{if $c}}{{if $c.StateCode}}{{nullString $c.StateCode}}{{else}}—{{end}}{{else}}—{{end}} <span class="text-text-muted text-xs">{{if $c}}{{if $c.GST}}derived from {{nullString $c.GST}}{{else}}enter GST to derive{{end}}{{else}}enter GST to derive{{end}}</span>
+                            {{if $c}}{{if $c.StateCode}}{{nullString $c.StateCode}}{{else}}—{{end}}{{else}}—{{end}} <span class="text-text-muted text-xs">{{if $c}}{{if $c.GST}}{{t "fl.derived_from"}} {{nullString $c.GST}}{{else}}{{t "fl.enter_gst"}}{{end}}{{else}}{{t "fl.enter_gst"}}{{end}}</span>
                         </div>
                         <p class="text-[11px] text-text-muted mt-1">{{t "fl.n2_digit_state_code_for_e_invoicing"}}</p>
                     </div>

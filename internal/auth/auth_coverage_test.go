@@ -438,6 +438,15 @@ func TestHasPermission_Complete(t *testing.T) {
 		{1, "unknown_resource", "read", false}, // unknown resource hits final return false (line 346)
 		{99, "unknown", "read", false},
 		{4, "settings", "read", false}, // viewer read but settings not in readResources
+		// dispatch planner (D2): dispatcher + org_admin + admin only; viewers
+		// and accountants must not plan, tune, or solve runs.
+		{2, "dispatch", "read", true},
+		{2, "dispatch", "create", true},
+		{2, "dispatch", "update", true},
+		{6, "dispatch", "read", true},
+		{3, "dispatch", "read", false},
+		{4, "dispatch", "read", false},
+		{5, "dispatch", "read", false},
 	}
 	for _, tt := range tests {
 		got := HasPermission(tt.role, tt.resource, tt.action)

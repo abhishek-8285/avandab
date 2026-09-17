@@ -154,7 +154,7 @@ func (h *AuthHandlers) ConsentNoticePage(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "could not read consent status", http.StatusInternalServerError)
 		return
 	}
-	h.renderAuthPage(w, "consent_notice.html", consentNoticeData(map[string]interface{}{
+	h.renderAuthPage(w, r, "consent_notice.html", consentNoticeData(map[string]interface{}{
 		"Granted":   grantedAt.Valid,
 		"Withdrawn": withdrawnAt.Valid,
 	}))
@@ -177,25 +177,25 @@ func (h *AuthHandlers) ConsentGrantForm(w http.ResponseWriter, r *http.Request) 
 	}
 	if r.PostFormValue("action") == "withdraw" {
 		if err := h.Services.Users.WithdrawConsent(r.Context(), tenantID, userID); err != nil {
-			h.renderAuthPage(w, "consent_notice.html", consentNoticeData(map[string]interface{}{
+			h.renderAuthPage(w, r, "consent_notice.html", consentNoticeData(map[string]interface{}{
 				"Error": "Could not record withdrawal, please try again.",
 			}))
 			return
 		}
-		h.renderAuthPage(w, "consent_notice.html", consentNoticeData(map[string]interface{}{
+		h.renderAuthPage(w, r, "consent_notice.html", consentNoticeData(map[string]interface{}{
 			"Withdrawn":  true,
 			"SuccessMsg": "Consent withdrawn. You will not be able to log in until you grant consent again.",
 		}))
 		return
 	}
 	if r.PostFormValue("agree") != "yes" {
-		h.renderAuthPage(w, "consent_notice.html", consentNoticeData(map[string]interface{}{
+		h.renderAuthPage(w, r, "consent_notice.html", consentNoticeData(map[string]interface{}{
 			"Error": "Please tick the checkbox to confirm you have read the notice — consent is only recorded with your explicit agreement.",
 		}))
 		return
 	}
 	if err := h.Services.Users.GrantConsent(r.Context(), tenantID, userID); err != nil {
-		h.renderAuthPage(w, "consent_notice.html", consentNoticeData(map[string]interface{}{
+		h.renderAuthPage(w, r, "consent_notice.html", consentNoticeData(map[string]interface{}{
 			"Error": "Could not record consent, please try again.",
 		}))
 		return
@@ -249,7 +249,7 @@ func (h *AuthHandlers) LoginPage(w http.ResponseWriter, r *http.Request) {
 		if h.Config.Turnstile.SiteKey != "" {
 			data["TurnstileSiteKey"] = h.Config.Turnstile.SiteKey
 		}
-		h.renderFragment(w, "login_form.html", data)
+		h.renderFragment(w, r, "login_form.html", data)
 		return
 	}
 
@@ -286,7 +286,7 @@ func (h *AuthHandlers) LoginPage(w http.ResponseWriter, r *http.Request) {
 		pd.Extra["TurnstileSiteKey"] = h.Config.Turnstile.SiteKey
 	}
 
-	h.renderAuthPage(w, "login_form.html", pd)
+	h.renderAuthPage(w, r, "login_form.html", pd)
 }
 
 // RegisterPage renders the user onboarding registration page.
@@ -296,7 +296,7 @@ func (h *AuthHandlers) RegisterPage(w http.ResponseWriter, r *http.Request) {
 		if h.Config.Turnstile.SiteKey != "" {
 			data["TurnstileSiteKey"] = h.Config.Turnstile.SiteKey
 		}
-		h.renderFragment(w, "register_form.html", data)
+		h.renderFragment(w, r, "register_form.html", data)
 		return
 	}
 	pd := PageData{Title: "Create Account"}
@@ -327,7 +327,7 @@ func (h *AuthHandlers) RegisterPage(w http.ResponseWriter, r *http.Request) {
 		}
 		pd.Extra["TurnstileSiteKey"] = h.Config.Turnstile.SiteKey
 	}
-	h.renderAuthPage(w, "register_form.html", pd)
+	h.renderAuthPage(w, r, "register_form.html", pd)
 }
 
 // Register handles self-onboarding account creation.
@@ -419,7 +419,7 @@ func (h *AuthHandlers) renderRegisterError(w http.ResponseWriter, r *http.Reques
 		data["TurnstileSiteKey"] = h.Config.Turnstile.SiteKey
 	}
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "register_form.html", data)
+		h.renderFragment(w, r, "register_form.html", data)
 		return
 	}
 	http.SetCookie(w, &http.Cookie{
@@ -463,7 +463,7 @@ func (h *AuthHandlers) Login(w http.ResponseWriter, r *http.Request) {
 				if h.Config.Turnstile.SiteKey != "" {
 					data["TurnstileSiteKey"] = h.Config.Turnstile.SiteKey
 				}
-				h.renderFragment(w, "login_form.html", data)
+				h.renderFragment(w, r, "login_form.html", data)
 				return
 			}
 			http.SetCookie(w, &http.Cookie{
@@ -494,7 +494,7 @@ func (h *AuthHandlers) Login(w http.ResponseWriter, r *http.Request) {
 			if h.Config.Turnstile.SiteKey != "" {
 				data["TurnstileSiteKey"] = h.Config.Turnstile.SiteKey
 			}
-			h.renderFragment(w, "login_form.html", data)
+			h.renderFragment(w, r, "login_form.html", data)
 			return
 		}
 
@@ -614,7 +614,7 @@ func (h *AuthHandlers) ProfilePage(w http.ResponseWriter, r *http.Request) {
 
 // ChangePasswordPage renders the change password page.
 func (h *AuthHandlers) ChangePasswordPage(w http.ResponseWriter, r *http.Request) {
-	h.renderAuthPage(w, "change_password.html", PageData{
+	h.renderAuthPage(w, r, "change_password.html", PageData{
 		Title: "Change Password",
 	})
 }
@@ -633,7 +633,7 @@ func (h *AuthHandlers) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	confirmPassword := r.PostFormValue("confirm_password")
 
 	if newPassword != confirmPassword {
-		h.renderAuthPage(w, "change_password.html", PageData{
+		h.renderAuthPage(w, r, "change_password.html", PageData{
 			Title:      "Change Password",
 			FlashError: "Passwords do not match",
 			User:       session,
@@ -642,7 +642,7 @@ func (h *AuthHandlers) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.Services.Auth.ChangePassword(r.Context(), userID, oldPassword, newPassword); err != nil {
-		h.renderAuthPage(w, "change_password.html", PageData{
+		h.renderAuthPage(w, r, "change_password.html", PageData{
 			Title:      "Change Password",
 			FlashError: err.Error(),
 			User:       session,
@@ -664,7 +664,7 @@ func (h *AuthHandlers) ChangePassword(w http.ResponseWriter, r *http.Request) {
 
 // ForgotPasswordPage renders the forgot password request page.
 func (h *AuthHandlers) ForgotPasswordPage(w http.ResponseWriter, r *http.Request) {
-	h.renderAuthPage(w, "forgot_password.html", PageData{
+	h.renderAuthPage(w, r, "forgot_password.html", PageData{
 		Title: "Forgot Password",
 	})
 }
@@ -683,7 +683,7 @@ func (h *AuthHandlers) SubmitForgotPassword(w http.ResponseWriter, r *http.Reque
 	}
 	if email == "" {
 		pd.Extra["Error"] = "Please enter your email address"
-		h.renderAuthPage(w, "forgot_password.html", pd)
+		h.renderAuthPage(w, r, "forgot_password.html", pd)
 		return
 	}
 
@@ -700,7 +700,7 @@ func (h *AuthHandlers) SubmitForgotPassword(w http.ResponseWriter, r *http.Reque
 	}
 
 	pd.Extra["SuccessMsg"] = "If an account exists for " + email + ", password reset instructions have been sent."
-	h.renderAuthPage(w, "forgot_password.html", pd)
+	h.renderAuthPage(w, r, "forgot_password.html", pd)
 }
 
 // enqueueResetEmail durably queues a password-reset email through comm_outbox
@@ -742,7 +742,7 @@ func (h *AuthHandlers) ResetPasswordPage(w http.ResponseWriter, r *http.Request)
 	if token == "" {
 		pd.Extra["Error"] = "Missing or invalid reset link."
 	}
-	h.renderAuthPage(w, "reset_password.html", pd)
+	h.renderAuthPage(w, r, "reset_password.html", pd)
 }
 
 // SubmitResetPassword redeems a reset token and sets a new password.
@@ -758,25 +758,25 @@ func (h *AuthHandlers) SubmitResetPassword(w http.ResponseWriter, r *http.Reques
 
 	if token == "" {
 		pd.Extra["Error"] = "Missing reset token."
-		h.renderAuthPage(w, "reset_password.html", pd)
+		h.renderAuthPage(w, r, "reset_password.html", pd)
 		return
 	}
 	if newPassword != confirm {
 		pd.Extra["Error"] = "Passwords do not match."
-		h.renderAuthPage(w, "reset_password.html", pd)
+		h.renderAuthPage(w, r, "reset_password.html", pd)
 		return
 	}
 
 	email, ok := h.App.ResetTokens.Consume(token)
 	if !ok {
 		pd.Extra["Error"] = "This reset link is invalid or has expired. Please request a new one."
-		h.renderAuthPage(w, "reset_password.html", pd)
+		h.renderAuthPage(w, r, "reset_password.html", pd)
 		return
 	}
 
 	if err := h.Services.Users.SetPasswordByEmail(r.Context(), email, newPassword); err != nil {
 		pd.Extra["Error"] = err.Error()
-		h.renderAuthPage(w, "reset_password.html", pd)
+		h.renderAuthPage(w, r, "reset_password.html", pd)
 		return
 	}
 
@@ -980,7 +980,7 @@ func (h *AuthHandlers) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "profile_page.html", PageData{
+		h.renderFragment(w, r, "profile_page.html", PageData{
 			Title:      "My Profile",
 			User:       session,
 			UserDetail: updated,

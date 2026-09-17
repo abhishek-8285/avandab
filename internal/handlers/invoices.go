@@ -105,7 +105,7 @@ func (h *InvoiceHandlers) List(w http.ResponseWriter, r *http.Request) {
 	pd.To = pp.DateTo
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "invoice_list_table.html", map[string]interface{}{
+		h.renderFragment(w, r, "invoice_list_table.html", map[string]interface{}{
 			"Invoices":     res.Invoices,
 			"Pagination":   pd,
 			"Query":        pp.Query,
@@ -1203,7 +1203,7 @@ func (h *InvoiceHandlers) GenerateIRN(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.renderFragment(w, "irn_qr.html", map[string]interface{}{
+	h.renderFragment(w, r, "irn_qr.html", map[string]interface{}{
 		"Invoice": invDTO,
 	})
 }
@@ -1219,7 +1219,7 @@ func (h *InvoiceHandlers) GetIRNFragment(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Invoice not found", http.StatusNotFound)
 		return
 	}
-	h.renderFragment(w, "irn_qr.html", map[string]interface{}{
+	h.renderFragment(w, r, "irn_qr.html", map[string]interface{}{
 		"Invoice": invDTO,
 	})
 }

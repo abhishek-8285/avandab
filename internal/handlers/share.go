@@ -346,7 +346,7 @@ func (h *ShareHandlers) ViewShare(w http.ResponseWriter, r *http.Request) {
 				isLocked = true
 				lockSec = int(lockedUntil.Time.Sub(now).Seconds())
 			}
-			h.renderStandalone(w, "share_pin_form.html", map[string]interface{}{
+			h.renderStandalone(w, r, "share_pin_form.html", map[string]interface{}{
 				"Token":       token,
 				"TripNumber":  tripNumber,
 				"IsLocked":    isLocked,
@@ -404,7 +404,7 @@ func (h *ShareHandlers) ViewShare(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Cache-Control", "no-cache, s-maxage=10, stale-while-revalidate=30")
-	h.renderStandalone(w, "share_public.html", map[string]interface{}{
+	h.renderStandalone(w, r, "share_public.html", map[string]interface{}{
 		"Token":            token,
 		"TripNumber":       tripNumber,
 		"TripStatus":       status,
@@ -897,13 +897,16 @@ func (h *ShareHandlers) RevokeShare(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/shares", http.StatusSeeOther)
 }
 
-func (h *ShareHandlers) renderStandalone(w http.ResponseWriter, name string, data interface{}) {
+func (h *ShareHandlers) renderStandalone(w http.ResponseWriter, r *http.Request, name string, data interface{}) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.Header().Set("Pragma", "no-cache")
 	w.Header().Set("Expires", "0")
 
-	tmpl := h.Templates.Lookup(name)
+	if m, ok := data.(map[string]interface{}); ok {
+		m["Lang"] = langOf(r)
+	}
+	tmpl := h.templatesFor(r).Lookup(name)
 	if tmpl == nil {
 		http.Error(w, fmt.Sprintf("template %q not found", name), http.StatusInternalServerError)
 		return

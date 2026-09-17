@@ -815,8 +815,14 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if db == nil {
 					return "database not available", nil
 				}
-				query := `SELECT id, source, alert_type, severity, entity_type, entity_id, title, message, status, created_at FROM alerts WHERE status = 'open'`
+				// Tenant isolation: alerts are multi-tenant data. Every sibling
+				// tool resolves the tenant from the request context; this query
+				// previously had no tenant_id filter, leaking every tenant's
+				// open alerts to any authenticated caller (audit 2026-09-17).
+				tenantID := string(shared.TenantIDFromContext(ctx))
+				query := `SELECT id, source, alert_type, severity, entity_type, entity_id, title, message, status, created_at FROM alerts WHERE status = 'open' AND tenant_id = ?`
 				var queryArgs []any
+				queryArgs = append(queryArgs, tenantID)
 				if in.Severity != "" {
 					query += ` AND severity = ?`
 					queryArgs = append(queryArgs, in.Severity)
@@ -830,20 +836,23 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				defer func() { _ = rows.Close() }()
 
 				type alertRow struct {
-					ID         string `json:"id"`
-					Source     string `json:"source"`
-					AlertType  string `json:"alert_type"`
-					Severity   string `json:"severity"`
-					EntityType string `json:"entity_type"`
-					EntityID   string `json:"entity_id"`
-					Title      string `json:"title"`
-					Message    string `json:"message"`
-					Status     string `json:"status"`
-					CreatedAt  string `json:"created_at"`
+					ID         string  `json:"id"`
+					Source     string  `json:"source"`
+					AlertType  string  `json:"alert_type"`
+					Severity   string  `json:"severity"`
+					EntityType *string `json:"entity_type"`
+					EntityID   *string `json:"entity_id"`
+					Title      string  `json:"title"`
+					Message    string  `json:"message"`
+					Status     string  `json:"status"`
+					CreatedAt  string  `json:"created_at"`
 				}
 				var list []alertRow
 				for rows.Next() {
 					var a alertRow
+					// entity_type/entity_id are nullable columns; scanning into
+					// non-pointer strings errors on NULL and silently drops the
+					// row from the tool output entirely.
 					if err := rows.Scan(&a.ID, &a.Source, &a.AlertType, &a.Severity, &a.EntityType, &a.EntityID, &a.Title, &a.Message, &a.Status, &a.CreatedAt); err == nil {
 						list = append(list, a)
 					}

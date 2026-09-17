@@ -6,6 +6,7 @@ package i18n
 import (
 	"embed"
 	"encoding/json"
+	"log"
 	"strings"
 )
 
@@ -18,12 +19,15 @@ func init() {
 	for _, lang := range []string{"en", "hi"} {
 		b, err := files.ReadFile(lang + ".json")
 		if err != nil {
+			log.Printf("i18n: cannot read %s bundle: %v", lang, err)
 			continue
 		}
 		m := map[string]string{}
-		if json.Unmarshal(b, &m) == nil {
-			bundles[lang] = m
+		if err := json.Unmarshal(b, &m); err != nil {
+			log.Printf("i18n: cannot parse %s bundle: %v", lang, err)
+			continue
 		}
+		bundles[lang] = m
 	}
 }
 
@@ -43,9 +47,12 @@ func Available(lang string) bool {
 }
 
 // T looks up key in lang, then English, then returns the key itself.
+// A key present-but-empty in the requested language returns "" — that is
+// an intentional blank (e.g. Hindi word order drops an English prefix),
+// not a missing translation. English fallback applies only to absent keys.
 func T(lang, key string) string {
 	if m := bundles[Normalize(lang)]; m != nil {
-		if v, ok := m[key]; ok && v != "" {
+		if v, ok := m[key]; ok {
 			return v
 		}
 	}

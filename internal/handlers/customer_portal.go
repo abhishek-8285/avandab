@@ -207,7 +207,7 @@ func (h *CustomerPortalHandlers) ListMyBookings(w http.ResponseWriter, r *http.R
 
 	// Datastar fragment reuse booking_list_table partial.
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "booking_list_table.html", map[string]interface{}{
+		h.renderFragment(w, r, "booking_list_table.html", map[string]interface{}{
 			"Bookings":     bookings,
 			"Pagination":   pd,
 			"Query":        pp.Query,
@@ -321,7 +321,7 @@ func (h *CustomerPortalHandlers) ListMyInvoices(w http.ResponseWriter, r *http.R
 	}
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, "invoice_list_table.html", map[string]interface{}{
+		h.renderFragment(w, r, "invoice_list_table.html", map[string]interface{}{
 			"Invoices":     invoices,
 			"Pagination":   pd,
 			"Query":        pp.Query,

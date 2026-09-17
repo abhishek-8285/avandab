@@ -21,6 +21,13 @@ type VRPMinCost struct{}
 
 const defaultSpeedKMH = 40.0 // matches MockOptimizer ground truth for duration
 
+// unusedVehiclePenaltyKM biases construction toward consolidating stops on
+// already-open routes before opening a new one (min-vehicles objective).
+// Chosen large enough (500 km ≫ any intra-city leg) that a used vehicle is
+// always preferred when constraints permit, yet small enough that a truly
+// infeasible assignment (capacity/duration/windows) still opens a new route.
+const unusedVehiclePenaltyKM = 500.0
+
 func (v *VRPMinCost) Name() string { return "vrp" }
 
 // Solve returns a constraint-feasible, 2-opt-improved route plan.
@@ -86,7 +93,14 @@ func (v *VRPMinCost) Solve(ctx context.Context, in OptimizationInput) (Optimizat
 				if !feasible(in, vi, si, load[vi], routeCount[vi], elapsed[vi], maxShip, maxDur, d, dur) {
 					continue
 				}
+				// Fleet-consolidation bias: already-used vehicles win ties so the
+				// plan uses the minimum number of routes when capacity slack
+				// allows (Samsara-style "fewer miles and vehicles"). Without
+				// this, idle vehicles round-robin stops into extra routes.
 				cost := d
+				if routeCount[vi] == 0 {
+					cost += unusedVehiclePenaltyKM
+				}
 				if cost < bestCost {
 					bestCost = cost
 					bestShip = si

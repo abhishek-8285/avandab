@@ -27,8 +27,16 @@ import (
 func newAgentTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	name := fmt.Sprintf("test_agent_maint_%d", time.Now().UnixNano())
-	db, err := sql.Open("sqlite", "file:"+name+"?mode=memory&cache=shared&_pragma=journal_mode(WAL)")
+	// NOTE: file-based, NOT in-memory. The get_open_alerts tool reaches the
+	// alerts table through env.Services.DB(), which is a *different* logical
+	// connection than the one migrations + seeding run on. SQLite's
+	// in-memory + shared-cache mode gives each connection its own private
+	// view of uncommitted/committed rows under WAL, so a tool query seeded
+	// through the test handle silently saw zero rows. A file DSN shares one
+	// on-disk database across both connections.
+	db, err := sql.Open("sqlite", "file:"+name+".db?mode=rwc&_pragma=journal_mode(WAL)&_pragma=foreign_keys(on)")
 	require.NoError(t, err)
+	t.Cleanup(func() { _ = os.Remove(name + ".db") })
 
 	cwd, _ := os.Getwd()
 	migrationsDir := "../../db/migrations"
