@@ -1,7 +1,7 @@
 # Migration Ownership Index
 
 Single source of truth for `db/migrations/` version numbers. Repo head is
-`00157_dispatcher_workflow.sql`; next free slot is `00158`.
+`00163_drop_dead_accounting_seeds.sql`; next free slot is `00164`.
 (`00039_experiments.sql` remains TAKEN — never edit.) Every new migration
 appends the next free number. **This table is authoritative; spec §3 numbers
 MUST match it.**
@@ -48,7 +48,7 @@ which always allocate head-ward from the maximum above.
 | 00042 | geofence engine + **canonical `company_config` create** | 02 |
 | 00043 | fuel audit + driver scorecard (seeds `company_config` only) | 03 |
 | 00044 | live map + share links + maintenance | 04 |
-| 00045 | alerting pipeline (alert_rules, alert_events, alert_routes, notification_prefs) | 05 |
+| 00045 | alerting pipeline (alert_rules, alert_events→`alerts`, notification_prefs→`notifications_preferences`; `alert_routes` never existed — phantom spec name) | 05 |
 | 00046 | compliance reporting + files | 05 |
 | 00047 | e-way bill lifecycle (eway_bills, eway_bill_events) | 07 |
 | 00048 | GST e-invoice (line items, invoice_sequences, CGST/SGST/IGST, hsn_sac_master, company state code) | 07 |
@@ -158,6 +158,9 @@ which always allocate head-ward from the maximum above.
 | 00158 | Remove orphaned `engine_state` rows before strict tenant-scoped geofence state persistence (sqlite + `migrations_pg/` ports) | Operational Workflow Architecture |
 | 00159 | `bookings.pickup_facility_id` / `drop_facility_id` → facilities(00145) so the dispatch planner resolves stop coords (trigger-based FK per 00103 rule; sqlite + `migrations_pg/` ports) | Dispatcher Workflow (D2) §2 |
 | 00160 | `planned_stops.run_id` direct run linkage (00157 linked stops to runs only via planned_routes; unassigned stops had no owner — draft runs cross-contaminated; trigger-based FK per 00103 rule) | Dispatcher Workflow (D2) §2 |
+| 00161 | `tenant_accounting_settings` — per-tenant accounting provider choice (none/tally/zoho/busy_excel/excel) + endpoint, tenant-isolated, env fallback | Accounting user-choice |
+| 00162 | Drop 8 dead tables (i18n_keys, notifications_preferences, revoked_refresh_tokens, provider_poll_state, route_constraints, offline_sync_log, audit_events, telemetry_events) + write-call removal; alert_sources KEPT (live alert_rules FK parent); Down recreates empty shells (roundtrip-safe) | Dead-table cleanup |
+| 00163 | Delete 4 dead company_config accounting seeds (never read; env + 00161 are the live paths); Down restores seeds | Dead-seed cleanup |
 | 00160+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a

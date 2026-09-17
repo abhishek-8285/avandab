@@ -142,6 +142,32 @@
                 </div>
             </div>
 
+            <div>
+                <h2 class="text-eyebrow text-text-muted border-b border-border-subtle pb-1 mb-3">Accounting Software Link</h2>
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="accounting_provider" class="block text-xs font-semibold text-secondary mb-1.5">Accounting software</label>
+                            <select id="accounting_provider" name="accounting_provider" class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
+                                {{$acc := ""}}{{if .Accounting}}{{$acc = .Accounting.Provider}}{{end}}
+                                <option value="none" {{if or (eq $acc "") (eq $acc "none")}}selected{{end}}>None</option>
+                                <option value="tally" {{if eq $acc "tally"}}selected{{end}}>Tally Prime (live sync)</option>
+                                <option value="zoho" {{if eq $acc "zoho"}}selected{{end}}>Zoho Books (CSV import)</option>
+                                <option value="busy_excel" {{if eq $acc "busy_excel"}}selected{{end}}>Busy (Excel import)</option>
+                                <option value="excel" {{if eq $acc "excel"}}selected{{end}}>Excel only (CSV download)</option>
+                            </select>
+                            <p class="text-[11px] text-text-muted mt-1">Only your company sees this choice. Live push works only for Tally; Zoho / Busy / Excel use CSV import.</p>
+                        </div>
+                        <div>
+                            <label for="accounting_endpoint" class="block text-xs font-semibold text-secondary mb-1.5">Tally gateway endpoint</label>
+                            <input autocomplete="off" id="accounting_endpoint" type="text" name="accounting_endpoint" value="{{if .Accounting}}{{.Accounting.Endpoint}}{{end}}" placeholder="http://localhost:9000"
+                                class="w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
+                            <p class="text-[11px] text-text-muted mt-1">Needed only for Tally Prime with gateway enabled on port 9000.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="sticky bottom-0 -mx-5 px-5 py-3 bg-surface-container-lowest border-t border-border-subtle flex justify-end gap-2 flex-wrap">
                 {{template "btn.html" (dict "Variant" "secondary" "Label" (t "sy.common.cancel") "Href" "/dashboard" "Class" "min-h-[44px]")}}
                 {{template "btn.html" (dict "Variant" "primary" "Label" (t "sy.settings.save") "Type" "submit" "Class" "min-h-[44px] shadow-sm")}}

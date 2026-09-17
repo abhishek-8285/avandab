@@ -148,6 +148,29 @@ func (r *SQLSettlementRepository) AppendLedgerEntry(ctx context.Context, tenantI
 	return tx.Commit()
 }
 
+func (r *SQLSettlementRepository) ListLedgerEntryTypes(ctx context.Context, tenantID, referenceType, referenceID string) ([]domain.EntryType, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT DISTINCT entry_type FROM driver_ledger_entries
+		WHERE tenant_id = $1 AND reference_type = $2 AND reference_id = $3`,
+		tenantID, referenceType, referenceID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []domain.EntryType
+	for rows.Next() {
+		var t string
+		if err := rows.Scan(&t); err != nil {
+			return nil, err
+		}
+		out = append(out, domain.EntryType(t))
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (r *SQLSettlementRepository) HasCompensatingLedgerEntry(ctx context.Context, tenantID, referenceType, referenceID string) (bool, error) {
 	var count int
 	err := r.db.QueryRowContext(ctx, `

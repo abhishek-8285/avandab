@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"math"
 	"time"
 
@@ -146,31 +145,12 @@ func (s *DriverAppService) IngestTelemetryEvent(ctx context.Context, tenantID, d
 		}
 	}
 
-	// 4. Save Event (idempotent ON CONFLICT DO NOTHING)
+	// 4. EventID echoes the accepted frame (dedupe key for the client);
+	// per-frame rows (telemetry_events, 00162-dropped) were write-only —
+	// the live rail is the latest-position projection below.
 	eventID := uuid.NewString()
 	accuracy := req.AccuracyMeters
 	heading := req.HeadingDegrees
-	event := domain.TelemetryEventRecord{
-		ID:            eventID,
-		TenantID:      tenantID,
-		SessionID:     req.SessionID,
-		ClientEventID: req.ClientEventID,
-		OccurredAt:    occurredAt,
-		ReceivedAt:    time.Now(),
-		Latitude:      req.Latitude,
-		Longitude:     req.Longitude,
-		Speed:         req.SpeedKmph,
-		Accuracy:      &accuracy,
-		Heading:       &heading,
-	}
-
-	if err := s.repo.IngestEvent(ctx, tenantID, event); err != nil {
-		return TelemetryIngestResponse{
-			Status:        StatusInvalidSession,
-			Message:       fmt.Sprintf("Failed recording event: %v", err),
-			ClientEventID: req.ClientEventID,
-		}, err
-	}
 
 	// 5. Update latest position projection if vehicle bound
 	if vehicleID != "" {

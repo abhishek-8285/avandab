@@ -141,70 +141,6 @@ func TestDriverLifecycle_ConflictingAssignmentsPrevented(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestDriverLifecycle_TelemetryIdempotency(t *testing.T) {
-	db := setupLifecycleTestDB(t)
-	repo := driversql.NewDriverLifecycleRepository(db)
-	ctx := context.Background()
-
-	tenantID := "tenant-1"
-	sessionID := "sess-1"
-	clientEventID := "evt-unique-123"
-
-	// Register installation & session first
-	inst := domain.TelemetryInstallationRecord{
-		ID:                "inst-1",
-		TenantID:          tenantID,
-		AppInstallationID: "app-inst-1",
-		Platform:          "android",
-		AppVersion:        "1.0.0",
-		DeviceModel:       "Realme 8",
-		OSVersion:         "Android 13",
-		Status:            "active",
-	}
-	err := repo.RegisterInstallation(ctx, tenantID, inst)
-	require.NoError(t, err)
-
-	sess := domain.TelemetrySessionRecord{
-		ID:             sessionID,
-		TenantID:       tenantID,
-		InstallationID: inst.ID,
-		DriverID:       "driver-1",
-		SessionType:    "on_duty",
-		Status:         "active",
-		StartReason:    "APP_AVAILABLE",
-		StartedAt:      time.Now(),
-	}
-	err = repo.StartSession(ctx, tenantID, sess)
-	require.NoError(t, err)
-
-	evt := domain.TelemetryEventRecord{
-		ID:            "evt-row-1",
-		TenantID:      tenantID,
-		SessionID:     sessionID,
-		ClientEventID: clientEventID,
-		OccurredAt:    time.Now(),
-		Latitude:      28.6139,
-		Longitude:     77.2090,
-		Speed:         42.5,
-	}
-
-	// First ingestion succeeds
-	err = repo.IngestEvent(ctx, tenantID, evt)
-	require.NoError(t, err)
-
-	// Duplicate ingestion with same clientEventID is silently ignored (idempotent)
-	evtDuplicate := evt
-	evtDuplicate.ID = "evt-row-2"
-	err = repo.IngestEvent(ctx, tenantID, evtDuplicate)
-	require.NoError(t, err)
-
-	// Verify only 1 event exists
-	var count int
-	err = db.QueryRow("SELECT COUNT(*) FROM telemetry_events WHERE session_id = ?", sessionID).Scan(&count)
-	require.NoError(t, err)
-	assert.Equal(t, 1, count)
-}
-
 func TestDriverLifecycle_VehicleLatestPositionProjection(t *testing.T) {
 	db := setupLifecycleTestDB(t)
 	repo := driversql.NewDriverLifecycleRepository(db)
@@ -254,31 +190,13 @@ func TestDriverLifecycle_VehicleLatestPositionProjection(t *testing.T) {
 	assert.Nil(t, fetchedB)
 }
 
-func TestDriverLifecycle_AuditAndVerificationLog(t *testing.T) {
+func TestDriverLifecycle_VerificationLog(t *testing.T) {
 	db := setupLifecycleTestDB(t)
 	repo := driversql.NewDriverLifecycleRepository(db)
 	ctx := context.Background()
 
 	tenantID := "tenant-1"
 	driverID := "driver-1"
-	actorID := "admin-user-1"
-	reason := "Approved after Vahan RC check"
-	oldState := "pending"
-	newState := "verified"
-
-	auditEvt := domain.AuditEventRecord{
-		ID:          "audit-1",
-		TenantID:    tenantID,
-		ActorUserID: &actorID,
-		EntityType:  "driver_license",
-		EntityID:    driverID,
-		Action:      "verify",
-		OldState:    &oldState,
-		NewState:    &newState,
-		Reason:      &reason,
-	}
-	err := repo.RecordAuditEvent(ctx, tenantID, auditEvt)
-	require.NoError(t, err)
 
 	ref := "VAHAN-REF-9921"
 	attempt := domain.VerificationAttemptRecord{
@@ -291,14 +209,10 @@ func TestDriverLifecycle_AuditAndVerificationLog(t *testing.T) {
 		Status:            "success",
 		RequestedAt:       time.Now().Add(-10 * time.Second),
 	}
-	err = repo.RecordVerificationAttempt(ctx, tenantID, attempt)
+	err := repo.RecordVerificationAttempt(ctx, tenantID, attempt)
 	require.NoError(t, err)
 
-	var auditCount, attemptCount int
-	err = db.QueryRow("SELECT COUNT(*) FROM audit_events WHERE tenant_id = ?", tenantID).Scan(&auditCount)
-	require.NoError(t, err)
-	assert.Equal(t, 1, auditCount)
-
+	var attemptCount int
 	err = db.QueryRow("SELECT COUNT(*) FROM verification_attempts WHERE tenant_id = ?", tenantID).Scan(&attemptCount)
 	require.NoError(t, err)
 	assert.Equal(t, 1, attemptCount)

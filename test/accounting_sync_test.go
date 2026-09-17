@@ -79,11 +79,12 @@ func TestAccounting_Migration00050_RoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 3, glCount, "3 GL rules must be seeded")
 
-	// Check company_config keys
+	// Dead seeds removed by 00163 (nothing ever read them; per-tenant choice
+	// lives in tenant_accounting_settings). Zero must remain after full up.
 	var flagCount int
 	err = db.QueryRow(`SELECT count(*) FROM company_config WHERE key IN ('accounting_adapter', 'accounting_enabled', 'accounting_endpoint', 'accounting_api_key')`).Scan(&flagCount)
 	require.NoError(t, err)
-	assert.Equal(t, 4, flagCount, "4 accounting config keys must be seeded")
+	assert.Equal(t, 0, flagCount, "dead accounting config seeds must be gone (00163)")
 
 	// Rollback to 49
 	require.NoError(t, goose.DownTo(db, "../db/migrations", 49))

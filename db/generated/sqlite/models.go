@@ -119,20 +119,6 @@ type AlertSource struct {
 	CreatedAt   time.Time      `json:"created_at"`
 }
 
-type AuditEvent struct {
-	ID          string         `json:"id"`
-	TenantID    string         `json:"tenant_id"`
-	ActorUserID sql.NullString `json:"actor_user_id"`
-	EntityType  string         `json:"entity_type"`
-	EntityID    string         `json:"entity_id"`
-	Action      string         `json:"action"`
-	OldState    sql.NullString `json:"old_state"`
-	NewState    sql.NullString `json:"new_state"`
-	Reason      sql.NullString `json:"reason"`
-	RequestID   sql.NullString `json:"request_id"`
-	CreatedAt   time.Time      `json:"created_at"`
-}
-
 type AuditLog struct {
 	ID        string         `json:"id"`
 	UserID    sql.NullString `json:"user_id"`
@@ -1204,17 +1190,6 @@ type HsnSacMaster struct {
 	CreatedAt   sql.NullTime `json:"created_at"`
 }
 
-type I18nKey struct {
-	Key string `json:"key"`
-	En  string `json:"en"`
-	Hi  string `json:"hi"`
-	Ta  string `json:"ta"`
-	Te  string `json:"te"`
-	Kn  string `json:"kn"`
-	Mr  string `json:"mr"`
-	Gu  string `json:"gu"`
-}
-
 type Incident struct {
 	ID         string         `json:"id"`
 	ErrorID    string         `json:"error_id"`
@@ -1414,28 +1389,6 @@ type NotificationLog struct {
 	CreatedAt time.Time      `json:"created_at"`
 }
 
-type NotificationsPreference struct {
-	ID          string    `json:"id"`
-	UserID      string    `json:"user_id"`
-	Channel     string    `json:"channel"`
-	Enabled     int64     `json:"enabled"`
-	MinSeverity string    `json:"min_severity"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
-}
-
-type OfflineSyncLog struct {
-	ID        string         `json:"id"`
-	TenantID  string         `json:"tenant_id"`
-	UserID    string         `json:"user_id"`
-	Kind      string         `json:"kind"`
-	Payload   string         `json:"payload"`
-	Status    string         `json:"status"`
-	Attempts  int64          `json:"attempts"`
-	LastError sql.NullString `json:"last_error"`
-	CreatedAt string         `json:"created_at"`
-}
-
 type OpsAlert struct {
 	ID             string         `json:"id"`
 	TenantID       string         `json:"tenant_id"`
@@ -1586,22 +1539,6 @@ type ProviderEvent struct {
 	ProcessedAt     time.Time `json:"processed_at"`
 }
 
-type ProviderPollState struct {
-	Provider            string         `json:"provider"`
-	TenantID            string         `json:"tenant_id"`
-	LastPollAt          sql.NullTime   `json:"last_poll_at"`
-	LastSuccessAt       sql.NullTime   `json:"last_success_at"`
-	Cursor              sql.NullString `json:"cursor"`
-	ConsecutiveFailures int64          `json:"consecutive_failures"`
-	BackoffUntil        sql.NullTime   `json:"backoff_until"`
-}
-
-type RevokedRefreshToken struct {
-	TokenHash string    `json:"token_hash"`
-	RevokedAt time.Time `json:"revoked_at"`
-	UserID    string    `json:"user_id"`
-}
-
 type Role struct {
 	ID          int64          `json:"id"`
 	Name        string         `json:"name"`
@@ -1632,14 +1569,6 @@ type Route struct {
 	DestNormalized      string          `json:"dest_normalized"`
 	Direction           string          `json:"direction"`
 	IsActive            int64           `json:"is_active"`
-}
-
-type RouteConstraint struct {
-	ID             string    `json:"id"`
-	JobID          string    `json:"job_id"`
-	ConstraintType string    `json:"constraint_type"`
-	ConstraintJson string    `json:"constraint_json"`
-	CreatedAt      time.Time `json:"created_at"`
 }
 
 type RouteLocation struct {
@@ -1802,22 +1731,6 @@ type TelemetryDevice struct {
 	UpdatedAt        time.Time      `json:"updated_at"`
 }
 
-type TelemetryEvent struct {
-	ID            string          `json:"id"`
-	TenantID      string          `json:"tenant_id"`
-	SessionID     string          `json:"session_id"`
-	ClientEventID string          `json:"client_event_id"`
-	OccurredAt    time.Time       `json:"occurred_at"`
-	ReceivedAt    time.Time       `json:"received_at"`
-	Latitude      float64         `json:"latitude"`
-	Longitude     float64         `json:"longitude"`
-	Speed         float64         `json:"speed"`
-	Accuracy      sql.NullFloat64 `json:"accuracy"`
-	Heading       sql.NullFloat64 `json:"heading"`
-	Altitude      sql.NullFloat64 `json:"altitude"`
-	RawPayload    sql.NullString  `json:"raw_payload"`
-}
-
 type TelemetryInstallation struct {
 	ID                string    `json:"id"`
 	TenantID          string    `json:"tenant_id"`
@@ -1913,6 +1826,13 @@ type Tenant struct {
 	Status    string         `json:"status"`
 	CreatedAt time.Time      `json:"created_at"`
 	UpdatedAt time.Time      `json:"updated_at"`
+}
+
+type TenantAccountingSetting struct {
+	TenantID  string    `json:"tenant_id"`
+	Provider  string    `json:"provider"`
+	Endpoint  string    `json:"endpoint"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type TenantCompanyProfile struct {

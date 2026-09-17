@@ -401,16 +401,6 @@ func (r *DriverLifecycleRepository) EndSession(ctx context.Context, tenantID, se
 	return err
 }
 
-func (r *DriverLifecycleRepository) IngestEvent(ctx context.Context, tenantID string, evt domain.TelemetryEventRecord) error {
-	ex := r.exec(ctx)
-	_, err := ex.ExecContext(ctx, `
-		INSERT INTO telemetry_events (id, tenant_id, session_id, client_event_id, occurred_at, received_at, latitude, longitude, speed, accuracy, heading, altitude, raw_payload)
-		VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, $6, $7, $8, $9, $10, $11, $12)
-		ON CONFLICT (tenant_id, session_id, client_event_id) DO NOTHING`,
-		evt.ID, tenantID, evt.SessionID, evt.ClientEventID, evt.OccurredAt, evt.Latitude, evt.Longitude, evt.Speed, evt.Accuracy, evt.Heading, evt.Altitude, evt.RawPayload)
-	return err
-}
-
 func (r *DriverLifecycleRepository) UpsertLatestPosition(ctx context.Context, tenantID string, pos domain.VehicleLatestPositionRecord) error {
 	ex := r.exec(ctx)
 	_, err := ex.ExecContext(ctx, `
@@ -456,17 +446,7 @@ func (r *DriverLifecycleRepository) GetLatestPosition(ctx context.Context, tenan
 	return &p, nil
 }
 
-// ─── AUDIT REPOSITORY ───────────────────────────────────────────────────────
-
-func (r *DriverLifecycleRepository) RecordAuditEvent(ctx context.Context, tenantID string, evt domain.AuditEventRecord) error {
-	ex := r.exec(ctx)
-	_, err := ex.ExecContext(ctx, `
-		INSERT INTO audit_events (id, tenant_id, actor_user_id, entity_type, entity_id, action, old_state, new_state, reason, request_id, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP)`,
-		evt.ID, tenantID, evt.ActorUserID, evt.EntityType, evt.EntityID, evt.Action, evt.OldState, evt.NewState, evt.Reason, evt.RequestID)
-	return err
-}
-
+// RecordVerificationAttempt logs a provider verification attempt (live rail).
 func (r *DriverLifecycleRepository) RecordVerificationAttempt(ctx context.Context, tenantID string, attempt domain.VerificationAttemptRecord) error {
 	ex := r.exec(ctx)
 	_, err := ex.ExecContext(ctx, `

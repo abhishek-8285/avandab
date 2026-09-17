@@ -53,6 +53,13 @@ func NewConsumer(db *sql.DB, client Client, cfg Config) *Consumer {
 	}
 }
 
+// clientFor resolves the tenant's saved provider (00161) over the global
+// config. Request ctx carries the tenant; tenant-less job ctx falls back.
+func (c *Consumer) clientFor(ctx context.Context) (Client, Config) {
+	cfg := ResolveConfig(ctx, c.db, c.cfg)
+	return NewClient(cfg), cfg
+}
+
 // SubscribeEvents registers accounting event handlers on the event bus.
 func (c *Consumer) SubscribeEvents(bus events.EventBus) {
 	if bus == nil {
@@ -93,7 +100,8 @@ func (c *Consumer) ProcessEvent(ctx context.Context, evt events.Event) (bool, er
 	entityType := inferEntityType(evt.Type)
 
 	payloadBytes, _ := json.Marshal(pMap)
-	adapterName := strings.ToLower(c.cfg.Provider)
+	client, cfg := c.clientFor(ctx)
+	adapterName := strings.ToLower(cfg.Provider)
 	if adapterName == "" {
 		adapterName = "mock"
 	}
@@ -137,7 +145,7 @@ func (c *Consumer) ProcessEvent(ctx context.Context, evt events.Event) (bool, er
 
 	if strings.Contains(strings.ToLower(evt.Type), "invoice") {
 		inv := parseInvoiceFromPayload(pMap, aggID)
-		expRes, err := c.client.ExportInvoice(ctx, inv)
+		expRes, err := client.ExportInvoice(ctx, inv)
 		if err != nil {
 			dispatchErr = err
 		} else {
@@ -156,7 +164,7 @@ func (c *Consumer) ProcessEvent(ctx context.Context, evt events.Event) (bool, er
 				{Account: creditAcc, Debit: 0, Credit: amount},
 			},
 		}
-		jeRes, err := c.client.PushJournalEntry(ctx, entry)
+		jeRes, err := client.PushJournalEntry(ctx, entry)
 		if err != nil {
 			dispatchErr = err
 		} else {
@@ -230,6 +238,12 @@ func (c *Consumer) TriggerSync(ctx context.Context, sinceMinutes int) (TriggerRe
 		}
 	}
 
+	client, cfg := c.clientFor(ctx)
+	adapterName := strings.ToLower(cfg.Provider)
+	if adapterName == "" {
+		adapterName = "mock"
+	}
+
 	for _, it := range items {
 		// Split idempotency key to recover event type
 		parts := strings.SplitN(it.idemKey, ":", 2)
@@ -243,7 +257,7 @@ func (c *Consumer) TriggerSync(ctx context.Context, sinceMinutes int) (TriggerRe
 
 		if strings.Contains(strings.ToLower(evtType), "invoice") {
 			inv := parseInvoiceFromPayload(payload, it.entityID)
-			expRes, err := c.client.ExportInvoice(ctx, inv)
+			expRes, err := client.ExportInvoice(ctx, inv)
 			if err != nil {
 				dispatchErr = err
 			} else {
@@ -260,7 +274,7 @@ func (c *Consumer) TriggerSync(ctx context.Context, sinceMinutes int) (TriggerRe
 					{Account: "Bank - Current", Debit: 0, Credit: amount},
 				},
 			}
-			jeRes, err := c.client.PushJournalEntry(ctx, entry)
+			jeRes, err := client.PushJournalEntry(ctx, entry)
 			if err != nil {
 				dispatchErr = err
 			} else {
@@ -284,10 +298,6 @@ func (c *Consumer) TriggerSync(ctx context.Context, sinceMinutes int) (TriggerRe
 			`, extID, it.id)
 
 			if extID != "" {
-				adapterName := strings.ToLower(c.cfg.Provider)
-				if adapterName == "" {
-					adapterName = "mock"
-				}
 				mapID := "map-" + uuid.New().String()
 				_, _ = c.db.ExecContext(ctx, `
 					INSERT INTO accounting_mapping (id, entity_type, entity_id, adapter, external_id, created_at)
@@ -346,12 +356,13 @@ func (c *Consumer) SyncContacts(ctx context.Context) (SyncResult, error) {
 		}
 	}
 
-	res, err := c.client.SyncContacts(ctx, contacts)
+	client, cfg := c.clientFor(ctx)
+	res, err := client.SyncContacts(ctx, contacts)
 	if err != nil {
 		return res, err
 	}
 
-	adapterName := strings.ToLower(c.cfg.Provider)
+	adapterName := strings.ToLower(cfg.Provider)
 	if adapterName == "" {
 		adapterName = "mock"
 	}
@@ -402,16 +413,17 @@ func (c *Consumer) Reconcile(ctx context.Context) (ReconcileResult, error) {
 	return res, nil
 }
 
-// GetStatus returns the current sync status.
+// GetStatus returns the current sync status (adapter reflects tenant choice).
 func (c *Consumer) GetStatus(ctx context.Context) (SyncStatusResponse, error) {
-	adapterName := strings.ToLower(c.cfg.Provider)
+	_, cfg := c.clientFor(ctx)
+	adapterName := strings.ToLower(cfg.Provider)
 	if adapterName == "" {
 		adapterName = "mock"
 	}
 
 	resp := SyncStatusResponse{
 		Adapter: adapterName,
-		Enabled: c.cfg.Enabled,
+		Enabled: cfg.Enabled,
 	}
 
 	if c.db != nil {

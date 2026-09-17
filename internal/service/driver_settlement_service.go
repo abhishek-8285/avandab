@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"time"
@@ -260,8 +261,14 @@ func (s *DriverSettlementService) GenerateSettlement(ctx context.Context, tripID
 	}
 
 	// Spec Phase 8 §P0: Money & Settlement Integrity
-	// Append immutable driver ledger entries so available balance & wallet stay synchronized
-	_ = s.recordLedgerForSettlement(ctx, db, "", driverID.String, tripID, settlementID, rateResult.GrossFare, rateResult.Commission, advances, deductions, tdsAmount, bonus)
+	// Append immutable driver ledger entries so available balance & wallet stay synchronized.
+	// Failures are LOUD (never `_ =`): header+lines are already committed, so
+	// the caller retries idempotently; a silent skip would understate the
+	// wallet with no trace.
+	if err := s.recordLedgerForSettlement(ctx, db, "", driverID.String, tripID, settlementID, rateResult.GrossFare, rateResult.Commission, advances, deductions, tdsAmount, bonus); err != nil {
+		slog.Error("settlement ledger append failed after header commit",
+			"trip_id", tripID, "settlement_id", settlementID, "error", err)
+	}
 
 	// 9. Emit SettlementGenerated Event
 	if s.events != nil {
@@ -300,37 +307,54 @@ func (s *DriverSettlementService) recordLedgerForSettlement(ctx context.Context,
 	}
 	tenantID = string(tid)
 
-	appendEntry := func(entryType, desc string, amt float64) {
+	appendEntry := func(entryType, desc string, amt float64) error {
 		if amt == 0 {
-			return
+			return nil
 		}
 		var currBal float64
-		_ = db.QueryRowContext(ctx, `SELECT balance_after FROM driver_ledger_entries WHERE tenant_id = $1 AND driver_id = $2 ORDER BY created_at DESC, `+appdb.RowidOrder(db, false)+` LIMIT 1`, tenantID, driverID).Scan(&currBal)
+		if err := db.QueryRowContext(ctx, `SELECT balance_after FROM driver_ledger_entries WHERE tenant_id = $1 AND driver_id = $2 ORDER BY created_at DESC, `+appdb.RowidOrder(db, false)+` LIMIT 1`, tenantID, driverID).Scan(&currBal); err != nil && !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("read ledger balance: %w", err)
+		}
 		newBal := currBal + amt
 		entryID := "led_" + uuid.NewString()
-		_, _ = db.ExecContext(ctx, `
+		if _, err := db.ExecContext(ctx, `
 			INSERT INTO driver_ledger_entries (id, tenant_id, driver_id, trip_id, entry_type, amount, currency, reference_type, reference_id, balance_after, description, created_at)
 			VALUES ($1, $2, $3, $4, $5, $6, 'INR', 'settlement', $7, $8, $9, CURRENT_TIMESTAMP)
-		`, entryID, tenantID, driverID, tripID, entryType, amt, settlementID, newBal, desc)
+		`, entryID, tenantID, driverID, tripID, entryType, amt, settlementID, newBal, desc); err != nil {
+			return fmt.Errorf("insert ledger entry: %w", err)
+		}
+		return nil
 	}
 
 	if grossFare > 0 {
-		appendEntry("TRIP_EARNING", fmt.Sprintf("Trip %s gross fare", tripID), grossFare)
+		if err := appendEntry("TRIP_EARNING", fmt.Sprintf("Trip %s gross fare", tripID), grossFare); err != nil {
+			return err
+		}
 	}
 	if commission > 0 {
-		appendEntry("COMMISSION", fmt.Sprintf("Platform commission for trip %s", tripID), -commission)
+		if err := appendEntry("COMMISSION", fmt.Sprintf("Platform commission for trip %s", tripID), -commission); err != nil {
+			return err
+		}
 	}
 	if advances > 0 {
-		appendEntry("ADVANCE_DEDUCTION", fmt.Sprintf("Approved advances/kharcha for trip %s", tripID), -advances)
+		if err := appendEntry("ADVANCE_DEDUCTION", fmt.Sprintf("Approved advances/kharcha for trip %s", tripID), -advances); err != nil {
+			return err
+		}
 	}
 	if deductions > 0 {
-		appendEntry("PENALTY", fmt.Sprintf("Trip deductions for trip %s", tripID), -deductions)
+		if err := appendEntry("PENALTY", fmt.Sprintf("Trip deductions for trip %s", tripID), -deductions); err != nil {
+			return err
+		}
 	}
 	if tdsAmount > 0 {
-		appendEntry("PENALTY", fmt.Sprintf("TDS deduction (194C) for trip %s", tripID), -tdsAmount)
+		if err := appendEntry("PENALTY", fmt.Sprintf("TDS deduction (194C) for trip %s", tripID), -tdsAmount); err != nil {
+			return err
+		}
 	}
 	if bonus > 0 {
-		appendEntry("BONUS", fmt.Sprintf("Performance bonus for trip %s", tripID), bonus)
+		if err := appendEntry("BONUS", fmt.Sprintf("Performance bonus for trip %s", tripID), bonus); err != nil {
+			return err
+		}
 	}
 
 	return nil

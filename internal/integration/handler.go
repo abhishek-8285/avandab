@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -29,6 +30,7 @@ type Handler struct {
 	gstn       gstn.Client
 	fastag     fastag.Client
 	accounting accounting.Client
+	accCfg     accounting.Config
 	authSrv    auth.AuthorizationService
 	db         *sql.DB
 }
@@ -44,9 +46,19 @@ func NewHandler(cfg Config, authSrv auth.AuthorizationService, db ...*sql.DB) *H
 		gstn:       gstn.NewClient(cfg.GSTN),
 		fastag:     fastag.NewClient(cfg.FASTag, dbConn),
 		accounting: accounting.NewClient(cfg.Accounting),
+		accCfg:     cfg.Accounting,
 		authSrv:    authSrv,
 		db:         dbConn,
 	}
+}
+
+// accountingClient resolves the tenant's saved provider (00161) over the
+// global config; tenant-less ctx keeps the startup client.
+func (h *Handler) accountingClient(ctx context.Context) accounting.Client {
+	if h.db == nil {
+		return h.accounting
+	}
+	return accounting.ClientFor(ctx, h.db, h.accCfg)
 }
 
 // Register mounts integration routes under /api/v1/integrations.
@@ -199,7 +211,7 @@ func (h *Handler) ExportInvoice(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-	res, err := h.accounting.ExportInvoice(r.Context(), req)
+	res, err := h.accountingClient(r.Context()).ExportInvoice(r.Context(), req)
 	if err != nil {
 		http.Error(w, "Accounting service unavailable", http.StatusServiceUnavailable)
 		return
@@ -215,7 +227,7 @@ func (h *Handler) SyncContacts(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-	res, err := h.accounting.SyncContacts(r.Context(), req.Contacts)
+	res, err := h.accountingClient(r.Context()).SyncContacts(r.Context(), req.Contacts)
 	if err != nil {
 		http.Error(w, "Accounting service unavailable", http.StatusServiceUnavailable)
 		return
@@ -229,7 +241,7 @@ func (h *Handler) PushJournalEntry(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
-	res, err := h.accounting.PushJournalEntry(r.Context(), req)
+	res, err := h.accountingClient(r.Context()).PushJournalEntry(r.Context(), req)
 	if err != nil {
 		http.Error(w, "Accounting service unavailable", http.StatusServiceUnavailable)
 		return
