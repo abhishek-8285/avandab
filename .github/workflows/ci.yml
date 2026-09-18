@@ -174,11 +174,31 @@ jobs:
         working-directory: ./mobile
         run: npm ci
 
-      - name: Fetch base for lint ratchet
-        run: git fetch origin master --depth=1 || true
+      - name: Resolve immutable lint base
+        # origin/master moves between fetch and diff, so the ratchet window
+        # drifts. Pin the event's own base SHA instead: the PR base SHA on
+        # pull_request, the pre-push SHA otherwise (HEAD~1 when before is
+        # all-zeros on a first push). Fetched explicitly so the diff below
+        # always resolves; fail loud if the object is missing so the gate
+        # can never silently green on an empty diff.
+        id: lint-base
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+              BASE="$(git rev-parse HEAD~1 2>/dev/null || echo HEAD)"
+            fi
+          fi
+          git fetch origin "$BASE" --depth=1 || true
+          git cat-file -e "$BASE^{commit}" || { echo "::error::lint base $BASE not fetchable"; exit 1; }
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+          echo "Lint base: $BASE"
 
       - name: Run Security Scanners
-        run: LINT_BASE=origin/master ./scripts/security-check.sh
+        run: LINT_BASE=${{ steps.lint-base.outputs.base }} ./scripts/security-check.sh
 
       - name: Tenant Isolation Lint
         run: ./scripts/tenant-lint.sh

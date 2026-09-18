@@ -343,6 +343,14 @@ func (s *SettlementAppService) InitiatePayout(ctx context.Context, tenantID, dri
 	// must converge to exactly one debit.
 	var resp *PayoutResponse
 	err = s.repo.WithTransaction(ctx, func(ctx context.Context) error {
+		// Serialize concurrent same-driver payouts before any read: without
+		// the driver lock both readers see the full balance and both debits
+		// commit (lost update). The peer waits here until this transaction
+		// commits, then reads the winner's debit.
+		if err := s.repo.LockDriverPayout(ctx, tenantID, driverID); err != nil {
+			return err
+		}
+
 		// Re-check inside the transaction: a concurrent same-key request
 		// may have committed between the fast-path check and our BEGIN.
 		if existing, err := s.repo.GetPayoutByIdempotencyKey(ctx, tenantID, req.IdempotencyKey); err == nil && existing != nil {

@@ -331,6 +331,34 @@ func (r *SQLSettlementRepository) GetRecentLedgerEntries(ctx context.Context, te
 	return entries, nil
 }
 
+func (r *SQLSettlementRepository) LockDriverPayout(ctx context.Context, tenantID, driverID string) error {
+	// Serialize concurrent same-driver payouts before the balance read.
+	// Postgres takes a row lock; SQLite has no FOR UPDATE, so a no-op touch
+	// of the driver row upgrades the DEFERRED transaction to a write lock —
+	// the peer's touch then busy-waits until this transaction commits and
+	// reads the winner's debit. first_name is self-assigned so the touch is
+	// portable across the sqlite/postgres drivers-table variants.
+	if appdb.IsPostgres(r.db) {
+		var id string
+		err := r.q(ctx).QueryRowContext(ctx, `
+			SELECT id FROM drivers
+			WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
+			tenantID, driverID).Scan(&id)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil // no row to lock; verified-check below rejects
+			}
+			return err
+		}
+		return nil
+	}
+	_, err := r.q(ctx).ExecContext(ctx, `
+		UPDATE drivers SET first_name = first_name
+		WHERE tenant_id = $1 AND id = $2`,
+		tenantID, driverID)
+	return err
+}
+
 func (r *SQLSettlementRepository) CreatePayoutInstruction(ctx context.Context, tenantID string, p *domain.PayoutInstruction) error {
 	_, err := r.q(ctx).ExecContext(ctx, `
 		INSERT INTO payout_instructions (

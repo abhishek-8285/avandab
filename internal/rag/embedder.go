@@ -11,8 +11,8 @@ import (
 )
 
 type Embedder interface {
-	Embed(text string) ([]float64, error)
-	EmbedBatch(texts []string) ([][]float64, error)
+	Embed(ctx context.Context, text string) ([]float64, error)
+	EmbedBatch(ctx context.Context, texts []string) ([][]float64, error)
 	Dimension() int
 }
 
@@ -53,13 +53,16 @@ func NewOpenAIEmbedder(apiKey, baseURL, model string) *OpenAIEmbedder {
 	}
 }
 
-func (e *OpenAIEmbedder) Embed(text string) ([]float64, error) {
+func (e *OpenAIEmbedder) Embed(ctx context.Context, text string) ([]float64, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	reqBody, err := json.Marshal(embedRequest{Model: e.model, Input: text})
 	if err != nil {
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), "POST", e.baseURL+"/embeddings", bytes.NewReader(reqBody))
+	req, err := http.NewRequestWithContext(ctx, "POST", e.baseURL+"/embeddings", bytes.NewReader(reqBody))
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
@@ -85,10 +88,13 @@ func (e *OpenAIEmbedder) Embed(text string) ([]float64, error) {
 	return result.Data[0].Embedding, nil
 }
 
-func (e *OpenAIEmbedder) EmbedBatch(texts []string) ([][]float64, error) {
+func (e *OpenAIEmbedder) EmbedBatch(ctx context.Context, texts []string) ([][]float64, error) {
 	results := make([][]float64, len(texts))
 	for i, text := range texts {
-		emb, err := e.Embed(text)
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		emb, err := e.Embed(ctx, text)
 		if err != nil {
 			return nil, fmt.Errorf("embed batch item %d: %w", i, err)
 		}
@@ -116,9 +122,9 @@ func NewHashEmbedder(dimensions int) *HashEmbedder {
 	}
 }
 
-func (h *HashEmbedder) Embed(text string) ([]float64, error) {
+func (h *HashEmbedder) Embed(ctx context.Context, text string) ([]float64, error) {
 	vectors := make([][]float64, 1)
-	embeddings, err := h.EmbedBatch([]string{text})
+	embeddings, err := h.EmbedBatch(ctx, []string{text})
 	if err != nil {
 		return nil, err
 	}
@@ -126,9 +132,12 @@ func (h *HashEmbedder) Embed(text string) ([]float64, error) {
 	return vectors[0], nil
 }
 
-func (h *HashEmbedder) EmbedBatch(texts []string) ([][]float64, error) {
+func (h *HashEmbedder) EmbedBatch(ctx context.Context, texts []string) ([][]float64, error) {
 	results := make([][]float64, len(texts))
 	for i, text := range texts {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		results[i] = hashEmbed(text, h.dimension, h.rng)
 	}
 	return results, nil

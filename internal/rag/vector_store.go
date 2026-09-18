@@ -6,6 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -179,6 +182,84 @@ func (vs *VectorStore) Count(ctx context.Context) (int, error) {
 func (vs *VectorStore) Clear(ctx context.Context) error {
 	_, err := vs.db.ExecContext(ctx, "DELETE FROM chunks")
 	return err
+}
+
+// ReplaceDirectory atomically swaps the stored chunks for one directory
+// scope. Callers prepare chunks+embeddings first, so a failed preparation
+// never reaches this method and old results stay searchable. Only rows whose
+// source is being replaced or that live under dirScope are deleted —
+// unrelated sources (teach/, other directories) are kept. Stale rows for
+// files deleted from the directory since the last index match the scope
+// prefix and are removed too.
+func (vs *VectorStore) ReplaceDirectory(ctx context.Context, dirScope string, chunks []Chunk, embeddings [][]float64) error {
+	scope := filepath.Clean(dirScope)
+	fresh := make(map[string]bool, len(chunks))
+	for _, c := range chunks {
+		fresh[c.Source] = true
+	}
+
+	tx, err := vs.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	rows, err := tx.QueryContext(ctx, `SELECT DISTINCT source FROM chunks`)
+	if err != nil {
+		return fmt.Errorf("list sources: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+	var doomed []string
+	for rows.Next() {
+		var src string
+		if err := rows.Scan(&src); err != nil {
+			return fmt.Errorf("scan source: %w", err)
+		}
+		if fresh[src] || src == scope || strings.HasPrefix(src, scope+string(os.PathSeparator)) {
+			doomed = append(doomed, src)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("iterate sources: %w", err)
+	}
+
+	if len(doomed) > 0 {
+		placeholders := make([]string, len(doomed))
+		args := make([]any, len(doomed))
+		for i, src := range doomed {
+			placeholders[i] = fmt.Sprintf("$%d", i+1)
+			args[i] = src
+		}
+		if _, err := tx.ExecContext(ctx,
+			`DELETE FROM chunks WHERE source IN (`+strings.Join(placeholders, ",")+`)`, args...,
+		); err != nil {
+			return fmt.Errorf("delete scoped chunks: %w", err)
+		}
+	}
+
+	if len(chunks) > 0 {
+		stmt, err := tx.PrepareContext(ctx,
+			`INSERT OR REPLACE INTO chunks (id, content, source, line_from, line_to, chunk_idx, embedding)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		)
+		if err != nil {
+			return fmt.Errorf("prepare statement: %w", err)
+		}
+		defer func() { _ = stmt.Close() }()
+
+		for i, chunk := range chunks {
+			embJSON, err := json.Marshal(embeddings[i])
+			if err != nil {
+				return fmt.Errorf("marshal embedding %d: %w", i, err)
+			}
+			_, err = stmt.ExecContext(ctx, chunk.ID, chunk.Content, chunk.Source, chunk.LineFrom, chunk.LineTo, chunk.ChunkIdx, embJSON)
+			if err != nil {
+				return fmt.Errorf("exec insert %d: %w", i, err)
+			}
+		}
+	}
+
+	return tx.Commit()
 }
 
 func (vs *VectorStore) Close() error {

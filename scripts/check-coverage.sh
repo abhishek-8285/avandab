@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # Backend coverage: ONE honest pass over app + integration tests.
 # History: this script used to profile only ./test (helpers, ~91%) while the
@@ -12,11 +12,17 @@ echo "Checking backend coverage (single pass)..."
 go test -timeout 20m -shuffle=on -count=1 -coverprofile=coverage.out -covermode=atomic ${COVER_PKGS:-./internal/... ./test/...}
 
 # Apply exclusions if .covignore exists
+profile=coverage.out
 if [ -f .covignore ]; then
   grep -v -f .covignore coverage.out > coverage.filtered.out || true
-  coverage=$(go tool cover -func=coverage.filtered.out | grep total | awk '{print $3}' | sed 's/%//')
-else
-  coverage=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+  profile=coverage.filtered.out
+fi
+# awk (not grep|awk: pipefail would kill the script when grep finds no
+# "total", and grep's exit code otherwise masks a failed `go tool cover`).
+coverage=$(go tool cover -func="$profile" | awk '/^total:/{gsub(/%/,"",$3); print $3}')
+if ! [[ "${coverage:-}" =~ ^[0-9]+(\.[0-9]+)?$ ]]; then
+  echo "❌ Could not parse total coverage from $profile (got '${coverage:-<empty>}')"
+  exit 1
 fi
 
 echo "Backend coverage: ${coverage}%"
@@ -25,7 +31,9 @@ echo "Backend coverage: ${coverage}%"
 # floor as coverage genuinely grows — never lower it without a design reason
 # recorded here. Mobile coverage lives in the Mobile CI job, not here.
 threshold=50
-if (( $(echo "$coverage < $threshold" | bc -l) )); then
+# awk float compare: bc is not guaranteed on CI images, and an empty/garbled
+# $coverage made the old `(( $(...|bc -l) ))` test silently pass the gate.
+if awk -v cov="$coverage" -v floor="$threshold" 'BEGIN { exit (cov < floor) ? 0 : 1 }'; then
   echo "❌ Coverage ${coverage}% is below ratchet floor ${threshold}%"
   echo "Run 'go test -coverprofile=coverage.out ./internal/... ./test/... && go tool cover -html=coverage.out' to inspect"
   exit 1

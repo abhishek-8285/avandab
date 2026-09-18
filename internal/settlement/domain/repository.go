@@ -26,6 +26,11 @@ type SettlementRepository interface {
 	GetRecentLedgerEntries(ctx context.Context, tenantID, driverID string, limit int) ([]LedgerEntry, error)
 
 	// Payouts
+	// LockDriverPayout serializes concurrent payouts for one driver. Call it
+	// first inside the payout transaction, before the balance read: Postgres
+	// takes a row lock (SELECT ... FOR UPDATE), SQLite performs a no-op row
+	// touch that upgrades the transaction to a write lock (no FOR UPDATE).
+	LockDriverPayout(ctx context.Context, tenantID, driverID string) error
 	CreatePayoutInstruction(ctx context.Context, tenantID string, p *PayoutInstruction) error
 	GetPayoutByIdempotencyKey(ctx context.Context, tenantID, idempotencyKey string) (*PayoutInstruction, error)
 	GetPayoutByID(ctx context.Context, tenantID, payoutID string) (*PayoutInstruction, error)

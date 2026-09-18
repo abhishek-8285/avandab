@@ -5,6 +5,14 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    # The app default DATABASE_URL is a bare relative path (CWD of the
+    # process), which in this image is / — outside the ./data:/data mount,
+    # so the DB would live on ephemeral container storage. Default to the
+    # persistent path; an explicit DATABASE_URL (env or .env) still wins.
+    # NOTE: a local .env that sets a relative file: URL bypasses /data —
+    # point it at file:/data/<name>.db?... to keep data on the volume.
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-file:/data/transport.db?mode=rwc&cache=shared&_foreign_keys=on&_journal_mode=WAL}
     volumes:
       - ./data:/data
       - ./uploads:/uploads
