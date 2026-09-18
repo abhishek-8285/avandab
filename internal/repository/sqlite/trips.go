@@ -131,19 +131,31 @@ func (r *SQLRepository) UpdateTrip(ctx context.Context, trip domain.Trip) (domai
 		vehicleID = sql.NullString{String: string(*trip.VehicleID), Valid: true}
 	}
 
+	// Lifecycle columns are owned by the trip state machine, not by detail
+	// edits: carry them over verbatim from the snapshot above, preserving
+	// Valid flags. Omitting them would NULL out timestamps and odometer
+	// readings written by start/deliver/complete on every remarks edit.
 	updated, err := r.Q(ctx).UpdateTrip(ctx, db.UpdateTripParams{
-		TripNumber:    trip.TripNumber,
-		BookingID:     bookingID,
-		DriverID:      driverID,
-		VehicleID:     vehicleID,
-		RouteID:       string(trip.RouteID),
-		DepartureTime: trip.DepartureTime,
-		ArrivalTime:   nullTime(trip.ArrivalTime),
-		Status:        string(trip.Status),
-		Remarks:       nullString(trip.Remarks),
-		ID:            string(trip.ID),
-		TenantID:      tenantIDFromCtx(ctx),
-		Version:       current.Version,
+		TripNumber:      trip.TripNumber,
+		BookingID:       bookingID,
+		DriverID:        driverID,
+		VehicleID:       vehicleID,
+		RouteID:         string(trip.RouteID),
+		DepartureTime:   trip.DepartureTime,
+		ArrivalTime:     nullTime(trip.ArrivalTime),
+		Status:          string(trip.Status),
+		Remarks:         nullString(trip.Remarks),
+		StartedAt:       current.StartedAt,
+		ReachedPickupAt: current.ReachedPickupAt,
+		InTransitAt:     current.InTransitAt,
+		DeliveredAt:     current.DeliveredAt,
+		CompletedAt:     current.CompletedAt,
+		CloseOdometer:   current.CloseOdometer,
+		StartOdometer:   current.StartOdometer,
+		GateFacilityID:  current.GateFacilityID,
+		ID:              string(trip.ID),
+		TenantID:        tenantIDFromCtx(ctx),
+		Version:         current.Version,
 	})
 	if err != nil {
 		return domain.Trip{}, err

@@ -49,7 +49,7 @@ func (s *Service) IndexDirectory(ctx context.Context, dirPath string) (int, erro
 
 	log.Printf("rag: generated %d chunks from %d files", len(chunks), countUniqueSources(chunks))
 
-	embeddings, err := s.embedBatch(chunks)
+	embeddings, err := s.embedBatch(ctx, chunks)
 	if err != nil {
 		return 0, fmt.Errorf("embed chunks: %w", err)
 	}
@@ -76,7 +76,7 @@ func (s *Service) Teach(ctx context.Context, name, content string) (int, error) 
 
 	log.Printf("rag: teaching %d chunks from %s", len(chunks), name)
 
-	embeddings, err := s.embedBatch(chunks)
+	embeddings, err := s.embedBatch(ctx, chunks)
 	if err != nil {
 		return 0, fmt.Errorf("embed taught content: %w", err)
 	}
@@ -117,7 +117,7 @@ func (s *Service) TeachFromFiles(ctx context.Context, topic string, filePaths []
 
 	log.Printf("rag: teaching %d chunks from %d files under topic %s", len(allChunks), len(filePaths), topic)
 
-	embeddings, err := s.embedBatch(allChunks)
+	embeddings, err := s.embedBatch(ctx, allChunks)
 	if err != nil {
 		return 0, fmt.Errorf("embed taught content: %w", err)
 	}
@@ -200,7 +200,7 @@ func (s *Service) Query(ctx context.Context, query string, topK int) (*SearchRes
 		topK = 5
 	}
 
-	embedding, err := s.embedder.Embed(query)
+	embedding, err := s.embedder.Embed(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("embed query: %w", err)
 	}
@@ -224,17 +224,30 @@ func (s *Service) Query(ctx context.Context, query string, topK int) (*SearchRes
 }
 
 func (s *Service) Reindex(ctx context.Context, dirPath string) (int, error) {
-	if err := s.store.Clear(ctx); err != nil {
-		return 0, fmt.Errorf("clear store: %w", err)
+	// Prepare everything BEFORE touching the store: a failed chunk/embed
+	// step returns here and the old results stay searchable.
+	chunks, err := s.chunker.IndexDirectory(dirPath, s.extensions)
+	if err != nil {
+		return 0, fmt.Errorf("chunk files: %w", err)
 	}
-	return s.IndexDirectory(ctx, dirPath)
+	embeddings, err := s.embedBatch(ctx, chunks)
+	if err != nil {
+		return 0, fmt.Errorf("embed chunks: %w", err)
+	}
+	// Atomically replace only this directory's scope; unrelated sources stay.
+	if err := s.store.ReplaceDirectory(ctx, dirPath, chunks, embeddings); err != nil {
+		return 0, fmt.Errorf("replace chunks: %w", err)
+	}
+	count, _ := s.store.Count(ctx)
+	log.Printf("rag: reindexed %s — %d total chunks", dirPath, count)
+	return count, nil
 }
 
 func (s *Service) Stats(ctx context.Context) (int, error) {
 	return s.store.Count(ctx)
 }
 
-func (s *Service) embedBatch(chunks []Chunk) ([][]float64, error) {
+func (s *Service) embedBatch(ctx context.Context, chunks []Chunk) ([][]float64, error) {
 	contentTexts := make([]string, len(chunks))
 	for i, c := range chunks {
 		contentTexts[i] = c.Content
@@ -244,19 +257,27 @@ func (s *Service) embedBatch(chunks []Chunk) ([][]float64, error) {
 	var allEmbeddings [][]float64
 
 	for i := 0; i < len(contentTexts); i += batchSize {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		end := i + batchSize
 		if end > len(contentTexts) {
 			end = len(contentTexts)
 		}
 
 		batch := contentTexts[i:end]
-		embeddings, err := s.embedder.EmbedBatch(batch)
+		embeddings, err := s.embedder.EmbedBatch(ctx, batch)
 		if err != nil {
 			return nil, fmt.Errorf("embed batch %d-%d: %w", i, end, err)
 		}
 
 		if len(batch) > 1 {
-			time.Sleep(50 * time.Millisecond)
+			// ponytail: fixed 50ms provider gap; select keeps shutdown/cancel prompt
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(50 * time.Millisecond):
+			}
 		}
 
 		allEmbeddings = append(allEmbeddings, embeddings...)

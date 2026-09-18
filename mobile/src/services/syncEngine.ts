@@ -3,7 +3,7 @@ import { getApiBaseURL } from '../constants/network';
 import { DB } from './storage';
 import { OfflineQueue } from './offlineQueue';
 import { sosService } from './sosService';
-import { useAuthStore } from '../stores/authStore';
+import { currentAccountId, useAuthStore } from '../stores/authStore';
 import { applyNetInfoState, useSyncStore } from '../stores/syncStore';
 
 let wasConnected = true;
@@ -138,7 +138,10 @@ class SyncEngineService {
 
     this.isSyncing = true;
     try {
-      const unsyncedLogs = await DB.getUnsyncedGPSLogs();
+      // Owner-scoped: only the current account's GPS logs sync under this
+      // session. Other accounts' rows stay queued until their owner signs in.
+      const owner = currentAccountId() ?? driverId;
+      const unsyncedLogs = await DB.getUnsyncedGPSLogs(owner);
       if (!unsyncedLogs || unsyncedLogs.length === 0) {
         // Even if no DB gps logs, try to flush OfflineQueue batch
         await this.flushOfflineQueues();
@@ -162,20 +165,23 @@ class SyncEngineService {
               'Content-Type': 'application/json',
               ...(token ? { Authorization: `Bearer ${token}` } : {}),
             },
-            body: JSON.stringify({
-              driver_id: driverId,
-              logs: batch.map((b: any) => ({
-                id: b.id, // echoed in synced_ids so the row gets marked synced
-                latitude: b.latitude,
-                longitude: b.longitude,
-                timestamp: b.timestamp,
-                ...(b.accuracy_m != null ? { accuracy_m: b.accuracy_m } : {}),
-                ...(b.speed != null ? { speed: b.speed } : {}),
-                ...(b.heading != null ? { heading: b.heading } : {}),
-                ...(b.motion != null ? { motion: b.motion === 1 } : {}),
-                ...(b.battery_level != null ? { battery_level: b.battery_level } : {}),
-              })),
-            }),
+              body: JSON.stringify({
+                driver_id: driverId,
+                logs: batch.map((b: any) => ({
+                  id: b.id, // echoed in synced_ids so the row gets marked synced
+                  latitude: b.latitude,
+                  longitude: b.longitude,
+                  timestamp: b.timestamp,
+                  ...(b.accuracy_m != null ? { accuracy_m: b.accuracy_m } : {}),
+                  ...(b.speed != null ? { speed: b.speed } : {}),
+                  ...(b.heading != null ? { heading: b.heading } : {}),
+                  ...(b.motion != null ? { motion: b.motion === 1 } : {}),
+                  ...(b.battery_level != null ? { battery_level: b.battery_level } : {}),
+                  // Stale re-observations sync ONLY flagged (additive flag —
+                  // old servers ignore it, new ones distrust the timestamp).
+                  ...(b.is_stale === 1 ? { is_stale: true } : {}),
+                })),
+              }),
           });
 
           if (!response.ok) {

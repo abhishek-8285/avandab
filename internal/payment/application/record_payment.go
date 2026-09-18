@@ -79,14 +79,6 @@ func (uc *RecordPaymentUseCase) Execute(ctx context.Context, cmd RecordPaymentCo
 			return ErrInvoiceNotFound
 		}
 
-		if err := inv.ApplyPayment(cmd.Amount, uc.clock.Now()); err != nil {
-			return err
-		}
-
-		if err := invoiceRepo.Save(txCtx, inv); err != nil {
-			return err
-		}
-
 		payment := paymentagg.NewPaymentAggregate(
 			paymentagg.PaymentID(uc.idGen.GenerateUUID()),
 			cmd.TenantID,
@@ -99,9 +91,26 @@ func (uc *RecordPaymentUseCase) Execute(ctx context.Context, cmd RecordPaymentCo
 			uc.clock.Now(),
 		)
 
-		if err := payRepo.Save(txCtx, payment); err != nil {
+		// Claim the idempotency key BEFORE touching the invoice: a replayed
+		// request must return the existing payment untouched, never apply
+		// the amount twice. SaveIfNew reports whether this call won the row.
+		created, err := payRepo.SaveIfNew(txCtx, payment)
+		if err != nil {
 			return err
 		}
+		if !created {
+			id = payment.ID
+			return nil
+		}
+
+		if err := inv.ApplyPayment(cmd.Amount, uc.clock.Now()); err != nil {
+			return err
+		}
+
+		if err := invoiceRepo.Save(txCtx, inv); err != nil {
+			return err
+		}
+
 		if cmd.RazorpayPaymentID != "" {
 			if err := payRepo.SetRazorpayFields(txCtx, payment.ID, cmd.TenantID, cmd.RazorpayOrderID, cmd.RazorpayPaymentID, cmd.RazorpaySignature); err != nil {
 				return err

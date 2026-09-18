@@ -281,6 +281,12 @@ func main() {
 
 	ctx := context.Background()
 
+	// Signal-scoped ctx for long-lived ingest + servers: Start must observe
+	// SIGINT/SIGTERM so workers/conns stop on signal, not just at Drain.
+	// Startup (DB open, migrations) stays on Background above.
+	sigCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	// Open the configured DB engine (sqlite | postgres | mysql) via the
 	// config-driven factory — switching engines never touches this file.
 	database, err := appdb.Open(ctx, &cfg.Database, logger)
@@ -796,11 +802,11 @@ func main() {
 
 	// Automated Retention Pruner (prunes >30d raw events/positions/snapshots + >7d outbox)
 	telemetryCleaner := telemetry.NewTelemetryCleaner(database, telemetryCfg.RawRetentionDays, logger)
-	telemetryCleaner.Start(ctx)
+	telemetryCleaner.Start(sigCtx)
 
 	// ── High-Throughput Async Ingestion Queue ─────────────────────────
 	asyncQueue := telemetry.NewAsyncIngestQueue(10000, 4, ingestor, logger)
-	asyncQueue.Start(ctx)
+	asyncQueue.Start(sigCtx)
 	ingestor.SetQueue(asyncQueue)
 
 	mqttHandler := telemetry.NewMQTTIngestHandler(ingestor, logger)
@@ -812,7 +818,7 @@ func main() {
 		tcpPort = ":5023"
 	}
 	tcpServer := telemetry.NewTCPIngestServer(tcpPort, ingestor, telemetry.NewDeviceStore(database), logger)
-	if err := tcpServer.Start(ctx); err != nil {
+	if err := tcpServer.Start(sigCtx); err != nil {
 		logger.Warn("telemetry hardware TCP server startup warning", "error", err)
 	}
 
@@ -1614,8 +1620,9 @@ func main() {
 		MaxHeaderBytes:    1 << 20, // 1 MB
 	}
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	// Signal ctx created near startup (telemetry Starts already use it);
+	// reuse here for background workers + shutdown wait.
+	ctx = sigCtx
 
 	// ── Background worker leadership ─────────────────────────────────────
 	// Every cron/sweeper below runs on exactly one replica when
@@ -2048,11 +2055,10 @@ func main() {
 
 	<-ctx.Done()
 	logger.Info("Shutting down server")
-	_ = tcpServer.Stop()
-	asyncQueue.Drain(5 * time.Second)
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	if err := srv.Shutdown(shutdownCtx); err != nil {
+	// One shared deadline for TCP stop -> queue drain -> HTTP shutdown,
+	// created BEFORE the TCP stop (ShutdownSequence order is unit-tested).
+	if err := telemetry.ShutdownSequence(context.Background(), telemetry.ShutdownTimeout,
+		tcpServer.Stop, asyncQueue.DrainContext, srv.Shutdown); err != nil {
 		logger.Error("Graceful shutdown failed", "error", err)
 	}
 }

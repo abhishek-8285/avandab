@@ -62,8 +62,13 @@ while IFS= read -r entry; do
     [ -z "$entry" ] && continue
     path="${entry%%:*}"; want="${entry#*:}"
     body="$(mktemp)"
-    code=$(curl -s --max-time 15 -b "$JAR" -o "$body" -w "%{http_code}" "$BASE$path")
-    final=$(curl -s --max-time 15 -b "$JAR" -o /dev/null -w "%{url_effective}" "$BASE$path")
+    code=$(curl -s --max-time 15 -b "$JAR" -o "$body" -w "%{http_code}" "$BASE$path" || echo "000")
+    # -L: %{url_effective} without --location is always the request URL, so
+    # the onboard-bounce check below never fired (and the 302 itself passed
+    # the -ge 400 gate). Follow redirects so a bounce lands on
+    # .../company/onboard and gets flagged. `|| true`: curl exits 47 on a
+    # redirect loop — report it as FAIL, don't abort the whole crawl.
+    final=$(curl -sL --max-redirs 5 --max-time 15 -b "$JAR" -o /dev/null -w "%{url_effective}" "$BASE$path" || true)
     bad=""
     [ "$code" -ge 400 ] && bad="HTTP $code"
     [[ "$final" == */company/onboard ]] && bad="bounced to onboard"

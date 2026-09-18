@@ -43,6 +43,7 @@ import (
 	id "transport-app/internal/shared/id"
 	"transport-app/internal/shared/ports"
 	uow "transport-app/internal/shared/uow"
+	"transport-app/internal/telemetry"
 	tripapp "transport-app/internal/trip/application"
 	tripagg "transport-app/internal/trip/domain/aggregate"
 )
@@ -570,8 +571,19 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 			"CurrentStop":       currentStop,
 			"Progression":       progression,
 			"PODFiles":          h.tripPODFiles(r, id),
+			"FuelRollup":        fuelRollupOrNil(r, h.DB, id),
 		},
 	})
+}
+
+// fuelRollupOrNil loads the trip fuel rollup best-effort: a telemetry gap
+// must never break the trip page (template guards nil via {{with}}).
+func fuelRollupOrNil(r *http.Request, db *sql.DB, tripID string) *telemetry.FuelRollup {
+	roll, err := telemetry.LoadFuelRollup(r.Context(), db, tripID)
+	if err != nil {
+		return nil
+	}
+	return roll
 }
 
 // tripPODFiles lists trip_pod attachments best-effort: a file-store hiccup

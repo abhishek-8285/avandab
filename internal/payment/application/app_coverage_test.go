@@ -24,6 +24,7 @@ import (
 
 type mockPayRepoApp struct {
 	saveErr              error
+	duplicateID          paymentagg.PaymentID
 	findErr              error
 	findResult           *paymentagg.PaymentAggregate
 	getReadModelErr      error
@@ -45,6 +46,14 @@ func (m *mockPayRepoApp) Save(_ context.Context, p *paymentagg.PaymentAggregate)
 	}
 	m.saved = append(m.saved, p)
 	return nil
+}
+func (m *mockPayRepoApp) SaveIfNew(ctx context.Context, p *paymentagg.PaymentAggregate) (bool, error) {
+	if m.duplicateID != "" {
+		p.ID = m.duplicateID
+		return false, nil
+	}
+	err := m.Save(ctx, p)
+	return err == nil, err
 }
 func (m *mockPayRepoApp) Find(_ context.Context, _ paymentagg.PaymentID, _ shared.TenantID) (*paymentagg.PaymentAggregate, error) {
 	if m.findErr != nil {
@@ -385,6 +394,29 @@ func TestReversePayment_NotFound_App(t *testing.T) {
 	ctx, _, _, reverseUC, _, _, _ := setupWebhookUnitTest(t)
 	_, err := reverseUC.Execute(ctx, ReversePaymentCommand{TenantID: "1", OriginalPayID: "nonexistent", Reason: "refund"})
 	require.ErrorIs(t, err, ErrPaymentNotFound)
+}
+
+func TestReversePayment_DuplicateClaimDoesNotChangeInvoice_App(t *testing.T) {
+	ctx := shared.ContextWithTenantID(context.Background(), shared.TenantID("reversal-tenant"))
+	tenantID := shared.TenantIDFromContext(ctx)
+	clock := &fakeClock{now: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)}
+	inv := invoiceAgg.NewInvoiceAggregate("inv-duplicate", tenantID, "INV-DUP", "bk-1", "cust-1", nil, 1000, 0, 0, 1000, invoiceAgg.PaymentStatusPending, clock.Now())
+	require.NoError(t, inv.ApplyPayment(400, clock.Now()))
+	before := *inv
+	original := paymentagg.NewPaymentAggregate("pay-original", tenantID, string(inv.ID), clock.Now(), 400, paymentagg.PaymentMethodCash, nil, nil, clock.Now())
+	payRepo := &mockPayRepoApp{findResult: original, duplicateID: "reversal-existing"}
+	invRepo := &mockInvRepoApp{findResult: inv, saveErr: errors.New("duplicate reversal must not save invoice")}
+	uc := NewReversePaymentUseCase(&mockUoWApp{payRepo: payRepo, invRepo: invRepo}, &fakeIDGen{}, clock)
+
+	precheckID, err := payRepo.FindByReference(ctx, "REVERSAL:pay-original", tenantID)
+	require.ErrorIs(t, err, sql.ErrNoRows)
+	require.Empty(t, precheckID)
+	id, err := uc.Execute(ctx, ReversePaymentCommand{TenantID: tenantID, OriginalPayID: original.ID, Reason: "refund"})
+
+	assert.NoError(t, err)
+	assert.Equal(t, payRepo.duplicateID, id)
+	assert.Equal(t, before, *inv)
+	assert.Empty(t, payRepo.saved)
 }
 
 func TestReversePayment_InvoiceNotFound_App(t *testing.T) {

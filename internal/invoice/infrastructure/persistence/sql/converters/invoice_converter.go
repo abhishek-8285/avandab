@@ -40,7 +40,7 @@ func ToDomain(i db.Invoice) *aggregate.InvoiceAggregate {
 		aggregate.PaymentStatus(i.PaymentStatus),
 		invoiceStatus,
 		i.PaidAmount,
-		0,
+		0, // no credit column: Rehydrate derives credit from paid/total
 		dueDate,
 		"",
 		"",

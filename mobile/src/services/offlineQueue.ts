@@ -1,6 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { getApiBaseURL } from '../constants/network';
-import { useAuthStore } from '../stores/authStore';
+import { currentAccountId, currentDriverId, useAuthStore } from '../stores/authStore';
 
 const DB_NAME = 'offline_queue.db';
 
@@ -20,6 +20,7 @@ export interface QueuedPOD {
   quantity_short: number | null;
   damage_qty: number | null;
   refusal_reason: string | null;
+  owner_id?: string | null;
   created_at: string;
 }
 
@@ -33,6 +34,7 @@ export interface QueuedExpense {
   latitude: number | null;
   longitude: number | null;
   idempotency_key: string | null;
+  owner_id?: string | null;
   created_at: string;
 }
 
@@ -47,6 +49,7 @@ export interface QueuedGPS {
   heading: number | null;
   motion: number | null;
   battery_level: number | null;
+  owner_id?: string | null;
   created_at: string;
 }
 
@@ -75,6 +78,7 @@ class OfflineQueueService {
         quantity_short REAL DEFAULT 0,
         damage_qty REAL DEFAULT 0,
         refusal_reason TEXT,
+        owner_id TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
       CREATE TABLE IF NOT EXISTS queued_gps (
@@ -88,6 +92,7 @@ class OfflineQueueService {
         heading REAL,
         motion INTEGER,
         battery_level REAL,
+        owner_id TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
       CREATE TABLE IF NOT EXISTS offline_expenses (
@@ -100,6 +105,7 @@ class OfflineQueueService {
         latitude REAL,
         longitude REAL,
         idempotency_key TEXT,
+        owner_id TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
     `);
@@ -144,6 +150,17 @@ class OfflineQueueService {
     try {
       await this.db.execAsync(`ALTER TABLE queued_gps ADD COLUMN battery_level REAL`);
     } catch {}
+    // Session-ownership columns: partition queues by account identity.
+    // Upgrade path swallows "duplicate column" on every restart after first.
+    try {
+      await this.db.execAsync(`ALTER TABLE queued_pods ADD COLUMN owner_id TEXT`);
+    } catch {}
+    try {
+      await this.db.execAsync(`ALTER TABLE queued_gps ADD COLUMN owner_id TEXT`);
+    } catch {}
+    try {
+      await this.db.execAsync(`ALTER TABLE offline_expenses ADD COLUMN owner_id TEXT`);
+    } catch {}
     // Expire pods older than 7 days
     try {
       await this.db.execAsync(`DELETE FROM queued_pods WHERE created_at < datetime('now','-7 days')`);
@@ -168,19 +185,26 @@ class OfflineQueueService {
       quantity_short?: number | null;
       damage_qty?: number | null;
       refusal_reason?: string | null;
-    }
+    },
+    ownerId?: string | null
   ): Promise<void> {
     if (!this.db) await this.init();
-    // Dedupe: don't queue twice for the same trip and stop
-    const existing = await this.db!.getFirstAsync<QueuedPOD>(
-      'SELECT id FROM queued_pods WHERE trip_id = ? AND ((stop_id IS NULL AND ? IS NULL) OR stop_id = ?)',
-      [tripId, data.stop_id ?? null, data.stop_id ?? null]
-    );
+    const owner = ownerId ?? currentAccountId();
+    // Dedupe scoped to owner: same trip queued by two accounts must not collapse.
+    const existing = owner == null
+      ? await this.db!.getFirstAsync<QueuedPOD>(
+        'SELECT id FROM queued_pods WHERE trip_id = ? AND ((stop_id IS NULL AND ? IS NULL) OR stop_id = ?)',
+        [tripId, data.stop_id ?? null, data.stop_id ?? null]
+      )
+      : await this.db!.getFirstAsync<QueuedPOD>(
+        'SELECT id FROM queued_pods WHERE trip_id = ? AND ((stop_id IS NULL AND ? IS NULL) OR stop_id = ?) AND owner_id = ?',
+        [tripId, data.stop_id ?? null, data.stop_id ?? null, owner]
+      );
     if (existing) return;
 
     await this.db!.runAsync(
-      `INSERT INTO queued_pods (trip_id, stop_id, stop_sequence, otp, consignee_name, consignee_phone, notes, photo_uri, latitude, longitude, pod_signature_data, quantity_short, damage_qty, refusal_reason)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO queued_pods (trip_id, stop_id, stop_sequence, otp, consignee_name, consignee_phone, notes, photo_uri, latitude, longitude, pod_signature_data, quantity_short, damage_qty, refusal_reason, owner_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         tripId,
         data.stop_id ?? null,
@@ -196,6 +220,7 @@ class OfflineQueueService {
         data.quantity_short ?? null,
         data.damage_qty ?? null,
         data.refusal_reason ?? null,
+        owner,
       ]
     );
   }
@@ -209,9 +234,11 @@ class OfflineQueueService {
     }
   }
 
-  async pendingPODs(): Promise<QueuedPOD[]> {
+  async pendingPODs(ownerId?: string | null): Promise<QueuedPOD[]> {
     if (!this.db) await this.init();
-    return await this.db!.getAllAsync<QueuedPOD>('SELECT * FROM queued_pods ORDER BY created_at ASC');
+    const owner = ownerId ?? currentAccountId();
+    if (owner == null) return await this.db!.getAllAsync<QueuedPOD>('SELECT * FROM queued_pods ORDER BY created_at ASC');
+    return await this.db!.getAllAsync<QueuedPOD>('SELECT * FROM queued_pods WHERE owner_id = ? ORDER BY created_at ASC', [owner]);
   }
 
   // ── Expense queue ───────────────────────────────────────
@@ -224,11 +251,12 @@ class OfflineQueueService {
     latitude?: number | null;
     longitude?: number | null;
     idempotency_key?: string | null;
-  }): Promise<void> {
+  }, ownerId?: string | null): Promise<void> {
     if (!this.db) await this.init();
+    const owner = ownerId ?? currentAccountId();
     await this.db!.runAsync(
-      `INSERT INTO offline_expenses (trip_id, expense_type, amount, receipt_uri, notes, latitude, longitude, idempotency_key)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO offline_expenses (trip_id, expense_type, amount, receipt_uri, notes, latitude, longitude, idempotency_key, owner_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         data.trip_id,
         data.expense_type,
@@ -238,13 +266,16 @@ class OfflineQueueService {
         data.latitude ?? null,
         data.longitude ?? null,
         data.idempotency_key || null,
+        owner,
       ]
     );
   }
 
-  async pendingExpenses(): Promise<QueuedExpense[]> {
+  async pendingExpenses(ownerId?: string | null): Promise<QueuedExpense[]> {
     if (!this.db) await this.init();
-    return await this.db!.getAllAsync<QueuedExpense>('SELECT * FROM offline_expenses ORDER BY created_at ASC');
+    const owner = ownerId ?? currentAccountId();
+    if (owner == null) return await this.db!.getAllAsync<QueuedExpense>('SELECT * FROM offline_expenses ORDER BY created_at ASC');
+    return await this.db!.getAllAsync<QueuedExpense>('SELECT * FROM offline_expenses WHERE owner_id = ? ORDER BY created_at ASC', [owner]);
   }
 
   async clearExpense(id: number): Promise<void> {
@@ -270,18 +301,24 @@ class OfflineQueueService {
     heading?: number | null;
     motion?: boolean | null;
     battery_level?: number | null;
-  }): Promise<void> {
+  }, ownerId?: string | null): Promise<void> {
     if (!this.db) await this.init();
+    // Owner captured at enqueue: the account that created the fix owns it.
+    // Falls back to the explicit driver_id so background callers without a
+    // session still attribute deterministically.
+    const owner = ownerId ?? currentAccountId() ?? log.driver_id ?? null;
     await this.db!.runAsync(
-      `INSERT INTO queued_gps (driver_id, latitude, longitude, timestamp, accuracy_m, speed, heading, motion, battery_level)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [log.driver_id, log.latitude, log.longitude, log.timestamp, log.accuracy_m ?? null, log.speed ?? null, log.heading ?? null, log.motion == null ? null : (log.motion ? 1 : 0), log.battery_level ?? null]
+      `INSERT INTO queued_gps (driver_id, latitude, longitude, timestamp, accuracy_m, speed, heading, motion, battery_level, owner_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [log.driver_id, log.latitude, log.longitude, log.timestamp, log.accuracy_m ?? null, log.speed ?? null, log.heading ?? null, log.motion == null ? null : (log.motion ? 1 : 0), log.battery_level ?? null, owner]
     );
   }
 
-  async pendingGPS(): Promise<QueuedGPS[]> {
+  async pendingGPS(ownerId?: string | null): Promise<QueuedGPS[]> {
     if (!this.db) await this.init();
-    return await this.db!.getAllAsync<QueuedGPS>('SELECT * FROM queued_gps ORDER BY created_at ASC');
+    const owner = ownerId ?? currentAccountId();
+    if (owner == null) return await this.db!.getAllAsync<QueuedGPS>('SELECT * FROM queued_gps ORDER BY created_at ASC');
+    return await this.db!.getAllAsync<QueuedGPS>('SELECT * FROM queued_gps WHERE owner_id = ? ORDER BY created_at ASC', [owner]);
   }
 
   async clearGPS(ids: number[]): Promise<void> {
@@ -292,13 +329,16 @@ class OfflineQueueService {
   }
 
   // ── Flush all queues (batch) ───────────────────────────────────
+  // Owner-scoped: only the current account's work flushes. Other accounts'
+  // rows stay queued (retained, never deleted) until their owner signs in.
   async flush(): Promise<{ podsFlushed: number; gpsFlushed: number; expensesFlushed: number }> {
     let podsFlushed = 0;
     let gpsFlushed = 0;
     let expensesFlushed = 0;
+    const owner = currentAccountId();
 
     // Flush queued PODs in batch, continue on partial failure
-    const pods = await this.pendingPODs();
+    const pods = await this.pendingPODs(owner);
     const podsBatch = pods.slice(0, OFFLINE_FLUSH_BATCH);
     for (const pod of podsBatch) {
       try {
@@ -368,7 +408,7 @@ class OfflineQueueService {
     }
 
     // Flush queued Expenses in batch, continue on partial failure
-    const expenses = await this.pendingExpenses();
+    const expenses = await this.pendingExpenses(owner);
     const expensesBatch = expenses.slice(0, OFFLINE_FLUSH_BATCH);
     for (const exp of expensesBatch) {
       try {
@@ -414,13 +454,14 @@ class OfflineQueueService {
       }
     }
 
-    // Flush queued GPS in batch
-    const gpsLogs = await this.pendingGPS();
+    // Flush queued GPS in batch — owner-filtered so a session switch can
+    // never attribute the previous driver's fixes to the current driver.
+    const gpsLogs = await this.pendingGPS(owner);
     const gpsBatch = gpsLogs.slice(0, OFFLINE_FLUSH_BATCH);
     if (gpsBatch.length > 0) {
       try {
         const token = useAuthStore.getState().token;
-        const driverId = useAuthStore.getState().user?.driverId || useAuthStore.getState().user?.id;
+        const driverId = currentDriverId();
         if (token && driverId) {
           const res = await fetch(`${getApiBaseURL()}/api/v1/telemetry/sync`, {
             method: 'POST',

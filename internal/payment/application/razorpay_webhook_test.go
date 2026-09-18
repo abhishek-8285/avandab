@@ -94,6 +94,11 @@ func (r *fakePaymentRepo) Save(_ context.Context, p *paymentagg.PaymentAggregate
 	return nil
 }
 
+func (r *fakePaymentRepo) SaveIfNew(ctx context.Context, p *paymentagg.PaymentAggregate) (bool, error) {
+	err := r.Save(ctx, p)
+	return err == nil, err
+}
+
 func (r *fakePaymentRepo) Find(_ context.Context, id paymentagg.PaymentID, _ shared.TenantID) (*paymentagg.PaymentAggregate, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()

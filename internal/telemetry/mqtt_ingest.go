@@ -51,6 +51,11 @@ func (h *MQTTIngestHandler) HandleMessage(ctx context.Context, topic string, pay
 	}
 
 	// Step 4: Build RawFrame.
+	valid := p.Valid
+	if p.IsStale != nil && *p.IsStale {
+		stale := false
+		valid = &stale
+	}
 	frame := providers.RawFrame{
 		IMEI:            imei,
 		Latitude:        p.Latitude,
@@ -67,7 +72,7 @@ func (h *MQTTIngestHandler) HandleMessage(ctx context.Context, topic string, pay
 		ExternalVoltage: p.ExternalVoltage,
 		GSMSignal:       p.GSMSignal,
 		Motion:          p.Motion,
-		Valid:           p.Valid,
+		Valid:           valid,
 		DriverID:        p.DriverID,
 		TripID:          p.TripID,
 		SOS:             p.SOS,
@@ -118,9 +123,12 @@ type mqttPayload struct {
 	GSMSignal       *int     `json:"gsm_signal,omitempty"`
 	Motion          *bool    `json:"motion,omitempty"`
 	Valid           *bool    `json:"valid,omitempty"`
-	DriverID        string   `json:"driver_id,omitempty"`
-	TripID          string   `json:"trip_id,omitempty"`
-	SOS             bool     `json:"sos"`
+	// IsStale marks a last-known (not live) fix from the mobile app; it
+	// forces Valid=false below so stale fixes stay in history, never live.
+	IsStale  *bool  `json:"is_stale,omitempty"`
+	DriverID string `json:"driver_id,omitempty"`
+	TripID   string `json:"trip_id,omitempty"`
+	SOS      bool   `json:"sos"`
 }
 
 // extractIMEIFromTopic parses "avandab/telemetry/devices/{imei}/gps" -> "{imei}".

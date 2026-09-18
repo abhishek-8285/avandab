@@ -37,6 +37,10 @@ type GPSLogPayload struct {
 	BatteryLevel *float64 `json:"battery_level,omitempty"`
 	Satellites   *int     `json:"satellites,omitempty"`
 	Motion       *bool    `json:"motion,omitempty"`
+	// IsStale marks a last-known (not live) fix: the app sends it flagged
+	// instead of fabricating a fresh measurement when GNSS is unavailable.
+	// Stale fixes map to Valid=false below — stored in history, never live.
+	IsStale *bool `json:"is_stale,omitempty"`
 }
 
 // SyncBatchRequest is the mobile-app sync payload. DeviceID is the synthetic
@@ -177,6 +181,13 @@ func HandleTelemetrySync(ing *Ingestor) http.HandlerFunc {
 
 			// Identity resolved + tenant-pinned above; empty imei means no
 			// device was claimed at all (pipeline quarantine handles it).
+			// A stale (last-known) fix is explicitly untrusted: history keeps
+			// it for audit, but it must never overwrite the live-map row.
+			var valid *bool
+			if logItem.IsStale != nil && *logItem.IsStale {
+				stale := false
+				valid = &stale
+			}
 			frame := providers.RawFrame{
 				IMEI:          imei,
 				Latitude:      logItem.Latitude,
@@ -190,6 +201,7 @@ func HandleTelemetrySync(ing *Ingestor) http.HandlerFunc {
 				BatteryLevel:  logItem.BatteryLevel,
 				Satellites:    logItem.Satellites,
 				Motion:        logItem.Motion,
+				Valid:         valid,
 			}
 
 			result, err := ing.IngestRawFrame(r.Context(), frame)

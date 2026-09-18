@@ -117,6 +117,11 @@ func setupPublicPayTest(t *testing.T) (*sql.DB, *App, *PaymentHandlers, string, 
 	_, err = db.Exec(`INSERT INTO trips (id, trip_number, booking_id, route_id, departure_time, status, tenant_id)
 		VALUES ('trip_pay_1', 'TRP-2026-001', 'bk_pay_1', 'r_pay_1', '2026-09-02 09:00:00', 'delivered', '1')`)
 	require.NoError(t, err)
+	// Separate trip for the paid invoice: migration 00164 enforces one
+	// invoice per (tenant, trip), so fixtures must not share trip_pay_1.
+	_, err = db.Exec(`INSERT INTO trips (id, trip_number, booking_id, route_id, departure_time, status, tenant_id)
+		VALUES ('trip_pay_2', 'TRP-2026-002', 'bk_pay_1', 'r_pay_1', '2026-09-02 09:00:00', 'delivered', '1')`)
+	require.NoError(t, err)
 
 	unpaidInvID := "inv_unpaid_101"
 	paidInvID := "inv_paid_202"
@@ -159,13 +164,14 @@ func setupPublicPayTest(t *testing.T) (*sql.DB, *App, *PaymentHandlers, string, 
 	require.NoError(t, invRepo.Save(context.Background(), unpaidAgg))
 
 	// Create fully paid invoice
+	paidTripIDVal := "trip_pay_2"
 	paidAgg := invoiceagg.NewInvoiceAggregate(
 		invoiceagg.InvoiceID(paidInvID),
 		shared.TenantID("1"),
 		"INV-2026-002",
 		"bk_pay_1",
 		"cust_pay_1",
-		&tripIDVal,
+		&paidTripIDVal,
 		5000.0,
 		900.0,
 		0.0,

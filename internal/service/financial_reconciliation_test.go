@@ -29,7 +29,7 @@ func newP5MockBus() *p5MockBus {
 	}
 }
 
-func (m *p5MockBus) Publish(ctx context.Context, e events.Event) {
+func (m *p5MockBus) Publish(ctx context.Context, e events.Event) error {
 	m.mu.Lock()
 	m.events = append(m.events, e)
 	handlers := m.subs[e.Type]
@@ -38,6 +38,7 @@ func (m *p5MockBus) Publish(ctx context.Context, e events.Event) {
 	for _, h := range handlers {
 		_ = h(ctx, e)
 	}
+	return nil
 }
 
 func (m *p5MockBus) Subscribe(eventType string, handler events.Handler) func() {
@@ -303,6 +304,23 @@ func setupFinancialReconciliationDB(t *testing.T) *sql.DB {
 		event_type TEXT NOT NULL,
 		payload TEXT NOT NULL,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	);
+
+	-- stubs for P&L daily aggregates (GenerateDailySnapshot fails hard on
+	-- missing revenue/fuel/payout/toll tables rather than persisting zeros,
+	-- mirroring the internal/pnl error contract; maintenance degrades).
+	CREATE TABLE IF NOT EXISTS maintenance_records (
+		id TEXT PRIMARY KEY,
+		tenant_id TEXT NOT NULL DEFAULT '1',
+		cost REAL NOT NULL DEFAULT 0,
+		performed_at DATETIME
+	);
+
+	CREATE TABLE IF NOT EXISTS fastag_transactions (
+		id TEXT PRIMARY KEY,
+		tenant_id TEXT NOT NULL DEFAULT '1',
+		amount REAL NOT NULL DEFAULT 0,
+		txn_timestamp DATETIME
 	);
 	`
 	if _, err := db.Exec(schema); err != nil {

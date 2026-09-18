@@ -213,9 +213,10 @@ func TestVectorStore_BatchInsert(t *testing.T) {
 }
 
 func TestHashEmbedder(t *testing.T) {
+	ctx := context.Background()
 	embedder := NewHashEmbedder(384)
 
-	emb1, err := embedder.Embed("hello world")
+	emb1, err := embedder.Embed(ctx, "hello world")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,7 +226,7 @@ func TestHashEmbedder(t *testing.T) {
 	}
 
 	// Same input should produce same embedding
-	emb2, err := embedder.Embed("hello world")
+	emb2, err := embedder.Embed(ctx, "hello world")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -238,7 +239,7 @@ func TestHashEmbedder(t *testing.T) {
 	}
 
 	// Different input should produce different embedding
-	emb3, err := embedder.Embed("goodbye world")
+	emb3, err := embedder.Embed(ctx, "goodbye world")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,10 +257,11 @@ func TestHashEmbedder(t *testing.T) {
 }
 
 func TestEmbedderBatch(t *testing.T) {
+	ctx := context.Background()
 	embedder := NewHashEmbedder(128)
 
 	texts := []string{"hello", "world", "foo", "bar", "baz"}
-	embeddings, err := embedder.EmbedBatch(texts)
+	embeddings, err := embedder.EmbedBatch(ctx, texts)
 	if err != nil {
 		t.Fatal(err)
 	}

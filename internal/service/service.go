@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log/slog"
 
 	"transport-app/internal/config"
@@ -17,6 +18,7 @@ import (
 	fuel "transport-app/internal/fuel"
 	invoiceapp "transport-app/internal/invoice/application"
 	"transport-app/internal/repository"
+	"transport-app/internal/shared"
 	"transport-app/internal/shared/clock"
 	"transport-app/internal/shared/id"
 	"transport-app/internal/storage"
@@ -255,6 +257,18 @@ func (s *Services) initEventHandlers() {
 		if !ok {
 			return nil
 		}
+		// The outbox relay redelivers on a global-scope context: rehydrate
+		// the event's tenant so lookups below stay tenant-scoped.
+		if evt.TenantID != "" {
+			ctx = shared.ContextWithTenantID(ctx, evt.TenantID)
+		}
+		// Idempotency: a redelivered confirmation must not mint a second
+		// trip — the outbox retries the whole fan-out on any failure.
+		if _, err := s.store.GetTripByBookingID(ctx, evt.BookingID); err == nil {
+			return nil
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
 		b, err := s.store.GetBookingByID(ctx, evt.BookingID)
 		if err != nil {
 			return err
@@ -281,7 +295,15 @@ func (s *Services) initEventHandlers() {
 		if !ok {
 			return nil
 		}
+		if evt.TenantID != "" {
+			ctx = shared.ContextWithTenantID(ctx, evt.TenantID)
+		}
 		if _, err := s.Invoices.GenerateInvoiceFromTrip(ctx, evt.TripID); err != nil {
+			// Duplicate means a previous delivery already invoiced: report
+			// success so the relay acknowledges instead of retrying forever.
+			if errors.Is(err, domain.ErrDuplicateInvoice) {
+				return nil
+			}
 			s.log.Error("auto-invoice generation failed for completed trip", "trip_id", evt.TripID, "error", err)
 			return err
 		}
@@ -302,12 +324,19 @@ func (s *Services) initEventHandlers() {
 		if !ok {
 			return nil
 		}
+		// Same tenant rehydration as above; the relay payload carries the
+		// tenant as a plain string (see tenantFromPayload).
+		if tenantID, ok := tenantFromPayload(payload["tenant_id"]); ok {
+			ctx = shared.ContextWithTenantID(ctx, tenantID)
+		}
 		// Attempt both side effects; return the first failure so the bus
 		// central log records it (a nil return would bury a half-done fan-out).
 		var firstErr error
 		if _, err := s.Invoices.GenerateInvoiceFromTrip(ctx, tripID); err != nil {
-			s.log.Error("auto-invoice generation failed for delivered trip", "trip_id", tripID, "error", err)
-			firstErr = err
+			if !errors.Is(err, domain.ErrDuplicateInvoice) {
+				s.log.Error("auto-invoice generation failed for delivered trip", "trip_id", tripID, "error", err)
+				firstErr = err
+			}
 		}
 		if _, err := s.Settlements.GenerateSettlement(ctx, string(tripID), false); err != nil {
 			s.log.Error("auto-settlement generation failed for delivered trip", "trip_id", tripID, "error", err)
@@ -329,6 +358,17 @@ func tripIDFromPayload(v interface{}) (domain.TripID, bool) {
 		return t, t != ""
 	case string:
 		return domain.TripID(t), t != ""
+	default:
+		return "", false
+	}
+}
+
+func tenantFromPayload(v interface{}) (shared.TenantID, bool) {
+	switch t := v.(type) {
+	case shared.TenantID:
+		return t, t != ""
+	case string:
+		return shared.TenantID(t), t != ""
 	default:
 		return "", false
 	}

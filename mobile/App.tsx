@@ -27,7 +27,7 @@ import { ExpenseScreen } from './src/components/ExpenseScreen';
 import { ProfileScreen } from './src/components/ProfileScreen';
 import { IssuesScreen } from './src/components/IssuesScreen';
 import { DB } from './src/services/storage';
-import { Telemetry } from './src/services/telemetry';
+import { Telemetry, canPublishFix } from './src/services/telemetry';
 import { Analytics } from './src/services/analytics';
 import { MQTT } from './src/services/mqtt';
 import { SyncEngine, startNetworkWatcher, stopNetworkWatcher } from './src/services/syncEngine';
@@ -299,6 +299,9 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
     latitude: number | null;
     longitude: number | null;
     error: string | null;
+    isStale?: boolean;
+    isFallback?: boolean;
+    lastFixAt?: string | null;
   }>({
     granted: false,
     latitude: null,
@@ -361,24 +364,29 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
         Analytics.track('driver_gps_permission_requested');
         const loc = await Telemetry.requestLocationPermission();
 
-        const lat = loc.latitude ?? 19.0760;
-        const lng = loc.longitude ?? 72.8777;
-
+        // Viewport shows whatever the honest chain returned (live / stale /
+        // coarse). Telemetry publish is gated: coarse viewport fallbacks must
+        // never leave the device; stale fixes publish ONLY flagged stale.
         const finalLoc = {
           granted: loc.granted,
-          latitude: loc.granted ? lat : null,
-          longitude: loc.granted ? lng : null,
+          latitude: loc.latitude,
+          longitude: loc.longitude,
           error: loc.error,
+          isStale: loc.isStale,
+          isFallback: loc.isFallback,
+          lastFixAt: loc.lastFixAt,
         };
 
         setLocationState(finalLoc);
-        if (finalLoc.granted) {
-          Analytics.track('driver_gps_location_acquired', { lat, lng });
+        if (canPublishFix(finalLoc) && finalLoc.latitude != null && finalLoc.longitude != null) {
+          Analytics.track('driver_gps_location_acquired', { lat: finalLoc.latitude, lng: finalLoc.longitude });
           if (driverIdentifier) {
-            MQTT.publishLocation(driverIdentifier, lat, lng);
+            MQTT.publishLocation(driverIdentifier, finalLoc.latitude, finalLoc.longitude, finalLoc.isStale ? { isStale: true } : undefined);
           }
+        }
+        if (finalLoc.granted) {
           Telemetry.startLiveLocationTracking((liveLat, liveLng) => {
-            setLocationState((prev) => ({ ...prev, granted: true, latitude: liveLat, longitude: liveLng }));
+            setLocationState((prev) => ({ ...prev, granted: true, latitude: liveLat, longitude: liveLng, isStale: false, isFallback: false }));
             if (driverIdentifier) {
               MQTT.publishLocation(driverIdentifier, liveLat, liveLng);
             }
@@ -388,6 +396,11 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
         Analytics.track('driver_gps_error', { error: e.message });
       }
     })();
+    // Cleanup on driver/tab switch/unmount: no live listener survives a
+    // session change (pairs with Telemetry's single-subscription guard).
+    return () => {
+      Telemetry.stopLiveLocationTracking();
+    };
   }, [driverIdentifier, activeTab]);
 
 

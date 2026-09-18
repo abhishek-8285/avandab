@@ -29,7 +29,7 @@ func newMockRecordedBus() *mockRecordedBus {
 	}
 }
 
-func (m *mockRecordedBus) Publish(ctx context.Context, e events.Event) {
+func (m *mockRecordedBus) Publish(ctx context.Context, e events.Event) error {
 	m.mu.Lock()
 	m.events = append(m.events, e)
 	handlers := m.subs[e.Type]
@@ -38,6 +38,7 @@ func (m *mockRecordedBus) Publish(ctx context.Context, e events.Event) {
 	for _, h := range handlers {
 		_ = h(ctx, e)
 	}
+	return nil
 }
 
 func (m *mockRecordedBus) Subscribe(eventType string, handler events.Handler) func() {

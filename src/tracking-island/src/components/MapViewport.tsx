@@ -213,7 +213,7 @@ export default function MapViewport(p: Props) {
     const anims = animsRef.current;
     const seen = new Set<string>();
     const now = performance.now();
-    const { selectedId, follow, onSelect } = propsRef.current;
+    const { onSelect } = propsRef.current;
 
     for (const v of p.vehicles.values()) {
       if (!hasPos(v)) continue;
@@ -243,21 +243,32 @@ export default function MapViewport(p: Props) {
         }
         mk.setTooltipContent(tooltipHTML(v));
       }
-      const el = mk.getElement();
-      if (el) el.classList.toggle('ti-selected', v.vehicle_id === selectedId);
     }
     for (const [id, mk] of markers) {
       if (!seen.has(id)) { map.removeLayer(mk); markers.delete(id); anims.delete(id); }
     }
     (map as unknown as { __kick?: (n: number) => void }).__kick?.(now);
 
-    if (follow && selectedId) {
-      const sel = p.vehicles.get(selectedId);
-      if (sel && hasPos(sel)) map.panTo([sel.lat, sel.lng], { animate: !REDUCED_MOTION });
-    }
     void onSelect;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.version]);
+
+  // Sync selection highlight + follow pan when the selection changes,
+  // independent of telemetry version bumps (selecting a quiet vehicle
+  // must update the marker immediately, not on the next fix).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    for (const [id, mk] of markersRef.current) {
+      const el = mk.getElement();
+      if (el) el.classList.toggle('ti-selected', id === p.selectedId);
+    }
+    if (p.follow && p.selectedId) {
+      const sel = p.vehicles.get(p.selectedId);
+      if (sel && hasPos(sel)) map.panTo([sel.lat, sel.lng], { animate: !REDUCED_MOTION });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.selectedId, p.follow, p.version]);
 
   // Geofence overlay.
   useEffect(() => {

@@ -325,10 +325,11 @@
     }
 
     // ── boot ────────────────────────────────────────────────────────
+    // No sheet init call: the panel starts hidden via template classes and
+    // openMobileSheet() lazily wires the close button on first select.
     function bootConsole() {
         if (!$("fleet-cards")) { return; } // not on the console page
         if (window.__consoleTimer) { clearInterval(window.__consoleTimer); window.__consoleTimer = null; }
-        initMobileSheet();
         loadFleet();
         wireActions();
         initPalette();

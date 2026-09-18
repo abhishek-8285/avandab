@@ -141,6 +141,22 @@ describe('MQTTTelemetryService', () => {
     expect(publish).not.toHaveBeenCalled();
   });
 
+  test('stale fixes publish flagged is_stale; fresh payloads stay backward compatible', () => {
+    MQTT.connect('drv_1');
+    emit('connect');
+    const { publish } = mqttModule.__getClient();
+    publish.mockClear();
+
+    MQTT.publishLocation('drv_1', 19.076, 72.8777, { isStale: true });
+    const stalePayload = JSON.parse(publish.mock.calls[0][1]);
+    expect(stalePayload.is_stale).toBe(true);
+    expect(stalePayload.latitude).toBe(19.076);
+
+    MQTT.publishLocation('drv_1', 19.076, 72.8777);
+    const freshPayload = JSON.parse(publish.mock.calls[1][1]);
+    expect('is_stale' in freshPayload).toBe(false); // additive only — old shape untouched
+  });
+
   test('reconnect backoff grows exponentially on close and resets on connect', () => {
     MQTT.connect('drv_1');
     const client = mqttModule.__getClient();

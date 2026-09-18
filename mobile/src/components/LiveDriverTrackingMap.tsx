@@ -20,7 +20,7 @@ interface LiveDriverTrackingMapProps {
   pickupLabel?: string;
   destinationLabel?: string;
   vehicleLabel?: string;
-  speedKmh?: number;
+  speedKmh?: number | null;
   height?: number;
   onOpenExternalNav?: () => void;
 }
@@ -35,7 +35,7 @@ export function LiveDriverTrackingMap({
   pickupLabel = 'JNPT Port, Navi Mumbai',
   destinationLabel = 'Chakan MIDC, Pune',
   vehicleLabel = 'DL-01-AB-1234',
-  speedKmh = 48,
+  speedKmh = null,
   height = 280,
   onOpenExternalNav,
 }: LiveDriverTrackingMapProps) {
@@ -245,7 +245,7 @@ export function LiveDriverTrackingMap({
         </View>
         <View style={styles.speedPill}>
           <MaterialCommunityIcons name="speedometer" size={12} color={Colors.textOnPrimary} />
-          <Text style={styles.speedText}>{speedKmh} KM/H</Text>
+          <Text style={styles.speedText}>{speedKmh != null ? `${speedKmh} KM/H` : '-- KM/H'}</Text>
         </View>
         <Text style={styles.vehicleText}>{vehicleLabel}</Text>
       </View>

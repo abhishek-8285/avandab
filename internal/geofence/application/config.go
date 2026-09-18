@@ -35,20 +35,24 @@ const cacheTTL = 30 * time.Second
 
 // ConfigReader reads company_config with a short-lived in-memory cache.
 // Writes go through the same table (1G admin UI); the TTL bounds staleness.
+// Snapshots AND refresh timestamps are keyed per tenant: a single shared
+// snapshot served one tenant's automation flags and billing rates to every
+// other tenant until expiry, including tenants with no configuration at all.
 type ConfigReader struct {
 	db      *sql.DB
 	mu      sync.RWMutex
-	cache   map[string]string // key -> value
-	cacheAt time.Time
+	cache   map[string]map[string]string
+	cacheAt map[string]time.Time
 	now     func() time.Time
 }
 
 // NewConfigReader constructs a ConfigReader.
 func NewConfigReader(db *sql.DB) *ConfigReader {
 	return &ConfigReader{
-		db:    db,
-		cache: make(map[string]string),
-		now:   time.Now,
+		db:      db,
+		cache:   make(map[string]map[string]string),
+		cacheAt: make(map[string]time.Time),
+		now:     time.Now,
 	}
 }
 
@@ -60,7 +64,7 @@ func (c *ConfigReader) Get(ctx context.Context, tenantID, key string) (string, e
 	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	return c.cache[key], nil
+	return c.cache[tenantID][key], nil
 }
 
 // GetDurationSeconds parses a key as seconds, falling back to def.
@@ -113,7 +117,8 @@ func (c *ConfigReader) GetBool(ctx context.Context, tenantID, key string, def bo
 // than cacheTTL.
 func (c *ConfigReader) refreshIfStale(ctx context.Context, tenantID string) error {
 	c.mu.RLock()
-	stale := c.cacheAt.IsZero() || c.now().Sub(c.cacheAt) > cacheTTL
+	at := c.cacheAt[tenantID]
+	stale := at.IsZero() || c.now().Sub(at) > cacheTTL
 	c.mu.RUnlock()
 	if !stale {
 		return nil
@@ -122,7 +127,8 @@ func (c *ConfigReader) refreshIfStale(ctx context.Context, tenantID string) erro
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	// Double-check under the write lock (another goroutine may have refreshed).
-	if !c.cacheAt.IsZero() && c.now().Sub(c.cacheAt) <= cacheTTL {
+	at = c.cacheAt[tenantID]
+	if !at.IsZero() && c.now().Sub(at) <= cacheTTL {
 		return nil
 	}
 
@@ -144,7 +150,7 @@ func (c *ConfigReader) refreshIfStale(ctx context.Context, tenantID string) erro
 	if err := rows.Err(); err != nil {
 		return err
 	}
-	c.cache = fresh
-	c.cacheAt = c.now()
+	c.cache[tenantID] = fresh
+	c.cacheAt[tenantID] = c.now()
 	return nil
 }

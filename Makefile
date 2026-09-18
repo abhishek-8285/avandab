@@ -1,4 +1,4 @@
-.PHONY: build run test test-race lint fmt vet generate migrate-up migrate-down clean docker dev build-css build-tracking check check-fast check-fmt check-ui staticcheck check-security build-rag
+.PHONY: build run test test-race lint fmt vet generate migrate-up migrate-down clean clean-db docker dev build-css build-tracking check check-fast check-fmt check-ui staticcheck check-security build-rag
 
 # CI images ship `python3`; Windows dev boxes usually only have `python`.
 # Override with: make check-ui PYTHON=python
@@ -61,9 +61,16 @@ migrate-up:
 migrate-down:
 	goose sqlite $(DATABASE_URL) down
 
-## Clean build artifacts
+## Clean generated artifacts only — never touches *.db (live runtime data).
+## Use `make clean-db` when you really mean to delete local SQLite files.
 clean:
-	rm -rf bin/ coverage.out *.db *.db-wal *.db-shm
+	rm -rf bin/ coverage.out coverage.filtered.out audit-results.txt
+
+## DANGER: deletes repo-root SQLite files (*.db + WAL/SHM). Explicit only —
+## `clean` must stay safe to run with live data (transport.db, rag_vectors.db,
+## agent_rl.db all live in the repo root).
+clean-db:
+	rm -f *.db *.db-wal *.db-shm
 
 ## Run tests and build
 ci: check-fmt vet test build

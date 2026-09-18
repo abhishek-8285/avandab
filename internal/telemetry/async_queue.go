@@ -21,6 +21,8 @@ type AsyncIngestQueue struct {
 	closed       atomic.Bool
 	droppedCount atomic.Uint64
 	failedCount  atomic.Uint64
+	mu           sync.Mutex
+	cancel       context.CancelFunc
 }
 
 // FailedCount reports frames the workers accepted from the queue but could
@@ -71,11 +73,15 @@ func (q *AsyncIngestQueue) Push(frame RawFrame) bool {
 
 // Start launches the background worker pool to process queued frames.
 func (q *AsyncIngestQueue) Start(ctx context.Context) {
+	wctx, cancel := context.WithCancel(ctx)
+	q.mu.Lock()
+	q.cancel = cancel
+	q.mu.Unlock()
 	for i := 0; i < q.workers; i++ {
 		q.wg.Add(1)
 		go func(workerID int) {
 			defer q.wg.Done()
-			q.workerLoop(ctx, workerID)
+			q.workerLoop(wctx, workerID)
 		}(i)
 	}
 	q.logger.Info("telemetry async queue workers started", "workers", q.workers, "capacity", cap(q.queue))
@@ -106,35 +112,82 @@ func (q *AsyncIngestQueue) workerLoop(ctx context.Context, id int) {
 }
 
 // Drain stops accepting new frames and flushes all remaining items in the buffer.
+// Wrapper around DrainContext with its own timeout; server shutdown prefers
+// DrainContext on the shared shutdown ctx so drain + HTTP shutdown share one
+// deadline (see ShutdownSequence).
 func (q *AsyncIngestQueue) Drain(timeout time.Duration) {
+	if timeout <= 0 {
+		timeout = 5 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	q.DrainContext(ctx)
+}
+
+// DrainContext stops accepting new frames and flushes the remainder under
+// the caller's ctx (shared shutdown deadline in prod).
+// Single ownership: workers are signalled to stop pulling first, then the
+// caller drains the remainder with a deadline ctx. wg.Wait is deadline-bounded
+// (stuck workers are cancelled); drain ingest errors are counted + logged.
+func (q *AsyncIngestQueue) DrainContext(ctx context.Context) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	if q.closed.Swap(true) {
 		return // Already draining
 	}
 
-	// Drain remaining items up to timeout
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	done := make(chan struct{})
-	go func() {
-		for len(q.queue) > 0 {
-			frame := <-q.queue
-			if q.ingestor != nil {
-				_, _ = q.ingestor.IngestRawFrame(ctx, frame)
-			}
-		}
-		close(done)
-	}()
-
-	select {
-	case <-done:
-		q.logger.Info("telemetry async queue drained cleanly")
-	case <-ctx.Done():
-		q.logger.Warn("telemetry async queue drain timed out", "remaining", len(q.queue))
-	}
+	q.mu.Lock()
+	workerCancel := q.cancel
+	q.mu.Unlock()
 
 	close(q.quit)
-	q.wg.Wait()
+
+	waitDone := make(chan struct{})
+	go func() {
+		q.wg.Wait()
+		close(waitDone)
+	}()
+	workersStuck := false
+	select {
+	case <-waitDone:
+		if workerCancel != nil {
+			workerCancel()
+		}
+	case <-ctx.Done():
+		workersStuck = true
+		if workerCancel != nil {
+			workerCancel()
+		}
+		q.logger.Warn("telemetry async queue workers did not stop before shutdown deadline")
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			q.logger.Warn("telemetry async queue drain timed out", "remaining", len(q.queue))
+			return
+		default:
+		}
+		select {
+		case frame := <-q.queue:
+			if q.ingestor != nil {
+				if _, err := q.ingestor.IngestRawFrame(ctx, frame); err != nil &&
+					!errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+					failed := q.failedCount.Add(1)
+					q.logger.Warn("async ingest drain frame failed",
+						"imei", frame.IMEI, "error", err, "failed_total", failed)
+				}
+			}
+		default:
+			if workersStuck {
+				q.logger.Warn("telemetry async queue drain incomplete, workers stuck", "remaining", len(q.queue))
+			} else {
+				q.logger.Info("telemetry async queue drained cleanly")
+			}
+			return
+		}
+	}
 }
 
 // Len returns the current count of queued frames in the buffer.

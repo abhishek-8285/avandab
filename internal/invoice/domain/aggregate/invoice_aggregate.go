@@ -12,6 +12,10 @@ type InvoiceID string
 type PaymentStatus string
 type InvoiceStatus string
 
+// invoiceCurrency is the single currency for minor-unit math below (Indian
+// logistics billing; shared.Money needs a currency to Add/compare).
+const invoiceCurrency = "INR"
+
 const (
 	PaymentStatusPending       PaymentStatus = "pending"
 	PaymentStatusPaid          PaymentStatus = "paid"
@@ -141,10 +145,16 @@ func RehydrateInvoiceAggregate(
 	bookingID, customerID string, tripID *string,
 	subtotal, tax, discount, total float64,
 	paymentStatus PaymentStatus, invoiceStatus InvoiceStatus,
-	paidAmount, creditBalance float64,
+	paidAmount, _ float64,
 	dueDate *time.Time, financialYear, remarks string,
 	createdAt, updatedAt time.Time, version int64,
 ) *InvoiceAggregate {
+	// No credit_balance column exists: credit is derived from gross paid
+	// (PaidAmount is never capped) in minor units, so save/reload round-trips.
+	var creditBalance float64
+	if over := shared.FloatToMoney(paidAmount, invoiceCurrency).Amount - shared.FloatToMoney(total, invoiceCurrency).Amount; over > 0 {
+		creditBalance = shared.Money{Amount: over, Currency: invoiceCurrency}.MoneyToFloat()
+	}
 	return &InvoiceAggregate{
 		ID:            id,
 		TenantID:      tenantID,
@@ -234,12 +244,21 @@ func (a *InvoiceAggregate) UpdatePaymentStatus(status PaymentStatus, now time.Ti
 	return nil
 }
 
-// OutstandingBalance returns Total - PaidAmount.
+// OutstandingBalance returns max(Total - PaidAmount, 0) in minor units, so
+// float dust never shows a phantom paise due and overpay reads 0 (Spec 05 §2).
 func (a *InvoiceAggregate) OutstandingBalance() float64 {
-	return a.Total - a.PaidAmount
+	outstanding := shared.FloatToMoney(a.Total, invoiceCurrency).Amount -
+		shared.FloatToMoney(a.PaidAmount, invoiceCurrency).Amount
+	if outstanding <= 0 {
+		return 0
+	}
+	return shared.Money{Amount: outstanding, Currency: invoiceCurrency}.MoneyToFloat()
 }
 
 // ApplyPayment records a payment against this invoice, updates PaidAmount and PaymentStatus.
+// PaidAmount is gross (never capped) so CreditBalance = max(Paid - Total, 0)
+// derives from the persisted column — no new column needed. All compares run
+// in minor units via shared.Money, so 0.1+0.2 hits exact zero.
 // If payment exceeds outstanding, the excess is recorded in CreditBalance.
 // Returns error if invoice is cancelled.
 func (a *InvoiceAggregate) ApplyPayment(amount float64, now time.Time) error {
@@ -247,22 +266,35 @@ func (a *InvoiceAggregate) ApplyPayment(amount float64, now time.Time) error {
 		return errors.New("cannot apply payment to cancelled invoice")
 	}
 
-	a.PaidAmount += amount
-	outstanding := a.Total - a.PaidAmount
+	newPaid, err := shared.FloatToMoney(a.PaidAmount, invoiceCurrency).
+		Add(shared.FloatToMoney(amount, invoiceCurrency))
+	if err != nil {
+		return err
+	}
+	if newPaid.Amount < 0 {
+		newPaid.Amount = 0 // a reversal can never drive paid below zero
+	}
+	a.PaidAmount = newPaid.MoneyToFloat()
+	outstanding := shared.FloatToMoney(a.Total, invoiceCurrency).Amount - newPaid.Amount
 
-	if outstanding < 0 {
-		a.CreditBalance = -outstanding
-		a.PaidAmount = a.Total
+	switch {
+	case outstanding < 0:
+		a.CreditBalance = shared.Money{Amount: -outstanding, Currency: invoiceCurrency}.MoneyToFloat()
 		a.PaymentStatus = PaymentStatusPaid
 		a.Status = InvoiceStatusPaid
-	} else if outstanding == 0 {
+	case outstanding == 0:
+		a.CreditBalance = 0
 		a.PaymentStatus = PaymentStatusPaid
 		a.Status = InvoiceStatusPaid
-	} else {
-		if a.PaidAmount > 0 {
+	default:
+		a.CreditBalance = 0
+		if newPaid.Amount > 0 {
 			a.PaymentStatus = PaymentStatusPartiallyPaid
 		} else {
 			a.PaymentStatus = PaymentStatusPending
+		}
+		if a.Status == InvoiceStatusPaid {
+			a.Status = InvoiceStatusOutstanding // reversal reopens a paid invoice
 		}
 	}
 

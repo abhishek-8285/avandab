@@ -39,81 +39,66 @@ func (r *paymentRepository) Q(ctx context.Context) *db.Queries {
 }
 
 func (r *paymentRepository) Save(ctx context.Context, p *aggregate.PaymentAggregate) error {
+	_, err := r.SaveIfNew(ctx, p)
+	return err
+}
+
+func (r *paymentRepository) SaveIfNew(ctx context.Context, p *aggregate.PaymentAggregate) (bool, error) {
+	// Two-phase claim: fast path for the same-ID retry, then a targeted
+	// ON CONFLICT DO NOTHING insert arbitrated by UNIQUE(tenant_id,
+	// idempotency_key). RowsAffected tells insert apart from a concurrent
+	// winner without parsing DB error strings; the loser re-reads the
+	// winner's ID. Payment outbox events are written only by the winner.
 	key := idempotencyKey(p)
-
-	if key != "" {
-		existingID, err := r.findIDByIdempotencyKey(ctx, p.TenantID, key)
-		if err == nil && existingID != "" {
-			p.ID = aggregate.PaymentID(existingID)
-			return nil
-		}
-	}
-
-	var reference, remarks sql.NullString
-	if p.Reference != nil {
-		reference = sql.NullString{String: *p.Reference, Valid: true}
-	}
-	if p.Remarks != nil {
-		remarks = sql.NullString{String: *p.Remarks, Valid: true}
-	}
-
 	_, err := r.Q(ctx).GetPaymentByID(ctx, db.GetPaymentByIDParams{
 		ID:       string(p.ID),
 		TenantID: string(p.TenantID),
 	})
-	if err != nil {
+	if err == nil {
+		existingID, err := r.findIDByIdempotencyKey(ctx, p.TenantID, key)
 		if errors.Is(err, sql.ErrNoRows) {
-			if key != "" {
-				err = r.insertPayment(ctx, p, key)
-				if err != nil && isIdempotencyConflict(err) {
-					if existingID, e := r.findIDByIdempotencyKey(ctx, p.TenantID, key); e == nil && existingID != "" {
-						p.ID = aggregate.PaymentID(existingID)
-						return nil
-					}
-				}
-				if err != nil {
-					return err
-				}
-			} else {
-				_, err = r.Q(ctx).CreatePayment(ctx, db.CreatePaymentParams{
-					ID:          string(p.ID),
-					InvoiceID:   p.InvoiceID,
-					PaymentDate: p.PaymentDate,
-					Amount:      p.Amount,
-					Method:      string(p.Method),
-					Reference:   reference,
-					Remarks:     remarks,
-					TenantID:    string(p.TenantID),
-				})
-				if err != nil {
-					return err
-				}
-			}
-		} else {
-			return err
+			return false, errors.New("updating payments is not allowed (immutable transaction records)")
 		}
-	} else {
-		return errors.New("updating payments is not allowed (immutable transaction records)")
+		if err != nil {
+			return false, err
+		}
+		p.ID = aggregate.PaymentID(existingID)
+		return false, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return false, err
 	}
 
-	err = r.outbox.SaveEvents(ctx, string(p.ID), "Payment", p.Events())
+	created, err := r.insertPayment(ctx, p, key)
 	if err != nil {
-		return err
+		return false, err
+	}
+	if !created {
+		existingID, err := r.findIDByIdempotencyKey(ctx, p.TenantID, key)
+		if err != nil {
+			return false, err
+		}
+		p.ID = aggregate.PaymentID(existingID)
+		return false, nil
+	}
+	if err := r.outbox.SaveEvents(ctx, string(p.ID), "Payment", p.Events()); err != nil {
+		return false, err
 	}
 	p.ClearEvents()
-	return nil
+	return true, nil
 }
 
 const insertPaymentSQL = `
 INSERT INTO payments (id, invoice_id, payment_date, amount, method, reference, remarks, tenant_id, idempotency_key)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
 `
 
 const findPaymentIDByKeySQL = `
 SELECT id FROM payments WHERE tenant_id = $1 AND idempotency_key = $2 LIMIT 1
 `
 
-func (r *paymentRepository) insertPayment(ctx context.Context, p *aggregate.PaymentAggregate, key string) error {
+func (r *paymentRepository) insertPayment(ctx context.Context, p *aggregate.PaymentAggregate, key string) (bool, error) {
 	var reference, remarks any = nil, nil
 	if p.Reference != nil {
 		reference = *p.Reference
@@ -121,7 +106,7 @@ func (r *paymentRepository) insertPayment(ctx context.Context, p *aggregate.Paym
 	if p.Remarks != nil {
 		remarks = *p.Remarks
 	}
-	_, err := r.exec(ctx).ExecContext(ctx, insertPaymentSQL,
+	res, err := r.exec(ctx).ExecContext(ctx, insertPaymentSQL,
 		string(p.ID),
 		p.InvoiceID,
 		p.PaymentDate,
@@ -132,7 +117,14 @@ func (r *paymentRepository) insertPayment(ctx context.Context, p *aggregate.Paym
 		string(p.TenantID),
 		key,
 	)
-	return err
+	if err != nil {
+		return false, err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return affected == 1, nil
 }
 
 func (r *paymentRepository) findIDByIdempotencyKey(ctx context.Context, tenantID shared.TenantID, key string) (string, error) {

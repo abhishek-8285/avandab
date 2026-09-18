@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
+	"fmt"
 	"time"
 	appdb "transport-app/internal/database"
 
@@ -62,8 +62,10 @@ func (s *Service) Calculate(ctx context.Context, tripID string) (LivePnL, error)
 	}
 
 	var startOdometer, latestOdometer sql.NullFloat64
-	_ = s.db.QueryRowContext(ctx, `SELECT MIN(odometer), MAX(odometer) FROM telemetry_snapshots WHERE trip_id = $1`, tripID).
-		Scan(&startOdometer, &latestOdometer)
+	if err := s.db.QueryRowContext(ctx, `SELECT MIN(odometer), MAX(odometer) FROM telemetry_snapshots WHERE trip_id = $1`, tripID).
+		Scan(&startOdometer, &latestOdometer); err != nil {
+		return LivePnL{}, fmt.Errorf("pnl telemetry read failed: %w", err)
+	}
 	if startOdometer.Valid && latestOdometer.Valid && efficiency.Valid && efficiency.Float64 > 0 {
 		if distance := latestOdometer.Float64 - startOdometer.Float64; distance > 0 {
 			p.FuelConsumedLiters = distance / efficiency.Float64
@@ -80,7 +82,13 @@ func (s *Service) Calculate(ctx context.Context, tripID string) (LivePnL, error)
 	}
 	var fuelPrice sql.NullFloat64
 	query := `SELECT ` + priceColumn + ` FROM fuel_prices WHERE tenant_id = ? ORDER BY updated_at DESC LIMIT 1`
-	_ = s.db.QueryRowContext(ctx, query, tenantID).Scan(&fuelPrice)
+	reboundFuel, rerr := appdb.Rebind(query)
+	if rerr != nil {
+		return LivePnL{}, fmt.Errorf("pnl fuel price query rebind failed: %w", rerr)
+	}
+	if err := s.db.QueryRowContext(ctx, reboundFuel, tenantID).Scan(&fuelPrice); err != nil && !errors.Is(err, sql.ErrNoRows) {
+		return LivePnL{}, fmt.Errorf("pnl fuel price read failed: %w", err)
+	}
 	if fuelPrice.Valid && startOdometer.Valid && latestOdometer.Valid && efficiency.Valid && efficiency.Float64 > 0 {
 		p.FuelCost = p.FuelConsumedLiters * fuelPrice.Float64
 		p.FuelCostLow = p.FuelCost * (1 - uncertainty)
@@ -94,10 +102,14 @@ func (s *Service) Calculate(ctx context.Context, tripID string) (LivePnL, error)
 		p.FuelCostStatus = "pending_verification"
 		p.Confidence = "unavailable"
 	}
-	_ = s.db.QueryRowContext(ctx, `
+	// Toll and kharcha are required margin inputs: a failed read must fail
+	// the calculation, never masquerade as a successful zero-cost aggregate.
+	if err := s.db.QueryRowContext(ctx, `
 		SELECT COALESCE(SUM(amount), 0) FROM driver_expenses
 		WHERE trip_id = $1 AND (expense_type = 'toll' OR category = 'toll')
-		  AND (COALESCE(status, '') IN ('approved', 'settled') OR approved = 1)`, tripID).Scan(&p.TollCost)
+		  AND (COALESCE(status, '') IN ('approved', 'settled') OR approved = 1)`, tripID).Scan(&p.TollCost); err != nil {
+		return LivePnL{}, fmt.Errorf("pnl toll cost read failed: %w", err)
+	}
 	// Approved non-toll expenses. When telemetry produced a real fuel-cost
 	// estimate, approved FUEL claims are excluded — they describe the same
 	// spend as FuelCost and would otherwise be counted twice in margin.
@@ -105,10 +117,12 @@ func (s *Service) Calculate(ctx context.Context, tripID string) (LivePnL, error)
 	if p.FuelCostStatus == "estimated" {
 		kharchaFuelFilter = " AND COALESCE(expense_type, '') <> 'fuel' AND COALESCE(category, '') <> 'fuel'"
 	}
-	_ = s.db.QueryRowContext(ctx, `
+	if err := s.db.QueryRowContext(ctx, `
 		SELECT COALESCE(SUM(amount), 0) FROM driver_expenses
 		WHERE trip_id = $1 AND (COALESCE(status, '') IN ('approved', 'settled') OR approved = 1)
-		  AND expense_type <> 'toll' AND COALESCE(category, '') <> 'toll'`+kharchaFuelFilter, tripID).Scan(&p.KharchaApproved)
+		  AND expense_type <> 'toll' AND COALESCE(category, '') <> 'toll'`+kharchaFuelFilter, tripID).Scan(&p.KharchaApproved); err != nil {
+		return LivePnL{}, fmt.Errorf("pnl kharcha read failed: %w", err)
+	}
 
 	p.MaintenanceCost, p.MaintenanceCostStatus = s.fetchMaintenanceCost(ctx, tenantID, vehicleID, tripID)
 
@@ -181,35 +195,10 @@ func (s *Service) fetchMaintenanceCost(ctx context.Context, tenantID, vehicleID,
 		return 0, "unavailable"
 	}
 	if err := s.db.QueryRowContext(ctx, rebound, args...).Scan(&cost); err != nil {
-		msg := err.Error()
-		if strings.Contains(msg, "no such table") || strings.Contains(msg, "does not exist") {
-			return 0, "unavailable"
-		}
-		if strings.Contains(msg, "no such column") || strings.Contains(msg, "unknown column") {
-			// Pre-00095 schema without tenant_id, or without performed_at:
-			// retry unscoped / windowless before giving up.
-			if strings.Contains(msg, "tenant_id") {
-				q2, args2 := sumQuery(false, withStart, withEnd)
-				rebound2, rerr2 := appdb.Rebind(q2)
-				if rerr2 != nil {
-					return 0, "unavailable"
-				}
-				if err2 := s.db.QueryRowContext(ctx, rebound2, args2...).Scan(&cost); err2 != nil {
-					return 0, "unavailable"
-				}
-			} else {
-				q2, args2 := sumQuery(true, false, false)
-				rebound2, rerr2 := appdb.Rebind(q2)
-				if rerr2 != nil {
-					return 0, "unavailable"
-				}
-				if err2 := s.db.QueryRowContext(ctx, rebound2, args2...).Scan(&cost); err2 != nil {
-					return 0, "unavailable"
-				}
-			}
-		} else {
-			return 0, "unavailable"
-		}
+		// Any failure — missing table, missing column, placeholder error —
+		// means unknown cost, never zero. In particular never retry without
+		// the tenant predicate: that would fold other tenants' costs in.
+		return 0, "unavailable"
 	}
 	if !cost.Valid {
 		return 0, "included"

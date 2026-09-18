@@ -25,10 +25,11 @@ type recordedBus struct {
 	events []events.Event
 }
 
-func (r *recordedBus) Publish(ctx context.Context, e events.Event) {
+func (r *recordedBus) Publish(ctx context.Context, e events.Event) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.events = append(r.events, e)
+	return nil
 }
 
 func (r *recordedBus) Subscribe(eventType string, handler events.Handler) func() {

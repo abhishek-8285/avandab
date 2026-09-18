@@ -31,7 +31,7 @@ func newP4MockBus() *p4MockBus {
 	}
 }
 
-func (m *p4MockBus) Publish(ctx context.Context, e events.Event) {
+func (m *p4MockBus) Publish(ctx context.Context, e events.Event) error {
 	m.mu.Lock()
 	m.events = append(m.events, e)
 	handlers := m.subs[e.Type]
@@ -40,6 +40,7 @@ func (m *p4MockBus) Publish(ctx context.Context, e events.Event) {
 	for _, h := range handlers {
 		_ = h(ctx, e)
 	}
+	return nil
 }
 
 func (m *p4MockBus) Subscribe(eventType string, handler events.Handler) func() {

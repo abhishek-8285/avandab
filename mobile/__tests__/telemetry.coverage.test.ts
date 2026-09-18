@@ -16,59 +16,74 @@ describe('Telemetry.requestLocationPermission', () => {
     resetSQLiteMockState();
   });
 
-  test('granted + last-known fix → coordinates returned and persisted to SQLite', async () => {
+  test('granted + stale last-known fix → coordinates returned flagged stale and persisted marked stale', async () => {
+    const fixTime = Date.now() - 5 * 60 * 1000;
+    Loc.getCurrentPositionAsync.mockResolvedValueOnce(null as any);
     Loc.getLastKnownPositionAsync.mockResolvedValueOnce({
       coords: { latitude: 18.5204, longitude: 73.8567, accuracy: 9 },
+      timestamp: fixTime,
     } as any);
 
     const res = await Telemetry.requestLocationPermission();
 
-    expect(res).toEqual({ granted: true, latitude: 18.5204, longitude: 73.8567, error: null });
+    expect(res).toMatchObject({ granted: true, latitude: 18.5204, longitude: 73.8567 });
+    expect(res.error).toMatch(/stale/i);
+    expect(res.isStale).toBe(true);
+    expect(res.isFallback).toBe(false);
+    expect(res.lastFixAt).toBe(new Date(fixTime).toISOString());
     const logs = getSQLiteMockState().offline_gps_logs;
     expect(logs).toHaveLength(1);
-    expect(logs[0]).toMatchObject({ latitude: 18.5204, longitude: 73.8567, accuracy: 9 });
+    expect(logs[0]).toMatchObject({ latitude: 18.5204, longitude: 73.8567, accuracy: 9, is_stale: 1 });
   });
 
-  test('falls back to current position when no last-known fix exists', async () => {
+  test('live current position is preferred fresh when no last-known fix exists', async () => {
     const res = await Telemetry.requestLocationPermission();
 
     expect(res.granted).toBe(true);
     expect(res.latitude).toBe(19.076);
     expect(res.longitude).toBe(72.8777);
+    expect(res.isStale).toBe(false);
+    expect(res.isFallback).toBe(false);
     expect(getSQLiteMockState().offline_gps_logs).toHaveLength(1);
   });
 
-  test('lastKnown throwing is swallowed and current position is used', async () => {
+  test('lastKnown throwing is swallowed and live position is used', async () => {
     Loc.getLastKnownPositionAsync.mockRejectedValueOnce(new Error('gps hw fault'));
 
     const res = await Telemetry.requestLocationPermission();
 
     expect(res.granted).toBe(true);
     expect(res.latitude).toBe(19.076);
+    expect(res.isStale).toBe(false);
   });
 
-  test('both fix sources unavailable → fallback coordinates used with granted true', async () => {
+  test('both fix sources unavailable → coarse viewport-only default, never persisted as a measurement', async () => {
     Loc.getLastKnownPositionAsync.mockResolvedValueOnce(null);
     Loc.getCurrentPositionAsync.mockResolvedValueOnce(null as any);
 
     const res = await Telemetry.requestLocationPermission();
 
-    expect(res).toEqual({
+    expect(res).toMatchObject({
       granted: true,
-      latitude: 19.076,
-      longitude: 72.8777,
-      error: null,
+      latitude: 21.1458,
+      longitude: 79.0882,
+      isFallback: true,
     });
-    expect(getSQLiteMockState().offline_gps_logs.length).toBeGreaterThan(0);
+    expect(res.isStale).toBe(false);
+    expect(res.lastFixAt).toBeNull();
+    // Coarse default is viewport-only: zero SQLite rows (no fake Mumbai fix).
+    expect(getSQLiteMockState().offline_gps_logs).toHaveLength(0);
   });
 
-  test('current-position failure after missing lastKnown uses fallback coordinates', async () => {
+  test('current-position failure after missing lastKnown uses coarse viewport default without persisting', async () => {
     Loc.getCurrentPositionAsync.mockRejectedValueOnce(new Error('timeout'));
 
     const res = await Telemetry.requestLocationPermission();
 
     expect(res.granted).toBe(true);
-    expect(res.latitude).toBe(19.076);
+    expect(res.latitude).toBe(21.1458);
+    expect(res.isFallback).toBe(true);
+    expect(getSQLiteMockState().offline_gps_logs).toHaveLength(0);
   });
 
   test('permission denied short-circuits with the OS status', async () => {
@@ -83,13 +98,17 @@ describe('Telemetry.requestLocationPermission', () => {
     expect(res.error).toContain('Permission status: denied');
   });
 
-  test('device GPS toggle off blocks even with permission granted', async () => {
+  test('device GPS toggle off keeps permission granted and serves honest fallback', async () => {
     Loc.hasServicesEnabledAsync.mockResolvedValueOnce(false);
+    Loc.getLastKnownPositionAsync.mockResolvedValueOnce(null);
+    Loc.getCurrentPositionAsync.mockResolvedValueOnce(null as any);
 
     const res = await Telemetry.requestLocationPermission();
 
-    expect(res.granted).toBe(false);
+    expect(res.granted).toBe(true); // permission held — GPS-off is fix state, not denial
+    expect(res.isFallback).toBe(true);
     expect(res.error).toContain('Device GPS is OFF');
+    expect(getSQLiteMockState().offline_gps_logs).toHaveLength(0);
   });
 
   test('unexpected permission-layer errors surface their message', async () => {
@@ -97,7 +116,7 @@ describe('Telemetry.requestLocationPermission', () => {
 
     const res = await Telemetry.requestLocationPermission();
 
-    expect(res).toEqual({
+    expect(res).toMatchObject({
       granted: false,
       latitude: null,
       longitude: null,

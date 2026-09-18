@@ -22,10 +22,11 @@ type mockEventBus struct {
 	events []events.Event
 }
 
-func (m *mockEventBus) Publish(ctx context.Context, e events.Event) {
+func (m *mockEventBus) Publish(ctx context.Context, e events.Event) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.events = append(m.events, e)
+	return nil
 }
 
 func (m *mockEventBus) Subscribe(eventType string, handler events.Handler) func() {

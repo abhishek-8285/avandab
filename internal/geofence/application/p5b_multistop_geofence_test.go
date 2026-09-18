@@ -26,10 +26,11 @@ type p5bMockEventBus struct {
 	events []events.Event
 }
 
-func (m *p5bMockEventBus) Publish(ctx context.Context, e events.Event) {
+func (m *p5bMockEventBus) Publish(ctx context.Context, e events.Event) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.events = append(m.events, e)
+	return nil
 }
 
 func (m *p5bMockEventBus) Subscribe(eventType string, handler events.Handler) func() {

@@ -2755,5 +2755,10 @@
   "fl.derived_from": "derived from",
   "fl.enter_gst": "enter GST to derive",
   "mo.pay.label": "Pay ₹{amt} Now via Razorpay",
-  "mo.pay.start_fail": "Unable to start checkout: "
+  "mo.pay.start_fail": "Unable to start checkout: ",
+  "tr.rollup_title": "Fuel & distance",
+  "tr.kmpl": "KMPL",
+  "tr.avg_speed": "Avg speed",
+  "tr.max_speed": "Top speed",
+  "tr.anomalies": "Fuel alerts"
 }

@@ -27,16 +27,74 @@ type FuelCardRepository interface {
 	GetTransactionByExternalID(ctx context.Context, tenantID, externalTxnID string) (*FuelCardTransaction, error)
 	ReconcileTransaction(ctx context.Context, tenantID, txnID, expenseID, notes string) (*FuelCardTransaction, error)
 	RecordPilferageAlert(ctx context.Context, tenantID, vehicleID, title, description string) error
+	VerifyAssignmentOwnership(ctx context.Context, tenantID string, vehicleID, driverID *string) error
+	// WithTransaction runs fn with all writes in one transaction, rolling
+	// back on error. Called on a transaction-bound repo it runs fn directly.
+	WithTransaction(ctx context.Context, fn func(FuelCardRepository) error) error
+}
+
+// dbTx is satisfied by *sql.DB and *sql.Tx alike.
+type dbTx interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
 }
 
 // SQLFuelCardRepository implements FuelCardRepository using database/sql.
 type SQLFuelCardRepository struct {
 	db *sql.DB
+	q  dbTx
 }
 
 // NewSQLFuelCardRepository creates a new SQLFuelCardRepository.
 func NewSQLFuelCardRepository(db *sql.DB) *SQLFuelCardRepository {
-	return &SQLFuelCardRepository{db: db}
+	return &SQLFuelCardRepository{db: db, q: db}
+}
+
+// WithTx returns a copy bound to tx for transactional writes.
+func (r *SQLFuelCardRepository) WithTx(tx *sql.Tx) *SQLFuelCardRepository {
+	return &SQLFuelCardRepository{db: r.db, q: tx}
+}
+
+// WithTransaction runs fn inside a single transaction.
+func (r *SQLFuelCardRepository) WithTransaction(ctx context.Context, fn func(FuelCardRepository) error) error {
+	if _, ok := r.q.(*sql.Tx); ok {
+		return fn(r)
+	}
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	if err := fn(r.WithTx(tx)); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
+}
+
+// VerifyAssignmentOwnership rejects card assignments to another tenant's vehicle/driver.
+func (r *SQLFuelCardRepository) VerifyAssignmentOwnership(ctx context.Context, tenantID string, vehicleID, driverID *string) error {
+	if vehicleID != nil && *vehicleID != "" {
+		var one int
+		if err := r.q.QueryRowContext(ctx,
+			`SELECT 1 FROM vehicles WHERE id = $1 AND tenant_id = $2`, *vehicleID, tenantID).Scan(&one); err != nil {
+			if err == sql.ErrNoRows {
+				return fmt.Errorf("vehicle %q does not belong to tenant: %w", *vehicleID, err)
+			}
+			return err
+		}
+	}
+	if driverID != nil && *driverID != "" {
+		var one int
+		if err := r.q.QueryRowContext(ctx,
+			`SELECT 1 FROM drivers WHERE id = $1 AND tenant_id = $2`, *driverID, tenantID).Scan(&one); err != nil {
+			if err == sql.ErrNoRows {
+				return fmt.Errorf("driver %q does not belong to tenant: %w", *driverID, err)
+			}
+			return err
+		}
+	}
+	return nil
 }
 
 // RegisterCard stores a new fuel card record.
@@ -55,7 +113,7 @@ func (r *SQLFuelCardRepository) RegisterCard(ctx context.Context, card FuelCard)
 			created_at, updated_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
 
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := r.q.ExecContext(ctx, query,
 		card.ID, card.TenantID, card.CardNumberMasked, card.CardTokenHash, string(card.Provider),
 		card.AssignedVehicleID, card.AssignedDriverID, card.DailySpendLimit, string(card.Status),
 		now, now,
@@ -80,7 +138,7 @@ func (r *SQLFuelCardRepository) GetCardByTokenHash(ctx context.Context, tenantID
 		FROM fuel_cards
 		WHERE tenant_id = $1 AND card_token_hash = $2`
 
-	err := r.db.QueryRowContext(ctx, query, tenantID, tokenHash).Scan(
+	err := r.q.QueryRowContext(ctx, query, tenantID, tokenHash).Scan(
 		&c.ID, &c.TenantID, &c.CardNumberMasked, &c.CardTokenHash, &prov,
 		&vehID, &drvID, &c.DailySpendLimit, &stat,
 		&c.CreatedAt, &c.UpdatedAt,
@@ -114,7 +172,7 @@ func (r *SQLFuelCardRepository) GetCardByID(ctx context.Context, tenantID, cardI
 		FROM fuel_cards
 		WHERE tenant_id = $1 AND id = $2`
 
-	err := r.db.QueryRowContext(ctx, query, tenantID, cardID).Scan(
+	err := r.q.QueryRowContext(ctx, query, tenantID, cardID).Scan(
 		&c.ID, &c.TenantID, &c.CardNumberMasked, &c.CardTokenHash, &prov,
 		&vehID, &drvID, &c.DailySpendLimit, &stat,
 		&c.CreatedAt, &c.UpdatedAt,
@@ -149,7 +207,7 @@ func (r *SQLFuelCardRepository) ListCards(ctx context.Context, tenantID string) 
 		GROUP BY c.id
 		ORDER BY c.created_at DESC`
 
-	rows, err := r.db.QueryContext(ctx, query, tenantID)
+	rows, err := r.q.QueryContext(ctx, query, tenantID)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +250,7 @@ func (r *SQLFuelCardRepository) ListCards(ctx context.Context, tenantID string) 
 // GetVehicleTankCapacity returns the fuel tank capacity of a vehicle.
 func (r *SQLFuelCardRepository) GetVehicleTankCapacity(ctx context.Context, tenantID, vehicleID string) (float64, error) {
 	var cap sql.NullFloat64
-	err := r.db.QueryRowContext(ctx, `
+	err := r.q.QueryRowContext(ctx, `
 		SELECT tank_capacity_litres FROM vehicles
 		WHERE id = $1 AND tenant_id = $2`, vehicleID, tenantID).Scan(&cap)
 	if err != nil {
@@ -218,7 +276,7 @@ func (r *SQLFuelCardRepository) FindMatchingExpense(ctx context.Context, tenantI
 	var err error
 
 	if driverID != nil && *driverID != "" {
-		err = r.db.QueryRowContext(ctx, `
+		err = r.q.QueryRowContext(ctx, `
 			SELECT id FROM driver_expenses
 			WHERE tenant_id = $1
 			  AND category = 'fuel'
@@ -229,7 +287,7 @@ func (r *SQLFuelCardRepository) FindMatchingExpense(ctx context.Context, tenantI
 			ORDER BY ABS(amount - $7) ASC
 			LIMIT 1`, tenantID, *driverID, minAmt, maxAmt, start, end, amount).Scan(&expenseID)
 	} else {
-		err = r.db.QueryRowContext(ctx, `
+		err = r.q.QueryRowContext(ctx, `
 			SELECT id FROM driver_expenses
 			WHERE tenant_id = $1
 			  AND category = 'fuel'
@@ -260,7 +318,7 @@ func (r *SQLFuelCardRepository) CreateVerifiedExpense(ctx context.Context, tenan
 			status, category, verification_state, flag_reason, fuel_litres, created_at
 		) VALUES ($1, $2, $3, 'fuel', $4, $5, 'approved', 'fuel', 'auto_verified', 'Created from fuel card transaction', $6, $7)`
 
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := r.q.ExecContext(ctx, query,
 		expenseID, tenantID, dID, amount, notes, litres, txnTime,
 	)
 	if err != nil {
@@ -272,7 +330,7 @@ func (r *SQLFuelCardRepository) CreateVerifiedExpense(ctx context.Context, tenan
 
 // MarkExpenseVerified updates an existing expense to verified status.
 func (r *SQLFuelCardRepository) MarkExpenseVerified(ctx context.Context, tenantID, expenseID, reason string) error {
-	_, err := r.db.ExecContext(ctx, `
+	_, err := r.q.ExecContext(ctx, `
 		UPDATE driver_expenses
 		SET verification_state = 'auto_verified', status = 'approved', flag_reason = $1
 		WHERE id = $2 AND tenant_id = $3`, reason, expenseID, tenantID)
@@ -296,7 +354,7 @@ func (r *SQLFuelCardRepository) PostGeneralLedgerAndSyncLog(ctx context.Context,
 	})
 
 	// 1. Insert into accounting_sync_log
-	_, err := r.db.ExecContext(ctx, `
+	_, err := r.q.ExecContext(ctx, `
 		INSERT INTO accounting_sync_log (
 			id, idempotency_key, direction, entity_type, entity_id,
 			adapter, payload_json, external_id, status, attempts, created_at, updated_at
@@ -311,22 +369,26 @@ func (r *SQLFuelCardRepository) PostGeneralLedgerAndSyncLog(ctx context.Context,
 	// Debit: Fuel Expense
 	debitID := uuid.NewString()
 	memoDebit := fmt.Sprintf("Fuel expense at %s (Card %s)", txn.FuelStationName, txn.FuelCardID)
-	_, _ = r.db.ExecContext(ctx, `
+	if _, err := r.q.ExecContext(ctx, `
 		INSERT INTO money_ledger (
 			id, tenant_id, txn_type, ref_table, ref_id, direction, amount_minor, currency, memo, created_by, created_at
 		) VALUES ($1, $2, 'kharcha_approved', 'fuel_card_transactions', $3, 'debit', $4, 'INR', $5, 'system', CURRENT_TIMESTAMP)`,
 		debitID, tenantID, txn.ID, amountMinor, memoDebit,
-	)
+	); err != nil {
+		return "", fmt.Errorf("failed to insert fuel expense ledger debit: %w", err)
+	}
 
 	// Credit: Fuel Card Clearing
 	creditID := uuid.NewString()
 	memoCredit := fmt.Sprintf("Fuel card clearing %s", provider)
-	_, _ = r.db.ExecContext(ctx, `
+	if _, err := r.q.ExecContext(ctx, `
 		INSERT INTO money_ledger (
 			id, tenant_id, txn_type, ref_table, ref_id, direction, amount_minor, currency, memo, created_by, created_at
 		) VALUES ($1, $2, 'kharcha_approved', 'fuel_card_transactions', $3, 'credit', $4, 'INR', $5, 'system', CURRENT_TIMESTAMP)`,
 		creditID, tenantID, txn.ID, amountMinor, memoCredit,
-	)
+	); err != nil {
+		return "", fmt.Errorf("failed to insert fuel clearing ledger credit: %w", err)
+	}
 
 	return syncLogID, nil
 }
@@ -347,7 +409,7 @@ func (r *SQLFuelCardRepository) InsertTransaction(ctx context.Context, txn FuelC
 			reconciliation_status, matched_expense_id, sync_log_id, notes, created_at
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`
 
-	_, err := r.db.ExecContext(ctx, query,
+	_, err := r.q.ExecContext(ctx, query,
 		txn.ID, txn.TenantID, txn.FuelCardID, txn.ExternalTxnID, txn.TxnTime,
 		txn.FuelStationName, txn.FuelStationCity, txn.FuelType,
 		txn.VolumeLitres, txn.RatePerLitre, txn.TotalAmount, txn.OdometerReported,
@@ -375,7 +437,7 @@ func (r *SQLFuelCardRepository) GetTransactionByID(ctx context.Context, tenantID
 		FROM fuel_card_transactions
 		WHERE tenant_id = $1 AND id = $2`
 
-	err := r.db.QueryRowContext(ctx, query, tenantID, txnID).Scan(
+	err := r.q.QueryRowContext(ctx, query, tenantID, txnID).Scan(
 		&t.ID, &t.TenantID, &t.FuelCardID, &t.ExternalTxnID, &t.TxnTime,
 		&t.FuelStationName, &city, &t.FuelType,
 		&t.VolumeLitres, &t.RatePerLitre, &t.TotalAmount, &odo,
@@ -420,7 +482,7 @@ func (r *SQLFuelCardRepository) GetTransactionByExternalID(ctx context.Context, 
 		FROM fuel_card_transactions
 		WHERE tenant_id = $1 AND external_txn_id = $2`
 
-	err := r.db.QueryRowContext(ctx, query, tenantID, externalTxnID).Scan(
+	err := r.q.QueryRowContext(ctx, query, tenantID, externalTxnID).Scan(
 		&t.ID, &t.TenantID, &t.FuelCardID, &t.ExternalTxnID, &t.TxnTime,
 		&t.FuelStationName, &city, &t.FuelType,
 		&t.VolumeLitres, &t.RatePerLitre, &t.TotalAmount, &odo,
@@ -452,26 +514,57 @@ func (r *SQLFuelCardRepository) GetTransactionByExternalID(ctx context.Context, 
 
 // ReconcileTransaction manually matches a transaction against an expense claim.
 func (r *SQLFuelCardRepository) ReconcileTransaction(ctx context.Context, tenantID, txnID, expenseID, notes string) (*FuelCardTransaction, error) {
-	_, err := r.db.ExecContext(ctx, `
-		UPDATE fuel_card_transactions
-		SET matched_expense_id = $1, reconciliation_status = 'MATCHED_EXPENSE', notes = COALESCE(notes || ' | ' || $2, $2)
-		WHERE id = $3 AND tenant_id = $4`,
-		expenseID, notes, txnID, tenantID,
-	)
+	var out *FuelCardTransaction
+	err := r.WithTransaction(ctx, func(tx FuelCardRepository) error {
+		txRepo, ok := tx.(*SQLFuelCardRepository)
+		if !ok {
+			return fmt.Errorf("fuel reconcile requires a SQL transaction")
+		}
+		var expenseTenant string
+		if err := txRepo.q.QueryRowContext(ctx,
+			`SELECT tenant_id FROM driver_expenses WHERE id = $1`, expenseID).Scan(&expenseTenant); err != nil {
+			if err == sql.ErrNoRows {
+				return fmt.Errorf("expense %q not found: %w", expenseID, err)
+			}
+			return err
+		}
+		if expenseTenant != tenantID {
+			return fmt.Errorf("expense %q belongs to another tenant: %w", expenseID, sql.ErrNoRows)
+		}
+
+		res, err := txRepo.q.ExecContext(ctx, `
+			UPDATE fuel_card_transactions
+			SET matched_expense_id = $1, reconciliation_status = 'MATCHED_EXPENSE', notes = COALESCE(notes || ' | ' || $2, $2)
+			WHERE id = $3 AND tenant_id = $4`,
+			expenseID, notes, txnID, tenantID,
+		)
+		if err != nil {
+			return fmt.Errorf("failed to reconcile transaction: %w", err)
+		}
+		if n, err := res.RowsAffected(); err != nil {
+			return err
+		} else if n != 1 {
+			return fmt.Errorf("transaction %q not found: %w", txnID, sql.ErrNoRows)
+		}
+
+		// Update driver expense to verified
+		if err := tx.MarkExpenseVerified(ctx, tenantID, expenseID, "Manually matched to fuel card transaction"); err != nil {
+			return err
+		}
+
+		out, err = tx.GetTransactionByID(ctx, tenantID, txnID)
+		return err
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to reconcile transaction: %w", err)
+		return nil, err
 	}
-
-	// Update driver expense to verified
-	_ = r.MarkExpenseVerified(ctx, tenantID, expenseID, "Manually matched to fuel card transaction")
-
-	return r.GetTransactionByID(ctx, tenantID, txnID)
+	return out, nil
 }
 
 // RecordPilferageAlert creates a high-severity alert in ops_alerts for volume anomalies.
 func (r *SQLFuelCardRepository) RecordPilferageAlert(ctx context.Context, tenantID, vehicleID, title, description string) error {
 	alertID := uuid.NewString()
-	_, err := r.db.ExecContext(ctx, `
+	_, err := r.q.ExecContext(ctx, `
 		INSERT INTO ops_alerts (
 			id, tenant_id, alert_type, severity, title, description, entity_type, entity_id, status, created_at
 		) VALUES ($1, $2, 'fuel_theft_confirmed', 'high', $3, $4, 'vehicle', $5, 'open', CURRENT_TIMESTAMP)`,
