@@ -80,28 +80,38 @@ func (s *SettlementAppService) CalculateAndCreateSettlement(ctx context.Context,
 		req.CommissionRate, req.TDSRate,
 	)
 
-	// Persist settlement record
-	if err := s.repo.CreateSettlement(ctx, tenantID, settlement); err != nil {
-		existing, getErr := s.repo.GetSettlementByTripID(ctx, tenantID, req.TripID)
-		if getErr == nil && existing != nil {
-			return existing, nil
+	// Persist settlement record and ledger entries atomically: a crash
+	// between header and lines must not leave an orphan header behind.
+	var out *domain.Settlement
+	err = s.repo.WithTransaction(ctx, func(ctx context.Context) error {
+		if err := s.repo.CreateSettlement(ctx, tenantID, settlement); err != nil {
+			existing, getErr := s.repo.GetSettlementByTripID(ctx, tenantID, req.TripID)
+			if getErr == nil && existing != nil {
+				out = existing
+				return nil
+			}
+			return fmt.Errorf("failed creating settlement: %w", err)
 		}
-		return nil, fmt.Errorf("failed creating settlement: %w", err)
-	}
 
-	// Append immutable ledger entries for driver earnings & deductions.
-	// Single builder for create + backfill paths so both write identical sets.
-	if err := s.appendSettlementLedger(ctx, tenantID, ledgerAmounts{
-		driverID: req.DriverID, tripID: req.TripID, settlementID: settlement.ID,
-		gross: settlement.GrossFare, commission: settlement.CommissionAmount,
-		commissionRate: settlement.CommissionRate, toll: settlement.TollAdjustment,
-		advance: settlement.AdvanceDeductions, tds: settlement.TDSAmount,
-		tdsRate: settlement.TDSRate,
-	}, nil); err != nil {
+		// Append immutable ledger entries for driver earnings & deductions.
+		// Single builder for create + backfill paths so both write identical sets.
+		if err := s.appendSettlementLedger(ctx, tenantID, ledgerAmounts{
+			driverID: req.DriverID, tripID: req.TripID, settlementID: settlement.ID,
+			gross: settlement.GrossFare, commission: settlement.CommissionAmount,
+			commissionRate: settlement.CommissionRate, toll: settlement.TollAdjustment,
+			advance: settlement.AdvanceDeductions, tds: settlement.TDSAmount,
+			tdsRate: settlement.TDSRate,
+		}, nil); err != nil {
+			return err
+		}
+		out = settlement
+		return nil
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	return settlement, nil
+	return out, nil
 }
 
 // ledgerAmounts carries one settlement's money movement for ledger writes.
@@ -234,11 +244,9 @@ func (s *SettlementAppService) warnIfLegacySettlement(ctx context.Context, tripI
 // entries stay individually visible in the ledger, never silent.
 func (s *SettlementAppService) backfillOwnLedger(ctx context.Context, tenantID string, existing *domain.Settlement) {
 	if existing == nil || !strings.HasPrefix(existing.ID, "set_") {
-		println("DBG EARLY RETURN")
 		return
 	}
 	legacy, err := s.repo.HasLegacySettlementLines(ctx, existing.TripID)
-	println("DBG legacy=", legacy, "err=", err != nil)
 	if err == nil && legacy {
 		return
 	}
@@ -313,9 +321,7 @@ func (s *SettlementAppService) InitiatePayout(ctx context.Context, tenantID, dri
 		return nil, errors.New("idempotency_key is required")
 	}
 
-	// 1. Idempotency Check: Return existing payout if duplicate key
-	existing, err := s.repo.GetPayoutByIdempotencyKey(ctx, tenantID, req.IdempotencyKey)
-	if err == nil && existing != nil {
+	duplicateOf := func(existing *domain.PayoutInstruction) *PayoutResponse {
 		return &PayoutResponse{
 			PayoutID:       existing.ID,
 			DriverID:       existing.DriverID,
@@ -323,67 +329,117 @@ func (s *SettlementAppService) InitiatePayout(ctx context.Context, tenantID, dri
 			Status:         existing.Status,
 			IdempotencyKey: existing.IdempotencyKey,
 			IsDuplicate:    true,
-		}, nil
+		}
 	}
 
-	// 2. Bank Account Verification Check
-	verified, accountID, err := s.repo.IsDriverPayoutAccountVerified(ctx, tenantID, driverID)
-	if err != nil || !verified {
-		return nil, errors.New("unverified bank account: driver must have an active verified payout account")
+	// 1. Idempotency Check: Return existing payout if duplicate key
+	existing, err := s.repo.GetPayoutByIdempotencyKey(ctx, tenantID, req.IdempotencyKey)
+	if err == nil && existing != nil {
+		return duplicateOf(existing), nil
 	}
 
-	// 3. Balance Check
-	wallet, err := s.repo.GetDriverWallet(ctx, tenantID, driverID)
+	// Instruction insert and wallet debit commit as one unit: a debit
+	// failure must not leave a payable instruction behind, and a retry
+	// must converge to exactly one debit.
+	var resp *PayoutResponse
+	err = s.repo.WithTransaction(ctx, func(ctx context.Context) error {
+		// Re-check inside the transaction: a concurrent same-key request
+		// may have committed between the fast-path check and our BEGIN.
+		if existing, err := s.repo.GetPayoutByIdempotencyKey(ctx, tenantID, req.IdempotencyKey); err == nil && existing != nil {
+			resp = duplicateOf(existing)
+			return nil
+		}
+
+		// 2. Bank Account Verification Check
+		verified, accountID, err := s.repo.IsDriverPayoutAccountVerified(ctx, tenantID, driverID)
+		if err != nil || !verified {
+			return errors.New("unverified bank account: driver must have an active verified payout account")
+		}
+
+		// 3. Balance Check
+		wallet, err := s.repo.GetDriverWallet(ctx, tenantID, driverID)
+		if err != nil {
+			return err
+		}
+
+		if err := domain.ValidatePayoutEligibility(wallet.AvailableBalance, req.Amount, verified, s.minPayoutLimit); err != nil {
+			return err
+		}
+
+		payoutID := "pout_" + uuid.NewString()
+		payout := &domain.PayoutInstruction{
+			ID:              payoutID,
+			TenantID:        tenantID,
+			DriverID:        driverID,
+			PayoutAccountID: accountID,
+			Amount:          req.Amount,
+			Currency:        "INR",
+			IdempotencyKey:  req.IdempotencyKey,
+			Status:          domain.PayoutInitiated,
+			InitiatedAt:     time.Now(),
+			CreatedAt:       time.Now(),
+			UpdatedAt:       time.Now(),
+		}
+
+		if err := s.repo.CreatePayoutInstruction(ctx, tenantID, payout); err != nil {
+			// Lost the insert race: another request committed this key.
+			// Roll back and report the winner as a duplicate outside.
+			if isUniqueConflict(err) {
+				return errPayoutKeyConflict
+			}
+			return fmt.Errorf("failed creating payout instruction: %w", err)
+		}
+
+		// 4. Debit driver ledger for held payout amount
+		if err := s.repo.AppendLedgerEntry(ctx, tenantID, &domain.LedgerEntry{
+			ID:            "led_" + uuid.NewString(),
+			TenantID:      tenantID,
+			DriverID:      driverID,
+			EntryType:     domain.EntryPayout,
+			Amount:        -req.Amount,
+			Currency:      "INR",
+			ReferenceType: "payout",
+			ReferenceID:   payoutID,
+			Description:   fmt.Sprintf("Disbursement payout %s initiated", payoutID),
+		}); err != nil {
+			return fmt.Errorf("append payout ledger entry: %w", err)
+		}
+
+		resp = &PayoutResponse{
+			PayoutID:       payout.ID,
+			DriverID:       driverID,
+			Amount:         payout.Amount,
+			Status:         payout.Status,
+			IdempotencyKey: payout.IdempotencyKey,
+			IsDuplicate:    false,
+		}
+		return nil
+	})
 	if err != nil {
+		if errors.Is(err, errPayoutKeyConflict) {
+			if existing, gerr := s.repo.GetPayoutByIdempotencyKey(ctx, tenantID, req.IdempotencyKey); gerr == nil && existing != nil {
+				return duplicateOf(existing), nil
+			}
+		}
 		return nil, err
 	}
 
-	if err := domain.ValidatePayoutEligibility(wallet.AvailableBalance, req.Amount, verified, s.minPayoutLimit); err != nil {
-		return nil, err
-	}
+	return resp, nil
+}
 
-	payoutID := "pout_" + uuid.NewString()
-	payout := &domain.PayoutInstruction{
-		ID:              payoutID,
-		TenantID:        tenantID,
-		DriverID:        driverID,
-		PayoutAccountID: accountID,
-		Amount:          req.Amount,
-		Currency:        "INR",
-		IdempotencyKey:  req.IdempotencyKey,
-		Status:          domain.PayoutInitiated,
-		InitiatedAt:     time.Now(),
-		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
-	}
+// errPayoutKeyConflict signals a lost idempotency-key insert race. The
+// enclosing transaction rolls back; the caller re-reads the winner outside
+// (a constraint violation may have aborted the tx on Postgres).
+var errPayoutKeyConflict = errors.New("payout idempotency key conflict")
 
-	if err := s.repo.CreatePayoutInstruction(ctx, tenantID, payout); err != nil {
-		return nil, fmt.Errorf("failed creating payout instruction: %w", err)
+// isUniqueConflict reports unique-constraint violations across engines.
+func isUniqueConflict(err error) bool {
+	if err == nil {
+		return false
 	}
-
-	// 4. Debit driver ledger for held payout amount
-	if err := s.repo.AppendLedgerEntry(ctx, tenantID, &domain.LedgerEntry{
-		ID:            "led_" + uuid.NewString(),
-		TenantID:      tenantID,
-		DriverID:      driverID,
-		EntryType:     domain.EntryPayout,
-		Amount:        -req.Amount,
-		Currency:      "INR",
-		ReferenceType: "payout",
-		ReferenceID:   payoutID,
-		Description:   fmt.Sprintf("Disbursement payout %s initiated", payoutID),
-	}); err != nil {
-		return nil, fmt.Errorf("append payout ledger entry: %w", err)
-	}
-
-	return &PayoutResponse{
-		PayoutID:       payout.ID,
-		DriverID:       driverID,
-		Amount:         payout.Amount,
-		Status:         payout.Status,
-		IdempotencyKey: payout.IdempotencyKey,
-		IsDuplicate:    false,
-	}, nil
+	msg := err.Error()
+	return strings.Contains(msg, "UNIQUE constraint failed") ||
+		strings.Contains(msg, "duplicate key value violates unique constraint")
 }
 
 type RazorpayWebhookPayload struct {
@@ -506,38 +562,49 @@ func (s *SettlementAppService) ProcessProviderWebhook(ctx context.Context, _, pr
 		return err
 	}
 
-	// Update payout status
+	// Update payout status, compensating credit and processed marker as one
+	// unit: a failed credit must not leave the payout marked reversed.
 	provPayoutID := entity.ID
-	if err := s.repo.UpdatePayoutStatus(ctx, tenantID, payout.ID, newStatus, &provPayoutID, utr, failReason); err != nil {
-		return fmt.Errorf("failed updating payout status: %w", err)
-	}
-
-	// 7. Compensating Ledger Entry on Failure or Reversal (strictly exactly ONE compensating credit)
-	if newStatus == domain.PayoutFailed || newStatus == domain.PayoutReversed {
-		hasComp, err := s.repo.HasCompensatingLedgerEntry(ctx, tenantID, "payout_reversal", payout.ID)
-		if err != nil {
-			return fmt.Errorf("check compensating ledger entry: %w", err)
+	if err := s.repo.WithTransaction(ctx, func(ctx context.Context) error {
+		if err := s.repo.UpdatePayoutStatus(ctx, tenantID, payout.ID, newStatus, &provPayoutID, utr, failReason); err != nil {
+			return fmt.Errorf("failed updating payout status: %w", err)
 		}
-		if !hasComp {
-			if err := s.repo.AppendLedgerEntry(ctx, tenantID, &domain.LedgerEntry{
-				ID:            "led_" + uuid.NewString(),
-				TenantID:      tenantID,
-				DriverID:      payout.DriverID,
-				EntryType:     domain.EntryPayoutReversal,
-				Amount:        payout.Amount, // Credit back original amount
-				Currency:      payout.Currency,
-				ReferenceType: "payout_reversal",
-				ReferenceID:   payout.ID,
-				Description:   fmt.Sprintf("Compensating credit for %s payout %s", newStatus, payout.ID),
-			}); err != nil {
-				return fmt.Errorf("append compensating ledger entry: %w", err)
+
+		// 7. Compensating Ledger Entry on Failure or Reversal (strictly exactly ONE compensating credit)
+		if newStatus == domain.PayoutFailed || newStatus == domain.PayoutReversed {
+			hasComp, err := s.repo.HasCompensatingLedgerEntry(ctx, tenantID, "payout_reversal", payout.ID)
+			if err != nil {
+				return fmt.Errorf("check compensating ledger entry: %w", err)
+			}
+			if !hasComp {
+				if err := s.repo.AppendLedgerEntry(ctx, tenantID, &domain.LedgerEntry{
+					ID:            "led_" + uuid.NewString(),
+					TenantID:      tenantID,
+					DriverID:      payout.DriverID,
+					EntryType:     domain.EntryPayoutReversal,
+					Amount:        payout.Amount, // Credit back original amount
+					Currency:      payout.Currency,
+					ReferenceType: "payout_reversal",
+					ReferenceID:   payout.ID,
+					Description:   fmt.Sprintf("Compensating credit for %s payout %s", newStatus, payout.ID),
+				}); err != nil {
+					return fmt.Errorf("append compensating ledger entry: %w", err)
+				}
 			}
 		}
-	}
 
-	// 8. Record event in idempotency log
-	if err := s.repo.RecordProviderEvent(ctx, tenantID, "razorpay", providerEventID, data.Event, string(body)); err != nil {
-		return fmt.Errorf("record provider event: %w", err)
+		// 8. Record event in idempotency log
+		if err := s.repo.RecordProviderEvent(ctx, tenantID, "razorpay", providerEventID, data.Event, string(body)); err != nil {
+			// A concurrent delivery already recorded this event; its own
+			// transaction applied the same status and credit.
+			if isUniqueConflict(err) {
+				return nil
+			}
+			return fmt.Errorf("record provider event: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return err
 	}
 
 	return nil

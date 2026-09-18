@@ -24,6 +24,7 @@ type TCPIngestServer struct {
 	quit        chan struct{}
 	mu          sync.Mutex
 	running     bool
+	conns       map[net.Conn]struct{}
 }
 
 // NewTCPIngestServer constructs a TCPIngestServer.
@@ -40,6 +41,7 @@ func NewTCPIngestServer(addr string, ingestor *Ingestor, store *DeviceStore, log
 		deviceStore: store,
 		logger:      logger,
 		quit:        make(chan struct{}),
+		conns:       make(map[net.Conn]struct{}),
 	}
 }
 
@@ -81,9 +83,23 @@ func (s *TCPIngestServer) Start(ctx context.Context) error {
 				}
 			}
 
+			s.mu.Lock()
+			if !s.running {
+				s.mu.Unlock()
+				_ = conn.Close()
+				continue
+			}
+			s.conns[conn] = struct{}{}
+			s.mu.Unlock()
+
 			s.wg.Add(1)
 			go func(c net.Conn) {
 				defer s.wg.Done()
+				defer func() {
+					s.mu.Lock()
+					delete(s.conns, c)
+					s.mu.Unlock()
+				}()
 				s.handleConnection(ctx, c)
 			}(conn)
 		}
@@ -93,6 +109,8 @@ func (s *TCPIngestServer) Start(ctx context.Context) error {
 }
 
 // Stop gracefully shuts down the TCP listener and active connections.
+// Accepted conns are closed so idle readers blocked in Read (5-min deadline)
+// wake promptly instead of delaying wg.Wait.
 func (s *TCPIngestServer) Stop() error {
 	s.mu.Lock()
 	if !s.running {
@@ -104,11 +122,26 @@ func (s *TCPIngestServer) Stop() error {
 	if s.listener != nil {
 		_ = s.listener.Close()
 	}
+	conns := make([]net.Conn, 0, len(s.conns))
+	for c := range s.conns {
+		conns = append(conns, c)
+	}
 	s.mu.Unlock()
+
+	for _, c := range conns {
+		_ = c.Close()
+	}
 
 	s.wg.Wait()
 	s.logger.Info("telemetry hardware TCP server stopped")
 	return nil
+}
+
+// ActiveConns reports the number of currently tracked accepted connections.
+func (s *TCPIngestServer) ActiveConns() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.conns)
 }
 
 // handleConnection manages the lifecycle of a single hardware tracker socket.

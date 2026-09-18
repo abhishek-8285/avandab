@@ -56,15 +56,17 @@ export function ActiveNavigationScreen({
   const [expenseCategory, setExpenseCategory] = useState<'Diesel' | 'Toll' | 'Food' | 'Other'>('Diesel');
   const [expenseSavedMsg, setExpenseSavedMsg] = useState(false);
 
+  // Viewport-only seed (Pune corridor): shown until live GPS arrives. Speed
+  // stays null when unknown — never a fabricated 48.
   const [coords, setCoords] = useState<{ latitude: number; longitude: number; speedKmh: number | null }>({
     latitude: 18.5204,
     longitude: 73.8567,
-    speedKmh: 48,
+    speedKmh: null,
   });
 
   React.useEffect(() => {
     Telemetry.startLiveLocationTracking((lat, lng, speedKmh) => {
-      setCoords({ latitude: lat, longitude: lng, speedKmh: speedKmh ?? 48 });
+      setCoords({ latitude: lat, longitude: lng, speedKmh: speedKmh ?? null });
     });
     return () => {
       Telemetry.stopLiveLocationTracking();
@@ -333,7 +335,7 @@ export function ActiveNavigationScreen({
             </View>
             <View style={styles.liveSpeedPill}>
               <View style={styles.liveDot} />
-              <Text style={styles.liveSpeedText}>{coords.speedKmh ?? 48} KM/H</Text>
+              <Text style={styles.liveSpeedText}>{coords.speedKmh != null ? `${coords.speedKmh} KM/H` : '-- KM/H'}</Text>
             </View>
           </View>
 
@@ -363,7 +365,7 @@ export function ActiveNavigationScreen({
           pickupLabel={origin}
           destinationLabel={destination}
           vehicleLabel={vehiclePlate}
-          speedKmh={coords.speedKmh ?? 48}
+          speedKmh={coords.speedKmh}
           height={240}
           onOpenExternalNav={() => launchNavigation(currentContent.navTarget)}
         />

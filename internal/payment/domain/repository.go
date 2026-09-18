@@ -25,6 +25,12 @@ type PaymentReadModel struct {
 // PaymentRepository defines the persistence contract for payments.
 type PaymentRepository interface {
 	Save(ctx context.Context, p *aggregate.PaymentAggregate) error
+	// SaveIfNew atomically claims the payment's idempotency key inside the
+	// caller's transaction. It returns created=false with p.ID rewritten to
+	// the existing row when the key was already claimed, so use cases can
+	// return the prior payment WITHOUT repeating invoice effects. Callers
+	// must gate all balance changes on created=true.
+	SaveIfNew(ctx context.Context, p *aggregate.PaymentAggregate) (created bool, err error)
 	Find(ctx context.Context, id aggregate.PaymentID, tenantID shared.TenantID) (*aggregate.PaymentAggregate, error)
 	FindByReference(ctx context.Context, reference string, tenantID shared.TenantID) (aggregate.PaymentID, error)
 	GetReadModel(ctx context.Context, id aggregate.PaymentID, tenantID shared.TenantID) (PaymentReadModel, error)

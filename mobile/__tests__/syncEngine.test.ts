@@ -56,6 +56,24 @@ describe('SyncEngine GPS flush', () => {
     expect(getSQLiteMockState().offline_gps_logs.every((l) => l.synced === 1)).toBe(true);
   });
 
+  test('stale re-observations sync ONLY flagged is_stale; fresh rows omit the flag', async () => {
+    await DB.logGPSLocation(19.09, 72.9, 10, { isStale: true });
+    const fetchMock = jest.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, synced_ids: [1, 2, 3] }),
+    });
+    global.fetch = fetchMock as any;
+
+    await SyncEngine.syncPendingLogs('drv_1');
+
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.logs).toHaveLength(3);
+    expect(body.logs[0].is_stale).toBeUndefined(); // fresh — additive only
+    expect(body.logs[1].is_stale).toBeUndefined();
+    expect(body.logs[2]).toMatchObject({ latitude: 19.09, is_stale: true });
+  });
+
   test('server failure retains unsynced logs and reports error', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,

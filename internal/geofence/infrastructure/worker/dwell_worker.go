@@ -176,12 +176,6 @@ func (w *DwellWorker) Tick(ctx context.Context) (int, error) {
 	}
 	tenantByVehicle := w.resolveFixTenants(ctx, fixes)
 
-	engine := application.NewDwellEngine(application.EngineConfig{
-		Debounce:         mustDuration(ctx, w, w.tenantID, application.ConfigDwellDebounceSeconds, application.DefaultDwellDebounce),
-		BufferMetres:     mustFloat(ctx, w, w.tenantID, application.ConfigBufferMetres, application.DefaultBufferMetres),
-		HysteresisMetres: mustFloat(ctx, w, w.tenantID, application.ConfigHysteresisMetres, application.DefaultHysteresisMetres),
-	})
-
 	handled := 0
 	for _, fix := range fixes {
 		select {
@@ -198,6 +192,11 @@ func (w *DwellWorker) Tick(ctx context.Context) (int, error) {
 		if w.featureGate != nil && !w.featureGate(tenant) {
 			continue
 		}
+
+		// The dwell engine is stateless (three thresholds only), so build it
+		// per fix from the FIX's tenant config — never from the worker's
+		// bootstrap tenant, which would apply one org's debounce/buffer/
+		// hysteresis to every other org in the sweep.
 
 		// Trip context gates zone evaluation for pickup/drop zones and
 		// enables auto-transitions (Spec 02 §5).
@@ -225,6 +224,11 @@ func (w *DwellWorker) Tick(ctx context.Context) (int, error) {
 			}
 		}
 
+		engine := application.NewDwellEngine(application.EngineConfig{
+			Debounce:         mustDuration(ctx, w, tenant, application.ConfigDwellDebounceSeconds, application.DefaultDwellDebounce),
+			BufferMetres:     mustFloat(ctx, w, tenant, application.ConfigBufferMetres, application.DefaultBufferMetres),
+			HysteresisMetres: mustFloat(ctx, w, tenant, application.ConfigHysteresisMetres, application.DefaultHysteresisMetres),
+		})
 		next, zoneEvents := engine.Evaluate(*current, fix, zones)
 		if err := w.persist(ctx, *current, next, fix, zoneEvents, tenant); err != nil {
 			w.log.Error("dwell worker: persist failed", "vehicle", fix.VehicleID, "error", err)

@@ -242,24 +242,26 @@
             } catch (_) {}
         }
         function stopDashStream() {
+            // Close BOTH handles: the fallback socket used to leak on hide
+            // because only __dashES was closed here.
             if (window.__dashES) {
                 window.__dashES.close();
                 window.__dashES = null;
+            }
+            if (window.__dashFallbackES) {
+                window.__dashFallbackES.close();
+                window.__dashFallbackES = null;
             }
             var st = document.getElementById('dash-live-stamp');
             if (st && document.hidden) {
                 st.textContent = ' live paused (tab hidden)';
             }
         }
-        // Fallback stream for classic variant (no live stamp): keeps the
-        // connection warm without KPI wiring.
+        // Fallback: no live stamp (classic variant or off-route page) means
+        // never open a stream from the global script — classic refreshes via
+        // polling and off-route pages need nothing. Drop any stray handle.
         if (!document.getElementById('dash-live-stamp')) {
-            if (window.EventSource && !window.__dashFallbackES && !document.hidden) {
-                try {
-                    window.__dashFallbackES = new EventSource('/dashboard/stream');
-                    window.__dashFallbackES.onerror = function () { if (window.__dashFallbackES) { window.__dashFallbackES.close(); window.__dashFallbackES = null; } };
-                } catch (_) {}
-            }
+            if (window.__dashFallbackES) { try { window.__dashFallbackES.close(); } catch (_) {} window.__dashFallbackES = null; }
         } else {
             startDashStream();
         }
@@ -268,7 +270,7 @@
             document.addEventListener('visibilitychange', function () {
                 if (document.hidden) {
                     stopDashStream();
-                } else {
+                } else if (document.getElementById('dash-live-stamp')) {
                     refreshTables();
                     startDashStream();
                 }

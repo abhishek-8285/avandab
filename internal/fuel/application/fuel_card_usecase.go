@@ -2,9 +2,12 @@ package application
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/google/uuid"
 
 	"transport-app/internal/fuel"
 )
@@ -37,6 +40,10 @@ func (uc *FuelCardUseCase) RegisterCard(ctx context.Context, tenantID string, re
 		limit = 50000.0 // Default per spec
 	}
 
+	if err := uc.repo.VerifyAssignmentOwnership(ctx, tenantID, req.AssignedVehicleID, req.AssignedDriverID); err != nil {
+		return nil, err
+	}
+
 	card := fuel.FuelCard{
 		TenantID:          tenantID,
 		CardNumberMasked:  fuel.MaskCardNumber(cleanNum),
@@ -65,59 +72,94 @@ type SyncResult struct {
 	Transactions   []fuel.FuelCardTransaction `json:"transactions"`
 }
 
+// errDuplicateImport marks a replayed external_txn_id: skip silently with no counts.
+var errDuplicateImport = errors.New("fuel card transaction already imported")
+
 // SyncTransactions processes statement records through pilferage check, kharcha cross-check, and GL sync.
 func (uc *FuelCardUseCase) SyncTransactions(ctx context.Context, tenantID string, req fuel.SyncFuelTransactionsRequest) (*SyncResult, error) {
 	result := &SyncResult{}
 
 	for _, item := range req.Transactions {
-		tokenHash := item.CardTokenHash
-		if tokenHash == "" && item.CardNumber != "" {
-			tokenHash = fuel.HashCardToken(item.CardNumber)
-		}
-		if tokenHash == "" {
-			continue
-		}
-
-		card, err := uc.repo.GetCardByTokenHash(ctx, tenantID, tokenHash)
-		if err != nil || card == nil {
-			// Skip or reject if card not found in this tenant
-			continue
-		}
-
-		status := fuel.ReconStatusUnreconciled
-		var matchedExpenseID *string
-		var anomalyNote *string
-
-		// 1. Pilferage Guard: Check vehicle tank capacity
-		if card.AssignedVehicleID != nil && *card.AssignedVehicleID != "" {
-			tankCap, err := uc.repo.GetVehicleTankCapacity(ctx, tenantID, *card.AssignedVehicleID)
-			if err == nil && tankCap > 0 && item.VolumeLitres > (tankCap*1.05) {
-				status = fuel.ReconStatusFlaggedAnomaly
-				msg := fmt.Sprintf("Fuel volume (%.1fL) exceeds vehicle tank capacity (%.1fL + 5%% tolerance)", item.VolumeLitres, tankCap)
-				anomalyNote = &msg
-				result.AnomalyCount++
-				_ = uc.repo.RecordPilferageAlert(ctx, tenantID, *card.AssignedVehicleID, "Fuel Volume Pilferage Risk", msg)
+		if err := uc.syncOne(ctx, tenantID, item, result); err != nil {
+			if errors.Is(err, errDuplicateImport) {
+				continue
 			}
+			// Per-item failures stay local: counts only reflect committed
+			// work, and the batch keeps its 200 contract.
+			continue
+		}
+	}
+
+	return result, nil
+}
+
+// syncOne imports a single statement row atomically: duplicate claim,
+// pilferage alert, kharcha match/generate, GL sync log, ledger legs and the
+// transaction row commit or roll back together.
+func (uc *FuelCardUseCase) syncOne(ctx context.Context, tenantID string, item fuel.IngestTransactionItem, result *SyncResult) error {
+	tokenHash := item.CardTokenHash
+	if tokenHash == "" && item.CardNumber != "" {
+		tokenHash = fuel.HashCardToken(item.CardNumber)
+	}
+	if tokenHash == "" {
+		return errors.New("card token is required")
+	}
+
+	card, err := uc.repo.GetCardByTokenHash(ctx, tenantID, tokenHash)
+	if err != nil || card == nil {
+		// Skip or reject if card not found in this tenant
+		return errors.New("fuel card not found in this tenant")
+	}
+
+	txnID := uuid.NewString()
+	var status fuel.ReconciliationStatus = fuel.ReconStatusUnreconciled
+	var matchedExpenseID *string
+	var inserted fuel.FuelCardTransaction
+
+	err = uc.repo.WithTransaction(ctx, func(tx fuel.FuelCardRepository) error {
+		// Claim the tenant-scoped external key first: replays skip before
+		// any pilferage alert, expense, GL or ledger side effect.
+		if _, err := tx.GetTransactionByExternalID(ctx, tenantID, item.ExternalTxnID); err == nil {
+			return errDuplicateImport
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+
+		anomalyNote, pilferage, err := uc.pilferageCheck(ctx, tx, tenantID, card, item)
+		if err != nil {
+			return err
+		}
+		if pilferage {
+			status = fuel.ReconStatusFlaggedAnomaly
 		}
 
 		// 2. Kharcha Cross-Check (Spec 20 §3.2)
 		if status != fuel.ReconStatusFlaggedAnomaly {
-			foundExpID, expErr := uc.repo.FindMatchingExpense(ctx, tenantID, card.AssignedVehicleID, card.AssignedDriverID, item.TotalAmount, item.TxnTime)
-			if expErr == nil && foundExpID != "" {
+			foundExpID, expErr := tx.FindMatchingExpense(ctx, tenantID, card.AssignedVehicleID, card.AssignedDriverID, item.TotalAmount, item.TxnTime)
+			switch {
+			case expErr == nil && foundExpID != "":
 				// Matched existing driver expense claim
 				matchedExpenseID = &foundExpID
 				status = fuel.ReconStatusMatchedExpense
-				_ = uc.repo.MarkExpenseVerified(ctx, tenantID, foundExpID, fmt.Sprintf("Verified via %s fuel card txn %s", card.Provider, item.ExternalTxnID))
-				result.MatchedCount++
-			} else {
+				if err := tx.MarkExpenseVerified(ctx, tenantID, foundExpID, fmt.Sprintf("Verified via %s fuel card txn %s", card.Provider, item.ExternalTxnID)); err != nil {
+					return err
+				}
+			case expErr != nil && !errors.Is(expErr, sql.ErrNoRows):
+				// A real lookup failure is not a miss — fail the item
+				// instead of auto-creating a duplicate expense.
+				return expErr
+			default:
 				// Auto-create verified driver expense
 				genNotes := fmt.Sprintf("Auto-generated from %s fuel card txn %s at %s", card.Provider, item.ExternalTxnID, item.FuelStationName)
-				newExpID, genErr := uc.repo.CreateVerifiedExpense(ctx, tenantID, card.AssignedVehicleID, card.AssignedDriverID, item.TotalAmount, item.VolumeLitres, item.TxnTime, genNotes)
-				if genErr == nil && newExpID != "" {
-					matchedExpenseID = &newExpID
-					status = fuel.ReconStatusSystemGenerated
-					result.GeneratedCount++
+				newExpID, genErr := tx.CreateVerifiedExpense(ctx, tenantID, card.AssignedVehicleID, card.AssignedDriverID, item.TotalAmount, item.VolumeLitres, item.TxnTime, genNotes)
+				if genErr != nil {
+					return genErr
 				}
+				if newExpID == "" {
+					return errors.New("failed to auto-create verified expense")
+				}
+				matchedExpenseID = &newExpID
+				status = fuel.ReconStatusSystemGenerated
 			}
 		}
 
@@ -132,6 +174,7 @@ func (uc *FuelCardUseCase) SyncTransactions(ctx context.Context, tenantID string
 		}
 
 		txn := fuel.FuelCardTransaction{
+			ID:                   txnID,
 			TenantID:             tenantID,
 			FuelCardID:           card.ID,
 			ExternalTxnID:        item.ExternalTxnID,
@@ -148,21 +191,61 @@ func (uc *FuelCardUseCase) SyncTransactions(ctx context.Context, tenantID string
 			Notes:                notes,
 		}
 
-		// 3. General Ledger Sync (Spec 20 §3.4)
-		syncLogID, glErr := uc.repo.PostGeneralLedgerAndSyncLog(ctx, tenantID, txn, string(card.Provider))
-		if glErr == nil && syncLogID != "" {
-			txn.SyncLogID = &syncLogID
+		// 3. General Ledger Sync (Spec 20 §3.4) with the real txn ID so
+		// ledger refs and the sync log link to the inserted row.
+		syncLogID, err := tx.PostGeneralLedgerAndSyncLog(ctx, tenantID, txn, string(card.Provider))
+		if err != nil {
+			return err
 		}
+		txn.SyncLogID = &syncLogID
 
 		// 4. Insert Transaction
-		inserted, insErr := uc.repo.InsertTransaction(ctx, txn)
-		if insErr == nil && inserted != nil {
-			result.Transactions = append(result.Transactions, *inserted)
-			result.IngestedCount++
+		stored, err := tx.InsertTransaction(ctx, txn)
+		if err != nil {
+			return err
 		}
+		inserted = *stored
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
-	return result, nil
+	result.Transactions = append(result.Transactions, inserted)
+	result.IngestedCount++
+	switch status {
+	case fuel.ReconStatusMatchedExpense:
+		result.MatchedCount++
+	case fuel.ReconStatusSystemGenerated:
+		result.GeneratedCount++
+	case fuel.ReconStatusFlaggedAnomaly:
+		result.AnomalyCount++
+	}
+	return nil
+}
+
+// pilferageCheck applies the tank-capacity guard, recording the alert inside
+// the caller's transaction. It returns the anomaly note and whether the item
+// is flagged.
+func (uc *FuelCardUseCase) pilferageCheck(ctx context.Context, tx fuel.FuelCardRepository, tenantID string, card *fuel.FuelCard, item fuel.IngestTransactionItem) (*string, bool, error) {
+	// 1. Pilferage Guard: Check vehicle tank capacity
+	if card.AssignedVehicleID != nil && *card.AssignedVehicleID != "" {
+		tankCap, err := tx.GetVehicleTankCapacity(ctx, tenantID, *card.AssignedVehicleID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, false, nil
+			}
+			return nil, false, err
+		}
+		if tankCap > 0 && item.VolumeLitres > (tankCap*1.05) {
+			msg := fmt.Sprintf("Fuel volume (%.1fL) exceeds vehicle tank capacity (%.1fL + 5%% tolerance)", item.VolumeLitres, tankCap)
+			if err := tx.RecordPilferageAlert(ctx, tenantID, *card.AssignedVehicleID, "Fuel Volume Pilferage Risk", msg); err != nil {
+				return nil, false, err
+			}
+			return &msg, true, nil
+		}
+	}
+	return nil, false, nil
 }
 
 // ReconcileTransaction manually links a transaction to an expense claim.

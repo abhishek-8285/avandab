@@ -205,21 +205,42 @@ jest.mock('expo-sqlite', () => ({
         return rows[0] ?? null;
       }
       if (query.includes('queued_pods WHERE trip_id =')) {
+        const ownerScoped = query.includes('owner_id');
+        const owner = ownerScoped ? params[params.length - 1] : null;
+        const matchOwner = (p: any) => !ownerScoped || (p.owner_id ?? null) === (owner ?? null);
         if (query.includes('stop_id') && params.length >= 3 && params[2] != null) {
-          return sqliteMockState.queued_pods.find((p) => p.trip_id === params[0] && p.stop_id === params[2]) || null;
+          return sqliteMockState.queued_pods.find((p) => p.trip_id === params[0] && p.stop_id === params[2] && matchOwner(p)) || null;
         }
-        return sqliteMockState.queued_pods.find((p) => p.trip_id === params[0]) || null;
+        return sqliteMockState.queued_pods.find((p) => p.trip_id === params[0] && matchOwner(p)) || null;
+      }
+      if (query.includes('FROM offline_gps_logs')) {
+        // Latest-fix lookup (ORDER BY id DESC LIMIT 1), owner-aware.
+        let rows = [...sqliteMockState.offline_gps_logs];
+        if (query.includes('owner_id') && params.length > 0) {
+          rows = rows.filter((l) => (l.owner_id ?? null) === (params[0] ?? null));
+        }
+        rows.sort((a, b) => b.id - a.id);
+        return rows[0] ?? null;
       }
       return null;
     }),
-    getAllAsync: jest.fn().mockImplementation(async (query: string) => {
+    getAllAsync: jest.fn().mockImplementation(async (query: string, params: any[] = []) => {
       if (query.includes('queued_pods')) {
+        if (query.includes('owner_id') && params.length > 0) {
+          return [...sqliteMockState.queued_pods].filter((p) => (p.owner_id ?? null) === (params[0] ?? null));
+        }
         return [...sqliteMockState.queued_pods];
       }
       if (query.includes('queued_gps')) {
+        if (query.includes('owner_id') && params.length > 0) {
+          return [...sqliteMockState.queued_gps].filter((g) => (g.owner_id ?? null) === (params[0] ?? null));
+        }
         return [...sqliteMockState.queued_gps];
       }
       if (query.includes('trips')) {
+        if (query.includes('owner_id') && params.length > 0) {
+          return [...sqliteMockState.trips].filter((t) => (t.owner_id ?? null) === (params[0] ?? null));
+        }
         return [...sqliteMockState.trips];
       }
       if (query.includes('offline_gps_logs')) {
@@ -228,9 +249,16 @@ jest.mock('expo-sqlite', () => ({
             ? { ...l, accuracy_m: l.accuracy ?? null }
             : { ...l }
         );
-        return query.includes('WHERE synced = 0') ? rows.filter((l) => l.synced === 0) : rows;
+        let filtered = query.includes('WHERE synced = 0') ? rows.filter((l) => l.synced === 0) : rows;
+        if (query.includes('owner_id') && params.length > 0) {
+          filtered = filtered.filter((l) => (l.owner_id ?? null) === (params[0] ?? null));
+        }
+        return filtered;
       }
       if (query.includes('offline_expenses')) {
+        if (query.includes('owner_id') && params.length > 0) {
+          return [...sqliteMockState.offline_expenses].filter((e) => (e.owner_id ?? null) === (params[0] ?? null));
+        }
         return [...sqliteMockState.offline_expenses];
       }
       if (query.includes('consent_log')) {
@@ -264,6 +292,7 @@ jest.mock('expo-sqlite', () => ({
             quantity_short: params[11] ?? null,
             damage_qty: params[12] ?? null,
             refusal_reason: params[13] ?? null,
+            owner_id: query.includes('owner_id') ? (params[14] ?? null) : null,
             created_at: new Date().toISOString(),
           };
         } else if (query.includes('consignee_phone')) {
@@ -317,6 +346,11 @@ jest.mock('expo-sqlite', () => ({
           longitude: params[2],
           timestamp: params[3],
           accuracy_m: params[4],
+          speed: params[5] ?? null,
+          heading: params[6] ?? null,
+          motion: params[7] ?? null,
+          battery_level: params[8] ?? null,
+          owner_id: query.includes('owner_id') ? (params[9] ?? null) : null,
           created_at: new Date().toISOString(),
         };
         sqliteMockState.queued_gps.push(gps);
@@ -324,6 +358,8 @@ jest.mock('expo-sqlite', () => ({
         const ids = params;
         sqliteMockState.queued_gps = sqliteMockState.queued_gps.filter((g) => !ids.includes(g.id));
       } else if (query.includes('INSERT INTO offline_expenses')) {
+        const hasIdempotency = query.includes('idempotency_key');
+        const hasOwner = query.includes('owner_id');
         const exp = {
           id: sqliteMockState.offline_expenses.length + 1,
           trip_id: params[0],
@@ -333,7 +369,8 @@ jest.mock('expo-sqlite', () => ({
           notes: params[4],
           latitude: params[5],
           longitude: params[6],
-          idempotency_key: params[7] ?? null,
+          idempotency_key: hasIdempotency ? (params[7] ?? null) : null,
+          owner_id: hasOwner ? (params[hasIdempotency ? 8 : 7] ?? null) : null,
           created_at: new Date().toISOString(),
         };
         sqliteMockState.offline_expenses.push(exp);
@@ -352,6 +389,7 @@ jest.mock('expo-sqlite', () => ({
           destination: params[5],
           status: params[6],
           startTime: params[7],
+          owner_id: query.includes('owner_id') ? (params[8] ?? null) : null,
         };
         const idx = sqliteMockState.trips.findIndex((t) => t.id === trip.id);
         if (idx >= 0) sqliteMockState.trips[idx] = trip;
@@ -367,6 +405,8 @@ jest.mock('expo-sqlite', () => ({
           heading: params[5] ?? null,
           motion: params[6] ?? null,
           battery_level: params[7] ?? null,
+          owner_id: query.includes('owner_id') ? (params[8] ?? null) : null,
+          is_stale: query.includes('is_stale') ? (params[9] ?? null) : null,
           synced: 0,
         };
         sqliteMockState.offline_gps_logs.push(log);

@@ -7,19 +7,22 @@
         </div>
     </div>
 
-    {{template "money_strip.html" .Extra}}
+    {{/* NOTE: pass `.` (flattened PageData), never `.Extra` — renderPage
+    flattens Extra into top-level keys, so `.Extra` is nil here and the
+    money strip / alert inbox would render empty. */}}
+    {{template "money_strip.html" .}}
 
     <div class="grid grid-cols-1 lg:grid-cols-[240px_minmax(0,1fr)_320px] gap-4">
-        {{template "fleet_strip.html" .Extra}}
+        {{template "fleet_strip.html" .}}
 
         <div id="console-map-wrap" class="group relative bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden min-h-[420px] hover:shadow-md transition-shadow">
             <div id="console-map" class="w-full h-full min-h-[420px]"></div>
         </div>
 
-        {{template "context_panel.html" .Extra}}
+        {{template "context_panel.html" .}}
     </div>
 
-    {{template "alert_inbox.html" .Extra}}
+    {{template "alert_inbox.html" .}}
 
     <button id="palette-trigger" type="button"
             class="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 rounded-full bg-primary text-on-primary px-4 py-2.5 text-sm font-semibold shadow-lg hover:bg-primary/90 hover:-translate-y-px transition cursor-pointer border-0">

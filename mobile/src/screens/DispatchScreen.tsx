@@ -10,7 +10,7 @@ import { useLanguageStore } from '../stores/languageStore';
 import { getApiBaseURL, getBackendHost } from '../constants/network';
 import { Card } from '../components/system/Card';
 import { DB } from '../services/storage';
-import { Telemetry } from '../services/telemetry';
+import { Telemetry, canPublishFix } from '../services/telemetry';
 import { MQTT } from '../services/mqtt';
 import { LocationService } from '../native/locationService';
 import { useAuthStore } from '../stores/authStore';
@@ -44,8 +44,9 @@ export function DispatchScreen() {
     if (perms.granted) {
       setLocationGranted(true);
       const loc = await Telemetry.requestLocationPermission();
-      if (driverId && loc.latitude && loc.longitude && LocationService.shouldAcceptFix(null, null)) {
-        MQTT.publishLocation(driverId, loc.latitude, loc.longitude);
+      // Coarse viewport fallbacks never publish; stale fixes publish flagged.
+      if (driverId && canPublishFix(loc) && loc.latitude && loc.longitude && LocationService.shouldAcceptFix(null, null)) {
+        MQTT.publishLocation(driverId, loc.latitude, loc.longitude, loc.isStale ? { isStale: true } : undefined);
       }
       Telemetry.startLiveLocationTracking((lat, lng, speedKmh) => {
         if (!driverId) return;

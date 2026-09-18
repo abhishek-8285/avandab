@@ -5,6 +5,10 @@ import (
 )
 
 type SettlementRepository interface {
+	// WithTransaction runs fn with all repository calls in one transaction.
+	// Re-entrant: nested calls run in the ambient transaction.
+	WithTransaction(ctx context.Context, fn func(context.Context) error) error
+
 	// Settlements
 	CreateSettlement(ctx context.Context, tenantID string, s *Settlement) error
 	GetSettlementByTripID(ctx context.Context, tenantID, tripID string) (*Settlement, error)

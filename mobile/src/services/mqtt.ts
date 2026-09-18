@@ -131,8 +131,12 @@ class MQTTTelemetryService {
     }
   }
 
-  // Publish high-frequency live GPS coordinates over MQTT
-  publishLocation(driverId: string, latitude: number, longitude: number): void {
+  // Publish high-frequency live GPS coordinates over MQTT.
+  // Additive-only payload evolution: stale fixes add `is_stale: true` so the
+  // server can tell a flagged re-observation from a fresh measurement.
+  // Coarse viewport fallbacks must never reach here (callers gate with
+  // canPublishFix) — this layer publishes whatever it is handed.
+  publishLocation(driverId: string, latitude: number, longitude: number, opts?: { isStale?: boolean }): void {
     if (this.client && this.isConnected) {
       const topic = `avandab/telemetry/drivers/${driverId}/gps`;
       const payload = JSON.stringify({
@@ -140,6 +144,7 @@ class MQTTTelemetryService {
         latitude,
         longitude,
         timestamp: new Date().toISOString(),
+        ...(opts?.isStale ? { is_stale: true } : {}),
       });
       this.client.publish(topic, payload, { qos: 1 });
       console.log(`[MQTT PUBLISHED GPS] Lat: ${latitude.toFixed(4)}, Lng: ${longitude.toFixed(4)} -> ${topic}`);

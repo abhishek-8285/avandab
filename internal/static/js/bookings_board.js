@@ -55,10 +55,14 @@
       col.addEventListener("dragover", function (ev) { ev.preventDefault(); });
       col.addEventListener("drop", function (ev) {
         ev.preventDefault();
-        if (!dragged) return;
-        var target = col.dataset.status;
-        var from = dragged.dataset.status;
-        var id = dragged.dataset.id;
+        // Capture per-drop: the shared `dragged` is cleared by dragend and
+        // reassigned by the next dragstart, so async callbacks must use this
+        // local or they dim/restore the wrong card (or throw on null).
+        var card = dragged;
+        if (!card) return;
+        var target = (ev.currentTarget || col).dataset.status;
+        var from = card.dataset.status;
+        var id = card.dataset.id;
 
         if (target === from) return;
         if (rank(target) < rank(from)) {
@@ -78,11 +82,11 @@
             window.location.reload(); // server-rendered board stays truthful
           } else {
             feedback("Transition rejected (" + r.status + ")", true);
-            dragged.style.opacity = "";
+            if (card) { card.style.opacity = ""; }
           }
         }).catch(function () {
           feedback("Network error", true);
-          dragged.style.opacity = "";
+          if (card) { card.style.opacity = ""; }
         });
       });
     });

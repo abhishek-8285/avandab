@@ -10,8 +10,8 @@ const PRECACHE_ASSETS = [
   '/static/css/tailwind.css',
   '/static/css/app.css',
   '/static/css/fonts.css',
-  '/static/css/material-symbols.css',
-  '/static/css/material-icons.css',
+  // NOTE: no material-symbols/icons CSS — those files were deleted and
+  // cache.addAll is atomic, so listing them rejected the whole install.
   '/static/js/htmx.min.js',
   '/static/js/toast.js',
   '/static/js/console.js',
@@ -65,7 +65,7 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin || event.request.method !== 'GET') return;
 
   // Strategy 1: Cache-first for /static assets (immutable, versioned).
-  // ignoreSearch makes bare-path precache entries match ?v= requests.
+  // Entries are matched exactly (query included), so ?v= bumps bust it.
   if (url.pathname.startsWith('/static/')) {
     event.respondWith(cacheFirst(event.request, STATIC_CACHE));
     return;

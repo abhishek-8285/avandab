@@ -62,3 +62,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 }));
+
+// Stable account identity for partitioning offline cache/queues by owner.
+// user.id is the backend user_id (flat); driverId is a mutable profile field.
+// Prefer id so a driverId refresh never orphans queued work.
+export function currentAccountId(): string | null {
+  try {
+    const u = useAuthStore.getState().user;
+    return u?.id ?? u?.driverId ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function currentDriverId(): string | null {
+  try {
+    const u = useAuthStore.getState().user;
+    return u?.driverId ?? u?.id ?? null;
+  } catch {
+    return null;
+  }
+}

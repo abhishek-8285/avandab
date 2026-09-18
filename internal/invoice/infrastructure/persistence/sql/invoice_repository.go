@@ -306,7 +306,7 @@ func (r *invoiceRepository) findInvoiceBySQL(ctx context.Context, querySQL strin
 		bookingID, customerID, tripPtr,
 		subtotal, tax, discount, total,
 		aggregate.PaymentStatus(paymentStatus), invStatus,
-		paidAmount, 0, // creditBalance not in DB, default 0
+		paidAmount, 0, // no credit column: Rehydrate derives credit from paid/total
 		dueDatePtr, "", "", // financialYear, remarks not in invoices table
 		createdAt, updatedAt, version,
 	)

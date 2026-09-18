@@ -616,12 +616,18 @@
                 return !sidebar.classList.contains('-translate-x-full');
             }
 
+            // Single close path for button, overlay click and Escape: resolves
+            // nodes fresh (boost swaps replace them) and restores overlay,
+            // aria-expanded and focus together — never sidebar classes alone.
             function closeSidebar() {
-                sidebar.classList.remove('translate-x-0');
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('opacity-0', 'invisible');
-                btn.setAttribute('aria-expanded', 'false');
-                btn.focus();
+                var sb = document.getElementById('sidebar');
+                var ov = document.getElementById('mobile-overlay');
+                var b = document.getElementById('mobile-menu-btn');
+                if (!sb) return;
+                sb.classList.remove('translate-x-0');
+                sb.classList.add('-translate-x-full');
+                if (ov) ov.classList.add('opacity-0', 'invisible');
+                if (b) { b.setAttribute('aria-expanded', 'false'); b.focus(); }
             }
 
             function openSidebar() {
@@ -650,8 +656,8 @@
                     var sb = document.getElementById('sidebar');
                     if (!sb || sb.classList.contains('-translate-x-full')) return;
                     if (e.key === 'Escape') {
-                        sb.classList.remove('translate-x-0');
-                        sb.classList.add('-translate-x-full');
+                        e.preventDefault();
+                        closeSidebar();
                     }
                     if (e.key === 'Tab') {
                         var links = sb.querySelectorAll('a, button');
@@ -756,14 +762,30 @@
 
         // Form submit loading state — prevent double submission.
         // Per-form guard flag: re-runs safely after boost swaps.
+        // Honors e.defaultPrevented (a cancelled data-confirm must NOT
+        // disable the button) and restores the button on htmx failures.
         function initFormGuards() {
             var forms = document.querySelectorAll('form[method="POST"]');
             forms.forEach(function(form) {
                 if (form.dataset.guardBound) return;
                 form.dataset.guardBound = 'true';
+                function restoreGuard() {
+                    var btn = form.querySelector('button[type="submit"]');
+                    if (btn) {
+                        if (btn.dataset.originalHtml !== undefined) {
+                            btn.innerHTML = btn.dataset.originalHtml;
+                        }
+                        btn.disabled = false;
+                        delete btn.dataset.loading;
+                    }
+                    delete form.dataset.submitting;
+                }
                 form.addEventListener('submit', function(e) {
+                    if (e.defaultPrevented) return;
+                    if (form.dataset.submitting === 'true') { e.preventDefault(); return; }
                     var btn = form.querySelector('button[type="submit"]');
                     if (!btn || btn.disabled) return;
+                    form.dataset.submitting = 'true';
                     btn.disabled = true;
                     btn.dataset.loading = 'true';
                     var originalHTML = btn.innerHTML;
@@ -771,6 +793,8 @@
                     // Restore on navigation error (keep original in case)
                     btn.dataset.originalHtml = originalHTML;
                 });
+                form.addEventListener('htmx:responseError', restoreGuard);
+                form.addEventListener('htmx:sendError', restoreGuard);
             });
         }
         initFormGuards();

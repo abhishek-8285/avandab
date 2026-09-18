@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"sync"
 	"time"
@@ -28,8 +29,8 @@ type Relay struct {
 	nextAttempt map[string]time.Time
 }
 
-// NewRelay constructs an outbox relay. bus may be nil, in which case
-// events are marked published without dispatch.
+// NewRelay constructs an outbox relay. A nil bus leaves events pending
+// for retry instead of marking them published without dispatch.
 func NewRelay(db *sql.DB, bus events.EventBus, logger *slog.Logger) *Relay {
 	return &Relay{
 		db:          db,
@@ -108,10 +109,15 @@ func (r *Relay) publish(ctx context.Context, e pendingEvent) error {
 		return err
 	}
 
-	if r.bus != nil {
-		r.bus.Publish(ctx, events.Event{Type: e.eventType, Payload: payload})
-	} else {
-		r.logger.Info("outbox relay: no event bus, marking event published", "id", e.id, "event_type", e.eventType)
+	// published_at is set ONLY after every subscriber reports success: a
+	// failed fan-out stays pending for backoff retry (markFailed), never
+	// silently acknowledged. A nil bus fails closed for the same reason.
+	if r.bus == nil {
+		return fmt.Errorf("outbox relay: no event bus, leaving event pending")
+	}
+	if err := r.bus.Publish(ctx, events.Event{Type: e.eventType, Payload: payload}); err != nil {
+		r.logger.Error("outbox relay: handler delivery failed", "id", e.id, "event_type", e.eventType, "error", err)
+		return err
 	}
 
 	res, err := r.db.ExecContext(ctx, `UPDATE outbox_events SET published_at = $1 WHERE id = $2 AND published_at IS NULL`, time.Now(), e.id)

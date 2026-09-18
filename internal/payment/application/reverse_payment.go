@@ -89,6 +89,17 @@ func (uc *ReversePaymentUseCase) Execute(ctx context.Context, cmd ReversePayment
 			uc.clock.Now(),
 		)
 
+		// Claim the reversal row BEFORE touching the invoice, mirroring
+		// RecordPayment: a retried refund must not decrement paid_amount twice.
+		created, err := payRepo.SaveIfNew(txCtx, reversal)
+		if err != nil {
+			return err
+		}
+		if !created {
+			id = reversal.ID
+			return nil
+		}
+
 		invoiceRepo, ok := txCtx.Repositories().Invoices().(invoiceDomain.InvoiceRepository)
 		if !ok {
 			return errors.New("failed to retrieve invoice repository")
@@ -110,10 +121,6 @@ func (uc *ReversePaymentUseCase) Execute(ctx context.Context, cmd ReversePayment
 		}
 
 		if err := invoiceRepo.Save(txCtx, inv); err != nil {
-			return err
-		}
-
-		if err := payRepo.Save(txCtx, reversal); err != nil {
 			return err
 		}
 

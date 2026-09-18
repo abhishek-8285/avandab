@@ -80,7 +80,7 @@ func TestApplyPayment_Overpayment(t *testing.T) {
 	now := time.Now()
 	err := inv.ApplyPayment(1200, now)
 	assert.NoError(t, err)
-	assert.Equal(t, 1000.0, inv.PaidAmount)
+	assert.Equal(t, 1200.0, inv.PaidAmount) // gross: credit derives from persisted paid
 	assert.Equal(t, 200.0, inv.CreditBalance)
 	assert.Equal(t, PaymentStatusPaid, inv.PaymentStatus)
 	assert.Equal(t, InvoiceStatusPaid, inv.Status)

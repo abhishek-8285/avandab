@@ -142,9 +142,6 @@ func TestTCPIngestServer_TeltonikaProtocol(t *testing.T) {
 // W2: a location packet whose ingest is rejected must NOT be ACKed — the
 // device retransmits per protocol. Login handshake ACK stays immediate.
 func TestTCPIngestServer_DataACKWithheldOnReject(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	db := newTestIngestorDB(t)
 	ing := newTestIngestor(t, db, nil)
 	_ = db.Close() // every pipeline query now fails → ingest rejects
@@ -152,6 +149,11 @@ func TestTCPIngestServer_DataACKWithheldOnReject(t *testing.T) {
 	q := NewAsyncIngestQueue(1, 0, nil, nil) // unstarted
 	q.Drain(time.Second)                     // closed: Push refuses, sync fallback runs and fails
 	ing.SetQueue(q)
+
+	// Operational ctx created after DB setup: migration time (slow under
+	// -race) must not consume the 10s server-ops budget.
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	server := NewTCPIngestServer("127.0.0.1:0", ing, nil, nil)
 	if err := server.Start(ctx); err != nil {

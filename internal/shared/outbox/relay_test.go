@@ -3,6 +3,7 @@ package outbox
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"io"
 	"log/slog"
 	"testing"
@@ -15,6 +16,84 @@ import (
 
 type relayTestEvent struct {
 	Hello string `json:"hello"`
+}
+
+func TestRelayHandlerAcknowledgement(t *testing.T) {
+	for _, fail := range []bool{true, false} {
+		name := "success"
+		if fail {
+			name = "failure"
+		}
+		t.Run(name, func(t *testing.T) {
+			db, err := sql.Open("sqlite", ":memory:")
+			if err != nil {
+				t.Fatal(err)
+			}
+			db.SetMaxOpenConns(1)
+			t.Cleanup(func() {
+				if err := db.Close(); err != nil {
+					t.Error(err)
+				}
+			})
+			if _, err := db.Exec(`CREATE TABLE outbox_events (
+				id TEXT PRIMARY KEY,
+				aggregate_id TEXT NOT NULL,
+				aggregate_type TEXT NOT NULL,
+				event_type TEXT NOT NULL,
+				payload TEXT NOT NULL,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
+				published_at DATETIME
+			)`); err != nil {
+				t.Fatal(err)
+			}
+			ctx := context.Background()
+			if err := NewOutboxWriter(db).SaveEvents(ctx, "agg-1", "booking", []any{relayTestEvent{Hello: "world"}}); err != nil {
+				t.Fatal(err)
+			}
+			bus := events.NewInMemoryBus()
+			calls, successfulCalls := 0, 0
+			var handlerErr error
+			if fail {
+				handlerErr = errors.New("delivery failed")
+			}
+			bus.Subscribe("relayTestEvent", func(ctx context.Context, e events.Event) error {
+				calls++
+				return handlerErr
+			})
+			bus.Subscribe("relayTestEvent", func(ctx context.Context, e events.Event) error {
+				successfulCalls++
+				return nil
+			})
+			relay := NewRelay(db, bus, slog.New(slog.NewTextHandler(io.Discard, nil)))
+			relay.interval = 0
+			relay.dispatch(ctx)
+			if calls != 1 || successfulCalls != 1 {
+				t.Fatalf("handler calls = (%d, %d), want (1, 1)", calls, successfulCalls)
+			}
+			var published sql.NullTime
+			if err := db.QueryRowContext(ctx, `SELECT published_at FROM outbox_events`).Scan(&published); err != nil {
+				t.Fatal(err)
+			}
+			if published.Valid == fail {
+				t.Fatalf("published_at.Valid = %v, want %v after handler delivery", published.Valid, !fail)
+			}
+			handlerErr = nil
+			relay.dispatch(ctx)
+			wantCalls := 1
+			if fail {
+				wantCalls = 2
+			}
+			if calls != wantCalls || successfulCalls != wantCalls {
+				t.Fatalf("handler calls after second dispatch = (%d, %d), want (%d, %d)", calls, successfulCalls, wantCalls, wantCalls)
+			}
+			if err := db.QueryRowContext(ctx, `SELECT published_at FROM outbox_events`).Scan(&published); err != nil {
+				t.Fatal(err)
+			}
+			if !published.Valid {
+				t.Fatal("published_at is NULL after successful delivery")
+			}
+		})
+	}
 }
 
 func TestRelayDispatchesAndMarksPublished(t *testing.T) {

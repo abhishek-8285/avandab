@@ -1,6 +1,6 @@
 /* Tracking island — scoped styles (ti- prefix). Dark/light via app tokens. */
 .ti-root { display: flex; height: 100%; min-height: 560px; width: 100%; overflow: hidden;
-  background: var(--ti-bg, #f4f6f8); color: var(--ti-fg, #1a2230); font-size: 13px;
+  background: var(--color-surface, #f4f6f8); color: var(--color-on-surface, #1a2230); font-size: 13px;
   touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .ti-root button:focus-visible, .ti-root a:focus-visible, .ti-root input:focus-visible {
   outline: 2px solid #2563eb; outline-offset: 2px; }
@@ -9,7 +9,7 @@
 
 /* Sidebar */
 .ti-sidebar { width: 300px; flex-shrink: 0; display: flex; flex-direction: column;
-  background: #fff; border-right: 1px solid #e3e8ef; z-index: 20; }
+  background: var(--color-surface-container-lowest, #fff); border-right: 1px solid var(--color-outline-variant, #e3e8ef); z-index: 20; }
 .ti-side-head { display: flex; align-items: center; justify-content: space-between;
   padding: 10px 12px; border-bottom: 1px solid #eef1f5; }
 .ti-side-title { display: flex; align-items: center; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
@@ -210,8 +210,8 @@
   transition: background 0.15s ease, color 0.15s ease;
 }
 .ti-row.sel .ti-row-type-badge {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--color-status-info-container, #dbeafe);
+  color: var(--color-on-status-info-container, #1d4ed8);
 }
 .ti-row-type-icon {
   width: 15px;
@@ -233,34 +233,25 @@
   color: var(--color-text-muted, #475569);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .ti-row-type-badge {
-    background: #1e293b;
-    color: #94a3b8;
-  }
-  :root:not([data-theme="light"]) .ti-row.sel .ti-row-type-badge {
-    background: #1e3a8a;
-    color: #93c5fd;
-  }
-  :root:not([data-theme="light"]) .ti-empty-illu {
-    color: #cbd5e1;
-  }
+/* Dark theme follows the app `.dark` class on documentElement (theme.js),
+ * not OS preference or data-theme attributes. Base rules above already use
+ * auto-flipping semantic tokens; these overrides pin the few rules whose
+ * light fallbacks must not leak through. */
+.dark .ti-row-type-badge {
+  background: var(--color-surface-container-high);
+  color: var(--color-text-muted);
 }
-:root[data-theme="dark"] .ti-row-type-badge {
-  background: #1e293b;
-  color: #94a3b8;
+.dark .ti-row.sel .ti-row-type-badge {
+  background: var(--color-status-info-container);
+  color: var(--color-on-status-info-container);
 }
-:root[data-theme="dark"] .ti-row.sel .ti-row-type-badge {
-  background: #1e3a8a;
-  color: #93c5fd;
-}
-:root[data-theme="dark"] .ti-empty-illu {
-  color: #cbd5e1;
+.dark .ti-empty-illu {
+  color: var(--color-text-muted);
 }
 
 /* Migration-00117 parity states (class names match server status tokens). */
-.ti-drawer .text-status-error { color: #dc2626; }
-.ti-drawer .text-status-success { color: #16a34a; }
+.ti-drawer .text-status-error { color: var(--color-status-alert, #dc2626); }
+.ti-drawer .text-status-success { color: var(--color-status-success, #16a34a); }
 
 @media (max-width: 1023.5px) {
   .ti-drawer { padding-bottom: env(safe-area-inset-bottom); }

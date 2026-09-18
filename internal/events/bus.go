@@ -5,6 +5,8 @@ package events
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"runtime/debug"
 	"sync"
@@ -23,7 +25,7 @@ type Handler func(ctx context.Context, e Event) error
 
 // EventBus allows services to publish events and register handlers.
 type EventBus interface {
-	Publish(ctx context.Context, e Event)
+	Publish(ctx context.Context, e Event) error
 	Subscribe(eventType string, h Handler) (unsubscribe func())
 }
 
@@ -52,25 +54,40 @@ func NewInMemoryBus() *InMemoryBus {
 }
 
 // Publish synchronously dispatches an event to all registered handlers
-// for the event type. Handlers run in the caller's goroutine.
-func (b *InMemoryBus) Publish(ctx context.Context, e Event) {
+// for the event type. Handlers run in the caller's goroutine. A failing
+// handler does NOT block its siblings, but its error is aggregated into the
+// return value (panics included) so the outbox relay can hold the event
+// pending instead of acknowledging a half-delivered fan-out.
+func (b *InMemoryBus) Publish(ctx context.Context, e Event) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	b.mu.RLock()
 	handlers := make([]*registeredHandler, len(b.subs[e.Type]))
 	copy(handlers, b.subs[e.Type])
 	b.mu.RUnlock()
 
+	var errs []error
 	for _, rh := range handlers {
-		b.dispatch(ctx, e, rh.handler)
+		if err := ctx.Err(); err != nil {
+			errs = append(errs, err)
+			break
+		}
+		if err := b.dispatch(ctx, e, rh.handler); err != nil {
+			errs = append(errs, err)
+		}
 	}
+	return errors.Join(errs...)
 }
 
-func (b *InMemoryBus) dispatch(ctx context.Context, e Event, h Handler) {
+func (b *InMemoryBus) dispatch(ctx context.Context, e Event, h Handler) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			b.log.Error("event handler panicked",
 				"event_type", e.Type,
 				"panic", r,
 				"stack", string(debug.Stack()))
+			err = fmt.Errorf("event handler panicked: %v", r)
 		}
 	}()
 
@@ -80,7 +97,9 @@ func (b *InMemoryBus) dispatch(ctx context.Context, e Event, h Handler) {
 		b.log.Error("event handler failed",
 			"event_type", e.Type,
 			"error", err)
+		return err
 	}
+	return nil
 }
 
 // Subscribe registers a handler for a given event type and returns an
