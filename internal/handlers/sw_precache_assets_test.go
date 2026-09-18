@@ -35,8 +35,6 @@ func swPrecacheTestDirs(t *testing.T) (staticDir, swPath string) {
 	return staticDir, swPath
 }
 
-var swPrecacheURLRe = regexp.MustCompile(`['"](\/static\/[^'"]+)['"]`)
-
 func swPrecacheAssets(t *testing.T, swPath string) []string {
 	t.Helper()
 	raw, err := os.ReadFile(swPath)
@@ -54,6 +52,8 @@ func swPrecacheAssets(t *testing.T, swPath string) []string {
 	require.NotEqual(t, -1, end, "premise: PRECACHE_ASSETS list must terminate")
 	block = block[:end]
 
+	// Local (never package-level): CI forbids shared mutable state in tests.
+	swPrecacheURLRe := regexp.MustCompile(`['"](\/static\/[^'"]+)['"]`)
 	assets := swPrecacheURLRe.FindAllString(block, -1)
 	require.NotEmpty(t, assets, "premise: PRECACHE_ASSETS must list /static/ URLs")
 	// Strip surrounding quotes.

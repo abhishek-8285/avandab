@@ -62,7 +62,7 @@ func (e *OpenAIEmbedder) Embed(ctx context.Context, text string) ([]float64, err
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", e.baseURL+"/embeddings", bytes.NewReader(reqBody))
+	req, err := http.NewRequestWithContext(ctx, "POST", e.baseURL+"/embeddings", bytes.NewReader(reqBody)) //nolint:gosec // G704: baseURL is operator-configured provider endpoint, never request input
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
