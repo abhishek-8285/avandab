@@ -84,9 +84,14 @@
 .ti-sync { font-size: 10px; color: var(--color-text-muted, #94a3b8); }
 .ti-density { font-size: 11px; color: var(--color-text-muted, #64748b); }
 .ti-density b { color: var(--color-on-surface, #0f172a); }
-.ti-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--color-on-surface-variant, #475569); cursor: pointer; user-select: none; }
-.ti-toggle input[type="checkbox"] { accent-color: var(--color-primary, #2563eb); cursor: pointer; }
-.ti-toggle-svg { width: 13px; height: 13px; color: var(--color-text-muted, #64748b); margin-right: 2px; flex-shrink: 0; }
+/* Stream + geofence are pressed-state icon buttons (ti-icon-btn.on), never
+ * native checkboxes — global checkbox sizing once blew these up to 40px. */
+.ti-live-btn .ti-live-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  background: var(--color-text-muted, #94a3b8); }
+.ti-live-btn.on .ti-live-dot { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+.ti-live-lbl { font-size: 11px; font-weight: 700; }
+/* Mobile action cluster: hidden on desktop, floats over the map on phones. */
+.ti-fab-stack { display: none; }
 .ti-map { flex: 1; min-height: 0; z-index: 0; }
 
 /* Markers */
@@ -180,6 +185,8 @@
   color: var(--color-on-surface, #0f172a);
   text-wrap: balance;
 }
+/* Desktop keeps the full telemetry wording; phones get the short version. */
+.ti-empty-title-short, .ti-empty-msg-short { display: none; }
 .ti-empty-msg {
   font-size: 12px;
   color: var(--color-text-muted, #64748b);
@@ -296,6 +303,61 @@
 
 @media (max-width: 1023.5px) {
   .ti-drawer { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* ── Mobile tracking (<768px): full-width map + fleet bottom sheet ── */
+@media (max-width: 767.5px) {
+  .ti-root { flex-direction: column; }
+  /* DOM order is sheet-then-map; map owns the top. */
+  .ti-main { order: -1; flex: 1; min-height: 0; }
+  .ti-rail-mobile { display: none; }
+
+  /* Topbar keeps badge/clock/density only — actions live in .ti-fab-stack. */
+  .ti-topbar { gap: 8px; }
+  .ti-topbar .ti-icon-btn, .ti-topbar .ti-live-btn { display: none; }
+  .ti-sync { white-space: nowrap; font-size: 9px; }
+
+  .ti-fab-stack { display: flex; flex-direction: column; gap: 8px;
+    position: absolute; right: 12px; bottom: 12px; z-index: 20; }
+  .ti-fab-stack .ti-icon-btn, .ti-fab-stack .ti-live-btn {
+    width: 44px; height: 44px; border-radius: 12px;
+    box-shadow: var(--shadow-lg, 0 8px 30px rgba(15,23,42,.18)); }
+  .ti-fab-stack .ti-live-lbl { display: none; }
+  .ti-fab-stack .ti-live-btn .ti-live-dot { width: 10px; height: 10px; }
+
+  /* Bottom sheet: grabber + summary always visible; body per state. */
+  .ti-sheet { position: relative; z-index: 25; display: flex; flex-direction: column;
+    background: var(--color-surface-container-lowest, #ffffff);
+    border-top: 1px solid var(--color-border-subtle, #e3e8ef);
+    border-radius: 16px 16px 0 0; margin-top: -14px;
+    box-shadow: 0 -8px 30px rgba(15,23,42,.15);
+    padding-bottom: env(safe-area-inset-bottom); }
+  .ti-sheet-handle { display: flex; justify-content: center; background: none; border: 0;
+    cursor: pointer; padding: 14px 0 10px; min-height: 40px; }
+  .ti-grabber { width: 40px; height: 4px; border-radius: 9999px;
+    background: var(--color-border-subtle, #cbd5e1); }
+  .ti-sheet-bar { display: flex; align-items: center; gap: 8px; padding: 0 12px 10px; }
+  .ti-sheet-summary { flex: 1; display: flex; align-items: center; gap: 8px; min-height: 44px;
+    background: none; border: 0; padding: 0; cursor: pointer; text-align: left; color: inherit; }
+  .ti-sheet-title { font-family: var(--font-display, "Outfit", sans-serif); font-size: 12px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+  /* collapsed ≈ 76px: grabber zone + summary row. */
+  .ti-sheet.collapsed .ti-sheet-body { display: none; }
+  .ti-sheet-body { display: flex; flex-direction: column; min-height: 0; }
+  .ti-sheet.half .ti-sheet-body .ti-list { max-height: 32vh; max-height: 32dvh; }
+  .ti-sheet.full { position: absolute; left: 0; right: 0; bottom: 0; margin-top: 0; max-height: 88%; }
+  .ti-sheet.full .ti-sheet-body .ti-list { max-height: 60vh; max-height: 60dvh; }
+
+  /* Filters scroll sideways, never wrap. */
+  .ti-tabs { display: flex; overflow-x: auto; scrollbar-width: none; }
+  .ti-tabs::-webkit-scrollbar { display: none; }
+  .ti-tabs .ti-tab { flex: 0 0 auto; min-width: 84px; }
+
+  /* Compact empty state: small radar, two-line copy, same CTAs. */
+  .ti-empty-state { padding: 20px 16px 24px; }
+  .ti-empty-illu-wrap { max-width: 140px; margin-bottom: 8px; }
+  .ti-empty-title-long, .ti-empty-msg-long { display: none; }
+  .ti-empty-title-short, .ti-empty-msg-short { display: inline; }
 }
 
 @media (prefers-reduced-motion: reduce) {
