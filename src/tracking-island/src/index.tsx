@@ -10,7 +10,9 @@ function readConfig(): TrackingMapConfig {
   let parsed: Partial<TrackingMapConfig> = {};
   try { parsed = JSON.parse(raw); } catch { parsed = {}; }
   return {
-    Provider: 'auto',
+    Provider: 'google',
+    GoogleStyle: 'm',
+    GL: 'IN',
     OSMUrl: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     PollSec: 10,
     LiveEndpoint: '/api/v1/telemetry/live',

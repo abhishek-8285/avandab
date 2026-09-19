@@ -28,13 +28,15 @@ interface LiveDriverTrackingMapProps {
 export function LiveDriverTrackingMap({
   driverLatitude,
   driverLongitude,
-  pickupLatitude = 18.9500, // JNPT Port, Navi Mumbai
+  pickupLatitude = 18.9500,
   pickupLongitude = 72.9500,
-  destinationLatitude = 18.7500, // Chakan MIDC, Pune
+  destinationLatitude = 18.7500,
   destinationLongitude = 73.8500,
-  pickupLabel = 'JNPT Port, Navi Mumbai',
-  destinationLabel = 'Chakan MIDC, Pune',
-  vehicleLabel = 'DL-01-AB-1234',
+  // Labels default to empty: coordinates above are only an initial map
+  // center, never presented as trip data.
+  pickupLabel = '',
+  destinationLabel = '',
+  vehicleLabel = '',
   speedKmh = null,
   height = 280,
   onOpenExternalNav,

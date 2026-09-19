@@ -141,9 +141,10 @@ export default function MapViewport(p: Props) {
       maxBoundsViscosity: 1.0,
     }).setView(INDIA_CENTER, INDIA_DEFAULT_ZOOM);
 
-    // Spec 04 §2: OSM-only by default with mandatory attribution. Google
-    // tiles serve only when Provider is explicitly 'google' (opt-in).
-    const useGoogle = propsRef.current.provider === 'google';
+    // Google Maps tiles with gl=IN are the default for Indian compliance
+    // (Survey of India official boundary). Uses standard roadmap ('m') tiles.
+    // Falls back to OSM only when Provider is explicitly 'osm'.
+    const useGoogle = propsRef.current.provider !== 'osm';
     const tileUrl = useGoogle
       ? googleTileUrl(propsRef.current.googleStyle || 'm', propsRef.current.gl || 'IN')
       : (propsRef.current.osmUrl || OSM_DEFAULT_TILE_URL);

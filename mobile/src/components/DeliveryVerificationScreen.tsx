@@ -275,7 +275,7 @@ export function DeliveryVerificationScreen({
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 10 }}>
           <Text style={styles.headerTitle}>{t('delivery.header_title', 'PROOF OF DELIVERY (e-POD)', locale)}</Text>
-          <Text style={styles.headerSubtitle}>{t('delivery.trip_prefix', 'Trip #', locale)}{tripId || 'TRP-8491'}</Text>
+          <Text style={styles.headerSubtitle}>{t('delivery.trip_prefix', 'Trip #', locale)}{tripId || '—'}</Text>
         </View>
         <View style={[styles.readyPill, isVerified ? styles.readyPillDone : styles.readyPillPending]}>
           <Text style={[styles.readyPillText, isVerified ? styles.readyPillTextDone : styles.readyPillTextPending]}>
@@ -379,11 +379,11 @@ export function DeliveryVerificationScreen({
               <Text style={styles.autoFilledTag}>{t('delivery.auto_verified', '✓ AUTO-VERIFIED', locale)}</Text>
             </View>
             <Text style={styles.consigneeNameText} numberOfLines={1} ellipsizeMode="tail">{consigneeName}</Text>
-            <Text style={styles.consigneeSubText} numberOfLines={2} ellipsizeMode="tail">Gate 3 Receiving Bay • Chakan MIDC, Pune</Text>
+            <Text style={styles.consigneeSubText} numberOfLines={2} ellipsizeMode="tail">{t('delivery.consignee_hint', 'Enter consignee details below — nothing is pre-filled.', locale)}</Text>
             <View style={styles.divider} />
             <View style={styles.metaRow}>
-              <Text style={styles.metaText} accessibilityLabel="18 Tons Steel Coils" numberOfLines={1} ellipsizeMode="tail">📦 18 Tons Steel Coils</Text>
-              <Text style={styles.metaText} accessibilityLabel="E-way bill 7291-8841-0294" numberOfLines={1} ellipsizeMode="tail">📄 EWB #7291-8841-0294</Text>
+              <Text style={styles.metaText} numberOfLines={1} ellipsizeMode="tail">{t('delivery.cargo_hint', '📦 Cargo details appear here once entered.', locale)}</Text>
+              <Text style={styles.metaText} numberOfLines={1} ellipsizeMode="tail">{t('delivery.ewb_hint', '📄 E-way bill appears here once entered.', locale)}</Text>
             </View>
           </View>
 
