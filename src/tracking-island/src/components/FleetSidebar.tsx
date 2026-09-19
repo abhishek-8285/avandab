@@ -21,6 +21,7 @@ interface Props {
   vehicles: Map<string, LiveVehicle>;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onSheetChange?: () => void;
 }
 
 const TABS: { key: StatusFilter; label: string }[] = [
@@ -49,7 +50,7 @@ const SPEED_LIMIT_KMH = 80;
 
 // Collapsible fleet registry: fuzzy search (/ hotkey), status tabs,
 // sort control, windowed list (renders visible slice + overscan only).
-export default function FleetSidebar({ vehicles, selectedId, onSelect }: Props) {
+export default function FleetSidebar({ vehicles, selectedId, onSelect, onSheetChange }: Props) {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
   const [sort, setSort] = useState<SortKey>('status');
@@ -114,6 +115,16 @@ export default function FleetSidebar({ vehicles, selectedId, onSelect }: Props) 
   }, [counts.all]);
 
   const touchSheet = (s: SheetState) => { sheetTouched.current = true; setSheet(s); };
+
+  // Sheet geometry changed → parent re-measures the map. Skips the first
+  // render (no geometry change yet) and desktop (no sheet rendered).
+  const sheetCb = useRef(onSheetChange);
+  sheetCb.current = onSheetChange;
+  const firstSheet = useRef(true);
+  useEffect(() => {
+    if (firstSheet.current) { firstSheet.current = false; return; }
+    sheetCb.current?.();
+  }, [sheet]);
 
   const renderEmpty = () => (
     <div className="ti-empty-state">

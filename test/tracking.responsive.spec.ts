@@ -85,6 +85,14 @@ test('tracking responsive layout', async ({ page }) => {
     expect(theaterBox).not.toBeNull();
     expect(theaterBox!.x).toBeLessThanOrEqual(1);
     expect(theaterBox!.x + theaterBox!.width).toBeGreaterThanOrEqual(vw - 1);
+    // Overlay, not a split: theater keeps full root height behind the sheet
+    // (±2px: #tracking-root's own 1px border is inside its bounding box).
+    const rootBox = await page.locator('#tracking-root').boundingBox();
+    expect(rootBox).not.toBeNull();
+    expect(
+      Math.abs(theaterBox!.height - rootBox!.height),
+      'map owns full height, sheet overlays',
+    ).toBeLessThanOrEqual(2);
     // Expand to half — search, filters, rows appear.
     await page.locator('.ti-sheet-summary').click();
     await expect(page.locator('#fleet-sheet.half')).toBeVisible();

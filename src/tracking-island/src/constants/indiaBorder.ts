@@ -23,14 +23,6 @@ export const INDIA_DEFAULT_ZOOM = 5;
 export const INDIA_MIN_ZOOM = 4;
 export const INDIA_MAX_ZOOM = 22;
 
-// Phone default: central-India framing that keeps the Delhi–Mumbai–
-// Kolkata–Bengaluru corridor on screen at 390px wide. fitBounds on a tall
-// narrow viewport zooms out to half of Asia instead — never use it there.
-export const MOBILE_DEFAULT: { center: [number, number]; zoom: number } = {
-  center: [23.5, 79.5],
-  zoom: 5,
-};
-
 /** Default OSM tile endpoint (Spec 04 §2 default). */
 export const OSM_DEFAULT_TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 export const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
