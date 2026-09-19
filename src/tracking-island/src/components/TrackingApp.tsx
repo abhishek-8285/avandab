@@ -59,7 +59,11 @@ export default function TrackingApp({ config }: { config: TrackingMapConfig }) {
     conn === 'live' ? 'Live Stream' :
     conn === 'poll' ? 'Live (Polling)' :
     conn === 'connecting' ? 'Connecting…' : 'Offline';
-  const beaconColor = conn === 'live' ? '#22c55e' : conn === 'poll' ? '#0284c7' : conn === 'offline' ? '#dc2626' : '#f59e0b';
+  const beaconColor =
+    conn === 'live' ? 'var(--color-status-success, #059669)' :
+    conn === 'poll' ? 'var(--color-status-info, #2563eb)' :
+    conn === 'offline' ? 'var(--color-status-alert, #dc2626)' :
+    'var(--color-status-warning, #d97706)';
 
   return (
     <section className="ti-root" aria-label="Live fleet tracking">

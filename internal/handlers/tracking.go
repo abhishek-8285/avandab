@@ -22,7 +22,7 @@ func (h *TrackingHandlers) Page(w http.ResponseWriter, r *http.Request) {
 	cfg := h.Config
 	if cfg == nil {
 		cfg = &config.Config{LiveMap: config.LiveMapConfig{
-			MapTileProvider: "auto",
+			MapTileProvider: "google",
 			MapGoogleStyle:  "m",
 			MapGL:           "IN",
 			MapOSMURL:       "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",

@@ -1,6 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { Colors } from '../constants/theme';
-import { Linking, Platform } from 'react-native';
+import { Linking, Platform, Alert } from 'react-native';
 import { VoiceAnnouncement } from './voiceAnnouncement';
 import { getApiBaseURL } from '../constants/network';
 import { useAuthStore } from '../stores/authStore';
@@ -101,7 +101,9 @@ class MobileNotificationService {
               this.onAcceptDispatchCallback(targetTripId);
             }
           } else if (actionId === 'CALL_HUB') {
-            Linking.openURL('tel:+919820012345').catch(() => {});
+            // No dispatcher number exists on record — never dial a hardcoded
+            // one from a notification action.
+            Alert.alert('Call Hub', 'Dispatcher contact is not available for this trip.');
           }
         });
       }

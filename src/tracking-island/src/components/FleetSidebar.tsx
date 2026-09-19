@@ -30,7 +30,9 @@ const SORTS: { key: SortKey; label: string }[] = [
 ];
 
 const DOT: Record<string, string> = {
-  running: '#059669', stopped: '#d97706', alert: '#dc2626',
+  running: 'var(--color-status-success, #059669)',
+  stopped: 'var(--color-status-warning, #d97706)',
+  alert: 'var(--color-status-alert, #dc2626)',
 };
 
 const STATUS_LABEL: Record<string, string> = {
