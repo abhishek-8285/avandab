@@ -13,6 +13,20 @@ export function bucketOf(v: LiveVehicle): 'running' | 'stopped' | 'alert' {
   return 'stopped';
 }
 
+// Compact relative age for fleet rows ("2m ago"). Empty string when the fix
+// carries no usable timestamp — never fabricate freshness.
+export function timeAgo(ts?: string): string {
+  const t = ts ? Date.parse(ts) : NaN;
+  if (!Number.isFinite(t)) return '';
+  const s = Math.max(0, Math.round((Date.now() - t) / 1000));
+  if (s < 45) return 'just now';
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
 // Bearing in degrees between two coordinates (for marker rotation).
 export function bearingDeg(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const toRad = (d: number) => (d * Math.PI) / 180;

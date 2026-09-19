@@ -10,6 +10,7 @@ import {
   INDIA_DEFAULT_ZOOM,
   INDIA_MIN_ZOOM,
   INDIA_MAX_ZOOM,
+  MOBILE_DEFAULT,
   googleTileUrl,
   OSM_DEFAULT_TILE_URL,
   OSM_ATTRIBUTION,
@@ -127,11 +128,13 @@ export default function MapViewport(p: Props) {
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef(new Map<string, L.Marker>());
   const animsRef = useRef(new Map<string, Anim>());
+  const fittedRef = useRef(false);
   const geoLayerRef = useRef<L.LayerGroup | null>(null);
   const propsRef = useRef(p);
   propsRef.current = p;
 
   useEffect(() => {
+    const narrow = typeof window !== 'undefined' && window.innerWidth < 768;
     const map = L.map(divRef.current!, {
       zoomControl: true,
       attributionControl: true,
@@ -161,7 +164,13 @@ export default function MapViewport(p: Props) {
 
     setTimeout(() => {
       map.invalidateSize();
-      map.fitBounds(INDIA_BOUNDS, { padding: [15, 15] });
+      if (narrow) {
+        // Phones: fitBounds on a tall narrow map zooms out to half of Asia.
+        // Fixed central-India framing instead (Delhi–Mumbai–Kolkata–Bengaluru).
+        map.setView(MOBILE_DEFAULT.center, MOBILE_DEFAULT.zoom);
+      } else {
+        map.fitBounds(INDIA_BOUNDS, { padding: [15, 15] });
+      }
     }, 100);
     let ro: ResizeObserver | null = null;
     if (window.ResizeObserver && divRef.current) {
@@ -247,6 +256,13 @@ export default function MapViewport(p: Props) {
     }
     for (const [id, mk] of markers) {
       if (!seen.has(id)) { map.removeLayer(mk); markers.delete(id); anims.delete(id); }
+    }
+    // First fleet snapshot: frame the vehicles, not the subcontinent.
+    // Once only — later pans/zooms belong to the user.
+    if (!fittedRef.current && markers.size > 0) {
+      fittedRef.current = true;
+      const pts = [...markers.values()].map((m) => m.getLatLng());
+      map.fitBounds(L.latLngBounds(pts).pad(0.15), { maxZoom: 16, animate: !REDUCED_MOTION });
     }
     (map as unknown as { __kick?: (n: number) => void }).__kick?.(now);
 
