@@ -695,6 +695,7 @@ func main() {
 	r.NotFound(app.NotFoundHandler)
 	r.MethodNotAllowed(app.MethodNotAllowedHandler)
 	r.Use(middleware.RequestID)
+	r.Use(middleware.ClientIPToContext)
 	r.Use(middleware.SecurityHeaders)
 	// Gzip every compressible response (HTML/JSON/CSS/JS). SSE streams
 	// exempted — compression buffers Flush and breaks realtime push.

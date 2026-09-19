@@ -708,7 +708,7 @@ func (h *CustomerHandlers) computeCustomerStatement(ctx context.Context, tenantI
 		       COALESCE(p.reference, ''), COALESCE(p.remarks, ''), i.invoice_number
 		FROM payments p
 		JOIN invoices i ON p.invoice_id = i.id
-		WHERE i.customer_id = $1 AND p.tenant_id = $2
+		WHERE i.customer_id = $1 AND p.tenant_id = $2 AND i.tenant_id = $2
 		ORDER BY p.payment_date ASC
 	`, customerID, string(tenantID))
 	if err != nil {
@@ -744,7 +744,7 @@ func (h *CustomerHandlers) computeCustomerStatement(ctx context.Context, tenantI
 		SELECT n.id, i.invoice_number, n.note_number, n.note_type, n.reason, n.total, n.created_at
 		FROM credit_debit_notes n
 		JOIN invoices i ON n.invoice_id = i.id
-		WHERE i.customer_id = $1 AND n.tenant_id = $2
+		WHERE i.customer_id = $1 AND n.tenant_id = $2 AND i.tenant_id = $2
 		ORDER BY n.created_at ASC
 	`, customerID, string(tenantID))
 	if errNotes == nil {
@@ -919,7 +919,7 @@ func (h *CustomerHandlers) fetchUnbilledTrips(
 				WHERE td.trip_id = t.id AND td.tenant_id = t.tenant_id AND td.status != 'waived' AND td.amount > 0
 			), 0) AS detention_amount
 		FROM trips t
-		JOIN bookings b ON t.booking_id = b.id
+		JOIN bookings b ON t.booking_id = b.id AND b.tenant_id = $2
 		LEFT JOIN routes r ON t.route_id = r.id
 		LEFT JOIN vehicles v ON t.vehicle_id = v.id
 		LEFT JOIN drivers d ON t.driver_id = d.id

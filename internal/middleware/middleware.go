@@ -37,6 +37,22 @@ func RequestID(next http.Handler) http.Handler {
 	})
 }
 
+// ClientIPToContext extracts client IP and geographic location and injects them
+// into the request context for all requests (authenticated and unauthenticated),
+// ensuring audit loggers, rate limiters, and telemetry handlers have access to origin IP.
+func ClientIPToContext(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		if ctx.Value(auth.ContextIP) == nil {
+			ctx = context.WithValue(ctx, auth.ContextIP, auth.ClientIP(r))
+		}
+		if ctx.Value(auth.ContextLocation) == nil {
+			ctx = context.WithValue(ctx, auth.ContextLocation, auth.ClientLocation(r))
+		}
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 // Logger logs request details and duration.
 func Logger(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

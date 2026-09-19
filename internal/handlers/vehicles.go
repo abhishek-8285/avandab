@@ -242,11 +242,12 @@ func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 	}
 	files, _ := h.Services.Files.GetFilesByEntity(r.Context(), "vehicle_insurance", id)
 
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
 	var maintDue, maintOvBy, maintOvReason sql.NullString
 	var maintOvAt sql.NullTime
 	_ = h.DB.QueryRowContext(r.Context(), `
 		SELECT maintenance_due, maintenance_override_by, maintenance_override_at, maintenance_override_reason
-		FROM vehicles WHERE id = $1`, id).Scan(&maintDue, &maintOvBy, &maintOvAt, &maintOvReason)
+		FROM vehicles WHERE id = $1 AND tenant_id = $2`, id, tenantID).Scan(&maintDue, &maintOvBy, &maintOvAt, &maintOvReason)
 
 	// Compliance doc-expiry strip: RC/permit/fitness/insurance/PUCC with days left.
 	type docStatus struct {
@@ -294,7 +295,7 @@ func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 	trips := []recentTrip{}
 	if rows, err := h.DB.QueryContext(r.Context(), `
 		SELECT id, trip_number, status, created_at FROM trips
-		WHERE vehicle_id = $1 ORDER BY created_at DESC LIMIT 5`, id); err == nil {
+		WHERE vehicle_id = $1 AND tenant_id = $2 ORDER BY created_at DESC LIMIT 5`, id, tenantID); err == nil {
 		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var t recentTrip
@@ -358,9 +359,10 @@ func (h *VehicleHandlers) Edit(w http.ResponseWriter, r *http.Request) {
 
 	var maintDue, maintOvBy, maintOvReason sql.NullString
 	var maintOvAt sql.NullTime
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
 	_ = h.DB.QueryRowContext(r.Context(), `
 		SELECT maintenance_due, maintenance_override_by, maintenance_override_at, maintenance_override_reason
-		FROM vehicles WHERE id = $1`, id).Scan(&maintDue, &maintOvBy, &maintOvAt, &maintOvReason)
+		FROM vehicles WHERE id = $1 AND tenant_id = $2`, id, tenantID).Scan(&maintDue, &maintOvBy, &maintOvAt, &maintOvReason)
 
 	extra := map[string]interface{}{
 		"Vehicle":                   vehicle,
