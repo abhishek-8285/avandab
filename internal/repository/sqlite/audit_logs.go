@@ -29,6 +29,7 @@ func (r *SQLRepository) CreateAuditLog(ctx context.Context, log domain.AuditLog)
 		OldValues: nullString(log.OldValues),
 		NewValues: nullString(log.NewValues),
 		IpAddress: nullString(log.IPAddress),
+		Location:  nullString(log.Location),
 	})
 	if err != nil {
 		return domain.AuditLog{}, err
@@ -49,6 +50,7 @@ func (r *SQLRepository) CreateAuditLog(ctx context.Context, log domain.AuditLog)
 		OldValues: fromNullString(created.OldValues),
 		NewValues: fromNullString(created.NewValues),
 		IPAddress: fromNullString(created.IpAddress),
+		Location:  fromNullString(created.Location),
 		CreatedAt: created.CreatedAt,
 	}, nil
 }
@@ -66,7 +68,7 @@ func (r *SQLRepository) ListAuditLogs(ctx context.Context, limit, offset int) ([
 		result[i] = auditLogRowToWithUser(
 			row.ID, row.UserID, row.Action, row.TableName,
 			row.RecordID, row.OldValues, row.NewValues,
-			row.IpAddress, row.CreatedAt, row.UserName,
+			row.IpAddress, row.Location, row.CreatedAt, row.UserName,
 		)
 	}
 	return result, nil
@@ -89,7 +91,7 @@ func (r *SQLRepository) GetAuditLogsByRecord(ctx context.Context, tableName, rec
 		result[i] = auditLogRowToWithUser(
 			row.ID, row.UserID, row.Action, row.TableName,
 			row.RecordID, row.OldValues, row.NewValues,
-			row.IpAddress, row.CreatedAt, row.UserName,
+			row.IpAddress, row.Location, row.CreatedAt, row.UserName,
 		)
 	}
 	return result, nil
@@ -119,7 +121,7 @@ func (r *SQLRepository) ListAuditLogsDateRange(ctx context.Context, query string
 	qPattern := "%" + query + "%"
 	dateFrom, dateTo := shared.DayBoundsUTC(from, to)
 	rows, err := r.query(ctx, `
-SELECT a.id, a.user_id, a.action, a.table_name, a.record_id, a.old_values, a.new_values, a.ip_address, a.created_at,
+SELECT a.id, a.user_id, a.action, a.table_name, a.record_id, a.old_values, a.new_values, a.ip_address, a.location, a.created_at,
        u.name AS user_name
 FROM audit_logs a
 LEFT JOIN users u ON a.user_id = u.id
@@ -138,16 +140,16 @@ LIMIT ? OFFSET ?`,
 	result := make([]repository.AuditLogWithUser, 0)
 	for rows.Next() {
 		var id, action, tableName string
-		var userID, recordID, oldValues, newValues, ipAddress, userName sql.NullString
+		var userID, recordID, oldValues, newValues, ipAddress, location, userName sql.NullString
 		var createdAt time.Time
 		if err := rows.Scan(&id, &userID, &action, &tableName, &recordID,
-			&oldValues, &newValues, &ipAddress, &createdAt, &userName); err != nil {
+			&oldValues, &newValues, &ipAddress, &location, &createdAt, &userName); err != nil {
 			return nil, 0, err
 		}
 		result = append(result, auditLogRowToWithUser(
 			id, userID, action, tableName,
 			recordID, oldValues, newValues,
-			ipAddress, createdAt, userName,
+			ipAddress, location, createdAt, userName,
 		))
 	}
 	if err := rows.Err(); err != nil {

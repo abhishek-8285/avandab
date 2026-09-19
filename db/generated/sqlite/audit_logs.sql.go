@@ -37,9 +37,9 @@ func (q *Queries) CountAuditLogsSince(ctx context.Context, since time.Time) (int
 }
 
 const createAuditLog = `-- name: CreateAuditLog :one
-INSERT INTO audit_logs (id, user_id, action, table_name, record_id, old_values, new_values, ip_address)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, user_id, action, table_name, record_id, old_values, new_values, ip_address, created_at
+INSERT INTO audit_logs (id, user_id, action, table_name, record_id, old_values, new_values, ip_address, location)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, user_id, action, table_name, record_id, old_values, new_values, ip_address, location, created_at
 `
 
 type CreateAuditLogParams struct {
@@ -51,9 +51,23 @@ type CreateAuditLogParams struct {
 	OldValues sql.NullString `json:"old_values"`
 	NewValues sql.NullString `json:"new_values"`
 	IpAddress sql.NullString `json:"ip_address"`
+	Location  sql.NullString `json:"location"`
 }
 
-func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (AuditLog, error) {
+type CreateAuditLogRow struct {
+	ID        string         `json:"id"`
+	UserID    sql.NullString `json:"user_id"`
+	Action    string         `json:"action"`
+	TableName string         `json:"table_name"`
+	RecordID  sql.NullString `json:"record_id"`
+	OldValues sql.NullString `json:"old_values"`
+	NewValues sql.NullString `json:"new_values"`
+	IpAddress sql.NullString `json:"ip_address"`
+	Location  sql.NullString `json:"location"`
+	CreatedAt time.Time      `json:"created_at"`
+}
+
+func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (CreateAuditLogRow, error) {
 	row := q.db.QueryRowContext(ctx, createAuditLog,
 		arg.ID,
 		arg.UserID,
@@ -63,8 +77,9 @@ func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) 
 		arg.OldValues,
 		arg.NewValues,
 		arg.IpAddress,
+		arg.Location,
 	)
-	var i AuditLog
+	var i CreateAuditLogRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
@@ -74,13 +89,14 @@ func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) 
 		&i.OldValues,
 		&i.NewValues,
 		&i.IpAddress,
+		&i.Location,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getAuditLogs = `-- name: GetAuditLogs :many
-SELECT a.id, a.user_id, a.action, a.table_name, a.record_id, a.old_values, a.new_values, a.ip_address, a.created_at,
+SELECT a.id, a.user_id, a.action, a.table_name, a.record_id, a.old_values, a.new_values, a.ip_address, a.location, a.created_at,
        u.name AS user_name
 FROM audit_logs a
 LEFT JOIN users u ON a.user_id = u.id
@@ -102,6 +118,7 @@ type GetAuditLogsRow struct {
 	OldValues sql.NullString `json:"old_values"`
 	NewValues sql.NullString `json:"new_values"`
 	IpAddress sql.NullString `json:"ip_address"`
+	Location  sql.NullString `json:"location"`
 	CreatedAt time.Time      `json:"created_at"`
 	UserName  sql.NullString `json:"user_name"`
 }
@@ -124,6 +141,7 @@ func (q *Queries) GetAuditLogs(ctx context.Context, arg GetAuditLogsParams) ([]G
 			&i.OldValues,
 			&i.NewValues,
 			&i.IpAddress,
+			&i.Location,
 			&i.CreatedAt,
 			&i.UserName,
 		); err != nil {
@@ -141,7 +159,7 @@ func (q *Queries) GetAuditLogs(ctx context.Context, arg GetAuditLogsParams) ([]G
 }
 
 const getAuditLogsByRecord = `-- name: GetAuditLogsByRecord :many
-SELECT a.id, a.user_id, a.action, a.table_name, a.record_id, a.old_values, a.new_values, a.ip_address, a.created_at,
+SELECT a.id, a.user_id, a.action, a.table_name, a.record_id, a.old_values, a.new_values, a.ip_address, a.location, a.created_at,
        u.name AS user_name
 FROM audit_logs a
 LEFT JOIN users u ON a.user_id = u.id
@@ -165,6 +183,7 @@ type GetAuditLogsByRecordRow struct {
 	OldValues sql.NullString `json:"old_values"`
 	NewValues sql.NullString `json:"new_values"`
 	IpAddress sql.NullString `json:"ip_address"`
+	Location  sql.NullString `json:"location"`
 	CreatedAt time.Time      `json:"created_at"`
 	UserName  sql.NullString `json:"user_name"`
 }
@@ -187,6 +206,7 @@ func (q *Queries) GetAuditLogsByRecord(ctx context.Context, arg GetAuditLogsByRe
 			&i.OldValues,
 			&i.NewValues,
 			&i.IpAddress,
+			&i.Location,
 			&i.CreatedAt,
 			&i.UserName,
 		); err != nil {
