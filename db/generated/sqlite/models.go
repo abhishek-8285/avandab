@@ -129,6 +129,7 @@ type AuditLog struct {
 	NewValues sql.NullString `json:"new_values"`
 	IpAddress sql.NullString `json:"ip_address"`
 	CreatedAt time.Time      `json:"created_at"`
+	Location  sql.NullString `json:"location"`
 }
 
 type Booking struct {

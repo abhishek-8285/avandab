@@ -16,5 +16,6 @@ type AuditLog struct {
 	OldValues *string
 	NewValues *string
 	IPAddress *string
+	Location  *string
 	CreatedAt time.Time
 }
