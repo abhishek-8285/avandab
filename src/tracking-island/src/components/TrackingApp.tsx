@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { GeofenceZone, LiveVehicle, TrackingMapConfig } from '../types';
 import { hasPos, useTelemetryFeed } from '../hooks';
 import MapViewport, { type MapHandle } from './MapViewport';
@@ -21,7 +21,15 @@ export default function TrackingApp({ config }: { config: TrackingMapConfig }) {
   const [follow, setFollow] = useState(false);
   const [geofences, setGeofences] = useState<GeofenceZone[]>([]);
   const [showGeofences, setShowGeofences] = useState(true);
+  // Sheet open/close must re-measure the map (center+zoom preserved by
+  // invalidateSize). Stable ref so the sidebar effect fires only on change.
   const [handle, setHandle] = useState<MapHandle | null>(null);
+  const handleRef = useRef<MapHandle | null>(null);
+  const setHandleRef = useCallback((h: MapHandle | null) => {
+    handleRef.current = h;
+    setHandle(h);
+  }, []);
+  const invalidateMap = useCallback(() => { handleRef.current?.invalidate(); }, []);
 
   useEffect(() => {
     let live = true;
@@ -65,8 +73,8 @@ export default function TrackingApp({ config }: { config: TrackingMapConfig }) {
     conn === 'offline' ? 'var(--color-status-alert, #dc2626)' :
     'var(--color-status-warning, #d97706)';
 
-  // Tap a vehicle → center it. Desktop keeps select-only (inspector-driven);
-  // on phones the sheet covers the map, so centering is the whole point.
+  // Tap a vehicle → select + center on phones (the sheet covers the map);
+  // desktop keeps select-only, inspector-driven.
   const selectVehicle = (id: string | null) => {
     setSelectedId(id);
     if (id) {
@@ -108,7 +116,7 @@ export default function TrackingApp({ config }: { config: TrackingMapConfig }) {
 
   return (
     <section className="ti-root" aria-label="Live fleet tracking">
-      <FleetSidebar vehicles={vehicles} selectedId={selectedId} onSelect={selectVehicle} />
+      <FleetSidebar vehicles={vehicles} selectedId={selectedId} onSelect={selectVehicle} onSheetChange={invalidateMap} />
       <div id="map-theater" className="ti-main">
         <div className="ti-topbar">
           <span className={'ti-badge ' + conn} aria-live="polite">
@@ -130,7 +138,7 @@ export default function TrackingApp({ config }: { config: TrackingMapConfig }) {
         <MapViewport vehicles={vehicles} version={version} selectedId={selectedId} follow={follow}
           geofences={geofences} showGeofences={showGeofences} osmUrl={config.OSMUrl}
           provider={config.Provider} googleStyle={config.GoogleStyle} gl={config.GL}
-          onSelect={selectVehicle} handleRef={setHandle} />
+          onSelect={selectVehicle} handleRef={setHandleRef} />
         {/* Mobile: topbar keeps badge/clock/density; actions float over the map. */}
         <div className="ti-fab-stack" role="group" aria-label="Map actions">
           {refreshBtn('refresh-feed-btn-m')}

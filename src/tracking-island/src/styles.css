@@ -318,20 +318,22 @@
   .ti-sync { white-space: nowrap; font-size: 9px; }
 
   .ti-fab-stack { display: flex; flex-direction: column; gap: 8px;
-    position: absolute; right: 12px; bottom: 12px; z-index: 20; }
+    position: absolute; top: 60px; right: 12px; z-index: 20; }
   .ti-fab-stack .ti-icon-btn, .ti-fab-stack .ti-live-btn {
     width: 44px; height: 44px; border-radius: 12px;
     box-shadow: var(--shadow-lg, 0 8px 30px rgba(15,23,42,.18)); }
   .ti-fab-stack .ti-live-lbl { display: none; }
   .ti-fab-stack .ti-live-btn .ti-live-dot { width: 10px; height: 10px; }
 
-  /* Bottom sheet: grabber + summary always visible; body per state. */
-  .ti-sheet { position: relative; z-index: 25; display: flex; flex-direction: column;
+  /* Bottom sheet: true overlay — map keeps full theater height behind it
+   * in every state. Grabber + summary always visible; body per state. */
+  .ti-sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 25;
+    display: flex; flex-direction: column;
     background: var(--color-surface-container-lowest, #ffffff);
     border-top: 1px solid var(--color-border-subtle, #e3e8ef);
-    border-radius: 16px 16px 0 0; margin-top: -14px;
+    border-radius: 16px 16px 0 0;
     box-shadow: 0 -8px 30px rgba(15,23,42,.15);
-    padding-bottom: env(safe-area-inset-bottom); }
+    padding-bottom: max(16px, env(safe-area-inset-bottom)); }
   .ti-sheet-handle { display: flex; justify-content: center; background: none; border: 0;
     cursor: pointer; padding: 14px 0 10px; min-height: 40px; }
   .ti-grabber { width: 40px; height: 4px; border-radius: 9999px;
@@ -344,8 +346,8 @@
   /* collapsed ≈ 76px: grabber zone + summary row. */
   .ti-sheet.collapsed .ti-sheet-body { display: none; }
   .ti-sheet-body { display: flex; flex-direction: column; min-height: 0; }
-  .ti-sheet.half .ti-sheet-body .ti-list { max-height: 32vh; max-height: 32dvh; }
-  .ti-sheet.full { position: absolute; left: 0; right: 0; bottom: 0; margin-top: 0; max-height: 88%; }
+  .ti-sheet.half .ti-sheet-body .ti-list { max-height: 38vh; max-height: 38dvh; }
+  .ti-sheet.full { max-height: 88%; }
   .ti-sheet.full .ti-sheet-body .ti-list { max-height: 60vh; max-height: 60dvh; }
 
   /* Filters scroll sideways, never wrap. */
@@ -353,9 +355,10 @@
   .ti-tabs::-webkit-scrollbar { display: none; }
   .ti-tabs .ti-tab { flex: 0 0 auto; min-width: 84px; }
 
-  /* Compact empty state: small radar, two-line copy, same CTAs. */
-  .ti-empty-state { padding: 20px 16px 24px; }
-  .ti-empty-illu-wrap { max-width: 140px; margin-bottom: 8px; }
+  /* Compact empty state: small radar, tight copy, same CTAs. */
+  .ti-empty-state { padding: 16px 16px 20px; }
+  .ti-empty-illu-wrap { max-width: 140px; margin-bottom: 6px; }
+  .ti-empty-btns { gap: 8px; margin-top: 12px; }
   .ti-empty-title-long, .ti-empty-msg-long { display: none; }
   .ti-empty-title-short, .ti-empty-msg-short { display: inline; }
 }

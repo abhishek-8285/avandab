@@ -10,7 +10,6 @@ import {
   INDIA_DEFAULT_ZOOM,
   INDIA_MIN_ZOOM,
   INDIA_MAX_ZOOM,
-  MOBILE_DEFAULT,
   googleTileUrl,
   OSM_DEFAULT_TILE_URL,
   OSM_ATTRIBUTION,
@@ -97,6 +96,9 @@ interface Anim { fromLat: number; fromLng: number; toLat: number; toLng: number;
 export interface MapHandle {
   focus: (v: LiveVehicle) => void;
   fitAll: () => void;
+  // Re-measure after the bottom sheet opens/closes. invalidateSize keeps
+  // the current center+zoom — never a setView/fitBounds, never a reinit.
+  invalidate: () => void;
 }
 
 interface Props {
@@ -134,7 +136,6 @@ export default function MapViewport(p: Props) {
   propsRef.current = p;
 
   useEffect(() => {
-    const narrow = typeof window !== 'undefined' && window.innerWidth < 768;
     const map = L.map(divRef.current!, {
       zoomControl: true,
       attributionControl: true,
@@ -164,13 +165,7 @@ export default function MapViewport(p: Props) {
 
     setTimeout(() => {
       map.invalidateSize();
-      if (narrow) {
-        // Phones: fitBounds on a tall narrow map zooms out to half of Asia.
-        // Fixed central-India framing instead (Delhi–Mumbai–Kolkata–Bengaluru).
-        map.setView(MOBILE_DEFAULT.center, MOBILE_DEFAULT.zoom);
-      } else {
-        map.fitBounds(INDIA_BOUNDS, { padding: [15, 15] });
-      }
+      map.fitBounds(INDIA_BOUNDS, { padding: [15, 15] });
     }, 100);
     let ro: ResizeObserver | null = null;
     if (window.ResizeObserver && divRef.current) {
@@ -195,6 +190,7 @@ export default function MapViewport(p: Props) {
 
     propsRef.current.handleRef({
       focus: (v) => map.setView([v.lat, v.lng], Math.max(map.getZoom(), 14), { animate: !REDUCED_MOTION }),
+      invalidate: () => { requestAnimationFrame(() => map.invalidateSize()); },
       fitAll: () => {
         const pts = [...markersRef.current.values()].map((m) => m.getLatLng());
         if (pts.length > 0) {
