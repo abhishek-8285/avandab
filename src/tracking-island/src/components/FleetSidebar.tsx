@@ -231,7 +231,9 @@ export default function FleetSidebar({ vehicles, selectedId, onSelect, onSheetCh
             <TruckIcon className="ti-title-icon" />
             <span className="ti-sheet-title">{fleetLabel}</span>
           </button>
-          {sheet !== 'collapsed' ? (
+          {/* Zero fleet: half and full show the same short card, so the
+              expand chevron is dead weight — bar tap still toggles. */}
+          {!isEmpty && (sheet !== 'collapsed' ? (
             <button type="button" className="ti-icon-btn" onClick={() => touchSheet(sheet === 'full' ? 'half' : 'full')}
               aria-label={sheet === 'full' ? 'Exit full screen' : 'Expand to full screen'}>
               {sheet === 'full'
@@ -242,7 +244,7 @@ export default function FleetSidebar({ vehicles, selectedId, onSelect, onSheetCh
             <button type="button" className="ti-icon-btn ti-sheet-open" onClick={toggleHalf} aria-label="Expand fleet panel">
               <ChevronUpIcon className="ti-btn-svg" />
             </button>
-          )}
+          ))}
         </div>
         {sheet !== 'collapsed' && (
           <div className="ti-sheet-body">
