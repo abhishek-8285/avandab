@@ -337,8 +337,7 @@ test('vehicles widths 360-430 stay usable with long data', async ({ page }) => {
   }
 });
 
-test('vehicles filter hierarchy: one CTA, selects inside Filters, compact zero-state', async ({ page }) => {
-  await registerFreshUser(page, 'pw-vehhier');
+test('vehicles filter hierarchy: one CTA, selects inside Filters, compact zero-state', async ({ page }) => {  await registerFreshUser(page, 'pw-vehhier');
   await page.goto('/vehicles');
 
   // Information hierarchy, top to bottom: header CTA > chips > date > search >
@@ -380,4 +379,29 @@ test('vehicles filter hierarchy: one CTA, selects inside Filters, compact zero-s
   expect(await page.locator('#list-table a[href="/vehicles/new"]').count(), 'no CTA in zero-state').toBe(0);
   const emptyBox = await page.locator('#list-table td[colspan]').first().boundingBox();
   expect(emptyBox!.height, 'compact zero-state').toBeLessThan(300);
+});
+
+test('vehicles chip highlight follows the active filter over htmx', async ({ page }) => {
+  await registerFreshUser(page, 'pw-vehchipsync');
+  await seedVehicle(page, uniqueReg('S'));
+  await page.goto('/vehicles');
+  await expect(page.locator('table.rtable tbody tr')).toHaveCount(1, { timeout: 15000 });
+
+  // Chips live outside the #list-table swap target: without the sync script
+  // the highlight would freeze on the previously selected chip.
+  const chipOn = async (label: string) =>
+    await page.locator('form[data-filterbar] a[hx-get]', { hasText: label }).first().evaluate((el) =>
+      el.className.includes('bg-primary'),
+    );
+
+  await expect.poll(() => chipOn('All Units'), { timeout: 10000 }).toBe(true);
+  await page.locator('form[data-filterbar] a[hx-get]', { hasText: 'Out of Service' }).first().click();
+  await expect(page.locator('#list-table')).toContainText('No vehicles found', { timeout: 15000 });
+  await expect.poll(() => chipOn('Out of Service'), { timeout: 10000 }).toBe(true);
+  expect(await chipOn('All Units')).toBe(false);
+
+  await page.locator('form[data-filterbar] a[hx-get]', { hasText: 'All Units' }).first().click();
+  await expect(page.locator('table.rtable tbody tr')).toHaveCount(1, { timeout: 15000 });
+  await expect.poll(() => chipOn('All Units'), { timeout: 10000 }).toBe(true);
+  expect(await chipOn('Out of Service')).toBe(false);
 });

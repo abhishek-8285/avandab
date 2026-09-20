@@ -46,3 +46,34 @@
         {{template "vehicle_list_table.html" .}}
     </div>
 </div>
+<script>
+    // htmx swaps only #list-table, so the server-rendered chip highlight would
+    // freeze on the previously selected chip. Re-derive it from the pushed URL
+    // after every list settle. Mirrors the server chip classes in filter_bar.
+    (function () {
+        var ON = ["border-primary", "bg-primary", "text-on-primary"];
+        var OFF = ["border-border-subtle", "bg-surface-container-lowest", "text-secondary", "hover:bg-surface-container-low"];
+        function statusOf(a) {
+            try { return new URL(a.getAttribute("href"), location.origin).searchParams.get("status") || ""; }
+            catch (e) { return ""; }
+        }
+        function syncChips() {
+            var cur = "";
+            try { cur = new URL(location.href).searchParams.get("status") || ""; } catch (e) { cur = ""; }
+            document.querySelectorAll('form[data-filterbar] a[hx-get]').forEach(function (a) {
+                var on = statusOf(a) === cur;
+                a.classList.remove.apply(a.classList, on ? OFF : ON);
+                a.classList.add.apply(a.classList, on ? ON : OFF);
+            });
+        }
+        // Vendored htmx uses colon-namespaced events (htmx:after:settle, …),
+        // dispatched on document when the target is detached — listen at
+        // document level, not body.
+        document.addEventListener("htmx:after:settle", function (e) {
+            if (e.detail && e.detail.target && e.detail.target.closest && e.detail.target.closest("#list-table")) syncChips();
+        });
+        // after:settle can run before hx-push-url commits location.href; the
+        // push event always sees the final URL.
+        document.addEventListener("htmx:after:history:push", syncChips);
+    })();
+</script>
