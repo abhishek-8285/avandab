@@ -9,9 +9,11 @@ import (
 	"html/template"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -316,6 +318,9 @@ func parseTemplatesLang(authSrv auth.AuthorizationService, lang string) (*templa
 		},
 		"formatDateTime": formatDateTime,
 		"formatDate":     formatDate,
+		"formatOdometer": formatOdometer,
+		"formatKmpl":     formatKmpl,
+		"derefNum":       derefNum,
 		"datetime": func(t time.Time) string {
 			return t.Format("02-01-2006 15:04")
 		},
@@ -604,6 +609,60 @@ func formatDateTime(t time.Time) string {
 
 func formatDate(t time.Time) string {
 	return t.Format("02-01-2006")
+}
+
+// formatOdometer renders the vehicle odometer for display. CurrentMileage is
+// *float64 (nil = never recorded) and Odometer is a plain float64 (0 =
+// unset), so templates must NOT pass the pointer straight to printf: Go
+// formats a *float64 as %!f(*float64=0x...) — the "%{...} km" garbage seen on
+// the Vehicle View page. Nil/zero everywhere renders "—", never raw syntax.
+func formatOdometer(current *float64, odo float64) string {
+	// A non-nil CurrentMileage is an explicit reading — even 0 km is real
+	// data ("0 km"), distinct from "never recorded" (nil + zero → "—").
+	if current != nil {
+		return groupThousands(int64(math.Round(*current))) + " km"
+	}
+	if odo == 0 {
+		return "—"
+	}
+	return groupThousands(int64(math.Round(odo))) + " km"
+}
+
+// formatKmpl renders an optional KMPL norm: nil = no norm ("—").
+func formatKmpl(f *float64) string {
+	if f == nil {
+		return "—"
+	}
+	return fmt.Sprintf("%.2f", *f)
+}
+
+// derefNum unwraps an optional *float64 for value position (edit-form
+// prefill): nil/false → "" so blank stays blank instead of printing a
+// pointer address or 0. Non-pointer values pass through untouched.
+func derefNum(v any) any {
+	if p, ok := v.(*float64); ok {
+		if p == nil {
+			return ""
+		}
+		return *p
+	}
+	return v
+}
+
+// groupThousands formats an integer with "," separators ("12345" → "12,345").
+func groupThousands(n int64) string {
+	neg := n < 0
+	if neg {
+		n = -n
+	}
+	s := strconv.FormatInt(n, 10)
+	for i := len(s) - 3; i > 0; i -= 3 {
+		s = s[:i] + "," + s[i:]
+	}
+	if neg {
+		s = "-" + s
+	}
+	return s
 }
 
 // PageData is the base data passed to all page templates.

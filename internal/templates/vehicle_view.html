@@ -1,6 +1,19 @@
 <a href="/vehicles" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> {{t "fl.vehicles"}}</a>
 
-<div class="space-y-5 max-w-[1600px] mx-auto">
+<style>
+/* Vehicle View progressive disclosure: secondary sections are native
+   <details> (no-JS safe: rendered open). On phones they start collapsed;
+   on md+ the headers are inert and chevrons hidden, so desktop is unchanged. */
+details.vsec > summary { list-style: none; }
+details.vsec > summary::-webkit-details-marker { display: none; }
+details.vsec .vsec-chev { transition: transform .15s ease; }
+details.vsec:not([open]) .vsec-chev { transform: rotate(-90deg); }
+@media (min-width: 768px) {
+    details.vsec > summary { cursor: default; pointer-events: none; }
+    details.vsec .vsec-chev { display: none; }
+}
+</style>
+<div class="space-y-5 max-w-[1600px] mx-auto" data-vehicle-view>
 
 <div class="relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm">
     <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-violet-500 to-cyan-400 opacity-90"></div>
@@ -28,26 +41,26 @@
             </div>
         </div>
 
-        <dl class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5 pt-5 border-t border-border-subtle">
-            <div class="rounded-xl bg-surface-container-low p-3">
+        <dl class="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-5 pt-5 border-t border-border-subtle" data-summary>
+            <div class="rounded-xl bg-surface-container-low p-3 min-w-0">
                 <dt class="text-eyebrow text-text-muted">{{t "fl.status"}}</dt>
                 <dd class="mt-1"><span class="status-badge {{statusBadge .Vehicle.Status}}">{{.Vehicle.Status}}</span></dd>
             </div>
-            <div class="rounded-xl bg-surface-container-low p-3">
+            <div class="rounded-xl bg-surface-container-low p-3 min-w-0">
                 <dt class="text-eyebrow text-text-muted">{{t "fl.fuel"}}</dt>
-                <dd class="text-sm font-semibold text-on-surface capitalize mt-1">{{.Vehicle.FuelType}}</dd>
+                <dd class="text-[15px] md:text-sm font-semibold text-on-surface capitalize mt-1 truncate">{{.Vehicle.FuelType}}</dd>
             </div>
-            <div class="rounded-xl bg-surface-container-low p-3">
+            <div class="rounded-xl bg-surface-container-low p-3 min-w-0">
                 <dt class="text-eyebrow text-text-muted">{{t "fl.capacity"}}</dt>
-                <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{print .Vehicle.Capacity}}</dd>
+                <dd class="text-[15px] md:text-sm font-semibold text-on-surface tabular-nums mt-1 truncate" data-numeric>{{print .Vehicle.Capacity}}</dd>
             </div>
-            <div class="rounded-xl bg-surface-container-low p-3">
+            <div class="rounded-xl bg-surface-container-low p-3 min-w-0">
                 <dt class="text-eyebrow text-text-muted">{{t "fl.odometer"}}</dt>
-                <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{if .Vehicle.CurrentMileage}}{{printf "%.0f" .Vehicle.CurrentMileage}}{{else if .Vehicle.Odometer}}{{printf "%.0f" .Vehicle.Odometer}}{{else}}0{{end}} km</dd>
+                <dd class="text-[15px] md:text-sm font-semibold text-on-surface tabular-nums mt-1 truncate" data-numeric data-odometer>{{formatOdometer .Vehicle.CurrentMileage .Vehicle.Odometer}}</dd>
             </div>
-            <div class="rounded-xl bg-surface-container-low p-3">
+            <div class="rounded-xl bg-surface-container-low p-3 min-w-0">
                 <dt class="text-eyebrow text-text-muted">{{t "fl.standard_kmpl"}}</dt>
-                <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1" data-numeric>{{if .Vehicle.StandardKmpl}}{{printf "%.2f" .Vehicle.StandardKmpl}}{{else}}—{{end}}</dd>
+                <dd class="text-[15px] md:text-sm font-semibold text-on-surface tabular-nums mt-1 truncate" data-numeric data-kmpl>{{formatKmpl .Vehicle.StandardKmpl}}</dd>
             </div>
         </dl>
     </div>
@@ -55,24 +68,25 @@
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
     <div class="lg:col-span-2 space-y-4">
-        <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
-            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+        <details class="vsec bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden" data-section="compliance" data-m-open="0" open>
+            <summary class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 cursor-pointer">
                 <div>
                     <h2 class="text-sm font-bold text-on-surface">{{t "fl.compliance"}}</h2>
                     <p class="text-xs text-text-muted">{{t "fl.document_expiry_and_maintenance_standing"}}</p>
                 </div>
-            </div>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="vsec-chev w-4 h-4 shrink-0 text-text-muted"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
             <div class="p-5">
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                     <div class="sm:col-span-2">
                         <dt class="text-eyebrow text-text-muted">{{t "fl.documents"}}</dt>
                         <dd class="mt-2">
-                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 md:gap-3">
                                 {{range .DocCards}}
-                                <div class="rounded-xl border border-border-subtle bg-surface-container-low p-3">
-                                    <p class="text-eyebrow text-text-muted">{{.Name}}</p>
+                                <div class="rounded-xl border border-border-subtle bg-surface-container-low p-2.5 md:p-3 min-w-0">
+                                    <p class="text-eyebrow text-text-muted truncate">{{.Name}}</p>
                                     {{if .HasDate}}
-                                    <p class="text-sm font-bold text-on-surface mt-1 tabular-nums" data-numeric>{{.Expiry}}</p>
+                                    <p class="text-[13px] md:text-sm font-bold text-on-surface mt-1 tabular-nums whitespace-nowrap" data-numeric>{{.Expiry}}</p>
                                     {{if lt .Days 0}}
                                     <span class="inline-flex mt-1.5 px-2 py-0.5 rounded-full text-[11px] font-bold bg-status-alert/10 text-status-alert border border-status-alert/20">{{t "fl.expired"}}</span>
                                     {{else if lt .Days 30}}
@@ -103,15 +117,16 @@
                     </div>
                 </dl>
             </div>
-        </section>
+        </details>
 
-        <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
-            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+        <details class="vsec bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden" data-section="fleet" data-m-open="0" open>
+            <summary class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 cursor-pointer">
                 <div>
                     <h2 class="text-sm font-semibold text-on-surface">{{t "fl.fleet_object"}}</h2>
                     <p class="text-xs text-text-muted">{{t "fl.sop_registry_master_data_general_organizatio"}}</p>
                 </div>
-            </div>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="vsec-chev w-4 h-4 shrink-0 text-text-muted"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
             <div class="p-5">
                 <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
                     <div>
@@ -144,17 +159,20 @@
                     </div>
                     <div>
                         <dt class="text-eyebrow text-text-muted">{{t "fl.engine_serial_no"}}</dt>
-                        <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1">{{or .Vehicle.Profile.EngineNumber "—"}}</dd>
+                        <dd class="text-sm font-semibold text-on-surface tabular-nums mt-1 break-all">{{or .Vehicle.Profile.EngineNumber "—"}}</dd>
                     </div>
                 </dl>
             </div>
-        </section>
+        </details>
 
-        <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
-            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+        <details class="vsec bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden" data-section="trips" data-m-open="0" open>
+            <summary class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 cursor-pointer">
                 <h2 class="text-sm font-bold text-on-surface">{{t "fl.recent_trips"}}</h2>
-                {{if .RecentTrips}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .RecentTrips}}</span>{{end}}
-            </div>
+                <span class="flex items-center gap-2">
+                    {{if .RecentTrips}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .RecentTrips}}</span>{{end}}
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="vsec-chev w-4 h-4 shrink-0 text-text-muted"><path d="m6 9 6 6 6-6"/></svg>
+                </span>
+            </summary>
             <div class="p-2">
                 {{if .RecentTrips}}
                 <div class="divide-y divide-border-subtle">
@@ -169,19 +187,22 @@
                     {{end}}
                 </div>
                 {{else}}
-                <p class="text-sm text-text-muted px-3 py-4">{{t "fl.no_trips_assigned_to_this_vehicle_yet"}}</p>
+                <p class="text-[13px] text-text-muted px-3 py-2" data-empty-trips>{{t "fl.no_trips_assigned_to_this_vehicle_yet"}}</p>
                 {{end}}
             </div>
-        </section>
+        </details>
 
-        <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
-            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+        <details class="vsec bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden" data-section="measuring" data-m-open="0" open>
+            <summary class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 cursor-pointer">
                 <div>
                     <h2 class="text-sm font-semibold text-on-surface">{{t "fl.measuring_points"}}</h2>
                     <p class="text-xs text-text-muted">{{t "fl.sop_ik01_counters_odo_top_up_pump"}}</p>
                 </div>
-                {{if .MeasuringPoints}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-semibold tabular-nums border border-border-subtle">{{len .MeasuringPoints}}</span>{{end}}
-            </div>
+                <span class="flex items-center gap-2">
+                    {{if .MeasuringPoints}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-semibold tabular-nums border border-border-subtle">{{len .MeasuringPoints}}</span>{{end}}
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="vsec-chev w-4 h-4 shrink-0 text-text-muted"><path d="m6 9 6 6 6-6"/></svg>
+                </span>
+            </summary>
             <div class="p-2">
                 {{if .MeasuringPoints}}
                 <div class="divide-y divide-border-subtle">
@@ -195,54 +216,57 @@
                         <form method="POST" action="/vehicles/points/{{.ID}}/measurements" class="flex flex-wrap items-center gap-2 mt-2">
                             <input type="hidden" name="vehicle_id" value="{{$.Vehicle.ID}}">
                             <input aria-label="{{t "fl.counter_reading"}}" type="number" step="any" min="0" name="counter_reading" placeholder="{{t "fl.counter_reading"}}" required
-                                class="w-36 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
+                                class="w-full sm:w-36 max-w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
                             <input aria-label="{{t "fl.read_by"}}" autocomplete="off" type="text" name="read_by" placeholder="{{t "fl.read_by"}}"
-                                class="w-28 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
-                            <button type="submit" class="inline-flex items-center justify-center rounded-full bg-primary text-on-primary px-3 py-1.5 text-xs font-semibold shadow-sm hover:bg-primary/90 transition cursor-pointer">{{t "fl.record_ik11"}}</button>
+                                class="w-full sm:w-28 max-w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
+                            <button type="submit" class="inline-flex items-center justify-center rounded-full bg-primary text-on-primary px-3 py-1.5 text-xs font-semibold shadow-sm hover:bg-primary/90 transition cursor-pointer max-w-full">{{t "fl.record_ik11"}}</button>
                         </form>
                     </div>
                     {{end}}
                 </div>
                 {{else}}
-                <p class="text-sm text-text-muted px-3 py-4">{{t "fl.no_measuring_points_registered_yet"}}</p>
+                <p class="text-[13px] text-text-muted px-3 py-2" data-empty-points>{{t "fl.no_measuring_points_registered_yet"}}</p>
                 {{end}}
                 <form method="POST" action="/vehicles/{{.Vehicle.ID}}/points" class="flex flex-wrap items-center gap-2 px-3 py-3 border-t border-border-subtle mt-1">
-                    <select name="kind" aria-label="{{t "fl.reading_kind"}}" class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary transition">
+                    <select name="kind" aria-label="{{t "fl.reading_kind"}}" class="max-w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary transition">
                         <option value="ODO">{{t "fl.odo"}}</option>
                         <option value="FUEL_TOPUP">{{t "fl.fuel_top_up"}}</option>
                         <option value="PUMP">{{t "fl.pump"}}</option>
                     </select>
                     <input aria-label="{{t "fl.annual_est_km"}}" type="number" step="any" min="0" name="annual_estimate" placeholder="{{t "fl.annual_est_km"}}"
-                        class="w-36 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary transition">
+                        class="w-full sm:w-36 max-w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface tabular-nums focus:outline-none focus:border-primary transition">
                     <input aria-label="{{t "fl.description"}}" autocomplete="off" type="text" name="description" placeholder="{{t "fl.description"}}"
-                        class="flex-1 min-w-32 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary transition">
-                    <button type="submit" class="inline-flex items-center justify-center rounded-full bg-surface-container border border-border-subtle px-3 py-1.5 text-xs font-semibold text-on-surface hover:bg-surface-container-low transition cursor-pointer">{{t "fl.create_ik01_point"}}</button>
+                        class="w-full sm:w-auto sm:flex-1 sm:min-w-32 max-w-full bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface placeholder:text-text-muted focus:outline-none focus:border-primary transition">
+                    <button type="submit" class="inline-flex items-center justify-center rounded-full bg-surface-container border border-border-subtle px-3 py-1.5 text-xs font-semibold text-on-surface hover:bg-surface-container-low transition cursor-pointer max-w-full">{{t "fl.create_ik01_point"}}</button>
                 </form>
             </div>
-        </section>
+        </details>
 
         {{if .RecentMeasurements}}
-        <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
-            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+        <details class="vsec bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden" data-section="measurements" data-m-open="0" open>
+            <summary class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 cursor-pointer">
                 <h2 class="text-sm font-semibold text-on-surface">{{t "fl.recent_measurements"}}</h2>
-                <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-semibold tabular-nums border border-border-subtle">{{len .RecentMeasurements}}</span>
-            </div>
+                <span class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-semibold tabular-nums border border-border-subtle">{{len .RecentMeasurements}}</span>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="vsec-chev w-4 h-4 shrink-0 text-text-muted"><path d="m6 9 6 6 6-6"/></svg>
+                </span>
+            </summary>
             <div class="p-2">
                 <div class="divide-y divide-border-subtle">
                     {{range .RecentMeasurements}}
                     <div class="flex items-center justify-between gap-3 px-3 py-2">
-                        <span class="text-sm font-semibold text-on-surface tabular-nums">{{.Counter}} {{.Unit}}</span>
-                        <span class="text-xs text-text-muted tabular-nums">{{.Kind}} · {{.MeasPosition}}{{if .Difference}} · Δ {{.Difference}}{{end}}{{if .ReadBy}} · {{.ReadBy}}{{end}}</span>
+                        <span class="text-sm font-semibold text-on-surface tabular-nums min-w-0">{{.Counter}} {{.Unit}}</span>
+                        <span class="text-xs text-text-muted tabular-nums text-right min-w-0">{{.Kind}} · {{.MeasPosition}}{{if .Difference}} · Δ {{.Difference}}{{end}}{{if .ReadBy}} · {{.ReadBy}}{{end}}</span>
                     </div>
                     {{end}}
                 </div>
             </div>
-        </section>
+        </details>
         {{end}}
     </div>
 
     <div class="space-y-4">
-        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden" data-section="maintenance-status" data-maintenance>
             <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2 bg-gradient-to-r from-amber-500/[0.07] to-transparent">
                 <span class="w-7 h-7 rounded-lg bg-amber-soft border border-amber-line grid place-items-center text-amber-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
                 <h2 class="text-sm font-bold text-on-surface">{{t "fl.maintenance_status"}}</h2>
@@ -288,14 +312,17 @@
             </div>
         </div>
 
-        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
-            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 bg-gradient-to-r from-blue-500/[0.06] to-transparent">
+        <details class="vsec bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden" data-section="jobcards" data-m-open="0" open>
+            <summary class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 cursor-pointer bg-gradient-to-r from-blue-500/[0.06] to-transparent">
                 <div class="flex items-center gap-2">
                     <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></span>
                     <h2 class="text-sm font-bold text-on-surface">{{t "fl.open_job_cards"}}</h2>
                 </div>
-                {{if .OpenWorkOrders}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .OpenWorkOrders}}</span>{{end}}
-            </div>
+                <span class="flex items-center gap-2">
+                    {{if .OpenWorkOrders}}<span class="px-2 py-0.5 rounded-full bg-surface-container text-xs font-bold tabular-nums border border-border-subtle">{{len .OpenWorkOrders}}</span>{{end}}
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="vsec-chev w-4 h-4 shrink-0 text-text-muted"><path d="m6 9 6 6 6-6"/></svg>
+                </span>
+            </summary>
             <div class="p-2">
                 {{if .OpenWorkOrders}}
                 <div class="divide-y divide-border-subtle">
@@ -310,7 +337,7 @@
                     {{end}}
                 </div>
                 {{else}}
-                <p class="text-sm text-text-muted px-3 py-4">{{t "fl.no_open_job_cards_for_this_vehicle"}}</p>
+                <p class="text-[13px] text-text-muted px-3 py-2" data-empty-jobcards>{{t "fl.no_open_job_cards_for_this_vehicle"}}</p>
                 {{end}}
                 {{if can .User "maintenance" "create"}}
                 <div class="px-3 py-2 border-t border-border-subtle">
@@ -318,9 +345,9 @@
                 </div>
                 {{end}}
             </div>
-        </div>
+        </details>
 
-        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden" data-section="teleop" data-teleop>
             <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-2 bg-gradient-to-r from-red-500/[0.08] via-amber-500/[0.05] to-transparent">
                 <div class="flex items-center gap-2">
                     <span class="w-7 h-7 rounded-lg bg-red-soft border border-red-500/20 grid place-items-center text-red-mid">
@@ -334,23 +361,23 @@
             </div>
             <div class="p-5 space-y-4">
                 <div class="grid grid-cols-3 gap-2">
-                    <form method="POST" action="/vehicles/{{.Vehicle.ID}}/command" class="w-full">
+                    <form method="POST" action="/vehicles/{{.Vehicle.ID}}/command" class="w-full min-w-0">
                         <input type="hidden" name="command_type" value="E_STOP">
-                        <button type="submit" data-confirm="{{t "fl.emergency_stop_immediately_halt_this_autonom"}}" class="w-full py-2.5 px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs tracking-wider shadow-sm transition flex flex-col items-center justify-center gap-1 cursor-pointer">
+                        <button type="submit" data-confirm="{{t "fl.emergency_stop_immediately_halt_this_autonom"}}" class="w-full py-2.5 px-1 sm:px-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-[11px] sm:text-xs tracking-wider shadow-sm transition flex flex-col items-center justify-center gap-1 cursor-pointer min-w-0">
                             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6"/></svg>
                             {{t "fl.e_stop"}}
                         </button>
                     </form>
-                    <form method="POST" action="/vehicles/{{.Vehicle.ID}}/command" class="w-full">
+                    <form method="POST" action="/vehicles/{{.Vehicle.ID}}/command" class="w-full min-w-0">
                         <input type="hidden" name="command_type" value="HOLD_POSITION">
-                        <button type="submit" class="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs tracking-wider shadow-sm transition flex flex-col items-center justify-center gap-1 cursor-pointer">
+                        <button type="submit" class="w-full py-2.5 px-1 sm:px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] sm:text-xs tracking-wider shadow-sm transition flex flex-col items-center justify-center gap-1 cursor-pointer min-w-0">
                             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
                             {{t "fl.hold"}}
                         </button>
                     </form>
-                    <form method="POST" action="/vehicles/{{.Vehicle.ID}}/command" class="w-full">
+                    <form method="POST" action="/vehicles/{{.Vehicle.ID}}/command" class="w-full min-w-0">
                         <input type="hidden" name="command_type" value="RESUME_MISSION">
-                        <button type="submit" class="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs tracking-wider shadow-sm transition flex flex-col items-center justify-center gap-1 cursor-pointer">
+                        <button type="submit" class="w-full py-2.5 px-1 sm:px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] sm:text-xs tracking-wider shadow-sm transition flex flex-col items-center justify-center gap-1 cursor-pointer min-w-0">
                             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="w-4 h-4"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                             {{t "fl.resume"}}
                         </button>
@@ -376,11 +403,14 @@
             </div>
         </div>
 
-        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
-            <div class="px-5 py-3 border-b border-border-subtle flex items-center gap-2 bg-gradient-to-r from-blue-500/[0.06] to-transparent">
-                <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
-                <h2 class="text-sm font-bold text-on-surface">{{t "fl.last_telemetry"}}</h2>
-            </div>
+        <details class="vsec bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden" data-section="telemetry" data-m-open="0" open>
+            <summary class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 cursor-pointer bg-gradient-to-r from-blue-500/[0.06] to-transparent">
+                <div class="flex items-center gap-2">
+                    <span class="w-7 h-7 rounded-lg bg-blue-soft border border-blue-line grid place-items-center text-blue-mid"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg></span>
+                    <h2 class="text-sm font-bold text-on-surface">{{t "fl.last_telemetry"}}</h2>
+                </div>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="vsec-chev w-4 h-4 shrink-0 text-text-muted"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
             <div class="p-5">
                 {{if .LastPosition.Has}}
                 <dl class="grid grid-cols-2 gap-4">
@@ -398,11 +428,25 @@
                     </div>
                 </dl>
                 {{else}}
-                <p class="text-sm text-text-muted">{{t "fl.no_telemetry_received_yet"}} <a href="/tracking" class="text-primary hover:underline">{{t "fl.live_tracking"}}</a></p>
+                <p class="text-[13px] text-text-muted">{{t "fl.no_telemetry_received_yet"}} <a href="/tracking" class="text-primary hover:underline">{{t "fl.live_tracking"}}</a></p>
                 {{end}}
             </div>
-        </div>
+        </details>
     </div>
 </div>
 
 </div>
+<script>
+// Vehicle View progressive disclosure: below md, secondary sections start
+// collapsed (summary + maintenance status + teleop stay visible). No-JS and
+// desktop keep everything expanded.
+(function () {
+    try {
+        if (window.matchMedia('(max-width: 767px)').matches) {
+            document.querySelectorAll('[data-vehicle-view] details.vsec[data-m-open="0"]').forEach(function (d) {
+                d.removeAttribute('open');
+            });
+        }
+    } catch (e) { /* expanded is the safe default */ }
+})();
+</script>
