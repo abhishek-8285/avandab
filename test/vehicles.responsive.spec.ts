@@ -82,6 +82,48 @@ test('vehicles list layout has no overflow', async ({ page }) => {
   }
 });
 
+for (const width of [288, 320, 360, 390, 412, 430]) {
+  test(`vehicles filter controls never clip their text at ${width}px`, async ({ page }) => {
+    await registerFreshUser(page, `pw-vehclip${width}`);
+    await seedVehicle(page, uniqueReg(`CLIP${width}`));
+    await page.setViewportSize({ width, height: 800 });
+    await page.goto('/vehicles');
+    await expect(page.locator('table.rtable tbody tr')).toHaveCount(1, { timeout: 15000 });
+
+    // Real-device report: "All ownership" rendered "All ownersh", "All classes"
+    // ran under the native arrow, date placeholders clipped to "dd-mm-y".
+    // scrollWidth is useless here (empty inputs and selects never scroll), so
+    // measure the longest rendered string with canvas and demand room for it.
+    const clipped = await page.evaluate(() => {
+      const ctx = document.createElement('canvas').getContext('2d')!;
+      const out: string[] = [];
+      const fits = (el: HTMLElement | null, text: string, extra: number, label: string) => {
+        if (!el) { out.push(`${label} missing`); return; }
+        const cs = getComputedStyle(el);
+        ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+        const need = ctx.measureText(text).width + extra;
+        if (el.clientWidth + 1 < need) {
+          out.push(`${label}: "${text}" needs ${Math.round(need)}px, has ${el.clientWidth}px`);
+        }
+      };
+      for (const id of ['fleet_class', 'ownership']) {
+        const sel = document.querySelector(`select#${id}`) as HTMLSelectElement | null;
+        // A closed select shows the SELECTED option, not the longest one
+        // (dropdown options render in an overlay) — measure what is visible.
+        const shown = sel?.options[sel?.selectedIndex]?.text ?? '';
+        // px-3 padding (24) + native arrow (~24).
+        fits(sel, shown, 48, `select#${id}`);
+      }
+      for (const key of ['from', 'to'] as const) {
+        const inp = document.querySelector(`[data-daterange] input[data-${key}]`) as HTMLInputElement | null;
+        fits(inp, inp?.placeholder ?? '', 8, `date ${key}`);
+      }
+      return out;
+    });
+    expect(clipped, `no clipped filter controls at ${width}px`).toEqual([]);
+  });
+}
+
 test('vehicles empty states distinguish empty garage from filtered zero', async ({ page }) => {
   await registerFreshUser(page, 'pw-vehemtpy');
   await page.goto('/vehicles');
@@ -93,6 +135,25 @@ test('vehicles empty states distinguish empty garage from filtered zero', async 
   await expect(page.locator('table.rtable tbody tr')).toHaveCount(1, { timeout: 15000 });
   await page.locator('form[data-filterbar] input[name="q"]').pressSequentially('ZZZ-NO-MATCH-999', { delay: 20 });
   await expect(page.locator('td[colspan]')).toContainText('No vehicles match', { timeout: 15000 });
+  // Filtered-zero empty state stays centered: card-mode `td{display:flex;
+  // justify-content:space-between}` + `td>*{text-align:right}` used to pin
+  // the block left (real-device report, "No vehicles found" off-center).
+  const centering = await page.locator('td[colspan]').evaluate((td) => {
+    const cs = getComputedStyle(td);
+    const child = td.firstElementChild as HTMLElement | null;
+    const tr = td.getBoundingClientRect();
+    const cr = child ? child.getBoundingClientRect() : tr;
+    return {
+      display: cs.display,
+      childAlign: child ? getComputedStyle(child).textAlign : '',
+      offset: Math.abs((cr.left + cr.right) / 2 - (tr.left + tr.right) / 2),
+    };
+  });
+  if (page.viewportSize()!.width <= 768) {
+    expect(centering.display, 'empty cell is block on mobile').toBe('block');
+  }
+  expect(centering.childAlign, 'empty content centered').toBe('center');
+  expect(centering.offset, 'empty block horizontally centered').toBeLessThan(8);
   // Clearing search restores the row (htmx fragment swap, no full reload).
   const qbox = page.locator('form[data-filterbar] input[name="q"]');
   await qbox.click();
@@ -373,9 +434,9 @@ test('vehicles filter hierarchy: one CTA, selects inside Filters, compact zero-s
     tops.push(box!.y + box!.height / 2);
   }
   for (let i = 1; i < tops.length; i++) {
-    // Step 5 is ownership vs fleet class: same-row side-by-side is correct
-    // responsive behavior, so equality is allowed there only.
-    if (i === 5) expect(tops[i], `order step ${i}`).toBeGreaterThanOrEqual(tops[i - 1] - 1);
+    // Step 3 (search vs date) and step 5 (ownership vs fleet class): same-row
+    // side-by-side is correct responsive behavior on wider viewports.
+    if (i === 3 || i === 5) expect(tops[i], `order step ${i}`).toBeGreaterThanOrEqual(tops[i - 1] - 1);
     else expect(tops[i], `order step ${i}`).toBeGreaterThan(tops[i - 1]);
   }
 

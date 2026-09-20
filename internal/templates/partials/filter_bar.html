@@ -10,10 +10,10 @@
         <div class="relative">
         <div data-daterange class="relative flex items-center gap-1.5 bg-surface-container-low border border-border-subtle rounded-full pl-3 pr-1.5 py-1.5 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10 transition">
             <input type="text" inputmode="numeric" data-from name="{{default "from" .FromName}}" value="{{inDate .DateFrom}}" placeholder="dd-mm-yyyy" maxlength="10" autocomplete="off" aria-label="From date, dd-mm-yyyy" aria-describedby="date-filter-error"
-                class="bg-transparent text-xs text-on-surface tabular-nums focus:outline-none w-[6.5rem] placeholder:text-text-muted/70">
+                class="bg-transparent text-xs text-on-surface tabular-nums focus:outline-none w-[7.25rem] shrink-0 placeholder:text-text-muted/70">
             <span class="text-text-muted text-xs select-none" aria-hidden="true">→</span>
             <input type="text" inputmode="numeric" data-to name="{{default "to" .ToName}}" value="{{inDate .DateTo}}" placeholder="dd-mm-yyyy" maxlength="10" autocomplete="off" aria-label="To date, dd-mm-yyyy" aria-describedby="date-filter-error"
-                class="bg-transparent text-xs text-on-surface tabular-nums focus:outline-none w-[6.5rem] placeholder:text-text-muted/70">
+                class="bg-transparent text-xs text-on-surface tabular-nums focus:outline-none w-[7.25rem] shrink-0 placeholder:text-text-muted/70">
             <button type="button" data-calbtn aria-label="Open calendar" aria-expanded="false" aria-haspopup="dialog"
                 class="w-7 h-7 inline-flex items-center justify-center rounded-full text-text-muted hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer border-0 bg-transparent">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 pointer-events-none"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/></svg>
