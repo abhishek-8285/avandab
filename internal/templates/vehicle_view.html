@@ -89,7 +89,7 @@ details.vsec:not([open]) .vsec-chev { transform: rotate(-90deg); }
                 {{else}}
                 <p class="text-sm text-text-muted">No driver assigned.</p>
                 {{end}}
-                {{if can .User "vehicles" "update"}}
+                {{if can .User "vehicles" "update"}}{{if not .AssignedDriver}}
                 <form method="POST" action="/vehicles/{{.Vehicle.ID}}/assign-driver" class="flex items-center gap-2 mt-3">
                     <select name="driver_id" aria-label="Choose driver" class="flex-1 min-w-0 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface">
                         <option value="">Select driver…</option>
@@ -97,7 +97,7 @@ details.vsec:not([open]) .vsec-chev { transform: rotate(-90deg); }
                     </select>
                     <button type="submit" class="shrink-0 inline-flex items-center justify-center rounded-full bg-primary text-on-primary px-3 py-1.5 text-xs font-semibold">Assign</button>
                 </form>
-                {{end}}
+                {{end}}{{end}}
             </div>
         </section>
 

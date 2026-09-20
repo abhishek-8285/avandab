@@ -55,14 +55,18 @@ test('driver-vehicle preferred assignment and trip prefill', async ({ page }) =>
   });
   expect(assignRes.ok() || assignRes.status() === 303, 'assign').toBeTruthy();
 
-  // Driver view shows assigned vehicle.
+  // Driver view shows assigned vehicle — Assign hidden, Unassign visible.
   await page.goto(`/drivers/${drvId}`);
   await expect(page.locator('[data-section="assigned-vehicle"]')).toContainText(vehReg);
   await expect(page.locator('[data-section="assigned-vehicle"]')).toContainText('Primary');
+  await expect(page.locator('[data-section="assigned-vehicle"] form[action$="/assign-vehicle"]')).toHaveCount(0, { timeout: 2_000 });
+  await expect(page.locator('[data-section="assigned-vehicle"] form[action$="/unassign-vehicle"]')).toHaveCount(1);
 
-  // Vehicle view shows assigned driver.
+  // Vehicle view shows assigned driver — Assign hidden, Unassign visible.
   await page.goto(`/vehicles/${vehId}`);
   await expect(page.locator('[data-section="assigned-driver"]')).toContainText('Rahul');
+  await expect(page.locator('[data-section="assigned-driver"] form[action$="/assign-driver"]')).toHaveCount(0, { timeout: 2_000 });
+  await expect(page.locator('[data-section="assigned-driver"] form[action$="/unassign-driver"]')).toHaveCount(1);
 
   // Trip create prefill: ?driver_id should pre-select vehicle.
   await page.goto(`/trips/new?driver_id=${drvId}`);
@@ -78,4 +82,6 @@ test('driver-vehicle preferred assignment and trip prefill', async ({ page }) =>
   expect(unassignRes.ok() || unassignRes.status() === 303).toBeTruthy();
   await page.goto(`/drivers/${drvId}`);
   await expect(page.locator('[data-section="assigned-vehicle"]')).toContainText('No vehicle assigned');
+  await expect(page.locator('[data-section="assigned-vehicle"] form[action$="/assign-vehicle"]')).toHaveCount(1);
+  await expect(page.locator('[data-section="assigned-vehicle"] form[action$="/unassign-vehicle"]')).toHaveCount(0);
 });

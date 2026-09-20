@@ -70,7 +70,7 @@
                 {{else}}
                 <p class="text-sm text-text-muted">No vehicle assigned.</p>
                 {{end}}
-                {{if can .User "drivers" "update"}}
+                {{if can .User "drivers" "update"}}{{if not .AssignedVehicle}}
                 <form method="POST" action="/drivers/{{.Driver.ID}}/assign-vehicle" class="flex items-center gap-2 mt-3">
                     <select name="vehicle_id" aria-label="Choose vehicle" class="flex-1 min-w-0 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface">
                         <option value="">Select vehicle…</option>
@@ -78,7 +78,7 @@
                     </select>
                     <button type="submit" class="shrink-0 inline-flex items-center justify-center rounded-full bg-primary text-on-primary px-3 py-1.5 text-xs font-semibold">Assign</button>
                 </form>
-                {{end}}
+                {{end}}{{end}}
             </div>
         </section>
 
