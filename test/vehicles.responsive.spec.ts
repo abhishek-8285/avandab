@@ -64,6 +64,22 @@ test('vehicles list layout has no overflow', async ({ page }) => {
   for (const label of ['Total Vehicles', 'Running', 'Available', 'Maintenance']) {
     await expect(page.locator('.grid').first().getByText(label, { exact: false }).first()).toBeVisible();
   }
+
+  // Chip labels are vertically centered in their pills (inline anchors with
+  // vertical padding rendered the text riding high).
+  const offCenters = await page.locator('form[data-filterbar] a[hx-get]').evaluateAll((els) =>
+    els.map((el) => {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const tr = range.getBoundingClientRect();
+      const cr = el.getBoundingClientRect();
+      return Math.abs((tr.top + tr.bottom) / 2 - (cr.top + cr.bottom) / 2);
+    }),
+  );
+  expect(offCenters.length, 'chips present').toBeGreaterThan(0);
+  for (const [i, off] of offCenters.entries()) {
+    expect(off, `chip ${i} label centered`).toBeLessThan(2);
+  }
 });
 
 test('vehicles empty states distinguish empty garage from filtered zero', async ({ page }) => {

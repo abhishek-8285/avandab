@@ -3,7 +3,7 @@
     {{range .Hidden}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}
     <span class="text-eyebrow text-text-muted mr-1">{{default "Filters:" .Label}}</span>
     {{range .Chips}}
-    <a href="{{$.Action}}?status={{.Value}}{{if $.ChipParams}}&{{$.ChipParams}}{{end}}" hx-get="{{$.Action}}{{if .Value}}?status={{.Value}}{{end}}" hx-include="closest form" hx-target="#list-table" hx-swap="innerMorph" hx-push-url="true" class="px-3 py-1 rounded-full border text-xs font-medium transition-colors {{if eq $sf (default "" .Value)}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">{{.Label}}</a>
+    <a href="{{$.Action}}?status={{.Value}}{{if $.ChipParams}}&{{$.ChipParams}}{{end}}" hx-get="{{$.Action}}{{if .Value}}?status={{.Value}}{{end}}" hx-include="closest form" hx-target="#list-table" hx-swap="innerMorph" hx-push-url="true" class="inline-flex items-center px-3 py-1 rounded-full border text-xs font-medium leading-5 transition-colors {{if eq $sf (default "" .Value)}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">{{.Label}}</a>
     {{end}}
     <div class="ml-auto flex flex-wrap items-center gap-2">
         {{if .ShowDates}}
