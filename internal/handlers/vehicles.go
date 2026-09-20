@@ -86,6 +86,9 @@ func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
 
 	fleetClassFilter := r.URL.Query().Get("fleet_class")
 	ownershipFilter := r.URL.Query().Get("ownership")
+	// Empty-state copy needs to know whether the garage is empty or the
+	// filters just match nothing. Derived from request params, not stored.
+	isFiltered := pp.Query != "" || pp.Status != "" || fleetClassFilter != "" || ownershipFilter != "" || pp.DateFrom != "" || pp.DateTo != ""
 
 	pd := newPaginationData(pp, res.Total, "/vehicles")
 	pd.From = pp.DateFrom
@@ -99,6 +102,7 @@ func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
 			"StatusFilter":     pp.Status,
 			"FleetClassFilter": fleetClassFilter,
 			"OwnershipFilter":  ownershipFilter,
+			"IsFiltered":       isFiltered,
 			"DateFrom":         pp.DateFrom,
 			"DateTo":           pp.DateTo,
 			"KPIs":             h.vehicleKPIs(r.Context()),
@@ -109,7 +113,7 @@ func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "vehicle_list.html", PageData{
 		Title: "Vehicles",
 		User:  session,
-		Extra: map[string]interface{}{"Vehicles": res.Vehicles, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "FleetClassFilter": fleetClassFilter, "OwnershipFilter": ownershipFilter, "DateFilterError": pp.DateFilterError, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.vehicleKPIs(r.Context())},
+		Extra: map[string]interface{}{"Vehicles": res.Vehicles, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "FleetClassFilter": fleetClassFilter, "OwnershipFilter": ownershipFilter, "IsFiltered": isFiltered, "DateFilterError": pp.DateFilterError, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.vehicleKPIs(r.Context())},
 	})
 }
 
