@@ -649,6 +649,19 @@ type DriverPayoutAccount struct {
 	CreatedAt              time.Time      `json:"created_at"`
 }
 
+type DriverPreferredVehicle struct {
+	ID           string         `json:"id"`
+	TenantID     string         `json:"tenant_id"`
+	DriverID     string         `json:"driver_id"`
+	VehicleID    string         `json:"vehicle_id"`
+	IsPrimary    int64          `json:"is_primary"`
+	AssignedAt   time.Time      `json:"assigned_at"`
+	UnassignedAt sql.NullTime   `json:"unassigned_at"`
+	AssignedBy   sql.NullString `json:"assigned_by"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
+}
+
 type DriverPushToken struct {
 	ID        string    `json:"id"`
 	TenantID  string    `json:"tenant_id"`

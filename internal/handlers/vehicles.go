@@ -63,6 +63,8 @@ func (h *VehicleHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "vehicles", "update")).Post("/{id}/points", h.CreatePoint)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "vehicles", "update")).Post("/points/{pointID}/measurements", h.RecordMeasurement)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "vehicles", "update")).Post("/{id}/command", h.SendCommand)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "vehicles", "update")).Post("/{id}/assign-driver", h.AssignDriverToVehicle)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "vehicles", "update")).Post("/{id}/unassign-driver", h.UnassignDriverFromVehicle)
 }
 
 func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
@@ -379,6 +381,23 @@ func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Preferred driver (master assignment) for this vehicle.
+	var assignedDriver map[string]interface{}
+	if a, _ := getActiveAssignmentByVehicle(r.Context(), h.DB, id, tenantID); a != nil {
+		var fn, ln, phone, dvid string
+		_ = h.DB.QueryRowContext(r.Context(), `SELECT first_name, last_name, phone, driver_id FROM drivers WHERE id = $1 AND tenant_id = $2`, a.DriverID, tenantID).Scan(&fn, &ln, &phone, &dvid)
+		assignedDriver = map[string]interface{}{"ID": a.DriverID, "FirstName": fn, "LastName": ln, "Phone": phone, "DriverID": dvid, "IsPrimary": a.IsPrimary}
+	}
+	var assignDrivers []map[string]interface{}
+	if rows, err := h.DB.QueryContext(r.Context(), `SELECT id, first_name, last_name, driver_id FROM drivers WHERE tenant_id = $1 ORDER BY first_name LIMIT 100`, tenantID); err == nil {
+		defer func() { _ = rows.Close() }()
+		for rows.Next() {
+			var did, fn, ln, dvid string
+			if rows.Scan(&did, &fn, &ln, &dvid) == nil {
+				assignDrivers = append(assignDrivers, map[string]interface{}{"ID": did, "FirstName": fn, "LastName": ln, "DriverID": dvid})
+			}
+		}
+	}
 	extra := map[string]interface{}{
 		"Vehicle":                   vehicle,
 		"Files":                     files,
@@ -394,6 +413,8 @@ func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 		"MeasuringPoints":           h.measuringPoints(r.Context(), id),
 		"RecentMeasurements":        h.recentMeasurements(r.Context(), id),
 		"RecentCommands":            h.recentCommands(r.Context(), id),
+		"AssignedDriver":            assignedDriver,
+		"AssignDrivers":             assignDrivers,
 	}
 
 	session, _ := h.getUserFromContext(r)

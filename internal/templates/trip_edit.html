@@ -105,4 +105,20 @@
 </div>
 
 <!-- Booking autofill lives in layout.html initTripEditAutofill (survives hx-boost). -->
+<script>
+(function(){
+  var m = {{if .DriverVehicleMap}}{{json .DriverVehicleMap}}{{else}}null{{end}};
+  if (!m) return;
+  var d = document.getElementById('driver_id'), v = document.getElementById('vehicle_id');
+  if (!d || !v) return;
+  function fill(force){
+    var vid = m[d.value];
+    if (!vid) return;
+    if (!force && v.value) return;
+    v.value = vid;
+  }
+  d.addEventListener('change', function(){ fill(true); });
+  // On load: if driver pre-selected (query param) and vehicle empty, prefill.
+  if (d.value && !v.value) fill(false);
+})();
 </script>

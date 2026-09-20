@@ -161,6 +161,7 @@ which always allocate head-ward from the maximum above.
 | 00161 | `tenant_accounting_settings` — per-tenant accounting provider choice (none/tally/zoho/busy_excel/excel) + endpoint, tenant-isolated, env fallback | Accounting user-choice |
 | 00162 | Drop 8 dead tables (i18n_keys, notifications_preferences, revoked_refresh_tokens, provider_poll_state, route_constraints, offline_sync_log, audit_events, telemetry_events) + write-call removal; alert_sources KEPT (live alert_rules FK parent); Down recreates empty shells (roundtrip-safe) | Dead-table cleanup |
 | 00163 | Delete 4 dead company_config accounting seeds (never read; env + 00161 are the live paths); Down restores seeds | Dead-seed cleanup |
+| 00166 | `driver_preferred_vehicles` preferred Driver↔Vehicle (one active per driver+vehicle, history via `unassigned_at`, `is_primary`) + tenant FK triggers + 4 indexes — new table to avoid colliding with 00108 `driver_vehicle_assignments` | Driver↔Vehicle preferred assignment |
 | 00160+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a

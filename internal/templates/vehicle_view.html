@@ -68,6 +68,39 @@ details.vsec:not([open]) .vsec-chev { transform: rotate(-90deg); }
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
     <div class="lg:col-span-2 space-y-4">
+        <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden" data-section="assigned-driver">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+                <h2 class="text-sm font-semibold text-on-surface">Assigned Driver</h2>
+                {{if .AssignedDriver}}<span class="px-2 py-0.5 rounded-full bg-emerald-soft border border-emerald-line text-emerald-mid text-xs font-semibold">Primary ✓</span>{{end}}
+            </div>
+            <div class="p-5">
+                {{if .AssignedDriver}}
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                        <a href="/drivers/{{.AssignedDriver.ID}}" class="text-sm font-semibold text-primary hover:underline">{{.AssignedDriver.FirstName}} {{.AssignedDriver.LastName}}</a>
+                        <span class="text-xs text-text-muted">({{or .AssignedDriver.DriverID "—"}} · {{.AssignedDriver.Phone}})</span>
+                    </div>
+                    {{if can .User "vehicles" "update"}}
+                    <form method="POST" action="/vehicles/{{.Vehicle.ID}}/unassign-driver" class="inline">
+                        <button type="submit" class="text-xs font-semibold text-text-muted hover:text-status-alert transition">Unassign</button>
+                    </form>
+                    {{end}}
+                </div>
+                {{else}}
+                <p class="text-sm text-text-muted">No driver assigned.</p>
+                {{end}}
+                {{if can .User "vehicles" "update"}}
+                <form method="POST" action="/vehicles/{{.Vehicle.ID}}/assign-driver" class="flex items-center gap-2 mt-3">
+                    <select name="driver_id" aria-label="Choose driver" class="flex-1 min-w-0 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface">
+                        <option value="">Select driver…</option>
+                        {{range .AssignDrivers}}<option value="{{.ID}}">{{.FirstName}} {{.LastName}} ({{.DriverID}})</option>{{end}}
+                    </select>
+                    <button type="submit" class="shrink-0 inline-flex items-center justify-center rounded-full bg-primary text-on-primary px-3 py-1.5 text-xs font-semibold">Assign</button>
+                </form>
+                {{end}}
+            </div>
+        </section>
+
         <details class="vsec bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden" data-section="compliance" data-m-open="0" open>
             <summary class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3 cursor-pointer">
                 <div>

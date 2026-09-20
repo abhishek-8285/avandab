@@ -302,6 +302,27 @@ func (h *TripHandlers) New(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	// Prefill vehicle from driver's preferred assignment (master relationship).
+	selectedDriverID := r.URL.Query().Get("driver_id")
+	selectedVehicleID := r.URL.Query().Get("vehicle_id")
+	if selectedDriverID != "" && selectedVehicleID == "" {
+		if a, _ := getActiveAssignmentByDriver(r.Context(), h.DB, selectedDriverID, string(shared.TenantIDFromContext(r.Context()))); a != nil {
+			selectedVehicleID = a.VehicleID
+		}
+	}
+	// Build driver→vehicle map for client-side auto-prefill on change.
+	driverVehicleMap := map[string]string{}
+	if h.DB != nil {
+		if rows, err := h.DB.QueryContext(r.Context(), `SELECT driver_id, vehicle_id FROM driver_preferred_vehicles WHERE tenant_id = $1 AND unassigned_at IS NULL`, string(shared.TenantIDFromContext(r.Context()))); err == nil {
+			defer func() { _ = rows.Close() }()
+			for rows.Next() {
+				var did, vid string
+				if rows.Scan(&did, &vid) == nil {
+					driverVehicleMap[did] = vid
+				}
+			}
+		}
+	}
 
 	h.renderForm(w, r, "trip_edit.html", PageData{
 		Title: "New Trip",
@@ -314,6 +335,9 @@ func (h *TripHandlers) New(w http.ResponseWriter, r *http.Request) {
 			"SelectedBookingID": bookingID,
 			"SelectedRouteID":   selectedRouteID,
 			"DepartureTime":     selectedDeparture,
+			"SelectedDriverID":  selectedDriverID,
+			"SelectedVehicleID": selectedVehicleID,
+			"DriverVehicleMap":  driverVehicleMap,
 		},
 	})
 }
@@ -707,6 +731,18 @@ func (h *TripHandlers) Edit(w http.ResponseWriter, r *http.Request) {
 		selVehicleID = *trip.VehicleID
 	}
 
+	driverVehicleMap := map[string]string{}
+	if h.DB != nil {
+		if rows, err := h.DB.QueryContext(r.Context(), `SELECT driver_id, vehicle_id FROM driver_preferred_vehicles WHERE tenant_id = $1 AND unassigned_at IS NULL`, string(shared.TenantIDFromContext(r.Context()))); err == nil {
+			defer func() { _ = rows.Close() }()
+			for rows.Next() {
+				var did, vid string
+				if rows.Scan(&did, &vid) == nil {
+					driverVehicleMap[did] = vid
+				}
+			}
+		}
+	}
 	h.renderForm(w, r, "trip_edit.html", PageData{
 		Title: "Edit Trip",
 		User:  session,
@@ -717,6 +753,7 @@ func (h *TripHandlers) Edit(w http.ResponseWriter, r *http.Request) {
 			"Routes":            routes,
 			"SelectedDriverID":  selDriverID,
 			"SelectedVehicleID": selVehicleID,
+			"DriverVehicleMap":  driverVehicleMap,
 		},
 	})
 }
