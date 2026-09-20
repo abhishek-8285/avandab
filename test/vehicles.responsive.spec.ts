@@ -336,3 +336,48 @@ test('vehicles widths 360-430 stay usable with long data', async ({ page }) => {
     await page.keyboard.press('Escape');
   }
 });
+
+test('vehicles filter hierarchy: one CTA, selects inside Filters, compact zero-state', async ({ page }) => {
+  await registerFreshUser(page, 'pw-vehhier');
+  await page.goto('/vehicles');
+
+  // Information hierarchy, top to bottom: header CTA > chips > date > search >
+  // fleet class > ownership > results. centers() order, not just fit.
+  const tops: number[] = [];
+  for (const sel of [
+    'a[href="/vehicles/new"]',
+    'form[data-filterbar] a[href*="status=running"]',
+    '[data-daterange]',
+    'form[data-filterbar] input[name="q"]',
+    'select#fleet_class',
+    'select#ownership',
+    '#list-table',
+  ]) {
+    const box = await page.locator(sel).first().boundingBox();
+    expect(box, `${sel} rendered`).not.toBeNull();
+    tops.push(box!.y + box!.height / 2);
+  }
+  for (let i = 1; i < tops.length; i++) {
+    // Step 5 is ownership vs fleet class: same-row side-by-side is correct
+    // responsive behavior, so equality is allowed there only.
+    if (i === 5) expect(tops[i], `order step ${i}`).toBeGreaterThanOrEqual(tops[i - 1] - 1);
+    else expect(tops[i], `order step ${i}`).toBeGreaterThan(tops[i - 1]);
+  }
+
+  // Exactly one New Vehicle CTA on the page (header); none in filter bar or results.
+  expect(await page.locator('a[href="/vehicles/new"]').count(), 'single CTA').toBe(1);
+  expect(await page.locator('form[data-filterbar] a[href="/vehicles/new"]').count(), 'no CTA in filters').toBe(0);
+
+  // Search placeholder is a real string, never a raw i18n key.
+  const ph = await page.locator('form[data-filterbar] input[name="q"]').first().getAttribute('placeholder');
+  expect(ph, 'placeholder text').not.toContain('common.search');
+  expect(ph!.length, 'placeholder non-empty').toBeGreaterThan(8);
+
+  // Filtered-zero state: correct copy, no creation CTA, compact height.
+  await page.locator('form[data-filterbar] input[name="q"]').first().pressSequentially('ZZZ-NO-MATCH-999');
+  await expect(page.locator('#list-table')).toContainText('No vehicles found', { timeout: 15000 });
+  await expect(page.locator('#list-table')).toContainText('No vehicles match the selected criteria.');
+  expect(await page.locator('#list-table a[href="/vehicles/new"]').count(), 'no CTA in zero-state').toBe(0);
+  const emptyBox = await page.locator('#list-table td[colspan]').first().boundingBox();
+  expect(emptyBox!.height, 'compact zero-state').toBeLessThan(300);
+});

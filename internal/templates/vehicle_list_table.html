@@ -42,9 +42,9 @@
             <tr>
                 <td colspan="5" class="py-12 text-center text-secondary">
                     {{if .IsFiltered}}
-                    {{template "empty_state.html" (dict "Icon" "local_shipping" "Title" "No vehicles found" "Message" "No vehicles match the selected criteria." "ActionHref" "/vehicles/new" "ActionIcon" "add" "ActionLabel" "New Vehicle")}}
+                    {{template "empty_state.html" (dict "Icon" "local_shipping" "Title" "No vehicles found" "Message" "No vehicles match the selected criteria." "Compact" true)}}
                     {{else}}
-                    {{template "empty_state.html" (dict "Icon" "local_shipping" "Title" "No vehicles yet" "Message" "Get started by adding your first vehicle to the fleet." "ActionHref" "/vehicles/new" "ActionIcon" "add" "ActionLabel" "New Vehicle")}}
+                    {{template "empty_state.html" (dict "Icon" "local_shipping" "Title" "No vehicles yet" "Message" "Get started by adding your first vehicle to the fleet.")}}
                     {{end}}
                 </td>
             </tr>
