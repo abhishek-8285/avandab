@@ -92,10 +92,9 @@ test('vehicles search, status chip, date range, pagination', async ({ page }) =>
   await seedVehicle(page, runReg);
   await seedVehicle(page, idleReg);
 
+  // Create forces available — flip one row via the real status endpoint.
   await page.goto('/vehicles');
   await expect(page.locator('table.rtable tbody tr')).toHaveCount(2, { timeout: 15000 });
-
-  // Create forces available — flip one row via the real status endpoint.
   const base = new URL(page.url()).origin;
   const runHref = await page.locator('table.rtable tbody tr a:has-text("View")').first().getAttribute('href');
   const st = await page.request.post(`${runHref}/status`, {
@@ -103,8 +102,6 @@ test('vehicles search, status chip, date range, pagination', async ({ page }) =>
     form: { status: 'running' },
   });
   expect(st.ok(), 'status flip').toBeTruthy();
-  // Re-seed determinism: flip the FIRST row regardless of order, then find
-  // which reg it carries and use it as the expected running vehicle below.
   await page.goto('/vehicles');
   await expect(page.locator('table.rtable tbody tr')).toHaveCount(2, { timeout: 15000 });
 
@@ -200,4 +197,142 @@ test('vehicles calendar popover stays in viewport', async ({ page }) => {
   expect(box!.y + box!.height).toBeLessThanOrEqual(vh + 1);
   await page.keyboard.press('Escape');
   await expect(pop).toBeHidden();
+});
+
+async function setStatus(page: Page, viewHref: string, status: string): Promise<void> {
+  const base = new URL(page.url()).origin;
+  const resp = await page.request.post(`${viewHref}/status`, {
+    headers: { Origin: base, Referer: `${base}${viewHref}` },
+    form: { status },
+  });
+  expect(resp.ok(), `status ${status}`).toBeTruthy();
+}
+
+test('vehicles filters behave as one state', async ({ page }) => {
+  await registerFreshUser(page, 'pw-vehone');
+  const reg = uniqueReg('ONE');
+  await seedVehicle(page, reg);
+  await page.goto('/vehicles');
+  await expect(page.locator('table.rtable tbody tr')).toHaveCount(1, { timeout: 15000 });
+
+  // Running chip on top of class+ownership preserves all three.
+  await page.goto('/vehicles?fleet_class=CV&ownership=O');
+  await page.getByRole('link', { name: 'Running' }).first().click();
+  await expect(page.locator('td[colspan]')).toContainText('No vehicles match', { timeout: 15000 });
+  expect(page.url()).toContain('status=running');
+  expect(page.url()).toContain('fleet_class=CV');
+  expect(page.url()).toContain('ownership=O');
+
+  // Search preserves status + class + ownership + date.
+  const today = new Date().toISOString().slice(0, 10);
+  await page.goto(`/vehicles?status=available&fleet_class=CV&ownership=O&from=${today}&to=${today}`);
+  await expect(page.locator('table.rtable tbody tr')).toHaveCount(1, { timeout: 15000 });
+  await page.locator('form[data-filterbar] input[name="q"]').pressSequentially(reg.slice(-4), { delay: 20 });
+  await expect(page.locator('table.rtable tbody tr')).toHaveCount(1, { timeout: 15000 });
+  expect(page.url()).toContain('status=available');
+  expect(page.url()).toContain('fleet_class=CV');
+  expect(page.url()).toContain('ownership=O');
+  expect(page.url()).toContain(`from=${today}`);
+
+  // Class Clear drops only class+ownership, keeps the rest.
+  await page.goto(`/vehicles?q=${reg.slice(-4)}&status=available&fleet_class=CV&ownership=O`);
+  await expect(page.locator('table.rtable tbody tr')).toHaveCount(1, { timeout: 15000 });
+  const clearHref = await page.getByRole('link', { name: 'Clear' }).first().getAttribute('href');
+  expect(clearHref, 'clear drops class+ownership only').not.toContain('fleet_class');
+  expect(clearHref, 'clear drops class+ownership only').not.toContain('ownership');
+  expect(clearHref, 'clear keeps search').toContain(`q=${reg.slice(-4)}`);
+  expect(clearHref, 'clear keeps status').toContain('status=available');
+});
+
+test('vehicles status chips match backend semantics; blocked stays unfiltered', async ({ page }) => {
+  // Authoritative mapping lives in vehicle_list.html chips:
+  // Active→available, Running→running, Maintenance→maintenance,
+  // Out of Service→inactive. blocked has no chip anywhere in the repo.
+  await registerFreshUser(page, 'pw-vehsts');
+  const availReg = uniqueReg('AVL');
+  const inaReg = uniqueReg('INA');
+  const blkReg = uniqueReg('BLK');
+  await seedVehicle(page, availReg);
+  await seedVehicle(page, inaReg);
+  await seedVehicle(page, blkReg);
+  await page.goto('/vehicles');
+  await expect(page.locator('table.rtable tbody tr')).toHaveCount(3, { timeout: 15000 });
+  const hrefFor = async (reg: string) => {
+    const row = page.locator('table.rtable tbody tr', { hasText: reg }).first();
+    return (await row.locator('a:has-text("View")').first().getAttribute('href'))!;
+  };
+  await setStatus(page, await hrefFor(inaReg), 'inactive');
+  await setStatus(page, await hrefFor(blkReg), 'blocked');
+  await page.goto('/vehicles');
+  await expect(page.locator('table.rtable tbody tr')).toHaveCount(3, { timeout: 15000 });
+
+  // Out of Service = exactly inactive (blocked excluded by exact-match SQL).
+  await page.goto('/vehicles?status=inactive');
+  await expect(page.locator('table.rtable tbody tr')).toHaveCount(1, { timeout: 15000 });
+  await expect(page.locator('table.rtable tbody')).toContainText(inaReg);
+
+  // Active = exactly available.
+  await page.goto('/vehicles?status=available');
+  await expect(page.locator('table.rtable tbody tr')).toHaveCount(1, { timeout: 15000 });
+  await expect(page.locator('table.rtable tbody')).toContainText(availReg);
+
+  // Blocked surfaces only under All Units (and text search).
+  await page.goto('/vehicles');
+  await expect(page.locator('table.rtable tbody')).toContainText(blkReg);
+});
+
+test('vehicles widths 360-430 stay usable with long data', async ({ page }) => {
+  if (page.viewportSize()!.width > 500) test.skip();
+  await registerFreshUser(page, 'pw-vehwide');
+  // 20-char plate, long fleet number + manufacturer: page.request skips the
+  // HTML pattern gate, the server stores them verbatim.
+  const longReg = `MH${'9'.repeat(14)}LONGA`.slice(0, 20);
+  await seedVehicle(page, longReg);
+  const base = new URL(page.url()).origin;
+  const longNumResp = await page.request.post('/vehicles/new', {
+    headers: { Origin: base, Referer: `${base}/vehicles/new` },
+    form: {
+      registration_number: uniqueReg('MFR'),
+      vehicle_number: 'FLEETNUMBER-VERYLONG-01',
+      vehicle_type: 'truck',
+      capacity: '99999999',
+      fuel_type: 'diesel',
+      insurance_expiry: futureDate(),
+      fitness_expiry: futureDate(),
+      permit_expiry: futureDate(),
+      manufacturer: 'SUPERLONGMANUFACTURERNAME-INDIA-PRIVATE-LIMITED',
+    },
+  });
+  expect(longNumResp.ok(), 'long-field seed').toBeTruthy();
+
+  for (const w of [360, 390, 412, 430]) {
+    await page.setViewportSize({ width: w, height: 800 });
+    await page.goto('/vehicles');
+    await expect(page.locator('table.rtable tbody tr')).toHaveCount(2, { timeout: 15000 });
+
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow, `no page overflow at ${w}px`).toBeLessThanOrEqual(1);
+
+    for (const [sel, label] of [
+      ['form[data-filterbar]', 'filter bar'],
+      ['form[data-filterbar] input[name="q"]', 'search'],
+      ['[data-daterange]', 'date pill'],
+      ['select#fleet_class', 'fleet class'],
+      ['select#ownership', 'ownership'],
+      ['a[href="/vehicles/new"]', 'new vehicle'],
+      ['table.rtable tbody tr', 'first card'],
+    ] as const) {
+      const box = await page.locator(sel).first().boundingBox();
+      expect(box, `${label} at ${w}px`).not.toBeNull();
+      expect(box!.x + box!.width, `${label} fits at ${w}px`).toBeLessThanOrEqual(w + 1);
+    }
+
+    // Calendar popover fits the narrow viewport too.
+    await page.locator('[data-calbtn]').first().click();
+    const pop = page.locator('#av-cal-pop');
+    await expect(pop).toBeVisible({ timeout: 10000 });
+    const pbox = await pop.boundingBox();
+    expect(pbox!.x + pbox!.width, `calendar fits at ${w}px`).toBeLessThanOrEqual(w + 1);
+    await page.keyboard.press('Escape');
+  }
 });

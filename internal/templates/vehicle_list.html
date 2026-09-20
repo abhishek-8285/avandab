@@ -13,6 +13,8 @@
         "DateTo" .DateTo
         "ShowSearch" true
         "SearchPlaceholder" (t "common.search")
+        "ChipParams" .ChipParams
+        "Hidden" .FilterHidden
         "Primary" (dict "Label" (t "fl.new_vehicle") "Href" "/vehicles/new" "Size" "sm" "Icon" "add")
     )}}
 
@@ -26,6 +28,7 @@
     {{if .StatusFilter}}<input type="hidden" name="status" value="{{.StatusFilter}}">{{end}}
     {{if .DateFrom}}<input type="hidden" name="from" value="{{.DateFrom}}">{{end}}
     {{if .DateTo}}<input type="hidden" name="to" value="{{.DateTo}}">{{end}}
+    <input type="hidden" name="limit" value="{{.Pagination.PerPage}}">
     <label for="fleet_class" class="text-xs font-semibold uppercase tracking-wider text-secondary">{{t "fl.fleet_class_2"}}</label>
     <select id="fleet_class" name="fleet_class" onchange="this.form.submit()" class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary transition">
         <option value="" {{if not .FleetClassFilter}}selected{{end}}>{{t "fl.all_classes"}}</option>
@@ -42,5 +45,5 @@
         <option value="F" {{if eq .OwnershipFilter "F"}}selected{{end}}>{{t "fl.f_fuel_station_2"}}</option>
         <option value="M" {{if eq .OwnershipFilter "M"}}selected{{end}}>{{t "fl.m_machine"}}</option>
     </select>
-    {{if or .FleetClassFilter .OwnershipFilter}}<a href="/vehicles" class="text-xs font-semibold text-primary hover:underline">{{t "fl.clear"}}</a>{{end}}
+    {{if or .FleetClassFilter .OwnershipFilter}}<a href="/vehicles{{if .ClearParams}}?{{.ClearParams}}{{end}}" class="text-xs font-semibold text-primary hover:underline">{{t "fl.clear"}}</a>{{end}}
 </form>

@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -94,6 +96,52 @@ func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
 	pd.From = pp.DateFrom
 	pd.To = pp.DateTo
 
+	// One filter state: every control preserves every other active filter.
+	// ChipParams carries everything except status (the chip being clicked
+	// supplies that); ClearParams carries everything except fleet_class and
+	// ownership (the Clear link's own scope). Both are url-encoded once here
+	// so templates never assemble raw query strings.
+	chipValues := url.Values{}
+	if pp.Query != "" {
+		chipValues.Set("q", pp.Query)
+	}
+	if pp.DateFrom != "" {
+		chipValues.Set("from", pp.DateFrom)
+	}
+	if pp.DateTo != "" {
+		chipValues.Set("to", pp.DateTo)
+	}
+	if fleetClassFilter != "" {
+		chipValues.Set("fleet_class", fleetClassFilter)
+	}
+	if ownershipFilter != "" {
+		chipValues.Set("ownership", ownershipFilter)
+	}
+	chipValues.Set("limit", strconv.Itoa(pp.Limit))
+	// template.URL: values are url-encoded above; without the trusted type
+	// html/template would escape the & and = separators on render.
+	chipParams := template.URL(chipValues.Encode())
+	clearValues := url.Values{}
+	if pp.Query != "" {
+		clearValues.Set("q", pp.Query)
+	}
+	if pp.Status != "" {
+		clearValues.Set("status", pp.Status)
+	}
+	if pp.DateFrom != "" {
+		clearValues.Set("from", pp.DateFrom)
+	}
+	if pp.DateTo != "" {
+		clearValues.Set("to", pp.DateTo)
+	}
+	clearValues.Set("limit", strconv.Itoa(pp.Limit))
+	clearParams := template.URL(clearValues.Encode())
+	filterHidden := []map[string]interface{}{
+		{"Name": "fleet_class", "Value": fleetClassFilter},
+		{"Name": "ownership", "Value": ownershipFilter},
+		{"Name": "limit", "Value": strconv.Itoa(pp.Limit)},
+	}
+
 	if isDatastarRequest(r) {
 		h.renderFragment(w, r, "vehicle_list_table.html", map[string]interface{}{
 			"Vehicles":         res.Vehicles,
@@ -103,6 +151,9 @@ func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
 			"FleetClassFilter": fleetClassFilter,
 			"OwnershipFilter":  ownershipFilter,
 			"IsFiltered":       isFiltered,
+			"ChipParams":       chipParams,
+			"ClearParams":      clearParams,
+			"FilterHidden":     filterHidden,
 			"DateFrom":         pp.DateFrom,
 			"DateTo":           pp.DateTo,
 			"KPIs":             h.vehicleKPIs(r.Context()),
@@ -113,7 +164,7 @@ func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "vehicle_list.html", PageData{
 		Title: "Vehicles",
 		User:  session,
-		Extra: map[string]interface{}{"Vehicles": res.Vehicles, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "FleetClassFilter": fleetClassFilter, "OwnershipFilter": ownershipFilter, "IsFiltered": isFiltered, "DateFilterError": pp.DateFilterError, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.vehicleKPIs(r.Context())},
+		Extra: map[string]interface{}{"Vehicles": res.Vehicles, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "FleetClassFilter": fleetClassFilter, "OwnershipFilter": ownershipFilter, "IsFiltered": isFiltered, "ChipParams": chipParams, "ClearParams": clearParams, "FilterHidden": filterHidden, "DateFilterError": pp.DateFilterError, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.vehicleKPIs(r.Context())},
 	})
 }
 
