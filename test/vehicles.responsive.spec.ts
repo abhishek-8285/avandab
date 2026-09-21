@@ -47,16 +47,20 @@ async function withinViewport(page: Page, selector: string, label: string) {
 
 test('vehicles list layout has no overflow', async ({ page }) => {
   await registerFreshUser(page, 'pw-veh');
-  const regA = uniqueReg('A');
-  const regB = uniqueReg('B');
+  // One token shared by both seeds: the E2E server/DB is shared across
+  // parallel specs and an absolute row count is order-dependent (CI once
+  // showed 20 rows here from sibling specs' seeds). Scoping the list to our
+  // own token keeps the populated-table layout assertions hermetic.
+  const tok = `OV${String(Date.now()).slice(-6)}${Math.floor(Math.random() * 1e4)}`.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const regA = `${tok}A`.slice(0, 14);
+  const regB = `${tok}B`.slice(0, 14);
   await seedVehicle(page, regA);
   await seedVehicle(page, regB);
-  await page.goto('/vehicles');
+  await page.goto(`/vehicles?q=${tok}`);
 
   await expect(page.locator('table.rtable tbody tr')).toHaveCount(2, { timeout: 15000 }).catch(async (e) => {
-    // Self-diagnosing: a shared parallel E2E DB once showed 20 rows here for
-    // a fresh 2-vehicle tenant — dump the visible regs so the next CI failure
-    // names the polluting rows instead of just a count.
+    // Self-diagnosing: dump the visible regs so a recurrence names the
+    // polluting rows instead of just a count.
     const regs = await page.locator('table.rtable tbody tr td:first-child').allTextContents().catch(() => []);
     console.log(`VEHICLES-OVERFLOW-DIAG seeded=[${regA}, ${regB}] visible=${JSON.stringify(regs.slice(0, 25))}`);
     throw e;
@@ -88,6 +92,34 @@ test('vehicles list layout has no overflow', async ({ page }) => {
   expect(offCenters.length, 'chips present').toBeGreaterThan(0);
   for (const [i, off] of offCenters.entries()) {
     expect(off, `chip ${i} label centered`).toBeLessThan(2);
+  }
+});
+
+// Cross-org isolation, stated explicitly: org B's list must never contain
+// org A's vehicle, no matter what else the shared parallel E2E DB holds.
+// (Absolute row counts proved order-dependent on CI; this asserts the
+// property directly instead of inferring it from a count.)
+test('vehicles list is tenant-isolated across orgs', async ({ browser }) => {
+  const ctxA = await browser.newContext();
+  const ctxB = await browser.newContext();
+  try {
+    const pageA = await ctxA.newPage();
+    const pageB = await ctxB.newPage();
+    await registerFreshUser(pageA, 'pw-vehisoA');
+    await registerFreshUser(pageB, 'pw-vehisoB');
+    const regA = uniqueReg('ISOA');
+    const regB = uniqueReg('ISOB');
+    await seedVehicle(pageA, regA);
+    await seedVehicle(pageB, regB);
+    await pageA.goto('/vehicles');
+    await pageB.goto('/vehicles');
+    await expect(pageA.locator('table.rtable tbody')).toContainText(regA, { timeout: 15000 });
+    await expect(pageB.locator('table.rtable tbody')).toContainText(regB, { timeout: 15000 });
+    await expect(pageA.locator('table.rtable tbody')).not.toContainText(regB);
+    await expect(pageB.locator('table.rtable tbody')).not.toContainText(regA);
+  } finally {
+    await ctxA.close();
+    await ctxB.close();
   }
 });
 
@@ -199,11 +231,16 @@ test('vehicles search, status chip, date range, pagination', async ({ page }) =>
   await expect(page.url()).toContain('status=running');
 
   // Date window around today keeps the row; a future window empties it.
-  const today = new Date().toISOString().slice(0, 10);
-  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  await page.goto(`/vehicles?from=${today}&to=${today}`);
+  // Wide ±7d window, not today..today: day bounds are fleet-local (IST) while
+  // `today` here is a UTC date, so a today..today window drops rows created
+  // after 18:29:59Z (midnight IST) — red-proven as a 1-of-2 failure at 00:05 IST.
+  const ago = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const ahead = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const fut1 = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const fut2 = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  await page.goto(`/vehicles?from=${ago}&to=${ahead}`);
   await expect(page.locator('table.rtable tbody tr')).toHaveCount(2, { timeout: 15000 });
-  await page.goto(`/vehicles?from=${tomorrow}&to=${tomorrow}`);
+  await page.goto(`/vehicles?from=${fut1}&to=${fut2}`);
   await expect(page.locator('td[colspan]')).toContainText('No vehicles match', { timeout: 15000 });
 
   // Pagination keeps class/ownership filters across pages.
