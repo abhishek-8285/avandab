@@ -130,6 +130,7 @@ type AuditLog struct {
 	IpAddress sql.NullString `json:"ip_address"`
 	CreatedAt time.Time      `json:"created_at"`
 	Location  sql.NullString `json:"location"`
+	TenantID  sql.NullString `json:"tenant_id"`
 }
 
 type Booking struct {

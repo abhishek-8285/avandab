@@ -265,7 +265,7 @@ func (h *TripHandlers) List(w http.ResponseWriter, r *http.Request) {
 	pd.To = pp.DateTo
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, r, "trip_list.html", map[string]interface{}{
+		h.renderFragment(w, r, "trip_list_table.html", map[string]interface{}{
 			"Trips":        res.Trips,
 			"Pagination":   pd,
 			"Query":        pp.Query,
@@ -942,8 +942,8 @@ func (h *TripHandlers) handleComplianceBlock(w http.ResponseWriter, r *http.Requ
 		if ip, ok := r.Context().Value(auth.ContextIP).(string); ok && ip != "" {
 			ipVal = &ip
 		}
-		_, _ = h.DB.ExecContext(r.Context(), `INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, ip_address, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`,
-			auditID, user.UserID, "dispatch_override", "trips", tripID, reason, ipVal)
+		_, _ = h.DB.ExecContext(r.Context(), `INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, ip_address, tenant_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)`,
+			auditID, user.UserID, "dispatch_override", "trips", tripID, reason, ipVal, string(shared.TenantOrPlatform(r.Context())))
 	}
 	return false
 }

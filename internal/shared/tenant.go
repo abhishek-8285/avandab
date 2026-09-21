@@ -75,6 +75,18 @@ func RequireTenantOr(ctx context.Context, tenantID string) (TenantID, error) {
 	return TenantID(tenantID), nil
 }
 
+// TenantOrPlatform returns the request tenant for audit attribution, falling
+// back to the platform tenant for unattributable system writes. Fallback rows
+// stay admin-visible only — never cross-org — by the audit read scope.
+//
+//nolint:tenant-default // single sanctioned platform-attribution fallback for audit writes
+func TenantOrPlatform(ctx context.Context) TenantID {
+	if t := TenantIDFromContext(ctx); t != "" {
+		return t
+	}
+	return DefaultTenant
+}
+
 // MustTenantID panics if tenant is missing. Use only where a panic is
 // genuinely appropriate — i.e. NON-request paths (background jobs, cron
 // entrypoints) where a missing tenant is a programmer error.

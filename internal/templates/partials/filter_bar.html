@@ -3,7 +3,7 @@
     {{range .Hidden}}<input type="hidden" name="{{.Name}}" value="{{.Value}}">{{end}}
     <span class="text-eyebrow text-text-muted mr-1">{{default "Filters:" .Label}}</span>
     {{range .Chips}}
-    <a href="{{$.Action}}?status={{.Value}}{{if $.ChipParams}}&{{$.ChipParams}}{{end}}" hx-get="{{$.Action}}{{if .Value}}?status={{.Value}}{{end}}" hx-include="closest form" hx-target="#list-table" hx-swap="innerMorph" hx-push-url="true" class="inline-flex items-center px-3 py-1 rounded-full border text-xs font-medium leading-5 transition-colors {{if eq $sf (default "" .Value)}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">{{.Label}}</a>
+    <a href="{{$.Action}}?status={{.Value}}{{if $.ChipParams}}&{{$.ChipParams}}{{end}}"{{if not $.NoHtmx}} hx-get="{{$.Action}}{{if .Value}}?status={{.Value}}{{end}}" hx-include="closest form" hx-target="#list-table" hx-swap="innerMorph" hx-push-url="true"{{end}} class="inline-flex items-center px-3 py-1 rounded-full border text-xs font-medium leading-5 transition-colors {{if eq $sf (default "" .Value)}}border-primary bg-primary text-on-primary{{else}}border-border-subtle bg-surface-container-lowest text-secondary hover:bg-surface-container-low{{end}}">{{.Label}}</a>
     {{end}}
     <div class="ml-auto flex flex-wrap items-center gap-2">
         {{if .ShowDates}}
@@ -27,7 +27,7 @@
         <div class="relative min-w-[180px] flex-1 basis-full sm:basis-auto sm:flex-none">
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
             <input autocomplete="off" type="text" name="q" aria-label="Search" value="{{if .Query}}{{.Query}}{{end}}" placeholder="{{default "Search…" .SearchPlaceholder}}"
-                hx-get="{{.Action}}" hx-trigger="keyup changed delay:300ms, search" hx-target="#list-table" hx-swap="innerMorph" hx-push-url="true" hx-include="closest form"
+                {{if not .NoHtmx}}hx-get="{{.Action}}" hx-trigger="keyup changed delay:300ms, search" hx-target="#list-table" hx-swap="innerMorph" hx-push-url="true" hx-include="closest form"{{end}}
                 class="bg-surface-container-low border border-border-subtle rounded-full py-2 pl-9 pr-4 text-sm text-on-surface placeholder:text-text-muted w-full focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition">
         </div>
         {{end}}
@@ -398,3 +398,32 @@
     })();
 </script>
 {{end}}
+<script>
+// ponytail: unconditional chip highlight (ShowDates=false pages skip the block above)
+(function () {
+    if (window.__fbChipWired) return;
+    window.__fbChipWired = true;
+    var ACTIVE = ["border-primary", "bg-primary", "text-on-primary"];
+    var IDLE = ["border-border-subtle", "bg-surface-container-lowest", "text-secondary", "hover:bg-surface-container-low"];
+    function val(a) { try { return new URL(a.href, location.origin).searchParams.get("status") || ""; } catch (e) { return ""; } }
+    function paint(form, v) {
+        form.querySelectorAll('a[hx-get]').forEach(function (a) {
+            var on = val(a) === v;
+            ACTIVE.forEach(function (c) { a.classList.toggle(c, on); });
+            IDLE.forEach(function (c) { a.classList.toggle(c, !on); });
+        });
+    }
+    document.addEventListener("click", function (e) {
+        var a = e.target.closest && e.target.closest('form[data-filterbar] a[hx-get]');
+        if (a) paint(a.closest("form"), val(a));
+    });
+    function sync() {
+        try {
+            var v = new URL(location.href).searchParams.get("status") || "";
+            document.querySelectorAll("form[data-filterbar]").forEach(function (f) { paint(f, v); });
+        } catch (e) {}
+    }
+    document.addEventListener("htmx:afterSettle", sync);
+    window.addEventListener("popstate", sync);
+})();
+</script>

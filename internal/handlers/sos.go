@@ -213,8 +213,8 @@ func (a *App) logAuditDirect(ctx context.Context, userID, action, entityType, en
 		return nil
 	}
 	_, err := a.DB.ExecContext(ctx, `
-		INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
-	`, "aud_"+uuid.NewString(), userID, action, entityType, entityID, details)
+		INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, tenant_id, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)
+	`, "aud_"+uuid.NewString(), userID, action, entityType, entityID, details, string(shared.TenantOrPlatform(ctx)))
 	return err
 }
