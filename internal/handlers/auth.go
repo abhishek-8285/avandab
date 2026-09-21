@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -435,6 +436,14 @@ func (h *AuthHandlers) renderRegisterError(w http.ResponseWriter, r *http.Reques
 }
 
 // Login processes the login form submission.
+// loginCtx seeds client IP/location into ctx. Login routes are public — the
+// session middleware never runs — so without this the login audit row stores
+// NULL ip_address (shows "-" in /audit-logs).
+func loginCtx(r *http.Request) context.Context {
+	ctx := context.WithValue(r.Context(), auth.ContextIP, auth.ClientIP(r))
+	return context.WithValue(ctx, auth.ContextLocation, auth.ClientLocation(r))
+}
+
 func (h *AuthHandlers) Login(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
@@ -480,7 +489,7 @@ func (h *AuthHandlers) Login(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	result, err := h.Services.Auth.Login(r.Context(), service.LoginRequest{
+	result, err := h.Services.Auth.Login(loginCtx(r), service.LoginRequest{
 		Email:    email,
 		Password: password,
 	})

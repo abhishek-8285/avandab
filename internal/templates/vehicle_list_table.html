@@ -12,7 +12,7 @@
         <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
             {{if .Vehicles}}
             {{range .Vehicles}}
-            <tr class="hover:bg-surface-container-low/50 transition-colors group" data-href="/vehicles/{{.ID}}" onclick="if(this.dataset.href)location.href=this.dataset.href">
+            <tr class="hover:bg-surface-container-low/50 transition-colors group" data-href="/vehicles/{{.ID}}" onclick="if(this.dataset.href)location.href=this.dataset.href" onkeydown="if((event.key==='Enter'||event.key===' ')){event.preventDefault();if(this.dataset.href)location.href=this.dataset.href}" tabindex="0" role="link" aria-label="View vehicle {{.RegistrationNumber}}">
                 <td data-label="Unit ID" class="px-3 py-2 font-data-mono font-bold text-primary tabular-nums whitespace-nowrap">{{.RegistrationNumber}}</td>
                 <td data-label="Vehicle Type" class="px-3 py-2">
                     <div class="flex items-center gap-2.5">
@@ -41,7 +41,11 @@
             {{else}}
             <tr>
                 <td colspan="5" class="py-12 text-center text-secondary">
-                    {{template "empty_state.html" (dict "Icon" "local_shipping" "Title" "No vehicles found" "Message" "No vehicles match the selected criteria." "ActionHref" "/vehicles/new" "ActionIcon" "add" "ActionLabel" "New Vehicle")}}
+                    {{if .IsFiltered}}
+                    {{template "empty_state.html" (dict "Icon" "local_shipping" "Title" "No vehicles found" "Message" "No vehicles match the selected criteria." "Compact" true)}}
+                    {{else}}
+                    {{template "empty_state.html" (dict "Icon" "local_shipping" "Title" "No vehicles yet" "Message" "Get started by adding your first vehicle to the fleet.")}}
+                    {{end}}
                 </td>
             </tr>
             {{end}}

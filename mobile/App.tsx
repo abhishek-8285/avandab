@@ -326,19 +326,16 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
         TripPoller.start(activeId);
       }
     });
+    // Push-notification dispatch accept: never fabricate trip details from
+    // a bare ID. Refresh the real list and land on Trips so the driver
+    // opens the authoritative record.
     NotificationService.setOnAcceptDispatch((tripId) => {
-      if (onStartNav) {
-        onStartNav({
-          id: tripId,
-          tripNumber: tripId,
-          driverName: user?.name || 'Abhishek',
-          vehiclePlate: 'DL-01-AB-1234',
-          origin: 'JNPT Port, Navi Mumbai',
-          destination: 'Chakan MIDC, Pune',
-          status: 'IN_TRANSIT',
-          startTime: '10:30 AM',
-        } as any);
-      }
+      queryClient.invalidateQueries({ queryKey: ['trips'] });
+      setActiveTab('trips');
+      Alert.alert(
+        t('dispatch.accepted', 'Trip Accepted', locale),
+        t('dispatch.acceptedBody', `Trip ${tripId} — opening your trips.`, locale)
+      );
     });
 
     // In-app dispatch alerts (trip assignment/status pushed over MQTT)
@@ -435,8 +432,6 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
         destination={item.destination}
         status={item.status}
         startTime={item.startTime}
-        advanceAmount={5000}
-        cargoWeight="18 Tons"
         onPress={() => onStartNav && onStartNav(item)}
         onNavigate={() => onStartNav && onStartNav(item)}
       />
@@ -627,39 +622,17 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
               );
               const showActiveEmpty = visibleTrips.length === 0 && tripFilter === 'active';
               if (showActiveEmpty) {
+                // Honest empty state: no demo trip. Assigned trips appear
+                // here once the dispatcher assigns them to this driver.
                 return (
-                  <View style={{ gap: 12 }}>
-                    <TripCard
-                      tripNumber="TRP-8491"
-                      driverName={user?.name || "Abhishek"}
-                      vehiclePlate="DL-01-AB-1234"
-                      origin="JNPT Port, Navi Mumbai"
-                      destination="Chakan MIDC, Pune"
-                      status="IN_TRANSIT"
-                      startTime="10:30 AM"
-                      cargoWeight="18 Tons"
-                      advanceAmount={5000}
-                      onPress={() => onStartNav && onStartNav({
-                        id: 'TRP-8491',
-                        tripNumber: 'TRP-8491',
-                        driverName: user?.name || 'Abhishek',
-                        vehiclePlate: 'DL-01-AB-1234',
-                        origin: 'JNPT Port, Navi Mumbai',
-                        destination: 'Chakan MIDC, Pune',
-                        status: 'IN_TRANSIT',
-                        startTime: '10:30 AM',
-                      } as any)}
-                      onNavigate={() => onStartNav && onStartNav({
-                        id: 'TRP-8491',
-                        tripNumber: 'TRP-8491',
-                        driverName: user?.name || 'Abhishek',
-                        vehiclePlate: 'DL-01-AB-1234',
-                        origin: 'JNPT Port, Navi Mumbai',
-                        destination: 'Chakan MIDC, Pune',
-                        status: 'IN_TRANSIT',
-                        startTime: '10:30 AM',
-                      } as any)}
-                    />
+                  <View style={styles.emptyInfoCard}>
+                    <View style={styles.emptyStateIconBox}>
+                      <MaterialCommunityIcons name="truck-delivery-outline" size={32} color="#008069" />
+                    </View>
+                    <Text style={styles.infoTitle}>{t('filter.noActive', 'No Active Trips', locale)}</Text>
+                    <Text style={styles.emptyInfoBody}>
+                      {t('filter.noActiveBody', 'Trips assigned to you will appear here.', locale)}
+                    </Text>
                   </View>
                 );
               } else if (visibleTrips.length === 0) {
@@ -699,167 +672,18 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
               </Text>
             </View>
 
-            {/* Load Card 1 */}
-            <View style={styles.loadCard}>
-              <View style={styles.loadTopRow}>
-                <View style={styles.loadBadge}>
-                  <Text style={styles.loadBadgeText}>{t('dispatch.instant', 'INSTANT DISPATCH', locale)}</Text>
-                </View>
-                <View style={[styles.loadBadge, { backgroundColor: '#f0fdf4' }]}>
-                  <Text style={[styles.loadBadgeText, { color: '#008069' }]}>18 TONS</Text>
-                </View>
+            {/* No offers feed on the backend yet: honest empty state.
+            Demo loads with fake ACCEPT buttons used to fabricate trips. */}
+            <View style={styles.emptyInfoCard}>
+              <View style={styles.emptyStateIconBox}>
+                <MaterialCommunityIcons name="briefcase-search-outline" size={32} color="#008069" />
               </View>
-
-              <View style={styles.loadRoute}>
-                <View style={styles.loadStop}>
-                  <View style={[styles.routeDot, { backgroundColor: '#e7ffdb', width: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center' }]}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#008069' }} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.loadCityLabel}>{t('dispatch.origin', 'ORIGIN', locale)}</Text>
-                    <Text style={styles.loadCityText}>JNPT Port, Navi Mumbai</Text>
-                  </View>
-                </View>
-
-                <View style={{ width: 2, height: 12, backgroundColor: '#cbd5e1', marginLeft: 6 }} />
-
-                <View style={styles.loadStop}>
-                  <View style={[styles.routeDot, { backgroundColor: '#fee2e2', width: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center' }]}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#ef4444' }} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.loadCityLabel}>{t('dispatch.destination', 'DESTINATION', locale)}</Text>
-                    <Text style={styles.loadCityText}>Chakan MIDC, Pune</Text>
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.loadMetaRow}>
-                <View style={styles.loadMetaChip}>
-                  <MaterialCommunityIcons name="weight" size={13} color="#667781" />
-                  <Text style={styles.loadMetaText}>18 Tons Steel Coils</Text>
-                </View>
-                <View style={styles.loadMetaChip}>
-                  <MaterialCommunityIcons name="clock-outline" size={13} color="#667781" />
-                  <Text style={styles.loadMetaText}>Pickup: Today 6:00 PM</Text>
-                </View>
-              </View>
-
-              <View style={styles.loadActionRow}>
-                <TouchableOpacity
-                  style={styles.loadCallBtn}
-                  activeOpacity={0.85}
-                  onPress={() => Alert.alert(t('dispatch.call', 'Call Dispatch', locale), '+91 98200 12345')}
-                >
-                  <MaterialCommunityIcons name="phone" size={15} color="#008069" />
-                  <Text style={styles.loadCallBtnText}>{t('dispatch.call', 'CALL', locale)}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.loadAcceptBtn}
-                  activeOpacity={0.85}
-                  onPress={() => {
-                    const assigned = {
-                      id: 'TRP-8491',
-                      tripNumber: 'TRP-8491',
-                      driverName: user?.name || 'Abhishek',
-                      vehiclePlate: 'DL-01-AB-1234',
-                      origin: 'JNPT Port, Navi Mumbai',
-                      destination: 'Chakan MIDC, Pune',
-                      status: 'IN_TRANSIT',
-                      startTime: '10:30 AM',
-                    } as any;
-                    if (onStartNav) {
-                      onStartNav(assigned);
-                    }
-                  }}
-                >
-                  <MaterialCommunityIcons name="check-circle" size={15} color="#ffffff" />
-                  <Text style={styles.loadAcceptBtnText}>{t('dispatch.accept', 'ACCEPT LOAD', locale)}</Text>
-                </TouchableOpacity>
-              </View>
+              <Text style={styles.infoTitle}>{t('dispatch.empty', 'No Loads Right Now', locale)}</Text>
+              <Text style={styles.emptyInfoBody}>
+                {t('dispatch.emptyBody', 'New verified loads assigned to you will appear here.', locale)}
+              </Text>
             </View>
 
-            {/* Load Card 2 */}
-            <View style={styles.loadCard}>
-              <View style={styles.loadTopRow}>
-                <View style={[styles.loadBadge, { backgroundColor: '#e0f2fe' }]}>
-                  <Text style={[styles.loadBadgeText, { color: '#0284c7' }]}>{t('dispatch.scheduled', 'SCHEDULED TOMORROW', locale)}</Text>
-                </View>
-                <View style={[styles.loadBadge, { backgroundColor: '#f0fdf4' }]}>
-                  <Text style={[styles.loadBadgeText, { color: '#008069' }]}>14 TONS</Text>
-                </View>
-              </View>
-
-              <View style={styles.loadRoute}>
-                <View style={styles.loadStop}>
-                  <View style={[styles.routeDot, { backgroundColor: '#e7ffdb', width: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center' }]}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#008069' }} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.loadCityLabel}>{t('dispatch.origin', 'ORIGIN', locale)}</Text>
-                    <Text style={styles.loadCityText}>Bhiwandi Logistics Park, Thane</Text>
-                  </View>
-                </View>
-
-                <View style={{ width: 2, height: 12, backgroundColor: '#cbd5e1', marginLeft: 6 }} />
-
-                <View style={styles.loadStop}>
-                  <View style={[styles.routeDot, { backgroundColor: '#fee2e2', width: 14, height: 14, borderRadius: 7, alignItems: 'center', justifyContent: 'center' }]}>
-                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#ef4444' }} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.loadCityLabel}>{t('dispatch.destination', 'DESTINATION', locale)}</Text>
-                    <Text style={styles.loadCityText}>Sanand GIDC, Ahmedabad</Text>
-                  </View>
-                </View>
-              </View>
-
-              <View style={styles.loadMetaRow}>
-                <View style={styles.loadMetaChip}>
-                  <MaterialCommunityIcons name="package-variant-closed" size={13} color="#667781" />
-                  <Text style={styles.loadMetaText}>14 Tons FMCG Pallets</Text>
-                </View>
-                <View style={styles.loadMetaChip}>
-                  <MaterialCommunityIcons name="clock-outline" size={13} color="#667781" />
-                  <Text style={styles.loadMetaText}>Tomorrow 8:00 AM</Text>
-                </View>
-              </View>
-
-              <View style={styles.loadActionRow}>
-                <TouchableOpacity
-                  style={styles.loadCallBtn}
-                  activeOpacity={0.85}
-                  onPress={() => Alert.alert(t('dispatch.call', 'Call Dispatch', locale), '+91 98200 54321')}
-                >
-                  <MaterialCommunityIcons name="phone" size={15} color="#008069" />
-                  <Text style={styles.loadCallBtnText}>{t('dispatch.call', 'CALL', locale)}</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.loadAcceptBtn}
-                  activeOpacity={0.85}
-                  onPress={() => {
-                    const assigned = {
-                      id: 'TRP-8492',
-                      tripNumber: 'TRP-8492',
-                      driverName: user?.name || 'Abhishek',
-                      vehiclePlate: 'DL-01-AB-1234',
-                      origin: 'Bhiwandi Logistics Park, Thane',
-                      destination: 'Sanand GIDC, Ahmedabad',
-                      status: 'IN_TRANSIT',
-                      startTime: 'Tomorrow 8:00 AM',
-                    } as any;
-                    if (onStartNav) {
-                      onStartNav(assigned);
-                    }
-                  }}
-                >
-                  <MaterialCommunityIcons name="check-circle" size={15} color="#ffffff" />
-                  <Text style={styles.loadAcceptBtnText}>{t('dispatch.accept', 'ACCEPT LOAD', locale)}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
           </View>
       </ScrollView>
       )}
@@ -880,7 +704,7 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
       <VoiceKharchaSheet
         visible={showVoiceKharchaModal}
         onClose={() => setShowVoiceKharchaModal(false)}
-        tripId={activeTrip?.tripNumber || activeTrip?.id || 'TRP-8491'}
+        tripId={activeTrip?.tripNumber || activeTrip?.id}
         onSaved={() => {
           queryClient.invalidateQueries({ queryKey: ['trips'] });
         }}

@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -61,6 +63,8 @@ func (h *VehicleHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "vehicles", "update")).Post("/{id}/points", h.CreatePoint)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "vehicles", "update")).Post("/points/{pointID}/measurements", h.RecordMeasurement)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "vehicles", "update")).Post("/{id}/command", h.SendCommand)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "vehicles", "update")).Post("/{id}/assign-driver", h.AssignDriverToVehicle)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "vehicles", "update")).Post("/{id}/unassign-driver", h.UnassignDriverFromVehicle)
 }
 
 func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
@@ -86,10 +90,59 @@ func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
 
 	fleetClassFilter := r.URL.Query().Get("fleet_class")
 	ownershipFilter := r.URL.Query().Get("ownership")
+	// Empty-state copy needs to know whether the garage is empty or the
+	// filters just match nothing. Derived from request params, not stored.
+	isFiltered := pp.Query != "" || pp.Status != "" || fleetClassFilter != "" || ownershipFilter != "" || pp.DateFrom != "" || pp.DateTo != ""
 
 	pd := newPaginationData(pp, res.Total, "/vehicles")
 	pd.From = pp.DateFrom
 	pd.To = pp.DateTo
+
+	// One filter state: every control preserves every other active filter.
+	// ChipParams carries everything except status (the chip being clicked
+	// supplies that); ClearParams carries everything except fleet_class and
+	// ownership (the Clear link's own scope). Both are url-encoded once here
+	// so templates never assemble raw query strings.
+	chipValues := url.Values{}
+	if pp.Query != "" {
+		chipValues.Set("q", pp.Query)
+	}
+	if pp.DateFrom != "" {
+		chipValues.Set("from", pp.DateFrom)
+	}
+	if pp.DateTo != "" {
+		chipValues.Set("to", pp.DateTo)
+	}
+	if fleetClassFilter != "" {
+		chipValues.Set("fleet_class", fleetClassFilter)
+	}
+	if ownershipFilter != "" {
+		chipValues.Set("ownership", ownershipFilter)
+	}
+	chipValues.Set("limit", strconv.Itoa(pp.Limit))
+	// template.URL: values are url-encoded above; without the trusted type
+	// html/template would escape the & and = separators on render.
+	chipParams := template.URL(chipValues.Encode())
+	clearValues := url.Values{}
+	if pp.Query != "" {
+		clearValues.Set("q", pp.Query)
+	}
+	if pp.Status != "" {
+		clearValues.Set("status", pp.Status)
+	}
+	if pp.DateFrom != "" {
+		clearValues.Set("from", pp.DateFrom)
+	}
+	if pp.DateTo != "" {
+		clearValues.Set("to", pp.DateTo)
+	}
+	clearValues.Set("limit", strconv.Itoa(pp.Limit))
+	clearParams := template.URL(clearValues.Encode())
+	filterHidden := []map[string]interface{}{
+		{"Name": "fleet_class", "Value": fleetClassFilter},
+		{"Name": "ownership", "Value": ownershipFilter},
+		{"Name": "limit", "Value": strconv.Itoa(pp.Limit)},
+	}
 
 	if isDatastarRequest(r) {
 		h.renderFragment(w, r, "vehicle_list_table.html", map[string]interface{}{
@@ -99,6 +152,10 @@ func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
 			"StatusFilter":     pp.Status,
 			"FleetClassFilter": fleetClassFilter,
 			"OwnershipFilter":  ownershipFilter,
+			"IsFiltered":       isFiltered,
+			"ChipParams":       chipParams,
+			"ClearParams":      clearParams,
+			"FilterHidden":     filterHidden,
 			"DateFrom":         pp.DateFrom,
 			"DateTo":           pp.DateTo,
 			"KPIs":             h.vehicleKPIs(r.Context()),
@@ -109,7 +166,7 @@ func (h *VehicleHandlers) List(w http.ResponseWriter, r *http.Request) {
 	h.renderPage(w, r, "vehicle_list.html", PageData{
 		Title: "Vehicles",
 		User:  session,
-		Extra: map[string]interface{}{"Vehicles": res.Vehicles, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "FleetClassFilter": fleetClassFilter, "OwnershipFilter": ownershipFilter, "DateFilterError": pp.DateFilterError, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.vehicleKPIs(r.Context())},
+		Extra: map[string]interface{}{"Vehicles": res.Vehicles, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "FleetClassFilter": fleetClassFilter, "OwnershipFilter": ownershipFilter, "IsFiltered": isFiltered, "ChipParams": chipParams, "ClearParams": clearParams, "FilterHidden": filterHidden, "DateFilterError": pp.DateFilterError, "DateFrom": pp.DateFrom, "DateTo": pp.DateTo, "KPIs": h.vehicleKPIs(r.Context())},
 	})
 }
 
@@ -242,11 +299,12 @@ func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 	}
 	files, _ := h.Services.Files.GetFilesByEntity(r.Context(), "vehicle_insurance", id)
 
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
 	var maintDue, maintOvBy, maintOvReason sql.NullString
 	var maintOvAt sql.NullTime
 	_ = h.DB.QueryRowContext(r.Context(), `
 		SELECT maintenance_due, maintenance_override_by, maintenance_override_at, maintenance_override_reason
-		FROM vehicles WHERE id = $1`, id).Scan(&maintDue, &maintOvBy, &maintOvAt, &maintOvReason)
+		FROM vehicles WHERE id = $1 AND tenant_id = $2`, id, tenantID).Scan(&maintDue, &maintOvBy, &maintOvAt, &maintOvReason)
 
 	// Compliance doc-expiry strip: RC/permit/fitness/insurance/PUCC with days left.
 	type docStatus struct {
@@ -294,7 +352,7 @@ func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 	trips := []recentTrip{}
 	if rows, err := h.DB.QueryContext(r.Context(), `
 		SELECT id, trip_number, status, created_at FROM trips
-		WHERE vehicle_id = $1 ORDER BY created_at DESC LIMIT 5`, id); err == nil {
+		WHERE vehicle_id = $1 AND tenant_id = $2 ORDER BY created_at DESC LIMIT 5`, id, tenantID); err == nil {
 		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var t recentTrip
@@ -323,6 +381,23 @@ func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Preferred driver (master assignment) for this vehicle.
+	var assignedDriver map[string]interface{}
+	if a, _ := getActiveAssignmentByVehicle(r.Context(), h.DB, id, tenantID); a != nil {
+		var fn, ln, phone, dvid string
+		_ = h.DB.QueryRowContext(r.Context(), `SELECT first_name, last_name, phone, driver_id FROM drivers WHERE id = $1 AND tenant_id = $2`, a.DriverID, tenantID).Scan(&fn, &ln, &phone, &dvid)
+		assignedDriver = map[string]interface{}{"ID": a.DriverID, "FirstName": fn, "LastName": ln, "Phone": phone, "DriverID": dvid, "IsPrimary": a.IsPrimary}
+	}
+	var assignDrivers []map[string]interface{}
+	if rows, err := h.DB.QueryContext(r.Context(), `SELECT id, first_name, last_name, driver_id FROM drivers WHERE tenant_id = $1 ORDER BY first_name LIMIT 100`, tenantID); err == nil {
+		defer func() { _ = rows.Close() }()
+		for rows.Next() {
+			var did, fn, ln, dvid string
+			if rows.Scan(&did, &fn, &ln, &dvid) == nil {
+				assignDrivers = append(assignDrivers, map[string]interface{}{"ID": did, "FirstName": fn, "LastName": ln, "DriverID": dvid})
+			}
+		}
+	}
 	extra := map[string]interface{}{
 		"Vehicle":                   vehicle,
 		"Files":                     files,
@@ -338,6 +413,8 @@ func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 		"MeasuringPoints":           h.measuringPoints(r.Context(), id),
 		"RecentMeasurements":        h.recentMeasurements(r.Context(), id),
 		"RecentCommands":            h.recentCommands(r.Context(), id),
+		"AssignedDriver":            assignedDriver,
+		"AssignDrivers":             assignDrivers,
 	}
 
 	session, _ := h.getUserFromContext(r)
@@ -358,9 +435,10 @@ func (h *VehicleHandlers) Edit(w http.ResponseWriter, r *http.Request) {
 
 	var maintDue, maintOvBy, maintOvReason sql.NullString
 	var maintOvAt sql.NullTime
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
 	_ = h.DB.QueryRowContext(r.Context(), `
 		SELECT maintenance_due, maintenance_override_by, maintenance_override_at, maintenance_override_reason
-		FROM vehicles WHERE id = $1`, id).Scan(&maintDue, &maintOvBy, &maintOvAt, &maintOvReason)
+		FROM vehicles WHERE id = $1 AND tenant_id = $2`, id, tenantID).Scan(&maintDue, &maintOvBy, &maintOvAt, &maintOvReason)
 
 	extra := map[string]interface{}{
 		"Vehicle":                   vehicle,

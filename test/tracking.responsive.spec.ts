@@ -10,13 +10,15 @@ test.describe.configure({ mode: 'serial' });
 //
 // The viewport now comes from the PROJECT (desktop 1440 / tablet 820 / mobile
 // 390) rather than being set per-test, so every project gets the same
-// assertions with no duplicated loop. Layout expectations branch on Tailwind's
-// `lg` breakpoint (1024px):
+// assertions with no duplicated loop. Layout expectations branch twice:
 //
-//   below lg  -> registry stows off-canvas, an expand rail appears, and the
-//                vehicle detail sheet docks to the bottom of the map theater
-//                at full width.
-//   lg and up -> registry is pinned open, no rail, detail sheet is a side panel.
+//   < 768px  -> phone: full-width map + fleet bottom sheet (collapsed /
+//                half / full). No side drawer, no expand rail.
+//   768–1023 -> tablet: map + collapsible off-canvas registry, expand rail
+//                re-opens it; vehicle detail sheet docks to the bottom of
+//                the map theater at full width.
+//   >= 1024  -> desktop: registry pinned open, no rail, detail sheet is a
+//                side panel.
 
 const VEHICLES = [
   {
@@ -68,9 +70,34 @@ test('tracking responsive layout', async ({ page }) => {
   await page.goto('/tracking');
 
   const vw = page.viewportSize()!.width;
+  const isPhone = vw < 768;
   const compact = isBelowLg(page);
 
-  if (compact) {
+  if (isPhone) {
+    // Bottom sheet, default collapsed; no drawer, no rail.
+    await expect(page.locator('#fleet-sheet')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('#fleet-sheet.collapsed')).toBeVisible();
+    await expect(page.locator('#fleet-drawer')).toHaveCount(0);
+    await expect(page.locator('#drawer-expand-rail')).toHaveCount(0);
+    await expect(page.locator('#fleet-list')).toBeHidden();
+    // Map owns the width: theater spans the viewport.
+    const theaterBox = await page.locator('#map-theater').boundingBox();
+    expect(theaterBox).not.toBeNull();
+    expect(theaterBox!.x).toBeLessThanOrEqual(1);
+    expect(theaterBox!.x + theaterBox!.width).toBeGreaterThanOrEqual(vw - 1);
+    // Overlay, not a split: theater keeps full root height behind the sheet
+    // (±2px: #tracking-root's own 1px border is inside its bounding box).
+    const rootBox = await page.locator('#tracking-root').boundingBox();
+    expect(rootBox).not.toBeNull();
+    expect(
+      Math.abs(theaterBox!.height - rootBox!.height),
+      'map owns full height, sheet overlays',
+    ).toBeLessThanOrEqual(2);
+    // Expand to half — search, filters, rows appear.
+    await page.locator('.ti-sheet-summary').click();
+    await expect(page.locator('#fleet-sheet.half')).toBeVisible();
+    await expect(page.locator('#fleet-list')).toBeVisible();
+  } else if (compact) {
     // Registry stowed off-canvas below lg; expand rail visible instead.
     await expect(page.locator('#drawer-expand-rail')).toBeVisible({ timeout: 15000 });
     const drawerState = await page.evaluate(() => {
@@ -93,7 +120,7 @@ test('tracking responsive layout', async ({ page }) => {
   expect(bar!.x).toBeGreaterThanOrEqual(0);
   expect(bar!.x + bar!.width).toBeLessThanOrEqual(vw + 1);
 
-  if (compact) {
+  if (!isPhone && compact) {
     await page.locator('#drawer-expand-rail').click();
   }
   await expect(page.locator('#fleet-list .fleet-row')).toHaveCount(2, { timeout: 15000 });
@@ -106,7 +133,16 @@ test('tracking responsive layout', async ({ page }) => {
   expect(sheet).not.toBeNull();
   expect(theater).not.toBeNull();
 
-  if (compact) {
+  if (isPhone) {
+    // Sheet docks to the theater's bottom edge at full width; the fleet
+    // sheet drops back to collapsed so the centered marker stays visible.
+    expect(sheet!.y + sheet!.height, 'sheet flush with theater bottom').toBeCloseTo(
+      theater!.y + theater!.height,
+      1,
+    );
+    expect(sheet!.width, 'sheet is full-width on small screens').toBe(theater!.width);
+    await expect(page.locator('#fleet-sheet.collapsed')).toBeVisible();
+  } else if (compact) {
     // Sheet docks to the theater's bottom edge at full width.
     expect(sheet!.y + sheet!.height, 'sheet flush with theater bottom').toBeCloseTo(
       theater!.y + theater!.height,

@@ -263,19 +263,14 @@ export function PaisaScreen({ tripId, onOpenExpenses }: PaisaScreenProps) {
               );
             })
           ) : (
+            // Honest empty state: never render a fabricated statement entry.
             <View style={styles.passbookRow}>
               <View style={[styles.passbookIcon, { backgroundColor: Colors.primarySubtle }]}>
                 <MaterialCommunityIcons name="arrow-down-left" size={18} color={Colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.passbookTitle}>Trip Fuel & Toll</Text>
-                <Text style={styles.passbookSub}>Trip #TRP-8491 · 10:30 AM</Text>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.passbookAmountPlus}>+₹2,000</Text>
-                <View style={[styles.statusBadge, { backgroundColor: Colors.primarySubtle }]}>
-                  <Text style={[styles.statusBadgeText, { color: Colors.primary }]}>PAID</Text>
-                </View>
+                <Text style={styles.passbookTitle}>{t('paisa.no_advances', 'No Advances Yet', locale)}</Text>
+                <Text style={styles.passbookSub}>{t('paisa.no_advances_sub', 'Approved advances will appear here.', locale)}</Text>
               </View>
             </View>
           )}

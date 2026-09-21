@@ -12,35 +12,72 @@
         "DateFrom" .DateFrom
         "DateTo" .DateTo
         "ShowSearch" true
-        "SearchPlaceholder" (t "common.search")
-        "Primary" (dict "Label" (t "fl.new_vehicle") "Href" "/vehicles/new" "Size" "sm" "Icon" "add")
+        "SearchPlaceholder" (t "fl.search_vehicles_ph")
+        "ChipParams" .ChipParams
+        "Hidden" .FilterHidden
     )}}
+
+    <form method="GET" action="/vehicles" class="px-4 py-2.5 border-b border-border-subtle flex flex-wrap items-center gap-x-3 gap-y-2 bg-surface-container-lowest">
+        <input type="hidden" name="q" value="{{if .Query}}{{.Query}}{{end}}">
+        {{if .StatusFilter}}<input type="hidden" name="status" value="{{.StatusFilter}}">{{end}}
+        {{if .DateFrom}}<input type="hidden" name="from" value="{{.DateFrom}}">{{end}}
+        {{if .DateTo}}<input type="hidden" name="to" value="{{.DateTo}}">{{end}}
+        <input type="hidden" name="limit" value="{{.Pagination.PerPage}}">
+        <span class="flex flex-col min-[360px]:flex-row min-[360px]:items-center gap-x-3 gap-y-1 w-full md:w-auto md:flex-1">
+        <label for="fleet_class" class="text-xs font-semibold uppercase tracking-wider text-secondary shrink-0">{{t "fl.fleet_class_2"}}</label>
+        <select id="fleet_class" name="fleet_class" onchange="this.form.submit()" class="flex-1 min-w-0 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary transition">
+            <option value="" {{if not .FleetClassFilter}}selected{{end}}>{{t "fl.all_classes"}}</option>
+            <option value="CV" {{if eq .FleetClassFilter "CV"}}selected{{end}}>{{t "fl.cv_commercial"}}</option>
+            <option value="PV" {{if eq .FleetClassFilter "PV"}}selected{{end}}>{{t "fl.pv_passenger"}}</option>
+            <option value="FS" {{if eq .FleetClassFilter "FS"}}selected{{end}}>{{t "fl.fs_fuel_station"}}</option>
+            <option value="OFS" {{if eq .FleetClassFilter "OFS"}}selected{{end}}>{{t "fl.ofs_outside_fuel_stn"}}</option>
+        </select>
+        </span>
+        <span class="flex flex-col min-[360px]:flex-row min-[360px]:items-center gap-x-3 gap-y-1 w-full md:w-auto md:flex-1">
+        <label for="ownership" class="text-xs font-semibold uppercase tracking-wider text-secondary shrink-0">{{t "fl.ownership"}}</label>
+        <select id="ownership" name="ownership" onchange="this.form.submit()" class="flex-1 min-w-0 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary transition">
+            <option value="" {{if not .OwnershipFilter}}selected{{end}}>{{t "fl.all_ownership"}}</option>
+            <option value="O" {{if eq .OwnershipFilter "O"}}selected{{end}}>{{t "fl.o_own"}}</option>
+            <option value="C" {{if eq .OwnershipFilter "C"}}selected{{end}}>{{t "fl.c_contract"}}</option>
+            <option value="F" {{if eq .OwnershipFilter "F"}}selected{{end}}>{{t "fl.f_fuel_station_2"}}</option>
+            <option value="M" {{if eq .OwnershipFilter "M"}}selected{{end}}>{{t "fl.m_machine"}}</option>
+        </select>
+        </span>
+        {{if or .FleetClassFilter .OwnershipFilter}}<a href="/vehicles{{if .ClearParams}}?{{.ClearParams}}{{end}}" class="text-xs font-semibold text-primary hover:underline">{{t "fl.clear"}}</a>{{end}}
+    </form>
 
     <div id="list-table">
         {{template "vehicle_list_table.html" .}}
     </div>
 </div>
-
-<form method="GET" action="/vehicles" class="px-4 py-2.5 border-t border-border-subtle flex flex-wrap items-center gap-2 bg-surface-container-lowest">
-    <input type="hidden" name="q" value="{{if .Query}}{{.Query}}{{end}}">
-    {{if .StatusFilter}}<input type="hidden" name="status" value="{{.StatusFilter}}">{{end}}
-    {{if .DateFrom}}<input type="hidden" name="from" value="{{.DateFrom}}">{{end}}
-    {{if .DateTo}}<input type="hidden" name="to" value="{{.DateTo}}">{{end}}
-    <label for="fleet_class" class="text-xs font-semibold uppercase tracking-wider text-secondary">{{t "fl.fleet_class_2"}}</label>
-    <select id="fleet_class" name="fleet_class" onchange="this.form.submit()" class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary transition">
-        <option value="" {{if not .FleetClassFilter}}selected{{end}}>{{t "fl.all_classes"}}</option>
-        <option value="CV" {{if eq .FleetClassFilter "CV"}}selected{{end}}>{{t "fl.cv_commercial"}}</option>
-        <option value="PV" {{if eq .FleetClassFilter "PV"}}selected{{end}}>{{t "fl.pv_passenger"}}</option>
-        <option value="FS" {{if eq .FleetClassFilter "FS"}}selected{{end}}>{{t "fl.fs_fuel_station"}}</option>
-        <option value="OFS" {{if eq .FleetClassFilter "OFS"}}selected{{end}}>{{t "fl.ofs_outside_fuel_stn"}}</option>
-    </select>
-    <label for="ownership" class="text-xs font-semibold uppercase tracking-wider text-secondary">{{t "fl.ownership"}}</label>
-    <select id="ownership" name="ownership" onchange="this.form.submit()" class="bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface focus:outline-none focus:border-primary transition">
-        <option value="" {{if not .OwnershipFilter}}selected{{end}}>{{t "fl.all_ownership"}}</option>
-        <option value="O" {{if eq .OwnershipFilter "O"}}selected{{end}}>{{t "fl.o_own"}}</option>
-        <option value="C" {{if eq .OwnershipFilter "C"}}selected{{end}}>{{t "fl.c_contract"}}</option>
-        <option value="F" {{if eq .OwnershipFilter "F"}}selected{{end}}>{{t "fl.f_fuel_station_2"}}</option>
-        <option value="M" {{if eq .OwnershipFilter "M"}}selected{{end}}>{{t "fl.m_machine"}}</option>
-    </select>
-    {{if or .FleetClassFilter .OwnershipFilter}}<a href="/vehicles" class="text-xs font-semibold text-primary hover:underline">{{t "fl.clear"}}</a>{{end}}
-</form>
+<script>
+    // htmx swaps only #list-table, so the server-rendered chip highlight would
+    // freeze on the previously selected chip. Re-derive it from the pushed URL
+    // after every list settle. Mirrors the server chip classes in filter_bar.
+    (function () {
+        var ON = ["border-primary", "bg-primary", "text-on-primary"];
+        var OFF = ["border-border-subtle", "bg-surface-container-lowest", "text-secondary", "hover:bg-surface-container-low"];
+        function statusOf(a) {
+            try { return new URL(a.getAttribute("href"), location.origin).searchParams.get("status") || ""; }
+            catch (e) { return ""; }
+        }
+        function syncChips() {
+            var cur = "";
+            try { cur = new URL(location.href).searchParams.get("status") || ""; } catch (e) { cur = ""; }
+            document.querySelectorAll('form[data-filterbar] a[hx-get]').forEach(function (a) {
+                var on = statusOf(a) === cur;
+                a.classList.remove.apply(a.classList, on ? OFF : ON);
+                a.classList.add.apply(a.classList, on ? ON : OFF);
+            });
+        }
+        // Vendored htmx uses colon-namespaced events (htmx:after:settle, …),
+        // dispatched on document when the target is detached — listen at
+        // document level, not body.
+        document.addEventListener("htmx:after:settle", function (e) {
+            if (e.detail && e.detail.target && e.detail.target.closest && e.detail.target.closest("#list-table")) syncChips();
+        });
+        // after:settle can run before hx-push-url commits location.href; the
+        // push event always sees the final URL.
+        document.addEventListener("htmx:after:history:push", syncChips);
+    })();
+</script>

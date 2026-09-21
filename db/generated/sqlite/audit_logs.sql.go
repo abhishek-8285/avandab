@@ -14,10 +14,23 @@ import (
 const countAuditLogs = `-- name: CountAuditLogs :one
 SELECT COUNT(*) AS count
 FROM audit_logs
+WHERE tenant_id = ?
 `
 
-func (q *Queries) CountAuditLogs(ctx context.Context) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countAuditLogs)
+func (q *Queries) CountAuditLogs(ctx context.Context, tenantID sql.NullString) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countAuditLogs, tenantID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countAuditLogsGlobal = `-- name: CountAuditLogsGlobal :one
+SELECT COUNT(*) AS count
+FROM audit_logs
+`
+
+func (q *Queries) CountAuditLogsGlobal(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countAuditLogsGlobal)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -26,20 +39,38 @@ func (q *Queries) CountAuditLogs(ctx context.Context) (int64, error) {
 const countAuditLogsSince = `-- name: CountAuditLogsSince :one
 SELECT COUNT(*) AS count
 FROM audit_logs
-WHERE created_at > ?1
+WHERE tenant_id = ? AND CAST(created_at AS TEXT) > CAST(? AS TEXT)
 `
 
-func (q *Queries) CountAuditLogsSince(ctx context.Context, since time.Time) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countAuditLogsSince, since)
+type CountAuditLogsSinceParams struct {
+	TenantID sql.NullString `json:"tenant_id"`
+	Column2  string         `json:"column_2"`
+}
+
+func (q *Queries) CountAuditLogsSince(ctx context.Context, arg CountAuditLogsSinceParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countAuditLogsSince, arg.TenantID, arg.Column2)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countAuditLogsSinceGlobal = `-- name: CountAuditLogsSinceGlobal :one
+SELECT COUNT(*) AS count
+FROM audit_logs
+WHERE CAST(created_at AS TEXT) > CAST(? AS TEXT)
+`
+
+func (q *Queries) CountAuditLogsSinceGlobal(ctx context.Context, dollar_1 string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countAuditLogsSinceGlobal, dollar_1)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
 }
 
 const createAuditLog = `-- name: CreateAuditLog :one
-INSERT INTO audit_logs (id, user_id, action, table_name, record_id, old_values, new_values, ip_address)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-RETURNING id, user_id, action, table_name, record_id, old_values, new_values, ip_address, created_at
+INSERT INTO audit_logs (id, user_id, action, table_name, record_id, old_values, new_values, ip_address, location, tenant_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+RETURNING id, user_id, action, table_name, record_id, old_values, new_values, ip_address, location, tenant_id, created_at
 `
 
 type CreateAuditLogParams struct {
@@ -51,9 +82,25 @@ type CreateAuditLogParams struct {
 	OldValues sql.NullString `json:"old_values"`
 	NewValues sql.NullString `json:"new_values"`
 	IpAddress sql.NullString `json:"ip_address"`
+	Location  sql.NullString `json:"location"`
+	TenantID  sql.NullString `json:"tenant_id"`
 }
 
-func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (AuditLog, error) {
+type CreateAuditLogRow struct {
+	ID        string         `json:"id"`
+	UserID    sql.NullString `json:"user_id"`
+	Action    string         `json:"action"`
+	TableName string         `json:"table_name"`
+	RecordID  sql.NullString `json:"record_id"`
+	OldValues sql.NullString `json:"old_values"`
+	NewValues sql.NullString `json:"new_values"`
+	IpAddress sql.NullString `json:"ip_address"`
+	Location  sql.NullString `json:"location"`
+	TenantID  sql.NullString `json:"tenant_id"`
+	CreatedAt time.Time      `json:"created_at"`
+}
+
+func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) (CreateAuditLogRow, error) {
 	row := q.db.QueryRowContext(ctx, createAuditLog,
 		arg.ID,
 		arg.UserID,
@@ -63,8 +110,10 @@ func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) 
 		arg.OldValues,
 		arg.NewValues,
 		arg.IpAddress,
+		arg.Location,
+		arg.TenantID,
 	)
-	var i AuditLog
+	var i CreateAuditLogRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
@@ -74,23 +123,27 @@ func (q *Queries) CreateAuditLog(ctx context.Context, arg CreateAuditLogParams) 
 		&i.OldValues,
 		&i.NewValues,
 		&i.IpAddress,
+		&i.Location,
+		&i.TenantID,
 		&i.CreatedAt,
 	)
 	return i, err
 }
 
 const getAuditLogs = `-- name: GetAuditLogs :many
-SELECT a.id, a.user_id, a.action, a.table_name, a.record_id, a.old_values, a.new_values, a.ip_address, a.created_at,
+SELECT a.id, a.user_id, a.action, a.table_name, a.record_id, a.old_values, a.new_values, a.ip_address, a.location, a.tenant_id, a.created_at,
        u.name AS user_name
 FROM audit_logs a
 LEFT JOIN users u ON a.user_id = u.id
+WHERE a.tenant_id = ?
 ORDER BY a.created_at DESC
 LIMIT ? OFFSET ?
 `
 
 type GetAuditLogsParams struct {
-	Limit  int64 `json:"limit"`
-	Offset int64 `json:"offset"`
+	TenantID sql.NullString `json:"tenant_id"`
+	Limit    int64          `json:"limit"`
+	Offset   int64          `json:"offset"`
 }
 
 type GetAuditLogsRow struct {
@@ -102,12 +155,14 @@ type GetAuditLogsRow struct {
 	OldValues sql.NullString `json:"old_values"`
 	NewValues sql.NullString `json:"new_values"`
 	IpAddress sql.NullString `json:"ip_address"`
+	Location  sql.NullString `json:"location"`
+	TenantID  sql.NullString `json:"tenant_id"`
 	CreatedAt time.Time      `json:"created_at"`
 	UserName  sql.NullString `json:"user_name"`
 }
 
 func (q *Queries) GetAuditLogs(ctx context.Context, arg GetAuditLogsParams) ([]GetAuditLogsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getAuditLogs, arg.Limit, arg.Offset)
+	rows, err := q.db.QueryContext(ctx, getAuditLogs, arg.TenantID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -124,6 +179,8 @@ func (q *Queries) GetAuditLogs(ctx context.Context, arg GetAuditLogsParams) ([]G
 			&i.OldValues,
 			&i.NewValues,
 			&i.IpAddress,
+			&i.Location,
+			&i.TenantID,
 			&i.CreatedAt,
 			&i.UserName,
 		); err != nil {
@@ -141,16 +198,17 @@ func (q *Queries) GetAuditLogs(ctx context.Context, arg GetAuditLogsParams) ([]G
 }
 
 const getAuditLogsByRecord = `-- name: GetAuditLogsByRecord :many
-SELECT a.id, a.user_id, a.action, a.table_name, a.record_id, a.old_values, a.new_values, a.ip_address, a.created_at,
+SELECT a.id, a.user_id, a.action, a.table_name, a.record_id, a.old_values, a.new_values, a.ip_address, a.location, a.tenant_id, a.created_at,
        u.name AS user_name
 FROM audit_logs a
 LEFT JOIN users u ON a.user_id = u.id
-WHERE a.table_name = ? AND a.record_id = ?
+WHERE a.tenant_id = ? AND a.table_name = ? AND a.record_id = ?
 ORDER BY a.created_at DESC
 LIMIT ?
 `
 
 type GetAuditLogsByRecordParams struct {
+	TenantID  sql.NullString `json:"tenant_id"`
 	TableName string         `json:"table_name"`
 	RecordID  sql.NullString `json:"record_id"`
 	Limit     int64          `json:"limit"`
@@ -165,12 +223,19 @@ type GetAuditLogsByRecordRow struct {
 	OldValues sql.NullString `json:"old_values"`
 	NewValues sql.NullString `json:"new_values"`
 	IpAddress sql.NullString `json:"ip_address"`
+	Location  sql.NullString `json:"location"`
+	TenantID  sql.NullString `json:"tenant_id"`
 	CreatedAt time.Time      `json:"created_at"`
 	UserName  sql.NullString `json:"user_name"`
 }
 
 func (q *Queries) GetAuditLogsByRecord(ctx context.Context, arg GetAuditLogsByRecordParams) ([]GetAuditLogsByRecordRow, error) {
-	rows, err := q.db.QueryContext(ctx, getAuditLogsByRecord, arg.TableName, arg.RecordID, arg.Limit)
+	rows, err := q.db.QueryContext(ctx, getAuditLogsByRecord,
+		arg.TenantID,
+		arg.TableName,
+		arg.RecordID,
+		arg.Limit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -187,6 +252,140 @@ func (q *Queries) GetAuditLogsByRecord(ctx context.Context, arg GetAuditLogsByRe
 			&i.OldValues,
 			&i.NewValues,
 			&i.IpAddress,
+			&i.Location,
+			&i.TenantID,
+			&i.CreatedAt,
+			&i.UserName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAuditLogsByRecordGlobal = `-- name: GetAuditLogsByRecordGlobal :many
+SELECT a.id, a.user_id, a.action, a.table_name, a.record_id, a.old_values, a.new_values, a.ip_address, a.location, a.tenant_id, a.created_at,
+       u.name AS user_name
+FROM audit_logs a
+LEFT JOIN users u ON a.user_id = u.id
+WHERE a.table_name = ? AND a.record_id = ?
+ORDER BY a.created_at DESC
+LIMIT ?
+`
+
+type GetAuditLogsByRecordGlobalParams struct {
+	TableName string         `json:"table_name"`
+	RecordID  sql.NullString `json:"record_id"`
+	Limit     int64          `json:"limit"`
+}
+
+type GetAuditLogsByRecordGlobalRow struct {
+	ID        string         `json:"id"`
+	UserID    sql.NullString `json:"user_id"`
+	Action    string         `json:"action"`
+	TableName string         `json:"table_name"`
+	RecordID  sql.NullString `json:"record_id"`
+	OldValues sql.NullString `json:"old_values"`
+	NewValues sql.NullString `json:"new_values"`
+	IpAddress sql.NullString `json:"ip_address"`
+	Location  sql.NullString `json:"location"`
+	TenantID  sql.NullString `json:"tenant_id"`
+	CreatedAt time.Time      `json:"created_at"`
+	UserName  sql.NullString `json:"user_name"`
+}
+
+func (q *Queries) GetAuditLogsByRecordGlobal(ctx context.Context, arg GetAuditLogsByRecordGlobalParams) ([]GetAuditLogsByRecordGlobalRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAuditLogsByRecordGlobal, arg.TableName, arg.RecordID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAuditLogsByRecordGlobalRow
+	for rows.Next() {
+		var i GetAuditLogsByRecordGlobalRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Action,
+			&i.TableName,
+			&i.RecordID,
+			&i.OldValues,
+			&i.NewValues,
+			&i.IpAddress,
+			&i.Location,
+			&i.TenantID,
+			&i.CreatedAt,
+			&i.UserName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAuditLogsGlobal = `-- name: GetAuditLogsGlobal :many
+SELECT a.id, a.user_id, a.action, a.table_name, a.record_id, a.old_values, a.new_values, a.ip_address, a.location, a.tenant_id, a.created_at,
+       u.name AS user_name
+FROM audit_logs a
+LEFT JOIN users u ON a.user_id = u.id
+ORDER BY a.created_at DESC
+LIMIT ? OFFSET ?
+`
+
+type GetAuditLogsGlobalParams struct {
+	Limit  int64 `json:"limit"`
+	Offset int64 `json:"offset"`
+}
+
+type GetAuditLogsGlobalRow struct {
+	ID        string         `json:"id"`
+	UserID    sql.NullString `json:"user_id"`
+	Action    string         `json:"action"`
+	TableName string         `json:"table_name"`
+	RecordID  sql.NullString `json:"record_id"`
+	OldValues sql.NullString `json:"old_values"`
+	NewValues sql.NullString `json:"new_values"`
+	IpAddress sql.NullString `json:"ip_address"`
+	Location  sql.NullString `json:"location"`
+	TenantID  sql.NullString `json:"tenant_id"`
+	CreatedAt time.Time      `json:"created_at"`
+	UserName  sql.NullString `json:"user_name"`
+}
+
+func (q *Queries) GetAuditLogsGlobal(ctx context.Context, arg GetAuditLogsGlobalParams) ([]GetAuditLogsGlobalRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAuditLogsGlobal, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetAuditLogsGlobalRow
+	for rows.Next() {
+		var i GetAuditLogsGlobalRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Action,
+			&i.TableName,
+			&i.RecordID,
+			&i.OldValues,
+			&i.NewValues,
+			&i.IpAddress,
+			&i.Location,
+			&i.TenantID,
 			&i.CreatedAt,
 			&i.UserName,
 		); err != nil {

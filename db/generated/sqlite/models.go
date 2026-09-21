@@ -129,6 +129,8 @@ type AuditLog struct {
 	NewValues sql.NullString `json:"new_values"`
 	IpAddress sql.NullString `json:"ip_address"`
 	CreatedAt time.Time      `json:"created_at"`
+	Location  sql.NullString `json:"location"`
+	TenantID  sql.NullString `json:"tenant_id"`
 }
 
 type Booking struct {
@@ -646,6 +648,19 @@ type DriverPayoutAccount struct {
 	ValidUntil             sql.NullTime   `json:"valid_until"`
 	HoldPayouts            int64          `json:"hold_payouts"`
 	CreatedAt              time.Time      `json:"created_at"`
+}
+
+type DriverPreferredVehicle struct {
+	ID           string         `json:"id"`
+	TenantID     string         `json:"tenant_id"`
+	DriverID     string         `json:"driver_id"`
+	VehicleID    string         `json:"vehicle_id"`
+	IsPrimary    int64          `json:"is_primary"`
+	AssignedAt   time.Time      `json:"assigned_at"`
+	UnassignedAt sql.NullTime   `json:"unassigned_at"`
+	AssignedBy   sql.NullString `json:"assigned_by"`
+	CreatedAt    time.Time      `json:"created_at"`
+	UpdatedAt    time.Time      `json:"updated_at"`
 }
 
 type DriverPushToken struct {
