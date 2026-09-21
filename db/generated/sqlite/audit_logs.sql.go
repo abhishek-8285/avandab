@@ -39,16 +39,16 @@ func (q *Queries) CountAuditLogsGlobal(ctx context.Context) (int64, error) {
 const countAuditLogsSince = `-- name: CountAuditLogsSince :one
 SELECT COUNT(*) AS count
 FROM audit_logs
-WHERE tenant_id = ? AND datetime(created_at) > datetime(?)
+WHERE tenant_id = ? AND CAST(created_at AS TEXT) > CAST(? AS TEXT)
 `
 
 type CountAuditLogsSinceParams struct {
 	TenantID sql.NullString `json:"tenant_id"`
-	Datetime interface{}    `json:"datetime"`
+	Column2  string         `json:"column_2"`
 }
 
 func (q *Queries) CountAuditLogsSince(ctx context.Context, arg CountAuditLogsSinceParams) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countAuditLogsSince, arg.TenantID, arg.Datetime)
+	row := q.db.QueryRowContext(ctx, countAuditLogsSince, arg.TenantID, arg.Column2)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -57,11 +57,11 @@ func (q *Queries) CountAuditLogsSince(ctx context.Context, arg CountAuditLogsSin
 const countAuditLogsSinceGlobal = `-- name: CountAuditLogsSinceGlobal :one
 SELECT COUNT(*) AS count
 FROM audit_logs
-WHERE datetime(created_at) > datetime(?)
+WHERE CAST(created_at AS TEXT) > CAST(? AS TEXT)
 `
 
-func (q *Queries) CountAuditLogsSinceGlobal(ctx context.Context, datetime interface{}) (int64, error) {
-	row := q.db.QueryRowContext(ctx, countAuditLogsSinceGlobal, datetime)
+func (q *Queries) CountAuditLogsSinceGlobal(ctx context.Context, dollar_1 string) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countAuditLogsSinceGlobal, dollar_1)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

@@ -47,11 +47,20 @@ async function withinViewport(page: Page, selector: string, label: string) {
 
 test('vehicles list layout has no overflow', async ({ page }) => {
   await registerFreshUser(page, 'pw-veh');
-  await seedVehicle(page, uniqueReg('A'));
-  await seedVehicle(page, uniqueReg('B'));
+  const regA = uniqueReg('A');
+  const regB = uniqueReg('B');
+  await seedVehicle(page, regA);
+  await seedVehicle(page, regB);
   await page.goto('/vehicles');
 
-  await expect(page.locator('table.rtable tbody tr')).toHaveCount(2, { timeout: 15000 });
+  await expect(page.locator('table.rtable tbody tr')).toHaveCount(2, { timeout: 15000 }).catch(async (e) => {
+    // Self-diagnosing: a shared parallel E2E DB once showed 20 rows here for
+    // a fresh 2-vehicle tenant — dump the visible regs so the next CI failure
+    // names the polluting rows instead of just a count.
+    const regs = await page.locator('table.rtable tbody tr td:first-child').allTextContents().catch(() => []);
+    console.log(`VEHICLES-OVERFLOW-DIAG seeded=[${regA}, ${regB}] visible=${JSON.stringify(regs.slice(0, 25))}`);
+    throw e;
+  });
   await expectNoHorizontalOverflow(page, '/vehicles populated');
   await withinViewport(page, 'form[data-filterbar]', 'filter bar');
   await withinViewport(page, 'form[data-filterbar] input[name="q"]', 'search input');

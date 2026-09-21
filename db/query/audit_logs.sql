@@ -32,12 +32,12 @@ FROM audit_logs;
 -- name: CountAuditLogsSince :one
 SELECT COUNT(*) AS count
 FROM audit_logs
-WHERE tenant_id = ? AND datetime(created_at) > datetime(?);
+WHERE tenant_id = ? AND CAST(created_at AS TEXT) > CAST(? AS TEXT);
 
 -- name: CountAuditLogsSinceGlobal :one
 SELECT COUNT(*) AS count
 FROM audit_logs
-WHERE datetime(created_at) > datetime(?);
+WHERE CAST(created_at AS TEXT) > CAST(? AS TEXT);
 
 -- name: GetAuditLogsByRecord :many
 SELECT a.id, a.user_id, a.action, a.table_name, a.record_id, a.old_values, a.new_values, a.ip_address, a.location, a.tenant_id, a.created_at,

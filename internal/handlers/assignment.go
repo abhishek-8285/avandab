@@ -115,14 +115,14 @@ func (h *DriverHandlers) AssignVehicleToDriver(w http.ResponseWriter, r *http.Re
 		h.failPage(w, r, err, http.StatusBadRequest, "Assignment Failed")
 		return
 	}
-	http.Redirect(w, r, "/drivers/"+driverID, http.StatusSeeOther)
+	http.Redirect(w, r, safeRedirect(r, "/drivers/"+driverID, "/drivers"), http.StatusSeeOther) //nolint:gosec // G710: safeRedirect returns only same-origin paths (see redirect_test.go)
 }
 
 func (h *DriverHandlers) UnassignVehicleFromDriver(w http.ResponseWriter, r *http.Request) {
 	driverID := chi.URLParam(r, "id")
 	tenantID := string(shared.TenantIDFromContext(r.Context()))
 	_ = unassignDriver(r.Context(), h.DB, tenantID, driverID)
-	http.Redirect(w, r, "/drivers/"+driverID, http.StatusSeeOther)
+	http.Redirect(w, r, safeRedirect(r, "/drivers/"+driverID, "/drivers"), http.StatusSeeOther) //nolint:gosec // G710: safeRedirect returns only same-origin paths (see redirect_test.go)
 }
 
 func (h *VehicleHandlers) AssignDriverToVehicle(w http.ResponseWriter, r *http.Request) {
@@ -141,12 +141,12 @@ func (h *VehicleHandlers) AssignDriverToVehicle(w http.ResponseWriter, r *http.R
 		h.failPage(w, r, err, http.StatusBadRequest, "Assignment Failed")
 		return
 	}
-	http.Redirect(w, r, "/vehicles/"+vehicleID, http.StatusSeeOther)
+	http.Redirect(w, r, safeRedirect(r, "/vehicles/"+vehicleID, "/vehicles"), http.StatusSeeOther) //nolint:gosec // G710: safeRedirect returns only same-origin paths (see redirect_test.go)
 }
 
 func (h *VehicleHandlers) UnassignDriverFromVehicle(w http.ResponseWriter, r *http.Request) {
 	vehicleID := chi.URLParam(r, "id")
 	tenantID := string(shared.TenantIDFromContext(r.Context()))
 	_ = unassignVehicle(r.Context(), h.DB, tenantID, vehicleID)
-	http.Redirect(w, r, "/vehicles/"+vehicleID, http.StatusSeeOther)
+	http.Redirect(w, r, safeRedirect(r, "/vehicles/"+vehicleID, "/vehicles"), http.StatusSeeOther) //nolint:gosec // G710: safeRedirect returns only same-origin paths (see redirect_test.go)
 }

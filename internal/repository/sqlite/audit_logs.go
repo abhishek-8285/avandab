@@ -208,7 +208,7 @@ func (r *SQLRepository) CountAuditLogsSince(ctx context.Context, since time.Time
 	}
 	return r.Q(ctx).CountAuditLogsSince(ctx, db.CountAuditLogsSinceParams{
 		TenantID: sql.NullString{String: tenantID, Valid: true},
-		Datetime: sinceStr,
+		Column2:  sinceStr,
 	})
 }
 
