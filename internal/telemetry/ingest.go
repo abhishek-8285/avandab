@@ -148,6 +148,28 @@ func (ing *Ingestor) fallbackVehicleID(ctx context.Context, tenantID, imei strin
 	return ""
 }
 
+// activeTripID resolves the trip a vehicle is currently on. Every real frame
+// source (mobile sync, MQTT, TCP hardware) arrives with an empty trip_id, and
+// an unattributed frame starves the dwell engine — pickup/drop zones and the
+// ReachPickup/StartTransit gates need a trip — and leaves
+// /api/v1/telemetry/live?trip_id= with zero rows. Only genuinely active
+// statuses count so a cancelled or completed trip is never latched onto;
+// latest departure wins when a vehicle has more than one.
+func (ing *Ingestor) activeTripID(ctx context.Context, tenantID, vehicleID string) string {
+	db := txOrDB(ctx, ing.deviceStore.db)
+	var tripID sql.NullString
+	err := db.QueryRowContext(ctx, `
+		SELECT id FROM trips
+		WHERE tenant_id = $1 AND vehicle_id = $2
+			AND status IN ('assigned', 'started', 'reached_pickup', 'in_transit')
+		ORDER BY departure_time DESC
+		LIMIT 1`, tenantID, vehicleID).Scan(&tripID)
+	if err != nil || !tripID.Valid || tripID.String == "" {
+		return ""
+	}
+	return tripID.String
+}
+
 // txOrDB returns the active transaction from context, or the fallback DB.
 // Both implement ExecContext/QueryRowContext/QueryContext.
 func txOrDB(ctx context.Context, fallback *sql.DB) interface {
@@ -257,6 +279,13 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 		}
 		if vehicleID == "" {
 			vehicleID = ing.fallbackVehicleID(txCtx, device.TenantID, frame.IMEI)
+		}
+
+		// Trip attribution: a trip the caller supplied is never overwritten,
+		// otherwise every unattributed frame writes telemetry_snapshots.trip_id
+		// = '' and the dwell engine skips pickup/drop zones entirely.
+		if frame.TripID == "" && vehicleID != "" {
+			frame.TripID = ing.activeTripID(txCtx, device.TenantID, vehicleID)
 		}
 
 		// Step 7: Redundant frame checks (migration 00117 + moving deadband):
@@ -600,13 +629,12 @@ func (ing *Ingestor) insertRawEvent(ctx context.Context, id, tenantID string, fr
 // insertPosition inserts a position row into telemetry_positions.
 func (ing *Ingestor) insertPosition(ctx context.Context, id, tenantID, vehicleID string, frame RawFrame, odometer, fuel *float64, rawEventID string, receivedAt time.Time) error {
 	db := txOrDB(ctx, ing.deviceStore.db)
-	// L9: unbound-device frames store NULL, never the '' sentinel — every
-	// reader already filters `IS NOT NULL AND != ''`, so NULL is excluded
-	// identically without the identity-ambiguous junk rows.
-	var vehicle sql.NullString
-	if vehicleID != "" {
-		vehicle = sql.NullString{String: vehicleID, Valid: true}
-	}
+	// L9: unbound frames store NULL, never the '' sentinel — every reader
+	// already filters `IS NOT NULL AND != ''`, so NULL is excluded identically
+	// without the identity-ambiguous junk rows. FK columns (driver_id, trip_id,
+	// vehicle_id) must be NULL rather than '': binding '' makes SQLite look up
+	// drivers/trips/vehicles with id = '' and abort the insert with FK 787
+	// under production's PRAGMA foreign_keys=ON, dropping the frame entirely.
 	_, err := db.ExecContext(ctx,
 		`INSERT INTO telemetry_positions
             (id, tenant_id, imei, device_time, received_at, latitude, longitude,
@@ -620,7 +648,7 @@ func (ing *Ingestor) insertPosition(ctx context.Context, id, tenantID, vehicleID
 		frame.Ignition, frame.EngineHours, frame.Accuracy, fuel, odometer,
 		frame.Satellites, frame.BatteryLevel, frame.ExternalVoltage, frame.GSMSignal,
 		boolPtr(frame.Motion), validInt(frame.Valid), frame.FixTime,
-		frame.DriverID, frame.TripID, vehicle,
+		nullStr(frame.DriverID), nullStr(frame.TripID), nullStr(vehicleID),
 		frame.Provider, rawEventID,
 	)
 	return err
@@ -709,13 +737,23 @@ func (ing *Ingestor) insertSnapshot(ctx context.Context, frame RawFrame, device 
              speed = excluded.speed, fuel_level = excluded.fuel_level, odometer = excluded.odometer,
              heading = excluded.heading, ignition = excluded.ignition, engine_hours = excluded.engine_hours,
              accuracy = excluded.accuracy, driver_id = excluded.driver_id`,
-		snapshotID, frame.TripID, vehicleID, frame.DeviceTime, frame.DeviceTime.Unix(),
+		snapshotID, nullStr(frame.TripID), nullStr(vehicleID), frame.DeviceTime, frame.DeviceTime.Unix(),
 		frame.Latitude, frame.Longitude, frame.Speed,
 		fuel, odometer,
 		frame.Heading, frame.Ignition, frame.EngineHours, frame.Accuracy, frame.DriverID,
 	)
 	_ = receivedAt
 	return err
+}
+
+// nullStr maps the ” sentinel to SQL NULL for FK columns: binding ” makes
+// SQLite look up trips/vehicles with id = ” and abort the insert with FK 787
+// under production's PRAGMA foreign_keys=ON.
+func nullStr(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
 }
 
 // quarantineUnknown inserts a quarantine entry for a frame from an IMEI that

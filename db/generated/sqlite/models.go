@@ -616,6 +616,15 @@ type DriverLicenseClass struct {
 	CreatedAt  time.Time    `json:"created_at"`
 }
 
+type DriverMqttCredential struct {
+	DriverKey    string       `json:"driver_key"`
+	TenantID     string       `json:"tenant_id"`
+	Username     string       `json:"username"`
+	PasswordHash string       `json:"password_hash"`
+	CreatedAt    time.Time    `json:"created_at"`
+	RotatedAt    sql.NullTime `json:"rotated_at"`
+}
+
 type DriverOnboarding struct {
 	DriverID       string       `json:"driver_id"`
 	TenantID       string       `json:"tenant_id"`

@@ -47,10 +47,33 @@ interface FeedState {
   lastSync: number;
 }
 
+// Merge a single-object frame into the fleet map.
+//
+// SSE publishes a POSITION frame (vehicle_id, lat/lng, speed, timestamp) while
+// REST polling publishes the full vehicle record. Replacing the stored object
+// on every live fix wiped vehicle_number, status, driver_name, heading and ts
+// — the sidebar fell back to raw vehicle ids, every marker rendered
+// `STATUS_LABEL[undefined]`, and "Fix time" showed Invalid Date. Merging keeps
+// the poll's identity fields and takes the frame's position; `timestamp` is
+// renamed to `ts` because that is what the LiveVehicle contract calls it.
+// Returns false when the payload names no vehicle (caller drops it).
+export function upsertVehicle(m: Map<string, LiveVehicle>, payload: unknown): boolean {
+  if (!payload || typeof payload !== 'object') return false;
+  const p = payload as Partial<LiveVehicle> & { timestamp?: string };
+  if (typeof p.vehicle_id !== 'string') return false;
+  const prev = m.get(p.vehicle_id);
+  const merged = { ...(prev ?? {}), ...p } as LiveVehicle;
+  if (typeof p.timestamp === 'string') merged.ts = p.timestamp;
+  else if (prev?.ts) merged.ts = prev.ts;
+  m.set(p.vehicle_id, merged);
+  return true;
+}
+
 // Live telemetry feed: SSE (telemetry events on the stream endpoint) is
 // authoritative; REST polling of the live endpoint is the backup while the
 // stream is down — same contract as the legacy tracking.html (ingestTelemetry:
-// a bare array replaces the fleet, a single object upserts one vehicle).
+// a bare array replaces the fleet, a single object merges into one vehicle via
+// upsertVehicle).
 export function useTelemetryFeed(cfg: { live: string; stream: string; pollSec: number }) {
   const [{ vehicles, version, conn, sseAttempts, lastSync }, setState] = useState<FeedState>({
     vehicles: new Map(), version: 0, conn: 'connecting', sseAttempts: 0, lastSync: 0,
@@ -90,8 +113,8 @@ export function useTelemetryFeed(cfg: { live: string; stream: string; pollSec: n
         m.set(v.vehicle_id, v);
       }
       for (const id of [...m.keys()]) if (!seen.has(id)) m.delete(id);
-    } else if (payload && typeof (payload as LiveVehicle).vehicle_id === 'string') {
-      m.set((payload as LiveVehicle).vehicle_id, payload as LiveVehicle);
+    } else if (upsertVehicle(m, payload)) {
+      // single-object frame — merged into the last poll record, see upsertVehicle
     } else {
       return;
     }

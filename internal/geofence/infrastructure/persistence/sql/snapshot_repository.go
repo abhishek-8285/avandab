@@ -57,7 +57,11 @@ func (r *SnapshotRepository) LoadNewFixes(ctx context.Context, limit int) ([]dom
 		if err := rows.Scan(&f.VehicleID, &tripID, &f.Timestamp, &f.Latitude, &f.Longitude, &f.Speed); err != nil {
 			return nil, err
 		}
-		if tripID.Valid {
+		// '' is the unattributed sentinel every reader filters out
+		// (IS NOT NULL AND != ''). Surface it as nil, or the dwell worker's
+		// tripID == nil gate never holds and pickup/drop zones run against
+		// an empty trip id.
+		if tripID.Valid && tripID.String != "" {
 			f.TripID = &tripID.String
 		}
 		fixes = append(fixes, f)

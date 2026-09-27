@@ -43,13 +43,21 @@ const session = () => ({
   driverId: 'drv_1',
 });
 
+// The broker credential is fetched asynchronously before connecting; the
+// anonymous path (dev broker) is the default here unless a test overrides it.
+jest.mock('../src/services/mqttCredentials', () => ({
+  getBrokerCredential: jest.fn().mockResolvedValue(null),
+  storedBrokerCredential: jest.fn().mockResolvedValue(null),
+  clearCachedBrokerCredential: jest.fn(),
+}));
+
 describe('MQTTTelemetryService', () => {
   beforeEach(async () => {
     await useAuthStore.getState().setAuth('tok', session());
   });
 
   test('connect uses persistent-session options with credentials', async () => {
-    MQTT.connect('drv_1');
+    await MQTT.connect('drv_1');
 
     expect(mqttModule.connect).toHaveBeenCalledTimes(1);
     const [, options] = mqttModule.connect.mock.calls[0];
@@ -62,29 +70,29 @@ describe('MQTTTelemetryService', () => {
     });
   });
 
-  test('clientId is deterministic across reconnects', () => {
-    MQTT.connect('drv_1');
+  test('clientId is deterministic across reconnects', async () => {
+    await MQTT.connect('drv_1');
     const id1 = mqttModule.connect.mock.calls[0][1].clientId;
-    MQTT.connect('drv_1');
+    await MQTT.connect('drv_1');
     const id2 = mqttModule.connect.mock.calls[1][1].clientId;
     expect(id1).toBe(id2);
   });
 
-  test('omits password when no token is present', () => {
+  test('omits password when no token is present', async () => {
     useAuthStore.setState({ token: null });
-    MQTT.connect('drv_1');
+    await MQTT.connect('drv_1');
     const [, options] = mqttModule.connect.mock.calls[0];
     expect(options.password).toBeUndefined();
   });
 
-  test('connect passes clean flag through', () => {
-    MQTT.connect('drv_1', true);
+  test('connect passes clean flag through', async () => {
+    await MQTT.connect('drv_1', true);
     const [, options] = mqttModule.connect.mock.calls[0];
     expect(options.clean).toBe(true);
   });
 
-  test('subscribes to both update topics on connect', () => {
-    MQTT.connect('drv_9');
+  test('subscribes to both update topics on connect', async () => {
+    await MQTT.connect('drv_9');
     emit('connect');
 
     const { subscribe } = mqttModule.__getClient();
@@ -98,11 +106,11 @@ describe('MQTTTelemetryService', () => {
     );
   });
 
-  test('message on updates topic emits dispatch to listeners', () => {
+  test('message on updates topic emits dispatch to listeners', async () => {
     const listener = jest.fn();
     const unsub = MQTT.onDispatch((u: TripDispatchUpdate) => listener(u));
 
-    MQTT.connect('drv_1');
+    await MQTT.connect('drv_1');
     emit(
       'message',
       'avandab/drivers/drv_1/updates',
@@ -119,12 +127,12 @@ describe('MQTTTelemetryService', () => {
     expect(listener).toHaveBeenCalledTimes(1); // unsubscribed
   });
 
-  test('publishLocation publishes QoS 1 GPS only when connected', () => {
+  test('publishLocation publishes QoS 1 GPS only when connected', async () => {
     MQTT.disconnect(); // reset singleton state from earlier tests
     MQTT.publishLocation('drv_1', 19.076, 72.8777);
     expect(mqttModule.__getClient().publish).not.toHaveBeenCalled(); // not connected yet
 
-    MQTT.connect('drv_1');
+    await MQTT.connect('drv_1');
     emit('connect');
     MQTT.publishLocation('drv_1', 19.076, 72.8777);
 
@@ -141,8 +149,8 @@ describe('MQTTTelemetryService', () => {
     expect(publish).not.toHaveBeenCalled();
   });
 
-  test('stale fixes publish flagged is_stale; fresh payloads stay backward compatible', () => {
-    MQTT.connect('drv_1');
+  test('stale fixes publish flagged is_stale; fresh payloads stay backward compatible', async () => {
+    await MQTT.connect('drv_1');
     emit('connect');
     const { publish } = mqttModule.__getClient();
     publish.mockClear();
@@ -157,8 +165,8 @@ describe('MQTTTelemetryService', () => {
     expect('is_stale' in freshPayload).toBe(false); // additive only — old shape untouched
   });
 
-  test('reconnect backoff grows exponentially on close and resets on connect', () => {
-    MQTT.connect('drv_1');
+  test('reconnect backoff grows exponentially on close and resets on connect', async () => {
+    await MQTT.connect('drv_1');
     const client = mqttModule.__getClient();
 
     emit('close');
@@ -175,8 +183,8 @@ describe('MQTTTelemetryService', () => {
     expect(client.options.reconnectPeriod).toBe(30000); // capped at max
   });
 
-  test('disconnect ends the client', () => {
-    MQTT.connect('drv_1');
+  test('disconnect ends the client', async () => {
+    await MQTT.connect('drv_1');
     MQTT.disconnect();
     expect(mqttModule.__getClient().end).toHaveBeenCalled();
   });

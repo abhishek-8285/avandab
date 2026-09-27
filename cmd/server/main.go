@@ -836,7 +836,11 @@ func main() {
 	// The broker spawns its own background goroutines (Paho read loop) which
 	// keep the client alive for the process lifetime. The TelemetryHandler
 	// callback routes canonical frames into the ingestion pipeline.
-	_ = mqttservice.NewMQTTBroker(mqttURL, mqttHandler.HandleMessage)
+	// Broker credentials for a hardened broker (docs/13 §5.2). Empty means the
+	// dev broker's allow_anonymous true, so both stay unset in local dev.
+	mqttUser := os.Getenv("MQTT_USERNAME")
+	mqttPass := os.Getenv("MQTT_PASSWORD")
+	_ = mqttservice.NewMQTTBroker(mqttURL, mqttUser, mqttPass, mqttHandler.HandleMessage)
 
 	// ── Geofence Dwell Engine (Spec 02 §4) ───────────────────────────
 	// Constructed here (needs the app DB + bus) but started with the
@@ -1013,6 +1017,20 @@ func main() {
 		integrationHandler.Register(r)
 		geofenceAPIHandler.Register(r)
 		driverLifecycleAPIHandler.RegisterRoutes(r)
+		// Driver "SHARE LIVE" (mobile DispatchScreen). The web mount at
+		// /trips/{id}/share sits behind shares:create, which the driver role
+		// deliberately does not hold — this one is self-scoped: ShareMyTrip
+		// mints only for the trip the caller is assigned to.
+		r.With(middleware.RequirePermission(authSvc, "driver", "write-self")).
+			Post("/api/v1/drivers/me/trips/{id}/share", app.Share.ShareMyTrip)
+		// Per-driver MQTT broker credentials (docs/13 §5.2). The hardened
+		// broker refuses anonymous clients, so a phone needs a credential whose
+		// ACL entry only unlocks its own GPS topic. Self-scoped like ShareMyTrip:
+		// the credential is always the caller's own.
+		r.With(middleware.RequirePermission(authSvc, "driver", "write-self")).
+			Get("/api/v1/telemetry/mqtt-credentials", app.MQTTCredentials.Get)
+		r.With(middleware.RequirePermission(authSvc, "driver", "write-self")).
+			Post("/api/v1/telemetry/mqtt-credentials/rotate", app.MQTTCredentials.Rotate)
 		customerAPIHandler.RegisterRoutes(r)
 		settlementAPIHandler.RegisterRoutes(r)
 		controlTowerAPIHandler.Register(r)

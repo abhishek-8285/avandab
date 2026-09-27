@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -435,27 +437,15 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 	var lastSeenStr *string
 	var lat, lng *float64
 	if vehicleID != "" {
-		var sLat, sLng sql.NullFloat64
-		var sTs sql.NullString
-		_ = h.DB.QueryRowContext(r.Context(), `
-			SELECT latitude, longitude, timestamp
-			FROM telemetry_snapshots
-			WHERE vehicle_id = $1 AND latitude IS NOT NULL AND longitude IS NOT NULL
-			ORDER BY timestamp DESC LIMIT 1`, vehicleID).Scan(&sLat, &sLng, &sTs)
-		if sLat.Valid && sLng.Valid {
-			vLat := sLat.Float64
-			vLng := sLng.Float64
-			lat = &vLat
-			lng = &vLng
+		fixLat, fixLng, fixTs, fixErr := lastSeenFix(r.Context(), h.DB, vehicleID)
+		if fixErr != nil {
+			// Never swallow: "query failed" must not render as "no data yet".
+			slog.ErrorContext(r.Context(), "customer_portal last-seen telemetry failed",
+				slog.String("vehicle_id", vehicleID), slog.Any("error", fixErr))
 		}
-		if sTs.Valid && sTs.String != "" {
-			if t := parseTimeFlex(sTs.String); !t.IsZero() {
-				s := t.UTC().Format(time.RFC3339)
-				lastSeenStr = &s
-			} else {
-				s := sTs.String
-				lastSeenStr = &s
-			}
+		lat, lng = fixLat, fixLng
+		if fixTs != "" {
+			lastSeenStr = &fixTs
 		}
 	}
 
@@ -731,4 +721,42 @@ func (h *CustomerPortalHandlers) Feedback(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{"id": feedbackID})
+}
+
+// lastSeenFix returns the newest telemetry fix recorded for a vehicle.
+//
+// Ordering uses ts_unix (migration 00134), not the `timestamp` text: that
+// column mixes RFC3339 ("2026-06-01T10:00:00Z") and Go's time.String() layout
+// ("2026-06-01 15:00:00 +0000 UTC") — 'T' > ' ' — so ORDER BY timestamp DESC
+// sorts bytes and hands back a different row than the newest fix.
+//
+// Returns (nil, nil, "", nil) when the vehicle has never reported. A real
+// query failure is returned to the caller so it can be logged: a dead table
+// and an unreported vehicle must not look identical to the shipper.
+func lastSeenFix(ctx context.Context, db *sql.DB, vehicleID string) (lat, lng *float64, ts string, err error) {
+	var sLat, sLng sql.NullFloat64
+	var sTs sql.NullString
+	err = db.QueryRowContext(ctx, `
+		SELECT latitude, longitude, timestamp
+		FROM telemetry_snapshots
+		WHERE vehicle_id = $1 AND latitude IS NOT NULL AND longitude IS NOT NULL
+		ORDER BY ts_unix DESC LIMIT 1`, vehicleID).Scan(&sLat, &sLng, &sTs)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil, "", nil
+	}
+	if err != nil {
+		return nil, nil, "", err
+	}
+	if sLat.Valid && sLng.Valid {
+		vLat, vLng := sLat.Float64, sLng.Float64
+		lat, lng = &vLat, &vLng
+	}
+	if sTs.Valid && sTs.String != "" {
+		if t := parseTimeFlex(sTs.String); !t.IsZero() {
+			ts = t.UTC().Format(time.RFC3339)
+		} else {
+			ts = sTs.String
+		}
+	}
+	return lat, lng, ts, nil
 }

@@ -1,6 +1,7 @@
 import * as Location from 'expo-location';
 import { Camera } from 'expo-camera';
 import { DB } from './storage';
+import { BackgroundGPS } from './backgroundLocation';
 
 // readBatteryPct returns the phone battery as 0-100, or null when the
 // platform refuses (expo-battery absence/emulator quirk must never break a
@@ -239,6 +240,12 @@ class TelemetryService {
         onLocationUpdate(latitude, longitude, speedKmh);
       }
     );
+
+    // Claim 3: the foreground watch alone dies when the driver locks the
+    // screen or switches to a navigation app. The OS-level task
+    // (backgroundGPSTask) is what keeps fixes flowing to SQLite + MQTT.
+    const bg = await BackgroundGPS.start();
+    if (!bg.started) console.log('[BG-GPS] background updates unavailable:', bg.error);
   }
 
   stopLiveLocationTracking(): void {
@@ -246,6 +253,7 @@ class TelemetryService {
       this.locationSubscription.remove();
       this.locationSubscription = null;
     }
+    void BackgroundGPS.stop();
   }
 
   // Request Camera Permission

@@ -28,12 +28,13 @@ interface LiveDriverTrackingMapProps {
 export function LiveDriverTrackingMap({
   driverLatitude,
   driverLongitude,
-  pickupLatitude = 18.9500,
-  pickupLongitude = 72.9500,
-  destinationLatitude = 18.7500,
-  destinationLongitude = 73.8500,
-  // Labels default to empty: coordinates above are only an initial map
-  // center, never presented as trip data.
+  pickupLatitude,
+  pickupLongitude,
+  destinationLatitude,
+  destinationLongitude,
+  // No coordinate defaults: a missing leg draws nothing rather than a
+  // fabricated Mumbai→Pune route. Labels default to empty and are only
+  // presentation, never trip data.
   pickupLabel = '',
   destinationLabel = '',
   vehicleLabel = '',
@@ -42,6 +43,11 @@ export function LiveDriverTrackingMap({
   onOpenExternalNav,
 }: LiveDriverTrackingMapProps) {
   const webViewRef = useRef<any>(null);
+
+  const hasPickup = typeof pickupLatitude === 'number' && typeof pickupLongitude === 'number';
+  const hasDest = typeof destinationLatitude === 'number' && typeof destinationLongitude === 'number';
+  const pickupJS = hasPickup ? `[${pickupLatitude}, ${pickupLongitude}]` : 'null';
+  const destJS = hasDest ? `[${destinationLatitude}, ${destinationLongitude}]` : 'null';
 
   // Generate Leaflet HTML with OpenStreetMap tiles, custom markers and polyline
   const leafletHTML = `
@@ -61,6 +67,16 @@ export function LiveDriverTrackingMap({
       background: ${Colors.mapDark};
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .offline-note {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #94a3b8;
+      font: 500 13px system-ui, sans-serif;
+      text-align: center;
+      padding: 0 16px;
     }
     .leaflet-control-attribution {
       display: none !important;
@@ -114,6 +130,12 @@ export function LiveDriverTrackingMap({
 <body>
   <div id="map"></div>
   <script>
+    // unpkg is the only Leaflet source: offline the script never loads and
+    // the map constructor below throws. Say so instead of a dead map.
+    if (typeof L === 'undefined') {
+      document.getElementById('map').innerHTML =
+        '<div class="offline-note">Map unavailable offline — live position and trip details still update.</div>';
+    } else {
     var INDIA_PAN_BOUNDS = [[4.0, 65.0], [38.5, 100.0]];
     var map = L.map('map', {
       zoomControl: false,
@@ -129,14 +151,15 @@ export function LiveDriverTrackingMap({
       maxZoom: 20,
     }).addTo(map);
 
-    // Route coordinates
-    var pickup = [${pickupLatitude}, ${pickupLongitude}];
+    // Route coordinates. Legs without real trip coords are null and get
+    // filtered out, so an unknown leg never fabricates a route.
+    var pickup = ${pickupJS};
     var driver = [${driverLatitude}, ${driverLongitude}];
-    var dest = [${destinationLatitude}, ${destinationLongitude}];
+    var dest = ${destJS};
 
     // Draw route polyline
-    var routeLine = L.polyline([pickup, driver, dest], {
-      color: Colors.primary,
+    var routeLine = L.polyline([pickup, driver, dest].filter(Boolean), {
+      color: '${Colors.primary}',
       weight: 5,
       opacity: 0.85,
       dashArray: '8, 6',
@@ -150,7 +173,7 @@ export function LiveDriverTrackingMap({
       iconSize: [60, 20],
       iconAnchor: [30, 25]
     });
-    L.marker(pickup, { icon: pickupIcon }).addTo(map);
+    if (pickup) L.marker(pickup, { icon: pickupIcon }).addTo(map);
 
     // Destination Marker
     var destIcon = L.divIcon({
@@ -159,26 +182,26 @@ export function LiveDriverTrackingMap({
       iconSize: [80, 20],
       iconAnchor: [40, 25]
     });
-    L.marker(dest, { icon: destIcon }).addTo(map);
+    if (dest) L.marker(dest, { icon: destIcon }).addTo(map);
 
     // Live Truck Marker
     var truckIcon = L.divIcon({
       className: 'custom-div-icon',
-      html: '<div class="truck-pulse"></div><div class="truck-marker"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke={Colors.surface} stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2" fill={Colors.surface}/><circle cx="7" cy="18" r="2" fill={Colors.surface}/></svg></div>',
+      html: '<div class="truck-pulse"></div><div class="truck-marker"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="${Colors.surface}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2" fill="${Colors.surface}"/><circle cx="7" cy="18" r="2" fill="${Colors.surface}"/></svg></div>',
       iconSize: [36, 36],
       iconAnchor: [18, 18]
     });
     var truckMarker = L.marker(driver, { icon: truckIcon }).addTo(map);
 
     // Auto-fit bounds with padding
-    var bounds = L.latLngBounds([pickup, driver, dest]);
+    var bounds = L.latLngBounds([pickup, driver, dest].filter(Boolean));
     map.fitBounds(bounds, { padding: [40, 40] });
 
     // Handle updates from React Native
     window.updatePosition = function(lat, lng) {
       if (truckMarker) {
         truckMarker.setLatLng([lat, lng]);
-        routeLine.setLatLngs([pickup, [lat, lng], dest]);
+        routeLine.setLatLngs([pickup, [lat, lng], dest].filter(Boolean));
       }
     };
 
@@ -187,6 +210,7 @@ export function LiveDriverTrackingMap({
         map.setView(truckMarker.getLatLng(), 13, { animate: true });
       }
     };
+    }
   </script>
 </body>
 </html>

@@ -43,6 +43,14 @@ function subscriberCallbacks(): ((err?: Error | null) => void)[] {
     .subscribe.mock.calls.map(([, cb]) => cb as (err?: Error | null) => void);
 }
 
+// The broker credential is fetched asynchronously before connecting; the
+// anonymous path (dev broker) is the default here unless a test overrides it.
+jest.mock('../src/services/mqttCredentials', () => ({
+  getBrokerCredential: jest.fn().mockResolvedValue(null),
+  storedBrokerCredential: jest.fn().mockResolvedValue(null),
+  clearCachedBrokerCredential: jest.fn(),
+}));
+
 describe('MQTT edge branches', () => {
   let logSpy: jest.SpyInstance;
 
@@ -62,8 +70,8 @@ describe('MQTT edge branches', () => {
     logSpy.mockRestore();
   });
 
-  test('subscribe ack logs the topic; subscribe errors are tolerated silently', () => {
-    MQTT.connect('drv_1');
+  test('subscribe ack logs the topic; subscribe errors are tolerated silently', async () => {
+    await MQTT.connect('drv_1');
     emit('connect');
 
     const cbs = subscriberCallbacks();
@@ -77,10 +85,10 @@ describe('MQTT edge branches', () => {
     expect(logSpy.mock.calls.length).toBe(callsBefore); // no success log for failures
   });
 
-  test('messages on non-updates topics are ignored without JSON parsing', () => {
+  test('messages on non-updates topics are ignored without JSON parsing', async () => {
     const listener = jest.fn();
     MQTT.onDispatch(listener);
-    MQTT.connect('drv_1');
+    await MQTT.connect('drv_1');
 
     expect(() =>
       emit('message', 'avandab/telemetry/drivers/drv_1/gps', Buffer.from('not json at all'))
@@ -88,10 +96,10 @@ describe('MQTT edge branches', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  test('malformed JSON on an updates topic is swallowed', () => {
+  test('malformed JSON on an updates topic is swallowed', async () => {
     const listener = jest.fn();
     MQTT.onDispatch(listener);
-    MQTT.connect('drv_1');
+    await MQTT.connect('drv_1');
 
     expect(() =>
       emit('message', 'avandab/drivers/drv_1/updates', Buffer.from('{broken'))
@@ -99,10 +107,10 @@ describe('MQTT edge branches', () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
-  test('payload with non-string trip_id is dropped; missing status/time default to empty strings', () => {
+  test('payload with non-string trip_id is dropped; missing status/time default to empty strings', async () => {
     const listener = jest.fn();
     MQTT.onDispatch(listener);
-    MQTT.connect('drv_1');
+    await MQTT.connect('drv_1');
 
     // trip_id must be a string — numbers are not a dispatch update.
     emit('message', 'avandab/drivers/drv_1/updates', Buffer.from(JSON.stringify({ trip_id: 42 })));
@@ -112,18 +120,18 @@ describe('MQTT edge branches', () => {
     expect(listener).toHaveBeenCalledWith({ trip_id: 't9', status: '', time: '' });
   });
 
-  test('broker error events are logged and never thrown', () => {
-    MQTT.connect('drv_1');
+  test('broker error events are logged and never thrown', async () => {
+    await MQTT.connect('drv_1');
     expect(() => emit('error', new Error('ECONNREFUSED'))).not.toThrow();
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('[MQTT MOBILE WARNING]'), expect.anything());
   });
 
-  test('connect-time crash is contained behind an init warning', () => {
+  test('connect-time crash is contained behind an init warning', async () => {
     mqttModule.connect.mockImplementationOnce(() => {
       throw new Error('no such broker');
     });
 
-    expect(() => MQTT.connect('drv_1')).not.toThrow();
+    await expect(MQTT.connect('drv_1')).resolves.toBeUndefined();
     expect(logSpy).toHaveBeenCalledWith('[MQTT INIT WARNING]', 'no such broker');
   });
 

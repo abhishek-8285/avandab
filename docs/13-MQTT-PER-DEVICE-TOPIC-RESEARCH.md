@@ -227,6 +227,20 @@ over-broadening subscriptions at throughput
    device usernames per ([mosquitto #1610](https://github.com/eclipse-mosquitto/mosquitto/issues/1610)).
    Bind username = IMEI at provisioning ( alongside `ActivateDevice`
    secret issuance, `devices.go:491-527`).
+
+   **Status (2026-09-27) — implemented in code, production cutover still
+   pending operator approval.** Per-driver credentials:
+   `driver_mqtt_credentials` (migration `00168`) holds only the mosquitto
+   PBKDF2-SHA512 hash; `GET /api/v1/telemetry/mqtt-credentials` hands the
+   plaintext to the phone exactly once and `.../rotate` re-issues it. The
+   broker side is `config/mosquitto.prod.conf.example` + `config/mosquitto-acl`
+   and `scripts/mqtt-export-credentials.sh`. The backend reads
+   `MQTT_USERNAME`/`MQTT_PASSWORD` (`internal/mqttservice/credentials.go`).
+   Verified on mosquitto 2.1.2: correct credential + own topic delivered;
+   sibling driver topic dropped by the ACL; wrong password and anonymous
+   refused. Note the failure mode — a denied QoS1 publish still returns
+   `PUBACK RC:0`, so the phone cannot detect that its fixes are being
+   discarded. Hardware-device `%u` provisioning (§6.3) is untouched.
 3. **Keep the app spoof guard regardless** (`mqtt_ingest.go:47-51`) — defense in
    depth for the anonymous-dev window and any ACL misconfiguration.
 4. **Revisit only on triggers:** single-broker CPU/match proven hot at ≥25k
@@ -247,6 +261,13 @@ over-broadening subscriptions at throughput
   the `%u` pattern denies cross-IMEI publish (device A → device B's topic) and
   that the backend superuser still receives all; add a red test (publish as A
   to B, expect CONNACK/denial, frame never in `telemetry_raw_events`).
+  **DONE for the driver path** (2026-09-27): the `%u` pattern denied a
+  cross-driver publish on mosquitto 2.1.2 while the same credential published
+  to its own topic successfully; anonymous and wrong-password connects were
+  refused with `not authorised`. The denied publish still returned
+  `PUBACK RC:0`, so "expect CONNACK/denial" is not what the client sees —
+  the observable is that the frame never reaches `telemetry_raw_events`.
+  Hardware-device provisioning (§6.3) and the live cutover remain.
 - **6.3 Tracker credential provisioning.** Verify own-GPS hardware can hold a
   per-device MQTT username/secret (or cert) flashed alongside the
   `ActivateDevice` raw secret (`devices.go:488-527`); fall back to gateway-level

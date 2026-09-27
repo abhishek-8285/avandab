@@ -128,6 +128,9 @@ type App struct {
 	Tracking *TrackingHandlers
 	// Share powers trip share link generation, public viewing & admin management (Spec 04 §4).
 	Share *ShareHandlers
+	// MQTTCredentials provisions per-driver broker credentials for the
+	// hardened MQTT broker (docs/13 §5.2).
+	MQTTCredentials *MQTTCredentialsHandlers
 	// Maintenance powers preventive maintenance schedules, DTCs, and records (Spec 04 §6).
 	Maintenance *MaintenanceHandlers
 	// Alerts repository and operational alerts handler (Spec 05 §3).
@@ -240,6 +243,8 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	app.Tracking = &TrackingHandlers{App: app}
 	// Trip share links (Spec 04 §4).
 	app.Share = NewShareHandlers(app, db)
+	// Per-driver MQTT broker credentials (docs/13 §5.2).
+	app.MQTTCredentials = NewMQTTCredentialsHandlers(app, db)
 	// Preventive maintenance (Spec 04 §6).
 	app.Maintenance = NewMaintenanceHandlers(app, db)
 	// Operational alerts (Spec 05 §3).

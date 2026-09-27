@@ -170,6 +170,29 @@ describe('Telemetry.startLiveLocationTracking', () => {
   test('stop without an active subscription is a safe no-op', () => {
     expect(() => Telemetry.stopLiveLocationTracking()).not.toThrow();
   });
+
+  // Claim 3: the Android foreground service existed but was never invoked —
+  // only the foreground watchPositionAsync ran, so GPS stopped the moment the
+  // driver locked the screen.
+  test('starts the foreground service so fixes survive screen lock, and stops it with the watcher', async () => {
+    Loc.watchPositionAsync.mockResolvedValueOnce({ remove: jest.fn() } as any);
+    Loc.requestForegroundPermissionsAsync.mockResolvedValueOnce({ status: 'granted', granted: true } as any);
+    Loc.requestBackgroundPermissionsAsync.mockResolvedValueOnce({ status: 'granted', granted: true } as any);
+    Loc.startLocationUpdatesAsync.mockClear();
+    Loc.stopLocationUpdatesAsync.mockClear();
+
+    await Telemetry.startLiveLocationTracking(jest.fn());
+
+    expect(Loc.startLocationUpdatesAsync).toHaveBeenCalledWith(
+      'AVANDAB_BACKGROUND_GPS',
+      expect.objectContaining({
+        foregroundService: expect.objectContaining({ killServiceOnDestroy: false }),
+      })
+    );
+
+    Telemetry.stopLiveLocationTracking();
+    expect(Loc.stopLocationUpdatesAsync).toHaveBeenCalledWith('AVANDAB_BACKGROUND_GPS');
+  });
 });
 
 describe('Telemetry.requestCameraPermission', () => {

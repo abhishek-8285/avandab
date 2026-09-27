@@ -1,0 +1,25 @@
+# MQTT broker ACL for the hardened production broker (docs/13 §5.2).
+#
+# Pair with allow_anonymous false + this file in /mosquitto/config/mosquitto.conf.
+#
+# Verified on mosquitto 2.1.2: a driver publishing to a sibling driver's topic
+# is dropped here ("Denied PUBLISH" in the broker log) while the client still
+# receives PUBACK RC:0 — a QoS1 publish that silently never lands. The app
+# cannot detect this, which is exactly why the ACL has to be the boundary.
+#
+# Password file lines come from driver_mqtt_credentials.password_hash via
+# scripts/mqtt-export-credentials.sh — hashes only, never plaintext.
+
+# Backend superuser: reads every GPS topic. The backend never publishes.
+user avandab_backend
+topic read avandab/telemetry/devices/+/gps
+topic read avandab/telemetry/drivers/+/gps
+
+# Per-driver publishers: %u binds the authenticated username to the topic
+# level, so a driver's credential cannot publish as any other driver.
+pattern write avandab/telemetry/drivers/%u/gps
+pattern read avandab/telemetry/drivers/%u/gps
+
+# Hardware GPS devices authenticate as their IMEI and publish only their own
+# topic (docs/13 §5.2). Provision with mosquitto_passwd alongside ActivateDevice.
+pattern write avandab/telemetry/devices/%u/gps

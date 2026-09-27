@@ -2,6 +2,7 @@ import mqtt from 'mqtt';
 import { getMQTTBrokerURL } from '../constants/network';
 import { useAuthStore } from '../stores/authStore';
 import { NotificationService } from './notificationService';
+import { getBrokerCredential, type BrokerCredential } from './mqttCredentials';
 
 export interface TripDispatchUpdate {
   trip_id: string;
@@ -20,6 +21,11 @@ class MQTTTelemetryService {
   private isConnected = false;
   private dispatchListeners: Set<DispatchListener> = new Set();
   private reconnectAttempt = 0;
+  // The hardened broker's ACL binds an authenticated username to a topic level
+  // (`pattern write avandab/telemetry/drivers/%u/gps`), so publishes must use
+  // the credential's identity — publishing under a different id is dropped by
+  // the broker with PUBACK RC:0, i.e. silently.
+  private topicIdentity: string | null = null;
 
   /**
    * Subscribe to in-app dispatch notifications (trip assignments/status
@@ -41,11 +47,25 @@ class MQTTTelemetryService {
     });
   }
 
-  connect(driverId: string, clean = false): void {
+  async connect(driverId: string, clean = false): Promise<void> {
     try {
       const brokerUrl = getMQTTBrokerURL();
       const token = useAuthStore.getState().token;
       this.reconnectAttempt = 0;
+
+      // A hardened broker (allow_anonymous false) needs the per-driver
+      // credential; an anonymous dev broker has none to hand out, and then the
+      // JWT keeps working exactly as before.
+      let cred: BrokerCredential | null = null;
+      try {
+        cred = await getBrokerCredential();
+      } catch (e: any) {
+        console.log('[MQTT] broker credential unavailable:', e?.message);
+      }
+      this.topicIdentity = cred?.username ?? null;
+      if (cred && cred.username !== driverId) {
+        console.log(`[MQTT] publishing as broker identity ${cred.username} (app identity ${driverId})`);
+      }
 
       const options: mqtt.IClientOptions = {
         // Persistent session: deterministic clientId (no random suffix — a
@@ -55,9 +75,14 @@ class MQTTTelemetryService {
         clean,
         keepalive: 60,
         reconnectPeriod: RECONNECT_BASE_MS,
-        username: driverId,
+        username: cred?.username ?? driverId,
+        // The tunnel routes only this path to mosquitto's WS listener; a bare
+        // "/" would be served by the web app instead (mqtt.js defaults to "/").
+        path: '/mqtt',
       };
-      if (token) {
+      if (cred) {
+        options.password = cred.password;
+      } else if (token) {
         options.password = token;
       }
 
@@ -138,9 +163,12 @@ class MQTTTelemetryService {
   // canPublishFix) — this layer publishes whatever it is handed.
   publishLocation(driverId: string, latitude: number, longitude: number, opts?: { isStale?: boolean }): void {
     if (this.client && this.isConnected) {
-      const topic = `avandab/telemetry/drivers/${driverId}/gps`;
+      // Publish under the identity the broker credential is bound to; the
+      // broker drops (not rejects) anything published under another id.
+      const identity = this.topicIdentity ?? driverId;
+      const topic = `avandab/telemetry/drivers/${identity}/gps`;
       const payload = JSON.stringify({
-        driver_id: driverId,
+        driver_id: identity,
         latitude,
         longitude,
         timestamp: new Date().toISOString(),

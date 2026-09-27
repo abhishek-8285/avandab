@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -118,6 +119,54 @@ func (h *ShareHandlers) requireTenant(w http.ResponseWriter, r *http.Request) (s
 		return "", false
 	}
 	return string(tid), true
+}
+
+// ShareMyTrip backs the driver app's SHARE LIVE button.
+//
+// A share link hands an unauthenticated customer live tracking of one trip, so
+// the caller must be the driver assigned to that exact trip: minting against
+// arbitrary trip ids would let any signed-in driver read any trip's movement.
+// Mounted at /api/v1/drivers/me/trips/{id}/share behind RequirePermission
+// ("driver","write-self"); CreateShare's tenant check, TTL clamp and
+// SHARE_LINK_MAX_ACTIVE cap still apply afterwards.
+func (h *ShareHandlers) ShareMyTrip(w http.ResponseWriter, r *http.Request) {
+	user, ok := h.getUserFromContext(r)
+	if !ok || user == nil {
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+		return
+	}
+	tenantID, ok := h.requireTenant(w, r)
+	if !ok {
+		return
+	}
+
+	// Same identity rule as GET /api/v1/drivers/me: trips.driver_id may carry
+	// the driver row id, the human driver code, or the auth user id directly.
+	var mine int
+	err := h.db.QueryRowContext(r.Context(), `
+		SELECT 1 FROM trips t
+		WHERE t.id = $1 AND t.tenant_id = $2 AND t.driver_id <> ''
+		  AND ( t.driver_id = $3
+		        OR EXISTS (
+		            SELECT 1 FROM drivers d
+		            WHERE d.tenant_id = $2
+		              AND (d.id = t.driver_id OR d.driver_id = t.driver_id)
+		              AND ( d.id = $3
+		                 OR d.email = (SELECT u.email FROM users u
+		                                WHERE u.id = $3 AND u.tenant_id = $2) ) ) )`,
+		chi.URLParam(r, "id"), tenantID, user.UserID).Scan(&mine)
+	if errors.Is(err, sql.ErrNoRows) {
+		http.Error(w, `{"error":"not your trip"}`, http.StatusForbidden)
+		return
+	}
+	if err != nil {
+		slog.ErrorContext(r.Context(), "share trip ownership lookup failed",
+			slog.String("trip_id", chi.URLParam(r, "id")), slog.Any("error", err))
+		http.Error(w, `{"error":"database error"}`, http.StatusInternalServerError)
+		return
+	}
+
+	h.CreateShare(w, r)
 }
 
 // CreateShare generates a cryptographically random token, stores its SHA-256 hash,

@@ -120,6 +120,88 @@ func latestLat(t *testing.T, db *sql.DB, vehicleID string) (float64, bool) {
 	return lat, true
 }
 
+// A frame that carries no trip_id (every real source: mobile sync, MQTT
+// device topic, TCP hardware) must still land attributed. Empty
+// telemetry_snapshots.trip_id starves the dwell engine — pickup/drop zones
+// and the ReachPickup/StartTransit gates need a trip — and makes
+// /api/v1/telemetry/live?trip_id= return zero rows.
+func TestIngestRawFrame_PopulatesTripIDFromActiveTrip(t *testing.T) {
+	db := newTestIngestorDB(t)
+	ing := newTestIngestor(t, db, events.NewInMemoryBus())
+	ctx := context.Background()
+
+	insertTestVehicle(t, db, "v-attrib")
+	insertTestDevice(t, db, "IMEI-ATTRIB", DeviceStatusActive, strPtr("v-attrib"))
+	seedFallbackDriver(t, db, "d-attrib", "user-attrib", "1")
+	seedFallbackTrip(t, db, "t-attrib", "TRIP-ATTRIB", "d-attrib", "v-attrib", "1", "started", "2026-09-01 10:00:00")
+
+	res, err := ing.IngestRawFrame(ctx, ownFrame("IMEI-ATTRIB", "attrib-msg", 19.07, 72.87, satPtr(8)))
+	requireNoErr(t, err)
+	requireTrue(t, res.Accepted)
+
+	var got string
+	requireNoErr(t, db.QueryRow(`SELECT trip_id FROM telemetry_snapshots WHERE vehicle_id = 'v-attrib'`).Scan(&got))
+	if got != "t-attrib" {
+		t.Fatalf("telemetry_snapshots.trip_id = %q, want t-attrib", got)
+	}
+
+	var positionTrip string
+	requireNoErr(t, db.QueryRow(`SELECT trip_id FROM telemetry_positions WHERE imei = 'IMEI-ATTRIB'`).Scan(&positionTrip))
+	if positionTrip != "t-attrib" {
+		t.Fatalf("telemetry_positions.trip_id = %q, want t-attrib", positionTrip)
+	}
+}
+
+// A trip the caller already supplied is never overwritten by the resolver —
+// the frame is the authority on which trip it belongs to.
+func TestIngestRawFrame_KeepsCallerSuppliedTripID(t *testing.T) {
+	db := newTestIngestorDB(t)
+	ing := newTestIngestor(t, db, events.NewInMemoryBus())
+	ctx := context.Background()
+
+	insertTestVehicle(t, db, "v-caller")
+	insertTestDevice(t, db, "IMEI-CALLER", DeviceStatusActive, strPtr("v-caller"))
+	seedFallbackDriver(t, db, "d-caller", "user-caller", "1")
+	seedFallbackTrip(t, db, "t-caller-active", "TRIP-CALLER-ACTIVE", "d-caller", "v-caller", "1", "started", "2026-09-01 10:00:00")
+
+	frame := ownFrame("IMEI-CALLER", "caller-msg", 19.07, 72.87, satPtr(8))
+	frame.TripID = "t-caller-supplied"
+	res, err := ing.IngestRawFrame(ctx, frame)
+	requireNoErr(t, err)
+	requireTrue(t, res.Accepted)
+
+	var got string
+	requireNoErr(t, db.QueryRow(`SELECT trip_id FROM telemetry_snapshots WHERE vehicle_id = 'v-caller'`).Scan(&got))
+	if got != "t-caller-supplied" {
+		t.Fatalf("telemetry_snapshots.trip_id = %q, want t-caller-supplied", got)
+	}
+}
+
+// No trip on the road: attribution stays empty rather than latching onto a
+// cancelled or completed trip.
+func TestIngestRawFrame_NoActiveTripStaysEmpty(t *testing.T) {
+	db := newTestIngestorDB(t)
+	ing := newTestIngestor(t, db, events.NewInMemoryBus())
+	ctx := context.Background()
+
+	insertTestVehicle(t, db, "v-none")
+	insertTestDevice(t, db, "IMEI-NONE", DeviceStatusActive, strPtr("v-none"))
+	seedFallbackDriver(t, db, "d-none", "user-none", "1")
+	seedFallbackTrip(t, db, "t-done", "TRIP-DONE", "d-none", "v-none", "1", "completed", "2026-09-01 10:00:00")
+
+	res, err := ing.IngestRawFrame(ctx, ownFrame("IMEI-NONE", "none-msg", 19.07, 72.87, satPtr(8)))
+	requireNoErr(t, err)
+	requireTrue(t, res.Accepted)
+
+	// COALESCE: unattributed frames store SQL NULL (FK columns never take the
+	// '' sentinel), and readers already filter IS NOT NULL AND != ''.
+	var got string
+	requireNoErr(t, db.QueryRow(`SELECT COALESCE(trip_id, '') FROM telemetry_snapshots WHERE vehicle_id = 'v-none'`).Scan(&got))
+	if got != "" {
+		t.Fatalf("telemetry_snapshots.trip_id = %q, want empty (completed trip is not active)", got)
+	}
+}
+
 func satPtr(n int) *int { return &n }
 
 // H4 trust policy: mobile frames without Valid are judged by fix quality.

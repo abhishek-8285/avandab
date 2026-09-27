@@ -1,8 +1,15 @@
 package mqttservice
 
 import (
+	"bytes"
 	"context"
+	"crypto/pbkdf2"
+	"crypto/sha512"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -62,5 +69,122 @@ func TestAsPahoHandler_ForwardsTopicAndPayload(t *testing.T) {
 	}
 	if string(gotPayload) != string(wantPayload) {
 		t.Errorf("payload = %s, want %s", gotPayload, wantPayload)
+	}
+}
+
+// codePtr returns a function's code pointer so two callbacks can be compared.
+func codePtr(f any) uintptr { return reflect.ValueOf(f).Pointer() }
+
+// Audit claim 1: avandab/telemetry/drivers/{driverId}/gps carried the mobile
+// app's live fixes but was bound to logOnlyHandler unconditionally, so 100% of
+// phone-published positions were discarded. With a handler wired, BOTH GPS
+// topics must reach it.
+func TestSubscriptions_DriverTopicRoutesToHandler(t *testing.T) {
+	// No handler wired: nothing to route to, log-only everywhere.
+	for _, sub := range subscriptions(nil) {
+		if got, want := codePtr(sub.handler), codePtr(logOnlyHandler); got != want {
+			t.Errorf("%s: handler = %#x, want logOnlyHandler %#x", sub.topic, got, want)
+		}
+	}
+
+	subs := subscriptions(func(context.Context, string, []byte) {})
+	if len(subs) != 2 {
+		t.Fatalf("subscriptions = %d, want 2 (device + driver)", len(subs))
+	}
+	for _, sub := range subs {
+		if codePtr(sub.handler) == codePtr(logOnlyHandler) {
+			t.Errorf("%s is log-only: frames published there are discarded", sub.topic)
+		}
+	}
+}
+
+// Claim 2c: a hardened broker (docs/13 §5.2) runs allow_anonymous false, so
+// the backend must present its superuser credentials — without them the
+// broker refuses the connection and every GPS frame stops arriving.
+func TestBrokerOptions_CarriesSuperuserCredentials(t *testing.T) {
+	opts := brokerOptions("tcp://localhost:1883", "avandab_backend", "s3cret")
+
+	if opts.Username != "avandab_backend" {
+		t.Fatalf("username = %q, want avandab_backend", opts.Username)
+	}
+	if opts.Password != "s3cret" {
+		t.Fatalf("password = %q, want s3cret", opts.Password)
+	}
+	if opts.ClientID != "avandab_backend_server" {
+		t.Fatalf("client id = %q, want avandab_backend_server", opts.ClientID)
+	}
+}
+
+// Dev brokers are anonymous; the broker must not send an empty username,
+// which mosquitto treats as a failed login rather than "no auth".
+func TestBrokerOptions_AnonymousWhenNoCredentialsConfigured(t *testing.T) {
+	opts := brokerOptions("tcp://localhost:1883", "", "")
+
+	if opts.Username != "" || opts.Password != "" {
+		t.Fatalf("username/password = %q/%q, want empty for an anonymous dev broker",
+			opts.Username, opts.Password)
+	}
+}
+
+// Claim 2c: a hardened broker (allow_anonymous false + acl_file) needs a real
+// password file. Mosquitto 2.x stores PBKDF2-SHA512 lines
+// `<user>:$7$1000$<b64 salt>$<b64 hash>`; a line in any other shape is silently
+// unusable, so the format is pinned here.
+func TestNewBrokerSecret_ProducesMosquittoPasswordFileLine(t *testing.T) {
+	secret, hash, err := NewBrokerSecret()
+	if err != nil {
+		t.Fatalf("NewBrokerSecret: %v", err)
+	}
+	if len(secret) < 32 {
+		t.Fatalf("secret %q is too short to brute-force", secret)
+	}
+	if strings.Contains(hash, secret) {
+		t.Fatal("hash must not contain the plaintext secret")
+	}
+
+	// "$7$1000$<salt>$<hash>" splits as ["", "7", "1000", salt, hash].
+	parts := strings.Split(hash, "$")
+	if len(parts) != 5 || parts[0] != "" || parts[1] != "7" {
+		t.Fatalf("hash %q is not a mosquitto $7$ entry: %#v", hash, parts)
+	}
+	if parts[2] != "1000" {
+		t.Fatalf("iterations = %q, want 1000 (mosquitto 2.x)", parts[2])
+	}
+	salt, err := base64.StdEncoding.DecodeString(parts[3])
+	if err != nil || len(salt) != mosquittoSaltBytes {
+		t.Fatalf("salt decode err=%v len=%d, want %d", err, len(salt), mosquittoSaltBytes)
+	}
+	derived, err := base64.StdEncoding.DecodeString(parts[4])
+	if err != nil || len(derived) != mosquittoDerivedSize {
+		t.Fatalf("hash decode err=%v len=%d, want %d", err, len(derived), mosquittoDerivedSize)
+	}
+
+	// The line must verify: same secret, same salt, same derived bytes.
+	want, err := pbkdf2.Key(sha512.New, secret, salt, mosquittoIterations, mosquittoDerivedSize)
+	if err != nil {
+		t.Fatalf("pbkdf2: %v", err)
+	}
+	if !bytes.Equal(want, derived) {
+		t.Fatal("stored hash does not verify against its own secret and salt")
+	}
+
+	line := BrokerPasswordFileLine("drv-42", hash)
+	if !strings.HasPrefix(line, "drv-42:$7$") {
+		t.Fatalf("password file line = %q, want drv-42:$7$...", line)
+	}
+}
+
+func TestValidateBrokerUsername(t *testing.T) {
+	for _, ok := range []string{"drv-42", "94a28d84-0618-47de-99fc-73a35e6de1a7", "avandab_backend"} {
+		if err := ValidateBrokerUsername(ok); err != nil {
+			t.Fatalf("ValidateBrokerUsername(%q) = %v, want nil", ok, err)
+		}
+	}
+	// `+` and `#` are wildcards: a username with either would make
+	// `pattern write avandab/telemetry/drivers/%u/gps` match other topics.
+	for _, bad := range []string{"", "drv+1", "drv#1", "drv 1", "drv\t1"} {
+		if err := ValidateBrokerUsername(bad); !errors.Is(err, ErrInvalidBrokerUsername) {
+			t.Fatalf("ValidateBrokerUsername(%q) = %v, want ErrInvalidBrokerUsername", bad, err)
+		}
 	}
 }
