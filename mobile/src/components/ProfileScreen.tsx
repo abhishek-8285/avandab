@@ -175,7 +175,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
     ]);
   };
 
-  const displayName = profile?.name || user?.name || 'Abhishek Sharma';
+  const displayName = profile?.name || user?.name || 'Driver';
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
@@ -391,7 +391,8 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                 </View>
               </TouchableOpacity>
 
-              {/* Test Notification & Audio Button */}
+              {/* Dev-only test trigger: never ships in release builds. */}
+              {__DEV__ && (
               <TouchableOpacity
                 style={[styles.interactiveRow, { backgroundColor: Colors.primarySubtle }]}
                 onPress={() => {
@@ -419,6 +420,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                   <Text style={[styles.changeBadgeText, { color: Colors.textOnPrimary }]}>PLAY</Text>
                 </View>
               </TouchableOpacity>
+              )}
 
               <View style={styles.divider} />
 

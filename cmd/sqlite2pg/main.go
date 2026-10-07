@@ -18,11 +18,14 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"io/fs"
 	"os"
 	"time"
 
+	"github.com/pressly/goose/v3"
 	_ "modernc.org/sqlite"
-	_ "transport-app/internal/database"
+	dbmigr "transport-app/db"
+	appdb "transport-app/internal/database"
 	"transport-app/internal/datamigrate"
 )
 
@@ -31,6 +34,7 @@ func main() {
 	pgURL := flag.String("pg-url", os.Getenv("DATABASE_URL"), "postgres URL (or DATABASE_URL env)")
 	checkOnly := flag.Bool("check", false, "read-only precheck report, migrate nothing")
 	dryRun := flag.Bool("dry-run", false, "full copy inside a rolled-back transaction")
+	autoSchema := flag.Bool("auto-schema", true, "automatically apply goose migrations to PG if unmigrated")
 	flag.Parse()
 
 	if *pgURL == "" {
@@ -50,13 +54,19 @@ func main() {
 	}
 	defer func() { _ = dst.Close() }()
 
+	if *autoSchema {
+		if err := ensurePGSchema(ctx, dst); err != nil {
+			fatal("auto-schema on pg: %v", err)
+		}
+	}
+
 	pre, err := datamigrate.RunPrecheck(ctx, src, dst)
 	if err != nil {
 		fatal("precheck: %v", err)
 	}
 	fmt.Print(pre.Report())
 	if !pre.VersionsMatch {
-		fatal("version mismatch — run the server once against each engine, then re-run")
+		fatal("version mismatch — sqlite=%d pg=%d", pre.SQLiteVersion, pre.PGVersion)
 	}
 	if *checkOnly {
 		return
@@ -90,6 +100,29 @@ func main() {
 		}
 		fmt.Printf("  %-28s %d -> %d (copied %d, skipped %d)%s\n", tc.Table, tc.SQLite, tc.PG, tc.Copied, tc.Skip, marker)
 	}
+}
+
+func ensurePGSchema(ctx context.Context, pg *sql.DB) error {
+	sub, err := fs.Sub(dbmigr.MigrationsPG, "migrations_pg")
+	if err != nil {
+		return fmt.Errorf("read pg migrations: %w", err)
+	}
+	provider, err := goose.NewProvider(appdb.GooseDialect("postgres"), pg, sub)
+	if err != nil {
+		return fmt.Errorf("create goose provider: %w", err)
+	}
+
+	// Two-phase migrate: UpTo(72) -> resync -> Up
+	if _, err := provider.UpTo(ctx, int64(appdb.PreGooseCutVersion)); err != nil {
+		return fmt.Errorf("pg up-to %d: %w", appdb.PreGooseCutVersion, err)
+	}
+	if err := appdb.ResyncIdentitySequences(ctx, pg); err != nil {
+		return fmt.Errorf("pg resync: %w", err)
+	}
+	if _, err := provider.Up(ctx); err != nil {
+		return fmt.Errorf("pg full up: %w", err)
+	}
+	return nil
 }
 
 func fatal(f string, a ...any) {

@@ -96,6 +96,9 @@ interface Anim { fromLat: number; fromLng: number; toLat: number; toLng: number;
 export interface MapHandle {
   focus: (v: LiveVehicle) => void;
   fitAll: () => void;
+  // Re-measure after the bottom sheet opens/closes. invalidateSize keeps
+  // the current center+zoom — never a setView/fitBounds, never a reinit.
+  invalidate: () => void;
 }
 
 interface Props {
@@ -127,6 +130,7 @@ export default function MapViewport(p: Props) {
   const mapRef = useRef<L.Map | null>(null);
   const markersRef = useRef(new Map<string, L.Marker>());
   const animsRef = useRef(new Map<string, Anim>());
+  const fittedRef = useRef(false);
   const geoLayerRef = useRef<L.LayerGroup | null>(null);
   const propsRef = useRef(p);
   propsRef.current = p;
@@ -141,9 +145,10 @@ export default function MapViewport(p: Props) {
       maxBoundsViscosity: 1.0,
     }).setView(INDIA_CENTER, INDIA_DEFAULT_ZOOM);
 
-    // Spec 04 §2: OSM-only by default with mandatory attribution. Google
-    // tiles serve only when Provider is explicitly 'google' (opt-in).
-    const useGoogle = propsRef.current.provider === 'google';
+    // Google Maps tiles with gl=IN are the default for Indian compliance
+    // (Survey of India official boundary). Uses standard roadmap ('m') tiles.
+    // Falls back to OSM only when Provider is explicitly 'osm'.
+    const useGoogle = propsRef.current.provider !== 'osm';
     const tileUrl = useGoogle
       ? googleTileUrl(propsRef.current.googleStyle || 'm', propsRef.current.gl || 'IN')
       : (propsRef.current.osmUrl || OSM_DEFAULT_TILE_URL);
@@ -185,6 +190,7 @@ export default function MapViewport(p: Props) {
 
     propsRef.current.handleRef({
       focus: (v) => map.setView([v.lat, v.lng], Math.max(map.getZoom(), 14), { animate: !REDUCED_MOTION }),
+      invalidate: () => { requestAnimationFrame(() => map.invalidateSize()); },
       fitAll: () => {
         const pts = [...markersRef.current.values()].map((m) => m.getLatLng());
         if (pts.length > 0) {
@@ -246,6 +252,13 @@ export default function MapViewport(p: Props) {
     }
     for (const [id, mk] of markers) {
       if (!seen.has(id)) { map.removeLayer(mk); markers.delete(id); anims.delete(id); }
+    }
+    // First fleet snapshot: frame the vehicles, not the subcontinent.
+    // Once only — later pans/zooms belong to the user.
+    if (!fittedRef.current && markers.size > 0) {
+      fittedRef.current = true;
+      const pts = [...markers.values()].map((m) => m.getLatLng());
+      map.fitBounds(L.latLngBounds(pts).pad(0.15), { maxZoom: 16, animate: !REDUCED_MOTION });
     }
     (map as unknown as { __kick?: (n: number) => void }).__kick?.(now);
 

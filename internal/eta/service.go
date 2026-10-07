@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"transport-app/internal/shared"
 	"transport-app/internal/shared/ports"
 )
 
@@ -355,10 +356,19 @@ func (s *EtaService) writeAuditLog(ctx context.Context, tripID string, action st
 	// inside one tick — see docs/10-FRONTEND-UX-AUDIT.md §7.4).
 	auditID := "eta-" + s.idGen.GenerateUUID()
 	newValues := fmt.Sprintf(`{"reason":"%s"}`, reason)
+	tenant := shared.TenantOrPlatform(ctx)
+	if tenant == shared.DefaultTenant && s.db != nil {
+		var tripTenant sql.NullString
+		if err := s.db.QueryRowContext(ctx,
+			`SELECT tenant_id FROM trips WHERE id = ?`, tripID).Scan(&tripTenant); err == nil &&
+			tripTenant.Valid && tripTenant.String != "" {
+			tenant = shared.TenantID(tripTenant.String)
+		}
+	}
 	_, _ = s.db.ExecContext(ctx, `
-		INSERT INTO audit_logs (id, action, table_name, record_id, new_values, created_at)
-		VALUES ($1, $2, 'trips', $3, $4, CURRENT_TIMESTAMP)`,
-		auditID, action, tripID, newValues,
+		INSERT INTO audit_logs (id, action, table_name, record_id, new_values, tenant_id, created_at)
+		VALUES ($1, $2, 'trips', $3, $4, $5, CURRENT_TIMESTAMP)`,
+		auditID, action, tripID, newValues, string(tenant),
 	)
 }
 

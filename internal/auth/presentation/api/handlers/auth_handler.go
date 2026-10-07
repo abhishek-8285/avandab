@@ -157,7 +157,11 @@ func (h *APIAuthHandler) IssueToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.authSvc.Login(r.Context(), service.LoginRequest{
+	// Public route: no session middleware runs, so seed client IP/location —
+	// otherwise the login audit row stores NULL ip_address ("-" in /audit-logs).
+	loginCtx := context.WithValue(r.Context(), auth.ContextIP, auth.ClientIP(r))
+	loginCtx = context.WithValue(loginCtx, auth.ContextLocation, auth.ClientLocation(r))
+	result, err := h.authSvc.Login(loginCtx, service.LoginRequest{
 		Email:    req.Email,
 		Password: req.Password,
 	})

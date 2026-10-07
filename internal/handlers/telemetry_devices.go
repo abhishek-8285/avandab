@@ -130,6 +130,8 @@ func (h *TelemetryDeviceHandlers) List(w http.ResponseWriter, r *http.Request) {
 			"DateFrom":        pp.DateFrom,
 			"DateTo":          pp.DateTo,
 			"DateFilterError": pp.DateFilterError,
+			// ponytail: no #list-table swap target on this page; chips+pagination are plain links
+			"NoHtmx": true,
 		},
 	})
 }

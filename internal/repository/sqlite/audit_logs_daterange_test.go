@@ -8,7 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"transport-app/internal/auth"
+	"transport-app/internal/domain"
 	"transport-app/internal/repository"
+	"transport-app/internal/shared"
 )
 
 // TestAuditLogRepository_ListAuditLogsDateRange proves the free-text and
@@ -22,7 +25,11 @@ func TestAuditLogRepository_ListAuditLogsDateRange(t *testing.T) {
 	})
 	require.True(t, ok, "audit repo must implement date-range listing")
 
-	ctx := context.Background()
+	ctx := context.WithValue(
+		shared.ContextWithTenantID(context.Background(), shared.DefaultTenant),
+		auth.ContextUser, &auth.SessionData{UserID: "u-plat", Role: string(domain.RoleAdmin)})
+	// Admin ctx reads global: seed rows carry no tenant and stay visible,
+	// so this test keeps proving only the date/window logic.
 	mk := func(action, table string, day int) {
 		created := time.Date(2026, 8, day, 8, 0, 0, 0, time.UTC).Format("2006-01-02T15:04:05Z")
 		_, err := dbConn.Exec(`INSERT INTO audit_logs (id, action, table_name, created_at)

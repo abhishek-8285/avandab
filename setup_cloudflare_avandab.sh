@@ -24,10 +24,15 @@ tunnel: ${TUNNEL_ID}
 credentials-file: /home/abhishek/.cloudflared/${TUNNEL_ID}.json
 
 ingress:
+  # MQTT over WebSocket -> mosquitto WS listener. Must stay first: cloudflared
+  # matches rules in order and the path-only rule catches /mqtt on any host.
+  # The mobile app connects to wss://<host>/mqtt (mobile/src/services/mqtt.ts).
+  - path: ^/mqtt$
+    service: http://localhost:9001
   - hostname: avandab.com
-    service: http://localhost:8090
+    service: http://localhost:8080
   - hostname: www.avandab.com
-    service: http://localhost:8090
+    service: http://localhost:8080
   - service: http_status:404
 EOF
 

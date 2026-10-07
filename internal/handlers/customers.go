@@ -113,7 +113,7 @@ func (h *CustomerHandlers) List(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
 	pp := parsePaginationParams(r)
 
-	list, total, err := h.Services.Customers.ListCustomers(r.Context(), pp.Query, pp.Limit, pp.Offset)
+	list, total, err := h.Services.Customers.ListCustomersFiltered(r.Context(), pp.Query, pp.Status, pp.Limit, pp.Offset)
 	if err != nil {
 		http.Error(w, "Failed to list customers", http.StatusInternalServerError)
 		return

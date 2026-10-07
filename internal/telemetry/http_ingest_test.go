@@ -149,8 +149,11 @@ func TestHTTPDeviceGPS_DedupReplay(t *testing.T) {
 // TestMQTTIngestHandler_ExtractIMEI verifies topic parsing.
 func TestMQTTIngestHandler_ExtractIMEI(t *testing.T) {
 	assert.Equal(t, "IMEI123", extractIMEIFromTopic("avandab/telemetry/devices/IMEI123/gps"))
-	assert.Equal(t, "", extractIMEIFromTopic("avandab/telemetry/drivers/drv1/gps"))
+	// The mobile driver topic resolves to the driver_id (Decision D3) — it
+	// used to return "" here, which discarded every phone-published fix.
+	assert.Equal(t, "drv1", extractIMEIFromTopic("avandab/telemetry/drivers/drv1/gps"))
 	assert.Equal(t, "", extractIMEIFromTopic("garbage/topic"))
+	assert.Equal(t, "", extractIMEIFromTopic("avandab/telemetry/trips/abc/gps"))
 }
 
 // TestMQTTIngestHandler_ValidMessage processes a valid MQTT frame through the

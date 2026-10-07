@@ -1,4 +1,5 @@
 {
+  "common.search": "खोजें…",
   "nav.overview": "सारांश",
   "nav.operations": "संचालन",
   "nav.fleet": "बेड़ा और संपत्ति",
@@ -1939,6 +1940,7 @@
   "fl.search": "खोजें",
   "fl.search_code_name_company_phone_email_contact": "कोड, नाम, कंपनी, फ़ोन, ईमेल, संपर्क या आंतरिक ID खोजें…",
   "fl.search_imei_serial_vehicle": "IMEI, सीरियल, गाड़ी खोजें…",
+  "fl.search_vehicles_ph": "वाहन खोजें (यूनिट, नंबर, ड्राइवर…)",
   "fl.search_invoice": "चालान खोजें",
   "fl.search_invoice_2": "चालान खोजें…",
   "fl.search_location": "जगह खोजें",

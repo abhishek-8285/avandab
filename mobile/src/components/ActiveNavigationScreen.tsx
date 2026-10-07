@@ -17,6 +17,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SOSButton } from './SOSButton';
 import { LiveDriverTrackingMap } from './LiveDriverTrackingMap';
+import { resolvePlaceCoords } from '../utils/geocode';
 import { Telemetry } from '../services/telemetry';
 import { Colors, Font, Radius, Spacing, FontSize} from '../constants/theme';
 import { Trip } from '../types/api';
@@ -75,6 +76,10 @@ export function ActiveNavigationScreen({
 
   const origin = trip?.origin || 'JNPT Port, Navi Mumbai';
   const destination = trip?.destination || 'Chakan MIDC, Pune';
+  // Map legs come from real trip data only: a trip without an origin draws no
+  // pickup leg instead of one pinned to a default city.
+  const pickupLeg = trip?.origin ? resolvePlaceCoords(trip.origin) : null;
+  const destinationLeg = trip?.destination ? resolvePlaceCoords(trip.destination) : null;
   const tripNumber = trip?.tripNumber || tripId || 'TRP-8491';
   const vehiclePlate = trip?.vehiclePlate || 'DL-01-AB-1234';
 
@@ -362,6 +367,10 @@ export function ActiveNavigationScreen({
         <LiveDriverTrackingMap
           driverLatitude={coords.latitude}
           driverLongitude={coords.longitude}
+          pickupLatitude={pickupLeg?.latitude}
+          pickupLongitude={pickupLeg?.longitude}
+          destinationLatitude={destinationLeg?.latitude}
+          destinationLongitude={destinationLeg?.longitude}
           pickupLabel={origin}
           destinationLabel={destination}
           vehicleLabel={vehiclePlate}

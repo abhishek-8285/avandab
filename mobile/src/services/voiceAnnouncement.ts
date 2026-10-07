@@ -23,18 +23,23 @@ class VoiceAnnouncementService {
 
     try {
       const activeLocale = params.locale || useLanguageStore.getState().locale || 'hi';
-      const advance = params.advanceAmount || 5000;
+      // Announce the amount only when a real one is known — never speak a
+      // fabricated default.
+      const advance = params.advanceAmount;
+      const advanceHi = advance ? ` ड्राइवर एडवांस ₹${advance}।` : '';
+      const advanceMr = advance ? ` ऍडव्हान्स ₹${advance}।` : '';
+      const advanceEn = advance ? ` Advance ${advance} rupees.` : '';
       let text = '';
       let langCode = 'hi-IN';
 
       if (activeLocale === 'hi') {
-        text = `नया ट्रिप असाइन हुआ। ${params.origin} से ${params.destination}। ड्राइवर एडवांस ₹${advance}।`;
+        text = `नया ट्रिप असाइन हुआ। ${params.origin} से ${params.destination}।${advanceHi}`;
         langCode = 'hi-IN';
       } else if (activeLocale === 'mr') {
-        text = `नवीन ट्रिप लोड प्राप्त झाले। ${params.origin} ते ${params.destination}। ऍडव्हान्स ₹${advance}।`;
+        text = `नवीन ट्रिप लोड प्राप्त झाले। ${params.origin} ते ${params.destination}।${advanceMr}`;
         langCode = 'mr-IN';
       } else {
-        text = `New trip assigned. From ${params.origin} to ${params.destination}. Advance ${advance} rupees.`;
+        text = `New trip assigned. From ${params.origin} to ${params.destination}.${advanceEn}`;
         langCode = 'en-IN';
       }
 

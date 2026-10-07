@@ -24,7 +24,7 @@ describe('network constants (env overrides)', () => {
     expect(net.MQTT_SCHEME).toBe('wss');
     expect(net.getBackendHost()).toBe('avandab.com');
     expect(net.getApiBaseURL()).toBe('https://avandab.com');
-    expect(net.getMQTTBrokerURL()).toBe('wss://avandab.com:8883');
+    expect(net.getMQTTBrokerURL()).toBe('wss://avandab.com');
   });
 
   test('custom host overrides respect setCustomBackendHost', () => {
@@ -33,7 +33,7 @@ describe('network constants (env overrides)', () => {
 
     expect(net.getBackendHost()).toBe('custom.avandab.com');
     expect(net.getApiBaseURL()).toBe('https://custom.avandab.com');
-    expect(net.getMQTTBrokerURL()).toBe('wss://custom.avandab.com:8883');
+    expect(net.getMQTTBrokerURL()).toBe('wss://custom.avandab.com');
 
     net.setCustomBackendHost(null);
     expect(net.getBackendHost()).toBe('avandab.com');

@@ -53,6 +53,8 @@ func (h *DriverHandlers) Routes(r chi.Router) {
 	r.With(middleware.ResourcePermission(h.AuthSrv, "drivers", "update")).Post("/{id}/edit", h.Update)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "drivers", "delete")).Post("/{id}/delete", h.Delete)
 	r.With(middleware.ResourcePermission(h.AuthSrv, "drivers", "update")).Post("/{id}/status", h.UpdateStatus)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "drivers", "update")).Post("/{id}/assign-vehicle", h.AssignVehicleToDriver)
+	r.With(middleware.ResourcePermission(h.AuthSrv, "drivers", "update")).Post("/{id}/unassign-vehicle", h.UnassignVehicleFromDriver)
 }
 
 func (h *DriverHandlers) List(w http.ResponseWriter, r *http.Request) {
@@ -214,10 +216,31 @@ func (h *DriverHandlers) View(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	// Preferred vehicle (master assignment) + vehicle details for display.
+	var assignedVehicle map[string]interface{}
+	if a, _ := getActiveAssignmentByDriver(r.Context(), h.DB, id, tenantID); a != nil {
+		var reg, vnum string
+		var vtype string
+		_ = h.DB.QueryRowContext(r.Context(), `SELECT registration_number, vehicle_number, vehicle_type FROM vehicles WHERE id = $1 AND tenant_id = $2`, a.VehicleID, tenantID).Scan(&reg, &vnum, &vtype)
+		assignedVehicle = map[string]interface{}{"ID": a.VehicleID, "RegistrationNumber": reg, "VehicleNumber": vnum, "VehicleType": vtype, "IsPrimary": a.IsPrimary}
+	}
+	// Vehicles for the "Change" dropdown (available + current, tenant-scoped).
+	var assignVehicles []map[string]interface{}
+	if rows, err := h.DB.QueryContext(r.Context(), `SELECT id, registration_number, vehicle_number FROM vehicles WHERE tenant_id = $1 ORDER BY registration_number LIMIT 100`, tenantID); err == nil {
+		defer func() { _ = rows.Close() }()
+		for rows.Next() {
+			var vid, reg, vnum string
+			if rows.Scan(&vid, &reg, &vnum) == nil {
+				assignVehicles = append(assignVehicles, map[string]interface{}{"ID": vid, "RegistrationNumber": reg, "VehicleNumber": vnum})
+			}
+		}
+	}
 	h.renderPage(w, r, "driver_view.html", PageData{Title: "View Driver", User: session,
 		Extra: map[string]interface{}{
 			"Driver": driver, "Files": files,
 			"Score": score, "Tier": tier, "BehaviourEvents": events, "RecentTrips": trips,
+			"AssignedVehicle": assignedVehicle, "AssignVehicles": assignVehicles,
 		}})
 }
 

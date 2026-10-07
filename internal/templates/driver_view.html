@@ -49,6 +49,39 @@
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
     <div class="lg:col-span-2 space-y-4">
+        <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden" data-section="assigned-vehicle">
+            <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">
+                <h2 class="text-sm font-semibold text-on-surface">Assigned Vehicle</h2>
+                {{if .AssignedVehicle}}<span class="px-2 py-0.5 rounded-full bg-emerald-soft border border-emerald-line text-emerald-mid text-xs font-semibold">Primary ✓</span>{{end}}
+            </div>
+            <div class="p-5">
+                {{if .AssignedVehicle}}
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                        <a href="/vehicles/{{.AssignedVehicle.ID}}" class="text-sm font-semibold text-primary hover:underline tabular-nums">{{.AssignedVehicle.RegistrationNumber}}</a>
+                        <span class="text-xs text-text-muted">({{or .AssignedVehicle.VehicleNumber "—"}} · {{.AssignedVehicle.VehicleType}})</span>
+                    </div>
+                    {{if can .User "drivers" "update"}}
+                    <form method="POST" action="/drivers/{{.Driver.ID}}/unassign-vehicle" class="inline">
+                        <button type="submit" class="text-xs font-semibold text-text-muted hover:text-status-alert transition">Unassign</button>
+                    </form>
+                    {{end}}
+                </div>
+                {{else}}
+                <p class="text-sm text-text-muted">No vehicle assigned.</p>
+                {{end}}
+                {{if can .User "drivers" "update"}}{{if not .AssignedVehicle}}
+                <form method="POST" action="/drivers/{{.Driver.ID}}/assign-vehicle" class="flex items-center gap-2 mt-3">
+                    <select name="vehicle_id" aria-label="Choose vehicle" class="flex-1 min-w-0 bg-surface-container-low border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-on-surface">
+                        <option value="">Select vehicle…</option>
+                        {{range .AssignVehicles}}<option value="{{.ID}}">{{.RegistrationNumber}} ({{.VehicleNumber}})</option>{{end}}
+                    </select>
+                    <button type="submit" class="shrink-0 inline-flex items-center justify-center rounded-full bg-primary text-on-primary px-3 py-1.5 text-xs font-semibold">Assign</button>
+                </form>
+                {{end}}{{end}}
+            </div>
+        </section>
+
         <section class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
             <div class="px-5 py-3 border-b border-border-subtle">
                 <h2 class="text-sm font-bold text-on-surface">{{t "fl.details"}}</h2>

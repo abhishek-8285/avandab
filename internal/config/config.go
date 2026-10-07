@@ -468,7 +468,7 @@ func Load() *Config {
 
 	// Spec 04 §9 — live map + share links + ETA + preventive maintenance.
 	cfg.LiveMap = LiveMapConfig{
-		MapTileProvider:         getEnv("MAP_TILE_PROVIDER", "auto"),
+		MapTileProvider:         getEnv("MAP_TILE_PROVIDER", "google"),
 		MapGoogleStyle:          getEnv("MAP_GOOGLE_STYLE", "m"),
 		MapGL:                   getEnv("MAP_GL", "IN"),
 		MapOSMURL:               getEnv("MAP_OSM_URL", "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"),

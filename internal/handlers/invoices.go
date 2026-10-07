@@ -210,7 +210,8 @@ func (h *InvoiceHandlers) invoiceViewExtra(r *http.Request, invoiceID string, in
 
 	dueDateStr := ""
 	var d sql.NullString
-	if err := h.DB.QueryRowContext(r.Context(), `SELECT COALESCE(CAST(due_date AS TEXT), '') FROM invoices WHERE id = $1`, invoiceID).Scan(&d); err == nil && d.String != "" {
+	tenantID := shared.TenantIDFromContext(r.Context())
+	if err := h.DB.QueryRowContext(r.Context(), `SELECT COALESCE(CAST(due_date AS TEXT), '') FROM invoices WHERE id = $1 AND tenant_id = $2`, invoiceID, string(tenantID)).Scan(&d); err == nil && d.String != "" {
 		if t, err := time.Parse("2006-01-02 15:04:05", d.String); err == nil {
 			dueDateStr = t.Format("02 Jan 2006")
 		} else if len(d.String) >= 10 {
@@ -491,9 +492,10 @@ func (h *InvoiceHandlers) buildInvoicePDFData(ctx context.Context,
 func (h *InvoiceHandlers) loadInvoiceExtras(ctx context.Context, invoiceID string) (dueDate, ewb string) {
 	var d sql.NullString
 	var e sql.NullString
+	tenantID := shared.TenantIDFromContext(ctx)
 	if err := h.DB.QueryRowContext(ctx,
 		`SELECT COALESCE(CAST(due_date AS TEXT), ''), COALESCE(ewb_number, '')
-		 FROM invoices WHERE id = $1`, invoiceID).Scan(&d, &e); err != nil {
+		 FROM invoices WHERE id = $1 AND tenant_id = $2`, invoiceID, string(tenantID)).Scan(&d, &e); err != nil {
 		slog.Warn("invoice extras lookup failed", "invoice_id", invoiceID, "error", err)
 		return "", ""
 	}
@@ -590,9 +592,10 @@ func (h *InvoiceHandlers) loadCompanyProfile(ctx context.Context) companyProfile
 
 // loadCustomerBillTo reads the buyer identity for the Bill To block.
 func (h *InvoiceHandlers) loadCustomerBillTo(ctx context.Context, customerID string) (name, gstin, address string) {
+	tenantID := shared.TenantIDFromContext(ctx)
 	err := h.DB.QueryRowContext(ctx, `
 		SELECT name, COALESCE(gst, ''), COALESCE(address, '')
-		FROM customers WHERE id = $1`, customerID).
+		FROM customers WHERE id = $1 AND tenant_id = $2`, customerID, string(tenantID)).
 		Scan(&name, &gstin, &address)
 	if err != nil {
 		slog.Warn("customer lookup failed for invoice PDF", "customer_id", customerID, "error", err)
@@ -602,6 +605,7 @@ func (h *InvoiceHandlers) loadCustomerBillTo(ctx context.Context, customerID str
 
 // loadLineItems reads the itemized rows with per-line GST data.
 func (h *InvoiceHandlers) loadLineItems(ctx context.Context, invoiceID string) []LineItemRecord {
+	tenantID := shared.TenantIDFromContext(ctx)
 	rows, err := h.DB.QueryContext(ctx, `
 		SELECT id, invoice_id, COALESCE(hsn_sac_code, ''), description, COALESCE(unit, 'NOS'),
 		       quantity, COALESCE(rate, unit_price), COALESCE(taxable_value, amount),
@@ -609,9 +613,9 @@ func (h *InvoiceHandlers) loadLineItems(ctx context.Context, invoiceID string) [
 		       COALESCE(cgst_amount, 0), COALESCE(sgst_amount, 0), COALESCE(igst_amount, 0),
 		       COALESCE(total, amount)
 		FROM invoice_line_items
-		WHERE invoice_id = $1
+		WHERE invoice_id = $1 AND tenant_id = $2
 		ORDER BY created_at ASC
-	`, invoiceID)
+	`, invoiceID, string(tenantID))
 	if err != nil {
 		slog.Warn("line items query failed for invoice PDF", "invoice_id", invoiceID, "error", err)
 		return nil
@@ -1064,8 +1068,8 @@ func (h *InvoiceHandlers) GenerateIRN(w http.ResponseWriter, r *http.Request) {
 	err := h.DB.QueryRowContext(r.Context(), `
 		SELECT invoice_number, customer_id, status, irn, substr(CAST(created_at AS TEXT), 1, 10), total, cgst, sgst, igst
 		FROM invoices
-		WHERE id = $1
-	`, invoiceID).Scan(&invNum, &custID, &invStatus, &existingIRN, &invDate, &totalVal, &cgstVal, &sgstVal, &igstVal)
+		WHERE id = $1 AND tenant_id = $2
+	`, invoiceID, string(tenantID)).Scan(&invNum, &custID, &invStatus, &existingIRN, &invDate, &totalVal, &cgstVal, &sgstVal, &igstVal)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			http.Error(w, "Invoice not found", http.StatusNotFound)
@@ -1098,8 +1102,8 @@ func (h *InvoiceHandlers) GenerateIRN(w http.ResponseWriter, r *http.Request) {
 			(SELECT gst_number FROM tenant_company_profiles WHERE tenant_id = $1),
 			CASE WHEN $2 IN ('', '1') THEN (SELECT gst_number FROM company_settings WHERE id = 1) END)
 		FROM customers c
-		WHERE c.id = $3
-	`, string(tenantID), string(tenantID), custID.String).Scan(&custGST, &compGST)
+		WHERE c.id = $3 AND c.tenant_id = $4
+	`, string(tenantID), string(tenantID), custID.String, string(tenantID)).Scan(&custGST, &compGST)
 
 	supplierGST := "27AABCU9603R1ZX"
 	if compGST.Valid && compGST.String != "" {
@@ -1114,8 +1118,8 @@ func (h *InvoiceHandlers) GenerateIRN(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(cgst_amount, 0), COALESCE(sgst_amount, 0), COALESCE(igst_amount, 0),
 		       COALESCE(total, amount)
 		FROM invoice_line_items
-		WHERE invoice_id = $1
-	`, invoiceID)
+		WHERE invoice_id = $1 AND tenant_id = $2
+	`, invoiceID, string(tenantID))
 	var lineViews []gstn.LineItemView
 	if err == nil {
 		defer func() { _ = rows.Close() }()

@@ -36,6 +36,21 @@ func newTestIngestorDB(t *testing.T) *sql.DB {
 	return db
 }
 
+// newTestIngestorDBFK is newTestIngestorDB plus the FK enforcement production
+// runs with (internal/database/database.go:67). goose.Up leaves
+// PRAGMA foreign_keys=0, and only a single pooled connection keeps the ON
+// pragma from being overwritten by a re-widened pool. Package-wide FK
+// enforcement is deliberately NOT applied: 24 legacy fixtures insert dangling
+// references — separate cleanup task.
+func newTestIngestorDBFK(t *testing.T) *sql.DB {
+	t.Helper()
+	db := newTestIngestorDB(t)
+	db.SetMaxOpenConns(1)
+	_, err := db.Exec(`PRAGMA foreign_keys=ON`)
+	require.NoError(t, err)
+	return db
+}
+
 // insertTestDevice inserts a device row and returns its IMEI.
 func insertTestDevice(t *testing.T, db *sql.DB, imei, status string, vehicleID *string) {
 	t.Helper()

@@ -83,6 +83,7 @@ func newShareTestApp(t *testing.T, db *sql.DB, authSrv auth.AuthorizationService
 		Config:    cfg,
 	}
 	app.Share = NewShareHandlers(app, db)
+	app.MQTTCredentials = NewMQTTCredentialsHandlers(app, db)
 	app.Share.EtaService = eta.NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock())
 	return app
 }

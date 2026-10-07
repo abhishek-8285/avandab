@@ -45,6 +45,12 @@ export default defineConfig({
       PORT: '8094',
       EXPERIMENT_ROLLOUT: '100',
       RATE_LIMIT_DISABLED: '1',
+      // The suite asserts multi-tenant isolation (fresh signup sees only its
+      // own rows). The server defaults to single-tenant bootstrap mode, and
+      // local dev gets multi-tenancy from gitignored .env — which CI checkouts
+      // lack. Pin it here so E2E means the same thing everywhere; without it
+      // every spec shares tenant "1" and counts accumulate across tests.
+      MULTI_TENANT_ENABLED: 'true',
       DATABASE_URL: `file:${databasePath}?mode=rwc&cache=shared&_foreign_keys=on&_journal_mode=WAL`,
     },
     port: 8094,

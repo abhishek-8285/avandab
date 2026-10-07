@@ -192,6 +192,37 @@ func (s *CustomerService) ListCustomers(ctx context.Context, query string, limit
 	return customers, total, nil
 }
 
+// customerStatusFilter is optionally implemented by stores (SQLRepository).
+// Asserted, never required — keeps the core repository interface untouched.
+type customerStatusFilter interface {
+	SearchCustomersFiltered(ctx context.Context, query, status string, limit, offset int) ([]domain.Customer, error)
+	CountCustomersFiltered(ctx context.Context, query, status string) (int64, error)
+}
+
+// ListCustomersFiltered mirrors ListCustomers with an optional exact status
+// match ("active"/"inactive"; anything else means all). Falls back to the
+// unfiltered path on stores without the optional interface.
+func (s *CustomerService) ListCustomersFiltered(ctx context.Context, query, status string, limit, offset int) ([]domain.Customer, int64, error) {
+	switch status {
+	case "active", "inactive":
+		// filtered below
+	default:
+		return s.ListCustomers(ctx, query, limit, offset)
+	}
+	if fs, ok := s.store.(customerStatusFilter); ok {
+		customers, err := fs.SearchCustomersFiltered(ctx, query, status, limit, offset)
+		if err != nil {
+			return nil, 0, err
+		}
+		total, err := fs.CountCustomersFiltered(ctx, query, status)
+		if err != nil {
+			return nil, 0, err
+		}
+		return customers, total, nil
+	}
+	return s.ListCustomers(ctx, query, limit, offset)
+}
+
 // UpdateCustomer updates an existing customer (legacy 8-arg form).
 func (s *CustomerService) UpdateCustomer(ctx context.Context, id domain.CustomerID, name, company, phone, email, gst, address, notes string) (domain.Customer, error) {
 	return s.UpdateCustomerFull(ctx, id, UpdateCustomerRequest{

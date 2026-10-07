@@ -8,6 +8,7 @@
                 <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Target Table</th>
                 <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Record ID</th>
                 <th class="px-3 py-2 text-right text-eyebrow text-text-muted">IP Address</th>
+                <th class="px-3 py-2 text-left text-eyebrow text-text-muted">Location</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
@@ -20,11 +21,12 @@
                 <td data-label="Target Table" class="px-3 py-2 text-xs font-data-mono text-secondary">{{.TableName}}</td>
                 <td data-label="Record ID" class="px-3 py-2 text-xs font-data-mono tabular-nums text-secondary">{{if .RecordID}}{{.RecordID}}{{else}}-{{end}}</td>
                 <td data-label="IP Address" class="px-3 py-2 text-right text-xs font-data-mono tabular-nums text-secondary whitespace-nowrap">{{if .IPAddress}}{{.IPAddress}}{{else}}-{{end}}</td>
+                <td data-label="Location" class="px-3 py-2 text-xs text-secondary whitespace-nowrap">{{if .Location}}{{.Location}}{{else}}-{{end}}</td>
             </tr>
             {{end}}
             {{else}}
             <tr>
-                <td colspan="6" class="px-4 py-12 text-center">
+                <td colspan="7" class="px-4 py-12 text-center">
                     {{template "empty_state.html" (dict "Icon" "history" "Title" "No audit log records found" "Message" "No audit activities match the search filter.")}}
                 </td>
             </tr>

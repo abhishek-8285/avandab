@@ -98,9 +98,9 @@ test.describe('tracking page', () => {
 
     await page.route('**/api/v1/telemetry/geofences**', (route) => route.fulfill({ json: [] }));
 
-    let osmTileRequests = 0;
-    await page.route(/tile\.openstreetmap\.org\//, async (route) => {
-      osmTileRequests++;
+    let tileRequests = 0;
+    await page.route(/mt1\.google\.com\/vt|tile\.openstreetmap\.org/, async (route) => {
+      tileRequests++;
       await route.continue();
     });
 
@@ -134,7 +134,7 @@ test.describe('tracking page', () => {
     // ── 2. Attribution present, visible, and actually clickable-through ──
     const attribution = page.locator('.leaflet-control-attribution');
     await expect(attribution).toBeVisible();
-    await expect(attribution).toContainText('OpenStreetMap');
+    await expect(attribution).toContainText(/Google Maps|OpenStreetMap/);
     const uncovered = await page.evaluate(() => {
       const el = document.querySelector('.leaflet-control-attribution') as HTMLElement;
       if (!el) return false;
@@ -147,7 +147,7 @@ test.describe('tracking page', () => {
 
     // ── 3. Real tile traffic reaches the map provider ──
     await page.waitForTimeout(1500);
-    expect(osmTileRequests, 'expected map tile fetches').toBeGreaterThan(0);
+    expect(tileRequests, 'expected map tile fetches').toBeGreaterThan(0);
 
     // ── 4. Poll snapshot ingested → registry, markers, counters ──
     await expect(page.locator('#fleet-list .fleet-row')).toHaveCount(2, { timeout: 15_000 });
