@@ -42,6 +42,12 @@ func (r *SnapshotRepository) LoadNewFixes(ctx context.Context, limit int) ([]dom
 		 LEFT JOIN engine_state e ON e.vehicle_id = s.vehicle_id
 		 WHERE (e.last_fix_at IS NULL OR s.timestamp > e.last_fix_at)
 		   AND s.latitude IS NOT NULL AND s.longitude IS NOT NULL
+		   -- An unbound frame stores vehicle_id NULL (FK columns never take the
+		   -- '' sentinel). The dwell engine is keyed by vehicle — engine_state,
+		   -- zone config and the tenant lookup all need one — so such a row is
+		   -- not a fix. Selecting it aborted the whole sweep on the NULL→string
+		   -- Scan error, every tick, forever.
+		   AND s.vehicle_id IS NOT NULL AND s.vehicle_id != ''
 		 ORDER BY s.timestamp ASC
 		 LIMIT $1`,
 		limit)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -38,7 +39,7 @@ type MQTTBroker struct {
 // (docs/13 §5.2: allow_anonymous false + acl_file) refuses anonymous clients,
 // so an empty username only works against a dev broker.
 func NewMQTTBroker(brokerURL, username, password string, handler TelemetryHandler) *MQTTBroker {
-	client := mqtt.NewClient(brokerOptions(brokerURL, username, password))
+	client := mqtt.NewClient(brokerOptions(brokerURL, username, password, BackendClientID()))
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		log.Printf("[MQTT WARNING] Could not connect to MQTT Broker (%s): %v (running fallback mode)", brokerURL, token.Error())
 	} else {
@@ -50,12 +51,29 @@ func NewMQTTBroker(brokerURL, username, password string, handler TelemetryHandle
 	return b
 }
 
+// BackendClientID returns an MQTT client id unique per running process.
+//
+// Mosquitto disconnects the older session whenever two clients share an id, so
+// a hardcoded id made production (:8080) and staging (:8081) evict each other in
+// a loop — the broker log filled with "already connected, closing old
+// connection" and every GPS frame arriving during the flap was dropped, with no
+// error anywhere. MQTT_CLIENT_ID overrides; PORT keeps the default unique.
+func BackendClientID() string {
+	if id := os.Getenv("MQTT_CLIENT_ID"); id != "" {
+		return id
+	}
+	if port := os.Getenv("PORT"); port != "" {
+		return "avandab_backend_" + port
+	}
+	return "avandab_backend"
+}
+
 // brokerOptions builds the Paho options for the backend subscriber. Credentials
 // are set only when a username exists: mosquitto treats an empty username as a
 // login attempt and rejects it, so an anonymous dev broker must stay unset.
-func brokerOptions(brokerURL, username, password string) *mqtt.ClientOptions {
+func brokerOptions(brokerURL, username, password, clientID string) *mqtt.ClientOptions {
 	opts := mqtt.NewClientOptions().AddBroker(brokerURL)
-	opts.SetClientID("avandab_backend_server")
+	opts.SetClientID(clientID)
 	opts.SetKeepAlive(60 * time.Second)
 	opts.SetPingTimeout(10 * time.Second)
 	if username != "" {

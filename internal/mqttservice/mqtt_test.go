@@ -102,7 +102,7 @@ func TestSubscriptions_DriverTopicRoutesToHandler(t *testing.T) {
 // the backend must present its superuser credentials — without them the
 // broker refuses the connection and every GPS frame stops arriving.
 func TestBrokerOptions_CarriesSuperuserCredentials(t *testing.T) {
-	opts := brokerOptions("tcp://localhost:1883", "avandab_backend", "s3cret")
+	opts := brokerOptions("tcp://localhost:1883", "avandab_backend", "s3cret", "avandab_backend_8080")
 
 	if opts.Username != "avandab_backend" {
 		t.Fatalf("username = %q, want avandab_backend", opts.Username)
@@ -110,15 +110,15 @@ func TestBrokerOptions_CarriesSuperuserCredentials(t *testing.T) {
 	if opts.Password != "s3cret" {
 		t.Fatalf("password = %q, want s3cret", opts.Password)
 	}
-	if opts.ClientID != "avandab_backend_server" {
-		t.Fatalf("client id = %q, want avandab_backend_server", opts.ClientID)
+	if opts.ClientID != "avandab_backend_8080" {
+		t.Fatalf("client id = %q, want the per-instance id passed in", opts.ClientID)
 	}
 }
 
 // Dev brokers are anonymous; the broker must not send an empty username,
 // which mosquitto treats as a failed login rather than "no auth".
 func TestBrokerOptions_AnonymousWhenNoCredentialsConfigured(t *testing.T) {
-	opts := brokerOptions("tcp://localhost:1883", "", "")
+	opts := brokerOptions("tcp://localhost:1883", "", "", "avandab_backend_8080")
 
 	if opts.Username != "" || opts.Password != "" {
 		t.Fatalf("username/password = %q/%q, want empty for an anonymous dev broker",
@@ -186,5 +186,38 @@ func TestValidateBrokerUsername(t *testing.T) {
 		if err := ValidateBrokerUsername(bad); !errors.Is(err, ErrInvalidBrokerUsername) {
 			t.Fatalf("ValidateBrokerUsername(%q) = %v, want ErrInvalidBrokerUsername", bad, err)
 		}
+	}
+}
+
+// Mosquitto drops the older session when two clients share an id, so a
+// hardcoded id made production (:8080) and staging (:8081) evict each other in
+// a loop and every GPS frame in the gap was dropped — silently.
+func TestBackendClientID_IsUniquePerInstance(t *testing.T) {
+	t.Setenv("MQTT_CLIENT_ID", "")
+	t.Setenv("PORT", "8080")
+	prod := BackendClientID()
+
+	t.Setenv("PORT", "8081")
+	staging := BackendClientID()
+
+	if prod == staging {
+		t.Fatalf("prod and staging share the MQTT client id %q — the broker will evict one of them", prod)
+	}
+	if !strings.Contains(prod, "8080") || !strings.Contains(staging, "8081") {
+		t.Fatalf("client ids should carry the instance port, got %q and %q", prod, staging)
+	}
+}
+
+func TestBackendClientID_ExplicitEnvWins(t *testing.T) {
+	t.Setenv("MQTT_CLIENT_ID", "avandab_backend_fixed")
+	if got := BackendClientID(); got != "avandab_backend_fixed" {
+		t.Fatalf("BackendClientID() = %q, want the MQTT_CLIENT_ID override", got)
+	}
+}
+
+func TestBrokerOptions_CarriesTheGivenClientID(t *testing.T) {
+	opts := brokerOptions("tcp://localhost:1883", "", "", "avandab_backend_8081")
+	if opts.ClientID != "avandab_backend_8081" {
+		t.Fatalf("client id = %q, want avandab_backend_8081", opts.ClientID)
 	}
 }

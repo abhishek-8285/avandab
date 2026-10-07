@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pressly/goose/v3"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	_ "modernc.org/sqlite"
@@ -56,4 +57,29 @@ func TestLoadNewFixes_PopulatedTripIDIsNotNil(t *testing.T) {
 	require.Len(t, fixes, 1)
 	require.NotNil(t, fixes[0].TripID)
 	require.Equal(t, "t-real", *fixes[0].TripID)
+}
+
+// An unbound frame stores vehicle_id NULL (FK columns never take the ”
+// sentinel). The dwell engine is keyed by vehicle, so such a row is not a fix —
+// but it used to abort the entire sweep on the NULL->string Scan error, so the
+// worker logged "dwell worker sweep failed" every tick and no vehicle was ever
+// evaluated again.
+func TestLoadNewFixes_SkipsUnboundSnapshotsWithoutFailing(t *testing.T) {
+	db := newSnapTestDB(t)
+	repo := NewSnapshotRepository(db)
+
+	_, err := db.Exec(`INSERT INTO telemetry_snapshots
+		(id, vehicle_id, trip_id, timestamp, ts_unix, latitude, longitude, speed)
+		VALUES ('snap-unbound', NULL, NULL, datetime('now'), unixepoch(), 19.07, 72.87, 30)`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO telemetry_snapshots
+		(id, vehicle_id, trip_id, timestamp, ts_unix, latitude, longitude, speed)
+		VALUES ('snap-bound', 'veh-ok', NULL, datetime('now'), unixepoch(), 19.08, 72.88, 25)`)
+	require.NoError(t, err)
+
+	fixes, err := repo.LoadNewFixes(context.Background(), 50)
+
+	require.NoError(t, err, "a NULL vehicle_id snapshot must not fail the whole sweep")
+	require.Len(t, fixes, 1, "only the bound snapshot is a fix")
+	assert.Equal(t, "veh-ok", fixes[0].VehicleID)
 }
