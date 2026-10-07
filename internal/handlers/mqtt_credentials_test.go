@@ -159,3 +159,27 @@ func TestMQTTCredentials_TenantScopedToTheCallersOrg(t *testing.T) {
 		`SELECT tenant_id FROM driver_mqtt_credentials WHERE username = 'DRV-MQTT-5'`).Scan(&tenantID))
 	assert.Equal(t, "1", tenantID, "credential must be owned by the caller's tenant")
 }
+
+// Ratchet: rotation was UPDATE-only, so rotating a driver with no stored row
+// (row deleted, provisioning write lost, phone reinstalled against a fresh
+// database) returned 200 with a plaintext secret that exists in no table and no
+// broker password file — the phone cached a credential the broker rejects.
+func TestMQTTCredentials_RotateProvisionsWhenNoRowExists(t *testing.T) {
+	r, db := mqttCredRouter(t, "u-mqtt-6", "1", "DRV-MQTT-6")
+
+	var rows int
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM driver_mqtt_credentials`).Scan(&rows))
+	require.Equal(t, 0, rows, "precondition: nothing provisioned yet")
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest("POST", "/api/v1/telemetry/mqtt-credentials/rotate", nil))
+	require.Equal(t, http.StatusOK, w.Code)
+	var rotated mqttCredential
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &rotated))
+	assert.Equal(t, "DRV-MQTT-6", rotated.Username)
+	require.NotEmpty(t, rotated.Password, "rotation must return a usable secret")
+
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*) FROM driver_mqtt_credentials`).Scan(&rows))
+	assert.Equal(t, 1, rows, "the issued secret must be stored — the broker password file is built from it")
+	assert.Contains(t, storedHash(t, db, "DRV-MQTT-6"), "$7$1000$")
+}

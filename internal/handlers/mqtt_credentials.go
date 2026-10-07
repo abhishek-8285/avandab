@@ -138,20 +138,17 @@ func (h *MQTTCredentialsHandlers) issue(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	driverKey := username
-	if rotate {
-		_, err = h.db.ExecContext(ctx, `
-			UPDATE driver_mqtt_credentials
-			SET password_hash = $1, rotated_at = datetime('now')
-			WHERE username = $2`, hash, username)
-	} else {
-		_, err = h.db.ExecContext(ctx, `
-			INSERT INTO driver_mqtt_credentials (driver_key, tenant_id, username, password_hash)
-			VALUES ($1, $2, $3, $4)
-			ON CONFLICT (username) DO UPDATE SET password_hash = excluded.password_hash,
-			                                        rotated_at = datetime('now')`,
-			driverKey, tenantID, username, hash)
-	}
+	// One upsert for both paths. A rotate against a driver with no stored row
+	// (row deleted, provisioning write lost, phone reinstalled against a fresh
+	// database) must still record the secret: the broker password file is built
+	// from this table, so an UPDATE-only rotate would hand the phone a plaintext
+	// that no table and no password file knows.
+	_, err = h.db.ExecContext(ctx, `
+		INSERT INTO driver_mqtt_credentials (driver_key, tenant_id, username, password_hash)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (username) DO UPDATE SET password_hash = excluded.password_hash,
+		                                        rotated_at = datetime('now')`,
+		username, tenantID, username, hash)
 	if err != nil {
 		slog.ErrorContext(ctx, "broker credential write failed",
 			slog.String("username", username), slog.Any("error", err))
