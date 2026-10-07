@@ -1654,6 +1654,16 @@ func (a *App) RenderErrorWithContext(w http.ResponseWriter, r *http.Request, sta
 	})
 }
 
+// RenderFeatureGateError draws the "add-on not enabled for your organisation"
+// page through the normal layout (features.Renderer). The gate used to answer
+// with a bare http.Error — text/plain, no viewport meta — which on a phone
+// renders as a 980px-wide page scaled down, i.e. ~7px body text on a black
+// screen, with no navigation back into the app. API/XHR callers still get the
+// JSON error shape (renderErrorInfo branches on the request).
+func (a *App) RenderFeatureGateError(w http.ResponseWriter, r *http.Request, status int, title, message string) {
+	a.RenderErrorWithContext(w, r, status, title, message, "feature-gate", "ERR_FEATURE_DISABLED")
+}
+
 // NotFoundHandler is the global 404 handler mounted on the router.
 func (a *App) NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 	reqID, _ := r.Context().Value(auth.ContextReqID).(string)

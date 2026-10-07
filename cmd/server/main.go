@@ -509,7 +509,7 @@ func main() {
 	}
 	// Per-org feature gates (registry lives on App; shared by routes + workers).
 	featureGate := func(key string) func(http.Handler) http.Handler {
-		return features.Gate(app.Features, key)
+		return features.Gate(app.Features, key, app.RenderFeatureGateError)
 	}
 	// Worker-tick gate: skip a background sweep when its feature is off for
 	// the default org (workers are single-tenant today). Cached → cheap.
