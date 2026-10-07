@@ -117,35 +117,55 @@ func fixTrusted(frame RawFrame) bool {
 	return true
 }
 
-// fallbackVehicleID resolves the vehicle for a frame from an unbound device.
+// fallbackVehicleSQL is the vehicle lookup for a frame from an unbound device.
 // The mobile device "IMEI" doubles as the driver identity (device IMEI =
-// user ID = drivers.driver_id), so the trip's vehicle_id is authoritative.
+// auth user id = drivers.driver_id), so the trip's vehicle_id is authoritative.
 //
-// Two tenant-scoped indexed probes (drivers.id PK, then drivers.driver_id
-// UNIQUE) replace the old OR-join full scan; each probe rides
-// idx_trips_driver_tenant_departure and picks deterministically (latest
-// departure first). The old drivers.notes→plate convention is gone: it was
-// an undocumented cross-module string coupling (any note became a vehicle
-// lookup) and vehicle binding is owned by the onboarding vehicle_binding step.
-// Reads via txOrDB so the lookup joins the ingest snapshot like every step.
+// The device identity and the trip's driver_id live in different spaces and are
+// written independently — the broker username (hence the published topic) is
+// the driver code once a drivers row exists and the auth user id before that,
+// while trips.driver_id is written as the drivers row id or the auth user id
+// (dispatch_service executeAcceptOffer stores session.UserID). Joining on one
+// column pair therefore drops real frames, so the trip is matched against every
+// shape of the same human. Each arm is an indexed lookup on drivers (PK /
+// UNIQUE driver_id) or users (PK), never a scan of trips: the tenant+status
+// prefix rides idx_trips_tenant_status_departure, asserted in the tests.
+// Latest departure wins, deterministically. The old drivers.notes→plate
+// convention is gone: it was an undocumented cross-module string coupling (any
+// note became a vehicle lookup) and vehicle binding is owned by the onboarding
+// vehicle_binding step.
+//
+// A const so the test can assert its query plan against the exact SQL that runs.
+const fallbackVehicleSQL = `
+		SELECT t.vehicle_id
+		FROM trips t
+		WHERE t.tenant_id = $2
+			AND t.status IN ('assigned', 'started', 'reached_pickup', 'in_transit')
+			AND t.vehicle_id IS NOT NULL AND t.vehicle_id <> ''
+			AND (
+			     t.driver_id = $1
+			  OR t.driver_id IN (SELECT d.id FROM drivers d
+			                     WHERE d.tenant_id = $2 AND (d.id = $1 OR d.driver_id = $1))
+			  OR t.driver_id IN (SELECT u.id FROM users u WHERE u.tenant_id = $2 AND u.id = $1)
+			  OR t.driver_id IN (SELECT d.id FROM drivers d JOIN users u
+			                      ON u.tenant_id = d.tenant_id AND u.email = d.email
+			                     WHERE d.tenant_id = $2 AND u.tenant_id = $2
+			                       AND (d.id = $1 OR d.driver_id = $1))
+			)
+		ORDER BY t.departure_time DESC
+		LIMIT 1`
+
+// fallbackVehicleID resolves the vehicle for a frame from an unbound device,
+// or "" when no active trip of that identity carries one. Reads via txOrDB so
+// the lookup joins the ingest snapshot like every step.
 func (ing *Ingestor) fallbackVehicleID(ctx context.Context, tenantID, imei string) string {
 	db := txOrDB(ctx, ing.deviceStore.db)
-	for _, driverCol := range []string{"d.id", "d.driver_id"} {
-		var vid sql.NullString
-		err := db.QueryRowContext(ctx, `
-			SELECT t.vehicle_id
-			FROM drivers d
-			JOIN trips t ON t.driver_id = `+driverCol+`
-				AND t.tenant_id = d.tenant_id
-				AND t.status IN ('assigned', 'started', 'reached_pickup', 'in_transit')
-			WHERE `+driverCol+` = $1 AND d.tenant_id = $2
-			ORDER BY t.departure_time DESC
-			LIMIT 1`, imei, tenantID).Scan(&vid)
-		if err == nil && vid.Valid && vid.String != "" {
-			return vid.String
-		}
+	var vid sql.NullString
+	err := db.QueryRowContext(ctx, fallbackVehicleSQL, imei, tenantID).Scan(&vid)
+	if err != nil || !vid.Valid || vid.String == "" {
+		return ""
 	}
-	return ""
+	return vid.String
 }
 
 // activeTripID resolves the trip a vehicle is currently on. Every real frame
@@ -155,15 +175,39 @@ func (ing *Ingestor) fallbackVehicleID(ctx context.Context, tenantID, imei strin
 // /api/v1/telemetry/live?trip_id= with zero rows. Only genuinely active
 // statuses count so a cancelled or completed trip is never latched onto;
 // latest departure wins when a vehicle has more than one.
-func (ing *Ingestor) activeTripID(ctx context.Context, tenantID, vehicleID string) string {
+//
+// driverID is the frame's own identity when it has one (a drivers.id, resolved
+// from the MQTT driver topic). Vehicle alone is not enough once a vehicle is
+// shared: two drivers on overlapping trips means the latest departure can be
+// the other driver's, and the dwell engine would then run pickup/drop zones and
+// the ReachPickup/StartTransit gates against a trip the driver is not on.
+// trips.driver_id carries three shapes in this codebase — the drivers row id,
+// the human driver code, and the auth user id executeAcceptOffer writes — so
+// all three are resolved, and a trip that provably belongs to another driver is
+// refused. An empty driverID keeps the vehicle-level behaviour (hardware
+// frames, and phones whose identity is only an auth user id).
+func (ing *Ingestor) activeTripID(ctx context.Context, tenantID, vehicleID, driverID string) string {
 	db := txOrDB(ctx, ing.deviceStore.db)
 	var tripID sql.NullString
 	err := db.QueryRowContext(ctx, `
-		SELECT id FROM trips
-		WHERE tenant_id = $1 AND vehicle_id = $2
-			AND status IN ('assigned', 'started', 'reached_pickup', 'in_transit')
-		ORDER BY departure_time DESC
-		LIMIT 1`, tenantID, vehicleID).Scan(&tripID)
+		SELECT t.id FROM trips t
+		WHERE t.tenant_id = $1 AND t.vehicle_id = $2
+			AND t.status IN ('assigned', 'started', 'reached_pickup', 'in_transit')
+			AND (
+				 $3 = ''
+			  OR t.driver_id = ''
+			  OR t.driver_id = $3
+			  OR EXISTS (SELECT 1 FROM drivers d
+			              WHERE d.tenant_id = t.tenant_id
+			                AND (d.id = t.driver_id OR d.driver_id = t.driver_id)
+			                AND (d.id = $3 OR d.driver_id = $3))
+			  OR EXISTS (SELECT 1 FROM users u JOIN drivers d
+			              ON d.tenant_id = u.tenant_id AND d.email = u.email
+			              WHERE u.id = t.driver_id AND u.tenant_id = t.tenant_id
+			                AND (d.id = $3 OR d.driver_id = $3))
+			)
+		ORDER BY t.departure_time DESC
+		LIMIT 1`, tenantID, vehicleID, driverID).Scan(&tripID)
 	if err != nil || !tripID.Valid || tripID.String == "" {
 		return ""
 	}
@@ -281,19 +325,21 @@ func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (Ingest
 			vehicleID = ing.fallbackVehicleID(txCtx, device.TenantID, frame.IMEI)
 		}
 
-		// Trip attribution: a trip the caller supplied is never overwritten,
-		// otherwise every unattributed frame writes telemetry_snapshots.trip_id
-		// = '' and the dwell engine skips pickup/drop zones entirely.
-		if frame.TripID == "" && vehicleID != "" {
-			frame.TripID = ing.activeTripID(txCtx, device.TenantID, vehicleID)
-		}
-
 		// Step 7: Redundant frame checks (migration 00117 + moving deadband):
 		// A motion=0 (or speed < 1 km/h) frame within ParkedDedupWindow and
 		// ParkedDedupMaxM adds no information.
 		// A moving frame with displacement < MovingDedupMinM and heading delta
 		// < MovingDedupMinDeg within MovingDedupWindow is also redundant for history.
+		//
+		// Trip attribution: a trip the caller supplied is never overwritten,
+		// otherwise every unattributed frame writes telemetry_snapshots.trip_id
+		// = '' and the dwell engine skips pickup/drop zones entirely. Resolved
+		// after the dedup check so a redundant frame does not pay for the
+		// lookup it is about to skip.
 		dedup := ing.checkDedup(txCtx, frame)
+		if frame.TripID == "" && vehicleID != "" {
+			frame.TripID = ing.activeTripID(txCtx, device.TenantID, vehicleID, frame.DriverID)
+		}
 		skipHistory := (dedup.Parked || dedup.MovingDedup) && !frame.SOS
 		// SOS is an emergency: even a redundant parked frame must refresh the
 		// live map and emit a PositionEvent so responders see the panic fix.
