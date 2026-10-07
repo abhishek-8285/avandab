@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { timeAgo, upsertVehicle } from './hooks';
+import { timeAgo, upsertVehicle, hasPos } from './hooks';
 import type { LiveVehicle } from './types';
 
 describe('timeAgo', () => {
@@ -75,5 +75,45 @@ describe('upsertVehicle', () => {
     expect(upsertVehicle(m, null)).toBe(false);
     expect(upsertVehicle(m, { lat: 1 })).toBe(false);
     expect(m.size).toBe(0);
+  });
+
+  // Ratchet: ingest.go publishes "vehicle_id": positionEvent.VehicleID, which
+  // is "" for every device with no vehicle binding (every phone until the
+  // driver is linked to a vehicle). A typeof-only guard let '' through, so the
+  // fleet grew a phantom entry per unbound frame.
+  it('rejects a frame with an empty vehicle_id', () => {
+    const m = new Map<string, LiveVehicle>();
+    const frame = {
+      tenant_id: 't1', vehicle_id: '', trip_id: '',
+      lat: 19.076, lng: 72.8777, speed: 30,
+      fuel_level: null, odometer: null, timestamp: '2026-09-27T09:00:00Z',
+    };
+    expect(upsertVehicle(m, frame)).toBe(false);
+    expect(m.size).toBe(0);
+    expect(hasPos({ ...pollRecord, vehicle_id: '' })).toBe(true); // why it showed up
+  });
+
+  // Ratchet: snapshotPayload is a map, so "trip_id" is always present — '' when
+  // the frame has no trip. Spreading it over the poll record erased the real
+  // trip id (and null fuel/odometer) on every live frame.
+  it('keeps poll values the live frame reports as empty', () => {
+    const m = new Map<string, LiveVehicle>();
+    m.set('veh-1', {
+      ...pollRecord, trip_id: 'trip-9', fuel_level: 62.5, odometer: 88123.4,
+    } as LiveVehicle);
+
+    upsertVehicle(m, {
+      tenant_id: 't1', vehicle_id: 'veh-1', trip_id: '',
+      lat: 19.11, lng: 72.9, speed: 42, fuel_level: null, odometer: null,
+      timestamp: '2026-09-19T09:38:20+05:30',
+    });
+
+    const v = m.get('veh-1')!;
+    expect(v.trip_id).toBe('trip-9');
+    expect(v.fuel_level).toBe(62.5);
+    expect(v.odometer).toBe(88123.4);
+    // the position itself still comes from the frame
+    expect(v.lat).toBe(19.11);
+    expect(v.speed).toBe(42);
   });
 });

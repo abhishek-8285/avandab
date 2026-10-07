@@ -56,16 +56,31 @@ interface FeedState {
 // `STATUS_LABEL[undefined]`, and "Fix time" showed Invalid Date. Merging keeps
 // the poll's identity fields and takes the frame's position; `timestamp` is
 // renamed to `ts` because that is what the LiveVehicle contract calls it.
+//
+// Two guards the plain spread got wrong:
+//   - An empty `vehicle_id` is not a vehicle. ingest.go publishes
+//     `"vehicle_id": positionEvent.VehicleID`, which is "" for every device
+//     with no vehicle binding (every phone), so a typeof-only check admitted a
+//     phantom marker per unbound frame.
+//   - The frame is a sparse projection: `trip_id` is always present ("" when
+//     the event has no trip) and fuel_level/odometer are null when unknown.
+//     Spreading those over the poll record erased real values on every live
+//     frame, so only defined, non-empty frame fields overwrite.
 // Returns false when the payload names no vehicle (caller drops it).
 export function upsertVehicle(m: Map<string, LiveVehicle>, payload: unknown): boolean {
   if (!payload || typeof payload !== 'object') return false;
   const p = payload as Partial<LiveVehicle> & { timestamp?: string };
-  if (typeof p.vehicle_id !== 'string') return false;
+  if (typeof p.vehicle_id !== 'string' || !p.vehicle_id) return false;
   const prev = m.get(p.vehicle_id);
-  const merged = { ...(prev ?? {}), ...p } as LiveVehicle;
-  if (typeof p.timestamp === 'string') merged.ts = p.timestamp;
-  else if (prev?.ts) merged.ts = prev.ts;
-  m.set(p.vehicle_id, merged);
+  const merged = { ...(prev ?? {}) } as Record<string, unknown>;
+  for (const [k, v] of Object.entries(p)) {
+    if (k === 'vehicle_id' || v === null || v === undefined || v === '') continue;
+    merged[k] = v;
+  }
+  const out = merged as unknown as LiveVehicle;
+  if (typeof p.timestamp === 'string' && p.timestamp) out.ts = p.timestamp;
+  else if (prev?.ts) out.ts = prev.ts;
+  m.set(p.vehicle_id, out);
   return true;
 }
 
