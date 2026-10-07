@@ -406,10 +406,11 @@ function MainScreen({ onOpenSetup, onStartNav, onOpenExpenses, onOpenProfile, on
 
 
   const handleSignOut = () => {
-    // Full teardown: no live listeners may survive a logout.
+    // Full teardown: no live listeners may survive a logout. The background GPS
+    // task is session-scoped, so it stops here and only here.
     TripPoller.stop();
     MQTT.disconnect();
-    Telemetry.stopLiveLocationTracking();
+    Telemetry.stopSessionTracking();
     SyncEngine.stopAutoSync();
     stopNetworkWatcher();
     useSyncStore.getState().markSynced();

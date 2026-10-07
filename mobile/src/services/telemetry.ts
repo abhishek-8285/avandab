@@ -244,15 +244,25 @@ class TelemetryService {
     // Claim 3: the foreground watch alone dies when the driver locks the
     // screen or switches to a navigation app. The OS-level task
     // (backgroundGPSTask) is what keeps fixes flowing to SQLite + MQTT.
+    // Session-scoped: re-registering an already-running task is a no-op, and
+    // only stopSessionTracking (sign-out) tears it down. A screen unmount
+    // stopping it would kill tracking for every other holder of the task.
     const bg = await BackgroundGPS.start();
     if (!bg.started) console.log('[BG-GPS] background updates unavailable:', bg.error);
   }
 
+  // Screen-scoped teardown: drops this screen's foreground watcher and leaves
+  // the session-scoped background task running for whoever still needs it.
   stopLiveLocationTracking(): void {
     if (this.locationSubscription) {
       this.locationSubscription.remove();
       this.locationSubscription = null;
     }
+  }
+
+  // Session-scoped teardown (sign-out): the OS task stops with the session.
+  stopSessionTracking(): void {
+    this.stopLiveLocationTracking();
     void BackgroundGPS.stop();
   }
 
