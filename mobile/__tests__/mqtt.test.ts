@@ -1,17 +1,24 @@
 import { MQTT, TripDispatchUpdate } from '../src/services/mqtt';
 import { useAuthStore } from '../src/stores/authStore';
 
-// Richer local mock capturing connect options + event handlers.
+// Richer local mock capturing connect options + event handlers. Each connect()
+// mints its own client so a leak of the previous socket is observable;
+// __getClient() still returns the newest one.
 jest.mock('mqtt', () => {
-  const mockClient = {
+  const clients: any[] = [];
+  const makeClient = () => ({
     on: jest.fn(),
     subscribe: jest.fn(),
     publish: jest.fn(),
     end: jest.fn(),
     options: {} as Record<string, unknown>,
-  };
-  const connect = jest.fn(() => mockClient);
-  return { connect, __getClient: () => mockClient };
+  });
+  const connect = jest.fn(() => {
+    const c = makeClient();
+    clients.push(c);
+    return c;
+  });
+  return { connect, __getClient: () => clients[clients.length - 1] };
 });
 
 interface MockMqttModule {
@@ -76,6 +83,20 @@ describe('MQTTTelemetryService', () => {
     await MQTT.connect('drv_1');
     const id2 = mqttModule.connect.mock.calls[1][1].clientId;
     expect(id1).toBe(id2);
+  });
+
+  // Ratchet: App.tsx re-runs its effect when the driver identity resolves
+  // (user.driverId lands from GET /drivers/me), so connect() runs twice in a
+  // session. It assigned this.client without ending the old socket, leaving a
+  // live client nothing can publish through or disconnect.
+  test('re-connecting with a new identity ends the previous client', async () => {
+    await MQTT.connect('drv_1');
+    const first = mqttModule.__getClient();
+    await MQTT.connect('drv_2');
+    const second = mqttModule.__getClient();
+
+    expect(second).not.toBe(first);
+    expect(first.end).toHaveBeenCalled();
   });
 
   test('omits password when no token is present', async () => {

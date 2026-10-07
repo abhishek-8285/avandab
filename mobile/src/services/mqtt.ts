@@ -86,8 +86,17 @@ class MQTTTelemetryService {
         options.password = token;
       }
 
-      // Connect to MQTT Broker over WebSockets
+      // Connect to MQTT Broker over WebSockets. The app re-runs its bootstrap
+      // effect when the driver identity resolves (user.driverId lands from
+      // GET /drivers/me), so this can run twice per session: end the previous
+      // socket instead of orphaning a live client nothing can publish through.
+      this.client?.end(true);
+      this.isConnected = false;
       this.client = mqtt.connect(brokerUrl, options);
+      // One identity for publish and subscribe: the broker ACL binds the
+      // credential to a topic level (`%u`), so subscribing under the app
+      // identity while publishing under the credential's would miss.
+      const identity = this.topicIdentity ?? driverId;
 
       this.client.on('connect', () => {
         this.isConnected = true;
@@ -100,8 +109,8 @@ class MQTTTelemetryService {
 
         // Subscribe to both driver update topics (legacy + spec)
         const topics = [
-          `avandab/trips/drivers/${driverId}/updates`,
-          `avandab/drivers/${driverId}/updates`,
+          `avandab/trips/drivers/${identity}/updates`,
+          `avandab/drivers/${identity}/updates`,
         ];
         topics.forEach((topic) => {
           this.client?.subscribe(topic, (err) => {
