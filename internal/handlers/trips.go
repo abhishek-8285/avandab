@@ -24,6 +24,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"transport-app/internal/auth"
 	bookingdomain "transport-app/internal/booking/domain"
 	bookingaggregate "transport-app/internal/booking/domain/aggregate"
 	"transport-app/internal/config"
@@ -199,8 +200,9 @@ func (h *TripHandlers) SendPODOTPSMS(w http.ResponseWriter, r *http.Request) {
 	var phone string
 	if h.App.DB != nil {
 		var p sql.NullString
+		tenantID := shared.TenantIDFromContext(r.Context())
 		if err := h.App.DB.QueryRowContext(r.Context(),
-			`SELECT COALESCE(pod_consignee_phone,'') FROM trips WHERE id = $1`, tripID).Scan(&p); err == nil {
+			`SELECT COALESCE(pod_consignee_phone,'') FROM trips WHERE id = $1 AND tenant_id = $2`, tripID, string(tenantID)).Scan(&p); err == nil {
 			phone = p.String
 		}
 	}
@@ -263,7 +265,7 @@ func (h *TripHandlers) List(w http.ResponseWriter, r *http.Request) {
 	pd.To = pp.DateTo
 
 	if isDatastarRequest(r) {
-		h.renderFragment(w, r, "trip_list.html", map[string]interface{}{
+		h.renderFragment(w, r, "trip_list_table.html", map[string]interface{}{
 			"Trips":        res.Trips,
 			"Pagination":   pd,
 			"Query":        pp.Query,
@@ -300,6 +302,27 @@ func (h *TripHandlers) New(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	// Prefill vehicle from driver's preferred assignment (master relationship).
+	selectedDriverID := r.URL.Query().Get("driver_id")
+	selectedVehicleID := r.URL.Query().Get("vehicle_id")
+	if selectedDriverID != "" && selectedVehicleID == "" {
+		if a, _ := getActiveAssignmentByDriver(r.Context(), h.DB, selectedDriverID, string(shared.TenantIDFromContext(r.Context()))); a != nil {
+			selectedVehicleID = a.VehicleID
+		}
+	}
+	// Build driver→vehicle map for client-side auto-prefill on change.
+	driverVehicleMap := map[string]string{}
+	if h.DB != nil {
+		if rows, err := h.DB.QueryContext(r.Context(), `SELECT driver_id, vehicle_id FROM driver_preferred_vehicles WHERE tenant_id = $1 AND unassigned_at IS NULL`, string(shared.TenantIDFromContext(r.Context()))); err == nil {
+			defer func() { _ = rows.Close() }()
+			for rows.Next() {
+				var did, vid string
+				if rows.Scan(&did, &vid) == nil {
+					driverVehicleMap[did] = vid
+				}
+			}
+		}
+	}
 
 	h.renderForm(w, r, "trip_edit.html", PageData{
 		Title: "New Trip",
@@ -312,6 +335,9 @@ func (h *TripHandlers) New(w http.ResponseWriter, r *http.Request) {
 			"SelectedBookingID": bookingID,
 			"SelectedRouteID":   selectedRouteID,
 			"DepartureTime":     selectedDeparture,
+			"SelectedDriverID":  selectedDriverID,
+			"SelectedVehicleID": selectedVehicleID,
+			"DriverVehicleMap":  driverVehicleMap,
 		},
 	})
 }
@@ -495,15 +521,16 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 	var progression *progressionInfo
 
 	if h.DB != nil {
+		tenantID := shared.TenantIDFromContext(r.Context())
 		rows, err := h.DB.QueryContext(r.Context(), `
 		SELECT id, stop_sequence, stop_type, COALESCE(location_name, ''), COALESCE(address, ''),
 		       status, substr(CAST(actual_arrival AS TEXT), 1, 19), substr(CAST(actual_departure AS TEXT), 1, 19),
 		       COALESCE(pod_required, 0), COALESCE(pod_url, ''),
 		       COALESCE(otp_required, 0), COALESCE(consignee_name, ''), COALESCE(consignee_phone, '')
 		FROM trip_stops
-		WHERE trip_id = $1
+		WHERE trip_id = $1 AND tenant_id = $2
 		ORDER BY stop_sequence ASC
-	`, id)
+	`, id, string(tenantID))
 		if err == nil {
 			defer func() { _ = rows.Close() }()
 			completedCount := 0
@@ -704,6 +731,18 @@ func (h *TripHandlers) Edit(w http.ResponseWriter, r *http.Request) {
 		selVehicleID = *trip.VehicleID
 	}
 
+	driverVehicleMap := map[string]string{}
+	if h.DB != nil {
+		if rows, err := h.DB.QueryContext(r.Context(), `SELECT driver_id, vehicle_id FROM driver_preferred_vehicles WHERE tenant_id = $1 AND unassigned_at IS NULL`, string(shared.TenantIDFromContext(r.Context()))); err == nil {
+			defer func() { _ = rows.Close() }()
+			for rows.Next() {
+				var did, vid string
+				if rows.Scan(&did, &vid) == nil {
+					driverVehicleMap[did] = vid
+				}
+			}
+		}
+	}
 	h.renderForm(w, r, "trip_edit.html", PageData{
 		Title: "Edit Trip",
 		User:  session,
@@ -714,6 +753,7 @@ func (h *TripHandlers) Edit(w http.ResponseWriter, r *http.Request) {
 			"Routes":            routes,
 			"SelectedDriverID":  selDriverID,
 			"SelectedVehicleID": selVehicleID,
+			"DriverVehicleMap":  driverVehicleMap,
 		},
 	})
 }
@@ -898,8 +938,12 @@ func (h *TripHandlers) handleComplianceBlock(w http.ResponseWriter, r *http.Requ
 		_ = h.Services.Audit.LogAction(r.Context(), &uid, "dispatch_override", "trips", tripID, nil, &rc)
 	} else if h.DB != nil {
 		auditID := uuid.NewString()
-		_, _ = h.DB.ExecContext(r.Context(), `INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, created_at) VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
-			auditID, user.UserID, "dispatch_override", "trips", tripID, reason)
+		var ipVal *string
+		if ip, ok := r.Context().Value(auth.ContextIP).(string); ok && ip != "" {
+			ipVal = &ip
+		}
+		_, _ = h.DB.ExecContext(r.Context(), `INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, ip_address, tenant_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)`,
+			auditID, user.UserID, "dispatch_override", "trips", tripID, reason, ipVal, string(shared.TenantOrPlatform(r.Context())))
 	}
 	return false
 }
@@ -915,7 +959,8 @@ func (h *TripHandlers) AssignDriver(w http.ResponseWriter, r *http.Request) {
 		var vehicleID string
 		if h.DB != nil {
 			var v sql.NullString
-			_ = h.DB.QueryRowContext(ctx, `SELECT vehicle_id FROM trips WHERE id = $1`, tripID).Scan(&v)
+			tenantID := shared.TenantIDFromContext(ctx)
+			_ = h.DB.QueryRowContext(ctx, `SELECT vehicle_id FROM trips WHERE id = $1 AND tenant_id = $2`, tripID, string(tenantID)).Scan(&v)
 			if v.Valid {
 				vehicleID = v.String
 			}
@@ -985,7 +1030,8 @@ func (h *TripHandlers) AssignVehicle(w http.ResponseWriter, r *http.Request) {
 		var driverID string
 		if h.DB != nil {
 			var d sql.NullString
-			_ = h.DB.QueryRowContext(ctx, `SELECT driver_id FROM trips WHERE id = $1`, tripID).Scan(&d)
+			tenantID := shared.TenantIDFromContext(ctx)
+			_ = h.DB.QueryRowContext(ctx, `SELECT driver_id FROM trips WHERE id = $1 AND tenant_id = $2`, tripID, string(tenantID)).Scan(&d)
 			if d.Valid {
 				driverID = d.String
 			}
@@ -1521,7 +1567,7 @@ func (h *TripHandlers) SubmitStopPOD(w http.ResponseWriter, r *http.Request) {
 	if stopID == "" && h.App != nil && h.App.DB != nil {
 		var sID string
 		_ = h.App.DB.QueryRowContext(r.Context(),
-			`SELECT id FROM trip_stops WHERE trip_id = $1 ORDER BY stop_sequence DESC LIMIT 1`, tripID).Scan(&sID)
+			`SELECT id FROM trip_stops WHERE trip_id = $1 AND tenant_id = $2 ORDER BY stop_sequence DESC LIMIT 1`, tripID, string(tenantID)).Scan(&sID)
 		if sID != "" {
 			stopID = sID
 		}
@@ -1550,8 +1596,8 @@ func (h *TripHandlers) SubmitStopPOD(w http.ResponseWriter, r *http.Request) {
 			    pod_signature_url = COALESCE(NULLIF($3, ''), pod_signature_url),
 			    pod_notes = COALESCE(NULLIF($4, ''), pod_notes),
 			    pod_captured_at = CURRENT_TIMESTAMP
-			WHERE id = $5 OR trip_number = $6`,
-			podURL, podURL, signatureURL, notes, tripID, tripID,
+			WHERE (id = $5 OR trip_number = $6) AND tenant_id = $7`,
+			podURL, podURL, signatureURL, notes, tripID, tripID, string(tenantID),
 		)
 		if podURL != "" && stopID != "" {
 			_, _ = h.App.DB.ExecContext(r.Context(), `

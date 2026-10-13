@@ -1075,14 +1075,21 @@ select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
     }
     .rtable tbody td:last-child > * { text-align: left; }
 
-    /* Empty-state / colspan rows are a full-bleed panel, not a card. */
+    /* Empty-state / colspan rows are a full-bleed panel, not a card.
+       display:block + centered text: without this the card-mode
+       `td { display:flex; justify-content:space-between }` and
+       `td > * { text-align:right }` pin the empty-state block to the
+       left (seen on /vehicles filtered-zero, "No vehicles found"). */
     .rtable tbody tr.rtable-full,
     .rtable tbody td[colspan] {
         border: 0;
         background: transparent;
         box-shadow: none;
         padding: 0;
+        display: block;
+        text-align: center;
     }
+    .rtable tbody td[colspan] > * { text-align: center; }
     .rtable tbody td[colspan]::before { content: none; }
 
     /* Total rows: keep the label and the amount on ONE line so a total still

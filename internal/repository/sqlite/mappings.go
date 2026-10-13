@@ -838,11 +838,12 @@ func paymentRowToWithInvoice(
 func auditLogRowToWithUser(
 	id string, userID sql.NullString, action string, tableName string,
 	recordID sql.NullString, oldValues sql.NullString, newValues sql.NullString,
-	ipAddress sql.NullString, createdAt time.Time, userName sql.NullString,
+	ipAddress sql.NullString, location sql.NullString, tenantID sql.NullString, createdAt time.Time, userName sql.NullString,
 ) repository.AuditLogWithUser {
 	return repository.AuditLogWithUser{
 		AuditLog: domain.AuditLog{
 			ID:        domain.FileID(id),
+			TenantID:  shared.TenantID(tenantID.String),
 			UserID:    nullStringToUserID(userID),
 			Action:    action,
 			TableName: tableName,
@@ -850,6 +851,7 @@ func auditLogRowToWithUser(
 			OldValues: fromNullString(oldValues),
 			NewValues: fromNullString(newValues),
 			IPAddress: fromNullString(ipAddress),
+			Location:  fromNullString(location),
 			CreatedAt: createdAt,
 		},
 		UserName: fromNullString(userName),

@@ -1,0 +1,38 @@
+# Hardened Mosquitto config for the production broker (docs/13 §5.2).
+#
+# This is the shipped target, not the dev default: dev keeps
+# config/mosquitto.conf on allow_anonymous true so a laptop needs no
+# provisioning. Production mounts this file plus config/mosquitto-acl and a
+# generated password file.
+#
+# Verified on mosquitto 2.1.2: correct credentials + own topic → delivered;
+# sibling driver's topic → denied by ACL; wrong password and anonymous →
+# "Connection Refused: not authorised".
+
+per_listener_settings false
+
+# Loopback-only listeners. The Cloudflare tunnel reaches the WebSocket listener
+# through the tunnel process on the same host; nothing binds publicly.
+listener 1883
+protocol mqtt
+allow_anonymous false
+password_file /mosquitto/config/passwd
+acl_file /mosquitto/config/acl
+
+listener 9001
+protocol websockets
+allow_anonymous false
+password_file /mosquitto/config/passwd
+acl_file /mosquitto/config/acl
+
+# Backend service account (NOT a driver credential): grant it in the generated
+# password file so the ingest pipeline can still subscribe to every topic.
+#
+#   echo "avandab_backend:$(openssl passwd -6 -salt ...)" >> /mosquitto/config/passwd
+#
+# The backend reads MQTT_USERNAME / MQTT_PASSWORD from its environment
+# (internal/mqttservice/credentials.go + cmd/server/main.go).
+
+log_dest stdout
+log_type all
+log_timestamp true

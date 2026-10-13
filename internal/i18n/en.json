@@ -1,4 +1,5 @@
 {
+  "common.search": "Search…",
   "nav.overview": "Overview",
   "nav.operations": "Operations",
   "nav.fleet": "Fleet & Assets",
@@ -1939,6 +1940,7 @@
   "fl.search": "Search",
   "fl.search_code_name_company_phone_email_contact": "Search code, name, company, phone, email, contact or internal ID…",
   "fl.search_imei_serial_vehicle": "Search IMEI, serial, vehicle…",
+  "fl.search_vehicles_ph": "Search vehicles (unit, number, driver…)",
   "fl.search_invoice": "Search invoice",
   "fl.search_invoice_2": "Search invoice…",
   "fl.search_location": "Search Location",

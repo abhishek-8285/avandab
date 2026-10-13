@@ -94,6 +94,65 @@ For physical hardware GPS trackers:
 
 ---
 
+## 4b. MQTT Broker Hardening Cutover (docs/13 §5.2)
+
+Switching the production broker from anonymous to authenticated. **Nothing here
+has been executed on the VPS** — it is the reviewed procedure, and it needs
+explicit sign-off because an empty password file locks out every driver *and*
+the backend at once.
+
+### Rehearse first (safe, local)
+
+```bash
+./scripts/mqtt-acl-verify.sh   # real mosquitto 2.x in Docker, all 5 checks
+```
+
+It asserts the driver's credential is delivered on its own topic, is **denied**
+on a sibling driver's topic, that wrong-password and anonymous clients are
+refused, and that the backend superuser still receives everything. `ACL VERIFY
+GREEN` is the precondition for cutting over.
+
+### Order of operations (each step is reversible)
+
+1. **Export driver credentials.** `scripts/mqtt-export-credentials.sh <db>` →
+   `mqtt-passwd.export` (hashes only). Empty file ⇒ stop: provision at least one
+   driver first (`GET /api/v1/telemetry/mqtt-credentials` on a signed-in phone).
+2. **Generate the backend superuser line** and keep the secret for step 5:
+   `go run ./cmd/mqttpass avandab_backend` → prints the secret, then the line.
+3. **Stage the broker config** beside the live one (do not swap yet):
+   `config/mosquitto.prod.conf.example` → `<broker-dir>/mosquitto.secure.conf`,
+   `config/mosquitto-acl` → `<broker-dir>/acl`, and the merged password file →
+   `<broker-dir>/passwd` (`chmod 600`, owned by the broker user).
+4. **Reload, don't restart** (`docker kill -s HUP <broker>` / `systemctl reload
+   mosquitto`): mosquitto re-reads `password_file` and `acl_file` on SIGHUP.
+5. **Point the backend at the credential** (`MQTT_USERNAME` /
+   `MQTT_PASSWORD` in the service environment — `systemctl edit avandab`), then
+   restart the app. Confirm in the journal: `[MQTT] Connected to broker at …`
+   and no `[MQTT WARNING] Could not connect`.
+6. **Verify end to end**: publish one frame from a real phone
+   (`wss://avandab.com/mqtt`, topic `avandab/telemetry/drivers/{identity}/gps`)
+   and confirm a new `telemetry_positions` row. A frame that does not arrive is
+   the signal to roll back.
+
+### Rollback (any step)
+
+```bash
+cp <broker-dir>/mosquitto.conf.bak <broker-dir>/mosquitto.conf   # allow_anonymous true
+<reload broker>; systemctl restart avandab; unset MQTT_USERNAME MQTT_PASSWORD
+```
+
+Rollback is safe because the app still falls back to an anonymous connect when
+it holds no credential, and driver GPS keeps flowing over the HTTP sync path
+even while MQTT is down.
+
+### Standing caveat
+
+A publish denied by the ACL returns **`PUBACK RC:0`** — the phone sees success
+and the fix is silently discarded. Monitor `telemetry_positions` row growth, not
+client-side publish confirmations.
+
+---
+
 ## 5. Key Environment Variables Reference
 
 | Variable | Default | Description |
@@ -101,6 +160,8 @@ For physical hardware GPS trackers:
 | `APP_ENV` | `development` | Environment mode (`development` / `production`). |
 | `PORT` | `8080` | HTTP Web and API port. |
 | `TELEMETRY_TCP_PORT` | `:5023` | Hardware GPS TCP socket port. |
+| `MQTT_URL` | `tcp://localhost:1883` | Broker URL for the backend ingest subscriber. |
+| `MQTT_USERNAME` / `MQTT_PASSWORD` | empty (unset) | Backend broker credential. Required once the broker runs `allow_anonymous false` (docs/13 §5.2); unset keeps the anonymous dev path. |
 | `TELEMETRY_DEVICE_SECRET_PEPPER` | empty (unset) | HMAC-SHA256 pepper for mobile/HTTP telemetry tokens. Set before provisioning hardware — rotation invalidates stored device hashes (reprovisioning required). Non-dev startup warns when unset. |
 | `RAZORPAY_KEY_ID` | empty | Razorpay API Key for payments. |
 | `RAZORPAY_KEY_SECRET` | empty | Razorpay API Secret for HMAC signature verification. |

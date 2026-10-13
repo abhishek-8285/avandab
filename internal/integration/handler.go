@@ -511,11 +511,11 @@ func (h *Handler) CancelIRN(w http.ResponseWriter, r *http.Request) {
 
 	if sess, _ := r.Context().Value(auth.ContextUser).(*auth.SessionData); sess != nil {
 		_, _ = h.db.ExecContext(r.Context(), `
-			INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, created_at)
-			VALUES ($1, $2, 'irn_cancelled', 'invoices', $3, $4, CURRENT_TIMESTAMP)
+			INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, tenant_id, created_at)
+			VALUES ($1, $2, 'irn_cancelled', 'invoices', $3, $4, $5, CURRENT_TIMESTAMP)
 		`, uuid.NewString(), sess.UserID, invoiceID,
 			fmt.Sprintf(`{"irn":%q,"cancel_reason":%d,"cancel_remark":%q,"window_source":%q}`,
-				irn.String, req.CancelReason, req.CancelRemark, windowSource))
+				irn.String, req.CancelReason, req.CancelRemark, windowSource), string(shared.TenantOrPlatform(r.Context())))
 	}
 
 	w.Header().Set("Content-Type", "application/json")

@@ -77,8 +77,18 @@ func (s *AuditLogService) LogAction(ctx context.Context, userID *domain.UserID, 
 		OldValues: oldValues,
 		NewValues: newValues,
 		IPAddress: getUserIP(ctx),
+		Location:  getUserLocation(ctx),
 	})
 	return err
+}
+
+// getUserLocation extracts the coarse location ("Pune, IN") from the request
+// context. "Unknown" stays nil so the UI keeps rendering "-".
+func getUserLocation(ctx context.Context) *string {
+	if loc, ok := ctx.Value(auth.ContextLocation).(string); ok && loc != "" && loc != "Unknown" {
+		return &loc
+	}
+	return nil
 }
 
 // getUserIP extracts the user IP from the request context.
@@ -100,6 +110,7 @@ func (s *baseService) logAudit(ctx context.Context, userID *domain.UserID, actio
 		OldValues: oldValues,
 		NewValues: newValues,
 		IPAddress: getUserIP(ctx),
+		Location:  getUserLocation(ctx),
 	}); err != nil && s.log != nil {
 		// Audit writes are compliance-critical — never fail silently.
 		s.log.Error("audit log write failed", "action", action, "table", table, "record_id", recordID, "error", err)

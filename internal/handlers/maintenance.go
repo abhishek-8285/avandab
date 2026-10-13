@@ -406,9 +406,9 @@ func (h *MaintenanceHandlers) OverrideBlock(w http.ResponseWriter, r *http.Reque
 
 	// Audit log
 	_, _ = h.DB.ExecContext(r.Context(), `
-		INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, created_at)
-		VALUES ($1, $2, 'maintenance_override', 'vehicles', $3, $4, CURRENT_TIMESTAMP)`,
-		uuid.NewString(), actorID, vehicleID, fmt.Sprintf(`{"reason":%q,"override_by":%q}`, reason, actorID),
+		INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, tenant_id, created_at)
+		VALUES ($1, $2, 'maintenance_override', 'vehicles', $3, $4, $5, CURRENT_TIMESTAMP)`,
+		uuid.NewString(), actorID, vehicleID, fmt.Sprintf(`{"reason":%q,"override_by":%q}`, reason, actorID), string(shared.TenantOrPlatform(r.Context())),
 	)
 
 	// safeRedirect provably returns only same-origin paths (covered by

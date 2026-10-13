@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity, Linking } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity, Linking, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors, Font, Radius, Spacing, FontSize} from '../constants/theme';
 import { useLanguageStore } from '../stores/languageStore';
@@ -31,7 +31,7 @@ const TripCardBase: React.FC<TripCardProps> = ({
   onPress,
   onNavigate,
   cargoWeight,
-  advanceAmount = 5000,
+  advanceAmount,
 }) => {
   const { locale } = useLanguageStore();
 
@@ -156,27 +156,31 @@ const TripCardBase: React.FC<TripCardProps> = ({
         </View>
       </View>
 
-      {/* Cargo & Route Details Strip */}
+      {/* Cargo & Route Details Strip (only when the trip carries cargo info) */}
+      {cargoWeight ? (
       <View style={styles.summaryStrip}>
         <View style={styles.cargoChip}>
-          <Text style={styles.weightText} accessibilityLabel={cargoWeight ? cargoWeight : '18 Tons Steel Coils'} numberOfLines={1} ellipsizeMode="tail">{cargoWeight ? `📦 ${cargoWeight}` : '📦 18 Tons Steel Coils'}</Text>
+          <Text style={styles.weightText} accessibilityLabel={cargoWeight} numberOfLines={1} ellipsizeMode="tail">{`📦 ${cargoWeight}`}</Text>
         </View>
         <View style={styles.routeStatusBadge}>
           <View style={styles.statusPulseDot} />
           <Text style={styles.routeStatusLabel}>{status === 'IN_TRANSIT' ? 'LIVE ROUTE' : 'DISPATCH READY'}</Text>
         </View>
       </View>
+      ) : null}
 
       {/* Action Toolbar: Quick Contact Icons + Full-Width Navigate */}
       <View style={styles.actionStrip}>
         <View style={styles.leftActions}>
+          {/* Dispatcher contact: the trip record carries no phone number,
+          so never dial a hardcoded one — say so honestly. */}
           <TouchableOpacity
             style={styles.actionIconBtn}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel="Call Dispatcher"
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            onPress={() => Linking.openURL('tel:+919876543210').catch(() => {})}
+            onPress={() => Alert.alert('Dispatcher', 'Dispatcher contact is not available for this trip.')}
           >
             <MaterialCommunityIcons name="phone" size={17} color={Colors.primary} />
           </TouchableOpacity>
@@ -188,8 +192,7 @@ const TripCardBase: React.FC<TripCardProps> = ({
             accessibilityLabel="WhatsApp Hub"
             hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
             onPress={() => {
-              const text = encodeURIComponent(`Avandab Fleet: Trip #${tripNumber} (${driverName}): En route from ${origin} to ${destination}`);
-              Linking.openURL(`https://wa.me/919876543210?text=${text}`).catch(() => {});
+              Alert.alert('WhatsApp Hub', 'Dispatcher contact is not available for this trip.');
             }}
           >
             <MaterialCommunityIcons name="whatsapp" size={19} color={Colors.accent} />

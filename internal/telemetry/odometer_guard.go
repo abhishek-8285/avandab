@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"transport-app/internal/repository"
+	"transport-app/internal/shared"
 )
 
 // AuditLogger abstracts the audit log service for testability. The guard passes
@@ -144,11 +145,30 @@ func (a *auditLogAdapter) LogAction(ctx context.Context, action, tableName, reco
 
 	execDB := a.txOrDB(ctx)
 	_, err := execDB.ExecContext(ctx,
-		`INSERT INTO audit_logs (id, action, table_name, record_id, old_values, new_values, ip_address)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		`INSERT INTO audit_logs (id, action, table_name, record_id, old_values, new_values, ip_address, tenant_id)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		uuid.NewString(), action, tableName, recordID, oldJSON, newJSON, "",
+		string(a.resolveTenant(ctx, tableName, recordID)),
 	)
 	return err
+}
+
+// resolveTenant attributes device-audit rows to the owning org: request
+// tenant first, then the device row for telemetry_devices writes, platform
+// scope otherwise (admin-visible, never cross-org).
+func (a *auditLogAdapter) resolveTenant(ctx context.Context, tableName, recordID string) shared.TenantID {
+	if t := shared.TenantIDFromContext(ctx); t != "" {
+		return t
+	}
+	if tableName == "telemetry_devices" && a.db != nil {
+		var tenant sql.NullString
+		if err := a.db.QueryRowContext(ctx,
+			`SELECT tenant_id FROM telemetry_devices WHERE imei = ?`, recordID).Scan(&tenant); err == nil &&
+			tenant.Valid && tenant.String != "" {
+			return shared.TenantID(tenant.String)
+		}
+	}
+	return shared.TenantOrPlatform(ctx)
 }
 
 // txOrDB returns the active transaction from context, or the stored DB.

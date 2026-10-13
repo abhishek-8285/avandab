@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -33,13 +34,12 @@ type MQTTBroker struct {
 
 // NewMQTTBroker creates and connects a broker that subscribes to canonical
 // GPS telemetry topics. When handler is nil, messages are logged only.
-func NewMQTTBroker(brokerURL string, handler TelemetryHandler) *MQTTBroker {
-	opts := mqtt.NewClientOptions().AddBroker(brokerURL)
-	opts.SetClientID("avandab_backend_server")
-	opts.SetKeepAlive(60 * time.Second)
-	opts.SetPingTimeout(10 * time.Second)
-
-	client := mqtt.NewClient(opts)
+//
+// username/password authenticate the backend superuser. A hardened broker
+// (docs/13 §5.2: allow_anonymous false + acl_file) refuses anonymous clients,
+// so an empty username only works against a dev broker.
+func NewMQTTBroker(brokerURL, username, password string, handler TelemetryHandler) *MQTTBroker {
+	client := mqtt.NewClient(brokerOptions(brokerURL, username, password, BackendClientID()))
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
 		log.Printf("[MQTT WARNING] Could not connect to MQTT Broker (%s): %v (running fallback mode)", brokerURL, token.Error())
 	} else {
@@ -51,25 +51,71 @@ func NewMQTTBroker(brokerURL string, handler TelemetryHandler) *MQTTBroker {
 	return b
 }
 
-// subscribeTelemetry subscribes to the canonical device topic (routing to the
-// handler) and keeps the legacy driver topic as a log-only bridge for the
-// mobile app until it is retrofitted (Spec 01 Phase 3).
+// BackendClientID returns an MQTT client id unique per running process.
+//
+// Mosquitto disconnects the older session whenever two clients share an id, so
+// a hardcoded id made production (:8080) and staging (:8081) evict each other in
+// a loop — the broker log filled with "already connected, closing old
+// connection" and every GPS frame arriving during the flap was dropped, with no
+// error anywhere. MQTT_CLIENT_ID overrides; PORT keeps the default unique.
+func BackendClientID() string {
+	if id := os.Getenv("MQTT_CLIENT_ID"); id != "" {
+		return id
+	}
+	if port := os.Getenv("PORT"); port != "" {
+		return "avandab_backend_" + port
+	}
+	return "avandab_backend"
+}
+
+// brokerOptions builds the Paho options for the backend subscriber. Credentials
+// are set only when a username exists: mosquitto treats an empty username as a
+// login attempt and rejects it, so an anonymous dev broker must stay unset.
+func brokerOptions(brokerURL, username, password, clientID string) *mqtt.ClientOptions {
+	opts := mqtt.NewClientOptions().AddBroker(brokerURL)
+	opts.SetClientID(clientID)
+	opts.SetKeepAlive(60 * time.Second)
+	opts.SetPingTimeout(10 * time.Second)
+	if username != "" {
+		opts.SetUsername(username)
+		opts.SetPassword(password)
+	}
+	return opts
+}
+
+// subscription is one broker subscription: a topic filter and its callback.
+type subscription struct {
+	topic   string
+	handler mqtt.MessageHandler
+}
+
+// subscriptions returns every GPS topic the backend listens on.
+//
+// The mobile app publishes to avandab/telemetry/drivers/{driverId}/gps; that
+// topic used to be bound to logOnlyHandler unconditionally, which discarded
+// 100% of phone-published fixes (audit 2026-09-27, claim 1). Both GPS topics
+// carry the same payload shape and the ingest handler resolves the identity
+// from the topic, so they now share one sink.
+func subscriptions(h TelemetryHandler) []subscription {
+	sink := logOnlyHandler
+	if h != nil {
+		sink = asPahoHandler(h)
+	}
+	return []subscription{
+		{topic: "avandab/telemetry/devices/+/gps", handler: sink},
+		{topic: "avandab/telemetry/drivers/+/gps", handler: sink},
+	}
+}
+
+// subscribeTelemetry subscribes the GPS topics and routes them to the
+// ingestion pipeline (log-only when no handler is wired).
 func (b *MQTTBroker) subscribeTelemetry() {
 	if !b.client.IsConnected() {
 		return
 	}
-
-	// Canonical topic: own GPS hardware devices.
-	canonicalTopic := "avandab/telemetry/devices/+/gps"
-	if b.handler != nil {
-		b.client.Subscribe(canonicalTopic, 1, asPahoHandler(b.handler))
-	} else {
-		b.client.Subscribe(canonicalTopic, 1, logOnlyHandler)
+	for _, sub := range subscriptions(b.handler) {
+		b.client.Subscribe(sub.topic, 1, sub.handler)
 	}
-
-	// Legacy bridge: mobile app still publishes here.
-	// Log-only until the mobile app is retrofitted (Spec 01 Phase 3).
-	b.client.Subscribe("avandab/telemetry/drivers/+/gps", 1, logOnlyHandler)
 }
 
 // logOnlyHandler acknowledges a message without logging its payload.

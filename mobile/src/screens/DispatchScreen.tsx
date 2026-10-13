@@ -7,7 +7,7 @@ import { Alert as RNAlert, Share } from 'react-native';
 import { Colors, Radius, Spacing, FontSize} from '../constants/theme';
 import { t } from '../i18n';
 import { useLanguageStore } from '../stores/languageStore';
-import { getApiBaseURL, getBackendHost } from '../constants/network';
+import { getApiBaseURL } from '../constants/network';
 import { Card } from '../components/system/Card';
 import { DB } from '../services/storage';
 import { Telemetry, canPublishFix } from '../services/telemetry';
@@ -60,10 +60,28 @@ export function DispatchScreen() {
   const onOpenIssues = () => navigation.navigate('Issues', {});
   const shareLiveLink = async () => {
     if (!activeTrip) return;
-    const url = `https://${getBackendHost()}/t/${activeTrip.id}`;
+    // Mint a real link server-side: ShareMyTrip only signs a link for the trip
+    // this driver is assigned to, and returns /share/<token> (PIN + expiry).
+    // The old `https://host/t/{tripId}` URL had no route behind it, so every
+    // customer who opened what the driver shared got a 404.
     try {
-      await Share.share({ message: `Live tracking ${activeTrip.tripNumber}: ${url}`, url });
-    } catch {}
+      const res = await fetch(`${getApiBaseURL()}/api/v1/drivers/me/trips/${activeTrip.id}/share`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = (await res.json()) as { url?: string };
+      if (!data.url) throw new Error('share response carried no url');
+      await Share.share({ message: `Live tracking ${activeTrip.tripNumber}: ${data.url}`, url: data.url });
+    } catch {
+      RNAlert.alert(
+        t('dispatch.share_failed', 'Share failed', locale),
+        t('dispatch.share_failed_body', 'Could not create a live tracking link. Please try again.', locale),
+      );
+    }
   };
   return (<View style={styles.container}>{activeTrip ? (<Card><View style={styles.infoCardHeader}><Text style={styles.infoTitle}>{t('dispatch.active_trip', 'ACTIVE TRIP', locale)}</Text><Text style={styles.infoMeta}>{activeTrip.tripNumber}</Text></View><View style={styles.routeContainer}><View style={styles.routeRow}><View style={[styles.routeDot, styles.routeDotOrigin]} /><Text style={styles.locationText} numberOfLines={1}>{activeTrip.origin}</Text></View><View style={styles.routeConnector} /><View style={styles.routeRow}><View style={[styles.routeDot, styles.routeDotDest]} /><Text style={styles.locationText} numberOfLines={1}>{activeTrip.destination}</Text></View></View>{detentionCharge > 0 ? (<View style={{ marginTop: Spacing.sm, backgroundColor: Colors.warningBg, borderRadius: Radius.sm, padding: Spacing.sm, flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ fontSize: FontSize.small, fontWeight: '800', color: Colors.warning }}>{t('dispatch.detention', 'DETENTION', locale)} {detentionMins}{t('trips.unit_min', 'm', locale)}</Text><Text style={{ fontSize: FontSize.small, fontWeight: '800', color: Colors.warning }}>₹{detentionCharge}</Text></View>) : null}<View style={{ flexDirection: 'row', gap: 8, marginTop: Spacing.md }}><TouchableOpacity style={[styles.actionBtn, styles.actionBtnTeal, { flex: 1 }]} onPress={() => onStartNav(activeTrip)}><MaterialCommunityIcons name="navigation" size={14} color={Colors.textOnPrimary} /><Text style={styles.actionBtnText}>{t('dispatch.navigate', 'NAVIGATE', locale)}</Text></TouchableOpacity><TouchableOpacity style={[styles.actionBtn, { flex: 1, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border }]} onPress={() => onOpenExpenses(activeTrip.id)}><MaterialCommunityIcons name="receipt" size={14} color={Colors.primary} /><Text style={[styles.actionBtnText, { color: Colors.primary }]}>{t('dispatch.expense', 'EXPENSE', locale)}</Text></TouchableOpacity></View><View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}><TouchableOpacity style={[styles.actionBtn, { flex: 1, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border }]} onPress={onOpenIssues}><MaterialCommunityIcons name="alert-circle-outline" size={14} color={Colors.warning} /><Text style={[styles.actionBtnText, { color: Colors.textPrimary }]}>{t('dispatch.report_issue', 'REPORT ISSUE', locale)}</Text></TouchableOpacity><TouchableOpacity style={[styles.actionBtn, { flex: 1, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border }]} onPress={shareLiveLink}><MaterialCommunityIcons name="share-variant" size={14} color={Colors.primary} /><Text style={[styles.actionBtnText, { color: Colors.primary }]}>{t('dispatch.share_live', 'SHARE LIVE', locale)}</Text></TouchableOpacity></View></Card>) : (<Card><Text style={styles.infoTitle}>{t('dispatch.no_trip', 'NO ACTIVE TRIP', locale)}</Text><Text style={styles.infoBody}>{t('dispatch.no_trip_body', 'You have no dispatched trips. Pull to refresh or contact dispatch.', locale)}</Text></Card>)}<Card><View style={styles.telemetryRow}><Text style={styles.telemetryLabel}>GPS</Text><View style={[styles.statusPill, locationGranted ? styles.statusPillActive : styles.statusPillPending]}><View style={[styles.statusPillDot, { backgroundColor: locationGranted ? Colors.success : Colors.warning }]} /><Text style={[styles.telemetryValue, { color: locationGranted ? Colors.success : Colors.warning }]}>{locationGranted ? t('dispatch.gps_on', 'ON', locale) : t('dispatch.gps_off', 'OFF', locale)}</Text></View></View>{!locationGranted && (<TouchableOpacity style={[styles.actionBtn, { marginTop: Spacing.sm }]} onPress={handleEnableLocation}><MaterialCommunityIcons name="crosshairs-gps" size={14} color={Colors.textOnPrimary} /><Text style={styles.actionBtnText}>{t('dispatch.enable_location', 'ENABLE LOCATION', locale)}</Text></TouchableOpacity>)}<Text style={[styles.hint, { marginTop: Spacing.sm }]}>{t('dispatch.location_diag', 'Diagnostics in Profile.', locale)}</Text></Card></View>);
 }

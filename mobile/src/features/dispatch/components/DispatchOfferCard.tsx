@@ -28,12 +28,12 @@ export const DispatchOfferCard: React.FC<Props> = ({
       <View style={styles.routeContainer}>
         <View style={styles.routePoint}>
           <View style={[styles.dot, styles.dotOrigin]} />
-          <Text style={styles.routeText}>{offer.origin || 'Mumbai Port / Nhava Sheva'}</Text>
+          <Text style={styles.routeText}>{offer.origin || '—'}</Text>
         </View>
         <View style={styles.routeLine} />
         <View style={styles.routePoint}>
           <View style={[styles.dot, styles.dotDest]} />
-          <Text style={styles.routeText}>{offer.destination || 'Pune Logistics Hub / Chakan'}</Text>
+          <Text style={styles.routeText}>{offer.destination || '—'}</Text>
         </View>
       </View>
 
@@ -41,7 +41,7 @@ export const DispatchOfferCard: React.FC<Props> = ({
         <View style={styles.detailCol}>
           <Text style={styles.detailLabel}>PAYOUT</Text>
           <Text style={styles.detailValueHighlight}>
-            ₹{offer.payout ? offer.payout.toLocaleString() : '8,500'}
+            ₹{offer.payout ? offer.payout.toLocaleString() : '—'}
           </Text>
         </View>
         <View style={styles.detailCol}>

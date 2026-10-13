@@ -170,6 +170,56 @@ describe('Telemetry.startLiveLocationTracking', () => {
   test('stop without an active subscription is a safe no-op', () => {
     expect(() => Telemetry.stopLiveLocationTracking()).not.toThrow();
   });
+
+  // Claim 3: the Android foreground service existed but was never invoked —
+  // only the foreground watchPositionAsync ran, so GPS stopped the moment the
+  // driver locked the screen.
+  test('starts the foreground service so fixes survive screen lock', async () => {
+    Loc.watchPositionAsync.mockResolvedValueOnce({ remove: jest.fn() } as any);
+    Loc.requestForegroundPermissionsAsync.mockResolvedValueOnce({ status: 'granted', granted: true } as any);
+    Loc.requestBackgroundPermissionsAsync.mockResolvedValueOnce({ status: 'granted', granted: true } as any);
+    Loc.startLocationUpdatesAsync.mockClear();
+    Loc.stopLocationUpdatesAsync.mockClear();
+
+    await Telemetry.startLiveLocationTracking(jest.fn());
+
+    expect(Loc.startLocationUpdatesAsync).toHaveBeenCalledWith(
+      'AVANDAB_BACKGROUND_GPS',
+      expect.objectContaining({
+        foregroundService: expect.objectContaining({ killServiceOnDestroy: false }),
+      })
+    );
+  });
+
+  // Ratchet: the OS task is session-scoped, but stopLiveLocationTracking is a
+  // screen-scoped teardown (ActiveNavigationScreen unmount, App tab switch).
+  // It stopped the task, so opening nav once and coming back left the driver
+  // with no background GPS and nothing to re-arm it.
+  test('a screen unmount does not stop the session-scoped background task', async () => {
+    Loc.watchPositionAsync.mockResolvedValueOnce({ remove: jest.fn() } as any);
+    Loc.requestForegroundPermissionsAsync.mockResolvedValueOnce({ status: 'granted', granted: true } as any);
+    Loc.requestBackgroundPermissionsAsync.mockResolvedValueOnce({ status: 'granted', granted: true } as any);
+    Loc.stopLocationUpdatesAsync.mockClear();
+
+    await Telemetry.startLiveLocationTracking(jest.fn());
+    Telemetry.stopLiveLocationTracking();
+
+    expect(Loc.stopLocationUpdatesAsync).not.toHaveBeenCalled();
+  });
+
+  test('sign-out tears down the watcher and the background task', async () => {
+    const remove = jest.fn();
+    Loc.watchPositionAsync.mockResolvedValueOnce({ remove } as any);
+    Loc.requestForegroundPermissionsAsync.mockResolvedValueOnce({ status: 'granted', granted: true } as any);
+    Loc.requestBackgroundPermissionsAsync.mockResolvedValueOnce({ status: 'granted', granted: true } as any);
+    Loc.stopLocationUpdatesAsync.mockClear();
+
+    await Telemetry.startLiveLocationTracking(jest.fn());
+    Telemetry.stopSessionTracking();
+
+    expect(remove).toHaveBeenCalled();
+    expect(Loc.stopLocationUpdatesAsync).toHaveBeenCalledWith('AVANDAB_BACKGROUND_GPS');
+  });
 });
 
 describe('Telemetry.requestCameraPermission', () => {

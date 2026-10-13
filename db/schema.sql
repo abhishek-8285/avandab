@@ -115,7 +115,7 @@ CREATE TABLE audit_logs (
     old_values TEXT,
     new_values  TEXT,
     ip_address  TEXT,
-    created_at  DATETIME NOT NULL DEFAULT (datetime('now')),
+    created_at  DATETIME NOT NULL DEFAULT (datetime('now')), location TEXT, tenant_id TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 CREATE TABLE bookings (
@@ -583,6 +583,20 @@ CREATE TABLE driver_payout_accounts (
     valid_until DATETIME,
     hold_payouts INTEGER NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE driver_preferred_vehicles (
+    id            TEXT PRIMARY KEY,
+    tenant_id     TEXT NOT NULL DEFAULT '1',
+    driver_id     TEXT NOT NULL,
+    vehicle_id    TEXT NOT NULL,
+    is_primary    INTEGER NOT NULL DEFAULT 1 CHECK (is_primary IN (0,1)),
+    assigned_at   DATETIME NOT NULL DEFAULT (datetime('now')),
+    unassigned_at DATETIME,
+    assigned_by   TEXT,
+    created_at    DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at    DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE CASCADE,
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(id) ON DELETE CASCADE
 );
 CREATE TABLE driver_push_tokens (
     id TEXT PRIMARY KEY,
@@ -2205,6 +2219,7 @@ CREATE INDEX idx_alerts_status_seen  ON alerts(status, last_seen_at);
 CREATE INDEX idx_alerts_user_status  ON alerts(user_id, status);
 CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at DESC);
 CREATE INDEX idx_audit_logs_record ON audit_logs(table_name, record_id);
+CREATE INDEX idx_audit_logs_tenant ON audit_logs(tenant_id);
 CREATE INDEX idx_bookings_drop_facility
     ON bookings(tenant_id, drop_facility_id) WHERE drop_facility_id IS NOT NULL;
 CREATE UNIQUE INDEX idx_bookings_idempotency
@@ -2254,6 +2269,16 @@ CREATE INDEX idx_dispatches_booking_id ON dispatches(booking_id);
 CREATE INDEX idx_dispatches_status ON dispatches(status);
 CREATE INDEX idx_dispatches_tenant ON dispatches(tenant_id);
 CREATE INDEX idx_dlc_tenant ON driver_license_classes(tenant_id, license_id);
+CREATE UNIQUE INDEX idx_dpv_tenant_driver_active
+    ON driver_preferred_vehicles(tenant_id, driver_id)
+    WHERE unassigned_at IS NULL;
+CREATE INDEX idx_dpv_tenant_driver_history
+    ON driver_preferred_vehicles(tenant_id, driver_id, assigned_at DESC);
+CREATE UNIQUE INDEX idx_dpv_tenant_vehicle_active
+    ON driver_preferred_vehicles(tenant_id, vehicle_id)
+    WHERE unassigned_at IS NULL;
+CREATE INDEX idx_dpv_tenant_vehicle_history
+    ON driver_preferred_vehicles(tenant_id, vehicle_id, assigned_at DESC);
 CREATE INDEX idx_driver_commands_driver ON driver_commands(tenant_id, driver_id, executed_at);
 CREATE INDEX idx_driver_compliance_documents_driver ON driver_compliance_documents(tenant_id, driver_id, document_type);
 CREATE INDEX idx_driver_expenses_driver ON driver_expenses(driver_id);
@@ -2351,6 +2376,9 @@ CREATE UNIQUE INDEX idx_invoices_irn ON invoices(irn) WHERE irn IS NOT NULL;
 CREATE INDEX idx_invoices_status ON invoices(status);
 CREATE INDEX idx_invoices_tenant ON invoices(tenant_id);
 CREATE INDEX idx_invoices_tenant_payment_status ON invoices(tenant_id, payment_status);
+CREATE UNIQUE INDEX idx_invoices_tenant_trip_unique
+    ON invoices(tenant_id, trip_id)
+    WHERE trip_id IS NOT NULL AND trip_id != '';
 CREATE INDEX idx_line_items_hsn ON invoice_line_items(hsn_sac_code);
 CREATE INDEX idx_line_items_invoice ON invoice_line_items(invoice_id);
 CREATE INDEX idx_loadboard_bids_listing
@@ -2539,6 +2567,20 @@ BEGIN
   SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
   THEN RAISE(ABORT, 'FK violation: tenants(id) missing for alerts.tenant_id') END;
 END;
+CREATE TRIGGER trg_audit_logs_tenant_fk_insert
+BEFORE INSERT ON audit_logs
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for audit_logs.tenant_id') END;
+END;
+CREATE TRIGGER trg_audit_logs_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON audit_logs
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for audit_logs.tenant_id') END;
+END;
 CREATE TRIGGER trg_bookings_drop_facility_fk
 BEFORE INSERT ON bookings
 FOR EACH ROW WHEN NEW.drop_facility_id IS NOT NULL
@@ -2700,6 +2742,20 @@ FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL
 BEGIN
   SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
   THEN RAISE(ABORT, 'FK violation: tenants(id) missing for dispatches.tenant_id') END;
+END;
+CREATE TRIGGER trg_dpv_tenant_fk_insert
+BEFORE INSERT ON driver_preferred_vehicles
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for driver_preferred_vehicles.tenant_id') END;
+END;
+CREATE TRIGGER trg_dpv_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON driver_preferred_vehicles
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for driver_preferred_vehicles.tenant_id') END;
 END;
 CREATE TRIGGER trg_driver_advance_requests_tenant_fk_insert
 BEFORE INSERT ON driver_advance_requests

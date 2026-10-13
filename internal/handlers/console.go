@@ -504,9 +504,9 @@ func writeAuditLog(r *http.Request, db *sql.DB, action, table, recordID string, 
 		return
 	}
 	_, _ = db.ExecContext(r.Context(), `
-		INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)`,
-		uuid.NewString(), contextUserID(r), action, table, recordID, string(blob))
+		INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, tenant_id, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`,
+		uuid.NewString(), contextUserID(r), action, table, recordID, string(blob), string(shared.TenantOrPlatform(r.Context())))
 }
 
 // WriteAuditLog exposes writeAuditLog for vertical-slice presentation packages.

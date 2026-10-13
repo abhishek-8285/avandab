@@ -1175,3 +1175,21 @@ func TestResponseWriterStatusDefault(t *testing.T) {
 	// ensure strings import used
 	assert.True(t, strings.Contains("hello world", "world"))
 }
+
+func TestClientIPToContext(t *testing.T) {
+	var capturedIP, capturedLoc any
+	handler := ClientIPToContext(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		capturedIP = r.Context().Value(auth.ContextIP)
+		capturedLoc = r.Context().Value(auth.ContextLocation)
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.RemoteAddr = "203.0.113.195:12345"
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	assert.Equal(t, "203.0.113.195", capturedIP)
+	assert.Equal(t, "Unknown", capturedLoc)
+}
