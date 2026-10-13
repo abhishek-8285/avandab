@@ -147,7 +147,7 @@ func (h *MQTTCredentialsHandlers) issue(w http.ResponseWriter, r *http.Request, 
 		INSERT INTO driver_mqtt_credentials (driver_key, tenant_id, username, password_hash)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (username) DO UPDATE SET password_hash = excluded.password_hash,
-		                                        rotated_at = datetime('now')`,
+		                                        rotated_at = CURRENT_TIMESTAMP`,
 		username, tenantID, username, hash)
 	if err != nil {
 		slog.ErrorContext(ctx, "broker credential write failed",
