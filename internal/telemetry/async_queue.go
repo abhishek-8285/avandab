@@ -87,25 +87,70 @@ func (q *AsyncIngestQueue) Start(ctx context.Context) {
 	q.logger.Info("telemetry async queue workers started", "workers", q.workers, "capacity", cap(q.queue))
 }
 
-// workerLoop continuously processes frames from the queue.
+// workerLoop continuously processes frames from the queue in batches.
 func (q *AsyncIngestQueue) workerLoop(ctx context.Context, id int) {
+	batchSize := 100
+	flushInterval := 50 * time.Millisecond
+	if q.ingestor != nil {
+		if q.ingestor.cfg.BatchSize > 0 {
+			batchSize = q.ingestor.cfg.BatchSize
+		}
+		if q.ingestor.cfg.FlushInterval > 0 {
+			flushInterval = q.ingestor.cfg.FlushInterval
+		}
+	}
+
+	batch := make([]RawFrame, 0, batchSize)
+	ticker := time.NewTicker(flushInterval)
+	defer ticker.Stop()
+
+	flush := func() {
+		if len(batch) == 0 {
+			return
+		}
+		toFlush := batch
+		batch = make([]RawFrame, 0, batchSize)
+		if q.ingestor != nil {
+			_, err := q.ingestor.IngestBatch(ctx, toFlush)
+			if err != nil && !errors.Is(err, context.Canceled) {
+				failed := q.failedCount.Add(uint64(len(toFlush)))
+				q.logger.Warn("async ingest batch processing failed",
+					"count", len(toFlush), "error", err, "failed_total", failed)
+			}
+		}
+	}
+
 	for {
 		select {
 		case <-q.quit:
+			flush()
 			return
 		case <-ctx.Done():
+			flush()
 			return
+		case <-ticker.C:
+			flush()
 		case frame, ok := <-q.queue:
 			if !ok {
+				flush()
 				return
 			}
-			if q.ingestor != nil {
-				_, err := q.ingestor.IngestRawFrame(ctx, frame)
-				if err != nil && !errors.Is(err, context.Canceled) {
-					failed := q.failedCount.Add(1)
-					q.logger.Warn("async ingest frame processing failed",
-						"imei", frame.IMEI, "error", err, "failed_total", failed)
+			batch = append(batch, frame)
+			for len(batch) < batchSize {
+				select {
+				case next, ok := <-q.queue:
+					if !ok {
+						flush()
+						return
+					}
+					batch = append(batch, next)
+				default:
+					goto batchReady
 				}
+			}
+		batchReady:
+			if len(batch) >= batchSize {
+				flush()
 			}
 		}
 	}
@@ -162,24 +207,42 @@ func (q *AsyncIngestQueue) DrainContext(ctx context.Context) {
 		q.logger.Warn("telemetry async queue workers did not stop before shutdown deadline")
 	}
 
+	batchSize := 100
+	if q.ingestor != nil && q.ingestor.cfg.BatchSize > 0 {
+		batchSize = q.ingestor.cfg.BatchSize
+	}
+	drainBatch := make([]RawFrame, 0, batchSize)
+	flushDrain := func() {
+		if len(drainBatch) == 0 {
+			return
+		}
+		if q.ingestor != nil {
+			if _, err := q.ingestor.IngestBatch(ctx, drainBatch); err != nil &&
+				!errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+				failed := q.failedCount.Add(uint64(len(drainBatch)))
+				q.logger.Warn("async ingest drain batch failed",
+					"count", len(drainBatch), "error", err, "failed_total", failed)
+			}
+		}
+		drainBatch = make([]RawFrame, 0, batchSize)
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
+			flushDrain()
 			q.logger.Warn("telemetry async queue drain timed out", "remaining", len(q.queue))
 			return
 		default:
 		}
 		select {
 		case frame := <-q.queue:
-			if q.ingestor != nil {
-				if _, err := q.ingestor.IngestRawFrame(ctx, frame); err != nil &&
-					!errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
-					failed := q.failedCount.Add(1)
-					q.logger.Warn("async ingest drain frame failed",
-						"imei", frame.IMEI, "error", err, "failed_total", failed)
-				}
+			drainBatch = append(drainBatch, frame)
+			if len(drainBatch) >= batchSize {
+				flushDrain()
 			}
 		default:
+			flushDrain()
 			if workersStuck {
 				q.logger.Warn("telemetry async queue drain incomplete, workers stuck", "remaining", len(q.queue))
 			} else {

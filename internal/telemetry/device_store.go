@@ -124,8 +124,9 @@ func (s *DeviceStore) UpdateLastSeen(ctx context.Context, imei string) error {
 // GetLastOdometer returns the last known odometer for a device's vehicle.
 // Returns (0, false, nil) if no position exists.
 func (s *DeviceStore) GetLastOdometer(ctx context.Context, imei string) (float64, bool, error) {
+	db := s.dbFromContext(ctx)
 	var odometer float64
-	err := s.db.QueryRowContext(ctx,
+	err := db.QueryRowContext(ctx,
 		`SELECT odometer FROM telemetry_positions
 		 WHERE imei = $1 AND odometer IS NOT NULL
 		 ORDER BY device_time DESC LIMIT 1`, imei).Scan(&odometer)
@@ -141,8 +142,9 @@ func (s *DeviceStore) GetLastOdometer(ctx context.Context, imei string) (float64
 // GetLastFuelLevel returns the last known fuel level for a device's vehicle.
 // Returns (0, false, nil) if no position exists.
 func (s *DeviceStore) GetLastFuelLevel(ctx context.Context, imei string) (float64, bool, error) {
+	db := s.dbFromContext(ctx)
 	var fuelLevel float64
-	err := s.db.QueryRowContext(ctx,
+	err := db.QueryRowContext(ctx,
 		`SELECT fuel_level FROM telemetry_positions
 		 WHERE imei = $1 AND fuel_level IS NOT NULL
 		 ORDER BY device_time DESC LIMIT 1`, imei).Scan(&fuelLevel)
@@ -158,8 +160,9 @@ func (s *DeviceStore) GetLastFuelLevel(ctx context.Context, imei string) (float6
 // GetLastPositionTime returns the device_time of the most recent position for
 // a device, to support monotonic-time checks in the latest-position upsert.
 func (s *DeviceStore) GetLastPositionTime(ctx context.Context, imei string) (*time.Time, error) {
+	db := s.dbFromContext(ctx)
 	var t time.Time
-	err := s.db.QueryRowContext(ctx,
+	err := db.QueryRowContext(ctx,
 		`SELECT device_time FROM telemetry_positions
 		 WHERE imei = $1 ORDER BY device_time DESC LIMIT 1`, imei).Scan(&t)
 	if err == sql.ErrNoRows {

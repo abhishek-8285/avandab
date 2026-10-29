@@ -172,7 +172,8 @@ func HandleTelemetrySync(ing *Ingestor) http.HandlerFunc {
 			return
 		}
 
-		syncedIDs := make([]int64, 0, len(req.Logs))
+		frames := make([]providers.RawFrame, 0, len(req.Logs))
+		logItemIDs := make([]int64, 0, len(req.Logs))
 		for _, logItem := range req.Logs {
 			ts, err := time.Parse(time.RFC3339, logItem.Timestamp)
 			if err != nil {
@@ -203,13 +204,19 @@ func HandleTelemetrySync(ing *Ingestor) http.HandlerFunc {
 				Motion:        logItem.Motion,
 				Valid:         valid,
 			}
+			frames = append(frames, frame)
+			logItemIDs = append(logItemIDs, logItem.ID)
+		}
 
-			result, err := ing.IngestRawFrame(r.Context(), frame)
-			if err != nil {
-				continue
-			}
-			if result.Accepted {
-				syncedIDs = append(syncedIDs, logItem.ID)
+		syncedIDs := make([]int64, 0, len(frames))
+		if len(frames) > 0 {
+			results, err := ing.IngestBatch(r.Context(), frames)
+			if err == nil {
+				for i, res := range results {
+					if res.Accepted {
+						syncedIDs = append(syncedIDs, logItemIDs[i])
+					}
+				}
 			}
 		}
 
