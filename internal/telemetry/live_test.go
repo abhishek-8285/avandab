@@ -54,6 +54,25 @@ func insertLiveSnapshot(t *testing.T, db *sql.DB, id, tripID, vehicleID string, 
 		id, tripID, vehicleID, ts.UTC().Format("2006-01-02 15:04:05"),
 		19.07, 72.87, speed, 60.0, 10000.0)
 	require.NoError(t, err)
+
+	tripVal := any(tripID)
+	if tripID == "" {
+		tripVal = nil
+	}
+	_, err = db.Exec(`INSERT INTO vehicle_latest_position
+		(vehicle_id, trip_id, device_time, latitude, longitude, speed, fuel_level, odometer)
+		VALUES (?, ?, ?, 19.07, 72.87, ?, 60.0, 10000.0)
+		ON CONFLICT(vehicle_id) DO UPDATE SET
+			trip_id = excluded.trip_id,
+			device_time = excluded.device_time,
+			latitude = excluded.latitude,
+			longitude = excluded.longitude,
+			speed = excluded.speed,
+			fuel_level = excluded.fuel_level,
+			odometer = excluded.odometer
+		WHERE excluded.device_time >= vehicle_latest_position.device_time`,
+		vehicleID, tripVal, ts.UTC().Format("2006-01-02 15:04:05"), speed)
+	require.NoError(t, err)
 }
 
 func TestLiveStore_States(t *testing.T) {
@@ -276,6 +295,9 @@ func TestLiveStore_WithEtaService(t *testing.T) {
 	_, _ = db.Exec(`INSERT INTO telemetry_snapshots
 		(id, trip_id, vehicle_id, timestamp, latitude, longitude, speed, fuel_level, odometer)
 		VALUES ('s-3', 't1', 'v1', ?, 19.3, 72.8, 60.0, 80.0, 1030.0)`, now.Add(-1*time.Minute).Format("2006-01-02 15:04:05"))
+	_, _ = db.Exec(`INSERT INTO vehicle_latest_position
+		(vehicle_id, trip_id, device_time, latitude, longitude, speed, fuel_level, odometer)
+		VALUES ('v1', 't1', ?, 19.3, 72.8, 60.0, 80.0, 1030.0)`, now.Add(-1*time.Minute).Format("2006-01-02 15:04:05"))
 
 	etaSvc := eta.NewEtaService(db, 15, 30, 5, id.NewUUIDGenerator(), clock.NewRealClock())
 	store := NewLiveStore(db, 15*time.Minute).WithEtaService(etaSvc)
@@ -341,6 +363,18 @@ func TestLiveStore_MixedTimestampLayouts(t *testing.T) {
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			id, "", vehicleID, ts.Format(time.RFC3339Nano), 19.07, 72.87, 0.0, 60.0, 10000.0)
 		require.NoError(t, err)
+		_, err = db.Exec(`INSERT INTO vehicle_latest_position
+			(vehicle_id, device_time, latitude, longitude, speed, fuel_level, odometer)
+			VALUES (?, ?, 19.07, 72.87, 0.0, 60.0, 10000.0)
+			ON CONFLICT(vehicle_id) DO UPDATE SET
+				device_time = excluded.device_time,
+				latitude = excluded.latitude,
+				longitude = excluded.longitude,
+				speed = excluded.speed,
+				fuel_level = excluded.fuel_level,
+				odometer = excluded.odometer`,
+			vehicleID, ts.Format(time.RFC3339Nano))
+		require.NoError(t, err)
 	}
 	insertRawSnapshot("r1", "v1", now.Add(-20*time.Minute)) // inside 30m window
 	insertRawSnapshot("r2", "v2", now.Add(-40*time.Minute)) // outside
@@ -378,6 +412,16 @@ func TestLive_PerDeviceTypeStaleness(t *testing.T) {
 	mkSnap := func(sid, vehicleID string, ts time.Time) {
 		_, err := db.Exec(`INSERT INTO telemetry_snapshots (id, vehicle_id, timestamp, latitude, longitude, speed)
 			VALUES (?, ?, ?, 19.07, 72.87, 0)`, sid, vehicleID, ts.UTC().Format("2006-01-02 15:04:05"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = db.Exec(`INSERT INTO vehicle_latest_position (vehicle_id, device_time, latitude, longitude, speed)
+			VALUES (?, ?, 19.07, 72.87, 0)
+			ON CONFLICT(vehicle_id) DO UPDATE SET
+				device_time = excluded.device_time,
+				latitude = excluded.latitude,
+				longitude = excluded.longitude,
+				speed = excluded.speed`, vehicleID, ts.UTC().Format("2006-01-02 15:04:05"))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -493,6 +537,16 @@ func TestLiveHandler_BBoxAndSinceFilters(t *testing.T) {
 	_, err := db.Exec(`INSERT INTO telemetry_snapshots
 		(id, vehicle_id, timestamp, latitude, longitude, speed)
 		VALUES ('s-out', 'v-out', ?, 28.61, 77.20, 40.0)`,
+		now.Add(-10*time.Minute).UTC().Format("2006-01-02 15:04:05"))
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO vehicle_latest_position
+		(vehicle_id, device_time, latitude, longitude, speed)
+		VALUES ('v-out', ?, 28.61, 77.20, 40.0)
+		ON CONFLICT(vehicle_id) DO UPDATE SET
+			device_time = excluded.device_time,
+			latitude = excluded.latitude,
+			longitude = excluded.longitude,
+			speed = excluded.speed`,
 		now.Add(-10*time.Minute).UTC().Format("2006-01-02 15:04:05"))
 	require.NoError(t, err)
 

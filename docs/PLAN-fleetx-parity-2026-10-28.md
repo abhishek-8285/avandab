@@ -167,15 +167,15 @@ Size: S. Risk: low. Blocks everything else. All items green. Gate 0 passed.
 
 ### P1 — Scale substrate (3–4 weeks)
 
-| # | Work | Acceptance |
-|---|---|---|
-| 1.1 | Execute Postgres cutover (`scripts/pg-cutover.sh` exists, runbook `docs/tech-specs/c2-pg-cutover-runbook.md`) | prod `DATABASE_DRIVER=postgres`; smoke green; rollback rehearsed |
-| 1.2 | Composite index with `device_time` leading; drop duplicate snapshot indexes | `EXPLAIN` shows index range scan for retention and history |
-| 1.3 | Batch ingest: use existing `BatchSize`/`FlushInterval`; batch outbox per flush, not per frame | 1 tx per batch, asserted in test |
-| 1.4 | Retention by partition drop (PG declarative partitions on `device_time`) or indexed chunked delete | purge completes < 60 s at 30-day volume |
-| 1.5 | Bound the live map query: read `vehicle_latest_position` only, no `MAX(timestamp)` scan | `EXPLAIN` = single index lookup per vehicle |
-| 1.6 | Add ingest soak benchmark: 10k virtual vehicles @30 s, 24 h | p95 write latency, rows/s, disk/day, zero loss |
-| 1.7 | Outbox + snapshot retention parity; enable `auto_vacuum`/`fillfactor` appropriately | disk growth flat after retention |
+| # | Work | Acceptance | Status |
+|---|---|---|---|
+| 1.1 | Execute Postgres cutover (`scripts/pg-cutover.sh` exists, runbook `docs/tech-specs/c2-pg-cutover-runbook.md`) | prod `DATABASE_DRIVER=postgres`; smoke green; rollback rehearsed | |
+| 1.2 | Composite index with `device_time` leading; drop duplicate snapshot indexes | `EXPLAIN` shows index range scan for retention and history | **DONE** (migration 00170) |
+| 1.3 | Batch ingest: use existing `BatchSize`/`FlushInterval`; batch outbox per flush, not per frame | 1 tx per batch, asserted in test | |
+| 1.4 | Retention by partition drop (PG declarative partitions on `device_time`) or indexed chunked delete | purge completes < 60 s at 30-day volume | |
+| 1.5 | Bound the live map query: read `vehicle_latest_position` only, no `MAX(timestamp)` scan | `EXPLAIN` = single index lookup per vehicle | **DONE** (`LiveStore.Live` reads `vehicle_latest_position`) |
+| 1.6 | Add ingest soak benchmark: 10k virtual vehicles @30 s, 24 h | p95 write latency, rows/s, disk/day, zero loss | |
+| 1.7 | Outbox + snapshot retention parity; enable `auto_vacuum`/`fillfactor` appropriately | disk growth flat after retention | |
 
 Size: M–L. Gate: 1.6 passes at 10k vehicles before any new module ships.
 
