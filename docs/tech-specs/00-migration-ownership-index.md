@@ -163,7 +163,9 @@ which always allocate head-ward from the maximum above.
 | 00163 | Delete 4 dead company_config accounting seeds (never read; env + 00161 are the live paths); Down restores seeds | Dead-seed cleanup |
 | 00166 | `driver_preferred_vehicles` preferred Driver↔Vehicle (one active per driver+vehicle, history via `unassigned_at`, `is_primary`) + tenant FK triggers + 4 indexes — new table to avoid colliding with 00108 `driver_vehicle_assignments` | Driver↔Vehicle preferred assignment |
 | 00167 | `audit_logs.tenant_id` — per-org scoping for dashboard RecentActivity + /audit-logs (admin sees all, org roles own tenant only; tenants-table rows platform-only) + backfill + tenant FK triggers + index (sqlite + `migrations_pg/` ports) | Audit tenant isolation |
-| 00160+ | future specs | reserved |
+| 00168 | `driver_mqtt_credentials` table + per-driver MQTT broker credentials (docs/13 §5.2) + tenant FK triggers + index (sqlite + `migrations_pg/` ports) | Driver MQTT credentials |
+| 00169 | `provider_mode` ('LIVE', 'MOCK') provenance column on `eway_bills`, `fastag_transactions`, `driver_expenses` (FleetX Parity P0.2) | FleetX Parity P0.2 provenance |
+| 00170+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

@@ -152,18 +152,18 @@ Ordering rule: P0 first, always. P1 and P2 run in parallel (P2 is contract-bound
 P1 is engineering). P3 only after P1 acceptance. P4 is a business decision, not
 an engineering task.
 
-### P0 — Stop fake data and data loss (3–5 days)
+### P0 — Stop fake data and data loss (COMPLETED 2026-10-29)
 
-| # | Work | Acceptance |
-|---|---|---|
-| 0.1 | Provider defaults fail closed: FASTag `AutoKharcha=false` unless real provider; EWB worker disabled when provider is mock; OCR mock returns error; FCM mock returns error; OTP returns 503 when SMS unconfigured | tests assert each refusal; no mock IDs reach business tables |
-| 0.2 | Gate mock writes: add `provider_mode` column/provenance on `eway_bills`, `fastag_transactions`, `driver_expenses`; refuse `AutoKharcha` for `source='PROVIDER'` when mock | migration + handler test |
-| 0.3 | Payout safety: block `InitiatePayout` unless account verified and a rail is configured; stop writing plaintext account numbers (either encrypt with a real KMS-backed key or refuse the write) | red test proves no ledger debit without rail |
-| 0.4 | Authenticate `/metrics` (bearer or loopback-only) | unauthenticated request returns 401 |
-| 0.5 | Multi-tenant fail-closed: when enabled, missing tenant = 401, never tenant `"1"`; remove default-tenant fallback in middleware | test for missing tenant |
-| 0.6 | GST line math: route live invoice add/edit through `ComputeLineTax`; add PDF amount assertions | unit test on 3 rounding cases |
+| # | Work | Acceptance | Status |
+|---|---|---|---|
+| 0.1 | Provider defaults fail closed: FASTag `AutoKharcha=false` unless real provider; EWB worker disabled when provider is mock; OCR mock returns error; FCM mock returns error; OTP returns 503 when SMS unconfigured | tests assert each refusal; no mock IDs reach business tables | **DONE** (`195f0151`) |
+| 0.2 | Gate mock writes: add `provider_mode` column/provenance on `eway_bills`, `fastag_transactions`, `driver_expenses`; refuse `AutoKharcha` for `source='PROVIDER'` when mock | migration + handler test | **DONE** (migration 00169 + `195f0151`) |
+| 0.3 | Payout safety: block `InitiatePayout` unless account verified and a rail is configured; stop writing plaintext account numbers (either encrypt with a real KMS-backed key or refuse the write) | red test proves no ledger debit without rail | **DONE** (`195f0151`) |
+| 0.4 | Authenticate `/metrics` (bearer or loopback-only) | unauthenticated request returns 401 | **DONE** (`195f0151`) |
+| 0.5 | Multi-tenant fail-closed: when enabled, missing tenant = 401, never tenant `"1"`; remove default-tenant fallback in middleware | test for missing tenant | **DONE** (`a59250ea`) |
+| 0.6 | GST line math: route live invoice add/edit through `ComputeLineTax`; add PDF amount assertions | unit test on 3 rounding cases | **DONE** (`195f0151`) |
 
-Size: S. Risk: low. Blocks everything else.
+Size: S. Risk: low. Blocks everything else. All items green. Gate 0 passed.
 
 ### P1 — Scale substrate (3–4 weeks)
 

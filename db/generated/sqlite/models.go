@@ -547,6 +547,7 @@ type DriverExpense struct {
 	OcrAmount         sql.NullFloat64 `json:"ocr_amount"`
 	OcrConfidence     sql.NullFloat64 `json:"ocr_confidence"`
 	TenantID          string          `json:"tenant_id"`
+	ProviderMode      string          `json:"provider_mode"`
 }
 
 type DriverIdentity struct {
@@ -909,6 +910,7 @@ type EwayBill struct {
 	QrCode           sql.NullString  `json:"qr_code"`
 	AckNo            sql.NullString  `json:"ack_no"`
 	GenMode          sql.NullString  `json:"gen_mode"`
+	ProviderMode     string          `json:"provider_mode"`
 }
 
 type EwayBillEvent struct {
@@ -1012,6 +1014,7 @@ type FastagTransaction struct {
 	Reconciled    int64          `json:"reconciled"`
 	KharchaID     sql.NullString `json:"kharcha_id"`
 	CreatedAt     sql.NullTime   `json:"created_at"`
+	ProviderMode  string         `json:"provider_mode"`
 }
 
 type FeatureFlag struct {
