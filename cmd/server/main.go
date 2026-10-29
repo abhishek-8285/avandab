@@ -780,7 +780,7 @@ func main() {
 		logger.Info("multi-tenant mode enabled: per-user tenant resolution active")
 		tenantResolver = middleware.TenantForUserResolver(func(ctx context.Context, userID string) (string, string, error) {
 			var tenantID, status string
-			row := database.QueryRowContext(ctx, `SELECT u.tenant_id, COALESCE(t.status,'active') FROM users u LEFT JOIN tenants t ON t.id = u.tenant_id WHERE u.id = $1`, userID)
+			row := database.QueryRowContext(ctx, `SELECT u.tenant_id, CASE WHEN t.id IS NULL THEN 'inactive' ELSE COALESCE(t.status,'inactive') END FROM users u LEFT JOIN tenants t ON t.id = u.tenant_id WHERE u.id = $1`, userID)
 			if err := row.Scan(&tenantID, &status); err != nil {
 				return "", "", err
 			}
