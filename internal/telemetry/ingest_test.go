@@ -23,7 +23,7 @@ import (
 
 // newTestIngestorDB creates an in-memory SQLite DB with all migrations applied
 // and returns it with a fresh goose dialect set.
-func newTestIngestorDB(t *testing.T) *sql.DB {
+func newTestIngestorDB(t testing.TB) *sql.DB {
 	t.Helper()
 	name := fmt.Sprintf("test_telem_%s_%d", strings.ReplaceAll(t.Name(), "/", "_"), time.Now().UnixNano())
 	db, err := sql.Open("sqlite", "file:"+name+"?mode=memory&cache=shared&_pragma=journal_mode(WAL)")
@@ -42,7 +42,7 @@ func newTestIngestorDB(t *testing.T) *sql.DB {
 // pragma from being overwritten by a re-widened pool. Package-wide FK
 // enforcement is deliberately NOT applied: 24 legacy fixtures insert dangling
 // references — separate cleanup task.
-func newTestIngestorDBFK(t *testing.T) *sql.DB {
+func newTestIngestorDBFK(t testing.TB) *sql.DB {
 	t.Helper()
 	db := newTestIngestorDB(t)
 	db.SetMaxOpenConns(1)
