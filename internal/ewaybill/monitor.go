@@ -42,6 +42,10 @@ func NewMonitor(svc *EWayBillService, cfg Config) *Monitor {
 
 // Run starts the monitor loop until ctx is cancelled.
 func (m *Monitor) Run(ctx context.Context) {
+	if m.svc.IsMockProvider() {
+		m.logger.Warn("ewaybill: mock provider — expiry monitor disabled (would mutate bills via stub)")
+		return
+	}
 	ticker := time.NewTicker(m.interval)
 	defer ticker.Stop()
 

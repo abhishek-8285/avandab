@@ -9,8 +9,8 @@ import (
 // LoadConfig with nil DB must return safe defaults without touching storage.
 func TestLoadConfig_NilDBDefaults(t *testing.T) {
 	cfg := LoadConfig(context.Background(), nil)
-	if !cfg.AutoKharcha {
-		t.Error("AutoKharcha should default to true")
+	if cfg.AutoKharcha {
+		t.Error("AutoKharcha should default to false")
 	}
 	if cfg.Provider != "MOCK" {
 		t.Errorf("Provider should default to %q, got %q", "MOCK", cfg.Provider)

@@ -688,6 +688,7 @@ func main() {
 	customerAPIHandler := customerAPIHandlers.NewCustomerHandler(customerAppSvc)
 	settlementRepo := settlementSQL.NewSQLSettlementRepository(database)
 	settlementAppSvc := settlementApp.NewSettlementAppService(settlementRepo, cfg.RazorpayWebhook, 100.0)
+	settlementAppSvc.SetPayoutRailEnabled(cfg.PayoutRailEnabled)
 	settlementAPIHandler := settlementAPIHandlers.NewSettlementHandler(settlementAppSvc)
 
 	// Setup router
@@ -745,9 +746,9 @@ func main() {
 	r.Head("/health", healthChecker.HealthHandler)
 	r.Get("/readyz", healthChecker.ReadinessHandler)
 	r.Head("/readyz", healthChecker.ReadinessHandler)
-	// Prometheus scrape endpoint (probe-style, no auth — bind the port to an
-	// internal interface or firewall it in production if exposure is a concern).
-	r.Get("/metrics", metrics.Handler().ServeHTTP)
+	// Prometheus scrape endpoint: loopback scrapes open, remote scrapes require
+	// METRICS_TOKEN. Without a token the endpoint is not exposed publicly.
+	r.Get("/metrics", metrics.Guard(os.Getenv("METRICS_TOKEN"), metrics.Handler()).ServeHTTP)
 
 	// Direct SEO Endpoints
 	r.Get("/sitemap.xml", func(w http.ResponseWriter, r *http.Request) {

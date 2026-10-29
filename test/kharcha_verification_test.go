@@ -31,13 +31,23 @@ func seedVerifyFixtures(t *testing.T, db *sql.DB) {
 	      VALUES ('tr-v','TR-V','drv-v','r-v','2026-08-24 06:00:00','in_transit','tenant-a')`)
 }
 
-// TestSpec22_OCRMockCanned — Spec 22 §7 S8: the mock adapter returns the
-// spec's canned fixture regardless of input.
-func TestSpec22_OCRMockCanned(t *testing.T) {
+// stubOCR injects an explicit extraction; the real mock is non-verifying.
+type stubOCR struct {
+	amt  float64
+	conf float64
+}
+
+func (s stubOCR) Extract(context.Context, string) (intOCR.Result, error) {
+	return intOCR.Result{Amount: s.amt, Confidence: s.conf}, nil
+}
+
+// TestSpec22_OCRMockNonVerifying — the mock has no receipt text and must
+// fail rather than feed a canned amount into verification.
+func TestSpec22_OCRMockNonVerifying(t *testing.T) {
 	res, err := intOCR.NewMockClient().Extract(shared.ContextWithTenantID(context.Background(), "1"), "/receipts/x.jpg")
-	require.NoError(t, err)
-	assert.InDelta(t, 3000.0, res.Amount, 0.001)
-	assert.InDelta(t, 0.94, res.Confidence, 0.001)
+	require.ErrorIs(t, err, intOCR.ErrMockNoExtraction)
+	assert.Zero(t, res.Amount)
+	assert.Zero(t, res.Confidence)
 
 	_, err = intOCR.NewMockClient().Extract(shared.ContextWithTenantID(context.Background(), "1"), "")
 	assert.Error(t, err, "no receipt on file must fail honestly")
@@ -66,7 +76,7 @@ func insertExpenseReceipt(t *testing.T, db *sql.DB, id string, lat, lng any, amo
 func TestSpec22_VerificationRuleTable(t *testing.T) {
 	db := NewTestDB(t)
 	seedVerifyFixtures(t, db)
-	svc := service.NewKharchaVerifyService(db, nil, intOCR.NewMockClient())
+	svc := service.NewKharchaVerifyService(db, nil, stubOCR{amt: 3000, conf: 0.94})
 	ctx := shared.ContextWithTenantID(context.Background(), "1")
 
 	stateOf := func(id string) string {
@@ -89,7 +99,7 @@ func TestSpec22_VerificationRuleTable(t *testing.T) {
 		insertExpense(t, db, "hist-fuel-"+itoa(i), nil, nil, amt, "fuel", 60*24*30)
 	}
 
-	// AUTO: on-route (near Pune endpoint) + mock OCR 3000@0.94 within ±20%
+	// AUTO: on-route (near Pune endpoint) + stub OCR 3000@0.94 within ±20%
 	// of... wait — 3000 vs median 1000 is 3x → would flag. Use food with no
 	// median history instead: flags require median>0 for rule 3; auto band
 	// requires median>0 too. So seed a matching median first.

@@ -97,11 +97,11 @@ func TestFCMService_MockMode(t *testing.T) {
 
 	ctx := context.Background()
 
-	// 1. Direct SendToToken in mock mode
+	// 1. Direct SendToToken in mock mode: recorded, but reported as not sent.
 	err := svc.SendToToken(ctx, "ExponentPushToken[mock-token-123]", "Test Title", "Test Body", map[string]string{
 		"custom_key": "custom_val",
 	})
-	require.NoError(t, err)
+	require.ErrorIs(t, err, notifications.ErrPushNotConfigured)
 
 	sent := svc.GetSentMessages()
 	require.Len(t, sent, 1)
@@ -118,6 +118,16 @@ func TestFCMService_MockMode(t *testing.T) {
 	// 3. Clear messages
 	svc.ClearSentMessages()
 	assert.Empty(t, svc.GetSentMessages())
+}
+
+func TestFCMService_UnconfiguredFallbackReturnsSentinel(t *testing.T) {
+	// Service account without project/server keys: not mock mode, but no usable
+	// transport — must not report success.
+	svc := notifications.NewFCMService(nil, notifications.FCMConfig{ServiceAccountJSON: "{}"}, nil)
+	require.False(t, svc.IsMockMode())
+
+	err := svc.SendToToken(context.Background(), "token-123", "Title", "Body", nil)
+	require.ErrorIs(t, err, notifications.ErrPushNotConfigured)
 }
 
 func TestFCMService_MultiDeviceDriverDispatch(t *testing.T) {
@@ -149,12 +159,12 @@ func TestFCMService_MultiDeviceDriverDispatch(t *testing.T) {
 	assert.Contains(t, tokens, "ExponentPushToken[device-phone-1]")
 	assert.Contains(t, tokens, "ExponentPushToken[device-tablet-2]")
 
-	// Send to driver -> dispatches to both devices
+	// Send to driver -> dispatches to both devices, but mock mode is not real delivery.
 	count, err := svc.SendToDriver(ctx, tenantID, driverID, "Assignment Update", "You have a new route", map[string]string{
 		"route": "DELHI-JAIPUR",
 	})
-	require.NoError(t, err)
-	assert.Equal(t, 2, count)
+	require.ErrorIs(t, err, notifications.ErrPushNotConfigured)
+	assert.Equal(t, 0, count)
 
 	sent := svc.GetSentMessages()
 	require.Len(t, sent, 2)
@@ -405,7 +415,7 @@ func TestFCMService_SendPushNotificationPort(t *testing.T) {
 			"doc_type": "driving_license",
 		},
 	})
-	require.NoError(t, err)
+	require.ErrorIs(t, err, notifications.ErrPushNotConfigured)
 
 	sent := svc.GetSentMessages()
 	require.Len(t, sent, 1)

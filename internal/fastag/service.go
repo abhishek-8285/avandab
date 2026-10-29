@@ -20,7 +20,7 @@ type Config struct {
 // LoadConfig reads FASTag configuration from company_config.
 func LoadConfig(ctx context.Context, db *sql.DB) Config {
 	cfg := Config{
-		AutoKharcha: true,
+		AutoKharcha: false,
 		Provider:    "MOCK",
 	}
 	if db == nil {

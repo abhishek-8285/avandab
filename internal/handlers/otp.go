@@ -49,6 +49,14 @@ func (h *OTPHandlers) SendOTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	smsReady := h.App.Notify != nil && h.App.Notify.SMSConfigured()
+	dev := h.Config != nil && h.Config.IsDevelopment()
+	// No sender and not dev: fail before issuing a code nobody can receive.
+	if !smsReady && !dev {
+		writeJSONError(w, http.StatusServiceUnavailable, "sms_not_configured")
+		return
+	}
+
 	code, err := h.App.OTPStore.Create(req.Phone)
 	if err != nil {
 		// Throttle still blocks (race): respond generically.
@@ -58,7 +66,7 @@ func (h *OTPHandlers) SendOTP(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Info("OTP issued", "phone_prefix", phonePrefix(req.Phone))
 
-	if h.App.Notify != nil && h.App.Notify.SMSConfigured() {
+	if smsReady {
 		msg := fmt.Sprintf("Your Avandab verification code is %s. It expires in 5 minutes. Do not share it.", code)
 		if serr := h.App.Notify.SendSMS(r.Context(), ports.NotificationMessage{
 			Recipient: req.Phone,
@@ -69,7 +77,7 @@ func (h *OTPHandlers) SendOTP(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]interface{}{"ok": true})
 			return
 		}
-	} else if h.Config != nil && h.Config.IsDevelopment() {
+	} else {
 		// No SMS sender: dev convenience echoes the code (reset-link pattern).
 		writeJSON(w, http.StatusOK, map[string]interface{}{"ok": true, "dev_code": code})
 		return

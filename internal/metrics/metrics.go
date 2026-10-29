@@ -5,7 +5,9 @@
 package metrics
 
 import (
+	"crypto/subtle"
 	"fmt"
+	"net"
 	"net/http"
 	"sort"
 	"strings"
@@ -161,4 +163,31 @@ func Handler() http.Handler {
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 		_, _ = w.Write([]byte(Default.Render()))
 	})
+}
+
+// Guard protects the exposition endpoint. Loopback scrapes stay open (local
+// node exporter / sidecar); remote scrapes require the bearer token. An empty
+// token means remote scrapes are refused — never exposed unauthenticated.
+func Guard(token string, next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if isLoopback(r.RemoteAddr) {
+			next.ServeHTTP(w, r)
+			return
+		}
+		got := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if token == "" || subtle.ConstantTimeCompare([]byte(got), []byte(token)) != 1 {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func isLoopback(remoteAddr string) bool {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		host = remoteAddr
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }

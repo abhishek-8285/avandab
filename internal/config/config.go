@@ -98,6 +98,7 @@ type Config struct {
 	DashboardSSEEnabled  bool
 	DashboardSSEInterval time.Duration
 	PWAEnabled           bool
+	PayoutRailEnabled    bool
 	RazorpayKeyID        string
 	RazorpayKeySecret    string
 	RazorpayWebhook      string
@@ -402,6 +403,7 @@ func Load() *Config {
 		DashboardSSEEnabled:  getEnvBool("DASHBOARD_SSE_ENABLED", true),
 		DashboardSSEInterval: time.Duration(getEnvInt("DASHBOARD_SSE_INTERVAL_SEC", 5)) * time.Second,
 		PWAEnabled:           getEnvBool("PWA_ENABLED", false),
+		PayoutRailEnabled:    getEnvBool("PAYOUT_RAIL_ENABLED", false),
 		RazorpayKeyID:        getEnv("RAZORPAY_KEY_ID", ""),
 		RazorpayKeySecret:    getEnv("RAZORPAY_KEY_SECRET", ""),
 		RazorpayWebhook:      os.Getenv("RAZORPAY_WEBHOOK_SECRET"),

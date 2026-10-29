@@ -345,7 +345,9 @@ func IsIntraState(supplierGSTIN, recipientGSTIN string) bool {
 	return supState == recState
 }
 
-// ComputeLineTax calculates line-item CGST/SGST/IGST tax split (Spec 07 §5.1).
+// ComputeLineTax calculates line-item CGST/SGST/IGST tax split (Spec 07 §5.1),
+// rounding each component to 2dp. This is the single rounding site for invoice
+// line tax, shared by the live handlers and any aggregate-time computation.
 func ComputeLineTax(taxable float64, rate float64, intraState bool) (cgst, sgst, igst float64) {
 	if intraState {
 		half := rate / 2.0

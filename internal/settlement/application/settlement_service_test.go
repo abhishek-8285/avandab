@@ -135,6 +135,7 @@ func TestPhase8_SettlementCalculationAndImmutableLedger(t *testing.T) {
 	db := setupSettlementTestDB(t)
 	repo := settleSQL.NewSQLSettlementRepository(db)
 	svc := application.NewSettlementAppService(repo, "secret_key_123", 100.0)
+	svc.SetPayoutRailEnabled(true)
 	ctx := context.Background()
 
 	tenantID := "tenant-1"

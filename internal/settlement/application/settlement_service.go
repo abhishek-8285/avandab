@@ -18,10 +18,21 @@ import (
 )
 
 type SettlementAppService struct {
-	repo           domain.SettlementRepository
-	webhookSecret  string
-	minPayoutLimit float64
+	repo              domain.SettlementRepository
+	webhookSecret     string
+	minPayoutLimit    float64
+	payoutRailEnabled bool
 }
+
+// SetPayoutRailEnabled enables InitiatePayout. Disabled by default: without a
+// provider rail a payout would debit the driver wallet and park the money in
+// payout_instructions forever.
+func (s *SettlementAppService) SetPayoutRailEnabled(v bool) {
+	s.payoutRailEnabled = v
+}
+
+// ErrPayoutRailDisabled is returned when no payout provider rail is configured.
+var ErrPayoutRailDisabled = errors.New("payout rail not configured: driver payouts are disabled; settle manually")
 
 func NewSettlementAppService(repo domain.SettlementRepository, webhookSecret string, minPayoutLimit float64) *SettlementAppService {
 	if minPayoutLimit <= 0 {
@@ -314,6 +325,11 @@ type PayoutResponse struct {
 }
 
 func (s *SettlementAppService) InitiatePayout(ctx context.Context, tenantID, driverID string, req InitiatePayoutRequest) (*PayoutResponse, error) {
+	// Fail closed before any read or write: no rail means no payout, and
+	// nothing may reach payout_instructions or the ledger.
+	if !s.payoutRailEnabled {
+		return nil, ErrPayoutRailDisabled
+	}
 	if tenantID == "" || driverID == "" {
 		return nil, errors.New("tenant_id and driver_id are required")
 	}

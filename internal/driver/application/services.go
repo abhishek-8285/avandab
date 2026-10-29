@@ -13,6 +13,7 @@ import (
 	"transport-app/internal/driver/domain/eligibility"
 	driversql "transport-app/internal/driver/infrastructure/persistence/sql"
 	"transport-app/internal/repository"
+	"transport-app/internal/secure"
 )
 
 type queryExecutor interface {
@@ -339,10 +340,16 @@ func (s *DriverAppService) SubmitPayoutAccount(ctx context.Context, tenantID, dr
 	if len(accNum) < 4 {
 		return "", errors.New("invalid account number")
 	}
+	// Fail closed before the transaction: an unencrypted account number must
+	// never reach account_number_encrypted, not even partially.
+	encAccNum, err := secure.EncryptAccountNumber(accNum)
+	if err != nil {
+		return "", err
+	}
 	masked := "******" + accNum[len(accNum)-4:]
 	accID := uuid.NewString()
 
-	err := s.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
+	err = s.txManager.WithTransaction(ctx, func(txCtx context.Context) error {
 		ex := s.exec(txCtx)
 
 		// Deactivate previous primary accounts
@@ -358,7 +365,7 @@ func (s *DriverAppService) SubmitPayoutAccount(ctx context.Context, tenantID, dr
 		_, err = ex.ExecContext(txCtx, `
 			INSERT INTO driver_payout_accounts (id, tenant_id, driver_id, account_holder_name, account_number_encrypted, account_number_masked, ifsc_code, bank_name, is_primary, verification_status, created_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 1, 'penny_drop_pending', CURRENT_TIMESTAMP)`,
-			accID, tenantID, driverID, holder, accNum, masked, strings.ToUpper(strings.TrimSpace(ifsc)), bankName)
+			accID, tenantID, driverID, holder, encAccNum, masked, strings.ToUpper(strings.TrimSpace(ifsc)), bankName)
 		if err != nil {
 			return err
 		}

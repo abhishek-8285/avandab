@@ -16,6 +16,10 @@ func (s *EWayBillService) SubscribeTripEvents(bus events.EventBus) {
 	if bus == nil {
 		return
 	}
+	if s.providerMock {
+		s.logger.Warn("ewaybill: mock provider — trip event auto-generation disabled (numbers would be fabricated)")
+		return
+	}
 
 	handler := func(ctx context.Context, e events.Event) error {
 		tripID := extractTripID(e.Payload)

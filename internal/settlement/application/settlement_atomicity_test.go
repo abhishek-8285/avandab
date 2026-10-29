@@ -81,6 +81,7 @@ func TestAtomicity_PayoutInstructionAndDebitAreOneUnit(t *testing.T) {
 	db := setupSettlementTestDB(t)
 	repo := settleSQL.NewSQLSettlementRepository(db)
 	svc := application.NewSettlementAppService(repo, "secret_key_123", 100.0)
+	svc.SetPayoutRailEnabled(true)
 	ctx := context.Background()
 
 	_, err := svc.CalculateAndCreateSettlement(ctx, "tenant-1", application.CalculateSettlementRequest{
@@ -117,6 +118,7 @@ func TestAtomicity_PayoutDuplicateMustNotSkipDebit(t *testing.T) {
 	db := setupSettlementTestDB(t)
 	repo := settleSQL.NewSQLSettlementRepository(db)
 	svc := application.NewSettlementAppService(repo, "secret_key_123", 100.0)
+	svc.SetPayoutRailEnabled(true)
 	ctx := context.Background()
 
 	_, err := svc.CalculateAndCreateSettlement(ctx, "tenant-1", application.CalculateSettlementRequest{
@@ -168,6 +170,7 @@ func TestAtomicity_WebhookStatusAndCompensationAreOneUnit(t *testing.T) {
 	db := setupSettlementTestDB(t)
 	repo := settleSQL.NewSQLSettlementRepository(db)
 	svc := application.NewSettlementAppService(repo, "secret_key_123", 100.0)
+	svc.SetPayoutRailEnabled(true)
 	ctx := context.Background()
 
 	_, err := svc.CalculateAndCreateSettlement(ctx, "tenant-1", application.CalculateSettlementRequest{
