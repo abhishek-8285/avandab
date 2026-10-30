@@ -187,7 +187,7 @@ Size: M–L. Gate: 1.6 passes at 10k vehicles before any new module ships.
 | 2.2 | GSTN IRP e-invoice: app key, JWS/JWE, IRN + signed QR | GSP/IRP creds | IRN round-trip in sandbox |
 | 2.3 | Vahan/ULIP RC verification; implement `taxverify` provider | ULIP/GSP contract | live RC fetch, cache, failure path |
 | 2.4 | FASTag via NPCI NETC or certified aggregator | sponsorship/aggregator | real toll txns reconciled to trips |
-| 2.5 | SMS gateway adapter (MSG91/Twilio/Fast2SMS) + OTP fail-loud | account | OTP delivered; 503 when unconfigured |
+| 2.5 | SMS gateway adapter (MSG91/Twilio/Fast2SMS) + OTP fail-loud | MSG91 adapter landed (`ea91ae9a`) — config-driven provider selection, HTTP-200 error bodies fail loud, OTP 503 untouched; Twilio/Fast2SMS one-case additions | **CODE DONE** — acceptance awaits real MSG91 account creds |
 | 2.6 | WhatsApp BSP + approved templates | WABA | template send in production |
 | 2.7 | RazorpayX payouts + penny-drop + webhook reconciliation | merchant account | end-to-end ₹1 payout + reversal |
 | 2.8 | Real OCR provider behind existing `http` seam + amount-vs-claim comparison | vendor key | mismatch → manual review, never auto-approve |
