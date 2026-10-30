@@ -53,6 +53,7 @@ import (
 	intOCR "transport-app/internal/integration/ocr"
 	"transport-app/internal/logging"
 	"transport-app/internal/maintenance"
+	"transport-app/internal/mcp"
 	"transport-app/internal/middleware"
 	"transport-app/internal/mqttservice"
 	fcmnotifications "transport-app/internal/notifications"
@@ -1258,12 +1259,21 @@ func main() {
 		agentAPI.WithPermissionChecker(authSvc)
 		logger.Info("AI agent enabled", "model", cfg.Agent.Model, "sub_agents", len(orch.AgentNames()), "approval_required", cfg.Agent.RequireApproval)
 
-		// API routes (bearer/session) — approval queue + chat
+		mcpServer := mcp.NewServer(mcp.ServerConfig{
+			ToolEnv:         toolEnv,
+			ApprovalService: approvalSvc,
+			PermChecker:     authSvc,
+			RequireApproval: cfg.Agent.RequireApproval,
+		})
+		logger.Info("hosted MCP server enabled", "tools", len(mcpServer.Tools()), "approval_required", cfg.Agent.RequireApproval)
+
+		// API routes (bearer/session) — approval queue + chat + MCP
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequireAPIAuth(authStore, apiSecret, tenantResolver))
 			r.Use(middleware.RateLimitDistributed(appCache, 30)) // LLM cost control + flood guard
 			r.Use(agentRequestTimeout(5 * time.Minute))
 			agentAPI.RegisterAPIRoute(r)
+			mcpServer.RegisterRoutes(r)
 			if approvalSvc != nil {
 				agent.NewApprovalHandler(approvalSvc).RegisterRoutes(r)
 			}

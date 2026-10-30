@@ -191,6 +191,11 @@ type ctxKey string
 
 const episodeCtxKey ctxKey = "agent_episode_id"
 
+// WithEpisodeID attaches an episode ID to the context for action auditing.
+func WithEpisodeID(ctx context.Context, episodeID string) context.Context {
+	return context.WithValue(ctx, episodeCtxKey, episodeID)
+}
+
 func episodeIDFrom(ctx context.Context) string {
 	if v, ok := ctx.Value(episodeCtxKey).(string); ok {
 		return v

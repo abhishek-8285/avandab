@@ -18,6 +18,7 @@ import (
 	"transport-app/internal/events"
 	"transport-app/internal/ewaybill"
 	intEWB "transport-app/internal/integration/ewaybill"
+	"transport-app/internal/mcp"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 	tripapp "transport-app/internal/trip/application"
@@ -110,6 +111,24 @@ func TestSubTask4D_MasterIntegrationSuite(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, res, "veh-sos-e2e")
 	assert.Contains(t, res, "sos")
+
+	// -------------------------------------------------------------
+	// 2b. MCP Server Integration: hosted MCP tools exposure
+	// -------------------------------------------------------------
+	mcpSrv := mcp.NewServer(mcp.ServerConfig{
+		Tools: tools,
+	})
+	mcpTools := mcpSrv.Tools()
+	assert.NotEmpty(t, mcpTools)
+	foundAlerts := false
+	for _, mt := range mcpTools {
+		if mt.Name == "get_open_alerts" {
+			foundAlerts = true
+			assert.NotEmpty(t, mt.Description)
+			assert.NotNil(t, mt.InputSchema)
+		}
+	}
+	assert.True(t, foundAlerts)
 
 	// -------------------------------------------------------------
 	// 3. Keyword Routing to Ops sub-agent

@@ -207,7 +207,7 @@ Recommended order (highest value per unit of work first):
 | 3.5 | RFQ/counter-offer on top of existing auction | Reuses `load_board` machinery | S–M | **DONE** (migration 00175, lane RFQ bidding, multi-round counter-offer negotiation engine for RFQs & load board listings, atomic award transaction) |
 | 3.6 | White-label customer portal (logo/colours from `tenant_company_profiles`) | Template-only change | S | **DONE** for name/logo (tenantBrand resolver from `tenant_company_profiles`, `customer_brand` header on shipper pages, layout title + sidebar). Accent colours deferred — `tenant_company_profiles` has no colour column |
 | 3.7 | Manager/owner mobile app (fleet, dashboard, approvals) | Reuses RN codebase + APIs | L |
-| 3.8 | Hosted MCP server (read tools first, write behind approval) | Differentiator; agent + approvals already exist | M |
+| 3.8 | Hosted MCP server (read tools first, write behind approval) | Differentiator; agent + approvals already exist | M | **DONE** (JSON-RPC 2.0 & SSE transport at `/api/v1/mcp`, tool schemas, tenant context scoping, Casbin RBAC, admin approval gating for mutating actions) |
 | 3.9 | Web UI for STO, load board, facilities, ESG, fuel cards, backhaul, control tower | 7 APIs already built, zero screens | M |
 | 3.10 | EV telematics (SoC, charging, battery health) | Needs CAN/OEM feed | L |
 | 3.11 | Cold chain (reefer probes, set-point drift) | Needs hardware | M + hardware |
