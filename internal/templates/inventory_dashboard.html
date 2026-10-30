@@ -1,0 +1,459 @@
+{{template "page_header.html" (dict "Title" "Parts & Spares Inventory" "Subtitle" "Spare parts catalog, multi-warehouse stock balances, issue ledger, and low-stock replenishment")}}
+
+<!-- KPI Row -->
+<div class="grid grid-cols-1 sm:grid-cols-5 gap-4 mb-6">
+    <div class="group relative overflow-hidden bg-gradient-to-br from-indigo-600 to-sky-700 rounded-xl shadow-md p-4 text-white hover:shadow-lg transition">
+        <div class="flex items-center gap-4">
+            <div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center shrink-0">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-semibold tabular-nums leading-none">{{if .Extra.Summary}}{{.Extra.Summary.TotalParts}}{{else}}0{{end}}</div>
+                <div class="text-xs font-medium text-white/80 mt-1">Catalog SKUs</div>
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">
+                ₹{{if .Extra.Summary}}{{printf "%.0f" .Extra.Summary.TotalValuation}}{{else}}0{{end}}
+            </div>
+            <div class="text-xs text-secondary font-medium mt-1">Stock Valuation</div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg {{if and .Extra.Summary (gt .Extra.Summary.LowStockCount 0)}}bg-rose-500/15 border border-rose-500/30 text-rose-600 animate-pulse{{else}}bg-slate-500/10 border border-slate-500/20 text-slate-600{{end}} grid place-items-center shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">
+                {{if .Extra.Summary}}{{.Extra.Summary.LowStockCount}}{{else}}0{{end}}
+            </div>
+            <div class="text-xs text-secondary font-medium mt-1">Low Stock Alerts</div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-sky-500/10 border border-sky-500/20 grid place-items-center text-sky-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">
+                {{if .Extra.Summary}}{{printf "%.0f" .Extra.Summary.TotalStockedUnits}}{{else}}0{{end}}
+            </div>
+            <div class="text-xs text-secondary font-medium mt-1">Units In Stock</div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 grid place-items-center text-amber-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M3 21h18"/><path d="M9 8h1"/><path d="M9 12h1"/><path d="M9 16h1"/><path d="M14 8h1"/><path d="M14 12h1"/><path d="M14 16h1"/><path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16Z"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">
+                {{if .Extra.Summary}}{{.Extra.Summary.ActiveFacilityCount}}{{else}}0{{end}}
+            </div>
+            <div class="text-xs text-secondary font-medium mt-1">Active Hubs</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Actions -->
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="/inventory" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.CategoryFilter ""}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                All Parts
+            </a>
+            <a href="/inventory?category=ENGINE" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.CategoryFilter "ENGINE"}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                Engine
+            </a>
+            <a href="/inventory?category=BRAKES" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.CategoryFilter "BRAKES"}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                Brakes
+            </a>
+            <a href="/inventory?category=SUSPENSION" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.CategoryFilter "SUSPENSION"}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                Suspension
+            </a>
+            <a href="/inventory?category=ELECTRICAL" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.CategoryFilter "ELECTRICAL"}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                Electrical
+            </a>
+            <a href="/inventory?category=FILTERS" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.CategoryFilter "FILTERS"}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                Filters
+            </a>
+            <a href="/inventory?category=FLUIDS" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.CategoryFilter "FLUIDS"}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                Fluids & Oils
+            </a>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="document.getElementById('issuePartModal').showModal()" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-surface border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container transition flex items-center gap-1.5">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><path d="m15 18-6-6 6-6"/></svg>
+                Issue to Vehicle
+            </button>
+            <button onclick="document.getElementById('adjustStockModal').showModal()" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-surface border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container transition flex items-center gap-1.5">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                Stock Count Audit
+            </button>
+            <button onclick="document.getElementById('createPartModal').showModal()" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-primary text-on-primary hover:bg-primary-hover shadow-xs transition flex items-center gap-1.5">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                New Part SKU
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Main Grid: Spares Catalog & Warehouse Stock -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+    <!-- Parts Catalog (2 cols) -->
+    <div class="lg:col-span-2 bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-border-subtle flex items-center justify-between">
+            <div>
+                <h3 class="text-base font-semibold text-on-surface">Parts & Spares Catalog</h3>
+                <p class="text-xs text-secondary mt-0.5">Authoritative catalog of maintenance parts, unit costs, and reorder levels</p>
+            </div>
+            <span class="text-xs font-mono bg-surface-container px-2.5 py-1 rounded-full text-secondary font-semibold">
+                {{if .Extra.Parts}}{{len .Extra.Parts}}{{else}}0{{end}} SKUs
+            </span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+                <thead class="bg-surface-container border-b border-border-subtle text-secondary uppercase font-semibold">
+                    <tr>
+                        <th class="px-4 py-3">Part # / SKU</th>
+                        <th class="px-4 py-3">Name & Brand</th>
+                        <th class="px-4 py-3">Category</th>
+                        <th class="px-4 py-3 text-right">Cost Price</th>
+                        <th class="px-4 py-3 text-right">Reorder Qty</th>
+                        <th class="px-4 py-3 text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border-subtle">
+                    {{if .Extra.Parts}}
+                    {{range .Extra.Parts}}
+                    <tr class="hover:bg-surface-container/50 transition">
+                        <td class="px-4 py-3 font-mono font-semibold text-primary">
+                            {{.PartNumber}}
+                        </td>
+                        <td class="px-4 py-3">
+                            <div class="font-medium text-on-surface">{{.Name}}</div>
+                            {{if .OEMBrand}}<div class="text-[11px] text-secondary">Brand: {{.OEMBrand}}</div>{{end}}
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container border border-border-subtle text-secondary">
+                                {{.Category}}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3 text-right font-mono font-medium">
+                            ₹{{printf "%.2f" .CostPrice}} <span class="text-[11px] text-secondary">/ {{.UOM}}</span>
+                        </td>
+                        <td class="px-4 py-3 text-right font-mono text-secondary">
+                            {{if .MinStockLevel}}{{printf "%.0f" .MinStockLevel}}{{else}}0{{end}} min
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            {{if .IsActive}}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                ACTIVE
+                            </span>
+                            {{else}}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                                INACTIVE
+                            </span>
+                            {{end}}
+                        </td>
+                    </tr>
+                    {{end}}
+                    {{else}}
+                    <tr>
+                        <td colspan="6" class="px-4 py-8 text-center text-secondary">
+                            No spare parts catalog entries found. Create a new part to begin tracking inventory.
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Multi-Warehouse Stock on Hand (1 col) -->
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden flex flex-col">
+        <div class="p-4 border-b border-border-subtle flex items-center justify-between">
+            <div>
+                <h3 class="text-base font-semibold text-on-surface">Warehouse Balances</h3>
+                <p class="text-xs text-secondary mt-0.5">Physical counts across regional maintenance facilities</p>
+            </div>
+            <span class="text-xs font-mono bg-surface-container px-2.5 py-1 rounded-full text-secondary font-semibold">
+                {{if .Extra.Stocks}}{{len .Extra.Stocks}}{{else}}0{{end}} Records
+            </span>
+        </div>
+        <div class="overflow-y-auto max-h-[480px] divide-y divide-border-subtle">
+            {{if .Extra.Stocks}}
+            {{range .Extra.Stocks}}
+            <div class="p-4 hover:bg-surface-container/50 transition">
+                <div class="flex items-center justify-between gap-2 mb-1.5">
+                    <span class="font-mono font-semibold text-xs text-on-surface">{{.PartNumber}}</span>
+                    <span class="text-xs font-semibold px-2 py-0.5 rounded-full {{if .IsLowStock}}bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200 animate-pulse{{else}}bg-surface-container text-secondary{{end}}">
+                        {{if .IsLowStock}}LOW STOCK{{else}}NORMAL{{end}}
+                    </span>
+                </div>
+                <div class="text-xs font-medium text-on-surface line-clamp-1 mb-1">{{.PartName}}</div>
+                <div class="flex items-center justify-between text-xs text-secondary mt-2">
+                    <span class="flex items-center gap-1">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                        {{if .FacilityName}}{{.FacilityName}}{{else}}Main Hub{{end}}
+                    </span>
+                    <span class="font-mono font-semibold text-on-surface text-sm">
+                        {{printf "%.0f" .QuantityOnHand}} <span class="text-xs text-secondary font-normal">{{.UOM}}</span>
+                    </span>
+                </div>
+            </div>
+            {{end}}
+            {{else}}
+            <div class="p-8 text-center text-xs text-secondary">
+                No active warehouse stock records found.
+            </div>
+            {{end}}
+        </div>
+    </div>
+</div>
+
+<!-- Stock Transaction Movement Ledger -->
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden mb-8">
+    <div class="p-4 border-b border-border-subtle flex items-center justify-between">
+        <div>
+            <h3 class="text-base font-semibold text-on-surface">Recent Stock Movement Ledger</h3>
+            <p class="text-xs text-secondary mt-0.5">Immutable audit trail of parts issued, received, returned, and count reconciliations</p>
+        </div>
+        <span class="text-xs font-mono bg-surface-container px-2.5 py-1 rounded-full text-secondary font-semibold">
+            {{if .Extra.Transactions}}{{len .Extra.Transactions}}{{else}}0{{end}} Movements
+        </span>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+            <thead class="bg-surface-container border-b border-border-subtle text-secondary uppercase font-semibold">
+                <tr>
+                    <th class="px-4 py-3">Timestamp</th>
+                    <th class="px-4 py-3">Movement Type</th>
+                    <th class="px-4 py-3">Part Details</th>
+                    <th class="px-4 py-3">Facility</th>
+                    <th class="px-4 py-3 text-right">Quantity</th>
+                    <th class="px-4 py-3 text-right">Balance After</th>
+                    <th class="px-4 py-3">Issued To / Reference</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-border-subtle">
+                {{if .Extra.Transactions}}
+                {{range .Extra.Transactions}}
+                <tr class="hover:bg-surface-container/50 transition">
+                    <td class="px-4 py-3 font-mono text-secondary">
+                        {{.RecordedAt.Format "02 Jan 15:04"}}
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold 
+                            {{if eq .TransactionType "ISSUE"}}bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800
+                            {{else if eq .TransactionType "RECEIVE"}}bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800
+                            {{else if eq .TransactionType "RETURN"}}bg-sky-50 text-sky-800 dark:bg-sky-950/40 dark:text-sky-300 border border-sky-200 dark:border-sky-800
+                            {{else}}bg-surface-container text-secondary border border-border-subtle{{end}}">
+                            {{.TransactionType}}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="font-mono font-medium text-on-surface">{{.PartNumber}}</div>
+                        <div class="text-[11px] text-secondary">{{.PartName}}</div>
+                    </td>
+                    <td class="px-4 py-3 text-secondary">
+                        {{if .FacilityName}}{{.FacilityName}}{{else}}-{{end}}
+                    </td>
+                    <td class="px-4 py-3 text-right font-mono font-semibold {{if eq .TransactionType "ISSUE"}}text-rose-600{{else}}text-emerald-600{{end}}">
+                        {{if eq .TransactionType "ISSUE"}}-{{else}}+{{end}}{{printf "%.0f" .Quantity}}
+                    </td>
+                    <td class="px-4 py-3 text-right font-mono font-medium text-on-surface">
+                        {{printf "%.0f" .BalanceAfter}}
+                    </td>
+                    <td class="px-4 py-3 text-secondary">
+                        {{if .VehicleID}}<span class="font-mono text-primary font-medium">Vehicle ID: {{.VehicleID}}</span>{{else if .WorkOrderID}}<span class="font-mono">WO: {{.WorkOrderID}}</span>{{else if .Notes}}{{.Notes}}{{else}}-{{end}}
+                    </td>
+                </tr>
+                {{end}}
+                {{else}}
+                <tr>
+                    <td colspan="7" class="px-4 py-8 text-center text-secondary">
+                        No inventory transactions recorded yet.
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: New Part SKU -->
+<dialog id="createPartModal" class="p-0 rounded-2xl bg-surface-container-lowest border border-border-subtle shadow-xl backdrop:bg-black/50 max-w-lg w-full">
+    <form method="POST" action="/inventory/parts" class="p-6">
+        <div class="flex items-center justify-between pb-4 border-b border-border-subtle mb-4">
+            <h3 class="text-base font-semibold text-on-surface">Register New Spare Part SKU</h3>
+            <button type="button" onclick="document.getElementById('createPartModal').close()" class="text-secondary hover:text-on-surface">✕</button>
+        </div>
+        <div class="space-y-4 text-xs">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Part Number / SKU *</label>
+                    <input type="text" name="part_number" required placeholder="e.g. BRK-PAD-001" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Part Name *</label>
+                    <input type="text" name="name" required placeholder="e.g. Front Brake Pad Set" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Category</label>
+                    <select name="category" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                        <option value="GENERAL">General</option>
+                        <option value="ENGINE">Engine</option>
+                        <option value="BRAKES">Brakes</option>
+                        <option value="SUSPENSION">Suspension</option>
+                        <option value="ELECTRICAL">Electrical</option>
+                        <option value="TRANSMISSION">Transmission</option>
+                        <option value="FLUIDS">Fluids & Lubricants</option>
+                        <option value="FILTERS">Filters</option>
+                        <option value="BODY">Body & Trim</option>
+                        <option value="TYRES">Tyres & Tubes</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Unit of Measure (UOM)</label>
+                    <select name="uom" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                        <option value="PIECES">Pieces (PCS)</option>
+                        <option value="LITRES">Litres (LTR)</option>
+                        <option value="KG">Kilograms (KG)</option>
+                        <option value="METERS">Meters (MTR)</option>
+                        <option value="SETS">Sets (SET)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Unit Cost Price (₹)</label>
+                    <input type="number" step="0.01" name="cost_price" value="0.00" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Min Safe Stock Level</label>
+                    <input type="number" step="1" name="min_stock_level" value="5" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-secondary mb-1">OEM Brand</label>
+                    <input type="text" name="oem_brand" placeholder="e.g. Bosch, Tata Genuine" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Reorder Quantity</label>
+                    <input type="number" step="1" name="reorder_quantity" value="20" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+            </div>
+            <div>
+                <label class="block font-medium text-secondary mb-1">Description & Specifications</label>
+                <textarea name="description" rows="2" placeholder="OEM part specifications, compatible engines, or storage instructions" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary"></textarea>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" onclick="document.getElementById('createPartModal').close()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-surface border border-border-subtle text-secondary hover:text-on-surface">Cancel</button>
+            <button type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold bg-primary text-on-primary hover:bg-primary-hover shadow-xs">Save SKU</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- Modal: Issue Part to Vehicle -->
+<dialog id="issuePartModal" class="p-0 rounded-2xl bg-surface-container-lowest border border-border-subtle shadow-xl backdrop:bg-black/50 max-w-md w-full">
+    <form method="POST" action="/inventory/issue" class="p-6">
+        <div class="flex items-center justify-between pb-4 border-b border-border-subtle mb-4">
+            <h3 class="text-base font-semibold text-on-surface">Issue Spares to Vehicle</h3>
+            <button type="button" onclick="document.getElementById('issuePartModal').close()" class="text-secondary hover:text-on-surface">✕</button>
+        </div>
+        <div class="space-y-4 text-xs">
+            <div>
+                <label class="block font-medium text-secondary mb-1">Select Part SKU *</label>
+                <select name="part_id" required class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                    <option value="">-- Choose Spare Part --</option>
+                    {{range .Extra.Parts}}
+                    <option value="{{.ID}}">{{.PartNumber}} - {{.Name}} ({{.UOM}})</option>
+                    {{end}}
+                </select>
+            </div>
+            <div>
+                <label class="block font-medium text-secondary mb-1">Issuing Warehouse Hub *</label>
+                <select name="facility_id" required class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                    <option value="">-- Choose Facility --</option>
+                    {{range .Extra.Facilities}}
+                    <option value="{{.ID}}">{{.Name}} ({{.Code}})</option>
+                    {{end}}
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Quantity to Issue *</label>
+                    <input type="number" step="1" name="quantity" required min="1" value="1" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Target Vehicle</label>
+                    <select name="vehicle_id" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                        <option value="">-- General Maintenance --</option>
+                        {{range .Extra.Vehicles}}
+                        <option value="{{.ID}}">{{.VehicleNumber}} ({{.RegistrationNumber}})</option>
+                        {{end}}
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block font-medium text-secondary mb-1">Work Order / Notes</label>
+                <input type="text" name="notes" placeholder="Scheduled PM #4, emergency brake overhaul, etc." class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" onclick="document.getElementById('issuePartModal').close()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-surface border border-border-subtle text-secondary hover:text-on-surface">Cancel</button>
+            <button type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold bg-primary text-on-primary hover:bg-primary-hover shadow-xs">Confirm Issue</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- Modal: Adjust Physical Stock -->
+<dialog id="adjustStockModal" class="p-0 rounded-2xl bg-surface-container-lowest border border-border-subtle shadow-xl backdrop:bg-black/50 max-w-md w-full">
+    <form method="POST" action="/inventory/stocks/adjust" class="p-6">
+        <div class="flex items-center justify-between pb-4 border-b border-border-subtle mb-4">
+            <h3 class="text-base font-semibold text-on-surface">Physical Stock Audit Reconciliation</h3>
+            <button type="button" onclick="document.getElementById('adjustStockModal').close()" class="text-secondary hover:text-on-surface">✕</button>
+        </div>
+        <div class="space-y-4 text-xs">
+            <div>
+                <label class="block font-medium text-secondary mb-1">Select Part SKU *</label>
+                <select name="part_id" required class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                    <option value="">-- Choose Spare Part --</option>
+                    {{range .Extra.Parts}}
+                    <option value="{{.ID}}">{{.PartNumber}} - {{.Name}}</option>
+                    {{end}}
+                </select>
+            </div>
+            <div>
+                <label class="block font-medium text-secondary mb-1">Audit Facility / Hub *</label>
+                <select name="facility_id" required class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                    <option value="">-- Choose Facility --</option>
+                    {{range .Extra.Facilities}}
+                    <option value="{{.ID}}">{{.Name}} ({{.Code}})</option>
+                    {{end}}
+                </select>
+            </div>
+            <div>
+                <label class="block font-medium text-secondary mb-1">Verified Physical Quantity on Hand *</label>
+                <input type="number" step="1" name="new_quantity_on_hand" required min="0" value="0" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+            </div>
+            <div>
+                <label class="block font-medium text-secondary mb-1">Audit Reason / Justification *</label>
+                <input type="text" name="reason" required placeholder="e.g. Month-end physical audit variance, damaged in store" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" onclick="document.getElementById('adjustStockModal').close()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-surface border border-border-subtle text-secondary hover:text-on-surface">Cancel</button>
+            <button type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold bg-primary text-on-primary hover:bg-primary-hover shadow-xs">Update Count</button>
+        </div>
+    </form>
+</dialog>

@@ -48,6 +48,200 @@ func (h *ReportBuilderHandlers) RegisterAPIRoutes(r chi.Router) {
 	})
 }
 
+// Routes mounts the Custom Report Builder web UI handlers at /report-builder.
+func (h *ReportBuilderHandlers) Routes(r chi.Router) {
+	r.With(middleware.RequirePermission(h.AuthSrv, "reports", "read")).Get("/", h.WebReportBuilderDashboard)
+	r.With(middleware.RequirePermission(h.AuthSrv, "reports", "write")).Post("/reports", h.WebCreateReport)
+	r.With(middleware.RequirePermission(h.AuthSrv, "reports", "read")).Post("/reports/{id}/run", h.WebRunReport)
+	r.With(middleware.RequirePermission(h.AuthSrv, "reports", "write")).Post("/schedules", h.WebCreateSchedule)
+}
+
+// WebReportBuilderDashboard renders custom report templates, scheduler, and execution history.
+func (h *ReportBuilderHandlers) WebReportBuilderDashboard(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+
+	svc := h.service()
+	catalog := svc.GetCatalog()
+
+	reports, _, _ := svc.ListReports(r.Context(), tenantID, reportbuilder.ListReportsFilter{
+		Limit: 50,
+	})
+
+	schedules, _, _ := svc.ListSchedules(r.Context(), tenantID, reportbuilder.ListSchedulesFilter{
+		Limit: 50,
+	})
+
+	executions, _, _ := svc.ListExecutions(r.Context(), tenantID, reportbuilder.ListExecutionsFilter{
+		Limit: 25,
+	})
+
+	data := PageData{
+		Title: "Custom Report Builder",
+		User:  user,
+		Extra: map[string]interface{}{
+			"Catalog":    catalog,
+			"Reports":    reports,
+			"Schedules":  schedules,
+			"Executions": executions,
+		},
+	}
+
+	h.renderPage(w, r, "report_builder_dashboard.html", data)
+}
+
+// WebCreateReport handles creation of a new custom query template.
+func (h *ReportBuilderHandlers) WebCreateReport(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+
+	if err := r.ParseForm(); err != nil {
+		h.renderError(w, http.StatusBadRequest, "Invalid form submission", err.Error(), user)
+		return
+	}
+
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" {
+		h.renderError(w, http.StatusBadRequest, "Report name is required", "Name cannot be empty", user)
+		return
+	}
+
+	ds := reportbuilder.DatasetType(strings.ToUpper(strings.TrimSpace(r.FormValue("dataset"))))
+	if ds == "" {
+		ds = reportbuilder.DatasetTrips
+	}
+
+	catalog := reportbuilder.GetDatasetCatalog()
+	meta, ok := catalog[ds]
+	var cols []string
+	if ok {
+		for _, c := range meta.Columns {
+			cols = append(cols, c.Name)
+		}
+	} else {
+		cols = []string{"id", "created_at"}
+	}
+
+	chartType := strings.ToUpper(strings.TrimSpace(r.FormValue("chart_type")))
+	if chartType == "" {
+		chartType = "TABLE"
+	}
+
+	userID := "system"
+	if user != nil && user.UserID != "" {
+		userID = user.UserID
+	}
+
+	in := reportbuilder.CreateReportInput{
+		Name:            name,
+		Description:     strings.TrimSpace(r.FormValue("description")),
+		Dataset:         ds,
+		SelectedColumns: cols,
+		ChartType:       chartType,
+		SortDirection:   "DESC",
+	}
+
+	if _, err := h.service().CreateReport(r.Context(), tenantID, userID, in); err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to create custom report", err.Error(), user)
+		return
+	}
+
+	http.Redirect(w, r, "/report-builder", http.StatusSeeOther)
+}
+
+// WebRunReport executes the report and streams the CSV download directly.
+func (h *ReportBuilderHandlers) WebRunReport(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	id := chi.URLParam(r, "id")
+	user, _ := h.getUserFromContext(r)
+
+	format := strings.ToUpper(strings.TrimSpace(r.FormValue("format")))
+	if format == "" {
+		format = "CSV"
+	}
+
+	in := reportbuilder.RunReportInput{
+		Format: format,
+		Limit:  1000,
+	}
+
+	res, err := h.service().RunReport(r.Context(), tenantID, id, in, "MANUAL")
+	if err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to execute report", err.Error(), user)
+		return
+	}
+
+	if strings.ToUpper(res.Format) == "CSV" {
+		w.Header().Set("Content-Type", "text/csv")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"report-%s.csv\"", id))
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(res.CSVData)
+		return
+	}
+
+	http.Redirect(w, r, "/report-builder", http.StatusSeeOther)
+}
+
+// WebCreateSchedule handles automated cron distribution setup.
+func (h *ReportBuilderHandlers) WebCreateSchedule(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+
+	if err := r.ParseForm(); err != nil {
+		h.renderError(w, http.StatusBadRequest, "Invalid form submission", err.Error(), user)
+		return
+	}
+
+	reportID := strings.TrimSpace(r.FormValue("report_id"))
+	name := strings.TrimSpace(r.FormValue("name"))
+	frequency := strings.ToUpper(strings.TrimSpace(r.FormValue("frequency")))
+	if frequency == "" {
+		frequency = "DAILY"
+	}
+
+	cronExpr := "0 8 * * *"
+	switch frequency {
+	case "WEEKLY":
+		cronExpr = "0 8 * * 1"
+	case "MONTHLY":
+		cronExpr = "0 8 1 * *"
+	}
+
+	recipientStr := strings.TrimSpace(r.FormValue("recipients"))
+	var recipients []string
+	for _, rec := range strings.Split(recipientStr, ",") {
+		rec = strings.TrimSpace(rec)
+		if rec != "" {
+			recipients = append(recipients, rec)
+		}
+	}
+	if len(recipients) == 0 {
+		recipients = []string{"fleetops@flyfleet.io"}
+	}
+
+	userID := "system"
+	if user != nil && user.UserID != "" {
+		userID = user.UserID
+	}
+
+	in := reportbuilder.CreateScheduleInput{
+		ReportID:       reportID,
+		Name:           name,
+		Frequency:      frequency,
+		CronExpression: cronExpr,
+		Format:         "CSV",
+		Channel:        "EMAIL",
+		Recipients:     recipients,
+	}
+
+	if _, err := h.service().CreateSchedule(r.Context(), tenantID, userID, in); err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to create report schedule", err.Error(), user)
+		return
+	}
+
+	http.Redirect(w, r, "/report-builder", http.StatusSeeOther)
+}
+
 func writeReportBuilderJSON(w http.ResponseWriter, code int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)

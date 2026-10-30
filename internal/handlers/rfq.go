@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -49,6 +50,313 @@ func (h *RFQHandlers) RegisterAPIRoutes(r chi.Router) {
 		r.With(middleware.RequirePermission(h.AuthSrv, "loadboard", "write")).Post("/counters/{counterId}/accept", h.APIAcceptCounterOffer)
 		r.With(middleware.RequirePermission(h.AuthSrv, "loadboard", "write")).Post("/counters/{counterId}/reject", h.APIRejectCounterOffer)
 	})
+}
+
+// Routes mounts the RFQ Lane Bidding web UI handlers at /rfq.
+func (h *RFQHandlers) Routes(r chi.Router) {
+	r.With(middleware.RequirePermission(h.AuthSrv, "rfq", "read")).Get("/", h.WebRFQDashboard)
+	r.With(middleware.RequirePermission(h.AuthSrv, "rfq", "write")).Post("/", h.WebCreateRFQ)
+	r.With(middleware.RequirePermission(h.AuthSrv, "rfq", "write")).Post("/{id}/close", h.WebCloseRFQ)
+	r.With(middleware.RequirePermission(h.AuthSrv, "rfq", "write")).Post("/{id}/cancel", h.WebCancelRFQ)
+	r.With(middleware.RequirePermission(h.AuthSrv, "rfq", "write")).Post("/{id}/bids", h.WebSubmitBid)
+	r.With(middleware.RequirePermission(h.AuthSrv, "rfq", "write")).Post("/{id}/award/{bidId}", h.WebAwardRFQ)
+	r.With(middleware.RequirePermission(h.AuthSrv, "rfq", "write")).Post("/{id}/bids/{bidId}/counter", h.WebSubmitCounterOffer)
+	r.With(middleware.RequirePermission(h.AuthSrv, "rfq", "write")).Post("/counters/{counterId}/accept", h.WebAcceptCounterOffer)
+	r.With(middleware.RequirePermission(h.AuthSrv, "rfq", "write")).Post("/counters/{counterId}/reject", h.WebRejectCounterOffer)
+}
+
+// WebRFQDashboard renders active lane procurement contracts, bidding board, and rate negotiations.
+func (h *RFQHandlers) WebRFQDashboard(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+
+	statusParam := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("status")))
+	var statusFilter *rfq.RFQStatus
+	if statusParam != "" {
+		st := rfq.RFQStatus(statusParam)
+		statusFilter = &st
+	}
+
+	search := r.URL.Query().Get("search")
+	rfqs, _, _ := h.service().ListRFQs(r.Context(), tenantID, rfq.ListRFQsFilter{
+		Status: statusFilter,
+		Search: search,
+		Limit:  50,
+	})
+
+	// Rollup counts
+	var openCount, awardedCount, totalBids int
+	for _, q := range rfqs {
+		if q.Status == rfq.StatusOpen || q.Status == rfq.StatusUnderNegotiation {
+			openCount++
+		} else if q.Status == rfq.StatusAwarded {
+			awardedCount++
+		}
+		totalBids += q.BidsCount
+	}
+
+	selectedRFQID := r.URL.Query().Get("rfq_id")
+	var selectedRFQ *rfq.RFQ
+	var selectedBids []rfq.RFQBid
+	if len(rfqs) > 0 {
+		if selectedRFQID == "" {
+			selectedRFQID = rfqs[0].ID
+		}
+		for i := range rfqs {
+			if rfqs[i].ID == selectedRFQID {
+				selectedRFQ = &rfqs[i]
+				break
+			}
+		}
+		if selectedRFQ != nil {
+			selectedBids, _ = h.service().ListBids(r.Context(), tenantID, selectedRFQ.ID)
+		}
+	}
+
+	data := PageData{
+		Title: "RFQ Lane Bidding",
+		User:  user,
+		Extra: map[string]interface{}{
+			"RFQs":         rfqs,
+			"SelectedRFQ":  selectedRFQ,
+			"SelectedBids": selectedBids,
+			"OpenCount":    openCount,
+			"AwardedCount": awardedCount,
+			"TotalBids":    totalBids,
+			"StatusParam":  statusParam,
+			"Search":       search,
+		},
+	}
+
+	h.renderPage(w, r, "rfq_dashboard.html", data)
+}
+
+// WebCreateRFQ creates a new spot/contract lane bidding tender.
+func (h *RFQHandlers) WebCreateRFQ(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+
+	if err := r.ParseForm(); err != nil {
+		h.renderError(w, http.StatusBadRequest, "Invalid form submission", err.Error(), user)
+		return
+	}
+
+	title := strings.TrimSpace(r.FormValue("title"))
+	origin := strings.TrimSpace(r.FormValue("origin_city"))
+	dest := strings.TrimSpace(r.FormValue("destination_city"))
+	vType := strings.TrimSpace(r.FormValue("vehicle_type_required"))
+
+	targetRate, _ := strconv.ParseFloat(r.FormValue("target_rate"), 64)
+	maxRate, _ := strconv.ParseFloat(r.FormValue("max_acceptable_rate"), 64)
+	if maxRate < targetRate {
+		maxRate = targetRate * 1.15
+	}
+	cargoWeight, _ := strconv.ParseFloat(r.FormValue("cargo_weight_tons"), 64)
+
+	now := time.Now()
+	pickup := now.Add(48 * time.Hour)
+	delivery := now.Add(96 * time.Hour)
+	bidDeadline := now.Add(24 * time.Hour)
+
+	userID := "shipper"
+	if user != nil && user.UserID != "" {
+		userID = user.UserID
+	}
+
+	in := rfq.CreateRFQInput{
+		Title:               title,
+		OriginCity:          origin,
+		DestinationCity:     dest,
+		VehicleTypeRequired: vType,
+		CargoType:           strings.TrimSpace(r.FormValue("cargo_type")),
+		CargoWeightTons:     cargoWeight,
+		TargetRate:          targetRate,
+		MaxAcceptableRate:   maxRate,
+		PickupDate:          pickup,
+		DeliveryDeadline:    delivery,
+		BidDeadline:         bidDeadline,
+	}
+
+	if _, err := h.service().CreateRFQ(r.Context(), tenantID, userID, in); err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to publish RFQ", err.Error(), user)
+		return
+	}
+
+	http.Redirect(w, r, "/rfq", http.StatusSeeOther)
+}
+
+// WebCloseRFQ manually closes bidding on an RFQ.
+func (h *RFQHandlers) WebCloseRFQ(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	id := chi.URLParam(r, "id")
+	user, _ := h.getUserFromContext(r)
+
+	if err := h.service().CloseRFQ(r.Context(), tenantID, id); err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to close RFQ", err.Error(), user)
+		return
+	}
+
+	http.Redirect(w, r, "/rfq", http.StatusSeeOther)
+}
+
+// WebCancelRFQ cancels an RFQ tender.
+func (h *RFQHandlers) WebCancelRFQ(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	id := chi.URLParam(r, "id")
+	user, _ := h.getUserFromContext(r)
+
+	if err := h.service().CancelRFQ(r.Context(), tenantID, id); err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to cancel RFQ", err.Error(), user)
+		return
+	}
+
+	http.Redirect(w, r, "/rfq", http.StatusSeeOther)
+}
+
+// WebSubmitBid submits a carrier rate bid on an open RFQ.
+func (h *RFQHandlers) WebSubmitBid(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	id := chi.URLParam(r, "id")
+	user, _ := h.getUserFromContext(r)
+
+	if err := r.ParseForm(); err != nil {
+		h.renderError(w, http.StatusBadRequest, "Invalid form submission", err.Error(), user)
+		return
+	}
+
+	bidAmount, _ := strconv.ParseFloat(r.FormValue("bid_amount"), 64)
+	transitDays, _ := strconv.Atoi(r.FormValue("transit_days"))
+	if transitDays <= 0 {
+		transitDays = 2
+	}
+	vehs, _ := strconv.Atoi(r.FormValue("vehicles_available"))
+	if vehs <= 0 {
+		vehs = 1
+	}
+
+	carrierName := strings.TrimSpace(r.FormValue("carrier_name"))
+	if carrierName == "" {
+		carrierName = "Partner Carrier"
+	}
+
+	carrierID := "carrier-01"
+	if user != nil && user.UserID != "" {
+		carrierID = user.UserID
+	}
+
+	in := rfq.SubmitRFQBidInput{
+		CarrierID:         carrierID,
+		CarrierName:       carrierName,
+		BidAmount:         bidAmount,
+		TransitDays:       transitDays,
+		VehiclesAvailable: vehs,
+		Remarks:           strings.TrimSpace(r.FormValue("remarks")),
+	}
+
+	if _, err := h.service().SubmitBid(r.Context(), tenantID, id, in); err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to submit bid", err.Error(), user)
+		return
+	}
+
+	http.Redirect(w, r, "/rfq?rfq_id="+id, http.StatusSeeOther)
+}
+
+// WebAwardRFQ accepts a carrier bid and awards the contract.
+func (h *RFQHandlers) WebAwardRFQ(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	id := chi.URLParam(r, "id")
+	bidID := chi.URLParam(r, "bidId")
+	user, _ := h.getUserFromContext(r)
+
+	userID := "shipper"
+	if user != nil && user.UserID != "" {
+		userID = user.UserID
+	}
+
+	if err := h.service().AwardRFQ(r.Context(), tenantID, id, bidID, userID); err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to award RFQ", err.Error(), user)
+		return
+	}
+
+	http.Redirect(w, r, "/rfq?rfq_id="+id, http.StatusSeeOther)
+}
+
+// WebSubmitCounterOffer submits a negotiated rate counter.
+func (h *RFQHandlers) WebSubmitCounterOffer(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	id := chi.URLParam(r, "id")
+	bidID := chi.URLParam(r, "bidId")
+	user, _ := h.getUserFromContext(r)
+
+	if err := r.ParseForm(); err != nil {
+		h.renderError(w, http.StatusBadRequest, "Invalid form submission", err.Error(), user)
+		return
+	}
+
+	counterRate, _ := strconv.ParseFloat(r.FormValue("counter_rate"), 64)
+	userID := "shipper"
+	userName := "Fleet Dispatcher"
+	if user != nil {
+		if user.UserID != "" {
+			userID = user.UserID
+		}
+		if user.Name != "" {
+			userName = user.Name
+		}
+	}
+
+	in := rfq.SubmitCounterOfferInput{
+		EntityType:    rfq.EntityRFQ,
+		RFQID:         &id,
+		SenderRole:    rfq.RoleShipper,
+		OfferedAmount: counterRate,
+		Remarks:       strings.TrimSpace(r.FormValue("remarks")),
+	}
+
+	if _, err := h.service().SubmitCounterOffer(r.Context(), tenantID, bidID, userID, userName, in); err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to submit counter offer", err.Error(), user)
+		return
+	}
+
+	http.Redirect(w, r, "/rfq?rfq_id="+id, http.StatusSeeOther)
+}
+
+// WebAcceptCounterOffer accepts a negotiated counter offer.
+func (h *RFQHandlers) WebAcceptCounterOffer(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	counterID := chi.URLParam(r, "counterId")
+	user, _ := h.getUserFromContext(r)
+
+	userID := "shipper"
+	if user != nil && user.UserID != "" {
+		userID = user.UserID
+	}
+
+	if err := h.service().AcceptCounterOffer(r.Context(), tenantID, counterID, userID); err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to accept counter offer", err.Error(), user)
+		return
+	}
+
+	http.Redirect(w, r, "/rfq", http.StatusSeeOther)
+}
+
+// WebRejectCounterOffer rejects a negotiated counter offer.
+func (h *RFQHandlers) WebRejectCounterOffer(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	counterID := chi.URLParam(r, "counterId")
+	user, _ := h.getUserFromContext(r)
+
+	userID := "shipper"
+	if user != nil && user.UserID != "" {
+		userID = user.UserID
+	}
+
+	if err := h.service().RejectCounterOffer(r.Context(), tenantID, counterID, userID); err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to reject counter offer", err.Error(), user)
+		return
+	}
+
+	http.Redirect(w, r, "/rfq", http.StatusSeeOther)
 }
 
 func writeRFQJSON(w http.ResponseWriter, code int, v interface{}) {

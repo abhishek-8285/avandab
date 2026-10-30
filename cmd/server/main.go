@@ -1563,6 +1563,11 @@ func main() {
 			r.Route("/ev", app.EV.Routes)
 			r.Route("/cold-chain", app.ColdChain.Routes)
 			r.Route("/video", app.Video.Routes)
+			r.Route("/tyres", app.Tyres.Routes)
+			r.Route("/inventory", app.Inventory.Routes)
+			r.Route("/freight-audit", app.FreightAudit.Routes)
+			r.Route("/report-builder", app.ReportBuilder.Routes)
+			r.Route("/rfq", app.RFQ.Routes)
 
 			// Telemetry device registry / provisioning / quarantine admin
 			if cfg.Telemetry.Enabled {

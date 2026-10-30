@@ -1,0 +1,376 @@
+{{template "page_header.html" (dict "Title" "RFQ Lane Bidding" "Subtitle" "Spot and contract lane procurement, carrier bidding boards, counter-offer rate negotiations, and awards")}}
+
+<!-- KPI Row -->
+<div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
+    <div class="group relative overflow-hidden bg-gradient-to-br from-indigo-600 to-blue-700 rounded-xl shadow-md p-4 text-white hover:shadow-lg transition">
+        <div class="flex items-center gap-4">
+            <div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center shrink-0">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><path d="m10 15 5-3-5-3v6Z"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-semibold tabular-nums leading-none">{{.Extra.OpenCount}}</div>
+                <div class="text-xs font-medium text-white/80 mt-1">Open Lane RFQs</div>
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">{{.Extra.AwardedCount}}</div>
+            <div class="text-xs text-secondary font-medium mt-1">Awarded Contracts</div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-sky-500/10 border border-sky-500/20 grid place-items-center text-sky-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">{{.Extra.TotalBids}}</div>
+            <div class="text-xs text-secondary font-medium mt-1">Total Carrier Bids</div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 grid place-items-center text-purple-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">{{if .Extra.RFQs}}{{len .Extra.RFQs}}{{else}}0{{end}}</div>
+            <div class="text-xs text-secondary font-medium mt-1">Active Tenders</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Actions -->
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="/rfq" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.StatusParam ""}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                All Tenders
+            </a>
+            <a href="/rfq?status=OPEN" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.StatusParam "OPEN"}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                Open Bidding
+            </a>
+            <a href="/rfq?status=UNDER_NEGOTIATION" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.StatusParam "UNDER_NEGOTIATION"}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                Under Negotiation
+            </a>
+            <a href="/rfq?status=AWARDED" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.StatusParam "AWARDED"}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                Awarded
+            </a>
+            <a href="/rfq?status=CLOSED" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.StatusParam "CLOSED"}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                Closed
+            </a>
+        </div>
+        <div>
+            <button onclick="document.getElementById('createRFQModal').showModal()" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-primary text-on-primary hover:bg-primary-hover shadow-xs transition flex items-center gap-1.5">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Publish Lane RFQ
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Main Split: Tender List & Bid Board -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+    <!-- Tender List (5 cols) -->
+    <div class="lg:col-span-5 bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden flex flex-col">
+        <div class="p-4 border-b border-border-subtle flex items-center justify-between">
+            <h3 class="text-base font-semibold text-on-surface">Lane Procurement Tenders</h3>
+            <span class="text-xs font-mono bg-surface-container px-2.5 py-1 rounded-full text-secondary font-semibold">
+                {{if .Extra.RFQs}}{{len .Extra.RFQs}}{{else}}0{{end}} Tenders
+            </span>
+        </div>
+        <div class="overflow-y-auto max-h-[600px] divide-y divide-border-subtle">
+            {{if .Extra.RFQs}}
+            {{range .Extra.RFQs}}
+            <a href="/rfq?rfq_id={{.ID}}" class="block p-4 hover:bg-surface-container/50 transition {{if and $.Extra.SelectedRFQ (eq $.Extra.SelectedRFQ.ID .ID)}}bg-primary/5 border-l-4 border-primary{{end}}">
+                <div class="flex items-center justify-between gap-2 mb-1.5">
+                    <span class="font-mono text-xs font-semibold text-primary">{{.RFQNumber}}</span>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold
+                        {{if eq .Status "OPEN"}}bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800
+                        {{else if eq .Status "UNDER_NEGOTIATION"}}bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800
+                        {{else if eq .Status "AWARDED"}}bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800
+                        {{else}}bg-surface-container text-secondary{{end}}">
+                        {{.Status}}
+                    </span>
+                </div>
+                <div class="text-sm font-semibold text-on-surface mb-1">{{.Title}}</div>
+                <div class="flex items-center gap-1.5 text-xs text-secondary font-medium mb-2">
+                    <span>{{.OriginCity}}</span>
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                    <span>{{.DestinationCity}}</span>
+                </div>
+                <div class="flex items-center justify-between text-xs pt-2 border-t border-border-subtle text-secondary">
+                    <span>{{.VehicleTypeRequired}}</span>
+                    <span class="font-mono font-semibold text-on-surface">Target: ₹{{printf "%.0f" .TargetRate}}</span>
+                </div>
+            </a>
+            {{end}}
+            {{else}}
+            <div class="p-8 text-center text-xs text-secondary">
+                No RFQs found matching filter criteria.
+            </div>
+            {{end}}
+        </div>
+    </div>
+
+    <!-- Selected RFQ Details & Carrier Bidding Board (7 cols) -->
+    <div class="lg:col-span-7 bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden flex flex-col">
+        {{if .Extra.SelectedRFQ}}
+        <div class="p-5 border-b border-border-subtle">
+            <div class="flex items-start justify-between gap-4 mb-3">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="font-mono text-xs font-semibold text-primary">{{.Extra.SelectedRFQ.RFQNumber}}</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                            {{.Extra.SelectedRFQ.Status}}
+                        </span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-on-surface">{{.Extra.SelectedRFQ.Title}}</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    {{if or (eq .Extra.SelectedRFQ.Status "OPEN") (eq .Extra.SelectedRFQ.Status "UNDER_NEGOTIATION")}}
+                    <button onclick="document.getElementById('submitBidModal').showModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary text-on-primary hover:bg-primary-hover transition">
+                        + Submit Bid
+                    </button>
+                    <form method="POST" action="/rfq/{{.Extra.SelectedRFQ.ID}}/close">
+                        <button type="submit" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface border border-border-subtle text-secondary hover:text-on-surface transition">
+                            Close
+                        </button>
+                    </form>
+                    {{end}}
+                </div>
+            </div>
+
+            <!-- Route and Rate Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs bg-surface-container/40 p-3 rounded-xl border border-border-subtle">
+                <div>
+                    <div class="text-[11px] text-secondary">Lane Route</div>
+                    <div class="font-medium text-on-surface mt-0.5">{{.Extra.SelectedRFQ.OriginCity}} → {{.Extra.SelectedRFQ.DestinationCity}}</div>
+                </div>
+                <div>
+                    <div class="text-[11px] text-secondary">Fleet Spec</div>
+                    <div class="font-medium text-on-surface mt-0.5">{{.Extra.SelectedRFQ.VehicleTypeRequired}} ({{printf "%.1f" .Extra.SelectedRFQ.CargoWeightTons}}T)</div>
+                </div>
+                <div>
+                    <div class="text-[11px] text-secondary">Target Rate</div>
+                    <div class="font-mono font-semibold text-emerald-600 mt-0.5">₹{{printf "%.0f" .Extra.SelectedRFQ.TargetRate}}</div>
+                </div>
+                <div>
+                    <div class="text-[11px] text-secondary">Ceiling Rate</div>
+                    <div class="font-mono font-medium text-secondary mt-0.5">₹{{printf "%.0f" .Extra.SelectedRFQ.MaxAcceptableRate}}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Carrier Bids Board -->
+        <div class="p-5 flex-1 flex flex-col">
+            <div class="flex items-center justify-between mb-3">
+                <h4 class="text-sm font-semibold text-on-surface">Carrier Quotations & Bids</h4>
+                <span class="text-xs font-mono text-secondary">
+                    {{if .Extra.SelectedBids}}{{len .Extra.SelectedBids}}{{else}}0{{end}} Bids Received
+                </span>
+            </div>
+
+            <div class="overflow-x-auto flex-1">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-surface-container border-b border-border-subtle text-secondary uppercase font-semibold">
+                        <tr>
+                            <th class="px-3 py-2.5">Carrier</th>
+                            <th class="px-3 py-2.5 text-right">Bid Amount</th>
+                            <th class="px-3 py-2.5 text-right">Transit</th>
+                            <th class="px-3 py-2.5 text-center">Status</th>
+                            <th class="px-3 py-2.5 text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border-subtle">
+                        {{if .Extra.SelectedBids}}
+                        {{range .Extra.SelectedBids}}
+                        <tr class="hover:bg-surface-container/50 transition">
+                            <td class="px-3 py-3">
+                                <div class="font-medium text-on-surface">{{.CarrierName}}</div>
+                                {{if .Remarks}}<div class="text-[11px] text-secondary line-clamp-1">{{.Remarks}}</div>{{end}}
+                            </td>
+                            <td class="px-3 py-3 text-right font-mono font-semibold {{if le .BidAmount $.Extra.SelectedRFQ.TargetRate}}text-emerald-600{{else}}text-on-surface{{end}}">
+                                ₹{{printf "%.0f" .BidAmount}}
+                            </td>
+                            <td class="px-3 py-3 text-right font-mono text-secondary">
+                                {{.TransitDays}} days
+                            </td>
+                            <td class="px-3 py-3 text-center">
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold
+                                    {{if eq .Status "ACCEPTED"}}bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300
+                                    {{else if eq .Status "COUNTER_OFFERED"}}bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300
+                                    {{else if eq .Status "SUBMITTED"}}bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-300
+                                    {{else}}bg-surface-container text-secondary{{end}}">
+                                    {{.Status}}
+                                </span>
+                            </td>
+                            <td class="px-3 py-3 text-right">
+                                {{if and (eq .Status "SUBMITTED") (ne $.Extra.SelectedRFQ.Status "AWARDED")}}
+                                <div class="inline-flex items-center gap-1.5">
+                                    <form method="POST" action="/rfq/{{$.Extra.SelectedRFQ.ID}}/award/{{.ID}}">
+                                        <button type="submit" class="px-2.5 py-1 rounded text-[11px] font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition">
+                                            Award
+                                        </button>
+                                    </form>
+                                    <button onclick="openCounterModal('{{$.Extra.SelectedRFQ.ID}}', '{{.ID}}', '{{.BidAmount}}')" class="px-2.5 py-1 rounded text-[11px] font-semibold bg-amber-100 text-amber-800 hover:bg-amber-200 transition">
+                                        Counter
+                                    </button>
+                                </div>
+                                {{else if eq .Status "ACCEPTED"}}
+                                <span class="font-semibold text-emerald-600 text-[11px]">Contract Awarded</span>
+                                {{else}}
+                                <span class="text-secondary text-[11px]">-</span>
+                                {{end}}
+                            </td>
+                        </tr>
+                        {{end}}
+                        {{else}}
+                        <tr>
+                            <td colspan="5" class="px-3 py-8 text-center text-secondary">
+                                No carrier quotations received for this lane yet.
+                            </td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {{else}}
+        <div class="p-12 text-center text-xs text-secondary flex-1 flex flex-col items-center justify-center">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-8 h-8 text-secondary/40 mb-2"><circle cx="12" cy="12" r="10"/><path d="m10 15 5-3-5-3v6Z"/></svg>
+            Select a lane tender on the left or publish a new RFQ to view carrier bids and negotiations.
+        </div>
+        {{end}}
+    </div>
+</div>
+
+<!-- Modal: Publish Lane RFQ -->
+<dialog id="createRFQModal" class="p-0 rounded-2xl bg-surface-container-lowest border border-border-subtle shadow-xl backdrop:bg-black/50 max-w-lg w-full">
+    <form method="POST" action="/rfq" class="p-6">
+        <div class="flex items-center justify-between pb-4 border-b border-border-subtle mb-4">
+            <h3 class="text-base font-semibold text-on-surface">Publish Lane Procurement RFQ</h3>
+            <button type="button" onclick="document.getElementById('createRFQModal').close()" class="text-secondary hover:text-on-surface">✕</button>
+        </div>
+        <div class="space-y-4 text-xs">
+            <div>
+                <label class="block font-medium text-secondary mb-1">Tender Title *</label>
+                <input type="text" name="title" required placeholder="e.g. Daily Dedicated Haul - Delhi to Mumbai" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Origin Hub / City *</label>
+                    <input type="text" name="origin_city" required placeholder="e.g. Delhi NCR" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Destination Hub / City *</label>
+                    <input type="text" name="destination_city" required placeholder="e.g. Mumbai Port" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Vehicle Specification *</label>
+                    <input type="text" name="vehicle_type_required" required placeholder="e.g. 32ft MXL Container" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Cargo Weight (Tons)</label>
+                    <input type="number" step="0.1" name="cargo_weight_tons" value="15.0" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Target Freight Rate (₹) *</label>
+                    <input type="number" step="1" name="target_rate" required value="48000" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Ceiling Max Rate (₹) *</label>
+                    <input type="number" step="1" name="max_acceptable_rate" required value="54000" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+            </div>
+            <div>
+                <label class="block font-medium text-secondary mb-1">Cargo Nature & Handling Instructions</label>
+                <input type="text" name="cargo_type" placeholder="e.g. FMCG Box Pallets, Fragile Electronics" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" onclick="document.getElementById('createRFQModal').close()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-surface border border-border-subtle text-secondary hover:text-on-surface">Cancel</button>
+            <button type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold bg-primary text-on-primary hover:bg-primary-hover shadow-xs">Publish Tender</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- Modal: Submit Carrier Bid -->
+{{if .Extra.SelectedRFQ}}
+<dialog id="submitBidModal" class="p-0 rounded-2xl bg-surface-container-lowest border border-border-subtle shadow-xl backdrop:bg-black/50 max-w-md w-full">
+    <form method="POST" action="/rfq/{{.Extra.SelectedRFQ.ID}}/bids" class="p-6">
+        <div class="flex items-center justify-between pb-4 border-b border-border-subtle mb-4">
+            <h3 class="text-base font-semibold text-on-surface">Submit Carrier Rate Quotation</h3>
+            <button type="button" onclick="document.getElementById('submitBidModal').close()" class="text-secondary hover:text-on-surface">✕</button>
+        </div>
+        <div class="space-y-4 text-xs">
+            <div>
+                <label class="block font-medium text-secondary mb-1">Transporter / Carrier Name *</label>
+                <input type="text" name="carrier_name" required placeholder="e.g. All-India Logistics Corp" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Bid Rate Amount (₹) *</label>
+                    <input type="number" step="1" name="bid_amount" required value="{{printf "%.0f" .Extra.SelectedRFQ.TargetRate}}" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Committed Transit (Days)</label>
+                    <input type="number" step="1" name="transit_days" value="2" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+            </div>
+            <div>
+                <label class="block font-medium text-secondary mb-1">Vehicles Ready to Deploy</label>
+                <input type="number" step="1" name="vehicles_available" value="2" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+            </div>
+            <div>
+                <label class="block font-medium text-secondary mb-1">Terms & Carrier Remarks</label>
+                <input type="text" name="remarks" placeholder="Fast-tag toll included, loading 3 hours free" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" onclick="document.getElementById('submitBidModal').close()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-surface border border-border-subtle text-secondary hover:text-on-surface">Cancel</button>
+            <button type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold bg-primary text-on-primary hover:bg-primary-hover shadow-xs">Place Bid</button>
+        </div>
+    </form>
+</dialog>
+{{end}}
+
+<!-- Modal: Counter Offer -->
+<dialog id="counterModal" class="p-0 rounded-2xl bg-surface-container-lowest border border-border-subtle shadow-xl backdrop:bg-black/50 max-w-sm w-full">
+    <form id="counterForm" method="POST" action="" class="p-6">
+        <div class="flex items-center justify-between pb-4 border-b border-border-subtle mb-4">
+            <h3 class="text-base font-semibold text-on-surface">Propose Counter Rate</h3>
+            <button type="button" onclick="document.getElementById('counterModal').close()" class="text-secondary hover:text-on-surface">✕</button>
+        </div>
+        <div class="space-y-4 text-xs">
+            <div>
+                <label class="block font-medium text-secondary mb-1">Counter-Offer Rate (₹) *</label>
+                <input type="number" step="1" id="counterRateInput" name="counter_rate" required class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+            </div>
+            <div>
+                <label class="block font-medium text-secondary mb-1">Negotiation Justification</label>
+                <textarea name="remarks" rows="2" placeholder="e.g. Higher guaranteed volume or immediate payment terms" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary"></textarea>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" onclick="document.getElementById('counterModal').close()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-surface border border-border-subtle text-secondary hover:text-on-surface">Cancel</button>
+            <button type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold bg-amber-600 text-white hover:bg-amber-700 shadow-xs">Send Counter</button>
+        </div>
+    </form>
+</dialog>
+
+<script>
+function openCounterModal(rfqId, bidId, currentBid) {
+    const f = document.getElementById('counterForm');
+    f.action = '/rfq/' + rfqId + '/bids/' + bidId + '/counter';
+    const rate = parseFloat(currentBid);
+    document.getElementById('counterRateInput').value = Math.round(rate * 0.95);
+    document.getElementById('counterModal').showModal();
+}
+</script>

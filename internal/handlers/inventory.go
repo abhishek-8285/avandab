@@ -45,6 +45,260 @@ func (h *InventoryHandlers) RegisterAPIRoutes(r chi.Router) {
 	})
 }
 
+// Routes mounts the Inventory management web UI handlers at /inventory.
+func (h *InventoryHandlers) Routes(r chi.Router) {
+	r.With(middleware.RequirePermission(h.AuthSrv, "inventory", "read")).Get("/", h.WebInventoryDashboard)
+	r.With(middleware.RequirePermission(h.AuthSrv, "inventory", "write")).Post("/parts", h.WebCreatePart)
+	r.With(middleware.RequirePermission(h.AuthSrv, "inventory", "write")).Post("/stocks/adjust", h.WebAdjustStock)
+	r.With(middleware.RequirePermission(h.AuthSrv, "inventory", "write")).Post("/issue", h.WebIssuePart)
+	r.With(middleware.RequirePermission(h.AuthSrv, "inventory", "write")).Post("/return", h.WebReturnPart)
+}
+
+// WebInventoryDashboard renders the spare parts catalog, stock balance, and ledger.
+func (h *InventoryHandlers) WebInventoryDashboard(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+
+	summary, err := h.service().GetSummary(r.Context(), tenantID)
+	if err != nil {
+		summary = &inventory.InventorySummary{}
+	}
+
+	categoryFilter := r.URL.Query().Get("category")
+	searchFilter := r.URL.Query().Get("search")
+
+	parts, _, err := h.service().ListParts(r.Context(), inventory.PartFilter{
+		TenantID: tenantID,
+		Category: categoryFilter,
+		Search:   searchFilter,
+		Limit:    100,
+	})
+	if err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to load parts", err.Error(), user)
+		return
+	}
+
+	stocks, _, _ := h.service().ListStocks(r.Context(), inventory.StockFilter{
+		TenantID: tenantID,
+		Limit:    100,
+	})
+
+	transactions, _, _ := h.service().ListTransactions(r.Context(), inventory.TransactionFilter{
+		TenantID: tenantID,
+		Limit:    25,
+	})
+
+	// Fetch facilities for stock operations
+	rowsF, err := h.DB.QueryContext(r.Context(), `SELECT id, name, facility_code FROM facilities WHERE tenant_id = $1 ORDER BY name ASC`, tenantID)
+	var facilities []map[string]string
+	if err == nil {
+		defer func() { _ = rowsF.Close() }()
+		for rowsF.Next() {
+			var id, name, code string
+			if err := rowsF.Scan(&id, &name, &code); err == nil {
+				facilities = append(facilities, map[string]string{
+					"ID":   id,
+					"Name": name,
+					"Code": code,
+				})
+			}
+		}
+	}
+
+	// Fetch vehicles for issue/return
+	rowsV, err := h.DB.QueryContext(r.Context(), `SELECT id, vehicle_number, registration_number FROM vehicles WHERE tenant_id = $1 ORDER BY vehicle_number ASC`, tenantID)
+	var vehicles []map[string]string
+	if err == nil {
+		defer func() { _ = rowsV.Close() }()
+		for rowsV.Next() {
+			var id, vNum, regNum string
+			if err := rowsV.Scan(&id, &vNum, &regNum); err == nil {
+				vehicles = append(vehicles, map[string]string{
+					"ID":                 id,
+					"VehicleNumber":      vNum,
+					"RegistrationNumber": regNum,
+				})
+			}
+		}
+	}
+
+	data := PageData{
+		Title: "Parts & Spares Inventory",
+		User:  user,
+		Extra: map[string]interface{}{
+			"Summary":        summary,
+			"Parts":          parts,
+			"Stocks":         stocks,
+			"Transactions":   transactions,
+			"Facilities":     facilities,
+			"Vehicles":       vehicles,
+			"CategoryFilter": categoryFilter,
+			"Search":         searchFilter,
+		},
+	}
+
+	h.renderPage(w, r, "inventory_dashboard.html", data)
+}
+
+// WebCreatePart creates a new spare part SKU in the catalog.
+func (h *InventoryHandlers) WebCreatePart(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+
+	if err := r.ParseForm(); err != nil {
+		h.renderError(w, http.StatusBadRequest, "Invalid form submission", err.Error(), user)
+		return
+	}
+
+	partNum := strings.TrimSpace(r.FormValue("part_number"))
+	name := strings.TrimSpace(r.FormValue("name"))
+	if partNum == "" || name == "" {
+		h.renderError(w, http.StatusBadRequest, "Part Number and Name required", "Part number and name cannot be blank", user)
+		return
+	}
+
+	cat := inventory.PartCategory(r.FormValue("category"))
+	if !inventory.IsValidCategory(cat) {
+		cat = inventory.CategoryGeneral
+	}
+
+	uom := inventory.PartUOM(r.FormValue("uom"))
+	if !inventory.IsValidUOM(uom) {
+		uom = inventory.UOMPieces
+	}
+
+	cost, _ := strconv.ParseFloat(r.FormValue("cost_price"), 64)
+	selling, _ := strconv.ParseFloat(r.FormValue("selling_price"), 64)
+	minStock, _ := strconv.ParseFloat(r.FormValue("min_stock_level"), 64)
+	reorderQty, _ := strconv.ParseFloat(r.FormValue("reorder_quantity"), 64)
+
+	in := inventory.CreatePartInput{
+		PartNumber:       partNum,
+		Name:             name,
+		Category:         cat,
+		Description:      strings.TrimSpace(r.FormValue("description")),
+		UOM:              uom,
+		CostPrice:        cost,
+		SellingPrice:     selling,
+		MinStockLevel:    &minStock,
+		ReorderQuantity:  &reorderQty,
+		OEMBrand:         strings.TrimSpace(r.FormValue("oem_brand")),
+		CompatibleModels: strings.TrimSpace(r.FormValue("compatible_models")),
+	}
+
+	if _, err := h.service().CreatePart(r.Context(), tenantID, in); err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to create part", err.Error(), user)
+		return
+	}
+
+	http.Redirect(w, r, "/inventory", http.StatusSeeOther)
+}
+
+// WebAdjustStock handles manual physical count reconciliation.
+func (h *InventoryHandlers) WebAdjustStock(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+
+	if err := r.ParseForm(); err != nil {
+		h.renderError(w, http.StatusBadRequest, "Invalid form submission", err.Error(), user)
+		return
+	}
+
+	partID := strings.TrimSpace(r.FormValue("part_id"))
+	facilityID := strings.TrimSpace(r.FormValue("facility_id"))
+	newQty, _ := strconv.ParseFloat(r.FormValue("new_quantity_on_hand"), 64)
+	reason := strings.TrimSpace(r.FormValue("reason"))
+
+	performer := "Store Keeper"
+	if user != nil && user.UserID != "" {
+		performer = user.UserID
+	}
+
+	in := inventory.AdjustStockInput{
+		PartID:            partID,
+		FacilityID:        facilityID,
+		NewQuantityOnHand: newQty,
+		Reason:            reason,
+		PerformedBy:       performer,
+		Notes:             strings.TrimSpace(r.FormValue("notes")),
+	}
+
+	if _, err := h.service().AdjustStock(r.Context(), tenantID, in); err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to adjust stock", err.Error(), user)
+		return
+	}
+
+	http.Redirect(w, r, "/inventory", http.StatusSeeOther)
+}
+
+// WebIssuePart issues spares to a vehicle or work order.
+func (h *InventoryHandlers) WebIssuePart(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+
+	if err := r.ParseForm(); err != nil {
+		h.renderError(w, http.StatusBadRequest, "Invalid form submission", err.Error(), user)
+		return
+	}
+
+	qty, _ := strconv.ParseFloat(r.FormValue("quantity"), 64)
+	performer := "Store Keeper"
+	if user != nil && user.UserID != "" {
+		performer = user.UserID
+	}
+
+	in := inventory.IssuePartInput{
+		PartID:      strings.TrimSpace(r.FormValue("part_id")),
+		FacilityID:  strings.TrimSpace(r.FormValue("facility_id")),
+		Quantity:    qty,
+		VehicleID:   strings.TrimSpace(r.FormValue("vehicle_id")),
+		WorkOrderID: strings.TrimSpace(r.FormValue("work_order_id")),
+		PerformedBy: performer,
+		Notes:       strings.TrimSpace(r.FormValue("notes")),
+	}
+
+	if _, err := h.service().IssuePart(r.Context(), tenantID, in); err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to issue part", err.Error(), user)
+		return
+	}
+
+	http.Redirect(w, r, "/inventory", http.StatusSeeOther)
+}
+
+// WebReturnPart returns unused parts back into facility stock.
+func (h *InventoryHandlers) WebReturnPart(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+
+	if err := r.ParseForm(); err != nil {
+		h.renderError(w, http.StatusBadRequest, "Invalid form submission", err.Error(), user)
+		return
+	}
+
+	qty, _ := strconv.ParseFloat(r.FormValue("quantity"), 64)
+	performer := "Store Keeper"
+	if user != nil && user.UserID != "" {
+		performer = user.UserID
+	}
+
+	in := inventory.ReturnPartInput{
+		PartID:      strings.TrimSpace(r.FormValue("part_id")),
+		FacilityID:  strings.TrimSpace(r.FormValue("facility_id")),
+		Quantity:    qty,
+		VehicleID:   strings.TrimSpace(r.FormValue("vehicle_id")),
+		WorkOrderID: strings.TrimSpace(r.FormValue("work_order_id")),
+		PerformedBy: performer,
+		Notes:       strings.TrimSpace(r.FormValue("notes")),
+	}
+
+	if _, err := h.service().ReturnPart(r.Context(), tenantID, in); err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to return part", err.Error(), user)
+		return
+	}
+
+	http.Redirect(w, r, "/inventory", http.StatusSeeOther)
+}
+
 func writeInventoryJSON(w http.ResponseWriter, code int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)

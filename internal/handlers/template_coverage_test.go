@@ -29,18 +29,23 @@ import (
 	"transport-app/internal/facility"
 	"transport-app/internal/fastag"
 	"transport-app/internal/features"
+	"transport-app/internal/freightaudit"
 	"transport-app/internal/fuel"
 	geofencedomain "transport-app/internal/geofence/domain"
+	"transport-app/internal/inventory"
 	invoiceapp "transport-app/internal/invoice/application"
 	maintenancedomain "transport-app/internal/maintenance/domain"
 	opserrors "transport-app/internal/operations/errors"
+	"transport-app/internal/reportbuilder"
 	"transport-app/internal/repository"
+	"transport-app/internal/rfq"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 	"transport-app/internal/sto"
 	"transport-app/internal/sustainability"
 	"transport-app/internal/telemetry"
 	tripapp "transport-app/internal/trip/application"
+	"transport-app/internal/tyre"
 	vehicleapp "transport-app/internal/vehicle/application"
 	"transport-app/internal/videotelematics"
 )
@@ -1393,6 +1398,247 @@ func TestAllTemplatesRender(t *testing.T) {
 			},
 			"AllVehicles": []map[string]string{
 				{"ID": "veh-cam-1", "VehicleNumber": "CAM-001", "RegistrationNumber": "DL-01-CAM-1001"},
+			},
+		}},
+		{"tyres_dashboard", "tyres_dashboard.html", map[string]interface{}{
+			"Title": "Tyre Management",
+			"User":  user,
+			"Extra": map[string]interface{}{
+				"Summary": &tyre.FleetTyreSummary{
+					TotalTyres:         10,
+					MountedCount:       6,
+					InStockCount:       4,
+					UnderRetreadCount:  0,
+					ScrappedCount:      0,
+					LowTreadCount:      1,
+					CriticalTreadCount: 0,
+					FleetAverageCPKM:   0.28,
+				},
+				"Tyres": []tyre.Tyre{
+					{
+						ID:                  "tyre-1",
+						TenantID:            "tenant-1",
+						SerialNumber:        "MRF-9901",
+						Brand:               "MRF",
+						Model:               "Steel Muscle S3C8",
+						Size:                "295/80 R22.5",
+						TyreType:            tyre.TyreTypeRadial,
+						Status:              tyre.TyreStatusMounted,
+						CurrentTreadDepthMM: 11.2,
+						TotalKMRun:          45000.0,
+						Metrics: &tyre.TyreMetrics{
+							CPKM: 0.25,
+						},
+						CreatedAt: now,
+						UpdatedAt: now,
+					},
+				},
+				"AllVehicles": []map[string]string{
+					{"ID": "veh-1", "VehicleNumber": "KA-01-AB-1234", "RegistrationNumber": "KA-01-AB-1234"},
+				},
+				"Status": "",
+			},
+		}},
+		{"inventory_dashboard", "inventory_dashboard.html", map[string]interface{}{
+			"Title": "Parts & Spares Inventory",
+			"User":  user,
+			"Extra": map[string]interface{}{
+				"Summary": &inventory.InventorySummary{
+					TotalParts:          15,
+					TotalValuation:      125000.0,
+					LowStockCount:       2,
+					TotalStockedUnits:   320,
+					ActiveFacilityCount: 3,
+				},
+				"Parts": []inventory.Part{
+					{
+						ID:            "part-1",
+						TenantID:      "tenant-1",
+						PartNumber:    "BRK-001",
+						Name:          "Heavy Duty Brake Pad Set",
+						Category:      inventory.CategoryBrakes,
+						UOM:           inventory.UOMPieces,
+						CostPrice:     4500.0,
+						MinStockLevel: 5.0,
+						IsActive:      true,
+						CreatedAt:     now,
+					},
+				},
+				"Stocks": []inventory.PartStock{
+					{
+						ID:             "stock-1",
+						TenantID:       "tenant-1",
+						PartID:         "part-1",
+						FacilityID:     "fac-1",
+						PartNumber:     "BRK-001",
+						PartName:       "Heavy Duty Brake Pad Set",
+						FacilityName:   "North Hub Warehouse",
+						QuantityOnHand: 18.0,
+						UOM:            inventory.UOMPieces,
+						IsLowStock:     false,
+					},
+				},
+				"Transactions": []inventory.PartTransaction{
+					{
+						ID:              "tx-1",
+						TenantID:        "tenant-1",
+						PartID:          "part-1",
+						PartNumber:      "BRK-001",
+						PartName:        "Heavy Duty Brake Pad Set",
+						TransactionType: inventory.TxWorkOrderIssue,
+						Quantity:        2,
+						BalanceAfter:    18,
+						VehicleID:       func() *string { v := "veh-1"; return &v }(),
+						RecordedAt:      now,
+					},
+				},
+				"Facilities": []map[string]string{
+					{"ID": "fac-1", "Name": "North Hub Warehouse", "Code": "NH-WH1"},
+				},
+				"Vehicles": []map[string]string{
+					{"ID": "veh-1", "VehicleNumber": "KA-01-AB-1234", "RegistrationNumber": "KA-01-AB-1234"},
+				},
+				"CategoryFilter": "",
+			},
+		}},
+		{"freight_audit_dashboard", "freight_audit_dashboard.html", map[string]interface{}{
+			"Title": "Freight Audit & Overbilling",
+			"User":  user,
+			"Extra": map[string]interface{}{
+				"Summary": &freightaudit.AuditSummary{
+					TotalAudits:            12,
+					TotalBilledAmount:      450000.0,
+					TotalAuditedAmount:     390000.0,
+					TotalOverbillingAmount: 60000.0,
+					TotalDeductionsAmount:  55000.0,
+					DiscrepancyCount:       3,
+					SettledCount:           8,
+				},
+				"Audits": []freightaudit.FreightAudit{
+					{
+						ID:                 "fa-1",
+						TenantID:           "tenant-1",
+						VendorName:         "Super Roadways",
+						VehicleNumber:      "MH-12-CD-9988",
+						BilledDistanceKM:   520.0,
+						GPSDistanceKM:      440.0,
+						DistanceVarianceKM: 80.0,
+						BilledTotal:        31200.0,
+						AuditedTotal:       26400.0,
+						OverbillingAmount:  4800.0,
+						VariancePct:        18.1,
+						Status:             freightaudit.AuditStatusDiscrepancyFlagged,
+						CreatedAt:          now,
+					},
+				},
+				"RateCards": []freightaudit.RateCard{
+					{
+						ID:                   "rc-1",
+						TenantID:             "tenant-1",
+						ContractNumber:       "RC-2026-001",
+						Name:                 "Long Haul North Corridor",
+						BillingBasis:         freightaudit.BillingBasisPerKM,
+						Rate:                 42.50,
+						MinCharge:            5000.0,
+						FreeDetentionHours:   24,
+						DetentionRatePerHour: 150.0,
+						IsActive:             true,
+					},
+				},
+				"StatusFilter": "",
+			},
+		}},
+		{"report_builder_dashboard", "report_builder_dashboard.html", map[string]interface{}{
+			"Title": "Custom Report Builder",
+			"User":  user,
+			"Extra": map[string]interface{}{
+				"Reports": []reportbuilder.CustomReport{
+					{
+						ID:          "rep-1",
+						TenantID:    "tenant-1",
+						Name:        "Monthly Vehicle Telemetry Rollup",
+						Description: "Aggregated fuel, mileage, and idling summary per vehicle",
+						Dataset:     reportbuilder.DatasetVehicles,
+						ChartType:   "TABLE",
+						UpdatedAt:   now,
+					},
+				},
+				"Schedules": []reportbuilder.ReportSchedule{
+					{
+						ID:             "sch-1",
+						TenantID:       "tenant-1",
+						Name:           "Daily Morning Ops Dispatch",
+						Frequency:      "DAILY",
+						CronExpression: "0 8 * * *",
+						Format:         "CSV",
+						Channel:        "EMAIL",
+						IsActive:       true,
+					},
+				},
+				"Executions": []reportbuilder.ReportExecution{
+					{
+						ID:                  "exec-1",
+						TenantID:            "tenant-1",
+						ReportID:            "rep-1",
+						TriggeredBy:         "SCHEDULED",
+						RowCount:            142,
+						ExecutionDurationMs: 48,
+						Status:              "COMPLETED",
+						CreatedAt:           now,
+					},
+				},
+			},
+		}},
+		{"rfq_dashboard", "rfq_dashboard.html", map[string]interface{}{
+			"Title": "RFQ Lane Bidding",
+			"User":  user,
+			"Extra": map[string]interface{}{
+				"OpenCount":    3,
+				"AwardedCount": 5,
+				"TotalBids":    14,
+				"StatusParam":  "",
+				"RFQs": []rfq.RFQ{
+					{
+						ID:                  "rfq-1",
+						TenantID:            "tenant-1",
+						RFQNumber:           "RFQ-2026-001",
+						Title:               "Delhi NCR to Mumbai Dedicated Lane",
+						OriginCity:          "Delhi NCR",
+						DestinationCity:     "Mumbai Port",
+						VehicleTypeRequired: "32ft MXL",
+						CargoWeightTons:     18.0,
+						TargetRate:          52000.0,
+						MaxAcceptableRate:   58000.0,
+						Status:              rfq.StatusOpen,
+						BidsCount:           3,
+					},
+				},
+				"SelectedRFQ": &rfq.RFQ{
+					ID:                  "rfq-1",
+					TenantID:            "tenant-1",
+					RFQNumber:           "RFQ-2026-001",
+					Title:               "Delhi NCR to Mumbai Dedicated Lane",
+					OriginCity:          "Delhi NCR",
+					DestinationCity:     "Mumbai Port",
+					VehicleTypeRequired: "32ft MXL",
+					CargoWeightTons:     18.0,
+					TargetRate:          52000.0,
+					MaxAcceptableRate:   58000.0,
+					Status:              rfq.StatusOpen,
+				},
+				"SelectedBids": []rfq.RFQBid{
+					{
+						ID:                "bid-1",
+						TenantID:          "tenant-1",
+						RFQID:             "rfq-1",
+						CarrierName:       "All-India Transporters",
+						BidAmount:         51000.0,
+						TransitDays:       2,
+						VehiclesAvailable: 3,
+						Status:            rfq.BidStatusSubmitted,
+						SubmittedAt:       now,
+					},
+				},
 			},
 		}},
 	}
