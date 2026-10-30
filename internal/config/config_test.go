@@ -63,6 +63,47 @@ func TestLoad_SMSProviderConfig(t *testing.T) {
 	}
 }
 
+// TestLoad_SMSTwilioAndFast2SMSConfig verifies that Twilio and Fast2SMS credentials survive
+// the config boundary (Plan P2 item 2.5).
+func TestLoad_SMSTwilioAndFast2SMSConfig(t *testing.T) {
+	t.Setenv("TWILIO_ACCOUNT_SID", "AC_test_123")
+	t.Setenv("TWILIO_AUTH_TOKEN", "auth_secret_xyz")
+	t.Setenv("TWILIO_FROM_NUMBER", "+15005550006")
+	t.Setenv("TWILIO_ENDPOINT", "https://api.twilio.test/messages")
+	t.Setenv("FAST2SMS_API_KEY", "fast_key_999")
+	t.Setenv("FAST2SMS_SENDER_ID", "FSTSMS")
+	t.Setenv("FAST2SMS_ROUTE", "dlt")
+	t.Setenv("FAST2SMS_ENDPOINT", "https://fast2sms.test/bulkV2")
+
+	cfg := config.Load()
+	n := cfg.Notify
+
+	if n.SMSTwilioAccountSID != "AC_test_123" {
+		t.Fatalf("expected SMSTwilioAccountSID AC_test_123, got %q", n.SMSTwilioAccountSID)
+	}
+	if n.SMSTwilioAuthToken != "auth_secret_xyz" {
+		t.Fatalf("expected SMSTwilioAuthToken auth_secret_xyz, got %q", n.SMSTwilioAuthToken)
+	}
+	if n.SMSTwilioFromNumber != "+15005550006" {
+		t.Fatalf("expected SMSTwilioFromNumber +15005550006, got %q", n.SMSTwilioFromNumber)
+	}
+	if n.SMSTwilioEndpoint != "https://api.twilio.test/messages" {
+		t.Fatalf("expected SMSTwilioEndpoint override, got %q", n.SMSTwilioEndpoint)
+	}
+	if n.SMSFast2SMSAPIKey != "fast_key_999" {
+		t.Fatalf("expected SMSFast2SMSAPIKey fast_key_999, got %q", n.SMSFast2SMSAPIKey)
+	}
+	if n.SMSFast2SMSSenderID != "FSTSMS" {
+		t.Fatalf("expected SMSFast2SMSSenderID FSTSMS, got %q", n.SMSFast2SMSSenderID)
+	}
+	if n.SMSFast2SMSRoute != "dlt" {
+		t.Fatalf("expected SMSFast2SMSRoute dlt, got %q", n.SMSFast2SMSRoute)
+	}
+	if n.SMSFast2SMSEndpoint != "https://fast2sms.test/bulkV2" {
+		t.Fatalf("expected SMSFast2SMSEndpoint override, got %q", n.SMSFast2SMSEndpoint)
+	}
+}
+
 // TestLoad_VideoMediaServerConfig pins the live-stream media server env name
 // (Plan P3 item 3.12): StartLivestream may build stream URLs only from this
 // configured base; unset keeps streaming fail-closed and unconfigured.

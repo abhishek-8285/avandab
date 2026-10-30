@@ -14,7 +14,7 @@ import (
 // Config drives SMS provider selection in NewSMSSenderFromConfig; empty
 // Provider keeps the provider-agnostic webhook sender.
 type SMSConfig struct {
-	Provider string // "" | "webhook" | "msg91"
+	Provider string // "" | "webhook" | "msg91" | "twilio" | "fast2sms"
 
 	WebhookURL   string
 	WebhookToken string
@@ -23,6 +23,16 @@ type SMSConfig struct {
 	MSG91SenderID string
 	MSG91Route    string
 	MSG91Endpoint string
+
+	TwilioAccountSID string
+	TwilioAuthToken  string
+	TwilioFromNumber string
+	TwilioEndpoint   string
+
+	Fast2SMSAPIKey   string
+	Fast2SMSSenderID string
+	Fast2SMSRoute    string
+	Fast2SMSEndpoint string
 }
 
 // NewSMSSenderFromConfig picks the SMS delivery engine per config. Unknown
@@ -37,6 +47,20 @@ func NewSMSSenderFromConfig(cfg SMSConfig) SMSSender {
 			SenderID: cfg.MSG91SenderID,
 			Route:    cfg.MSG91Route,
 			Endpoint: cfg.MSG91Endpoint,
+		})
+	case "twilio":
+		return NewTwilioSMSSender(TwilioConfig{
+			AccountSID: cfg.TwilioAccountSID,
+			AuthToken:  cfg.TwilioAuthToken,
+			FromNumber: cfg.TwilioFromNumber,
+			Endpoint:   cfg.TwilioEndpoint,
+		})
+	case "fast2sms":
+		return NewFast2SMSSender(Fast2SMSConfig{
+			APIKey:   cfg.Fast2SMSAPIKey,
+			SenderID: cfg.Fast2SMSSenderID,
+			Route:    cfg.Fast2SMSRoute,
+			Endpoint: cfg.Fast2SMSEndpoint,
 		})
 	case "", "webhook":
 		return NewWebhookSMSSender(cfg.WebhookURL, cfg.WebhookToken)
@@ -54,7 +78,7 @@ type unknownSMSSender struct {
 func (u *unknownSMSSender) Configured() bool { return false }
 
 func (u *unknownSMSSender) Send(_ context.Context, _ string, _ string) error {
-	return fmt.Errorf("sms delivery: unknown SMS_PROVIDER %q — supported: webhook, msg91", u.provider)
+	return fmt.Errorf("sms delivery: unknown SMS_PROVIDER %q — supported: webhook, msg91, twilio, fast2sms", u.provider)
 }
 
 // MSG91SMSSender delivers SMS through the MSG91 HTTP API v5

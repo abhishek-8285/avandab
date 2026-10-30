@@ -187,7 +187,7 @@ Size: M–L. Gate: 1.6 passes at 10k vehicles before any new module ships.
 | 2.2 | GSTN IRP e-invoice: app key, JWS/JWE, IRN + signed QR | GSP/IRP creds | IRN round-trip in sandbox |
 | 2.3 | Vahan/ULIP RC verification; implement `taxverify` provider | ULIP/GSP contract | live RC fetch, cache, failure path |
 | 2.4 | FASTag via NPCI NETC or certified aggregator | sponsorship/aggregator | real toll txns reconciled to trips |
-| 2.5 | SMS gateway adapter (MSG91/Twilio/Fast2SMS) + OTP fail-loud | MSG91 adapter landed (`ea91ae9a`) — config-driven provider selection, HTTP-200 error bodies fail loud, OTP 503 untouched; Twilio/Fast2SMS one-case additions | **CODE DONE** — acceptance awaits real MSG91 account creds |
+| 2.5 | SMS gateway adapter (MSG91/Twilio/Fast2SMS) + OTP fail-loud | All three adapters landed: MSG91 (`ea91ae9a`), Twilio (E.164 HTTP Basic Auth), Fast2SMS (bulkV2 JSON) behind SMSSender seam. Config-driven provider selection, HTTP-200 error bodies fail loud, unknown providers fail closed, OTP 503 untouched | **CODE DONE** — acceptance awaits live carrier/aggregator credentials |
 | 2.6 | WhatsApp BSP + approved templates | WABA | template send in production |
 | 2.7 | RazorpayX payouts + penny-drop + webhook reconciliation | merchant account | end-to-end ₹1 payout + reversal |
 | 2.8 | Real OCR provider behind existing `http` seam + amount-vs-claim comparison | vendor key | mismatch → manual review, never auto-approve |
@@ -240,7 +240,7 @@ writes to the DB and calls nothing).
 | 5.5 | CI hardening: `-race` on telemetry/outbox/settlement, mobile e2e gated, coverage floor 65% on money paths | red build on race |
 | 5.6 | DSAR export + erasure endpoints, retention schedule, sub-processor list | export/erase a test user end-to-end |
 | 5.7 | Docs truth pass: `docs/09`, `RELEASES.md`, `db/schema.sql`, migration ownership index | index matches 162 files, no stale claims |
-| 5.8 | Publish pricing + SLA + `/pricing` page | public page live |
+| 5.8 | Publish pricing + SLA + `/pricing` page | public page live | **DONE** (public `/pricing` page live with Starter trial, Professional TMS ₹499/veh/mo, Enterprise 3PL ₹899/veh/mo, 99.9% uptime SLA commitments, RPO/RTO metrics, robots/sitemap indexing, and test coverage) |
 
 ---
 

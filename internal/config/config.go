@@ -170,19 +170,27 @@ func (c *TurnstileConfig) Enabled() bool {
 // NotifyConfig holds outbound delivery channel settings. Empty values keep a
 // channel unconfigured — sends then fail honestly instead of faking success.
 type NotifyConfig struct {
-	SMTPHost         string
-	SMTPPort         string
-	SMTPUser         string
-	SMTPPassword     string
-	SMTPFrom         string
-	SMTPDirect       bool
-	SMSProvider      string
-	SMSWebhookURL    string
-	SMSWebhookToken  string
-	SMSMSG91AuthKey  string
-	SMSMSG91SenderID string
-	SMSMSG91Route    string
-	SMSMSG91Endpoint string
+	SMTPHost            string
+	SMTPPort            string
+	SMTPUser            string
+	SMTPPassword        string
+	SMTPFrom            string
+	SMTPDirect          bool
+	SMSProvider         string
+	SMSWebhookURL       string
+	SMSWebhookToken     string
+	SMSMSG91AuthKey     string
+	SMSMSG91SenderID    string
+	SMSMSG91Route       string
+	SMSMSG91Endpoint    string
+	SMSTwilioAccountSID string
+	SMSTwilioAuthToken  string
+	SMSTwilioFromNumber string
+	SMSTwilioEndpoint   string
+	SMSFast2SMSAPIKey   string
+	SMSFast2SMSSenderID string
+	SMSFast2SMSRoute    string
+	SMSFast2SMSEndpoint string
 	// Email pool — dynamic multi-provider failover with quota tracking.
 	EmailPoolEnabled   bool
 	EmailPoolStrategy  string
@@ -590,22 +598,30 @@ func Load() *Config {
 	smtpPass = strings.ReplaceAll(smtpPass, " ", "")
 
 	cfg.Notify = NotifyConfig{
-		SMTPHost:           os.Getenv("SMTP_HOST"),
-		SMTPPort:           os.Getenv("SMTP_PORT"),
-		SMTPUser:           os.Getenv("SMTP_USER"),
-		SMTPPassword:       smtpPass,
-		SMTPFrom:           os.Getenv("SMTP_FROM"),
-		SMTPDirect:         getEnvBool("SMTP_DIRECT", false) || strings.EqualFold(os.Getenv("SMTP_HOST"), "direct"),
-		SMSProvider:        os.Getenv("SMS_PROVIDER"),
-		SMSWebhookURL:      os.Getenv("SMS_WEBHOOK_URL"),
-		SMSWebhookToken:    os.Getenv("SMS_WEBHOOK_TOKEN"),
-		SMSMSG91AuthKey:    os.Getenv("SMS_MSG91_AUTH_KEY"),
-		SMSMSG91SenderID:   os.Getenv("SMS_MSG91_SENDER_ID"),
-		SMSMSG91Route:      os.Getenv("SMS_MSG91_ROUTE"),
-		SMSMSG91Endpoint:   os.Getenv("SMS_MSG91_ENDPOINT"),
-		EmailPoolEnabled:   getEnvBool("EMAIL_POOL_ENABLED", true),
-		EmailPoolStrategy:  getEnv("EMAIL_POOL_STRATEGY", getEnv("EMAIL_PROVIDER_STRATEGY", "priority")),
-		EmailProvidersJSON: os.Getenv("EMAIL_PROVIDERS_JSON"),
+		SMTPHost:            os.Getenv("SMTP_HOST"),
+		SMTPPort:            os.Getenv("SMTP_PORT"),
+		SMTPUser:            os.Getenv("SMTP_USER"),
+		SMTPPassword:        smtpPass,
+		SMTPFrom:            os.Getenv("SMTP_FROM"),
+		SMTPDirect:          getEnvBool("SMTP_DIRECT", false) || strings.EqualFold(os.Getenv("SMTP_HOST"), "direct"),
+		SMSProvider:         os.Getenv("SMS_PROVIDER"),
+		SMSWebhookURL:       os.Getenv("SMS_WEBHOOK_URL"),
+		SMSWebhookToken:     os.Getenv("SMS_WEBHOOK_TOKEN"),
+		SMSMSG91AuthKey:     os.Getenv("SMS_MSG91_AUTH_KEY"),
+		SMSMSG91SenderID:    os.Getenv("SMS_MSG91_SENDER_ID"),
+		SMSMSG91Route:       os.Getenv("SMS_MSG91_ROUTE"),
+		SMSMSG91Endpoint:    os.Getenv("SMS_MSG91_ENDPOINT"),
+		SMSTwilioAccountSID: os.Getenv("TWILIO_ACCOUNT_SID"),
+		SMSTwilioAuthToken:  os.Getenv("TWILIO_AUTH_TOKEN"),
+		SMSTwilioFromNumber: os.Getenv("TWILIO_FROM_NUMBER"),
+		SMSTwilioEndpoint:   os.Getenv("TWILIO_ENDPOINT"),
+		SMSFast2SMSAPIKey:   os.Getenv("FAST2SMS_API_KEY"),
+		SMSFast2SMSSenderID: os.Getenv("FAST2SMS_SENDER_ID"),
+		SMSFast2SMSRoute:    os.Getenv("FAST2SMS_ROUTE"),
+		SMSFast2SMSEndpoint: os.Getenv("FAST2SMS_ENDPOINT"),
+		EmailPoolEnabled:    getEnvBool("EMAIL_POOL_ENABLED", true),
+		EmailPoolStrategy:   getEnv("EMAIL_POOL_STRATEGY", getEnv("EMAIL_PROVIDER_STRATEGY", "priority")),
+		EmailProvidersJSON:  os.Getenv("EMAIL_PROVIDERS_JSON"),
 	}
 	cfg.Comm = CommConfig{
 		OutboxWorker: getEnvBool("COMM_OUTBOX_WORKER", true),

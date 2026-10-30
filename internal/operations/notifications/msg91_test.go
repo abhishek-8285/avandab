@@ -143,10 +143,10 @@ func TestNewSMSSenderFromConfig_SelectsProvider(t *testing.T) {
 	assert.True(t, m91.Configured())
 
 	// Unknown provider: fail closed — nothing configured, sends stay errors.
-	sms = NewSMSSenderFromConfig(SMSConfig{Provider: "fast2sms"})
+	sms = NewSMSSenderFromConfig(SMSConfig{Provider: "unsupported_mock"})
 	unk, isUnknown := sms.(*unknownSMSSender)
 	require.True(t, isUnknown, "unknown provider must be fail-closed, not a fake success")
 	err := unk.Send(context.Background(), "+919900112233", "hi")
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "fast2sms")
+	assert.Contains(t, err.Error(), "unsupported_mock")
 }

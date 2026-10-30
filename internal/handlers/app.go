@@ -1309,6 +1309,7 @@ func (a *App) PolicyPage(w http.ResponseWriter, r *http.Request, name string) {
 		"refunds.html":             {"Title": "Refund Policy", "Desc": "Avandab Refund Policy — eligibility, submission window and processing for undelivered services.", "Path": "/refunds"},
 		"consumer_compliance.html": {"Title": "Consumer Compliance", "Desc": "Avandab Consumer Compliance — E-Commerce Amendment 2026 disclosures, grievance SLAs and dark-pattern self-audit certificate.", "Path": "/consumer-compliance"},
 		"faq.html":                 {"Title": "Frequently Asked Questions", "Desc": "Avandab FAQ — setup, tracking, ePOD, billing, data protection and support answers for fleet owners.", "Path": "/faq"},
+		"pricing.html":             {"Title": "Pricing & SLA", "Desc": "Avandab Fleet & TMS Pricing — Transparent plans for growing fleets, enterprise 3PLs, and guaranteed 99.9% uptime SLA commitments.", "Path": "/pricing"},
 	}
 	meta := seo[name]
 	title, desc, path := name, "", "/"
@@ -1353,6 +1354,11 @@ func (a *App) ConsumerCompliance(w http.ResponseWriter, r *http.Request) {
 // FAQ serves the public frequently-asked-questions page.
 func (a *App) FAQ(w http.ResponseWriter, r *http.Request) {
 	a.PolicyPage(w, r, "faq.html")
+}
+
+// Pricing serves the public pricing and SLA commitment page (Plan P5 item 5.8).
+func (a *App) Pricing(w http.ResponseWriter, r *http.Request) {
+	a.PolicyPage(w, r, "pricing.html")
 }
 
 // FeaturePage serves a public, login-free explainer for a single product

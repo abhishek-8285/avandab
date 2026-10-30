@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="{{.Lang}}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{{if .Title}}{{.Title}} - Avandab{{else}}Pricing &amp; SLA - Avandab{{end}}</title>
+    {{template "seo_head.html" .}}
+    <link rel="stylesheet" href="/static/css/fonts.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
+    <link rel="stylesheet" href="/static/css/tailwind.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
+    <link rel="stylesheet" href="/static/css/app.css?v={{if .Version}}{{.Version}}{{else}}20260812{{end}}">
+    {{template "theme_head.html" .}}
+    <style>
+        body { background-color: var(--color-background); color: var(--color-on-surface); font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="has-public-nav">
+    {{template "public_header.html" .}}
+
+    <main class="max-w-6xl mx-auto px-4 py-8 sm:py-16">
+        <!-- Breadcrumb Header -->
+        <nav class="mb-6 flex items-center gap-1.5 text-xs text-text-muted" aria-label="Breadcrumb navigation">
+            <a href="/" class="hover:text-primary transition-colors">Home</a>
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3"><path d="m9 18 6-6-6-6"/></svg>
+            <span class="text-primary font-semibold">Pricing &amp; SLA</span>
+        </nav>
+
+        <!-- Hero Section -->
+        <div class="text-center max-w-3xl mx-auto mb-14">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold mb-4">
+                <span>Enterprise Fleet &amp; TMS Platform</span>
+            </div>
+            <h1 class="font-display text-3xl sm:text-4xl lg:text-5xl font-semibold text-on-surface tracking-tight mb-4">
+                Predictable, Value-First Pricing
+            </h1>
+            <p class="text-base sm:text-lg text-on-surface-variant leading-relaxed">
+                Choose the right operating tier for your road transport business. All paid plans include our guaranteed 99.9% uptime SLA and automated compliance rails.
+            </p>
+        </div>
+
+        <!-- Pricing Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+            <!-- Tier 1: Starter / 14-Day Free Trial -->
+            <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle p-6 sm:p-8 flex flex-col justify-between shadow-xs">
+                <div>
+                    <div class="text-sm font-semibold text-secondary uppercase tracking-wider mb-2">Starter / Trial</div>
+                    <div class="flex items-baseline gap-1 mb-4">
+                        <span class="text-3xl sm:text-4xl font-semibold text-on-surface">Free</span>
+                        <span class="text-xs text-secondary font-medium">/ 14 days</span>
+                    </div>
+                    <p class="text-xs text-on-surface-variant mb-6 leading-relaxed">
+                        Test live GPS tracking, ePOD, and driver payouts on up to 5 vehicles with zero upfront credit card commitments.
+                    </p>
+                    <ul class="space-y-3 mb-8 text-xs text-on-surface-variant">
+                        <li class="flex items-start gap-2">
+                            <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Up to 5 active vehicles</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Live map tracking &amp; speed alerts</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Driver mobile dispatch &amp; ePOD</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Standard E-Way bill lifecycle</span>
+                        </li>
+                    </ul>
+                </div>
+                <a href="/register" class="w-full text-center py-2.5 px-4 rounded-xl border border-border-subtle bg-surface-container-low text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors">
+                    Start 14-Day Free Trial
+                </a>
+            </div>
+
+            <!-- Tier 2: Professional TMS (Recommended) -->
+            <div class="bg-surface-container-lowest rounded-2xl border-2 border-primary p-6 sm:p-8 flex flex-col justify-between shadow-md relative">
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-on-primary text-[11px] font-semibold px-3 py-0.5 rounded-full uppercase tracking-wider">
+                    Most Popular
+                </div>
+                <div>
+                    <div class="text-sm font-semibold text-primary uppercase tracking-wider mb-2">Professional TMS</div>
+                    <div class="flex items-baseline gap-1 mb-4">
+                        <span class="text-3xl sm:text-4xl font-semibold text-on-surface">&#8377;499</span>
+                        <span class="text-xs text-secondary font-medium">/ vehicle / month</span>
+                    </div>
+                    <p class="text-xs text-on-surface-variant mb-6 leading-relaxed">
+                        Complete operating system for mid-market fleet owners. Tyres, spares, freight audit, RFQ bidding, and custom reports.
+                    </p>
+                    <ul class="space-y-3 mb-8 text-xs text-on-surface-variant">
+                        <li class="flex items-start gap-2">
+                            <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Everything in Starter + unlimited fleet size</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Tyre CPKM wear &amp; retread tracking</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Multi-store spares inventory &amp; work orders</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>3-way Freight Audit (GPS/FASTag variance)</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Custom Report Builder &amp; CSV schedules</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Lane RFQ bidding &amp; counter-offers</span>
+                        </li>
+                    </ul>
+                </div>
+                <a href="/register?plan=pro" class="w-full text-center py-2.5 px-4 rounded-xl bg-primary text-on-primary hover:opacity-90 font-semibold text-xs shadow-xs transition-opacity">
+                    Deploy Professional TMS
+                </a>
+            </div>
+
+            <!-- Tier 3: Enterprise & Specialized Fleets -->
+            <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle p-6 sm:p-8 flex flex-col justify-between shadow-xs">
+                <div>
+                    <div class="text-sm font-semibold text-secondary uppercase tracking-wider mb-2">Enterprise 3PL</div>
+                    <div class="flex items-baseline gap-1 mb-4">
+                        <span class="text-3xl sm:text-4xl font-semibold text-on-surface">&#8377;899</span>
+                        <span class="text-xs text-secondary font-medium">/ vehicle / month</span>
+                    </div>
+                    <p class="text-xs text-on-surface-variant mb-6 leading-relaxed">
+                        Advanced cold chain reefer compliance, EV CAN telematics, edge AI dashcams, and bespoke ERP integration.
+                    </p>
+                    <ul class="space-y-3 mb-8 text-xs text-on-surface-variant">
+                        <li class="flex items-start gap-2">
+                            <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Everything in Professional</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Cold chain multi-zone probes &amp; MKT math</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>EV CAN telematics, SoC &amp; charging cycles</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>AI dashcam DMS/ADAS coaching workflows</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>99.9% Production SLA &amp; dedicated TAM</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>SAP / Oracle / Custom ERP data connectors</span>
+                        </li>
+                    </ul>
+                </div>
+                <a href="/contact-us?subject=enterprise_pricing" class="w-full text-center py-2.5 px-4 rounded-xl border border-border-subtle bg-surface-container-low text-on-surface hover:bg-surface-container font-semibold text-xs transition-colors">
+                    Contact Enterprise Sales
+                </a>
+            </div>
+        </div>
+
+        <!-- SLA Commitments Section -->
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle p-6 sm:p-10 shadow-xs mb-16">
+            <div class="max-w-3xl mb-8">
+                <div class="inline-flex items-center gap-1.5 text-xs text-primary font-semibold uppercase tracking-wider mb-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    <span>Commitment &amp; Trust Surface</span>
+                </div>
+                <h2 class="font-display text-2xl sm:text-3xl font-semibold text-on-surface tracking-tight mb-2">
+                    Service Level Agreement (SLA)
+                </h2>
+                <p class="text-sm text-on-surface-variant leading-relaxed">
+                    We know that in transport operations, system downtime means idling trucks and delayed dispatches. Avandab backs its production TMS with clear, enforceable availability metrics and financial credits.
+                </p>
+            </div>
+
+            <!-- SLA Metrics Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="p-4 rounded-xl bg-surface-container-low border border-border-subtle">
+                    <div class="text-xs text-secondary font-medium mb-1">Monthly Uptime Guarantee</div>
+                    <div class="text-2xl font-semibold text-primary">99.9%</div>
+                    <div class="text-[11px] text-text-muted mt-1">&lt; 43 minutes downtime/month</div>
+                </div>
+                <div class="p-4 rounded-xl bg-surface-container-low border border-border-subtle">
+                    <div class="text-xs text-secondary font-medium mb-1">Recovery Point (RPO)</div>
+                    <div class="text-2xl font-semibold text-on-surface">&lt; 5 mins</div>
+                    <div class="text-[11px] text-text-muted mt-1">Continuous WAL replication</div>
+                </div>
+                <div class="p-4 rounded-xl bg-surface-container-low border border-border-subtle">
+                    <div class="text-xs text-secondary font-medium mb-1">Recovery Time (RTO)</div>
+                    <div class="text-2xl font-semibold text-on-surface">&lt; 30 mins</div>
+                    <div class="text-[11px] text-text-muted mt-1">Automated failover fail-safe</div>
+                </div>
+                <div class="p-4 rounded-xl bg-surface-container-low border border-border-subtle">
+                    <div class="text-xs text-secondary font-medium mb-1">P1 Response Time</div>
+                    <div class="text-2xl font-semibold text-emerald-600">&lt; 15 mins</div>
+                    <div class="text-[11px] text-text-muted mt-1">24/7 pager duty incident team</div>
+                </div>
+            </div>
+
+            <!-- Incident Response Table -->
+            <div class="overflow-x-auto mb-8">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="border-b border-border-subtle text-secondary font-semibold">
+                            <th class="py-3 px-4">Severity Tier</th>
+                            <th class="py-3 px-4">Definition</th>
+                            <th class="py-3 px-4">Target Initial Response</th>
+                            <th class="py-3 px-4">Target Workaround/Resolution</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border-subtle text-on-surface-variant">
+                        <tr>
+                            <td class="py-3 px-4 font-semibold text-red-600">P1 &mdash; Critical</td>
+                            <td class="py-3 px-4">Complete platform downtime, GPS position ingest stoppage, or inability to create dispatches.</td>
+                            <td class="py-3 px-4 font-semibold">&lt; 15 minutes</td>
+                            <td class="py-3 px-4">&lt; 4 hours</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4 font-semibold text-amber-600">P2 &mdash; Major</td>
+                            <td class="py-3 px-4">Significant core capability degradation (e.g., E-way bill generation delayed, FASTag reconciliation queue backlog).</td>
+                            <td class="py-3 px-4 font-semibold">&lt; 1 hour</td>
+                            <td class="py-3 px-4">&lt; 8 hours</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4 font-semibold text-blue-600">P3 &mdash; Minor</td>
+                            <td class="py-3 px-4">Non-critical functional issue with accessible workarounds (e.g., custom report builder UI formatting).</td>
+                            <td class="py-3 px-4 font-semibold">&lt; 4 hours</td>
+                            <td class="py-3 px-4">&lt; 24 hours</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 px-4 font-semibold text-secondary">P4 &mdash; General</td>
+                            <td class="py-3 px-4">Feature requests, minor UI enhancements, routine data exports.</td>
+                            <td class="py-3 px-4 font-semibold">&lt; 1 business day</td>
+                            <td class="py-3 px-4">Next release cycle</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Uptime Credit Schedule -->
+            <div class="border-t border-border-subtle pt-6">
+                <h3 class="text-sm font-semibold text-on-surface mb-2">Service Level Credits Schedule</h3>
+                <p class="text-xs text-on-surface-variant leading-relaxed mb-4">
+                    In the event that Avandab does not maintain the guaranteed 99.9% monthly availability for your production tenant, you are eligible for the following invoice credits upon request:
+                </p>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                    <div class="p-3 rounded-lg bg-surface-container-low border border-border-subtle">
+                        <div class="font-semibold text-on-surface">&lt; 99.9% to 99.0%</div>
+                        <div class="text-text-muted mt-0.5">10% of monthly subscription credited</div>
+                    </div>
+                    <div class="p-3 rounded-lg bg-surface-container-low border border-border-subtle">
+                        <div class="font-semibold text-on-surface">&lt; 99.0% to 95.0%</div>
+                        <div class="text-text-muted mt-0.5">25% of monthly subscription credited</div>
+                    </div>
+                    <div class="p-3 rounded-lg bg-surface-container-low border border-border-subtle">
+                        <div class="font-semibold text-on-surface">&lt; 95.0%</div>
+                        <div class="text-text-muted mt-0.5">50% of monthly subscription credited</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FAQ Section -->
+        <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle p-6 sm:p-10 shadow-xs mb-16">
+            <h2 class="font-display text-2xl font-semibold text-on-surface tracking-tight mb-6">Frequently Asked Questions</h2>
+            <div class="space-y-6 text-xs text-on-surface-variant">
+                <div>
+                    <h3 class="text-sm font-semibold text-on-surface mb-1">Are there hidden device-integration or telemetry ingestion fees?</h3>
+                    <p class="leading-relaxed">No. We support standard AIS-140 GPS trackers, OBD/CAN devices, and temperature probes without per-packet or ingestion markup fees.</p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-on-surface mb-1">How does the 14-day free trial work?</h3>
+                    <p class="leading-relaxed">You receive complete access to GPS tracking, driver dispatch, and ePOD for up to 5 vehicles. At the end of 14 days, you can choose to activate a paid tier or export your trip records.</p>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-on-surface mb-1">Where is our fleet and driver data stored?</h3>
+                    <p class="leading-relaxed">In accordance with India's Digital Personal Data Protection Act (DPDP Act, 2023), all fleet records, telemetry logs, and driver personal data are stored in certified secure data centers within India.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA Strip -->
+        <div class="rounded-2xl bg-primary/10 border border-primary/20 p-8 sm:p-12 text-center">
+            <h2 class="font-display text-2xl sm:text-3xl font-semibold text-on-surface tracking-tight mb-3">
+                Ready to transform your fleet operations?
+            </h2>
+            <p class="text-sm text-on-surface-variant max-w-xl mx-auto mb-6">
+                Join forward-thinking fleet operators using Avandab for real-time tracking, tyre CPKM, freight audit, and automated settlement.
+            </p>
+            <div class="flex flex-wrap items-center justify-center gap-3">
+                <a href="/register" class="py-2.5 px-6 rounded-xl bg-primary text-on-primary font-semibold text-xs shadow-xs hover:opacity-90 transition-opacity">
+                    Start Free Trial
+                </a>
+                <a href="/contact-us" class="py-2.5 px-6 rounded-xl border border-border-subtle bg-surface-container-lowest text-on-surface font-semibold text-xs hover:bg-surface-container-low transition-colors">
+                    Talk to Transport Specialist
+                </a>
+            </div>
+        </div>
+    </main>
+
+    {{template "footer.html" .}}
+
+    {{template "cookie-consent" .}}
+    <script src="/static/js/loader.js?v={{if .Version}}{{.Version}}{{else}}20260818{{end}}" defer></script>
+    <script src="/static/js/theme.js?v={{if .Version}}{{.Version}}{{else}}20260820{{end}}" defer></script>
+</body>
+</html>

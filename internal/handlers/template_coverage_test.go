@@ -503,6 +503,7 @@ func TestAllTemplatesRender(t *testing.T) {
 		{"refunds", "refunds.html", map[string]interface{}{"Version": AppVersion}},
 		{"consumer_compliance", "consumer_compliance.html", map[string]interface{}{"Version": AppVersion}},
 		{"faq", "faq.html", map[string]interface{}{"Version": AppVersion}},
+		{"pricing", "pricing.html", map[string]interface{}{"Version": AppVersion, "Title": "Pricing & SLA"}},
 		{"feature", "feature.html", map[string]interface{}{
 			"Feature": feature, "RelatedFeatures": []FeatureContent{}, "Version": AppVersion,
 		}},
