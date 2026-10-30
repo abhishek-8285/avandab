@@ -770,6 +770,7 @@ func TestAllTemplatesRender(t *testing.T) {
 		{"partial_footer", "footer.html", map[string]interface{}{}},
 		{"partial_irn_qr", "irn_qr.html", map[string]interface{}{"Invoice": invoiceapp.InvoiceResponseDTO{IRN: "irn", IRNAckNo: "ack", IRNAckDate: "2026-08-20", SignedQR: "data:image/png;base64,x"}}},
 		{"partial_page_header", "page_header.html", map[string]interface{}{"Title": "Page", "Subtitle": "sub", "ActionHref": "/", "ActionIcon": "add"}},
+		{"partial_customer_brand", "customer_brand.html", map[string]interface{}{"BrandName": "Acme Freight", "BrandLogo": "/uploads/acme-logo.png"}},
 		{"partial_note_form", "note_form.html", map[string]interface{}{"Action": "/invoices/inv-1/credit-note", "Label": "Issue Credit Note", "Icon": "cancel"}},
 		{"partial_timezone_options", "timezone_options.html", "Asia/Tokyo"},
 		{"partial_filter_bar", "filter_bar.html", map[string]interface{}{

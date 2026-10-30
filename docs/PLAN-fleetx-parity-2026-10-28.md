@@ -205,7 +205,7 @@ Recommended order (highest value per unit of work first):
 | 3.3 | Freight audit: rate vs GPS distance vs weight, overbilling deduct | Directly monetisable, uses existing telemetry + FASTag | M | **DONE** (migration 00173, freight_rate_cards tariff master, 3-way matching vs GPS/FASTag, overbilling variance, debit notes) |
 | 3.4 | Report builder + scheduled delivery | Closes 40+ report gap without per-report code | M | **DONE** (migration 00174, dynamic query engine across 10 fleet datasets, custom & system reports, CSV export, scheduled delivery channels) |
 | 3.5 | RFQ/counter-offer on top of existing auction | Reuses `load_board` machinery | S–M | **DONE** (migration 00175, lane RFQ bidding, multi-round counter-offer negotiation engine for RFQs & load board listings, atomic award transaction) |
-| 3.6 | White-label customer portal (logo/colours from `tenant_company_profiles`) | Template-only change | S |
+| 3.6 | White-label customer portal (logo/colours from `tenant_company_profiles`) | Template-only change | S | **DONE** for name/logo (tenantBrand resolver from `tenant_company_profiles`, `customer_brand` header on shipper pages, layout title + sidebar). Accent colours deferred — `tenant_company_profiles` has no colour column |
 | 3.7 | Manager/owner mobile app (fleet, dashboard, approvals) | Reuses RN codebase + APIs | L |
 | 3.8 | Hosted MCP server (read tools first, write behind approval) | Differentiator; agent + approvals already exist | M |
 | 3.9 | Web UI for STO, load board, facilities, ESG, fuel cards, backhaul, control tower | 7 APIs already built, zero screens | M |

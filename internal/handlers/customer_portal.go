@@ -221,7 +221,7 @@ func (h *CustomerPortalHandlers) ListMyBookings(w http.ResponseWriter, r *http.R
 	h.renderPage(w, r, "customer_bookings.html", PageData{
 		Title: "My Shipments",
 		User:  session,
-		Extra: map[string]interface{}{"Bookings": bookings, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status},
+		Extra: h.withBrand(r.Context(), map[string]interface{}{"Bookings": bookings, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status}),
 	})
 }
 
@@ -336,7 +336,7 @@ func (h *CustomerPortalHandlers) ListMyInvoices(w http.ResponseWriter, r *http.R
 	h.renderPage(w, r, "customer_invoices.html", PageData{
 		Title: "My Invoices",
 		User:  session,
-		Extra: map[string]interface{}{"Invoices": invoices, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "PortalPay": true},
+		Extra: h.withBrand(r.Context(), map[string]interface{}{"Invoices": invoices, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "PortalPay": true}),
 	})
 }
 
@@ -533,7 +533,7 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 	h.renderPage(w, r, "customer_tracking.html", PageData{
 		Title: "Shipment Tracking",
 		User:  session,
-		Extra: map[string]interface{}{
+		Extra: h.withBrand(r.Context(), map[string]interface{}{
 			"TripID":       tripID,
 			"TripNumber":   tripNumber,
 			"Status":       status,
@@ -548,7 +548,7 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 			"Stops":        stopsList,
 			"CurrentStop":  currentStop,
 			"Progression":  prog,
-		},
+		}),
 	})
 }
 
