@@ -314,7 +314,7 @@ func TestAllTemplatesRender(t *testing.T) {
 				Description: sPtr("Catalyst efficiency"), OccurredAt: now, CreatedAt: now,
 			}},
 			"WorkOrders": []maintenancedomain.WorkOrder{{
-				ID: "wo-1", TenantID: "1", VehicleID: "veh-1",
+				ID: "wo-1", TenantID: "tenant-1", VehicleID: "veh-1",
 				Title: "Brake pad replacement", Status: maintenancedomain.WorkOrderOpen,
 				CreatedAt: now,
 			}},
@@ -331,7 +331,7 @@ func TestAllTemplatesRender(t *testing.T) {
 		}},
 		{"maintenance_work_order", "maintenance_work_order.html", map[string]interface{}{
 			"WorkOrder": &maintenancedomain.WorkOrder{
-				ID: "wo-1", TenantID: "1", VehicleID: "veh-1",
+				ID: "wo-1", TenantID: "tenant-1", VehicleID: "veh-1",
 				Title: "Brake pad replacement", Assignee: "Ramesh", Vendor: "City Garage",
 				Status: maintenancedomain.WorkOrderAssigned, CreatedAt: now,
 			},
@@ -1353,7 +1353,7 @@ func TestAllTemplatesRender(t *testing.T) {
 						VehicleID:      "veh-cam-1",
 						Channel:        videotelematics.ChannelRoadFacing,
 						StreamProtocol: videotelematics.ProtocolWebRTC,
-						StreamURL:      "webrtc://live.fleetx.io/streams/tenant-1/veh-cam-1/road",
+						StreamURL:      "https://media.internal.example/streams/tenant-1/veh-cam-1/road",
 						SessionToken:   "tok-123",
 						Status:         videotelematics.StreamActive,
 						StartedAt:      now,
