@@ -218,3 +218,47 @@ screen plus `index.ts` (zero logic, stable import surface):
    auto-recovers and flushes fully on reconnect without duplicates
    (idempotency keys intact).
 10. Store metadata ready: bilingual screenshots (en + hi) for both platforms.
+
+## Store release
+
+Android release builds are signed with an upload key kept **outside the repo**
+(`~/.gradle/gradle.properties`). Never commit the keystore or its passwords.
+
+Generate the upload key once:
+
+```bash
+keytool -genkeypair -v -storetype PKCS12 \
+  -keystore ~/avandab-upload-key.keystore \
+  -alias avandab-upload -keyalg RSA -keysize 2048 -validity 10000
+```
+
+Add to `~/.gradle/gradle.properties` (replace the placeholders; the build fails
+with a clear error if these are missing and `-PallowUnsignedRelease=true` is not
+passed):
+
+```properties
+AVANDAB_UPLOAD_STORE_FILE=/home/<you>/avandab-upload-key.keystore
+AVANDAB_UPLOAD_STORE_PASSWORD=<store password>
+AVANDAB_UPLOAD_KEY_ALIAS=avandab-upload
+AVANDAB_UPLOAD_KEY_PASSWORD=<key password>
+```
+
+Play Store (`com.avandab.mobile`) with EAS — credentials are managed by EAS:
+
+```bash
+npx eas-cli login
+npx eas-cli build --profile production --platform android
+npx eas-cli build --profile production --platform ios   # needs Apple creds first
+npx eas-cli submit --profile production --platform android   # uploads to internal track
+```
+
+Local smoke builds (no signing, cannot be uploaded):
+
+```bash
+cd android && ./gradlew assembleRelease -PallowUnsignedRelease=true
+```
+
+`android.usesCleartextTraffic` is only enabled when
+`EXPO_PUBLIC_API_SCHEME=http`; production defaults to https. Debug builds keep
+cleartext through `android/app/src/debug/AndroidManifest.xml`.
+

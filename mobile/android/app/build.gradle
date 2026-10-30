@@ -104,15 +104,24 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            // Upload key lives in ~/.gradle/gradle.properties (see mobile/README.md, "Store release").
+            if (project.hasProperty('AVANDAB_UPLOAD_STORE_FILE')) {
+                storeFile file(AVANDAB_UPLOAD_STORE_FILE)
+                storePassword AVANDAB_UPLOAD_STORE_PASSWORD
+                keyAlias AVANDAB_UPLOAD_KEY_ALIAS
+                keyPassword AVANDAB_UPLOAD_KEY_PASSWORD
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            if (project.hasProperty('AVANDAB_UPLOAD_STORE_FILE')) {
+                signingConfig signingConfigs.release
+            }
             def enableShrinkResources = findProperty('android.enableShrinkResourcesInReleaseBuilds') ?: 'false'
             shrinkResources enableShrinkResources.toBoolean()
             minifyEnabled enableMinifyInReleaseBuilds
@@ -129,6 +138,20 @@ android {
     }
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
+    }
+}
+
+// Guard instead of signing release with the debug key. -PallowUnsignedRelease=true
+// skips signing (unsigned artifact) for local/CI smoke builds.
+def allowUnsignedRelease = (findProperty('allowUnsignedRelease') ?: 'false').toBoolean()
+if (!project.hasProperty('AVANDAB_UPLOAD_STORE_FILE') && !allowUnsignedRelease) {
+    gradle.taskGraph.whenReady { graph ->
+        if (graph.allTasks.any { it.name.toLowerCase().contains('release') }) {
+            throw new GradleException(
+                "Release build needs the AVANDAB_UPLOAD_STORE_FILE/_STORE_PASSWORD/_KEY_ALIAS/_KEY_PASSWORD " +
+                "gradle properties (see mobile/README.md, Store release). " +
+                "Pass -PallowUnsignedRelease=true only for an unsigned local/CI build.")
+        }
     }
 }
 
