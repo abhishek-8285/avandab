@@ -169,7 +169,8 @@ which always allocate head-ward from the maximum above.
 | 00171 | Tyre management: tyres master, tyre_activities ledger, tyre_inspections, CPKM tracking, and RBAC grants (FleetX Parity P3.1) | FleetX Parity P3.1 tyre management |
 | 00172 | Parts & Spares inventory: parts master, part_stocks multi-store, part_purchase_bills, part_purchase_items, part_transactions stock ledger, and inventory RBAC grants (FleetX Parity P3.2) | FleetX Parity P3.2 parts inventory |
 | 00173 | Freight Audit & Pay: freight_rate_cards tariff master, freight_audits variance engine, freight_audit_deductions line items, debit notes, and RBAC grants (FleetX Parity P3.3) | FleetX Parity P3.3 freight audit |
-| 00174+ | future specs | reserved |
+| 00174 | Report Builder & Scheduled Delivery: custom_reports, report_schedules, report_executions, and reports:write RBAC (FleetX Parity P3.4) | FleetX Parity P3.4 report builder |
+| 00175+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

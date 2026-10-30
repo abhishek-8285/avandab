@@ -179,6 +179,8 @@ type App struct {
 	Inventory *InventoryHandlers
 	// FreightAudit powers freight audit, rate cards, GPS/weight variance, and deductions (P3 3.3).
 	FreightAudit *FreightAuditHandlers
+	// ReportBuilder powers custom fleet report builder and scheduled delivery (P3 3.4).
+	ReportBuilder *ReportBuilderHandlers
 }
 
 // NewApp creates a new handler app with all handler groups initialized.
@@ -294,6 +296,7 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	app.Tyres = &TyreHandlers{App: app}
 	app.Inventory = &InventoryHandlers{App: app}
 	app.FreightAudit = &FreightAuditHandlers{App: app}
+	app.ReportBuilder = &ReportBuilderHandlers{App: app}
 
 	return app
 }

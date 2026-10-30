@@ -277,6 +277,25 @@ type CreditDebitNote struct {
 	CreatedAt      time.Time      `json:"created_at"`
 }
 
+type CustomReport struct {
+	ID              string    `json:"id"`
+	TenantID        string    `json:"tenant_id"`
+	Name            string    `json:"name"`
+	Description     string    `json:"description"`
+	Dataset         string    `json:"dataset"`
+	SelectedColumns string    `json:"selected_columns"`
+	Filters         string    `json:"filters"`
+	GroupBy         string    `json:"group_by"`
+	Aggregations    string    `json:"aggregations"`
+	SortBy          string    `json:"sort_by"`
+	SortDirection   string    `json:"sort_direction"`
+	ChartType       string    `json:"chart_type"`
+	IsSystem        int64     `json:"is_system"`
+	CreatedBy       string    `json:"created_by"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
 type Customer struct {
 	ID               string         `json:"id"`
 	Name             string         `json:"name"`
@@ -1724,6 +1743,42 @@ type ProviderEvent struct {
 	EventType       string    `json:"event_type"`
 	Payload         string    `json:"payload"`
 	ProcessedAt     time.Time `json:"processed_at"`
+}
+
+type ReportExecution struct {
+	ID                  string         `json:"id"`
+	TenantID            string         `json:"tenant_id"`
+	ReportID            string         `json:"report_id"`
+	ScheduleID          sql.NullString `json:"schedule_id"`
+	Format              string         `json:"format"`
+	Status              string         `json:"status"`
+	RowCount            int64          `json:"row_count"`
+	FileSizeBytes       int64          `json:"file_size_bytes"`
+	ExecutionDurationMs int64          `json:"execution_duration_ms"`
+	ErrorMessage        string         `json:"error_message"`
+	TriggeredBy         string         `json:"triggered_by"`
+	CreatedAt           time.Time      `json:"created_at"`
+	CompletedAt         sql.NullTime   `json:"completed_at"`
+}
+
+type ReportSchedule struct {
+	ID             string       `json:"id"`
+	TenantID       string       `json:"tenant_id"`
+	ReportID       string       `json:"report_id"`
+	Name           string       `json:"name"`
+	Frequency      string       `json:"frequency"`
+	CronExpression string       `json:"cron_expression"`
+	Format         string       `json:"format"`
+	Channel        string       `json:"channel"`
+	Recipients     string       `json:"recipients"`
+	IsActive       int64        `json:"is_active"`
+	LastRunAt      sql.NullTime `json:"last_run_at"`
+	NextRunAt      sql.NullTime `json:"next_run_at"`
+	LastStatus     string       `json:"last_status"`
+	LastError      string       `json:"last_error"`
+	CreatedBy      string       `json:"created_by"`
+	CreatedAt      time.Time    `json:"created_at"`
+	UpdatedAt      time.Time    `json:"updated_at"`
 }
 
 type Role struct {
