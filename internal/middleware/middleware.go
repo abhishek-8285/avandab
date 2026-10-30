@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"transport-app/internal/apm"
 	"transport-app/internal/auth"
 	"transport-app/internal/domain"
 	"transport-app/internal/httpx"
@@ -22,16 +23,28 @@ import (
 	"transport-app/internal/shared"
 )
 
-// RequestID adds a unique request ID to the context and response header.
+// RequestID adds a unique request and trace ID to the context and response headers.
 func RequestID(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		reqID := r.Header.Get("X-Request-ID")
+		if reqID == "" {
+			reqID = r.Header.Get("X-Trace-ID")
+		}
+		if reqID == "" {
+			reqID = r.Header.Get("X-Correlation-ID")
+		}
 		if reqID == "" {
 			reqID = uuid.NewString()
 		}
 
 		ctx := context.WithValue(r.Context(), auth.ContextReqID, reqID)
+		ctx = context.WithValue(ctx, apm.TraceIDKey, reqID)
+		ctx = context.WithValue(ctx, "trace_id", reqID)
+		ctx = context.WithValue(ctx, "request_id", reqID)
+
 		w.Header().Set("X-Request-ID", reqID)
+		w.Header().Set("X-Trace-ID", reqID)
+		w.Header().Set("X-Correlation-ID", reqID)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})

@@ -30,6 +30,7 @@ import (
 	alertpipeline "transport-app/internal/alerts/pipeline"
 	alertsqlite "transport-app/internal/alerts/repository/sqlite"
 	"transport-app/internal/apiversion"
+	"transport-app/internal/apm"
 	"transport-app/internal/shared/resilience"
 
 	dbmigr "transport-app/db"
@@ -162,6 +163,7 @@ const seoSitemap = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>https://avandab.com/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
   <url><loc>https://avandab.com/contact-us</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://avandab.com/pricing</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://avandab.com/status</loc><changefreq>always</changefreq><priority>0.8</priority></url>
   <url><loc>https://avandab.com/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://avandab.com/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
   <url><loc>https://avandab.com/refunds</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
@@ -185,17 +187,17 @@ const seoSitemap = `<?xml version="1.0" encoding="UTF-8"?>
   <url><loc>https://avandab.com/features/assistant</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
 </urlset>`
 
-const seoRobots = "User-agent: *\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /drivers\nDisallow: /vehicles\nDisallow: /customers\nDisallow: /routes\nDisallow: /invoices\nDisallow: /payments\nDisallow: /reports\nDisallow: /settings\nDisallow: /users\nDisallow: /login\nDisallow: /register\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /uploads/\n" +
+const seoRobots = "User-agent: *\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /drivers\nDisallow: /vehicles\nDisallow: /customers\nDisallow: /routes\nDisallow: /invoices\nDisallow: /payments\nDisallow: /reports\nDisallow: /settings\nDisallow: /users\nDisallow: /login\nDisallow: /register\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /uploads/\n" +
 	"# AI search / assistant crawlers — allowed on public pages only, same rules as (*).\n" +
-	"User-agent: GPTBot\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
-	"User-agent: ChatGPT-User\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
-	"User-agent: ClaudeBot\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
-	"User-agent: anthropic-ai\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
-	"User-agent: CCBot\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
-	"User-agent: PerplexityBot\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
-	"User-agent: Google-Extended\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
-	"User-agent: Applebot-Extended\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
-	"User-agent: Meta-ExternalAgent\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: GPTBot\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: ChatGPT-User\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: ClaudeBot\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: anthropic-ai\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: CCBot\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: PerplexityBot\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: Google-Extended\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: Applebot-Extended\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
+	"User-agent: Meta-ExternalAgent\nAllow: /$\nAllow: /contact-us\nAllow: /pricing\nAllow: /status\nAllow: /features\nAllow: /features/\nAllow: /privacy\nAllow: /terms\nAllow: /refunds\nAllow: /consumer-compliance\nAllow: /faq\nAllow: /llms.txt\nAllow: /static/\nDisallow: /dashboard\nDisallow: /bookings\nDisallow: /trips\nDisallow: /pay/\nDisallow: /share\nDisallow: /customer/\nDisallow: /api/\nDisallow: /login\nDisallow: /register\nDisallow: /uploads/\n" +
 	"Sitemap: https://avandab.com/sitemap.xml\n"
 
 // seoLLMs is the /llms.txt body — a machine-readable summary so AI assistants
@@ -204,6 +206,7 @@ const seoLLMs = "# Avandab\n\n" +
 	"> Avandab replaces WhatsApp, spreadsheets and calls with one live cockpit — dispatch, track, e-POD, GST invoice and payments for Indian fleets.\n\n" +
 	"- Home: https://avandab.com/\n" +
 	"- Pricing & SLA: https://avandab.com/pricing\n" +
+	"- System Status: https://avandab.com/status\n" +
 	"- Contact & support status: https://avandab.com/contact-us\n" +
 	"- Privacy: https://avandab.com/privacy\n" +
 	"- Terms: https://avandab.com/terms\n" +
@@ -734,6 +737,8 @@ func main() {
 	// Golden-signal request metrics (count, latency, status per route) for
 	// the Prometheus exposition mounted at GET /metrics below.
 	r.Use(metrics.Middleware)
+	// APM trace spans & p95 SLA latency tracking (Plan P5.2)
+	r.Use(apm.Middleware)
 	r.Use(middleware.Logger)
 	// Panic safety net: converts panics into RFC7807-style problem+json 500s
 	// and reports them as CRITICAL errors to the ops reporter (Spec 16 §5.5).
@@ -1452,6 +1457,9 @@ func main() {
 		r.Get("/consumer-compliance", app.ConsumerCompliance)
 		r.Get("/faq", app.FAQ)
 		r.Get("/pricing", app.Pricing)
+		r.Get("/status", app.Status)
+		r.Get("/api/v1/health/status", app.StatusJSON)
+		r.Get("/api/v1/status", app.StatusJSON)
 
 		// Public feature explainer pages (login-free)
 		r.Get("/features/{slug}", app.FeaturePage)

@@ -9187,6 +9187,18 @@ paths:
         '200':
           description: List of vetted third-party sub-processors.
 
+  /api/v1/health/status:
+    get:
+      tags:
+        - Operations
+      summary: Public synthetic health & subsystem status
+      description: Returns real-time health, latency percentiles, and availability across core platform subsystems (API, DB, Telemetry Ingestion, Outbox, Compliance, SMS). Used by synthetic uptime monitors and status badges.
+      responses:
+        '200':
+          description: Operational status response.
+        '503':
+          description: Degraded platform performance or subsystem outage.
+
   /api/v1/access-reviews/due:
     get:
       tags:

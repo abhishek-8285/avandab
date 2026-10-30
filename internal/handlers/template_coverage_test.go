@@ -504,6 +504,15 @@ func TestAllTemplatesRender(t *testing.T) {
 		{"consumer_compliance", "consumer_compliance.html", map[string]interface{}{"Version": AppVersion}},
 		{"faq", "faq.html", map[string]interface{}{"Version": AppVersion}},
 		{"pricing", "pricing.html", map[string]interface{}{"Version": AppVersion, "Title": "Pricing & SLA"}},
+		{"status", "status.html", map[string]interface{}{
+			"Version": AppVersion, "Title": "System Status & SLA", "OverallStatus": "Operational",
+			"UptimePercentage": 99.98, "SLATarget": "99.9%", "RPO": "< 1 Hour", "RTO": "< 30 Minutes",
+			"P95LatencyMs": int64(12), "LastUpdated": "12:00:00 UTC",
+			"Subsystems": []SubsystemStatus{
+				{Name: "API", Category: "Edge", Status: "operational", Availability: "99.99%", Description: "API Gateway"},
+			},
+			"HistoricalDays": []int{1, 2, 3},
+		}},
 		{"feature", "feature.html", map[string]interface{}{
 			"Feature": feature, "RelatedFeatures": []FeatureContent{}, "Version": AppVersion,
 		}},

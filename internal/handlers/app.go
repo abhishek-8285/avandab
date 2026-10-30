@@ -1310,6 +1310,7 @@ func (a *App) PolicyPage(w http.ResponseWriter, r *http.Request, name string) {
 		"consumer_compliance.html": {"Title": "Consumer Compliance", "Desc": "Avandab Consumer Compliance — E-Commerce Amendment 2026 disclosures, grievance SLAs and dark-pattern self-audit certificate.", "Path": "/consumer-compliance"},
 		"faq.html":                 {"Title": "Frequently Asked Questions", "Desc": "Avandab FAQ — setup, tracking, ePOD, billing, data protection and support answers for fleet owners.", "Path": "/faq"},
 		"pricing.html":             {"Title": "Pricing & SLA", "Desc": "Avandab Fleet & TMS Pricing — Transparent plans for growing fleets, enterprise 3PLs, and guaranteed 99.9% uptime SLA commitments.", "Path": "/pricing"},
+		"status.html":              {"Title": "System Status & SLA", "Desc": "Avandab System Status — real-time platform availability, component latency benchmarks, and guaranteed 99.9% uptime SLA compliance.", "Path": "/status"},
 	}
 	meta := seo[name]
 	title, desc, path := name, "", "/"

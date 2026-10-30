@@ -6,9 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
+
+	"transport-app/internal/apm"
 
 	"transport-app/internal/events"
 	"transport-app/internal/repository"
@@ -280,6 +283,10 @@ func (ing *Ingestor) IngestBatch(ctx context.Context, frames []RawFrame) ([]Inge
 		return nil, nil
 	}
 
+	ctx, span := apm.StartSpan(ctx, "telemetry.batch_ingest")
+	span.SetTag("batch_size", strconv.Itoa(len(frames)))
+	defer span.End()
+
 	results := make([]IngestResult, len(frames))
 
 	type busNotification struct {
@@ -543,6 +550,7 @@ func (ing *Ingestor) IngestBatch(ctx context.Context, frames []RawFrame) ([]Inge
 	})
 
 	if err != nil {
+		span.SetError(err)
 		return results, err
 	}
 
