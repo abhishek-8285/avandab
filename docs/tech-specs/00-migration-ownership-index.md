@@ -168,7 +168,8 @@ which always allocate head-ward from the maximum above.
 | 00170 | `telemetry_scale_indexes` — indexes on `device_time`, `timestamp`, `outbox_events`, `vlp(trip_id)`, drop duplicate snapshot index, and backfill VLP (FleetX Parity P1.2, P1.5) | FleetX Parity P1.2, P1.5 scale |
 | 00171 | Tyre management: tyres master, tyre_activities ledger, tyre_inspections, CPKM tracking, and RBAC grants (FleetX Parity P3.1) | FleetX Parity P3.1 tyre management |
 | 00172 | Parts & Spares inventory: parts master, part_stocks multi-store, part_purchase_bills, part_purchase_items, part_transactions stock ledger, and inventory RBAC grants (FleetX Parity P3.2) | FleetX Parity P3.2 parts inventory |
-| 00173+ | future specs | reserved |
+| 00173 | Freight Audit & Pay: freight_rate_cards tariff master, freight_audits variance engine, freight_audit_deductions line items, debit notes, and RBAC grants (FleetX Parity P3.3) | FleetX Parity P3.3 freight audit |
+| 00174+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

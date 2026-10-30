@@ -177,6 +177,8 @@ type App struct {
 	Tyres *TyreHandlers
 	// Inventory powers parts catalog, multi-store stock, purchase bills, and movements (P3 3.2).
 	Inventory *InventoryHandlers
+	// FreightAudit powers freight audit, rate cards, GPS/weight variance, and deductions (P3 3.3).
+	FreightAudit *FreightAuditHandlers
 }
 
 // NewApp creates a new handler app with all handler groups initialized.
@@ -291,6 +293,7 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	app.ESG = NewESGHandlers(app, esgUseCase)
 	app.Tyres = &TyreHandlers{App: app}
 	app.Inventory = &InventoryHandlers{App: app}
+	app.FreightAudit = &FreightAuditHandlers{App: app}
 
 	return app
 }

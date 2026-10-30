@@ -1062,6 +1062,8 @@ func main() {
 		app.Tyres.RegisterAPIRoutes(r)
 		// Parts and spares inventory (P3 3.2) JSON API — tenant-scoped, inventory RBAC.
 		app.Inventory.RegisterAPIRoutes(r)
+		// Freight audit and overbilling deductions (P3 3.3) JSON API — tenant-scoped, freight_audit RBAC.
+		app.FreightAudit.RegisterAPIRoutes(r)
 		// Spec 18 Wave A — route optimization API (tenant-scoped, permission-gated)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "create")).Post("/api/v1/routes/optimize", app.Routes.Optimize)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "read")).Get("/api/v1/routes/optimize/jobs", app.Routes.OptimizeJobs)

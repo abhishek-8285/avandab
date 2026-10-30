@@ -1066,6 +1066,87 @@ type FounderSignal struct {
 	CreatedAt      time.Time       `json:"created_at"`
 }
 
+type FreightAudit struct {
+	ID                      string         `json:"id"`
+	TenantID                string         `json:"tenant_id"`
+	AuditNumber             string         `json:"audit_number"`
+	TripID                  sql.NullString `json:"trip_id"`
+	InvoiceID               sql.NullString `json:"invoice_id"`
+	BookingID               sql.NullString `json:"booking_id"`
+	RateCardID              sql.NullString `json:"rate_card_id"`
+	VendorName              string         `json:"vendor_name"`
+	VehicleNumber           string         `json:"vehicle_number"`
+	Status                  string         `json:"status"`
+	BillingBasis            string         `json:"billing_basis"`
+	BilledDistanceKm        float64        `json:"billed_distance_km"`
+	BilledWeightKg          float64        `json:"billed_weight_kg"`
+	BilledRate              float64        `json:"billed_rate"`
+	BilledBaseFreight       float64        `json:"billed_base_freight"`
+	BilledTollCharges       float64        `json:"billed_toll_charges"`
+	BilledDetentionCharges  float64        `json:"billed_detention_charges"`
+	BilledTotal             float64        `json:"billed_total"`
+	GpsDistanceKm           float64        `json:"gps_distance_km"`
+	ActualWeightKg          float64        `json:"actual_weight_kg"`
+	AuditedRate             float64        `json:"audited_rate"`
+	AuditedBaseFreight      float64        `json:"audited_base_freight"`
+	AuditedTollCharges      float64        `json:"audited_toll_charges"`
+	AuditedDetentionHours   float64        `json:"audited_detention_hours"`
+	AuditedDetentionCharges float64        `json:"audited_detention_charges"`
+	AuditedTotal            float64        `json:"audited_total"`
+	DistanceVarianceKm      float64        `json:"distance_variance_km"`
+	WeightVarianceKg        float64        `json:"weight_variance_kg"`
+	RateVariance            float64        `json:"rate_variance"`
+	TollVariance            float64        `json:"toll_variance"`
+	OverbillingAmount       float64        `json:"overbilling_amount"`
+	VariancePct             float64        `json:"variance_pct"`
+	DeductionAmount         float64        `json:"deduction_amount"`
+	PayableAmount           float64        `json:"payable_amount"`
+	DeductionReason         string         `json:"deduction_reason"`
+	DebitNoteNumber         string         `json:"debit_note_number"`
+	DiscrepancyFlags        string         `json:"discrepancy_flags"`
+	DisputeReason           string         `json:"dispute_reason"`
+	ReviewedBy              string         `json:"reviewed_by"`
+	ReviewedAt              sql.NullTime   `json:"reviewed_at"`
+	ApprovedBy              string         `json:"approved_by"`
+	ApprovedAt              sql.NullTime   `json:"approved_at"`
+	CreatedAt               time.Time      `json:"created_at"`
+	UpdatedAt               time.Time      `json:"updated_at"`
+}
+
+type FreightAuditDeduction struct {
+	ID              string    `json:"id"`
+	TenantID        string    `json:"tenant_id"`
+	AuditID         string    `json:"audit_id"`
+	Category        string    `json:"category"`
+	Description     string    `json:"description"`
+	ClaimedValue    float64   `json:"claimed_value"`
+	VerifiedValue   float64   `json:"verified_value"`
+	UnitRate        float64   `json:"unit_rate"`
+	DeductionAmount float64   `json:"deduction_amount"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
+type FreightRateCard struct {
+	ID                   string         `json:"id"`
+	TenantID             string         `json:"tenant_id"`
+	ContractNumber       string         `json:"contract_number"`
+	Name                 string         `json:"name"`
+	VendorID             sql.NullString `json:"vendor_id"`
+	CustomerID           sql.NullString `json:"customer_id"`
+	RouteID              sql.NullString `json:"route_id"`
+	VehicleType          string         `json:"vehicle_type"`
+	BillingBasis         string         `json:"billing_basis"`
+	Rate                 float64        `json:"rate"`
+	MinCharge            float64        `json:"min_charge"`
+	FreeDetentionHours   float64        `json:"free_detention_hours"`
+	DetentionRatePerHour float64        `json:"detention_rate_per_hour"`
+	EffectiveFrom        time.Time      `json:"effective_from"`
+	EffectiveTo          sql.NullTime   `json:"effective_to"`
+	IsActive             int64          `json:"is_active"`
+	CreatedAt            time.Time      `json:"created_at"`
+	UpdatedAt            time.Time      `json:"updated_at"`
+}
+
 type FuelCard struct {
 	ID                string         `json:"id"`
 	TenantID          string         `json:"tenant_id"`
