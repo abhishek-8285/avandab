@@ -126,6 +126,7 @@ func TestOrgAdmin_RBACGrants(t *testing.T) {
 			{"inventory", "read"}, {"inventory", "write"},
 			{"freight_audit", "read"}, {"freight_audit", "write"},
 			{"reports", "read"}, {"reports", "write"},
+			{"rfq", "read"}, {"rfq", "write"},
 		},
 		"u-disp": {
 			{"trips", "read"}, {"ewaybill", "read"}, {"ewaybill", "create"},
@@ -135,6 +136,7 @@ func TestOrgAdmin_RBACGrants(t *testing.T) {
 			{"inventory", "read"}, {"inventory", "write"},
 			{"freight_audit", "read"}, {"freight_audit", "write"},
 			{"reports", "read"}, {"reports", "write"},
+			{"rfq", "read"}, {"rfq", "write"},
 		},
 	}
 	for user, pairs := range mustAllow {

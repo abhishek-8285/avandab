@@ -258,6 +258,26 @@ type ContactSubmission struct {
 	AcknowledgedAt sql.NullTime   `json:"acknowledged_at"`
 }
 
+type CounterOffer struct {
+	ID            string         `json:"id"`
+	TenantID      string         `json:"tenant_id"`
+	EntityType    string         `json:"entity_type"`
+	RfqID         sql.NullString `json:"rfq_id"`
+	ListingID     sql.NullString `json:"listing_id"`
+	BidID         string         `json:"bid_id"`
+	RoundNumber   int64          `json:"round_number"`
+	SenderRole    string         `json:"sender_role"`
+	SenderID      string         `json:"sender_id"`
+	SenderName    string         `json:"sender_name"`
+	OfferedAmount float64        `json:"offered_amount"`
+	Remarks       string         `json:"remarks"`
+	Status        string         `json:"status"`
+	ExpiresAt     sql.NullTime   `json:"expires_at"`
+	CreatedAt     time.Time      `json:"created_at"`
+	DecidedAt     sql.NullTime   `json:"decided_at"`
+	DecidedBy     string         `json:"decided_by"`
+}
+
 type CreditDebitNote struct {
 	ID             string         `json:"id"`
 	TenantID       string         `json:"tenant_id"`
@@ -1779,6 +1799,50 @@ type ReportSchedule struct {
 	CreatedBy      string       `json:"created_by"`
 	CreatedAt      time.Time    `json:"created_at"`
 	UpdatedAt      time.Time    `json:"updated_at"`
+}
+
+type Rfq struct {
+	ID                  string         `json:"id"`
+	TenantID            string         `json:"tenant_id"`
+	RfqNumber           string         `json:"rfq_number"`
+	Title               string         `json:"title"`
+	OriginCity          string         `json:"origin_city"`
+	DestinationCity     string         `json:"destination_city"`
+	VehicleTypeRequired string         `json:"vehicle_type_required"`
+	CargoType           string         `json:"cargo_type"`
+	CargoWeightTons     float64        `json:"cargo_weight_tons"`
+	TargetRate          float64        `json:"target_rate"`
+	MaxAcceptableRate   float64        `json:"max_acceptable_rate"`
+	PickupDate          time.Time      `json:"pickup_date"`
+	DeliveryDeadline    time.Time      `json:"delivery_deadline"`
+	BidDeadline         time.Time      `json:"bid_deadline"`
+	Status              string         `json:"status"`
+	BookingID           sql.NullString `json:"booking_id"`
+	StoID               sql.NullString `json:"sto_id"`
+	AwardedBidID        sql.NullString `json:"awarded_bid_id"`
+	AwardedCarrierID    string         `json:"awarded_carrier_id"`
+	AwardedCarrierName  string         `json:"awarded_carrier_name"`
+	AwardedRate         float64        `json:"awarded_rate"`
+	AwardedAt           sql.NullTime   `json:"awarded_at"`
+	CreatedBy           string         `json:"created_by"`
+	CreatedAt           time.Time      `json:"created_at"`
+	UpdatedAt           time.Time      `json:"updated_at"`
+}
+
+type RfqBid struct {
+	ID                string       `json:"id"`
+	TenantID          string       `json:"tenant_id"`
+	RfqID             string       `json:"rfq_id"`
+	CarrierID         string       `json:"carrier_id"`
+	CarrierName       string       `json:"carrier_name"`
+	BidAmount         float64      `json:"bid_amount"`
+	TransitDays       int64        `json:"transit_days"`
+	VehiclesAvailable int64        `json:"vehicles_available"`
+	Remarks           string       `json:"remarks"`
+	Status            string       `json:"status"`
+	SubmittedAt       time.Time    `json:"submitted_at"`
+	DecidedAt         sql.NullTime `json:"decided_at"`
+	DecidedBy         string       `json:"decided_by"`
 }
 
 type Role struct {

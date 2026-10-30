@@ -1066,6 +1066,8 @@ func main() {
 		app.FreightAudit.RegisterAPIRoutes(r)
 		// Report builder and scheduled delivery (P3 3.4) JSON API — tenant-scoped, reports RBAC.
 		app.ReportBuilder.RegisterAPIRoutes(r)
+		// RFQ lane bidding and counter-offer negotiation (P3 3.5) JSON API — tenant-scoped, rfq RBAC.
+		app.RFQ.RegisterAPIRoutes(r)
 		// Spec 18 Wave A — route optimization API (tenant-scoped, permission-gated)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "create")).Post("/api/v1/routes/optimize", app.Routes.Optimize)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "read")).Get("/api/v1/routes/optimize/jobs", app.Routes.OptimizeJobs)
