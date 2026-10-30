@@ -1070,6 +1070,8 @@ func main() {
 		app.ReportBuilder.RegisterAPIRoutes(r)
 		// RFQ lane bidding and counter-offer negotiation (P3 3.5) JSON API — tenant-scoped, rfq RBAC.
 		app.RFQ.RegisterAPIRoutes(r)
+		// EV telematics, battery management, and charging sessions (P3 3.10) JSON API — tenant-scoped, ev RBAC.
+		app.EV.RegisterAPIRoutes(r)
 		// Spec 18 Wave A — route optimization API (tenant-scoped, permission-gated)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "create")).Post("/api/v1/routes/optimize", app.Routes.Optimize)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "read")).Get("/api/v1/routes/optimize/jobs", app.Routes.OptimizeJobs)
@@ -1554,6 +1556,7 @@ func main() {
 			r.Route("/fuel-cards", app.FuelCards.Routes)
 			r.Route("/backhaul", app.Backhaul.Routes)
 			r.Route("/control-tower", app.ControlTower.Routes)
+			r.Route("/ev", app.EV.Routes)
 
 			// Telemetry device registry / provisioning / quarantine admin
 			if cfg.Telemetry.Enabled {

@@ -24,6 +24,7 @@ import (
 	domainpayment "transport-app/internal/domain/payment"
 	domaintrip "transport-app/internal/domain/trip"
 	driverapp "transport-app/internal/driver/application"
+	"transport-app/internal/ev"
 	"transport-app/internal/facility"
 	"transport-app/internal/fastag"
 	"transport-app/internal/features"
@@ -1129,6 +1130,89 @@ func TestAllTemplatesRender(t *testing.T) {
 			"SOSCount":     0,
 			"StaleCount":   0,
 			"StatusFilter": "",
+		}},
+		{"ev_dashboard", "ev_dashboard.html", map[string]interface{}{
+			"Title": "EV Telematics",
+			"User":  user,
+			"Metrics": &ev.EVFleetMetrics{
+				TotalEVs:             2,
+				ActiveChargingCount:  1,
+				FleetAvgSoC:          65.5,
+				FleetAvgSoH:          98.0,
+				LowBatteryAlerts:     0,
+				TotalGreenDistanceKM: 1250.0,
+				TotalEnergyKWh:       250.0,
+				TotalCO2AvoidedKG:    687.5,
+				AvgEfficiencyWhKM:    200.0,
+			},
+			"Vehicles": []ev.EVVehicleStatus{
+				{
+					VehicleID:          "v-1",
+					RegistrationNumber: "KA-01-EV-1001",
+					VehicleNumber:      "EV-001",
+					VehicleType:        "truck",
+					FuelType:           "electric",
+					Status:             "available",
+					Profile: &ev.EVProfile{
+						VehicleID:             "v-1",
+						TenantID:              "tenant-1",
+						BatteryCapacityKWh:    80.0,
+						MaxRangeKM:            300.0,
+						ChargingStandard:      "CCS2",
+						MinSafeSoC:            15.0,
+						NominalEfficiencyWhKM: 200.0,
+						CreatedAt:             now,
+						UpdatedAt:             now,
+					},
+					Telemetry: &ev.EVTelemetry{
+						VehicleID:        "v-1",
+						TenantID:         "tenant-1",
+						SoCPercent:       65.5,
+						SoHPercent:       98.0,
+						BatteryTempC:     fPtr(31.2),
+						RemainingRangeKM: 196.5,
+						ChargingStatus:   "CHARGING",
+						ChargingPowerKW:  30.0,
+						CurrentDrawA:     75.0,
+						VoltageV:         400.0,
+						LastSyncAt:       now,
+					},
+					IsLowBattery: false,
+				},
+			},
+			"Sessions": []ev.ChargingSession{
+				{
+					ID:             "sess-1",
+					TenantID:       "tenant-1",
+					VehicleID:      "v-1",
+					StartTime:      now.Add(-2 * time.Hour),
+					EndTime:        &now,
+					StartSoC:       20.0,
+					EndSoC:         fPtr(65.5),
+					EnergyAddedKWh: 36.4,
+					PeakPowerKW:    50.0,
+					ChargerType:    "DC_FAST",
+					EstimatedCost:  527.8,
+					Status:         "COMPLETED",
+					CreatedAt:      now,
+					UpdatedAt:      now,
+				},
+			},
+			"Summaries": []ev.EVEnergySummary{
+				{
+					ID:                "summ-1",
+					TenantID:          "tenant-1",
+					VehicleID:         "v-1",
+					DistanceKM:        100.0,
+					EnergyConsumedKWh: 20.0,
+					EfficiencyWhKM:    200.0,
+					CO2AvoidedKG:      55.0,
+					RecordedAt:        now,
+				},
+			},
+			"AllVehicles": []map[string]string{
+				{"ID": "v-1", "VehicleNumber": "EV-001", "RegistrationNumber": "KA-01-EV-1001"},
+			},
 		}},
 	}
 

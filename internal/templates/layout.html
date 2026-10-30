@@ -145,7 +145,7 @@
                 </a>
                 {{end}}
                 {{end}}
-                {{if or (can .User "bookings" "read") (can .User "trips" "read") (can .User "customer_portal" "read")}}<div class="nav-section-label">{{t "nav.fleet"}}</div>{{end}}
+                {{if or (can .User "bookings" "read") (can .User "trips" "read") (can .User "customer_portal" "read") (can .User "ev" "read")}}<div class="nav-section-label">{{t "nav.fleet"}}</div>{{end}}
                 {{if can .User "drivers" "read"}}
                 <a href="/drivers" class="nav-item {{if eq .Title "Drivers"}}active{{end}}">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -156,6 +156,12 @@
                 <a href="/vehicles" class="nav-item {{if eq .Title "Vehicles"}}active{{end}}">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
                     <span>{{t "nav.vehicles"}}</span>
+                </a>
+                {{end}}
+                {{if can .User "ev" "read"}}
+                <a href="/ev" class="nav-item {{if eq .Title "EV Telematics"}}active{{end}}">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                    <span>EV Telematics</span>
                 </a>
                 {{end}}
                 {{if can .User "facilities" "read"}}

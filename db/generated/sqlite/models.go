@@ -919,6 +919,36 @@ type EtaHistoryMonthly struct {
 	SampleCount  int64   `json:"sample_count"`
 }
 
+type EvChargingSession struct {
+	ID             string          `json:"id"`
+	TenantID       string          `json:"tenant_id"`
+	VehicleID      string          `json:"vehicle_id"`
+	FacilityID     sql.NullString  `json:"facility_id"`
+	StartTime      time.Time       `json:"start_time"`
+	EndTime        sql.NullTime    `json:"end_time"`
+	StartSoc       float64         `json:"start_soc"`
+	EndSoc         sql.NullFloat64 `json:"end_soc"`
+	EnergyAddedKwh float64         `json:"energy_added_kwh"`
+	PeakPowerKw    float64         `json:"peak_power_kw"`
+	ChargerType    string          `json:"charger_type"`
+	EstimatedCost  float64         `json:"estimated_cost"`
+	Status         string          `json:"status"`
+	CreatedAt      time.Time       `json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
+}
+
+type EvEnergySummary struct {
+	ID                string         `json:"id"`
+	TenantID          string         `json:"tenant_id"`
+	VehicleID         string         `json:"vehicle_id"`
+	TripID            sql.NullString `json:"trip_id"`
+	DistanceKm        float64        `json:"distance_km"`
+	EnergyConsumedKwh float64        `json:"energy_consumed_kwh"`
+	EfficiencyWhKm    float64        `json:"efficiency_wh_km"`
+	Co2AvoidedKg      float64        `json:"co2_avoided_kg"`
+	RecordedAt        time.Time      `json:"recorded_at"`
+}
+
 type EwayBill struct {
 	ID               string          `json:"id"`
 	TripID           sql.NullString  `json:"trip_id"`
@@ -2565,6 +2595,32 @@ type VehicleDocument struct {
 	VerifiedBy sql.NullString `json:"verified_by"`
 	VerifiedAt sql.NullTime   `json:"verified_at"`
 	CreatedAt  time.Time      `json:"created_at"`
+}
+
+type VehicleEvProfile struct {
+	VehicleID             string    `json:"vehicle_id"`
+	TenantID              string    `json:"tenant_id"`
+	BatteryCapacityKwh    float64   `json:"battery_capacity_kwh"`
+	MaxRangeKm            float64   `json:"max_range_km"`
+	ChargingStandard      string    `json:"charging_standard"`
+	MinSafeSoc            float64   `json:"min_safe_soc"`
+	NominalEfficiencyWhKm float64   `json:"nominal_efficiency_wh_km"`
+	CreatedAt             time.Time `json:"created_at"`
+	UpdatedAt             time.Time `json:"updated_at"`
+}
+
+type VehicleEvTelemetryLatest struct {
+	VehicleID        string          `json:"vehicle_id"`
+	TenantID         string          `json:"tenant_id"`
+	SocPercent       float64         `json:"soc_percent"`
+	SohPercent       float64         `json:"soh_percent"`
+	BatteryTempC     sql.NullFloat64 `json:"battery_temp_c"`
+	RemainingRangeKm float64         `json:"remaining_range_km"`
+	ChargingStatus   string          `json:"charging_status"`
+	ChargingPowerKw  float64         `json:"charging_power_kw"`
+	CurrentDrawA     float64         `json:"current_draw_a"`
+	VoltageV         float64         `json:"voltage_v"`
+	LastSyncAt       time.Time       `json:"last_sync_at"`
 }
 
 type VehicleGeofence struct {

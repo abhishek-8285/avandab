@@ -185,6 +185,8 @@ type App struct {
 	RFQ *RFQHandlers
 	// ControlTower powers the operations cockpit and multi-stop tracking (P3 3.9).
 	ControlTower *ControlTowerHandlers
+	// EV powers EV fleet telematics, battery SoC/SoH tracking, and charging sessions (P3 3.10).
+	EV *EVHandlers
 }
 
 // NewApp creates a new handler app with all handler groups initialized.
@@ -303,6 +305,7 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	app.ReportBuilder = &ReportBuilderHandlers{App: app}
 	app.RFQ = &RFQHandlers{App: app}
 	app.ControlTower = NewControlTowerHandlers(app, nil)
+	app.EV = NewEVHandlers(app)
 
 	return app
 }

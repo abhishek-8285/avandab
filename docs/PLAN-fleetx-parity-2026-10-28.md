@@ -209,7 +209,7 @@ Recommended order (highest value per unit of work first):
 | 3.7 | Manager/owner mobile app (fleet, dashboard, approvals) | Reuses RN codebase + APIs | L |
 | 3.8 | Hosted MCP server (read tools first, write behind approval) | Differentiator; agent + approvals already exist | M | **DONE** (JSON-RPC 2.0 & SSE transport at `/api/v1/mcp`, tool schemas, tenant context scoping, Casbin RBAC, admin approval gating for mutating actions) |
 | 3.9 | Web UI for STO, load board, facilities, ESG, fuel cards, backhaul, control tower | 7 APIs already built, zero screens | M | **DONE** (web UI screens for all 7 headless modules: STO management & release, Load Board bidding, Facilities catalog, ESG & BRSR reporting, Fuel Cards & OMC sync, Backhaul corridor matching, and Control Tower real-time cockpit) |
-| 3.10 | EV telematics (SoC, charging, battery health) | Needs CAN/OEM feed | L |
+| 3.10 | EV telematics (SoC, charging, battery health) | Needs CAN/OEM feed | L | **DONE** (migration 00176, vehicle EV profiles, CAN telemetry ingestion, auto charging session detection & costing, dynamic range & power estimation, green energy & CO2 avoidance summaries, Web UI cockpit at `/ev`) |
 | 3.11 | Cold chain (reefer probes, set-point drift) | Needs hardware | M + hardware |
 | 3.12 | Video telematics (DMS/ADAS, face-match, live stream) | Needs hardware partner | XL |
 
