@@ -68,7 +68,7 @@
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         </div>
         <div class="min-w-0">
-            <div class="text-xl font-semibold tabular-nums text-on-surface leading-tight">{{if $metrics}}{{printf "%.1f" $metrics.FleetAvgSafetyScore}}{{else}}&ndash;{{end}}</div>
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-tight">{{if and $metrics (gt $metrics.FleetAvgSafetyScore 0.0)}}{{printf "%.1f" $metrics.FleetAvgSafetyScore}}{{else}}&ndash;{{end}}</div>
             <div class="text-xs text-secondary font-medium">Fleet Safety Score</div>
         </div>
     </div>

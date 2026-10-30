@@ -618,7 +618,7 @@ func (r *SQLRepository) GetFleetMetrics(ctx context.Context, tenantID string) (*
 		(SELECT COUNT(*) FROM video_safety_events WHERE tenant_id = $1 AND event_time >= $2),
 		(SELECT COUNT(*) FROM video_safety_events WHERE tenant_id = $1 AND severity = 'CRITICAL' AND event_time >= $2),
 		(SELECT COUNT(*) FROM video_safety_events WHERE tenant_id = $1 AND review_status = 'PENDING_REVIEW'),
-		COALESCE((SELECT AVG(safety_score) FROM driver_safety_scorecards WHERE tenant_id = $1), 100.0)`
+		COALESCE((SELECT AVG(safety_score) FROM driver_safety_scorecards WHERE tenant_id = $1), 0.0)`
 
 	err := r.db.QueryRowContext(ctx, query, tenantID, todayStart).Scan(
 		&metrics.TotalCameras,

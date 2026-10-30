@@ -425,6 +425,19 @@ func TestVideoTelematics_FleetMetrics(t *testing.T) {
 	assert.Equal(t, 1, metrics.TodayEventsCount)
 	assert.Equal(t, 1, metrics.CriticalEventsToday)
 	assert.Equal(t, 1, metrics.PendingCoachingCount)
+	// Honest fleet metrics: unmeasured fleet with no driver scorecards yields 0.0, never fabricated 100.0
+	assert.Equal(t, 0.0, metrics.FleetAvgSafetyScore)
+
+	// When a real driver scorecard is created with real mileage, fleet avg reflects the real score
+	now := time.Now().UTC()
+	start := now.Add(-24 * time.Hour)
+	card, err := svc.CalculateAndSaveDriverScorecard(ctx, "tenant-vid-a", "drv-metrics-1", start, now, 500.0)
+	require.NoError(t, err)
+	require.NotNil(t, card)
+
+	metricsWithScore, err := svc.GetFleetMetrics(ctx, "tenant-vid-a")
+	require.NoError(t, err)
+	assert.Equal(t, card.SafetyScore, metricsWithScore.FleetAvgSafetyScore)
 }
 
 func TestVideoTelematics_TenantIsolation(t *testing.T) {
