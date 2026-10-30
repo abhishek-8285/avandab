@@ -1,0 +1,652 @@
+{{template "page_header.html" (dict "Title" "Video Telematics & AI Safety" "Subtitle" "Edge AI dual-facing dashcams, real-time live streaming, driver safety scorecards & coaching workflow")}}
+
+{{$metrics := .Metrics}}
+{{$vehicles := .Vehicles}}
+{{$events := .Events}}
+{{$scorecards := .Scorecards}}
+{{$allVehicles := .AllVehicles}}
+{{if and (not $metrics) .Extra}}{{$metrics = .Extra.Metrics}}{{end}}
+{{if and (not $vehicles) .Extra}}{{$vehicles = .Extra.Vehicles}}{{end}}
+{{if and (not $events) .Extra}}{{$events = .Extra.Events}}{{end}}
+{{if and (not $scorecards) .Extra}}{{$scorecards = .Extra.Scorecards}}{{end}}
+{{if and (not $allVehicles) .Extra}}{{$allVehicles = .Extra.AllVehicles}}{{end}}
+
+<!-- KPI Stats Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+    <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-sky-500/10 border border-sky-500/20 grid place-items-center text-sky-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-tight">{{if $metrics}}{{$metrics.TotalCameras}}{{else}}0{{end}}</div>
+            <div class="text-xs text-secondary font-medium">AI Dashcams</div>
+        </div>
+    </div>
+
+    <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" x2="12.01" y1="20" y2="20"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-tight">{{if $metrics}}{{$metrics.OnlineCameras}}{{else}}0{{end}}</div>
+            <div class="text-xs text-secondary font-medium">Online Cameras</div>
+        </div>
+    </div>
+
+    <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 grid place-items-center text-indigo-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-tight">{{if $metrics}}{{$metrics.TodayEventsCount}}{{else}}0{{end}}</div>
+            <div class="text-xs text-secondary font-medium">Events Today</div>
+        </div>
+    </div>
+
+    <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/20 grid place-items-center text-rose-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-tight">{{if $metrics}}{{$metrics.CriticalEventsToday}}{{else}}0{{end}}</div>
+            <div class="text-xs text-secondary font-medium">Critical Incidents</div>
+        </div>
+    </div>
+
+    <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 grid place-items-center text-amber-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-tight">{{if $metrics}}{{$metrics.PendingCoachingCount}}{{else}}0{{end}}</div>
+            <div class="text-xs text-secondary font-medium">Pending Coaching</div>
+        </div>
+    </div>
+
+    <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-teal-500/10 border border-teal-500/20 grid place-items-center text-teal-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-tight">{{if $metrics}}{{printf "%.1f" $metrics.FleetAvgSafetyScore}}{{else}}100.0{{end}}</div>
+            <div class="text-xs text-secondary font-medium">Fleet Safety Score</div>
+        </div>
+    </div>
+</div>
+
+<!-- AI Dashcam Fleet Section -->
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xs overflow-hidden mb-6">
+    <div class="p-4 border-b border-border-subtle flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <h3 class="text-base font-semibold text-on-surface">Dual-Facing Dashcam Fleet & Live Streaming</h3>
+            <p class="text-xs text-secondary mt-0.5">Real-time camera connectivity, live cabin/road video brokering, and edge AI status</p>
+        </div>
+        {{if can .User "video" "write"}}
+        <button type="button" onclick="document.getElementById('configure-dashcam-modal').classList.remove('hidden')" class="px-3.5 py-1.5 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary-hover transition flex items-center gap-1.5">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+            <span>Bind Dashcam Hardware</span>
+        </button>
+        {{end}}
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+            <thead>
+                <tr class="border-b border-border-subtle bg-surface-container-low text-secondary text-xs uppercase tracking-wider">
+                    <th class="py-3 px-4 font-semibold">Vehicle</th>
+                    <th class="py-3 px-4 font-semibold">Camera Model & Serial</th>
+                    <th class="py-3 px-4 font-semibold">Status</th>
+                    <th class="py-3 px-4 font-semibold">AI Features</th>
+                    <th class="py-3 px-4 font-semibold">Today Incidents</th>
+                    <th class="py-3 px-4 font-semibold">Pending Review</th>
+                    <th class="py-3 px-4 font-semibold text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-border-subtle text-on-surface">
+                {{if $vehicles}}
+                {{range $vehicles}}
+                <tr class="hover:bg-surface-container-low/50 transition">
+                    <td class="py-3.5 px-4 font-medium">
+                        <div class="font-semibold text-on-surface">{{.VehicleNumber}}</div>
+                        <div class="text-xs text-secondary">{{.RegistrationNumber}} &bull; {{.VehicleType}}</div>
+                    </td>
+                    <td class="py-3.5 px-4">
+                        {{if .Profile}}
+                        <div class="font-medium text-on-surface">{{.Profile.CameraMakeModel}}</div>
+                        <div class="text-xs text-secondary font-mono">{{.Profile.CameraSerial}} &bull; {{.Profile.FirmwareVersion}}</div>
+                        {{else}}
+                        <span class="text-xs text-secondary italic">Not Bound</span>
+                        {{end}}
+                    </td>
+                    <td class="py-3.5 px-4">
+                        {{if .Profile}}
+                            {{if eq .Profile.Status "ONLINE"}}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                ONLINE
+                            </span>
+                            {{else if eq .Profile.Status "STANDBY"}}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                STANDBY
+                            </span>
+                            {{else}}
+                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-500/10 text-zinc-600 border border-zinc-500/20">
+                                <span class="w-1.5 h-1.5 rounded-full bg-zinc-500"></span>
+                                OFFLINE
+                            </span>
+                            {{end}}
+                        {{else}}
+                        <span class="text-xs text-secondary">-</span>
+                        {{end}}
+                    </td>
+                    <td class="py-3.5 px-4">
+                        {{if .Profile}}
+                        <div class="flex flex-wrap gap-1">
+                            {{if .Profile.DualFacing}}<span class="px-1.5 py-0.5 rounded text-[11px] font-medium bg-sky-500/10 text-sky-600 border border-sky-500/20">Dual Cam</span>{{end}}
+                            {{if .Profile.ADASEnabled}}<span class="px-1.5 py-0.5 rounded text-[11px] font-medium bg-indigo-500/10 text-indigo-600 border border-indigo-500/20">ADAS</span>{{end}}
+                            {{if .Profile.DMSEnabled}}<span class="px-1.5 py-0.5 rounded text-[11px] font-medium bg-purple-500/10 text-purple-600 border border-purple-500/20">DMS</span>{{end}}
+                            {{if .Profile.LiveStreamSupported}}<span class="px-1.5 py-0.5 rounded text-[11px] font-medium bg-teal-500/10 text-teal-600 border border-teal-500/20">Live</span>{{end}}
+                        </div>
+                        {{else}}
+                        <span class="text-xs text-secondary">-</span>
+                        {{end}}
+                    </td>
+                    <td class="py-3.5 px-4">
+                        <div class="text-sm tabular-nums font-semibold {{if gt .CriticalEventsCount 0}}text-rose-600{{else}}text-on-surface{{end}}">
+                            {{.TodayEventsCount}} <span class="text-xs font-normal text-secondary">({{if gt .CriticalEventsCount 0}}{{.CriticalEventsCount}} critical{{else}}0 critical{{end}})</span>
+                        </div>
+                    </td>
+                    <td class="py-3.5 px-4">
+                        {{if gt .PendingReviewsCount 0}}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                            {{.PendingReviewsCount}} pending
+                        </span>
+                        {{else}}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                            All reviewed
+                        </span>
+                        {{end}}
+                    </td>
+                    <td class="py-3.5 px-4 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            {{if .ActiveLivestream}}
+                            <button type="button" onclick="openLivestreamViewer('{{.VehicleNumber}}', '{{.ActiveLivestream.Channel}}', '{{.ActiveLivestream.StreamURL}}', '{{.ActiveLivestream.ID}}')" class="px-2.5 py-1 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-700 transition flex items-center gap-1 shadow-xs">
+                                <span class="w-2 h-2 rounded-full bg-white animate-ping"></span>
+                                Live Now
+                            </button>
+                            {{else}}
+                            <button type="button" onclick="openStartLivestreamModal('{{.VehicleID}}', '{{.VehicleNumber}}')" class="px-2.5 py-1 bg-surface-container-high text-on-surface rounded text-xs font-medium hover:bg-surface-container-highest transition flex items-center gap-1">
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5 text-sky-600"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                                Stream
+                            </button>
+                            {{end}}
+                            {{if can $.User "video" "write"}}
+                            <button type="button" onclick="openConfigureModal('{{.VehicleID}}', '{{if .Profile}}{{.Profile.CameraMakeModel}}{{end}}', '{{if .Profile}}{{.Profile.CameraSerial}}{{end}}')" class="px-2.5 py-1 text-secondary hover:text-on-surface rounded text-xs font-medium transition">
+                                Edit
+                            </button>
+                            {{end}}
+                        </div>
+                    </td>
+                </tr>
+                {{end}}
+                {{else}}
+                <tr>
+                    <td colspan="7" class="py-8 text-center text-secondary text-sm">
+                        No AI dashcam hardware bound yet. Click "Bind Dashcam Hardware" above to configure your first vehicle.
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Grid Layout: AI Safety Event Feed & Driver Leaderboard -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+    <!-- Left 2 Cols: AI Safety Incidents Feed -->
+    <div class="lg:col-span-2 bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xs overflow-hidden">
+        <div class="p-4 border-b border-border-subtle flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h3 class="text-base font-semibold text-on-surface">AI Safety Incident Feed & Video Clips</h3>
+                <p class="text-xs text-secondary mt-0.5">Automated edge AI detections with dual-channel recorded clips and supervisor coaching</p>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+                <thead>
+                    <tr class="border-b border-border-subtle bg-surface-container-low text-secondary text-xs uppercase tracking-wider">
+                        <th class="py-3 px-4 font-semibold">Incident Type</th>
+                        <th class="py-3 px-4 font-semibold">Vehicle & Driver</th>
+                        <th class="py-3 px-4 font-semibold">Telemetry & Clip</th>
+                        <th class="py-3 px-4 font-semibold">Review Status</th>
+                        <th class="py-3 px-4 font-semibold text-right">Coaching</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border-subtle text-on-surface">
+                    {{if $events}}
+                    {{range $events}}
+                    <tr class="hover:bg-surface-container-low/50 transition">
+                        <td class="py-3.5 px-4 font-medium">
+                            <div class="flex items-center gap-1.5 mb-1">
+                                {{if eq .Category "DMS"}}
+                                <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-purple-500/10 text-purple-600 border border-purple-500/20">DMS</span>
+                                {{else if eq .Category "ADAS"}}
+                                <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-sky-500/10 text-sky-600 border border-sky-500/20">ADAS</span>
+                                {{else}}
+                                <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-600 border border-rose-500/20">SOS</span>
+                                {{end}}
+
+                                {{if eq .Severity "CRITICAL"}}
+                                <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-600 border border-rose-500/20">CRITICAL</span>
+                                {{else if eq .Severity "HIGH"}}
+                                <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-orange-500/10 text-orange-600 border border-orange-500/20">HIGH</span>
+                                {{else if eq .Severity "MEDIUM"}}
+                                <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-600 border border-amber-500/20">MEDIUM</span>
+                                {{else}}
+                                <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">LOW</span>
+                                {{end}}
+                            </div>
+                            <div class="font-semibold text-on-surface">{{.EventType}}</div>
+                            <div class="text-xs text-secondary">{{.EventTime.Format "02 Jan 15:04"}} &bull; {{.DurationSeconds}}s</div>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <div class="font-medium text-on-surface">{{if .VehicleNumber}}{{.VehicleNumber}}{{else}}{{.VehicleID}}{{end}}</div>
+                            <div class="text-xs text-secondary">{{if .DriverName}}{{.DriverName}}{{else}}Unassigned{{end}}</div>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <div class="text-xs text-secondary mb-1">
+                                <span class="font-medium text-on-surface tabular-nums">{{printf "%.1f" .SpeedKMH}} km/h</span>
+                                {{if .LocationName}} &bull; {{.LocationName}}{{end}}
+                            </div>
+                            <button type="button" onclick="openVideoPlayer('{{.EventType}}', '{{.MediaClipURL}}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition">
+                                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                <span>Play Clip</span>
+                            </button>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            {{if eq .ReviewStatus "COACHED"}}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                Coached
+                            </span>
+                            {{if .CoachingNote}}
+                            <p class="text-xs text-secondary mt-1 italic line-clamp-1">"{{.CoachingNote}}"</p>
+                            {{end}}
+                            {{else if eq .ReviewStatus "DISMISSED"}}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-zinc-500/10 text-zinc-600 border border-zinc-500/20">
+                                Dismissed
+                            </span>
+                            {{else if eq .ReviewStatus "ESCALATED"}}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-600 border border-rose-500/20">
+                                Escalated
+                            </span>
+                            {{else}}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/10 text-amber-600 border border-amber-500/20">
+                                Pending Review
+                            </span>
+                            {{end}}
+                        </td>
+                        <td class="py-3.5 px-4 text-right">
+                            {{if can $.User "video" "write"}}
+                            <button type="button" onclick="openCoachingModal('{{.ID}}', '{{.EventType}}', '{{if .DriverName}}{{.DriverName}}{{else}}Driver{{end}}')" class="px-2.5 py-1 bg-surface-container-high text-on-surface rounded text-xs font-medium hover:bg-surface-container-highest transition">
+                                Coach
+                            </button>
+                            {{end}}
+                        </td>
+                    </tr>
+                    {{end}}
+                    {{else}}
+                    <tr>
+                        <td colspan="5" class="py-8 text-center text-secondary text-sm">
+                            No AI safety events recorded yet today. Fleet is operating safely!
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Right Col: Driver Safety Scorecard & Coaching Leaderboard -->
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xs overflow-hidden flex flex-col">
+        <div class="p-4 border-b border-border-subtle">
+            <h3 class="text-base font-semibold text-on-surface">Driver Safety Scorecards</h3>
+            <p class="text-xs text-secondary mt-0.5">30-day normalized safety scoring & incident coaching tiers</p>
+        </div>
+
+        <div class="p-4 divide-y divide-border-subtle flex-1 overflow-y-auto">
+            {{if $scorecards}}
+            {{range $scorecards}}
+            <div class="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-3">
+                <div class="min-w-0 flex-1">
+                    <div class="flex items-center justify-between gap-2 mb-1">
+                        <span class="font-semibold text-sm text-on-surface truncate">{{if .DriverName}}{{.DriverName}}{{else}}{{.DriverID}}{{end}}</span>
+                        <span class="text-xs font-semibold tabular-nums {{if ge .SafetyScore 85.0}}text-emerald-600{{else if ge .SafetyScore 70.0}}text-sky-600{{else if ge .SafetyScore 50.0}}text-amber-600{{else}}text-rose-600{{end}}">
+                            {{printf "%.1f" .SafetyScore}}/100
+                        </span>
+                    </div>
+
+                    <div class="w-full bg-surface-container-high rounded-full h-1.5 overflow-hidden mb-1.5">
+                        <div class="h-full rounded-full {{if ge .SafetyScore 85.0}}bg-emerald-500{{else if ge .SafetyScore 70.0}}bg-sky-500{{else if ge .SafetyScore 50.0}}bg-amber-500{{else}}bg-rose-500{{end}}" style="width: {{.SafetyScore}}%"></div>
+                    </div>
+
+                    <div class="flex items-center justify-between text-xs text-secondary">
+                        <span>{{printf "%.0f" .DistanceKM}} km &bull; {{.ADASEventCount}} ADAS &bull; {{.DMSEventCount}} DMS</span>
+                        {{if eq .RiskTier "LOW_RISK"}}
+                        <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-600">Low Risk</span>
+                        {{else if eq .RiskTier "MODERATE_RISK"}}
+                        <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-sky-500/10 text-sky-600">Moderate</span>
+                        {{else if eq .RiskTier "HIGH_RISK"}}
+                        <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-500/10 text-amber-600">High Risk</span>
+                        {{else}}
+                        <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-rose-500/10 text-rose-600">Critical</span>
+                        {{end}}
+                    </div>
+                </div>
+            </div>
+            {{end}}
+            {{else}}
+            <div class="py-8 text-center text-secondary text-sm">
+                No safety scorecards computed yet. Scorecards are automatically generated as trips and events occur.
+            </div>
+            {{end}}
+        </div>
+    </div>
+</div>
+
+<!-- Modal 1: Configure Dashcam Profile -->
+<div id="configure-dashcam-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div class="p-4 border-b border-border-subtle flex items-center justify-between">
+            <h3 class="text-base font-semibold text-on-surface">Configure AI Dashcam Hardware</h3>
+            <button type="button" onclick="document.getElementById('configure-dashcam-modal').classList.add('hidden')" class="text-secondary hover:text-on-surface">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+            </button>
+        </div>
+
+        <form action="/video/cameras" method="POST" class="p-4 space-y-4">
+            <div>
+                <label for="cfg-vehicle-id" class="block text-xs font-semibold text-secondary mb-1">Target Vehicle *</label>
+                <select id="cfg-vehicle-id" name="vehicle_id" required class="w-full px-3 py-2 bg-surface-container-low border border-border-subtle rounded-lg text-sm text-on-surface focus:outline-hidden focus:ring-1 focus:ring-primary">
+                    <option value="">Select a Vehicle...</option>
+                    {{if $allVehicles}}
+                    {{range $allVehicles}}
+                    <option value="{{.ID}}">{{.VehicleNumber}} ({{.RegistrationNumber}})</option>
+                    {{end}}
+                    {{end}}
+                </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label for="cfg-camera-serial" class="block text-xs font-semibold text-secondary mb-1">Camera Serial / IMEI *</label>
+                    <input type="text" id="cfg-camera-serial" name="camera_serial" required placeholder="e.g. FX-CAM-1008" class="w-full px-3 py-2 bg-surface-container-low border border-border-subtle rounded-lg text-sm text-on-surface font-mono">
+                </div>
+                <div>
+                    <label for="cfg-make-model" class="block text-xs font-semibold text-secondary mb-1">Make & Model</label>
+                    <input type="text" id="cfg-make-model" name="camera_make_model" value="FleetX AI Dashcam Pro" class="w-full px-3 py-2 bg-surface-container-low border border-border-subtle rounded-lg text-sm text-on-surface">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label for="cfg-firmware" class="block text-xs font-semibold text-secondary mb-1">Firmware Version</label>
+                    <input type="text" id="cfg-firmware" name="firmware_version" value="v2.4.0-edge-ai" class="w-full px-3 py-2 bg-surface-container-low border border-border-subtle rounded-lg text-sm text-on-surface font-mono">
+                </div>
+                <div>
+                    <label for="cfg-status" class="block text-xs font-semibold text-secondary mb-1">Operating Status</label>
+                    <select id="cfg-status" name="status" class="w-full px-3 py-2 bg-surface-container-low border border-border-subtle rounded-lg text-sm text-on-surface">
+                        <option value="ONLINE">ONLINE</option>
+                        <option value="STANDBY">STANDBY</option>
+                        <option value="OFFLINE">OFFLINE</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="p-3 bg-surface-container-low rounded-xl border border-border-subtle space-y-2">
+                <div class="text-xs font-semibold text-on-surface mb-1">AI Vision Features & Channels</div>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="dual_facing" value="1" checked class="rounded border-border-subtle text-primary">
+                        <span>Dual Facing (Road + Cabin)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="live_stream_supported" value="1" checked class="rounded border-border-subtle text-primary">
+                        <span>WebRTC Live Stream</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="adas_enabled" value="1" checked class="rounded border-border-subtle text-primary">
+                        <span>ADAS (FCW, LDW, Tailgate)</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" name="dms_enabled" value="1" checked class="rounded border-border-subtle text-primary">
+                        <span>DMS (Drowsy, Phone, Belt)</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-3">
+                <button type="button" onclick="document.getElementById('configure-dashcam-modal').classList.add('hidden')" class="px-4 py-2 border border-border-subtle rounded-lg text-sm font-medium hover:bg-surface-container-high transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary-hover transition">
+                    Save Dashcam Profile
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal 2: Coach Driver Review Modal -->
+<div id="coach-driver-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div class="p-4 border-b border-border-subtle flex items-center justify-between">
+            <h3 class="text-base font-semibold text-on-surface">Driver Safety Coaching</h3>
+            <button type="button" onclick="document.getElementById('coach-driver-modal').classList.add('hidden')" class="text-secondary hover:text-on-surface">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+            </button>
+        </div>
+
+        <form id="coach-form" action="" method="POST" class="p-4 space-y-4">
+            <div>
+                <div class="text-xs text-secondary mb-1">Safety Incident</div>
+                <div id="coach-event-title" class="text-sm font-semibold text-on-surface">Drowsiness Alert</div>
+                <div id="coach-driver-name" class="text-xs text-secondary">Driver: Rajesh Sharma</div>
+            </div>
+
+            <div>
+                <label for="coach-status" class="block text-xs font-semibold text-secondary mb-1">Review Outcome *</label>
+                <select id="coach-status" name="review_status" required class="w-full px-3 py-2 bg-surface-container-low border border-border-subtle rounded-lg text-sm text-on-surface">
+                    <option value="COACHED">COACHED &mdash; Driver debrief completed</option>
+                    <option value="DISMISSED">DISMISSED &mdash; False positive</option>
+                    <option value="ESCALATED">ESCALATED &mdash; Safety council review</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="coach-note" class="block text-xs font-semibold text-secondary mb-1">Coaching / Investigation Note</label>
+                <textarea id="coach-note" name="coaching_note" rows="3" placeholder="Describe feedback provided to driver or reason for dismissal..." class="w-full px-3 py-2 bg-surface-container-low border border-border-subtle rounded-lg text-sm text-on-surface resize-none"></textarea>
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-3">
+                <button type="button" onclick="document.getElementById('coach-driver-modal').classList.add('hidden')" class="px-4 py-2 border border-border-subtle rounded-lg text-sm font-medium hover:bg-surface-container-high transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary-hover transition">
+                    Submit Coaching Note
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal 3: Start Stream Modal -->
+<div id="start-stream-modal" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div class="p-4 border-b border-border-subtle flex items-center justify-between">
+            <h3 class="text-base font-semibold text-on-surface">Start Live Stream</h3>
+            <button type="button" onclick="document.getElementById('start-stream-modal').classList.add('hidden')" class="text-secondary hover:text-on-surface">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+            </button>
+        </div>
+
+        <form action="/video/livestream/start" method="POST" class="p-4 space-y-4">
+            <input type="hidden" id="stream-vehicle-id" name="vehicle_id" value="">
+
+            <div>
+                <div class="text-xs text-secondary mb-1">Vehicle</div>
+                <div id="stream-vehicle-name" class="text-sm font-semibold text-on-surface">CAM-001</div>
+            </div>
+
+            <div>
+                <label for="stream-channel" class="block text-xs font-semibold text-secondary mb-1">Video Channel</label>
+                <select id="stream-channel" name="channel" class="w-full px-3 py-2 bg-surface-container-low border border-border-subtle rounded-lg text-sm text-on-surface">
+                    <option value="ROAD_FACING">Road-Facing (Forward ADAS view)</option>
+                    <option value="CABIN_FACING">Cabin-Facing (Driver DMS view)</option>
+                    <option value="CARGO_FACING">Cargo-Facing (Trailer / Rear view)</option>
+                </select>
+            </div>
+
+            <div class="pt-2 flex items-center justify-end gap-3">
+                <button type="button" onclick="document.getElementById('start-stream-modal').classList.add('hidden')" class="px-4 py-2 border border-border-subtle rounded-lg text-sm font-medium hover:bg-surface-container-high transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition">
+                    Launch Stream
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal 4: Live Video Stream Viewer Modal -->
+<div id="livestream-viewer-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-zinc-950 rounded-2xl border border-zinc-800 shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-white">
+        <div class="p-4 border-b border-zinc-800 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
+                <span class="font-semibold text-sm" id="live-viewer-title">CAM-001 &bull; ROAD_FACING Live</span>
+                <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30">LIVE WebRTC</span>
+            </div>
+            <button type="button" onclick="document.getElementById('livestream-viewer-modal').classList.add('hidden')" class="text-zinc-400 hover:text-white">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+            </button>
+        </div>
+
+        <div class="p-6">
+            <div class="aspect-video bg-zinc-900 rounded-xl overflow-hidden relative flex items-center justify-center border border-zinc-800 shadow-inner">
+                <div class="text-center p-6 space-y-3">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-12 h-12 text-zinc-600 mx-auto animate-pulse"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
+                    <div class="text-sm font-medium text-zinc-300">Live WebRTC Session Active</div>
+                    <div id="live-stream-url" class="text-xs text-zinc-500 font-mono break-all max-w-md">webrtc://live.fleetx.io/streams/...</div>
+                    <div class="text-xs text-emerald-400 font-medium">Low-latency H.264 video feed &bull; 1080p @ 30fps</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 border-t border-zinc-800 flex items-center justify-between">
+            <span class="text-xs text-zinc-500">FleetX Telematics Edge Gateway</span>
+            <form id="stop-stream-form" action="" method="POST">
+                <button type="submit" class="px-3.5 py-1.5 bg-rose-600 text-white rounded-lg text-xs font-semibold hover:bg-rose-700 transition">
+                    End Live Session
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 5: Video Clip Player Modal -->
+<div id="video-clip-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-zinc-950 rounded-2xl border border-zinc-800 shadow-2xl w-full max-w-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-white">
+        <div class="p-4 border-b border-zinc-800 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4 text-sky-400"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span class="font-semibold text-sm" id="clip-title">Recorded Safety Incident Clip</span>
+            </div>
+            <button type="button" onclick="document.getElementById('video-clip-modal').classList.add('hidden')" class="text-zinc-400 hover:text-white">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+            </button>
+        </div>
+
+        <div class="p-6">
+            <div class="aspect-video bg-zinc-900 rounded-xl overflow-hidden relative flex items-center justify-center border border-zinc-800 shadow-inner">
+                <div class="text-center p-6 space-y-2">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-10 h-10 text-zinc-600 mx-auto"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                    <div id="clip-url-display" class="text-xs text-zinc-400 font-mono">/media/clips/...</div>
+                    <div class="text-xs text-zinc-500">15-second pre/post trigger event video clip</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 border-t border-zinc-800 flex items-center justify-end">
+            <button type="button" onclick="document.getElementById('video-clip-modal').classList.add('hidden')" class="px-4 py-1.5 bg-zinc-800 text-zinc-200 rounded-lg text-xs font-medium hover:bg-zinc-700 transition">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+function openConfigureModal(vehID, make, serial) {
+    var modal = document.getElementById('configure-dashcam-modal');
+    if (!modal) return;
+    if (vehID) {
+        var sel = document.getElementById('cfg-vehicle-id');
+        if (sel) sel.value = vehID;
+    }
+    if (make) {
+        var m = document.getElementById('cfg-make-model');
+        if (m) m.value = make;
+    }
+    if (serial) {
+        var s = document.getElementById('cfg-camera-serial');
+        if (s) s.value = serial;
+    }
+    modal.classList.remove('hidden');
+}
+
+function openCoachingModal(eventID, eventType, driverName) {
+    var modal = document.getElementById('coach-driver-modal');
+    if (!modal) return;
+    var form = document.getElementById('coach-form');
+    if (form) form.action = '/video/events/' + eventID + '/review';
+    var title = document.getElementById('coach-event-title');
+    if (title) title.textContent = eventType;
+    var drv = document.getElementById('coach-driver-name');
+    if (drv) drv.textContent = 'Driver: ' + driverName;
+    modal.classList.remove('hidden');
+}
+
+function openStartLivestreamModal(vehID, vehNumber) {
+    var modal = document.getElementById('start-stream-modal');
+    if (!modal) return;
+    var inp = document.getElementById('stream-vehicle-id');
+    if (inp) inp.value = vehID;
+    var name = document.getElementById('stream-vehicle-name');
+    if (name) name.textContent = vehNumber;
+    modal.classList.remove('hidden');
+}
+
+function openLivestreamViewer(vehNum, channel, streamURL, sessionID) {
+    var modal = document.getElementById('livestream-viewer-modal');
+    if (!modal) return;
+    var title = document.getElementById('live-viewer-title');
+    if (title) title.textContent = vehNum + ' \u2022 ' + channel + ' Live';
+    var url = document.getElementById('live-stream-url');
+    if (url) url.textContent = streamURL;
+    var form = document.getElementById('stop-stream-form');
+    if (form) form.action = '/video/livestream/' + sessionID + '/stop';
+    modal.classList.remove('hidden');
+}
+
+function openVideoPlayer(eventType, clipURL) {
+    var modal = document.getElementById('video-clip-modal');
+    if (!modal) return;
+    var title = document.getElementById('clip-title');
+    if (title) title.textContent = eventType + ' \u2022 Safety Incident Clip';
+    var disp = document.getElementById('clip-url-display');
+    if (disp) disp.textContent = clipURL;
+    modal.classList.remove('hidden');
+}
+</script>

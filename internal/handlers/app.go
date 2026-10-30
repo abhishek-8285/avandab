@@ -189,6 +189,8 @@ type App struct {
 	EV *EVHandlers
 	// ColdChain powers reefer telematics, thermal excursions, door sensors, and HACCP/GDP compliance (P3 3.11).
 	ColdChain *ColdChainHandlers
+	// Video powers AI dashcam DMS/ADAS, live stream session brokering, and driver safety coaching (P3 3.12).
+	Video *VideoTelematicsHandlers
 }
 
 // NewApp creates a new handler app with all handler groups initialized.
@@ -309,6 +311,7 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	app.ControlTower = NewControlTowerHandlers(app, nil)
 	app.EV = NewEVHandlers(app)
 	app.ColdChain = NewColdChainHandlers(app)
+	app.Video = NewVideoTelematicsHandlers(app)
 
 	return app
 }

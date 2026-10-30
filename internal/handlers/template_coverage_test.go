@@ -42,6 +42,7 @@ import (
 	"transport-app/internal/telemetry"
 	tripapp "transport-app/internal/trip/application"
 	vehicleapp "transport-app/internal/vehicle/application"
+	"transport-app/internal/videotelematics"
 )
 
 // TestAllTemplatesRender executes every registered template with representative
@@ -1304,6 +1305,94 @@ func TestAllTemplatesRender(t *testing.T) {
 			},
 			"AllVehicles": []map[string]string{
 				{"ID": "veh-1", "VehicleNumber": "REF-001", "RegistrationNumber": "KA-01-CC-1001"},
+			},
+		}},
+		{"video_dashboard", "video_dashboard.html", map[string]interface{}{
+			"Title": "Video Telematics & AI Safety",
+			"User":  user,
+			"Metrics": &videotelematics.VideoFleetMetrics{
+				TotalCameras:         2,
+				OnlineCameras:        1,
+				TodayEventsCount:     3,
+				CriticalEventsToday:  1,
+				PendingCoachingCount: 1,
+				FleetAvgSafetyScore:  88.5,
+			},
+			"Vehicles": []videotelematics.VideoVehicleStatus{
+				{
+					VehicleID:          "veh-cam-1",
+					RegistrationNumber: "DL-01-CAM-1001",
+					VehicleNumber:      "CAM-001",
+					VehicleType:        "truck",
+					Status:             "available",
+					Profile: &videotelematics.DashcamProfile{
+						VehicleID:           "veh-cam-1",
+						TenantID:            "tenant-1",
+						CameraMakeModel:     "FleetX AI Pro Dual-200",
+						CameraSerial:        "FX-CAM-99018",
+						DualFacing:          true,
+						ADASEnabled:         true,
+						DMSEnabled:          true,
+						LiveStreamSupported: true,
+						FirmwareVersion:     "v3.1.2-edge",
+						Status:              videotelematics.DashcamOnline,
+						CreatedAt:           now,
+						UpdatedAt:           now,
+					},
+					PendingReviewsCount: 1,
+					TodayEventsCount:    2,
+					CriticalEventsCount: 1,
+					ActiveLivestream: &videotelematics.LivestreamSession{
+						ID:             "stream-1",
+						TenantID:       "tenant-1",
+						VehicleID:      "veh-cam-1",
+						Channel:        videotelematics.ChannelRoadFacing,
+						StreamProtocol: videotelematics.ProtocolWebRTC,
+						StreamURL:      "webrtc://live.fleetx.io/streams/tenant-1/veh-cam-1/road",
+						SessionToken:   "tok-123",
+						Status:         videotelematics.StreamActive,
+						StartedAt:      now,
+					},
+				},
+			},
+			"Events": []videotelematics.VideoSafetyEvent{
+				{
+					ID:              "evt-1",
+					TenantID:        "tenant-1",
+					VehicleID:       "veh-cam-1",
+					Category:        videotelematics.CategoryDMS,
+					EventType:       videotelematics.EventTypeDrowsiness,
+					Severity:        videotelematics.SeverityCritical,
+					EventTime:       now,
+					SpeedKMH:        65.0,
+					DurationSeconds: 15,
+					ReviewStatus:    videotelematics.ReviewPending,
+					MediaClipURL:    "/media/clips/veh-cam-1_123.mp4",
+					ThumbnailURL:    "/media/thumbnails/veh-cam-1_123.jpg",
+					CreatedAt:       now,
+					UpdatedAt:       now,
+				},
+			},
+			"Scorecards": []videotelematics.DriverSafetyScorecard{
+				{
+					ID:                 "sc-1",
+					TenantID:           "tenant-1",
+					DriverID:           "drv-1",
+					PeriodStart:        now.AddDate(0, 0, -30),
+					PeriodEnd:          now,
+					DistanceKM:         1500.0,
+					SafetyScore:        92.0,
+					ADASEventCount:     2,
+					DMSEventCount:      1,
+					CriticalEventCount: 0,
+					CoachedEventCount:  1,
+					RiskTier:           videotelematics.RiskLow,
+					CreatedAt:          now,
+					UpdatedAt:          now,
+				},
+			},
+			"AllVehicles": []map[string]string{
+				{"ID": "veh-cam-1", "VehicleNumber": "CAM-001", "RegistrationNumber": "DL-01-CAM-1001"},
 			},
 		}},
 	}

@@ -725,6 +725,23 @@ type DriverPushToken struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type DriverSafetyScorecard struct {
+	ID                 string    `json:"id"`
+	TenantID           string    `json:"tenant_id"`
+	DriverID           string    `json:"driver_id"`
+	PeriodStart        time.Time `json:"period_start"`
+	PeriodEnd          time.Time `json:"period_end"`
+	DistanceKm         float64   `json:"distance_km"`
+	SafetyScore        float64   `json:"safety_score"`
+	AdasEventCount     int64     `json:"adas_event_count"`
+	DmsEventCount      int64     `json:"dms_event_count"`
+	CriticalEventCount int64     `json:"critical_event_count"`
+	CoachedEventCount  int64     `json:"coached_event_count"`
+	RiskTier           string    `json:"risk_tier"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
+}
+
 type DriverScore struct {
 	ID          string    `json:"id"`
 	DriverID    string    `json:"driver_id"`
@@ -2624,6 +2641,21 @@ type VehicleComplianceDocument struct {
 	CreatedAt          time.Time      `json:"created_at"`
 }
 
+type VehicleDashcamProfile struct {
+	VehicleID           string    `json:"vehicle_id"`
+	TenantID            string    `json:"tenant_id"`
+	CameraMakeModel     string    `json:"camera_make_model"`
+	CameraSerial        string    `json:"camera_serial"`
+	DualFacing          int64     `json:"dual_facing"`
+	AdasEnabled         int64     `json:"adas_enabled"`
+	DmsEnabled          int64     `json:"dms_enabled"`
+	LiveStreamSupported int64     `json:"live_stream_supported"`
+	FirmwareVersion     string    `json:"firmware_version"`
+	Status              string    `json:"status"`
+	CreatedAt           time.Time `json:"created_at"`
+	UpdatedAt           time.Time `json:"updated_at"`
+}
+
 type VehicleDocument struct {
 	ID         string         `json:"id"`
 	VehicleID  string         `json:"vehicle_id"`
@@ -2786,6 +2818,45 @@ type VerificationAttempt struct {
 	CompletedAt       sql.NullTime   `json:"completed_at"`
 	FailureCode       sql.NullString `json:"failure_code"`
 	FailureReason     sql.NullString `json:"failure_reason"`
+}
+
+type VideoLivestreamSession struct {
+	ID             string       `json:"id"`
+	TenantID       string       `json:"tenant_id"`
+	VehicleID      string       `json:"vehicle_id"`
+	Channel        string       `json:"channel"`
+	StreamProtocol string       `json:"stream_protocol"`
+	StreamUrl      string       `json:"stream_url"`
+	SessionToken   string       `json:"session_token"`
+	Status         string       `json:"status"`
+	StartedAt      time.Time    `json:"started_at"`
+	EndedAt        sql.NullTime `json:"ended_at"`
+	RequestedBy    string       `json:"requested_by"`
+}
+
+type VideoSafetyEvent struct {
+	ID              string          `json:"id"`
+	TenantID        string          `json:"tenant_id"`
+	VehicleID       string          `json:"vehicle_id"`
+	DriverID        sql.NullString  `json:"driver_id"`
+	TripID          sql.NullString  `json:"trip_id"`
+	Category        string          `json:"category"`
+	EventType       string          `json:"event_type"`
+	Severity        string          `json:"severity"`
+	EventTime       time.Time       `json:"event_time"`
+	SpeedKmh        float64         `json:"speed_kmh"`
+	Latitude        sql.NullFloat64 `json:"latitude"`
+	Longitude       sql.NullFloat64 `json:"longitude"`
+	LocationName    string          `json:"location_name"`
+	MediaClipUrl    string          `json:"media_clip_url"`
+	ThumbnailUrl    string          `json:"thumbnail_url"`
+	DurationSeconds int64           `json:"duration_seconds"`
+	ReviewStatus    string          `json:"review_status"`
+	CoachingNote    string          `json:"coaching_note"`
+	ReviewedBy      string          `json:"reviewed_by"`
+	ReviewedAt      sql.NullTime    `json:"reviewed_at"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 type WorkOrder struct {

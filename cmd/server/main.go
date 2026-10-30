@@ -1074,6 +1074,8 @@ func main() {
 		app.EV.RegisterAPIRoutes(r)
 		// Cold chain telematics, multi-zone probes, and excursion audits (P3 3.11) JSON API — tenant-scoped, coldchain RBAC.
 		app.ColdChain.RegisterAPIRoutes(r)
+		// Video telematics, AI Dashcam DMS/ADAS, live stream session brokering, and safety coaching (P3 3.12) JSON API — tenant-scoped, video RBAC.
+		app.Video.RegisterAPIRoutes(r)
 		// Spec 18 Wave A — route optimization API (tenant-scoped, permission-gated)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "create")).Post("/api/v1/routes/optimize", app.Routes.Optimize)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "read")).Get("/api/v1/routes/optimize/jobs", app.Routes.OptimizeJobs)
@@ -1560,6 +1562,7 @@ func main() {
 			r.Route("/control-tower", app.ControlTower.Routes)
 			r.Route("/ev", app.EV.Routes)
 			r.Route("/cold-chain", app.ColdChain.Routes)
+			r.Route("/video", app.Video.Routes)
 
 			// Telemetry device registry / provisioning / quarantine admin
 			if cfg.Telemetry.Enabled {
