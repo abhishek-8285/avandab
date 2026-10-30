@@ -116,6 +116,7 @@ type Config struct {
 	EWayBill             EWayBillConfig
 	GSTN                 GSTNConfig
 	FASTag               FASTagConfig
+	Video                VideoConfig
 	Routing              RoutingConfig
 	Cache                CacheConfig
 	Storage              StorageConfig
@@ -211,6 +212,14 @@ type FASTagConfig struct {
 	APIKey   string
 	Enabled  bool
 	Endpoint string
+}
+
+// VideoConfig holds video telematics media brokering settings. An empty
+// MediaServerURL keeps live streaming unconfigured: StartLivestream fails
+// closed with no session row instead of fabricating stream URLs
+// (Plan P3 item 3.12; P0 "stop fake data").
+type VideoConfig struct {
+	MediaServerURL string
 }
 
 // EWayBillConfig holds configuration for the E-Way Bill lifecycle worker (Spec 05 §7, Spec 07).
@@ -534,6 +543,12 @@ func Load() *Config {
 		APIKey:   getEnv("INTEGRATION_FASTAG_API_KEY", os.Getenv("FASTAG_API_KEY")),
 		Enabled:  getEnvBool("INTEGRATION_FASTAG_ENABLED", false),
 		Endpoint: getEnv("INTEGRATION_FASTAG_ENDPOINT", "https://api.fastag.org"),
+	}
+
+	// Plan P3 item 3.12 — live stream brokering target. Unset keeps
+	// StartLivestream fail-closed; no default host is invented.
+	cfg.Video = VideoConfig{
+		MediaServerURL: strings.TrimRight(strings.TrimSpace(os.Getenv("VIDEO_MEDIA_SERVER_URL")), "/"),
 	}
 
 	// Spec 18 — Route optimization (Wave A)

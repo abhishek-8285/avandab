@@ -68,7 +68,7 @@
             <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         </div>
         <div class="min-w-0">
-            <div class="text-xl font-semibold tabular-nums text-on-surface leading-tight">{{if $metrics}}{{printf "%.1f" $metrics.FleetAvgSafetyScore}}{{else}}100.0{{end}}</div>
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-tight">{{if $metrics}}{{printf "%.1f" $metrics.FleetAvgSafetyScore}}{{else}}&ndash;{{end}}</div>
             <div class="text-xs text-secondary font-medium">Fleet Safety Score</div>
         </div>
     </div>
@@ -171,9 +171,11 @@
                     <td class="py-3.5 px-4 text-right">
                         <div class="flex items-center justify-end gap-2">
                             {{if .ActiveLivestream}}
-                            <button type="button" onclick="openLivestreamViewer('{{.VehicleNumber}}', '{{.ActiveLivestream.Channel}}', '{{.ActiveLivestream.StreamURL}}', '{{.ActiveLivestream.ID}}')" class="px-2.5 py-1 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-700 transition flex items-center gap-1 shadow-xs">
+                            <button type="button" onclick="openLivestreamViewer('{{.VehicleNumber}}', '{{.ActiveLivestream.Channel}}', '{{.ActiveLivestream.StreamURL}}', '{{.ActiveLivestream.ID}}', '{{.ActiveLivestream.Status}}')"
+                                {{if eq .ActiveLivestream.Status "ACTIVE"}}class="px-2.5 py-1 bg-emerald-600 text-white rounded text-xs font-medium hover:bg-emerald-700 transition flex items-center gap-1 shadow-xs">
                                 <span class="w-2 h-2 rounded-full bg-white animate-ping"></span>
-                                Live Now
+                                Live Now{{else}}class="px-2.5 py-1 bg-amber-500/10 text-amber-600 border border-amber-500/20 rounded text-xs font-medium transition">
+                                Stream requested{{end}}
                             </button>
                             {{else}}
                             <button type="button" onclick="openStartLivestreamModal('{{.VehicleID}}', '{{.VehicleNumber}}')" class="px-2.5 py-1 bg-surface-container-high text-on-surface rounded text-xs font-medium hover:bg-surface-container-highest transition flex items-center gap-1">
@@ -260,10 +262,14 @@
                                 <span class="font-medium text-on-surface tabular-nums">{{printf "%.1f" .SpeedKMH}} km/h</span>
                                 {{if .LocationName}} &bull; {{.LocationName}}{{end}}
                             </div>
+                            {{if .MediaClipURL}}
                             <button type="button" onclick="openVideoPlayer('{{.EventType}}', '{{.MediaClipURL}}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20 transition">
                                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3 h-3"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                                 <span>Play Clip</span>
                             </button>
+                            {{else}}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-zinc-500/10 text-zinc-500 border border-zinc-500/20">Evidence Pending</span>
+                            {{end}}
                         </td>
                         <td class="py-3.5 px-4">
                             {{if eq .ReviewStatus "COACHED"}}
@@ -397,9 +403,10 @@
                 <div>
                     <label for="cfg-status" class="block text-xs font-semibold text-secondary mb-1">Operating Status</label>
                     <select id="cfg-status" name="status" class="w-full px-3 py-2 bg-surface-container-low border border-border-subtle rounded-lg text-sm text-on-surface">
-                        <option value="ONLINE">ONLINE</option>
-                        <option value="STANDBY">STANDBY</option>
+                        <option value="STANDBY" selected>STANDBY (default &mdash; device not yet connected)</option>
+                        <option value="ONLINE">ONLINE (only after device connects)</option>
                         <option value="OFFLINE">OFFLINE</option>
+                        <option value="FAULT">FAULT</option>
                     </select>
                 </div>
             </div>
@@ -525,9 +532,9 @@
     <div class="bg-zinc-950 rounded-2xl border border-zinc-800 shadow-2xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 text-white">
         <div class="p-4 border-b border-zinc-800 flex items-center justify-between">
             <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
-                <span class="font-semibold text-sm" id="live-viewer-title">CAM-001 &bull; ROAD_FACING Live</span>
-                <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30">LIVE WebRTC</span>
+                <span class="w-2.5 h-2.5 rounded-full bg-zinc-400"></span>
+                <span class="font-semibold text-sm" id="live-viewer-title">CAM-001 &bull; ROAD_FACING</span>
+                <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-zinc-500/20 text-zinc-400 border border-zinc-500/30" id="live-status-chip">INITIATED</span>
             </div>
             <button type="button" onclick="document.getElementById('livestream-viewer-modal').classList.add('hidden')" class="text-zinc-400 hover:text-white">
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
@@ -538,15 +545,15 @@
             <div class="aspect-video bg-zinc-900 rounded-xl overflow-hidden relative flex items-center justify-center border border-zinc-800 shadow-inner">
                 <div class="text-center p-6 space-y-3">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-12 h-12 text-zinc-600 mx-auto animate-pulse"><path d="m22 8-6 4 6 4V8Z"/><rect width="14" height="12" x="2" y="6" rx="2"/></svg>
-                    <div class="text-sm font-medium text-zinc-300">Live WebRTC Session Active</div>
-                    <div id="live-stream-url" class="text-xs text-zinc-500 font-mono break-all max-w-md">webrtc://live.fleetx.io/streams/...</div>
-                    <div class="text-xs text-emerald-400 font-medium">Low-latency H.264 video feed &bull; 1080p @ 30fps</div>
+                    <div class="text-sm font-medium text-zinc-300" id="live-session-title">Video stream session</div>
+                    <div id="live-stream-url" class="text-xs text-zinc-500 font-mono break-all max-w-md">&ndash;</div>
+                    <div class="text-xs text-zinc-500 font-medium">URL points at your configured media server &mdash; playback still needs the device to confirm the stream</div>
                 </div>
             </div>
         </div>
 
         <div class="p-4 border-t border-zinc-800 flex items-center justify-between">
-            <span class="text-xs text-zinc-500">FleetX Telematics Edge Gateway</span>
+            <span class="text-xs text-zinc-500">Dashcam Edge Gateway</span>
             <form id="stop-stream-form" action="" method="POST">
                 <button type="submit" class="px-3.5 py-1.5 bg-rose-600 text-white rounded-lg text-xs font-semibold hover:bg-rose-700 transition">
                     End Live Session
@@ -573,8 +580,8 @@
             <div class="aspect-video bg-zinc-900 rounded-xl overflow-hidden relative flex items-center justify-center border border-zinc-800 shadow-inner">
                 <div class="text-center p-6 space-y-2">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-10 h-10 text-zinc-600 mx-auto"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-                    <div id="clip-url-display" class="text-xs text-zinc-400 font-mono">/media/clips/...</div>
-                    <div class="text-xs text-zinc-500">15-second pre/post trigger event video clip</div>
+                    <div id="clip-url-display" class="text-xs text-zinc-400 font-mono">&ndash;</div>
+                    <div class="text-xs text-zinc-500">Recorded clip from the device upload &mdash; duration shown on the incident row</div>
                 </div>
             </div>
         </div>
@@ -628,13 +635,23 @@ function openStartLivestreamModal(vehID, vehNumber) {
     modal.classList.remove('hidden');
 }
 
-function openLivestreamViewer(vehNum, channel, streamURL, sessionID) {
+function openLivestreamViewer(vehNum, channel, streamURL, sessionID, status) {
     var modal = document.getElementById('livestream-viewer-modal');
     if (!modal) return;
+    var state = status || 'INITIATED';
     var title = document.getElementById('live-viewer-title');
-    if (title) title.textContent = vehNum + ' \u2022 ' + channel + ' Live';
+    if (title) title.textContent = vehNum + ' \u2022 ' + channel;
+    var chip = document.getElementById('live-status-chip');
+    if (chip) {
+        chip.textContent = state;
+        chip.className = state === 'ACTIVE'
+            ? 'px-1.5 py-0.2 rounded text-[10px] font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30'
+            : 'px-1.5 py-0.2 rounded text-[10px] font-semibold bg-zinc-500/20 text-zinc-400 border border-zinc-500/30';
+    }
+    var headline = document.getElementById('live-session-title');
+    if (headline) headline.textContent = state === 'ACTIVE' ? 'Live stream in progress' : 'Stream session ' + state + ' \u2014 awaiting device confirmation';
     var url = document.getElementById('live-stream-url');
-    if (url) url.textContent = streamURL;
+    if (url) url.textContent = streamURL || '\u2013';
     var form = document.getElementById('stop-stream-form');
     if (form) form.action = '/video/livestream/' + sessionID + '/stop';
     modal.classList.remove('hidden');

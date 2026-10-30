@@ -230,7 +230,8 @@ func TestVideoTelematicsAPI_FullLifecycleAndRBAC(t *testing.T) {
 	assert.Equal(t, videotelematics.ReviewCoached, reviewedEvent.ReviewStatus)
 	assert.Equal(t, "Mandatory 20-min fatigue break scheduled.", reviewedEvent.CoachingNote)
 
-	// 9. Start Livestream
+	// 9. Start Livestream — unconfigured media server must fail closed (P3.12):
+	// no fabricated stream URL, no session row.
 	streamBody, _ := json.Marshal(videotelematics.StartLivestreamInput{
 		VehicleID:      vehicleID,
 		Channel:        videotelematics.ChannelRoadFacing,
@@ -242,12 +243,26 @@ func TestVideoTelematicsAPI_FullLifecycleAndRBAC(t *testing.T) {
 	req.Header.Set("X-Test-Tenant", tenantID)
 	rec = httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), "livestream")
+
+	// 9b. Configured media server → session brokered against the configured
+	// host, honestly INITIATED (never fabricated ACTIVE).
+	app.Config.Video.MediaServerURL = "https://media.fleet-internal.example"
+	req = httptest.NewRequest("POST", "/api/v1/video/livestream/start", bytes.NewReader(streamBody))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Test-User", "viewer-user")
+	req.Header.Set("X-Test-Tenant", tenantID)
+	rec = httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
 
 	var streamSess videotelematics.LivestreamSession
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &streamSess))
 	assert.NotEmpty(t, streamSess.ID)
-	assert.Equal(t, videotelematics.StreamActive, streamSess.Status)
+	assert.Equal(t, videotelematics.StreamInitiated, streamSess.Status)
+	assert.Contains(t, streamSess.StreamURL, "https://media.fleet-internal.example/streams/")
+	assert.NotContains(t, streamSess.StreamURL, "fleetx.io")
 
 	// 10. End Livestream
 	req = httptest.NewRequest("POST", "/api/v1/video/livestream/"+streamSess.ID+"/stop", nil)
@@ -256,6 +271,9 @@ func TestVideoTelematicsAPI_FullLifecycleAndRBAC(t *testing.T) {
 	rec = httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
 	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// Reset so the dashboard render step reflects the configured path as well.
+	app.Config.Video.MediaServerURL = ""
 
 	// 11. Driver Scorecard
 	req = httptest.NewRequest("GET", "/api/v1/video/drivers/"+driverID+"/scorecard", nil)
@@ -301,6 +319,10 @@ func TestVideoTelematicsAPI_FullLifecycleAndRBAC(t *testing.T) {
 	htmlBody := rec.Body.String()
 	assert.Contains(t, htmlBody, "Video Telematics &amp; AI Safety")
 	assert.Contains(t, htmlBody, "CAM-8888")
+	// Honest render (P3.12): no competitor/fabricated stream endpoint, and
+	// events without device clips admit "evidence pending" instead of a fake link.
+	assert.NotContains(t, htmlBody, "fleetx.io")
+	assert.Contains(t, htmlBody, "Evidence Pending")
 
 	// 15. Web Form Profile Configure POST
 	form := url.Values{}

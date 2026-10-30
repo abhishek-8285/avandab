@@ -63,6 +63,24 @@ func TestLoad_SMSProviderConfig(t *testing.T) {
 	}
 }
 
+// TestLoad_VideoMediaServerConfig pins the live-stream media server env name
+// (Plan P3 item 3.12): StartLivestream may build stream URLs only from this
+// configured base; unset keeps streaming fail-closed and unconfigured.
+func TestLoad_VideoMediaServerConfig(t *testing.T) {
+	t.Setenv("VIDEO_MEDIA_SERVER_URL", "https://media.internal.example")
+
+	cfg := config.Load()
+	if cfg.Video.MediaServerURL != "https://media.internal.example" {
+		t.Fatalf("expected Video.MediaServerURL from VIDEO_MEDIA_SERVER_URL, got %q", cfg.Video.MediaServerURL)
+	}
+
+	t.Setenv("VIDEO_MEDIA_SERVER_URL", "")
+	cfg = config.Load()
+	if cfg.Video.MediaServerURL != "" {
+		t.Fatalf("expected empty Video.MediaServerURL when unset, got %q", cfg.Video.MediaServerURL)
+	}
+}
+
 func TestValidate_DatabaseURL(t *testing.T) {
 	valid := []string{
 		"file:transport.db?mode=rwc&cache=shared&_foreign_keys=on&_journal_mode=WAL",

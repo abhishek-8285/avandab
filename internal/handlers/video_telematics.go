@@ -23,7 +23,11 @@ func NewVideoTelematicsHandlers(app *App) *VideoTelematicsHandlers {
 }
 
 func (h *VideoTelematicsHandlers) service() *videotelematics.Service {
-	return videotelematics.NewService(videotelematics.NewSQLRepository(h.DB))
+	mediaServerURL := ""
+	if h.Config != nil {
+		mediaServerURL = h.Config.Video.MediaServerURL
+	}
+	return videotelematics.NewService(videotelematics.NewSQLRepository(h.DB), mediaServerURL)
 }
 
 func writeVideoJSON(w http.ResponseWriter, code int, v interface{}) {
@@ -396,10 +400,9 @@ func (h *VideoTelematicsHandlers) WebConfigureProfile(w http.ResponseWriter, r *
 		firmware = "v2.4.0-edge-ai"
 	}
 
+	// Empty status falls through to the service default (STANDBY) — the form
+	// must not claim a freshly bound camera is ONLINE (Plan P3 item 3.12).
 	status := strings.TrimSpace(r.FormValue("status"))
-	if status == "" {
-		status = videotelematics.DashcamOnline
-	}
 
 	dualFacing := r.FormValue("dual_facing") == "1" || r.FormValue("dual_facing") == "true" || r.FormValue("dual_facing") == "on"
 	adasEnabled := r.FormValue("adas_enabled") == "1" || r.FormValue("adas_enabled") == "true" || r.FormValue("adas_enabled") == "on"

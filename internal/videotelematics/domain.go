@@ -226,7 +226,10 @@ func (in *ConfigureDashcamProfileInput) Validate() error {
 		in.FirmwareVersion = "v2.4.0-edge-ai"
 	}
 	if in.Status == "" {
-		in.Status = DashcamOnline
+		// Honest connectivity: registration does not attest to a live device.
+		// STANDBY until the device connects; migration 00178's schema default
+		// of 'ONLINE' is a known debt (deferred, see plan row 3.12).
+		in.Status = DashcamStandby
 	}
 	return nil
 }

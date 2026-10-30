@@ -50,7 +50,7 @@ func newTestVideoDB(t *testing.T) *sql.DB {
 func TestVideoTelematics_ProfileCRUD(t *testing.T) {
 	db := newTestVideoDB(t)
 	repo := videotelematics.NewSQLRepository(db)
-	svc := videotelematics.NewService(repo)
+	svc := videotelematics.NewService(repo, "")
 	ctx := context.Background()
 
 	// 1. Configure Dashcam Profile
@@ -85,10 +85,28 @@ func TestVideoTelematics_ProfileCRUD(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestVideoTelematics_NewCameraNotOnline(t *testing.T) {
+	db := newTestVideoDB(t)
+	repo := videotelematics.NewSQLRepository(db)
+	svc := videotelematics.NewService(repo, "")
+	ctx := context.Background()
+
+	// Registering a camera that has no attested/connected device must not
+	// advertise ONLINE (P3.12 honest connectivity, schema default deferred).
+	prof, err := svc.ConfigureProfile(ctx, "tenant-vid-a", "veh-cam-1", videotelematics.ConfigureDashcamProfileInput{
+		CameraSerial: "CAM-NEW-01",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, prof)
+	assert.NotEqual(t, videotelematics.DashcamOnline, prof.Status,
+		"newly registered camera must not default to ONLINE")
+	assert.Equal(t, videotelematics.DashcamStandby, prof.Status)
+}
+
 func TestVideoTelematics_SafetyEventIngestAndFilter(t *testing.T) {
 	db := newTestVideoDB(t)
 	repo := videotelematics.NewSQLRepository(db)
-	svc := videotelematics.NewService(repo)
+	svc := videotelematics.NewService(repo, "")
 	ctx := context.Background()
 
 	driverID := "drv-vid-1"
@@ -113,8 +131,21 @@ func TestVideoTelematics_SafetyEventIngestAndFilter(t *testing.T) {
 	assert.Equal(t, videotelematics.EventTypeDrowsiness, event1.EventType)
 	assert.Equal(t, videotelematics.SeverityCritical, event1.Severity)
 	assert.Equal(t, videotelematics.ReviewPending, event1.ReviewStatus)
-	assert.NotEmpty(t, event1.MediaClipURL)
-	assert.NotEmpty(t, event1.ThumbnailURL)
+	// No fabricated evidence: when the device sends no clip, none is stored (P3.12).
+	assert.Empty(t, event1.MediaClipURL)
+	assert.Empty(t, event1.ThumbnailURL)
+
+	// Device-supplied evidence passes through untouched.
+	uploadEvent, err := svc.IngestSafetyEvent(ctx, "tenant-vid-a", videotelematics.IngestSafetyEventInput{
+		VehicleID:    "veh-cam-1",
+		Category:     videotelematics.CategoryDMS,
+		EventType:    videotelematics.EventTypeYawning,
+		MediaClipURL: "https://media.internal.example/clips/dev-0001.mp4",
+		ThumbnailURL: "https://media.internal.example/thumbs/dev-0001.jpg",
+	})
+	require.NoError(t, err)
+	assert.Equal(t, "https://media.internal.example/clips/dev-0001.mp4", uploadEvent.MediaClipURL)
+	assert.Equal(t, "https://media.internal.example/thumbs/dev-0001.jpg", uploadEvent.ThumbnailURL)
 
 	// Ingest ADAS tailgating event
 	event2, err := svc.IngestSafetyEvent(ctx, "tenant-vid-a", videotelematics.IngestSafetyEventInput{
@@ -133,6 +164,7 @@ func TestVideoTelematics_SafetyEventIngestAndFilter(t *testing.T) {
 	events, total, err := svc.ListSafetyEvents(ctx, "tenant-vid-a", videotelematics.EventFilter{
 		VehicleID: "veh-cam-1",
 		Category:  videotelematics.CategoryDMS,
+		EventType: videotelematics.EventTypeDrowsiness,
 	})
 	require.NoError(t, err)
 	assert.Equal(t, 1, total)
@@ -143,7 +175,7 @@ func TestVideoTelematics_SafetyEventIngestAndFilter(t *testing.T) {
 func TestVideoTelematics_ReviewAndCoachingWorkflow(t *testing.T) {
 	db := newTestVideoDB(t)
 	repo := videotelematics.NewSQLRepository(db)
-	svc := videotelematics.NewService(repo)
+	svc := videotelematics.NewService(repo, "")
 	ctx := context.Background()
 
 	driverID := "drv-vid-1"
@@ -180,11 +212,30 @@ func TestVideoTelematics_ReviewAndCoachingWorkflow(t *testing.T) {
 func TestVideoTelematics_LivestreamLifecycle(t *testing.T) {
 	db := newTestVideoDB(t)
 	repo := videotelematics.NewSQLRepository(db)
-	svc := videotelematics.NewService(repo)
+	svc := videotelematics.NewService(repo, "")
 	ctx := context.Background()
 
-	// 1. Start WebRTC Stream
+	// Unconfigured media server must fail closed — no fabricated URLs
+	// (P0 "stop fake data", P3.12), and no session row.
 	session, err := svc.StartLivestream(ctx, "tenant-vid-a", videotelematics.StartLivestreamInput{
+		VehicleID:      "veh-cam-1",
+		Channel:        videotelematics.ChannelRoadFacing,
+		StreamProtocol: videotelematics.ProtocolWebRTC,
+		RequestedBy:    "Dispatcher Verma",
+	})
+	assert.Error(t, err)
+	assert.Nil(t, session)
+
+	var persisted int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM video_livestream_sessions`).Scan(&persisted); err != nil {
+		t.Fatalf("count livestream sessions: %v", err)
+	}
+	assert.Equal(t, 0, persisted)
+
+	// Configured media server: URL built from the configured host and the
+	// session stays INITIATED until a device/confirm call proves activity.
+	svcCfg := videotelematics.NewService(repo, "https://media.internal.example:8443")
+	session, err = svcCfg.StartLivestream(ctx, "tenant-vid-a", videotelematics.StartLivestreamInput{
 		VehicleID:      "veh-cam-1",
 		Channel:        videotelematics.ChannelRoadFacing,
 		StreamProtocol: videotelematics.ProtocolWebRTC,
@@ -192,12 +243,13 @@ func TestVideoTelematics_LivestreamLifecycle(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, session)
-	assert.Equal(t, videotelematics.StreamActive, session.Status)
-	assert.Contains(t, session.StreamURL, "webrtc://live.fleetx.io")
+	assert.Equal(t, videotelematics.StreamInitiated, session.Status)
+	assert.Contains(t, session.StreamURL, "https://media.internal.example:8443/streams/")
+	assert.NotContains(t, session.StreamURL, "fleetx.io")
 	assert.NotEmpty(t, session.SessionToken)
 
-	// 2. Start Cabin Stream (should end previous stream on same vehicle)
-	session2, err := svc.StartLivestream(ctx, "tenant-vid-a", videotelematics.StartLivestreamInput{
+	// Second start on the same vehicle ends the previous pending session (HLS path)
+	session2, err := svcCfg.StartLivestream(ctx, "tenant-vid-a", videotelematics.StartLivestreamInput{
 		VehicleID:      "veh-cam-1",
 		Channel:        videotelematics.ChannelCabinFacing,
 		StreamProtocol: videotelematics.ProtocolHLS,
@@ -205,27 +257,27 @@ func TestVideoTelematics_LivestreamLifecycle(t *testing.T) {
 	})
 	require.NoError(t, err)
 	require.NotNil(t, session2)
-	assert.Equal(t, videotelematics.ChannelCabinFacing, session2.Channel)
-	assert.Contains(t, session2.StreamURL, "https://live.fleetx.io/hls")
+	assert.Equal(t, videotelematics.StreamInitiated, session2.Status)
+	assert.Contains(t, session2.StreamURL, "https://media.internal.example:8443/hls/")
 
-	// Verify previous stream was ended
 	oldSession, err := repo.GetLivestreamSession(ctx, "tenant-vid-a", session.ID)
 	require.NoError(t, err)
-	assert.Equal(t, "ENDED", oldSession.Status)
+	require.NotNil(t, oldSession)
+	assert.Equal(t, videotelematics.StreamEnded, oldSession.Status)
 
-	// 3. End stream
-	err = svc.EndLivestream(ctx, "tenant-vid-a", session2.ID)
+	// End stream
+	err = svcCfg.EndLivestream(ctx, "tenant-vid-a", session2.ID)
 	require.NoError(t, err)
 
 	endedSession, err := repo.GetLivestreamSession(ctx, "tenant-vid-a", session2.ID)
 	require.NoError(t, err)
-	assert.Equal(t, "ENDED", endedSession.Status)
+	assert.Equal(t, videotelematics.StreamEnded, endedSession.Status)
 }
 
 func TestVideoTelematics_ScorecardAndLeaderboard(t *testing.T) {
 	db := newTestVideoDB(t)
 	repo := videotelematics.NewSQLRepository(db)
-	svc := videotelematics.NewService(repo)
+	svc := videotelematics.NewService(repo, "")
 	ctx := context.Background()
 
 	driverID := "drv-vid-1"
@@ -271,7 +323,7 @@ func TestVideoTelematics_ScorecardAndLeaderboard(t *testing.T) {
 func TestVideoTelematics_FleetMetrics(t *testing.T) {
 	db := newTestVideoDB(t)
 	repo := videotelematics.NewSQLRepository(db)
-	svc := videotelematics.NewService(repo)
+	svc := videotelematics.NewService(repo, "")
 	ctx := context.Background()
 
 	// Configure cameras
@@ -305,7 +357,7 @@ func TestVideoTelematics_FleetMetrics(t *testing.T) {
 func TestVideoTelematics_TenantIsolation(t *testing.T) {
 	db := newTestVideoDB(t)
 	repo := videotelematics.NewSQLRepository(db)
-	svc := videotelematics.NewService(repo)
+	svc := videotelematics.NewService(repo, "")
 	ctx := context.Background()
 
 	// Configure camera for Tenant A

@@ -2,6 +2,7 @@ package videotelematics
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -11,12 +12,16 @@ import (
 
 // Service provides high-level business logic for video telematics and AI dashcams.
 type Service struct {
-	repo Repository
+	repo           Repository
+	mediaServerURL string
 }
 
-// NewService creates a new video telematics service.
-func NewService(repo Repository) *Service {
-	return &Service{repo: repo}
+// NewService creates a new video telematics service. An empty mediaServerURL
+// keeps live streaming fail-closed (P0 "stop fake data"): StartLivestream
+// returns an error and creates no session row until a real media server is
+// configured (Plan P3 item 3.12).
+func NewService(repo Repository, mediaServerURL string) *Service {
+	return &Service{repo: repo, mediaServerURL: strings.TrimSpace(mediaServerURL)}
 }
 
 // ConfigureProfile configures or updates the dashcam profile and edge AI features for a vehicle.
@@ -67,15 +72,9 @@ func (s *Service) IngestSafetyEvent(ctx context.Context, tenantID string, in Ing
 		eventTime = time.Now().UTC()
 	}
 
-	mediaClipURL := in.MediaClipURL
-	if mediaClipURL == "" {
-		mediaClipURL = fmt.Sprintf("/media/clips/%s_%d.mp4", in.VehicleID, eventTime.Unix())
-	}
-	thumbnailURL := in.ThumbnailURL
-	if thumbnailURL == "" {
-		thumbnailURL = fmt.Sprintf("/media/thumbnails/%s_%d.jpg", in.VehicleID, eventTime.Unix())
-	}
-
+	// Media evidence is stored only as received from the device (P0 "stop
+	// fake data"): no clip upload means empty URLs — UI shows "evidence
+	// pending" and the scorecard never rests on fabricated media.
 	event := &VideoSafetyEvent{
 		ID:              eventID,
 		TenantID:        tenantID,
@@ -90,8 +89,8 @@ func (s *Service) IngestSafetyEvent(ctx context.Context, tenantID string, in Ing
 		Latitude:        in.Latitude,
 		Longitude:       in.Longitude,
 		LocationName:    in.LocationName,
-		MediaClipURL:    mediaClipURL,
-		ThumbnailURL:    thumbnailURL,
+		MediaClipURL:    in.MediaClipURL,
+		ThumbnailURL:    in.ThumbnailURL,
 		DurationSeconds: in.DurationSeconds,
 		ReviewStatus:    ReviewPending,
 	}
@@ -145,13 +144,19 @@ func (s *Service) ReviewSafetyEvent(ctx context.Context, tenantID, eventID strin
 	return event, nil
 }
 
-// StartLivestream brokers a secure WebRTC or HLS video stream session with an active dashcam.
+// StartLivestream brokers a live video stream session against the configured
+// media server. It fails closed when no media server is configured — no
+// fabricated URLs, no session row.
 func (s *Service) StartLivestream(ctx context.Context, tenantID string, in StartLivestreamInput) (*LivestreamSession, error) {
 	if err := in.Validate(); err != nil {
 		return nil, err
 	}
 
-	// Terminate any existing active stream for this vehicle
+	if s.mediaServerURL == "" {
+		return nil, errors.New("livestream media server is not configured; set VIDEO_MEDIA_SERVER_URL")
+	}
+
+	// Terminate any existing pending/active stream for this vehicle
 	if existing, _ := s.repo.GetActiveLivestreamByVehicle(ctx, tenantID, in.VehicleID); existing != nil {
 		_ = s.repo.EndLivestreamSession(ctx, tenantID, existing.ID, time.Now().UTC())
 	}
@@ -162,11 +167,11 @@ func (s *Service) StartLivestream(ctx context.Context, tenantID string, in Start
 
 	switch in.StreamProtocol {
 	case ProtocolHLS:
-		streamURL = fmt.Sprintf("https://live.fleetx.io/hls/%s/%s/%s/live.m3u8?token=%s", tenantID, in.VehicleID, channelSlug, sessionToken)
+		streamURL = fmt.Sprintf("%s/hls/%s/%s/%s/live.m3u8?token=%s", s.mediaServerURL, tenantID, in.VehicleID, channelSlug, sessionToken)
 	case ProtocolRTSP:
-		streamURL = fmt.Sprintf("rtsps://live.fleetx.io:554/%s/%s/%s?token=%s", tenantID, in.VehicleID, channelSlug, sessionToken)
+		streamURL = fmt.Sprintf("%s/%s/%s/%s?token=%s", s.mediaServerURL, tenantID, in.VehicleID, channelSlug, sessionToken)
 	default:
-		streamURL = fmt.Sprintf("webrtc://live.fleetx.io/streams/%s/%s/%s?token=%s", tenantID, in.VehicleID, channelSlug, sessionToken)
+		streamURL = fmt.Sprintf("%s/streams/%s/%s/%s?token=%s", s.mediaServerURL, tenantID, in.VehicleID, channelSlug, sessionToken)
 	}
 
 	session := &LivestreamSession{
@@ -177,9 +182,11 @@ func (s *Service) StartLivestream(ctx context.Context, tenantID string, in Start
 		StreamProtocol: in.StreamProtocol,
 		StreamURL:      streamURL,
 		SessionToken:   sessionToken,
-		Status:         StreamActive,
-		StartedAt:      time.Now().UTC(),
-		RequestedBy:    in.RequestedBy,
+		// INITIATED until an external force/confirm call flips it to ACTIVE —
+		// sessions are never fabricated as already-streaming (Plan P3 item 3.12).
+		Status:      StreamInitiated,
+		StartedAt:   time.Now().UTC(),
+		RequestedBy: in.RequestedBy,
 	}
 
 	if err := s.repo.CreateLivestreamSession(ctx, session); err != nil {
