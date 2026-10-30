@@ -1444,6 +1444,85 @@ type OutboxEvent struct {
 	PublishedAt   sql.NullTime `json:"published_at"`
 }
 
+type Part struct {
+	ID               string    `json:"id"`
+	TenantID         string    `json:"tenant_id"`
+	PartNumber       string    `json:"part_number"`
+	Name             string    `json:"name"`
+	Category         string    `json:"category"`
+	Description      string    `json:"description"`
+	Uom              string    `json:"uom"`
+	MinStockLevel    float64   `json:"min_stock_level"`
+	ReorderQuantity  float64   `json:"reorder_quantity"`
+	CostPrice        float64   `json:"cost_price"`
+	SellingPrice     float64   `json:"selling_price"`
+	OemBrand         string    `json:"oem_brand"`
+	CompatibleModels string    `json:"compatible_models"`
+	IsActive         int64     `json:"is_active"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+type PartPurchaseBill struct {
+	ID           string       `json:"id"`
+	TenantID     string       `json:"tenant_id"`
+	BillNumber   string       `json:"bill_number"`
+	VendorName   string       `json:"vendor_name"`
+	VendorGstin  string       `json:"vendor_gstin"`
+	FacilityID   string       `json:"facility_id"`
+	BillDate     time.Time    `json:"bill_date"`
+	TotalAmount  float64      `json:"total_amount"`
+	TaxAmount    float64      `json:"tax_amount"`
+	Status       string       `json:"status"`
+	ReceivedDate sql.NullTime `json:"received_date"`
+	ReceivedBy   string       `json:"received_by"`
+	Notes        string       `json:"notes"`
+	CreatedAt    time.Time    `json:"created_at"`
+	UpdatedAt    time.Time    `json:"updated_at"`
+}
+
+type PartPurchaseItem struct {
+	ID        string    `json:"id"`
+	TenantID  string    `json:"tenant_id"`
+	BillID    string    `json:"bill_id"`
+	PartID    string    `json:"part_id"`
+	Quantity  float64   `json:"quantity"`
+	UnitCost  float64   `json:"unit_cost"`
+	TaxRate   float64   `json:"tax_rate"`
+	TotalCost float64   `json:"total_cost"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type PartStock struct {
+	ID               string    `json:"id"`
+	TenantID         string    `json:"tenant_id"`
+	PartID           string    `json:"part_id"`
+	FacilityID       string    `json:"facility_id"`
+	QuantityOnHand   float64   `json:"quantity_on_hand"`
+	QuantityReserved float64   `json:"quantity_reserved"`
+	BinLocation      string    `json:"bin_location"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+type PartTransaction struct {
+	ID              string         `json:"id"`
+	TenantID        string         `json:"tenant_id"`
+	PartID          string         `json:"part_id"`
+	FacilityID      string         `json:"facility_id"`
+	TransactionType string         `json:"transaction_type"`
+	Quantity        float64        `json:"quantity"`
+	UnitCost        float64        `json:"unit_cost"`
+	TotalCost       float64        `json:"total_cost"`
+	BalanceAfter    float64        `json:"balance_after"`
+	ReferenceType   string         `json:"reference_type"`
+	ReferenceID     string         `json:"reference_id"`
+	VehicleID       sql.NullString `json:"vehicle_id"`
+	WorkOrderID     sql.NullString `json:"work_order_id"`
+	Notes           string         `json:"notes"`
+	PerformedBy     string         `json:"performed_by"`
+	RecordedAt      time.Time      `json:"recorded_at"`
+}
+
 type Payment struct {
 	ID                string         `json:"id"`
 	InvoiceID         string         `json:"invoice_id"`

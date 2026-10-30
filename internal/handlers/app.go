@@ -175,6 +175,8 @@ type App struct {
 	ESG *ESGHandlers
 	// Tyres powers tyre management, axle tracking, retreading, and CPKM (P3 3.1).
 	Tyres *TyreHandlers
+	// Inventory powers parts catalog, multi-store stock, purchase bills, and movements (P3 3.2).
+	Inventory *InventoryHandlers
 }
 
 // NewApp creates a new handler app with all handler groups initialized.
@@ -288,6 +290,7 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	esgUseCase := esgapp.NewESGUsecase(esgRepo)
 	app.ESG = NewESGHandlers(app, esgUseCase)
 	app.Tyres = &TyreHandlers{App: app}
+	app.Inventory = &InventoryHandlers{App: app}
 
 	return app
 }

@@ -1060,6 +1060,8 @@ func main() {
 		app.ESG.RegisterAPIRoutes(r)
 		// Tyre management and CPKM lifecycle (P3 3.1) JSON API — tenant-scoped, tyres RBAC.
 		app.Tyres.RegisterAPIRoutes(r)
+		// Parts and spares inventory (P3 3.2) JSON API — tenant-scoped, inventory RBAC.
+		app.Inventory.RegisterAPIRoutes(r)
 		// Spec 18 Wave A — route optimization API (tenant-scoped, permission-gated)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "create")).Post("/api/v1/routes/optimize", app.Routes.Optimize)
 		r.With(middleware.ResourcePermission(authSvc, "routes", "read")).Get("/api/v1/routes/optimize/jobs", app.Routes.OptimizeJobs)

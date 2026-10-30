@@ -167,7 +167,8 @@ which always allocate head-ward from the maximum above.
 | 00169 | `provider_mode` ('LIVE', 'MOCK') provenance column on `eway_bills`, `fastag_transactions`, `driver_expenses` (FleetX Parity P0.2) | FleetX Parity P0.2 provenance |
 | 00170 | `telemetry_scale_indexes` — indexes on `device_time`, `timestamp`, `outbox_events`, `vlp(trip_id)`, drop duplicate snapshot index, and backfill VLP (FleetX Parity P1.2, P1.5) | FleetX Parity P1.2, P1.5 scale |
 | 00171 | Tyre management: tyres master, tyre_activities ledger, tyre_inspections, CPKM tracking, and RBAC grants (FleetX Parity P3.1) | FleetX Parity P3.1 tyre management |
-| 00172+ | future specs | reserved |
+| 00172 | Parts & Spares inventory: parts master, part_stocks multi-store, part_purchase_bills, part_purchase_items, part_transactions stock ledger, and inventory RBAC grants (FleetX Parity P3.2) | FleetX Parity P3.2 parts inventory |
+| 00173+ | future specs | reserved |
 
 > NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
 > concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the

@@ -201,7 +201,7 @@ Recommended order (highest value per unit of work first):
 | # | Module | Why first | Size | Status |
 |---|---|---|---|---|
 | 3.1 | Tyre management: tyre entity, axle position, CPKM vs GPS odo, rotation, retread, tread | Pure software, high fleet demand, no hardware needed | M | **DONE** (migration 00171, domain/repo/service/HTTP APIs, CPKM, rotation, retread, scrap, wear rate) |
-| 3.2 | Parts/spares inventory: stock ledger, issue history, multi-store, purchase bills | Extends existing facilities + maintenance; makes STO real | M |
+| 3.2 | Parts/spares inventory: stock ledger, issue history, multi-store, purchase bills | Extends existing facilities + maintenance; makes STO real | M | **DONE** (migration 00172, multi-store stock ledger, parts catalog master, purchase bills GRN, WO issue/return, STO transfers, valuation) |
 | 3.3 | Freight audit: rate vs GPS distance vs weight, overbilling deduct | Directly monetisable, uses existing telemetry + FASTag | M |
 | 3.4 | Report builder + scheduled delivery | Closes 40+ report gap without per-report code | M |
 | 3.5 | RFQ/counter-offer on top of existing auction | Reuses `load_board` machinery | S–M |
