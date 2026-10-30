@@ -1795,6 +1795,45 @@ type ProviderEvent struct {
 	ProcessedAt     time.Time `json:"processed_at"`
 }
 
+type ReeferTemperatureExcursion struct {
+	ID              string         `json:"id"`
+	TenantID        string         `json:"tenant_id"`
+	VehicleID       string         `json:"vehicle_id"`
+	TripID          sql.NullString `json:"trip_id"`
+	ZoneNumber      int64          `json:"zone_number"`
+	ExcursionType   string         `json:"excursion_type"`
+	Severity        string         `json:"severity"`
+	StartTime       time.Time      `json:"start_time"`
+	EndTime         sql.NullTime   `json:"end_time"`
+	DurationSeconds int64          `json:"duration_seconds"`
+	PeakTempC       float64        `json:"peak_temp_c"`
+	ThresholdTempC  float64        `json:"threshold_temp_c"`
+	SetpointC       float64        `json:"setpoint_c"`
+	Status          string         `json:"status"`
+	ResolutionNote  string         `json:"resolution_note"`
+	ResolvedBy      string         `json:"resolved_by"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
+}
+
+type ReeferTripSummary struct {
+	ID                        string       `json:"id"`
+	TenantID                  string       `json:"tenant_id"`
+	TripID                    string       `json:"trip_id"`
+	VehicleID                 string       `json:"vehicle_id"`
+	StartTime                 time.Time    `json:"start_time"`
+	EndTime                   time.Time    `json:"end_time"`
+	Zone1MinTempC             float64      `json:"zone1_min_temp_c"`
+	Zone1MaxTempC             float64      `json:"zone1_max_temp_c"`
+	Zone1MeanKineticTempC     float64      `json:"zone1_mean_kinetic_temp_c"`
+	TotalExcursionDurationSec int64        `json:"total_excursion_duration_sec"`
+	DoorOpenCount             int64        `json:"door_open_count"`
+	ComplianceStatus          string       `json:"compliance_status"`
+	CertifiedAt               sql.NullTime `json:"certified_at"`
+	CertifiedBy               string       `json:"certified_by"`
+	CreatedAt                 time.Time    `json:"created_at"`
+}
+
 type ReportExecution struct {
 	ID                  string         `json:"id"`
 	TenantID            string         `json:"tenant_id"`
@@ -2695,6 +2734,44 @@ type VehicleOwnership struct {
 	ValidFrom      time.Time    `json:"valid_from"`
 	ValidUntil     sql.NullTime `json:"valid_until"`
 	CreatedAt      time.Time    `json:"created_at"`
+}
+
+type VehicleReeferProfile struct {
+	VehicleID          string          `json:"vehicle_id"`
+	TenantID           string          `json:"tenant_id"`
+	ReeferMakeModel    string          `json:"reefer_make_model"`
+	NumZones           int64           `json:"num_zones"`
+	Zone1Type          string          `json:"zone1_type"`
+	Zone1TargetTempC   float64         `json:"zone1_target_temp_c"`
+	Zone1MinTempC      float64         `json:"zone1_min_temp_c"`
+	Zone1MaxTempC      float64         `json:"zone1_max_temp_c"`
+	Zone2Type          sql.NullString  `json:"zone2_type"`
+	Zone2TargetTempC   sql.NullFloat64 `json:"zone2_target_temp_c"`
+	Zone2MinTempC      sql.NullFloat64 `json:"zone2_min_temp_c"`
+	Zone2MaxTempC      sql.NullFloat64 `json:"zone2_max_temp_c"`
+	HumidityMonitoring int64           `json:"humidity_monitoring"`
+	TargetHumidityRh   sql.NullFloat64 `json:"target_humidity_rh"`
+	DefrostMode        string          `json:"defrost_mode"`
+	CreatedAt          time.Time       `json:"created_at"`
+	UpdatedAt          time.Time       `json:"updated_at"`
+}
+
+type VehicleReeferTelemetryLatest struct {
+	VehicleID           string          `json:"vehicle_id"`
+	TenantID            string          `json:"tenant_id"`
+	ReeferPowerStatus   string          `json:"reefer_power_status"`
+	ReeferMode          string          `json:"reefer_mode"`
+	Zone1TempC          float64         `json:"zone1_temp_c"`
+	Zone1SetpointC      float64         `json:"zone1_setpoint_c"`
+	Zone2TempC          sql.NullFloat64 `json:"zone2_temp_c"`
+	Zone2SetpointC      sql.NullFloat64 `json:"zone2_setpoint_c"`
+	HumidityRh          sql.NullFloat64 `json:"humidity_rh"`
+	DoorStatus          string          `json:"door_status"`
+	DoorOpenDurationSec int64           `json:"door_open_duration_sec"`
+	ReeferFuelLevelPct  float64         `json:"reefer_fuel_level_pct"`
+	ReeferBatteryV      float64         `json:"reefer_battery_v"`
+	HasActiveExcursion  int64           `json:"has_active_excursion"`
+	LastSyncAt          time.Time       `json:"last_sync_at"`
 }
 
 type VerificationAttempt struct {

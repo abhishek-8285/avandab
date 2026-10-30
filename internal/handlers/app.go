@@ -187,6 +187,8 @@ type App struct {
 	ControlTower *ControlTowerHandlers
 	// EV powers EV fleet telematics, battery SoC/SoH tracking, and charging sessions (P3 3.10).
 	EV *EVHandlers
+	// ColdChain powers reefer telematics, thermal excursions, door sensors, and HACCP/GDP compliance (P3 3.11).
+	ColdChain *ColdChainHandlers
 }
 
 // NewApp creates a new handler app with all handler groups initialized.
@@ -306,6 +308,7 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	app.RFQ = &RFQHandlers{App: app}
 	app.ControlTower = NewControlTowerHandlers(app, nil)
 	app.EV = NewEVHandlers(app)
+	app.ColdChain = NewColdChainHandlers(app)
 
 	return app
 }

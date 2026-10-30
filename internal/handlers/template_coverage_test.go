@@ -16,6 +16,7 @@ import (
 	alertsdomain "transport-app/internal/alerts/domain"
 	"transport-app/internal/auth"
 	bookingapp "transport-app/internal/booking/application"
+	"transport-app/internal/coldchain"
 	ctdomain "transport-app/internal/controltower/domain"
 	"transport-app/internal/domain"
 	domaindaudit "transport-app/internal/domain/audit"
@@ -1212,6 +1213,97 @@ func TestAllTemplatesRender(t *testing.T) {
 			},
 			"AllVehicles": []map[string]string{
 				{"ID": "v-1", "VehicleNumber": "EV-001", "RegistrationNumber": "KA-01-EV-1001"},
+			},
+		}},
+		{"cold_chain_dashboard", "cold_chain_dashboard.html", map[string]interface{}{
+			"Title": "Cold Chain Telematics",
+			"User":  user,
+			"Metrics": &coldchain.ColdChainFleetMetrics{
+				TotalReefers:           2,
+				ActiveCoolingCount:     1,
+				InExcursionCount:       0,
+				OpenExcursionsCount:    0,
+				DoorOpenAlerts:         0,
+				FleetComplianceRatePct: 100.0,
+				AvgZone1TempC:          4.2,
+			},
+			"Vehicles": []coldchain.ColdChainVehicleStatus{
+				{
+					VehicleID:          "veh-1",
+					RegistrationNumber: "KA-01-CC-1001",
+					VehicleNumber:      "REF-001",
+					VehicleType:        "reefer",
+					Status:             "available",
+					Profile: &coldchain.ReeferProfile{
+						VehicleID:        "veh-1",
+						TenantID:         "tenant-1",
+						ReeferMakeModel:  "Carrier Transicold Supra",
+						NumZones:         1,
+						Zone1Type:        coldchain.ZoneTypeChilled,
+						Zone1TargetTempC: 4.0,
+						Zone1MinTempC:    2.0,
+						Zone1MaxTempC:    8.0,
+						DefrostMode:      "AUTO",
+						CreatedAt:        now,
+						UpdatedAt:        now,
+					},
+					Telemetry: &coldchain.ReeferTelemetry{
+						VehicleID:          "veh-1",
+						TenantID:           "tenant-1",
+						ReeferPowerStatus:  coldchain.PowerStatusOn,
+						ReeferMode:         coldchain.ModeCooling,
+						Zone1TempC:         4.2,
+						Zone1SetpointC:     4.0,
+						DoorStatus:         coldchain.DoorClosed,
+						ReeferFuelLevelPct: 85.0,
+						ReeferBatteryV:     12.8,
+						LastSyncAt:         now,
+					},
+					ActiveExcursionsCount: 0,
+					IsInExcursion:         false,
+					IsDoorOpen:            false,
+				},
+			},
+			"Excursions": []coldchain.TemperatureExcursion{
+				{
+					ID:              "exc-1",
+					TenantID:        "tenant-1",
+					VehicleID:       "veh-1",
+					VehicleNumber:   sPtr("REF-001"),
+					ZoneNumber:      1,
+					ExcursionType:   coldchain.ExcursionOverTemp,
+					Severity:        coldchain.SeverityWarning,
+					StartTime:       now.Add(-1 * time.Hour),
+					DurationSeconds: 600,
+					PeakTempC:       9.2,
+					ThresholdTempC:  8.0,
+					SetpointC:       4.0,
+					Status:          coldchain.ExcursionOpen,
+					CreatedAt:       now,
+					UpdatedAt:       now,
+				},
+			},
+			"Summaries": []coldchain.ReeferTripSummary{
+				{
+					ID:                        "sum-1",
+					TenantID:                  "tenant-1",
+					TripID:                    "TRIP-101",
+					VehicleID:                 "veh-1",
+					StartTime:                 now.Add(-4 * time.Hour),
+					EndTime:                   now,
+					Zone1MinTempC:             3.1,
+					Zone1MaxTempC:             5.8,
+					Zone1MeanKineticTempC:     4.45,
+					TotalExcursionDurationSec: 0,
+					DoorOpenCount:             2,
+					ComplianceStatus:          coldchain.ComplianceCompliant,
+					CertifiedAt:               &now,
+					CertifiedBy:               "Dr. Quality",
+					CreatedAt:                 now,
+				},
+			},
+			"AllVehicles": []map[string]string{
+				{"ID": "veh-1", "VehicleNumber": "REF-001", "RegistrationNumber": "KA-01-CC-1001"},
 			},
 		}},
 	}
