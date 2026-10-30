@@ -20,6 +20,145 @@ type STOHandlers struct {
 	STOSvc *sto.Service
 }
 
+// Routes registers web UI routes for Stock Transfer Orders under /sto.
+func (h *STOHandlers) Routes(r chi.Router) {
+	r.With(middleware.RequirePermission(h.AuthSrv, "sto", "read")).Get("/", h.WebListSTOs)
+	r.With(middleware.RequirePermission(h.AuthSrv, "sto", "write")).Post("/", h.WebCreateSTO)
+	r.With(middleware.RequirePermission(h.AuthSrv, "sto", "write")).Post("/{id}/release", h.WebReleaseSTO)
+	r.With(middleware.RequirePermission(h.AuthSrv, "sto", "write")).Post("/{id}/post-to-loadboard", h.WebPostToLoadBoard)
+}
+
+// LoadBoardRoutes registers web UI routes for the Load Board under /loadboard.
+func (h *STOHandlers) LoadBoardRoutes(r chi.Router) {
+	r.With(middleware.RequirePermission(h.AuthSrv, "loadboard", "read")).Get("/", h.WebListLoadboard)
+	r.With(middleware.RequirePermission(h.AuthSrv, "loadboard", "write")).Post("/listings/{id}/bids", h.WebSubmitBid)
+}
+
+// WebListSTOs renders the Stock Transfer Orders page.
+func (h *STOHandlers) WebListSTOs(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+	svc := h.getService()
+	statusStr := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("status")))
+
+	list, total, err := svc.ListSTOs(r.Context(), tenantID, statusStr, 100, 0)
+	if err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to load STOs", err.Error(), user)
+		return
+	}
+	data := PageData{
+		Title: "Stock Transfers",
+		User:  user,
+		Extra: map[string]interface{}{
+			"STOs":         list,
+			"Total":        total,
+			"StatusFilter": statusStr,
+		},
+	}
+	h.renderPage(w, r, "sto_list.html", data)
+}
+
+// WebCreateSTO handles form submissions for creating new STOs.
+func (h *STOHandlers) WebCreateSTO(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	svc := h.getService()
+
+	qty, _ := strconv.ParseFloat(r.PostFormValue("quantity"), 64)
+	user, _ := h.getUserFromContext(r)
+	createdBy := "system"
+	if user != nil && user.Name != "" {
+		createdBy = user.Name
+	}
+
+	in := sto.CreateSTOInput{
+		OriginFacilityID:      strings.TrimSpace(r.PostFormValue("origin_facility_id")),
+		DestinationFacilityID: strings.TrimSpace(r.PostFormValue("destination_facility_id")),
+		MaterialCode:          strings.TrimSpace(r.PostFormValue("material_code")),
+		MaterialDescription:   strings.TrimSpace(r.PostFormValue("material_description")),
+		Quantity:              qty,
+		UOM:                   strings.ToUpper(strings.TrimSpace(r.PostFormValue("uom"))),
+		RequiredDeliveryDate:  strings.TrimSpace(r.PostFormValue("required_delivery_date")),
+		Notes:                 strings.TrimSpace(r.PostFormValue("notes")),
+		CreatedBy:             createdBy,
+	}
+
+	if _, err := svc.CreateSTO(r.Context(), tenantID, in); err != nil {
+		http.Redirect(w, r, "/sto?error="+err.Error(), http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/sto", http.StatusSeeOther)
+}
+
+// WebReleaseSTO releases an STO for transport.
+func (h *STOHandlers) WebReleaseSTO(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	id := chi.URLParam(r, "id")
+	svc := h.getService()
+	_, _ = svc.ReleaseSTO(r.Context(), tenantID, id)
+	http.Redirect(w, r, "/sto", http.StatusSeeOther)
+}
+
+// WebPostToLoadBoard publishes an STO to the open marketplace.
+func (h *STOHandlers) WebPostToLoadBoard(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	id := chi.URLParam(r, "id")
+	svc := h.getService()
+	in := sto.PostToLoadBoardInput{
+		VehicleTypeRequired: "truck",
+		TargetRate:          15000,
+		MaxRate:             20000,
+		Visibility:          sto.VisibilityPRIVATE,
+		ExpiresHours:        48,
+	}
+	_, _ = svc.PostToLoadBoard(r.Context(), tenantID, id, in)
+	http.Redirect(w, r, "/loadboard", http.StatusSeeOther)
+}
+
+// WebListLoadboard renders the Load Board listings page.
+func (h *STOHandlers) WebListLoadboard(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+	svc := h.getService()
+	statusStr := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("status")))
+
+	listings, _, err := svc.ListListings(r.Context(), tenantID, statusStr, "", "", 100, 0)
+	if err != nil {
+		h.renderError(w, http.StatusInternalServerError, "Failed to load listings", err.Error(), user)
+		return
+	}
+	data := PageData{
+		Title: "Load Board",
+		User:  user,
+		Extra: map[string]interface{}{
+			"Listings":     listings,
+			"StatusFilter": statusStr,
+		},
+	}
+	h.renderPage(w, r, "loadboard_list.html", data)
+}
+
+// WebSubmitBid submits a carrier bid on a load board listing.
+func (h *STOHandlers) WebSubmitBid(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	listingID := chi.URLParam(r, "id")
+	svc := h.getService()
+
+	bidAmt, _ := strconv.ParseFloat(r.PostFormValue("bid_amount"), 64)
+	carrierName := strings.TrimSpace(r.PostFormValue("carrier_name"))
+	carrierID := strings.TrimSpace(r.PostFormValue("carrier_id"))
+	if carrierID == "" {
+		carrierID = "carrier-ext"
+	}
+	in := sto.SubmitBidInput{
+		CarrierID:   carrierID,
+		CarrierName: carrierName,
+		BidAmount:   bidAmt,
+		Remarks:     strings.TrimSpace(r.PostFormValue("remarks")),
+	}
+	_, _ = svc.SubmitBid(r.Context(), tenantID, listingID, in)
+	http.Redirect(w, r, "/loadboard", http.StatusSeeOther)
+}
+
 // RegisterAPIRoutes registers /api/v1/sto/* and /api/v1/loadboard/* routes.
 func (h *STOHandlers) RegisterAPIRoutes(r chi.Router) {
 	r.Route("/api/v1/sto", func(r chi.Router) {

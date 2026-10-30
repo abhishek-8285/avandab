@@ -1,0 +1,174 @@
+{{template "page_header.html" (dict "Title" "Stock Transfer Orders" "Subtitle" "Inter-warehouse movements, internal transfers, and load board syndication")}}
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+    <div class="group relative overflow-hidden bg-gradient-to-br from-primary to-indigo-600 rounded-xl shadow-md p-4 text-white hover:shadow-lg transition">
+        <div class="flex items-center gap-4">
+            <div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center shrink-0">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/><rect x="8" y="8" width="8" height="8" rx="2"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-black tabular-nums leading-none">{{.Total}}</div>
+                <div class="text-xs font-medium text-white/80 mt-1">Total Stock Orders</div>
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 grid place-items-center text-amber-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">{{if .STOs}}{{len .STOs}}{{else}}0{{end}}</div>
+            <div class="text-xs text-secondary font-medium mt-1">Active Transfers</div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+        </div>
+        <div class="min-w-0">
+            <a href="/loadboard" class="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
+                <span>View Load Board</span>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+            <div class="text-xs text-secondary font-medium mt-1">Externalize Excess Capacity</div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden mb-6">
+    <div class="p-4 border-b border-border-subtle flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="/sto" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .StatusFilter ""}}bg-primary text-on-primary{{else}}bg-surface-container text-on-surface hover:bg-surface-container-high{{end}} transition">All</a>
+            <a href="/sto?status=DRAFT" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .StatusFilter "DRAFT"}}bg-primary text-on-primary{{else}}bg-surface-container text-on-surface hover:bg-surface-container-high{{end}} transition">Draft</a>
+            <a href="/sto?status=RELEASED" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .StatusFilter "RELEASED"}}bg-primary text-on-primary{{else}}bg-surface-container text-on-surface hover:bg-surface-container-high{{end}} transition">Released</a>
+            <a href="/sto?status=IN_TRANSIT" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .StatusFilter "IN_TRANSIT"}}bg-primary text-on-primary{{else}}bg-surface-container text-on-surface hover:bg-surface-container-high{{end}} transition">In Transit</a>
+            <a href="/sto?status=DELIVERED" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .StatusFilter "DELIVERED"}}bg-primary text-on-primary{{else}}bg-surface-container text-on-surface hover:bg-surface-container-high{{end}} transition">Delivered</a>
+        </div>
+
+        {{if can .User "sto" "write"}}
+        <button type="button" onclick="document.getElementById('sto-modal').classList.remove('hidden')" class="px-4 py-1.5 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary/90 transition flex items-center gap-1.5">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Create STO</span>
+        </button>
+        {{end}}
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="rtable min-w-full divide-y divide-border-subtle">
+            <thead class="bg-surface-container-low">
+                <tr>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">STO Number</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Origin Facility</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Destination Facility</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Material / Items</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Quantity</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Required Date</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Status</th>
+                    <th class="px-4 py-3 text-right text-eyebrow text-text-muted">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
+                {{range .STOs}}
+                <tr class="hover:bg-surface-container-low/50 transition">
+                    <td class="px-4 py-3 font-mono font-semibold text-primary">{{.STONumber}}</td>
+                    <td class="px-4 py-3 font-semibold">{{if .OriginFacilityName}}{{.OriginFacilityName}}{{else}}{{.OriginFacilityID}}{{end}}</td>
+                    <td class="px-4 py-3 font-semibold">{{if .DestFacilityName}}{{.DestFacilityName}}{{else}}{{.DestinationFacilityID}}{{end}}</td>
+                    <td class="px-4 py-3">
+                        <div class="font-medium">{{.MaterialDescription}}</div>
+                        <div class="text-xs text-text-muted font-mono">{{.MaterialCode}}</div>
+                    </td>
+                    <td class="px-4 py-3 font-mono font-semibold">{{.Quantity}} <span class="text-xs text-text-muted uppercase">{{.UOM}}</span></td>
+                    <td class="px-4 py-3 text-text-muted text-xs">{{.RequiredDeliveryDate}}</td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
+                            {{if eq .Status "DRAFT"}}bg-surface-container text-text-muted border border-border-subtle
+                            {{else if eq .Status "RELEASED"}}bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800
+                            {{else if eq .Status "IN_TRANSIT"}}bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800
+                            {{else if eq .Status "DELIVERED"}}bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800
+                            {{else}}bg-surface-container text-on-surface{{end}} uppercase tracking-wider">
+                            {{.Status}}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <div class="flex items-center justify-end gap-2">
+                            {{if and (can $.User "sto" "write") (eq .Status "DRAFT")}}
+                            <form method="POST" action="/sto/{{.ID}}/release" class="inline">
+                                <button type="submit" class="px-2.5 py-1 text-xs font-semibold rounded bg-blue-600 text-white hover:bg-blue-700 transition">Release</button>
+                            </form>
+                            {{end}}
+                            {{if and (can $.User "sto" "write") (eq .Status "RELEASED")}}
+                            <form method="POST" action="/sto/{{.ID}}/post-to-loadboard" class="inline">
+                                <button type="submit" class="px-2.5 py-1 text-xs font-semibold rounded bg-indigo-600 text-white hover:bg-indigo-700 transition">To Load Board</button>
+                            </form>
+                            {{end}}
+                        </div>
+                    </td>
+                </tr>
+                {{else}}
+                <tr>
+                    <td colspan="8" class="px-4 py-12 text-center text-text-muted">
+                        <div class="flex flex-col items-center gap-2">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-8 h-8 text-text-muted/60"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/><rect x="8" y="8" width="8" height="8" rx="2"/></svg>
+                            <span class="text-sm">No stock transfer orders found. Click "Create STO" to initiate an inter-facility shipment.</span>
+                        </div>
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: Create STO -->
+<div id="sto-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in duration-200">
+        <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between bg-surface-container-low">
+            <h3 class="text-base font-semibold text-on-surface">Create Stock Transfer Order</h3>
+            <button type="button" onclick="document.getElementById('sto-modal').classList.add('hidden')" class="text-text-muted hover:text-on-surface">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form method="POST" action="/sto" class="p-6 space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">Origin Facility ID *</label>
+                    <input type="text" name="origin_facility_id" required placeholder="e.g. WH-BOM-01" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">Destination Facility ID *</label>
+                    <input type="text" name="destination_facility_id" required placeholder="e.g. WH-PUN-02" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-text-muted mb-1">Material Description *</label>
+                <input type="text" name="material_description" required placeholder="e.g. Automotive Spare Parts, Palletized" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">Material Code</label>
+                    <input type="text" name="material_code" placeholder="MAT-1002" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">Quantity *</label>
+                    <input type="number" step="any" name="quantity" required placeholder="12.0" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">UOM *</label>
+                    <input type="text" name="uom" required placeholder="PALLETS" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-text-muted mb-1">Required Delivery Date *</label>
+                <input type="date" name="required_delivery_date" required class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-text-muted mb-1">Notes / Instructions</label>
+                <textarea name="notes" rows="2" placeholder="Fragile goods, requires closed container" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20"></textarea>
+            </div>
+            <div class="pt-4 border-t border-border-subtle flex items-center justify-end gap-3">
+                <button type="button" onclick="document.getElementById('sto-modal').classList.add('hidden')" class="px-4 py-2 rounded-lg border border-border-subtle text-sm text-on-surface hover:bg-surface-container-low transition">Cancel</button>
+                <button type="submit" class="px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-semibold hover:bg-primary/90 transition">Save STO Draft</button>
+            </div>
+        </form>
+    </div>
+</div>

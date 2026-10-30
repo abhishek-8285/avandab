@@ -971,6 +971,7 @@ func main() {
 		WithEwayBillAdapter(ewbClient, cfg.EWayBill.ExtendEnabled)
 	controlTowerSvc := controlTowerApp.NewService(database, etaService, time.Duration(cfg.LiveMap.TelemetryStaleMin)*time.Minute)
 	controlTowerAPIHandler := controlTowerAPIHandlers.NewHandler(controlTowerSvc, authSvc)
+	app.ControlTower = handlers.NewControlTowerHandlers(app, controlTowerSvc)
 
 	// Protected: Telemetry, and all /api/v1/* routes require a valid session or Bearer token
 	r.Group(func(r chi.Router) {
@@ -1544,6 +1545,15 @@ func main() {
 
 			// Audit Logs
 			r.Route("/audit-logs", app.AuditLogs.Routes)
+
+			// Headless modules web UI (P3 3.9)
+			r.Route("/facilities", app.Facilities.Routes)
+			r.Route("/sto", app.STO.Routes)
+			r.Route("/loadboard", app.STO.LoadBoardRoutes)
+			r.Route("/esg", app.ESG.Routes)
+			r.Route("/fuel-cards", app.FuelCards.Routes)
+			r.Route("/backhaul", app.Backhaul.Routes)
+			r.Route("/control-tower", app.ControlTower.Routes)
 
 			// Telemetry device registry / provisioning / quarantine admin
 			if cfg.Telemetry.Enabled {

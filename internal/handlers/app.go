@@ -183,6 +183,8 @@ type App struct {
 	ReportBuilder *ReportBuilderHandlers
 	// RFQ powers Request For Quotation lane bidding and multi-round counter-offers (P3 3.5).
 	RFQ *RFQHandlers
+	// ControlTower powers the operations cockpit and multi-stop tracking (P3 3.9).
+	ControlTower *ControlTowerHandlers
 }
 
 // NewApp creates a new handler app with all handler groups initialized.
@@ -300,6 +302,7 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	app.FreightAudit = &FreightAuditHandlers{App: app}
 	app.ReportBuilder = &ReportBuilderHandlers{App: app}
 	app.RFQ = &RFQHandlers{App: app}
+	app.ControlTower = NewControlTowerHandlers(app, nil)
 
 	return app
 }

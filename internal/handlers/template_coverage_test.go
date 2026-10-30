@@ -16,6 +16,7 @@ import (
 	alertsdomain "transport-app/internal/alerts/domain"
 	"transport-app/internal/auth"
 	bookingapp "transport-app/internal/booking/application"
+	ctdomain "transport-app/internal/controltower/domain"
 	"transport-app/internal/domain"
 	domaindaudit "transport-app/internal/domain/audit"
 	domainbooking "transport-app/internal/domain/booking"
@@ -23,8 +24,10 @@ import (
 	domainpayment "transport-app/internal/domain/payment"
 	domaintrip "transport-app/internal/domain/trip"
 	driverapp "transport-app/internal/driver/application"
+	"transport-app/internal/facility"
 	"transport-app/internal/fastag"
 	"transport-app/internal/features"
+	"transport-app/internal/fuel"
 	geofencedomain "transport-app/internal/geofence/domain"
 	invoiceapp "transport-app/internal/invoice/application"
 	maintenancedomain "transport-app/internal/maintenance/domain"
@@ -32,6 +35,8 @@ import (
 	"transport-app/internal/repository"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
+	"transport-app/internal/sto"
+	"transport-app/internal/sustainability"
 	"transport-app/internal/telemetry"
 	tripapp "transport-app/internal/trip/application"
 	vehicleapp "transport-app/internal/vehicle/application"
@@ -929,6 +934,201 @@ func TestAllTemplatesRender(t *testing.T) {
 				},
 			},
 			RazorpayKeyID: "rzp_test_123",
+		}},
+		{"facilities_list", "facilities_list.html", map[string]interface{}{
+			"Title": "Facilities",
+			"User":  user,
+			"Facilities": []facility.Facility{
+				{
+					ID:           "fac-1",
+					TenantID:     "tenant-1",
+					FacilityCode: "FAC-001",
+					Name:         "Central Warehouse",
+					FacilityType: "warehouse",
+					Address:      "Plot 42, Sector 18",
+					City:         "Gurugram",
+					State:        "Haryana",
+					Pincode:      "122015",
+					Latitude:     fPtr(28.4595),
+					Longitude:    fPtr(77.0266),
+					CreatedAt:    now,
+					UpdatedAt:    now,
+				},
+			},
+			"Total":      1,
+			"Query":      "",
+			"TypeFilter": "",
+		}},
+		{"sto_list", "sto_list.html", map[string]interface{}{
+			"Title": "Stock Transfer Orders",
+			"User":  user,
+			"STOs": []sto.StockTransferOrder{
+				{
+					ID:                    "sto-1",
+					TenantID:              "tenant-1",
+					STONumber:             "STO-2026-001",
+					OriginFacilityID:      "fac-1",
+					OriginFacilityName:    "Central Hub",
+					DestinationFacilityID: "fac-2",
+					DestFacilityName:      "Regional Hub",
+					MaterialCode:          "MAT-001",
+					MaterialDescription:   "Automotive Spare Parts",
+					Quantity:              500,
+					UOM:                   "EA",
+					Status:                sto.StatusDRAFT,
+					RequiredDeliveryDate:  "2026-11-05",
+					CreatedAt:             now,
+					UpdatedAt:             now,
+				},
+			},
+			"Total":        1,
+			"StatusFilter": "",
+		}},
+		{"loadboard_list", "loadboard_list.html", map[string]interface{}{
+			"Title": "Load Board",
+			"User":  user,
+			"Listings": []sto.LoadBoardListing{
+				{
+					ID:                  "lb-1",
+					TenantID:            "tenant-1",
+					OriginCity:          "Delhi",
+					DestinationCity:     "Mumbai",
+					VehicleTypeRequired: "32ft Container",
+					TargetRate:          35000.0,
+					MaxRate:             40000.0,
+					Status:              sto.LBStatusOPEN,
+					ExpiresAt:           now.Add(24 * time.Hour),
+					CreatedAt:           now,
+					UpdatedAt:           now,
+					BidsCount:           2,
+				},
+			},
+			"StatusFilter": "",
+		}},
+		{"esg_dashboard", "esg_dashboard.html", map[string]interface{}{
+			"Title":           "ESG Sustainability",
+			"User":            user,
+			"TotalCO2eMT":     32.16,
+			"AvgIntensity":    0.71,
+			"CleanDistanceKM": 5000.0,
+			"TotalDistanceKM": 45000.0,
+			"Snapshots": []sustainability.ESGEmissionSnapshot{
+				{
+					ID:              "esg-1",
+					TenantID:        "tenant-1",
+					PeriodStart:     "2026-10-01",
+					PeriodEnd:       "2026-10-31",
+					TotalTrips:      15,
+					TotalDistanceKM: 45000.0,
+					TotalCargoTKM:   65000.0,
+					TotalFuelLitres: 12000.0,
+					TotalCO2eKG:     32160.0,
+					AvgCO2ePerTKM:   0.71,
+					EVDistanceKM:    5000.0,
+					BS6DistanceKM:   40000.0,
+					BS4DistanceKM:   0.0,
+					CreatedBy:       "system",
+					CreatedAt:       now,
+				},
+			},
+		}},
+		{"fuel_cards_list", "fuel_cards_list.html", map[string]interface{}{
+			"Title": "Fuel Cards",
+			"User":  user,
+			"Cards": []fuel.FuelCard{
+				{
+					ID:                "fc-1",
+					TenantID:          "tenant-1",
+					CardNumberMasked:  "6070-XXXX-XXXX-1234",
+					Provider:          fuel.ProviderIOCL,
+					AssignedVehicleID: sPtr("KA-01-HH-1234"),
+					AssignedDriverID:  sPtr("John Doe"),
+					DailySpendLimit:   10000.0,
+					Status:            fuel.CardStatusActive,
+					SpendToday:        2500.0,
+					CreatedAt:         now,
+					UpdatedAt:         now,
+				},
+			},
+			"ActiveCount":     1,
+			"TotalSpendToday": 2500.0,
+		}},
+		{"backhaul_matches", "backhaul_matches.html", map[string]interface{}{
+			"Title": "Backhaul Matching",
+			"User":  user,
+			"Trips": []BackhaulTripOption{
+				{
+					ID:         "trip-1",
+					TripNumber: "TRIP-001",
+					Status:     "started",
+				},
+			},
+			"SelectedTripID": "trip-1",
+			"RadiusKm":       50.0,
+			"Matches": []service.BackhaulMatchDTO{
+				{
+					BookingID:          "bk-1",
+					BookingNumber:      "BK-001",
+					CustomerName:       "Test Customer",
+					PickupAddress:      "Pune Hub",
+					DeliveryAddress:    "Mumbai Port",
+					CargoWeight:        15.0,
+					VehicleType:        "32ft MXL",
+					Price:              25000.0,
+					FreightMargin:      5000.0,
+					DeadheadKm:         15.0,
+					PickupDistanceKm:   15.0,
+					CorridorSavingsPct: 35.0,
+				},
+			},
+			"BestMargin":  5000.0,
+			"MinDeadhead": 15.0,
+			"Offered":     false,
+		}},
+		{"control_tower", "control_tower.html", map[string]interface{}{
+			"Title": "Control Tower",
+			"User":  user,
+			"Trips": []ctdomain.ControlTowerTrip{
+				{
+					TripID:      "trip-1",
+					TripNumber:  "TRIP-001",
+					TenantID:    "tenant-1",
+					Status:      "started",
+					Origin:      "Delhi Hub",
+					Destination: "Jaipur Depot",
+					Driver: ctdomain.DriverInfo{
+						ID:    "d-1",
+						Name:  "Ramesh Kumar",
+						Phone: "9876543210",
+					},
+					Vehicle: ctdomain.VehicleInfo{
+						ID:            "v-1",
+						VehicleNumber: "DL01AB1234",
+					},
+					Progression: ctdomain.ControlTowerProgression{
+						TotalStops:      4,
+						CompletedStops:  2,
+						ProgressPercent: 50.0,
+					},
+					Telemetry: ctdomain.ControlTowerTelemetry{
+						Speed:        fPtr(62.5),
+						RemainingKM:  fPtr(120.0),
+						MarkerStatus: "running",
+					},
+					Safety: ctdomain.ControlTowerSafety{
+						HasActiveSOS: false,
+						IsDeviated:   false,
+					},
+					SyncState: ctdomain.ControlTowerSyncState{
+						IsStale: false,
+					},
+				},
+			},
+			"ActiveCount":  1,
+			"DelayedCount": 0,
+			"SOSCount":     0,
+			"StaleCount":   0,
+			"StatusFilter": "",
 		}},
 	}
 

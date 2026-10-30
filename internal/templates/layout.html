@@ -116,6 +116,26 @@
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="16" x="4" y="3" rx="2"/><path d="M4 11h16"/><circle cx="8" cy="15" r="1"/><circle cx="16" cy="15" r="1"/></svg>
                     <span>{{t "nav.trips"}}</span>
                 </a>
+                <a href="/control-tower" class="nav-item {{if eq .Title "Control Tower"}}active{{end}}">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                    <span>Control Tower</span>
+                </a>
+                <a href="/backhaul" class="nav-item {{if eq .Title "Backhaul Matching"}}active{{end}}">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                    <span>Backhaul</span>
+                </a>
+                {{end}}
+                {{if can .User "sto" "read"}}
+                <a href="/sto" class="nav-item {{if eq .Title "Stock Transfer Orders"}}active{{end}}">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"/><path d="M7 21h10"/><path d="M12 3v18"/><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg>
+                    <span>Stock Transfers</span>
+                </a>
+                {{end}}
+                {{if can .User "loadboard" "read"}}
+                <a href="/loadboard" class="nav-item {{if eq .Title "Load Board"}}active{{end}}">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                    <span>Load Board</span>
+                </a>
                 {{end}}
                 {{if can .User "customer_portal" "read"}}
                 {{if and .Features (index .Features "customer_portal")}}
@@ -136,6 +156,12 @@
                 <a href="/vehicles" class="nav-item {{if eq .Title "Vehicles"}}active{{end}}">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
                     <span>{{t "nav.vehicles"}}</span>
+                </a>
+                {{end}}
+                {{if can .User "facilities" "read"}}
+                <a href="/facilities" class="nav-item {{if eq .Title "Facilities"}}active{{end}}">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+                    <span>Facilities</span>
                 </a>
                 {{end}}
                 {{if can .User "maintenance" "read"}}
@@ -226,7 +252,7 @@
                     <span>{{t "nav.settlements"}}</span>
                 </a>
                 {{end}}
-                {{if or (can .User "fuel" "read") (can .User "scorecard" "read") (can .User "reports" "read") (can .User "pnl" "read")}}<div class="nav-section-label">{{t "nav.insights"}}</div>{{end}}
+                {{if or (can .User "fuel" "read") (can .User "scorecard" "read") (can .User "reports" "read") (can .User "pnl" "read") (can .User "esg" "read")}}<div class="nav-section-label">{{t "nav.insights"}}</div>{{end}}
                 {{if can .User "fuel" "read"}}
                 {{if and .Features (index .Features "fuel_audit")}}
                 <a href="/fuel/audit" class="nav-item {{if eq .Title "Fuel Audit"}}active{{end}}">
@@ -239,6 +265,10 @@
                     <span class="ml-auto text-[11px] font-bold uppercase tracking-wider text-primary/70 border border-primary/20 rounded-full px-1.5 py-0.5">Add-on</span>
                 </span>
                 {{end}}
+                <a href="/fuel-cards" class="nav-item {{if eq .Title "Fuel Cards"}}active{{end}}">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                    <span>Fuel Cards</span>
+                </a>
                 {{end}}
                 {{if can .User "scorecard" "read"}}
                 {{if and .Features (index .Features "scorecard")}}
@@ -257,6 +287,12 @@
                 <a href="/reports" class="nav-item {{if eq .Title "Reports"}}active{{end}}">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="18" y1="20" y2="4"/><line x1="12" x2="12" y1="20" y2="10"/><line x1="6" x2="6" y1="20" y2="16"/><line x1="2" x2="22" y1="20" y2="20"/></svg>
                     <span>{{t "nav.reports"}}</span>
+                </a>
+                {{end}}
+                {{if can .User "esg" "read"}}
+                <a href="/esg" class="nav-item {{if eq .Title "ESG Sustainability"}}active{{end}}">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+                    <span>ESG & Carbon</span>
                 </a>
                 {{end}}
                 {{if can .User "pnl" "read"}}
