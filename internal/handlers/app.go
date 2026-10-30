@@ -173,6 +173,8 @@ type App struct {
 	FuelCards *FuelCardHandlers
 	// ESG powers Scope 3 carbon emission snapshots and BRSR reporting (B11).
 	ESG *ESGHandlers
+	// Tyres powers tyre management, axle tracking, retreading, and CPKM (P3 3.1).
+	Tyres *TyreHandlers
 }
 
 // NewApp creates a new handler app with all handler groups initialized.
@@ -285,6 +287,7 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	esgRepo := sustainability.NewSQLESGRepository(db)
 	esgUseCase := esgapp.NewESGUsecase(esgRepo)
 	app.ESG = NewESGHandlers(app, esgUseCase)
+	app.Tyres = &TyreHandlers{App: app}
 
 	return app
 }

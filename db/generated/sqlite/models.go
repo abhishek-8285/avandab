@@ -2064,6 +2064,70 @@ type TripStop struct {
 	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
+type Tyre struct {
+	ID                  string          `json:"id"`
+	TenantID            string          `json:"tenant_id"`
+	SerialNumber        string          `json:"serial_number"`
+	Brand               string          `json:"brand"`
+	Model               string          `json:"model"`
+	Size                string          `json:"size"`
+	TyreType            string          `json:"tyre_type"`
+	Status              string          `json:"status"`
+	VehicleID           sql.NullString  `json:"vehicle_id"`
+	AxlePosition        sql.NullString  `json:"axle_position"`
+	MountOdometerKm     sql.NullFloat64 `json:"mount_odometer_km"`
+	MountDate           sql.NullTime    `json:"mount_date"`
+	InitialTreadDepthMm float64         `json:"initial_tread_depth_mm"`
+	CurrentTreadDepthMm float64         `json:"current_tread_depth_mm"`
+	MinTreadDepthMm     float64         `json:"min_tread_depth_mm"`
+	PurchaseDate        sql.NullTime    `json:"purchase_date"`
+	PurchaseCost        float64         `json:"purchase_cost"`
+	VendorName          string          `json:"vendor_name"`
+	InvoiceNumber       string          `json:"invoice_number"`
+	RetreadCount        int64           `json:"retread_count"`
+	MaxRetreads         int64           `json:"max_retreads"`
+	TotalRetreadCost    float64         `json:"total_retread_cost"`
+	TotalKmRun          float64         `json:"total_km_run"`
+	ScrapDate           sql.NullTime    `json:"scrap_date"`
+	ScrapReason         string          `json:"scrap_reason"`
+	ScrapRecoveryAmount float64         `json:"scrap_recovery_amount"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+}
+
+type TyreActivity struct {
+	ID           string          `json:"id"`
+	TenantID     string          `json:"tenant_id"`
+	TyreID       string          `json:"tyre_id"`
+	ActivityType string          `json:"activity_type"`
+	VehicleID    sql.NullString  `json:"vehicle_id"`
+	FromPosition sql.NullString  `json:"from_position"`
+	ToPosition   sql.NullString  `json:"to_position"`
+	OdometerKm   float64         `json:"odometer_km"`
+	TreadDepthMm sql.NullFloat64 `json:"tread_depth_mm"`
+	PressurePsi  sql.NullFloat64 `json:"pressure_psi"`
+	Cost         float64         `json:"cost"`
+	Notes        string          `json:"notes"`
+	PerformedBy  string          `json:"performed_by"`
+	RecordedAt   time.Time       `json:"recorded_at"`
+}
+
+type TyreInspection struct {
+	ID             string          `json:"id"`
+	TenantID       string          `json:"tenant_id"`
+	TyreID         string          `json:"tyre_id"`
+	VehicleID      sql.NullString  `json:"vehicle_id"`
+	InspectionDate time.Time       `json:"inspection_date"`
+	OdometerKm     float64         `json:"odometer_km"`
+	TreadDepthMm   float64         `json:"tread_depth_mm"`
+	PressurePsi    sql.NullFloat64 `json:"pressure_psi"`
+	Condition      string          `json:"condition"`
+	ActionTaken    string          `json:"action_taken"`
+	InspectorName  string          `json:"inspector_name"`
+	Notes          string          `json:"notes"`
+	CreatedAt      time.Time       `json:"created_at"`
+}
+
 type User struct {
 	ID              string         `json:"id"`
 	Email           string         `json:"email"`
