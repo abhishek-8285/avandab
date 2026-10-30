@@ -1802,6 +1802,18 @@ type PnlDaily struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
+type PrivacyDsarRequest struct {
+	ID          string       `json:"id"`
+	TenantID    string       `json:"tenant_id"`
+	UserID      string       `json:"user_id"`
+	RequestType string       `json:"request_type"`
+	Status      string       `json:"status"`
+	RequestedBy string       `json:"requested_by"`
+	Details     string       `json:"details"`
+	CreatedAt   time.Time    `json:"created_at"`
+	CompletedAt sql.NullTime `json:"completed_at"`
+}
+
 type ProviderEvent struct {
 	ID              string    `json:"id"`
 	TenantID        string    `json:"tenant_id"`

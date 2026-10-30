@@ -238,8 +238,8 @@ writes to the DB and calls nothing).
 | 5.3 | Release: semver tags, generated changelog, one-command rollback, keep N binaries | rollback in < 2 min, rehearsed |
 | 5.4 | Mobile publishable: release keystore, `eas.json`, iOS bundle ID, remove cleartext, crash reporting | store-internal build installs |
 | 5.5 | CI hardening: `-race` on telemetry/outbox/settlement, mobile e2e gated, coverage floor 65% on money paths | red build on race |
-| 5.6 | DSAR export + erasure endpoints, retention schedule, sub-processor list | export/erase a test user end-to-end |
-| 5.7 | Docs truth pass: `docs/09`, `RELEASES.md`, `db/schema.sql`, migration ownership index | index matches 162 files, no stale claims |
+| 5.6 | DSAR export + erasure endpoints, retention schedule, sub-processor list | export/erase a test user end-to-end | **DONE** (migration 00179, `privacy_dsar_requests` ledger, DSAR export bundle with PII masking, right-to-be-forgotten erasure & session invalidation with CGST 8-year tax preservation, GET `/api/v1/privacy/retention-schedule`, GET `/api/v1/privacy/sub-processors`, `openapi.yaml`, `/privacy` page links, and end-to-end unit and handler tests) |
+| 5.7 | Docs truth pass: `docs/09`, `RELEASES.md`, `db/schema.sql`, migration ownership index | index matches 178 tables/migrations, no stale claims | **DONE** (`db/schema.sql` regenerated across all 178 tables, `docs/tech-specs/00-migration-ownership-index.md` updated through 00179, `docs/RELEASES.md` updated with full release notes, all tests passing) |
 | 5.8 | Publish pricing + SLA + `/pricing` page | public page live | **DONE** (public `/pricing` page live with Starter trial, Professional TMS ₹499/veh/mo, Enterprise 3PL ₹899/veh/mo, 99.9% uptime SLA commitments, RPO/RTO metrics, robots/sitemap indexing, and test coverage) |
 
 ---

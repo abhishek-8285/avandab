@@ -222,6 +222,28 @@ CREATE TABLE contact_submissions (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 , acknowledged_at DATETIME);
+CREATE TABLE counter_offers (
+    id             TEXT PRIMARY KEY,
+    tenant_id      TEXT NOT NULL,
+    entity_type    TEXT NOT NULL CHECK (entity_type IN ('RFQ', 'LOAD_BOARD')),
+    rfq_id         TEXT REFERENCES rfqs(id) ON DELETE CASCADE,
+    listing_id     TEXT REFERENCES load_board_listings(id) ON DELETE CASCADE,
+    bid_id         TEXT NOT NULL,
+    round_number   INTEGER NOT NULL DEFAULT 1 CHECK (round_number >= 1),
+    sender_role    TEXT NOT NULL CHECK (sender_role IN ('SHIPPER', 'CARRIER')),
+    sender_id      TEXT NOT NULL DEFAULT '',
+    sender_name    TEXT NOT NULL DEFAULT '',
+    offered_amount REAL NOT NULL CHECK (offered_amount > 0.0),
+    remarks        TEXT NOT NULL DEFAULT '',
+    status         TEXT NOT NULL DEFAULT 'PENDING'
+                   CHECK (status IN ('PENDING', 'ACCEPTED', 'REJECTED', 'SUPERSEDED', 'EXPIRED')),
+    expires_at     DATETIME,
+    created_at     DATETIME NOT NULL DEFAULT (datetime('now')),
+    decided_at     DATETIME,
+    decided_by     TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    CHECK (rfq_id IS NOT NULL OR listing_id IS NOT NULL)
+);
 CREATE TABLE credit_debit_notes (
     id               TEXT PRIMARY KEY,
     tenant_id        TEXT NOT NULL,
@@ -239,6 +261,25 @@ CREATE TABLE credit_debit_notes (
     irn_cancelled_at TIMESTAMP,
     created_by       TEXT,
     created_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE custom_reports (
+    id               TEXT PRIMARY KEY,
+    tenant_id        TEXT NOT NULL,
+    name             TEXT NOT NULL,
+    description      TEXT NOT NULL DEFAULT '',
+    dataset          TEXT NOT NULL CHECK (dataset IN ('TRIPS', 'VEHICLES', 'DRIVERS', 'FUEL', 'FASTAG', 'TYRES', 'INVENTORY', 'FREIGHT_AUDIT', 'EXPENSES', 'INVOICES')),
+    selected_columns TEXT NOT NULL DEFAULT '[]',
+    filters          TEXT NOT NULL DEFAULT '[]',
+    group_by         TEXT NOT NULL DEFAULT '',
+    aggregations     TEXT NOT NULL DEFAULT '[]',
+    sort_by          TEXT NOT NULL DEFAULT '',
+    sort_direction   TEXT NOT NULL DEFAULT 'DESC' CHECK (sort_direction IN ('ASC', 'DESC')),
+    chart_type       TEXT NOT NULL DEFAULT 'TABLE' CHECK (chart_type IN ('TABLE', 'BAR', 'LINE', 'PIE')),
+    is_system        INTEGER NOT NULL DEFAULT 0 CHECK (is_system IN (0, 1)),
+    created_by       TEXT NOT NULL DEFAULT '',
+    created_at       DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at       DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
 );
 CREATE TABLE customer_booking_details (
     booking_id           TEXT PRIMARY KEY,
@@ -476,7 +517,7 @@ CREATE TABLE "driver_expenses" (
   idempotency_key TEXT,
   latitude REAL,
   longitude REAL, verification_state TEXT NOT NULL DEFAULT 'manual'
-  CHECK (verification_state IN ('manual','auto_verified','flagged')), flag_reason TEXT NOT NULL DEFAULT '', ocr_amount REAL, ocr_confidence REAL, tenant_id TEXT NOT NULL DEFAULT '1',
+  CHECK (verification_state IN ('manual','auto_verified','flagged')), flag_reason TEXT NOT NULL DEFAULT '', ocr_amount REAL, ocr_confidence REAL, tenant_id TEXT NOT NULL DEFAULT '1', provider_mode TEXT NOT NULL DEFAULT 'LIVE' CHECK (provider_mode IN ('LIVE', 'MOCK')),
   FOREIGN KEY (trip_id) REFERENCES trips(id),
   FOREIGN KEY (driver_id) REFERENCES drivers(id)
 );
@@ -551,6 +592,15 @@ CREATE TABLE driver_licenses (
     verified_at DATETIME,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE driver_mqtt_credentials (
+    driver_key    TEXT PRIMARY KEY,
+    tenant_id     TEXT NOT NULL,
+    username      TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
+    created_at    DATETIME NOT NULL DEFAULT (datetime('now')),
+    rotated_at    DATETIME,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+);
 CREATE TABLE driver_onboarding (
     driver_id TEXT PRIMARY KEY,
     tenant_id TEXT NOT NULL,
@@ -610,6 +660,23 @@ CREATE TABLE driver_push_tokens (
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+);
+CREATE TABLE driver_safety_scorecards (
+    id                        TEXT PRIMARY KEY,
+    tenant_id                 TEXT NOT NULL,
+    driver_id                 TEXT NOT NULL REFERENCES drivers(id) ON DELETE CASCADE,
+    period_start              DATETIME NOT NULL,
+    period_end                DATETIME NOT NULL,
+    distance_km               REAL NOT NULL DEFAULT 0.0,
+    safety_score              REAL NOT NULL DEFAULT 100.0,
+    adas_event_count          INTEGER NOT NULL DEFAULT 0,
+    dms_event_count          INTEGER NOT NULL DEFAULT 0,
+    critical_event_count      INTEGER NOT NULL DEFAULT 0,
+    coached_event_count       INTEGER NOT NULL DEFAULT 0,
+    risk_tier                 TEXT NOT NULL DEFAULT 'LOW_RISK' CHECK (risk_tier IN ('LOW_RISK', 'MODERATE_RISK', 'HIGH_RISK', 'CRITICAL_RISK')),
+    created_at                DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at                DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
 );
 CREATE TABLE driver_scores (
     id           TEXT PRIMARY KEY,
@@ -806,6 +873,37 @@ CREATE TABLE eta_history_monthly (
     sample_count INTEGER NOT NULL,
     PRIMARY KEY (tenant_id, segment_start, segment_end, month)
 );
+CREATE TABLE ev_charging_sessions (
+    id                        TEXT PRIMARY KEY,
+    tenant_id                 TEXT NOT NULL,
+    vehicle_id                TEXT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+    facility_id               TEXT REFERENCES facilities(id) ON DELETE SET NULL,
+    start_time                DATETIME NOT NULL,
+    end_time                  DATETIME,
+    start_soc                 REAL NOT NULL,
+    end_soc                   REAL,
+    energy_added_kwh          REAL NOT NULL DEFAULT 0.0,
+    peak_power_kw             REAL NOT NULL DEFAULT 0.0,
+    charger_type              TEXT NOT NULL DEFAULT 'AC_SLOW' CHECK (charger_type IN ('AC_SLOW', 'DC_FAST')),
+    estimated_cost            REAL NOT NULL DEFAULT 0.0,
+    status                    TEXT NOT NULL DEFAULT 'IN_PROGRESS'
+                              CHECK (status IN ('IN_PROGRESS', 'COMPLETED', 'INTERRUPTED')),
+    created_at                DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at                DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+);
+CREATE TABLE ev_energy_summaries (
+    id                        TEXT PRIMARY KEY,
+    tenant_id                 TEXT NOT NULL,
+    vehicle_id                TEXT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+    trip_id                   TEXT REFERENCES trips(id) ON DELETE SET NULL,
+    distance_km               REAL NOT NULL DEFAULT 0.0,
+    energy_consumed_kwh       REAL NOT NULL DEFAULT 0.0,
+    efficiency_wh_km          REAL NOT NULL DEFAULT 0.0,
+    co2_avoided_kg            REAL NOT NULL DEFAULT 0.0,
+    recorded_at               DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+);
 CREATE TABLE "eway_bill_events" (
     id          TEXT PRIMARY KEY,
     ewb_number  TEXT NOT NULL,
@@ -829,7 +927,7 @@ CREATE TABLE "eway_bills" (
   vehicle_number TEXT,
   status TEXT DEFAULT 'active' CHECK (status IN ('active','part_a','delivered','cancelled','expired')),
   raw_response TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP, part_a_json        TEXT, part_b_json        TEXT, from_place         TEXT, from_state_code    TEXT, to_place           TEXT, to_state_code      TEXT, goods_value        REAL, distance           INTEGER, doc_type           TEXT, doc_no             TEXT, doc_date           TEXT, transporter_doc_no TEXT, extension_count    INTEGER DEFAULT 0, cancel_reason      TEXT, cancelled_at       DATETIME, qr_code            TEXT, ack_no             TEXT, gen_mode           TEXT DEFAULT 'MANUAL',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP, part_a_json        TEXT, part_b_json        TEXT, from_place         TEXT, from_state_code    TEXT, to_place           TEXT, to_state_code      TEXT, goods_value        REAL, distance           INTEGER, doc_type           TEXT, doc_no             TEXT, doc_date           TEXT, transporter_doc_no TEXT, extension_count    INTEGER DEFAULT 0, cancel_reason      TEXT, cancelled_at       DATETIME, qr_code            TEXT, ack_no             TEXT, gen_mode           TEXT DEFAULT 'MANUAL', provider_mode TEXT NOT NULL DEFAULT 'LIVE' CHECK (provider_mode IN ('LIVE', 'MOCK')),
   FOREIGN KEY (trip_id) REFERENCES trips(id)
 );
 CREATE TABLE experiment_assignments (
@@ -922,7 +1020,7 @@ CREATE TABLE fastag_transactions (
     source        TEXT NOT NULL DEFAULT 'PROVIDER' CHECK (source IN ('PROVIDER','MANUAL','GPS')),
     reconciled    INTEGER NOT NULL DEFAULT 0,
     kharcha_id    TEXT,
-    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
+    created_at    DATETIME DEFAULT CURRENT_TIMESTAMP, provider_mode TEXT NOT NULL DEFAULT 'LIVE' CHECK (provider_mode IN ('LIVE', 'MOCK')),
     FOREIGN KEY (tag_id) REFERENCES fastag_tags(tag_id),
     FOREIGN KEY (trip_id) REFERENCES trips(id),
     FOREIGN KEY (kharcha_id) REFERENCES driver_expenses(id)
@@ -978,6 +1076,103 @@ CREATE TABLE founder_signals (
     acknowledged_by TEXT,
     acknowledged_at DATETIME,
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE freight_audit_deductions (
+    id               TEXT PRIMARY KEY,
+    tenant_id        TEXT NOT NULL,
+    audit_id         TEXT NOT NULL,
+    category         TEXT NOT NULL CHECK (category IN ('DISTANCE_INFLATION', 'WEIGHT_MISMATCH', 'RATE_OVERCHARGE', 'UNVERIFIED_TOLL', 'EXCESS_DETENTION', 'DAMAGE_PENALTY', 'OTHER')),
+    description      TEXT NOT NULL,
+    claimed_value    REAL NOT NULL DEFAULT 0.0,
+    verified_value   REAL NOT NULL DEFAULT 0.0,
+    unit_rate        REAL NOT NULL DEFAULT 0.0,
+    deduction_amount REAL NOT NULL CHECK (deduction_amount >= 0.0),
+    created_at       DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    FOREIGN KEY (audit_id) REFERENCES freight_audits(id) ON DELETE CASCADE
+);
+CREATE TABLE freight_audits (
+    id                       TEXT PRIMARY KEY,
+    tenant_id                TEXT NOT NULL,
+    audit_number             TEXT NOT NULL UNIQUE,
+    trip_id                  TEXT,
+    invoice_id               TEXT,
+    booking_id               TEXT,
+    rate_card_id             TEXT,
+    vendor_name              TEXT NOT NULL DEFAULT '',
+    vehicle_number           TEXT NOT NULL DEFAULT '',
+    status                   TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'VERIFIED', 'DISCREPANCY_FLAGGED', 'DEDUCTION_APPROVED', 'DISPUTED', 'SETTLED')),
+    billing_basis            TEXT NOT NULL CHECK (billing_basis IN ('PER_KM', 'PER_KG', 'PER_TON', 'PER_TON_KM', 'FLAT')),
+
+    -- Billed amounts & claimed metrics
+    billed_distance_km       REAL NOT NULL DEFAULT 0.0 CHECK (billed_distance_km >= 0.0),
+    billed_weight_kg         REAL NOT NULL DEFAULT 0.0 CHECK (billed_weight_kg >= 0.0),
+    billed_rate              REAL NOT NULL DEFAULT 0.0 CHECK (billed_rate >= 0.0),
+    billed_base_freight      REAL NOT NULL DEFAULT 0.0 CHECK (billed_base_freight >= 0.0),
+    billed_toll_charges      REAL NOT NULL DEFAULT 0.0 CHECK (billed_toll_charges >= 0.0),
+    billed_detention_charges REAL NOT NULL DEFAULT 0.0 CHECK (billed_detention_charges >= 0.0),
+    billed_total             REAL NOT NULL DEFAULT 0.0 CHECK (billed_total >= 0.0),
+
+    -- Audited ground-truth metrics
+    gps_distance_km          REAL NOT NULL DEFAULT 0.0 CHECK (gps_distance_km >= 0.0),
+    actual_weight_kg         REAL NOT NULL DEFAULT 0.0 CHECK (actual_weight_kg >= 0.0),
+    audited_rate             REAL NOT NULL DEFAULT 0.0 CHECK (audited_rate >= 0.0),
+    audited_base_freight     REAL NOT NULL DEFAULT 0.0 CHECK (audited_base_freight >= 0.0),
+    audited_toll_charges     REAL NOT NULL DEFAULT 0.0 CHECK (audited_toll_charges >= 0.0),
+    audited_detention_hours  REAL NOT NULL DEFAULT 0.0 CHECK (audited_detention_hours >= 0.0),
+    audited_detention_charges REAL NOT NULL DEFAULT 0.0 CHECK (audited_detention_charges >= 0.0),
+    audited_total            REAL NOT NULL DEFAULT 0.0 CHECK (audited_total >= 0.0),
+
+    -- Variances & overbilling calculation
+    distance_variance_km     REAL NOT NULL DEFAULT 0.0,
+    weight_variance_kg       REAL NOT NULL DEFAULT 0.0,
+    rate_variance            REAL NOT NULL DEFAULT 0.0,
+    toll_variance            REAL NOT NULL DEFAULT 0.0,
+    overbilling_amount       REAL NOT NULL DEFAULT 0.0,
+    variance_pct             REAL NOT NULL DEFAULT 0.0,
+
+    -- Deductions & settlement
+    deduction_amount         REAL NOT NULL DEFAULT 0.0 CHECK (deduction_amount >= 0.0),
+    payable_amount           REAL NOT NULL DEFAULT 0.0 CHECK (payable_amount >= 0.0),
+    deduction_reason         TEXT NOT NULL DEFAULT '',
+    debit_note_number        TEXT NOT NULL DEFAULT '',
+
+    -- Audit trail & resolution
+    discrepancy_flags        TEXT NOT NULL DEFAULT '',
+    dispute_reason           TEXT NOT NULL DEFAULT '',
+    reviewed_by              TEXT NOT NULL DEFAULT '',
+    reviewed_at              DATETIME,
+    approved_by              TEXT NOT NULL DEFAULT '',
+    approved_at              DATETIME,
+    created_at               DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at               DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    FOREIGN KEY (trip_id) REFERENCES trips(id),
+    FOREIGN KEY (invoice_id) REFERENCES invoices(id),
+    FOREIGN KEY (booking_id) REFERENCES bookings(id),
+    FOREIGN KEY (rate_card_id) REFERENCES freight_rate_cards(id)
+);
+CREATE TABLE freight_rate_cards (
+    id                      TEXT PRIMARY KEY,
+    tenant_id               TEXT NOT NULL,
+    contract_number         TEXT NOT NULL,
+    name                    TEXT NOT NULL,
+    vendor_id               TEXT,
+    customer_id             TEXT,
+    route_id                TEXT,
+    vehicle_type            TEXT NOT NULL DEFAULT '',
+    billing_basis           TEXT NOT NULL CHECK (billing_basis IN ('PER_KM', 'PER_KG', 'PER_TON', 'PER_TON_KM', 'FLAT')),
+    rate                    REAL NOT NULL CHECK (rate >= 0.0),
+    min_charge              REAL NOT NULL DEFAULT 0.0 CHECK (min_charge >= 0.0),
+    free_detention_hours    REAL NOT NULL DEFAULT 0.0 CHECK (free_detention_hours >= 0.0),
+    detention_rate_per_hour REAL NOT NULL DEFAULT 0.0 CHECK (detention_rate_per_hour >= 0.0),
+    effective_from          DATETIME NOT NULL DEFAULT (datetime('now')),
+    effective_to            DATETIME,
+    is_active               INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+    created_at              DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at              DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    FOREIGN KEY (route_id) REFERENCES routes(id)
 );
 CREATE TABLE fuel_card_transactions (
     id                    TEXT PRIMARY KEY,
@@ -1346,6 +1541,98 @@ CREATE TABLE outbox_events (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL,
     published_at DATETIME
 );
+CREATE TABLE part_purchase_bills (
+    id             TEXT PRIMARY KEY,
+    tenant_id      TEXT NOT NULL,
+    bill_number    TEXT NOT NULL,
+    vendor_name    TEXT NOT NULL,
+    vendor_gstin   TEXT NOT NULL DEFAULT '',
+    facility_id    TEXT NOT NULL,
+    bill_date      DATE NOT NULL,
+    total_amount   REAL NOT NULL DEFAULT 0.0 CHECK (total_amount >= 0.0),
+    tax_amount     REAL NOT NULL DEFAULT 0.0 CHECK (tax_amount >= 0.0),
+    status         TEXT NOT NULL DEFAULT 'DRAFT' CHECK (status IN ('DRAFT', 'RECEIVED', 'CANCELLED')),
+    received_date  DATETIME,
+    received_by    TEXT NOT NULL DEFAULT '',
+    notes          TEXT NOT NULL DEFAULT '',
+    created_at     DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at     DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    FOREIGN KEY (facility_id) REFERENCES facilities(id),
+    UNIQUE (tenant_id, bill_number)
+);
+CREATE TABLE part_purchase_items (
+    id             TEXT PRIMARY KEY,
+    tenant_id      TEXT NOT NULL,
+    bill_id        TEXT NOT NULL,
+    part_id        TEXT NOT NULL,
+    quantity       REAL NOT NULL CHECK (quantity > 0.0),
+    unit_cost      REAL NOT NULL CHECK (unit_cost >= 0.0),
+    tax_rate       REAL NOT NULL DEFAULT 0.0 CHECK (tax_rate >= 0.0),
+    total_cost     REAL NOT NULL CHECK (total_cost >= 0.0),
+    created_at     DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    FOREIGN KEY (bill_id) REFERENCES part_purchase_bills(id) ON DELETE CASCADE,
+    FOREIGN KEY (part_id) REFERENCES parts(id)
+);
+CREATE TABLE part_stocks (
+    id                 TEXT PRIMARY KEY,
+    tenant_id          TEXT NOT NULL,
+    part_id            TEXT NOT NULL,
+    facility_id        TEXT NOT NULL,
+    quantity_on_hand   REAL NOT NULL DEFAULT 0.0 CHECK (quantity_on_hand >= 0.0),
+    quantity_reserved  REAL NOT NULL DEFAULT 0.0 CHECK (quantity_reserved >= 0.0),
+    bin_location       TEXT NOT NULL DEFAULT '',
+    updated_at         DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    FOREIGN KEY (part_id) REFERENCES parts(id) ON DELETE CASCADE,
+    FOREIGN KEY (facility_id) REFERENCES facilities(id) ON DELETE CASCADE,
+    UNIQUE (tenant_id, part_id, facility_id)
+);
+CREATE TABLE part_transactions (
+    id               TEXT PRIMARY KEY,
+    tenant_id        TEXT NOT NULL,
+    part_id          TEXT NOT NULL,
+    facility_id      TEXT NOT NULL,
+    transaction_type TEXT NOT NULL CHECK (transaction_type IN ('PURCHASE_RECEIPT', 'WORK_ORDER_ISSUE', 'WORK_ORDER_RETURN', 'STO_OUT', 'STO_IN', 'ADJUSTMENT_IN', 'ADJUSTMENT_OUT', 'SCRAP')),
+    quantity         REAL NOT NULL CHECK (quantity > 0.0),
+    unit_cost        REAL NOT NULL DEFAULT 0.0 CHECK (unit_cost >= 0.0),
+    total_cost       REAL NOT NULL DEFAULT 0.0 CHECK (total_cost >= 0.0),
+    balance_after    REAL NOT NULL DEFAULT 0.0 CHECK (balance_after >= 0.0),
+    reference_type   TEXT NOT NULL DEFAULT '',
+    reference_id     TEXT NOT NULL DEFAULT '',
+    vehicle_id       TEXT,
+    work_order_id    TEXT,
+    notes            TEXT NOT NULL DEFAULT '',
+    performed_by     TEXT NOT NULL DEFAULT '',
+    recorded_at      DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    FOREIGN KEY (part_id) REFERENCES parts(id),
+    FOREIGN KEY (facility_id) REFERENCES facilities(id),
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(id),
+    FOREIGN KEY (work_order_id) REFERENCES work_orders(id)
+);
+CREATE TABLE parts (
+    id                 TEXT PRIMARY KEY,
+    tenant_id          TEXT NOT NULL,
+    part_number        TEXT NOT NULL,
+    name               TEXT NOT NULL,
+    category           TEXT NOT NULL DEFAULT 'GENERAL'
+                       CHECK (category IN ('ENGINE', 'BRAKES', 'ELECTRICAL', 'SUSPENSION', 'TRANSMISSION', 'FILTERS', 'FLUIDS', 'TYRES_ACCESSORIES', 'FASTENERS', 'BODY', 'GENERAL')),
+    description        TEXT NOT NULL DEFAULT '',
+    uom                TEXT NOT NULL DEFAULT 'PIECES'
+                       CHECK (uom IN ('PIECES', 'LITRES', 'METRES', 'SETS', 'KG', 'BOXES')),
+    min_stock_level    REAL NOT NULL DEFAULT 5.0 CHECK (min_stock_level >= 0.0),
+    reorder_quantity   REAL NOT NULL DEFAULT 10.0 CHECK (reorder_quantity >= 0.0),
+    cost_price         REAL NOT NULL DEFAULT 0.0 CHECK (cost_price >= 0.0),
+    selling_price      REAL NOT NULL DEFAULT 0.0 CHECK (selling_price >= 0.0),
+    oem_brand          TEXT NOT NULL DEFAULT '',
+    compatible_models  TEXT NOT NULL DEFAULT '',
+    is_active          INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+    created_at         DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at         DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+);
 CREATE TABLE payments (
     id              TEXT PRIMARY KEY,
     invoice_id      TEXT NOT NULL,
@@ -1472,6 +1759,17 @@ CREATE TABLE pnl_daily (
     created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (tenant_id, snapshot_date)
 );
+CREATE TABLE privacy_dsar_requests (
+    id              TEXT PRIMARY KEY,
+    tenant_id       TEXT NOT NULL,
+    user_id         TEXT NOT NULL,
+    request_type    TEXT NOT NULL CHECK (request_type IN ('export', 'erasure', 'rectification')),
+    status          TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('pending', 'processing', 'completed', 'rejected')),
+    requested_by    TEXT NOT NULL,
+    details         TEXT NOT NULL DEFAULT '',
+    created_at      DATETIME NOT NULL DEFAULT (datetime('now')),
+    completed_at    DATETIME
+);
 CREATE TABLE provider_events (
     id                TEXT PRIMARY KEY,
     tenant_id         TEXT NOT NULL,
@@ -1481,6 +1779,131 @@ CREATE TABLE provider_events (
     payload           TEXT NOT NULL,
     processed_at      DATETIME NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (tenant_id) REFERENCES tenants(id) ON DELETE CASCADE
+);
+CREATE TABLE reefer_temperature_excursions (
+    id                        TEXT PRIMARY KEY,
+    tenant_id                 TEXT NOT NULL,
+    vehicle_id                TEXT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+    trip_id                   TEXT REFERENCES trips(id) ON DELETE SET NULL,
+    zone_number               INTEGER NOT NULL DEFAULT 1,
+    excursion_type            TEXT NOT NULL CHECK (excursion_type IN ('OVER_TEMP', 'UNDER_TEMP', 'DOOR_PROLONGED_OPEN', 'SENSOR_FAULT')),
+    severity                  TEXT NOT NULL DEFAULT 'WARNING' CHECK (severity IN ('WARNING', 'CRITICAL')),
+    start_time                DATETIME NOT NULL,
+    end_time                  DATETIME,
+    duration_seconds          INTEGER NOT NULL DEFAULT 0,
+    peak_temp_c               REAL NOT NULL,
+    threshold_temp_c          REAL NOT NULL,
+    setpoint_c                REAL NOT NULL,
+    status                    TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'ACKNOWLEDGED', 'RESOLVED')),
+    resolution_note           TEXT NOT NULL DEFAULT '',
+    resolved_by               TEXT NOT NULL DEFAULT '',
+    created_at                DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at                DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+);
+CREATE TABLE reefer_trip_summaries (
+    id                        TEXT PRIMARY KEY,
+    tenant_id                 TEXT NOT NULL,
+    trip_id                   TEXT NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+    vehicle_id                TEXT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+    start_time                DATETIME NOT NULL,
+    end_time                  DATETIME NOT NULL,
+    zone1_min_temp_c          REAL NOT NULL,
+    zone1_max_temp_c          REAL NOT NULL,
+    zone1_mean_kinetic_temp_c REAL NOT NULL,
+    total_excursion_duration_sec INTEGER NOT NULL DEFAULT 0,
+    door_open_count           INTEGER NOT NULL DEFAULT 0,
+    compliance_status         TEXT NOT NULL DEFAULT 'COMPLIANT' CHECK (compliance_status IN ('COMPLIANT', 'BREACHED')),
+    certified_at              DATETIME,
+    certified_by              TEXT NOT NULL DEFAULT '',
+    created_at                DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+);
+CREATE TABLE report_executions (
+    id                    TEXT PRIMARY KEY,
+    tenant_id             TEXT NOT NULL,
+    report_id             TEXT NOT NULL,
+    schedule_id           TEXT,
+    format                TEXT NOT NULL DEFAULT 'CSV' CHECK (format IN ('CSV', 'JSON', 'PDF')),
+    status                TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED')),
+    row_count             INTEGER NOT NULL DEFAULT 0,
+    file_size_bytes       INTEGER NOT NULL DEFAULT 0,
+    execution_duration_ms INTEGER NOT NULL DEFAULT 0,
+    error_message         TEXT NOT NULL DEFAULT '',
+    triggered_by          TEXT NOT NULL DEFAULT 'MANUAL' CHECK (triggered_by IN ('MANUAL', 'SCHEDULE')),
+    created_at            DATETIME NOT NULL DEFAULT (datetime('now')),
+    completed_at          DATETIME,
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    FOREIGN KEY (report_id) REFERENCES custom_reports(id) ON DELETE CASCADE,
+    FOREIGN KEY (schedule_id) REFERENCES report_schedules(id) ON DELETE SET NULL
+);
+CREATE TABLE report_schedules (
+    id              TEXT PRIMARY KEY,
+    tenant_id       TEXT NOT NULL,
+    report_id       TEXT NOT NULL,
+    name            TEXT NOT NULL,
+    frequency       TEXT NOT NULL CHECK (frequency IN ('DAILY', 'WEEKLY', 'MONTHLY')),
+    cron_expression TEXT NOT NULL DEFAULT '',
+    format          TEXT NOT NULL DEFAULT 'CSV' CHECK (format IN ('CSV', 'JSON', 'PDF')),
+    channel         TEXT NOT NULL DEFAULT 'EMAIL' CHECK (channel IN ('EMAIL', 'WEBHOOK')),
+    recipients      TEXT NOT NULL DEFAULT '[]',
+    is_active       INTEGER NOT NULL DEFAULT 1 CHECK (is_active IN (0, 1)),
+    last_run_at     DATETIME,
+    next_run_at     DATETIME,
+    last_status     TEXT NOT NULL DEFAULT '',
+    last_error      TEXT NOT NULL DEFAULT '',
+    created_by      TEXT NOT NULL DEFAULT '',
+    created_at      DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at      DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    FOREIGN KEY (report_id) REFERENCES custom_reports(id) ON DELETE CASCADE
+);
+CREATE TABLE rfq_bids (
+    id                 TEXT PRIMARY KEY,
+    tenant_id          TEXT NOT NULL,
+    rfq_id             TEXT NOT NULL REFERENCES rfqs(id) ON DELETE CASCADE,
+    carrier_id         TEXT NOT NULL,
+    carrier_name       TEXT NOT NULL,
+    bid_amount         REAL NOT NULL CHECK (bid_amount > 0.0),
+    transit_days       INTEGER NOT NULL DEFAULT 1 CHECK (transit_days > 0),
+    vehicles_available INTEGER NOT NULL DEFAULT 1 CHECK (vehicles_available > 0),
+    remarks            TEXT NOT NULL DEFAULT '',
+    status             TEXT NOT NULL DEFAULT 'SUBMITTED'
+                       CHECK (status IN ('SUBMITTED', 'COUNTER_OFFERED', 'ACCEPTED', 'REJECTED', 'WITHDRAWN')),
+    submitted_at       DATETIME NOT NULL DEFAULT (datetime('now')),
+    decided_at         DATETIME,
+    decided_by         TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+);
+CREATE TABLE rfqs (
+    id                    TEXT PRIMARY KEY,
+    tenant_id             TEXT NOT NULL,
+    rfq_number            TEXT NOT NULL,
+    title                 TEXT NOT NULL,
+    origin_city           TEXT NOT NULL,
+    destination_city      TEXT NOT NULL,
+    vehicle_type_required TEXT NOT NULL,
+    cargo_type            TEXT NOT NULL DEFAULT '',
+    cargo_weight_tons     REAL NOT NULL DEFAULT 0.0 CHECK (cargo_weight_tons >= 0.0),
+    target_rate           REAL NOT NULL DEFAULT 0.0 CHECK (target_rate >= 0.0),
+    max_acceptable_rate   REAL NOT NULL DEFAULT 0.0 CHECK (max_acceptable_rate >= target_rate),
+    pickup_date           DATETIME NOT NULL,
+    delivery_deadline     DATETIME NOT NULL,
+    bid_deadline          DATETIME NOT NULL,
+    status                TEXT NOT NULL DEFAULT 'OPEN'
+                          CHECK (status IN ('OPEN', 'UNDER_NEGOTIATION', 'AWARDED', 'CLOSED', 'EXPIRED', 'CANCELLED')),
+    booking_id            TEXT REFERENCES bookings(id) ON DELETE SET NULL,
+    sto_id                TEXT REFERENCES stock_transfer_orders(id) ON DELETE SET NULL,
+    awarded_bid_id        TEXT,
+    awarded_carrier_id    TEXT NOT NULL DEFAULT '',
+    awarded_carrier_name  TEXT NOT NULL DEFAULT '',
+    awarded_rate          REAL NOT NULL DEFAULT 0.0,
+    awarded_at            DATETIME,
+    created_by            TEXT NOT NULL DEFAULT '',
+    created_at            DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at            DATETIME NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (tenant_id, rfq_number),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
 );
 CREATE TABLE role_permissions (
     role_id       INTEGER NOT NULL,
@@ -1936,6 +2359,75 @@ CREATE TABLE "trips" (
     FOREIGN KEY (vehicle_id) REFERENCES vehicles(id),
     FOREIGN KEY (route_id) REFERENCES routes(id)
 );
+CREATE TABLE tyre_activities (
+    id             TEXT PRIMARY KEY,
+    tenant_id      TEXT NOT NULL,
+    tyre_id        TEXT NOT NULL,
+    activity_type  TEXT NOT NULL CHECK (activity_type IN ('MOUNT', 'DISMOUNT', 'ROTATION', 'INSPECTION', 'RETREAD_SEND', 'RETREAD_RECEIVE', 'SCRAP')),
+    vehicle_id     TEXT,
+    from_position  TEXT,
+    to_position    TEXT,
+    odometer_km    REAL NOT NULL DEFAULT 0.0,
+    tread_depth_mm REAL,
+    pressure_psi   REAL,
+    cost           REAL NOT NULL DEFAULT 0.0,
+    notes          TEXT NOT NULL DEFAULT '',
+    performed_by   TEXT NOT NULL DEFAULT '',
+    recorded_at    DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    FOREIGN KEY (tyre_id) REFERENCES tyres(id),
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(id)
+);
+CREATE TABLE tyre_inspections (
+    id              TEXT PRIMARY KEY,
+    tenant_id       TEXT NOT NULL,
+    tyre_id         TEXT NOT NULL,
+    vehicle_id      TEXT,
+    inspection_date DATETIME NOT NULL DEFAULT (datetime('now')),
+    odometer_km     REAL NOT NULL DEFAULT 0.0,
+    tread_depth_mm  REAL NOT NULL,
+    pressure_psi    REAL,
+    condition       TEXT NOT NULL DEFAULT 'GOOD' CHECK (condition IN ('GOOD', 'UNEVEN_WEAR', 'CUTS_OR_CRACKS', 'BULGE', 'PUNCTURE', 'WORN_OUT')),
+    action_taken    TEXT NOT NULL DEFAULT '',
+    inspector_name  TEXT NOT NULL DEFAULT '',
+    notes           TEXT NOT NULL DEFAULT '',
+    created_at      DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    FOREIGN KEY (tyre_id) REFERENCES tyres(id),
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(id)
+);
+CREATE TABLE tyres (
+    id                     TEXT PRIMARY KEY,
+    tenant_id              TEXT NOT NULL,
+    serial_number          TEXT NOT NULL,
+    brand                  TEXT NOT NULL,
+    model                  TEXT NOT NULL DEFAULT '',
+    size                   TEXT NOT NULL,
+    tyre_type              TEXT NOT NULL DEFAULT 'TUBELESS' CHECK (tyre_type IN ('TUBELESS', 'TUBE_TYPE', 'RADIAL', 'NYLON')),
+    status                 TEXT NOT NULL DEFAULT 'IN_STOCK' CHECK (status IN ('IN_STOCK', 'MOUNTED', 'UNDER_RETREAD', 'SCRAPPED')),
+    vehicle_id             TEXT,
+    axle_position          TEXT,
+    mount_odometer_km      REAL,
+    mount_date             DATETIME,
+    initial_tread_depth_mm REAL NOT NULL DEFAULT 15.0,
+    current_tread_depth_mm REAL NOT NULL DEFAULT 15.0,
+    min_tread_depth_mm     REAL NOT NULL DEFAULT 3.0,
+    purchase_date          DATE,
+    purchase_cost          REAL NOT NULL DEFAULT 0.0,
+    vendor_name            TEXT NOT NULL DEFAULT '',
+    invoice_number         TEXT NOT NULL DEFAULT '',
+    retread_count          INTEGER NOT NULL DEFAULT 0,
+    max_retreads           INTEGER NOT NULL DEFAULT 3,
+    total_retread_cost     REAL NOT NULL DEFAULT 0.0,
+    total_km_run           REAL NOT NULL DEFAULT 0.0,
+    scrap_date             DATETIME,
+    scrap_reason           TEXT NOT NULL DEFAULT '',
+    scrap_recovery_amount  REAL NOT NULL DEFAULT 0.0,
+    created_at             DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at             DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id),
+    FOREIGN KEY (vehicle_id) REFERENCES vehicles(id)
+);
 CREATE TABLE user_consents (
     id              TEXT PRIMARY KEY,
     tenant_id       TEXT NOT NULL,
@@ -2014,6 +2506,21 @@ CREATE TABLE vehicle_compliance_documents (
     rejection_reason TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE vehicle_dashcam_profiles (
+    vehicle_id                TEXT PRIMARY KEY REFERENCES vehicles(id) ON DELETE CASCADE,
+    tenant_id                 TEXT NOT NULL,
+    camera_make_model         TEXT NOT NULL DEFAULT 'FleetX AI Dashcam Pro',
+    camera_serial             TEXT NOT NULL,
+    dual_facing               INTEGER NOT NULL DEFAULT 1 CHECK (dual_facing IN (0, 1)),
+    adas_enabled              INTEGER NOT NULL DEFAULT 1 CHECK (adas_enabled IN (0, 1)),
+    dms_enabled               INTEGER NOT NULL DEFAULT 1 CHECK (dms_enabled IN (0, 1)),
+    live_stream_supported     INTEGER NOT NULL DEFAULT 1 CHECK (live_stream_supported IN (0, 1)),
+    firmware_version          TEXT NOT NULL DEFAULT 'v2.4.0-edge-ai',
+    status                    TEXT NOT NULL DEFAULT 'ONLINE' CHECK (status IN ('ONLINE', 'OFFLINE', 'STANDBY', 'FAULT')),
+    created_at                DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at                DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+);
 CREATE TABLE vehicle_documents (
     id            TEXT PRIMARY KEY,
     vehicle_id    TEXT NOT NULL,
@@ -2025,6 +2532,33 @@ CREATE TABLE vehicle_documents (
     verified_at   DATETIME,
     created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (vehicle_id) REFERENCES vehicles(id)
+);
+CREATE TABLE vehicle_ev_profiles (
+    vehicle_id                TEXT PRIMARY KEY REFERENCES vehicles(id) ON DELETE CASCADE,
+    tenant_id                 TEXT NOT NULL,
+    battery_capacity_kwh      REAL NOT NULL CHECK (battery_capacity_kwh > 0.0),
+    max_range_km              REAL NOT NULL CHECK (max_range_km > 0.0),
+    charging_standard         TEXT NOT NULL DEFAULT 'CCS2',
+    min_safe_soc              REAL NOT NULL DEFAULT 15.0 CHECK (min_safe_soc >= 0.0 AND min_safe_soc <= 100.0),
+    nominal_efficiency_wh_km  REAL NOT NULL DEFAULT 140.0 CHECK (nominal_efficiency_wh_km > 0.0),
+    created_at                DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at                DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+);
+CREATE TABLE vehicle_ev_telemetry_latest (
+    vehicle_id                TEXT PRIMARY KEY REFERENCES vehicles(id) ON DELETE CASCADE,
+    tenant_id                 TEXT NOT NULL,
+    soc_percent               REAL NOT NULL CHECK (soc_percent >= 0.0 AND soc_percent <= 100.0),
+    soh_percent               REAL NOT NULL DEFAULT 100.0 CHECK (soh_percent >= 0.0 AND soh_percent <= 100.0),
+    battery_temp_c            REAL,
+    remaining_range_km        REAL NOT NULL DEFAULT 0.0,
+    charging_status           TEXT NOT NULL DEFAULT 'DISCHARGING'
+                              CHECK (charging_status IN ('DISCHARGING', 'CHARGING', 'FAST_CHARGING', 'COMPLETE', 'NOT_CHARGING')),
+    charging_power_kw         REAL NOT NULL DEFAULT 0.0,
+    current_draw_a            REAL NOT NULL DEFAULT 0.0,
+    voltage_v                 REAL NOT NULL DEFAULT 0.0,
+    last_sync_at              DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
 );
 CREATE TABLE vehicle_geofences (
     vehicle_id   TEXT NOT NULL,
@@ -2092,6 +2626,44 @@ CREATE TABLE vehicle_ownership (
     valid_from DATE NOT NULL,
     valid_until DATE,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE vehicle_reefer_profiles (
+    vehicle_id                TEXT PRIMARY KEY REFERENCES vehicles(id) ON DELETE CASCADE,
+    tenant_id                 TEXT NOT NULL,
+    reefer_make_model         TEXT NOT NULL DEFAULT 'Carrier Transicold',
+    num_zones                 INTEGER NOT NULL DEFAULT 1 CHECK (num_zones >= 1 AND num_zones <= 3),
+    zone1_type                TEXT NOT NULL DEFAULT 'CHILLED' CHECK (zone1_type IN ('FROZEN', 'CHILLED', 'AMBIENT', 'MULTI_TEMP')),
+    zone1_target_temp_c       REAL NOT NULL DEFAULT 4.0,
+    zone1_min_temp_c          REAL NOT NULL DEFAULT 2.0,
+    zone1_max_temp_c          REAL NOT NULL DEFAULT 8.0,
+    zone2_type                TEXT CHECK (zone2_type IN ('FROZEN', 'CHILLED', 'AMBIENT') OR zone2_type IS NULL),
+    zone2_target_temp_c       REAL,
+    zone2_min_temp_c          REAL,
+    zone2_max_temp_c          REAL,
+    humidity_monitoring       INTEGER NOT NULL DEFAULT 0 CHECK (humidity_monitoring IN (0, 1)),
+    target_humidity_rh        REAL,
+    defrost_mode              TEXT NOT NULL DEFAULT 'AUTO' CHECK (defrost_mode IN ('AUTO', 'MANUAL', 'CYCLE')),
+    created_at                DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at                DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+);
+CREATE TABLE vehicle_reefer_telemetry_latest (
+    vehicle_id                TEXT PRIMARY KEY REFERENCES vehicles(id) ON DELETE CASCADE,
+    tenant_id                 TEXT NOT NULL,
+    reefer_power_status       TEXT NOT NULL DEFAULT 'ON' CHECK (reefer_power_status IN ('OFF', 'ON', 'STANDBY', 'FAULT')),
+    reefer_mode               TEXT NOT NULL DEFAULT 'COOLING' CHECK (reefer_mode IN ('COOLING', 'HEATING', 'DEFROST', 'IDLE', 'OFF')),
+    zone1_temp_c              REAL NOT NULL,
+    zone1_setpoint_c          REAL NOT NULL,
+    zone2_temp_c              REAL,
+    zone2_setpoint_c          REAL,
+    humidity_rh               REAL,
+    door_status               TEXT NOT NULL DEFAULT 'CLOSED' CHECK (door_status IN ('CLOSED', 'OPEN')),
+    door_open_duration_sec    INTEGER NOT NULL DEFAULT 0,
+    reefer_fuel_level_pct     REAL NOT NULL DEFAULT 100.0,
+    reefer_battery_v          REAL NOT NULL DEFAULT 12.6,
+    has_active_excursion      INTEGER NOT NULL DEFAULT 0 CHECK (has_active_excursion IN (0, 1)),
+    last_sync_at              DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
 );
 CREATE TABLE "vehicles" (
     id                TEXT PRIMARY KEY,
@@ -2171,6 +2743,48 @@ CREATE TABLE verification_attempts (
     failure_code TEXT,
     failure_reason TEXT
 );
+CREATE TABLE video_livestream_sessions (
+    id                        TEXT PRIMARY KEY,
+    tenant_id                 TEXT NOT NULL,
+    vehicle_id                TEXT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+    channel                   TEXT NOT NULL DEFAULT 'ROAD_FACING' CHECK (channel IN ('ROAD_FACING', 'CABIN_FACING', 'CARGO_FACING')),
+    stream_protocol           TEXT NOT NULL DEFAULT 'WEBRTC' CHECK (stream_protocol IN ('WEBRTC', 'HLS', 'RTSP')),
+    stream_url                TEXT NOT NULL,
+    session_token             TEXT NOT NULL,
+    status                    TEXT NOT NULL DEFAULT 'INITIATED' CHECK (status IN ('INITIATED', 'ACTIVE', 'ENDED', 'FAILED')),
+    started_at                DATETIME NOT NULL DEFAULT (datetime('now')),
+    ended_at                  DATETIME,
+    requested_by              TEXT NOT NULL DEFAULT '',
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+);
+CREATE TABLE video_safety_events (
+    id                        TEXT PRIMARY KEY,
+    tenant_id                 TEXT NOT NULL,
+    vehicle_id                TEXT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+    driver_id                 TEXT REFERENCES drivers(id) ON DELETE SET NULL,
+    trip_id                   TEXT REFERENCES trips(id) ON DELETE SET NULL,
+    category                  TEXT NOT NULL CHECK (category IN ('DMS', 'ADAS', 'MANUAL_SOS')),
+    event_type                TEXT NOT NULL CHECK (event_type IN (
+        'DROWSINESS', 'CELLPHONE_DISTRACTION', 'SEATBELT_UNBUCKLED', 'SMOKING', 'YAWNING', 'FACE_MISMATCH', 'CAMERA_OBSTRUCTION',
+        'FORWARD_COLLISION_WARNING', 'LANE_DEPARTURE_WARNING', 'TAILGATING', 'PEDESTRIAN_COLLISION_WARNING', 'HARSH_CORNERING', 'HARSH_BRAKING', 'PANIC_SOS'
+    )),
+    severity                  TEXT NOT NULL DEFAULT 'MEDIUM' CHECK (severity IN ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL')),
+    event_time                DATETIME NOT NULL,
+    speed_kmh                 REAL NOT NULL DEFAULT 0.0,
+    latitude                  REAL,
+    longitude                 REAL,
+    location_name             TEXT NOT NULL DEFAULT '',
+    media_clip_url            TEXT NOT NULL DEFAULT '',
+    thumbnail_url             TEXT NOT NULL DEFAULT '',
+    duration_seconds          INTEGER NOT NULL DEFAULT 15,
+    review_status             TEXT NOT NULL DEFAULT 'PENDING_REVIEW' CHECK (review_status IN ('PENDING_REVIEW', 'COACHED', 'DISMISSED', 'ESCALATED')),
+    coaching_note             TEXT NOT NULL DEFAULT '',
+    reviewed_by               TEXT NOT NULL DEFAULT '',
+    reviewed_at               DATETIME,
+    created_at                DATETIME NOT NULL DEFAULT (datetime('now')),
+    updated_at                DATETIME NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (tenant_id) REFERENCES tenants(id)
+);
 CREATE TABLE work_orders (
     id             TEXT PRIMARY KEY,
     tenant_id      TEXT NOT NULL,
@@ -2241,10 +2855,20 @@ CREATE INDEX idx_compliance_exemptions_entity
 CREATE INDEX idx_contact_submissions_email ON contact_submissions(email);
 CREATE INDEX idx_contact_submissions_status ON contact_submissions(status);
 CREATE INDEX idx_contact_submissions_ticket ON contact_submissions(ticket_number);
+CREATE INDEX idx_counter_offers_bid
+    ON counter_offers(tenant_id, bid_id, status);
+CREATE INDEX idx_counter_offers_listing
+    ON counter_offers(tenant_id, listing_id);
+CREATE INDEX idx_counter_offers_rfq
+    ON counter_offers(tenant_id, rfq_id);
 CREATE INDEX idx_credit_debit_notes_tenant_invoice ON credit_debit_notes(tenant_id, invoice_id);
 CREATE UNIQUE INDEX idx_cust_bk_details_idemp
 ON customer_booking_details(tenant_id, idempotency_key)
 WHERE idempotency_key IS NOT NULL;
+CREATE INDEX idx_custom_reports_tenant_dataset
+    ON custom_reports(tenant_id, dataset);
+CREATE INDEX idx_custom_reports_tenant_system
+    ON custom_reports(tenant_id, is_system);
 CREATE INDEX idx_customer_quotes_tenant_cust
 ON customer_quotes(tenant_id, customer_id, status);
 CREATE INDEX idx_customer_users_customer ON customer_users(customer_id);
@@ -2256,6 +2880,8 @@ CREATE INDEX idx_customers_state_code ON customers(state_code);
 CREATE INDEX idx_customers_status ON customers(status);
 CREATE INDEX idx_customers_tenant_id ON customers(tenant_id);
 CREATE INDEX idx_customers_type ON customers(type);
+CREATE INDEX idx_dashcam_profiles_tenant_status
+    ON vehicle_dashcam_profiles(tenant_id, status);
 CREATE INDEX idx_dbe_driver_time ON driver_behaviour_events(driver_id, occurred_at);
 CREATE INDEX idx_device_quarantine_tenant ON device_quarantine(tenant_id);
 CREATE INDEX idx_dispatch_exc_kind_status ON dispatch_exceptions(kind, status);
@@ -2269,6 +2895,8 @@ CREATE INDEX idx_dispatches_booking_id ON dispatches(booking_id);
 CREATE INDEX idx_dispatches_status ON dispatches(status);
 CREATE INDEX idx_dispatches_tenant ON dispatches(tenant_id);
 CREATE INDEX idx_dlc_tenant ON driver_license_classes(tenant_id, license_id);
+CREATE INDEX idx_dmc_tenant
+    ON driver_mqtt_credentials(tenant_id);
 CREATE UNIQUE INDEX idx_dpv_tenant_driver_active
     ON driver_preferred_vehicles(tenant_id, driver_id)
     WHERE unassigned_at IS NULL;
@@ -2325,6 +2953,14 @@ CREATE INDEX idx_esg_snapshots_period
 CREATE INDEX idx_eta_history_created ON eta_history(created_at);
 CREATE INDEX idx_eta_history_segment ON eta_history(tenant_id, segment_start, segment_end, created_at);
 CREATE INDEX idx_eta_history_trip ON eta_history(trip_id);
+CREATE INDEX idx_ev_charging_tenant_veh
+    ON ev_charging_sessions(tenant_id, vehicle_id, status);
+CREATE INDEX idx_ev_energy_tenant_date
+    ON ev_energy_summaries(tenant_id, recorded_at DESC);
+CREATE INDEX idx_ev_profiles_tenant
+    ON vehicle_ev_profiles(tenant_id);
+CREATE INDEX idx_ev_telemetry_tenant_status
+    ON vehicle_ev_telemetry_latest(tenant_id, charging_status);
 CREATE INDEX idx_exp_assignments_subject ON experiment_assignments(tenant_id, subject_type, subject_id);
 CREATE INDEX idx_experiment_events_exp ON experiment_events (experiment, created_at);
 CREATE INDEX idx_experiment_events_tenant ON experiment_events(tenant_id);
@@ -2346,6 +2982,20 @@ CREATE INDEX idx_files_tenant_uploadable ON files(tenant_id, uploadable_type, up
 CREATE INDEX idx_founder_audit_actor    ON founder_audit(tenant_id, actor_id, created_at);
 CREATE INDEX idx_founder_audit_resource ON founder_audit(tenant_id, resource_type, resource_id);
 CREATE INDEX idx_founder_signals_type ON founder_signals(tenant_id, signal_type, created_at);
+CREATE INDEX idx_freight_audits_created
+    ON freight_audits(tenant_id, created_at DESC);
+CREATE INDEX idx_freight_audits_tenant_invoice
+    ON freight_audits(tenant_id, invoice_id);
+CREATE INDEX idx_freight_audits_tenant_status
+    ON freight_audits(tenant_id, status);
+CREATE INDEX idx_freight_audits_tenant_trip
+    ON freight_audits(tenant_id, trip_id);
+CREATE INDEX idx_freight_deductions_audit
+    ON freight_audit_deductions(tenant_id, audit_id);
+CREATE INDEX idx_freight_rates_lookup
+    ON freight_rate_cards(tenant_id, route_id, vehicle_type, is_active);
+CREATE INDEX idx_freight_rates_tenant_contract
+    ON freight_rate_cards(tenant_id, contract_number);
 CREATE INDEX idx_fuel_cards_tenant
     ON fuel_cards(tenant_id, status);
 CREATE INDEX idx_fuel_claim_audits_result ON fuel_claim_audits(result);
@@ -2402,7 +3052,32 @@ CREATE INDEX idx_ops_alerts_status ON ops_alerts(tenant_id, status);
 CREATE INDEX idx_ops_alerts_type   ON ops_alerts(tenant_id, alert_type);
 CREATE INDEX idx_optimization_jobs_status ON route_optimization_jobs(status);
 CREATE INDEX idx_optimization_jobs_tenant ON route_optimization_jobs(tenant_id, created_at);
+CREATE INDEX idx_outbox_published_created_at ON outbox_events(created_at) WHERE published_at IS NOT NULL;
 CREATE INDEX idx_outbox_unpublished ON outbox_events(published_at) WHERE published_at IS NULL;
+CREATE INDEX idx_part_bills_tenant_facility
+    ON part_purchase_bills(tenant_id, facility_id);
+CREATE INDEX idx_part_bills_tenant_status
+    ON part_purchase_bills(tenant_id, status);
+CREATE INDEX idx_part_items_bill
+    ON part_purchase_items(bill_id);
+CREATE INDEX idx_part_items_part
+    ON part_purchase_items(part_id);
+CREATE INDEX idx_part_stocks_tenant_facility
+    ON part_stocks(tenant_id, facility_id);
+CREATE INDEX idx_part_stocks_tenant_part
+    ON part_stocks(tenant_id, part_id);
+CREATE INDEX idx_part_tx_facility
+    ON part_transactions(tenant_id, facility_id, recorded_at DESC);
+CREATE INDEX idx_part_tx_part
+    ON part_transactions(tenant_id, part_id, recorded_at DESC);
+CREATE INDEX idx_part_tx_work_order
+    ON part_transactions(tenant_id, work_order_id);
+CREATE INDEX idx_parts_tenant_active
+    ON parts(tenant_id, is_active);
+CREATE INDEX idx_parts_tenant_category
+    ON parts(tenant_id, category);
+CREATE UNIQUE INDEX idx_parts_tenant_number
+    ON parts(tenant_id, part_number);
 CREATE UNIQUE INDEX idx_payments_idempotency ON payments(tenant_id, idempotency_key);
 CREATE INDEX idx_payments_invoice ON payments(invoice_id);
 CREATE UNIQUE INDEX idx_payments_razorpay_payment
@@ -2428,24 +3103,56 @@ CREATE INDEX idx_planner_runs_job_id     ON planner_runs(job_id) WHERE job_id IS
 CREATE INDEX idx_planner_runs_status     ON planner_runs(tenant_id, status);
 CREATE INDEX idx_planner_runs_tenant    ON planner_runs(tenant_id, created_at DESC);
 CREATE INDEX idx_pnl_daily_tenant_date ON pnl_daily(tenant_id, snapshot_date);
+CREATE INDEX idx_positions_device_time ON telemetry_positions(device_time DESC);
 CREATE INDEX idx_positions_imei_time ON telemetry_positions(imei, device_time DESC);
 CREATE INDEX idx_positions_raw_event ON telemetry_positions(raw_event_id);
+CREATE INDEX idx_positions_trip_time ON telemetry_positions(trip_id, device_time DESC);
 CREATE INDEX idx_positions_vehicle_time ON telemetry_positions(vehicle_id, device_time DESC);
+CREATE INDEX idx_privacy_dsar_requests_tenant_created
+    ON privacy_dsar_requests(tenant_id, created_at DESC);
+CREATE INDEX idx_privacy_dsar_requests_tenant_user
+    ON privacy_dsar_requests(tenant_id, user_id, request_type);
 CREATE UNIQUE INDEX idx_provider_events_provider_id
 ON provider_events(provider, provider_event_id);
 CREATE INDEX idx_quarantine_status ON device_quarantine(status, created_at);
 CREATE UNIQUE INDEX idx_raw_dedup ON telemetry_raw_events(imei, provider_msg_id)
     WHERE provider_msg_id IS NOT NULL;
+CREATE INDEX idx_raw_device_time ON telemetry_raw_events(device_time DESC);
 CREATE INDEX idx_raw_imei_time ON telemetry_raw_events(imei, device_time DESC);
 CREATE INDEX idx_raw_received ON telemetry_raw_events(received_at);
+CREATE INDEX idx_reefer_excursions_tenant_veh
+    ON reefer_temperature_excursions(tenant_id, vehicle_id, status);
+CREATE INDEX idx_reefer_profiles_tenant
+    ON vehicle_reefer_profiles(tenant_id);
+CREATE INDEX idx_reefer_telemetry_tenant_excursion
+    ON vehicle_reefer_telemetry_latest(tenant_id, has_active_excursion);
+CREATE INDEX idx_reefer_trip_tenant_trip
+    ON reefer_trip_summaries(tenant_id, trip_id);
+CREATE INDEX idx_report_executions_report
+    ON report_executions(tenant_id, report_id, created_at DESC);
+CREATE INDEX idx_report_executions_status
+    ON report_executions(tenant_id, status);
+CREATE INDEX idx_report_schedules_next_run
+    ON report_schedules(is_active, next_run_at);
+CREATE INDEX idx_report_schedules_tenant_active
+    ON report_schedules(tenant_id, is_active);
+CREATE INDEX idx_rfq_bids_rfq
+    ON rfq_bids(tenant_id, rfq_id, status);
+CREATE INDEX idx_rfqs_tenant_lane
+    ON rfqs(tenant_id, origin_city, destination_city);
+CREATE INDEX idx_rfqs_tenant_status
+    ON rfqs(tenant_id, status, bid_deadline);
 CREATE UNIQUE INDEX idx_routes_tenant_normalized
     ON routes (tenant_id, source_normalized, dest_normalized);
+CREATE INDEX idx_safety_scorecard_tenant_driver
+    ON driver_safety_scorecards(tenant_id, driver_id, period_start);
 CREATE INDEX idx_sessions_expires_at ON sessions(expires_at);
 CREATE UNIQUE INDEX idx_sessions_token_hash ON sessions(token_hash);
 CREATE INDEX idx_settlement_lines_settlement ON settlement_lines(settlement_id);
 CREATE INDEX idx_settlement_lines_trip ON settlement_lines(trip_id);
 CREATE INDEX idx_share_links_expires ON share_links(expires_at);
 CREATE INDEX idx_share_links_trip   ON share_links(trip_id);
+CREATE INDEX idx_snapshots_timestamp ON telemetry_snapshots(timestamp DESC);
 CREATE INDEX idx_sto_tenant_status
     ON stock_transfer_orders(tenant_id, status, required_delivery_date);
 CREATE INDEX idx_stop_pod_attachments_stop
@@ -2464,8 +3171,6 @@ CREATE INDEX idx_telemetry_positions_tenant ON telemetry_positions(tenant_id);
 CREATE INDEX idx_telemetry_raw_events_tenant ON telemetry_raw_events(tenant_id);
 CREATE INDEX idx_telemetry_sessions_active ON telemetry_sessions(tenant_id, status, vehicle_id);
 CREATE INDEX idx_telemetry_snapshots_trip ON telemetry_snapshots(trip_id, timestamp);
-CREATE INDEX idx_telemetry_snapshots_vehicle_time
-    ON telemetry_snapshots(vehicle_id, timestamp);
 CREATE INDEX idx_telemetry_snapshots_vehicle_timestamp ON telemetry_snapshots(vehicle_id, timestamp);
 CREATE INDEX idx_telemetry_snapshots_vehicle_ts ON telemetry_snapshots(vehicle_id, ts_unix);
 CREATE UNIQUE INDEX idx_tenant_entitlement_override_key ON tenant_entitlement_overrides(tenant_id, entitlement_type, key_name);
@@ -2492,6 +3197,23 @@ CREATE INDEX idx_trips_tenant_status_departure
     ON trips(tenant_id, status, departure_time DESC);
 CREATE INDEX idx_trips_vehicle_tenant_departure
     ON trips(vehicle_id, tenant_id, departure_time);
+CREATE INDEX idx_tyre_act_tenant
+    ON tyre_activities(tenant_id, recorded_at DESC);
+CREATE INDEX idx_tyre_act_tyre
+    ON tyre_activities(tyre_id, recorded_at DESC);
+CREATE INDEX idx_tyre_insp_tenant
+    ON tyre_inspections(tenant_id, inspection_date DESC);
+CREATE INDEX idx_tyre_insp_tyre
+    ON tyre_inspections(tyre_id, inspection_date DESC);
+CREATE UNIQUE INDEX idx_tyres_tenant_serial
+    ON tyres(tenant_id, serial_number);
+CREATE INDEX idx_tyres_tenant_status
+    ON tyres(tenant_id, status);
+CREATE INDEX idx_tyres_tenant_vehicle
+    ON tyres(tenant_id, vehicle_id);
+CREATE UNIQUE INDEX idx_tyres_vehicle_axle_mounted
+    ON tyres(vehicle_id, axle_position)
+    WHERE status = 'MOUNTED' AND vehicle_id IS NOT NULL AND axle_position IS NOT NULL;
 CREATE INDEX idx_user_consents_tenant_user
     ON user_consents(tenant_id, user_id);
 CREATE UNIQUE INDEX idx_users_google_sub
@@ -2510,6 +3232,15 @@ CREATE INDEX idx_vehicle_ownership_vehicle ON vehicle_ownership(tenant_id, vehic
 CREATE INDEX idx_vehicles_tenant ON vehicles(tenant_id);
 CREATE INDEX idx_vehicles_tenant_status ON vehicles(tenant_id, status);
 CREATE INDEX idx_verification_attempts_entity ON verification_attempts(tenant_id, entity_type, entity_id);
+CREATE INDEX idx_video_events_tenant_driver
+    ON video_safety_events(tenant_id, driver_id);
+CREATE INDEX idx_video_events_tenant_review_sev
+    ON video_safety_events(tenant_id, review_status, severity);
+CREATE INDEX idx_video_events_tenant_veh_time
+    ON video_safety_events(tenant_id, vehicle_id, event_time);
+CREATE INDEX idx_video_livestream_tenant_veh
+    ON video_livestream_sessions(tenant_id, vehicle_id, status);
+CREATE INDEX idx_vlp_trip ON vehicle_latest_position(trip_id);
 CREATE INDEX idx_work_orders_tenant_status
     ON work_orders(tenant_id, status, created_at DESC);
 CREATE INDEX idx_work_orders_vehicle
@@ -2659,6 +3390,20 @@ BEGIN
   SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
   THEN RAISE(ABORT, 'FK violation: tenants(id) missing for company_config.tenant_id') END;
 END;
+CREATE TRIGGER trg_counter_offers_tenant_fk_insert
+BEFORE INSERT ON counter_offers
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for counter_offers.tenant_id') END;
+END;
+CREATE TRIGGER trg_counter_offers_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON counter_offers
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for counter_offers.tenant_id') END;
+END;
 CREATE TRIGGER trg_credit_debit_notes_tenant_fk_insert
 BEFORE INSERT ON credit_debit_notes
 FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL
@@ -2672,6 +3417,20 @@ FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL
 BEGIN
   SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
   THEN RAISE(ABORT, 'FK violation: tenants(id) missing for credit_debit_notes.tenant_id') END;
+END;
+CREATE TRIGGER trg_custom_reports_tenant_fk_insert
+BEFORE INSERT ON custom_reports
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for custom_reports.tenant_id') END;
+END;
+CREATE TRIGGER trg_custom_reports_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON custom_reports
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for custom_reports.tenant_id') END;
 END;
 CREATE TRIGGER trg_customers_tenant_fk_insert
 BEFORE INSERT ON customers
@@ -2743,6 +3502,20 @@ BEGIN
   SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
   THEN RAISE(ABORT, 'FK violation: tenants(id) missing for dispatches.tenant_id') END;
 END;
+CREATE TRIGGER trg_dmc_tenant_fk_insert
+BEFORE INSERT ON driver_mqtt_credentials
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for driver_mqtt_credentials.tenant_id') END;
+END;
+CREATE TRIGGER trg_dmc_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON driver_mqtt_credentials
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for driver_mqtt_credentials.tenant_id') END;
+END;
 CREATE TRIGGER trg_dpv_tenant_fk_insert
 BEFORE INSERT ON driver_preferred_vehicles
 FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
@@ -2798,6 +3571,20 @@ FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL
 BEGIN
   SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
   THEN RAISE(ABORT, 'FK violation: tenants(id) missing for driver_issues.tenant_id') END;
+END;
+CREATE TRIGGER trg_driver_safety_scorecards_tenant_fk_insert
+BEFORE INSERT ON driver_safety_scorecards
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for driver_safety_scorecards.tenant_id') END;
+END;
+CREATE TRIGGER trg_driver_safety_scorecards_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON driver_safety_scorecards
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for driver_safety_scorecards.tenant_id') END;
 END;
 CREATE TRIGGER trg_drivers_tenant_fk_insert
 BEFORE INSERT ON drivers
@@ -2882,6 +3669,34 @@ FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL
 BEGIN
   SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
   THEN RAISE(ABORT, 'FK violation: tenants(id) missing for eta_history.tenant_id') END;
+END;
+CREATE TRIGGER trg_ev_charging_sessions_tenant_fk_insert
+BEFORE INSERT ON ev_charging_sessions
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for ev_charging_sessions.tenant_id') END;
+END;
+CREATE TRIGGER trg_ev_charging_sessions_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON ev_charging_sessions
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for ev_charging_sessions.tenant_id') END;
+END;
+CREATE TRIGGER trg_ev_energy_summaries_tenant_fk_insert
+BEFORE INSERT ON ev_energy_summaries
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for ev_energy_summaries.tenant_id') END;
+END;
+CREATE TRIGGER trg_ev_energy_summaries_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON ev_energy_summaries
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for ev_energy_summaries.tenant_id') END;
 END;
 CREATE TRIGGER trg_experiment_assignments_tenant_fk_insert
 BEFORE INSERT ON experiment_assignments
@@ -3022,6 +3837,48 @@ FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL
 BEGIN
   SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
   THEN RAISE(ABORT, 'FK violation: tenants(id) missing for founder_signals.tenant_id') END;
+END;
+CREATE TRIGGER trg_freight_audits_tenant_fk_insert
+BEFORE INSERT ON freight_audits
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for freight_audits.tenant_id') END;
+END;
+CREATE TRIGGER trg_freight_audits_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON freight_audits
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for freight_audits.tenant_id') END;
+END;
+CREATE TRIGGER trg_freight_deductions_tenant_fk_insert
+BEFORE INSERT ON freight_audit_deductions
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for freight_audit_deductions.tenant_id') END;
+END;
+CREATE TRIGGER trg_freight_deductions_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON freight_audit_deductions
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for freight_audit_deductions.tenant_id') END;
+END;
+CREATE TRIGGER trg_freight_rate_cards_tenant_fk_insert
+BEFORE INSERT ON freight_rate_cards
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for freight_rate_cards.tenant_id') END;
+END;
+CREATE TRIGGER trg_freight_rate_cards_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON freight_rate_cards
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for freight_rate_cards.tenant_id') END;
 END;
 CREATE TRIGGER trg_fuel_cards_tenant_fk_insert
 BEFORE INSERT ON fuel_cards
@@ -3289,6 +4146,62 @@ BEGIN
   SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
   THEN RAISE(ABORT, 'FK violation: tenants(id) missing for ops_alerts.tenant_id') END;
 END;
+CREATE TRIGGER trg_part_purchase_bills_tenant_fk_insert
+BEFORE INSERT ON part_purchase_bills
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for part_purchase_bills.tenant_id') END;
+END;
+CREATE TRIGGER trg_part_purchase_bills_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON part_purchase_bills
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for part_purchase_bills.tenant_id') END;
+END;
+CREATE TRIGGER trg_part_stocks_tenant_fk_insert
+BEFORE INSERT ON part_stocks
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for part_stocks.tenant_id') END;
+END;
+CREATE TRIGGER trg_part_stocks_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON part_stocks
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for part_stocks.tenant_id') END;
+END;
+CREATE TRIGGER trg_part_transactions_tenant_fk_insert
+BEFORE INSERT ON part_transactions
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for part_transactions.tenant_id') END;
+END;
+CREATE TRIGGER trg_part_transactions_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON part_transactions
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for part_transactions.tenant_id') END;
+END;
+CREATE TRIGGER trg_parts_tenant_fk_insert
+BEFORE INSERT ON parts
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for parts.tenant_id') END;
+END;
+CREATE TRIGGER trg_parts_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON parts
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for parts.tenant_id') END;
+END;
 CREATE TRIGGER trg_payments_tenant_fk_insert
 BEFORE INSERT ON payments
 FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL
@@ -3374,6 +4287,104 @@ FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL
 BEGIN
   SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
   THEN RAISE(ABORT, 'FK violation: tenants(id) missing for pnl_daily.tenant_id') END;
+END;
+CREATE TRIGGER trg_privacy_dsar_requests_tenant_fk_insert
+BEFORE INSERT ON privacy_dsar_requests
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for privacy_dsar_requests.tenant_id') END;
+END;
+CREATE TRIGGER trg_privacy_dsar_requests_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON privacy_dsar_requests
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for privacy_dsar_requests.tenant_id') END;
+END;
+CREATE TRIGGER trg_reefer_temp_excursions_tenant_fk_insert
+BEFORE INSERT ON reefer_temperature_excursions
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for reefer_temperature_excursions.tenant_id') END;
+END;
+CREATE TRIGGER trg_reefer_temp_excursions_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON reefer_temperature_excursions
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for reefer_temperature_excursions.tenant_id') END;
+END;
+CREATE TRIGGER trg_reefer_trip_summaries_tenant_fk_insert
+BEFORE INSERT ON reefer_trip_summaries
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for reefer_trip_summaries.tenant_id') END;
+END;
+CREATE TRIGGER trg_reefer_trip_summaries_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON reefer_trip_summaries
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for reefer_trip_summaries.tenant_id') END;
+END;
+CREATE TRIGGER trg_report_executions_tenant_fk_insert
+BEFORE INSERT ON report_executions
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for report_executions.tenant_id') END;
+END;
+CREATE TRIGGER trg_report_executions_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON report_executions
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for report_executions.tenant_id') END;
+END;
+CREATE TRIGGER trg_report_schedules_tenant_fk_insert
+BEFORE INSERT ON report_schedules
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for report_schedules.tenant_id') END;
+END;
+CREATE TRIGGER trg_report_schedules_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON report_schedules
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for report_schedules.tenant_id') END;
+END;
+CREATE TRIGGER trg_rfq_bids_tenant_fk_insert
+BEFORE INSERT ON rfq_bids
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for rfq_bids.tenant_id') END;
+END;
+CREATE TRIGGER trg_rfq_bids_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON rfq_bids
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for rfq_bids.tenant_id') END;
+END;
+CREATE TRIGGER trg_rfqs_tenant_fk_insert
+BEFORE INSERT ON rfqs
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for rfqs.tenant_id') END;
+END;
+CREATE TRIGGER trg_rfqs_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON rfqs
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for rfqs.tenant_id') END;
 END;
 CREATE TRIGGER trg_route_optimization_jobs_tenant_fk_insert
 BEFORE INSERT ON route_optimization_jobs
@@ -3543,6 +4554,48 @@ BEGIN
   SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
   THEN RAISE(ABORT, 'FK violation: tenants(id) missing for trips.tenant_id') END;
 END;
+CREATE TRIGGER trg_tyre_activities_tenant_fk_insert
+BEFORE INSERT ON tyre_activities
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for tyre_activities.tenant_id') END;
+END;
+CREATE TRIGGER trg_tyre_activities_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON tyre_activities
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for tyre_activities.tenant_id') END;
+END;
+CREATE TRIGGER trg_tyre_inspections_tenant_fk_insert
+BEFORE INSERT ON tyre_inspections
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for tyre_inspections.tenant_id') END;
+END;
+CREATE TRIGGER trg_tyre_inspections_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON tyre_inspections
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for tyre_inspections.tenant_id') END;
+END;
+CREATE TRIGGER trg_tyres_tenant_fk_insert
+BEFORE INSERT ON tyres
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for tyres.tenant_id') END;
+END;
+CREATE TRIGGER trg_tyres_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON tyres
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for tyres.tenant_id') END;
+END;
 CREATE TRIGGER trg_user_consents_tenant_fk_insert
 BEFORE INSERT ON user_consents
 FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
@@ -3585,6 +4638,48 @@ BEGIN
   SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
   THEN RAISE(ABORT, 'FK violation: tenants(id) missing for vehicle_commands.tenant_id') END;
 END;
+CREATE TRIGGER trg_vehicle_dashcam_profiles_tenant_fk_insert
+BEFORE INSERT ON vehicle_dashcam_profiles
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for vehicle_dashcam_profiles.tenant_id') END;
+END;
+CREATE TRIGGER trg_vehicle_dashcam_profiles_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON vehicle_dashcam_profiles
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for vehicle_dashcam_profiles.tenant_id') END;
+END;
+CREATE TRIGGER trg_vehicle_ev_profiles_tenant_fk_insert
+BEFORE INSERT ON vehicle_ev_profiles
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for vehicle_ev_profiles.tenant_id') END;
+END;
+CREATE TRIGGER trg_vehicle_ev_profiles_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON vehicle_ev_profiles
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for vehicle_ev_profiles.tenant_id') END;
+END;
+CREATE TRIGGER trg_vehicle_ev_telemetry_tenant_fk_insert
+BEFORE INSERT ON vehicle_ev_telemetry_latest
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for vehicle_ev_telemetry_latest.tenant_id') END;
+END;
+CREATE TRIGGER trg_vehicle_ev_telemetry_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON vehicle_ev_telemetry_latest
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for vehicle_ev_telemetry_latest.tenant_id') END;
+END;
 CREATE TRIGGER trg_vehicle_geofences_tenant_fk_insert
 BEFORE INSERT ON vehicle_geofences
 FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL
@@ -3613,6 +4708,34 @@ BEGIN
   SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
   THEN RAISE(ABORT, 'FK violation: tenants(id) missing for vehicle_latest_position.tenant_id') END;
 END;
+CREATE TRIGGER trg_vehicle_reefer_profiles_tenant_fk_insert
+BEFORE INSERT ON vehicle_reefer_profiles
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for vehicle_reefer_profiles.tenant_id') END;
+END;
+CREATE TRIGGER trg_vehicle_reefer_profiles_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON vehicle_reefer_profiles
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for vehicle_reefer_profiles.tenant_id') END;
+END;
+CREATE TRIGGER trg_vehicle_reefer_telemetry_tenant_fk_insert
+BEFORE INSERT ON vehicle_reefer_telemetry_latest
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for vehicle_reefer_telemetry_latest.tenant_id') END;
+END;
+CREATE TRIGGER trg_vehicle_reefer_telemetry_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON vehicle_reefer_telemetry_latest
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for vehicle_reefer_telemetry_latest.tenant_id') END;
+END;
 CREATE TRIGGER trg_vehicles_tenant_fk_insert
 BEFORE INSERT ON vehicles
 FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL
@@ -3626,6 +4749,34 @@ FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL
 BEGIN
   SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
   THEN RAISE(ABORT, 'FK violation: tenants(id) missing for vehicles.tenant_id') END;
+END;
+CREATE TRIGGER trg_video_livestream_sessions_tenant_fk_insert
+BEFORE INSERT ON video_livestream_sessions
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for video_livestream_sessions.tenant_id') END;
+END;
+CREATE TRIGGER trg_video_livestream_sessions_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON video_livestream_sessions
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for video_livestream_sessions.tenant_id') END;
+END;
+CREATE TRIGGER trg_video_safety_events_tenant_fk_insert
+BEFORE INSERT ON video_safety_events
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for video_safety_events.tenant_id') END;
+END;
+CREATE TRIGGER trg_video_safety_events_tenant_fk_update
+BEFORE UPDATE OF tenant_id ON video_safety_events
+FOR EACH ROW WHEN NEW.tenant_id IS NOT NULL AND NEW.tenant_id != ''
+BEGIN
+  SELECT CASE WHEN NOT EXISTS (SELECT 1 FROM tenants WHERE id = NEW.tenant_id)
+  THEN RAISE(ABORT, 'FK violation: tenants(id) missing for video_safety_events.tenant_id') END;
 END;
 CREATE TRIGGER trg_work_orders_tenant_fk_insert
 BEFORE INSERT ON work_orders

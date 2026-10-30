@@ -615,9 +615,11 @@ func main() {
 	idGen := id.NewUUIDGenerator()
 	realClock := clock.NewRealClock()
 
-	// DPDP privacy slice (consent ledger lives on Users; breach/recert here).
+	// DPDP privacy slice (consent ledger lives on Users; breach/recert/dsar here).
 	privacySvc := privacyApp.NewPrivacyService(database, idGen)
 	recertSvc := privacyApp.NewAccessReviewService(database, idGen)
+	dsarSvc := privacyApp.NewDSARService(database, idGen)
+	dsarAPI := privacyAPIHandlers.NewDSARHandlers(dsarSvc)
 
 	// Commercial enforcement: READ_ONLY/CLOSED orgs cannot create bookings.
 	// Reused by the billing webhook mount below.
@@ -954,6 +956,10 @@ func main() {
 	r.With(middleware.RateLimitDistributed(appCache, 5)).Post("/api/v1/auth/otp/send", app.OTP.SendOTP)
 	r.With(middleware.RateLimitDistributed(appCache, 15)).Post("/api/v1/auth/otp/verify", app.OTP.VerifyOTP)
 
+	// Public: DPDP transparency disclosures (retention schedule & sub-processors)
+	r.Get("/api/v1/privacy/retention-schedule", dsarAPI.RetentionScheduleAPI)
+	r.Get("/api/v1/privacy/sub-processors", dsarAPI.SubProcessorsAPI)
+
 	// ── AI Agent (operations assistant) — built after RAG below ─────────
 	var agentAPI *agent.Handler
 	var approvalSvc *agent.ApprovalService
@@ -1135,6 +1141,9 @@ func main() {
 		r.Get("/api/v1/consent", app.Auth.ConsentStatusAPI)
 		r.Post("/api/v1/consent/grant", app.Auth.GrantConsentAPI)
 		r.Post("/api/v1/consent/withdraw", app.Auth.WithdrawConsentAPI)
+		// DPDP Act 2023 §11–15 Data Principal Rights (DSAR export & erasure, request ledger)
+		r.Post("/api/v1/privacy/dsar/export", dsarAPI.ExportDSARAPI)
+		r.Post("/api/v1/privacy/dsar/erase", dsarAPI.EraseDSARAPI)
 		// DPDP breach-notice ledger (00154) + access re-certification (00155):
 		// vertical slice (internal/privacy), org/platform admins only.
 		privacyAPI := privacyAPIHandlers.NewPrivacyHandlers(privacySvc)
@@ -1145,6 +1154,7 @@ func main() {
 		r.With(privacyGuard).Post("/api/v1/privacy/breaches/{id}/notify", privacyAPI.NotifyBreachAPI)
 		r.With(privacyGuard).Post("/api/v1/privacy/breaches/{id}/detail", privacyAPI.DetailBreachAPI)
 		r.With(privacyGuard).Post("/api/v1/privacy/breaches/{id}/close", privacyAPI.CloseBreachAPI)
+		r.With(privacyGuard).Get("/api/v1/privacy/dsar/requests", dsarAPI.ListDSARRequestsAPI)
 		// Access re-certification ledger (00155): same governance surface.
 		accessAPI := privacyAPIHandlers.NewAccessReviewHandlers(recertSvc)
 		r.With(privacyGuard).Get("/api/v1/access-reviews/due", accessAPI.ListDueReviewsAPI)

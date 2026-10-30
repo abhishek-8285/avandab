@@ -9103,6 +9103,90 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/v1/privacy/dsar/export:
+    post:
+      tags:
+        - Privacy
+      summary: Export personal data bundle (DPDP Act §11 DSAR)
+      description: Authenticated principals can export their own records; admins (admin/org_admin) can export on behalf of any tenant user. Supports `?format=download` for file download attachment.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                  description: Optional target user ID (admin only).
+      responses:
+        '200':
+          description: Machine-readable JSON export bundle containing identity, consents, driver assignments, expense history, audit events, retention policies, and sub-processors.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden to export another principal's data without admin privileges.
+        '404':
+          description: Data principal not found in tenant.
+
+  /api/v1/privacy/dsar/erase:
+    post:
+      tags:
+        - Privacy
+      summary: Erase personal data and anonymize records (DPDP Act §12)
+      description: Authenticated principals can request erasure of their personal data; admins can execute for tenant users. Anonymizes identity, terminates active sessions, and marks consents withdrawn. Statutory tax ledgers (CGST Act §36 8-year rule) are retained in an immutable anonymized form.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                  description: Optional target user ID (admin only).
+      responses:
+        '200':
+          description: Erasure result with audit confirmation and statutory retention disclosure.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden to erase another principal's data without admin privileges.
+        '404':
+          description: Data principal not found in tenant.
+
+  /api/v1/privacy/dsar/requests:
+    get:
+      tags:
+        - Privacy
+      summary: List DSAR request audit ledger history
+      description: Requires privacy:manage (org/platform admin). Returns tenant history of DSAR export and erasure requests.
+      responses:
+        '200':
+          description: List of DSAR request records.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/privacy/retention-schedule:
+    get:
+      tags:
+        - Privacy
+      summary: Get statutory data retention schedule
+      description: Publicly accessible disclosure of data retention periods, legal bases, and disposal methods under DPDP Act §8(7), Motor Vehicles Act, CGST Act, and IT Act.
+      responses:
+        '200':
+          description: List of data retention schedule policies.
+
+  /api/v1/privacy/sub-processors:
+    get:
+      tags:
+        - Privacy
+      summary: Get vetted sub-processor registry
+      description: Publicly accessible registry of authorized data processors, jurisdictions, data shared, and compliance certifications under DPDP Act §8(1).
+      responses:
+        '200':
+          description: List of vetted third-party sub-processors.
+
   /api/v1/access-reviews/due:
     get:
       tags:
