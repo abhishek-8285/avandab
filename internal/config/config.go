@@ -169,14 +169,19 @@ func (c *TurnstileConfig) Enabled() bool {
 // NotifyConfig holds outbound delivery channel settings. Empty values keep a
 // channel unconfigured — sends then fail honestly instead of faking success.
 type NotifyConfig struct {
-	SMTPHost        string
-	SMTPPort        string
-	SMTPUser        string
-	SMTPPassword    string
-	SMTPFrom        string
-	SMTPDirect      bool
-	SMSWebhookURL   string
-	SMSWebhookToken string
+	SMTPHost         string
+	SMTPPort         string
+	SMTPUser         string
+	SMTPPassword     string
+	SMTPFrom         string
+	SMTPDirect       bool
+	SMSProvider      string
+	SMSWebhookURL    string
+	SMSWebhookToken  string
+	SMSMSG91AuthKey  string
+	SMSMSG91SenderID string
+	SMSMSG91Route    string
+	SMSMSG91Endpoint string
 	// Email pool — dynamic multi-provider failover with quota tracking.
 	EmailPoolEnabled   bool
 	EmailPoolStrategy  string
@@ -576,8 +581,13 @@ func Load() *Config {
 		SMTPPassword:       smtpPass,
 		SMTPFrom:           os.Getenv("SMTP_FROM"),
 		SMTPDirect:         getEnvBool("SMTP_DIRECT", false) || strings.EqualFold(os.Getenv("SMTP_HOST"), "direct"),
+		SMSProvider:        os.Getenv("SMS_PROVIDER"),
 		SMSWebhookURL:      os.Getenv("SMS_WEBHOOK_URL"),
 		SMSWebhookToken:    os.Getenv("SMS_WEBHOOK_TOKEN"),
+		SMSMSG91AuthKey:    os.Getenv("SMS_MSG91_AUTH_KEY"),
+		SMSMSG91SenderID:   os.Getenv("SMS_MSG91_SENDER_ID"),
+		SMSMSG91Route:      os.Getenv("SMS_MSG91_ROUTE"),
+		SMSMSG91Endpoint:   os.Getenv("SMS_MSG91_ENDPOINT"),
 		EmailPoolEnabled:   getEnvBool("EMAIL_POOL_ENABLED", true),
 		EmailPoolStrategy:  getEnv("EMAIL_POOL_STRATEGY", getEnv("EMAIL_PROVIDER_STRATEGY", "priority")),
 		EmailProvidersJSON: os.Getenv("EMAIL_PROVIDERS_JSON"),

@@ -396,7 +396,18 @@ func main() {
 			Direct:   cfg.Notify.SMTPDirect,
 		})
 	}
-	smsSender := notifications.NewWebhookSMSSender(cfg.Notify.SMSWebhookURL, cfg.Notify.SMSWebhookToken)
+	// Config-driven SMS gateway (Plan P2 item 2.5): SMS_PROVIDER selects
+	// webhook (default) vs msg91; unknown values fail closed. Unconfigured
+	// stays 503-fail-closed on the OTP path.
+	smsSender := notifications.NewSMSSenderFromConfig(notifications.SMSConfig{
+		Provider:      cfg.Notify.SMSProvider,
+		WebhookURL:    cfg.Notify.SMSWebhookURL,
+		WebhookToken:  cfg.Notify.SMSWebhookToken,
+		MSG91AuthKey:  cfg.Notify.SMSMSG91AuthKey,
+		MSG91SenderID: cfg.Notify.SMSMSG91SenderID,
+		MSG91Route:    cfg.Notify.SMSMSG91Route,
+		MSG91Endpoint: cfg.Notify.SMSMSG91Endpoint,
+	})
 	notifSvc := notifications.NewServiceWithChannels(emailSender, smsSender, id.NewUUIDGenerator(), clock.NewRealClock())
 
 	var emailChannel alertchannels.Provider = stubProviders["email"]
@@ -404,7 +415,7 @@ func main() {
 		emailChannel = alertchannels.NewEmailBridge(notifSvc)
 	}
 	var smsChannel alertchannels.Provider = stubProviders["sms"]
-	if smsSender.Configured() {
+	if notifications.SMSConfigured(smsSender) {
 		smsChannel = alertchannels.NewSMSBridge(notifSvc)
 	}
 

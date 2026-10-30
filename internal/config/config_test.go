@@ -33,6 +33,36 @@ func TestLoad_DefaultsAndEnv(t *testing.T) {
 	})
 }
 
+// TestLoad_SMSProviderConfig pins the SMS gateway adapter env names
+// (Plan P2 item 2.5): provider selection plus MSG91 credentials must survive
+// the config boundary.
+func TestLoad_SMSProviderConfig(t *testing.T) {
+	t.Setenv("SMS_PROVIDER", "msg91")
+	t.Setenv("SMS_MSG91_AUTH_KEY", "test-authkey")
+	t.Setenv("SMS_MSG91_SENDER_ID", "AVNDAB")
+	t.Setenv("SMS_MSG91_ROUTE", "4")
+	t.Setenv("SMS_MSG91_ENDPOINT", "https://gw.test/api/v5/sms/")
+
+	cfg := config.Load()
+
+	n := cfg.Notify
+	if n.SMSProvider != "msg91" {
+		t.Fatalf("expected SMSProvider msg91, got %q", n.SMSProvider)
+	}
+	if n.SMSMSG91AuthKey != "test-authkey" {
+		t.Fatalf("expected SMSMSG91AuthKey test-authkey, got %q", n.SMSMSG91AuthKey)
+	}
+	if n.SMSMSG91SenderID != "AVNDAB" {
+		t.Fatalf("expected SMSMSG91SenderID AVNDAB, got %q", n.SMSMSG91SenderID)
+	}
+	if n.SMSMSG91Route != "4" {
+		t.Fatalf("expected SMSMSG91Route 4, got %q", n.SMSMSG91Route)
+	}
+	if n.SMSMSG91Endpoint != "https://gw.test/api/v5/sms/" {
+		t.Fatalf("expected SMSMSG91Endpoint override, got %q", n.SMSMSG91Endpoint)
+	}
+}
+
 func TestValidate_DatabaseURL(t *testing.T) {
 	valid := []string{
 		"file:transport.db?mode=rwc&cache=shared&_foreign_keys=on&_journal_mode=WAL",
