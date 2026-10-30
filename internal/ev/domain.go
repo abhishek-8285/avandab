@@ -174,8 +174,11 @@ func (in *IngestEVTelemetryInput) Validate() error {
 	if in.SoCPercent < 0 || in.SoCPercent > 100 {
 		return errors.New("soc_percent must be between 0 and 100")
 	}
+	// Measured battery health is required — a missing reading must be refused,
+	// never defaulted to 100.0 (P0 "stop fake data"; migration 00176's schema
+	// default is deferred debt, see plan row 3.10).
 	if in.SoHPercent <= 0 || in.SoHPercent > 100 {
-		in.SoHPercent = 100.0
+		return errors.New("soh_percent is required from the CAN/OEM feed (measured battery health, 0-100)")
 	}
 	status := strings.ToUpper(strings.TrimSpace(in.ChargingStatus))
 	switch status {

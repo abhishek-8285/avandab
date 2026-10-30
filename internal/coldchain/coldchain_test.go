@@ -80,10 +80,12 @@ func TestColdChain_ProfileConfigureAndFetch(t *testing.T) {
 	require.NotNil(t, fetched)
 	assert.Equal(t, "Thermo King SLXi", fetched.ReeferMakeModel)
 
-	// 3. Validation error: min > max
+	// 3. Validation error: min > max (explicit make model so min/max is the
+	// rule under test)
 	_, err = svc.ConfigureProfile(ctx, "tenant-cc-a", "veh-ref-1", coldchain.ConfigureReeferProfileInput{
-		Zone1MinTempC: 10.0,
-		Zone1MaxTempC: 5.0,
+		ReeferMakeModel: "Thermo King SLXi",
+		Zone1MinTempC:   10.0,
+		Zone1MaxTempC:   5.0,
 	})
 	assert.Error(t, err)
 }
@@ -166,8 +168,9 @@ func TestColdChain_AcknowledgeAndResolveExcursion(t *testing.T) {
 	ctx := context.Background()
 
 	_, err := svc.ConfigureProfile(ctx, "tenant-cc-a", "veh-ref-1", coldchain.ConfigureReeferProfileInput{
-		Zone1MinTempC: 2.0,
-		Zone1MaxTempC: 8.0,
+		ReeferMakeModel: "Carrier Xarios 350",
+		Zone1MinTempC:   2.0,
+		Zone1MaxTempC:   8.0,
 	})
 	require.NoError(t, err)
 
@@ -254,6 +257,30 @@ func TestColdChain_CalculateMKT_AndComplianceCertification(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, vehicles, 1)
 	assert.Equal(t, "veh-ref-1", vehicles[0].VehicleID)
+}
+
+func TestColdChain_ReeferMakeModelRequired(t *testing.T) {
+	db := newTestColdChainDB(t)
+	repo := coldchain.NewSQLRepository(db)
+	svc := coldchain.NewService(repo)
+	ctx := context.Background()
+
+	// Registering a reefer without an explicit make/model must be refused —
+	// migration 00177's 'Carrier Transicold' schema default must not leak
+	// through the service path as a fabricated spec (P0 "stop fake data").
+	prof, err := svc.ConfigureProfile(ctx, "tenant-cc-a", "veh-ref-1", coldchain.ConfigureReeferProfileInput{
+		Zone1Type:        coldchain.ZoneTypeChilled,
+		Zone1TargetTempC: 4.0,
+		Zone1MinTempC:    2.0,
+		Zone1MaxTempC:    8.0,
+	})
+	require.Error(t, err, "reefer_make_model is required; refusing to substitute a vendor name")
+	assert.ErrorContains(t, err, "reefer_make_model")
+	assert.Nil(t, prof)
+
+	fetched, err := svc.GetProfile(ctx, "tenant-cc-a", "veh-ref-1")
+	require.NoError(t, err)
+	assert.Nil(t, fetched, "no reefer profile row may exist from refused registration")
 }
 
 func TestColdChain_TenantIsolation(t *testing.T) {

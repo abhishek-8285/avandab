@@ -16,6 +16,11 @@ type Service struct {
 	mediaServerURL string
 }
 
+// ErrInsufficientMileage is returned when a driver scorecard is requested
+// without any real reported distance: scores may only normalize real
+// mileage, never an assumed baseline (P0 "stop fake data").
+var ErrInsufficientMileage = errors.New("driver scorecard requires a real reported distance_km; refusing to score without mileage data")
+
 // NewService creates a new video telematics service. An empty mediaServerURL
 // keeps live streaming fail-closed (P0 "stop fake data"): StartLivestream
 // returns an error and creates no session row until a real media server is
@@ -201,6 +206,33 @@ func (s *Service) EndLivestream(ctx context.Context, tenantID, sessionID string)
 	return s.repo.EndLivestreamSession(ctx, tenantID, sessionID, time.Now().UTC())
 }
 
+// ConfirmLivestream flips an INITIATED stream to ACTIVE after the device or
+// media partner confirms the CDN/stream is actually serving. It fails closed
+// when no media server is configured, and only INITIATED sessions can be
+// confirmed — ACTIVE is never fabricated into an ENDED/FAILED session
+// (Plan P3 item 3.12).
+func (s *Service) ConfirmLivestream(ctx context.Context, tenantID, sessionID string) (*LivestreamSession, error) {
+	if s.mediaServerURL == "" {
+		return nil, errors.New("livestream media server is not configured; set VIDEO_MEDIA_SERVER_URL")
+	}
+
+	session, err := s.repo.GetLivestreamSession(ctx, tenantID, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if session == nil {
+		return nil, errors.New("livestream session not found")
+	}
+	if session.Status != StreamInitiated {
+		return nil, fmt.Errorf("livestream session is %s; only INITIATED sessions can be confirmed live", session.Status)
+	}
+
+	if err := s.repo.ActivateLivestreamSession(ctx, tenantID, sessionID); err != nil {
+		return nil, err
+	}
+	return s.repo.GetLivestreamSession(ctx, tenantID, sessionID)
+}
+
 // CalculateAndSaveDriverScorecard aggregates safety events and recalculates a 0-100 score.
 func (s *Service) CalculateAndSaveDriverScorecard(ctx context.Context, tenantID, driverID string, periodStart, periodEnd time.Time, distanceKM float64) (*DriverSafetyScorecard, error) {
 	if periodStart.IsZero() {
@@ -213,9 +245,12 @@ func (s *Service) CalculateAndSaveDriverScorecard(ctx context.Context, tenantID,
 	existing, _ := s.repo.GetDriverScorecard(ctx, tenantID, driverID)
 	if distanceKM <= 0 {
 		if existing != nil && existing.DistanceKM > 0 {
+			// Re-normalize against the driver's previously reported real distance.
 			distanceKM = existing.DistanceKM
 		} else {
-			distanceKM = 1200.0 // 1,200 km default monthly baseline
+			// No real reported distance anywhere — refuse instead of scoring
+			// against an invented baseline (P0 "stop fake data").
+			return nil, ErrInsufficientMileage
 		}
 	}
 

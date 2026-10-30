@@ -136,6 +136,7 @@ func TestEVChargingSession_AutoLifecycle(t *testing.T) {
 	_, err = svc.IngestTelemetry(ctx, "tenant-a", ev.IngestEVTelemetryInput{
 		VehicleID:       "ev-001",
 		SoCPercent:      20.0,
+		SoHPercent:      98.0,
 		ChargingStatus:  ev.ChargingStatusFastCharging,
 		ChargingPowerKW: 50.0,
 	})
@@ -154,6 +155,7 @@ func TestEVChargingSession_AutoLifecycle(t *testing.T) {
 	_, err = svc.IngestTelemetry(ctx, "tenant-a", ev.IngestEVTelemetryInput{
 		VehicleID:       "ev-001",
 		SoCPercent:      70.0,
+		SoHPercent:      98.0,
 		ChargingStatus:  ev.ChargingStatusFastCharging,
 		ChargingPowerKW: 65.0,
 	})
@@ -169,6 +171,7 @@ func TestEVChargingSession_AutoLifecycle(t *testing.T) {
 	_, err = svc.IngestTelemetry(ctx, "tenant-a", ev.IngestEVTelemetryInput{
 		VehicleID:      "ev-001",
 		SoCPercent:     90.0,
+		SoHPercent:     98.0,
 		ChargingStatus: ev.ChargingStatusDischarging,
 	})
 	require.NoError(t, err)
@@ -182,6 +185,39 @@ func TestEVChargingSession_AutoLifecycle(t *testing.T) {
 	assert.Equal(t, 70.0, sessions[0].EnergyAddedKWh)
 	// Estimated cost: 70 kWh * 14.50 INR/kWh = 1015.0 INR
 	assert.Equal(t, 1015.0, sessions[0].EstimatedCost)
+}
+
+func TestEVTelemetry_MissingSoHRefusedAndMetricsNotFabricated(t *testing.T) {
+	db := newTestEVDB(t)
+	repo := ev.NewSQLRepository(db)
+	svc := ev.NewService(repo)
+	ctx := context.Background()
+
+	// Registered EV profile without a measured battery-health input must not
+	// silently persist 100.0 (migration 00176 default, P0 "stop fake data").
+	_, err := svc.ConfigureProfile(ctx, "tenant-a", "ev-001", ev.ConfigureEVProfileInput{
+		BatteryCapacityKWh: 80.0,
+		MaxRangeKM:         300.0,
+	})
+	require.NoError(t, err)
+
+	telem, err := svc.IngestTelemetry(ctx, "tenant-a", ev.IngestEVTelemetryInput{
+		VehicleID:      "ev-001",
+		SoCPercent:     75.0,
+		ChargingStatus: ev.ChargingStatusDischarging,
+	})
+	require.Error(t, err, "telemetry without measured SoH must be refused, not defaulted to 100%")
+	assert.ErrorContains(t, err, "soh_percent")
+	assert.Nil(t, telem)
+
+	latest, err := svc.GetLatestTelemetry(ctx, "tenant-a", "ev-001")
+	require.NoError(t, err)
+	assert.Nil(t, latest, "no telemetry row may exist from refused ingest")
+
+	// Fleet metrics must report no data (0), never a fabricated 100% fleet SoH.
+	metrics, err := svc.GetFleetMetrics(ctx, "tenant-a")
+	require.NoError(t, err)
+	assert.Equal(t, 0.0, metrics.FleetAvgSoH, "fleet SoH must not be fabricated as 100.0 without any real measurement")
 }
 
 func TestEVFleetMetrics_AndCarbonAvoided(t *testing.T) {
@@ -202,6 +238,7 @@ func TestEVFleetMetrics_AndCarbonAvoided(t *testing.T) {
 	_, err = svc.IngestTelemetry(ctx, "tenant-a", ev.IngestEVTelemetryInput{
 		VehicleID:      "ev-001",
 		SoCPercent:     12.0,
+		SoHPercent:     97.0,
 		ChargingStatus: ev.ChargingStatusDischarging,
 	})
 	require.NoError(t, err)
@@ -210,6 +247,7 @@ func TestEVFleetMetrics_AndCarbonAvoided(t *testing.T) {
 	_, err = svc.IngestTelemetry(ctx, "tenant-a", ev.IngestEVTelemetryInput{
 		VehicleID:       "ev-002",
 		SoCPercent:      60.0,
+		SoHPercent:      99.0,
 		ChargingStatus:  ev.ChargingStatusCharging,
 		ChargingPowerKW: 22.0,
 	})

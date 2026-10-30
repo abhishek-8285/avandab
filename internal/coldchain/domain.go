@@ -190,6 +190,12 @@ type ConfigureReeferProfileInput struct {
 }
 
 func (in *ConfigureReeferProfileInput) Validate() error {
+	// An explicit make/model is required — a silent vendor default is fabricated
+	// hardware attribution (P0 "stop fake data"; migration 00177's 'Carrier
+	// Transicold' schema default is deferred debt, see plan row 3.11).
+	if strings.TrimSpace(in.ReeferMakeModel) == "" {
+		return errors.New("reefer_make_model is required")
+	}
 	if in.NumZones < 1 || in.NumZones > 3 {
 		in.NumZones = 1
 	}
@@ -198,9 +204,6 @@ func (in *ConfigureReeferProfileInput) Validate() error {
 	}
 	if in.Zone1Type == "" {
 		in.Zone1Type = ZoneTypeChilled
-	}
-	if in.ReeferMakeModel == "" {
-		in.ReeferMakeModel = "Carrier Transicold"
 	}
 	if in.DefrostMode == "" {
 		in.DefrostMode = "AUTO"

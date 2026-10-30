@@ -91,6 +91,90 @@ func setupVideoTelematicsTestApp(t *testing.T) (*App, *chi.Mux) {
 	return app, r
 }
 
+func TestVideoTelematicsAPI_LivestreamConfirmFlow(t *testing.T) {
+	app, r := setupVideoTelematicsTestApp(t)
+
+	tenantID := "tenant-vid-confirm"
+	_, err := app.DB.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ($1, 'Confirm Tenant', 'confirm-tenant')`, tenantID)
+	require.NoError(t, err)
+
+	vehicleID := "veh-cam-confirm-1"
+	_, err = app.DB.Exec(`INSERT OR IGNORE INTO vehicles (id, tenant_id, registration_number, vehicle_number, vehicle_type, capacity, insurance_expiry, fitness_expiry, permit_expiry, current_mileage)
+		VALUES ($1, $2, 'DL-01-CF-1001', 'CFM-001', 'truck', 10.0, date('now','+1 year'), date('now','+1 year'), date('now','+1 year'), 12000.0)`,
+		vehicleID, tenantID)
+	require.NoError(t, err)
+
+	startBody, _ := json.Marshal(videotelematics.StartLivestreamInput{
+		VehicleID:      vehicleID,
+		Channel:        videotelematics.ChannelRoadFacing,
+		StreamProtocol: videotelematics.ProtocolWebRTC,
+	})
+
+	// Start a session (media server configured).
+	app.Config.Video.MediaServerURL = "https://media.fleet-internal.example"
+	call := func(user, method, path string, body []byte) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(method, path, bytes.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Test-User", user)
+		req.Header.Set("X-Test-Tenant", tenantID)
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+		return rec
+	}
+
+	rec := call("admin-user", "POST", "/api/v1/video/livestream/start", startBody)
+	require.Equal(t, http.StatusOK, rec.Code)
+	var sess videotelematics.LivestreamSession
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &sess))
+	assert.Equal(t, videotelematics.StreamInitiated, sess.Status)
+
+	// Confirm fails closed without configuration: honest error, no state change.
+	app.Config.Video.MediaServerURL = ""
+	rec = call("admin-user", "POST", "/api/v1/video/livestream/"+sess.ID+"/confirm", nil)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), "not configured")
+
+	var stored videotelematics.LivestreamSession
+	require.NoError(t, app.DB.QueryRow(`SELECT id, status FROM video_livestream_sessions WHERE id = $1`, sess.ID).
+		Scan(&stored.ID, &stored.Status))
+	assert.Equal(t, videotelematics.StreamInitiated, stored.Status, "refused confirm must not change state")
+
+	// With configuration: confirm marks ACTIVE ("Live Now").
+	app.Config.Video.MediaServerURL = "https://media.fleet-internal.example"
+	rec = call("admin-user", "POST", "/api/v1/video/livestream/"+sess.ID+"/confirm", nil)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var confirmed videotelematics.LivestreamSession
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &confirmed))
+	assert.Equal(t, videotelematics.StreamActive, confirmed.Status)
+}
+
+func TestVideoTelematicsAPI_ScorecardRefusesUnmeasuredDistance(t *testing.T) {
+	app, r := setupVideoTelematicsTestApp(t)
+
+	tenantID := "tenant-vid-scoreless"
+	_, err := app.DB.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ($1, 'Scoreless Tenant', 'scoreless-tenant')`, tenantID)
+	require.NoError(t, err)
+
+	driverID := "drv-vid-scoreless"
+	_, err = app.DB.Exec(`INSERT OR IGNORE INTO drivers (id, tenant_id, driver_id, first_name, last_name, phone, license_number, license_expiry, status)
+		VALUES ($1, $2, 'DRV-SL1', 'No', 'Mileage', '+919999900011', 'DL-SL-101', date('now','+2 years'), 'available')`,
+		driverID, tenantID)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest("GET", "/api/v1/video/drivers/"+driverID+"/scorecard", nil)
+	req.Header.Set("X-Test-User", "viewer-user")
+	req.Header.Set("X-Test-Tenant", tenantID)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+	assert.Equal(t, http.StatusUnprocessableEntity, rec.Code, "scorecard without real reported distance must be honestly refused")
+	assert.Contains(t, rec.Body.String(), "distance")
+
+	var count int
+	require.NoError(t, app.DB.QueryRow(`SELECT COUNT(*) FROM driver_safety_scorecards WHERE driver_id = $1`, driverID).Scan(&count))
+	assert.Equal(t, 0, count)
+}
+
 func TestVideoTelematicsAPI_FullLifecycleAndRBAC(t *testing.T) {
 	app, r := setupVideoTelematicsTestApp(t)
 
@@ -275,18 +359,19 @@ func TestVideoTelematicsAPI_FullLifecycleAndRBAC(t *testing.T) {
 	// Reset so the dashboard render step reflects the configured path as well.
 	app.Config.Video.MediaServerURL = ""
 
-	// 11. Driver Scorecard
+	// 11. Driver Scorecard without real reported distance → honest refusal
+	// (P0 "stop fake data"): no fabricated baseline, no score row created.
 	req = httptest.NewRequest("GET", "/api/v1/video/drivers/"+driverID+"/scorecard", nil)
 	req.Header.Set("X-Test-User", "viewer-user")
 	req.Header.Set("X-Test-Tenant", tenantID)
 	rec = httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
-	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+	assert.Contains(t, rec.Body.String(), "distance")
 
-	var card videotelematics.DriverSafetyScorecard
-	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &card))
-	assert.Equal(t, driverID, card.DriverID)
-	assert.True(t, card.SafetyScore > 0)
+	var scorecardRows int
+	require.NoError(t, app.DB.QueryRow(`SELECT COUNT(*) FROM driver_safety_scorecards WHERE driver_id = $1`, driverID).Scan(&scorecardRows))
+	assert.Equal(t, 0, scorecardRows)
 
 	// 12. Scorecards leaderboard
 	req = httptest.NewRequest("GET", "/api/v1/video/scorecards", nil)

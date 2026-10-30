@@ -24,6 +24,7 @@ type Repository interface {
 	GetLivestreamSession(ctx context.Context, tenantID, sessionID string) (*LivestreamSession, error)
 	GetActiveLivestreamByVehicle(ctx context.Context, tenantID, vehicleID string) (*LivestreamSession, error)
 	EndLivestreamSession(ctx context.Context, tenantID, sessionID string, endedAt time.Time) error
+	ActivateLivestreamSession(ctx context.Context, tenantID, sessionID string) error
 
 	UpsertSafetyScorecard(ctx context.Context, card *DriverSafetyScorecard) error
 	GetDriverScorecard(ctx context.Context, tenantID, driverID string) (*DriverSafetyScorecard, error)
@@ -477,6 +478,22 @@ func (r *SQLRepository) EndLivestreamSession(ctx context.Context, tenantID, sess
 
 	_, err := r.db.ExecContext(ctx, query, tenantID, sessionID, endedAt)
 	return err
+}
+
+// ActivateLivestreamSession marks an INITIATED livestream session ACTIVE. It
+// refuses to touch sessions in any other state (no rows affected → error).
+func (r *SQLRepository) ActivateLivestreamSession(ctx context.Context, tenantID, sessionID string) error {
+	res, err := r.db.ExecContext(ctx, `UPDATE video_livestream_sessions
+	SET status = 'ACTIVE'
+	WHERE tenant_id = $1 AND id = $2 AND status = 'INITIATED'`, tenantID, sessionID)
+	if err != nil {
+		return err
+	}
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		return errors.New("livestream session not found or not INITIATED")
+	}
+	return nil
 }
 
 func (r *SQLRepository) UpsertSafetyScorecard(ctx context.Context, card *DriverSafetyScorecard) error {

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -51,6 +52,7 @@ func (h *VideoTelematicsHandlers) RegisterAPIRoutes(r chi.Router) {
 		r.With(middleware.RequirePermission(h.AuthSrv, "video", "read")).Get("/events/{id}", h.APIGetEvent)
 		r.With(middleware.RequirePermission(h.AuthSrv, "video", "write")).Post("/events/{id}/review", h.APIReviewEvent)
 		r.With(middleware.RequirePermission(h.AuthSrv, "video", "read")).Post("/livestream/start", h.APIStartLivestream)
+		r.With(middleware.RequirePermission(h.AuthSrv, "video", "write")).Post("/livestream/{id}/confirm", h.APIConfirmLivestream)
 		r.With(middleware.RequirePermission(h.AuthSrv, "video", "read")).Post("/livestream/{id}/stop", h.APIEndLivestream)
 		r.With(middleware.RequirePermission(h.AuthSrv, "video", "read")).Get("/drivers/{id}/scorecard", h.APIGetDriverScorecard)
 		r.With(middleware.RequirePermission(h.AuthSrv, "video", "read")).Get("/scorecards", h.APIListDriverScorecards)
@@ -250,6 +252,23 @@ func (h *VideoTelematicsHandlers) APIEndLivestream(w http.ResponseWriter, r *htt
 	writeVideoJSON(w, http.StatusOK, map[string]string{"status": "ended"})
 }
 
+// APIConfirmLivestream marks an INITIATED stream ACTIVE after the device or
+// media partner confirms the CDN is actually serving. Fails closed without a
+// configured media server; the only path to ACTIVE is a real confirmation
+// (Plan P3 item 3.12, video write permission).
+func (h *VideoTelematicsHandlers) APIConfirmLivestream(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	sessionID := chi.URLParam(r, "id")
+
+	session, err := h.service().ConfirmLivestream(r.Context(), tenantID, sessionID)
+	if err != nil {
+		writeVideoError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	writeVideoJSON(w, http.StatusOK, session)
+}
+
 // APIGetDriverScorecard returns safety scorecard for a driver.
 func (h *VideoTelematicsHandlers) APIGetDriverScorecard(w http.ResponseWriter, r *http.Request) {
 	tenantID := string(shared.TenantIDFromContext(r.Context()))
@@ -261,14 +280,19 @@ func (h *VideoTelematicsHandlers) APIGetDriverScorecard(w http.ResponseWriter, r
 		return
 	}
 	if card == nil {
-		// Calculate on the fly if not yet generated
+		// Calculate on the fly only when real reported distance exists.
 		now := time.Now().UTC()
 		start := now.AddDate(0, 0, -30)
 		card, err = h.service().CalculateAndSaveDriverScorecard(r.Context(), tenantID, driverID, start, now, 0)
-		if err != nil {
+		if err != nil && !errors.Is(err, videotelematics.ErrInsufficientMileage) {
 			writeVideoError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+	}
+	if card == nil {
+		// No real mileage anywhere: no score is the honest answer.
+		writeVideoError(w, http.StatusUnprocessableEntity, videotelematics.ErrInsufficientMileage.Error())
+		return
 	}
 
 	writeVideoJSON(w, http.StatusOK, card)

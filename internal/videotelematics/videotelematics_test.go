@@ -320,6 +320,79 @@ func TestVideoTelematics_ScorecardAndLeaderboard(t *testing.T) {
 	assert.Equal(t, "Rajesh Sharma", *cards[0].DriverName)
 }
 
+func TestVideoTelematics_LivestreamConfirm(t *testing.T) {
+	db := newTestVideoDB(t)
+	repo := videotelematics.NewSQLRepository(db)
+	svc := videotelematics.NewService(repo, "")
+	ctx := context.Background()
+
+	svcCfg := videotelematics.NewService(repo, "https://media.internal.example:8443")
+	session, err := svcCfg.StartLivestream(ctx, "tenant-vid-a", videotelematics.StartLivestreamInput{
+		VehicleID:      "veh-cam-1",
+		Channel:        videotelematics.ChannelRoadFacing,
+		StreamProtocol: videotelematics.ProtocolWebRTC,
+		RequestedBy:    "Dispatcher Verma",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, session)
+
+	// Fail-closed: the only path to ACTIVE is a real device/partner confirm,
+	// and it is refused outright when no media server is configured (P0/P3.12).
+	confirmed, err := svc.ConfirmLivestream(ctx, "tenant-vid-a", session.ID)
+	require.Error(t, err, "confirm must fail closed without configured media server")
+	assert.ErrorContains(t, err, "not configured")
+	assert.Nil(t, confirmed)
+
+	stored, err := repo.GetLivestreamSession(ctx, "tenant-vid-a", session.ID)
+	require.NoError(t, err)
+	require.NotNil(t, stored)
+	assert.Equal(t, videotelematics.StreamInitiated, stored.Status, "no state change on refused confirm")
+
+	// Configured media server: a real confirm flips INITIATED → ACTIVE.
+	confirmed, err = svcCfg.ConfirmLivestream(ctx, "tenant-vid-a", session.ID)
+	require.NoError(t, err)
+	require.NotNil(t, confirmed)
+	assert.Equal(t, videotelematics.StreamActive, confirmed.Status)
+
+	// END still ends, and an ENDED session cannot be re-confirmed to ACTIVE.
+	require.NoError(t, svcCfg.EndLivestream(ctx, "tenant-vid-a", session.ID))
+	reconfirmed, err := svcCfg.ConfirmLivestream(ctx, "tenant-vid-a", session.ID)
+	require.Error(t, err, "ENDED sessions must not be re-activated")
+	assert.Nil(t, reconfirmed)
+}
+
+func TestVideoTelematics_ScorecardRefusesUnmeasuredDistance(t *testing.T) {
+	db := newTestVideoDB(t)
+	repo := videotelematics.NewSQLRepository(db)
+	svc := videotelematics.NewService(repo, "")
+	ctx := context.Background()
+
+	driverID := "drv-vid-1"
+	now := time.Now().UTC()
+	start := now.AddDate(0, 0, -30)
+
+	// A driver with events but no reported mileage must NOT get a scorecard
+	// normalized against an invented baseline (P0 "stop fake data").
+	card, err := svc.CalculateAndSaveDriverScorecard(ctx, "tenant-vid-a", driverID, start, now, 0)
+	require.Error(t, err, "refuse to score without real reported distance")
+	require.ErrorIs(t, err, videotelematics.ErrInsufficientMileage)
+	assert.Nil(t, card)
+
+	var count int
+	var distances float64
+	require.NoError(t, db.QueryRow(`SELECT COUNT(*), COALESCE(MAX(distance_km), 0) FROM driver_safety_scorecards`).Scan(&count, &distances))
+	assert.Equal(t, 0, count, "no scorecard row may exist without measured mileage")
+	assert.NotEqual(t, 1200.0, distances, "no fabricated 1200 km baseline may be stored")
+
+	// A real distance keeps scoring honest: reuse of the driver's previously
+	// reported distance while explicit mileage is absent is allowed (real data),
+	// but a fresh driver with nothing reported is not scoreable.
+	cardReal, err := svc.CalculateAndSaveDriverScorecard(ctx, "tenant-vid-a", driverID, start, now, 640.0)
+	require.NoError(t, err)
+	require.NotNil(t, cardReal)
+	assert.Equal(t, 640.0, cardReal.DistanceKM)
+}
+
 func TestVideoTelematics_FleetMetrics(t *testing.T) {
 	db := newTestVideoDB(t)
 	repo := videotelematics.NewSQLRepository(db)

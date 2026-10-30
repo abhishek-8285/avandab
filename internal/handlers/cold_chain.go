@@ -366,9 +366,11 @@ func (h *ColdChainHandlers) WebConfigureProfile(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	// Make/model is required — no vendor default (validate honestly via service).
 	model := strings.TrimSpace(r.FormValue("reefer_make_model"))
 	if model == "" {
-		model = "Carrier Transicold"
+		h.renderError(w, http.StatusBadRequest, "Reefer make/model is required", "reefer_make_model cannot be blank", user)
+		return
 	}
 
 	numZones := 1

@@ -362,12 +362,14 @@ func (r *SQLRepository) RecordEnergySummary(ctx context.Context, s *EVEnergySumm
 func (r *SQLRepository) GetFleetMetrics(ctx context.Context, tenantID string) (*EVFleetMetrics, error) {
 	metrics := &EVFleetMetrics{}
 
-	// 1. Vehicle counts and telemetry aggregates
+	// 1. Vehicle counts and telemetry aggregates.
+	// FleetAvgSoH reports 0 (= no data) when no real SoH measurement exists —
+	// never a fabricated 100% fleet health (P0 "stop fake data").
 	queryVehicles := `SELECT
 		COUNT(DISTINCT v.id),
 		COALESCE(SUM(CASE WHEN t.charging_status IN ('CHARGING', 'FAST_CHARGING') THEN 1 ELSE 0 END), 0),
 		COALESCE(AVG(t.soc_percent), 0.0),
-		COALESCE(AVG(t.soh_percent), 100.0),
+		COALESCE(AVG(t.soh_percent), 0.0),
 		COALESCE(SUM(CASE WHEN t.soc_percent < COALESCE(p.min_safe_soc, 15.0) THEN 1 ELSE 0 END), 0)
 	FROM vehicles v
 	LEFT JOIN vehicle_ev_profiles p ON v.id = p.vehicle_id AND v.tenant_id = p.tenant_id

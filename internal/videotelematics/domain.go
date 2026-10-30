@@ -323,11 +323,11 @@ func (in *StartLivestreamInput) Validate() error {
 }
 
 // CalculateSafetyScore computes a 0-100 score based on ADAS/DMS events and distance.
+// distanceKM must be a real reported distance — callers must refuse earlier
+// (see ErrInsufficientMileage); this function only picks the penalty scale.
 func CalculateSafetyScore(distanceKM float64, adasCount, dmsCount, criticalCount int) (float64, string) {
-	if distanceKM <= 0 {
-		distanceKM = 100.0 // Normalize to 100 km standard baseline if zero distance recorded
-	}
-
+	// Penalty scale floor: one 100 km unit at least (scale minimum, not a
+	// fabricated distance — the stored distance_km is always the real value).
 	unitsOf100KM := distanceKM / 100.0
 	if unitsOf100KM < 1.0 {
 		unitsOf100KM = 1.0
