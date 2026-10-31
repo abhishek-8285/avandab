@@ -232,3 +232,37 @@ func (h *DashboardHandlers) writeDashFrame(w http.ResponseWriter, f http.Flusher
 	fmt.Fprintf(w, "event: datastar-merge-signals\ndata: {\"dashboard\":%s}\n\n", jsonBytes)
 	f.Flush()
 }
+
+// SummaryAPI returns pure JSON KPIs for the Manager/Owner Mobile App (P3.7).
+func (h *DashboardHandlers) SummaryAPI(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	data, err := h.Services.Dashboard.GetDashboardData(ctx)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"todays_trips_count":       data.TodaysTripsCount,
+		"active_trips_count":       data.ActiveTripsCount,
+		"completed_trips_count":    data.CompletedTripsCount,
+		"cancelled_trips_count":    data.CancelledTripsCount,
+		"available_vehicles_count": data.AvailableVehiclesCount,
+		"available_drivers_count":  data.AvailableDriversCount,
+		"pending_payments_count":   data.PendingPaymentsCount,
+		"monthly_revenue":          data.MonthlyRevenue,
+		"attention": map[string]interface{}{
+			"unassigned_bookings": data.Attention.UnassignedBookings,
+			"maintenance_due":     data.Attention.MaintenanceDue,
+			"open_work_orders":    data.Attention.OpenWorkOrders,
+			"garage_vehicles":     data.Attention.GarageVehicles,
+			"open_alerts":         data.Attention.OpenAlerts,
+			"active_dtcs":         data.Attention.ActiveDTCs,
+			"expiring_ewaybills":  data.Attention.ExpiringEwaybills,
+			"pending_kharcha":     data.Attention.PendingKharcha,
+			"low_fastag":          data.Attention.LowFastag,
+			"total":               data.Attention.Total(),
+		},
+	})
+}

@@ -438,6 +438,22 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
               </View>
             </View>
 
+            {/* Manager Mode Switch for Admins/Dispatchers/Managers */}
+            {user?.role && ['admin', 'dispatcher', 'manager', 'owner'].includes(user.role.toLowerCase()) ? (
+              <TouchableOpacity
+                style={styles.managerModeBtn}
+                onPress={() => {
+                  useAuthStore.getState().setMode('manager');
+                  onBack?.();
+                }}
+                activeOpacity={0.85}
+                testID="switch-to-manager-mode-btn"
+              >
+                <MaterialCommunityIcons name="view-dashboard-outline" size={20} color="#075e54" />
+                <Text style={styles.managerModeText}>SWITCH TO MANAGER COCKPIT</Text>
+              </TouchableOpacity>
+            ) : null}
+
             {/* 4. Safe Sign Out Button */}
             <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut} activeOpacity={0.85}>
               <MaterialCommunityIcons name="logout" size={20} color={Colors.danger} />
@@ -819,6 +835,25 @@ const styles = StyleSheet.create({
   },
   renewBtnTextOutline: {
     color: Colors.primary,
+  },
+  managerModeBtn: {
+    backgroundColor: '#dcf8c6',
+    borderWidth: 1.5,
+    borderColor: '#059669',
+    paddingVertical: 14,
+    borderRadius: Radius.full,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  managerModeText: {
+    color: '#075e54',
+    fontSize: FontSize.body,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   signOutBtn: {
     backgroundColor: Colors.surface,

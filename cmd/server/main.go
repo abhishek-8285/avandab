@@ -1148,6 +1148,11 @@ func main() {
 		// Driver expense claims from mobile (Spec 13) — same trips:update
 		// gate as the web /kharcha/create form.
 		r.With(middleware.ResourcePermission(authSvc, "trips", "update")).Post("/api/v1/kharcha/expense", app.Kharcha.CreateExpenseAPI)
+		// Manager/Owner Mobile App (P3.7) endpoints
+		r.With(middleware.ResourcePermission(authSvc, "trips", "read")).Get("/api/v1/manager/dashboard", app.Dashboard.SummaryAPI)
+		r.With(middleware.ResourcePermission(authSvc, "trips", "read")).Get("/api/v1/kharcha/pending", app.Kharcha.PendingAPI)
+		r.With(middleware.ResourcePermission(authSvc, "trips", "update")).Post("/api/v1/kharcha/{id}/approve", app.Kharcha.ApproveAPI)
+		r.With(middleware.ResourcePermission(authSvc, "trips", "update")).Post("/api/v1/kharcha/{id}/reject", app.Kharcha.RejectAPI)
 		r.Get("/api/v1/users/me/preferences", app.Users.GetMyPreferences)
 		r.Patch("/api/v1/users/me/preferences", app.Users.UpdateMyPreferences)
 		r.Post("/api/v1/users/me/preferences", app.Users.UpdateMyPreferences)
