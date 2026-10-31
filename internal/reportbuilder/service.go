@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -11,12 +12,37 @@ import (
 	"github.com/google/uuid"
 )
 
+// ReportArtifact captures the generated report output for delivery.
+type ReportArtifact struct {
+	ReportID    string `json:"report_id"`
+	ReportName  string `json:"report_name"`
+	ExecutionID string `json:"execution_id"`
+	Format      string `json:"format"`
+	Data        []byte `json:"-"`
+	RowCount    int    `json:"row_count"`
+}
+
+// ScheduleDelivery defines the contract for delivering scheduled reports.
+type ScheduleDelivery interface {
+	Configured() bool
+	Deliver(ctx context.Context, tenantID string, sched *ReportSchedule, artifact ReportArtifact) error
+}
+
 type Service struct {
-	repo *Repository
+	repo     *Repository
+	delivery ScheduleDelivery
 }
 
 func NewService(repo *Repository) *Service {
 	return &Service{repo: repo}
+}
+
+func NewServiceWithDelivery(repo *Repository, delivery ScheduleDelivery) *Service {
+	return &Service{repo: repo, delivery: delivery}
+}
+
+func (s *Service) Delivery() ScheduleDelivery {
+	return s.delivery
 }
 
 // Catalog & Metadata
@@ -486,8 +512,26 @@ func (s *Service) TriggerSchedule(ctx context.Context, tenantID, scheduleID stri
 		return nil, fmt.Errorf("scheduled report execution failed: %w", err)
 	}
 
-	// Delivery simulation: mock channel dispatch
-	// In production, this dispatches to EmailProviderPool or WebhookClient
+	artifact := ReportArtifact{
+		ReportID:    sched.ReportID,
+		ReportName:  runRes.ReportName,
+		ExecutionID: runRes.ExecutionID,
+		Format:      runRes.Format,
+		Data:        runRes.CSVData,
+		RowCount:    runRes.RowCount,
+	}
+
+	if s.delivery == nil || !s.delivery.Configured() {
+		errMsg := "delivery not configured"
+		_ = s.repo.UpdateScheduleRunStatus(ctx, tenantID, scheduleID, "PENDING_DELIVERY", errMsg, &now, nextRun)
+		return runRes, errors.New(errMsg)
+	}
+
+	if delivErr := s.delivery.Deliver(ctx, tenantID, sched, artifact); delivErr != nil {
+		_ = s.repo.UpdateScheduleRunStatus(ctx, tenantID, scheduleID, "FAILED", delivErr.Error(), &now, nextRun)
+		return runRes, fmt.Errorf("delivery failed: %w", delivErr)
+	}
+
 	_ = s.repo.UpdateScheduleRunStatus(ctx, tenantID, scheduleID, "SUCCESS", "", &now, nextRun)
 
 	return runRes, nil

@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 // stubOSRM spins up an httptest server that answers /table (distance matrix)
@@ -143,6 +144,81 @@ func TestOSRMClient_Name(t *testing.T) {
 		if got := o.Name(); got != want {
 			t.Fatalf("Name(%q) = %q, want %q", base, got, want)
 		}
+	}
+}
+
+func testInput() OptimizationInput {
+	return OptimizationInput{
+		Shipments: []Shipment{{ID: "s1", Latitude: 19.0760, Longitude: 72.8777}},
+		Vehicles:  []Vehicle{{ID: "v1", StartLat: 19.0760, StartLng: 72.8777, Capacity: 10}},
+	}
+}
+
+// P0: an OSRM 500 used to be swallowed and answered with fabricated mock
+// distances. It must surface as an error instead.
+func TestOSRMClient_Solve_Table500FailsHonest(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "upstream exploded", http.StatusInternalServerError)
+	}))
+	t.Cleanup(srv.Close)
+
+	o := &OSRMClient{BaseURL: srv.URL}
+	out, err := o.Solve(context.Background(), testInput())
+	if err == nil {
+		t.Fatalf("expected an error on OSRM 500, got fabricated success: %+v", out)
+	}
+}
+
+// P0: unreachable OSRM host must fail, not fall back to mock routes.
+func TestOSRMClient_Solve_UnreachableHostFailsHonest(t *testing.T) {
+	o := &OSRMClient{
+		BaseURL:    "http://127.0.0.1:1",
+		HTTPClient: &http.Client{Timeout: 500 * time.Millisecond},
+	}
+	out, err := o.Solve(context.Background(), testInput())
+	if err == nil {
+		t.Fatalf("expected an error on unreachable OSRM, got fabricated success: %+v", out)
+	}
+}
+
+// P0: an unparseable / non-Ok table response must fail too.
+func TestOSRMClient_Solve_ParseFailureFailsHonest(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"code":"InvalidQuery"}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	o := &OSRMClient{BaseURL: srv.URL}
+	out, err := o.Solve(context.Background(), testInput())
+	if err == nil {
+		t.Fatalf("expected an error on non-Ok OSRM response, got fabricated success: %+v", out)
+	}
+}
+
+// A client with no base URL is a misconfiguration, not a licence to fake.
+func TestOSRMClient_Solve_EmptyBaseURLFailsHonest(t *testing.T) {
+	o := &OSRMClient{}
+	if _, err := o.Solve(context.Background(), testInput()); err == nil {
+		t.Fatal("expected an error when OSRM BaseURL is empty")
+	}
+}
+
+// The mock solver stays available, but only when explicitly selected.
+func TestGet_ExplicitMockStillWorks(t *testing.T) {
+	out, err := Get("mock").Solve(context.Background(), testInput())
+	if err != nil {
+		t.Fatalf("explicit mock solve failed: %v", err)
+	}
+	if out.ProviderName != "mock" {
+		t.Fatalf("expected provider mock, got %q", out.ProviderName)
+	}
+}
+
+// Unknown provider ids must not silently degrade to fabricated mock routes.
+func TestGet_UnknownProviderFailsHonest(t *testing.T) {
+	if _, err := Get("typo-osrm").Solve(context.Background(), testInput()); err == nil {
+		t.Fatal("expected an error for an unknown provider")
 	}
 }
 

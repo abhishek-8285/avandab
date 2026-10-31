@@ -542,6 +542,73 @@ func (r *Repository) UpdateScheduleRunStatus(ctx context.Context, tenantID, id, 
 	return nil
 }
 
+// ListDueSchedules retrieves all active schedules across tenants whose next_run_at is due (<= now).
+func (r *Repository) ListDueSchedules(ctx context.Context, now time.Time, limit int) ([]ReportSchedule, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	query := `SELECT 
+		s.id, s.tenant_id, s.report_id, s.name, s.frequency,
+		s.cron_expression, s.format, s.channel, s.recipients,
+		s.is_active, s.last_run_at, s.next_run_at, s.last_status,
+		s.last_error, s.created_by, s.created_at, s.updated_at,
+		COALESCE(r.name, '') AS report_name
+	FROM report_schedules s
+	LEFT JOIN custom_reports r ON r.id = s.report_id
+	WHERE (s.is_active = 1 OR s.is_active = true)
+	  AND s.next_run_at IS NOT NULL
+	  AND s.next_run_at <= ?
+	ORDER BY s.next_run_at ASC
+	LIMIT ?`
+
+	rows, err := r.db.QueryContext(ctx, query, now, limit)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query due report schedules: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var schedules []ReportSchedule
+	for rows.Next() {
+		var (
+			s              ReportSchedule
+			recipientsJSON string
+		)
+		err := rows.Scan(
+			&s.ID,
+			&s.TenantID,
+			&s.ReportID,
+			&s.Name,
+			&s.Frequency,
+			&s.CronExpression,
+			&s.Format,
+			&s.Channel,
+			&recipientsJSON,
+			&s.IsActive,
+			&s.LastRunAt,
+			&s.NextRunAt,
+			&s.LastStatus,
+			&s.LastError,
+			&s.CreatedBy,
+			&s.CreatedAt,
+			&s.UpdatedAt,
+			&s.ReportName,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan due report schedule: %w", err)
+		}
+		if recipientsJSON != "" {
+			_ = json.Unmarshal([]byte(recipientsJSON), &s.Recipients)
+		}
+		schedules = append(schedules, s)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("due schedules iteration error: %w", err)
+	}
+
+	return schedules, nil
+}
+
 // Report Executions Repository
 
 func (r *Repository) CreateExecution(ctx context.Context, exec *ReportExecution) error {

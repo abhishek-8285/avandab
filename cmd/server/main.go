@@ -68,6 +68,7 @@ import (
 	"transport-app/internal/podsign"
 	"transport-app/internal/rag"
 	"transport-app/internal/realtime"
+	"transport-app/internal/reportbuilder"
 	"transport-app/internal/repository/sqlite"
 	"transport-app/internal/safety"
 	"transport-app/internal/service"
@@ -2148,6 +2149,13 @@ func main() {
 			}
 		}
 	})
+
+	// Fleet report builder scheduled delivery engine (FleetX Parity P3.4)
+	reportScheduler := reportbuilder.NewScheduler(
+		reportbuilder.NewService(reportbuilder.NewRepository(database)),
+		logger,
+	)
+	runLeadered("report_scheduler", reportScheduler.Run)
 
 	go func() {
 		logger.Info("Server listening", "address", addr)

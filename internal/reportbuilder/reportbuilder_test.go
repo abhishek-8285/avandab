@@ -371,7 +371,7 @@ func TestScheduledDelivery_LifecycleAndTrigger(t *testing.T) {
 	db := setupTestDB(t)
 	defer db.Close()
 
-	svc := NewService(NewRepository(db))
+	svc := NewServiceWithDelivery(NewRepository(db), &fakeDelivery{configured: true})
 	ctx := context.Background()
 
 	// 1. Create schedule for system report
@@ -421,6 +421,37 @@ func TestScheduledDelivery_LifecycleAndTrigger(t *testing.T) {
 
 	_, err = svc.GetSchedule(ctx, "tenant-1", sched.ID)
 	assert.ErrorIs(t, err, ErrNotFound)
+}
+
+// P0: a schedule with no configured delivery transport must never report
+// SUCCESS — the report ran, but nothing was delivered.
+func TestTriggerSchedule_NoDeliveryProvider_FailsHonest(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	svc := NewService(NewRepository(db))
+	ctx := context.Background()
+
+	sched, err := svc.CreateSchedule(ctx, "tenant-1", "u1", CreateScheduleInput{
+		ReportID:   "sys-rep-trip-profitability",
+		Name:       "Daily profitability",
+		Frequency:  "DAILY",
+		Format:     "CSV",
+		Channel:    "EMAIL",
+		Recipients: []string{"ops@fleet.local"},
+	})
+	require.NoError(t, err)
+
+	runRes, err := svc.TriggerSchedule(ctx, "tenant-1", sched.ID)
+	assert.Error(t, err, "no delivery transport is wired, so this must not report success")
+	assert.NotNil(t, runRes, "the report itself still runs")
+
+	after, err := svc.GetSchedule(ctx, "tenant-1", sched.ID)
+	require.NoError(t, err)
+	assert.Equal(t, "PENDING_DELIVERY", after.LastStatus)
+	assert.Contains(t, after.LastError, "delivery not configured")
+	assert.NotNil(t, after.LastRunAt)
+	assert.NotNil(t, after.NextRunAt)
 }
 
 func TestDynamicQuery_SecurityInjectionPrevention(t *testing.T) {

@@ -3,6 +3,7 @@ package pipeline
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -73,6 +74,7 @@ func (f *Flusher) Flush(ctx context.Context) error {
 		return err
 	}
 
+	var allFlushErrs []error
 	for _, a := range alerts {
 		var meta map[string]any
 		if a.Metadata != "" {
@@ -99,10 +101,26 @@ func (f *Flusher) Flush(ctx context.Context) error {
 		}
 
 		// Send to channels
+		var sendErrs []error
 		for _, provider := range f.channels {
 			if provider != nil {
-				_ = provider.Send(ctx, msg)
+				if err := provider.Send(ctx, msg); err != nil {
+					f.logger.Error("failed to deliver storm alert to channel",
+						"channel", provider.Name(),
+						"alert_id", a.ID,
+						"error", err,
+					)
+					sendErrs = append(sendErrs, fmt.Errorf("channel %s delivery failed: %w", provider.Name(), err))
+				}
 			}
+		}
+
+		if len(sendErrs) > 0 {
+			meta["delivery_error"] = sendErrs[0].Error()
+			metaBytes, _ := json.Marshal(meta)
+			_ = f.repo.UpdateMetadata(ctx, a.ID, string(metaBytes))
+			allFlushErrs = append(allFlushErrs, errors.Join(sendErrs...))
+			continue
 		}
 
 		meta["flushed"] = true
@@ -113,5 +131,8 @@ func (f *Flusher) Flush(ctx context.Context) error {
 		f.logger.Info("flushed storm alert batch", "alert_id", a.ID, "occurrences", a.Occurrences)
 	}
 
+	if len(allFlushErrs) > 0 {
+		return errors.Join(allFlushErrs...)
+	}
 	return nil
 }

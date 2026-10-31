@@ -643,6 +643,11 @@ func (h *ReportBuilderHandlers) APITriggerSchedule(w http.ResponseWriter, r *htt
 			writeReportBuilderError(w, http.StatusNotFound, "schedule not found")
 			return
 		}
+		if res != nil {
+			// Report generated successfully, but delivery transport is unconfigured or failed.
+			writeReportBuilderJSON(w, http.StatusOK, res)
+			return
+		}
 		writeReportBuilderError(w, http.StatusInternalServerError, "failed to trigger schedule: "+err.Error())
 		return
 	}
