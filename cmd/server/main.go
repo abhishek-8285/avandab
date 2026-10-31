@@ -621,7 +621,7 @@ func main() {
 	// DPDP privacy slice (consent ledger lives on Users; breach/recert/dsar here).
 	privacySvc := privacyApp.NewPrivacyService(database, idGen)
 	recertSvc := privacyApp.NewAccessReviewService(database, idGen)
-	dsarSvc := privacyApp.NewDSARService(database, idGen)
+	dsarSvc := privacyApp.NewDSARService(database, idGen, services.Files.BlobStore())
 	dsarAPI := privacyAPIHandlers.NewDSARHandlers(dsarSvc)
 
 	// Commercial enforcement: READ_ONLY/CLOSED orgs cannot create bookings.

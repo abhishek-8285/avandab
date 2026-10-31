@@ -154,7 +154,14 @@ func NewTracer(sampleLimit int) *Tracer {
 // Default is the package-level tracer instance used application-wide.
 var Default = NewTracer(1000)
 
+// breachThrottleWindow caps warning volume for one (operation, threshold) pair
+// so a latency incident cannot turn into a log storm.
+const breachThrottleWindow = time.Minute
+
 func defaultBreachHandler(opName string, dur time.Duration, threshold time.Duration, span *Span) {
+	if !breachWarnAllowed(opName, threshold) {
+		return
+	}
 	traceID := ""
 	if span != nil {
 		traceID = span.TraceID
@@ -165,6 +172,23 @@ func defaultBreachHandler(opName string, dur time.Duration, threshold time.Durat
 		slog.Duration("p95_sla_threshold", threshold),
 		slog.String("trace_id", traceID),
 	)
+}
+
+// breachWarnAllowed reports whether a fresh warning is due for the pair and
+// records the window start atomically.
+func breachWarnAllowed(opName string, threshold time.Duration) bool {
+	key := opName + "|" + threshold.String()
+	t := now()
+	breachLog.Lock()
+	defer breachLog.Unlock()
+	if breachLog.last == nil {
+		breachLog.last = make(map[string]time.Time)
+	}
+	if last, ok := breachLog.last[key]; ok && t.Sub(last) < breachThrottleWindow {
+		return false
+	}
+	breachLog.last[key] = t
+	return true
 }
 
 // SetSLAThreshold configures a p95 SLA duration threshold for an operation.
@@ -383,3 +407,11 @@ func GenerateID(byteLen int) string {
 	}
 	return hex.EncodeToString(b)
 }
+
+// now is the throttle clock; tests swap it to advance time deterministically.
+var now = time.Now
+
+var breachLog = struct {
+	sync.Mutex
+	last map[string]time.Time
+}{last: make(map[string]time.Time)}

@@ -22,6 +22,9 @@ type FileService struct {
 	storage storage.Store
 }
 
+// BlobStore returns the configured storage backend (nil when unset).
+func (s *FileService) BlobStore() storage.Store { return s.storage }
+
 // UploadResult contains information about an uploaded file.
 type UploadResult struct {
 	File domain.File

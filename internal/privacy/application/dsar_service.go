@@ -5,11 +5,14 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
+	"strings"
 	"time"
 
 	"transport-app/internal/privacy"
 	"transport-app/internal/repository"
 	"transport-app/internal/shared/ports"
+	"transport-app/internal/storage"
 )
 
 // DPDP Data Principal Rights (Digital Personal Data Protection Act, 2023 §11–15):
@@ -167,6 +170,8 @@ type ErasureResult struct {
 	RequestID             string    `json:"request_id"`
 	CompletedAt           time.Time `json:"completed_at"`
 	DocumentsDeleted      int64     `json:"documents_deleted"`
+	BlobsDeleted          int64     `json:"blobs_deleted"`
+	BlobsPending          int64     `json:"blobs_pending"`
 	ScrubbedFields        []string  `json:"scrubbed_fields"`
 	RetainedRecordsNotice string    `json:"retained_records_notice"`
 }
@@ -175,11 +180,17 @@ type ErasureResult struct {
 type DSARService struct {
 	db    *sql.DB
 	idGen ports.IDGenerator
+	blobs storage.Store
 }
 
-// NewDSARService wires the DSAR engine.
-func NewDSARService(db *sql.DB, idGen ports.IDGenerator) *DSARService {
-	return &DSARService{db: db, idGen: idGen}
+// NewDSARService wires the DSAR engine. blobs is optional (nil-safe): when
+// present, KYC document blobs are deleted best-effort after erasure commits.
+func NewDSARService(db *sql.DB, idGen ports.IDGenerator, blobs ...storage.Store) *DSARService {
+	s := &DSARService{db: db, idGen: idGen}
+	if len(blobs) > 0 {
+		s.blobs = blobs[0]
+	}
+	return s
 }
 
 // DefaultRetentionSchedule returns statutory retention policies.
@@ -561,21 +572,15 @@ func (s *DSARService) EraseDataPrincipal(ctx context.Context, tenantID, targetUs
 		UPDATE user_consents SET withdrawn_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
 		WHERE tenant_id = $1 AND user_id = $2`, tenantID, targetUserID)
 
-	// 4b. Delete KYC document scans (Aadhaar/PAN/licence images). This must run
-	// before step 5: the driver scrub below nulls the email/phone values that the
-	// matched-driver subquery keys on.
-	docsRes, err := tx.ExecContext(ctx, `
-		DELETE FROM driver_documents
-		WHERE driver_id IN (
-			SELECT id FROM drivers WHERE tenant_id = $1 AND (id = $2 OR driver_id = $2 OR (email != '' AND email = $3) OR (phone != '' AND phone = $4))
-		)`, tenantID, targetUserID, userEmail, cleanPhone)
+	// 4b. Delete KYC document scans (Aadhaar/PAN/licence images) and capture
+	// their file_url values so the blobs can be removed after the transaction
+	// commits. This must run before step 5: the driver scrub below nulls the
+	// email/phone values that the matched-driver subquery keys on.
+	docURLs, err := eraseKYCDocuments(ctx, tx, tenantID, targetUserID, userEmail, cleanPhone)
 	if err != nil {
-		return nil, fmt.Errorf("could not delete KYC document scans: %w", err)
+		return nil, err
 	}
-	docsDeleted, err := docsRes.RowsAffected()
-	if err != nil {
-		return nil, fmt.Errorf("could not count deleted KYC document scans: %w", err)
-	}
+	docsDeleted := int64(len(docURLs))
 
 	// 5. If driver record exists, scrub driver PII
 	_, err = tx.ExecContext(ctx, `
@@ -629,18 +634,102 @@ func (s *DSARService) EraseDataPrincipal(ctx context.Context, tenantID, targetUs
 		return nil, err
 	}
 
+	// 9. Remove the KYC blobs only after the DB erasure is durable. Blob deletion
+	// is best-effort and idempotent: a failed/missing object must never undo the
+	// committed PII erasure, it is reported for manual retry instead.
+	blobsDeleted, blobsPending := s.deleteKYCBlobs(ctx, docURLs)
+
 	return &ErasureResult{
 		Success:          true,
 		UserID:           targetUserID,
 		RequestID:        dsarID,
 		CompletedAt:      time.Now().UTC(),
 		DocumentsDeleted: docsDeleted,
+		BlobsDeleted:     blobsDeleted,
+		BlobsPending:     blobsPending,
 		ScrubbedFields: []string{
 			"name", "email", "phone", "password_hash", "address",
 			"emergency_contacts", "license_number", "aadhaar", "pan", "bank_details", "sessions", "kyc_documents",
 		},
 		RetainedRecordsNotice: "Statutory transaction and tax ledgers (CGST Act Section 36 / Income Tax Act 8-year retention rule) are retained in an immutable, anonymized state for fiscal compliance.",
 	}, nil
+}
+
+// eraseKYCDocuments deletes the matched driver KYC rows inside tx and returns
+// the file_url values of the deleted rows.
+func eraseKYCDocuments(ctx context.Context, tx *sql.Tx, tenantID, targetUserID, userEmail, cleanPhone string) ([]string, error) {
+	rows, err := tx.QueryContext(ctx, `
+		DELETE FROM driver_documents
+		WHERE driver_id IN (
+			SELECT id FROM drivers WHERE tenant_id = $1 AND (id = $2 OR driver_id = $2 OR (email != '' AND email = $3) OR (phone != '' AND phone = $4))
+		) RETURNING file_url`, tenantID, targetUserID, userEmail, cleanPhone)
+	if err != nil {
+		return nil, fmt.Errorf("could not delete KYC document scans: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var urls []string
+	for rows.Next() {
+		var fileURL sql.NullString
+		if err := rows.Scan(&fileURL); err != nil {
+			return nil, fmt.Errorf("could not read deleted KYC document: %w", err)
+		}
+		if fileURL.Valid {
+			urls = append(urls, fileURL.String)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("could not delete KYC document scans: %w", err)
+	}
+	return urls, nil
+}
+
+// blobStoreKey maps a driver_documents.file_url onto a storage key. Only the
+// local "/uploads/<key>" form is understood; full/S3 URLs have no configured
+// base prefix to strip, so they are reported as unknown rather than guessed.
+func blobStoreKey(fileURL string) (string, bool) {
+	const uploadsPrefix = "/uploads/"
+	if !strings.HasPrefix(fileURL, uploadsPrefix) {
+		return "", false
+	}
+	key := strings.TrimPrefix(fileURL, uploadsPrefix)
+	if key == "" {
+		return "", false
+	}
+	return key, true
+}
+
+// deleteKYCBlobs removes erased KYC blobs best-effort. Missing or failed blobs
+// count as pending so operators can retry them manually; they never fail erasure.
+func (s *DSARService) deleteKYCBlobs(ctx context.Context, fileURLs []string) (deleted, pending int64) {
+	if s.blobs == nil {
+		if len(fileURLs) > 0 {
+			slog.Warn("dsar: no blob store configured; KYC blobs left for manual removal", "count", len(fileURLs))
+		}
+		return 0, int64(len(fileURLs))
+	}
+	for _, fileURL := range fileURLs {
+		key, ok := blobStoreKey(fileURL)
+		if !ok {
+			slog.Warn("dsar: unrecognised KYC file_url; blob left for manual review", "file_url", fileURL)
+			pending++
+			continue
+		}
+		// Probe before deleting: Store.Delete treats a missing key as success,
+		// which would misreport an already-vanished blob as deleted.
+		f, err := s.blobs.Open(ctx, key)
+		if err == nil {
+			_ = f.Close()
+			err = s.blobs.Delete(ctx, key)
+		}
+		if err != nil {
+			slog.Warn("dsar: KYC blob not deleted; left for manual review", "key", key, "error", err)
+			pending++
+			continue
+		}
+		deleted++
+	}
+	return deleted, pending
 }
 
 // ListDSARRequests returns the tenant's DSAR audit ledger history.

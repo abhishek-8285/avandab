@@ -3,6 +3,9 @@ package application
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -10,6 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"transport-app/internal/shared/id"
+	"transport-app/internal/storage"
 )
 
 func newDSARService(t *testing.T, db *sql.DB) *DSARService {
@@ -257,6 +261,116 @@ func TestDSARService_Erase_EndToEnd(t *testing.T) {
 	err = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM audit_logs WHERE tenant_id = $1 AND action = 'privacy.dsar.erasure'`, tenantID).Scan(&audCount)
 	require.NoError(t, err)
 	assert.Equal(t, 1, audCount, "Erasure must be recorded in audit_logs")
+}
+
+// dsarStoreCfg adapts a temp directory to storage.Settings for the local driver.
+type dsarStoreCfg struct{ dir string }
+
+func (c dsarStoreCfg) GetDriver() string   { return storage.DriverLocal }
+func (c dsarStoreCfg) GetLocalDir() string { return c.dir }
+
+// seedErasurePrincipal seeds a user, the driver record reachable from it, and
+// one KYC document row per fileURL.
+func seedErasurePrincipal(t *testing.T, db *sql.DB, tenantID, userID string, fileURLs []string) string {
+	t.Helper()
+	ctx := context.Background()
+	seedPrivacyTenant(t, db, tenantID)
+
+	_, err := db.ExecContext(ctx, `
+		INSERT INTO users (id, tenant_id, name, email, phone, password_hash, role_id, status)
+		VALUES ($1, $2, 'Blob Test', 'blob.test@example.com', '9000000001', 'hash', 2, 'active')`,
+		userID, tenantID)
+	require.NoError(t, err)
+
+	driverID := userID + "_drv"
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO drivers (id, tenant_id, driver_id, first_name, last_name, phone, email, license_number, status)
+		VALUES ($1, $2, $3, 'Blob', 'Test', '9000000001', 'blob.test@example.com', 'DL-TEST-1', 'available')`,
+		driverID, tenantID, driverID)
+	require.NoError(t, err)
+
+	for i, u := range fileURLs {
+		_, err = db.ExecContext(ctx, `
+			INSERT INTO driver_documents (id, driver_id, doc_type, file_url, status)
+			VALUES ($1, $2, 'other', $3, 'verified')`, fmt.Sprintf("%s_doc_%d", userID, i), driverID, u)
+		require.NoError(t, err)
+	}
+	return driverID
+}
+
+func TestDSARService_Erase_DeletesKYCBlobAfterCommit(t *testing.T) {
+	ctx := context.Background()
+	db := newPrivacyTestDB(t)
+
+	dir := t.TempDir()
+	store, err := storage.New(dsarStoreCfg{dir: dir})
+	require.NoError(t, err)
+
+	const key = "driver_license/kyc.pdf"
+	blobPath := filepath.Join(dir, key)
+	require.NoError(t, os.MkdirAll(filepath.Dir(blobPath), 0o750))
+	require.NoError(t, os.WriteFile(blobPath, []byte("%PDF-1.4 kyc scan"), 0o600))
+
+	const tenantID, userID = "tenant_blob_1", "usr_blob_1"
+	driverID := seedErasurePrincipal(t, db, tenantID, userID, []string{"/uploads/" + key})
+
+	svc := NewDSARService(db, id.NewUUIDGenerator(), store)
+	result, err := svc.EraseDataPrincipal(ctx, tenantID, userID, userID)
+	require.NoError(t, err)
+
+	var docCount int
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT COUNT(*) FROM driver_documents WHERE driver_id = $1`, driverID).Scan(&docCount))
+	assert.Equal(t, 0, docCount, "KYC document row must be deleted")
+
+	_, statErr := os.Stat(blobPath)
+	assert.True(t, os.IsNotExist(statErr), "KYC blob must be deleted after the erasure transaction commits")
+	assert.EqualValues(t, 1, result.BlobsDeleted)
+	assert.EqualValues(t, 0, result.BlobsPending)
+}
+
+func TestDSARService_Erase_MissingBlobStillSucceeds(t *testing.T) {
+	ctx := context.Background()
+	db := newPrivacyTestDB(t)
+
+	dir := t.TempDir()
+	store, err := storage.New(dsarStoreCfg{dir: dir})
+	require.NoError(t, err)
+
+	const tenantID, userID = "tenant_blob_2", "usr_blob_2"
+	driverID := seedErasurePrincipal(t, db, tenantID, userID, []string{"/uploads/driver_license/already-gone.pdf"})
+
+	svc := NewDSARService(db, id.NewUUIDGenerator(), store)
+	result, err := svc.EraseDataPrincipal(ctx, tenantID, userID, userID)
+	require.NoError(t, err, "a missing blob must not fail or roll back erasure")
+	assert.True(t, result.Success)
+
+	var docCount int
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT COUNT(*) FROM driver_documents WHERE driver_id = $1`, driverID).Scan(&docCount))
+	assert.Equal(t, 0, docCount, "DB erasure must commit even when the blob is already missing")
+	assert.EqualValues(t, 0, result.BlobsDeleted)
+	assert.EqualValues(t, 1, result.BlobsPending, "missing blob must be reported for manual review")
+}
+
+func TestDSARService_Erase_NoBlobStoreIsNilSafe(t *testing.T) {
+	ctx := context.Background()
+	db := newPrivacyTestDB(t)
+
+	const tenantID, userID = "tenant_blob_3", "usr_blob_3"
+	driverID := seedErasurePrincipal(t, db, tenantID, userID, []string{
+		"/uploads/driver_license/a.pdf",
+		"s3://kyc/b.jpg",
+	})
+
+	svc := NewDSARService(db, id.NewUUIDGenerator())
+	result, err := svc.EraseDataPrincipal(ctx, tenantID, userID, userID)
+	require.NoError(t, err)
+	assert.True(t, result.Success)
+
+	var docCount int
+	require.NoError(t, db.QueryRowContext(ctx, `SELECT COUNT(*) FROM driver_documents WHERE driver_id = $1`, driverID).Scan(&docCount))
+	assert.Equal(t, 0, docCount)
+	assert.EqualValues(t, 0, result.BlobsDeleted)
+	assert.EqualValues(t, 2, result.BlobsPending, "without a store every KYC blob is left pending")
 }
 
 func TestDSARService_FailClosed(t *testing.T) {

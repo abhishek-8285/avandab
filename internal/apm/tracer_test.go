@@ -3,6 +3,7 @@ package apm
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -232,5 +233,93 @@ func TestTracer_ConcurrencySafe(t *testing.T) {
 	all := tr.AllStats()
 	if len(all) != 1 {
 		t.Fatalf("expected 1 operation family, got %d", len(all))
+	}
+}
+
+// countingLogHandler counts slog records so throttle tests assert on emissions.
+type countingLogHandler struct {
+	mu sync.Mutex
+	n  int
+}
+
+func (h *countingLogHandler) Enabled(context.Context, slog.Level) bool { return true }
+
+func (h *countingLogHandler) Handle(context.Context, slog.Record) error {
+	h.mu.Lock()
+	h.n++
+	h.mu.Unlock()
+	return nil
+}
+
+func (h *countingLogHandler) WithAttrs([]slog.Attr) slog.Handler { return h }
+func (h *countingLogHandler) WithGroup(string) slog.Handler      { return h }
+
+func (h *countingLogHandler) count() int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.n
+}
+
+// freezeBreachClock captures breach logs and pins the handler clock to start.
+// Returns the log counter and a pointer so a test can advance time.
+func freezeBreachClock(t *testing.T, start time.Time) (*countingLogHandler, *time.Time) {
+	t.Helper()
+	h := &countingLogHandler{}
+	prevLogger := slog.Default()
+	slog.SetDefault(slog.New(h))
+
+	cur := start
+	prevNow := now
+	now = func() time.Time { return cur }
+
+	breachLog.Lock()
+	breachLog.last = map[string]time.Time{}
+	breachLog.Unlock()
+
+	t.Cleanup(func() {
+		slog.SetDefault(prevLogger)
+		now = prevNow
+	})
+	return h, &cur
+}
+
+func TestDefaultBreachHandler_ThrottlesBurstToOnePerWindow(t *testing.T) {
+	h, cur := freezeBreachClock(t, time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
+
+	for i := 0; i < 50; i++ {
+		defaultBreachHandler("http.request", 900*time.Millisecond, 500*time.Millisecond, &Span{TraceID: "trace"})
+	}
+	if got := h.count(); got != 1 {
+		t.Fatalf("expected 1 warning for 50 breaches inside the window, got %d", got)
+	}
+
+	// Still inside the 1-minute window.
+	*cur = cur.Add(59 * time.Second)
+	defaultBreachHandler("http.request", 900*time.Millisecond, 500*time.Millisecond, &Span{TraceID: "trace"})
+	if got := h.count(); got != 1 {
+		t.Fatalf("expected warning suppressed 59s after the first, got %d", got)
+	}
+
+	// Advance past the window: one more warning.
+	*cur = cur.Add(2 * time.Second)
+	defaultBreachHandler("http.request", 900*time.Millisecond, 500*time.Millisecond, &Span{TraceID: "trace"})
+	if got := h.count(); got != 2 {
+		t.Fatalf("expected a second warning after the window elapsed, got %d", got)
+	}
+}
+
+func TestDefaultBreachHandler_ThrottlesPerOperationAndThreshold(t *testing.T) {
+	h, _ := freezeBreachClock(t, time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC))
+
+	defaultBreachHandler("http.request", 900*time.Millisecond, 500*time.Millisecond, nil)
+	defaultBreachHandler("telemetry.batch_ingest", 3*time.Second, 2*time.Second, nil)
+	if got := h.count(); got != 2 {
+		t.Fatalf("expected distinct operations to throttle independently, got %d warnings", got)
+	}
+
+	// Same operation, different threshold is a distinct pair.
+	defaultBreachHandler("http.request", 2*time.Second, 1500*time.Millisecond, nil)
+	if got := h.count(); got != 3 {
+		t.Fatalf("expected a distinct threshold to warn independently, got %d warnings", got)
 	}
 }
