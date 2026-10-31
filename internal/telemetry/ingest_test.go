@@ -4,6 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -21,10 +24,58 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// newTestIngestorDB creates an in-memory SQLite DB with all migrations applied
-// and returns it with a fresh goose dialect set.
+func TestMain(m *testing.M) {
+	tmpDir, err := os.MkdirTemp("", "telem_template_*")
+	if err == nil {
+		templatePath := filepath.Join(tmpDir, "template.db")
+		db, openErr := sql.Open("sqlite", "file:"+templatePath+"?_pragma=journal_mode(WAL)")
+		if openErr == nil {
+			_ = goose.SetDialect("sqlite")
+			if upErr := goose.Up(db, "../../db/migrations"); upErr == nil {
+				_, _ = db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('1','Default','default'), ('2','Tenant 2','tenant-2'), ('7','Tenant 7','tenant-7'), ('9','Tenant 9','tenant-9'), ('other-tenant','Other Tenant','other-tenant'), ('tenant-1','Test Tenant 1','tenant-1'), ('tenant-a','Tenant A','tenant-a'), ('tenant-b','Tenant B','tenant-b')`)
+				_, _ = db.Exec("PRAGMA wal_checkpoint(TRUNCATE)")
+				_ = db.Close()
+				_ = os.Setenv("TEST_TELEMETRY_TEMPLATE_DB", templatePath)
+			} else {
+				_ = db.Close()
+			}
+		}
+	}
+	code := m.Run()
+	if tmpDir != "" {
+		_ = os.RemoveAll(tmpDir)
+	}
+	os.Exit(code)
+}
+
+// newTestIngestorDB creates a SQLite DB with all migrations applied.
+// When TEST_TELEMETRY_TEMPLATE_DB is available (initialized once via TestMain),
+// it copies the pre-migrated database into t.TempDir() in milliseconds,
+// avoiding repeated 179-migration overhead during race-detector test runs.
 func newTestIngestorDB(t testing.TB) *sql.DB {
 	t.Helper()
+	templatePath := os.Getenv("TEST_TELEMETRY_TEMPLATE_DB")
+	if templatePath != "" {
+		targetPath := filepath.Join(t.TempDir(), fmt.Sprintf("test_telem_%s_%d.db", strings.ReplaceAll(t.Name(), "/", "_"), time.Now().UnixNano()))
+		src, err := os.Open(templatePath)
+		if err == nil {
+			dst, err := os.Create(targetPath)
+			if err == nil {
+				_, copyErr := io.Copy(dst, src)
+				_ = dst.Close()
+				_ = src.Close()
+				if copyErr == nil {
+					db, err := sql.Open("sqlite", "file:"+targetPath+"?_pragma=journal_mode(WAL)")
+					require.NoError(t, err)
+					t.Cleanup(func() { _ = db.Close() })
+					return db
+				}
+			} else {
+				_ = src.Close()
+			}
+		}
+	}
+
 	name := fmt.Sprintf("test_telem_%s_%d", strings.ReplaceAll(t.Name(), "/", "_"), time.Now().UnixNano())
 	db, err := sql.Open("sqlite", "file:"+name+"?mode=memory&cache=shared&_pragma=journal_mode(WAL)")
 	require.NoError(t, err)

@@ -39,6 +39,8 @@ import { ComplianceBanner } from './src/components/ComplianceBanner';
 import { PaisaScreen } from './src/components/PaisaScreen';
 import { useLanguageStore } from './src/stores/languageStore';
 import { NotificationService } from './src/services/notificationService';
+import { CrashReporter } from './src/services/crashReporter';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { t } from './src/i18n';
 import { QRDemoScreen } from './src/components/QRDemoScreen';
 import { useAuthStore } from './src/stores/authStore';
@@ -233,6 +235,8 @@ export default function App() {
   const [splashDone, setSplashDone] = useState(false);
 
   useEffect(() => {
+    CrashReporter.init();
+    Analytics.init().catch(() => {});
     loadSession();
     useLanguageStore.getState().loadLanguage();
     OfflineQueue.init().catch(() => {});
@@ -254,18 +258,20 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider style={{ backgroundColor: '#075e54' }}>
-      <QueryClientProvider client={queryClient}>
-        <StatusBar barStyle="light-content" backgroundColor="#075e54" />
-        <NavigationContainer theme={navTheme}>
-          {isAuthenticated ? (
-            <DriverStack />
-          ) : (
-            <AuthStack />
-          )}
-        </NavigationContainer>
-      </QueryClientProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider style={{ backgroundColor: '#075e54' }}>
+        <QueryClientProvider client={queryClient}>
+          <StatusBar barStyle="light-content" backgroundColor="#075e54" />
+          <NavigationContainer theme={navTheme}>
+            {isAuthenticated ? (
+              <DriverStack />
+            ) : (
+              <AuthStack />
+            )}
+          </NavigationContainer>
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
 

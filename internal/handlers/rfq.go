@@ -44,12 +44,10 @@ func (h *RFQHandlers) RegisterAPIRoutes(r chi.Router) {
 	})
 
 	// Load Board Counter-Offer Negotiation routes (reuses load board permissions)
-	r.Route("/api/v1/loadboard", func(r chi.Router) {
-		r.With(middleware.RequirePermission(h.AuthSrv, "loadboard", "write")).Post("/listings/{id}/bids/{bidId}/counter", h.APISubmitLoadBoardCounter)
-		r.With(middleware.RequirePermission(h.AuthSrv, "loadboard", "read")).Get("/listings/{id}/bids/{bidId}/counters", h.APIListLoadBoardCounters)
-		r.With(middleware.RequirePermission(h.AuthSrv, "loadboard", "write")).Post("/counters/{counterId}/accept", h.APIAcceptCounterOffer)
-		r.With(middleware.RequirePermission(h.AuthSrv, "loadboard", "write")).Post("/counters/{counterId}/reject", h.APIRejectCounterOffer)
-	})
+	r.With(middleware.RequirePermission(h.AuthSrv, "loadboard", "write")).Post("/api/v1/loadboard/listings/{id}/bids/{bidId}/counter", h.APISubmitLoadBoardCounter)
+	r.With(middleware.RequirePermission(h.AuthSrv, "loadboard", "read")).Get("/api/v1/loadboard/listings/{id}/bids/{bidId}/counters", h.APIListLoadBoardCounters)
+	r.With(middleware.RequirePermission(h.AuthSrv, "loadboard", "write")).Post("/api/v1/loadboard/counters/{counterId}/accept", h.APIAcceptCounterOffer)
+	r.With(middleware.RequirePermission(h.AuthSrv, "loadboard", "write")).Post("/api/v1/loadboard/counters/{counterId}/reject", h.APIRejectCounterOffer)
 }
 
 // Routes mounts the RFQ Lane Bidding web UI handlers at /rfq.

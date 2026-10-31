@@ -33,7 +33,7 @@ func (r *Repository) GetTripAuditData(ctx context.Context, tenantID, tripID stri
 	query := `SELECT 
 		t.id,
 		COALESCE(t.vehicle_id, ''),
-		COALESCE(v.plate_number, ''),
+		COALESCE(v.registration_number, ''),
 		COALESCE(t.route_id, ''),
 		COALESCE(r.distance, 0.0),
 		COALESCE(r.standard_fare, 0.0),

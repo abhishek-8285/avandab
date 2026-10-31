@@ -193,10 +193,8 @@ type failingProvider struct{ name string }
 
 func (f *failingProvider) Name() string { return f.name }
 func (f *failingProvider) Send(ctx context.Context, msg channels.Message) error {
-	return errFlushDown
+	return errors.New("channel down")
 }
-
-var errFlushDown = errors.New("channel down")
 
 // P0: a channel that cannot deliver must surface, not be swallowed as if the
 // storm batch was delivered.

@@ -31,8 +31,8 @@ import (
 //
 // Set SOAK_CYCLES=N (e.g. SOAK_CYCLES=5) to run multiple full-fleet 10k cycles.
 func TestIngestSoak_10kScale(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping 10k soak benchmark in short mode")
+	if testing.Short() || raceDetectorEnabled {
+		t.Skip("skipping 10k soak benchmark in short mode or under race detector")
 	}
 
 	db := newTestIngestorDB(t)

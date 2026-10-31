@@ -253,6 +253,15 @@ func serveLLMs(w http.ResponseWriter) {
 }
 
 func main() {
+	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-version" || os.Args[1] == "version") {
+		v := Version
+		if v == "" {
+			v = "dev"
+		}
+		fmt.Printf("avandab %s\n", v)
+		return
+	}
+
 	// Load .env (if present) before config so file-based config takes effect.
 	// Real env vars take precedence; missing file is not an error.
 	if err := godotenv.Load(); err != nil {
@@ -318,7 +327,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	provider, err := goose.NewProvider(appdb.GooseDialect(cfg.Database.Driver), database, migrations)
+	provider, err := goose.NewProvider(appdb.GooseDialect(cfg.Database.Driver), database, migrations, goose.WithAllowOutofOrder(true))
 	if err != nil {
 		logger.Error("Failed to create migration provider", "error", err)
 		os.Exit(1)

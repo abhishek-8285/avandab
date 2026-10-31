@@ -216,3 +216,139 @@ func TestFreightAudit_ApprovalDisputeAndSettlementLifecycle(t *testing.T) {
 func strPtr(s string) *string {
 	return &s
 }
+
+func TestFreightAudit_EnumsAndValidation(t *testing.T) {
+	// 1. BillingBasis.IsValid
+	assert.True(t, freightaudit.BillingBasisPerKM.IsValid())
+	assert.True(t, freightaudit.BillingBasisPerKG.IsValid())
+	assert.True(t, freightaudit.BillingBasisPerTon.IsValid())
+	assert.True(t, freightaudit.BillingBasisPerTonKM.IsValid())
+	assert.True(t, freightaudit.BillingBasisFlat.IsValid())
+	assert.False(t, freightaudit.BillingBasis("UNKNOWN").IsValid())
+
+	// 2. AuditStatus.IsValid
+	assert.True(t, freightaudit.AuditStatusPending.IsValid())
+	assert.True(t, freightaudit.AuditStatusVerified.IsValid())
+	assert.True(t, freightaudit.AuditStatusDiscrepancyFlagged.IsValid())
+	assert.True(t, freightaudit.AuditStatusDeductionApproved.IsValid())
+	assert.True(t, freightaudit.AuditStatusDisputed.IsValid())
+	assert.True(t, freightaudit.AuditStatusSettled.IsValid())
+	assert.False(t, freightaudit.AuditStatus("UNKNOWN").IsValid())
+
+	// 3. CreateRateCardInput.Validate
+	inValidRC := freightaudit.CreateRateCardInput{
+		ContractNumber: "RC-001",
+		Name:           "Valid RC",
+		BillingBasis:   freightaudit.BillingBasisPerKM,
+		Rate:           45.0,
+		MinCharge:      500.0,
+	}
+	assert.NoError(t, inValidRC.Validate())
+
+	emptyContract := inValidRC
+	emptyContract.ContractNumber = ""
+	assert.Error(t, emptyContract.Validate())
+
+	emptyName := inValidRC
+	emptyName.Name = ""
+	assert.Error(t, emptyName.Validate())
+
+	badBasis := inValidRC
+	badBasis.BillingBasis = "HOURLY"
+	assert.Error(t, badBasis.Validate())
+
+	negRate := inValidRC
+	negRate.Rate = -10
+	assert.Error(t, negRate.Validate())
+
+	negMinCharge := inValidRC
+	negMinCharge.MinCharge = -50
+	assert.Error(t, negMinCharge.Validate())
+
+	// 4. CreateAuditInput.Validate
+	inValidAudit := freightaudit.CreateAuditInput{
+		BilledTotal: 1000.0,
+	}
+	assert.NoError(t, inValidAudit.Validate())
+
+	negTotal := inValidAudit
+	negTotal.BilledTotal = -10.0
+	assert.Error(t, negTotal.Validate())
+}
+
+func TestFreightAudit_FindMatchingAndListAudits(t *testing.T) {
+	db := setupTestDB(t)
+	defer db.Close()
+
+	repo := freightaudit.NewRepository(db)
+	svc := freightaudit.NewService(repo)
+	ctx := context.Background()
+
+	// 1. Create a Rate Card with route and vehicle
+	rc, err := svc.CreateRateCard(ctx, "t-fa-1", freightaudit.CreateRateCardInput{
+		ContractNumber: "RC-MATCH-01",
+		Name:           "Route Specific Rate",
+		RouteID:        strPtr("route-del-mum"),
+		VehicleType:    "32FT",
+		BillingBasis:   freightaudit.BillingBasisPerKM,
+		Rate:           50.0,
+	})
+	require.NoError(t, err)
+
+	// 2. FindMatchingRateCard
+	matched, err := repo.FindMatchingRateCard(ctx, "t-fa-1", "route-del-mum", "32FT")
+	require.NoError(t, err)
+	assert.Equal(t, rc.ID, matched.ID)
+
+	// Not found in tenant 2
+	_, err = repo.FindMatchingRateCard(ctx, "t-fa-2", "route-del-mum", "32FT")
+	assert.Error(t, err)
+
+	// 3. UpdateRateCard
+	newRate := 55.0
+	updated, err := svc.UpdateRateCard(ctx, "t-fa-1", rc.ID, freightaudit.UpdateRateCardInput{
+		Rate:     &newRate,
+		IsActive: boolPtr(true),
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 55.0, updated.Rate)
+
+	// 4. Create Audits and ListAudits
+	_, err = svc.CreateAudit(ctx, "t-fa-1", freightaudit.CreateAuditInput{
+		VendorName:        "Fast Delivery",
+		VehicleNumber:     "DL01A1000",
+		BilledTotal:       5000.0,
+		BilledDistanceKM:  100.0,
+		BilledRate:        50.0,
+		BilledBaseFreight: 5000.0,
+	})
+	require.NoError(t, err)
+
+	audits, total, err := svc.ListAudits(ctx, "t-fa-1", freightaudit.AuditFilter{
+		Search: "Fast Delivery",
+		Limit:  10,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, 1, total)
+	assert.Len(t, audits, 1)
+
+	// 5. GetTripAuditData
+	// Seed trip, vehicle, booking
+	_, err = db.Exec(`INSERT INTO vehicles (id, tenant_id, registration_number, vehicle_number, vehicle_type, capacity, insurance_expiry, fitness_expiry, permit_expiry) 
+		VALUES ('v-fa-1', 't-fa-1', 'DL01A1000', 'DL01A1000', 'truck', 10, '2028-01-01', '2028-01-01', '2028-01-01')`)
+	require.NoError(t, err)
+	_, err = db.Exec(`INSERT INTO trips (id, tenant_id, trip_number, status, vehicle_id, route_id, departure_time, start_odometer, close_odometer) 
+		VALUES ('tr-fa-1', 't-fa-1', 'TRIP-100', 'completed', 'v-fa-1', 'route-del-mum', datetime('now'), 1000.0, 1500.0)`)
+	require.NoError(t, err)
+
+	tripData, err := repo.GetTripAuditData(ctx, "t-fa-1", "tr-fa-1")
+	require.NoError(t, err)
+	assert.Equal(t, "tr-fa-1", tripData.TripID)
+	assert.Equal(t, "DL01A1000", tripData.VehicleNumber)
+	assert.Equal(t, 1000.0, *tripData.StartOdometer)
+	assert.Equal(t, 1500.0, *tripData.CloseOdometer)
+}
+
+func boolPtr(b bool) *bool {
+	return &b
+}
