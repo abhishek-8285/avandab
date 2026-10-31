@@ -71,7 +71,7 @@ func (r *Repository) GetReportByID(ctx context.Context, tenantID, id string) (*C
 		sort_by, sort_direction, chart_type, is_system,
 		created_by, created_at, updated_at
 	FROM custom_reports
-	WHERE id = ? AND (tenant_id = ? OR is_system = 1 OR is_system = TRUE)`
+	WHERE id = ? AND (tenant_id = ? OR is_system = TRUE)`
 
 	row := r.db.QueryRowContext(ctx, query, id, tenantID)
 
@@ -117,7 +117,7 @@ func (r *Repository) GetReportByID(ctx context.Context, tenantID, id string) (*C
 }
 
 func (r *Repository) ListReports(ctx context.Context, tenantID string, filter ListReportsFilter) ([]CustomReport, int, error) {
-	whereClauses := []string{"(tenant_id = ? OR is_system = 1 OR is_system = TRUE)"}
+	whereClauses := []string{"(tenant_id = ? OR is_system = TRUE)"}
 	args := []interface{}{tenantID}
 
 	if filter.Dataset != nil && *filter.Dataset != "" {
@@ -238,7 +238,7 @@ func (r *Repository) UpdateReport(ctx context.Context, report *CustomReport) err
 		sort_direction = ?,
 		chart_type = ?,
 		updated_at = ?
-	WHERE id = ? AND tenant_id = ? AND (is_system = 0 OR is_system = FALSE)`
+	WHERE id = ? AND tenant_id = ? AND is_system = FALSE`
 
 	res, err := r.db.ExecContext(ctx, query,
 		report.Name,
@@ -270,7 +270,7 @@ func (r *Repository) UpdateReport(ctx context.Context, report *CustomReport) err
 
 func (r *Repository) DeleteReport(ctx context.Context, tenantID, id string) error {
 	query := `DELETE FROM custom_reports 
-	WHERE id = ? AND tenant_id = ? AND (is_system = 0 OR is_system = FALSE)`
+	WHERE id = ? AND tenant_id = ? AND is_system = FALSE`
 
 	res, err := r.db.ExecContext(ctx, query, id, tenantID)
 	if err != nil {
@@ -555,7 +555,7 @@ func (r *Repository) ListDueSchedules(ctx context.Context, now time.Time, limit 
 		COALESCE(r.name, '') AS report_name
 	FROM report_schedules s
 	LEFT JOIN custom_reports r ON r.id = s.report_id
-	WHERE (s.is_active = 1 OR s.is_active = true)
+	WHERE s.is_active = TRUE
 	  AND s.next_run_at IS NOT NULL
 	  AND s.next_run_at <= ?
 	ORDER BY s.next_run_at ASC

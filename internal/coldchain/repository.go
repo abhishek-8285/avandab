@@ -561,7 +561,7 @@ func (r *SQLRepository) GetFleetMetrics(ctx context.Context, tenantID string) (*
 	query := `SELECT
 		COUNT(DISTINCT p.vehicle_id),
 		COALESCE(SUM(CASE WHEN t.reefer_mode = 'COOLING' AND t.reefer_power_status = 'ON' THEN 1 ELSE 0 END), 0),
-		COALESCE(SUM(CASE WHEN t.has_active_excursion = 1 THEN 1 ELSE 0 END), 0),
+		COALESCE(SUM(CASE WHEN t.has_active_excursion = TRUE THEN 1 ELSE 0 END), 0),
 		(SELECT COUNT(*) FROM reefer_temperature_excursions e WHERE e.tenant_id = $1 AND e.status IN ('OPEN', 'ACKNOWLEDGED')),
 		COALESCE(SUM(CASE WHEN t.door_status = 'OPEN' THEN 1 ELSE 0 END), 0),
 		COALESCE(AVG(t.zone1_temp_c), 0.0)

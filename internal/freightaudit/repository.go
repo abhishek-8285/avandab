@@ -163,7 +163,7 @@ func (r *Repository) FindMatchingRateCard(ctx context.Context, tenantID string, 
 		billing_basis, rate, min_charge, free_detention_hours, detention_rate_per_hour,
 		effective_from, effective_to, is_active, created_at, updated_at
 	FROM freight_rate_cards
-	WHERE tenant_id = $1 AND is_active = 1
+	WHERE tenant_id = $1 AND is_active = TRUE
 	  AND (route_id = $2 OR route_id IS NULL OR route_id = '')
 	  AND (vehicle_type = $3 OR vehicle_type = '')
 	ORDER BY 
@@ -222,7 +222,7 @@ func (r *Repository) ListRateCards(ctx context.Context, tenantID string, filter 
 		argIdx++
 	}
 	if filter.ActiveOnly {
-		conditions = append(conditions, "is_active = 1")
+		conditions = append(conditions, "is_active = TRUE")
 	}
 	if filter.Search != "" {
 		searchTerm := "%" + filter.Search + "%"

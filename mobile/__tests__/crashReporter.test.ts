@@ -2,11 +2,19 @@ import { CrashReporter } from '../src/services/crashReporter';
 import { Analytics } from '../src/services/analytics';
 
 describe('CrashReporter Service', () => {
+  const originalFetch = global.fetch;
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('initializes without throwing', () => {
+  afterEach(() => {
+    global.fetch = originalFetch;
+  });
+
+  it('initializes without throwing and handles subsequent init calls', () => {
+    expect(() => CrashReporter.init()).not.toThrow();
+    // Subsequent call hits early return
     expect(() => CrashReporter.init()).not.toThrow();
   });
 
@@ -43,6 +51,15 @@ describe('CrashReporter Service', () => {
       })
     );
 
+    trackSpy.mockRestore();
+  });
+
+  it('handles analytics track failure gracefully', () => {
+    const trackSpy = jest.spyOn(Analytics, 'track').mockImplementation(() => {
+      throw new Error('Analytics failed');
+    });
+
+    expect(() => CrashReporter.reportError(new Error('Test error'))).not.toThrow();
     trackSpy.mockRestore();
   });
 });
