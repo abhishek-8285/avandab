@@ -162,6 +162,24 @@ func TestDSARService_Erase_EndToEnd(t *testing.T) {
 		driverID, tenantID, userPhone, userEmail)
 	require.NoError(t, err)
 
+	// 5. Seed KYC document scans for the data principal's driver, plus one for an
+	// unrelated driver in the same tenant that must survive erasure.
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO driver_documents (id, driver_id, doc_type, file_url, status)
+		VALUES ('doc_erase_aadhaar', $1, 'aadhaar', 's3://kyc/aadhaar.jpg', 'verified'),
+		       ('doc_erase_pan', $1, 'pan', 's3://kyc/pan.jpg', 'verified')`, driverID)
+	require.NoError(t, err)
+
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO drivers (id, tenant_id, driver_id, first_name, last_name, phone, email, license_number, status)
+		VALUES ('drv_erase_other', $1, 'DRV003', 'Other', 'Driver', '9000000000', 'other.driver@example.com', 'DL-KA-1111111111', 'available')`,
+		tenantID)
+	require.NoError(t, err)
+	_, err = db.ExecContext(ctx, `
+		INSERT INTO driver_documents (id, driver_id, doc_type, file_url, status)
+		VALUES ('doc_other_driver', 'drv_erase_other', 'dl', 's3://kyc/other-dl.jpg', 'verified')`)
+	require.NoError(t, err)
+
 	// Act: Run EraseDataPrincipal
 	result, err := svc.EraseDataPrincipal(ctx, tenantID, userID, userID)
 	require.NoError(t, err)
@@ -212,6 +230,19 @@ func TestDSARService_Erase_EndToEnd(t *testing.T) {
 	assert.Equal(t, "[ERASED]", dLicense)
 	assert.False(t, dEmContact.Valid)
 	assert.Equal(t, "inactive", dStatus)
+
+	// Verify KYC document scans deleted for the data principal, count reported,
+	// and an unrelated driver's documents untouched.
+	var docCount int
+	err = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM driver_documents WHERE driver_id = $1`, driverID).Scan(&docCount)
+	require.NoError(t, err)
+	assert.Equal(t, 0, docCount, "KYC document scans must be deleted on DPDP erasure")
+	assert.Equal(t, int64(2), result.DocumentsDeleted, "ErasureResult must report deleted document count")
+
+	var otherDocCount int
+	err = db.QueryRowContext(ctx, `SELECT COUNT(*) FROM driver_documents WHERE driver_id = 'drv_erase_other'`).Scan(&otherDocCount)
+	require.NoError(t, err)
+	assert.Equal(t, 1, otherDocCount, "documents of unrelated drivers must be preserved")
 
 	// Verify privacy_dsar_requests record
 	var dsarType, dsarStatus string

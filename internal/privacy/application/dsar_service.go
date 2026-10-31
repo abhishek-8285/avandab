@@ -166,6 +166,7 @@ type ErasureResult struct {
 	UserID                string    `json:"user_id"`
 	RequestID             string    `json:"request_id"`
 	CompletedAt           time.Time `json:"completed_at"`
+	DocumentsDeleted      int64     `json:"documents_deleted"`
 	ScrubbedFields        []string  `json:"scrubbed_fields"`
 	RetainedRecordsNotice string    `json:"retained_records_notice"`
 }
@@ -560,6 +561,22 @@ func (s *DSARService) EraseDataPrincipal(ctx context.Context, tenantID, targetUs
 		UPDATE user_consents SET withdrawn_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
 		WHERE tenant_id = $1 AND user_id = $2`, tenantID, targetUserID)
 
+	// 4b. Delete KYC document scans (Aadhaar/PAN/licence images). This must run
+	// before step 5: the driver scrub below nulls the email/phone values that the
+	// matched-driver subquery keys on.
+	docsRes, err := tx.ExecContext(ctx, `
+		DELETE FROM driver_documents
+		WHERE driver_id IN (
+			SELECT id FROM drivers WHERE tenant_id = $1 AND (id = $2 OR driver_id = $2 OR (email != '' AND email = $3) OR (phone != '' AND phone = $4))
+		)`, tenantID, targetUserID, userEmail, cleanPhone)
+	if err != nil {
+		return nil, fmt.Errorf("could not delete KYC document scans: %w", err)
+	}
+	docsDeleted, err := docsRes.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("could not count deleted KYC document scans: %w", err)
+	}
+
 	// 5. If driver record exists, scrub driver PII
 	_, err = tx.ExecContext(ctx, `
 		UPDATE drivers SET
@@ -613,13 +630,14 @@ func (s *DSARService) EraseDataPrincipal(ctx context.Context, tenantID, targetUs
 	}
 
 	return &ErasureResult{
-		Success:     true,
-		UserID:      targetUserID,
-		RequestID:   dsarID,
-		CompletedAt: time.Now().UTC(),
+		Success:          true,
+		UserID:           targetUserID,
+		RequestID:        dsarID,
+		CompletedAt:      time.Now().UTC(),
+		DocumentsDeleted: docsDeleted,
 		ScrubbedFields: []string{
 			"name", "email", "phone", "password_hash", "address",
-			"emergency_contacts", "license_number", "aadhaar", "pan", "bank_details", "sessions",
+			"emergency_contacts", "license_number", "aadhaar", "pan", "bank_details", "sessions", "kyc_documents",
 		},
 		RetainedRecordsNotice: "Statutory transaction and tax ledgers (CGST Act Section 36 / Income Tax Act 8-year retention rule) are retained in an immutable, anonymized state for fiscal compliance.",
 	}, nil

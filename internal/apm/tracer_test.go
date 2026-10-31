@@ -135,6 +135,74 @@ func TestTracer_SLABreachAlert(t *testing.T) {
 	}
 }
 
+func TestTracer_DefaultSLAThresholds(t *testing.T) {
+	tr := NewTracer(10)
+
+	httpSLA, ok := tr.SLAThreshold("http.request")
+	if !ok || httpSLA != 500*time.Millisecond {
+		t.Fatalf("expected default http.request SLA 500ms, got %v (configured=%v)", httpSLA, ok)
+	}
+	ingestSLA, ok := tr.SLAThreshold("telemetry.batch_ingest")
+	if !ok || ingestSLA != 2*time.Second {
+		t.Fatalf("expected default telemetry.batch_ingest SLA 2s, got %v (configured=%v)", ingestSLA, ok)
+	}
+
+	// Explicit configuration must still win over the default.
+	tr.SetSLAThreshold("http.request", 50*time.Millisecond)
+	if got, _ := tr.SLAThreshold("http.request"); got != 50*time.Millisecond {
+		t.Fatalf("SetSLAThreshold override ignored: got %v", got)
+	}
+}
+
+func TestTracer_DefaultThresholdFiresBreachCallback(t *testing.T) {
+	tr := NewTracer(10)
+
+	type breach struct {
+		op        string
+		threshold time.Duration
+	}
+	fired := make(chan breach, 1)
+	tr.SetBreachHandler(func(opName string, dur time.Duration, threshold time.Duration, span *Span) {
+		select {
+		case fired <- breach{op: opName, threshold: threshold}:
+		default:
+		}
+	})
+
+	// No SetSLAThreshold call: the tracer's defaults alone must drive alerting.
+	// A span stamped 1s in the past deterministically exceeds the 500ms default.
+	_, span := tr.StartSpan(context.Background(), "http.request")
+	span.StartTime = time.Now().Add(-time.Second)
+	span.End()
+
+	select {
+	case b := <-fired:
+		if b.op != "http.request" {
+			t.Fatalf("expected breach op 'http.request', got %q", b.op)
+		}
+		if b.threshold != 500*time.Millisecond {
+			t.Fatalf("expected breach threshold 500ms, got %v", b.threshold)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("breach callback did not fire: no default SLA threshold configured for http.request")
+	}
+
+	// An explicit 1ns override must also fire, carrying the override value.
+	tr.SetSLAThreshold("http.request", time.Nanosecond)
+	_, s2 := tr.StartSpan(context.Background(), "http.request")
+	s2.StartTime = time.Now().Add(-time.Millisecond)
+	s2.End()
+
+	select {
+	case b := <-fired:
+		if b.threshold != time.Nanosecond {
+			t.Fatalf("expected breach threshold 1ns, got %v", b.threshold)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("breach callback did not fire for the 1ns override")
+	}
+}
+
 func TestTracer_ConcurrencySafe(t *testing.T) {
 	tr := NewTracer(500)
 	var wg sync.WaitGroup

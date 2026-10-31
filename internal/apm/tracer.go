@@ -120,6 +120,20 @@ type Tracer struct {
 	onBreach    BreachHandler
 }
 
+// Default p95 SLA thresholds for the operations instrumented in production.
+const (
+	defaultHTTPRequestSLA time.Duration = 500 * time.Millisecond
+	defaultIngestBatchSLA time.Duration = 2 * time.Second
+)
+
+// defaultSLAThresholds returns the production defaults; SetSLAThreshold overrides them.
+func defaultSLAThresholds() map[string]time.Duration {
+	return map[string]time.Duration{
+		"http.request":           defaultHTTPRequestSLA,
+		"telemetry.batch_ingest": defaultIngestBatchSLA,
+	}
+}
+
 // NewTracer constructs an APM tracer with an in-memory reservoir sample size.
 func NewTracer(sampleLimit int) *Tracer {
 	if sampleLimit <= 0 {
@@ -132,7 +146,7 @@ func NewTracer(sampleLimit int) *Tracer {
 		errors:      make(map[string]int64),
 		durSums:     make(map[string]time.Duration),
 		maxDurs:     make(map[string]time.Duration),
-		thresholds:  make(map[string]time.Duration),
+		thresholds:  defaultSLAThresholds(),
 		onBreach:    defaultBreachHandler,
 	}
 }
@@ -158,6 +172,14 @@ func (t *Tracer) SetSLAThreshold(opName string, threshold time.Duration) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.thresholds[opName] = threshold
+}
+
+// SLAThreshold reports the p95 threshold configured for an operation.
+func (t *Tracer) SLAThreshold(opName string) (time.Duration, bool) {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	threshold, ok := t.thresholds[opName]
+	return threshold, ok
 }
 
 // SetBreachHandler sets the callback for SLA breach alerts.
