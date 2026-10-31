@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -718,7 +719,7 @@ func (h *RFQHandlers) WebSubmitBid(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/rfq?rfq_id="+id, http.StatusSeeOther)
+	http.Redirect(w, r, safeRedirect(r, "/rfq?rfq_id="+url.QueryEscape(id), "/rfq"), http.StatusSeeOther) //nolint:gosec // G710: safeRedirect returns only same-origin paths (see redirect_test.go)
 }
 
 // WebAwardRFQ accepts a carrier bid and awards the contract.
@@ -738,7 +739,7 @@ func (h *RFQHandlers) WebAwardRFQ(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/rfq?rfq_id="+id, http.StatusSeeOther)
+	http.Redirect(w, r, safeRedirect(r, "/rfq?rfq_id="+url.QueryEscape(id), "/rfq"), http.StatusSeeOther) //nolint:gosec // G710: safeRedirect returns only same-origin paths (see redirect_test.go)
 }
 
 // WebSubmitCounterOffer submits a negotiated rate counter.
@@ -778,7 +779,7 @@ func (h *RFQHandlers) WebSubmitCounterOffer(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	http.Redirect(w, r, "/rfq?rfq_id="+id, http.StatusSeeOther)
+	http.Redirect(w, r, safeRedirect(r, "/rfq?rfq_id="+url.QueryEscape(id), "/rfq"), http.StatusSeeOther) //nolint:gosec // G710: safeRedirect returns only same-origin paths (see redirect_test.go)
 }
 
 // WebAcceptCounterOffer accepts a negotiated counter offer.

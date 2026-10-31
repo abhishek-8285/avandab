@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -146,7 +147,7 @@ func (h *BackhaulHandlers) WebCreateOffer(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	http.Redirect(w, r, "/backhaul?trip_id="+tripID+"&offered=1", http.StatusSeeOther)
+	http.Redirect(w, r, safeRedirect(r, "/backhaul?trip_id="+url.QueryEscape(tripID)+"&offered=1", "/backhaul"), http.StatusSeeOther) //nolint:gosec // G710: safeRedirect returns only same-origin paths (see redirect_test.go)
 }
 
 // RegisterAPIRoutes registers backhaul endpoints with Chi.

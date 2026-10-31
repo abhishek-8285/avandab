@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -715,7 +716,7 @@ func (h *CustomerPortalHandlers) Feedback(w http.ResponseWriter, r *http.Request
 	// For form posts, redirect to tracking page or show success
 	if strings.Contains(r.Header.Get("Accept"), "text/html") || ct == "application/x-www-form-urlencoded" || r.Method == http.MethodPost {
 		// If HTML form, redirect back to tracking with success flash via query param
-		http.Redirect(w, r, "/customer/tracking/"+tripID+"?feedback=success", http.StatusSeeOther)
+		http.Redirect(w, r, safeRedirect(r, "/customer/tracking/"+url.PathEscape(tripID)+"?feedback=success", "/customer/tracking"), http.StatusSeeOther) //nolint:gosec // G710: safeRedirect returns only same-origin paths (see redirect_test.go)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")

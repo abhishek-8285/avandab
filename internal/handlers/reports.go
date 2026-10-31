@@ -626,7 +626,7 @@ func (h *ReportBuilderHandlers) WebRunReport(w http.ResponseWriter, r *http.Requ
 		w.Header().Set("Content-Type", "text/csv")
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"report-%s.csv\"", id))
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(res.CSVData)
+		_, _ = w.Write(res.CSVData) //nolint:gosec // G705: raw CSV served as file attachment, not HTML
 		return
 	}
 
@@ -908,7 +908,7 @@ func (h *ReportBuilderHandlers) APIRunReport(w http.ResponseWriter, r *http.Requ
 		w.Header().Set("Content-Type", "text/csv")
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"report-%s.csv\"", id))
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(res.CSVData)
+		_, _ = w.Write(res.CSVData) //nolint:gosec // G705: raw CSV served as file attachment, not HTML
 		return
 	}
 
@@ -950,7 +950,7 @@ func (h *ReportBuilderHandlers) APIRunAdHoc(w http.ResponseWriter, r *http.Reque
 		w.Header().Set("Content-Type", "text/csv")
 		w.Header().Set("Content-Disposition", "attachment; filename=\"adhoc-report.csv\"")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write(res.CSVData)
+		_, _ = w.Write(res.CSVData) //nolint:gosec // G705: raw CSV served as file attachment, not HTML
 		return
 	}
 
