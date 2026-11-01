@@ -807,7 +807,7 @@ func (h *InvoiceHandlers) AddLineItem(w http.ResponseWriter, r *http.Request) {
 		rate = 1000.0
 	}
 
-	_, cgstRate, sgstRate, igstRate, err := h.resolveLineGST(r.Context(), h.DB, tenantID, invoiceID, hsnCode)
+	gstRate, cgstRate, sgstRate, igstRate, err := h.resolveLineGST(r.Context(), h.DB, tenantID, invoiceID, hsnCode)
 	if err != nil {
 		if errors.Is(err, errUnknownHSN) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -818,14 +818,10 @@ func (h *InvoiceHandlers) AddLineItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Single rounding site for persisted line tax: stored values must equal the
+	// totals the PDF renderer sums back out of these columns.
 	taxable := qty * rate
-	var cgstAmt, sgstAmt, igstAmt float64
-	if cgstRate > 0 || sgstRate > 0 {
-		cgstAmt = taxable * (cgstRate / 100.0)
-		sgstAmt = taxable * (sgstRate / 100.0)
-	} else if igstRate > 0 {
-		igstAmt = taxable * (igstRate / 100.0)
-	}
+	cgstAmt, sgstAmt, igstAmt := invoiceapp.ComputeLineTax(taxable, gstRate, cgstRate > 0 || sgstRate > 0)
 	lineTotal := taxable + cgstAmt + sgstAmt + igstAmt
 
 	lineID := uuid.NewString()
@@ -885,7 +881,7 @@ func (h *InvoiceHandlers) EditLineItem(w http.ResponseWriter, r *http.Request) {
 	}
 	rate, _ := strconv.ParseFloat(r.FormValue("rate"), 64)
 
-	_, cgstRate, sgstRate, igstRate, err := h.resolveLineGST(r.Context(), h.DB, tenantID, invoiceID, hsnCode)
+	gstRate, cgstRate, sgstRate, igstRate, err := h.resolveLineGST(r.Context(), h.DB, tenantID, invoiceID, hsnCode)
 	if err != nil {
 		if errors.Is(err, errUnknownHSN) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -896,14 +892,10 @@ func (h *InvoiceHandlers) EditLineItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Single rounding site for persisted line tax: stored values must equal the
+	// totals the PDF renderer sums back out of these columns.
 	taxable := qty * rate
-	var cgstAmt, sgstAmt, igstAmt float64
-	if cgstRate > 0 || sgstRate > 0 {
-		cgstAmt = taxable * (cgstRate / 100.0)
-		sgstAmt = taxable * (sgstRate / 100.0)
-	} else if igstRate > 0 {
-		igstAmt = taxable * (igstRate / 100.0)
-	}
+	cgstAmt, sgstAmt, igstAmt := invoiceapp.ComputeLineTax(taxable, gstRate, cgstRate > 0 || sgstRate > 0)
 	lineTotal := taxable + cgstAmt + sgstAmt + igstAmt
 
 	tx, err := h.DB.BeginTx(r.Context(), nil)

@@ -163,24 +163,19 @@ which always allocate head-ward from the maximum above.
 | 00163 | Delete 4 dead company_config accounting seeds (never read; env + 00161 are the live paths); Down restores seeds | Dead-seed cleanup |
 | 00166 | `driver_preferred_vehicles` preferred Driver↔Vehicle (one active per driver+vehicle, history via `unassigned_at`, `is_primary`) + tenant FK triggers + 4 indexes — new table to avoid colliding with 00108 `driver_vehicle_assignments` | Driver↔Vehicle preferred assignment |
 | 00167 | `audit_logs.tenant_id` — per-org scoping for dashboard RecentActivity + /audit-logs (admin sees all, org roles own tenant only; tenants-table rows platform-only) + backfill + tenant FK triggers + index (sqlite + `migrations_pg/` ports) | Audit tenant isolation |
-| 00160+ | future specs | reserved |
-
-> NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
-> concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the
-> "next free slot" rule. Nothing shipped on the old numbers.| 00086 | `driver_issues` table — mobile Report-Issues screen (FleetBase parity) | Spec 13 |
-| 00087 | `trips.pod_scan_value` — barcode/QR POD proof column | Spec 13 |
-| 00088 | driver_expenses rebuild — category CHECK gains rto/tyre/bhatta (mobile/server parity fix) | India milestone M1 |
-| 00089 | feature_flags table + features:update permission (per-org feature registry) | Plugin/feature-flag milestone |
-| 00090 | trips pod_otp + pod_otp_expires_at (e-POD OTP verification) | E2E completion milestone |
-| 00091 | `route_locations` side-table — geocoded endpoint coordinates for routes (gap #46 standardized locations) | Location standardization milestone |
-| 00092 | alert inbox hardening (ack_status / severity_rank / money_at_risk / snoozed_until + inbox index) | 22 |
-| 00093 | `driver_advance_requests` (driver Paisa tab advance flow) | 22 |
-| 00094 | `driver_expenses` verification (verification_state / flag_reason / ocr_amount / ocr_confidence) | 22 |
-| 00095 | tenant_id columns for `driver_expenses` + `maintenance_records` (fixes PnL/money-strip silent zero aggregation) | 22 |
-
-> NOTE: Spec 13 briefly held 00084/00085 for these same migrations during a
-> concurrent-session collision on 2026-08-22; renumbered to 00086/00087 per the
-> "next free slot" rule. Nothing shipped on the old numbers.
+| 00168 | `driver_mqtt_credentials` table + per-driver MQTT broker credentials (docs/13 §5.2) + tenant FK triggers + index (sqlite + `migrations_pg/` ports) | Driver MQTT credentials |
+| 00169 | `provider_mode` ('LIVE', 'MOCK') provenance column on `eway_bills`, `fastag_transactions`, `driver_expenses` (FleetX Parity P0.2) | FleetX Parity P0.2 provenance |
+| 00170 | `telemetry_scale_indexes` — indexes on `device_time`, `timestamp`, `outbox_events`, `vlp(trip_id)`, drop duplicate snapshot index, and backfill VLP (FleetX Parity P1.2, P1.5) | FleetX Parity P1.2, P1.5 scale |
+| 00171 | Tyre management: tyres master, tyre_activities ledger, tyre_inspections, CPKM tracking, and RBAC grants (FleetX Parity P3.1) | FleetX Parity P3.1 tyre management |
+| 00172 | Parts & Spares inventory: parts master, part_stocks multi-store, part_purchase_bills, part_purchase_items, part_transactions stock ledger, and inventory RBAC grants (FleetX Parity P3.2) | FleetX Parity P3.2 parts inventory |
+| 00173 | Freight Audit & Pay: freight_rate_cards tariff master, freight_audits variance engine, freight_audit_deductions line items, debit notes, and RBAC grants (FleetX Parity P3.3) | FleetX Parity P3.3 freight audit |
+| 00174 | Report Builder & Scheduled Delivery: custom_reports, report_schedules, report_executions, and reports:write RBAC (FleetX Parity P3.4) | FleetX Parity P3.4 report builder |
+| 00175 | RFQ & Counter-Offer: rfqs, rfq_bids, counter_offers, and rfq RBAC grants (FleetX Parity P3.5) | FleetX Parity P3.5 RFQ & counter-offer |
+| 00176 | Electric Vehicle (EV) Telematics: vehicle_battery_profiles, ev_charging_sessions, battery degradation SOH tracking, SOC alerts, and RBAC grants (FleetX Parity P3.10) | FleetX Parity P3.10 EV telematics |
+| 00177 | Cold Chain & Reefer Monitoring: reefer_profiles, reefer_telemetry_logs, temperature_excursions, multi-zone probes, defrost cycles, MKT math, and RBAC grants (FleetX Parity P3.11) | FleetX Parity P3.11 cold chain |
+| 00178 | Video Telematics & AI Dashcam: vehicle_dashcam_profiles, video_safety_events, video_livestream_sessions, driver_safety_scorecards, DMS & ADAS coaching, and video RBAC grants (FleetX Parity P3.12) | FleetX Parity P3.12 video telematics |
+| 00179 | DPDP Data Subject Access Request (DSAR) & Erasure: privacy_dsar_requests ledger, DSAR export bundle, right-to-be-forgotten PII anonymization, and statutory tax retention preservation (FleetX Parity P5.6) | FleetX Parity P5.6 DSAR & privacy rights |
+| 00180+ | future specs | reserved |
 
 ## Implementation rule
 Pick the number from this table for your feature and update the spec's §3 to

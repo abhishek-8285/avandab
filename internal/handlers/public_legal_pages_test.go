@@ -25,6 +25,8 @@ func TestPublicLegalPages_RenderWithComplianceContent(t *testing.T) {
 		{"refunds", app.Refunds, []string{"30 days", "business days", "consumerhelpline"}},
 		{"consumer-compliance", app.ConsumerCompliance, []string{"Self-audit certificate", "consumerhelpline", "48 hours"}},
 		{"faq", app.FAQ, nil},
+		{"pricing", app.Pricing, []string{"Professional TMS", "Enterprise 3PL", "99.9%", "Service Level Agreement"}},
+		{"status", app.Status, []string{"All Systems Operational", "99.9%", "API", "Telemetry"}},
 	}
 
 	for _, tc := range cases {

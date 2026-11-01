@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -186,4 +187,48 @@ func TestFlusher_StormBatchConsolidation(t *testing.T) {
 	require.Len(t, messages, 2)
 	assert.Contains(t, messages[1].Title, "⚠️ Storm:")
 	assert.Contains(t, messages[1].Body, "occurred 5 times")
+}
+
+type failingProvider struct{ name string }
+
+func (f *failingProvider) Name() string { return f.name }
+func (f *failingProvider) Send(ctx context.Context, msg channels.Message) error {
+	return errors.New("channel down")
+}
+
+// P0: a channel that cannot deliver must surface, not be swallowed as if the
+// storm batch was delivered.
+func TestFlusher_PropagatesDeliveryFailure(t *testing.T) {
+	db := newAlertsTestDB(t)
+	repo := sqliterepo.NewAlertRepository(db)
+
+	mockCh := newMockProvider("in_app")
+	providerMap := map[string]channels.Provider{"in_app": mockCh, "whatsapp": &failingProvider{name: "whatsapp"}}
+
+	engine := NewEngine(repo, map[string]channels.Provider{"in_app": mockCh}, nil)
+	flusher := NewFlusher(repo, providerMap, nil)
+
+	startTime := time.Date(2026, 8, 19, 15, 0, 0, 0, time.UTC)
+	clk := &mockClock{current: startTime}
+	engine.SetClock(clk)
+	flusher.SetClock(clk)
+
+	ctx := shared.ContextWithTenantID(context.Background(), "tenant-42")
+	ev := events.Event{
+		Type: "AlertEvent",
+		Payload: map[string]interface{}{
+			"source":     "telemetry",
+			"alert_type": "speeding",
+			"severity":   "warning",
+			"vehicle_id": "v-storm-failing",
+			"title":      "Speeding 92 km/h",
+		},
+	}
+	for i := 0; i < 5; i++ {
+		require.NoError(t, engine.ProcessEvent(ctx, ev))
+		clk.Advance(5 * time.Second)
+	}
+	clk.Advance(60 * time.Second)
+
+	require.Error(t, flusher.Flush(ctx), "failed channel delivery must be reported")
 }

@@ -6,9 +6,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
+
+	"transport-app/internal/apm"
 
 	"transport-app/internal/events"
 	"transport-app/internal/repository"
@@ -68,6 +71,12 @@ func (c *IngestConfig) applyDefaults() {
 	}
 	if c.ParkedDedupMaxM <= 0 {
 		c.ParkedDedupMaxM = 50
+	}
+	if c.BatchSize <= 0 {
+		c.BatchSize = 100
+	}
+	if c.FlushInterval <= 0 {
+		c.FlushInterval = 50 * time.Millisecond
 	}
 }
 
@@ -253,243 +262,309 @@ func (ing *Ingestor) IngestAsync(ctx context.Context, frame RawFrame) error {
 // Step 12 (in-memory bus publish) happens after the transaction commits.
 // Spec 17 §5.3
 func (ing *Ingestor) IngestRawFrame(ctx context.Context, frame RawFrame) (IngestResult, error) {
-	var result IngestResult
-	var positionEvent *PositionEvent
-	var sosEvent *SOSEvent
-	var alertEvent *AlertEvent
+	results, err := ing.IngestBatch(ctx, []RawFrame{frame})
+	if err != nil {
+		if len(results) > 0 {
+			return results[0], err
+		}
+		return IngestResult{}, err
+	}
+	if len(results) > 0 {
+		return results[0], nil
+	}
+	return IngestResult{}, nil
+}
+
+// IngestBatch processes multiple RawFrames atomically in a single UnitOfWork transaction.
+// Outbox writes are batched per flush (the latest PositionEvent per aggregate is emitted,
+// alongside all SOS and Alert events), dramatically reducing outbox table bloat and write lock contention.
+func (ing *Ingestor) IngestBatch(ctx context.Context, frames []RawFrame) ([]IngestResult, error) {
+	if len(frames) == 0 {
+		return nil, nil
+	}
+
+	ctx, span := apm.StartSpan(ctx, "telemetry.batch_ingest")
+	span.SetTag("batch_size", strconv.Itoa(len(frames)))
+	defer span.End()
+
+	results := make([]IngestResult, len(frames))
+
+	type busNotification struct {
+		eventType string
+		payload   any
+	}
+	var notifications []busNotification
+
+	type aggregateOutbox struct {
+		aggregateID   string
+		aggregateType string
+		latestPos     *PositionEvent
+		sosEvents     []*SOSEvent
+		alertEvents   []*AlertEvent
+	}
+
+	outboxMap := make(map[string]*aggregateOutbox)
+	var outboxOrder []string
+	seenIMEIs := make(map[string]struct{})
+	deviceCache := make(map[string]*Device)
 
 	err := ing.uow.Execute(ctx, func(txCtx ports.TxContext) error {
-		// Step 1: Device lookup
-		device, err := ing.deviceStore.GetByIMEI(txCtx, frame.IMEI)
-		if err != nil {
-			return fmt.Errorf("device lookup: %w", err)
-		}
-
-		// Step 2: Unknown IMEI → quarantine
-		if device == nil {
-			return ing.quarantineFrame(txCtx, frame, QuarantineReasonUnknownDevice)
-		}
-
-		// Step 3: Non-active device → quarantine
-		if device.Status != DeviceStatusActive {
-			reason := QuarantineReasonRetiredDevice
-			if device.Status == DeviceStatusQuarantined {
-				reason = QuarantineReasonQuarantinedDevice
+		for i, frame := range frames {
+			// Step 1: Device lookup (cached within batch)
+			device, ok := deviceCache[frame.IMEI]
+			if !ok {
+				var err error
+				device, err = ing.deviceStore.GetByIMEI(txCtx, frame.IMEI)
+				if err != nil {
+					return fmt.Errorf("device lookup: %w", err)
+				}
+				deviceCache[frame.IMEI] = device
 			}
-			return ing.quarantineFrame(txCtx, frame, reason)
-		}
 
-		// Step 4: Insert raw event (dedup via partial unique index)
-		rawEventID := ing.idGen.GenerateUUID()
-		payloadJSON, _ := json.Marshal(frame)
-		deduped, err := ing.insertRawEvent(txCtx, rawEventID, device.TenantID, frame, string(payloadJSON))
-		if err != nil {
-			return fmt.Errorf("raw event insert: %w", err)
-		}
-		if deduped {
-			result.Deduped = true
-			result.Accepted = true
-			return nil // replay — no further processing
-		}
+			// Step 2: Unknown IMEI → quarantine
+			if device == nil {
+				if err := ing.quarantineFrame(txCtx, frame, QuarantineReasonUnknownDevice); err != nil {
+					return err
+				}
+				continue
+			}
 
-		// Step 5: Odometer guard (monotonic check)
-		adjustedOdometer := frame.Odometer
-		if frame.Odometer != nil {
-			adj, guardFired, err := ing.guard.CheckOdometer(txCtx, frame.IMEI, *frame.Odometer)
+			// Step 3: Non-active device → quarantine
+			if device.Status != DeviceStatusActive {
+				reason := QuarantineReasonRetiredDevice
+				if device.Status == DeviceStatusQuarantined {
+					reason = QuarantineReasonQuarantinedDevice
+				}
+				if err := ing.quarantineFrame(txCtx, frame, reason); err != nil {
+					return err
+				}
+				continue
+			}
+
+			// Step 4: Insert raw event (dedup via partial unique index)
+			rawEventID := ing.idGen.GenerateUUID()
+			payloadJSON, _ := json.Marshal(frame)
+			deduped, err := ing.insertRawEvent(txCtx, rawEventID, device.TenantID, frame, string(payloadJSON))
 			if err != nil {
-				return fmt.Errorf("odometer guard: %w", err)
+				return fmt.Errorf("raw event insert: %w", err)
 			}
-			if guardFired {
-				adjustedOdometer = &adj
+			if deduped {
+				results[i].Deduped = true
+				results[i].Accepted = true
+				continue // replay — no further processing
+			}
+
+			// Step 5: Odometer guard (monotonic check)
+			adjustedOdometer := frame.Odometer
+			if frame.Odometer != nil {
+				adj, guardFired, err := ing.guard.CheckOdometer(txCtx, frame.IMEI, *frame.Odometer)
+				if err != nil {
+					return fmt.Errorf("odometer guard: %w", err)
+				}
+				if guardFired {
+					adjustedOdometer = &adj
+				}
+			}
+
+			// Step 6: Fuel clamp
+			adjustedFuel := frame.FuelLevel
+			if frame.FuelLevel != nil {
+				adj, clampFired, err := ing.guard.ClampFuelLevel(txCtx, frame.IMEI, *frame.FuelLevel)
+				if err != nil {
+					return fmt.Errorf("fuel clamp: %w", err)
+				}
+				if clampFired {
+					adjustedFuel = &adj
+				}
+			}
+
+			// Resolve vehicle ID from the device (frame carries no vehicle_id).
+			var vehicleID string
+			if device.VehicleID != nil {
+				vehicleID = *device.VehicleID
+			}
+			if vehicleID == "" {
+				vehicleID = ing.fallbackVehicleID(txCtx, device.TenantID, frame.IMEI)
+			}
+
+			// Step 7: Redundant frame checks (migration 00117 + moving deadband)
+			dedup := ing.checkDedup(txCtx, frame)
+			if frame.TripID == "" && vehicleID != "" {
+				frame.TripID = ing.activeTripID(txCtx, device.TenantID, vehicleID, frame.DriverID)
+			}
+			skipHistory := (dedup.Parked || dedup.MovingDedup) && !frame.SOS
+			writeLive := !dedup.Parked || frame.SOS
+
+			// Step 7b: Insert position
+			positionID := ing.idGen.GenerateUUID()
+			receivedAt := time.Now().UTC()
+			if !skipHistory {
+				if err := ing.insertPosition(txCtx, positionID, device.TenantID, vehicleID, frame, adjustedOdometer, adjustedFuel, rawEventID, receivedAt); err != nil {
+					return fmt.Errorf("position insert: %w", err)
+				}
+			}
+
+			// Step 8: Upsert vehicle_latest_position (only newer device_time wins).
+			if vehicleID != "" && writeLive && fixTrusted(frame) {
+				if err := ing.upsertLatestPosition(txCtx, vehicleID, device.TenantID, frame, adjustedOdometer, adjustedFuel, receivedAt); err != nil {
+					return fmt.Errorf("latest position upsert: %w", err)
+				}
+			}
+
+			// Step 10: Enrich + INSERT telemetry_snapshots
+			if !skipHistory {
+				if err := ing.insertSnapshot(txCtx, frame, device, vehicleID, adjustedOdometer, adjustedFuel, positionID, receivedAt); err != nil {
+					return fmt.Errorf("snapshot insert: %w", err)
+				}
+			}
+
+			// Step 11: Collect Outbox Events & Dual-write notifications
+			var positionEvent *PositionEvent
+			if writeLive {
+				positionEvent = &PositionEvent{
+					EventID:     positionID,
+					TenantID:    device.TenantID,
+					DeviceIMEI:  frame.IMEI,
+					VehicleID:   vehicleID,
+					DriverID:    frame.DriverID,
+					TripID:      frame.TripID,
+					Latitude:    frame.Latitude,
+					Longitude:   frame.Longitude,
+					Speed:       frame.Speed,
+					Heading:     frame.Heading,
+					Ignition:    frame.Ignition,
+					EngineHours: frame.EngineHours,
+					Accuracy:    frame.Accuracy,
+					FuelLevel:   adjustedFuel,
+					Odometer:    adjustedOdometer,
+					DeviceTime:  frame.DeviceTime,
+					ReceivedAt:  receivedAt,
+				}
+			}
+
+			aggregateID := vehicleID
+			if aggregateID == "" {
+				aggregateID = frame.IMEI // IMEI when unassigned (Decision D6)
+			}
+			agg, exists := outboxMap[aggregateID]
+			if !exists {
+				agg = &aggregateOutbox{
+					aggregateID:   aggregateID,
+					aggregateType: "Vehicle",
+				}
+				outboxMap[aggregateID] = agg
+				outboxOrder = append(outboxOrder, aggregateID)
+			}
+
+			if positionEvent != nil {
+				if agg.latestPos == nil || frame.DeviceTime.After(agg.latestPos.DeviceTime) {
+					agg.latestPos = positionEvent
+				}
+			}
+
+			// Device-health guard (migration 00117)
+			var alertEvent *AlertEvent
+			if !dedup.Parked {
+				if alert := ing.deviceHealthGuard(txCtx, positionID, device, vehicleID, frame); alert != nil {
+					alertEvent = alert
+					agg.alertEvents = append(agg.alertEvents, alertEvent)
+					notifications = append(notifications, busNotification{
+						eventType: BusEventTelemetryAlert,
+						payload:   alertEvent,
+					})
+				}
+			}
+
+			// SOS Event
+			var sosEvent *SOSEvent
+			if frame.SOS {
+				sosEvent = &SOSEvent{
+					EventID:    ing.idGen.GenerateUUID(),
+					TenantID:   device.TenantID,
+					DeviceIMEI: frame.IMEI,
+					VehicleID:  vehicleID,
+					DriverID:   frame.DriverID,
+					Latitude:   frame.Latitude,
+					Longitude:  frame.Longitude,
+					OccurredAt: receivedAt,
+					DeviceTime: frame.DeviceTime,
+				}
+				agg.sosEvents = append(agg.sosEvents, sosEvent)
+				notifications = append(notifications, busNotification{
+					eventType: EventTypeSOS,
+					payload:   sosEvent,
+				})
+			}
+
+			seenIMEIs[frame.IMEI] = struct{}{}
+			results[i].Accepted = true
+
+			// Fast-path dual-write notification for live map SSE
+			if positionEvent != nil {
+				snapshotPayload := map[string]interface{}{
+					"tenant_id":  positionEvent.TenantID,
+					"vehicle_id": positionEvent.VehicleID,
+					"trip_id":    positionEvent.TripID,
+					"lat":        positionEvent.Latitude,
+					"lng":        positionEvent.Longitude,
+					"speed":      positionEvent.Speed,
+					"fuel_level": positionEvent.FuelLevel,
+					"odometer":   positionEvent.Odometer,
+					"timestamp":  positionEvent.DeviceTime,
+				}
+				notifications = append(notifications, busNotification{
+					eventType: BusEventTelemetrySnapshot,
+					payload:   snapshotPayload,
+				})
 			}
 		}
 
-		// Step 6: Fuel clamp
-		adjustedFuel := frame.FuelLevel
-		if frame.FuelLevel != nil {
-			adj, clampFired, err := ing.guard.ClampFuelLevel(txCtx, frame.IMEI, *frame.FuelLevel)
-			if err != nil {
-				return fmt.Errorf("fuel clamp: %w", err)
+		// Batch outbox writes per flush across all aggregates
+		for _, aggID := range outboxOrder {
+			agg := outboxMap[aggID]
+			var eventsToSave []any
+			if agg.latestPos != nil {
+				eventsToSave = append(eventsToSave, agg.latestPos)
 			}
-			if clampFired {
-				adjustedFuel = &adj
+			for _, alert := range agg.alertEvents {
+				eventsToSave = append(eventsToSave, alert)
 			}
-		}
-
-		// Resolve vehicle ID from the device (frame carries no vehicle_id).
-		var vehicleID string
-		if device.VehicleID != nil {
-			vehicleID = *device.VehicleID
-		}
-		if vehicleID == "" {
-			vehicleID = ing.fallbackVehicleID(txCtx, device.TenantID, frame.IMEI)
-		}
-
-		// Step 7: Redundant frame checks (migration 00117 + moving deadband):
-		// A motion=0 (or speed < 1 km/h) frame within ParkedDedupWindow and
-		// ParkedDedupMaxM adds no information.
-		// A moving frame with displacement < MovingDedupMinM and heading delta
-		// < MovingDedupMinDeg within MovingDedupWindow is also redundant for history.
-		//
-		// Trip attribution: a trip the caller supplied is never overwritten,
-		// otherwise every unattributed frame writes telemetry_snapshots.trip_id
-		// = '' and the dwell engine skips pickup/drop zones entirely. Resolved
-		// after the dedup check so a redundant frame does not pay for the
-		// lookup it is about to skip.
-		dedup := ing.checkDedup(txCtx, frame)
-		if frame.TripID == "" && vehicleID != "" {
-			frame.TripID = ing.activeTripID(txCtx, device.TenantID, vehicleID, frame.DriverID)
-		}
-		skipHistory := (dedup.Parked || dedup.MovingDedup) && !frame.SOS
-		// SOS is an emergency: even a redundant parked frame must refresh the
-		// live map and emit a PositionEvent so responders see the panic fix.
-		writeLive := !dedup.Parked || frame.SOS
-
-		// Step 7b: Insert position
-		positionID := ing.idGen.GenerateUUID()
-		receivedAt := time.Now().UTC()
-		if !skipHistory {
-			if err := ing.insertPosition(txCtx, positionID, device.TenantID, vehicleID, frame, adjustedOdometer, adjustedFuel, rawEventID, receivedAt); err != nil {
-				return fmt.Errorf("position insert: %w", err)
+			for _, sos := range agg.sosEvents {
+				eventsToSave = append(eventsToSave, sos)
+			}
+			if len(eventsToSave) > 0 {
+				if err := ing.outbox.SaveEvents(txCtx, agg.aggregateID, agg.aggregateType, eventsToSave); err != nil {
+					return fmt.Errorf("outbox write: %w", err)
+				}
 			}
 		}
 
-		// Step 8: Upsert vehicle_latest_position (only newer device_time wins).
-		// Invalid-fix gate (migration 00117): a frame the device flagged as an
-		// invalid GNSS fix (or with too few satellites) is stored in history for
-		// audit but must never overwrite the live-map row — this is the parking-
-		// drift corruption guard. Frames from providers that speak Valid are
-		// judged by the flag; providers that never set it (mobile "own") are
-		// judged by derived fix quality (H4 trust policy).
-		if vehicleID != "" && writeLive && fixTrusted(frame) {
-			if err := ing.upsertLatestPosition(txCtx, vehicleID, device.TenantID, frame, adjustedOdometer, adjustedFuel, receivedAt); err != nil {
-				return fmt.Errorf("latest position upsert: %w", err)
+		// Update last_seen_at once per active IMEI in the batch
+		for imei := range seenIMEIs {
+			if err := ing.deviceStore.UpdateLastSeen(txCtx, imei); err != nil {
+				return fmt.Errorf("last_seen update: %w", err)
 			}
 		}
 
-		// Step 9: Ignition trip boundary (Decoupled by design — Phase 2 ADR)
-		// Raw ignition cycling (tolls, traffic, dwell) must NOT prematurely start
-		// or stop consignment trips. Trip transitions are legally bound to e-Way Bills,
-		// geofences, and dispatch workflows. Raw ignition state is persisted in snapshots
-		// for idle/fuel scoring; automated ignition trip boundaries require the dwell
-		// debouncing window scheduled in Phase 2.
-
-		// Step 10: Enrich + INSERT telemetry_snapshots
-		if !skipHistory {
-			if err := ing.insertSnapshot(txCtx, frame, device, vehicleID, adjustedOdometer, adjustedFuel, positionID, receivedAt); err != nil {
-				return fmt.Errorf("snapshot insert: %w", err)
-			}
-		}
-
-		// Step 11: Outbox write (same tx). SOS rides the same transaction so
-		// the emergency event can never be lost while the position commits.
-		positionEvent = &PositionEvent{
-			EventID:     positionID,
-			TenantID:    device.TenantID,
-			DeviceIMEI:  frame.IMEI,
-			VehicleID:   vehicleID,
-			DriverID:    frame.DriverID,
-			TripID:      frame.TripID,
-			Latitude:    frame.Latitude,
-			Longitude:   frame.Longitude,
-			Speed:       frame.Speed,
-			Heading:     frame.Heading,
-			Ignition:    frame.Ignition,
-			EngineHours: frame.EngineHours,
-			Accuracy:    frame.Accuracy,
-			FuelLevel:   adjustedFuel,
-			Odometer:    adjustedOdometer,
-			DeviceTime:  frame.DeviceTime,
-			ReceivedAt:  receivedAt,
-		}
-
-		aggregateID := vehicleID
-		if aggregateID == "" {
-			aggregateID = frame.IMEI // IMEI when unassigned (Decision D6)
-		}
-		var eventsToSave []any
-		if writeLive {
-			eventsToSave = append(eventsToSave, positionEvent)
-		}
-		// Device-health guard (migration 00117): transition detection against
-		// the previous stored row. Fires at most one alert (power_cut >
-		// low_battery > poor_signal) per frame and only on a healthy→unhealthy
-		// crossing, so recovery re-arms it without alert spam.
-		if !dedup.Parked {
-			if alert := ing.deviceHealthGuard(txCtx, positionID, device, vehicleID, frame); alert != nil {
-				alertEvent = alert
-				eventsToSave = append(eventsToSave, alertEvent)
-			}
-		}
-		if frame.SOS {
-			sosEvent = &SOSEvent{
-				EventID:    ing.idGen.GenerateUUID(),
-				TenantID:   device.TenantID,
-				DeviceIMEI: frame.IMEI,
-				VehicleID:  vehicleID,
-				DriverID:   frame.DriverID,
-				Latitude:   frame.Latitude,
-				Longitude:  frame.Longitude,
-				OccurredAt: receivedAt,
-				DeviceTime: frame.DeviceTime,
-			}
-			eventsToSave = append(eventsToSave, sosEvent)
-		}
-		if len(eventsToSave) > 0 {
-			if err := ing.outbox.SaveEvents(txCtx, aggregateID, "Vehicle", eventsToSave); err != nil {
-				return fmt.Errorf("outbox write: %w", err)
-			}
-		}
-
-		// Update last_seen_at last.
-		if err := ing.deviceStore.UpdateLastSeen(txCtx, frame.IMEI); err != nil {
-			return fmt.Errorf("last_seen update: %w", err)
-		}
-
-		result.Accepted = true
 		return nil
 	})
 
 	if err != nil {
-		return result, err
+		span.SetError(err)
+		return results, err
 	}
 
-	// Step 12 (post-commit): Dual-write fast-path — publish to in-memory bus
-	// for real-time consumers (SSE hub in Spec 04). Fire-and-forget; if the
-	// bus publish fails the outbox relay catches up within 5s.
-	if result.Accepted && !result.Deduped && positionEvent != nil {
-		snapshotPayload := map[string]interface{}{
-			"tenant_id":  positionEvent.TenantID,
-			"vehicle_id": positionEvent.VehicleID,
-			"trip_id":    positionEvent.TripID,
-			"lat":        positionEvent.Latitude,
-			"lng":        positionEvent.Longitude,
-			"speed":      positionEvent.Speed,
-			"fuel_level": positionEvent.FuelLevel,
-			"odometer":   positionEvent.Odometer,
-			"timestamp":  positionEvent.DeviceTime,
-		}
-		ing.bus.Publish(ctx, events.Event{
-			Type:    BusEventTelemetrySnapshot,
-			Payload: snapshotPayload,
-		})
-		if sosEvent != nil {
+	// Step 12 (post-commit): Publish in-memory notifications
+	if ing.bus != nil {
+		for _, n := range notifications {
 			ing.bus.Publish(ctx, events.Event{
-				Type:    EventTypeSOS,
-				Payload: sosEvent,
+				Type:    n.eventType,
+				Payload: n.payload,
 			})
 		}
 	}
-	if result.Accepted && !result.Deduped && alertEvent != nil {
-		// Device-health alert → alerts pipeline (engine normalizes the
-		// "telemetry.alert" type and routes into the alert inbox).
-		ing.bus.Publish(ctx, events.Event{
-			Type:    BusEventTelemetryAlert,
-			Payload: alertEvent,
-		})
-	}
 
-	return result, nil
+	return results, nil
 }
 
 // parkedDuplicate reports whether the frame is a redundant parked report:

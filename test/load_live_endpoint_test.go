@@ -89,6 +89,12 @@ func TestLiveEndpoint_500Vehicles(t *testing.T) {
 	require.NoError(t, err)
 	defer stmtSnap.Close()
 
+	stmtVLP, err := tx.Prepare(`INSERT INTO vehicle_latest_position
+		(vehicle_id, tenant_id, device_time, latitude, longitude, speed, odometer, ignition)
+		VALUES (?, '1', CURRENT_TIMESTAMP, ?, ?, ?, ?, 1)`)
+	require.NoError(t, err)
+	defer stmtVLP.Close()
+
 	for i := 1; i <= 500; i++ {
 		vehID := fmt.Sprintf("veh-scale-%03d", i)
 		regNum := fmt.Sprintf("MH-01-SC-%04d", i)
@@ -111,6 +117,8 @@ func TestLiveEndpoint_500Vehicles(t *testing.T) {
 		lat := 18.5 + float64(i)*0.001
 		lng := 73.8 + float64(i)*0.001
 		_, err = stmtSnap.Exec(snapID, vehID, lat, lng, speed, float64(i*100))
+		require.NoError(t, err)
+		_, err = stmtVLP.Exec(vehID, lat, lng, speed, float64(i*100))
 		require.NoError(t, err)
 	}
 	require.NoError(t, tx.Commit())

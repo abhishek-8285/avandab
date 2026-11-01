@@ -1,0 +1,45 @@
+name: Monthly Restore Drill
+
+# Plan P5 §5.1: Monthly automated restore drill in CI.
+# Proves that database backups are restorable, schema head matches,
+# pragma integrity_check passes, and core business tables are populated.
+on:
+  schedule:
+    - cron: '0 3 1 * *' # Monthly at 03:00 UTC on the 1st
+  workflow_dispatch:
+
+env:
+  GO_VERSION: '1.26'
+
+jobs:
+  restore-drill:
+    name: Verify Snapshot Restoreability
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: true
+
+      - name: Install SQLite3
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y sqlite3
+
+      - name: Initialize & Migrate Seed Database
+        run: |
+          go install github.com/pressly/goose/v3/cmd/goose@v3.24.1
+          mkdir -p backups
+          goose -dir db/migrations sqlite3 ./transport.db up
+
+      - name: Run Online Backup
+        run: |
+          ./scripts/backup-db.sh ./transport.db ./backups
+
+      - name: Execute Restore Drill
+        run: |
+          ./scripts/restore-drill.sh "./backups/transport_*.db.gz"

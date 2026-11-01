@@ -96,11 +96,12 @@ type ExtendRequest struct {
 
 // EWayBillService orchestrates the E-Way Bill lifecycle and DB persistence.
 type EWayBillService struct {
-	db     *sql.DB
-	client intEWB.Client
-	bus    events.EventBus
-	logger *slog.Logger
-	cfg    Config
+	db           *sql.DB
+	client       intEWB.Client
+	bus          events.EventBus
+	logger       *slog.Logger
+	cfg          Config
+	providerMock bool
 }
 
 // NewEWayBillService constructs an EWayBillService.
@@ -118,12 +119,19 @@ func NewEWayBillService(db *sql.DB, bus events.EventBus, client intEWB.Client, l
 		cfg.ExtensionKM = 5.0
 	}
 	return &EWayBillService{
-		db:     db,
-		client: client,
-		bus:    bus,
-		logger: logger,
-		cfg:    cfg,
+		db:           db,
+		client:       client,
+		bus:          bus,
+		logger:       logger,
+		cfg:          cfg,
+		providerMock: intEWB.IsMockClient(client),
 	}
+}
+
+// IsMockProvider reports whether the service talks to the demo stub rather
+// than the live NIC API. Background writers must not persist stub output.
+func (s *EWayBillService) IsMockProvider() bool {
+	return s.providerMock
 }
 
 // GeneratePartA creates a Part-A E-Way Bill for a trip.
@@ -289,6 +297,9 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 	}
 
 	// 2. Call integration client
+	if s.providerMock {
+		s.logger.Warn("ewaybill: mock provider — generated number is not a government document", "trip_id", req.TripID)
+	}
 	genReq := intEWB.GenerateRequest{
 		DocumentNumber: req.DocNo,
 		FromGSTIN:      req.FromGSTIN,

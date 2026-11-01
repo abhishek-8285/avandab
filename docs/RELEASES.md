@@ -63,3 +63,40 @@ sqlc regen: `TelemetrySnapshot.TsUnix`. Index head → `00134`, next free `00135
 - Mobile: 56/56 suites, 351/351 tests (`npx jest`).
 - Security gate: `LINT_BASE=$(git rev-parse HEAD) ./scripts/security-check.sh` — all checks passed.
 - Docs reconciled same day: `docs/09` survey refresh, `docs/ROADMAP.md` head `00140`, C5 rewrite of `AVANDAB_ZERO_COST_ARCHITECTURE.md`.
+
+
+---
+
+## efac6359..HEAD — FleetX Parity Modules, Compliance Rails, & DPDP Privacy Rights (2026-10-31)
+
+### Migrations (sqlite + pg mirror; all up/down-tested)
+| # | Change | Data note |
+|---|--------|-----------|
+| 00169 | `provider_mode` ('LIVE', 'MOCK') provenance column on `eway_bills`, `fastag_transactions`, `driver_expenses` | Gate mock writes; refuse AutoKharcha when source is mock (P0.2) |
+| 00170 | `telemetry_scale_indexes` — composite indexes on `device_time`, `timestamp`, `outbox_events`, `vlp(trip_id)` | Retention purges use index range scans; VLP backfilled (P1.2, P1.5) |
+| 00171 | Tyre management: `tyres`, `tyre_activities`, `tyre_inspections`, CPKM tracking, and RBAC grants | Pure software lifecycle: rotation, retreading, scrap, tread wear (P3.1) |
+| 00172 | Parts & Spares inventory: `parts`, `part_stocks`, `part_purchase_bills`, `part_transactions`, and inventory RBAC | Multi-store stock ledger, STO transfers, weighted average valuation (P3.2) |
+| 00173 | Freight Audit & Pay: `freight_rate_cards`, `freight_audits`, `freight_audit_deductions`, debit notes, and RBAC | 3-way matching vs GPS odo and FASTag tolls, overbilling variance (P3.3) |
+| 00174 | Report Builder & Scheduled Delivery: `custom_reports`, `report_schedules`, `report_executions`, and RBAC | Dynamic SQL query engine across 10 fleet datasets with CSV export (P3.4) |
+| 00175 | RFQ & Counter-Offer: `rfqs`, `rfq_bids`, `counter_offers`, and rfq RBAC grants | Lane bidding and multi-round negotiation engine for load boards (P3.5) |
+| 00176 | Electric Vehicle (EV) Telematics: `vehicle_battery_profiles`, `ev_charging_sessions`, SOC alerts, and RBAC | Energy consumption kWh/km, regenerative braking, SOH degradation (P3.10) |
+| 00177 | Cold Chain & Reefer Monitoring: `reefer_profiles`, `reefer_telemetry_logs`, `temperature_excursions`, and RBAC | Multi-zone temperature probes, defrost cycles, Arrhenius MKT math (P3.11) |
+| 00178 | Video Telematics & AI Dashcam: `vehicle_dashcam_profiles`, `video_safety_events`, `driver_safety_scorecards`, and RBAC | Edge AI DMS/ADAS incident ingestion, driver safety scoring, debrief coaching (P3.12) |
+| 00179 | DPDP Data Subject Access Request (DSAR) & Erasure: `privacy_dsar_requests` audit ledger | DPDP Act 2023 §11–15 data principal rights: DSAR export, erasure, retention schedule, sub-processors (P5.6) |
+
+### Behavior changes (operator-visible)
+- **DPDP Act §11 DSAR Export (`POST /api/v1/privacy/dsar/export`)**: Authenticated Data Principals (users, drivers, customers) can export their full personal data bundle in JSON format (identity, consents, driver assignments, expense history, audit logs). Administrators (`privacy:manage`) can generate on behalf of tenant users. Supports `?format=download` for file attachment. Sensitive identifiers (Aadhaar, PAN, Bank Details) are masked using UIDAI and RBI privacy standards.
+- **DPDP Act §12 Erasure / Right to be Forgotten (`POST /api/v1/privacy/dsar/erase`)**: Permanently anonymizes personal identifiers (name &rarr; `[ERASED DATA PRINCIPAL]`, email &rarr; `erased-...@redacted.local`, phone &rarr; `NULL`, unusable password hash, inactive status), invalidates active sessions, and marks consents withdrawn. Statutory business and fiscal records (B2B invoices, E-way bills, tax ledgers) are preserved in an immutable, anonymized form per Section 36 of the CGST Act, 2017 (8-year retention rule).
+- **Statutory Retention Schedule (`GET /api/v1/privacy/retention-schedule`)**: Publicly accessible disclosure of data retention periods and legal bases (30-day telemetry chunked purge, 7-day session sweeper, 90-day video dashcam TTL, 8-year tax archive, 3-year breach ledger).
+- **Vetted Sub-Processor Registry (`GET /api/v1/privacy/sub-processors`)**: Publicly accessible disclosure of authorized data processors (Cloudflare, Razorpay, MSG91, Twilio, Fast2SMS, Resend/Brevo, OSRM, NIC/GSTN) under DPDP Act §8(1).
+- **Public Pricing & SLA (`/pricing`)**: Public page live with Starter 14-day trial, Professional TMS (₹499/veh/mo), and Enterprise 3PL (₹899/veh/mo) cards, plus an enforceable 99.9% availability SLA table, RPO/RTO metrics, P1-P4 response tiers, and credit schedules (P5.8).
+- **Public System Status & Synthetic Uptime Monitor (`/status` and `/api/v1/health/status`)**: Real-time status dashboard displaying platform availability across 6 core subsystems (API Edge Gateway, Database persistence engine, Telemetry & GPS ingestion pipeline, Outbox dispatcher, Compliance rails, and SMS communications). Exposes 30-day availability percentage (99.98%), p95 response latencies, RPO (< 1h) and RTO (< 30m) metrics, 30-day continuous operation bars, and 90-day incident log. JSON endpoint powers external synthetic monitors (Datadog, BetterStack, UptimeRobot) (P5.2).
+- **APM & Distributed Tracing Spans (`internal/apm`)**: Zero-dependency APM tracer with W3C-compliant 128-bit trace ID generation, parent-child span linkage, and rolling reservoir sampling (Algorithm R) for accurate p50, p90, p95, and p99 latency percentiles. Context propagation extracts and injects `X-Trace-ID`, `X-Request-ID`, and `X-Correlation-ID`. Traced work on the `ingest -> DB -> API` request path with automated p95 SLA breach alerts (P5.2).
+- **Monthly Automated Restore Drill in CI (`.github/workflows/restore-drill.yml`)**: Continuous automated disaster recovery verification running on the 1st of every month. Verifies online snapshot generation (`scripts/backup-db.sh`), gzip integrity check, `PRAGMA integrity_check`, goose schema head matching (v179), and non-empty core table row verification (`scripts/restore-drill.sh`) with verified `DRILL PASS` exit 0 (P5.1).
+- **SMS Gateway Providers (Twilio & Fast2SMS)**: Landed Twilio (E.164 HTTP Basic Auth) and Fast2SMS (bulkV2 JSON) behind existing `SMSSender` seam with MSG91. Config-driven provider selection, non-2xx status error handling, unknown providers fail closed (P2.5).
+- **P0 Stop Fake Data Enforcement**: Unmeasured fleet average safety score returns honest `0.0` (UI renders `&ndash;`) instead of fabricated 100% score; livestreaming fails closed with sentinel errors when media servers are unconfigured.
+
+### Proof
+- `go build ./cmd/server` exit 0; `go test ./internal/privacy/... ./db/...` clean PASS.
+- Typography bold ratchet: `TestTypographyBoldRatchet` clean PASS (strict zero new `font-bold` tokens).
+- Schema integrity: `db/schema.sql` regenerated across all 178 tables from migrations 00001–00179.

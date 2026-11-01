@@ -19,6 +19,16 @@ import (
 	intOCR "transport-app/internal/integration/ocr"
 )
 
+// stubOCR injects an explicit extraction; the real mock is non-verifying.
+type stubOCR struct {
+	amt  float64
+	conf float64
+}
+
+func (s stubOCR) Extract(context.Context, string) (intOCR.Result, error) {
+	return intOCR.Result{Amount: s.amt, Confidence: s.conf}, nil
+}
+
 func newVerifyTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	name := fmt.Sprintf("test_kharcha_verify_%d", time.Now().UnixNano())
@@ -53,8 +63,12 @@ func newVerifyTestDB(t *testing.T) *sql.DB {
 }
 
 func newVerifier(db *sql.DB) *KharchaVerifyService {
+	return newVerifierWithOCR(db, stubOCR{amt: 3000, conf: 0.94})
+}
+
+func newVerifierWithOCR(db *sql.DB, c intOCR.Client) *KharchaVerifyService {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
-	return NewKharchaVerifyService(db, logger, intOCR.NewClient(intOCR.Config{Provider: "mock"}, logger))
+	return NewKharchaVerifyService(db, logger, c)
 }
 
 // seedRouteCorridor creates a Nashik→Pune-ish corridor so GPS distances
@@ -99,7 +113,7 @@ func TestKharchaVerify_AutoVerifiedHappyPath(t *testing.T) {
 	seedExpense(t, db, "hist-1", nil, nil, 2500, false)
 	seedExpense(t, db, "hist-2", nil, nil, 3500, false)
 	// Claim at the fuel stop right on the route corridor, amount in band,
-	// receipt present (mock OCR: ₹3000 @ 0.94).
+	// receipt present (stub OCR: ₹3000 @ 0.94).
 	seedExpense(t, db, "exp-auto", fptr(19.9970), fptr(73.7900), 3000, true)
 
 	state, err := svc.VerifyExpense(ctx, "exp-auto")
@@ -113,6 +127,66 @@ func TestKharchaVerify_AutoVerifiedHappyPath(t *testing.T) {
 	assert.Empty(t, reason)
 	assert.InDelta(t, 3000, ocrAmt.Float64, 0.01)
 	assert.InDelta(t, 0.94, ocrConf.Float64, 0.001)
+}
+
+// TestKharchaVerify_OCRAmountMismatchStaysManual — claimed ₹500 but OCR
+// reads ₹3000 (e.g. a different receipt); high confidence alone must not
+// auto-verify.
+func TestKharchaVerify_OCRAmountMismatchStaysManual(t *testing.T) {
+	db := newVerifyTestDB(t)
+	svc := newVerifierWithOCR(db, stubOCR{amt: 3000, conf: 0.94})
+	ctx := context.Background()
+	seedRouteCorridor(t, db, "tr-verify")
+
+	// Category median 500 and claim near the corridor: everything except
+	// the OCR amount agrees, so a pre-fix run auto-verifies.
+	for i, amt := range []float64{500, 500, 500} {
+		seedExpense(t, db, fmt.Sprintf("hist-m%d", i), nil, nil, amt, false)
+	}
+	seedExpense(t, db, "exp-mismatch", fptr(19.9970), fptr(73.7900), 500, true)
+
+	state, err := svc.VerifyExpense(ctx, "exp-mismatch")
+	require.NoError(t, err)
+	assert.Equal(t, VerifyManual, state)
+}
+
+// TestKharchaVerify_OCRAmountMatchAutoVerifies — claimed ₹500, OCR ₹505
+// @ 0.95, within band and near route → auto_verified.
+func TestKharchaVerify_OCRAmountMatchAutoVerifies(t *testing.T) {
+	db := newVerifyTestDB(t)
+	svc := newVerifierWithOCR(db, stubOCR{amt: 505, conf: 0.95})
+	ctx := context.Background()
+	seedRouteCorridor(t, db, "tr-verify")
+
+	for i, amt := range []float64{500, 500, 500} {
+		seedExpense(t, db, fmt.Sprintf("hist-a%d", i), nil, nil, amt, false)
+	}
+	seedExpense(t, db, "exp-match", fptr(19.9970), fptr(73.7900), 500, true)
+
+	state, err := svc.VerifyExpense(ctx, "exp-match")
+	require.NoError(t, err)
+	assert.Equal(t, VerifyAutoVerified, state)
+}
+
+func TestOCRAmountMatchesTolerance(t *testing.T) {
+	// max(₹2, 5% of claim).
+	cases := []struct {
+		claimed, ocr float64
+		want         bool
+	}{
+		{500, 505, true},   // 5% = 25
+		{500, 525, true},   // exactly 5%
+		{500, 526, false},  // just outside 5%
+		{500, 475, true},   // symmetric
+		{30, 32, true},     // ₹2 floor beats 5%
+		{30, 32.5, false},  // outside floor
+		{0, 2, false},      // no claim → no match
+		{500, 0, false},    // OCR zero never matches
+		{500, 3000, false}, // different receipt
+	}
+	for _, c := range cases {
+		assert.Equal(t, c.want, ocrAmountMatches(c.claimed, c.ocr), "claimed=%v ocr=%v", c.claimed, c.ocr)
+	}
 }
 
 func TestKharchaVerify_FlaggedDistanceFromRoute(t *testing.T) {

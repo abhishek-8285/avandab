@@ -173,18 +173,26 @@ func (a *Agent) executeTool(ctx context.Context, fn FunctionCall) (string, error
 		if t.Name != fn.Name {
 			continue
 		}
-		// RBAC: enforce the same permission the REST API enforces for the
-		// data this tool exposes. Fail closed when the permission is set but
-		// no checker is available or the check denies.
-		if t.Resource != "" || t.Action != "" {
-			pc := permissionCheckerFrom(ctx)
-			if pc == nil || !pc.Can(userIDFrom(ctx), t.Resource, t.Action) {
-				return "", fmt.Errorf("permission denied for tool %q (requires %s:%s)", fn.Name, t.Resource, t.Action)
-			}
-		}
-		return t.Handler(ctx, normalizeArgs(fn.Arguments))
+		return t.Execute(ctx, fn.Arguments)
 	}
 	return "", fmt.Errorf("unknown tool %q", fn.Name)
+}
+
+// Execute validates arguments, enforces Casbin RBAC (if gated), and executes the tool.
+func (t *RegisteredTool) Execute(ctx context.Context, args json.RawMessage) (string, error) {
+	if len(args) == 0 || string(args) == "null" {
+		args = json.RawMessage(`{}`)
+	}
+	// RBAC: enforce the same permission the REST API enforces for the
+	// data this tool exposes. Fail closed when the permission is set but
+	// no checker is available or the check denies.
+	if t.Resource != "" || t.Action != "" {
+		pc := permissionCheckerFrom(ctx)
+		if pc == nil || !pc.Can(userIDFrom(ctx), t.Resource, t.Action) {
+			return "", fmt.Errorf("permission denied for tool %q (requires %s:%s)", t.Name, t.Resource, t.Action)
+		}
+	}
+	return t.Handler(ctx, normalizeArgs(args))
 }
 
 // normalizeArgs unwraps double-encoded tool arguments. OpenAI-compatible APIs
@@ -213,6 +221,11 @@ func userIDFrom(ctx context.Context) string {
 		return v
 	}
 	return ""
+}
+
+// UserIDFromContext returns the acting user ID from context.
+func UserIDFromContext(ctx context.Context) string {
+	return userIDFrom(ctx)
 }
 
 // WithAgentUser carries the acting user's identity into the tool-execution

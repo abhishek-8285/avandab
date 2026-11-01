@@ -1,6 +1,7 @@
 {{define "customer_tracking.html"}}
 <!-- reuses booking_list_table.html partial reference for Spec 21 §4 consistency -->
 {{template "page_header.html" (dict "Title" (t "db.tracking_title") "Subtitle" (t "db.tracking_sub"))}}
+{{template "customer_brand.html" .}}
 {{if false}}{{template "booking_list_table.html" .}}{{end}}
 
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">

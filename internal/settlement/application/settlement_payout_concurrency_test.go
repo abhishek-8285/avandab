@@ -204,9 +204,11 @@ func TestPayout_ConcurrentSameDriverCannotOverspend(t *testing.T) {
 		arrived := make(chan struct{}, 2)
 		release := make(chan struct{})
 		newRacer := func(db *sql.DB) *application.SettlementAppService {
-			return application.NewSettlementAppService(
+			svc := application.NewSettlementAppService(
 				&observeRepo{settleSQL.NewSQLSettlementRepository(db), seen, arrived, release},
 				"secret", 100.0)
+			svc.SetPayoutRailEnabled(true)
+			return svc
 		}
 		svcs := []*application.SettlementAppService{newRacer(dbA), newRacer(dbB)}
 

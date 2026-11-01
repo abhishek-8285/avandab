@@ -40,3 +40,15 @@ func (uc *STOUseCase) SubmitBid(ctx context.Context, tenantID shared.TenantID, l
 func (uc *STOUseCase) AwardBid(ctx context.Context, tenantID shared.TenantID, listingID, bidID string) (*sto.AwardResult, error) {
 	return uc.svc.AwardBid(ctx, string(tenantID), listingID, bidID)
 }
+
+func (uc *STOUseCase) DispatchSTO(ctx context.Context, tenantID shared.TenantID, stoID string) (*sto.StockTransferOrder, error) {
+	return uc.svc.DispatchSTO(ctx, string(tenantID), stoID)
+}
+
+func (uc *STOUseCase) ReceiveSTO(ctx context.Context, tenantID shared.TenantID, stoID string) (*sto.StockTransferOrder, error) {
+	return uc.svc.ReceiveSTO(ctx, string(tenantID), stoID)
+}
+
+func (uc *STOUseCase) CancelSTO(ctx context.Context, tenantID shared.TenantID, stoID string) (*sto.StockTransferOrder, error) {
+	return uc.svc.CancelSTO(ctx, string(tenantID), stoID)
+}

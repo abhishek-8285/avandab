@@ -446,3 +446,70 @@ func (h *KharchaHandlers) DeliverWithPOD(w http.ResponseWriter, r *http.Request)
 		"pod_url":     h.PODSigner.SignURLOrRaw(podPhotoURL),
 	})
 }
+
+// PendingAPI handles GET /api/v1/kharcha/pending (P3.7) for mobile manager approvals.
+func (h *KharchaHandlers) PendingAPI(w http.ResponseWriter, r *http.Request) {
+	pending, err := h.Services.Kharcha.ListPendingExpenses(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if pending == nil {
+		pending = []service.KharchaExpense{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(pending)
+}
+
+// ApproveAPI handles POST /api/v1/kharcha/{id}/approve with JSON response.
+func (h *KharchaHandlers) ApproveAPI(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	expenseID := chi.URLParam(r, "id")
+	session, ok := h.getUserFromContext(r)
+	userID := "system"
+	if ok && session != nil {
+		userID = session.UserID
+	}
+
+	if err := h.Services.Kharcha.ApproveExpense(ctx, expenseID, userID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":     "approved",
+		"expense_id": expenseID,
+	})
+}
+
+// RejectAPI handles POST /api/v1/kharcha/{id}/reject with JSON response.
+func (h *KharchaHandlers) RejectAPI(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	expenseID := chi.URLParam(r, "id")
+	session, ok := h.getUserFromContext(r)
+	userID := "system"
+	if ok && session != nil {
+		userID = session.UserID
+	}
+
+	var body struct {
+		Reason string `json:"reason"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&body)
+	if body.Reason == "" {
+		body.Reason = r.FormValue("reason")
+	}
+
+	if err := h.Services.Kharcha.RejectExpense(ctx, expenseID, userID, body.Reason); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":     "rejected",
+		"expense_id": expenseID,
+		"reason":     body.Reason,
+	})
+}

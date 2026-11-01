@@ -283,3 +283,82 @@ func TestGateOn_BearerSuspendedOrg401(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, rr.Code)
 	assert.Contains(t, rr.Body.String(), "suspended")
 }
+
+func TestGateOn_MissingTenantUser_APIReturns401(t *testing.T) {
+	lk := newCountingLookup()
+	// user exists but has empty tenant
+	lk.users["usr-no-tenant"] = struct {
+		tenant string
+		status string
+		err    error
+	}{"", "active", nil}
+	resolver := TenantForUserResolver(lk.lookup, cache.Noop{})
+	secret := []byte("missing-tenant-secret-32-bytes-xx")
+
+	claims := auth.APITokenClaims{UserID: "usr-no-tenant", Role: "admin"}
+	token, err := auth.IssueAPIToken(secret, claims)
+	require.NoError(t, err)
+
+	handler := RequireAPIAuth(nil, secret, resolver)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("user with missing tenant must not reach API")
+	}))
+	req := httptest.NewRequest("GET", "/api/test", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+	assert.Contains(t, rr.Body.String(), "has no tenant")
+}
+
+func TestGateOn_EmptyTenantID_APIReturns401(t *testing.T) {
+	// A resolver that returns ("", nil) without error must still fail closed in RequireAPIAuth
+	emptyResolver := func(_ context.Context, _ string) (shared.TenantID, error) {
+		return "", nil
+	}
+	secret := []byte("empty-tenant-secret-32-bytes-xxx")
+
+	claims := auth.APITokenClaims{UserID: "usr-empty-tid", Role: "admin"}
+	token, err := auth.IssueAPIToken(secret, claims)
+	require.NoError(t, err)
+
+	handler := RequireAPIAuth(nil, secret, emptyResolver)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("empty tenant ID must not reach API")
+	}))
+	req := httptest.NewRequest("GET", "/api/test", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusUnauthorized, rr.Code)
+	assert.Contains(t, rr.Body.String(), "missing tenant")
+}
+
+func TestGateOn_MissingTenantUser_WebRedirects(t *testing.T) {
+	lk := newCountingLookup()
+	lk.users["usr-no-tenant-web"] = struct {
+		tenant string
+		status string
+		err    error
+	}{"", "active", nil}
+	resolver := TenantForUserResolver(lk.lookup, cache.Noop{})
+	store := auth.NewSessionStore("missing-tenant-web-secret-32-b", false)
+	rec := httptest.NewRecorder()
+	store.CreateSession(rec, "usr-no-tenant-web", "admin", "Admin")
+	cookie := rec.Result().Cookies()[0]
+
+	handler := AuthRequired(store, "/login", resolver)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("user without tenant must not reach protected page")
+	}))
+	req := httptest.NewRequest("GET", "/dashboard", nil)
+	req.AddCookie(cookie)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+	assert.Equal(t, http.StatusSeeOther, rr.Code)
+	assert.Equal(t, "/login", rr.Header().Get("Location"))
+	flash := ""
+	for _, c := range rr.Result().Cookies() {
+		if c.Name == "flash_error" {
+			flash = c.Value
+		}
+	}
+	assert.Contains(t, flash, "has no tenant")
+}

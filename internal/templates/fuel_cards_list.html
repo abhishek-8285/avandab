@@ -1,0 +1,156 @@
+{{template "page_header.html" (dict "Title" "Fuel Cards" "Subtitle" "Corporate fleet fuel cards, OMC automated reconciliation, and driver fuel limits")}}
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+    <div class="group relative overflow-hidden bg-gradient-to-br from-amber-600 to-orange-700 rounded-xl shadow-md p-4 text-white hover:shadow-lg transition">
+        <div class="flex items-center gap-4">
+            <div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center shrink-0">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-black tabular-nums leading-none">{{if .Cards}}{{len .Cards}}{{else}}0{{end}}</div>
+                <div class="text-xs font-medium text-white/80 mt-1">Total Fuel Cards</div>
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">{{.ActiveCount}}</div>
+            <div class="text-xs text-secondary font-medium mt-1">Active OMC Cards</div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 grid place-items-center text-blue-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">₹{{priceFormat .TotalSpendToday}}</div>
+            <div class="text-xs text-secondary font-medium mt-1">Today's Fleet Fuel Spend</div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden mb-6">
+    <div class="p-4 border-b border-border-subtle flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <h3 class="text-base font-semibold text-on-surface">Registered Commercial Fuel Cards</h3>
+            <p class="text-xs text-secondary mt-0.5">IOCL XTRAPOWER, BPCL SmartFleet, and HPCL DriveTrack Plus integrations</p>
+        </div>
+        <div class="flex items-center gap-2">
+            {{if can .User "fuel" "write"}}
+            <form method="POST" action="/fuel-cards/sync" class="inline">
+                <button type="submit" class="px-3.5 py-1.5 rounded-lg border border-border-subtle text-xs font-semibold text-on-surface hover:bg-surface-container-low transition flex items-center gap-1.5">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                    <span>Sync OMC Feed</span>
+                </button>
+            </form>
+            <button type="button" onclick="document.getElementById('card-modal').classList.remove('hidden')" class="px-4 py-1.5 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary/90 transition flex items-center gap-1.5">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <span>Register Card</span>
+            </button>
+            {{end}}
+        </div>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="rtable min-w-full divide-y divide-border-subtle">
+            <thead class="bg-surface-container-low">
+                <tr>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Card Number</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">OMC Provider</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Assigned Vehicle</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Assigned Driver</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Daily Limit</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Spend Today</th>
+                    <th class="px-4 py-3 text-right text-eyebrow text-text-muted">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
+                {{range .Cards}}
+                <tr class="hover:bg-surface-container-low/50 transition">
+                    <td class="px-4 py-3 font-mono font-semibold">{{.CardNumberMasked}}</td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
+                            {{if eq .Provider "IOCL"}}bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800
+                            {{else if eq .Provider "BPCL"}}bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800
+                            {{else if eq .Provider "HPCL"}}bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 border border-red-200 dark:border-red-800
+                            {{else}}bg-surface-container text-on-surface{{end}} uppercase tracking-wider">
+                            {{.Provider}}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 font-semibold">{{if .AssignedVehicleID}}{{nullString .AssignedVehicleID}}{{else}}<span class="text-text-muted">Unassigned</span>{{end}}</td>
+                    <td class="px-4 py-3">{{if .AssignedDriverID}}{{nullString .AssignedDriverID}}{{else}}<span class="text-text-muted">Unassigned</span>{{end}}</td>
+                    <td class="px-4 py-3 font-mono">₹{{priceFormat .DailySpendLimit}}</td>
+                    <td class="px-4 py-3 font-mono font-semibold text-emerald-600">₹{{priceFormat .SpendToday}}</td>
+                    <td class="px-4 py-3 text-right">
+                        {{if or (eq .Status "active") (eq .Status "ACTIVE")}}
+                        <span class="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Active
+                        </span>
+                        {{else}}
+                        <span class="inline-flex items-center gap-1 text-xs font-medium text-text-muted bg-surface-container px-2 py-0.5 rounded-full border border-border-subtle">
+                            {{.Status}}
+                        </span>
+                        {{end}}
+                    </td>
+                </tr>
+                {{else}}
+                <tr>
+                    <td colspan="7" class="px-4 py-12 text-center text-text-muted">
+                        <div class="flex flex-col items-center gap-2">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-8 h-8 text-text-muted/60"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                            <span class="text-sm">No fuel cards registered. Click "Register Card" to onboard corporate fleet cards.</span>
+                        </div>
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: Register Card -->
+<div id="card-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xl w-full max-w-md overflow-hidden animate-in fade-in duration-200">
+        <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between bg-surface-container-low">
+            <h3 class="text-base font-semibold text-on-surface">Register Fuel Card</h3>
+            <button type="button" onclick="document.getElementById('card-modal').classList.add('hidden')" class="text-text-muted hover:text-on-surface">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form method="POST" action="/fuel-cards" class="p-6 space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-text-muted mb-1">Card Number (16 digits) *</label>
+                <input type="text" name="card_number" required placeholder="7082 1234 5678 9012" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-text-muted mb-1">OMC Provider *</label>
+                <select name="provider" required class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    <option value="IOCL">IOCL XTRAPOWER</option>
+                    <option value="BPCL">BPCL SmartFleet</option>
+                    <option value="HPCL">HPCL DriveTrack Plus</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-text-muted mb-1">Daily Spend Limit (₹) *</label>
+                <input type="number" step="any" name="daily_spend_limit" required placeholder="25000" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">Assigned Vehicle</label>
+                    <input type="text" name="assigned_vehicle_id" placeholder="Vehicle ID" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">Assigned Driver</label>
+                    <input type="text" name="assigned_driver_id" placeholder="Driver ID" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+                </div>
+            </div>
+            <div class="pt-4 border-t border-border-subtle flex items-center justify-end gap-3">
+                <button type="button" onclick="document.getElementById('card-modal').classList.add('hidden')" class="px-4 py-2 rounded-lg border border-border-subtle text-sm text-on-surface hover:bg-surface-container-low transition">Cancel</button>
+                <button type="submit" class="px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-semibold hover:bg-primary/90 transition">Save Fuel Card</button>
+            </div>
+        </form>
+    </div>
+</div>

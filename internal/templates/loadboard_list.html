@@ -1,0 +1,155 @@
+{{template "page_header.html" (dict "Title" "Load Board" "Subtitle" "Spot freight marketplace, carrier bidding, and load syndication")}}
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+    <div class="group relative overflow-hidden bg-gradient-to-br from-indigo-600 to-primary rounded-xl shadow-md p-4 text-white hover:shadow-lg transition">
+        <div class="flex items-center gap-4">
+            <div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center shrink-0">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-black tabular-nums leading-none">{{if .Listings}}{{len .Listings}}{{else}}0{{end}}</div>
+                <div class="text-xs font-medium text-white/80 mt-1">Available Loads</div>
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 grid place-items-center text-blue-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">Instant Matching</div>
+            <div class="text-xs text-secondary font-medium mt-1">Verified Carrier Network</div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="min-w-0">
+            <a href="/sto" class="text-sm font-semibold text-primary hover:underline flex items-center gap-1">
+                <span>Stock Transfer Orders</span>
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+            <div class="text-xs text-secondary font-medium mt-1">Syndicate Internal Demands</div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden mb-6">
+    <div class="p-4 border-b border-border-subtle flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="/loadboard" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .StatusFilter ""}}bg-primary text-on-primary{{else}}bg-surface-container text-on-surface hover:bg-surface-container-high{{end}} transition">All</a>
+            <a href="/loadboard?status=OPEN" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .StatusFilter "OPEN"}}bg-primary text-on-primary{{else}}bg-surface-container text-on-surface hover:bg-surface-container-high{{end}} transition">Open</a>
+            <a href="/loadboard?status=BIDDING" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .StatusFilter "BIDDING"}}bg-primary text-on-primary{{else}}bg-surface-container text-on-surface hover:bg-surface-container-high{{end}} transition">Bidding</a>
+            <a href="/loadboard?status=AWARDED" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .StatusFilter "AWARDED"}}bg-primary text-on-primary{{else}}bg-surface-container text-on-surface hover:bg-surface-container-high{{end}} transition">Awarded</a>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="rtable min-w-full divide-y divide-border-subtle">
+            <thead class="bg-surface-container-low">
+                <tr>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Route (Lane)</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Vehicle Required</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Target Rate</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Max Ceiling</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Source Order</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Bids</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Status</th>
+                    <th class="px-4 py-3 text-right text-eyebrow text-text-muted">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
+                {{range .Listings}}
+                <tr class="hover:bg-surface-container-low/50 transition">
+                    <td class="px-4 py-3">
+                        <div class="font-semibold flex items-center gap-1.5">
+                            <span>{{.OriginCity}}</span>
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5 text-text-muted"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                            <span>{{.DestinationCity}}</span>
+                        </div>
+                        <div class="text-xs text-text-muted font-mono mt-0.5">ID: {{.ID}}</div>
+                    </td>
+                    <td class="px-4 py-3 font-semibold uppercase text-xs">{{.VehicleTypeRequired}}</td>
+                    <td class="px-4 py-3 font-mono font-semibold text-emerald-600">₹{{priceFormat .TargetRate}}</td>
+                    <td class="px-4 py-3 font-mono text-xs text-text-muted">₹{{priceFormat .MaxRate}}</td>
+                    <td class="px-4 py-3 text-xs font-mono text-primary">
+                        {{if .STONumber}}STO: {{.STONumber}}{{else if .STOID}}STO: {{.STOID}}{{else}}Direct Load{{end}}
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-surface-container border border-border-subtle">{{.BidsCount}} bids</span>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
+                            {{if eq .Status "OPEN"}}bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800
+                            {{else if eq .Status "BIDDING"}}bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800
+                            {{else if eq .Status "AWARDED"}}bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border border-purple-200 dark:border-purple-800
+                            {{else}}bg-surface-container text-text-muted border border-border-subtle{{end}} uppercase tracking-wider">
+                            {{.Status}}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        {{if and (can $.User "loadboard" "write") (ne .Status "AWARDED")}}
+                        <button type="button" onclick="openBidModal('{{.ID}}', '{{.OriginCity}} to {{.DestinationCity}}', '{{.TargetRate}}')" class="px-2.5 py-1 text-xs font-semibold rounded bg-primary text-on-primary hover:bg-primary/90 transition">
+                            Submit Bid
+                        </button>
+                        {{end}}
+                    </td>
+                </tr>
+                {{else}}
+                <tr>
+                    <td colspan="8" class="px-4 py-12 text-center text-text-muted">
+                        <div class="flex flex-col items-center gap-2">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-8 h-8 text-text-muted/60"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                            <span class="text-sm">No freight listings available on the load board currently.</span>
+                        </div>
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: Submit Bid -->
+<div id="bid-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xl w-full max-w-md overflow-hidden animate-in fade-in duration-200">
+        <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between bg-surface-container-low">
+            <h3 class="text-base font-semibold text-on-surface">Submit Carrier Bid</h3>
+            <button type="button" onclick="document.getElementById('bid-modal').classList.add('hidden')" class="text-text-muted hover:text-on-surface">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form id="bid-form" method="POST" action="" class="p-6 space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-text-muted mb-1">Selected Lane</label>
+                <div id="modal-lane" class="text-sm font-semibold text-on-surface"></div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-text-muted mb-1">Carrier Name *</label>
+                <input type="text" name="carrier_name" required placeholder="e.g. Express Roadways" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-text-muted mb-1">Offered Amount (₹) *</label>
+                <input type="number" step="any" name="bid_amount" id="modal-rate" required placeholder="5000" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-text-muted mb-1">Notes / Terms</label>
+                <input type="text" name="notes" placeholder="Guaranteed placement within 4 hours" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+            </div>
+            <div class="pt-4 border-t border-border-subtle flex items-center justify-end gap-3">
+                <button type="button" onclick="document.getElementById('bid-modal').classList.add('hidden')" class="px-4 py-2 rounded-lg border border-border-subtle text-sm text-on-surface hover:bg-surface-container-low transition">Cancel</button>
+                <button type="submit" class="px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-semibold hover:bg-primary/90 transition">Place Bid</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openBidModal(listingID, lane, targetRate) {
+    document.getElementById('modal-lane').textContent = lane;
+    document.getElementById('modal-rate').value = targetRate;
+    document.getElementById('bid-form').action = '/loadboard/listings/' + listingID + '/bids';
+    document.getElementById('bid-modal').classList.remove('hidden');
+}
+</script>

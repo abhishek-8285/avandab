@@ -18,7 +18,6 @@ import (
 	dbmigr "transport-app/db"
 	"transport-app/internal/events"
 	"transport-app/internal/ewaybill"
-	intEWB "transport-app/internal/integration/ewaybill"
 )
 
 func TestA9_TripDeliveryOnMigratedChain(t *testing.T) {
@@ -50,8 +49,7 @@ func TestA9_TripDeliveryOnMigratedChain(t *testing.T) {
 	}
 
 	bus := newMockRecordedBus()
-	client := intEWB.NewClient(intEWB.Config{Enabled: true, UseMock: true})
-	svc := ewaybill.NewEWayBillService(db, bus, client, slog.Default(), ewaybill.Config{Enabled: true})
+	svc := ewaybill.NewEWayBillService(db, bus, fakeRealProvider{}, slog.Default(), ewaybill.Config{Enabled: true})
 	svc.SubscribeTripEvents(bus)
 
 	const tripID, ewbNumber = "TRIP-A9-STAGING-001", "888800009999"

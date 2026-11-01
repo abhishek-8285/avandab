@@ -1,0 +1,179 @@
+{{template "page_header.html" (dict "Title" "Facilities" "Subtitle" "Manage enterprise warehouse hubs, depots, cross-docks, and yards")}}
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+    <div class="group relative overflow-hidden bg-gradient-to-br from-primary to-indigo-600 rounded-xl shadow-md p-4 text-white hover:shadow-lg transition">
+        <div class="flex items-center gap-4">
+            <div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center shrink-0">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M3 21h18"/><path d="M19 21v-4"/><path d="M19 17l-5-5v8"/><path d="M14 12l-5-5v13"/><path d="M9 7L4 2v19"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-black tabular-nums leading-none">{{.Total}}</div>
+                <div class="text-xs font-medium text-white/80 mt-1">Total Facilities</div>
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">{{if .Facilities}}{{len .Facilities}}{{else}}0{{end}}</div>
+            <div class="text-xs text-secondary font-medium mt-1">Active Locations</div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 grid place-items-center text-blue-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">GPS Geofenced</div>
+            <div class="text-xs text-secondary font-medium mt-1">Automated Gate Detection</div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden mb-6">
+    <div class="p-4 border-b border-border-subtle flex flex-wrap items-center justify-between gap-4">
+        <form method="GET" action="/facilities" class="flex flex-wrap items-center gap-2 flex-1">
+            <input type="text" name="q" value="{{.Query}}" placeholder="Search by name, code, or city..." class="px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20 flex-1 max-w-sm">
+            <select name="type" class="px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+                <option value="">All Facility Types</option>
+                <option value="WAREHOUSE" {{if eq .TypeFilter "WAREHOUSE"}}selected{{end}}>Warehouse</option>
+                <option value="HUB" {{if eq .TypeFilter "HUB"}}selected{{end}}>Distribution Hub</option>
+                <option value="DEPOT" {{if eq .TypeFilter "DEPOT"}}selected{{end}}>Depot</option>
+                <option value="CROSS_DOCK" {{if eq .TypeFilter "CROSS_DOCK"}}selected{{end}}>Cross Dock</option>
+                <option value="YARD" {{if eq .TypeFilter "YARD"}}selected{{end}}>Yard</option>
+            </select>
+            <button type="submit" class="px-4 py-1.5 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary/90 transition">Filter</button>
+        </form>
+
+        {{if can .User "facilities" "write"}}
+        <button type="button" onclick="document.getElementById('facility-modal').classList.remove('hidden')" class="px-4 py-1.5 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary/90 transition flex items-center gap-1.5">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Add Facility</span>
+        </button>
+        {{end}}
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="rtable min-w-full divide-y divide-border-subtle">
+            <thead class="bg-surface-container-low">
+                <tr>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Code</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Facility Name</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Type</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">City / State</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Address</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Coordinates</th>
+                    <th class="px-4 py-3 text-right text-eyebrow text-text-muted">Status</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
+                {{range .Facilities}}
+                <tr class="hover:bg-surface-container-low/50 transition">
+                    <td class="px-4 py-3 font-mono font-semibold text-primary">{{.FacilityCode}}</td>
+                    <td class="px-4 py-3 font-semibold">{{.Name}}</td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-surface-container text-on-surface border border-border-subtle uppercase tracking-wider">{{.FacilityType}}</span>
+                    </td>
+                    <td class="px-4 py-3">{{.City}}{{if and .City .State}}, {{end}}{{.State}}</td>
+                    <td class="px-4 py-3 text-secondary text-xs max-w-xs truncate">{{.Address}}</td>
+                    <td class="px-4 py-3 font-mono text-xs text-text-muted">
+                        {{if and .Latitude .Longitude}}
+                        {{printf "%.4f, %.4f" (derefFloat .Latitude) (derefFloat .Longitude)}}
+                        {{else}}
+                        —
+                        {{end}}
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        {{if .IsActive}}
+                        <span class="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Active
+                        </span>
+                        {{else}}
+                        <span class="inline-flex items-center gap-1 text-xs font-medium text-text-muted bg-surface-container px-2 py-0.5 rounded-full border border-border-subtle">
+                            Inactive
+                        </span>
+                        {{end}}
+                    </td>
+                </tr>
+                {{else}}
+                <tr>
+                    <td colspan="7" class="px-4 py-12 text-center text-text-muted">
+                        <div class="flex flex-col items-center gap-2">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-8 h-8 text-text-muted/60"><path d="M3 21h18"/><path d="M19 21v-4"/><path d="M19 17l-5-5v8"/><path d="M14 12l-5-5v13"/><path d="M9 7L4 2v19"/></svg>
+                            <span class="text-sm">No facilities found. Click "Add Facility" to register your first warehouse or hub.</span>
+                        </div>
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: Add Facility -->
+<div id="facility-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in duration-200">
+        <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between bg-surface-container-low">
+            <h3 class="text-base font-semibold text-on-surface">Register New Facility</h3>
+            <button type="button" onclick="document.getElementById('facility-modal').classList.add('hidden')" class="text-text-muted hover:text-on-surface">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form method="POST" action="/facilities" class="p-6 space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">Facility Code *</label>
+                    <input type="text" name="facility_code" required placeholder="e.g. WH-BOM-01" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">Facility Type *</label>
+                    <select name="facility_type" required class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+                        <option value="WAREHOUSE">Warehouse</option>
+                        <option value="HUB">Distribution Hub</option>
+                        <option value="DEPOT">Depot</option>
+                        <option value="CROSS_DOCK">Cross Dock</option>
+                        <option value="YARD">Yard</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-text-muted mb-1">Facility Name *</label>
+                <input type="text" name="name" required placeholder="e.g. Bhiwandi Central Logistics Hub" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-text-muted mb-1">Address</label>
+                <input type="text" name="address" placeholder="Plot 14, Logistics Park" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+            </div>
+            <div class="grid grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">City</label>
+                    <input type="text" name="city" placeholder="Thane" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">State</label>
+                    <input type="text" name="state" placeholder="Maharashtra" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">Pincode</label>
+                    <input type="text" name="pincode" placeholder="421302" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">Latitude</label>
+                    <input type="number" step="any" name="latitude" placeholder="19.2968" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-text-muted mb-1">Longitude</label>
+                    <input type="number" step="any" name="longitude" placeholder="73.0631" class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/20">
+                </div>
+            </div>
+            <div class="pt-4 border-t border-border-subtle flex items-center justify-end gap-3">
+                <button type="button" onclick="document.getElementById('facility-modal').classList.add('hidden')" class="px-4 py-2 rounded-lg border border-border-subtle text-sm text-on-surface hover:bg-surface-container-low transition">Cancel</button>
+                <button type="submit" class="px-4 py-2 rounded-lg bg-primary text-on-primary text-sm font-semibold hover:bg-primary/90 transition">Save Facility</button>
+            </div>
+        </form>
+    </div>
+</div>

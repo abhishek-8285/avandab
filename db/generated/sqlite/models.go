@@ -258,6 +258,26 @@ type ContactSubmission struct {
 	AcknowledgedAt sql.NullTime   `json:"acknowledged_at"`
 }
 
+type CounterOffer struct {
+	ID            string         `json:"id"`
+	TenantID      string         `json:"tenant_id"`
+	EntityType    string         `json:"entity_type"`
+	RfqID         sql.NullString `json:"rfq_id"`
+	ListingID     sql.NullString `json:"listing_id"`
+	BidID         string         `json:"bid_id"`
+	RoundNumber   int64          `json:"round_number"`
+	SenderRole    string         `json:"sender_role"`
+	SenderID      string         `json:"sender_id"`
+	SenderName    string         `json:"sender_name"`
+	OfferedAmount float64        `json:"offered_amount"`
+	Remarks       string         `json:"remarks"`
+	Status        string         `json:"status"`
+	ExpiresAt     sql.NullTime   `json:"expires_at"`
+	CreatedAt     time.Time      `json:"created_at"`
+	DecidedAt     sql.NullTime   `json:"decided_at"`
+	DecidedBy     string         `json:"decided_by"`
+}
+
 type CreditDebitNote struct {
 	ID             string         `json:"id"`
 	TenantID       string         `json:"tenant_id"`
@@ -275,6 +295,25 @@ type CreditDebitNote struct {
 	IrnCancelledAt sql.NullTime   `json:"irn_cancelled_at"`
 	CreatedBy      sql.NullString `json:"created_by"`
 	CreatedAt      time.Time      `json:"created_at"`
+}
+
+type CustomReport struct {
+	ID              string    `json:"id"`
+	TenantID        string    `json:"tenant_id"`
+	Name            string    `json:"name"`
+	Description     string    `json:"description"`
+	Dataset         string    `json:"dataset"`
+	SelectedColumns string    `json:"selected_columns"`
+	Filters         string    `json:"filters"`
+	GroupBy         string    `json:"group_by"`
+	Aggregations    string    `json:"aggregations"`
+	SortBy          string    `json:"sort_by"`
+	SortDirection   string    `json:"sort_direction"`
+	ChartType       string    `json:"chart_type"`
+	IsSystem        int64     `json:"is_system"`
+	CreatedBy       string    `json:"created_by"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 type Customer struct {
@@ -547,6 +586,7 @@ type DriverExpense struct {
 	OcrAmount         sql.NullFloat64 `json:"ocr_amount"`
 	OcrConfidence     sql.NullFloat64 `json:"ocr_confidence"`
 	TenantID          string          `json:"tenant_id"`
+	ProviderMode      string          `json:"provider_mode"`
 }
 
 type DriverIdentity struct {
@@ -683,6 +723,23 @@ type DriverPushToken struct {
 	IsActive  int64     `json:"is_active"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type DriverSafetyScorecard struct {
+	ID                 string    `json:"id"`
+	TenantID           string    `json:"tenant_id"`
+	DriverID           string    `json:"driver_id"`
+	PeriodStart        time.Time `json:"period_start"`
+	PeriodEnd          time.Time `json:"period_end"`
+	DistanceKm         float64   `json:"distance_km"`
+	SafetyScore        float64   `json:"safety_score"`
+	AdasEventCount     int64     `json:"adas_event_count"`
+	DmsEventCount      int64     `json:"dms_event_count"`
+	CriticalEventCount int64     `json:"critical_event_count"`
+	CoachedEventCount  int64     `json:"coached_event_count"`
+	RiskTier           string    `json:"risk_tier"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
 }
 
 type DriverScore struct {
@@ -879,6 +936,36 @@ type EtaHistoryMonthly struct {
 	SampleCount  int64   `json:"sample_count"`
 }
 
+type EvChargingSession struct {
+	ID             string          `json:"id"`
+	TenantID       string          `json:"tenant_id"`
+	VehicleID      string          `json:"vehicle_id"`
+	FacilityID     sql.NullString  `json:"facility_id"`
+	StartTime      time.Time       `json:"start_time"`
+	EndTime        sql.NullTime    `json:"end_time"`
+	StartSoc       float64         `json:"start_soc"`
+	EndSoc         sql.NullFloat64 `json:"end_soc"`
+	EnergyAddedKwh float64         `json:"energy_added_kwh"`
+	PeakPowerKw    float64         `json:"peak_power_kw"`
+	ChargerType    string          `json:"charger_type"`
+	EstimatedCost  float64         `json:"estimated_cost"`
+	Status         string          `json:"status"`
+	CreatedAt      time.Time       `json:"created_at"`
+	UpdatedAt      time.Time       `json:"updated_at"`
+}
+
+type EvEnergySummary struct {
+	ID                string         `json:"id"`
+	TenantID          string         `json:"tenant_id"`
+	VehicleID         string         `json:"vehicle_id"`
+	TripID            sql.NullString `json:"trip_id"`
+	DistanceKm        float64        `json:"distance_km"`
+	EnergyConsumedKwh float64        `json:"energy_consumed_kwh"`
+	EfficiencyWhKm    float64        `json:"efficiency_wh_km"`
+	Co2AvoidedKg      float64        `json:"co2_avoided_kg"`
+	RecordedAt        time.Time      `json:"recorded_at"`
+}
+
 type EwayBill struct {
 	ID               string          `json:"id"`
 	TripID           sql.NullString  `json:"trip_id"`
@@ -909,6 +996,7 @@ type EwayBill struct {
 	QrCode           sql.NullString  `json:"qr_code"`
 	AckNo            sql.NullString  `json:"ack_no"`
 	GenMode          sql.NullString  `json:"gen_mode"`
+	ProviderMode     string          `json:"provider_mode"`
 }
 
 type EwayBillEvent struct {
@@ -1012,6 +1100,7 @@ type FastagTransaction struct {
 	Reconciled    int64          `json:"reconciled"`
 	KharchaID     sql.NullString `json:"kharcha_id"`
 	CreatedAt     sql.NullTime   `json:"created_at"`
+	ProviderMode  string         `json:"provider_mode"`
 }
 
 type FeatureFlag struct {
@@ -1061,6 +1150,87 @@ type FounderSignal struct {
 	AcknowledgedBy sql.NullString  `json:"acknowledged_by"`
 	AcknowledgedAt sql.NullTime    `json:"acknowledged_at"`
 	CreatedAt      time.Time       `json:"created_at"`
+}
+
+type FreightAudit struct {
+	ID                      string         `json:"id"`
+	TenantID                string         `json:"tenant_id"`
+	AuditNumber             string         `json:"audit_number"`
+	TripID                  sql.NullString `json:"trip_id"`
+	InvoiceID               sql.NullString `json:"invoice_id"`
+	BookingID               sql.NullString `json:"booking_id"`
+	RateCardID              sql.NullString `json:"rate_card_id"`
+	VendorName              string         `json:"vendor_name"`
+	VehicleNumber           string         `json:"vehicle_number"`
+	Status                  string         `json:"status"`
+	BillingBasis            string         `json:"billing_basis"`
+	BilledDistanceKm        float64        `json:"billed_distance_km"`
+	BilledWeightKg          float64        `json:"billed_weight_kg"`
+	BilledRate              float64        `json:"billed_rate"`
+	BilledBaseFreight       float64        `json:"billed_base_freight"`
+	BilledTollCharges       float64        `json:"billed_toll_charges"`
+	BilledDetentionCharges  float64        `json:"billed_detention_charges"`
+	BilledTotal             float64        `json:"billed_total"`
+	GpsDistanceKm           float64        `json:"gps_distance_km"`
+	ActualWeightKg          float64        `json:"actual_weight_kg"`
+	AuditedRate             float64        `json:"audited_rate"`
+	AuditedBaseFreight      float64        `json:"audited_base_freight"`
+	AuditedTollCharges      float64        `json:"audited_toll_charges"`
+	AuditedDetentionHours   float64        `json:"audited_detention_hours"`
+	AuditedDetentionCharges float64        `json:"audited_detention_charges"`
+	AuditedTotal            float64        `json:"audited_total"`
+	DistanceVarianceKm      float64        `json:"distance_variance_km"`
+	WeightVarianceKg        float64        `json:"weight_variance_kg"`
+	RateVariance            float64        `json:"rate_variance"`
+	TollVariance            float64        `json:"toll_variance"`
+	OverbillingAmount       float64        `json:"overbilling_amount"`
+	VariancePct             float64        `json:"variance_pct"`
+	DeductionAmount         float64        `json:"deduction_amount"`
+	PayableAmount           float64        `json:"payable_amount"`
+	DeductionReason         string         `json:"deduction_reason"`
+	DebitNoteNumber         string         `json:"debit_note_number"`
+	DiscrepancyFlags        string         `json:"discrepancy_flags"`
+	DisputeReason           string         `json:"dispute_reason"`
+	ReviewedBy              string         `json:"reviewed_by"`
+	ReviewedAt              sql.NullTime   `json:"reviewed_at"`
+	ApprovedBy              string         `json:"approved_by"`
+	ApprovedAt              sql.NullTime   `json:"approved_at"`
+	CreatedAt               time.Time      `json:"created_at"`
+	UpdatedAt               time.Time      `json:"updated_at"`
+}
+
+type FreightAuditDeduction struct {
+	ID              string    `json:"id"`
+	TenantID        string    `json:"tenant_id"`
+	AuditID         string    `json:"audit_id"`
+	Category        string    `json:"category"`
+	Description     string    `json:"description"`
+	ClaimedValue    float64   `json:"claimed_value"`
+	VerifiedValue   float64   `json:"verified_value"`
+	UnitRate        float64   `json:"unit_rate"`
+	DeductionAmount float64   `json:"deduction_amount"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
+type FreightRateCard struct {
+	ID                   string         `json:"id"`
+	TenantID             string         `json:"tenant_id"`
+	ContractNumber       string         `json:"contract_number"`
+	Name                 string         `json:"name"`
+	VendorID             sql.NullString `json:"vendor_id"`
+	CustomerID           sql.NullString `json:"customer_id"`
+	RouteID              sql.NullString `json:"route_id"`
+	VehicleType          string         `json:"vehicle_type"`
+	BillingBasis         string         `json:"billing_basis"`
+	Rate                 float64        `json:"rate"`
+	MinCharge            float64        `json:"min_charge"`
+	FreeDetentionHours   float64        `json:"free_detention_hours"`
+	DetentionRatePerHour float64        `json:"detention_rate_per_hour"`
+	EffectiveFrom        time.Time      `json:"effective_from"`
+	EffectiveTo          sql.NullTime   `json:"effective_to"`
+	IsActive             int64          `json:"is_active"`
+	CreatedAt            time.Time      `json:"created_at"`
+	UpdatedAt            time.Time      `json:"updated_at"`
 }
 
 type FuelCard struct {
@@ -1441,6 +1611,85 @@ type OutboxEvent struct {
 	PublishedAt   sql.NullTime `json:"published_at"`
 }
 
+type Part struct {
+	ID               string    `json:"id"`
+	TenantID         string    `json:"tenant_id"`
+	PartNumber       string    `json:"part_number"`
+	Name             string    `json:"name"`
+	Category         string    `json:"category"`
+	Description      string    `json:"description"`
+	Uom              string    `json:"uom"`
+	MinStockLevel    float64   `json:"min_stock_level"`
+	ReorderQuantity  float64   `json:"reorder_quantity"`
+	CostPrice        float64   `json:"cost_price"`
+	SellingPrice     float64   `json:"selling_price"`
+	OemBrand         string    `json:"oem_brand"`
+	CompatibleModels string    `json:"compatible_models"`
+	IsActive         int64     `json:"is_active"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+type PartPurchaseBill struct {
+	ID           string       `json:"id"`
+	TenantID     string       `json:"tenant_id"`
+	BillNumber   string       `json:"bill_number"`
+	VendorName   string       `json:"vendor_name"`
+	VendorGstin  string       `json:"vendor_gstin"`
+	FacilityID   string       `json:"facility_id"`
+	BillDate     time.Time    `json:"bill_date"`
+	TotalAmount  float64      `json:"total_amount"`
+	TaxAmount    float64      `json:"tax_amount"`
+	Status       string       `json:"status"`
+	ReceivedDate sql.NullTime `json:"received_date"`
+	ReceivedBy   string       `json:"received_by"`
+	Notes        string       `json:"notes"`
+	CreatedAt    time.Time    `json:"created_at"`
+	UpdatedAt    time.Time    `json:"updated_at"`
+}
+
+type PartPurchaseItem struct {
+	ID        string    `json:"id"`
+	TenantID  string    `json:"tenant_id"`
+	BillID    string    `json:"bill_id"`
+	PartID    string    `json:"part_id"`
+	Quantity  float64   `json:"quantity"`
+	UnitCost  float64   `json:"unit_cost"`
+	TaxRate   float64   `json:"tax_rate"`
+	TotalCost float64   `json:"total_cost"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type PartStock struct {
+	ID               string    `json:"id"`
+	TenantID         string    `json:"tenant_id"`
+	PartID           string    `json:"part_id"`
+	FacilityID       string    `json:"facility_id"`
+	QuantityOnHand   float64   `json:"quantity_on_hand"`
+	QuantityReserved float64   `json:"quantity_reserved"`
+	BinLocation      string    `json:"bin_location"`
+	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+type PartTransaction struct {
+	ID              string         `json:"id"`
+	TenantID        string         `json:"tenant_id"`
+	PartID          string         `json:"part_id"`
+	FacilityID      string         `json:"facility_id"`
+	TransactionType string         `json:"transaction_type"`
+	Quantity        float64        `json:"quantity"`
+	UnitCost        float64        `json:"unit_cost"`
+	TotalCost       float64        `json:"total_cost"`
+	BalanceAfter    float64        `json:"balance_after"`
+	ReferenceType   string         `json:"reference_type"`
+	ReferenceID     string         `json:"reference_id"`
+	VehicleID       sql.NullString `json:"vehicle_id"`
+	WorkOrderID     sql.NullString `json:"work_order_id"`
+	Notes           string         `json:"notes"`
+	PerformedBy     string         `json:"performed_by"`
+	RecordedAt      time.Time      `json:"recorded_at"`
+}
+
 type Payment struct {
 	ID                string         `json:"id"`
 	InvoiceID         string         `json:"invoice_id"`
@@ -1553,6 +1802,18 @@ type PnlDaily struct {
 	CreatedAt     time.Time `json:"created_at"`
 }
 
+type PrivacyDsarRequest struct {
+	ID          string       `json:"id"`
+	TenantID    string       `json:"tenant_id"`
+	UserID      string       `json:"user_id"`
+	RequestType string       `json:"request_type"`
+	Status      string       `json:"status"`
+	RequestedBy string       `json:"requested_by"`
+	Details     string       `json:"details"`
+	CreatedAt   time.Time    `json:"created_at"`
+	CompletedAt sql.NullTime `json:"completed_at"`
+}
+
 type ProviderEvent struct {
 	ID              string    `json:"id"`
 	TenantID        string    `json:"tenant_id"`
@@ -1561,6 +1822,125 @@ type ProviderEvent struct {
 	EventType       string    `json:"event_type"`
 	Payload         string    `json:"payload"`
 	ProcessedAt     time.Time `json:"processed_at"`
+}
+
+type ReeferTemperatureExcursion struct {
+	ID              string         `json:"id"`
+	TenantID        string         `json:"tenant_id"`
+	VehicleID       string         `json:"vehicle_id"`
+	TripID          sql.NullString `json:"trip_id"`
+	ZoneNumber      int64          `json:"zone_number"`
+	ExcursionType   string         `json:"excursion_type"`
+	Severity        string         `json:"severity"`
+	StartTime       time.Time      `json:"start_time"`
+	EndTime         sql.NullTime   `json:"end_time"`
+	DurationSeconds int64          `json:"duration_seconds"`
+	PeakTempC       float64        `json:"peak_temp_c"`
+	ThresholdTempC  float64        `json:"threshold_temp_c"`
+	SetpointC       float64        `json:"setpoint_c"`
+	Status          string         `json:"status"`
+	ResolutionNote  string         `json:"resolution_note"`
+	ResolvedBy      string         `json:"resolved_by"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
+}
+
+type ReeferTripSummary struct {
+	ID                        string       `json:"id"`
+	TenantID                  string       `json:"tenant_id"`
+	TripID                    string       `json:"trip_id"`
+	VehicleID                 string       `json:"vehicle_id"`
+	StartTime                 time.Time    `json:"start_time"`
+	EndTime                   time.Time    `json:"end_time"`
+	Zone1MinTempC             float64      `json:"zone1_min_temp_c"`
+	Zone1MaxTempC             float64      `json:"zone1_max_temp_c"`
+	Zone1MeanKineticTempC     float64      `json:"zone1_mean_kinetic_temp_c"`
+	TotalExcursionDurationSec int64        `json:"total_excursion_duration_sec"`
+	DoorOpenCount             int64        `json:"door_open_count"`
+	ComplianceStatus          string       `json:"compliance_status"`
+	CertifiedAt               sql.NullTime `json:"certified_at"`
+	CertifiedBy               string       `json:"certified_by"`
+	CreatedAt                 time.Time    `json:"created_at"`
+}
+
+type ReportExecution struct {
+	ID                  string         `json:"id"`
+	TenantID            string         `json:"tenant_id"`
+	ReportID            string         `json:"report_id"`
+	ScheduleID          sql.NullString `json:"schedule_id"`
+	Format              string         `json:"format"`
+	Status              string         `json:"status"`
+	RowCount            int64          `json:"row_count"`
+	FileSizeBytes       int64          `json:"file_size_bytes"`
+	ExecutionDurationMs int64          `json:"execution_duration_ms"`
+	ErrorMessage        string         `json:"error_message"`
+	TriggeredBy         string         `json:"triggered_by"`
+	CreatedAt           time.Time      `json:"created_at"`
+	CompletedAt         sql.NullTime   `json:"completed_at"`
+}
+
+type ReportSchedule struct {
+	ID             string       `json:"id"`
+	TenantID       string       `json:"tenant_id"`
+	ReportID       string       `json:"report_id"`
+	Name           string       `json:"name"`
+	Frequency      string       `json:"frequency"`
+	CronExpression string       `json:"cron_expression"`
+	Format         string       `json:"format"`
+	Channel        string       `json:"channel"`
+	Recipients     string       `json:"recipients"`
+	IsActive       int64        `json:"is_active"`
+	LastRunAt      sql.NullTime `json:"last_run_at"`
+	NextRunAt      sql.NullTime `json:"next_run_at"`
+	LastStatus     string       `json:"last_status"`
+	LastError      string       `json:"last_error"`
+	CreatedBy      string       `json:"created_by"`
+	CreatedAt      time.Time    `json:"created_at"`
+	UpdatedAt      time.Time    `json:"updated_at"`
+}
+
+type Rfq struct {
+	ID                  string         `json:"id"`
+	TenantID            string         `json:"tenant_id"`
+	RfqNumber           string         `json:"rfq_number"`
+	Title               string         `json:"title"`
+	OriginCity          string         `json:"origin_city"`
+	DestinationCity     string         `json:"destination_city"`
+	VehicleTypeRequired string         `json:"vehicle_type_required"`
+	CargoType           string         `json:"cargo_type"`
+	CargoWeightTons     float64        `json:"cargo_weight_tons"`
+	TargetRate          float64        `json:"target_rate"`
+	MaxAcceptableRate   float64        `json:"max_acceptable_rate"`
+	PickupDate          time.Time      `json:"pickup_date"`
+	DeliveryDeadline    time.Time      `json:"delivery_deadline"`
+	BidDeadline         time.Time      `json:"bid_deadline"`
+	Status              string         `json:"status"`
+	BookingID           sql.NullString `json:"booking_id"`
+	StoID               sql.NullString `json:"sto_id"`
+	AwardedBidID        sql.NullString `json:"awarded_bid_id"`
+	AwardedCarrierID    string         `json:"awarded_carrier_id"`
+	AwardedCarrierName  string         `json:"awarded_carrier_name"`
+	AwardedRate         float64        `json:"awarded_rate"`
+	AwardedAt           sql.NullTime   `json:"awarded_at"`
+	CreatedBy           string         `json:"created_by"`
+	CreatedAt           time.Time      `json:"created_at"`
+	UpdatedAt           time.Time      `json:"updated_at"`
+}
+
+type RfqBid struct {
+	ID                string       `json:"id"`
+	TenantID          string       `json:"tenant_id"`
+	RfqID             string       `json:"rfq_id"`
+	CarrierID         string       `json:"carrier_id"`
+	CarrierName       string       `json:"carrier_name"`
+	BidAmount         float64      `json:"bid_amount"`
+	TransitDays       int64        `json:"transit_days"`
+	VehiclesAvailable int64        `json:"vehicles_available"`
+	Remarks           string       `json:"remarks"`
+	Status            string       `json:"status"`
+	SubmittedAt       time.Time    `json:"submitted_at"`
+	DecidedAt         sql.NullTime `json:"decided_at"`
+	DecidedBy         string       `json:"decided_by"`
 }
 
 type Role struct {
@@ -2061,6 +2441,70 @@ type TripStop struct {
 	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
+type Tyre struct {
+	ID                  string          `json:"id"`
+	TenantID            string          `json:"tenant_id"`
+	SerialNumber        string          `json:"serial_number"`
+	Brand               string          `json:"brand"`
+	Model               string          `json:"model"`
+	Size                string          `json:"size"`
+	TyreType            string          `json:"tyre_type"`
+	Status              string          `json:"status"`
+	VehicleID           sql.NullString  `json:"vehicle_id"`
+	AxlePosition        sql.NullString  `json:"axle_position"`
+	MountOdometerKm     sql.NullFloat64 `json:"mount_odometer_km"`
+	MountDate           sql.NullTime    `json:"mount_date"`
+	InitialTreadDepthMm float64         `json:"initial_tread_depth_mm"`
+	CurrentTreadDepthMm float64         `json:"current_tread_depth_mm"`
+	MinTreadDepthMm     float64         `json:"min_tread_depth_mm"`
+	PurchaseDate        sql.NullTime    `json:"purchase_date"`
+	PurchaseCost        float64         `json:"purchase_cost"`
+	VendorName          string          `json:"vendor_name"`
+	InvoiceNumber       string          `json:"invoice_number"`
+	RetreadCount        int64           `json:"retread_count"`
+	MaxRetreads         int64           `json:"max_retreads"`
+	TotalRetreadCost    float64         `json:"total_retread_cost"`
+	TotalKmRun          float64         `json:"total_km_run"`
+	ScrapDate           sql.NullTime    `json:"scrap_date"`
+	ScrapReason         string          `json:"scrap_reason"`
+	ScrapRecoveryAmount float64         `json:"scrap_recovery_amount"`
+	CreatedAt           time.Time       `json:"created_at"`
+	UpdatedAt           time.Time       `json:"updated_at"`
+}
+
+type TyreActivity struct {
+	ID           string          `json:"id"`
+	TenantID     string          `json:"tenant_id"`
+	TyreID       string          `json:"tyre_id"`
+	ActivityType string          `json:"activity_type"`
+	VehicleID    sql.NullString  `json:"vehicle_id"`
+	FromPosition sql.NullString  `json:"from_position"`
+	ToPosition   sql.NullString  `json:"to_position"`
+	OdometerKm   float64         `json:"odometer_km"`
+	TreadDepthMm sql.NullFloat64 `json:"tread_depth_mm"`
+	PressurePsi  sql.NullFloat64 `json:"pressure_psi"`
+	Cost         float64         `json:"cost"`
+	Notes        string          `json:"notes"`
+	PerformedBy  string          `json:"performed_by"`
+	RecordedAt   time.Time       `json:"recorded_at"`
+}
+
+type TyreInspection struct {
+	ID             string          `json:"id"`
+	TenantID       string          `json:"tenant_id"`
+	TyreID         string          `json:"tyre_id"`
+	VehicleID      sql.NullString  `json:"vehicle_id"`
+	InspectionDate time.Time       `json:"inspection_date"`
+	OdometerKm     float64         `json:"odometer_km"`
+	TreadDepthMm   float64         `json:"tread_depth_mm"`
+	PressurePsi    sql.NullFloat64 `json:"pressure_psi"`
+	Condition      string          `json:"condition"`
+	ActionTaken    string          `json:"action_taken"`
+	InspectorName  string          `json:"inspector_name"`
+	Notes          string          `json:"notes"`
+	CreatedAt      time.Time       `json:"created_at"`
+}
+
 type User struct {
 	ID              string         `json:"id"`
 	Email           string         `json:"email"`
@@ -2209,6 +2653,21 @@ type VehicleComplianceDocument struct {
 	CreatedAt          time.Time      `json:"created_at"`
 }
 
+type VehicleDashcamProfile struct {
+	VehicleID           string    `json:"vehicle_id"`
+	TenantID            string    `json:"tenant_id"`
+	CameraMakeModel     string    `json:"camera_make_model"`
+	CameraSerial        string    `json:"camera_serial"`
+	DualFacing          int64     `json:"dual_facing"`
+	AdasEnabled         int64     `json:"adas_enabled"`
+	DmsEnabled          int64     `json:"dms_enabled"`
+	LiveStreamSupported int64     `json:"live_stream_supported"`
+	FirmwareVersion     string    `json:"firmware_version"`
+	Status              string    `json:"status"`
+	CreatedAt           time.Time `json:"created_at"`
+	UpdatedAt           time.Time `json:"updated_at"`
+}
+
 type VehicleDocument struct {
 	ID         string         `json:"id"`
 	VehicleID  string         `json:"vehicle_id"`
@@ -2219,6 +2678,32 @@ type VehicleDocument struct {
 	VerifiedBy sql.NullString `json:"verified_by"`
 	VerifiedAt sql.NullTime   `json:"verified_at"`
 	CreatedAt  time.Time      `json:"created_at"`
+}
+
+type VehicleEvProfile struct {
+	VehicleID             string    `json:"vehicle_id"`
+	TenantID              string    `json:"tenant_id"`
+	BatteryCapacityKwh    float64   `json:"battery_capacity_kwh"`
+	MaxRangeKm            float64   `json:"max_range_km"`
+	ChargingStandard      string    `json:"charging_standard"`
+	MinSafeSoc            float64   `json:"min_safe_soc"`
+	NominalEfficiencyWhKm float64   `json:"nominal_efficiency_wh_km"`
+	CreatedAt             time.Time `json:"created_at"`
+	UpdatedAt             time.Time `json:"updated_at"`
+}
+
+type VehicleEvTelemetryLatest struct {
+	VehicleID        string          `json:"vehicle_id"`
+	TenantID         string          `json:"tenant_id"`
+	SocPercent       float64         `json:"soc_percent"`
+	SohPercent       float64         `json:"soh_percent"`
+	BatteryTempC     sql.NullFloat64 `json:"battery_temp_c"`
+	RemainingRangeKm float64         `json:"remaining_range_km"`
+	ChargingStatus   string          `json:"charging_status"`
+	ChargingPowerKw  float64         `json:"charging_power_kw"`
+	CurrentDrawA     float64         `json:"current_draw_a"`
+	VoltageV         float64         `json:"voltage_v"`
+	LastSyncAt       time.Time       `json:"last_sync_at"`
 }
 
 type VehicleGeofence struct {
@@ -2295,6 +2780,44 @@ type VehicleOwnership struct {
 	CreatedAt      time.Time    `json:"created_at"`
 }
 
+type VehicleReeferProfile struct {
+	VehicleID          string          `json:"vehicle_id"`
+	TenantID           string          `json:"tenant_id"`
+	ReeferMakeModel    string          `json:"reefer_make_model"`
+	NumZones           int64           `json:"num_zones"`
+	Zone1Type          string          `json:"zone1_type"`
+	Zone1TargetTempC   float64         `json:"zone1_target_temp_c"`
+	Zone1MinTempC      float64         `json:"zone1_min_temp_c"`
+	Zone1MaxTempC      float64         `json:"zone1_max_temp_c"`
+	Zone2Type          sql.NullString  `json:"zone2_type"`
+	Zone2TargetTempC   sql.NullFloat64 `json:"zone2_target_temp_c"`
+	Zone2MinTempC      sql.NullFloat64 `json:"zone2_min_temp_c"`
+	Zone2MaxTempC      sql.NullFloat64 `json:"zone2_max_temp_c"`
+	HumidityMonitoring int64           `json:"humidity_monitoring"`
+	TargetHumidityRh   sql.NullFloat64 `json:"target_humidity_rh"`
+	DefrostMode        string          `json:"defrost_mode"`
+	CreatedAt          time.Time       `json:"created_at"`
+	UpdatedAt          time.Time       `json:"updated_at"`
+}
+
+type VehicleReeferTelemetryLatest struct {
+	VehicleID           string          `json:"vehicle_id"`
+	TenantID            string          `json:"tenant_id"`
+	ReeferPowerStatus   string          `json:"reefer_power_status"`
+	ReeferMode          string          `json:"reefer_mode"`
+	Zone1TempC          float64         `json:"zone1_temp_c"`
+	Zone1SetpointC      float64         `json:"zone1_setpoint_c"`
+	Zone2TempC          sql.NullFloat64 `json:"zone2_temp_c"`
+	Zone2SetpointC      sql.NullFloat64 `json:"zone2_setpoint_c"`
+	HumidityRh          sql.NullFloat64 `json:"humidity_rh"`
+	DoorStatus          string          `json:"door_status"`
+	DoorOpenDurationSec int64           `json:"door_open_duration_sec"`
+	ReeferFuelLevelPct  float64         `json:"reefer_fuel_level_pct"`
+	ReeferBatteryV      float64         `json:"reefer_battery_v"`
+	HasActiveExcursion  int64           `json:"has_active_excursion"`
+	LastSyncAt          time.Time       `json:"last_sync_at"`
+}
+
 type VerificationAttempt struct {
 	ID                string         `json:"id"`
 	TenantID          string         `json:"tenant_id"`
@@ -2307,6 +2830,45 @@ type VerificationAttempt struct {
 	CompletedAt       sql.NullTime   `json:"completed_at"`
 	FailureCode       sql.NullString `json:"failure_code"`
 	FailureReason     sql.NullString `json:"failure_reason"`
+}
+
+type VideoLivestreamSession struct {
+	ID             string       `json:"id"`
+	TenantID       string       `json:"tenant_id"`
+	VehicleID      string       `json:"vehicle_id"`
+	Channel        string       `json:"channel"`
+	StreamProtocol string       `json:"stream_protocol"`
+	StreamUrl      string       `json:"stream_url"`
+	SessionToken   string       `json:"session_token"`
+	Status         string       `json:"status"`
+	StartedAt      time.Time    `json:"started_at"`
+	EndedAt        sql.NullTime `json:"ended_at"`
+	RequestedBy    string       `json:"requested_by"`
+}
+
+type VideoSafetyEvent struct {
+	ID              string          `json:"id"`
+	TenantID        string          `json:"tenant_id"`
+	VehicleID       string          `json:"vehicle_id"`
+	DriverID        sql.NullString  `json:"driver_id"`
+	TripID          sql.NullString  `json:"trip_id"`
+	Category        string          `json:"category"`
+	EventType       string          `json:"event_type"`
+	Severity        string          `json:"severity"`
+	EventTime       time.Time       `json:"event_time"`
+	SpeedKmh        float64         `json:"speed_kmh"`
+	Latitude        sql.NullFloat64 `json:"latitude"`
+	Longitude       sql.NullFloat64 `json:"longitude"`
+	LocationName    string          `json:"location_name"`
+	MediaClipUrl    string          `json:"media_clip_url"`
+	ThumbnailUrl    string          `json:"thumbnail_url"`
+	DurationSeconds int64           `json:"duration_seconds"`
+	ReviewStatus    string          `json:"review_status"`
+	CoachingNote    string          `json:"coaching_note"`
+	ReviewedBy      string          `json:"reviewed_by"`
+	ReviewedAt      sql.NullTime    `json:"reviewed_at"`
+	CreatedAt       time.Time       `json:"created_at"`
+	UpdatedAt       time.Time       `json:"updated_at"`
 }
 
 type WorkOrder struct {

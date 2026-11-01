@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -221,7 +222,7 @@ func (h *CustomerPortalHandlers) ListMyBookings(w http.ResponseWriter, r *http.R
 	h.renderPage(w, r, "customer_bookings.html", PageData{
 		Title: "My Shipments",
 		User:  session,
-		Extra: map[string]interface{}{"Bookings": bookings, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status},
+		Extra: h.withBrand(r.Context(), map[string]interface{}{"Bookings": bookings, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status}),
 	})
 }
 
@@ -336,7 +337,7 @@ func (h *CustomerPortalHandlers) ListMyInvoices(w http.ResponseWriter, r *http.R
 	h.renderPage(w, r, "customer_invoices.html", PageData{
 		Title: "My Invoices",
 		User:  session,
-		Extra: map[string]interface{}{"Invoices": invoices, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "PortalPay": true},
+		Extra: h.withBrand(r.Context(), map[string]interface{}{"Invoices": invoices, "Pagination": pd, "Query": pp.Query, "StatusFilter": pp.Status, "PortalPay": true}),
 	})
 }
 
@@ -533,7 +534,7 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 	h.renderPage(w, r, "customer_tracking.html", PageData{
 		Title: "Shipment Tracking",
 		User:  session,
-		Extra: map[string]interface{}{
+		Extra: h.withBrand(r.Context(), map[string]interface{}{
 			"TripID":       tripID,
 			"TripNumber":   tripNumber,
 			"Status":       status,
@@ -548,7 +549,7 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 			"Stops":        stopsList,
 			"CurrentStop":  currentStop,
 			"Progression":  prog,
-		},
+		}),
 	})
 }
 
@@ -715,7 +716,7 @@ func (h *CustomerPortalHandlers) Feedback(w http.ResponseWriter, r *http.Request
 	// For form posts, redirect to tracking page or show success
 	if strings.Contains(r.Header.Get("Accept"), "text/html") || ct == "application/x-www-form-urlencoded" || r.Method == http.MethodPost {
 		// If HTML form, redirect back to tracking with success flash via query param
-		http.Redirect(w, r, "/customer/tracking/"+tripID+"?feedback=success", http.StatusSeeOther)
+		http.Redirect(w, r, safeRedirect(r, "/customer/tracking/"+url.PathEscape(tripID)+"?feedback=success", "/customer/tracking"), http.StatusSeeOther) //nolint:gosec // G710: safeRedirect returns only same-origin paths (see redirect_test.go)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -759,4 +760,51 @@ func lastSeenFix(ctx context.Context, db *sql.DB, vehicleID string) (lat, lng *f
 		}
 	}
 	return lat, lng, ts, nil
+}
+
+// brandView is the customer-facing identity for white-labelled shipper pages.
+type brandView struct {
+	Name string
+	Logo string
+}
+
+// tenantBrand resolves the transporter's own brand: tenant profile first,
+// platform company settings second, product default last. White-label means
+// the shipper must see the transporter, never the platform vendor.
+func (a *App) tenantBrand(ctx context.Context) brandView {
+	b := brandView{Name: "Avandab"}
+	if a == nil || a.DB == nil {
+		return b
+	}
+
+	var name, logo sql.NullString
+	if tid := string(shared.TenantIDFromContext(ctx)); tid != "" {
+		if q, err := appdb.Rebind(`SELECT company_name, logo_path FROM tenant_company_profiles WHERE tenant_id = ?`); err == nil {
+			_ = a.DB.QueryRowContext(ctx, q, tid).Scan(&name, &logo)
+		}
+	}
+	if !name.Valid || name.String == "" {
+		if q, err := appdb.Rebind(`SELECT company_name, logo_path FROM company_settings WHERE id = 1`); err == nil {
+			_ = a.DB.QueryRowContext(ctx, q).Scan(&name, &logo)
+		}
+	}
+
+	if name.Valid && name.String != "" {
+		b.Name = name.String
+	}
+	if logo.Valid && logo.String != "" {
+		b.Logo = logo.String
+	}
+	return b
+}
+
+// withBrand injects the brand into an existing template Extra map.
+func (a *App) withBrand(ctx context.Context, extra map[string]interface{}) map[string]interface{} {
+	if extra == nil {
+		extra = map[string]interface{}{}
+	}
+	b := a.tenantBrand(ctx)
+	extra["BrandName"] = b.Name
+	extra["BrandLogo"] = b.Logo
+	return extra
 }

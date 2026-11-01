@@ -55,7 +55,7 @@ const (
 	MarkerStateStopped        = "stopped"
 )
 
-// LiveStore reads the live-fleet snapshot from telemetry_snapshots.
+// LiveStore reads the live-fleet snapshot from vehicle_latest_position.
 type LiveStore struct {
 	db *sql.DB
 
@@ -176,31 +176,39 @@ func (s *LiveStore) WithMobileStaleMin(d time.Duration) *LiveStore {
 	return s
 }
 
-// Live queries the latest snapshot per vehicle visible in the window.
+// Live queries the latest position per vehicle visible in the window.
+// Reads directly from vehicle_latest_position (single row per vehicle)
+// instead of scanning historical snapshots (FleetX Parity P1.5).
 // tripID filters to a single trip when non-empty. Rows are scoped to the
-// tenant via the vehicles join (telemetry_snapshots has no tenant column).
+// tenant via the vehicles join.
 func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, now time.Time) ([]LiveVehicle, error) {
 	s.maintenanceDueChecked.Do(func() {
 		s.hasMaintenanceDue = columnExists(ctx, s.db, "vehicles", "maintenance_due")
 	})
 	s.headingChecked.Do(func() {
-		s.hasHeading = columnExists(ctx, s.db, "telemetry_snapshots", "heading")
+		s.hasHeading = columnExists(ctx, s.db, "vehicle_latest_position", "heading")
 	})
-	headingSel := "s.heading"
+	headingSel := "vlp.heading"
 	if !s.hasHeading {
 		headingSel = "NULL as heading"
 	}
 	s.vlpParityChecked.Do(func() {
 		s.hasVLPParity = columnExists(ctx, s.db, "vehicle_latest_position", "battery_level")
 	})
-	vlpJoin, vlpSel := "", "NULL as battery_level, NULL as motion, NULL as valid"
+	vlpSel := "NULL as battery_level, NULL as motion, NULL as valid"
 	if s.hasVLPParity {
-		vlpJoin = `LEFT JOIN vehicle_latest_position vlp ON vlp.vehicle_id = s.vehicle_id`
 		vlpSel = "vlp.battery_level, vlp.motion, vlp.valid"
 	}
 	q := `
-		SELECT s.trip_id, s.vehicle_id, s.latitude, s.longitude, s.speed,
-		       s.fuel_level, s.odometer, ` + headingSel + `, s.timestamp,
+		SELECT COALESCE(vlp.trip_id, '') as trip_id,
+		       vlp.vehicle_id,
+		       vlp.latitude,
+		       vlp.longitude,
+		       vlp.speed,
+		       vlp.fuel_level,
+		       vlp.odometer,
+		       ` + headingSel + `,
+		       vlp.device_time as timestamp,
 		       ` + vlpSel + `,
 		       COALESCE(v.vehicle_number, v.registration_number, '') as vehicle_num,
 		       COALESCE(NULLIF(TRIM(COALESCE(d.first_name, '') || ' ' || COALESCE(d.last_name, '')), ''), '') as driver_name,
@@ -208,22 +216,15 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 		       rt.distance as route_km,
 		       td.device_type as device_type,
 		       COALESCE(v.vehicle_type, 'truck') as vehicle_type
-		FROM telemetry_snapshots s
-		JOIN (
-		    SELECT vehicle_id, MAX(timestamp) AS ts
-		    FROM telemetry_snapshots
-		    WHERE latitude IS NOT NULL AND longitude IS NOT NULL
-		      AND ($1 = '' OR trip_id = $2)
-		    GROUP BY vehicle_id
-		) latest ON latest.vehicle_id = s.vehicle_id AND latest.ts = s.timestamp
-		JOIN vehicles v ON v.id = s.vehicle_id AND v.tenant_id = $3
-		` + vlpJoin + `
+		FROM vehicle_latest_position vlp
+		JOIN vehicles v ON v.id = vlp.vehicle_id AND v.tenant_id = $3
 		LEFT JOIN telemetry_devices td ON td.vehicle_id = v.id AND td.tenant_id = v.tenant_id
-		LEFT JOIN trips t ON t.id = s.trip_id
-		LEFT JOIN drivers d ON d.id = t.driver_id
+		LEFT JOIN trips t ON t.id = vlp.trip_id
+		LEFT JOIN drivers d ON d.id = COALESCE(vlp.driver_id, t.driver_id)
 		LEFT JOIN routes rt ON rt.id = t.route_id
-		WHERE s.latitude IS NOT NULL AND s.longitude IS NOT NULL
-		ORDER BY s.vehicle_id`
+		WHERE vlp.latitude IS NOT NULL AND vlp.longitude IS NOT NULL
+		  AND ($1 = '' OR vlp.trip_id = $2)
+		ORDER BY vlp.vehicle_id`
 	rows, err := s.db.QueryContext(ctx, q, tripID, tripID, tenantID)
 	if err != nil {
 		return nil, err

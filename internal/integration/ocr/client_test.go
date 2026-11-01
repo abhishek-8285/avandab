@@ -1,25 +1,37 @@
 package ocr
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
-// TestMockClient_CannedFixture — Spec 22 §7 S8: the mock returns the
-// documented canned amount + confidence.
-func TestMockClient_CannedFixture(t *testing.T) {
+// TestMockClient_NoExtraction — the mock has no receipt text, so it must
+// fail rather than return an amount that could rubber-stamp a claim.
+func TestMockClient_NoExtraction(t *testing.T) {
 	m := NewMockClient()
-	r, err := m.Extract(context.Background(), "/storage/receipts/r1.jpg")
-	if err != nil {
-		t.Fatal(err)
+	for _, ref := range []string{"/storage/receipts/r1.jpg", ""} {
+		r, err := m.Extract(context.Background(), ref)
+		if !errors.Is(err, ErrMockNoExtraction) {
+			t.Errorf("ref=%q err = %v, want ErrMockNoExtraction", ref, err)
+		}
+		if r.Amount != 0 || r.Confidence != 0 {
+			t.Errorf("ref=%q mock = %+v, want zero result", ref, r)
+		}
 	}
-	if r.Amount != 3000.00 || r.Confidence != 0.94 {
-		t.Errorf("mock = %+v, want 3000.00 @ 0.94", r)
-	}
-	if _, err := m.Extract(context.Background(), ""); err == nil {
-		t.Error("empty receipt ref must error")
+}
+
+func TestNewClient_WarnsMockCannotVerify(t *testing.T) {
+	var buf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&buf, nil))
+	NewClient(Config{}, logger)
+	if !strings.Contains(buf.String(), "cannot verify") {
+		t.Errorf("mock selection must warn it cannot verify, log = %q", buf.String())
 	}
 }
 

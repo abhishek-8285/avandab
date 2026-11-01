@@ -98,6 +98,7 @@ type Config struct {
 	DashboardSSEEnabled  bool
 	DashboardSSEInterval time.Duration
 	PWAEnabled           bool
+	PayoutRailEnabled    bool
 	RazorpayKeyID        string
 	RazorpayKeySecret    string
 	RazorpayWebhook      string
@@ -115,6 +116,7 @@ type Config struct {
 	EWayBill             EWayBillConfig
 	GSTN                 GSTNConfig
 	FASTag               FASTagConfig
+	Video                VideoConfig
 	Routing              RoutingConfig
 	Cache                CacheConfig
 	Storage              StorageConfig
@@ -168,14 +170,27 @@ func (c *TurnstileConfig) Enabled() bool {
 // NotifyConfig holds outbound delivery channel settings. Empty values keep a
 // channel unconfigured — sends then fail honestly instead of faking success.
 type NotifyConfig struct {
-	SMTPHost        string
-	SMTPPort        string
-	SMTPUser        string
-	SMTPPassword    string
-	SMTPFrom        string
-	SMTPDirect      bool
-	SMSWebhookURL   string
-	SMSWebhookToken string
+	SMTPHost            string
+	SMTPPort            string
+	SMTPUser            string
+	SMTPPassword        string
+	SMTPFrom            string
+	SMTPDirect          bool
+	SMSProvider         string
+	SMSWebhookURL       string
+	SMSWebhookToken     string
+	SMSMSG91AuthKey     string
+	SMSMSG91SenderID    string
+	SMSMSG91Route       string
+	SMSMSG91Endpoint    string
+	SMSTwilioAccountSID string
+	SMSTwilioAuthToken  string
+	SMSTwilioFromNumber string
+	SMSTwilioEndpoint   string
+	SMSFast2SMSAPIKey   string
+	SMSFast2SMSSenderID string
+	SMSFast2SMSRoute    string
+	SMSFast2SMSEndpoint string
 	// Email pool — dynamic multi-provider failover with quota tracking.
 	EmailPoolEnabled   bool
 	EmailPoolStrategy  string
@@ -205,6 +220,14 @@ type FASTagConfig struct {
 	APIKey   string
 	Enabled  bool
 	Endpoint string
+}
+
+// VideoConfig holds video telematics media brokering settings. An empty
+// MediaServerURL keeps live streaming unconfigured: StartLivestream fails
+// closed with no session row instead of fabricating stream URLs
+// (Plan P3 item 3.12; P0 "stop fake data").
+type VideoConfig struct {
+	MediaServerURL string
 }
 
 // EWayBillConfig holds configuration for the E-Way Bill lifecycle worker (Spec 05 §7, Spec 07).
@@ -402,6 +425,7 @@ func Load() *Config {
 		DashboardSSEEnabled:  getEnvBool("DASHBOARD_SSE_ENABLED", true),
 		DashboardSSEInterval: time.Duration(getEnvInt("DASHBOARD_SSE_INTERVAL_SEC", 5)) * time.Second,
 		PWAEnabled:           getEnvBool("PWA_ENABLED", false),
+		PayoutRailEnabled:    getEnvBool("PAYOUT_RAIL_ENABLED", false),
 		RazorpayKeyID:        getEnv("RAZORPAY_KEY_ID", ""),
 		RazorpayKeySecret:    getEnv("RAZORPAY_KEY_SECRET", ""),
 		RazorpayWebhook:      os.Getenv("RAZORPAY_WEBHOOK_SECRET"),
@@ -529,6 +553,12 @@ func Load() *Config {
 		Endpoint: getEnv("INTEGRATION_FASTAG_ENDPOINT", "https://api.fastag.org"),
 	}
 
+	// Plan P3 item 3.12 — live stream brokering target. Unset keeps
+	// StartLivestream fail-closed; no default host is invented.
+	cfg.Video = VideoConfig{
+		MediaServerURL: strings.TrimRight(strings.TrimSpace(os.Getenv("VIDEO_MEDIA_SERVER_URL")), "/"),
+	}
+
 	// Spec 18 — Route optimization (Wave A)
 	cfg.Routing = RoutingConfig{
 		Provider: getEnv("ROUTING_PROVIDER", "mock"),
@@ -568,17 +598,30 @@ func Load() *Config {
 	smtpPass = strings.ReplaceAll(smtpPass, " ", "")
 
 	cfg.Notify = NotifyConfig{
-		SMTPHost:           os.Getenv("SMTP_HOST"),
-		SMTPPort:           os.Getenv("SMTP_PORT"),
-		SMTPUser:           os.Getenv("SMTP_USER"),
-		SMTPPassword:       smtpPass,
-		SMTPFrom:           os.Getenv("SMTP_FROM"),
-		SMTPDirect:         getEnvBool("SMTP_DIRECT", false) || strings.EqualFold(os.Getenv("SMTP_HOST"), "direct"),
-		SMSWebhookURL:      os.Getenv("SMS_WEBHOOK_URL"),
-		SMSWebhookToken:    os.Getenv("SMS_WEBHOOK_TOKEN"),
-		EmailPoolEnabled:   getEnvBool("EMAIL_POOL_ENABLED", true),
-		EmailPoolStrategy:  getEnv("EMAIL_POOL_STRATEGY", getEnv("EMAIL_PROVIDER_STRATEGY", "priority")),
-		EmailProvidersJSON: os.Getenv("EMAIL_PROVIDERS_JSON"),
+		SMTPHost:            os.Getenv("SMTP_HOST"),
+		SMTPPort:            os.Getenv("SMTP_PORT"),
+		SMTPUser:            os.Getenv("SMTP_USER"),
+		SMTPPassword:        smtpPass,
+		SMTPFrom:            os.Getenv("SMTP_FROM"),
+		SMTPDirect:          getEnvBool("SMTP_DIRECT", false) || strings.EqualFold(os.Getenv("SMTP_HOST"), "direct"),
+		SMSProvider:         os.Getenv("SMS_PROVIDER"),
+		SMSWebhookURL:       os.Getenv("SMS_WEBHOOK_URL"),
+		SMSWebhookToken:     os.Getenv("SMS_WEBHOOK_TOKEN"),
+		SMSMSG91AuthKey:     os.Getenv("SMS_MSG91_AUTH_KEY"),
+		SMSMSG91SenderID:    os.Getenv("SMS_MSG91_SENDER_ID"),
+		SMSMSG91Route:       os.Getenv("SMS_MSG91_ROUTE"),
+		SMSMSG91Endpoint:    os.Getenv("SMS_MSG91_ENDPOINT"),
+		SMSTwilioAccountSID: os.Getenv("TWILIO_ACCOUNT_SID"),
+		SMSTwilioAuthToken:  os.Getenv("TWILIO_AUTH_TOKEN"),
+		SMSTwilioFromNumber: os.Getenv("TWILIO_FROM_NUMBER"),
+		SMSTwilioEndpoint:   os.Getenv("TWILIO_ENDPOINT"),
+		SMSFast2SMSAPIKey:   os.Getenv("FAST2SMS_API_KEY"),
+		SMSFast2SMSSenderID: os.Getenv("FAST2SMS_SENDER_ID"),
+		SMSFast2SMSRoute:    os.Getenv("FAST2SMS_ROUTE"),
+		SMSFast2SMSEndpoint: os.Getenv("FAST2SMS_ENDPOINT"),
+		EmailPoolEnabled:    getEnvBool("EMAIL_POOL_ENABLED", true),
+		EmailPoolStrategy:   getEnv("EMAIL_POOL_STRATEGY", getEnv("EMAIL_PROVIDER_STRATEGY", "priority")),
+		EmailProvidersJSON:  os.Getenv("EMAIL_PROVIDERS_JSON"),
 	}
 	cfg.Comm = CommConfig{
 		OutboxWorker: getEnvBool("COMM_OUTBOX_WORKER", true),

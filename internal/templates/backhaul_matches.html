@@ -1,0 +1,214 @@
+{{template "page_header.html" (dict "Title" "Backhaul Engine" "Subtitle" "Eliminate empty return miles with automated return-corridor cargo matching")}}
+
+{{if .Offered}}
+<div class="mb-5 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5 text-emerald-500 shrink-0"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <span class="text-sm font-semibold">Backhaul dispatch offer successfully created and queued for driver assignment!</span>
+    </div>
+    <a href="/backhaul{{if .SelectedTripID}}?trip_id={{.SelectedTripID}}{{end}}" class="text-xs font-semibold underline hover:no-underline">Dismiss</a>
+</div>
+{{end}}
+
+<div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-5">
+    <div class="group relative overflow-hidden bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-xl shadow-md p-4 text-white hover:shadow-lg transition">
+        <div class="flex items-center gap-4">
+            <div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center shrink-0">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-black tabular-nums leading-none">{{len .Matches}}</div>
+                <div class="text-xs font-medium text-white/80 mt-1">Available Matches</div>
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 grid place-items-center text-blue-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><rect width="16" height="16" x="4" y="4" rx="2"/><path d="M9 9h6v6H9z"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">{{len .Trips}}</div>
+            <div class="text-xs text-secondary font-medium mt-1">Monitored Trips</div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">₹{{priceFormat .BestMargin}}</div>
+            <div class="text-xs text-secondary font-medium mt-1">Top Freight Margin</div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-amber-500/10 border border-amber-500/20 grid place-items-center text-amber-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">{{priceFormat .MinDeadhead}} km</div>
+            <div class="text-xs text-secondary font-medium mt-1">Min Deadhead Distance</div>
+        </div>
+    </div>
+</div>
+
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 mb-6">
+    <form method="GET" action="/backhaul" class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-3">
+            <div>
+                <label for="trip-select" class="block text-xs font-semibold text-secondary mb-1">Target Trip</label>
+                <select id="trip-select" name="trip_id" onchange="this.form.submit()" class="px-3 py-1.5 rounded-lg border border-border-subtle bg-surface text-sm text-on-surface font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                    {{if not .Trips}}
+                    <option value="">No active trips found</option>
+                    {{end}}
+                    {{range .Trips}}
+                    <option value="{{.ID}}" {{if eq .ID $.SelectedTripID}}selected{{end}}>
+                        {{.TripNumber}} ({{.Status}})
+                    </option>
+                    {{end}}
+                </select>
+            </div>
+            <div>
+                <label for="radius-select" class="block text-xs font-semibold text-secondary mb-1">Search Corridor Radius</label>
+                <select id="radius-select" name="radius_km" onchange="this.form.submit()" class="px-3 py-1.5 rounded-lg border border-border-subtle bg-surface text-sm text-on-surface font-medium focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                    <option value="25" {{if eq (priceFormat $.RadiusKm) "25.00"}}selected{{end}}>25 km</option>
+                    <option value="50" {{if eq (priceFormat $.RadiusKm) "50.00"}}selected{{end}}>50 km (Standard)</option>
+                    <option value="75" {{if eq (priceFormat $.RadiusKm) "75.00"}}selected{{end}}>75 km</option>
+                    <option value="100" {{if eq (priceFormat $.RadiusKm) "100.00"}}selected{{end}}>100 km</option>
+                    <option value="150" {{if eq (priceFormat $.RadiusKm) "150.00"}}selected{{end}}>150 km (Extended)</option>
+                </select>
+            </div>
+        </div>
+        <div>
+            <button type="submit" class="px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary/90 transition flex items-center gap-2">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <span>Refresh Matches</span>
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden mb-6">
+    <div class="p-4 border-b border-border-subtle flex items-center justify-between">
+        <div>
+            <h3 class="text-base font-semibold text-on-surface">Return Corridor Cargo Opportunities</h3>
+            <p class="text-xs text-secondary mt-0.5">High-affinity return loads sorted by shortest deadhead routing</p>
+        </div>
+        <span class="text-xs font-mono bg-surface-container px-2.5 py-1 rounded-full text-secondary font-semibold">
+            {{len .Matches}} Matches
+        </span>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="rtable min-w-full divide-y divide-border-subtle">
+            <thead class="bg-surface-container-low">
+                <tr>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Booking</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Route Corridor</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Deadhead Distance</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Cargo Specs</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Gross Fare</th>
+                    <th class="px-4 py-3 text-left text-eyebrow text-text-muted">Corridor Savings</th>
+                    <th class="px-4 py-3 text-right text-eyebrow text-text-muted">Action</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-border-subtle text-sm text-on-surface">
+                {{range .Matches}}
+                <tr class="hover:bg-surface-container-low/50 transition">
+                    <td class="px-4 py-3">
+                        <div class="font-semibold text-on-surface">{{.BookingNumber}}</div>
+                        <div class="text-xs text-secondary">{{if .CustomerName}}{{.CustomerName}}{{else}}{{.CustomerID}}{{end}}</div>
+                    </td>
+                    <td class="px-4 py-3 max-w-xs">
+                        <div class="flex items-center gap-1.5 text-xs font-medium text-on-surface">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                            <span class="truncate">{{.PickupAddress}}</span>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-xs text-secondary mt-1">
+                            <span class="w-2 h-2 rounded-full bg-rose-500 shrink-0"></span>
+                            <span class="truncate">{{.DeliveryAddress}}</span>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="font-semibold tabular-nums text-amber-600">{{priceFormat .DeadheadKm}} km</div>
+                        <div class="text-xs text-secondary font-mono">Pickup dist: {{priceFormat .PickupDistanceKm}} km</div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="font-semibold">{{priceFormat .CargoWeight}} MT</div>
+                        <div class="text-xs text-secondary">{{.VehicleType}}</div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <div class="font-semibold font-mono text-emerald-600">₹{{priceFormat .Price}}</div>
+                        <div class="text-xs text-secondary font-mono">Margin: ₹{{priceFormat .FreightMargin}}</div>
+                    </td>
+                    <td class="px-4 py-3">
+                        <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                            +{{priceFormat .CorridorSavingsPct}}% Saved
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        {{if can $.User "trips" "update"}}
+                        <button type="button" onclick="openOfferModal('{{.BookingID}}', '{{.BookingNumber}}', '{{priceFormat .Price}}')" class="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-xs font-semibold transition">
+                            Dispatch Offer
+                        </button>
+                        {{end}}
+                    </td>
+                </tr>
+                {{else}}
+                <tr>
+                    <td colspan="7" class="px-4 py-12 text-center text-secondary text-sm">
+                        <div class="w-12 h-12 rounded-full bg-surface-container mx-auto flex items-center justify-center mb-3 text-secondary">
+                            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-6 h-6"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                        </div>
+                        <p class="font-semibold text-on-surface">No Return Corridor Matches Found</p>
+                        <p class="text-xs text-secondary mt-1">There are currently no unassigned cargo bookings within {{priceFormat .RadiusKm}} km of this trip's delivery point.</p>
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div id="offer-modal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xl max-w-md w-full p-6">
+        <div class="flex items-center justify-between pb-4 border-b border-border-subtle">
+            <h3 class="text-lg font-semibold text-on-surface">Create Backhaul Dispatch Offer</h3>
+            <button type="button" onclick="document.getElementById('offer-modal').classList.add('hidden')" class="text-secondary hover:text-on-surface">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <form method="POST" action="/backhaul/offers" class="space-y-4 pt-4">
+            <input type="hidden" name="trip_id" value="{{.SelectedTripID}}">
+            <input type="hidden" id="modal-booking-id" name="booking_id" value="">
+
+            <div>
+                <label class="block text-xs font-semibold text-secondary mb-1">Target Booking</label>
+                <input type="text" id="modal-booking-number" disabled class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface-container-low text-sm font-semibold text-on-surface">
+            </div>
+
+            <div>
+                <label for="modal-rate" class="block text-xs font-semibold text-secondary mb-1">Offered Rate (₹)</label>
+                <input type="number" id="modal-rate" name="offered_rate" step="0.01" required class="w-full px-3 py-2 rounded-lg border border-border-subtle bg-surface text-sm text-on-surface focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                <p class="text-2xs text-secondary mt-1">Pre-filled with booking customer rate. You may adjust for return discount incentive.</p>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-3">
+                <button type="button" onclick="document.getElementById('offer-modal').classList.add('hidden')" class="px-4 py-2 border border-border-subtle text-sm font-semibold rounded-lg hover:bg-surface-container-low transition">
+                    Cancel
+                </button>
+                <button type="submit" class="px-4 py-2 bg-primary text-on-primary text-sm font-semibold rounded-lg hover:bg-primary/90 transition">
+                    Dispatch to Driver
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openOfferModal(bookingID, bookingNumber, price) {
+    document.getElementById('modal-booking-id').value = bookingID;
+    document.getElementById('modal-booking-number').value = bookingNumber;
+    document.getElementById('modal-rate').value = price;
+    document.getElementById('offer-modal').classList.remove('hidden');
+}
+</script>

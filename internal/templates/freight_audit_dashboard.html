@@ -1,0 +1,411 @@
+{{template "page_header.html" (dict "Title" "Freight Audit & Overbilling" "Subtitle" "Automated 3-way matching of freight invoices against GPS distance, toll receipts, and tariff contracts")}}
+
+<!-- KPI Row -->
+<div class="grid grid-cols-1 sm:grid-cols-6 gap-4 mb-6">
+    <div class="group relative overflow-hidden bg-gradient-to-br from-indigo-600 to-violet-700 rounded-xl shadow-md p-4 text-white hover:shadow-lg transition">
+        <div class="flex items-center gap-4">
+            <div class="w-9 h-9 rounded-lg bg-white/15 border border-white/20 grid place-items-center shrink-0">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-xl font-semibold tabular-nums leading-none">{{if .Extra.Summary}}{{.Extra.Summary.TotalAudits}}{{else}}0{{end}}</div>
+                <div class="text-xs font-medium text-white/80 mt-1">Invoices Audited</div>
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-slate-500/10 border border-slate-500/20 grid place-items-center text-slate-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">
+                ₹{{if .Extra.Summary}}{{printf "%.0f" .Extra.Summary.TotalBilledAmount}}{{else}}0{{end}}
+            </div>
+            <div class="text-xs text-secondary font-medium mt-1">Gross Billed</div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-sky-500/10 border border-sky-500/20 grid place-items-center text-sky-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">
+                ₹{{if .Extra.Summary}}{{printf "%.0f" .Extra.Summary.TotalAuditedAmount}}{{else}}0{{end}}
+            </div>
+            <div class="text-xs text-secondary font-medium mt-1">GPS Verified Total</div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg {{if and .Extra.Summary (gt .Extra.Summary.DiscrepancyCount 0)}}bg-rose-500/15 border border-rose-500/30 text-rose-600 animate-pulse{{else}}bg-slate-500/10 border border-slate-500/20 text-slate-600{{end}} grid place-items-center shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-rose-600 leading-none">
+                ₹{{if .Extra.Summary}}{{printf "%.0f" .Extra.Summary.TotalOverbillingAmount}}{{else}}0{{end}}
+            </div>
+            <div class="text-xs text-secondary font-medium mt-1">Overbilling Found</div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-emerald-600 leading-none">
+                ₹{{if .Extra.Summary}}{{printf "%.0f" .Extra.Summary.TotalDeductionsAmount}}{{else}}0{{end}}
+            </div>
+            <div class="text-xs text-secondary font-medium mt-1">Deductions Saved</div>
+        </div>
+    </div>
+    <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm transition">
+        <div class="w-9 h-9 rounded-lg bg-teal-500/10 border border-teal-500/20 grid place-items-center text-teal-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-none">
+                {{if .Extra.Summary}}{{.Extra.Summary.SettledCount}}{{else}}0{{end}}
+            </div>
+            <div class="text-xs text-secondary font-medium mt-1">Settled & Closed</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Actions -->
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm p-4 mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex flex-wrap items-center gap-2">
+            <a href="/freight-audit" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.StatusFilter ""}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                All Audits
+            </a>
+            <a href="/freight-audit?status=DISCREPANCY_FLAGGED" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.StatusFilter "DISCREPANCY_FLAGGED"}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                Discrepancies
+            </a>
+            <a href="/freight-audit?status=DEDUCTION_APPROVED" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.StatusFilter "DEDUCTION_APPROVED"}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                Debit Notes
+            </a>
+            <a href="/freight-audit?status=DISPUTED" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.StatusFilter "DISPUTED"}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                In Dispute
+            </a>
+            <a href="/freight-audit?status=VERIFIED" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.StatusFilter "VERIFIED"}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                Verified Clean
+            </a>
+            <a href="/freight-audit?status=SETTLED" class="px-3 py-1.5 rounded-lg text-xs font-semibold {{if eq .Extra.StatusFilter "SETTLED"}}bg-primary text-on-primary{{else}}bg-surface border border-border-subtle text-secondary hover:text-on-surface{{end}} transition">
+                Settled
+            </a>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="document.getElementById('createRateCardModal').showModal()" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-surface border border-border-subtle text-secondary hover:text-on-surface hover:bg-surface-container transition flex items-center gap-1.5">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
+                New Tariff Contract
+            </button>
+            <button onclick="document.getElementById('createAuditModal').showModal()" class="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-primary text-on-primary hover:bg-primary-hover shadow-xs transition flex items-center gap-1.5">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-3.5 h-3.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Audit Invoice
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Main Audits Table -->
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden mb-8">
+    <div class="p-4 border-b border-border-subtle flex items-center justify-between">
+        <div>
+            <h3 class="text-base font-semibold text-on-surface">Freight Audit Discrepancy Register</h3>
+            <p class="text-xs text-secondary mt-0.5">Authoritative invoice vs GPS telemetry reconciliation and recovery workflow</p>
+        </div>
+        <span class="text-xs font-mono bg-surface-container px-2.5 py-1 rounded-full text-secondary font-semibold">
+            {{if .Extra.Audits}}{{len .Extra.Audits}}{{else}}0{{end}} Invoices
+        </span>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+            <thead class="bg-surface-container border-b border-border-subtle text-secondary uppercase font-semibold">
+                <tr>
+                    <th class="px-4 py-3">Carrier / Vehicle</th>
+                    <th class="px-4 py-3 text-right">Billed Dist vs GPS</th>
+                    <th class="px-4 py-3 text-right">Billed vs Audited (₹)</th>
+                    <th class="px-4 py-3 text-right">Overbilling Variance</th>
+                    <th class="px-4 py-3 text-center">Status</th>
+                    <th class="px-4 py-3">Debit Note / Notes</th>
+                    <th class="px-4 py-3 text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-border-subtle">
+                {{if .Extra.Audits}}
+                {{range .Extra.Audits}}
+                <tr class="hover:bg-surface-container/50 transition">
+                    <td class="px-4 py-3">
+                        <div class="font-medium text-on-surface">{{.VendorName}}</div>
+                        <div class="font-mono text-[11px] text-secondary">Veh: {{.VehicleNumber}}</div>
+                    </td>
+                    <td class="px-4 py-3 text-right font-mono">
+                        <div>{{printf "%.0f" .BilledDistanceKM}} km billed</div>
+                        <div class="text-[11px] text-primary font-medium">{{printf "%.0f" .GPSDistanceKM}} km GPS ({{printf "%+.0f" .DistanceVarianceKM}})</div>
+                    </td>
+                    <td class="px-4 py-3 text-right font-mono">
+                        <div class="text-secondary line-through">₹{{printf "%.2f" .BilledTotal}}</div>
+                        <div class="font-semibold text-on-surface">₹{{printf "%.2f" .AuditedTotal}}</div>
+                    </td>
+                    <td class="px-4 py-3 text-right font-mono">
+                        {{if gt .OverbillingAmount 0.0}}
+                        <div class="font-semibold text-rose-600">+₹{{printf "%.2f" .OverbillingAmount}}</div>
+                        <div class="text-[11px] text-rose-500 font-medium">{{printf "%.1f" .VariancePct}}% inflated</div>
+                        {{else}}
+                        <div class="font-medium text-emerald-600">Clean Match</div>
+                        {{end}}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold
+                            {{if eq .Status "DISCREPANCY_FLAGGED"}}bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-200 animate-pulse
+                            {{else if eq .Status "DEDUCTION_APPROVED"}}bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300
+                            {{else if eq .Status "DISPUTED"}}bg-purple-100 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300
+                            {{else if eq .Status "VERIFIED"}}bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300
+                            {{else if eq .Status "SETTLED"}}bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300
+                            {{else}}bg-surface-container text-secondary{{end}}">
+                            {{.Status}}
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-secondary text-[11px]">
+                        {{if .DebitNoteNumber}}
+                        <div class="font-mono text-primary font-semibold">Debit Note: {{.DebitNoteNumber}}</div>
+                        <div>Deducted: ₹{{printf "%.2f" .DeductionAmount}}</div>
+                        {{else if .DisputeReason}}
+                        <div class="text-purple-600 font-medium">Dispute: {{.DisputeReason}}</div>
+                        {{else if .DiscrepancyFlags}}
+                        <div class="text-rose-600">{{.DiscrepancyFlags}}</div>
+                        {{else}}
+                        <div>-</div>
+                        {{end}}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <div class="inline-flex items-center gap-1.5">
+                            {{if eq .Status "DISCREPANCY_FLAGGED"}}
+                            <form method="POST" action="/freight-audit/audits/{{.ID}}/approve-deduction">
+                                <button type="submit" class="px-2 py-1 rounded text-[11px] font-semibold bg-emerald-600 text-white hover:bg-emerald-700 transition" title="Generate Debit Note">
+                                    Approve Deduction
+                                </button>
+                            </form>
+                            <button onclick="openDisputeModal('{{.ID}}')" class="px-2 py-1 rounded text-[11px] font-semibold bg-purple-100 text-purple-800 hover:bg-purple-200 transition">
+                                Dispute
+                            </button>
+                            {{else if eq .Status "DEDUCTION_APPROVED"}}
+                            <form method="POST" action="/freight-audit/audits/{{.ID}}/settle">
+                                <button type="submit" class="px-2 py-1 rounded text-[11px] font-semibold bg-primary text-on-primary hover:bg-primary-hover transition">
+                                    Settle
+                                </button>
+                            </form>
+                            {{else if eq .Status "VERIFIED"}}
+                            <form method="POST" action="/freight-audit/audits/{{.ID}}/settle">
+                                <button type="submit" class="px-2 py-1 rounded text-[11px] font-semibold bg-surface border border-border-subtle text-secondary hover:text-on-surface transition">
+                                    Settle
+                                </button>
+                            </form>
+                            {{else}}
+                            <span class="text-secondary text-[11px]">Closed</span>
+                            {{end}}
+                        </div>
+                    </td>
+                </tr>
+                {{end}}
+                {{else}}
+                <tr>
+                    <td colspan="7" class="px-4 py-8 text-center text-secondary">
+                        No freight audits recorded. Click 'Audit Invoice' to reconcile carrier billing against GPS telemetry.
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Tariff Rate Cards Reference Grid -->
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden mb-8">
+    <div class="p-4 border-b border-border-subtle flex items-center justify-between">
+        <div>
+            <h3 class="text-base font-semibold text-on-surface">Active Freight Tariff Contracts</h3>
+            <p class="text-xs text-secondary mt-0.5">Agreed rates, minimum commitments, and detention hourly penalty terms</p>
+        </div>
+        <span class="text-xs font-mono bg-surface-container px-2.5 py-1 rounded-full text-secondary font-semibold">
+            {{if .Extra.RateCards}}{{len .Extra.RateCards}}{{else}}0{{end}} Contracts
+        </span>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+            <thead class="bg-surface-container border-b border-border-subtle text-secondary uppercase font-semibold">
+                <tr>
+                    <th class="px-4 py-3">Contract #</th>
+                    <th class="px-4 py-3">Contract Name</th>
+                    <th class="px-4 py-3">Vehicle Type</th>
+                    <th class="px-4 py-3">Billing Basis</th>
+                    <th class="px-4 py-3 text-right">Agreed Rate</th>
+                    <th class="px-4 py-3 text-right">Min Charge</th>
+                    <th class="px-4 py-3 text-right">Free Detention</th>
+                    <th class="px-4 py-3 text-right">Detention / Hr</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-border-subtle">
+                {{if .Extra.RateCards}}
+                {{range .Extra.RateCards}}
+                <tr class="hover:bg-surface-container/50 transition">
+                    <td class="px-4 py-3 font-mono font-semibold text-primary">{{.ContractNumber}}</td>
+                    <td class="px-4 py-3 font-medium text-on-surface">{{.Name}}</td>
+                    <td class="px-4 py-3 text-secondary">{{if .VehicleType}}{{.VehicleType}}{{else}}All Fleets{{end}}</td>
+                    <td class="px-4 py-3 font-mono text-[11px]">{{.BillingBasis}}</td>
+                    <td class="px-4 py-3 text-right font-mono font-semibold">₹{{printf "%.2f" .Rate}}</td>
+                    <td class="px-4 py-3 text-right font-mono text-secondary">₹{{printf "%.0f" .MinCharge}}</td>
+                    <td class="px-4 py-3 text-right font-mono text-secondary">{{printf "%.0f" .FreeDetentionHours}} hrs</td>
+                    <td class="px-4 py-3 text-right font-mono font-medium text-amber-600">₹{{printf "%.0f" .DetentionRatePerHour}}</td>
+                </tr>
+                {{end}}
+                {{else}}
+                <tr>
+                    <td colspan="8" class="px-4 py-6 text-center text-secondary">
+                        No tariff rate cards configured.
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: New Tariff Contract -->
+<dialog id="createRateCardModal" class="p-0 rounded-2xl bg-surface-container-lowest border border-border-subtle shadow-xl backdrop:bg-black/50 max-w-md w-full">
+    <form method="POST" action="/freight-audit/rates" class="p-6">
+        <div class="flex items-center justify-between pb-4 border-b border-border-subtle mb-4">
+            <h3 class="text-base font-semibold text-on-surface">Register Tariff Rate Card</h3>
+            <button type="button" onclick="document.getElementById('createRateCardModal').close()" class="text-secondary hover:text-on-surface">✕</button>
+        </div>
+        <div class="space-y-4 text-xs">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Contract Number *</label>
+                    <input type="text" name="contract_number" required placeholder="e.g. CON-2026-001" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Rate Card Name *</label>
+                    <input type="text" name="name" required placeholder="e.g. North Zone Long Haul" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Billing Tariff Basis *</label>
+                    <select name="billing_basis" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                        <option value="PER_KM">Per KM</option>
+                        <option value="PER_TON_KM">Per Ton-KM</option>
+                        <option value="PER_TON">Per Ton</option>
+                        <option value="PER_KG">Per KG</option>
+                        <option value="FLAT">Flat Fee</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Agreed Rate (₹) *</label>
+                    <input type="number" step="0.01" name="rate" required value="42.50" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Vehicle Type Spec</label>
+                    <input type="text" name="vehicle_type" placeholder="e.g. 32ft MXL, 20ft Container" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Minimum Charge (₹)</label>
+                    <input type="number" step="0.01" name="min_charge" value="5000.00" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Free Detention Hours</label>
+                    <input type="number" step="1" name="free_detention_hours" value="24" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Detention Rate / Hr (₹)</label>
+                    <input type="number" step="0.01" name="detention_rate_per_hour" value="150.00" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" onclick="document.getElementById('createRateCardModal').close()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-surface border border-border-subtle text-secondary hover:text-on-surface">Cancel</button>
+            <button type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold bg-primary text-on-primary hover:bg-primary-hover shadow-xs">Save Tariff</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- Modal: New Freight Audit -->
+<dialog id="createAuditModal" class="p-0 rounded-2xl bg-surface-container-lowest border border-border-subtle shadow-xl backdrop:bg-black/50 max-w-lg w-full">
+    <form method="POST" action="/freight-audit/audits" class="p-6">
+        <div class="flex items-center justify-between pb-4 border-b border-border-subtle mb-4">
+            <h3 class="text-base font-semibold text-on-surface">Run Freight Invoice Audit</h3>
+            <button type="button" onclick="document.getElementById('createAuditModal').close()" class="text-secondary hover:text-on-surface">✕</button>
+        </div>
+        <div class="space-y-4 text-xs">
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Carrier / Transporter Name *</label>
+                    <input type="text" name="vendor_name" required placeholder="e.g. Express Roadlines" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Vehicle Registration # *</label>
+                    <input type="text" name="vehicle_number" required placeholder="e.g. MH12AB1234" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Billed Distance (KM) *</label>
+                    <input type="number" step="0.1" name="billed_distance_km" required value="450.0" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block font-medium text-secondary mb-1">GPS Telemetry Distance (KM)</label>
+                    <input type="number" step="0.1" name="gps_distance_km" value="385.0" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Billed Rate / KM (₹)</label>
+                    <input type="number" step="0.01" name="billed_rate" value="50.0" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+                <div>
+                    <label class="block font-medium text-secondary mb-1">Total Invoice Amount Claimed (₹) *</label>
+                    <input type="number" step="0.01" name="billed_total" required value="22500.0" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+                </div>
+            </div>
+            <div>
+                <label class="block font-medium text-secondary mb-1">Invoice Notes / Trip Reference</label>
+                <input type="text" name="notes" placeholder="Invoice #INV-9821, route Delhi-Jaipur" class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary">
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" onclick="document.getElementById('createAuditModal').close()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-surface border border-border-subtle text-secondary hover:text-on-surface">Cancel</button>
+            <button type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold bg-primary text-on-primary hover:bg-primary-hover shadow-xs">Execute Audit</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- Modal: Carrier Dispute -->
+<dialog id="disputeModal" class="p-0 rounded-2xl bg-surface-container-lowest border border-border-subtle shadow-xl backdrop:bg-black/50 max-w-sm w-full">
+    <form id="disputeForm" method="POST" action="" class="p-6">
+        <div class="flex items-center justify-between pb-4 border-b border-border-subtle mb-4">
+            <h3 class="text-base font-semibold text-on-surface">Flag Invoice Under Dispute</h3>
+            <button type="button" onclick="document.getElementById('disputeModal').close()" class="text-secondary hover:text-on-surface">✕</button>
+        </div>
+        <div class="space-y-4 text-xs">
+            <div>
+                <label class="block font-medium text-secondary mb-1">Carrier Dispute Reason *</label>
+                <textarea name="reason" rows="3" required placeholder="Transporter claims highway detour due to flood/construction or weighbridge calibration variance." class="w-full px-3 py-2 rounded-lg bg-surface border border-border-subtle text-on-surface focus:outline-none focus:border-primary"></textarea>
+            </div>
+        </div>
+        <div class="mt-6 flex justify-end gap-3">
+            <button type="button" onclick="document.getElementById('disputeModal').close()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-surface border border-border-subtle text-secondary hover:text-on-surface">Cancel</button>
+            <button type="submit" class="px-4 py-2 rounded-lg text-xs font-semibold bg-purple-600 text-white hover:bg-purple-700 shadow-xs">Record Dispute</button>
+        </div>
+    </form>
+</dialog>
+
+<script>
+function openDisputeModal(id) {
+    const f = document.getElementById('disputeForm');
+    f.action = '/freight-audit/audits/' + id + '/dispute';
+    document.getElementById('disputeModal').showModal();
+}
+</script>

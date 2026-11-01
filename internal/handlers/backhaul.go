@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -17,6 +18,136 @@ import (
 type BackhaulHandlers struct {
 	*App
 	BackhaulSvc *service.BackhaulService
+}
+
+// Routes registers web UI routes for backhaul under /backhaul.
+func (h *BackhaulHandlers) Routes(r chi.Router) {
+	r.With(middleware.RequirePermission(h.AuthSrv, "trips", "read")).Get("/", h.WebBackhaulPage)
+	r.With(middleware.RequirePermission(h.AuthSrv, "trips", "update")).Post("/offers", h.WebCreateOffer)
+}
+
+// BackhaulTripOption represents a summary of a trip available for backhaul matching.
+type BackhaulTripOption struct {
+	ID         string
+	TripNumber string
+	Status     string
+}
+
+// WebBackhaulPage renders the interactive backhaul corridor matching workspace.
+func (h *BackhaulHandlers) WebBackhaulPage(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+	svc := h.BackhaulSvc
+	if svc == nil {
+		svc = service.NewBackhaulService(h.DB)
+	}
+
+	var trips []BackhaulTripOption
+	if h.DB != nil {
+		rows, err := h.DB.QueryContext(r.Context(), `
+			SELECT id, trip_number, status
+			FROM trips
+			WHERE tenant_id = $1 AND status IN ('scheduled', 'assigned', 'started', 'completed')
+			ORDER BY created_at DESC
+			LIMIT 50`, tenantID)
+		if err == nil {
+			defer func() { _ = rows.Close() }()
+			for rows.Next() {
+				var t BackhaulTripOption
+				if scanErr := rows.Scan(&t.ID, &t.TripNumber, &t.Status); scanErr == nil {
+					trips = append(trips, t)
+				}
+			}
+		}
+	}
+
+	selectedTripID := strings.TrimSpace(r.URL.Query().Get("trip_id"))
+	if selectedTripID == "" && len(trips) > 0 {
+		selectedTripID = trips[0].ID
+	}
+
+	radiusKm := 50.0
+	if rParam := strings.TrimSpace(r.URL.Query().Get("radius_km")); rParam != "" {
+		if val, err := strconv.ParseFloat(rParam, 64); err == nil && val > 0 {
+			radiusKm = val
+		}
+	}
+
+	var matches []service.BackhaulMatchDTO
+	if selectedTripID != "" {
+		if res, err := svc.FindBackhaulMatches(r.Context(), tenantID, selectedTripID, radiusKm); err == nil {
+			matches = res
+		}
+	}
+
+	var bestMargin float64
+	var minDeadhead float64 = -1
+	for _, m := range matches {
+		if m.FreightMargin > bestMargin {
+			bestMargin = m.FreightMargin
+		}
+		if minDeadhead < 0 || m.DeadheadKm < minDeadhead {
+			minDeadhead = m.DeadheadKm
+		}
+	}
+	if minDeadhead < 0 {
+		minDeadhead = 0
+	}
+
+	data := PageData{
+		Title: "Backhaul Matching",
+		User:  user,
+		Extra: map[string]interface{}{
+			"Trips":          trips,
+			"SelectedTripID": selectedTripID,
+			"RadiusKm":       radiusKm,
+			"Matches":        matches,
+			"BestMargin":     bestMargin,
+			"MinDeadhead":    minDeadhead,
+			"Offered":        r.URL.Query().Get("offered") == "1",
+		},
+	}
+	h.renderPage(w, r, "backhaul_matches.html", data)
+}
+
+// WebCreateOffer handles web form dispatch submissions for backhaul loads.
+func (h *BackhaulHandlers) WebCreateOffer(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	user, _ := h.getUserFromContext(r)
+	svc := h.BackhaulSvc
+	if svc == nil {
+		svc = service.NewBackhaulService(h.DB)
+	}
+
+	tripID := strings.TrimSpace(r.PostFormValue("trip_id"))
+	bookingID := strings.TrimSpace(r.PostFormValue("booking_id"))
+	rateStr := strings.TrimSpace(r.PostFormValue("offered_rate"))
+
+	if tripID == "" || bookingID == "" {
+		http.Redirect(w, r, "/backhaul?error=missing_fields", http.StatusSeeOther)
+		return
+	}
+
+	var offeredRate float64
+	if rateStr != "" {
+		if f, err := strconv.ParseFloat(rateStr, 64); err == nil {
+			offeredRate = f
+		}
+	}
+
+	req := service.BackhaulOfferRequest{
+		TripID:      tripID,
+		BookingID:   bookingID,
+		OfferedRate: offeredRate,
+	}
+
+	_, err := svc.CreateBackhaulOffer(r.Context(), tenantID, req)
+	if err != nil {
+		h.renderError(w, http.StatusBadRequest, "Failed to create backhaul offer", err.Error(), user)
+		return
+	}
+
+	http.Redirect(w, r, safeRedirect(r, "/backhaul?trip_id="+url.QueryEscape(tripID)+"&offered=1", "/backhaul"), http.StatusSeeOther) //nolint:gosec // G710: safeRedirect returns only same-origin paths (see redirect_test.go)
 }
 
 // RegisterAPIRoutes registers backhaul endpoints with Chi.

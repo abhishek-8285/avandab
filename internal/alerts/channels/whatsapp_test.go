@@ -99,6 +99,20 @@ func TestWhatsApp_SendWhatsAppDirect(t *testing.T) {
 	assert.Equal(t, 1, sender.sends)
 }
 
+// P0: no provider configured must fail loud — it used to log "mock send" and
+// return nil, which the pipeline recorded as a successful delivery.
+func TestWhatsApp_UnconfiguredProviderFailsHonest(t *testing.T) {
+	ctx := context.Background()
+	msg := Message{AlertID: "a", Title: "t", Body: "b", Phone: "+919876543210", Severity: domain.SeverityCritical}
+
+	p := NewWhatsAppProvider("", nil, waLogger())
+	assert.ErrorIs(t, p.Send(ctx, msg), ErrNotConfigured)
+	assert.ErrorIs(t, p.SendWhatsApp(ctx, "+919876543210", "x"), ErrNotConfigured)
+
+	unknown := NewWhatsAppProvider("not-a-real-bsp", nil, waLogger())
+	assert.ErrorIs(t, unknown.Send(ctx, msg), ErrNotConfigured)
+}
+
 func TestWhatsApp_EvolutionTransport_HTTPServer(t *testing.T) {
 	var receivedPath, receivedKey, receivedBody string
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

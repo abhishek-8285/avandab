@@ -290,6 +290,18 @@ func (l *LogEmailSender) SendRich(ctx context.Context, msg EmailMessage) error {
 	return nil
 }
 
+// Configurable matches senders exposing an optional Configured() probe.
+type Configurable interface {
+	Configured() bool
+}
+
+// SMSConfigured reports whether a real SMS sender is wired, tolerating
+// senders without the optional probe (they count as unconfigured).
+func SMSConfigured(sender SMSSender) bool {
+	c, ok := sender.(Configurable)
+	return ok && c != nil && c.Configured()
+}
+
 // WebhookSMSSender posts {to, message} JSON to a configured webhook URL —
 // provider-agnostic so any gateway (MSG91 bridge, Twilio proxy, custom) works.
 // Non-2xx responses are errors; unconfigured sends fail with ErrSMSNotConfigured.

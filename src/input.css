@@ -17,6 +17,7 @@
 
   /* Primary (ops blue) */
   --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
   --color-on-primary: #ffffff;
   --color-primary-container: #dbeafe;
   --color-on-primary-container: #1e40af;
@@ -205,6 +206,8 @@
   --text-title-lg--line-height: 1.75rem;
   --text-data-mono: 0.875rem;
   --text-data-mono--line-height: 1.25rem;
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 0.75rem;
   --text-headline-md: 1.25rem;
   --text-headline-md--line-height: 1.75rem;
   --text-headline-lg: 1.5rem;
@@ -243,6 +246,19 @@
   letter-spacing: 0.08em;
   font-weight: 700;
   text-transform: uppercase;
+}
+
+@utility animate-in {
+  animation-duration: 150ms;
+  animation-fill-mode: both;
+}
+
+@utility fade-in {
+  animation-name: fadeIn;
+}
+
+@utility zoom-in-95 {
+  transform: scale(0.95);
 }
 
 :root.dark {

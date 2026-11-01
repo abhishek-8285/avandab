@@ -31,13 +31,18 @@ func TestRunAsLeader_RunsFnOnceLeaseAcquired(t *testing.T) {
 	db := testDB(t)
 	m := leader.NewManager(db, "instance-a", 2*time.Second, slog.Default())
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	var ran atomic.Bool
 	done := make(chan struct{})
+	workerDone := make(chan struct{})
 	go func() {
-		m.RunAsLeader(context.Background(), "worker_x", func(ctx context.Context) {
+		defer close(workerDone)
+		m.RunAsLeader(ctx, "worker_x", func(c context.Context) {
 			ran.Store(true)
 			close(done)
-			<-ctx.Done() // hold lease until cancelled
+			<-c.Done() // hold lease until cancelled
 		})
 	}()
 
@@ -46,29 +51,44 @@ func TestRunAsLeader_RunsFnOnceLeaseAcquired(t *testing.T) {
 	case <-time.After(3 * time.Second):
 		t.Fatal("fn never ran")
 	}
+	cancel()
+	<-workerDone
 }
 
 func TestRunAsLeader_RecoversFromWorkerPanicAndReleasesLease(t *testing.T) {
 	db := testDB(t)
 	m := leader.NewManager(db, "panic-inst", 2*time.Second, slog.Default())
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	panicked := make(chan struct{})
-	go m.RunAsLeader(context.Background(), "panic_job", func(ctx context.Context) {
-		close(panicked)
-		panic("boom")
-	})
+	panicDone := make(chan struct{})
+	go func() {
+		defer close(panicDone)
+		m.RunAsLeader(ctx, "panic_job", func(ctx context.Context) {
+			close(panicked)
+			panic("boom")
+		})
+	}()
 
 	select {
 	case <-panicked:
 	case <-time.After(3 * time.Second):
 		t.Fatal("fn never ran")
 	}
+	<-panicDone
 
 	// After the panic is recovered the lease must be released, so a fresh
 	// claim by the same or another instance can win it again.
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
-		if m.TryRunAsLeader(context.Background(), "panic_job", func(ctx context.Context) {}) {
+		tryDone := make(chan struct{})
+		if m.TryRunAsLeader(context.Background(), "panic_job", func(ctx context.Context) {
+			close(tryDone)
+		}) {
+			<-tryDone
+			time.Sleep(20 * time.Millisecond)
 			return // lease released despite the panic
 		}
 		time.Sleep(50 * time.Millisecond)
@@ -79,27 +99,36 @@ func TestRunAsLeader_RecoversFromWorkerPanicAndReleasesLease(t *testing.T) {
 func TestRunAsLeader_SecondInstanceWaits(t *testing.T) {
 	db := testDB(t)
 	release := make(chan struct{})
+	ctx1, cancel1 := context.WithCancel(context.Background())
+	defer cancel1()
 	m1 := leader.NewManager(db, "a", 5*time.Second, slog.Default())
-	go m1.RunAsLeader(context.Background(), "job", func(ctx context.Context) {
-		<-release // hold the lease until we let go
-	})
+	m1Done := make(chan struct{})
+	go func() {
+		defer close(m1Done)
+		m1.RunAsLeader(ctx1, "job", func(ctx context.Context) {
+			<-release // hold the lease until we let go
+		})
+	}()
 
 	// Give m1 time to claim.
 	time.Sleep(200 * time.Millisecond)
 
 	var ranB atomic.Bool
 	m2 := leader.NewManager(db, "b", 5*time.Second, slog.Default())
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	defer cancel2()
+	m2Done := make(chan struct{})
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
-		defer cancel()
-		m2.RunAsLeader(ctx, "job", func(ctx context.Context) { ranB.Store(true) })
+		defer close(m2Done)
+		m2.RunAsLeader(ctx2, "job", func(ctx context.Context) { ranB.Store(true) })
 	}()
 
-	time.Sleep(600 * time.Millisecond)
+	<-m2Done
 	if ranB.Load() {
 		t.Fatal("second instance ran while first still held the lease")
 	}
 	close(release)
+	<-m1Done
 }
 
 func TestRunAsLeader_TakesOverAfterExpiry(t *testing.T) {
@@ -112,13 +141,18 @@ func TestRunAsLeader_TakesOverAfterExpiry(t *testing.T) {
 		t.Fatalf("seed: %v", err)
 	}
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	var ran atomic.Bool
 	done := make(chan struct{})
+	workerDone := make(chan struct{})
 	go func() {
-		m1.RunAsLeader(context.Background(), "stale", func(ctx context.Context) {
+		defer close(workerDone)
+		m1.RunAsLeader(ctx, "stale", func(c context.Context) {
 			ran.Store(true)
 			close(done)
-			<-ctx.Done()
+			<-c.Done()
 		})
 	}()
 
@@ -130,6 +164,8 @@ func TestRunAsLeader_TakesOverAfterExpiry(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("expired lease was never taken over")
 	}
+	cancel()
+	<-workerDone
 }
 
 func TestRelease_RemovesOwnLeaseOnly(t *testing.T) {

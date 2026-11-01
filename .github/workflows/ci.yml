@@ -121,7 +121,12 @@ jobs:
         # coverage (~20min). Now one -count=1 pass with the honest app-wide
         # profile; shuffle still proves test isolation. Flake-hunting moved
         # to the weekly flake-watch workflow. Mobile coverage: Mobile job.
+        # Enforces 50% backend floor + P5.5 65% money paths floor.
         run: ./scripts/check-coverage.sh
+
+      - name: Hardened race detector (P5.5)
+        # Red build on data race in critical high-concurrency subsystems
+        run: go test -race -timeout 10m ./internal/shared/outbox/... ./internal/settlement/... ./internal/telemetry/...
 
       - name: Audit shared state
         run: |

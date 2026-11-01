@@ -178,6 +178,7 @@ func TestDriverAppService_LifecycleE2E(t *testing.T) {
 	assert.NotEmpty(t, docID)
 
 	// 4. Submit Payout Account
+	t.Setenv("PAYOUT_ENCRYPTION_KEY", testPayoutKey())
 	accID, err := svc.SubmitPayoutAccount(ctx, tenantID, driverID, "Rajesh Kumar", "123456789012", "SBIN0001234", "State Bank of India")
 	require.NoError(t, err)
 	assert.NotEmpty(t, accID)

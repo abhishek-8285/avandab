@@ -1,0 +1,493 @@
+{{template "page_header.html" (dict "Title" "Cold Chain Telematics" "Subtitle" "Real-time reefer temperature probes, setpoint drift, door sensor alerts, and HACCP/GDP compliance")}}
+
+{{$metrics := .Metrics}}
+{{$vehicles := .Vehicles}}
+{{$excursions := .Excursions}}
+{{$summaries := .Summaries}}
+{{$allVehicles := .AllVehicles}}
+{{if and (not $metrics) .Extra}}{{$metrics = .Extra.Metrics}}{{end}}
+{{if and (not $vehicles) .Extra}}{{$vehicles = .Extra.Vehicles}}{{end}}
+{{if and (not $excursions) .Extra}}{{$excursions = .Extra.Excursions}}{{end}}
+{{if and (not $summaries) .Extra}}{{$summaries = .Extra.Summaries}}{{end}}
+{{if and (not $allVehicles) .Extra}}{{$allVehicles = .Extra.AllVehicles}}{{end}}
+
+<!-- KPI Stats Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+    <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-sky-500/10 border border-sky-500/20 grid place-items-center text-sky-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/><path d="M12 12v3"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-tight">{{if $metrics}}{{$metrics.TotalReefers}}{{else}}0{{end}}</div>
+            <div class="text-xs text-secondary font-medium">Reefer Fleet</div>
+        </div>
+    </div>
+
+    <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 grid place-items-center text-emerald-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-tight">{{if $metrics}}{{$metrics.ActiveCoolingCount}}{{else}}0{{end}}</div>
+            <div class="text-xs text-secondary font-medium">Actively Cooling</div>
+        </div>
+    </div>
+
+    <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-rose-500/10 border border-rose-500/20 grid place-items-center text-rose-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-tight">{{if $metrics}}{{$metrics.InExcursionCount}}{{else}}0{{end}}</div>
+            <div class="text-xs text-secondary font-medium">In Excursion</div>
+        </div>
+    </div>
+
+    <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 grid place-items-center text-amber-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-tight">{{if $metrics}}{{$metrics.OpenExcursionsCount}}{{else}}0{{end}}</div>
+            <div class="text-xs text-secondary font-medium">Open Excursions</div>
+        </div>
+    </div>
+
+    <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 grid place-items-center text-indigo-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><circle cx="14" cy="12" r="1"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-tight">{{if $metrics}}{{$metrics.DoorOpenAlerts}}{{else}}0{{end}}</div>
+            <div class="text-xs text-secondary font-medium">Door Open Alarms</div>
+        </div>
+    </div>
+
+    <div class="bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-teal-500/10 border border-teal-500/20 grid place-items-center text-teal-600 shrink-0">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-5 h-5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="min-w-0">
+            <div class="text-xl font-semibold tabular-nums text-on-surface leading-tight">{{if $metrics}}{{printf "%.1f" $metrics.FleetComplianceRatePct}}%{{else}}100%{{end}}</div>
+            <div class="text-xs text-secondary font-medium">HACCP Compliance</div>
+        </div>
+    </div>
+</div>
+
+<!-- Live Reefer Fleet Status Table Section -->
+<div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xs overflow-hidden mb-6">
+    <div class="p-4 border-b border-border-subtle flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <h3 class="text-base font-semibold text-on-surface">Live Reefer Fleet Probes & Door Status</h3>
+            <p class="text-xs text-secondary mt-0.5">Real-time thermal monitoring, setpoint drift tracking, and cargo reed-switch telemetry</p>
+        </div>
+        {{if can .User "coldchain" "write"}}
+        <button type="button" onclick="document.getElementById('configure-reefer-modal').classList.remove('hidden')" class="px-3.5 py-1.5 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary-hover transition flex items-center gap-1.5">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
+            <span>Configure Reefer Profile</span>
+        </button>
+        {{end}}
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-sm">
+            <thead>
+                <tr class="border-b border-border-subtle bg-surface-container-low text-secondary text-xs uppercase tracking-wider">
+                    <th class="py-3 px-4 font-semibold">Vehicle</th>
+                    <th class="py-3 px-4 font-semibold">Reefer Specs</th>
+                    <th class="py-3 px-4 font-semibold">Zone 1 Temperature</th>
+                    <th class="py-3 px-4 font-semibold">Zone 2 Temperature</th>
+                    <th class="py-3 px-4 font-semibold">Reefer Mode</th>
+                    <th class="py-3 px-4 font-semibold">Door Status</th>
+                    <th class="py-3 px-4 font-semibold">Thermal Status</th>
+                    <th class="py-3 px-4 font-semibold text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-border-subtle">
+                {{range $vehicles}}
+                <tr class="hover:bg-surface-container-low/50 transition">
+                    <td class="py-3.5 px-4">
+                        <div class="font-medium text-on-surface">{{.VehicleNumber}}</div>
+                        <div class="text-xs text-secondary font-mono">{{.RegistrationNumber}}</div>
+                    </td>
+                    <td class="py-3.5 px-4">
+                        {{if .Profile}}
+                        <div class="font-medium text-on-surface">{{.Profile.ReeferMakeModel}}</div>
+                        <div class="text-[11px] text-secondary font-medium">{{.Profile.Zone1Type}} &bull; {{.Profile.NumZones}} Zone(s)</div>
+                        {{else}}
+                        <span class="text-secondary text-xs italic">Unconfigured</span>
+                        {{end}}
+                    </td>
+                    <td class="py-3.5 px-4">
+                        {{if .Telemetry}}
+                        <div class="flex items-center gap-2">
+                            <span class="text-base font-semibold tabular-nums {{if .IsInExcursion}}text-rose-600 dark:text-rose-400{{else}}text-on-surface{{end}}">
+                                {{printf "%.1f" .Telemetry.Zone1TempC}}°C
+                            </span>
+                        </div>
+                        <div class="text-[11px] text-secondary font-medium">
+                            Set: {{printf "%.1f" .Telemetry.Zone1SetpointC}}°C
+                            {{if .Profile}}({{printf "%.1f" .Profile.Zone1MinTempC}} to {{printf "%.1f" .Profile.Zone1MaxTempC}}°C){{end}}
+                        </div>
+                        {{else}}
+                        <span class="text-secondary text-xs italic">Awaiting telemetry</span>
+                        {{end}}
+                    </td>
+                    <td class="py-3.5 px-4">
+                        {{if and .Telemetry .Telemetry.Zone2TempC}}
+                        <div class="text-base font-semibold tabular-nums text-on-surface">
+                            {{printf "%.1f" (derefFloat .Telemetry.Zone2TempC)}}°C
+                        </div>
+                        {{if .Telemetry.Zone2SetpointC}}
+                        <div class="text-[11px] text-secondary font-medium">Set: {{printf "%.1f" (derefFloat .Telemetry.Zone2SetpointC)}}°C</div>
+                        {{end}}
+                        {{else}}
+                        <span class="text-secondary text-xs">-</span>
+                        {{end}}
+                    </td>
+                    <td class="py-3.5 px-4">
+                        {{if .Telemetry}}
+                        {{if eq .Telemetry.ReeferMode "COOLING"}}
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            COOLING
+                        </span>
+                        {{else if eq .Telemetry.ReeferMode "DEFROST"}}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                            DEFROST
+                        </span>
+                        {{else if eq .Telemetry.ReeferMode "HEATING"}}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-500/15 text-orange-700 dark:text-orange-300">
+                            HEATING
+                        </span>
+                        {{else}}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-500/15 text-slate-700 dark:text-slate-300">
+                            {{.Telemetry.ReeferMode}}
+                        </span>
+                        {{end}}
+                        {{if gt .Telemetry.ReeferFuelLevelPct 0.0}}
+                        <div class="text-[11px] text-secondary font-medium mt-0.5">Fuel: {{printf "%.0f" .Telemetry.ReeferFuelLevelPct}}%</div>
+                        {{end}}
+                        {{else}}
+                        <span class="text-secondary text-xs">-</span>
+                        {{end}}
+                    </td>
+                    <td class="py-3.5 px-4">
+                        {{if .Telemetry}}
+                        {{if eq .Telemetry.DoorStatus "OPEN"}}
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-rose-500/15 text-rose-700 dark:text-rose-300">
+                            OPEN ({{.Telemetry.DoorOpenDurationSec}}s)
+                        </span>
+                        {{else}}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                            CLOSED
+                        </span>
+                        {{end}}
+                        {{else}}
+                        <span class="text-secondary text-xs">-</span>
+                        {{end}}
+                    </td>
+                    <td class="py-3.5 px-4">
+                        {{if .IsInExcursion}}
+                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/15 text-rose-700 dark:text-rose-300 animate-pulse">
+                            EXCURSION
+                        </span>
+                        {{else}}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-500/15 text-teal-700 dark:text-teal-300">
+                            NORMAL
+                        </span>
+                        {{end}}
+                    </td>
+                    <td class="py-3.5 px-4 text-right">
+                        {{if can $.User "coldchain" "write"}}
+                        <button type="button" onclick="openConfigureModal('{{.VehicleID}}', '{{if .Profile}}{{.Profile.ReeferMakeModel}}{{end}}', '{{if .Profile}}{{.Profile.NumZones}}{{else}}1{{end}}', '{{if .Profile}}{{.Profile.Zone1Type}}{{else}}CHILLED{{end}}', '{{if .Profile}}{{.Profile.Zone1TargetTempC}}{{end}}', '{{if .Profile}}{{.Profile.Zone1MinTempC}}{{end}}', '{{if .Profile}}{{.Profile.Zone1MaxTempC}}{{end}}', '{{if .Profile}}{{.Profile.DefrostMode}}{{else}}AUTO{{end}}')" class="text-xs font-medium text-primary hover:underline">
+                            Configure Specs
+                        </button>
+                        {{end}}
+                    </td>
+                </tr>
+                {{else}}
+                <tr>
+                    <td colspan="8" class="py-8 text-center text-secondary text-sm">
+                        No reefer vehicles configured yet. Click "Configure Reefer Profile" to register temperature bands.
+                    </td>
+                </tr>
+                {{end}}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Bottom Section: Excursions Audit & GDP Compliance Summaries -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Temperature Excursions Incident Log -->
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xs overflow-hidden">
+        <div class="p-4 border-b border-border-subtle">
+            <h3 class="text-base font-semibold text-on-surface">Thermal Excursion Incident Log</h3>
+            <p class="text-xs text-secondary mt-0.5">Automated breach logging, peak temperature excursions, and HACCP corrective actions</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="border-b border-border-subtle bg-surface-container-low text-secondary uppercase tracking-wider">
+                        <th class="py-2.5 px-4 font-semibold">Vehicle</th>
+                        <th class="py-2.5 px-4 font-semibold">Incident Type</th>
+                        <th class="py-2.5 px-4 font-semibold">Severity & Peak</th>
+                        <th class="py-2.5 px-4 font-semibold">Status</th>
+                        <th class="py-2.5 px-4 font-semibold text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border-subtle">
+                    {{range $excursions}}
+                    <tr class="hover:bg-surface-container-low/50 transition">
+                        <td class="py-2.5 px-4">
+                            <span class="font-medium text-on-surface">{{if .VehicleNumber}}{{.VehicleNumber}}{{else}}{{.VehicleID}}{{end}}</span>
+                            <div class="text-[11px] text-secondary font-mono">{{.StartTime.Format "02 Jan 15:04"}}</div>
+                        </td>
+                        <td class="py-2.5 px-4">
+                            <span class="font-medium text-on-surface">{{.ExcursionType}}</span>
+                            <div class="text-[11px] text-secondary font-medium">Zone {{.ZoneNumber}}</div>
+                        </td>
+                        <td class="py-2.5 px-4">
+                            <div class="flex items-center gap-1.5">
+                                {{if eq .Severity "CRITICAL"}}
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-rose-500/15 text-rose-700 dark:text-rose-300">CRITICAL</span>
+                                {{else}}
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/15 text-amber-700 dark:text-amber-300">WARNING</span>
+                                {{end}}
+                                <span class="font-semibold tabular-nums text-on-surface">{{printf "%.1f" .PeakTempC}}°C</span>
+                            </div>
+                            <div class="text-[11px] text-secondary font-medium">Limit: {{printf "%.1f" .ThresholdTempC}}°C</div>
+                        </td>
+                        <td class="py-2.5 px-4">
+                            {{if eq .Status "RESOLVED"}}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
+                                RESOLVED
+                            </span>
+                            {{if .ResolvedBy}}<div class="text-[10px] text-secondary font-medium mt-0.5">By: {{.ResolvedBy}}</div>{{end}}
+                            {{else if eq .Status "ACKNOWLEDGED"}}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                                ACKNOWLEDGED
+                            </span>
+                            {{else}}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-500/15 text-rose-700 dark:text-rose-300">
+                                OPEN
+                            </span>
+                            {{end}}
+                        </td>
+                        <td class="py-2.5 px-4 text-right">
+                            {{if ne .Status "RESOLVED"}}
+                            {{if can $.User "coldchain" "write"}}
+                            <button type="button" onclick="openResolveModal('{{.ID}}', '{{if .VehicleNumber}}{{.VehicleNumber}}{{else}}{{.VehicleID}}{{end}}', '{{.ExcursionType}}')" class="px-2 py-1 bg-surface-container-low border border-border-subtle rounded text-xs font-medium text-primary hover:bg-surface-container-high transition">
+                                Resolve
+                            </button>
+                            {{end}}
+                            {{else}}
+                            <span class="text-secondary text-[11px]">{{if .ResolutionNote}}{{.ResolutionNote}}{{else}}-{{end}}</span>
+                            {{end}}
+                        </td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                        <td colspan="5" class="py-6 text-center text-secondary text-xs">
+                            No thermal excursions recorded. All reefers within specification.
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- HACCP / GDP Trip Compliance Ledger -->
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xs overflow-hidden">
+        <div class="p-4 border-b border-border-subtle">
+            <h3 class="text-base font-semibold text-on-surface">GDP & HACCP Trip Compliance Records</h3>
+            <p class="text-xs text-secondary mt-0.5">Mean Kinetic Temperature (MKT), door open counters, and certified pharma audit stamps</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="border-b border-border-subtle bg-surface-container-low text-secondary uppercase tracking-wider">
+                        <th class="py-2.5 px-4 font-semibold">Trip & Vehicle</th>
+                        <th class="py-2.5 px-4 font-semibold">Min / Max Temp</th>
+                        <th class="py-2.5 px-4 font-semibold">MKT (°C)</th>
+                        <th class="py-2.5 px-4 font-semibold">Status</th>
+                        <th class="py-2.5 px-4 font-semibold">Certified By</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-border-subtle">
+                    {{range $summaries}}
+                    <tr class="hover:bg-surface-container-low/50 transition">
+                        <td class="py-2.5 px-4">
+                            <div class="font-medium text-on-surface font-mono">{{.TripID}}</div>
+                            <div class="text-[11px] text-secondary">{{.StartTime.Format "02 Jan 15:04"}} &rarr; {{.EndTime.Format "15:04"}}</div>
+                        </td>
+                        <td class="py-2.5 px-4 font-medium text-on-surface tabular-nums">
+                            {{printf "%.1f" .Zone1MinTempC}}°C / {{printf "%.1f" .Zone1MaxTempC}}°C
+                            <div class="text-[11px] text-secondary font-medium">Doors opened: {{.DoorOpenCount}}</div>
+                        </td>
+                        <td class="py-2.5 px-4 font-semibold text-on-surface tabular-nums">
+                            {{printf "%.2f" .Zone1MeanKineticTempC}}°C
+                        </td>
+                        <td class="py-2.5 px-4">
+                            {{if eq .ComplianceStatus "COMPLIANT"}}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-teal-500/15 text-teal-700 dark:text-teal-300">
+                                COMPLIANT
+                            </span>
+                            {{else}}
+                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-rose-500/15 text-rose-700 dark:text-rose-300">
+                                BREACHED
+                            </span>
+                            {{end}}
+                        </td>
+                        <td class="py-2.5 px-4 text-secondary">
+                            <div class="font-medium text-on-surface">{{if .CertifiedBy}}{{.CertifiedBy}}{{else}}Auditor{{end}}</div>
+                            {{if .CertifiedAt}}<div class="text-[11px] text-secondary font-mono">{{.CertifiedAt.Format "02 Jan 15:04"}}</div>{{end}}
+                        </td>
+                    </tr>
+                    {{else}}
+                    <tr>
+                        <td colspan="5" class="py-6 text-center text-secondary text-xs">
+                            No trip compliance summaries certified yet.
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Configure Reefer Profile -->
+<div id="configure-reefer-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 hidden">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xl w-full max-w-md p-6 overflow-hidden">
+        <div class="flex items-center justify-between mb-4 border-b border-border-subtle pb-3">
+            <h4 class="text-base font-semibold text-on-surface">Configure Reefer Profile</h4>
+            <button type="button" onclick="document.getElementById('configure-reefer-modal').classList.add('hidden')" class="text-secondary hover:text-on-surface text-lg leading-none">&times;</button>
+        </div>
+
+        <form method="POST" action="/cold-chain/profiles">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-secondary mb-1">Select Vehicle</label>
+                    <select name="vehicle_id" id="modal-vehicle-id" required class="w-full text-sm bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary">
+                        <option value="">-- Choose fleet vehicle --</option>
+                        {{range $allVehicles}}
+                        <option value="{{index . "ID"}}">{{index . "VehicleNumber"}} ({{index . "RegistrationNumber"}})</option>
+                        {{end}}
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-secondary mb-1">Reefer Make / Model</label>
+                        <input type="text" name="reefer_make_model" id="modal-reefer-model" required placeholder="e.g. Thermo King SLXi 400" class="w-full text-sm bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-secondary mb-1">Number of Zones</label>
+                        <select name="num_zones" id="modal-num-zones" class="w-full text-sm bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary">
+                            <option value="1">1 Zone</option>
+                            <option value="2">2 Zones</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-secondary mb-1">Zone 1 Commodity Classification</label>
+                    <select name="zone1_type" id="modal-zone1-type" class="w-full text-sm bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary">
+                        <option value="CHILLED">Chilled / Pharma (2°C to 8°C)</option>
+                        <option value="FROZEN">Deep Frozen (-25°C to -18°C)</option>
+                        <option value="AMBIENT">Controlled Ambient (15°C to 25°C)</option>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-xs font-medium text-secondary mb-1">Target (°C)</label>
+                        <input type="number" step="0.1" name="zone1_target_temp_c" id="modal-target-temp" required value="4.0" class="w-full text-sm bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-secondary mb-1">Min Safe (°C)</label>
+                        <input type="number" step="0.1" name="zone1_min_temp_c" id="modal-min-temp" required value="2.0" class="w-full text-sm bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-secondary mb-1">Max Safe (°C)</label>
+                        <input type="number" step="0.1" name="zone1_max_temp_c" id="modal-max-temp" required value="8.0" class="w-full text-sm bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-secondary mb-1">Defrost Mode</label>
+                        <select name="defrost_mode" id="modal-defrost-mode" class="w-full text-sm bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary">
+                            <option value="AUTO">AUTO (Demand)</option>
+                            <option value="CYCLE">CYCLE (Timer)</option>
+                            <option value="MANUAL">MANUAL</option>
+                        </select>
+                    </div>
+                    <div class="flex items-center pt-5">
+                        <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-medium text-on-surface">
+                            <input type="checkbox" name="humidity_monitoring" value="1" class="rounded border-border-subtle text-primary focus:ring-primary">
+                            <span>Humidity Sensor</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3 pt-3 border-t border-border-subtle">
+                <button type="button" onclick="document.getElementById('configure-reefer-modal').classList.add('hidden')" class="px-4 py-2 text-sm text-secondary hover:text-on-surface font-medium">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-medium hover:bg-primary-hover transition">Save Profile</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Resolve Temperature Excursion -->
+<div id="resolve-excursion-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 hidden">
+    <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-xl w-full max-w-md p-6 overflow-hidden">
+        <div class="flex items-center justify-between mb-4 border-b border-border-subtle pb-3">
+            <h4 class="text-base font-semibold text-on-surface">Resolve Temperature Excursion</h4>
+            <button type="button" onclick="document.getElementById('resolve-excursion-modal').classList.add('hidden')" class="text-secondary hover:text-on-surface text-lg leading-none">&times;</button>
+        </div>
+
+        <form method="POST" id="resolve-excursion-form" action="/cold-chain/excursions//resolve">
+            <div class="space-y-4">
+                <div class="bg-surface-container-low p-3 rounded-lg border border-border-subtle">
+                    <div class="text-xs text-secondary font-medium" id="resolve-modal-meta">Vehicle Incident</div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-secondary mb-1">Corrective Action Taken & HACCP Note</label>
+                    <textarea name="resolution_note" required rows="3" placeholder="Describe corrective action (e.g., Driver re-secured thermal curtain, reefer compressor restarted, cargo inspected upon arrival)" class="w-full text-sm bg-surface-container-low border border-border-subtle rounded-lg px-3 py-2 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"></textarea>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3 pt-3 border-t border-border-subtle">
+                <button type="button" onclick="document.getElementById('resolve-excursion-modal').classList.add('hidden')" class="px-4 py-2 text-sm text-secondary hover:text-on-surface font-medium">Cancel</button>
+                <button type="submit" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition">Mark Resolved</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openConfigureModal(vehId, make, zones, zType, target, min, max, defrost) {
+    document.getElementById('modal-vehicle-id').value = vehId;
+    if (make) document.getElementById('modal-reefer-model').value = make;
+    if (zones) document.getElementById('modal-num-zones').value = zones;
+    if (zType) document.getElementById('modal-zone1-type').value = zType;
+    if (target) document.getElementById('modal-target-temp').value = target;
+    if (min) document.getElementById('modal-min-temp').value = min;
+    if (max) document.getElementById('modal-max-temp').value = max;
+    if (defrost) document.getElementById('modal-defrost-mode').value = defrost;
+    document.getElementById('configure-reefer-modal').classList.remove('hidden');
+}
+
+function openResolveModal(excId, vehNum, excType) {
+    var form = document.getElementById('resolve-excursion-form');
+    form.action = '/cold-chain/excursions/' + excId + '/resolve';
+    document.getElementById('resolve-modal-meta').textContent = (vehNum || 'Vehicle') + ' - ' + (excType || 'Incident');
+    document.getElementById('resolve-excursion-modal').classList.remove('hidden');
+}
+</script>

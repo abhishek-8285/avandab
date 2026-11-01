@@ -156,6 +156,65 @@ func (s *TelemetryService) ProcessTelemetryStream(ctx context.Context, dp Teleme
 		}
 	}
 
+	// 3. Rule Check: Temperature Breach (> 8.0°C or < -25.0°C)
+	if dp.Temperature != nil {
+		temp := *dp.Temperature
+		if temp > 8.0 || temp < -25.0 {
+			var details string
+			if temp > 8.0 {
+				details = fmt.Sprintf("High temperature breach detected: %.1f°C exceeds max threshold 8.0°C", temp)
+			} else {
+				details = fmt.Sprintf("Low temperature breach detected: %.1f°C below min threshold -25.0°C", temp)
+			}
+			alert := TelemetryAlert{
+				ID:        generateID(),
+				TripID:    strFromPtr(dp.TripID),
+				VehicleID: string(dp.VehicleID),
+				DriverID:  strFromPtr(dp.DriverID),
+				AlertType: "temp_breach",
+				Severity:  "critical",
+				Details:   details,
+				CreatedAt: time.Now(),
+			}
+			generatedAlerts = append(generatedAlerts, alert)
+			s.persistRawAlert(ctx, alert, dp.Latitude, dp.Longitude)
+
+			if s.log != nil {
+				s.log.Warn("telemetry exception: Temperature Breach", "temp_c", temp, "vehicle_id", dp.VehicleID)
+			}
+			if s.events != nil {
+				_ = s.events.Publish(ctx, events.Event{
+					Type: "AlertEvent",
+					Payload: map[string]interface{}{
+						"source":      "telemetry",
+						"alert_type":  alert.AlertType,
+						"severity":    alert.Severity,
+						"title":       fmt.Sprintf("Temperature Breach: %.1f°C", temp),
+						"details":     alert.Details,
+						"vehicle_id":  alert.VehicleID,
+						"driver_id":   alert.DriverID,
+						"trip_id":     alert.TripID,
+						"tenant_id":   string(shared.TenantIDFromContext(ctx)),
+						"latitude":    dp.Latitude,
+						"longitude":   dp.Longitude,
+						"occurred_at": alert.CreatedAt,
+					},
+				})
+				_ = s.events.Publish(ctx, events.Event{
+					Type: events.TempBreachAlert,
+					Payload: map[string]interface{}{
+						"tenant_id":   string(shared.TenantIDFromContext(ctx)),
+						"trip_id":     alert.TripID,
+						"vehicle_id":  alert.VehicleID,
+						"alert":       alert,
+						"temperature": temp,
+						"occurred_at": time.Now(),
+					},
+				})
+			}
+		}
+	}
+
 	return generatedAlerts, nil
 }
 

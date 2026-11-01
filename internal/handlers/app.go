@@ -173,6 +173,24 @@ type App struct {
 	FuelCards *FuelCardHandlers
 	// ESG powers Scope 3 carbon emission snapshots and BRSR reporting (B11).
 	ESG *ESGHandlers
+	// Tyres powers tyre management, axle tracking, retreading, and CPKM (P3 3.1).
+	Tyres *TyreHandlers
+	// Inventory powers parts catalog, multi-store stock, purchase bills, and movements (P3 3.2).
+	Inventory *InventoryHandlers
+	// FreightAudit powers freight audit, rate cards, GPS/weight variance, and deductions (P3 3.3).
+	FreightAudit *FreightAuditHandlers
+	// ReportBuilder powers custom fleet report builder and scheduled delivery (P3 3.4).
+	ReportBuilder *ReportBuilderHandlers
+	// RFQ powers Request For Quotation lane bidding and multi-round counter-offers (P3 3.5).
+	RFQ *RFQHandlers
+	// ControlTower powers the operations cockpit and multi-stop tracking (P3 3.9).
+	ControlTower *ControlTowerHandlers
+	// EV powers EV fleet telematics, battery SoC/SoH tracking, and charging sessions (P3 3.10).
+	EV *EVHandlers
+	// ColdChain powers reefer telematics, thermal excursions, door sensors, and HACCP/GDP compliance (P3 3.11).
+	ColdChain *ColdChainHandlers
+	// Video powers AI dashcam DMS/ADAS, live stream session brokering, and driver safety coaching (P3 3.12).
+	Video *VideoTelematicsHandlers
 }
 
 // NewApp creates a new handler app with all handler groups initialized.
@@ -285,6 +303,15 @@ func NewApp(svc *service.Services, cfg *config.Config, authStore *auth.SessionSt
 	esgRepo := sustainability.NewSQLESGRepository(db)
 	esgUseCase := esgapp.NewESGUsecase(esgRepo)
 	app.ESG = NewESGHandlers(app, esgUseCase)
+	app.Tyres = &TyreHandlers{App: app}
+	app.Inventory = &InventoryHandlers{App: app}
+	app.FreightAudit = &FreightAuditHandlers{App: app}
+	app.ReportBuilder = &ReportBuilderHandlers{App: app}
+	app.RFQ = &RFQHandlers{App: app}
+	app.ControlTower = NewControlTowerHandlers(app, nil)
+	app.EV = NewEVHandlers(app)
+	app.ColdChain = NewColdChainHandlers(app)
+	app.Video = NewVideoTelematicsHandlers(app)
 
 	return app
 }
@@ -1282,6 +1309,8 @@ func (a *App) PolicyPage(w http.ResponseWriter, r *http.Request, name string) {
 		"refunds.html":             {"Title": "Refund Policy", "Desc": "Avandab Refund Policy — eligibility, submission window and processing for undelivered services.", "Path": "/refunds"},
 		"consumer_compliance.html": {"Title": "Consumer Compliance", "Desc": "Avandab Consumer Compliance — E-Commerce Amendment 2026 disclosures, grievance SLAs and dark-pattern self-audit certificate.", "Path": "/consumer-compliance"},
 		"faq.html":                 {"Title": "Frequently Asked Questions", "Desc": "Avandab FAQ — setup, tracking, ePOD, billing, data protection and support answers for fleet owners.", "Path": "/faq"},
+		"pricing.html":             {"Title": "Pricing & SLA", "Desc": "Avandab Fleet & TMS Pricing — Transparent plans for growing fleets, enterprise 3PLs, and guaranteed 99.9% uptime SLA commitments.", "Path": "/pricing"},
+		"status.html":              {"Title": "System Status & SLA", "Desc": "Avandab System Status — real-time platform availability, component latency benchmarks, and guaranteed 99.9% uptime SLA compliance.", "Path": "/status"},
 	}
 	meta := seo[name]
 	title, desc, path := name, "", "/"
@@ -1326,6 +1355,11 @@ func (a *App) ConsumerCompliance(w http.ResponseWriter, r *http.Request) {
 // FAQ serves the public frequently-asked-questions page.
 func (a *App) FAQ(w http.ResponseWriter, r *http.Request) {
 	a.PolicyPage(w, r, "faq.html")
+}
+
+// Pricing serves the public pricing and SLA commitment page (Plan P5 item 5.8).
+func (a *App) Pricing(w http.ResponseWriter, r *http.Request) {
+	a.PolicyPage(w, r, "pricing.html")
 }
 
 // FeaturePage serves a public, login-free explainer for a single product
