@@ -208,4 +208,33 @@ func TestSTOLifecycleAndLoadBoardBidding(t *testing.T) {
 
 	_, err = svc.GetListing(ctx, tenantB, listing.ID)
 	assert.Error(t, err)
+
+	// 11. Lifecycle completion: DispatchSTO -> IN_TRANSIT, ReceiveSTO -> RECEIVED
+	dispatchedSTO, err := svc.DispatchSTO(ctx, tenantA, createdSTO.ID)
+	require.NoError(t, err)
+	assert.Equal(t, sto.StatusINTRANSIT, dispatchedSTO.Status)
+
+	receivedSTO, err := svc.ReceiveSTO(ctx, tenantA, createdSTO.ID)
+	require.NoError(t, err)
+	assert.Equal(t, sto.StatusRECEIVED, receivedSTO.Status)
+
+	// Cannot cancel an already RECEIVED STO
+	_, err = svc.CancelSTO(ctx, tenantA, createdSTO.ID)
+	assert.Error(t, err)
+
+	// Verify cancellation on a new DRAFT STO
+	draftSTO, err := svc.CreateSTO(ctx, tenantA, sto.CreateSTOInput{
+		OriginFacilityID:      facPuneID,
+		DestinationFacilityID: facMumbaiID,
+		MaterialCode:          "MAT-CANCEL",
+		MaterialDescription:   "Cancelled Parts",
+		Quantity:              5,
+		UOM:                   "EA",
+		RequiredDeliveryDate:  "2026-12-31",
+		CreatedBy:             "user-1",
+	})
+	require.NoError(t, err)
+	cancelledSTO, err := svc.CancelSTO(ctx, tenantA, draftSTO.ID)
+	require.NoError(t, err)
+	assert.Equal(t, sto.StatusCANCELLED, cancelledSTO.Status)
 }

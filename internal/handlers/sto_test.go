@@ -193,7 +193,33 @@ func TestSTOAndLoadBoardAPI(t *testing.T) {
 	r.ServeHTTP(recAward, reqAward)
 	assert.Equal(t, http.StatusOK, recAward.Code)
 
-	// 8. RBAC: viewer-user cannot create STO or award bids -> 403
+	// 8. POST /api/v1/sto/{id}/dispatch -> IN_TRANSIT
+	reqDispatch := httptest.NewRequest(http.MethodPost, "/api/v1/sto/"+stoCreated.ID+"/dispatch", nil)
+	reqDispatch.Header.Set("X-Test-User", "authorized-user")
+	reqDispatch.Header.Set("X-Test-Tenant", tenantID)
+	recDispatch := httptest.NewRecorder()
+	r.ServeHTTP(recDispatch, reqDispatch)
+	assert.Equal(t, http.StatusOK, recDispatch.Code)
+
+	var stoDispatched sto.StockTransferOrder
+	err = json.NewDecoder(recDispatch.Body).Decode(&stoDispatched)
+	require.NoError(t, err)
+	assert.Equal(t, sto.StatusINTRANSIT, stoDispatched.Status)
+
+	// 9. POST /api/v1/sto/{id}/receive -> RECEIVED
+	reqReceive := httptest.NewRequest(http.MethodPost, "/api/v1/sto/"+stoCreated.ID+"/receive", nil)
+	reqReceive.Header.Set("X-Test-User", "authorized-user")
+	reqReceive.Header.Set("X-Test-Tenant", tenantID)
+	recReceive := httptest.NewRecorder()
+	r.ServeHTTP(recReceive, reqReceive)
+	assert.Equal(t, http.StatusOK, recReceive.Code)
+
+	var stoReceived sto.StockTransferOrder
+	err = json.NewDecoder(recReceive.Body).Decode(&stoReceived)
+	require.NoError(t, err)
+	assert.Equal(t, sto.StatusRECEIVED, stoReceived.Status)
+
+	// 10. RBAC: viewer-user cannot create STO or award bids -> 403
 	reqViewerSTO := httptest.NewRequest(http.MethodPost, "/api/v1/sto", bytes.NewBufferString(createBody))
 	reqViewerSTO.Header.Set("Content-Type", "application/json")
 	reqViewerSTO.Header.Set("X-Test-User", "viewer-user")

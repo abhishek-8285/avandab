@@ -1,7 +1,7 @@
 {{template "page_header.html" (dict "Title" (t "sy.users.title") "Subtitle" (t "sy.users.subtitle") "ActionHref" "/users/new" "ActionIcon" "add" "ActionLabel" (t "sy.users.new_user"))}}
 
 <div class="space-y-4">
-    <!-- Compact stat row (totals only — per-status counts need a handler TODO) -->
+    <!-- Compact stat row: totals and active counts -->
     <div class="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <div class="flex items-center gap-4 bg-surface-container-lowest rounded-xl border border-border-subtle shadow-xs p-4 hover:shadow-sm hover:border-primary/20 transition">
             <div class="w-9 h-9 rounded-lg bg-primary/10 border border-primary/15 grid place-items-center text-primary shrink-0">

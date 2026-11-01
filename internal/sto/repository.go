@@ -444,13 +444,13 @@ func (r *SQLRepository) AwardBidTransaction(ctx context.Context, tenantID, listi
 	defer func() { _ = tx.Rollback() }()
 
 	// 1. Fetch & lock listing
-	var currentLBStatus string
+	var currentLBStatus, originCity, destCity string
 	var stoID, bkgID sql.NullString
 	err = tx.QueryRowContext(ctx, `
-		SELECT status, sto_id, booking_id
+		SELECT status, sto_id, booking_id, origin_city, destination_city
 		FROM load_board_listings
 		WHERE tenant_id = $1 AND id = $2`,
-		tenantID, listingID).Scan(&currentLBStatus, &stoID, &bkgID)
+		tenantID, listingID).Scan(&currentLBStatus, &stoID, &bkgID, &originCity, &destCity)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, fmt.Errorf("listing not found: %s", listingID)
@@ -542,17 +542,44 @@ func (r *SQLRepository) AwardBidTransaction(ctx context.Context, tenantID, listi
 	driverIDVal := winningBid.DriverID
 	vehicleIDVal := winningBid.VehicleID
 
+	// Resolve route ID: if booking linked, prefer booking's route; otherwise lookup/insert matching route
+	routeID := "route-sto-loadboard"
+	if bkgID.Valid && bkgID.String != "" {
+		var bkgRouteID sql.NullString
+		_ = tx.QueryRowContext(ctx, `SELECT route_id FROM bookings WHERE tenant_id = $1 AND id = $2`, tenantID, bkgID.String).Scan(&bkgRouteID)
+		if bkgRouteID.Valid && bkgRouteID.String != "" {
+			routeID = bkgRouteID.String
+		}
+	}
+	// Verify route exists in routes table; if not, insert a fallback route for this origin/destination
+	var existingRouteID string
+	err = tx.QueryRowContext(ctx, `
+		SELECT id FROM routes
+		WHERE (id = $1 OR (source = $2 AND destination = $3))
+		  AND (tenant_id = $4 OR tenant_id IS NULL OR tenant_id = '')
+		LIMIT 1`,
+		routeID, originCity, destCity, tenantID).Scan(&existingRouteID)
+	if err == nil && existingRouteID != "" {
+		routeID = existingRouteID
+	} else {
+		// Insert dynamic route ensuring foreign key integrity
+		_, _ = tx.ExecContext(ctx, `
+			INSERT INTO routes (id, tenant_id, source, destination, distance, estimated_hours, standard_fare)
+			VALUES ($1, $2, $3, $4, 100, 4, $5)`,
+			routeID, tenantID, originCity, destCity, winningBid.BidAmount)
+	}
+
 	// Create trip execution record
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO trips (
 			id, tenant_id, trip_number, booking_id, driver_id, vehicle_id, route_id,
 			departure_time, status, remarks, created_at, updated_at
 		) VALUES (
-			$1, $2, $3, $4, $5, $6, 'route-sto-loadboard',
-			$7, 'assigned', $8, $9, $10
+			$1, $2, $3, $4, $5, $6, $7,
+			$8, 'assigned', $9, $10, $11
 		)`,
 		tripID, tenantID, "TRIP-"+now.Format("20060102")+"-"+winningBid.CarrierID,
-		bkgIDPtr, driverIDVal, vehicleIDVal, now,
+		bkgIDPtr, driverIDVal, vehicleIDVal, routeID, now,
 		"Awarded from load board listing "+listingID, now, now,
 	)
 	if err == nil {

@@ -271,3 +271,78 @@ func (s *Service) AwardBid(ctx context.Context, tenantID, listingID, bidID strin
 
 	return s.repo.AwardBidTransaction(ctx, tenantID, listingID, bidID)
 }
+
+// DispatchSTO marks an ASSIGNED STO as IN_TRANSIT.
+func (s *Service) DispatchSTO(ctx context.Context, tenantID, stoID string) (*StockTransferOrder, error) {
+	if tenantID == "" {
+		return nil, errors.New("tenant_id is required")
+	}
+	if stoID == "" {
+		return nil, errors.New("sto_id is required")
+	}
+
+	record, err := s.repo.GetSTOByID(ctx, tenantID, stoID)
+	if err != nil {
+		return nil, err
+	}
+	if record.Status != StatusASSIGNED {
+		return nil, fmt.Errorf("only ASSIGNED STOs can be dispatched (current status: %s)", record.Status)
+	}
+
+	if err := s.repo.UpdateSTOStatus(ctx, tenantID, stoID, StatusINTRANSIT); err != nil {
+		return nil, err
+	}
+	record.Status = StatusINTRANSIT
+	record.UpdatedAt = time.Now()
+	return record, nil
+}
+
+// ReceiveSTO marks an IN_TRANSIT or ASSIGNED STO as RECEIVED.
+func (s *Service) ReceiveSTO(ctx context.Context, tenantID, stoID string) (*StockTransferOrder, error) {
+	if tenantID == "" {
+		return nil, errors.New("tenant_id is required")
+	}
+	if stoID == "" {
+		return nil, errors.New("sto_id is required")
+	}
+
+	record, err := s.repo.GetSTOByID(ctx, tenantID, stoID)
+	if err != nil {
+		return nil, err
+	}
+	if record.Status != StatusINTRANSIT && record.Status != StatusASSIGNED {
+		return nil, fmt.Errorf("only ASSIGNED or IN_TRANSIT STOs can be marked received (current status: %s)", record.Status)
+	}
+
+	if err := s.repo.UpdateSTOStatus(ctx, tenantID, stoID, StatusRECEIVED); err != nil {
+		return nil, err
+	}
+	record.Status = StatusRECEIVED
+	record.UpdatedAt = time.Now()
+	return record, nil
+}
+
+// CancelSTO cancels an unfulfilled STO.
+func (s *Service) CancelSTO(ctx context.Context, tenantID, stoID string) (*StockTransferOrder, error) {
+	if tenantID == "" {
+		return nil, errors.New("tenant_id is required")
+	}
+	if stoID == "" {
+		return nil, errors.New("sto_id is required")
+	}
+
+	record, err := s.repo.GetSTOByID(ctx, tenantID, stoID)
+	if err != nil {
+		return nil, err
+	}
+	if record.Status == StatusRECEIVED || record.Status == StatusCANCELLED {
+		return nil, fmt.Errorf("cannot cancel STO in %s status", record.Status)
+	}
+
+	if err := s.repo.UpdateSTOStatus(ctx, tenantID, stoID, StatusCANCELLED); err != nil {
+		return nil, err
+	}
+	record.Status = StatusCANCELLED
+	record.UpdatedAt = time.Now()
+	return record, nil
+}

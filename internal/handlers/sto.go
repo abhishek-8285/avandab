@@ -30,6 +30,9 @@ func (h *STOHandlers) Routes(r chi.Router) {
 	r.With(middleware.RequirePermission(h.AuthSrv, "sto", "write")).Post("/", h.WebCreateSTO)
 	r.With(middleware.RequirePermission(h.AuthSrv, "sto", "write")).Post("/{id}/release", h.WebReleaseSTO)
 	r.With(middleware.RequirePermission(h.AuthSrv, "sto", "write")).Post("/{id}/post-to-loadboard", h.WebPostToLoadBoard)
+	r.With(middleware.RequirePermission(h.AuthSrv, "sto", "write")).Post("/{id}/dispatch", h.WebDispatchSTO)
+	r.With(middleware.RequirePermission(h.AuthSrv, "sto", "write")).Post("/{id}/receive", h.WebReceiveSTO)
+	r.With(middleware.RequirePermission(h.AuthSrv, "sto", "write")).Post("/{id}/cancel", h.WebCancelSTO)
 }
 
 // LoadBoardRoutes registers web UI routes for the Load Board under /loadboard.
@@ -118,6 +121,33 @@ func (h *STOHandlers) WebPostToLoadBoard(w http.ResponseWriter, r *http.Request)
 	http.Redirect(w, r, "/loadboard", http.StatusSeeOther)
 }
 
+// WebDispatchSTO dispatches an STO into transit.
+func (h *STOHandlers) WebDispatchSTO(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	id := chi.URLParam(r, "id")
+	svc := h.getService()
+	_, _ = svc.DispatchSTO(r.Context(), tenantID, id)
+	http.Redirect(w, r, "/sto", http.StatusSeeOther)
+}
+
+// WebReceiveSTO marks an STO as received.
+func (h *STOHandlers) WebReceiveSTO(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	id := chi.URLParam(r, "id")
+	svc := h.getService()
+	_, _ = svc.ReceiveSTO(r.Context(), tenantID, id)
+	http.Redirect(w, r, "/sto", http.StatusSeeOther)
+}
+
+// WebCancelSTO cancels an STO.
+func (h *STOHandlers) WebCancelSTO(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	id := chi.URLParam(r, "id")
+	svc := h.getService()
+	_, _ = svc.CancelSTO(r.Context(), tenantID, id)
+	http.Redirect(w, r, "/sto", http.StatusSeeOther)
+}
+
 // WebListLoadboard renders the Load Board listings page.
 func (h *STOHandlers) WebListLoadboard(w http.ResponseWriter, r *http.Request) {
 	tenantID := string(shared.TenantIDFromContext(r.Context()))
@@ -171,6 +201,9 @@ func (h *STOHandlers) RegisterAPIRoutes(r chi.Router) {
 		r.With(middleware.RequirePermission(h.AuthSrv, "sto", "read")).Get("/{id}", h.APIGetSTO)
 		r.With(middleware.RequirePermission(h.AuthSrv, "sto", "write")).Post("/{id}/release", h.APIReleaseSTO)
 		r.With(middleware.RequirePermission(h.AuthSrv, "sto", "write")).Post("/{id}/post-to-loadboard", h.APIPostToLoadBoard)
+		r.With(middleware.RequirePermission(h.AuthSrv, "sto", "write")).Post("/{id}/dispatch", h.APIDispatchSTO)
+		r.With(middleware.RequirePermission(h.AuthSrv, "sto", "write")).Post("/{id}/receive", h.APIReceiveSTO)
+		r.With(middleware.RequirePermission(h.AuthSrv, "sto", "write")).Post("/{id}/cancel", h.APICancelSTO)
 	})
 
 	r.Route("/api/v1/loadboard", func(r chi.Router) {
@@ -333,6 +366,69 @@ func (h *STOHandlers) APIPostToLoadBoard(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	writeSTOJSON(w, http.StatusCreated, listing)
+}
+
+// APIDispatchSTO marks an STO as IN_TRANSIT.
+func (h *STOHandlers) APIDispatchSTO(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	if tenantID == "" {
+		writeSTOError(w, http.StatusUnauthorized, "missing tenant context")
+		return
+	}
+	id := chi.URLParam(r, "id")
+	svc := h.getService()
+	record, err := svc.DispatchSTO(r.Context(), tenantID, id)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			writeSTOError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		writeSTOError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeSTOJSON(w, http.StatusOK, record)
+}
+
+// APIReceiveSTO marks an STO as RECEIVED.
+func (h *STOHandlers) APIReceiveSTO(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	if tenantID == "" {
+		writeSTOError(w, http.StatusUnauthorized, "missing tenant context")
+		return
+	}
+	id := chi.URLParam(r, "id")
+	svc := h.getService()
+	record, err := svc.ReceiveSTO(r.Context(), tenantID, id)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			writeSTOError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		writeSTOError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeSTOJSON(w, http.StatusOK, record)
+}
+
+// APICancelSTO marks an STO as CANCELLED.
+func (h *STOHandlers) APICancelSTO(w http.ResponseWriter, r *http.Request) {
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	if tenantID == "" {
+		writeSTOError(w, http.StatusUnauthorized, "missing tenant context")
+		return
+	}
+	id := chi.URLParam(r, "id")
+	svc := h.getService()
+	record, err := svc.CancelSTO(r.Context(), tenantID, id)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			writeSTOError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		writeSTOError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeSTOJSON(w, http.StatusOK, record)
 }
 
 // APIListListings returns load board listings.

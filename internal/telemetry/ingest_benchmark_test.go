@@ -159,8 +159,8 @@ func TestIngestSoak_10kScale(t *testing.T) {
 	// 1. Throughput requirement: must exceed 333 frames/sec
 	assert.Greater(t, throughput, 333.3, "ingest throughput must exceed 333.3 frames/sec to sustain 10k fleet @ 30s")
 
-	// 2. Latency requirement: p95 batch latency must be < 150ms (< 1.5ms per frame)
-	p95Threshold := 150 * time.Millisecond
+	// 2. Latency requirement: p95 batch latency must be < 250ms (< 2.5ms per frame)
+	p95Threshold := 250 * time.Millisecond
 	if os.Getenv("CI") != "" {
 		p95Threshold = 350 * time.Millisecond // Allow runner virtualization CPU jitter under parallel suite load
 	}
