@@ -41,6 +41,16 @@
         .font-data-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
         td[data-numeric] { font-feature-settings: "tnum" 1; font-variant-numeric: tabular-nums; }
         dt { font-size: 0.75rem; line-height: 1; }
+        /* Progressive disclosure for dense detail pages (vehicle/trip view).
+           Without JS every section stays open, so the page is never cut off. */
+        details.vsec > summary { list-style: none; }
+        details.vsec > summary::-webkit-details-marker { display: none; }
+        details.vsec .vsec-chev { transition: transform .15s ease; }
+        details.vsec:not([open]) .vsec-chev { transform: rotate(-90deg); }
+        @media (min-width: 768px) {
+            details.vsec > summary { cursor: default; pointer-events: none; }
+            details.vsec .vsec-chev { display: none; }
+        }
 
     </style>
     <script>
@@ -1137,6 +1147,21 @@
     <script src="/static/js/session-guard.js?v={{if .Version}}{{.Version}}{{else}}20260821{{end}}"></script>
     {{end}}
     <script src="/static/js/toast.js?v={{if .Version}}{{.Version}}{{else}}20260822{{end}}"></script>
+    <script>
+    // Progressive disclosure shared by dense detail pages (vehicle/trip view):
+    // data-m-open="0" means "start collapsed on phones only". Runs after the
+    // body is parsed inside the page script, so phones never paint the sections
+    // expanded; no-JS and desktop keep everything expanded (markup ships `open`).
+    (function () {
+        try {
+            if (window.matchMedia('(max-width: 767px)').matches) {
+                document.querySelectorAll('details.vsec[data-m-open="0"]').forEach(function (d) {
+                    d.removeAttribute('open');
+                });
+            }
+        } catch (e) { /* expanded is the safe default */ }
+    })();
+    </script>
     {{if .User}}
     <script src="/static/js/error-capture.js?v={{if .Version}}{{.Version}}{{else}}20260822{{end}}"></script>
     {{end}}

@@ -1,18 +1,5 @@
 <a href="/vehicles" class="back-link inline-flex items-center gap-1 text-sm font-medium text-text-muted hover:text-on-surface transition-colors text-decoration-none mb-3"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 shrink-0"><path d="m15 18-6-6 6-6"/></svg> {{t "fl.vehicles"}}</a>
 
-<style>
-/* Vehicle View progressive disclosure: secondary sections are native
-   <details> (no-JS safe: rendered open). On phones they start collapsed;
-   on md+ the headers are inert and chevrons hidden, so desktop is unchanged. */
-details.vsec > summary { list-style: none; }
-details.vsec > summary::-webkit-details-marker { display: none; }
-details.vsec .vsec-chev { transition: transform .15s ease; }
-details.vsec:not([open]) .vsec-chev { transform: rotate(-90deg); }
-@media (min-width: 768px) {
-    details.vsec > summary { cursor: default; pointer-events: none; }
-    details.vsec .vsec-chev { display: none; }
-}
-</style>
 <div class="space-y-5 max-w-[1600px] mx-auto" data-vehicle-view>
 
 <div class="relative overflow-hidden bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm">
@@ -469,17 +456,3 @@ details.vsec:not([open]) .vsec-chev { transform: rotate(-90deg); }
 </div>
 
 </div>
-<script>
-// Vehicle View progressive disclosure: below md, secondary sections start
-// collapsed (summary + maintenance status + teleop stay visible). No-JS and
-// desktop keep everything expanded.
-(function () {
-    try {
-        if (window.matchMedia('(max-width: 767px)').matches) {
-            document.querySelectorAll('[data-vehicle-view] details.vsec[data-m-open="0"]').forEach(function (d) {
-                d.removeAttribute('open');
-            });
-        }
-    } catch (e) { /* expanded is the safe default */ }
-})();
-</script>

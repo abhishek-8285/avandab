@@ -181,3 +181,14 @@ which always allocate head-ward from the maximum above.
 Pick the number from this table for your feature and update the spec's §3 to
 match exactly. If two specs appear to need the same number, the FIRST spec in
 the table wins and the other moves to the next free slot (update this index).
+
+## Width rule (enforced by `db/schema_column_ratchet_test.go`)
+Do not append columns to a wide table. When a feature needs more fields, put
+them in a satellite table keyed by the parent id — the `vehicle_ev_profiles`,
+`customer_booking_details` and `trip_stops` pattern. The ratchet test fails
+when `vehicles` (62), `trips` (52), `freight_audits` (44) or any table >= 20
+columns grows past its recorded cap, and no table may exceed 62 columns.
+Raise a cap in that test only with a comment saying why the new field belongs
+in that aggregate. After any migration, regenerate the schema
+(`./scripts/dump-schema.sh`) and the sqlc models, or the ratchet reads stale
+data.
