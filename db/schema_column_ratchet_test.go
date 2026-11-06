@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -82,7 +81,7 @@ func TestSchemaColumnRatchet(t *testing.T) {
 			continue // table dropped/renamed; the cap is just stale, not a failure
 		}
 		assert.LessOrEqual(t, n, cap,
-			"%s grew to %s columns (cap %s): put the new fields in a satellite table or raise the cap in maxColumns with a reason",
-			table, strconv.Itoa(n), strconv.Itoa(cap))
+			"%s grew to %d columns (cap %d): put the new fields in a satellite table or raise the cap in maxColumns with a reason",
+			table, n, cap)
 	}
 }

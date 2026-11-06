@@ -119,6 +119,13 @@ test('trip view desktop stays fully expanded', async ({ page }) => {
     await expect(page.locator(`details[data-section="${sec}"]`), `${sec} open on desktop`).toHaveJSProperty('open', true);
   }
   await expectNoHorizontalOverflow(page, 'trip view desktop');
+
+  // Regression: desktop disables pointer events on the summary itself, but
+  // interactive children (the kharcha "full ledger" link) must stay clickable.
+  const ledgerLink = page.locator('details[data-section="kharcha"] > summary a[href="/kharcha/ledger"]');
+  await expect(ledgerLink).toBeVisible();
+  await ledgerLink.click();
+  await expect(page).toHaveURL(/\/kharcha\/ledger/);
 });
 
 for (const width of [288, 320, 360, 390, 412, 430]) {

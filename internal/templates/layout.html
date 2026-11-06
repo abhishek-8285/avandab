@@ -48,7 +48,16 @@
         details.vsec .vsec-chev { transition: transform .15s ease; }
         details.vsec:not([open]) .vsec-chev { transform: rotate(-90deg); }
         @media (min-width: 768px) {
+            /* Desktop sections are always open; the summary itself is inert. */
             details.vsec > summary { cursor: default; pointer-events: none; }
+            /* ...but interactive children must stay usable: pointer-events is
+               inherited, so without this the trip view "full ledger" link
+               (inside the kharcha summary) is dead on desktop. */
+            details.vsec > summary a,
+            details.vsec > summary button,
+            details.vsec > summary [role="button"],
+            details.vsec > summary input,
+            details.vsec > summary select { pointer-events: auto; cursor: pointer; }
             details.vsec .vsec-chev { display: none; }
         }
 
