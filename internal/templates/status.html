@@ -46,7 +46,7 @@
                             {{if eq .OverallStatus "Operational"}}All Systems Operational{{else}}Degraded Service Performance{{end}}
                         </h1>
                         <p class="text-xs sm:text-sm text-secondary mt-1">
-                            Real-time platform availability, telemetry ingestion health, and SLA performance.
+                            Live subsystem checks and measured API latency. Availability history is not yet measured.
                         </p>
                     </div>
                 </div>
@@ -62,27 +62,32 @@
             </div>
         </div>
 
-        <!-- 4-Card SLA & Uptime KPI Strip -->
+        <!-- Measured-only KPI strip: no invented uptime/RPO/RTO numbers. -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
             <div class="p-4 rounded-xl bg-surface-container-lowest border border-border-subtle shadow-xs">
                 <div class="text-[11px] font-medium text-secondary uppercase tracking-wider mb-1">30-Day Availability</div>
+                {{if .UptimeMeasured}}
                 <div class="text-2xl sm:text-3xl font-semibold text-emerald-600 font-display tabular-nums">{{printf "%.2f" .UptimePercentage}}%</div>
-                <div class="text-[11px] text-text-muted mt-1">Production SLA target: {{.SLATarget}}</div>
+                <div class="text-[11px] text-text-muted mt-1">SLA target: {{.SLATarget}}</div>
+                {{else}}
+                <div class="text-2xl sm:text-3xl font-semibold text-secondary font-display tabular-nums">&mdash;</div>
+                <div class="text-[11px] text-text-muted mt-1">Not measured yet; SLA target: {{.SLATarget}}</div>
+                {{end}}
             </div>
             <div class="p-4 rounded-xl bg-surface-container-lowest border border-border-subtle shadow-xs">
                 <div class="text-[11px] font-medium text-secondary uppercase tracking-wider mb-1">API Latency (p95)</div>
                 <div class="text-2xl sm:text-3xl font-semibold text-primary font-display tabular-nums">{{.P95LatencyMs}} ms</div>
-                <div class="text-[11px] text-text-muted mt-1">Measured at edge gateway</div>
+                <div class="text-[11px] text-text-muted mt-1">Measured from in-process spans</div>
             </div>
             <div class="p-4 rounded-xl bg-surface-container-lowest border border-border-subtle shadow-xs">
-                <div class="text-[11px] font-medium text-secondary uppercase tracking-wider mb-1">RPO (Data Durability)</div>
-                <div class="text-2xl sm:text-3xl font-semibold text-on-surface font-display tabular-nums">{{.RPO}}</div>
-                <div class="text-[11px] text-text-muted mt-1">Automated WAL &amp; hourly snapshots</div>
+                <div class="text-[11px] font-medium text-secondary uppercase tracking-wider mb-1">Database Ping</div>
+                <div class="text-2xl sm:text-3xl font-semibold text-on-surface font-display tabular-nums">{{.DBLatency}}</div>
+                <div class="text-[11px] text-text-muted mt-1">Measured on this request</div>
             </div>
             <div class="p-4 rounded-xl bg-surface-container-lowest border border-border-subtle shadow-xs">
-                <div class="text-[11px] font-medium text-secondary uppercase tracking-wider mb-1">RTO (Disaster Recovery)</div>
-                <div class="text-2xl sm:text-3xl font-semibold text-on-surface font-display tabular-nums">{{.RTO}}</div>
-                <div class="text-[11px] text-text-muted mt-1">Automated failover &amp; drills</div>
+                <div class="text-[11px] font-medium text-secondary uppercase tracking-wider mb-1">Subsystem Checks</div>
+                <div class="text-2xl sm:text-3xl font-semibold text-on-surface font-display tabular-nums">{{.OperationalCount}} / {{.SubsystemCount}}</div>
+                <div class="text-[11px] text-text-muted mt-1">Operational or configured</div>
             </div>
         </div>
 
@@ -91,10 +96,10 @@
             <div class="flex items-center justify-between mb-6 pb-4 border-b border-border-subtle">
                 <div>
                     <h2 class="text-lg font-semibold text-on-surface">Core Infrastructure Subsystems</h2>
-                    <p class="text-xs text-secondary mt-0.5">Automated synthetic checks running continuously across regional points of presence</p>
+                    <p class="text-xs text-secondary mt-0.5">Checked when this page loads; only states this handler can probe are reported</p>
                 </div>
-                <span class="text-xs font-mono px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-700 font-semibold border border-emerald-500/20">
-                    6 / 6 Normal
+                <span class="text-xs font-mono px-2.5 py-1 rounded-full bg-surface-container text-secondary font-semibold border border-border-subtle">
+                    {{.OperationalCount}} / {{.SubsystemCount}} checked
                 </span>
             </div>
 
@@ -103,7 +108,7 @@
                 <div class="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div class="min-w-0">
                         <div class="flex items-center gap-2.5">
-                            <span class="w-2 h-2 rounded-full {{if eq .Status "operational"}}bg-emerald-500{{else}}bg-amber-500{{end}}"></span>
+                            <span class="w-2 h-2 rounded-full {{if eq .Status "operational"}}bg-emerald-500{{else if eq .Status "degraded"}}bg-amber-500{{else}}bg-slate-400{{end}}"></span>
                             <span class="text-sm font-semibold text-on-surface">{{.Name}}</span>
                             <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface-container text-secondary">{{.Category}}</span>
                         </div>
@@ -116,12 +121,8 @@
                             <span class="font-mono font-medium text-on-surface">{{.Latency}}</span>
                         </div>
                         {{end}}
-                        <div class="text-right">
-                            <span class="text-[11px] text-text-muted">Uptime:</span>
-                            <span class="font-mono font-medium text-emerald-600">{{.Availability}}</span>
-                        </div>
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium {{if eq .Status "operational"}}bg-emerald-500/10 text-emerald-700 border border-emerald-500/20{{else}}bg-amber-500/10 text-amber-700 border border-amber-500/20{{end}}">
-                            {{if eq .Status "operational"}}Operational{{else}}Degraded{{end}}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium {{if eq .Status "operational"}}bg-emerald-500/10 text-emerald-700 border border-emerald-500/20{{else if eq .Status "degraded"}}bg-amber-500/10 text-amber-700 border border-amber-500/20{{else}}bg-surface-container text-secondary border border-border-subtle{{end}}">
+                            {{if eq .Status "operational"}}Operational{{else if eq .Status "degraded"}}Degraded{{else if eq .Status "configured"}}Configured{{else if eq .Status "not_probed"}}Not probed{{else}}Not configured{{end}}
                         </span>
                     </div>
                 </div>
@@ -133,17 +134,24 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle p-6 sm:p-8 shadow-xs mb-10">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-semibold text-on-surface">30-Day Platform Continuity</h3>
-                <span class="text-xs font-mono text-emerald-600 font-semibold">100% Operational Timeline</span>
+                {{if .HistoryAvailable}}<span class="text-xs font-mono text-emerald-600 font-semibold">Measured history</span>{{end}}
             </div>
+            {{if .HistoryAvailable}}
             <div class="grid grid-cols-15 sm:grid-cols-30 gap-1 sm:gap-1.5 h-8">
                 {{range .HistoricalDays}}
-                <div class="bg-emerald-500/80 hover:bg-emerald-400 rounded-sm transition-colors cursor-pointer" title="Day {{.}}: 100% operational, 0 outages"></div>
+                <div class="bg-emerald-500/80 hover:bg-emerald-400 rounded-sm transition-colors cursor-pointer" title="Day {{.}}: measured"></div>
                 {{end}}
             </div>
             <div class="flex items-center justify-between text-[11px] text-text-muted mt-2">
                 <span>30 days ago</span>
                 <span>Today</span>
             </div>
+            {{else}}
+            <div class="p-6 rounded-xl bg-surface-container-low border border-border-subtle text-center">
+                <div class="text-xs font-semibold text-on-surface">Availability history not yet measured</div>
+                <div class="text-[11px] text-secondary mt-0.5">No synthetic uptime samples are recorded yet, so no 30-day bars are shown.</div>
+            </div>
+            {{end}}
         </div>
 
         <!-- Incident History -->
@@ -169,8 +177,8 @@
                 <div class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 mb-2">
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
-                <div class="text-xs font-semibold text-on-surface">No Incidents Reported</div>
-                <div class="text-[11px] text-secondary mt-0.5">All platform systems have operated with zero unscheduled downtime across the past 90 days.</div>
+                <div class="text-xs font-semibold text-on-surface">No incidents recorded</div>
+                <div class="text-[11px] text-secondary mt-0.5">Automated incident tracking is not enabled yet; this page does not claim zero downtime.</div>
             </div>
             {{end}}
         </div>
@@ -178,9 +186,9 @@
         <!-- Production SLA Assurance Box -->
         <div class="rounded-2xl bg-primary/10 border border-primary/20 p-6 sm:p-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
             <div>
-                <h3 class="text-base font-semibold text-on-surface">Guaranteed 99.9% Production SLA</h3>
+                <h3 class="text-base font-semibold text-on-surface">99.9% uptime target</h3>
                 <p class="text-xs text-on-surface-variant mt-1 max-w-xl">
-                    Transport operations require dependable software. If monthly platform availability drops below 99.9%, customers automatically receive SLA service credits according to our published commercial agreement.
+                    Availability is not yet continuously measured. The 99.9% target applies to contracted Enterprise deployments; service credits are defined in the signed agreement, not granted automatically on this page.
                 </p>
             </div>
             <div class="flex items-center gap-3 shrink-0">

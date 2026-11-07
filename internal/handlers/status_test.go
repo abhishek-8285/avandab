@@ -24,11 +24,13 @@ func TestStatusHandler_HTMLPage(t *testing.T) {
 	body := rr.Body.String()
 	assert.Contains(t, body, "All Systems Operational")
 	assert.Contains(t, body, "30-Day Availability")
-	assert.Contains(t, body, "99.98%")
 	assert.Contains(t, body, "API &amp; Web Gateway")
 	assert.Contains(t, body, "Database Persistence Engine")
 	assert.Contains(t, body, "Telemetry &amp; GPS Ingestion")
-	assert.Contains(t, body, "Guaranteed 99.9% Production SLA")
+	// P0 stop-fake-data: no invented uptime number and no guarantee claim.
+	assert.NotContains(t, body, "99.98%")
+	assert.NotContains(t, body, "Guaranteed 99.9% Production SLA")
+	assert.Contains(t, body, "99.9% uptime target")
 }
 
 func TestStatusHandler_JSONEndpoint(t *testing.T) {
@@ -53,17 +55,23 @@ func TestStatusHandler_JSONEndpoint(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "Operational", res.OverallStatus)
-	assert.Equal(t, 99.98, res.UptimePercentage)
+	// No continuous availability measurement exists: 0 + measured=false, never
+	// a fabricated percentage (P0 stop-fake-data).
+	assert.Equal(t, 0.0, res.UptimePercentage)
+	assert.False(t, res.UptimeMeasured)
 	assert.Equal(t, "99.9%", res.SLATarget)
 	assert.Len(t, res.Subsystems, 6)
-	assert.Len(t, res.HistoricalDays, 30)
+	assert.Empty(t, res.HistoricalDays)
+	assert.False(t, res.HistoryAvailable)
+	assert.Equal(t, 6, res.SubsystemCount)
+	assert.NotEmpty(t, res.DBLatency)
 
-	// Verify each subsystem is populated
+	// Verify each subsystem reports a real state; no availability percentages.
 	names := make([]string, len(res.Subsystems))
 	for i, sub := range res.Subsystems {
 		names[i] = sub.Name
 		assert.NotEmpty(t, sub.Status)
-		assert.NotEmpty(t, sub.Availability)
+		assert.Empty(t, sub.Availability, "no invented per-subsystem uptime")
 	}
 	assert.Contains(t, names, "API & Web Gateway")
 	assert.Contains(t, names, "Database Persistence Engine")

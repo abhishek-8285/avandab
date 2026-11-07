@@ -40,7 +40,7 @@ type SubsystemStatus struct {
 	Category     string `json:"category"`
 	Status       string `json:"status"` // "operational", "degraded", "outage"
 	Latency      string `json:"latency,omitempty"`
-	Availability string `json:"availability"`
+	Availability string `json:"availability,omitempty"`
 	Description  string `json:"description"`
 }
 
@@ -54,27 +54,36 @@ type StatusIncident struct {
 
 // StatusPageData is the view model for the public /status page and JSON status endpoint.
 type StatusPageData struct {
-	Version           string            `json:"version"`
-	Title             string            `json:"title"`
-	SEODescription    string            `json:"seo_description"`
-	CanonicalPath     string            `json:"canonical_path"`
-	NoIndex           bool              `json:"no_index"`
-	OGType            string            `json:"og_type"`
-	OGImage           string            `json:"og_image"`
-	SEOJSONLD         string            `json:"seo_jsonld,omitempty"`
-	PWAEnabled        bool              `json:"pwa_enabled"`
-	Lang              string            `json:"lang"`
-	OverallStatus     string            `json:"overall_status"`
-	OverallBadgeClass string            `json:"overall_badge_class"`
-	UptimePercentage  float64           `json:"uptime_percentage"`
-	SLATarget         string            `json:"sla_target"`
-	RPO               string            `json:"rpo"`
-	RTO               string            `json:"rto"`
-	P95LatencyMs      int64             `json:"p95_latency_ms"`
-	LastUpdated       string            `json:"last_updated"`
-	Subsystems        []SubsystemStatus `json:"subsystems"`
-	HistoricalDays    []int             `json:"historical_days"`
-	Incidents         []StatusIncident  `json:"incidents"`
+	Version           string `json:"version"`
+	Title             string `json:"title"`
+	SEODescription    string `json:"seo_description"`
+	CanonicalPath     string `json:"canonical_path"`
+	NoIndex           bool   `json:"no_index"`
+	OGType            string `json:"og_type"`
+	OGImage           string `json:"og_image"`
+	SEOJSONLD         string `json:"seo_jsonld,omitempty"`
+	PWAEnabled        bool   `json:"pwa_enabled"`
+	Lang              string `json:"lang"`
+	OverallStatus     string `json:"overall_status"`
+	OverallBadgeClass string `json:"overall_badge_class"`
+	// UptimePercentage is only meaningful when UptimeMeasured is true. No
+	// continuous availability measurement exists yet, so it ships as 0 and
+	// the UI shows "not measured" instead of an invented 99.98% (P0 stop-fake-data).
+	UptimePercentage float64           `json:"uptime_percentage"`
+	UptimeMeasured   bool              `json:"uptime_measured"`
+	SLATarget        string            `json:"sla_target"`
+	RPO              string            `json:"rpo"`
+	RTO              string            `json:"rto"`
+	DBLatency        string            `json:"db_latency"`
+	P95LatencyMs     int64             `json:"p95_latency_ms"`
+	OperationalCount int               `json:"operational_subsystems"`
+	SubsystemCount   int               `json:"subsystem_count"`
+	LastUpdated      string            `json:"last_updated"`
+	Subsystems       []SubsystemStatus `json:"subsystems"`
+	// HistoricalDays is empty until availability history is actually recorded.
+	HistoricalDays   []int            `json:"historical_days"`
+	HistoryAvailable bool             `json:"history_available"`
+	Incidents        []StatusIncident `json:"incidents"`
 }
 
 // buildStatusData aggregates live system diagnostics and APM percentiles.
@@ -104,82 +113,88 @@ func (a *App) buildStatusData(ctx context.Context, lang string) StatusPageData {
 		dbLatencyStr = "uninitialized"
 	}
 
-	// 2. Query APM telemetry and HTTP percentiles
+	// 2. Query APM telemetry and HTTP percentiles (measured, not synthesized).
 	httpStats := apm.Default.GetStats("http.request")
 	ingestStats := apm.Default.GetStats("telemetry.batch_ingest")
 
-	p95Ms := int64(12)
+	var p95Ms int64
 	if httpStats.P95 > 0 {
 		p95Ms = httpStats.P95.Milliseconds()
 	}
 
-	ingestLatencyStr := "15 ms"
+	ingestLatencyStr := "not measured"
+	ingestStatus := "not_probed"
 	if ingestStats.P95 > 0 {
 		ingestLatencyStr = fmt.Sprintf("%d ms", ingestStats.P95.Milliseconds())
+		ingestStatus = "operational"
 	}
 
-	// Subsystem status matrix
+	// 3. Subsystem checks. Only states this handler can actually probe are
+	// reported. Availability percentages, RPO/RTO, synthetic checks and a
+	// 30-day history do not exist yet and are not invented here (P0
+	// "stop fake data"; AGENTS.md prime directive).
 	subsystems := []SubsystemStatus{
 		{
-			Name:         "API & Web Gateway",
-			Category:     "Routing & Edge",
-			Status:       "operational",
-			Latency:      fmt.Sprintf("%d ms", p95Ms),
-			Availability: "99.99%",
-			Description:  "Public and authenticated REST endpoints, TLS termination, and request router.",
+			Name:        "API & Web Gateway",
+			Category:    "Routing & Edge",
+			Status:      "operational",
+			Latency:     fmt.Sprintf("%d ms", p95Ms),
+			Description: "Public and authenticated REST endpoints and request router.",
 		},
 		{
-			Name:         "Database Persistence Engine",
-			Category:     "Storage & Cache",
-			Status:       dbStatus,
-			Latency:      dbLatencyStr,
-			Availability: "100.0%",
-			Description:  "Relational multi-tenant ledger, ACID write transactions, and read replicas.",
+			Name:        "Database Persistence Engine",
+			Category:    "Storage & Cache",
+			Status:      dbStatus,
+			Latency:     dbLatencyStr,
+			Description: "Relational ledger and ACID write transactions.",
 		},
 		{
-			Name:         "Telemetry & GPS Ingestion",
-			Category:     "IoT Pipeline",
-			Status:       "operational",
-			Latency:      ingestLatencyStr,
-			Availability: "99.98%",
-			Description:  "AIS-140/OBD device parser, raw position deduplication, and dead-reckoning engine.",
+			Name:        "Telemetry & GPS Ingestion",
+			Category:    "IoT Pipeline",
+			Status:      ingestStatus,
+			Latency:     ingestLatencyStr,
+			Description: "Batch position ingest; latency appears once spans are recorded.",
 		},
 		{
-			Name:         "Async Outbox Dispatcher",
-			Category:     "Event Bus",
-			Status:       "operational",
-			Latency:      "< 5 ms",
-			Availability: "100.0%",
-			Description:  "Guaranteed at-least-once outbox dispatcher, worker leases, and idempotent event delivery.",
+			Name:        "Async Outbox Dispatcher",
+			Category:    "Event Bus",
+			Status:      "not_probed",
+			Description: "At-least-once outbox dispatcher; no public health probe yet.",
 		},
 		{
-			Name:         "Compliance & E-Way Bill Rails",
-			Category:     "Regulatory Integrations",
-			Status:       "operational",
-			Latency:      "Synced",
-			Availability: "99.95%",
-			Description:  "NIC GSP e-way bill verification, GSTN e-invoicing, and FASTag toll reconciliation.",
-		},
-		{
-			Name:         "SMS & Communication Gateway",
-			Category:     "Alerts & Carrier",
-			Status:       "operational",
-			Latency:      "Real-time",
-			Availability: "99.99%",
-			Description:  "Multi-provider failover (MSG91, Twilio, Fast2SMS) for OTP and driver notifications.",
+			Name:        "Compliance & E-Way Bill Rails",
+			Category:    "Regulatory Integrations",
+			Status:      "not_configured",
+			Description: "Provider adapters are enabled per contract; no live probe on this page.",
 		},
 	}
 
-	// 30 days history array (Day 1..30)
-	days := make([]int, 30)
-	for i := 0; i < 30; i++ {
-		days[i] = i + 1
+	// SMS status is derived from configuration, never assumed.
+	smsStatus := "not_configured"
+	smsDesc := "No SMS provider configured; OTP and driver notifications fail loudly."
+	if a.Config != nil && a.Config.Notify.SMSProvider != "" &&
+		!strings.EqualFold(a.Config.Notify.SMSProvider, "mock") {
+		smsStatus = "configured"
+		smsDesc = "SMS provider configured: " + a.Config.Notify.SMSProvider + "."
+	}
+	subsystems = append(subsystems, SubsystemStatus{
+		Name:        "SMS & Communication Gateway",
+		Category:    "Alerts & Carrier",
+		Status:      smsStatus,
+		Description: smsDesc,
+	})
+
+	operational := 0
+	for _, s := range subsystems {
+		if s.Status == "operational" || s.Status == "configured" {
+			operational++
+		}
 	}
 
 	return StatusPageData{
 		Version:           AppVersion,
-		Title:             "System Status & SLA",
-		SEODescription:    "Avandab System Status — real-time platform availability, component latency benchmarks, and guaranteed 99.9% uptime SLA compliance.",
+		Title:             "System Status",
+		SEODescription:    "Avandab system status: live subsystem checks and measured API latency.",
 		CanonicalPath:     "/status",
 		NoIndex:           false,
 		OGType:            "website",
@@ -188,15 +203,22 @@ func (a *App) buildStatusData(ctx context.Context, lang string) StatusPageData {
 		Lang:              lang,
 		OverallStatus:     overallStatus,
 		OverallBadgeClass: overallBadge,
-		UptimePercentage:  99.98,
-		SLATarget:         "99.9%",
-		RPO:               "< 1 Hour",
-		RTO:               "< 30 Minutes",
-		P95LatencyMs:      p95Ms,
-		LastUpdated:       time.Now().UTC().Format("15:04:05 UTC"),
-		Subsystems:        subsystems,
-		HistoricalDays:    days,
-		Incidents:         nil, // Zero incidents
+		// No continuous availability measurement exists yet: report 0 + flag
+		// so consumers never mistake an invented number for telemetry.
+		UptimePercentage: 0,
+		UptimeMeasured:   false,
+		SLATarget:        "99.9%",
+		RPO:              "not measured",
+		RTO:              "not measured",
+		DBLatency:        dbLatencyStr,
+		P95LatencyMs:     p95Ms,
+		OperationalCount: operational,
+		SubsystemCount:   len(subsystems),
+		LastUpdated:      time.Now().UTC().Format("15:04:05 UTC"),
+		Subsystems:       subsystems,
+		HistoricalDays:   nil,
+		HistoryAvailable: false,
+		Incidents:        nil,
 	}
 }
 
