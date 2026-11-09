@@ -49,7 +49,13 @@ describe('DeliveryVerificationScreen', () => {
     global.fetch = fetchMock as any;
 
     const { getByText, getByPlaceholderText } = render(
-      <DeliveryVerificationScreen tripId="trip_99" onComplete={onComplete} onBack={onBack} />
+      <DeliveryVerificationScreen
+        tripId="trip_99"
+        initialConsigneeName="Tata AutoComp Systems Ltd"
+        initialConsigneePhone="+91 98765 43210"
+        onComplete={onComplete}
+        onBack={onBack}
+      />
     );
 
     // Switch to OTP mode
@@ -76,7 +82,12 @@ describe('DeliveryVerificationScreen', () => {
     const onBack = jest.fn();
 
     const { getByText } = render(
-      <DeliveryVerificationScreen tripId="trip_back" onComplete={onComplete} onBack={onBack} />
+      <DeliveryVerificationScreen
+        tripId="trip_back"
+        initialConsigneeName="Tata AutoComp Systems Ltd"
+        onComplete={onComplete}
+        onBack={onBack}
+      />
     );
 
     expect(getByText('PROOF OF DELIVERY (e-POD)')).toBeTruthy();
@@ -90,7 +101,12 @@ describe('DeliveryVerificationScreen', () => {
     global.fetch = jest.fn().mockRejectedValue(new Error('Offline connection failed')) as any;
 
     const { getByText, getByPlaceholderText } = render(
-      <DeliveryVerificationScreen tripId="trip_offline_77" onComplete={onComplete} onBack={onBack} />
+      <DeliveryVerificationScreen
+        tripId="trip_offline_77"
+        initialConsigneeName="Tata AutoComp Systems Ltd"
+        onComplete={onComplete}
+        onBack={onBack}
+      />
     );
 
     // Switch to OTP mode

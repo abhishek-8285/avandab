@@ -46,11 +46,11 @@ export const DispatchOfferCard: React.FC<Props> = ({
         </View>
         <View style={styles.detailCol}>
           <Text style={styles.detailLabel}>CARGO</Text>
-          <Text style={styles.detailValue}>{offer.cargo_type || 'Industrial Goods'}</Text>
+          <Text style={styles.detailValue}>{offer.cargo_type || '—'}</Text>
         </View>
         <View style={styles.detailCol}>
           <Text style={styles.detailLabel}>VEHICLE</Text>
-          <Text style={styles.detailValue}>{offer.vehicle_id || 'MH04AB1234'}</Text>
+          <Text style={styles.detailValue}>{offer.vehicle_id || '—'}</Text>
         </View>
       </View>
 

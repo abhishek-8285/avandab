@@ -215,7 +215,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                 <MaterialCommunityIcons name="account" size={40} color={Colors.textOnPrimary} accessible={false} />
               </View>
               <Text style={styles.heroName} numberOfLines={1} ellipsizeMode="tail">{displayName}</Text>
-              <Text style={styles.heroSub} numberOfLines={1} ellipsizeMode="tail">{user?.email || 'driver@avandab.com'}</Text>
+              <Text style={styles.heroSub} numberOfLines={1} ellipsizeMode="tail">{user?.email || '—'}</Text>
               
               {/* Duty Toggle Button */}
               <TouchableOpacity 
@@ -271,7 +271,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                 </View>
                 <View style={styles.rowContent}>
                   <Text style={styles.rowLabel}>{t('profile.phone', 'Mobile Phone', locale)}</Text>
-                  <Text style={styles.rowValue} numberOfLines={1} ellipsizeMode="tail">{profile?.phone || '+91 98765 43210'}</Text>
+                  <Text style={styles.rowValue} numberOfLines={1} ellipsizeMode="tail">{profile?.phone || '—'}</Text>
                 </View>
                 <View style={styles.changeBadge}>
                   <Text style={styles.changeBadgeText}>{t('profile.edit', 'CHANGE', locale)}</Text>
@@ -287,7 +287,7 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                 </View>
                 <View style={styles.rowContent}>
                   <Text style={styles.rowLabel}>{t('profile.vehicle', 'Assigned Vehicle', locale)}</Text>
-                  <Text style={styles.rowValue} numberOfLines={1} ellipsizeMode="tail">{profile?.vehicle_plate || 'Tata Prima · DL-01-AB-1234'}</Text>
+                  <Text style={styles.rowValue} numberOfLines={1} ellipsizeMode="tail">{profile?.vehicle_plate || '—'}</Text>
                 </View>
               </View>
             </View>
@@ -397,9 +397,9 @@ export function ProfileScreen({ onBack }: ProfileScreenProps) {
                 style={[styles.interactiveRow, { backgroundColor: Colors.primarySubtle }]}
                 onPress={() => {
                   NotificationService.showDispatchNotification({
-                    tripNumber: 'TRP-8491',
-                    origin: 'JNPT Port, Navi Mumbai',
-                    destination: 'Chakan MIDC, Pune',
+                    tripNumber: 'DEV-TRIP',
+                    origin: 'Dev origin',
+                    destination: 'Dev destination',
                     advanceAmount: 5000,
                   }).catch(() => {});
                   Alert.alert(

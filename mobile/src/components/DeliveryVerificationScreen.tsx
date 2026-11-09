@@ -56,8 +56,8 @@ export function DeliveryVerificationScreen({
   stopType,
   requiresOTP,
   requiresPOD,
-  initialConsigneeName = 'Tata AutoComp Systems Ltd',
-  initialConsigneePhone = '+91 98765 43210',
+  initialConsigneeName = '',
+  initialConsigneePhone = '',
   onComplete,
   onBack,
 }: DeliveryVerificationScreenProps) {
@@ -151,6 +151,14 @@ export function DeliveryVerificationScreen({
       return;
     }
 
+    if (!consigneeName.trim()) {
+      Alert.alert(
+        t('delivery.alert_consignee', 'Receiver Name Required', locale),
+        t('delivery.alert_consignee_body', 'Enter the name of the person receiving the goods — it is part of the proof of delivery.', locale)
+      );
+      return;
+    }
+
     if (!capturedPhoto && !otp.trim() && !signatureData) {
       Alert.alert(
         t('delivery.alert_proof', 'Proof Required', locale),
@@ -166,7 +174,7 @@ export function DeliveryVerificationScreen({
     const combinedNotes = selectedChips.map((k) => CHIP_EN[k] || k).join(', ');
 
     const form = new FormData();
-    form.append('consignee_name', consigneeName.trim() || 'Tata AutoComp Systems Ltd');
+    form.append('consignee_name', consigneeName.trim());
     if (consigneePhone.trim()) {
       form.append('consignee_phone', consigneePhone.trim());
     }
@@ -242,7 +250,7 @@ export function DeliveryVerificationScreen({
         stop_id: stopId || null,
         stop_sequence: stopSequence || null,
         otp: otp.trim() || null,
-        consignee_name: consigneeName.trim() || 'Tata AutoComp Systems Ltd',
+        consignee_name: consigneeName.trim(),
         consignee_phone: consigneePhone.trim() || null,
         notes: combinedNotes,
         photo_uri: capturedPhoto,
@@ -378,7 +386,7 @@ export function DeliveryVerificationScreen({
               </View>
               <Text style={styles.autoFilledTag}>{t('delivery.auto_verified', '✓ AUTO-VERIFIED', locale)}</Text>
             </View>
-            <Text style={styles.consigneeNameText} numberOfLines={1} ellipsizeMode="tail">{consigneeName}</Text>
+            <Text style={styles.consigneeNameText} numberOfLines={1} ellipsizeMode="tail">{consigneeName.trim() || '—'}</Text>
             <Text style={styles.consigneeSubText} numberOfLines={2} ellipsizeMode="tail">{t('delivery.consignee_hint', 'Enter consignee details below — nothing is pre-filled.', locale)}</Text>
             <View style={styles.divider} />
             <View style={styles.metaRow}>

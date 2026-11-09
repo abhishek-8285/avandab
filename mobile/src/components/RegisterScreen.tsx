@@ -128,7 +128,7 @@ export function RegisterScreen({ onRegisterSuccess, onBackToLogin }: RegisterScr
             <MaterialCommunityIcons name="email-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} accessible={false} />
             <TextInput
               style={styles.input}
-              placeholder="driver@avandab.com" accessibilityLabel="Email" autoComplete="email" textContentType="emailAddress"
+              placeholder="driver@example.com" accessibilityLabel="Email" autoComplete="email" textContentType="emailAddress"
               placeholderTextColor={Colors.textMuted}
               value={email}
               onChangeText={setEmail}
@@ -144,7 +144,7 @@ export function RegisterScreen({ onRegisterSuccess, onBackToLogin }: RegisterScr
             <MaterialCommunityIcons name="phone-outline" size={16} color={Colors.textMuted} style={styles.inputIcon} accessible={false} />
             <TextInput
               style={styles.input}
-              placeholder="+91 98765 43210" accessibilityLabel="Phone" autoComplete="tel" textContentType="telephoneNumber"
+              placeholder="9876543210" accessibilityLabel="Phone" autoComplete="tel" textContentType="telephoneNumber"
               placeholderTextColor={Colors.textMuted}
               value={phone}
               onChangeText={setPhone}

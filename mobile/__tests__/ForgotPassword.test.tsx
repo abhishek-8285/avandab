@@ -11,7 +11,7 @@ describe('ForgotPasswordScreen', () => {
   });
 
   const fillEmail = (getByPlaceholderText: any) =>
-    fireEvent.changeText(getByPlaceholderText('driver@avandab.com'), 'driver@avandab.com');
+    fireEvent.changeText(getByPlaceholderText('driver@example.com'), 'driver@example.com');
 
   test('successful request shows submitted state', async () => {
     global.fetch = jest.fn().mockResolvedValue({
@@ -30,7 +30,7 @@ describe('ForgotPasswordScreen', () => {
 
     await waitFor(() => expect(getByText('REQUEST SUBMITTED')).toBeTruthy());
     const body = JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body);
-    expect(body).toEqual({ email: 'driver@avandab.com' });
+    expect(body).toEqual({ email: 'driver@example.com' });
   });
 
   test('network failure shows an inline error and stays on the form', async () => {
