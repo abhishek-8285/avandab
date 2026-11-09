@@ -33,7 +33,7 @@
                 Predictable, Value-First Pricing
             </h1>
             <p class="text-base sm:text-lg text-on-surface-variant leading-relaxed">
-                Choose the right operating tier for your road transport business. All paid plans include our guaranteed 99.9% uptime SLA and automated compliance rails.
+                Choose the right operating tier for your road transport business. All paid plans include a 99.9% uptime target, public status reporting, and API access. Compliance integrations (E-Way Bill, GSTN, FASTag) are enabled per provider contract.
             </p>
         </div>
 
@@ -65,7 +65,7 @@
                         </li>
                         <li class="flex items-start gap-2">
                             <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                            <span>Standard E-Way bill lifecycle</span>
+                            <span>E-Way bill record &amp; lifecycle tracking (provider integration optional)</span>
                         </li>
                     </ul>
                 </div>
@@ -129,7 +129,7 @@
                         <span class="text-xs text-secondary font-medium">/ vehicle / month</span>
                     </div>
                     <p class="text-xs text-on-surface-variant mb-6 leading-relaxed">
-                        Advanced cold chain reefer compliance, EV CAN telematics, edge AI dashcams, and bespoke ERP integration.
+                        Advanced cold chain reefer compliance, EV CAN telematics, edge AI dashcams, and API access for ERP integration. Hardware-dependent modules require a supported device or vendor feed.
                     </p>
                     <ul class="space-y-3 mb-8 text-xs text-on-surface-variant">
                         <li class="flex items-start gap-2">
@@ -138,23 +138,23 @@
                         </li>
                         <li class="flex items-start gap-2">
                             <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                            <span>Cold chain multi-zone probes &amp; MKT math</span>
+                            <span>Cold chain multi-zone probes &amp; MKT math (hardware-dependent)</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                            <span>EV CAN telematics, SoC &amp; charging cycles</span>
+                            <span>EV CAN telematics, SoC &amp; charging cycles (OEM/CAN feed required)</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                            <span>AI dashcam DMS/ADAS coaching workflows</span>
+                            <span>AI dashcam DMS/ADAS coaching workflows (hardware partner required)</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                            <span>99.9% Production SLA &amp; dedicated TAM</span>
+                            <span>99.9% uptime target &amp; priority support</span>
                         </li>
                         <li class="flex items-start gap-2">
                             <svg class="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                            <span>SAP / Oracle / Custom ERP data connectors</span>
+                            <span>REST API + webhooks (documented OpenAPI spec)</span>
                         </li>
                     </ul>
                 </div>
@@ -175,31 +175,31 @@
                     Service Level Agreement (SLA)
                 </h2>
                 <p class="text-sm text-on-surface-variant leading-relaxed">
-                    We know that in transport operations, system downtime means idling trucks and delayed dispatches. Avandab backs its production TMS with clear, enforceable availability metrics and financial credits.
+                    We know that in transport operations, system downtime means idling trucks and delayed dispatches. This page documents the availability target and support terms; contractual service credits apply only where a signed Enterprise agreement defines them.
                 </p>
             </div>
 
             <!-- SLA Metrics Grid -->
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <div class="p-4 rounded-xl bg-surface-container-low border border-border-subtle">
-                    <div class="text-xs text-secondary font-medium mb-1">Monthly Uptime Guarantee</div>
+                    <div class="text-xs text-secondary font-medium mb-1">Monthly Uptime Target</div>
                     <div class="text-2xl font-semibold text-primary">99.9%</div>
-                    <div class="text-[11px] text-text-muted mt-1">&lt; 43 minutes downtime/month</div>
+                    <div class="text-[11px] text-text-muted mt-1">&lt; 43 minutes downtime/month target</div>
                 </div>
                 <div class="p-4 rounded-xl bg-surface-container-low border border-border-subtle">
                     <div class="text-xs text-secondary font-medium mb-1">Recovery Point (RPO)</div>
-                    <div class="text-2xl font-semibold text-on-surface">&lt; 5 mins</div>
-                    <div class="text-[11px] text-text-muted mt-1">Continuous WAL replication</div>
+                    <div class="text-2xl font-semibold text-on-surface">Latest backup</div>
+                    <div class="text-[11px] text-text-muted mt-1">Snapshot backups; schedule is deployment-specific</div>
                 </div>
                 <div class="p-4 rounded-xl bg-surface-container-low border border-border-subtle">
                     <div class="text-xs text-secondary font-medium mb-1">Recovery Time (RTO)</div>
-                    <div class="text-2xl font-semibold text-on-surface">&lt; 30 mins</div>
-                    <div class="text-[11px] text-text-muted mt-1">Automated failover fail-safe</div>
+                    <div class="text-2xl font-semibold text-on-surface">Restore time</div>
+                    <div class="text-[11px] text-text-muted mt-1">Manual restore from latest verified backup; no automatic failover</div>
                 </div>
                 <div class="p-4 rounded-xl bg-surface-container-low border border-border-subtle">
-                    <div class="text-xs text-secondary font-medium mb-1">P1 Response Time</div>
-                    <div class="text-2xl font-semibold text-emerald-600">&lt; 15 mins</div>
-                    <div class="text-[11px] text-text-muted mt-1">24/7 pager duty incident team</div>
+                    <div class="text-xs text-secondary font-medium mb-1">P1 Response</div>
+                    <div class="text-2xl font-semibold text-emerald-600">Business hours</div>
+                    <div class="text-[11px] text-text-muted mt-1">Target response defined in Enterprise agreements</div>
                 </div>
             </div>
 
@@ -210,7 +210,7 @@
                         <tr class="border-b border-border-subtle text-secondary font-semibold">
                             <th class="py-3 px-4">Severity Tier</th>
                             <th class="py-3 px-4">Definition</th>
-                            <th class="py-3 px-4">Target Initial Response</th>
+                            <th class="py-3 px-4">Target Initial Response (IST business hours)</th>
                             <th class="py-3 px-4">Target Workaround/Resolution</th>
                         </tr>
                     </thead>
@@ -243,11 +243,15 @@
                 </table>
             </div>
 
+            <p class="text-xs text-text-muted mb-8">
+                Response targets above apply to contracted Enterprise agreements; Professional and Trial plans receive best-effort support during business hours (IST).
+            </p>
+
             <!-- Uptime Credit Schedule -->
             <div class="border-t border-border-subtle pt-6">
                 <h3 class="text-sm font-semibold text-on-surface mb-2">Service Level Credits Schedule</h3>
                 <p class="text-xs text-on-surface-variant leading-relaxed mb-4">
-                    In the event that Avandab does not maintain the guaranteed 99.9% monthly availability for your production tenant, you are eligible for the following invoice credits upon request:
+                    If availability for a contracted Enterprise tenant falls below the 99.9% target, credits follow the schedule below as defined in the signed agreement. Trial and Professional plans are not covered by service credits.
                 </p>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
                     <div class="p-3 rounded-lg bg-surface-container-low border border-border-subtle">
@@ -272,7 +276,7 @@
             <div class="space-y-6 text-xs text-on-surface-variant">
                 <div>
                     <h3 class="text-sm font-semibold text-on-surface mb-1">Are there hidden device-integration or telemetry ingestion fees?</h3>
-                    <p class="leading-relaxed">No. We support standard AIS-140 GPS trackers, OBD/CAN devices, and temperature probes without per-packet or ingestion markup fees.</p>
+                    <p class="leading-relaxed">No per-packet or ingestion markup fees. Device support depends on the device protocol; contact us for the supported tracker and probe list before purchase.</p>
                 </div>
                 <div>
                     <h3 class="text-sm font-semibold text-on-surface mb-1">How does the 14-day free trial work?</h3>
@@ -280,7 +284,7 @@
                 </div>
                 <div>
                     <h3 class="text-sm font-semibold text-on-surface mb-1">Where is our fleet and driver data stored?</h3>
-                    <p class="leading-relaxed">In accordance with India's Digital Personal Data Protection Act (DPDP Act, 2023), all fleet records, telemetry logs, and driver personal data are stored in certified secure data centers within India.</p>
+                    <p class="leading-relaxed">Fleet records, telemetry logs, and driver personal data are stored in the deployment region configured for your tenant. Data-protection terms and retention follow India's Digital Personal Data Protection Act (DPDP Act, 2023).</p>
                 </div>
             </div>
         </div>
@@ -291,7 +295,7 @@
                 Ready to transform your fleet operations?
             </h2>
             <p class="text-sm text-on-surface-variant max-w-xl mx-auto mb-6">
-                Join forward-thinking fleet operators using Avandab for real-time tracking, tyre CPKM, freight audit, and automated settlement.
+                Join forward-thinking fleet operators using Avandab for real-time tracking, tyre CPKM, freight audit, and settlement workflows.
             </p>
             <div class="flex flex-wrap items-center justify-center gap-3">
                 <a href="/register" class="py-2.5 px-6 rounded-xl bg-primary text-on-primary font-semibold text-xs shadow-xs hover:opacity-90 transition-opacity">
