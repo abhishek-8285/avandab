@@ -15,12 +15,28 @@ import (
 // below this value raises availability.sla_breach alerts.
 const SLATargetPercent = 99.9
 
+// Alert source/type written by the SLA monitor (must match migration 00182
+// and internal/alerts/domain constants).
+const (
+	AlertSourceAvailability = "availability"
+	AlertTypeSLABreach      = "sla_breach"
+	resolvedBySystem        = "system:availability-sla-monitor"
+)
+
+// AlertResolver resolves open alerts of a source+type after recovery. The
+// alert repository implements it; keeping it an interface lets the monitor be
+// tested without a database-backed repository.
+type AlertResolver interface {
+	ResolveOpenBySourceType(ctx context.Context, source, alertType, resolvedBy string, at time.Time) (int64, error)
+}
+
 // SLAMonitor publishes an operational alert for every active tenant while the
 // measured 30-day uptime is below the SLA target. Alerts are deduplicated by
 // the alert engine per tenant (dedup key includes the tenant id).
 type SLAMonitor struct {
 	db             *sql.DB
 	bus            events.EventBus
+	resolver       AlertResolver
 	logger         *slog.Logger
 	window         time.Duration
 	sampleInterval time.Duration
@@ -29,7 +45,7 @@ type SLAMonitor struct {
 
 // NewSLAMonitor builds an SLA monitor. Zero intervals fall back to sane
 // defaults (15m check, 60s sample, 30-day window).
-func NewSLAMonitor(db *sql.DB, bus events.EventBus, window, sampleInterval, checkInterval time.Duration, logger *slog.Logger) *SLAMonitor {
+func NewSLAMonitor(db *sql.DB, bus events.EventBus, resolver AlertResolver, window, sampleInterval, checkInterval time.Duration, logger *slog.Logger) *SLAMonitor {
 	if window <= 0 {
 		window = 30 * 24 * time.Hour
 	}
@@ -45,6 +61,7 @@ func NewSLAMonitor(db *sql.DB, bus events.EventBus, window, sampleInterval, chec
 	return &SLAMonitor{
 		db:             db,
 		bus:            bus,
+		resolver:       resolver,
 		logger:         logger,
 		window:         window,
 		sampleInterval: sampleInterval,
@@ -80,6 +97,7 @@ func (m *SLAMonitor) check(ctx context.Context) {
 		return
 	}
 	if snap.UptimePct >= SLATargetPercent {
+		m.resolveRecovered(ctx, snap)
 		return
 	}
 	tenants, err := m.activeTenants(ctx)
@@ -93,6 +111,23 @@ func (m *SLAMonitor) check(ctx context.Context) {
 	}
 	for _, tenantID := range tenants {
 		m.publish(ctx, tenantID, snap)
+	}
+}
+
+// resolveRecovered closes open SLA breach alerts once measured uptime is back
+// above target, so the inbox reflects reality without waiting for a manual ack.
+func (m *SLAMonitor) resolveRecovered(ctx context.Context, snap Snapshot) {
+	if m.resolver == nil {
+		return
+	}
+	n, err := m.resolver.ResolveOpenBySourceType(ctx, AlertSourceAvailability, AlertTypeSLABreach, resolvedBySystem, time.Now().UTC())
+	if err != nil {
+		m.logger.Warn("sla monitor: failed to resolve recovered SLA alerts", "error", err)
+		return
+	}
+	if n > 0 {
+		m.logger.Info("availability recovered above SLA target; resolved open SLA alerts",
+			"resolved", n, "uptime_percent", snap.UptimePct, "target_percent", SLATargetPercent)
 	}
 }
 
@@ -121,8 +156,8 @@ func (m *SLAMonitor) publish(ctx context.Context, tenantID string, snap Snapshot
 	)
 	payload := map[string]interface{}{
 		"tenant_id":        tenantID,
-		"source":           "availability",
-		"alert_type":       "sla_breach",
+		"source":           AlertSourceAvailability,
+		"alert_type":       AlertTypeSLABreach,
 		"title":            title,
 		"message":          message,
 		"uptime_percent":   snap.UptimePct,

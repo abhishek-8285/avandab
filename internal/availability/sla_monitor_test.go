@@ -34,10 +34,28 @@ func (b *captureBus) snapshot() ([]events.Event, []string) {
 	return append([]events.Event(nil), b.events...), append([]string(nil), b.tenants...)
 }
 
+type fakeResolver struct {
+	calls      int
+	source     string
+	alertType  string
+	resolvedBy string
+	affected   int64
+	err        error
+}
+
+func (f *fakeResolver) ResolveOpenBySourceType(_ context.Context, source, alertType, resolvedBy string, _ time.Time) (int64, error) {
+	f.calls++
+	f.source = source
+	f.alertType = alertType
+	f.resolvedBy = resolvedBy
+	return f.affected, f.err
+}
+
 func TestSLAMonitor_NoSamplesNoAlert(t *testing.T) {
 	db := testDB(t)
 	bus := &captureBus{}
-	NewSLAMonitor(db, bus, 30*24*time.Hour, time.Minute, time.Minute, nil).check(context.Background())
+	resolver := &fakeResolver{}
+	NewSLAMonitor(db, bus, resolver, 30*24*time.Hour, time.Minute, time.Minute, nil).check(context.Background())
 	evs, _ := bus.snapshot()
 	if len(evs) != 0 {
 		t.Fatalf("not-measured uptime must not alert, got %d events", len(evs))
@@ -59,10 +77,20 @@ func TestSLAMonitor_HealthyUptimeNoAlert(t *testing.T) {
 		}
 	}
 	bus := &captureBus{}
-	NewSLAMonitor(db, bus, 30*24*time.Hour, time.Minute, time.Minute, nil).check(context.Background())
+	resolver := &fakeResolver{affected: 2}
+	NewSLAMonitor(db, bus, resolver, 30*24*time.Hour, time.Minute, time.Minute, nil).check(context.Background())
 	evs, _ := bus.snapshot()
 	if len(evs) != 0 {
 		t.Fatalf("100%% uptime must not alert, got %d events", len(evs))
+	}
+	if resolver.calls != 1 {
+		t.Fatalf("recovered uptime must attempt to resolve open SLA alerts once, got %d calls", resolver.calls)
+	}
+	if resolver.source != AlertSourceAvailability || resolver.alertType != AlertTypeSLABreach {
+		t.Fatalf("resolver called with %q/%q", resolver.source, resolver.alertType)
+	}
+	if resolver.resolvedBy == "" {
+		t.Fatal("recovery resolution must be attributed to the system resolver")
 	}
 }
 
@@ -83,7 +111,7 @@ func TestSLAMonitor_BreachAlertsActiveTenantsOnly(t *testing.T) {
 	}
 
 	bus := &captureBus{}
-	NewSLAMonitor(db, bus, 30*24*time.Hour, time.Minute, time.Minute, nil).check(context.Background())
+	NewSLAMonitor(db, bus, nil, 30*24*time.Hour, time.Minute, time.Minute, nil).check(context.Background())
 
 	evs, tenants := bus.snapshot()
 	if len(evs) != 2 {
@@ -122,7 +150,7 @@ func TestSLAMonitor_RunStopsOnCancel(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		NewSLAMonitor(db, bus, 30*24*time.Hour, time.Minute, 10*time.Millisecond, nil).Run(ctx)
+		NewSLAMonitor(db, bus, nil, 30*24*time.Hour, time.Minute, 10*time.Millisecond, nil).Run(ctx)
 	}()
 	time.Sleep(50 * time.Millisecond)
 	cancel()

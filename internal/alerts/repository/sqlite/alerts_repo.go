@@ -426,6 +426,25 @@ func (r *sqlAlertRepository) Resolve(ctx context.Context, alertID string, userID
 	return err
 }
 
+// ResolveOpenBySourceType implements system recovery: one UPDATE closes every
+// open/acknowledged/escalated alert of a source+type and clears its escalation.
+func (r *sqlAlertRepository) ResolveOpenBySourceType(ctx context.Context, source, alertType, resolvedBy string, at time.Time) (int64, error) {
+	res, err := r.db.ExecContext(ctx, `
+		UPDATE alerts
+		SET status = 'resolved',
+		    ack_status = 'resolved',
+		    next_escalation_at = NULL,
+		    resolved_by = $1,
+		    resolved_at = $2,
+		    updated_at = CURRENT_TIMESTAMP
+		WHERE source = $3 AND alert_type = $4
+		  AND status IN ('open', 'acknowledged', 'escalated')`, resolvedBy, at.UTC(), source, alertType)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
 func (r *sqlAlertRepository) MarkAllRead(ctx context.Context, userID string) error {
 	now := time.Now().UTC()
 	_, err := r.db.ExecContext(ctx, `

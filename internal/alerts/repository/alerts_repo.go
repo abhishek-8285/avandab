@@ -25,6 +25,11 @@ type AlertRepository interface {
 	Recent(ctx context.Context, userID string, limit int) ([]domain.Alert, error)
 	Ack(ctx context.Context, alertID string, userID string) error
 	Resolve(ctx context.Context, alertID string, userID string) error
+	// ResolveOpenBySourceType closes every open/acknowledged/escalated alert of
+	// a source+type and returns the rows affected. Used by system recovery
+	// (e.g. the SLA monitor when measured uptime is back above target);
+	// platform-scoped by design, not request-scoped.
+	ResolveOpenBySourceType(ctx context.Context, source, alertType, resolvedBy string, at time.Time) (int64, error)
 	MarkAllRead(ctx context.Context, userID string) error
 
 	// Inbox operations (Spec 22 S1). status is one of open|snoozed|acked|
