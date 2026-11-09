@@ -43,8 +43,12 @@ func TestStatusHandler_HTMLPage(t *testing.T) {
 
 func TestStatusHandler_HTMLPageWithMeasuredUptime(t *testing.T) {
 	app := newRegisterTestApp(t)
-	for i := 0; i < 3; i++ {
-		require.NoError(t, availability.Record(context.Background(), app.DB, availability.ComponentOverall, true, time.Millisecond))
+	app.Config.UptimeSampleInterval = 25 * time.Hour
+	now := time.Now().UTC()
+	for _, at := range []time.Time{now.Add(-25 * time.Hour), now} {
+		_, err := app.DB.Exec("INSERT INTO availability_samples (sampled_at, component, healthy, latency_ms) VALUES ($1, $2, $3, $4)",
+			at, availability.ComponentOverall, true, 1)
+		require.NoError(t, err)
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/status", nil)
@@ -54,7 +58,7 @@ func TestStatusHandler_HTMLPageWithMeasuredUptime(t *testing.T) {
 	require.Equal(t, http.StatusOK, rr.Code)
 	body := rr.Body.String()
 	assert.Contains(t, body, "100.00%")
-	assert.Contains(t, body, "From 3 samples")
+	assert.Contains(t, body, "From 2 samples")
 	assert.Contains(t, body, "Measured history")
 }
 
@@ -106,9 +110,12 @@ func TestStatusHandler_JSONEndpoint(t *testing.T) {
 
 func TestStatusHandler_JSONMeasuredUptime(t *testing.T) {
 	app := newRegisterTestApp(t)
-	ctx := context.Background()
-	for i := 0; i < 3; i++ {
-		require.NoError(t, availability.Record(ctx, app.DB, availability.ComponentOverall, true, time.Millisecond))
+	app.Config.UptimeSampleInterval = 25 * time.Hour
+	now := time.Now().UTC()
+	for _, at := range []time.Time{now.Add(-25 * time.Hour), now} {
+		_, err := app.DB.Exec("INSERT INTO availability_samples (sampled_at, component, healthy, latency_ms) VALUES ($1, $2, $3, $4)",
+			at, availability.ComponentOverall, true, 1)
+		require.NoError(t, err)
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/health/status", nil)
@@ -120,7 +127,7 @@ func TestStatusHandler_JSONMeasuredUptime(t *testing.T) {
 	require.NoError(t, json.NewDecoder(rr.Body).Decode(&res))
 
 	assert.True(t, res.UptimeMeasured)
-	assert.Equal(t, 3, res.UptimeSamples)
+	assert.Equal(t, 2, res.UptimeSamples)
 	assert.Equal(t, 100.0, res.UptimePercentage)
 	assert.True(t, res.HistoryAvailable)
 	require.Len(t, res.HistoricalDays, 30)
@@ -129,11 +136,11 @@ func TestStatusHandler_JSONMeasuredUptime(t *testing.T) {
 	for _, day := range res.HistoricalDays {
 		if day.HasData {
 			withData++
-			assert.Equal(t, 3, day.Samples)
+			assert.Equal(t, 1, day.Samples)
 			assert.Equal(t, 100.0, day.UptimePercent)
 		}
 	}
-	assert.Equal(t, 1, withData, "all three samples fall in one UTC day bucket")
+	assert.Equal(t, 2, withData, "two samples land in two UTC day buckets")
 }
 
 func TestStatusHandler_JSONViaAcceptHeader(t *testing.T) {
@@ -204,4 +211,26 @@ func TestStatusHandler_IncidentHistoryFromSLAAlerts(t *testing.T) {
 	assert.Contains(t, body, "Investigating")
 	assert.Contains(t, body, "Resolved")
 	assert.Contains(t, body, "30-day uptime 98.50% is below the 99.9% SLA target")
+}
+
+func TestStatusHandler_JSONCollectingUptime(t *testing.T) {
+	app := newRegisterTestApp(t)
+	ctx := context.Background()
+	for i := 0; i < 2; i++ {
+		require.NoError(t, availability.Record(ctx, app.DB, availability.ComponentOverall, true, time.Millisecond))
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/health/status", nil)
+	rr := httptest.NewRecorder()
+	app.StatusJSON(rr, req)
+
+	require.Equal(t, http.StatusOK, rr.Code)
+	var res StatusPageData
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&res))
+
+	assert.False(t, res.UptimeMeasured, "two back-to-back samples must not read as 30-day availability")
+	assert.True(t, res.UptimeCollecting)
+	assert.Equal(t, 2, res.UptimeSamples)
+	assert.Equal(t, 0.0, res.UptimePercentage)
+	assert.False(t, res.HistoryAvailable)
 }

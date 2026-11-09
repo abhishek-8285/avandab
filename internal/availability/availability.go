@@ -21,6 +21,12 @@ const ComponentOverall = "overall"
 // days; 90 gives headroom for incident review without unbounded growth.
 const retention = 90 * 24 * time.Hour
 
+// MinMeasuredCoverage is how much real sampling history is required before
+// uptime is presented as a measured 30-day number. A single 60-second sample
+// must never read as "100% availability" (found in runtime smoke: the status
+// page showed 100% measured from 1 sample).
+const MinMeasuredCoverage = 24 * time.Hour
+
 // Day is one UTC day of measured availability.
 type Day struct {
 	Date          string  `json:"date"`
@@ -34,12 +40,16 @@ type Day struct {
 // Measured is false when no samples exist yet (fresh deployment): callers must
 // render "not measured" instead of inventing a percentage.
 type Snapshot struct {
-	Measured  bool
-	UptimePct float64
-	Samples   int
-	Healthy   int
-	Expected  int
-	Days      []Day
+	Measured bool
+	// CoverageSufficient is true only once samples span MinMeasuredCoverage.
+	// Callers must render "collecting data" instead of a percentage until then.
+	CoverageSufficient bool
+	CoverageHours      float64
+	UptimePct          float64
+	Samples            int
+	Healthy            int
+	Expected           int
+	Days               []Day
 }
 
 // Record inserts one availability sample for the given component at now.
@@ -103,6 +113,8 @@ func LoadSnapshot(ctx context.Context, db *sql.DB, now time.Time, window, interv
 	}
 
 	span := points[len(points)-1].at.Sub(points[0].at)
+	snap.CoverageHours = span.Hours()
+	snap.CoverageSufficient = span >= MinMeasuredCoverage
 	expected := int(span/interval) + 1
 	if expected < len(points) {
 		expected = len(points)

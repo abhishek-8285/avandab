@@ -622,6 +622,12 @@ func Load() *Config {
 		S3AllowedRegions:  getEnv("S3_ALLOWED_REGIONS", ""),
 	}
 	cfg.WorkerLeaderLock = getEnvBool("WORKER_LEADER_LOCK", true)
+	// SQLite is a single-process file DB: DB leases only add write contention
+	// (SQLITE_BUSY storms at boot) and cannot coordinate replicas. Default the
+	// leader lock off for sqlite unless the operator explicitly set it.
+	if _, explicit := os.LookupEnv("WORKER_LEADER_LOCK"); !explicit && dbDriver == "sqlite" {
+		cfg.WorkerLeaderLock = false
+	}
 
 	smtpPass := os.Getenv("SMTP_PASSWORD")
 	if smtpPass == "" {

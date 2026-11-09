@@ -92,7 +92,7 @@ func (m *SLAMonitor) Run(ctx context.Context) {
 // tenant when the target is missed. No samples yet => no alert (not measured).
 func (m *SLAMonitor) check(ctx context.Context) {
 	snap := LoadSnapshot(ctx, m.db, time.Now().UTC(), m.window, m.sampleInterval)
-	if !snap.Measured {
+	if !snap.Measured || !snap.CoverageSufficient {
 		m.logger.Debug("sla monitor: uptime not measured yet, no alert")
 		return
 	}

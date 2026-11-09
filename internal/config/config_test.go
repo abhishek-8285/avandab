@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -291,6 +292,36 @@ func TestLoad_MultiTenantDefaultAndOptOut(t *testing.T) {
 		cfg := config.Load()
 		if !cfg.MultiTenant.Enabled {
 			t.Fatal("MULTI_TENANT_ENABLED=true must enable per-user resolution")
+		}
+	})
+}
+
+// TestLoad_WorkerLeaderLockDefaultsByDriver pins the single-node default:
+// sqlite runs workers in-process (no DB lease contention) unless explicitly
+// opted in; multi-replica engines keep the DB lease lock on.
+func TestLoad_WorkerLeaderLockDefaultsByDriver(t *testing.T) {
+	t.Run("sqlite defaults off", func(t *testing.T) {
+		t.Setenv("DATABASE_DRIVER", "sqlite")
+		t.Setenv("DATABASE_URL", "file:test.db")
+		os.Unsetenv("WORKER_LEADER_LOCK")
+		if config.Load().WorkerLeaderLock {
+			t.Fatal("sqlite must default WORKER_LEADER_LOCK off (in-process workers)")
+		}
+	})
+	t.Run("postgres defaults on", func(t *testing.T) {
+		t.Setenv("DATABASE_DRIVER", "postgres")
+		t.Setenv("DATABASE_URL", "postgres://u:p@127.0.0.1:5432/db?sslmode=disable")
+		os.Unsetenv("WORKER_LEADER_LOCK")
+		if !config.Load().WorkerLeaderLock {
+			t.Fatal("postgres must default WORKER_LEADER_LOCK on")
+		}
+	})
+	t.Run("explicit sqlite opt-in wins", func(t *testing.T) {
+		t.Setenv("DATABASE_DRIVER", "sqlite")
+		t.Setenv("DATABASE_URL", "file:test.db")
+		t.Setenv("WORKER_LEADER_LOCK", "true")
+		if !config.Load().WorkerLeaderLock {
+			t.Fatal("explicit WORKER_LEADER_LOCK=true must win on sqlite")
 		}
 	})
 }

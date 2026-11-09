@@ -71,14 +71,15 @@ func TestSLAMonitor_HealthyUptimeNoAlert(t *testing.T) {
 		t.Fatalf("seed tenant: %v", err)
 	}
 	now := time.Now().UTC()
-	for i := 0; i < 4; i++ {
-		if err := recordAt(context.Background(), db, ComponentOverall, true, time.Millisecond, now.Add(-3*time.Minute+time.Duration(i)*time.Minute)); err != nil {
+	// 25h of healthy samples at a 6h tick => sufficient coverage, 100% uptime.
+	for i := 0; i < 5; i++ {
+		if err := recordAt(context.Background(), db, ComponentOverall, true, time.Millisecond, now.Add(-24*time.Hour+time.Duration(i)*6*time.Hour)); err != nil {
 			t.Fatalf("record: %v", err)
 		}
 	}
 	bus := &captureBus{}
 	resolver := &fakeResolver{affected: 2}
-	NewSLAMonitor(db, bus, resolver, 30*24*time.Hour, time.Minute, time.Minute, nil).check(context.Background())
+	NewSLAMonitor(db, bus, resolver, 30*24*time.Hour, 6*time.Hour, time.Minute, nil).check(context.Background())
 	evs, _ := bus.snapshot()
 	if len(evs) != 0 {
 		t.Fatalf("100%% uptime must not alert, got %d events", len(evs))
@@ -102,16 +103,16 @@ func TestSLAMonitor_BreachAlertsActiveTenantsOnly(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO tenants (id, status) VALUES ('tenant-a','active'), ('tenant-b','suspended'), ('tenant-c','active')`); err != nil {
 		t.Fatalf("seed tenants: %v", err)
 	}
-	// 2 healthy samples, expected 4 -> 50% measured uptime.
+	// 24h span at a 12h tick => 3 expected, 2 healthy => ~66% measured uptime.
 	now := time.Now().UTC()
-	for _, offset := range []int{-3, 0} {
-		if err := recordAt(context.Background(), db, ComponentOverall, true, time.Millisecond, now.Add(time.Duration(offset)*time.Minute)); err != nil {
+	for _, offset := range []int{-24, 0} {
+		if err := recordAt(context.Background(), db, ComponentOverall, true, time.Millisecond, now.Add(time.Duration(offset)*time.Hour)); err != nil {
 			t.Fatalf("record: %v", err)
 		}
 	}
 
 	bus := &captureBus{}
-	NewSLAMonitor(db, bus, nil, 30*24*time.Hour, time.Minute, time.Minute, nil).check(context.Background())
+	NewSLAMonitor(db, bus, nil, 30*24*time.Hour, 12*time.Hour, time.Minute, nil).check(context.Background())
 
 	evs, tenants := bus.snapshot()
 	if len(evs) != 2 {

@@ -74,6 +74,9 @@ func TestLoadSnapshot_MeasuresUptimeAndDays(t *testing.T) {
 	if !snap.Measured {
 		t.Fatal("expected measured snapshot")
 	}
+	if snap.CoverageSufficient {
+		t.Fatal("3 minutes of samples must not count as sufficient 24h coverage")
+	}
 	if snap.Samples != 3 || snap.Healthy != 3 {
 		t.Fatalf("samples=%d healthy=%d, want 3/3", snap.Samples, snap.Healthy)
 	}
@@ -150,5 +153,23 @@ func TestPrune_DropsOldSamples(t *testing.T) {
 	}
 	if n != 1 {
 		t.Fatalf("expected 1 sample after prune, got %d", n)
+	}
+}
+
+func TestLoadSnapshot_Requires24hCoverageForMeasuredUptime(t *testing.T) {
+	db := testDB(t)
+	ctx := context.Background()
+	now := time.Date(2026, 11, 9, 12, 0, 0, 0, time.UTC)
+	for _, at := range []time.Time{now.Add(-25 * time.Hour), now} {
+		if err := recordAt(ctx, db, ComponentOverall, true, time.Millisecond, at); err != nil {
+			t.Fatalf("record: %v", err)
+		}
+	}
+	snap := LoadSnapshot(ctx, db, now, 30*24*time.Hour, time.Hour)
+	if !snap.Measured || !snap.CoverageSufficient {
+		t.Fatalf("25h span must be sufficient coverage (measured=%v sufficient=%v)", snap.Measured, snap.CoverageSufficient)
+	}
+	if snap.CoverageHours < 24 {
+		t.Fatalf("coverage=%.2fh, want >= 24h", snap.CoverageHours)
 	}
 }

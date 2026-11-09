@@ -72,18 +72,20 @@ type StatusPageData struct {
 	// computed from real availability_samples (migration 00180); before the
 	// sampler has data it ships as 0 and the UI shows "not measured" instead
 	// of an invented 99.98% (P0 stop-fake-data).
-	UptimePercentage float64           `json:"uptime_percentage"`
-	UptimeMeasured   bool              `json:"uptime_measured"`
-	UptimeSamples    int               `json:"uptime_samples"`
-	SLATarget        string            `json:"sla_target"`
-	RPO              string            `json:"rpo"`
-	RTO              string            `json:"rto"`
-	DBLatency        string            `json:"db_latency"`
-	P95LatencyMs     int64             `json:"p95_latency_ms"`
-	OperationalCount int               `json:"operational_subsystems"`
-	SubsystemCount   int               `json:"subsystem_count"`
-	LastUpdated      string            `json:"last_updated"`
-	Subsystems       []SubsystemStatus `json:"subsystems"`
+	UptimePercentage    float64           `json:"uptime_percentage"`
+	UptimeMeasured      bool              `json:"uptime_measured"`
+	UptimeCollecting    bool              `json:"uptime_collecting"`
+	UptimeCoverageHours float64           `json:"uptime_coverage_hours"`
+	UptimeSamples       int               `json:"uptime_samples"`
+	SLATarget           string            `json:"sla_target"`
+	RPO                 string            `json:"rpo"`
+	RTO                 string            `json:"rto"`
+	DBLatency           string            `json:"db_latency"`
+	P95LatencyMs        int64             `json:"p95_latency_ms"`
+	OperationalCount    int               `json:"operational_subsystems"`
+	SubsystemCount      int               `json:"subsystem_count"`
+	LastUpdated         string            `json:"last_updated"`
+	Subsystems          []SubsystemStatus `json:"subsystems"`
 	// HistoricalDays is one entry per UTC day; HasData=false means the sampler
 	// had no samples that day (fresh deployment or process down all day).
 	HistoricalDays   []availability.Day `json:"historical_days"`
@@ -216,23 +218,25 @@ func (a *App) buildStatusData(ctx context.Context, lang string) StatusPageData {
 		Lang:              lang,
 		OverallStatus:     overallStatus,
 		OverallBadgeClass: overallBadge,
-		// 0 + measured=false until the sampler has recorded samples, so
-		// consumers never mistake an invented number for telemetry.
-		UptimePercentage: uptime.UptimePct,
-		UptimeMeasured:   uptime.Measured,
-		UptimeSamples:    uptime.Samples,
-		SLATarget:        "99.9%",
-		RPO:              "not measured",
-		RTO:              "not measured",
-		DBLatency:        dbLatencyStr,
-		P95LatencyMs:     p95Ms,
-		OperationalCount: operational,
-		SubsystemCount:   len(subsystems),
-		LastUpdated:      time.Now().UTC().Format("15:04:05 UTC"),
-		Subsystems:       subsystems,
-		HistoricalDays:   uptime.Days,
-		HistoryAvailable: uptime.Measured,
-		Incidents:        a.loadAvailabilityIncidents(ctx),
+		// A percentage is only published once samples span >= 24h; before
+		// that the page reports "collecting" (never 100% from one sample).
+		UptimePercentage:    measuredUptimePct(uptime),
+		UptimeMeasured:      uptime.Measured && uptime.CoverageSufficient,
+		UptimeCollecting:    uptime.Measured && !uptime.CoverageSufficient,
+		UptimeCoverageHours: uptime.CoverageHours,
+		UptimeSamples:       uptime.Samples,
+		SLATarget:           "99.9%",
+		RPO:                 "not measured",
+		RTO:                 "not measured",
+		DBLatency:           dbLatencyStr,
+		P95LatencyMs:        p95Ms,
+		OperationalCount:    operational,
+		SubsystemCount:      len(subsystems),
+		LastUpdated:         time.Now().UTC().Format("15:04:05 UTC"),
+		Subsystems:          subsystems,
+		HistoricalDays:      uptime.Days,
+		HistoryAvailable:    uptime.Measured && uptime.CoverageSufficient,
+		Incidents:           a.loadAvailabilityIncidents(ctx),
 	}
 }
 
@@ -341,4 +345,13 @@ func (a *App) StatusJSON(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(statusCode)
 	_ = json.NewEncoder(w).Encode(data)
+}
+
+// measuredUptimePct returns 0 unless the snapshot has enough coverage to be
+// called a measured 30-day number. Keeps "100% from one sample" impossible.
+func measuredUptimePct(s availability.Snapshot) float64 {
+	if !s.Measured || !s.CoverageSufficient {
+		return 0
+	}
+	return s.UptimePct
 }

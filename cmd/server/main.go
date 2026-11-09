@@ -356,6 +356,17 @@ func main() {
 
 	logger.Info("Database migrated successfully")
 
+	// Fail-closed multi-tenancy rejects logins whose user has no tenants row.
+	// Legacy workspace-era users would be locked out silently after an
+	// upgrade; warn loudly with the count (remediation SQL in docs/08 §5).
+	if cfg.MultiTenant.Enabled {
+		if orphanUsers, oerr := appdb.CountOrphanTenantUsers(ctx, database); oerr == nil && orphanUsers > 0 {
+			logger.Warn("legacy users with unknown tenant_id cannot log in under fail-closed multi-tenancy",
+				"count", orphanUsers,
+				"remediation", "docs/08-DEPLOYMENT-AND-PRODUCTION-RUNBOOK.md section 5 upgrade note")
+		}
+	}
+
 	// Re-establish the SQLite posture post-migration: NO TRANSACTION
 	// migrations (00126) necessarily mutate pragma state on the handle they
 	// run on, so re-assert rather than trust it. No-op on other engines.
@@ -1807,7 +1818,11 @@ func main() {
 			go leaderMgr.RunAsLeader(shared.WithGlobalScope(ctx), name, fn)
 		}
 	} else {
-		logger.Warn("WORKER_LEADER_LOCK=false: background workers will duplicate across replicas")
+		if cfg.Database.Driver == "sqlite" {
+			logger.Info("WORKER_LEADER_LOCK off: single-node sqlite runs background workers in-process (no DB lease contention)")
+		} else {
+			logger.Warn("WORKER_LEADER_LOCK=false: background workers will duplicate across replicas")
+		}
 		runLeadered = func(name string, fn func(context.Context)) {
 			go func() {
 				// Mirror leader.RunAsLeader: a panicking worker must not kill the server.

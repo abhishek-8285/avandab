@@ -71,7 +71,11 @@
                 <div class="text-[11px] text-text-muted mt-1">From {{.UptimeSamples}} samples; SLA target: {{.SLATarget}}</div>
                 {{else}}
                 <div class="text-2xl sm:text-3xl font-semibold text-secondary font-display tabular-nums">&mdash;</div>
+                {{if .UptimeCollecting}}
+                <div class="text-[11px] text-text-muted mt-1">Collecting data: {{.UptimeSamples}} samples ({{printf "%.1f" .UptimeCoverageHours}}h) so far; SLA target: {{.SLATarget}}</div>
+                {{else}}
                 <div class="text-[11px] text-text-muted mt-1">Not measured yet; SLA target: {{.SLATarget}}</div>
+                {{end}}
                 {{end}}
             </div>
             <div class="p-4 rounded-xl bg-surface-container-lowest border border-border-subtle shadow-xs">
@@ -134,7 +138,7 @@
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle p-6 sm:p-8 shadow-xs mb-10">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-sm font-semibold text-on-surface">30-Day Platform Continuity</h3>
-                {{if .HistoryAvailable}}<span class="text-xs font-mono text-emerald-600 font-semibold">Measured history</span>{{end}}
+                {{if .HistoryAvailable}}<span class="text-xs font-mono text-emerald-600 font-semibold">Measured history</span>{{else if .UptimeCollecting}}<span class="text-xs font-mono text-text-muted font-semibold">Collecting history</span>{{end}}
             </div>
             {{if .HistoryAvailable}}
             <div class="grid grid-cols-15 sm:grid-cols-30 gap-1 sm:gap-1.5 h-8">
