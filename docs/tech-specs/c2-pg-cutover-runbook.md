@@ -26,21 +26,23 @@ read-only and never modifies it — the pre-freeze file is itself a fallback.
 > Confirmed by the 2026-11-09 rehearsal below.
 
 - `sqlite2pg --check`: require `sqlite vN vs pg vN -> MATCH`, `dirty INTEGER
-  columns: 0`, `orphan FK rows: 0`. Seed collisions (`-> merged by name`)
-  are by design (runtime seeds differ by engine).
-- **Trigger-enforced tenant FKs are invisible to the check.** Migrations
-  00103+ enforce tenant isolation with triggers, not FK constraints, so
-  `PRAGMA foreign_key_check` reports `orphan FK rows: 0` even when users point
-  at missing tenants. Run the explicit prechecks first and fix/accept any rows:
-  ```bash
-  sqlite3 "$SQLITE_DB" "SELECT 'users', COUNT(*) FROM users WHERE tenant_id NOT IN (SELECT id FROM tenants)
-    UNION ALL SELECT 'sessions', COUNT(*) FROM sessions WHERE user_id NOT IN (SELECT id FROM users)
-    UNION ALL SELECT 'user_roles', COUNT(*) FROM user_roles WHERE user_id NOT IN (SELECT id FROM users);"
-  ```
+  columns: 0`, `orphan FK rows: 0`, **`tenant orphans ... users=0 sessions=0
+  user_roles=0`**, and **`sqlite-only tables with rows ...: 0`**. The command
+  **exits non-zero** when trigger-enforced tenant orphans exist (they would be
+  quarantined by the live copy). Seed collisions (`-> merged by name`) are by
+  design (runtime seeds differ by engine).
+- **Trigger-enforced tenant FKs are invisible to `PRAGMA foreign_key_check`.**
+  Migrations 00103+ enforce tenant isolation with triggers, not FK constraints,
+  so the old check reported `orphan FK rows: 0` even when users pointed at
+  missing tenants. `--check` now runs the explicit queries itself:
+  `users.tenant_id NOT IN tenants` plus the cascading
+  `sessions.user_id`/`user_roles.user_id` dependents, and fails the gate.
+  Fix or delete those rows before cutover.
 - Legacy sqlite DBs may still carry a `workspaces` table (workspace-era
-  tenancy) with no PG migration owning it — the live copy quarantines those
-  rows. Nothing in the head code references `workspaces`; archive/drop it
-  before cutover rather than migrating it.
+  tenancy) with no PG migration owning it. `--check` lists it under
+  `sqlite-only tables with rows` and the live copy quarantines those rows.
+  Nothing in the head code references `workspaces`; archive/drop it before
+  cutover rather than migrating it.
 - `sqlite2pg --dry-run`: require exit 0 inside rolled-back txn.
 - `sqlite2pg` (live): require exit 0 and **review every quarantined row** in
   `_migration_quarantine` (expected 0; known-legacy classes above are the only
@@ -91,7 +93,8 @@ throughout), `systemctl start avandab`, re-run §4 smokes against sqlite.
 |---|---|
 | online backup copy → integrity_check | ok, v137 |
 | sqlite chain on the copy (v137 → v182) | 45 migrations applied, 0 errors (real rows preserved) |
-| `sqlite2pg --check` | versions MATCH, 0 dirty, 0 orphan FK rows, 52 seed collisions merged by name |
+| `sqlite2pg --check` (before the check fix) | versions MATCH, 0 dirty, 0 orphan FK rows, 52 seed collisions merged by name — **missed the 8 tenant orphans** |
+| `sqlite2pg --check` (after the fix) | `tenant orphans ... users=8 sessions=8 user_roles=8`, `workspaces: 8 rows`, **exit 1** (gate now stops the cutover) |
 | `sqlite2pg --dry-run` | exit 0, 24 tables, 0 quarantined (rolled back) |
 | `sqlite2pg` live copy | exit 0; 21 tables processed, rows copied for audit_logs/drivers/experiment_events/outbox_events/pnl_daily/role_permissions/worker_leases; **8 users + 8 sessions + 8 user_roles + 8 workspaces rows quarantined** |
 | row parity (non-quarantined tables) | roles 9, permissions 144, role_permissions 422, drivers 1, audit_logs 1, experiment_events 9, pnl_daily 6, outbox_events 1, worker_leases 17, company_config 46 — all match |
