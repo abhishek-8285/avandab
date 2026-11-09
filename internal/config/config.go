@@ -346,9 +346,12 @@ type BootstrapAdminConfig struct {
 	Password string
 }
 
-// MultiTenantConfig gates per-user tenant resolution (Spec 24). Disabled
-// (default) keeps the single-org bootstrap tenant for every request; enabled
-// resolves each user's tenant from users.tenant_id and rejects suspended orgs.
+// MultiTenantConfig gates per-user tenant resolution (Spec 24). Enabled is
+// the default: each request resolves its tenant from users.tenant_id and
+// suspended orgs are rejected at the edge (fail-closed). Single-org
+// deployments must opt out explicitly with MULTI_TENANT_ENABLED=false —
+// startup then logs a warning because every request collapses onto the
+// bootstrap tenant '1'.
 type MultiTenantConfig struct {
 	Enabled bool
 }
@@ -442,7 +445,9 @@ func Load() *Config {
 			Password: os.Getenv("BOOTSTRAP_ADMIN_PASSWORD"),
 		},
 		MultiTenant: MultiTenantConfig{
-			Enabled: getEnv("MULTI_TENANT_ENABLED", "false") == "true",
+			// Fail-closed SaaS default: resolve the tenant per user. Opt out
+			// only for a deliberate single-org deployment.
+			Enabled: getEnv("MULTI_TENANT_ENABLED", "true") == "true",
 		},
 		RAG: RAGConfig{
 			Enabled:          getEnv("RAG_ENABLED", "false") == "true",

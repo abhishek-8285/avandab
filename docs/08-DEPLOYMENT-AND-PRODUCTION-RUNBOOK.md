@@ -158,6 +158,7 @@ client-side publish confirmations.
 | Variable | Default | Description |
 | :--- | :--- | :--- |
 | `APP_ENV` | `development` | Environment mode (`development` / `production`). |
+| `MULTI_TENANT_ENABLED` | `true` | Fail-closed per-user tenant resolution (API 401 / web redirect when the user has no tenant or the org is suspended). Set `false` only for a deliberate single-org deployment — every request then resolves to bootstrap tenant `1` and startup logs a warning. Never run `false` with more than one organisation. |
 | `PORT` | `8080` | HTTP Web and API port. |
 | `TELEMETRY_TCP_PORT` | `:5023` | Hardware GPS TCP socket port. |
 | `MQTT_URL` | `tcp://localhost:1883` | Broker URL for the backend ingest subscriber. |

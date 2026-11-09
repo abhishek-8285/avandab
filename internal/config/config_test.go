@@ -268,3 +268,29 @@ func TestUsingKnownDefaultSecret(t *testing.T) {
 		}
 	}
 }
+
+// TestLoad_MultiTenantDefaultAndOptOut pins the fail-closed SaaS default:
+// per-user tenant resolution is on unless a deployment explicitly opts out.
+func TestLoad_MultiTenantDefaultAndOptOut(t *testing.T) {
+	t.Run("default enabled", func(t *testing.T) {
+		t.Setenv("MULTI_TENANT_ENABLED", "")
+		cfg := config.Load()
+		if !cfg.MultiTenant.Enabled {
+			t.Fatal("MULTI_TENANT_ENABLED must default to true (fail-closed SaaS mode)")
+		}
+	})
+	t.Run("explicit opt-out", func(t *testing.T) {
+		t.Setenv("MULTI_TENANT_ENABLED", "false")
+		cfg := config.Load()
+		if cfg.MultiTenant.Enabled {
+			t.Fatal("MULTI_TENANT_ENABLED=false must disable per-user resolution")
+		}
+	})
+	t.Run("explicit enable", func(t *testing.T) {
+		t.Setenv("MULTI_TENANT_ENABLED", "true")
+		cfg := config.Load()
+		if !cfg.MultiTenant.Enabled {
+			t.Fatal("MULTI_TENANT_ENABLED=true must enable per-user resolution")
+		}
+	})
+}

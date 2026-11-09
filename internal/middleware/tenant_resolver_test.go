@@ -362,3 +362,11 @@ func TestGateOn_MissingTenantUser_WebRedirects(t *testing.T) {
 	}
 	assert.Contains(t, flash, "has no tenant")
 }
+
+// TestFailClosedTenantResolver_RejectsWithoutTenantLookup proves the default
+// resolver cannot silently grant the bootstrap tenant: a missing resolver must
+// always error so middleware answers 401 instead of serving tenant '1'.
+func TestFailClosedTenantResolver_RejectsWithoutTenantLookup(t *testing.T) {
+	_, err := FailClosedTenantResolver(context.Background(), "usr-any")
+	require.ErrorIs(t, err, ErrTenantResolverNotConfigured)
+}

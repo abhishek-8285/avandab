@@ -818,9 +818,10 @@ func main() {
 	authAPIHandler := authAPIHandlers.NewAPIAuthHandler(services.Auth, services.Users, apiSecret, database).WithAuthorizer(authSvc)
 
 	// ── Tenant resolution (Spec 24) ─────────────────────────────────────
-	// Gate off (default): every request resolves to the bootstrap tenant.
-	// Gate on (MULTI_TENANT_ENABLED=true): per-user lookup of users.tenant_id
-	// joined to tenants.status; suspended orgs are rejected at the edge.
+	// Gate on (default): per-user lookup of users.tenant_id joined to
+	// tenants.status; suspended orgs are rejected at the edge. Gate off is an
+	// explicit single-org opt-out (MULTI_TENANT_ENABLED=false) and warns loudly
+	// because every request then collapses onto the bootstrap tenant.
 	tenantResolver := middleware.TenantResolver(middleware.DefaultTenantResolver)
 	if cfg.MultiTenant.Enabled {
 		logger.Info("multi-tenant mode enabled: per-user tenant resolution active")
@@ -832,6 +833,8 @@ func main() {
 			}
 			return tenantID, status, nil
 		}, appCache)
+	} else {
+		logger.Warn("multi-tenant mode DISABLED: every request resolves to the bootstrap tenant '1'. Set MULTI_TENANT_ENABLED=true for SaaS deployments; single-org mode is unsafe with more than one tenant.")
 	}
 
 	// ── Telemetry Ingestion Pipeline (Phase 1) ─────────────────────────
