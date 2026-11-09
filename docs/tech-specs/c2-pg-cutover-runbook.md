@@ -105,6 +105,23 @@ rehearsal: the local sqlite was dev/test data (10 users, 1 driver, no
 trips/vehicles/invoices). The live cutover still needs the production sqlite at
 head (§2–§3) and a row-level review of any quarantine.
 
+## Rehearsal evidence (2026-11-09, PG 18.2 Termux local, port 55432, head v183)
+| Step | Result |
+|---|---|
+| empty-PG chain (two-phase: UpTo 72 → resync → Up) | v183, 177 migrations applied (67 pre-cut + 110 post-cut), 0 errors |
+| schema parity vs fresh sqlite v183 | 179/179 table-name sets identical (goose table excluded) |
+| migration 00183 on PG (retention indexes) | all 5 indexes created: `idx_video_events_event_time`, `idx_video_livestream_created_at`, `idx_breach_incidents_detected_at`, `idx_user_consents_created_at`, `idx_privacy_dsar_created_at` |
+| seed parity | roles 9, permissions 144, tenants 2, alert_rules 17 on both engines |
+| `go test -tags pg_integration ./internal/database/ ./internal/datamigrate/` | `ok internal/database`, `ok internal/datamigrate` |
+| full down-migration (DownTo 0) | 0 public tables remaining |
+| re-up after down (two-phase) | v183 again, 0 errors (reversible + repeatable) |
+| server boot on PG v183 (port 18082) | `Database migrated successfully`; `/login` 200, `/healthz` 200, `/status` 200, `/api/v1/health/status` 200, `/pricing` 200; no ERROR lines |
+
+Scratch cluster note: Termux PG 18.2 local cluster runs with OS user `u0_a412`
+as superuser (no `postgres` role) — DSN is
+`postgres://u0_a412@127.0.0.1:55432/<db>?sslmode=disable`. CI uses the standard
+`postgres` role inside the service container.
+
 ## Timescale decision
 Deferred. Cut over to plain PG first; revisit only on proven hypertable
 need (>5k-truck telemetry volume per ROADMAP trigger). No code changes for it now.
