@@ -764,6 +764,10 @@ func main() {
 		logger.Warn("PAYOUT_RAIL_ENABLED=true but no payout provider is configured; driver payouts remain disabled")
 	}
 	settlementAPIHandler := settlementAPIHandlers.NewSettlementHandler(settlementAppSvc)
+	// Settlement view page shows payout history + penny-drop verification.
+	if app.Settlements != nil {
+		app.Settlements.SetPayoutService(settlementAppSvc)
+	}
 
 	// Setup router
 	r := chi.NewRouter()

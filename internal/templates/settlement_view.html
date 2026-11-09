@@ -162,6 +162,50 @@
                 </div>
             </div>
 
+            <!-- Payout rail: account verification + recent disbursements -->
+            {{if .PayoutServiceReady}}
+            <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
+                <div class="px-5 py-3 border-b border-border-subtle">
+                    <h2 class="text-sm font-bold text-on-surface">{{t "mo.stlv.payouts"}}</h2>
+                    <p class="text-xs text-text-muted">{{t "mo.stlv.payout_account"}}</p>
+                </div>
+                <div class="p-5 space-y-3">
+                    {{with .PayoutAccount}}
+                    <div class="flex justify-between items-center gap-3 flex-wrap">
+                        <span class="text-xs text-text-muted">{{.BankName}} · {{.AccountNumberMasked}} · {{.IFSC}}</span>
+                        <span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-bold {{if eq .VerificationStatus "verified"}}bg-status-success/10 text-status-success{{else}}bg-status-warning/10 text-status-warning{{end}}">
+                            {{if eq .VerificationStatus "verified"}}{{t "mo.stlv.account_verified"}}{{else}}{{t "mo.stlv.account_unverified"}}{{end}}
+                        </span>
+                    </div>
+                    {{if ne .VerificationStatus "verified"}}
+                    <form method="POST" action="/settlements/payouts/verify-account">
+                        <input type="hidden" name="driver_id" value="{{$s.DriverID}}" />
+                        <button type="submit" class="w-full rounded-full border border-primary/30 bg-primary/10 text-primary py-2 px-4 text-xs font-semibold hover:bg-primary/20 transition cursor-pointer">{{t "mo.stlv.verify_account"}}</button>
+                    </form>
+                    {{end}}
+                    {{else}}
+                    <p class="text-xs text-text-muted">{{t "mo.stlv.no_payout_account"}}</p>
+                    {{end}}
+
+                    {{if .Payouts}}
+                    <div class="divide-y divide-border-subtle border-t border-border-subtle pt-2">
+                        {{range .Payouts}}
+                        <div class="py-2 flex items-center justify-between gap-2">
+                            <div class="min-w-0">
+                                <div class="text-xs font-semibold text-on-surface tabular-nums">₹{{printf "%.2f" .Amount}}</div>
+                                <div class="text-[11px] text-text-muted">{{.InitiatedAt.Format "02 Jan 15:04"}}{{if .UTR}} · UTR {{.UTR}}{{end}}</div>
+                            </div>
+                            <span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase {{if eq .Status "paid"}}bg-status-success/10 text-status-success{{else if eq .Status "failed"}}bg-status-alert/10 text-status-alert{{else}}bg-status-warning/10 text-status-warning{{end}}">{{.Status}}</span>
+                        </div>
+                        {{end}}
+                    </div>
+                    {{else}}
+                    <p class="text-xs text-text-muted">{{t "mo.stlv.no_payouts"}}</p>
+                    {{end}}
+                </div>
+            </div>
+            {{end}}
+
             <!-- Lifecycle Action Bar -->
             <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle shadow-sm overflow-hidden">
                 <div class="px-5 py-3 border-b border-border-subtle flex items-center justify-between gap-3">

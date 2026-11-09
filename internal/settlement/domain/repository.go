@@ -36,6 +36,10 @@ type SettlementRepository interface {
 	GetPayoutByID(ctx context.Context, tenantID, payoutID string) (*PayoutInstruction, error)
 	GetPayoutByIDGlobal(ctx context.Context, payoutID string) (*PayoutInstruction, error)
 	UpdatePayoutStatus(ctx context.Context, tenantID, payoutID string, status PayoutStatus, providerPayoutID, utr, failureReason *string) error
+	// ListPayoutsByDriver returns the latest payout instructions for one driver.
+	ListPayoutsByDriver(ctx context.Context, tenantID, driverID string, limit int) ([]PayoutInstruction, error)
+	// GetPrimaryPayoutAccount returns the driver primary account, nil when absent.
+	GetPrimaryPayoutAccount(ctx context.Context, tenantID, driverID string) (*PayoutAccount, error)
 
 	// Webhook / Provider Events
 	RecordProviderEvent(ctx context.Context, tenantID, provider, eventID, eventType, payload string) error

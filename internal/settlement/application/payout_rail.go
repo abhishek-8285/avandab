@@ -196,3 +196,26 @@ func (s *SettlementAppService) applyFundAccountValidation(ctx context.Context, d
 		return nil
 	})
 }
+
+// PayoutSummary is the admin view of one driver's payout rail state.
+type PayoutSummary struct {
+	Account *domain.PayoutAccount
+	Payouts []domain.PayoutInstruction
+}
+
+// ListDriverPayouts returns the driver's primary bank account plus recent
+// payout instructions for the settlement view page.
+func (s *SettlementAppService) ListDriverPayouts(ctx context.Context, tenantID, driverID string, limit int) (*PayoutSummary, error) {
+	if tenantID == "" || driverID == "" {
+		return nil, errors.New("tenant_id and driver_id are required")
+	}
+	payouts, err := s.repo.ListPayoutsByDriver(ctx, tenantID, driverID, limit)
+	if err != nil {
+		return nil, err
+	}
+	acct, err := s.repo.GetPrimaryPayoutAccount(ctx, tenantID, driverID)
+	if err != nil {
+		return nil, err
+	}
+	return &PayoutSummary{Account: acct, Payouts: payouts}, nil
+}
