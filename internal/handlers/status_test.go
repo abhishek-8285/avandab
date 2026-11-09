@@ -37,6 +37,8 @@ func TestStatusHandler_HTMLPage(t *testing.T) {
 	// Fresh test DB has no availability samples: honest empty state.
 	assert.Contains(t, body, "Not measured yet")
 	assert.Contains(t, body, "Availability history not yet measured")
+	// No SLA alerts either: honest empty incident history.
+	assert.Contains(t, body, "Availability alerting is active")
 }
 
 func TestStatusHandler_HTMLPageWithMeasuredUptime(t *testing.T) {
@@ -150,4 +152,56 @@ func TestStatusHandler_JSONViaAcceptHeader(t *testing.T) {
 	err := json.NewDecoder(rr.Body).Decode(&res)
 	require.NoError(t, err)
 	assert.Equal(t, "Operational", res.OverallStatus)
+}
+
+// TestStatusHandler_IncidentHistoryFromSLAAlerts proves the public incident
+// history is derived from real availability SLA alerts, deduplicated across
+// the per-tenant alert fan-out (one public incident per breach, not per tenant).
+func TestStatusHandler_IncidentHistoryFromSLAAlerts(t *testing.T) {
+	app := newRegisterTestApp(t)
+	now := time.Now().UTC()
+
+	insertAlert := func(id, tenant, status string, firstSeen time.Time, resolvedAt *time.Time) {
+		t.Helper()
+		_, err := app.DB.Exec(`INSERT INTO alerts (
+			id, source, alert_type, severity, status, dedup_key,
+			tenant_id, ack_status, severity_rank, money_at_risk,
+			title, message, occurrences, first_seen_at, last_seen_at, created_at, updated_at,
+			resolved_at, resolved_by
+		) VALUES (?, 'availability', 'sla_breach', 'critical', ?, ?, ?,
+			'open', 1, 0,
+			'30-day uptime 98.50% is below the 99.9% SLA target',
+			'Measured platform uptime is below target.', 1,
+			?, ?, ?, ?, ?, ?)`,
+			id, status, "dk-"+id, tenant, firstSeen, firstSeen, firstSeen, firstSeen, resolvedAt, nil)
+		require.NoError(t, err)
+	}
+
+	// Same 10-minute breach bucket across two tenants => ONE public incident.
+	insertAlert("i-open-a", "tenant-42", "open", now.Add(-2*time.Minute), nil)
+	insertAlert("i-open-b", "tenant-7", "open", now.Add(-2*time.Minute), nil)
+	// Older resolved breach => second incident with recovery text.
+	resolved := now.Add(-40 * time.Minute)
+	insertAlert("i-res", "tenant-42", "resolved", now.Add(-60*time.Minute), &resolved)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/health/status", nil)
+	rr := httptest.NewRecorder()
+	app.StatusJSON(rr, req)
+	require.Equal(t, http.StatusOK, rr.Code)
+
+	var res StatusPageData
+	require.NoError(t, json.NewDecoder(rr.Body).Decode(&res))
+	require.Len(t, res.Incidents, 2, "tenant fan-out must collapse into one public incident per breach bucket")
+	assert.Equal(t, "Investigating", res.Incidents[0].Status)
+	assert.Equal(t, "Resolved", res.Incidents[1].Status)
+	assert.Contains(t, res.Incidents[1].Description, "Recovered after")
+
+	reqHTML := httptest.NewRequest(http.MethodGet, "/status", nil)
+	rrHTML := httptest.NewRecorder()
+	app.Status(rrHTML, reqHTML)
+	require.Equal(t, http.StatusOK, rrHTML.Code)
+	body := rrHTML.Body.String()
+	assert.Contains(t, body, "Investigating")
+	assert.Contains(t, body, "Resolved")
+	assert.Contains(t, body, "30-day uptime 98.50% is below the 99.9% SLA target")
 }

@@ -157,7 +157,7 @@
         <!-- Incident History -->
         <div class="bg-surface-container-lowest rounded-2xl border border-border-subtle p-6 sm:p-8 shadow-xs mb-12">
             <h2 class="text-lg font-semibold text-on-surface mb-2">Past Incident History</h2>
-            <p class="text-xs text-secondary mb-6">Transparent public disclosure of all system interruptions and remediations</p>
+            <p class="text-xs text-secondary mb-6">Derived from measured availability SLA alerts — no hand-written incidents.</p>
 
             {{if .Incidents}}
             <div class="space-y-4">
@@ -165,7 +165,7 @@
                 <div class="p-4 rounded-xl bg-surface border border-border-subtle">
                     <div class="flex items-center justify-between mb-1">
                         <span class="text-xs font-semibold text-on-surface">{{.Title}}</span>
-                        <span class="text-[10px] font-mono text-emerald-600 font-semibold">{{.Status}}</span>
+                        <span class="text-[10px] font-mono font-semibold {{if eq .Status "Resolved"}}text-emerald-600{{else}}text-amber-600{{end}}">{{.Status}}</span>
                     </div>
                     <div class="text-[11px] text-text-muted mb-2">{{.Date}}</div>
                     <p class="text-xs text-on-surface-variant leading-relaxed">{{.Description}}</p>
@@ -178,7 +178,7 @@
                     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-4 h-4"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
                 <div class="text-xs font-semibold text-on-surface">No incidents recorded</div>
-                <div class="text-[11px] text-secondary mt-0.5">Automated incident tracking is not enabled yet; this page does not claim zero downtime.</div>
+                <div class="text-[11px] text-secondary mt-0.5">Availability alerting is active; no SLA breach has been recorded in the retained window.</div>
             </div>
             {{end}}
         </div>
@@ -188,7 +188,7 @@
             <div>
                 <h3 class="text-base font-semibold text-on-surface">99.9% uptime target</h3>
                 <p class="text-xs text-on-surface-variant mt-1 max-w-xl">
-                    Availability is not yet continuously measured. The 99.9% target applies to contracted Enterprise deployments; service credits are defined in the signed agreement, not granted automatically on this page.
+                    Availability is measured by an in-process sampler every minute. The 99.9% target applies to contracted Enterprise deployments; service credits are defined in the signed agreement, not granted automatically on this page.
                 </p>
             </div>
             <div class="flex items-center gap-3 shrink-0">

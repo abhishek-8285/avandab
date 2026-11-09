@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -231,8 +232,77 @@ func (a *App) buildStatusData(ctx context.Context, lang string) StatusPageData {
 		Subsystems:       subsystems,
 		HistoricalDays:   uptime.Days,
 		HistoryAvailable: uptime.Measured,
-		Incidents:        nil,
+		Incidents:        a.loadAvailabilityIncidents(ctx),
 	}
+}
+
+// loadAvailabilityIncidents derives public incident history from the
+// platform's availability SLA alerts (source=availability, type=sla_breach).
+// The monitor fans one breach out to every active tenant, so rows are
+// deduplicated into ~10-minute breach buckets: the public page shows one
+// incident per breach, not one per tenant. Missing table/columns on an old
+// database degrade to an empty history rather than failing the page.
+func (a *App) loadAvailabilityIncidents(ctx context.Context) []StatusIncident {
+	if a.DB == nil {
+		return nil
+	}
+	rows, err := a.DB.QueryContext(ctx, `
+		SELECT title, message, status, first_seen_at, resolved_at
+		FROM alerts
+		WHERE source = 'availability' AND alert_type = 'sla_breach'
+		ORDER BY first_seen_at DESC
+		LIMIT 50`)
+	if err != nil {
+		return nil
+	}
+	defer func() { _ = rows.Close() }()
+
+	type incidentRow struct {
+		title     string
+		message   string
+		status    string
+		firstSeen time.Time
+		resolved  sql.NullTime
+	}
+	var found []incidentRow
+	for rows.Next() {
+		var r incidentRow
+		if err := rows.Scan(&r.title, &r.message, &r.status, &r.firstSeen, &r.resolved); err != nil {
+			return nil
+		}
+		found = append(found, r)
+	}
+	if err := rows.Err(); err != nil {
+		return nil
+	}
+
+	seen := map[string]bool{}
+	out := make([]StatusIncident, 0, len(found))
+	for _, r := range found {
+		bucket := r.firstSeen.UTC().Truncate(10 * time.Minute).Format("2006-01-02T15:04")
+		if seen[bucket] {
+			continue
+		}
+		seen[bucket] = true
+
+		status := "Investigating"
+		description := r.message
+		if r.resolved.Valid {
+			status = "Resolved"
+			description = fmt.Sprintf("%s Recovered after %s; measured uptime is back above the 99.9%% target.",
+				r.message, r.resolved.Time.Sub(r.firstSeen).Round(time.Minute))
+		}
+		out = append(out, StatusIncident{
+			Date:        r.firstSeen.UTC().Format("02 Jan 2006 15:04 UTC"),
+			Title:       r.title,
+			Status:      status,
+			Description: description,
+		})
+		if len(out) >= 10 {
+			break
+		}
+	}
+	return out
 }
 
 // Status serves the public HTML status dashboard at GET /status.
