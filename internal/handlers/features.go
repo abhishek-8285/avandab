@@ -61,7 +61,7 @@ var featureRegistry = map[string]FeatureContent{
 			{Icon: "description", Title: "Recent activity", Text: "Upcoming trips and the latest bookings and payments in one feed."},
 		},
 		Benefits: []FeatureBenefit{
-			{Icon: "check_circle", Text: "One screen instead of five — decisions happen 3x faster."},
+			{Icon: "check_circle", Text: "One screen instead of five — stop assembling reports by hand."},
 			{Icon: "monitoring", Text: "Spot a stalled trip or unpaid invoice before it escalates — zero surprises."},
 			{Icon: "schedule", Text: "Plan your entire day in under 5 minutes."},
 		},
@@ -96,14 +96,14 @@ var featureRegistry = map[string]FeatureContent{
 			{Icon: "edit", Title: "Create & assign", Text: "Spin up a trip from a booking or from scratch, then assign a driver and a vehicle."},
 			{Icon: "pending", Title: "Status pipeline", Text: "Scheduled to started to completed, with cancellations tracked separately."},
 			{Icon: "badge", Title: "Driver & vehicle binding", Text: "Every trip knows exactly who and what is carrying it."},
-			{Icon: "task_alt", Title: "Proof of delivery", Text: "Capture POD in-app or via mobile e-POD to close the loop dispute-free."},
+			{Icon: "task_alt", Title: "Proof of delivery", Text: "Capture POD in-app or via mobile e-POD to close the loop with evidence."},
 			{Icon: "history", Title: "Full history", Text: "The complete lifecycle of each trip is retained for audits and disputes."},
 			{Icon: "receipt_long", Title: "EWB auto-extension", Text: "Monitor E-Way Bill validity and send alerts before expiry."},
 		},
 		Benefits: []FeatureBenefit{
-			{Icon: "check_circle", Text: "Dispatch 3x more trips per dispatcher with clear assignment."},
-			{Icon: "public", Text: "Real-time visibility for ops and your customers — 100% tracking coverage."},
-			{Icon: "verified", Text: "Dispute-free deliveries — 95% fewer claims with captured POD."},
+			{Icon: "check_circle", Text: "Clear assignment flow so dispatchers spend less time coordinating."},
+			{Icon: "public", Text: "Live trip visibility for ops and customers while devices are reporting."},
+			{Icon: "verified", Text: "Captured POD evidence to defend delivery disputes."},
 		},
 		Steps: []string{
 			"Sign in and open Live Dispatch",
@@ -140,8 +140,8 @@ var featureRegistry = map[string]FeatureContent{
 		},
 		Benefits: []FeatureBenefit{
 			{Icon: "check_circle", Text: "Consistent, fair pricing across repeats — zero pricing disputes."},
-			{Icon: "schedule", Text: "Faster booking entry — 80% less time on known lanes."},
-			{Icon: "task_alt", Text: "Less manual error — 90% fewer data entry mistakes."},
+			{Icon: "schedule", Text: "Faster booking entry with saved lanes and repeat customers."},
+			{Icon: "task_alt", Text: "Structured booking fields reduce manual entry."},
 		},
 		Steps: []string{
 			"Sign in and open Routes",
@@ -177,7 +177,7 @@ var featureRegistry = map[string]FeatureContent{
 			{Icon: "receipt_long", Title: "Operational handoff", Text: "Use the confirmed booking to create its trip and linked invoice."},
 		},
 		Benefits: []FeatureBenefit{
-			{Icon: "check_circle", Text: "No lost leads — 100% of requests captured."},
+			{Icon: "check_circle", Text: "Every booking request lands in one queue."},
 			{Icon: "send", Text: "Clean handoff — zero dropped balls from sales to ops."},
 			{Icon: "payments", Text: "Instant, accurate billing — 0 manual invoice creation."},
 		},
@@ -207,19 +207,19 @@ var featureRegistry = map[string]FeatureContent{
 		Audience: "For fleet managers",
 		Summary:  "Register every unit, track status, and never miss a service.",
 		Lead:     "Every unit's health, documents, and service clock in one registry.",
-		WhatItIs: "The Vehicles module is your fleet registry. Each unit carries status (available or in-maintenance), type and capacity, service reminders, and document storage for RC, insurance, and permits — so a roadside check or an audit is never a scramble. AIS 140 compliance tracking ensures your GPS devices meet India's mandatory vehicle tracking standard, and FASTag integration automates toll expense recording.",
+		WhatItIs: "The Vehicles module is your fleet registry. Each unit carries status (available or in-maintenance), type and capacity, service reminders, and document storage for RC, insurance, and permits — so a roadside check or an audit is never a scramble. Device and document tracking helps you keep AIS 140 paperwork ready; FASTag reconciliation is available when a NETC/aggregator provider is configured.",
 		Capabilities: []FeatureCapability{
 			{Icon: "inventory_2", Title: "Fleet registry", Text: "A complete catalog of every unit you operate."},
 			{Icon: "pending", Title: "Status tracking", Text: "Know what's available versus in-maintenance at any moment."},
 			{Icon: "schedule", Title: "Service reminders", Text: "Set fitness and service intervals so nothing is overlooked."},
 			{Icon: "description", Title: "Document storage", Text: "Keep RC, insurance, and permits attached to the unit."},
 			{Icon: "badge", Title: "Type & capacity", Text: "Metadata that powers assignment and capacity planning."},
-			{Icon: "verified", Title: "AIS 140 compliance", Text: "Track GPS device compliance with India's mandatory vehicle tracking standard."},
-			{Icon: "payments", Title: "FASTag integration", Text: "Automate toll expense recording and reconciliation."},
+			{Icon: "verified", Title: "AIS 140 device registry", Text: "Track device assignments and document status; certification stays with the hardware vendor."},
+			{Icon: "payments", Title: "FASTag reconciliation", Text: "Match toll transactions when a NETC/aggregator provider is configured."},
 		},
 		Benefits: []FeatureBenefit{
-			{Icon: "check_circle", Text: "Fewer breakdowns — 85% reduction with proactive servicing."},
-			{Icon: "verified", Text: "Compliance ready — pass 100% of audits and checkpost inspections."},
+			{Icon: "check_circle", Text: "Proactive service reminders to catch maintenance before a breakdown."},
+			{Icon: "verified", Text: "Document expiry tracking to keep audit paperwork ready."},
 			{Icon: "directions_bus", Text: "Capacity planning you can trust — no overbooking."},
 		},
 		Steps: []string{
@@ -257,8 +257,8 @@ var featureRegistry = map[string]FeatureContent{
 		},
 		Benefits: []FeatureBenefit{
 			{Icon: "verified", Text: "Regulatory safety built into dispatch — 0 expired licenses on road."},
-			{Icon: "schedule", Text: "Faster, conflict-free assignment — 50% less scheduling time."},
-			{Icon: "history", Text: "An audit trail of licensing — 100% compliance documentation."},
+			{Icon: "schedule", Text: "Conflict checks so a driver or vehicle is never double-booked."},
+			{Icon: "history", Text: "An audit trail of licensing history."},
 		},
 		Steps: []string{
 			"Sign in and open Drivers",
@@ -294,7 +294,7 @@ var featureRegistry = map[string]FeatureContent{
 		},
 		Benefits: []FeatureBenefit{
 			{Icon: "thumb_up", Text: "Better, more personal service — know every account's full history."},
-			{Icon: "schedule", Text: "Faster repeat bookings — 60% less time on repeat orders."},
+			{Icon: "schedule", Text: "Repeat bookings reuse saved customer and lane details."},
 			{Icon: "receipt_long", Text: "Cleaner, contextual billing — 0 billing errors."},
 		},
 		Steps: []string{
@@ -323,7 +323,7 @@ var featureRegistry = map[string]FeatureContent{
 		Audience: "For finance teams",
 		Summary:  "Generate professional invoices and email them automatically.",
 		Lead:     "Turn completed work into a polished, compliant invoice instantly.",
-		WhatItIs: "Invoices consolidates completed trips and bookings into a single billable document with editable line items, PDF export, and email delivery. E-Way Bill (EWB) generation is built in for goods movement exceeding Rs. 50,000, and GSTIN details from your Company profile auto-populate for compliant invoicing. Payment status updates as customers pay, so the ledger and the customer always agree.",
+		WhatItIs: "Invoices consolidates completed trips and bookings into a single billable document with editable line items, PDF export, and email delivery. E-Way Bill records and lifecycle tracking are built in (live NIC GSP generation when a provider is configured), and GSTIN details from your Company profile auto-populate invoices. Payment status updates as customers pay, so the ledger and the customer always agree.",
 		Capabilities: []FeatureCapability{
 			{Icon: "description", Title: "Auto-generate", Text: "Build an invoice straight from trips and bookings."},
 			{Icon: "edit", Title: "Editable line items", Text: "Adjust descriptions, quantities, and amounts before sending."},
@@ -333,8 +333,8 @@ var featureRegistry = map[string]FeatureContent{
 		},
 		Benefits: []FeatureBenefit{
 			{Icon: "schedule", Text: "Faster billing — generate invoices in 2 minutes, not 2 hours."},
-			{Icon: "verified", Text: "Fewer disputes — 90% reduction with clear, transparent line items."},
-			{Icon: "history", Text: "Audit-ready records — 100% GST-compliant documentation."},
+			{Icon: "verified", Text: "Clear, itemised invoices reduce billing disputes."},
+			{Icon: "history", Text: "GST fields on every invoice for audit-ready records."},
 		},
 		Steps: []string{
 			"Sign in and open a completed trip",
@@ -370,7 +370,7 @@ var featureRegistry = map[string]FeatureContent{
 			{Icon: "description", Title: "Auto-receipts", Text: "A receipt is generated the moment money is recorded."},
 		},
 		Benefits: []FeatureBenefit{
-			{Icon: "verified", Text: "Accurate books — 100% payment-to-invoice matching."},
+			{Icon: "verified", Text: "Payment-to-invoice matching in one ledger."},
 			{Icon: "thumb_up", Text: "Trustworthy receipts — auto-generated for every transaction."},
 			{Icon: "search", Text: "Effortless reconciliation — 50 payments in under 10 minutes."},
 		},
@@ -410,7 +410,7 @@ var featureRegistry = map[string]FeatureContent{
 		},
 		Benefits: []FeatureBenefit{
 			{Icon: "monitoring", Text: "Data-driven decisions — 5 reports replacing 5 spreadsheets."},
-			{Icon: "search", Text: "Spot idle assets — save 15% on fleet costs by identifying underused vehicles."},
+			{Icon: "search", Text: "Spot idle assets by identifying underused vehicles."},
 			{Icon: "account_balance_wallet", Text: "Protect cash flow — forecast 30 days ahead with real numbers."},
 		},
 		Steps: []string{
@@ -447,7 +447,7 @@ var featureRegistry = map[string]FeatureContent{
 			{Icon: "description", Title: "Exportable", Text: "Pull the evidence for any investigation."},
 		},
 		Benefits: []FeatureBenefit{
-			{Icon: "shield", Text: "Real accountability — 100% of actions logged, zero gaps."},
+			{Icon: "shield", Text: "Append-only audit trail of actions."},
 			{Icon: "search", Text: "Fast incident forensics — investigate any event in under 2 minutes."},
 			{Icon: "verified", Text: "Regulatory readiness — export compliance reports in one click."},
 		},
@@ -485,9 +485,9 @@ var featureRegistry = map[string]FeatureContent{
 			{Icon: "notifications", Title: "Notifications", Text: "Tune what fires and to whom."},
 		},
 		Benefits: []FeatureBenefit{
-			{Icon: "verified", Text: "Right access for the right people — RBAC enforced 100% of the time."},
+			{Icon: "verified", Text: "Role-based access control for every route."},
 			{Icon: "thumb_up", Text: "An on-brand experience — consistent identity across the workspace."},
-			{Icon: "published_with_changes", Text: "Connected tooling — integrate with Tally, Zoho, and more."},
+			{Icon: "published_with_changes", Text: "Connected tooling — Tally live push; Zoho/Busy/Excel via CSV import."},
 		},
 		Steps: []string{
 			"Sign in and open Settings",
@@ -563,7 +563,7 @@ var featureRegistry = map[string]FeatureContent{
 		},
 		Benefits: []FeatureBenefit{
 			{Icon: "verified", Text: "Compliant, professional invoicing — GST-ready from day one."},
-			{Icon: "thumb_up", Text: "A trusted profile — GSTIN and KYC verified for credibility."},
+			{Icon: "thumb_up", Text: "A trusted profile — GSTIN and KYC details captured for credibility."},
 			{Icon: "schedule", Text: "A smooth, guided setup — complete onboarding in 10 minutes."},
 		},
 		Steps: []string{
@@ -601,7 +601,7 @@ var featureRegistry = map[string]FeatureContent{
 			{Icon: "payments", Title: "FASTag auto-import", Text: "Toll expenses auto-import and match to trips."},
 		},
 		Benefits: []FeatureBenefit{
-			{Icon: "shield", Text: "Controlled, accountable spend — catch 8-12% of on-road leakage."},
+			{Icon: "shield", Text: "Controlled, accountable spend with every kharcha entry logged."},
 			{Icon: "verified", Text: "A fraud-resistant approval — verify every expense with proof."},
 			{Icon: "account_balance_wallet", Text: "True trip-level costing — know the real cost of every trip."},
 		},
@@ -640,7 +640,7 @@ var featureRegistry = map[string]FeatureContent{
 		},
 		Benefits: []FeatureBenefit{
 			{Icon: "schedule", Text: "Faster answers — get results in 10 seconds, not 10 minutes."},
-			{Icon: "shield", Text: "Safe automation — 100% of actions require approval."},
+			{Icon: "shield", Text: "Safe automation — mutating actions require approval when the approval gate is enabled."},
 			{Icon: "thumb_up", Text: "A helpful teammate — available 24/7, never takes a break."},
 		},
 		Steps: []string{
