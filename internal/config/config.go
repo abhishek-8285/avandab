@@ -98,6 +98,9 @@ type Config struct {
 	DashboardSSEEnabled  bool
 	DashboardSSEInterval time.Duration
 	PWAEnabled           bool
+	// UptimeSampleInterval controls the in-process availability sampler that
+	// feeds the measured 30-day history on /status (migration 00180).
+	UptimeSampleInterval time.Duration
 	PayoutRailEnabled    bool
 	RazorpayKeyID        string
 	RazorpayKeySecret    string
@@ -425,6 +428,7 @@ func Load() *Config {
 		DashboardSSEEnabled:  getEnvBool("DASHBOARD_SSE_ENABLED", true),
 		DashboardSSEInterval: time.Duration(getEnvInt("DASHBOARD_SSE_INTERVAL_SEC", 5)) * time.Second,
 		PWAEnabled:           getEnvBool("PWA_ENABLED", false),
+		UptimeSampleInterval: getEnvDuration("UPTIME_SAMPLE_INTERVAL", time.Minute),
 		PayoutRailEnabled:    getEnvBool("PAYOUT_RAIL_ENABLED", false),
 		RazorpayKeyID:        getEnv("RAZORPAY_KEY_ID", ""),
 		RazorpayKeySecret:    getEnv("RAZORPAY_KEY_SECRET", ""),

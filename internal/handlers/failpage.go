@@ -11,6 +11,7 @@ import (
 	"time"
 	"transport-app/internal/apm"
 	"transport-app/internal/apperr"
+	"transport-app/internal/availability"
 	"transport-app/internal/logging"
 )
 
@@ -66,11 +67,13 @@ type StatusPageData struct {
 	Lang              string `json:"lang"`
 	OverallStatus     string `json:"overall_status"`
 	OverallBadgeClass string `json:"overall_badge_class"`
-	// UptimePercentage is only meaningful when UptimeMeasured is true. No
-	// continuous availability measurement exists yet, so it ships as 0 and
-	// the UI shows "not measured" instead of an invented 99.98% (P0 stop-fake-data).
+	// UptimePercentage is only meaningful when UptimeMeasured is true. It is
+	// computed from real availability_samples (migration 00180); before the
+	// sampler has data it ships as 0 and the UI shows "not measured" instead
+	// of an invented 99.98% (P0 stop-fake-data).
 	UptimePercentage float64           `json:"uptime_percentage"`
 	UptimeMeasured   bool              `json:"uptime_measured"`
+	UptimeSamples    int               `json:"uptime_samples"`
 	SLATarget        string            `json:"sla_target"`
 	RPO              string            `json:"rpo"`
 	RTO              string            `json:"rto"`
@@ -80,10 +83,11 @@ type StatusPageData struct {
 	SubsystemCount   int               `json:"subsystem_count"`
 	LastUpdated      string            `json:"last_updated"`
 	Subsystems       []SubsystemStatus `json:"subsystems"`
-	// HistoricalDays is empty until availability history is actually recorded.
-	HistoricalDays   []int            `json:"historical_days"`
-	HistoryAvailable bool             `json:"history_available"`
-	Incidents        []StatusIncident `json:"incidents"`
+	// HistoricalDays is one entry per UTC day; HasData=false means the sampler
+	// had no samples that day (fresh deployment or process down all day).
+	HistoricalDays   []availability.Day `json:"historical_days"`
+	HistoryAvailable bool               `json:"history_available"`
+	Incidents        []StatusIncident   `json:"incidents"`
 }
 
 // buildStatusData aggregates live system diagnostics and APM percentiles.
@@ -129,10 +133,18 @@ func (a *App) buildStatusData(ctx context.Context, lang string) StatusPageData {
 		ingestStatus = "operational"
 	}
 
-	// 3. Subsystem checks. Only states this handler can actually probe are
-	// reported. Availability percentages, RPO/RTO, synthetic checks and a
-	// 30-day history do not exist yet and are not invented here (P0
-	// "stop fake data"; AGENTS.md prime directive).
+	// 3. Measured availability from the in-process sampler (migration 00180).
+	// Missing ticks between samples count as downtime; no samples at all means
+	// "not measured" — never an invented percentage (P0 stop-fake-data).
+	interval := time.Minute
+	if a.Config != nil && a.Config.UptimeSampleInterval > 0 {
+		interval = a.Config.UptimeSampleInterval
+	}
+	uptime := availability.LoadSnapshot(ctx, a.DB, time.Now().UTC(), 30*24*time.Hour, interval)
+
+	// 4. Subsystem checks. Only states this handler can actually probe are
+	// reported. Per-subsystem availability percentages and synthetic checks
+	// do not exist and are not invented here (AGENTS.md prime directive).
 	subsystems := []SubsystemStatus{
 		{
 			Name:        "API & Web Gateway",
@@ -194,7 +206,7 @@ func (a *App) buildStatusData(ctx context.Context, lang string) StatusPageData {
 	return StatusPageData{
 		Version:           AppVersion,
 		Title:             "System Status",
-		SEODescription:    "Avandab system status: live subsystem checks and measured API latency.",
+		SEODescription:    "Avandab system status: live subsystem checks, measured API latency and sampled availability.",
 		CanonicalPath:     "/status",
 		NoIndex:           false,
 		OGType:            "website",
@@ -203,10 +215,11 @@ func (a *App) buildStatusData(ctx context.Context, lang string) StatusPageData {
 		Lang:              lang,
 		OverallStatus:     overallStatus,
 		OverallBadgeClass: overallBadge,
-		// No continuous availability measurement exists yet: report 0 + flag
-		// so consumers never mistake an invented number for telemetry.
-		UptimePercentage: 0,
-		UptimeMeasured:   false,
+		// 0 + measured=false until the sampler has recorded samples, so
+		// consumers never mistake an invented number for telemetry.
+		UptimePercentage: uptime.UptimePct,
+		UptimeMeasured:   uptime.Measured,
+		UptimeSamples:    uptime.Samples,
 		SLATarget:        "99.9%",
 		RPO:              "not measured",
 		RTO:              "not measured",
@@ -216,8 +229,8 @@ func (a *App) buildStatusData(ctx context.Context, lang string) StatusPageData {
 		SubsystemCount:   len(subsystems),
 		LastUpdated:      time.Now().UTC().Format("15:04:05 UTC"),
 		Subsystems:       subsystems,
-		HistoricalDays:   nil,
-		HistoryAvailable: false,
+		HistoricalDays:   uptime.Days,
+		HistoryAvailable: uptime.Measured,
 		Incidents:        nil,
 	}
 }

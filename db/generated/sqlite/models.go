@@ -133,6 +133,14 @@ type AuditLog struct {
 	TenantID  sql.NullString `json:"tenant_id"`
 }
 
+type AvailabilitySample struct {
+	ID        int64     `json:"id"`
+	SampledAt time.Time `json:"sampled_at"`
+	Component string    `json:"component"`
+	Healthy   bool      `json:"healthy"`
+	LatencyMs int64     `json:"latency_ms"`
+}
+
 type Booking struct {
 	ID               string          `json:"id"`
 	BookingNumber    string          `json:"booking_number"`

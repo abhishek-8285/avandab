@@ -175,7 +175,8 @@ which always allocate head-ward from the maximum above.
 | 00177 | Cold Chain & Reefer Monitoring: reefer_profiles, reefer_telemetry_logs, temperature_excursions, multi-zone probes, defrost cycles, MKT math, and RBAC grants (FleetX Parity P3.11) | FleetX Parity P3.11 cold chain |
 | 00178 | Video Telematics & AI Dashcam: vehicle_dashcam_profiles, video_safety_events, video_livestream_sessions, driver_safety_scorecards, DMS & ADAS coaching, and video RBAC grants (FleetX Parity P3.12) | FleetX Parity P3.12 video telematics |
 | 00179 | DPDP Data Subject Access Request (DSAR) & Erasure: privacy_dsar_requests ledger, DSAR export bundle, right-to-be-forgotten PII anonymization, and statutory tax retention preservation (FleetX Parity P5.6) | FleetX Parity P5.6 DSAR & privacy rights |
-| 00180+ | future specs | reserved |
+| 00180 | Uptime availability samples: availability_samples table for the public /status page (measured 30-day uptime, replaces the previously fabricated percentages) | Trust surface / P5.2 follow-up |
+| 00181+ | future specs | reserved |
 
 ## Implementation rule
 Pick the number from this table for your feature and update the spec's §3 to

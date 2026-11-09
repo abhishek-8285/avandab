@@ -118,6 +118,13 @@ CREATE TABLE audit_logs (
     created_at  DATETIME NOT NULL DEFAULT (datetime('now')), location TEXT, tenant_id TEXT,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
+CREATE TABLE availability_samples (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    sampled_at  DATETIME NOT NULL DEFAULT (datetime('now')),
+    component   TEXT NOT NULL DEFAULT 'overall',
+    healthy     BOOLEAN NOT NULL,
+    latency_ms  INTEGER NOT NULL DEFAULT 0
+);
 CREATE TABLE bookings (
     id             TEXT PRIMARY KEY,
     booking_number TEXT NOT NULL UNIQUE,
@@ -2834,6 +2841,8 @@ CREATE INDEX idx_alerts_user_status  ON alerts(user_id, status);
 CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at DESC);
 CREATE INDEX idx_audit_logs_record ON audit_logs(table_name, record_id);
 CREATE INDEX idx_audit_logs_tenant ON audit_logs(tenant_id);
+CREATE INDEX idx_availability_samples_sampled_at
+    ON availability_samples(sampled_at);
 CREATE INDEX idx_bookings_drop_facility
     ON bookings(tenant_id, drop_facility_id) WHERE drop_facility_id IS NOT NULL;
 CREATE UNIQUE INDEX idx_bookings_idempotency

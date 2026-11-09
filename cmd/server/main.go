@@ -31,6 +31,7 @@ import (
 	alertsqlite "transport-app/internal/alerts/repository/sqlite"
 	"transport-app/internal/apiversion"
 	"transport-app/internal/apm"
+	"transport-app/internal/availability"
 	"transport-app/internal/shared/resilience"
 
 	dbmigr "transport-app/db"
@@ -362,6 +363,12 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
+	// ── Uptime availability sampler (public /status measured history) ────
+	// Records one sample per UPTIME_SAMPLE_INTERVAL (migration 00180); the
+	// status page reads them back for a real 30-day uptime instead of the
+	// fabricated percentages removed in the P0 stop-fake-data pass.
+	go availability.NewSampler(database, cfg.UptimeSampleInterval, logger).Run(sigCtx)
 
 	// Initialize repository
 	repo := sqlite.NewRepository(database)

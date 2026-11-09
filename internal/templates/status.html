@@ -68,7 +68,7 @@
                 <div class="text-[11px] font-medium text-secondary uppercase tracking-wider mb-1">30-Day Availability</div>
                 {{if .UptimeMeasured}}
                 <div class="text-2xl sm:text-3xl font-semibold text-emerald-600 font-display tabular-nums">{{printf "%.2f" .UptimePercentage}}%</div>
-                <div class="text-[11px] text-text-muted mt-1">SLA target: {{.SLATarget}}</div>
+                <div class="text-[11px] text-text-muted mt-1">From {{.UptimeSamples}} samples; SLA target: {{.SLATarget}}</div>
                 {{else}}
                 <div class="text-2xl sm:text-3xl font-semibold text-secondary font-display tabular-nums">&mdash;</div>
                 <div class="text-[11px] text-text-muted mt-1">Not measured yet; SLA target: {{.SLATarget}}</div>
@@ -139,7 +139,7 @@
             {{if .HistoryAvailable}}
             <div class="grid grid-cols-15 sm:grid-cols-30 gap-1 sm:gap-1.5 h-8">
                 {{range .HistoricalDays}}
-                <div class="bg-emerald-500/80 hover:bg-emerald-400 rounded-sm transition-colors cursor-pointer" title="Day {{.}}: measured"></div>
+                <div class="{{if not .HasData}}bg-surface-container{{else if ge .UptimePercent 99.9}}bg-emerald-500/80{{else if ge .UptimePercent 99.0}}bg-amber-400/80{{else}}bg-red-500/80{{end}} hover:opacity-80 rounded-sm transition-colors cursor-pointer" title="{{.Date}}: {{if .HasData}}{{printf "%.2f" .UptimePercent}}% ({{.Samples}} samples){{else}}no samples{{end}}"></div>
                 {{end}}
             </div>
             <div class="flex items-center justify-between text-[11px] text-text-muted mt-2">
@@ -149,7 +149,7 @@
             {{else}}
             <div class="p-6 rounded-xl bg-surface-container-low border border-border-subtle text-center">
                 <div class="text-xs font-semibold text-on-surface">Availability history not yet measured</div>
-                <div class="text-[11px] text-secondary mt-0.5">No synthetic uptime samples are recorded yet, so no 30-day bars are shown.</div>
+                <div class="text-[11px] text-secondary mt-0.5">The availability sampler has not recorded any samples yet, so no 30-day bars are shown.</div>
             </div>
             {{end}}
         </div>
