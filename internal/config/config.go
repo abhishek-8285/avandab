@@ -105,33 +105,40 @@ type Config struct {
 	// measured 30-day uptime and raises availability.sla_breach alerts.
 	UptimeSLACheckInterval time.Duration
 	PayoutRailEnabled      bool
-	RazorpayKeyID          string
-	RazorpayKeySecret      string
-	RazorpayWebhook        string
-	OCRProvider            string // mock | http (Spec 22 §6)
-	OCRHTTPURL             string
-	OCRHTTPKey             string
-	BootstrapAdmin         BootstrapAdminConfig
-	MultiTenant            MultiTenantConfig
-	RAG                    RAGConfig
-	Agent                  AgentConfig
-	Experiment             ExperimentConfig
-	Telemetry              TelemetryConfig
-	LiveMap                LiveMapConfig
-	Alerts                 AlertConfig
-	EWayBill               EWayBillConfig
-	GSTN                   GSTNConfig
-	FASTag                 FASTagConfig
-	Video                  VideoConfig
-	Routing                RoutingConfig
-	Cache                  CacheConfig
-	Storage                StorageConfig
-	WorkerLeaderLock       bool
-	Notify                 NotifyConfig
-	Comm                   CommConfig
-	Google                 GoogleConfig
-	FCM                    FCMConfig
-	Turnstile              TurnstileConfig
+	// Payout rail provider: "" (disabled) | "razorpayx". The rail stays off
+	// unless PAYOUT_RAIL_ENABLED=true AND the provider is fully configured.
+	PayoutProvider      string
+	PayoutAccountNumber string
+	PayoutWebhookSecret string
+	RazorpayXKeyID      string
+	RazorpayXKeySecret  string
+	RazorpayKeyID       string
+	RazorpayKeySecret   string
+	RazorpayWebhook     string
+	OCRProvider         string // mock | http (Spec 22 §6)
+	OCRHTTPURL          string
+	OCRHTTPKey          string
+	BootstrapAdmin      BootstrapAdminConfig
+	MultiTenant         MultiTenantConfig
+	RAG                 RAGConfig
+	Agent               AgentConfig
+	Experiment          ExperimentConfig
+	Telemetry           TelemetryConfig
+	LiveMap             LiveMapConfig
+	Alerts              AlertConfig
+	EWayBill            EWayBillConfig
+	GSTN                GSTNConfig
+	FASTag              FASTagConfig
+	Video               VideoConfig
+	Routing             RoutingConfig
+	Cache               CacheConfig
+	Storage             StorageConfig
+	WorkerLeaderLock    bool
+	Notify              NotifyConfig
+	Comm                CommConfig
+	Google              GoogleConfig
+	FCM                 FCMConfig
+	Turnstile           TurnstileConfig
 }
 
 // CommConfig controls the durable outbound queue (comm_outbox, migration
@@ -437,6 +444,11 @@ func Load() *Config {
 		UptimeSampleInterval:   getEnvDuration("UPTIME_SAMPLE_INTERVAL", time.Minute),
 		UptimeSLACheckInterval: getEnvDuration("UPTIME_SLA_CHECK_INTERVAL", 15*time.Minute),
 		PayoutRailEnabled:      getEnvBool("PAYOUT_RAIL_ENABLED", false),
+		PayoutProvider:         getEnv("PAYOUT_PROVIDER", ""),
+		PayoutAccountNumber:    os.Getenv("RAZORPAYX_ACCOUNT_NUMBER"),
+		PayoutWebhookSecret:    getEnv("PAYOUT_WEBHOOK_SECRET", os.Getenv("RAZORPAYX_WEBHOOK_SECRET")),
+		RazorpayXKeyID:         getEnv("RAZORPAYX_KEY_ID", os.Getenv("RAZORPAY_KEY_ID")),
+		RazorpayXKeySecret:     getEnv("RAZORPAYX_KEY_SECRET", os.Getenv("RAZORPAY_KEY_SECRET")),
 		RazorpayKeyID:          getEnv("RAZORPAY_KEY_ID", ""),
 		RazorpayKeySecret:      getEnv("RAZORPAY_KEY_SECRET", ""),
 		RazorpayWebhook:        os.Getenv("RAZORPAY_WEBHOOK_SECRET"),

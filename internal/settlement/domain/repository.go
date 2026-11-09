@@ -43,6 +43,13 @@ type SettlementRepository interface {
 
 	// Bank Account Verification lookup
 	IsDriverPayoutAccountVerified(ctx context.Context, tenantID, driverID string) (bool, string, error)
+	// GetPayoutAccount returns one driver payout account (number encrypted).
+	GetPayoutAccount(ctx context.Context, tenantID, accountID string) (*PayoutAccount, error)
+	// GetPayoutAccountByVerificationReference finds the account by the provider
+	// fund_account id stored at penny-drop initiation (webhook reconciliation).
+	GetPayoutAccountByVerificationReference(ctx context.Context, reference string) (*PayoutAccount, error)
+	// UpdatePayoutAccountVerification stores the penny-drop outcome.
+	UpdatePayoutAccountVerification(ctx context.Context, tenantID, accountID, status, reference, reason string) error
 
 	// Dual-write guard (gap 2): reports whether the legacy trip-close accounting
 	// flow (internal/service DriverSettlementService.GenerateSettlement) already

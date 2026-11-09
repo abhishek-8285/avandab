@@ -531,6 +531,55 @@ func (r *SQLSettlementRepository) IsDriverPayoutAccountVerified(ctx context.Cont
 	return status == "verified", id, nil
 }
 
+// GetPayoutAccount loads one payout account row (account number stays encrypted).
+func (r *SQLSettlementRepository) GetPayoutAccount(ctx context.Context, tenantID, accountID string) (*domain.PayoutAccount, error) {
+	var a domain.PayoutAccount
+	err := r.q(ctx).QueryRowContext(ctx, `
+		SELECT id, tenant_id, driver_id, account_holder_name, account_number_encrypted,
+		       account_number_masked, ifsc_code, bank_name, verification_status,
+		       COALESCE(verification_reference, '')
+		FROM driver_payout_accounts
+		WHERE tenant_id = $1 AND id = $2`, tenantID, accountID).
+		Scan(&a.ID, &a.TenantID, &a.DriverID, &a.HolderName, &a.AccountNumberEncrypted,
+			&a.AccountNumberMasked, &a.IFSC, &a.BankName, &a.VerificationStatus, &a.VerificationReference)
+	if err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
+// GetPayoutAccountByVerificationReference finds the account by provider
+// fund_account id (penny-drop webhook reconciliation).
+func (r *SQLSettlementRepository) GetPayoutAccountByVerificationReference(ctx context.Context, reference string) (*domain.PayoutAccount, error) {
+	var a domain.PayoutAccount
+	err := r.q(ctx).QueryRowContext(ctx, `
+		SELECT id, tenant_id, driver_id, account_holder_name, account_number_encrypted,
+		       account_number_masked, ifsc_code, bank_name, verification_status,
+		       COALESCE(verification_reference, '')
+		FROM driver_payout_accounts
+		WHERE verification_reference = $1
+		LIMIT 1`, reference).
+		Scan(&a.ID, &a.TenantID, &a.DriverID, &a.HolderName, &a.AccountNumberEncrypted,
+			&a.AccountNumberMasked, &a.IFSC, &a.BankName, &a.VerificationStatus, &a.VerificationReference)
+	if err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
+// UpdatePayoutAccountVerification stores the penny-drop outcome. A rejected
+// account records the provider reason; a verified account stamps verified_at.
+func (r *SQLSettlementRepository) UpdatePayoutAccountVerification(ctx context.Context, tenantID, accountID, status, reference, reason string) error {
+	_, err := r.q(ctx).ExecContext(ctx, `
+		UPDATE driver_payout_accounts
+		SET verification_status = $1,
+		    verification_reference = COALESCE(NULLIF($2, ''), verification_reference),
+		    rejected_reason = NULLIF($3, ''),
+		    verified_at = CASE WHEN $1 = 'verified' THEN CURRENT_TIMESTAMP ELSE verified_at END
+		WHERE tenant_id = $4 AND id = $5`, status, reference, reason, tenantID, accountID)
+	return err
+}
+
 // HasLegacySettlementLines is the gap-2 dual-write cross-check: it SELECTs from
 // settlement_lines, a table only the legacy trip-close flow
 // (internal/service DriverSettlementService.GenerateSettlement) writes. The

@@ -27,7 +27,7 @@ func (h *SettlementHandler) RegisterRoutes(r chi.Router) {
 		r.Post("/settlements/calculate", h.CalculateSettlement)
 		r.Get("/drivers/me/wallet", h.GetDriverWallet)
 		r.Post("/drivers/me/payouts", h.InitiatePayout)
-		r.Post("/webhooks/payouts/razorpay", h.RazorpayPayoutWebhook)
+		r.Post("/drivers/me/payout-account/verify", h.VerifyPayoutAccount)
 	})
 }
 
@@ -113,6 +113,22 @@ func (h *SettlementHandler) InitiatePayout(w http.ResponseWriter, r *http.Reques
 	} else {
 		httpx.JSON(w, http.StatusCreated, resp)
 	}
+}
+
+// VerifyPayoutAccount starts penny-drop validation for the driver's primary
+// bank account. The final valid/invalid lands via the payout webhook.
+func (h *SettlementHandler) VerifyPayoutAccount(w http.ResponseWriter, r *http.Request) {
+	tenantID, driverID, ok := h.getTenantAndUser(r)
+	if !ok {
+		httpx.JSON(w, http.StatusUnauthorized, map[string]string{"error": "authentication required"})
+		return
+	}
+	res, err := h.svc.VerifyPayoutAccount(r.Context(), tenantID, driverID)
+	if err != nil {
+		httpx.JSON(w, http.StatusUnprocessableEntity, map[string]string{"error": err.Error()})
+		return
+	}
+	httpx.JSON(w, http.StatusAccepted, res)
 }
 
 func (h *SettlementHandler) RazorpayPayoutWebhook(w http.ResponseWriter, r *http.Request) {

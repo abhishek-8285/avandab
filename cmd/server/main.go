@@ -73,6 +73,7 @@ import (
 	"transport-app/internal/repository/sqlite"
 	"transport-app/internal/safety"
 	"transport-app/internal/service"
+	rzpxPayout "transport-app/internal/settlement/payout/razorpayx"
 	"transport-app/internal/telemetry"
 
 	// Vertical-slice use cases
@@ -732,7 +733,35 @@ func main() {
 	customerAPIHandler := customerAPIHandlers.NewCustomerHandler(customerAppSvc)
 	settlementRepo := settlementSQL.NewSQLSettlementRepository(database)
 	settlementAppSvc := settlementApp.NewSettlementAppService(settlementRepo, cfg.RazorpayWebhook, 100.0)
-	settlementAppSvc.SetPayoutRailEnabled(cfg.PayoutRailEnabled)
+	// Payout rail: fail closed. The rail is only enabled when explicitly
+	// requested AND a fully configured provider exists — otherwise payouts stay
+	// disabled and the API answers ErrPayoutRailDisabled.
+	payoutRailReady := false
+	if cfg.PayoutProvider != "" {
+		switch strings.ToLower(cfg.PayoutProvider) {
+		case "razorpayx":
+			provider, err := rzpxPayout.New(rzpxPayout.Config{
+				KeyID:         cfg.RazorpayXKeyID,
+				KeySecret:     cfg.RazorpayXKeySecret,
+				AccountNumber: cfg.PayoutAccountNumber,
+				BaseURL:       os.Getenv("RAZORPAYX_BASE_URL"),
+			})
+			if err != nil {
+				logger.Warn("payout provider requested but not configured; payouts stay disabled", "provider", cfg.PayoutProvider, "error", err)
+			} else {
+				settlementAppSvc.SetPayoutProvider(provider)
+				settlementAppSvc.SetPayoutWebhookSecret(cfg.PayoutWebhookSecret)
+				payoutRailReady = true
+				logger.Info("payout rail ready: razorpayx")
+			}
+		default:
+			logger.Warn("unknown payout provider; payouts stay disabled", "provider", cfg.PayoutProvider)
+		}
+	}
+	settlementAppSvc.SetPayoutRailEnabled(cfg.PayoutRailEnabled && payoutRailReady)
+	if cfg.PayoutRailEnabled && !payoutRailReady {
+		logger.Warn("PAYOUT_RAIL_ENABLED=true but no payout provider is configured; driver payouts remain disabled")
+	}
 	settlementAPIHandler := settlementAPIHandlers.NewSettlementHandler(settlementAppSvc)
 
 	// Setup router
@@ -991,6 +1020,10 @@ func main() {
 
 	// Public: Razorpay webhook — signature-verified, rate-limited against flood attacks
 	r.With(middleware.RateLimitDistributed(appCache, 30)).Post("/api/v1/payments/razorpay-webhook", paymentAPIHandler.RazorpayWebhook)
+	// Public: payout provider callbacks (payout.processed/failed/reversed and
+	// fund_account.validation.*) — signature-verified inside the service, and
+	// deliberately outside RequireAPIAuth because providers cannot authenticate.
+	r.With(middleware.RateLimitDistributed(appCache, 30)).Post("/api/v1/webhooks/payouts/razorpay", settlementAPIHandler.RazorpayPayoutWebhook)
 
 	// Public: Razorpay SUBSCRIPTION webhook — activates plan upgrades,
 	// downgrades on cancel/expiry, and PAST_DUE on payment failure. Dead

@@ -64,6 +64,9 @@ CREATE TABLE driver_payout_accounts (
 	bank_name TEXT NOT NULL DEFAULT '',
 	is_primary INTEGER NOT NULL DEFAULT 1,
 	verification_status TEXT NOT NULL DEFAULT 'unverified',
+	verification_reference TEXT,
+	verified_at DATETIME,
+	rejected_reason TEXT,
 	created_at DATETIME DEFAULT (datetime('now'))
 );
 
@@ -194,6 +197,7 @@ func TestPayout_ConcurrentSameDriverCannotOverspend(t *testing.T) {
 			 VALUES (?, 'tenant-1', ?, 'verified', 1)`,
 			fmt.Sprintf("acc-race-%d", attempt), driverID)
 		require.NoError(t, err)
+		seedEncryptedAccount(t, setup, fmt.Sprintf("acc-race-%d", attempt), "Race Driver", "1122334455", "SBIN0001234")
 		_, err = fundSvc.CalculateAndCreateSettlement(ctx, "tenant-1", application.CalculateSettlementRequest{
 			TripID: fmt.Sprintf("trip-race-%d", attempt), DriverID: driverID,
 			GrossFare: 2000.0, CommissionRate: 0.10, TDSRate: 0.01,
@@ -207,7 +211,7 @@ func TestPayout_ConcurrentSameDriverCannotOverspend(t *testing.T) {
 			svc := application.NewSettlementAppService(
 				&observeRepo{settleSQL.NewSQLSettlementRepository(db), seen, arrived, release},
 				"secret", 100.0)
-			svc.SetPayoutRailEnabled(true)
+			enableFakePayoutRail(t, svc)
 			return svc
 		}
 		svcs := []*application.SettlementAppService{newRacer(dbA), newRacer(dbB)}

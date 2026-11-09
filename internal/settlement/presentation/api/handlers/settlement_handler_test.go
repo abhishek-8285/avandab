@@ -48,7 +48,8 @@ func setupSettlementHandlerDB(t *testing.T) *sql.DB {
 		account_holder_name TEXT NOT NULL DEFAULT '', account_number_encrypted TEXT NOT NULL DEFAULT '',
 		account_number_masked TEXT NOT NULL DEFAULT '', ifsc_code TEXT NOT NULL DEFAULT '',
 		bank_name TEXT NOT NULL DEFAULT '', is_primary INTEGER NOT NULL DEFAULT 1,
-		verification_status TEXT NOT NULL DEFAULT 'unverified', created_at DATETIME DEFAULT (datetime('now'))
+		verification_status TEXT NOT NULL DEFAULT 'unverified', verification_reference TEXT,
+		verified_at DATETIME, rejected_reason TEXT, created_at DATETIME DEFAULT (datetime('now'))
 	);
 	INSERT INTO driver_payout_accounts (id, tenant_id, driver_id, verification_status, is_primary)
 	VALUES ('acc-1', 'tenant-1', 'drv-1', 'verified', 1);
@@ -86,6 +87,7 @@ func setupSettlementHandlerDB(t *testing.T) *sql.DB {
 	_, err = db.Exec(schema)
 	require.NoError(t, err)
 
+	seedHandlerEncryptedAccount(t, db)
 	t.Cleanup(func() { _ = db.Close() })
 	return db
 }
@@ -174,6 +176,7 @@ func TestSettlementHandler_InitiatePayout(t *testing.T) {
 	db := setupSettlementHandlerDB(t)
 	repo := settleSQL.NewSQLSettlementRepository(db)
 	svc := application.NewSettlementAppService(repo, "secret_key_123", 100.0)
+	svc.SetPayoutProvider(&handlerFakePayoutProvider{})
 	svc.SetPayoutRailEnabled(true)
 	h := NewSettlementHandler(svc)
 

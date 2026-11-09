@@ -15,13 +15,16 @@ import (
 	"github.com/google/uuid"
 
 	"transport-app/internal/settlement/domain"
+	"transport-app/internal/settlement/payout"
 )
 
 type SettlementAppService struct {
-	repo              domain.SettlementRepository
-	webhookSecret     string
-	minPayoutLimit    float64
-	payoutRailEnabled bool
+	repo                domain.SettlementRepository
+	webhookSecret       string
+	minPayoutLimit      float64
+	payoutRailEnabled   bool
+	payoutProvider      payout.Provider
+	payoutWebhookSecret string
 }
 
 // SetPayoutRailEnabled enables InitiatePayout. Disabled by default: without a
@@ -327,7 +330,7 @@ type PayoutResponse struct {
 func (s *SettlementAppService) InitiatePayout(ctx context.Context, tenantID, driverID string, req InitiatePayoutRequest) (*PayoutResponse, error) {
 	// Fail closed before any read or write: no rail means no payout, and
 	// nothing may reach payout_instructions or the ledger.
-	if !s.payoutRailEnabled {
+	if !s.payoutRailEnabled || s.payoutProvider == nil {
 		return nil, ErrPayoutRailDisabled
 	}
 	if tenantID == "" || driverID == "" {
@@ -358,6 +361,7 @@ func (s *SettlementAppService) InitiatePayout(ctx context.Context, tenantID, dri
 	// failure must not leave a payable instruction behind, and a retry
 	// must converge to exactly one debit.
 	var resp *PayoutResponse
+	var payoutAccountID string
 	err = s.repo.WithTransaction(ctx, func(ctx context.Context) error {
 		// Serialize concurrent same-driver payouts before any read: without
 		// the driver lock both readers see the full balance and both debits
@@ -376,6 +380,7 @@ func (s *SettlementAppService) InitiatePayout(ctx context.Context, tenantID, dri
 
 		// 2. Bank Account Verification Check
 		verified, accountID, err := s.repo.IsDriverPayoutAccountVerified(ctx, tenantID, driverID)
+		payoutAccountID = accountID
 		if err != nil || !verified {
 			return errors.New("unverified bank account: driver must have an active verified payout account")
 		}
@@ -448,6 +453,19 @@ func (s *SettlementAppService) InitiatePayout(ctx context.Context, tenantID, dri
 		return nil, err
 	}
 
+	// 5. Hand the committed instruction to the payout rail. The wallet is
+	// already debited; a provider failure is compensated below (failed status +
+	// reversal credit), never silently retried.
+	if resp != nil && !resp.IsDuplicate {
+		if derr := s.dispatchPayout(ctx, tenantID, resp.PayoutID, driverID, payoutAccountID, req.Amount); derr != nil {
+			return resp, derr
+		}
+		// Reflect the rail outcome (processing/failed) in the API response.
+		if updated, gerr := s.repo.GetPayoutByID(ctx, tenantID, resp.PayoutID); gerr == nil && updated != nil {
+			resp.Status = updated.Status
+		}
+	}
+
 	return resp, nil
 }
 
@@ -480,6 +498,17 @@ type RazorpayWebhookPayload struct {
 				ErrorDesc string  `json:"error_description"`
 			} `json:"entity"`
 		} `json:"payout"`
+		FundAccount struct {
+			Entity struct {
+				ID      string `json:"id"`
+				Status  string `json:"status"`
+				Results struct {
+					AccountStatus  string `json:"account_status"` // valid | invalid
+					RegisteredName string `json:"registered_name"`
+					Reason         string `json:"reason_code"`
+				} `json:"results"`
+			} `json:"entity"`
+		} `json:"fund_account"`
 	} `json:"payload"`
 }
 
@@ -497,13 +526,13 @@ func (s *SettlementAppService) ProcessProviderWebhook(ctx context.Context, _, pr
 	// 1. Signature Verification: fail closed without a secret (C3) — an
 	// unverified payout webhook can forge PAID outcomes. Mirrors the payment
 	// webhook's ErrWebhookNotConfigured.
-	if s.webhookSecret == "" {
+	if s.payoutSecret() == "" {
 		return errors.New("webhook secret not configured")
 	}
 	if signature == "" {
 		return errors.New("missing webhook signature: signature is mandatory")
 	}
-	mac := hmac.New(sha256.New, []byte(s.webhookSecret))
+	mac := hmac.New(sha256.New, []byte(s.payoutSecret()))
 	mac.Write(body)
 	expectedSignature := hex.EncodeToString(mac.Sum(nil))
 	if !hmac.Equal([]byte(signature), []byte(expectedSignature)) {
@@ -519,6 +548,11 @@ func (s *SettlementAppService) ProcessProviderWebhook(ctx context.Context, _, pr
 	var data RazorpayWebhookPayload
 	if err := json.Unmarshal(body, &data); err != nil {
 		return fmt.Errorf("invalid webhook JSON: %w", err)
+	}
+
+	// Penny-drop validation callbacks complete the bank-account verification.
+	if strings.HasPrefix(data.Event, "fund_account.validation.") {
+		return s.applyFundAccountValidation(ctx, data, providerEventID, string(body))
 	}
 
 	entity := data.Payload.Payout.Entity
