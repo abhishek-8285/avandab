@@ -78,3 +78,51 @@ export async function requestAdvance(
   if (res.status === 201) return res.json();
   throw new Error(`advance request failed (${res.status})`);
 }
+
+export interface DriverPayoutAccount {
+  masked: string;
+  bank_name: string;
+  ifsc: string;
+  verification_status: 'unverified' | 'penny_drop_pending' | 'verified' | 'rejected' | string;
+}
+
+export interface DriverPayout {
+  id: string;
+  amount: number;
+  currency: string;
+  status: 'initiated' | 'processing' | 'paid' | 'failed' | 'reversed' | 'cancelled' | string;
+  utr?: string;
+  provider_payout_id?: string;
+  failure_reason?: string;
+  initiated_at: string;
+  completed_at?: string;
+}
+
+export interface DriverPayouts {
+  rail_enabled: boolean;
+  account?: DriverPayoutAccount | null;
+  payouts: DriverPayout[];
+}
+
+/** GET /api/v1/drivers/me/payouts - real payout-rail state; null when disabled/forbidden. */
+export async function getDriverPayouts(): Promise<DriverPayouts | null> {
+  const res = await fetch(`${getApiBaseURL()}/api/v1/drivers/me/payouts`, { headers: authHeaders() });
+  if (res.status === 403 || res.status === 404) return null;
+  if (!res.ok) throw new Error(`payouts fetch failed (${res.status})`);
+  const data = await res.json();
+  return {
+    rail_enabled: !!data.rail_enabled,
+    account: data.account ?? null,
+    payouts: data.payouts ?? [],
+  };
+}
+
+/** POST /api/v1/drivers/me/payout-account/verify - starts penny-drop validation. */
+export async function verifyPayoutAccount(): Promise<{ status: string; reference?: string }> {
+  const res = await fetch(`${getApiBaseURL()}/api/v1/drivers/me/payout-account/verify`, {
+    method: 'POST',
+    headers: authHeaders(),
+  });
+  if (!res.ok) throw new Error(`payout verification failed (${res.status})`);
+  return res.json();
+}

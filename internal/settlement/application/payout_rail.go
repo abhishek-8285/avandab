@@ -219,3 +219,9 @@ func (s *SettlementAppService) ListDriverPayouts(ctx context.Context, tenantID, 
 	}
 	return &PayoutSummary{Account: acct, Payouts: payouts}, nil
 }
+
+// PayoutRailEnabled reports whether disbursements are actually configured
+// (provider wired + rail explicitly enabled).
+func (s *SettlementAppService) PayoutRailEnabled() bool {
+	return s.payoutRailEnabled && s.payoutProvider != nil
+}

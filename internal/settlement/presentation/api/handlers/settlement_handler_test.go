@@ -296,3 +296,53 @@ func TestSettlementHandler_RazorpayPayoutWebhook(t *testing.T) {
 	}
 	assert.Equal(t, http.StatusOK, wValid.Code)
 }
+
+func TestSettlementHandler_ListMyPayouts(t *testing.T) {
+	db := setupSettlementHandlerDB(t)
+	repo := settleSQL.NewSQLSettlementRepository(db)
+	svc := application.NewSettlementAppService(repo, "secret_key_123", 100.0)
+	h := NewSettlementHandler(svc)
+
+	_, err := db.Exec(`INSERT INTO payout_instructions
+		(id, tenant_id, driver_id, payout_account_id, amount, currency, idempotency_key, status, provider_payout_id, utr, initiated_at)
+		VALUES ('pout-list-1','tenant-1','drv-1','acc-1',500,'INR','idem-list-1','paid','pout_rzp_9','UTR999','2026-11-09 10:00:00')`)
+	require.NoError(t, err)
+
+	ctx := shared.ContextWithTenantID(context.Background(), "tenant-1")
+	ctx = context.WithValue(ctx, auth.ContextUser, &auth.SessionData{UserID: "drv-1"})
+	req := httptest.NewRequest("GET", "/api/v1/drivers/me/payouts", nil).WithContext(ctx)
+	w := httptest.NewRecorder()
+	h.ListMyPayouts(w, req)
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var resp struct {
+		RailEnabled bool `json:"rail_enabled"`
+		Account     struct {
+			Masked             string `json:"masked"`
+			BankName           string `json:"bank_name"`
+			IFSC               string `json:"ifsc"`
+			VerificationStatus string `json:"verification_status"`
+		} `json:"account"`
+		Payouts []struct {
+			ID     string  `json:"id"`
+			Amount float64 `json:"amount"`
+			Status string  `json:"status"`
+			UTR    string  `json:"utr"`
+		} `json:"payouts"`
+	}
+	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
+	assert.False(t, resp.RailEnabled, "rail disabled without a configured provider")
+	assert.Equal(t, "verified", resp.Account.VerificationStatus)
+	assert.Equal(t, "XXXX4455", resp.Account.Masked)
+	require.Len(t, resp.Payouts, 1)
+	assert.Equal(t, "paid", resp.Payouts[0].Status)
+	assert.Equal(t, "UTR999", resp.Payouts[0].UTR)
+	assert.NotContains(t, w.Body.String(), "account_number_encrypted")
+	assert.NotContains(t, w.Body.String(), "1122334455", "plain account number must never leak")
+
+	// Fail closed without a session.
+	req2 := httptest.NewRequest("GET", "/api/v1/drivers/me/payouts", nil)
+	w2 := httptest.NewRecorder()
+	h.ListMyPayouts(w2, req2)
+	assert.Equal(t, http.StatusUnauthorized, w2.Code)
+}
