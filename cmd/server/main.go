@@ -71,6 +71,7 @@ import (
 	"transport-app/internal/realtime"
 	"transport-app/internal/reportbuilder"
 	"transport-app/internal/repository/sqlite"
+	"transport-app/internal/retention"
 	"transport-app/internal/safety"
 	"transport-app/internal/service"
 	rzpxPayout "transport-app/internal/settlement/payout/razorpayx"
@@ -2138,6 +2139,13 @@ func main() {
 	// When uptime recovers above target it auto-resolves those open alerts.
 	slaMonitor := availability.NewSLAMonitor(database, eventBus, alertRepo, 30*24*time.Hour, cfg.UptimeSampleInterval, cfg.UptimeSLACheckInterval, logger)
 	runLeadered("availability_sla_monitor", slaMonitor.Run)
+
+	// Business-data retention: enforces the published DPDP schedule that had
+	// no automated disposal (video telematics 90d, audit/breach ledger 3y,
+	// consents/DSAR 5y). Telemetry/sessions/outbox have their own purgers.
+	if cfg.RetentionWorkerEnabled {
+		runLeadered("business_retention", retention.NewWorker(database, logger, cfg.RetentionInterval).Run)
+	}
 
 	// Spec 22 S1 — reopen snoozed inbox alerts whose snooze expired.
 	if app.AlertsRepo != nil {

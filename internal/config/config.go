@@ -104,6 +104,11 @@ type Config struct {
 	// UptimeSLACheckInterval controls how often the SLA monitor re-evaluates
 	// measured 30-day uptime and raises availability.sla_breach alerts.
 	UptimeSLACheckInterval time.Duration
+	// RetentionWorkerEnabled runs the business-data retention worker that
+	// enforces the published DPDP schedule (video 90d, audit/breach 3y,
+	// consents/DSAR 5y). RetentionInterval is its tick (default 24h).
+	RetentionWorkerEnabled bool
+	RetentionInterval      time.Duration
 	PayoutRailEnabled      bool
 	// Payout rail provider: "" (disabled) | "razorpayx". The rail stays off
 	// unless PAYOUT_RAIL_ENABLED=true AND the provider is fully configured.
@@ -443,6 +448,8 @@ func Load() *Config {
 		PWAEnabled:             getEnvBool("PWA_ENABLED", false),
 		UptimeSampleInterval:   getEnvDuration("UPTIME_SAMPLE_INTERVAL", time.Minute),
 		UptimeSLACheckInterval: getEnvDuration("UPTIME_SLA_CHECK_INTERVAL", 15*time.Minute),
+		RetentionWorkerEnabled: getEnvBool("RETENTION_WORKER_ENABLED", true),
+		RetentionInterval:      getEnvDuration("RETENTION_INTERVAL", 24*time.Hour),
 		PayoutRailEnabled:      getEnvBool("PAYOUT_RAIL_ENABLED", false),
 		PayoutProvider:         getEnv("PAYOUT_PROVIDER", ""),
 		PayoutAccountNumber:    os.Getenv("RAZORPAYX_ACCOUNT_NUMBER"),

@@ -2853,6 +2853,7 @@ CREATE INDEX idx_bookings_pickup_facility
 CREATE INDEX idx_bookings_tenant ON bookings(tenant_id);
 CREATE INDEX idx_bookings_tenant_status_pickup
     ON bookings(tenant_id, status, pickup_date DESC);
+CREATE INDEX idx_breach_incidents_detected_at ON breach_incidents(detected_at);
 CREATE INDEX idx_breach_incidents_tenant_status
     ON breach_incidents(tenant_id, status);
 CREATE INDEX idx_comm_outbox_poll ON comm_outbox(status, next_attempt_at);
@@ -3117,6 +3118,7 @@ CREATE INDEX idx_positions_imei_time ON telemetry_positions(imei, device_time DE
 CREATE INDEX idx_positions_raw_event ON telemetry_positions(raw_event_id);
 CREATE INDEX idx_positions_trip_time ON telemetry_positions(trip_id, device_time DESC);
 CREATE INDEX idx_positions_vehicle_time ON telemetry_positions(vehicle_id, device_time DESC);
+CREATE INDEX idx_privacy_dsar_created_at ON privacy_dsar_requests(created_at);
 CREATE INDEX idx_privacy_dsar_requests_tenant_created
     ON privacy_dsar_requests(tenant_id, created_at DESC);
 CREATE INDEX idx_privacy_dsar_requests_tenant_user
@@ -3223,6 +3225,7 @@ CREATE INDEX idx_tyres_tenant_vehicle
 CREATE UNIQUE INDEX idx_tyres_vehicle_axle_mounted
     ON tyres(vehicle_id, axle_position)
     WHERE status = 'MOUNTED' AND vehicle_id IS NOT NULL AND axle_position IS NOT NULL;
+CREATE INDEX idx_user_consents_created_at ON user_consents(created_at);
 CREATE INDEX idx_user_consents_tenant_user
     ON user_consents(tenant_id, user_id);
 CREATE UNIQUE INDEX idx_users_google_sub
@@ -3241,12 +3244,14 @@ CREATE INDEX idx_vehicle_ownership_vehicle ON vehicle_ownership(tenant_id, vehic
 CREATE INDEX idx_vehicles_tenant ON vehicles(tenant_id);
 CREATE INDEX idx_vehicles_tenant_status ON vehicles(tenant_id, status);
 CREATE INDEX idx_verification_attempts_entity ON verification_attempts(tenant_id, entity_type, entity_id);
+CREATE INDEX idx_video_events_event_time ON video_safety_events(event_time);
 CREATE INDEX idx_video_events_tenant_driver
     ON video_safety_events(tenant_id, driver_id);
 CREATE INDEX idx_video_events_tenant_review_sev
     ON video_safety_events(tenant_id, review_status, severity);
 CREATE INDEX idx_video_events_tenant_veh_time
     ON video_safety_events(tenant_id, vehicle_id, event_time);
+CREATE INDEX idx_video_livestream_created_at ON video_livestream_sessions(started_at);
 CREATE INDEX idx_video_livestream_tenant_veh
     ON video_livestream_sessions(tenant_id, vehicle_id, status);
 CREATE INDEX idx_vlp_trip ON vehicle_latest_position(trip_id);

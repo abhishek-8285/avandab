@@ -178,7 +178,8 @@ which always allocate head-ward from the maximum above.
 | 00180 | Uptime availability samples: availability_samples table for the public /status page (measured 30-day uptime, replaces the previously fabricated percentages) | Trust surface / P5.2 follow-up |
 | 00181 | Alert escalation schedules: severity-tiered default `escalation_schedule` backfill for the 16 shipped alert rules (critical/blocker 3 steps, warning 2, info 1) so the escalator actually fires | Ops readiness / Spec 05 §4 |
 | 00182 | Availability SLA alert: `availability` alert source + `rule_sla_breach` (critical, 6h cooldown, 3-step in-app escalation) so measured 30-day uptime below 99.9% becomes an operational alert | Ops readiness / Spec 05 §4 |
-| 00183+ | future specs | reserved |
+| 00183 | Retention purge indexes: event_time/created_at/detected_at indexes on video_safety_events, video_livestream_sessions, breach_incidents, user_consents, privacy_dsar_requests so the business-retention worker deletes by range scan instead of table scan | Ops / published DPDP retention schedule |
+| 00184+ | future specs | reserved |
 
 ## Implementation rule
 Pick the number from this table for your feature and update the spec's §3 to
