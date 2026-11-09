@@ -268,3 +268,15 @@ writes to the DB and calls nothing).
 2. Is hardware in scope at all? If no, P4 collapses to cloud-to-cloud ingest.
 3. Which compliance rails are commercially required in the next 90 days?
    (E-way bill and FASTag are the two that produce fake data today.)
+
+
+---
+
+## Update 2026-11-09 (branch `feat/trip-fuel-rollup`)
+
+Several "CONFIRMED" gaps above are closed in code on the branch, pending merge:
+- **Payouts are no longer ledger-only**: RazorpayX rail (IMPS), penny-drop verification, signed webhook reconciliation, wallet compensation on failure. Live proof still needs merchant credentials.
+- **Business-table retention exists**: daily worker enforces video 90d / audit+breach 3y / consents+DSAR 5y (migration 00183 indexes).
+- **Public status is measured**: real availability sampler + SLA breach alerts + incident history; fabricated 99.98% and RPO/RTO claims removed.
+- **Multi-tenant resolution is fail-closed by default** (`MULTI_TENANT_ENABLED=true`).
+- **PG cutover rehearsed** (PG 18.2, v182, 179/179 tables, down/up clean); A7 two-phase requirement and the `--check` tenant-orphan gap documented in `docs/tech-specs/c2-pg-cutover-runbook.md`.

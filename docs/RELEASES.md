@@ -100,3 +100,33 @@ sqlc regen: `TelemetrySnapshot.TsUnix`. Index head → `00134`, next free `00135
 - `go build ./cmd/server` exit 0; `go test ./internal/privacy/... ./db/...` clean PASS.
 - Typography bold ratchet: `TestTypographyBoldRatchet` clean PASS (strict zero new `font-bold` tokens).
 - Schema integrity: `db/schema.sql` regenerated across all 178 tables from migrations 00001–00179.
+
+
+---
+
+## Unreleased — feat/trip-fuel-rollup @ 51d763c (2026-11-09)
+
+Scope: truth passes, measured uptime + SLA alerting, fail-closed multi-tenancy, RazorpayX payout rail, business-data retention, PG cutover rehearsal tooling.
+
+### Migrations (sqlite + pg mirror, all up/down-tested)
+| # | Change | Data note |
+|---|--------|-----------|
+| 00180 | `availability_samples` (sampler-written uptime samples, 90d retention) | platform-scoped; fresh installs show "not measured" until the sampler writes |
+| 00181 | severity-tiered `escalation_schedule` backfill for the 16 shipped alert rules | custom schedules untouched; down clears only backfilled values |
+| 00182 | `availability` alert source + `rule_sla_breach` | fires when measured 30d uptime < 99.9%; 6h cooldown |
+| 00183 | purge indexes for the retention worker | indexes only, no DDL change |
+
+### Behavior changes (operator-visible)
+- **MULTI_TENANT_ENABLED now defaults to `true`** (fail-closed per-user tenant resolution). Single-org deployments must set `false`; startup warns. Upgrade-safe: `users.tenant_id` defaults to seeded tenant `1`.
+- **/status is measured, not fabricated**: removed the 99.98% uptime, per-subsystem availability, RPO/RTO and 30-day-history claims. Only probeable states are reported: measured 30-day availability, API p95, DB ping, real incident history from SLA alerts. JSON gains `uptime_measured`, `uptime_samples`, `history_available`, `db_latency`, `subsystem_count`.
+- **/pricing claims aligned**: 99.9% is a target (credits only under a signed Enterprise agreement); removed SAP/Oracle connectors, WAL replication, automated failover, 24/7 pager, "automated compliance rails" and "certified data centres".
+- **Marketing copy aligned**: removed invented feature stats (3x/95%/100% etc.) and hardware-free/compliance absolutes from /features and the landing page.
+- **SLA alerting**: measured 30-day uptime < 99.9% raises `availability.sla_breach` per active tenant through `rule_sla_breach` (5/15/30 min in-app escalation); recovery above target auto-resolves open alerts with system attribution.
+- **Payout rail**: real RazorpayX IMPS payouts + penny-drop account verification + signed payout-webhook reconciliation; provider failure/reversal credits the wallet back exactly once. Disabled unless `PAYOUT_RAIL_ENABLED=true` and a fully configured provider exists.
+- **Business retention worker**: enforces the published DPDP schedule (video 90d, audit/breach 3y, consents/DSAR 5y) in bounded batches; tax ledgers untouched.
+- **PG cutover tooling**: `sqlite2pg --check` now fails on trigger-enforced tenant orphans and lists sqlite-only rows; the A7 two-phase requirement is documented in `docs/tech-specs/c2-pg-cutover-runbook.md` with 2026-11-09 rehearsal evidence.
+
+### Proof
+- `go build ./...`, `go vet ./...`, gofmt clean; full suite `go test -shuffle ./internal/... ./test/...` → 147 packages ok, 0 FAIL; coverage 61.2% (filtered 60.9%) ≥ 50, money paths 67.8% ≥ 65.
+- PG rehearsal: PG 18.2 chain v182 (176 migrations), 179/179 table parity, down→0→up clean; server boot on PG serves /login, /healthz, /status 200.
+- Environment limits: race detector and Go stdlib govulncheck are CI-only on this android/arm64 host; the hardware soak test runs in CI.
