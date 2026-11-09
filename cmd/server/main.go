@@ -453,6 +453,10 @@ func main() {
 	})
 	notifSvc := notifications.NewServiceWithChannels(emailSender, smsSender, id.NewUUIDGenerator(), clock.NewRealClock())
 
+	// Scheduled report delivery rides the same email adapter: real sends when
+	// SMTP/pool is configured, honest PENDING_DELIVERY when it is not.
+	reportDelivery := reportbuilder.NewEmailDelivery(emailSender, logger)
+
 	var emailChannel alertchannels.Provider = stubProviders["email"]
 	if emailSender.Configured() {
 		emailChannel = alertchannels.NewEmailBridge(notifSvc)
@@ -2244,7 +2248,7 @@ func main() {
 
 	// Fleet report builder scheduled delivery engine (FleetX Parity P3.4)
 	reportScheduler := reportbuilder.NewScheduler(
-		reportbuilder.NewService(reportbuilder.NewRepository(database)),
+		reportbuilder.NewServiceWithDelivery(reportbuilder.NewRepository(database), reportDelivery),
 		logger,
 	)
 	runLeadered("report_scheduler", reportScheduler.Run)
