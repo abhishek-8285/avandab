@@ -101,34 +101,37 @@ type Config struct {
 	// UptimeSampleInterval controls the in-process availability sampler that
 	// feeds the measured 30-day history on /status (migration 00180).
 	UptimeSampleInterval time.Duration
-	PayoutRailEnabled    bool
-	RazorpayKeyID        string
-	RazorpayKeySecret    string
-	RazorpayWebhook      string
-	OCRProvider          string // mock | http (Spec 22 §6)
-	OCRHTTPURL           string
-	OCRHTTPKey           string
-	BootstrapAdmin       BootstrapAdminConfig
-	MultiTenant          MultiTenantConfig
-	RAG                  RAGConfig
-	Agent                AgentConfig
-	Experiment           ExperimentConfig
-	Telemetry            TelemetryConfig
-	LiveMap              LiveMapConfig
-	Alerts               AlertConfig
-	EWayBill             EWayBillConfig
-	GSTN                 GSTNConfig
-	FASTag               FASTagConfig
-	Video                VideoConfig
-	Routing              RoutingConfig
-	Cache                CacheConfig
-	Storage              StorageConfig
-	WorkerLeaderLock     bool
-	Notify               NotifyConfig
-	Comm                 CommConfig
-	Google               GoogleConfig
-	FCM                  FCMConfig
-	Turnstile            TurnstileConfig
+	// UptimeSLACheckInterval controls how often the SLA monitor re-evaluates
+	// measured 30-day uptime and raises availability.sla_breach alerts.
+	UptimeSLACheckInterval time.Duration
+	PayoutRailEnabled      bool
+	RazorpayKeyID          string
+	RazorpayKeySecret      string
+	RazorpayWebhook        string
+	OCRProvider            string // mock | http (Spec 22 §6)
+	OCRHTTPURL             string
+	OCRHTTPKey             string
+	BootstrapAdmin         BootstrapAdminConfig
+	MultiTenant            MultiTenantConfig
+	RAG                    RAGConfig
+	Agent                  AgentConfig
+	Experiment             ExperimentConfig
+	Telemetry              TelemetryConfig
+	LiveMap                LiveMapConfig
+	Alerts                 AlertConfig
+	EWayBill               EWayBillConfig
+	GSTN                   GSTNConfig
+	FASTag                 FASTagConfig
+	Video                  VideoConfig
+	Routing                RoutingConfig
+	Cache                  CacheConfig
+	Storage                StorageConfig
+	WorkerLeaderLock       bool
+	Notify                 NotifyConfig
+	Comm                   CommConfig
+	Google                 GoogleConfig
+	FCM                    FCMConfig
+	Turnstile              TurnstileConfig
 }
 
 // CommConfig controls the durable outbound queue (comm_outbox, migration
@@ -418,27 +421,28 @@ func Load() *Config {
 			MaxIdleConns:    maxIdleConns,
 			ConnMaxLifetime: getEnvDuration("DB_CONN_MAX_LIFETIME", 15*time.Minute),
 		},
-		CookieSecret:         getEnv("COOKIE_SECRET", "dev-secret-key-change-in-production-32b!"),
-		APITokenSecret:       getEnv("API_SECRET", ""),
-		PublicBaseURL:        strings.TrimRight(getEnv("APP_PUBLIC_URL", "https://avandab.com"), "/"),
-		SessionMaxAge:        sessionMaxAge,
-		CookieSecure:         cookieSecure,
-		LogLevel:             getEnv("LOG_LEVEL", "info"),
-		UploadDir:            getEnv("UPLOAD_DIR", "./uploads"),
-		StaticDir:            getEnv("STATIC_DIR", "internal/static"),
-		MaxUploadSize:        maxUpload,
-		ExportMaxRows:        getEnvInt("EXPORT_MAX_ROWS", 50000),
-		DashboardSSEEnabled:  getEnvBool("DASHBOARD_SSE_ENABLED", true),
-		DashboardSSEInterval: time.Duration(getEnvInt("DASHBOARD_SSE_INTERVAL_SEC", 5)) * time.Second,
-		PWAEnabled:           getEnvBool("PWA_ENABLED", false),
-		UptimeSampleInterval: getEnvDuration("UPTIME_SAMPLE_INTERVAL", time.Minute),
-		PayoutRailEnabled:    getEnvBool("PAYOUT_RAIL_ENABLED", false),
-		RazorpayKeyID:        getEnv("RAZORPAY_KEY_ID", ""),
-		RazorpayKeySecret:    getEnv("RAZORPAY_KEY_SECRET", ""),
-		RazorpayWebhook:      os.Getenv("RAZORPAY_WEBHOOK_SECRET"),
-		OCRProvider:          getEnv("OCR_PROVIDER", "mock"),
-		OCRHTTPURL:           getEnv("OCR_HTTP_URL", ""),
-		OCRHTTPKey:           getEnv("OCR_HTTP_KEY", ""),
+		CookieSecret:           getEnv("COOKIE_SECRET", "dev-secret-key-change-in-production-32b!"),
+		APITokenSecret:         getEnv("API_SECRET", ""),
+		PublicBaseURL:          strings.TrimRight(getEnv("APP_PUBLIC_URL", "https://avandab.com"), "/"),
+		SessionMaxAge:          sessionMaxAge,
+		CookieSecure:           cookieSecure,
+		LogLevel:               getEnv("LOG_LEVEL", "info"),
+		UploadDir:              getEnv("UPLOAD_DIR", "./uploads"),
+		StaticDir:              getEnv("STATIC_DIR", "internal/static"),
+		MaxUploadSize:          maxUpload,
+		ExportMaxRows:          getEnvInt("EXPORT_MAX_ROWS", 50000),
+		DashboardSSEEnabled:    getEnvBool("DASHBOARD_SSE_ENABLED", true),
+		DashboardSSEInterval:   time.Duration(getEnvInt("DASHBOARD_SSE_INTERVAL_SEC", 5)) * time.Second,
+		PWAEnabled:             getEnvBool("PWA_ENABLED", false),
+		UptimeSampleInterval:   getEnvDuration("UPTIME_SAMPLE_INTERVAL", time.Minute),
+		UptimeSLACheckInterval: getEnvDuration("UPTIME_SLA_CHECK_INTERVAL", 15*time.Minute),
+		PayoutRailEnabled:      getEnvBool("PAYOUT_RAIL_ENABLED", false),
+		RazorpayKeyID:          getEnv("RAZORPAY_KEY_ID", ""),
+		RazorpayKeySecret:      getEnv("RAZORPAY_KEY_SECRET", ""),
+		RazorpayWebhook:        os.Getenv("RAZORPAY_WEBHOOK_SECRET"),
+		OCRProvider:            getEnv("OCR_PROVIDER", "mock"),
+		OCRHTTPURL:             getEnv("OCR_HTTP_URL", ""),
+		OCRHTTPKey:             getEnv("OCR_HTTP_KEY", ""),
 		BootstrapAdmin: BootstrapAdminConfig{
 			Email:    os.Getenv("BOOTSTRAP_ADMIN_EMAIL"),
 			Name:     getEnv("BOOTSTRAP_ADMIN_NAME", "Admin"),

@@ -2098,6 +2098,13 @@ func main() {
 	runLeadered("alerts_escalator", alertEscalator.Run)
 	runLeadered("alerts_flusher", alertFlusher.Run)
 
+	// Platform SLA monitor: when measured 30-day uptime drops below the
+	// published 99.9% target, publish availability.sla_breach per active
+	// tenant so the alert pipeline (rule_sla_breach, migration 00182) raises a
+	// real, escalating operational alert instead of only a status-page number.
+	slaMonitor := availability.NewSLAMonitor(database, eventBus, 30*24*time.Hour, cfg.UptimeSampleInterval, cfg.UptimeSLACheckInterval, logger)
+	runLeadered("availability_sla_monitor", slaMonitor.Run)
+
 	// Spec 22 S1 — reopen snoozed inbox alerts whose snooze expired.
 	if app.AlertsRepo != nil {
 		inboxRepo := app.AlertsRepo

@@ -176,7 +176,9 @@ which always allocate head-ward from the maximum above.
 | 00178 | Video Telematics & AI Dashcam: vehicle_dashcam_profiles, video_safety_events, video_livestream_sessions, driver_safety_scorecards, DMS & ADAS coaching, and video RBAC grants (FleetX Parity P3.12) | FleetX Parity P3.12 video telematics |
 | 00179 | DPDP Data Subject Access Request (DSAR) & Erasure: privacy_dsar_requests ledger, DSAR export bundle, right-to-be-forgotten PII anonymization, and statutory tax retention preservation (FleetX Parity P5.6) | FleetX Parity P5.6 DSAR & privacy rights |
 | 00180 | Uptime availability samples: availability_samples table for the public /status page (measured 30-day uptime, replaces the previously fabricated percentages) | Trust surface / P5.2 follow-up |
-| 00181+ | future specs | reserved |
+| 00181 | Alert escalation schedules: severity-tiered default `escalation_schedule` backfill for the 16 shipped alert rules (critical/blocker 3 steps, warning 2, info 1) so the escalator actually fires | Ops readiness / Spec 05 §4 |
+| 00182 | Availability SLA alert: `availability` alert source + `rule_sla_breach` (critical, 6h cooldown, 3-step in-app escalation) so measured 30-day uptime below 99.9% becomes an operational alert | Ops readiness / Spec 05 §4 |
+| 00183+ | future specs | reserved |
 
 ## Implementation rule
 Pick the number from this table for your feature and update the spec's §3 to

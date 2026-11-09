@@ -417,6 +417,29 @@ func (e *Engine) normalizeEvent(ev events.Event) (IngestEvent, error) {
 		ingest.Metadata = m
 		return ingest, nil
 
+	case "availability.sla_breach":
+		b, _ := json.Marshal(ev.Payload)
+		var m map[string]interface{}
+		_ = json.Unmarshal(b, &m)
+		ingest.Source = domain.SourceAvailability
+		ingest.AlertType = domain.AlertTypeSLABreach
+		// Severity comes from the rule (critical); per-tenant dedup uses the
+		// tenant id as entity id so one tenant's open breach cannot dedupe
+		// another tenant's alert.
+		ingest.EntityType = "platform"
+		if tid, ok := m["tenant_id"].(string); ok {
+			ingest.TenantID = tid
+			ingest.EntityID = tid
+		}
+		if title, ok := m["title"].(string); ok {
+			ingest.Title = title
+		}
+		if msg, ok := m["message"].(string); ok {
+			ingest.Message = msg
+		}
+		ingest.Metadata = m
+		return ingest, nil
+
 	case "ComplianceBlocked":
 		b, _ := json.Marshal(ev.Payload)
 		var m map[string]interface{}
