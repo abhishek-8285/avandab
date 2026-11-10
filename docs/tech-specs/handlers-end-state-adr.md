@@ -576,6 +576,36 @@ dropdowns and the label map, the registration/vehicle-number/id fallbacks,
 ordering, best-effort nil-DB/dead-table behavior, the id-only label quirk and
 the audit row shape/payload bytes + platform-tenant fallback.
 
+**Phase 2 progress (2026-11-10, eighteenth increment - expenses/kharcha
+domain complete):** the remaining raw SQL of the driver expense, e-POD and
+driver-money surfaces moved into a new `internal/kharcha/application` slice
+(no `internal/kharcha*`/`internal/expense*` package existed, and
+`internal/payment` owns Razorpay/recorded payments, not the expense ledger):
+`LookupUserDriver` (the legacy mobile identity rule - drivers.id OR
+drivers.email via the users table, no tenant filter, nil for no driver row,
+real errors surfaced for logging), `UpdateTripPODArtifacts` (the best-effort
+trips e-POD signature/discrepancy UPDATE with the exact
+COALESCE/NULLIF/zero-guard CASE semantics), `DriverSettlements` (the
+driver-scoped 50-newest settlement read with the legacy trip_id->"period"
+mapping and nullable paid_at) and `ExpenseOCRFields` (tenant-scoped
+ocr_amount/ocr_confidence read where missing rows/NULL columns stay JSON
+nulls). The approval/verification state machine, fuel-audit enforcement,
+ledger/stats math, driver balance/advance decisions, audit helper and all
+validation stay in the untouched `service.KharchaService`,
+`service.KharchaVerifyService`/`service.DriverBalanceService` and handler
+code; handlers keep multipart/JSON parsing, status codes, response shapes and
+rendering. `internal/handlers/kharcha.go` is now 505 lines / 0 SQL sites (was
+516 / 3), `driver_money.go` 160 / 0 (was 177 / 2), `kharcha_verify.go` 61 /
+0 (was 65 / 1), handlers/ total 24 (was 30), caps lowered in the same PR.
+Existing POD/expense-API characterization tests
+(`TestDeliverPOD_SuccessAndErrors`, `TestDeliverPOD_OTPVerification`,
+`TestCreateExpenseAPI_SuccessAndErrors`) pass unchanged; new
+`internal/kharcha/application/kharcha_test.go` pins the identity rules
+(email/id match, missing row, surfaced lookup errors, no tenant filter), the
+e-POD coalesce/zero-guard matrix, settlement ordering/50-row cap/period
+mapping/nullable paid_at/driver isolation, and tenant-scoped OCR field reads
+with NULL/no-row semantics.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 
