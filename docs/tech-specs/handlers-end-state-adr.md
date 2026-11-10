@@ -153,6 +153,28 @@ unchanged; new `internal/trip/application/trip_write_use_cases_test.go` pins
 tenant isolation, vehicle resolution, the exact breakdown description and the
 legacy POD mirror behaviour.
 
+**Phase 2 progress (2026-11-10, third increment - trip read paths):** the
+remaining trip read queries moved to `internal/trip/application`
+(`TripReadQueries` read model: `PODConsigneePhone` - POD OTP SMS consignee
+phone; `DriverPreferredVehicles` - new/edit driver→vehicle prefill map;
+`TripStops` - trip view stop list; `AssignmentRefs` - dispatch-compliance
+prechecks; `LastStop` - ePOD last-stop auto-locate; `PublicEPODCertificate` -
+trip/vehicle/driver/tenant/trip_stops data for the login-free certificate),
+with sentinel `ErrEPODCertificateNotFound` preserving the handler's 404 and
+the legacy best-effort companion lookups (vehicle/driver/tenant/stops errors
+leave blank fields). Tenant scoping is unchanged: the tenant-scoped queries
+still receive the trip's tenant (`shared.TenantIDFromContext`/`MustTenantID`
+at the call sites), while the public certificate keeps its legacy
+id-or-trip-number lookup and derives branding from the trip's own tenant row
+(never the global `company_settings` row). `internal/handlers/trips.go` is
+now 1,931 lines / 0 SQL sites (was 2,010 / 12), handlers/ total 169 (was 181),
+caps lowered in the same PR. Existing trip handler tests (epod, multipart/base64
+POD, create/assign flash, selected-trip CRUD, tenant isolation,
+complete/detention) pass unchanged; new
+`internal/trip/application/trip_read_use_cases_test.go` pins tenant isolation,
+the not-found sentinel, stop ordering, POD URL precedence, nullable timestamp
+parsing and the legacy best-effort companion lookups.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 

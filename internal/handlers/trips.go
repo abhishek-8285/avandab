@@ -209,13 +209,14 @@ func (h *TripHandlers) SendPODOTPSMS(w http.ResponseWriter, r *http.Request) {
 		h.flashAndRedirect(w, r, tripID, "No delivery OTP is active for this trip.", false)
 		return
 	}
+	// Legacy best-effort: a lookup error leaves the phone empty (flash below).
 	var phone string
 	if h.App.DB != nil {
-		var p sql.NullString
-		tenantID := shared.TenantIDFromContext(r.Context())
-		if err := h.App.DB.QueryRowContext(r.Context(),
-			`SELECT COALESCE(pod_consignee_phone,'') FROM trips WHERE id = $1 AND tenant_id = $2`, tripID, string(tenantID)).Scan(&p); err == nil {
-			phone = p.String
+		if p, err := tripapp.NewTripReadQueries(h.App.DB).PODConsigneePhone(r.Context(), tripapp.TripPODPhoneQuery{
+			TripID:   tripID,
+			TenantID: shared.TenantIDFromContext(r.Context()),
+		}); err == nil {
+			phone = p
 		}
 	}
 	if strings.TrimSpace(phone) == "" {
@@ -325,14 +326,10 @@ func (h *TripHandlers) New(w http.ResponseWriter, r *http.Request) {
 	// Build driver→vehicle map for client-side auto-prefill on change.
 	driverVehicleMap := map[string]string{}
 	if h.DB != nil {
-		if rows, err := h.DB.QueryContext(r.Context(), `SELECT driver_id, vehicle_id FROM driver_preferred_vehicles WHERE tenant_id = $1 AND unassigned_at IS NULL`, string(shared.TenantIDFromContext(r.Context()))); err == nil {
-			defer func() { _ = rows.Close() }()
-			for rows.Next() {
-				var did, vid string
-				if rows.Scan(&did, &vid) == nil {
-					driverVehicleMap[did] = vid
-				}
-			}
+		if preferred, err := tripapp.NewTripReadQueries(h.DB).DriverPreferredVehicles(r.Context(), tripapp.DriverPreferredVehiclesQuery{
+			TenantID: shared.TenantIDFromContext(r.Context()),
+		}); err == nil {
+			driverVehicleMap = preferred
 		}
 	}
 
@@ -533,45 +530,35 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 	var progression *progressionInfo
 
 	if h.DB != nil {
-		tenantID := shared.TenantIDFromContext(r.Context())
-		rows, err := h.DB.QueryContext(r.Context(), `
-		SELECT id, stop_sequence, stop_type, COALESCE(location_name, ''), COALESCE(address, ''),
-		       status, substr(CAST(actual_arrival AS TEXT), 1, 19), substr(CAST(actual_departure AS TEXT), 1, 19),
-		       COALESCE(pod_required, 0), COALESCE(pod_url, ''),
-		       COALESCE(otp_required, 0), COALESCE(consignee_name, ''), COALESCE(consignee_phone, '')
-		FROM trip_stops
-		WHERE trip_id = $1 AND tenant_id = $2
-		ORDER BY stop_sequence ASC
-	`, id, string(tenantID))
+		records, err := tripapp.NewTripReadQueries(h.DB).TripStops(r.Context(), tripapp.TripStopsQuery{
+			TripID:   id,
+			TenantID: shared.TenantIDFromContext(r.Context()),
+		})
 		if err == nil {
-			defer func() { _ = rows.Close() }()
 			completedCount := 0
-			for rows.Next() {
-				var s stopItem
-				var arrStr, depStr sql.NullString
-				var reqPOD, reqOTP int
-				if err := rows.Scan(&s.ID, &s.StopSequence, &s.StopType, &s.LocationName, &s.Address, &s.Status, &arrStr, &depStr, &reqPOD, &s.PODUrl, &reqOTP, &s.ConsigneeName, &s.ConsigneePhone); err == nil {
-					s.RequiresPOD = reqPOD == 1
-					s.RequiresOTP = reqOTP == 1
-					// Portable datetime text (YYYY-MM-DD HH:MM:SS) on both engines.
-					if arrStr.Valid && arrStr.String != "" {
-						if t, err := time.Parse("2006-01-02 15:04:05", arrStr.String); err == nil {
-							s.ActualArrival = &t
-						}
-					}
-					if depStr.Valid && depStr.String != "" {
-						if t, err := time.Parse("2006-01-02 15:04:05", depStr.String); err == nil {
-							s.ActualDeparture = &t
-						}
-					}
-					if s.Status == "completed" {
-						completedCount++
-					} else if (s.Status != "skipped") && currentStop == nil {
-						sCopy := s
-						currentStop = &sCopy
-					}
-					stopsList = append(stopsList, s)
+			for _, record := range records {
+				stop := stopItem{
+					ID:              record.ID,
+					StopSequence:    record.StopSequence,
+					StopType:        record.StopType,
+					LocationName:    record.LocationName,
+					Address:         record.Address,
+					Status:          record.Status,
+					ActualArrival:   record.ActualArrival,
+					ActualDeparture: record.ActualDeparture,
+					RequiresPOD:     record.RequiresPOD,
+					PODUrl:          record.PODURL,
+					RequiresOTP:     record.RequiresOTP,
+					ConsigneeName:   record.ConsigneeName,
+					ConsigneePhone:  record.ConsigneePhone,
 				}
+				if stop.Status == "completed" {
+					completedCount++
+				} else if (stop.Status != "skipped") && currentStop == nil {
+					stopCopy := stop
+					currentStop = &stopCopy
+				}
+				stopsList = append(stopsList, stop)
 			}
 			if len(stopsList) > 0 {
 				prog := progressionInfo{
@@ -745,14 +732,10 @@ func (h *TripHandlers) Edit(w http.ResponseWriter, r *http.Request) {
 
 	driverVehicleMap := map[string]string{}
 	if h.DB != nil {
-		if rows, err := h.DB.QueryContext(r.Context(), `SELECT driver_id, vehicle_id FROM driver_preferred_vehicles WHERE tenant_id = $1 AND unassigned_at IS NULL`, string(shared.TenantIDFromContext(r.Context()))); err == nil {
-			defer func() { _ = rows.Close() }()
-			for rows.Next() {
-				var did, vid string
-				if rows.Scan(&did, &vid) == nil {
-					driverVehicleMap[did] = vid
-				}
-			}
+		if preferred, err := tripapp.NewTripReadQueries(h.DB).DriverPreferredVehicles(r.Context(), tripapp.DriverPreferredVehiclesQuery{
+			TenantID: shared.TenantIDFromContext(r.Context()),
+		}); err == nil {
+			driverVehicleMap = preferred
 		}
 	}
 	h.renderForm(w, r, "trip_edit.html", PageData{
@@ -955,11 +938,11 @@ func (h *TripHandlers) AssignDriver(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		var vehicleID string
 		if h.DB != nil {
-			var v sql.NullString
-			tenantID := shared.TenantIDFromContext(ctx)
-			_ = h.DB.QueryRowContext(ctx, `SELECT vehicle_id FROM trips WHERE id = $1 AND tenant_id = $2`, tripID, string(tenantID)).Scan(&v)
-			if v.Valid {
-				vehicleID = v.String
+			if refs, err := tripapp.NewTripReadQueries(h.DB).AssignmentRefs(ctx, tripapp.TripAssignmentRefsQuery{
+				TripID:   tripID,
+				TenantID: shared.TenantIDFromContext(ctx),
+			}); err == nil {
+				vehicleID = refs.VehicleID
 			}
 		}
 		var dPtr *domain.DriverID
@@ -1026,11 +1009,11 @@ func (h *TripHandlers) AssignVehicle(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		var driverID string
 		if h.DB != nil {
-			var d sql.NullString
-			tenantID := shared.TenantIDFromContext(ctx)
-			_ = h.DB.QueryRowContext(ctx, `SELECT driver_id FROM trips WHERE id = $1 AND tenant_id = $2`, tripID, string(tenantID)).Scan(&d)
-			if d.Valid {
-				driverID = d.String
+			if refs, err := tripapp.NewTripReadQueries(h.DB).AssignmentRefs(ctx, tripapp.TripAssignmentRefsQuery{
+				TripID:   tripID,
+				TenantID: shared.TenantIDFromContext(ctx),
+			}); err == nil {
+				driverID = refs.DriverID
 			}
 		}
 		var dPtr *domain.DriverID
@@ -1554,11 +1537,11 @@ func (h *TripHandlers) SubmitStopPOD(w http.ResponseWriter, r *http.Request) {
 
 	// Auto-locate default stop if omitted
 	if stopID == "" && h.App != nil && h.App.DB != nil {
-		var sID string
-		_ = h.App.DB.QueryRowContext(r.Context(),
-			`SELECT id FROM trip_stops WHERE trip_id = $1 AND tenant_id = $2 ORDER BY stop_sequence DESC LIMIT 1`, tripID, string(tenantID)).Scan(&sID)
-		if sID != "" {
-			stopID = sID
+		if lastStopID, err := tripapp.NewTripReadQueries(h.App.DB).LastStop(r.Context(), tripapp.LastStopQuery{
+			TripID:   tripID,
+			TenantID: tenantID,
+		}); err == nil && lastStopID != "" {
+			stopID = lastStopID
 		}
 	}
 
@@ -1684,43 +1667,9 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	var (
-		resolvedTripID, tenantID, tripNumber, status string
-		departureTime                                time.Time
-		arrivalTime                                  sql.NullTime
-		startedAt, reachedPickupAt                   sql.NullTime
-		inTransitAt, deliveredAt                     sql.NullTime
-		completedAt                                  sql.NullTime
-		driverID, vehicleID                          sql.NullString
-		podURL, podPhotoURL                          sql.NullString
-		podSigURL, podConsName                       sql.NullString
-		podConsPhone                                 sql.NullString
-		podOTPVerified                               int
-		podCapturedAt                                sql.NullTime
-		podNotes                                     sql.NullString
-	)
-
-	err := h.App.DB.QueryRowContext(r.Context(), `
-		SELECT id, tenant_id, trip_number, status, departure_time, arrival_time,
-		       started_at, reached_pickup_at, in_transit_at, delivered_at, completed_at,
-		       COALESCE(driver_id, ''), COALESCE(vehicle_id, ''),
-		       COALESCE(pod_url, ''), COALESCE(pod_photo_url, ''), COALESCE(pod_signature_url, ''),
-		       COALESCE(pod_consignee_name, ''), COALESCE(pod_consignee_phone, ''),
-		       COALESCE(pod_otp_verified, 0), pod_captured_at, COALESCE(pod_notes, '')
-		FROM trips
-		WHERE id = $1 OR trip_number = $2
-		LIMIT 1
-	`, tripID, tripID).Scan(
-		&resolvedTripID, &tenantID, &tripNumber, &status, &departureTime, &arrivalTime,
-		&startedAt, &reachedPickupAt, &inTransitAt, &deliveredAt, &completedAt,
-		&driverID, &vehicleID,
-		&podURL, &podPhotoURL, &podSigURL,
-		&podConsName, &podConsPhone,
-		&podOTPVerified, &podCapturedAt, &podNotes,
-	)
-
+	cert, err := tripapp.NewTripReadQueries(h.App.DB).PublicEPODCertificate(r.Context(), tripapp.PublicEPODCertificateQuery{TripRef: tripID})
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, tripapp.ErrEPODCertificateNotFound) {
 			http.Error(w, "e-POD Certificate not found", http.StatusNotFound)
 			return
 		}
@@ -1731,90 +1680,61 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	// Lookup vehicle
-	var vehicleReg string
-	if vehicleID.Valid && vehicleID.String != "" {
-		_ = h.App.DB.QueryRowContext(r.Context(), `
-			SELECT COALESCE(registration_number, vehicle_number, '') FROM vehicles WHERE id = $1
-		`, vehicleID.String).Scan(&vehicleReg)
-	}
-
-	// Lookup driver
-	var driverName, driverPhone string
-	if driverID.Valid && driverID.String != "" {
-		_ = h.App.DB.QueryRowContext(r.Context(), `
-			SELECT COALESCE(first_name || ' ' || last_name, ''), COALESCE(phone, '')
-			FROM drivers WHERE id = $1 OR driver_id = $2
-		`, driverID.String, driverID.String).Scan(&driverName, &driverPhone)
-	}
-
-	// Lookup company settings / name & logo. Security: company_settings is
-	// global (id=1 is the bootstrap row) — pulling it onto a tenant-scoped
-	// public page leaks other tenants' branding. Prefer the trip's tenant;
-	// fall back to a neutral default instead of the global row.
+	trip := cert.Trip
+	resolvedTripID, tenantID := trip.ID, trip.TenantID
+	tripNumber, status := trip.TripNumber, trip.Status
+	departureTime, arrivalTime := trip.DepartureTime, trip.ArrivalTime
+	podCapturedAt, deliveredAt := trip.PODCapturedAt, trip.DeliveredAt
+	vehicleReg := cert.VehicleRegistration
+	driverName, driverPhone := cert.DriverName, cert.DriverPhone
+	// Security: company_settings is global (id=1 is the bootstrap row) — the
+	// trip's own tenant name is used instead, so a public page never leaks
+	// another tenant's branding; unknown tenants keep the neutral default.
 	companyName := "Avandab Logistics"
-	companyLogo := ""
-	if tenantID != "" {
-		var tName sql.NullString
-		if err := h.App.DB.QueryRowContext(r.Context(), `SELECT COALESCE(name, '') FROM tenants WHERE id = $1`, tenantID).Scan(&tName); err == nil && tName.Valid && tName.String != "" {
-			companyName = tName.String
-		}
+	if cert.TenantName != "" {
+		companyName = cert.TenantName
 	}
-
-	// Query trip_stops
-	rows, err := h.App.DB.QueryContext(r.Context(), `
-		SELECT id, stop_sequence, stop_type, COALESCE(location_name, ''), COALESCE(address, ''),
-		       status, actual_arrival, actual_departure,
-		       COALESCE(otp_required, 0), otp_verified_at,
-		       COALESCE(pod_required, 0), COALESCE(pod_url, ''), COALESCE(pod_signature_url, ''),
-		       pod_verified_at, COALESCE(pod_notes, ''),
-		       COALESCE(consignee_name, ''), COALESCE(consignee_phone, ''), COALESCE(consignee_email, '')
-		FROM trip_stops
-		WHERE trip_id = $1
-		ORDER BY stop_sequence ASC
-	`, resolvedTripID)
+	companyLogo := ""
 
 	var stops []EPODReceiptStopView
 	var selectedStop *EPODReceiptStopView
 
-	if err == nil {
-		defer func() { _ = rows.Close() }()
-		for rows.Next() {
-			var s EPODReceiptStopView
-			var arrTime, depTime, otpVerTime, podVerTime sql.NullTime
-			var reqOTP, reqPOD int
-			if err := rows.Scan(
-				&s.ID, &s.StopSequence, &s.StopType, &s.LocationName, &s.Address,
-				&s.Status, &arrTime, &depTime,
-				&reqOTP, &otpVerTime,
-				&reqPOD, &s.PODURL, &s.SignatureURL,
-				&podVerTime, &s.Notes,
-				&s.ConsigneeName, &s.ConsigneePhone, &s.ConsigneeEmail,
-			); err == nil {
-				s.OTPRequired = reqOTP == 1
-				s.PODRequired = reqPOD == 1
-				if otpVerTime.Valid {
-					s.OTPVerified = true
-					s.OTPVerifiedAt = otpVerTime.Time.Format("02 Jan 2006, 15:04 MST")
-				}
-				if podVerTime.Valid {
-					s.PODVerified = true
-				}
-				if arrTime.Valid {
-					s.ActualArrival = arrTime.Time.Format("02 Jan 2006, 15:04")
-				}
-				if depTime.Valid {
-					s.ActualDeparture = depTime.Time.Format("02 Jan 2006, 15:04")
-				}
-
-				if stopID != "" && s.ID == stopID {
-					s.IsSelected = true
-					sc := s
-					selectedStop = &sc
-				}
-				stops = append(stops, s)
-			}
+	for _, record := range cert.Stops {
+		stop := EPODReceiptStopView{
+			ID:             record.ID,
+			StopSequence:   record.StopSequence,
+			StopType:       record.StopType,
+			LocationName:   record.LocationName,
+			Address:        record.Address,
+			Status:         record.Status,
+			ConsigneeName:  record.ConsigneeName,
+			ConsigneePhone: record.ConsigneePhone,
+			ConsigneeEmail: record.ConsigneeEmail,
+			OTPRequired:    record.OTPRequired,
+			PODRequired:    record.PODRequired,
+			PODURL:         record.PODURL,
+			SignatureURL:   record.SignatureURL,
+			Notes:          record.Notes,
 		}
+		if record.OTPVerifiedAt != nil {
+			stop.OTPVerified = true
+			stop.OTPVerifiedAt = record.OTPVerifiedAt.Format("02 Jan 2006, 15:04 MST")
+		}
+		if record.PODVerifiedAt != nil {
+			stop.PODVerified = true
+		}
+		if record.ActualArrival != nil {
+			stop.ActualArrival = record.ActualArrival.Format("02 Jan 2006, 15:04")
+		}
+		if record.ActualDeparture != nil {
+			stop.ActualDeparture = record.ActualDeparture.Format("02 Jan 2006, 15:04")
+		}
+		if stopID != "" && stop.ID == stopID {
+			stop.IsSelected = true
+			selected := stop
+			selectedStop = &selected
+		}
+		stops = append(stops, stop)
 	}
 
 	// Pick default selected stop if not explicitly chosen
@@ -1841,19 +1761,20 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	// Prepare final view data
-	finalPODURL := podPhotoURL.String
+	// Prepare final view data (legacy precedence: POD photo URL wins over the
+	// generic pod_url column; stop-level values override trip-level ones).
+	finalPODURL := trip.PODPhotoURL
 	if finalPODURL == "" {
-		finalPODURL = podURL.String
+		finalPODURL = trip.PODURL
 	}
-	finalSigURL := podSigURL.String
-	finalConsName := podConsName.String
-	finalConsPhone := podConsPhone.String
-	finalNotes := podNotes.String
-	finalOTPVerified := podOTPVerified == 1
+	finalSigURL := trip.PODSignatureURL
+	finalConsName := trip.PODConsigneeName
+	finalConsPhone := trip.PODConsigneePhone
+	finalNotes := trip.PODNotes
+	finalOTPVerified := trip.PODOTPVerified
 	var finalOTPVerifiedAt string
-	if finalOTPVerified && podCapturedAt.Valid {
-		finalOTPVerifiedAt = podCapturedAt.Time.Format("02 Jan 2006, 15:04 MST")
+	if finalOTPVerified && podCapturedAt != nil {
+		finalOTPVerifiedAt = podCapturedAt.Format("02 Jan 2006, 15:04 MST")
 	}
 
 	stopSeq := 1
@@ -1900,12 +1821,12 @@ func (h *TripHandlers) PublicEPODCertificate(w http.ResponseWriter, r *http.Requ
 	}
 
 	delivTimestamp := ""
-	if deliveredAt.Valid {
-		delivTimestamp = deliveredAt.Time.Format("02 Jan 2006, 15:04 MST")
-	} else if arrivalTime.Valid {
-		delivTimestamp = arrivalTime.Time.Format("02 Jan 2006, 15:04 MST")
-	} else if podCapturedAt.Valid {
-		delivTimestamp = podCapturedAt.Time.Format("02 Jan 2006, 15:04 MST")
+	if deliveredAt != nil {
+		delivTimestamp = deliveredAt.Format("02 Jan 2006, 15:04 MST")
+	} else if arrivalTime != nil {
+		delivTimestamp = arrivalTime.Format("02 Jan 2006, 15:04 MST")
+	} else if podCapturedAt != nil {
+		delivTimestamp = podCapturedAt.Format("02 Jan 2006, 15:04 MST")
 	}
 
 	// Generate tamper-proof SHA-256 digital verification hash
