@@ -237,6 +237,34 @@ and idempotency guards live in `internal/service/credit_note_service.go` +
 `internal/handlers/credit_notes.go` (not this file); this increment migrates
 only the statement read of notes.
 
+**Phase 2 progress (2026-11-10, sixth increment - drivers):** the driver
+identity/KYC/status security surface moved from `internal/handlers/drivers.go`
+into `internal/driver/application`: `DriverProfileQueries` (view-page
+score/tier, recent behaviour events, recent trips, active preferred vehicle
+plus details and the assignment dropdown - every query best-effort like the
+legacy handler) and `DriverSelfService` (`GetMe`: tenant-scoped
+id-or-user-email identity, the driver_code-falls-back-to-id rule, active-trip
+plate and latest-position/snapshot location; `UpdateMe`: tenant-scoped
+identity, the legacy CASE update where empty values keep stored columns,
+status transitions with the migration-00185 `deactivated_at` clock, and the
+best-effort vehicle upsert + telemetry-device link + notes mirror;
+`UpdateMyStatus`; `ReportIssue`; `ListMyIssues`) with the
+`ErrDriverNotFound` sentinel keeping the handler 404s while DB failures keep
+their 500 bodies. The legacy tenant-unscoped identity lookups of the older
+mobile status/issue endpoints are preserved verbatim (pinned as frozen
+behavior in the new tests), the KYC purge stamp `kyc_purged_at` is never
+written by these paths, and license/expiry are still stored verbatim without
+an expiry guard (legacy semantics). `internal/handlers/drivers.go` is now
+575 lines / 0 SQL sites (was 812 / 22), handlers/ total 112 (was 134), caps
+lowered in the same PR. Existing handler characterization tests (KYC status
+clock, driver self update, get-me success/not-found/unauthorized,
+status+issues API) pass unchanged; new
+`internal/driver/application/driver_self_service_test.go` and
+`driver_profile_read_test.go` pin tenant isolation, the identity rules
+(including the driver_code fallback), status/KYC transitions, tenant-scoped
+vehicle binding, verbatim expiry writes, issue insert/list semantics and the
+view read-model ordering/limits.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 

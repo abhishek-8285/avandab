@@ -1,8 +1,8 @@
 package handlers
 
 import (
-	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 
 	"transport-app/internal/domain"
 	driverapp "transport-app/internal/driver/application"
@@ -29,6 +28,8 @@ type DriverHandlers struct {
 	updateUC *driverapp.UpdateDriverUseCase
 	getUC    *driverapp.GetDriverUseCase
 	listUC   *driverapp.ListDriversUseCase
+	self     *driverapp.DriverSelfService
+	profileQ *driverapp.DriverProfileQueries
 }
 
 func (h *DriverHandlers) init() {
@@ -41,6 +42,10 @@ func (h *DriverHandlers) init() {
 		h.updateUC = driverapp.NewUpdateDriverUseCase(uowImpl, clockImpl)
 		h.getUC = driverapp.NewGetDriverUseCase(uowImpl)
 		h.listUC = driverapp.NewListDriversUseCase(uowImpl)
+	}
+	if h.self == nil {
+		h.self = driverapp.NewDriverSelfService(h.DB)
+		h.profileQ = driverapp.NewDriverProfileQueries(h.DB)
 	}
 }
 
@@ -171,76 +176,16 @@ func (h *DriverHandlers) View(w http.ResponseWriter, r *http.Request) {
 	}
 	files, _ := h.Services.Files.GetFilesByEntity(r.Context(), "driver_license", id)
 
-	// Scorecard tier + recent behaviour events (fuel-fraud and, later, driving events).
-	var score sql.NullFloat64
-	var tier sql.NullString
-	_ = h.DB.QueryRowContext(r.Context(),
-		`SELECT score, tier FROM drivers WHERE id = $1`, id).Scan(&score, &tier)
-	type behavEvent struct {
-		EventType   string
-		Severity    string
-		CreatedAt   sql.NullTime
-		Description sql.NullString
-		Resolved    bool
-	}
-	events := []behavEvent{}
-	if rows, err := h.DB.QueryContext(r.Context(), `
-		SELECT event_type, severity, created_at, metadata
-		FROM driver_behaviour_events WHERE driver_id = $1
-		ORDER BY created_at DESC LIMIT 5`, id); err == nil {
-		defer func() { _ = rows.Close() }()
-		for rows.Next() {
-			var e behavEvent
-			e.Resolved = false
-			if rows.Scan(&e.EventType, &e.Severity, &e.CreatedAt, &e.Description) == nil {
-				events = append(events, e)
-			}
-		}
-	}
-
-	// Recent trips + latest settlement summary.
-	type recentTrip struct {
-		ID, TripNumber, Status string
-		CreatedAt              sql.NullTime
-	}
-	trips := []recentTrip{}
-	if rows, err := h.DB.QueryContext(r.Context(), `
-		SELECT id, trip_number, status, created_at FROM trips
-		WHERE driver_id = $1 ORDER BY created_at DESC LIMIT 5`, id); err == nil {
-		defer func() { _ = rows.Close() }()
-		for rows.Next() {
-			var t recentTrip
-			if rows.Scan(&t.ID, &t.TripNumber, &t.Status, &t.CreatedAt) == nil {
-				trips = append(trips, t)
-			}
-		}
-	}
-
-	tenantID := string(shared.TenantIDFromContext(r.Context()))
-	// Preferred vehicle (master assignment) + vehicle details for display.
-	var assignedVehicle map[string]interface{}
-	if a, _ := getActiveAssignmentByDriver(r.Context(), h.DB, id, tenantID); a != nil {
-		var reg, vnum string
-		var vtype string
-		_ = h.DB.QueryRowContext(r.Context(), `SELECT registration_number, vehicle_number, vehicle_type FROM vehicles WHERE id = $1 AND tenant_id = $2`, a.VehicleID, tenantID).Scan(&reg, &vnum, &vtype)
-		assignedVehicle = map[string]interface{}{"ID": a.VehicleID, "RegistrationNumber": reg, "VehicleNumber": vnum, "VehicleType": vtype, "IsPrimary": a.IsPrimary}
-	}
-	// Vehicles for the "Change" dropdown (available + current, tenant-scoped).
-	var assignVehicles []map[string]interface{}
-	if rows, err := h.DB.QueryContext(r.Context(), `SELECT id, registration_number, vehicle_number FROM vehicles WHERE tenant_id = $1 ORDER BY registration_number LIMIT 100`, tenantID); err == nil {
-		defer func() { _ = rows.Close() }()
-		for rows.Next() {
-			var vid, reg, vnum string
-			if rows.Scan(&vid, &reg, &vnum) == nil {
-				assignVehicles = append(assignVehicles, map[string]interface{}{"ID": vid, "RegistrationNumber": reg, "VehicleNumber": vnum})
-			}
-		}
-	}
+	profile := h.profileQ.Load(r.Context(), driverapp.DriverProfileQuery{
+		DriverID: id,
+		TenantID: shared.TenantIDFromContext(r.Context()),
+	})
 	h.renderPage(w, r, "driver_view.html", PageData{Title: "View Driver", User: session,
 		Extra: map[string]interface{}{
 			"Driver": driver, "Files": files,
-			"Score": score, "Tier": tier, "BehaviourEvents": events, "RecentTrips": trips,
-			"AssignedVehicle": assignedVehicle, "AssignVehicles": assignVehicles,
+			"Score": profile.Score, "Tier": profile.Tier, "BehaviourEvents": profile.BehaviourEvents,
+			"RecentTrips": profile.RecentTrips, "AssignedVehicle": profile.AssignedVehicle,
+			"AssignVehicles": profile.AssignVehicles,
 		}})
 }
 
@@ -392,114 +337,39 @@ func (h *DriverHandlers) GetMe(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "unauthorized"})
 		return
 	}
+	h.init()
 
 	ctx := r.Context()
-	tenantID := string(shared.MustTenantID(ctx))
-	var d struct {
-		ID            string
-		DriverID      string
-		FirstName     string
-		LastName      string
-		Phone         string
-		Status        string
-		LicenseNumber string
-		LicenseExpiry string
-		BankDetails   string
-		Aadhaar       string
-		Pan           string
-		Notes         string
-	}
-
-	// Query driver linked to user by ID, user_id (if matches ID), or email —
-	// scoped to the acting tenant so a cross-tenant user id/email match never
-	// resolves (Spec 13 §2.2).
-	err := h.DB.QueryRowContext(ctx, `
-		SELECT id, driver_id, first_name, last_name, phone, status,
-		       COALESCE(license_number, ''), COALESCE(CAST(license_expiry AS TEXT), ''),
-		       COALESCE(bank_details, ''), COALESCE(aadhaar, ''), COALESCE(pan, ''),
-		       COALESCE(notes, '')
-		FROM drivers
-		WHERE (id = $1 OR email = (SELECT email FROM users WHERE id = $2))
-		  AND tenant_id = $3
-		LIMIT 1
-	`, session.UserID, session.UserID, tenantID).Scan(
-		&d.ID, &d.DriverID, &d.FirstName, &d.LastName, &d.Phone, &d.Status,
-		&d.LicenseNumber, &d.LicenseExpiry, &d.BankDetails, &d.Aadhaar, &d.Pan,
-		&d.Notes,
-	)
+	me, err := h.self.GetMe(ctx, session.UserID, shared.MustTenantID(ctx))
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		_ = json.NewEncoder(w).Encode(map[string]string{"error": "driver not found"})
 		return
 	}
 
-	fullName := strings.TrimSpace(d.FirstName + " " + d.LastName)
-	driverCode := d.DriverID
-	if driverCode == "" {
-		driverCode = d.ID
-	}
-
-	// Check active trip and vehicle plate
-	var vehiclePlate string
-	var vehicleID string
-	_ = h.DB.QueryRowContext(ctx, `
-		SELECT COALESCE(v.registration_number, ''), COALESCE(t.vehicle_id, '')
-		FROM trips t
-		LEFT JOIN vehicles v ON t.vehicle_id = v.id
-		WHERE (t.driver_id = $1 OR t.driver_id = $2 OR t.driver_id = $3)
-		  AND t.status IN ('assigned', 'started', 'reached_pickup', 'in_transit')
-		  AND t.tenant_id = $4
-		ORDER BY t.departure_time DESC, t.created_at DESC
-		LIMIT 1
-	`, d.ID, d.DriverID, session.UserID, tenantID).Scan(&vehiclePlate, &vehicleID)
-
-	// No notes→plate fallback here: the drivers.notes string convention was
-	// removed pipeline-wide (ingest fallbackVehicleID) — any note becomes a
-	// vehicle lookup, and binding is owned by the onboarding vehicle_binding
-	// step. Empty plate simply renders as unassigned below.
-
-	// Check current location from latest snapshot or vehicle latest position
+	fullName := strings.TrimSpace(me.Profile.FirstName + " " + me.Profile.LastName)
 	type Location struct {
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
 	}
 	var curLoc *Location
-	if vehicleID != "" {
-		var lat, lon float64
-		if errLoc := h.DB.QueryRowContext(ctx, `
-			SELECT latitude, longitude 
-			FROM vehicle_latest_position 
-			WHERE vehicle_id = $1
-		`, vehicleID).Scan(&lat, &lon); errLoc == nil {
-			curLoc = &Location{Latitude: lat, Longitude: lon}
-		}
-	}
-	if curLoc == nil {
-		var lat, lon float64
-		if errLoc := h.DB.QueryRowContext(ctx, `
-			SELECT latitude, longitude
-			FROM telemetry_snapshots
-			WHERE (vehicle_id = $1 AND vehicle_id != '') OR driver_id = $2 OR driver_id = $3
-			ORDER BY timestamp DESC
-			LIMIT 1
-		`, vehicleID, d.ID, d.DriverID).Scan(&lat, &lon); errLoc == nil {
-			curLoc = &Location{Latitude: lat, Longitude: lon}
-		}
+	if me.CurrentLocation != nil {
+		curLoc = &Location{Latitude: me.CurrentLocation.Latitude, Longitude: me.CurrentLocation.Longitude}
 	}
 
 	resp := map[string]interface{}{
-		"driver_id":        driverCode,
+		"driver_id":        me.DriverCode,
 		"user_id":          session.UserID,
 		"name":             fullName,
-		"phone":            d.Phone,
-		"status":           d.Status,
-		"vehicle_plate":    vehiclePlate,
+		"phone":            me.Profile.Phone,
+		"status":           me.Profile.Status,
+		"vehicle_plate":    me.VehiclePlate,
 		"current_location": curLoc,
-		"license_number":   d.LicenseNumber,
-		"license_expiry":   d.LicenseExpiry,
-		"bank_details":     d.BankDetails,
-		"aadhaar":          d.Aadhaar,
-		"pan":              d.Pan,
+		"license_number":   me.Profile.LicenseNumber,
+		"license_expiry":   me.Profile.LicenseExpiry,
+		"bank_details":     me.Profile.BankDetails,
+		"aadhaar":          me.Profile.Aadhaar,
+		"pan":              me.Profile.Pan,
 	}
 
 	w.WriteHeader(http.StatusOK)
@@ -529,83 +399,35 @@ func (h *DriverHandlers) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
+	h.init()
 
-	ctx := r.Context()
-	tenantID := string(shared.MustTenantID(ctx))
-
-	var driverID string
-	err := h.DB.QueryRowContext(ctx, `
-		SELECT id FROM drivers
-		WHERE (id = $1 OR email = (SELECT email FROM users WHERE id = $2))
-		  AND tenant_id = $3
-		LIMIT 1`, session.UserID, session.UserID, tenantID).Scan(&driverID)
+	result, err := h.self.UpdateMe(r.Context(), driverapp.UpdateMeCommand{
+		UserID:        session.UserID,
+		TenantID:      shared.MustTenantID(r.Context()),
+		LicenseNumber: req.LicenseNumber,
+		LicenseExpiry: req.LicenseExpiry,
+		BankDetails:   req.BankDetails,
+		Aadhaar:       req.Aadhaar,
+		Pan:           req.Pan,
+		Status:        req.Status,
+		VehicleNumber: req.VehicleNumber,
+		VehiclePlate:  req.VehiclePlate,
+	})
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "driver not found")
-		return
-	}
-
-	vNum := strings.ToUpper(strings.TrimSpace(req.VehicleNumber))
-	if vNum == "" {
-		vNum = strings.ToUpper(strings.TrimSpace(req.VehiclePlate))
-	}
-	if vNum != "" {
-		var existingVID string
-		errV := h.DB.QueryRowContext(ctx, `SELECT id FROM vehicles WHERE registration_number = $1 AND tenant_id = $2`, vNum, tenantID).Scan(&existingVID)
-		if errV != nil {
-			existingVID = uuid.New().String()
-			_, _ = h.DB.ExecContext(ctx, `
-				INSERT INTO vehicles (id, registration_number, vehicle_number, vehicle_type, capacity, fuel_type, insurance_expiry, fitness_expiry, permit_expiry, status, tenant_id)
-				VALUES ($1, $2, $3, 'truck', 5000, 'diesel', NULL, NULL, NULL, 'available', $4)`,
-				existingVID, vNum, vNum, tenantID)
+		if errors.Is(err, driverapp.ErrDriverNotFound) {
+			writeJSONError(w, http.StatusNotFound, "driver not found")
+			return
 		}
-		_, _ = h.DB.ExecContext(ctx, `UPDATE drivers SET notes = $1 WHERE id = $2 AND tenant_id = $3`, vNum, driverID, tenantID)
-
-		// Link telemetry synthetic device to this vehicle
-		_, _ = h.DB.ExecContext(ctx, `
-			UPDATE telemetry_devices
-			SET vehicle_id = $1, status = 'active', updated_at = CURRENT_TIMESTAMP
-			WHERE (imei = $2 OR imei = $3) AND tenant_id = $4`,
-			existingVID, driverID, session.UserID, tenantID)
-	}
-
-	query := `
-		UPDATE drivers
-		SET updated_at = CURRENT_TIMESTAMP,
-		    license_number = CASE WHEN $1 != '' THEN $2 ELSE license_number END,
-		    license_expiry = CASE WHEN $3 != '' THEN $4 ELSE license_expiry END,
-		    bank_details = CASE WHEN $5 != '' THEN $6 ELSE bank_details END,
-		    aadhaar = CASE WHEN $7 != '' THEN $8 ELSE aadhaar END,
-		    pan = CASE WHEN $9 != '' THEN $10 ELSE pan END,
-		    status = CASE WHEN $11 IN ('available', 'leave', 'inactive') THEN $12 ELSE status END,
-		    deactivated_at = CASE
-		        WHEN $11 IN ('available', 'leave', 'inactive') AND $12 = 'inactive' THEN COALESCE(deactivated_at, CURRENT_TIMESTAMP)
-		        WHEN $11 IN ('available', 'leave', 'inactive') AND $12 IN ('available', 'leave') THEN NULL
-		        ELSE deactivated_at END
-		WHERE id = $13 AND tenant_id = $14`
-
-	res, err := h.DB.ExecContext(ctx, query,
-		req.LicenseNumber, req.LicenseNumber,
-		req.LicenseExpiry, req.LicenseExpiry,
-		req.BankDetails, req.BankDetails,
-		req.Aadhaar, req.Aadhaar,
-		req.Pan, req.Pan,
-		req.Status, req.Status,
-		driverID, tenantID)
-	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "update failed: "+err.Error())
-		return
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		writeJSONError(w, http.StatusNotFound, "driver not found")
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{
 		"success":       true,
-		"driver_id":     driverID,
+		"driver_id":     result.DriverID,
 		"status":        req.Status,
-		"vehicle_plate": vNum,
+		"vehicle_plate": result.VehiclePlate,
 	})
 }
 
@@ -636,33 +458,15 @@ func (h *DriverHandlers) UpdateMyStatus(w http.ResponseWriter, r *http.Request) 
 		writeJSONError(w, http.StatusBadRequest, "status must be one of: available, leave, inactive")
 		return
 	}
+	h.init()
 
-	ctx := r.Context()
-	var driverID string
-	err := h.DB.QueryRowContext(ctx, `
-		SELECT id FROM drivers
-		WHERE id = $1 OR email = (SELECT email FROM users WHERE id = $2)
-		LIMIT 1`, session.UserID, session.UserID).Scan(&driverID)
+	driverID, err := h.self.UpdateMyStatus(r.Context(), session.UserID, req.Status)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "driver not found")
-		return
-	}
-
-	res, err := h.DB.ExecContext(ctx,
-		`UPDATE drivers
-		 SET status = $1,
-		     updated_at = CURRENT_TIMESTAMP,
-		     deactivated_at = CASE
-		         WHEN $1 = 'inactive' THEN COALESCE(deactivated_at, CURRENT_TIMESTAMP)
-		         ELSE NULL END
-		 WHERE id = $2`,
-		req.Status, driverID)
-	if err != nil {
+		if errors.Is(err, driverapp.ErrDriverNotFound) {
+			writeJSONError(w, http.StatusNotFound, "driver not found")
+			return
+		}
 		writeJSONError(w, http.StatusInternalServerError, "update failed")
-		return
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		writeJSONError(w, http.StatusNotFound, "driver not found")
 		return
 	}
 
@@ -705,12 +509,9 @@ func (h *DriverHandlers) ReportIssue(w http.ResponseWriter, r *http.Request) {
 	}
 	tripID := strings.TrimSpace(r.FormValue("trip_id"))
 
+	h.init()
 	ctx := r.Context()
-	var driverID string
-	err := h.DB.QueryRowContext(ctx, `
-		SELECT id FROM drivers
-		WHERE id = $1 OR email = (SELECT email FROM users WHERE id = $2)
-		LIMIT 1`, session.UserID, session.UserID).Scan(&driverID)
+	driverID, err := h.self.ResolveActorDriverID(ctx, session.UserID)
 	if err != nil {
 		writeJSONError(w, http.StatusNotFound, "driver not found")
 		return
@@ -726,18 +527,14 @@ func (h *DriverHandlers) ReportIssue(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	issueID := uuid.NewString()
-	if tripID != "" {
-		_, err = h.DB.ExecContext(ctx,
-			`INSERT INTO driver_issues (id, driver_id, trip_id, category, severity, message, photo_url)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-			issueID, driverID, tripID, category, severity, message, nullIfEmpty(photoURL))
-	} else {
-		_, err = h.DB.ExecContext(ctx,
-			`INSERT INTO driver_issues (id, driver_id, category, severity, message, photo_url)
-			 VALUES ($1, $2, $3, $4, $5, $6)`,
-			issueID, driverID, category, severity, message, nullIfEmpty(photoURL))
-	}
+	issueID, err := h.self.ReportIssue(ctx, driverapp.ReportIssueCommand{
+		DriverID: driverID,
+		TripID:   tripID,
+		Category: category,
+		Severity: severity,
+		Message:  message,
+		PhotoURL: photoURL,
+	})
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "insert failed")
 		return
@@ -760,52 +557,18 @@ func (h *DriverHandlers) ListMyIssues(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
+	h.init()
 
-	ctx := r.Context()
-	var driverID string
-	err := h.DB.QueryRowContext(ctx, `
-		SELECT id FROM drivers
-		WHERE id = $1 OR email = (SELECT email FROM users WHERE id = $2)
-		LIMIT 1`, session.UserID, session.UserID).Scan(&driverID)
+	issues, err := h.self.ListMyIssues(r.Context(), session.UserID)
 	if err != nil {
-		writeJSONError(w, http.StatusNotFound, "driver not found")
-		return
-	}
-
-	rows, err := h.DB.QueryContext(ctx, `
-		SELECT id, COALESCE(trip_id,''), category, severity, message, COALESCE(photo_url,''), status, created_at
-		FROM driver_issues WHERE driver_id = $1 ORDER BY created_at DESC LIMIT 20`, driverID)
-	if err != nil {
+		if errors.Is(err, driverapp.ErrDriverNotFound) {
+			writeJSONError(w, http.StatusNotFound, "driver not found")
+			return
+		}
 		writeJSONError(w, http.StatusInternalServerError, "query failed")
 		return
-	}
-	defer func() { _ = rows.Close() }()
-
-	type issue struct {
-		ID        string `json:"id"`
-		TripID    string `json:"trip_id,omitempty"`
-		Category  string `json:"category"`
-		Severity  string `json:"severity"`
-		Message   string `json:"message"`
-		PhotoURL  string `json:"photo_url,omitempty"`
-		Status    string `json:"status"`
-		CreatedAt string `json:"created_at"`
-	}
-	issues := []issue{}
-	for rows.Next() {
-		var i issue
-		if err := rows.Scan(&i.ID, &i.TripID, &i.Category, &i.Severity, &i.Message, &i.PhotoURL, &i.Status, &i.CreatedAt); err == nil {
-			issues = append(issues, i)
-		}
 	}
 
 	w.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(w).Encode(map[string]interface{}{"issues": issues})
-}
-
-func nullIfEmpty(s string) interface{} {
-	if s == "" {
-		return nil
-	}
-	return s
 }
