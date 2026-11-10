@@ -362,3 +362,15 @@ func TestLoad_PayoutSweepDefaults(t *testing.T) {
 		t.Fatalf("env overrides not applied: %s / %s", cfg.PayoutStuckAfter, cfg.PayoutSweepInterval)
 	}
 }
+
+// TestLoad_KYCPostTenureRetention pins the published 3-year post-tenure default.
+func TestLoad_KYCPostTenureRetention(t *testing.T) {
+	t.Setenv("KYC_POST_TENURE_RETENTION", "")
+	if got := config.Load().KYCPostTenureRetention; got != 3*365*24*time.Hour {
+		t.Fatalf("KYCPostTenureRetention default = %s, want 3y", got)
+	}
+	t.Setenv("KYC_POST_TENURE_RETENTION", "720h")
+	if got := config.Load().KYCPostTenureRetention; got != 30*24*time.Hour {
+		t.Fatalf("KYCPostTenureRetention override = %s, want 720h (30d)", got)
+	}
+}

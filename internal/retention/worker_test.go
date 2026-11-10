@@ -22,6 +22,11 @@ func testRetentionDB(t *testing.T) *sql.DB {
 		_, err := db.Exec(fmt.Sprintf(`CREATE TABLE %s (id TEXT PRIMARY KEY, %s DATETIME NOT NULL)`, tgt.Table, tgt.TimeColumn))
 		require.NoError(t, err, tgt.Table)
 	}
+	// KYC purge runs in the same worker pass; give it its tables.
+	_, err = db.Exec(`
+		CREATE TABLE drivers (id TEXT PRIMARY KEY, deactivated_at DATETIME, kyc_purged_at DATETIME);
+		CREATE TABLE driver_documents (id TEXT PRIMARY KEY, driver_id TEXT NOT NULL, file_url TEXT NOT NULL)`)
+	require.NoError(t, err, "kyc tables")
 	return db
 }
 

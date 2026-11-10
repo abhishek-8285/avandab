@@ -186,6 +186,7 @@ client-side publish confirmations.
 | `UPTIME_SLA_CHECK_INTERVAL` | `15m` | How often the SLA monitor evaluates measured uptime and raises `availability.sla_breach` alerts (migration 00182); recovery auto-resolves them. |
 | `RETENTION_WORKER_ENABLED` | `true` | Daily business-data retention worker: video telematics 90d, audit/breach ledger 3y, consents/DSAR 5y (migration 00183). Telemetry/sessions/outbox have dedicated purgers. |
 | `RETENTION_INTERVAL` | `24h` | Retention worker tick. |
+| `KYC_POST_TENURE_RETENTION` | `26280h` (3y) | Driver KYC/licence data (documents, licence, Aadhaar/PAN, bank details, emergency contacts) is purged this long after `drivers.deactivated_at` (published DPDP schedule: employment duration + 3 years). |
 | `REPORT_WEBHOOK_SECRET` | empty | Signs scheduled-report webhook deliveries (HMAC-SHA256 in `X-Report-Signature`). Optional; webhook schedules still require an explicit endpoint URL in recipients. |
 | `WORKER_LEADER_LOCK` | sqlite: `false`; postgres/mysql: `true` | DB lease leader election for background workers. SQLite is single-node, so the default is off (in-process workers, no lease contention); set `true` explicitly only for multi-replica setups. Multi-replica engines default on to prevent duplicate crons. |
 
@@ -194,6 +195,9 @@ client-side publish confirmations.
 > **Mock honesty:** all four providers default to mock (`*_USE_MOCK=true`). Synthetic IDs carry a `MOCK-` prefix (`EWB-MOCK-`, `MOCK-`, `JE-MOCK-`, `EXT-MOCK-`) plus `(mock)` messages and warn logs — never real provider data. Exception: GSTN e-invoice IRNs are format-locked NIC hashes (persisted on invoices), so honesty there is warn logs + `mock_qr_` payloads. Pinned by `TestMockHonesty_SyntheticIDsCarryMockPrefix`. Set the flag to `false` with live creds for production.
 
 ## 6. Backups & Encrypted Restore Drill
+
+The business-retention worker also enforces driver KYC post-tenure disposal: when a driver goes inactive, `drivers.deactivated_at` is stamped (cleared on reactivation); after `KYC_POST_TENURE_RETENTION` (default 3y) the worker clears KYC fields, deletes `driver_documents` rows and best-effort removes local `/uploads` blobs, stamping `kyc_purged_at` for idempotency. Financial ledger rows keep the driver id (statutory retention).
+
 
 `scripts/backup-db.sh` takes an online SQLite snapshot, gzips it, and (when
 `BACKUP_ENCRYPTION_PASSPHRASE` is set, >=16 chars) encrypts it with gpg

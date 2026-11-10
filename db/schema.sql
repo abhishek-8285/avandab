@@ -758,7 +758,7 @@ CREATE TABLE "drivers" (
     notes               TEXT,
     created_at          DATETIME NOT NULL DEFAULT (datetime('now')),
     updated_at          DATETIME NOT NULL DEFAULT (datetime('now'))
-, tenant_id TEXT DEFAULT '1' NOT NULL, version INTEGER NOT NULL DEFAULT 1, blocked INTEGER NOT NULL DEFAULT 0, blocked_reason TEXT, aadhaar TEXT, pan TEXT, bank_details TEXT, score REAL, tier TEXT);
+, tenant_id TEXT DEFAULT '1' NOT NULL, version INTEGER NOT NULL DEFAULT 1, blocked INTEGER NOT NULL DEFAULT 0, blocked_reason TEXT, aadhaar TEXT, pan TEXT, bank_details TEXT, score REAL, tier TEXT, deactivated_at DATETIME, kyc_purged_at DATETIME);
 CREATE TABLE dtc_events (
     id          TEXT PRIMARY KEY,
     vehicle_id  TEXT NOT NULL,
@@ -2943,6 +2943,7 @@ CREATE INDEX idx_driver_push_tokens_driver ON driver_push_tokens(tenant_id, driv
 CREATE INDEX idx_driver_scores_driver ON driver_scores(driver_id, period_end DESC);
 CREATE INDEX idx_driver_settlements_tenant_trip ON driver_settlements(tenant_id, trip_id);
 CREATE INDEX idx_driver_settlements_trip ON driver_settlements(trip_id);
+CREATE INDEX idx_drivers_deactivated_at ON drivers(deactivated_at);
 CREATE INDEX idx_drivers_tenant ON drivers(tenant_id);
 CREATE INDEX idx_drivers_tenant_status ON drivers(tenant_id, status);
 CREATE INDEX idx_drvdocs_driver ON driver_documents(driver_id);

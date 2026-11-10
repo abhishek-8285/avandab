@@ -576,7 +576,11 @@ func (h *DriverHandlers) UpdateMe(w http.ResponseWriter, r *http.Request) {
 		    bank_details = CASE WHEN $5 != '' THEN $6 ELSE bank_details END,
 		    aadhaar = CASE WHEN $7 != '' THEN $8 ELSE aadhaar END,
 		    pan = CASE WHEN $9 != '' THEN $10 ELSE pan END,
-		    status = CASE WHEN $11 IN ('available', 'leave', 'inactive') THEN $12 ELSE status END
+		    status = CASE WHEN $11 IN ('available', 'leave', 'inactive') THEN $12 ELSE status END,
+		    deactivated_at = CASE
+		        WHEN $11 IN ('available', 'leave', 'inactive') AND $12 = 'inactive' THEN COALESCE(deactivated_at, CURRENT_TIMESTAMP)
+		        WHEN $11 IN ('available', 'leave', 'inactive') AND $12 IN ('available', 'leave') THEN NULL
+		        ELSE deactivated_at END
 		WHERE id = $13 AND tenant_id = $14`
 
 	res, err := h.DB.ExecContext(ctx, query,
@@ -645,7 +649,13 @@ func (h *DriverHandlers) UpdateMyStatus(w http.ResponseWriter, r *http.Request) 
 	}
 
 	res, err := h.DB.ExecContext(ctx,
-		`UPDATE drivers SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2`,
+		`UPDATE drivers
+		 SET status = $1,
+		     updated_at = CURRENT_TIMESTAMP,
+		     deactivated_at = CASE
+		         WHEN $1 = 'inactive' THEN COALESCE(deactivated_at, CURRENT_TIMESTAMP)
+		         ELSE NULL END
+		 WHERE id = $2`,
 		req.Status, driverID)
 	if err != nil {
 		writeJSONError(w, http.StatusInternalServerError, "update failed")

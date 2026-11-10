@@ -109,6 +109,9 @@ type Config struct {
 	// consents/DSAR 5y). RetentionInterval is its tick (default 24h).
 	RetentionWorkerEnabled bool
 	RetentionInterval      time.Duration
+	// KYCPostTenureRetention is how long driver KYC/licence data is kept after
+	// deactivation (published DPDP schedule: employment duration + 3 years).
+	KYCPostTenureRetention time.Duration
 	PayoutRailEnabled      bool
 	// PayoutStuckAfter is how long a payout may sit in initiated/processing
 	// before the stuck-payout sweep raises a settlement.payout_stuck alert.
@@ -458,6 +461,7 @@ func Load() *Config {
 		UptimeSLACheckInterval: getEnvDuration("UPTIME_SLA_CHECK_INTERVAL", 15*time.Minute),
 		RetentionWorkerEnabled: getEnvBool("RETENTION_WORKER_ENABLED", true),
 		RetentionInterval:      getEnvDuration("RETENTION_INTERVAL", 24*time.Hour),
+		KYCPostTenureRetention: getEnvDuration("KYC_POST_TENURE_RETENTION", 3*365*24*time.Hour),
 		PayoutRailEnabled:      getEnvBool("PAYOUT_RAIL_ENABLED", false),
 		PayoutStuckAfter:       getEnvDuration("PAYOUT_STUCK_AFTER", 24*time.Hour),
 		PayoutSweepInterval:    getEnvDuration("PAYOUT_SWEEP_INTERVAL", time.Hour),

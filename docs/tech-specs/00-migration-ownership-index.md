@@ -180,7 +180,8 @@ which always allocate head-ward from the maximum above.
 | 00182 | Availability SLA alert: `availability` alert source + `rule_sla_breach` (critical, 6h cooldown, 3-step in-app escalation) so measured 30-day uptime below 99.9% becomes an operational alert | Ops readiness / Spec 05 §4 |
 | 00183 | Retention purge indexes: event_time/created_at/detected_at indexes on video_safety_events, video_livestream_sessions, breach_incidents, user_consents, privacy_dsar_requests so the business-retention worker deletes by range scan instead of table scan | Ops / published DPDP retention schedule |
 | 00184 | Stuck-payout alert rule: `settlement` alert source + `rule_payout_stuck` (critical, 1h cooldown, 3-step escalation) so payouts parked in initiated/processing past PAYOUT_STUCK_AFTER raise a real alert | Money movement safety / Spec 05 §4 |
-| 00185+ | future specs | reserved |
+| 00185 | Driver KYC post-tenure retention: `drivers.deactivated_at`/`kyc_purged_at` + index; retention worker clears KYC fields/documents `KYC_POST_TENURE_RETENTION` (default 3y) after deactivation, per published DPDP schedule | Privacy / published retention schedule |
+| 00186+ | future specs | reserved |
 
 ## Implementation rule
 Pick the number from this table for your feature and update the spec's §3 to

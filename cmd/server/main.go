@@ -2171,7 +2171,12 @@ func main() {
 	// no automated disposal (video telematics 90d, audit/breach ledger 3y,
 	// consents/DSAR 5y). Telemetry/sessions/outbox have their own purgers.
 	if cfg.RetentionWorkerEnabled {
-		runLeadered("business_retention", retention.NewWorker(database, logger, cfg.RetentionInterval).Run)
+		retentionWorker := retention.NewWorker(database, logger, cfg.RetentionInterval)
+		if services.Files != nil && services.Files.BlobStore() != nil {
+			retentionWorker = retention.NewWorker(database, logger, cfg.RetentionInterval, services.Files.BlobStore())
+		}
+		retentionWorker.SetKYCAfter(cfg.KYCPostTenureRetention)
+		runLeadered("business_retention", retentionWorker.Run)
 	}
 
 	// Spec 22 S1 — reopen snoozed inbox alerts whose snooze expired.
