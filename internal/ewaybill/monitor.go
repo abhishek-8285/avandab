@@ -113,7 +113,7 @@ func (m *Monitor) processExpiredEWBs(ctx context.Context) {
 			`, eventID, it.ewbNumber, it.tripID)
 
 			if m.bus != nil && it.tenantID != "" {
-				m.bus.Publish(ctx, events.Event{
+				if err := m.bus.Publish(ctx, events.Event{
 					Type: "AlertEvent",
 					Payload: map[string]interface{}{
 						"source":      "ewaybill",
@@ -125,7 +125,9 @@ func (m *Monitor) processExpiredEWBs(ctx context.Context) {
 						"tenant_id":   it.tenantID,
 						"occurred_at": time.Now().UTC(),
 					},
-				})
+				}); err != nil {
+					slog.WarnContext(ctx, "ewaybill alert publish failed", "error", err)
+				}
 			}
 		}
 	}
@@ -171,7 +173,7 @@ func (m *Monitor) processExpiringSoonEWBs(ctx context.Context) {
 		// deleted, tenant unknown) still get lifecycle handling below, but
 		// no cross-org alert is published for them.
 		if m.bus != nil && it.tenantID != "" {
-			m.bus.Publish(ctx, events.Event{
+			if err := m.bus.Publish(ctx, events.Event{
 				Type: "AlertEvent",
 				Payload: map[string]interface{}{
 					"source":      "ewaybill",
@@ -183,7 +185,9 @@ func (m *Monitor) processExpiringSoonEWBs(ctx context.Context) {
 					"tenant_id":   it.tenantID,
 					"occurred_at": time.Now().UTC(),
 				},
-			})
+			}); err != nil {
+				slog.WarnContext(ctx, "ewaybill alert publish failed", "error", err)
+			}
 		}
 
 		switch it.tripStatus {

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -9,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -244,86 +242,31 @@ func wantsJSON(r *http.Request) bool {
 	return strings.Contains(accept, "application/json") || strings.Contains(contentType, "application/json")
 }
 
-type EWBStats struct {
-	Total     int
-	Active    int
-	PartAOnly int
-	Extended  int
-	Cancelled int
-	Expired   int
-}
-
-type EWBListItem struct {
-	ID             string
-	TripID         string
-	TripNumber     string
-	EwbNumber      string
-	VehicleNumber  string
-	FromPlace      string
-	ToPlace        string
-	GoodsValue     float64
-	Status         string
-	ValidUntil     time.Time
-	ExtensionCount int
-	CreatedAt      time.Time
-}
-
-type TripOption struct {
-	ID          string
-	TripNumber  string
-	Source      string
-	Destination string
-}
-
-type EWBEventRecord struct {
-	ID        string    `json:"id"`
-	EwbNumber string    `json:"ewb_number"`
-	TripID    string    `json:"trip_id"`
-	EventType string    `json:"event_type"`
-	Payload   string    `json:"payload"`
-	CreatedBy string    `json:"created_by"`
-	CreatedAt time.Time `json:"created_at"`
-}
+// EWB page view models live in internal/ewaybill (handlers-end-state ADR,
+// Phase 2); the aliases keep template and render-test references unchanged.
+type (
+	EWBStats       = ewaybill.EWBStats
+	EWBListItem    = ewaybill.EWBListItem
+	TripOption     = ewaybill.TripOption
+	EWBEventRecord = ewaybill.EWBEventRecord
+)
 
 func (h *EWayBillHandlers) List(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
 
-	// 1. Fetch stats
-	var stats EWBStats
-	if sErr := h.DB.QueryRowContext(r.Context(), `
-		SELECT COUNT(*),
-		       COALESCE(SUM(CASE WHEN status='active' AND (vehicle_number IS NOT NULL AND vehicle_number != '') THEN 1 ELSE 0 END), 0),
-		       COALESCE(SUM(CASE WHEN status='active' AND (vehicle_number IS NULL OR vehicle_number = '') THEN 1 ELSE 0 END), 0),
-		       COALESCE(SUM(CASE WHEN extension_count > 0 THEN 1 ELSE 0 END), 0),
-		       COALESCE(SUM(CASE WHEN status='cancelled' THEN 1 ELSE 0 END), 0),
-		       COALESCE(SUM(CASE WHEN status='expired' THEN 1 ELSE 0 END), 0)
-		FROM eway_bills
-	`).Scan(&stats.Total, &stats.Active, &stats.PartAOnly, &stats.Extended, &stats.Cancelled, &stats.Expired); sErr != nil && sErr != sql.ErrNoRows {
+	// 1. Fetch stats (global legacy scope: the EWB read model documents why).
+	reads := ewaybill.NewEWayBillReadQueries(h.DB)
+	stats, sErr := reads.Stats(r.Context())
+	if sErr != nil && sErr != sql.ErrNoRows {
 		// Zeroed stats on a failed query is a silent failure - surface it in logs.
 		slog.WarnContext(r.Context(), "EWB stats query failed", slog.Any("error", sErr))
 	}
 
 	// 2. Fetch list items
-	items := h.queryEWBItems(r.Context())
+	items := reads.Items(r.Context())
 
 	// 3. Fetch candidate trips for new modal
-	var trips []TripOption
-	tRows, err := h.DB.QueryContext(r.Context(), `
-		SELECT t.id, t.trip_number, r.source, r.destination
-		FROM trips t
-		JOIN routes r ON t.route_id = r.id
-		WHERE t.status IN ('scheduled', 'assigned', 'started', 'reached_pickup', 'in_transit')
-		ORDER BY t.created_at DESC LIMIT 50
-	`)
-	if err == nil {
-		defer tRows.Close()
-		for tRows.Next() {
-			var to TripOption
-			if err := tRows.Scan(&to.ID, &to.TripNumber, &to.Source, &to.Destination); err == nil {
-				trips = append(trips, to)
-			}
-		}
-	}
+	trips := reads.CandidateTrips(r.Context())
 
 	h.renderPage(w, r, "ewaybill_index.html", PageData{
 		Title: "E-Way Bills",
@@ -338,59 +281,15 @@ func (h *EWayBillHandlers) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *EWayBillHandlers) TableFragment(w http.ResponseWriter, r *http.Request) {
-	items := h.queryEWBItems(r.Context())
+	items := ewaybill.NewEWayBillReadQueries(h.DB).Items(r.Context())
 	h.renderFragment(w, r, "ewaybill_row.html", map[string]interface{}{
 		"EWayBills": items,
 	})
 }
 
-func (h *EWayBillHandlers) queryEWBItems(ctx context.Context) []EWBListItem {
-	rows, err := h.DB.QueryContext(ctx, `
-		SELECT e.id, e.trip_id, COALESCE(t.trip_number, ''), e.ewb_number,
-		       COALESCE(e.vehicle_number, ''), COALESCE(e.from_place, ''), COALESCE(e.to_place, ''),
-		       e.goods_value, e.status, e.valid_until, e.extension_count, e.created_at
-		FROM eway_bills e
-		LEFT JOIN trips t ON e.trip_id = t.id
-		ORDER BY e.created_at DESC LIMIT 100
-	`)
-	if err != nil {
-		return nil
-	}
-	defer rows.Close()
-
-	var items []EWBListItem
-	for rows.Next() {
-		var it EWBListItem
-		if err := rows.Scan(
-			&it.ID, &it.TripID, &it.TripNumber, &it.EwbNumber,
-			&it.VehicleNumber, &it.FromPlace, &it.ToPlace,
-			&it.GoodsValue, &it.Status, &it.ValidUntil, &it.ExtensionCount, &it.CreatedAt,
-		); err == nil {
-			items = append(items, it)
-		}
-	}
-	return items
-}
-
 func (h *EWayBillHandlers) NewForm(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
-	var trips []TripOption
-	tRows, err := h.DB.QueryContext(r.Context(), `
-		SELECT t.id, t.trip_number, r.source, r.destination
-		FROM trips t
-		JOIN routes r ON t.route_id = r.id
-		WHERE t.status IN ('scheduled', 'assigned', 'started', 'reached_pickup', 'in_transit')
-		ORDER BY t.created_at DESC LIMIT 50
-	`)
-	if err == nil {
-		defer tRows.Close()
-		for tRows.Next() {
-			var to TripOption
-			if err := tRows.Scan(&to.ID, &to.TripNumber, &to.Source, &to.Destination); err == nil {
-				trips = append(trips, to)
-			}
-		}
-	}
+	trips := ewaybill.NewEWayBillReadQueries(h.DB).CandidateTrips(r.Context())
 
 	h.renderPage(w, r, "ewaybill_index.html", PageData{
 		Title: "Generate E-Way Bill",
@@ -448,22 +347,7 @@ func (h *EWayBillHandlers) Detail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch event history in chronological order
-	rows, err := h.DB.QueryContext(r.Context(), `
-		SELECT id, ewb_number, COALESCE(trip_id, ''), event_type, COALESCE(payload, ''), COALESCE(created_by, 'system'), created_at
-		FROM eway_bill_events
-		WHERE ewb_number = $1
-		ORDER BY created_at ASC
-	`, ewbNumber)
-	var events []EWBEventRecord
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var ev EWBEventRecord
-			if err := rows.Scan(&ev.ID, &ev.EwbNumber, &ev.TripID, &ev.EventType, &ev.Payload, &ev.CreatedBy, &ev.CreatedAt); err == nil {
-				events = append(events, ev)
-			}
-		}
-	}
+	events := ewaybill.NewEWayBillReadQueries(h.DB).Events(r.Context(), ewbNumber)
 
 	if wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")

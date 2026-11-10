@@ -456,6 +456,38 @@ attribution, active-trip status/order selection, first-delivery-only
 publish+audit with command-id idempotency, the `TenantOrPlatform` audit
 fallback, nil-bus degradation and the insert-failure duplicate-ack path.
 
+**Phase 2 progress (2026-11-10, fourteenth increment - E-Way Bill pages):** the
+E-Way Bill presentation read model moved from
+`internal/handlers/ewaybill.go` into the existing `internal/ewaybill` slice
+(the domain's service/application package, no subdirectory - same pattern as
+`internal/sharing`/`internal/fleetreports`): `EWayBillReadQueries` with
+`Stats` (list-page counters: total / active-with-vehicle / Part-A-only /
+extended / cancelled / expired), `Items` (100 newest bills + trip-number
+LEFT JOIN with NULL coalescing and per-row scan tolerance), `CandidateTrips`
+(50 newest trips in the five EWB-eligible statuses joined to routes) and
+`Events` (chronological `eway_bill_events` history with payload/actor NULL
+defaults). The handler keeps HTTP/permissions (`ewaybill:*`), form/JSON
+parsing, the lifecycle calls into the untouched `EWayBillService`
+(tenant-gated generate/attach/extend/cancel with its provider seam,
+idempotency and status transitions), all status codes/messages/JSON shapes
+and the page/partial/detail templates; the page view models are re-exported
+as handler aliases so template and render-test references stay unchanged.
+The presentation reads keep their FROZEN legacy global scope: `eway_bills`
+has no tenant_id and the legacy handler never joined `trips.tenant_id`, so
+the list/stats/candidate-trip/event views are global for any operator with
+`ewaybill:read` - preserved verbatim and flagged for a follow-up security
+increment, while the write lifecycle keeps its existing tenant gate
+(`TestGeneratePartA_CrossTenantDenied`). `internal/handlers/ewaybill.go` is
+now 371 lines / 0 SQL sites (was 487 / 5), handlers/ total 50 (was 55), caps
+lowered in the same PR. Existing characterization tests
+(`TestSettlementUI_PagesAndEWayBillCard` - trip EWB partial + mock-adapter
+generate redirect; `TestAllTemplatesRenderCleanly` - list/detail/table
+templates with the moved view models) pass unchanged; new
+`internal/ewaybill/read_queries_test.go` pins the stats math, 100-row list
+window + ordering + NULL coalescing, candidate-trip eligibility/ordering/
+50-row window, chronological event history, nil-DB/missing-table degradation
+and the frozen global scope.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 
