@@ -132,6 +132,27 @@ unchanged for trip/cap/insert, but request parsing now runs before the
 tenant/cap checks (needed to bundle the checks with the INSERT in one
 use-case call); no status/JSON shape changed for valid requests.
 
+**Phase 2 progress (2026-11-10, second write increment - trips):** the trip
+write side-effect paths moved to `internal/trip/application`
+(`RecordDispatchOverrideUseCase` - `dispatch_overrides` row plus the audit
+service/raw-audit fallback with the legacy audit precedence;
+`BlockVehicleForBreakdownUseCase` - trip-close breakdown vehicle
+maintenance/blocked flag plus the shared operator-facing description;
+`MirrorPODArtifactsUseCase` - legacy `trips` POD columns and
+`stop_pod_attachments` mirror), preserving tenant scoping, the exact
+descriptions/statuses, the audit write and the legacy best-effort error
+semantics (errors are returned for logging, never surfaced as HTTP failures).
+The ops-breakdown alert stays handler-filed because `CompleteTripUseCase`
+explicitly leaves breakdown alerts to callers. `internal/handlers/trips.go` is
+now 2,010 lines / 12 SQL sites (was 2,035 / 20; the remaining 12 are reads:
+trip view, e-POD certificate, compliance prechecks, preferred-vehicle lookups,
+ePOD stop auto-locate), handlers/ total 181 (was 189), caps lowered in the
+same PR. Existing trip handler tests (trips_selected_test.go,
+trips_complete_detention_test.go, trip_create_assign_flash_test.go) pass
+unchanged; new `internal/trip/application/trip_write_use_cases_test.go` pins
+tenant isolation, vehicle resolution, the exact breakdown description and the
+legacy POD mirror behaviour.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 

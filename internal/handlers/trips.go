@@ -24,7 +24,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
-	"transport-app/internal/auth"
 	bookingdomain "transport-app/internal/booking/domain"
 	bookingaggregate "transport-app/internal/booking/domain/aggregate"
 	"transport-app/internal/config"
@@ -69,6 +68,9 @@ type TripHandlers struct {
 	reachStopUC       *tripapp.ReachStopUseCase
 	submitStopPODUC   *tripapp.SubmitStopPODUseCase
 	completeStopUC    *tripapp.CompleteStopUseCase
+	recordOverrideUC  *tripapp.RecordDispatchOverrideUseCase
+	blockBreakdownUC  *tripapp.BlockVehicleForBreakdownUseCase
+	mirrorPODUC       *tripapp.MirrorPODArtifactsUseCase
 	detRepo           *geofencerepo.EventLogRepository
 }
 
@@ -96,6 +98,16 @@ func (h *TripHandlers) init() {
 		h.reachStopUC = tripapp.NewReachStopUseCase(uowImpl, clockImpl)
 		h.submitStopPODUC = tripapp.NewSubmitStopPODUseCase(uowImpl, clockImpl)
 		h.completeStopUC = tripapp.NewCompleteStopUseCase(uowImpl, clockImpl)
+		// Legacy side-effect writes extracted from this file (handlers-end-state
+		// ADR Phase 2): compliance overrides, trip-close breakdown and the POD
+		// legacy mirror. Errors stay best-effort exactly as before.
+		var auditSink tripapp.AuditLogger
+		if h.Services != nil && h.Services.Audit != nil {
+			auditSink = h.Services.Audit
+		}
+		h.recordOverrideUC = tripapp.NewRecordDispatchOverrideUseCase(h.DB, auditSink)
+		h.blockBreakdownUC = tripapp.NewBlockVehicleForBreakdownUseCase(h.DB)
+		h.mirrorPODUC = tripapp.NewMirrorPODArtifactsUseCase(h.DB)
 		h.detRepo = geofencerepo.NewEventLogRepository(h.DB)
 	}
 }
@@ -916,34 +928,19 @@ func (h *TripHandlers) handleComplianceBlock(w http.ResponseWriter, r *http.Requ
 		return true
 	}
 	tenant := shared.MustTenantID(r.Context())
-	if h.DB != nil {
-		_, _ = h.DB.ExecContext(r.Context(), `CREATE TABLE IF NOT EXISTS dispatch_overrides (
-            id TEXT PRIMARY KEY,
-            tenant_id TEXT NOT NULL DEFAULT '1',
-            trip_id TEXT NOT NULL,
-            vehicle_id TEXT,
-            driver_id TEXT,
-            blocked_by TEXT NOT NULL,
-            reason TEXT NOT NULL,
-            overridden_by TEXT NOT NULL,
-            created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
-        )`)
-		id := uuid.NewString()
-		_, _ = h.DB.ExecContext(r.Context(), `INSERT INTO dispatch_overrides (id, tenant_id, trip_id, vehicle_id, driver_id, blocked_by, reason, overridden_by, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-			id, string(tenant), tripID, vehicleID, driverID, code, reason, user.UserID, time.Now().UTC().Format("2006-01-02 15:04:05"))
-	}
-	if h.Services != nil && h.Services.Audit != nil {
-		uid := domain.UserID(user.UserID)
-		rc := reason
-		_ = h.Services.Audit.LogAction(r.Context(), &uid, "dispatch_override", "trips", tripID, nil, &rc)
-	} else if h.DB != nil {
-		auditID := uuid.NewString()
-		var ipVal *string
-		if ip, ok := r.Context().Value(auth.ContextIP).(string); ok && ip != "" {
-			ipVal = &ip
-		}
-		_, _ = h.DB.ExecContext(r.Context(), `INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, ip_address, tenant_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP)`,
-			auditID, user.UserID, "dispatch_override", "trips", tripID, reason, ipVal, string(shared.TenantOrPlatform(r.Context())))
+	// Best-effort like the legacy inline writes: a failed override record must
+	// not change the dispatch response (errors surface in the log only).
+	if err := h.recordOverrideUC.Execute(r.Context(), tripapp.RecordDispatchOverrideCommand{
+		TenantID:     tenant,
+		TripID:       tripID,
+		VehicleID:    vehicleID,
+		DriverID:     driverID,
+		BlockedBy:    code,
+		Reason:       reason,
+		OverriddenBy: user.UserID,
+	}); err != nil {
+		slog.WarnContext(r.Context(), "dispatch override recording failed",
+			slog.String("trip_id", tripID), slog.Any("error", err))
 	}
 	return false
 }
@@ -1256,29 +1253,21 @@ func (h *TripHandlers) CompleteTrip(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if breakdown {
-		desc := "Breakdown reported at trip close"
-		if breakdownNote != "" {
-			desc += ": " + breakdownNote
-		}
-		if closedVehicleID == "" && h.DB != nil {
-			_ = h.DB.QueryRowContext(r.Context(), `SELECT vehicle_id FROM trips WHERE id = $1 AND tenant_id = $2`, id, string(tenant)).Scan(&closedVehicleID)
-		}
-		if closedVehicleID != "" {
-			desc += " (vehicle " + closedVehicleID + ")"
-			if h.DB != nil {
-				_, _ = h.DB.ExecContext(r.Context(),
-					`UPDATE vehicles SET status = 'maintenance', blocked = 1, blocked_reason = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 AND tenant_id = $3`,
-					desc, closedVehicleID, string(tenant),
-				)
-			}
-		}
+		res := h.blockBreakdownUC.Execute(r.Context(), tripapp.BlockVehicleForBreakdownCommand{
+			TenantID:  tenant,
+			TripID:    tripID,
+			VehicleID: closedVehicleID,
+			Note:      breakdownNote,
+		})
+		// The ops alert stays filed by the caller (see complete_trip.go: the
+		// completion use-case deliberately leaves breakdown alerts to callers).
 		if h.Services != nil && h.Services.OpsAlerts != nil {
 			_, _ = h.Services.OpsAlerts.CreateAlert(r.Context(), service.OpsAlert{
 				TenantID:    string(tenant),
 				AlertType:   service.OpsAlertVehicleBreakdown,
 				Severity:    service.OpsAlertSeverityHigh,
 				Title:       "Vehicle breakdown at trip close",
-				Description: desc,
+				Description: res.Description,
 				EntityType:  strPtr("trip"),
 				EntityID:    &id,
 			})
@@ -1587,32 +1576,18 @@ func (h *TripHandlers) SubmitStopPOD(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Mirror to legacy trips table and stop_pod_attachments for cross-compatibility
-	if h.App != nil && h.App.DB != nil {
-		_, _ = h.App.DB.ExecContext(r.Context(), `
-			UPDATE trips
-			SET pod_url = COALESCE(NULLIF($1, ''), pod_url),
-			    pod_photo_url = COALESCE(NULLIF($2, ''), pod_photo_url),
-			    pod_signature_url = COALESCE(NULLIF($3, ''), pod_signature_url),
-			    pod_notes = COALESCE(NULLIF($4, ''), pod_notes),
-			    pod_captured_at = CURRENT_TIMESTAMP
-			WHERE (id = $5 OR trip_number = $6) AND tenant_id = $7`,
-			podURL, podURL, signatureURL, notes, tripID, tripID, string(tenantID),
-		)
-		if podURL != "" && stopID != "" {
-			_, _ = h.App.DB.ExecContext(r.Context(), `
-				INSERT INTO stop_pod_attachments (id, tenant_id, stop_id, trip_id, file_url, file_type, created_at)
-				VALUES ($1, $2, $3, $4, $5, 'photo', CURRENT_TIMESTAMP)`,
-				uuid.NewString(), string(tenantID), stopID, tripID, podURL,
-			)
-		}
-		if signatureURL != "" && stopID != "" {
-			_, _ = h.App.DB.ExecContext(r.Context(), `
-				INSERT INTO stop_pod_attachments (id, tenant_id, stop_id, trip_id, file_url, file_type, created_at)
-				VALUES ($1, $2, $3, $4, $5, 'signature', CURRENT_TIMESTAMP)`,
-				uuid.NewString(), string(tenantID), stopID, tripID, signatureURL,
-			)
-		}
+	// Mirror to legacy trips table and stop_pod_attachments for
+	// cross-compatibility (best-effort; the stop POD is already committed).
+	if err := h.mirrorPODUC.Execute(r.Context(), tripapp.MirrorPODArtifactsCommand{
+		TenantID:     tenantID,
+		TripID:       tripID,
+		StopID:       stopID,
+		PODURL:       podURL,
+		SignatureURL: signatureURL,
+		Notes:        notes,
+	}); err != nil {
+		slog.WarnContext(r.Context(), "legacy POD mirror failed",
+			slog.String("trip_id", tripID), slog.Any("error", err))
 	}
 
 	if wantsJSON(r) {
