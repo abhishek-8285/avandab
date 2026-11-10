@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"transport-app/internal/config"
 )
@@ -339,5 +340,25 @@ func TestLoad_ReportWebhookSecret(t *testing.T) {
 	t.Setenv("REPORT_DELIVERY_WEBHOOK_SECRET", "whsec-fallback")
 	if got := config.Load().Notify.ReportWebhookSecret; got != "whsec-fallback" {
 		t.Fatalf("ReportWebhookSecret = %q, want fallback env value", got)
+	}
+}
+
+// TestLoad_PayoutSweepDefaults pins the stuck-payout sweep knobs.
+func TestLoad_PayoutSweepDefaults(t *testing.T) {
+	t.Setenv("PAYOUT_STUCK_AFTER", "")
+	t.Setenv("PAYOUT_SWEEP_INTERVAL", "")
+	cfg := config.Load()
+	if cfg.PayoutStuckAfter != 24*time.Hour {
+		t.Fatalf("PayoutStuckAfter default = %s, want 24h", cfg.PayoutStuckAfter)
+	}
+	if cfg.PayoutSweepInterval != time.Hour {
+		t.Fatalf("PayoutSweepInterval default = %s, want 1h", cfg.PayoutSweepInterval)
+	}
+
+	t.Setenv("PAYOUT_STUCK_AFTER", "6h")
+	t.Setenv("PAYOUT_SWEEP_INTERVAL", "15m")
+	cfg = config.Load()
+	if cfg.PayoutStuckAfter != 6*time.Hour || cfg.PayoutSweepInterval != 15*time.Minute {
+		t.Fatalf("env overrides not applied: %s / %s", cfg.PayoutStuckAfter, cfg.PayoutSweepInterval)
 	}
 }

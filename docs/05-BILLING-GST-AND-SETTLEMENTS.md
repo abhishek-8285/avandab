@@ -59,6 +59,7 @@ Wallet debits only become real money through the payout rail; without it, `Initi
 - **Webhook reconciliation**: `POST /api/v1/webhooks/payouts/razorpay` is public but signature-verified (HMAC-SHA256, mandatory), idempotent by `X-Razorpay-Event-Id`, and derives tenancy from the stored payout — never from the callback. Amount/currency are checked against the local instruction before any status change.
 - **Enablement**: `PAYOUT_RAIL_ENABLED=true` **and** `PAYOUT_PROVIDER=razorpayx` with account + keys; otherwise startup warns and payouts stay disabled. Bank account numbers are AES-256-GCM encrypted at rest and decrypted only for the provider call (`PAYOUT_ENCRYPTION_KEY`).
 - **UI**: admin settlement view shows account status, recent payouts (amount/status/UTR) and a penny-drop button.
+- **Stuck-payout safety**: a leadered sweep alerts (settlement.payout_stuck, rule_payout_stuck) when a payout stays in initiated/processing past `PAYOUT_STUCK_AFTER` (default 24h) so a lost provider webhook cannot park money silently.
 
 ---
 

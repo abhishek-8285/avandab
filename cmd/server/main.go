@@ -74,6 +74,7 @@ import (
 	"transport-app/internal/retention"
 	"transport-app/internal/safety"
 	"transport-app/internal/service"
+	settlementMonitor "transport-app/internal/settlement/monitor"
 	rzpxPayout "transport-app/internal/settlement/payout/razorpayx"
 	"transport-app/internal/telemetry"
 
@@ -2250,6 +2251,12 @@ func main() {
 	})
 
 	// Fleet report builder scheduled delivery engine (FleetX Parity P3.4)
+	// Stuck-payout sweep: a lost provider webhook must not park money in
+	// initiated/processing forever. Publishes settlement.payout_stuck alerts
+	// (rule_payout_stuck, migration 00184) for payouts older than the threshold.
+	payoutSweeper := settlementMonitor.NewSweeper(settlementRepo, eventBus, cfg.PayoutStuckAfter, cfg.PayoutSweepInterval, logger)
+	runLeadered("payout_stuck_sweep", payoutSweeper.Run)
+
 	reportScheduler := reportbuilder.NewScheduler(
 		reportbuilder.NewServiceWithDelivery(reportbuilder.NewRepository(database), reportDelivery),
 		logger,

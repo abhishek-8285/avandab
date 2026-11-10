@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"time"
 )
 
 type SettlementRepository interface {
@@ -38,6 +39,9 @@ type SettlementRepository interface {
 	UpdatePayoutStatus(ctx context.Context, tenantID, payoutID string, status PayoutStatus, providerPayoutID, utr, failureReason *string) error
 	// ListPayoutsByDriver returns the latest payout instructions for one driver.
 	ListPayoutsByDriver(ctx context.Context, tenantID, driverID string, limit int) ([]PayoutInstruction, error)
+	// ListPayoutsAwaitingCompletion returns non-terminal payouts older than a cutoff
+	// (stuck-payout sweep: provider webhook may never arrive).
+	ListPayoutsAwaitingCompletion(ctx context.Context, olderThan time.Time, limit int) ([]PayoutInstruction, error)
 	// GetPrimaryPayoutAccount returns the driver primary account, nil when absent.
 	GetPrimaryPayoutAccount(ctx context.Context, tenantID, driverID string) (*PayoutAccount, error)
 

@@ -654,3 +654,48 @@ func (r *SQLSettlementRepository) HasLegacySettlementLines(ctx context.Context, 
 	}
 	return count > 0, nil
 }
+
+// ListPayoutsAwaitingCompletion returns non-terminal payout instructions older
+// than olderThan. The stuck-payout sweep publishes an alert per row so money
+// parked in initiated/processing cannot disappear silently when a provider
+// webhook is lost.
+func (r *SQLSettlementRepository) ListPayoutsAwaitingCompletion(ctx context.Context, olderThan time.Time, limit int) ([]domain.PayoutInstruction, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	rows, err := r.q(ctx).QueryContext(ctx, `
+		SELECT id, tenant_id, driver_id, payout_account_id, amount, currency, idempotency_key,
+		       provider_payout_id, status, failure_reason, utr, initiated_at, completed_at, created_at, updated_at
+		FROM payout_instructions
+		WHERE status IN ('initiated', 'processing')
+		  AND COALESCE(initiated_at, created_at) < $1
+		ORDER BY COALESCE(initiated_at, created_at) ASC
+		LIMIT $2`, olderThan, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []domain.PayoutInstruction
+	for rows.Next() {
+		var p domain.PayoutInstruction
+		var provID, failReason, utr sql.NullString
+		var compAt sql.NullTime
+		if err := rows.Scan(&p.ID, &p.TenantID, &p.DriverID, &p.PayoutAccountID, &p.Amount, &p.Currency, &p.IdempotencyKey, &provID, &p.Status, &failReason, &utr, &p.InitiatedAt, &compAt, &p.CreatedAt, &p.UpdatedAt); err != nil {
+			return nil, err
+		}
+		if provID.Valid {
+			p.ProviderPayoutID = &provID.String
+		}
+		if failReason.Valid {
+			p.FailureReason = &failReason.String
+		}
+		if utr.Valid {
+			p.UTR = &utr.String
+		}
+		if compAt.Valid {
+			p.CompletedAt = &compAt.Time
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}

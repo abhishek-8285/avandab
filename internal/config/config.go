@@ -110,6 +110,11 @@ type Config struct {
 	RetentionWorkerEnabled bool
 	RetentionInterval      time.Duration
 	PayoutRailEnabled      bool
+	// PayoutStuckAfter is how long a payout may sit in initiated/processing
+	// before the stuck-payout sweep raises a settlement.payout_stuck alert.
+	PayoutStuckAfter time.Duration
+	// PayoutSweepInterval is the stuck-payout sweep tick.
+	PayoutSweepInterval time.Duration
 	// Payout rail provider: "" (disabled) | "razorpayx". The rail stays off
 	// unless PAYOUT_RAIL_ENABLED=true AND the provider is fully configured.
 	PayoutProvider      string
@@ -454,6 +459,8 @@ func Load() *Config {
 		RetentionWorkerEnabled: getEnvBool("RETENTION_WORKER_ENABLED", true),
 		RetentionInterval:      getEnvDuration("RETENTION_INTERVAL", 24*time.Hour),
 		PayoutRailEnabled:      getEnvBool("PAYOUT_RAIL_ENABLED", false),
+		PayoutStuckAfter:       getEnvDuration("PAYOUT_STUCK_AFTER", 24*time.Hour),
+		PayoutSweepInterval:    getEnvDuration("PAYOUT_SWEEP_INTERVAL", time.Hour),
 		PayoutProvider:         getEnv("PAYOUT_PROVIDER", ""),
 		PayoutAccountNumber:    os.Getenv("RAZORPAYX_ACCOUNT_NUMBER"),
 		PayoutWebhookSecret:    getEnv("PAYOUT_WEBHOOK_SECRET", os.Getenv("RAZORPAYX_WEBHOOK_SECRET")),

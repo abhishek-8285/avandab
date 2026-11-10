@@ -174,6 +174,8 @@ client-side publish confirmations.
 | `RAZORPAYX_WEBHOOK_SECRET` / `PAYOUT_WEBHOOK_SECRET` | falls back to `RAZORPAY_WEBHOOK_SECRET` | Payout callback signing secret (mandatory — unsigned callbacks are rejected). |
 | `RAZORPAYX_BASE_URL` | `https://api.razorpay.com` | Sandbox/test override only. |
 | `PAYOUT_ENCRYPTION_KEY` | empty | Base64 of exactly 32 bytes; AES-256-GCM key for bank account numbers at rest. Required to dispatch a payout. |
+| `PAYOUT_STUCK_AFTER` | `24h` | A payout in initiated/processing older than this raises a settlement.payout_stuck alert (rule_payout_stuck, migration 00184) so a lost provider webhook cannot park money silently. |
+| `PAYOUT_SWEEP_INTERVAL` | `1h` | Stuck-payout sweep tick (leadered). |
 | `AGENT_REQUIRE_APPROVAL` | `true` | Requires admin approval for mutating AI tools. |
 | `AGENT_API_KEY` | empty | OpenAI API Key for operations assistant. |
 | `INTEGRATION_EWAYBILL_USE_MOCK` | `true` | Demo mode for NIC e-waybills; live needs `INTEGRATION_EWAYBILL_API_KEY` + `INTEGRATION_EWAYBILL_ENDPOINT`. |
