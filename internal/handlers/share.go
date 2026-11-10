@@ -20,6 +20,7 @@ import (
 
 	"transport-app/internal/eta"
 	"transport-app/internal/shared"
+	sharing "transport-app/internal/sharing"
 	"transport-app/internal/trip/application"
 )
 
@@ -46,23 +47,7 @@ type CreateShareRequest struct {
 	TTLHours int    `json:"ttl_hours"`
 }
 
-type ShareLinkItem struct {
-	ID                string
-	TripID            string
-	TripNumber        string
-	TokenHash         string
-	HasPIN            bool
-	CreatedBy         string
-	CreatorName       string
-	CreatedAt         time.Time
-	ExpiresAt         time.Time
-	LastViewedAt      *time.Time
-	ViewCount         int
-	FailedPinAttempts int
-	LockedUntil       *time.Time
-	RevokedAt         *time.Time
-	Status            string
-}
+type ShareLinkItem = sharing.LinkItem
 
 func sha256Hex(s string) string {
 	h := sha256.Sum256([]byte(s))
@@ -324,26 +309,19 @@ func (h *ShareHandlers) ViewShare(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 	tokenHash := sha256Hex(token)
 
-	// 1. Lookup share_links
-	var id, tripID string
-	var pinHash, pinSalt sql.NullString
+	link, err := sharing.New(h.db).ByToken(r.Context(), tokenHash)
+	var id string
+	var pinHash sql.NullString
 	var createdAt, expiresAt time.Time
-	var lastViewedAt, lockedUntil, revokedAt sql.NullTime
-	var viewCount, failedAttempts int
+	var lockedUntil, revokedAt sql.NullTime
 	var tripNumber, status string
-	var vehicleID, arrivalTime sql.NullString
-
-	err := h.db.QueryRowContext(r.Context(), `
-		SELECT s.id, s.trip_id, s.pin_hash, s.pin_salt, s.created_at, s.expires_at,
-		       s.last_viewed_at, s.view_count, s.failed_pin_attempts, s.locked_until, s.revoked_at,
-		       t.trip_number, t.status, t.vehicle_id, t.arrival_time
-		FROM share_links s
-		JOIN trips t ON t.id = s.trip_id
-		WHERE s.token_hash = $1`, tokenHash).Scan(
-		&id, &tripID, &pinHash, &pinSalt, &createdAt, &expiresAt,
-		&lastViewedAt, &viewCount, &failedAttempts, &lockedUntil, &revokedAt,
-		&tripNumber, &status, &vehicleID, &arrivalTime,
-	)
+	if link != nil {
+		id = link.ID
+		pinHash = link.PinHash
+		createdAt, expiresAt = link.CreatedAt, link.ExpiresAt
+		lockedUntil, revokedAt = link.LockedUntil, link.RevokedAt
+		tripNumber, status = link.TripNumber, link.Status
+	}
 
 	// 404 for unknown token (uniform, no existence oracle)
 	if err == sql.ErrNoRows {
@@ -474,20 +452,18 @@ func (h *ShareHandlers) VerifyPIN(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 	tokenHash := sha256Hex(token)
 
+	plink, err := sharing.New(h.db).PINByToken(r.Context(), tokenHash)
 	var id string
 	var pinHash, pinSalt sql.NullString
 	var createdAt, expiresAt time.Time
 	var lockedUntil, revokedAt sql.NullTime
 	var failedAttempts int
-
-	err := h.db.QueryRowContext(r.Context(), `
-		SELECT id, pin_hash, pin_salt, created_at, expires_at,
-		       failed_pin_attempts, locked_until, revoked_at
-		FROM share_links
-		WHERE token_hash = $1`, tokenHash).Scan(
-		&id, &pinHash, &pinSalt, &createdAt, &expiresAt,
-		&failedAttempts, &lockedUntil, &revokedAt,
-	)
+	if plink != nil {
+		id = plink.ID
+		pinHash, pinSalt = plink.PinHash, plink.PinSalt
+		createdAt, expiresAt = plink.CreatedAt, plink.ExpiresAt
+		failedAttempts, lockedUntil, revokedAt = plink.FailedPinAttempts, plink.LockedUntil, plink.RevokedAt
+	}
 
 	if err == sql.ErrNoRows {
 		http.Error(w, "Share link not found", http.StatusNotFound)
@@ -607,26 +583,22 @@ func (h *ShareHandlers) ShareData(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 	tokenHash := sha256Hex(token)
 
-	var id, tripID string
+	dlink, err := sharing.New(h.db).DataByToken(r.Context(), tokenHash)
+	var tripID string
 	var pinHash sql.NullString
 	var expiresAt time.Time
 	var revokedAt sql.NullTime
 	var tripNumber, status string
 	var vehicleID, arrivalTime sql.NullString
 	var regNumber, vehNumber sql.NullString
-
-	err := h.db.QueryRowContext(r.Context(), `
-		SELECT s.id, s.trip_id, s.pin_hash, s.expires_at, s.revoked_at,
-		       t.trip_number, t.status, t.vehicle_id, t.arrival_time,
-		       v.registration_number, v.vehicle_number
-		FROM share_links s
-		JOIN trips t ON t.id = s.trip_id
-		LEFT JOIN vehicles v ON v.id = t.vehicle_id
-		WHERE s.token_hash = $1`, tokenHash).Scan(
-		&id, &tripID, &pinHash, &expiresAt, &revokedAt,
-		&tripNumber, &status, &vehicleID, &arrivalTime,
-		&regNumber, &vehNumber,
-	)
+	if dlink != nil {
+		tripID = dlink.TripID
+		pinHash = dlink.PinHash
+		expiresAt, revokedAt = dlink.ExpiresAt, dlink.RevokedAt
+		tripNumber, status = dlink.TripNumber, dlink.Status
+		vehicleID, arrivalTime = dlink.VehicleID, dlink.ArrivalTime
+		regNumber, vehNumber = dlink.RegNumber, dlink.VehicleNumber
+	}
 
 	if err == sql.ErrNoRows {
 		http.Error(w, `{"error":"share link not found"}`, http.StatusNotFound)
@@ -653,53 +625,22 @@ func (h *ShareHandlers) ShareData(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Fetch latest telemetry snapshot for vehicle
 	var lat, lng, speed, fuel, odo *float64
 	var lastSeen *time.Time
 	var snapFound bool
-
-	if vehicleID.Valid && vehicleID.String != "" {
-		var sLat, sLng, sSpeed, sFuel, sOdo sql.NullFloat64
-		var sTs sql.NullTime
-		rowErr := h.db.QueryRowContext(r.Context(), `
-			SELECT latitude, longitude, speed, fuel_level, odometer, timestamp
-			FROM telemetry_snapshots
-			WHERE vehicle_id = $1 AND latitude IS NOT NULL AND longitude IS NOT NULL
-			ORDER BY timestamp DESC LIMIT 1`, vehicleID.String).Scan(
-			&sLat, &sLng, &sSpeed, &sFuel, &sOdo, &sTs,
-		)
-		if rowErr == nil && sLat.Valid && sLng.Valid {
-			snapFound = true
-			lat = &sLat.Float64
-			lng = &sLng.Float64
-			if sSpeed.Valid {
-				speed = &sSpeed.Float64
-			}
-			if sFuel.Valid {
-				fuel = &sFuel.Float64
-			}
-			if sOdo.Valid {
-				odo = &sOdo.Float64
-			}
-			if sTs.Valid {
-				tUTC := sTs.Time.UTC()
-				lastSeen = &tUTC
-			}
-		}
-	}
-
-	// Check maintenance_due
 	maintDue := false
+
+	// Latest telemetry snapshot from the read model.
 	if vehicleID.Valid && vehicleID.String != "" {
-		var md sql.NullBool
-		if qErr := h.db.QueryRowContext(r.Context(),
-			`SELECT maintenance_due FROM vehicles WHERE id = $1`, vehicleID.String).Scan(&md); qErr != nil && qErr != sql.ErrNoRows {
-			slog.WarnContext(r.Context(), "share vehicle maintenance-due lookup failed", slog.Any("error", qErr))
-		}
-		if md.Valid && md.Bool {
-			maintDue = true
-		}
+		snap := sharing.New(h.db).Snapshot(r.Context(), vehicleID.String)
+		snapFound = snap.Found
+		lat, lng = snap.Lat, snap.Lng
+		speed, fuel, odo = snap.Speed, snap.Fuel, snap.Odometer
+		lastSeen = snap.LastSeen
 	}
+
+	// Maintenance flag from the read model.
+	maintDue = sharing.New(h.db).MaintenanceDue(r.Context(), vehicleID.String)
 
 	// ETA Hybrid Calculation (Spec 04 §5, 3D)
 	var etaMin, etaMax *string
@@ -748,23 +689,9 @@ func (h *ShareHandlers) ShareData(w http.ResponseWriter, r *http.Request) {
 		lastSeenStr = &s
 	}
 
-	// Fetch polyline coordinates
 	var polyline [][]float64
-	pRows, pErr := h.db.QueryContext(r.Context(), `
-		SELECT latitude, longitude
-		FROM telemetry_positions
-		WHERE trip_id = $1
-		ORDER BY device_time ASC
-		LIMIT 500`, tripID)
-	if pErr == nil {
-		defer func() { _ = pRows.Close() }()
-		for pRows.Next() {
-			var pLat, pLng float64
-			if err := pRows.Scan(&pLat, &pLng); err == nil {
-				polyline = append(polyline, []float64{pLat, pLng})
-			}
-		}
-	}
+	// Polyline from the read model; fall back to the latest fix.
+	polyline = sharing.New(h.db).Polyline(r.Context(), tripID)
 	if len(polyline) == 0 && lat != nil && lng != nil {
 		polyline = append(polyline, []float64{*lat, *lng})
 	}
@@ -805,18 +732,16 @@ func (h *ShareHandlers) ShareTimeline(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 	tokenHash := sha256Hex(token)
 
+	tlink, err := sharing.New(h.db).TimelineByToken(r.Context(), tokenHash)
 	var tripID, tripTenantID string
 	var pinHash sql.NullString
 	var expiresAt time.Time
 	var revokedAt sql.NullTime
-
-	err := h.db.QueryRowContext(r.Context(), `
-		SELECT s.trip_id, t.tenant_id, s.pin_hash, s.expires_at, s.revoked_at
-		FROM share_links s
-		JOIN trips t ON t.id = s.trip_id
-		WHERE s.token_hash = $1`, tokenHash).Scan(
-		&tripID, &tripTenantID, &pinHash, &expiresAt, &revokedAt,
-	)
+	if tlink != nil {
+		tripID, tripTenantID = tlink.TripID, tlink.TenantID
+		pinHash = tlink.PinHash
+		expiresAt, revokedAt = tlink.ExpiresAt, tlink.RevokedAt
+	}
 
 	if err == sql.ErrNoRows {
 		http.Error(w, `{"error":"share link not found"}`, http.StatusNotFound)
@@ -864,51 +789,12 @@ func (h *ShareHandlers) ListShares(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := h.db.QueryContext(r.Context(), `
-		SELECT s.id, s.trip_id, t.trip_number, s.created_by, COALESCE(u.name, s.created_by),
-		       s.created_at, s.expires_at, s.last_viewed_at, s.view_count,
-		       s.pin_hash IS NOT NULL, s.revoked_at
-		FROM share_links s
-		JOIN trips t ON t.id = s.trip_id
-		LEFT JOIN users u ON u.id = s.created_by
-		WHERE t.tenant_id = $1
-		ORDER BY s.created_at DESC`, tenantID)
+	items, err := sharing.New(h.db).List(r.Context(), tenantID)
 	if err != nil {
 		http.Error(w, "failed to load share links", http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
-
-	now := time.Now().UTC()
-	var shares []ShareLinkItem
-	for rows.Next() {
-		var item ShareLinkItem
-		var lastViewed, revoked sql.NullTime
-		var hasPIN int
-		var createdAtVal, expiresAtVal interface{}
-		if err := rows.Scan(
-			&item.ID, &item.TripID, &item.TripNumber, &item.CreatedBy, &item.CreatorName,
-			&createdAtVal, &expiresAtVal, &lastViewed, &item.ViewCount,
-			&hasPIN, &revoked,
-		); err != nil {
-			continue
-		}
-		item.HasPIN = (hasPIN != 0)
-		item.CreatedAt = parseAnyTime(createdAtVal)
-		item.ExpiresAt = parseAnyTime(expiresAtVal)
-		if lastViewed.Valid {
-			item.LastViewedAt = &lastViewed.Time
-		}
-		if revoked.Valid {
-			item.RevokedAt = &revoked.Time
-			item.Status = "revoked"
-		} else if item.ExpiresAt.Before(now) {
-			item.Status = "expired"
-		} else {
-			item.Status = "active"
-		}
-		shares = append(shares, item)
-	}
+	shares := items
 
 	h.renderPage(w, r, "shares_list.html", PageData{
 		Title: "Trip Share Links",
@@ -964,21 +850,6 @@ func (h *ShareHandlers) renderStandalone(w http.ResponseWriter, r *http.Request,
 	if err := tmpl.Execute(w, data); err != nil {
 		http.Error(w, fmt.Sprintf("template error: %v", err), http.StatusInternalServerError)
 	}
-}
-
-func parseAnyTime(v interface{}) time.Time {
-	if v == nil {
-		return time.Time{}
-	}
-	switch val := v.(type) {
-	case time.Time:
-		return val
-	case string:
-		return parseTimeStr(val)
-	case []byte:
-		return parseTimeStr(string(val))
-	}
-	return time.Time{}
 }
 
 func parseTimeStr(s string) time.Time {

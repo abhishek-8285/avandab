@@ -27,7 +27,7 @@ Measured baseline at head `41345ca` (2026-11-10):
 | `internal/handlers/drivers.go` | 812 | 22 |
 | `internal/handlers/customer_portal.go` | 811 | 16 |
 | `internal/agent/tools.go` | 1,186 | 1 |
-| **handlers/ package total** | — | **222** (was 245) |
+| **handlers/ package total** | — | **214** (was 245) |
 
 Why this matters:
 - The DDD boundaries in `docs/CONTRIBUTING.md` are real and proven by
@@ -92,10 +92,12 @@ service wired into `App`; `App.DB` must not be used by migrated domains.
 
 **Phase 0 — ratchet + guardrails (this ADR).**
 - `internal/architecture/ratchet_test.go` caps handler SQL sites at the
-  measured baseline (222 total, per-file caps), `agent/tools.go` SQL at 1,
+  measured baseline (214 total, per-file caps), `agent/tools.go` SQL at 1,
   and god-file line counts at current sizes. Caps may only be **lowered**.
 - Review rule: no new business logic or SQL in `handlers/` or
   `agent/tools.go`; new behavior goes to a slice UC first.
+
+**Phase 1 progress (2026-11-10, third domain):** the public share/playback read paths moved to `internal/sharing` (`ByToken`, `PINByToken`, `DataByToken`, `Snapshot`, `MaintenanceDue`, `Polyline`, `TimelineByToken`, `List`); `internal/handlers/share.go` is now 870 lines / 8 SQL sites (was 999 / 16 - the 8 remaining are the create/view-count/revoke writes and create-path reads, Phase 2), handlers/ total 214, caps lowered in the same PR. Existing share characterization tests (share_test.go: create/view/PIN/data/list/revoke/timeline) pin behavior.
 
 **Phase 1 progress (2026-11-10, second domain):** the dashboard KPI read paths moved to `internal/kpi` (`Service.Bookings`, `Trips`, `Vehicles`, `Drivers`, `Payments`, `Invoices`); `internal/handlers/kpis.go` is now 41 lines / 0 SQL sites (was 239 / 14), handlers/ total 222 (was 236), caps lowered in the same PR. Characterization tests exposed a real formatting bug (`trimFloat` cut trailing zeros from integer rupees, e.g. ₹300 rendered as ₹3), fixed and pinned. 
 
