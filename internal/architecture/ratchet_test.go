@@ -21,7 +21,7 @@ var sqlTokens = []string{"QueryContext(", "ExecContext(", "QueryRowContext("}
 
 // handlerSQLCaps is the per-file raw-SQL call-site baseline.
 var handlerSQLCaps = map[string]int{
-	"assignment.go":           9,
+	"assignment.go":           0,
 	"backhaul.go":             1,
 	"bookings.go":             1,
 	"compliance.go":           4,
@@ -76,6 +76,7 @@ var handlerLineCaps = map[string]int{
 	"maintenance_plans.go":    910,
 	"drivers.go":              575,
 	"customer_portal.go":      588,
+	"assignment.go":           78,
 }
 
 func countSQL(text string) int {
@@ -117,8 +118,8 @@ func TestArchitectureRatchet_HandlersSQLAndGodFiles(t *testing.T) {
 				"%s grew to %d lines (cap %d): split at the adapter boundary and lower the cap (handlers-end-state ADR)", name, lineCount(text), capLines)
 		}
 	}
-	assert.LessOrEqual(t, totalSQL, 98,
-		"handlers/ raw SQL total grew to %d (cap 98): new SQL belongs in a domain repository", totalSQL)
+	assert.LessOrEqual(t, totalSQL, 89,
+		"handlers/ raw SQL total grew to %d (cap 89): new SQL belongs in a domain repository", totalSQL)
 
 	agentPath := filepath.Join("..", "agent", "tools.go")
 	agentData, err := os.ReadFile(agentPath)

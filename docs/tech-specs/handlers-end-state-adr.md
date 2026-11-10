@@ -288,6 +288,28 @@ tenants), telemetry frame vehicle+tenant binding, the legacy map-key truthiness
 (NULL annual estimate/difference/created-at), the AV actuation transitions, and
 per-tenant plate uniqueness + fail-closed create validation.
 
+**Phase 2 progress (2026-11-10, eighth increment - driver-vehicle assignment):**
+the preferred driver↔vehicle master-assignment surface moved from
+`internal/handlers/assignment.go` into `internal/dispatch/application`
+(`AssignmentService`): `ActiveByDriver`/`ActiveByVehicle` (tenant-scoped active
+row with the legacy sql.ErrNoRows→nil mapping) and
+`AssignVehicleToDriver`/`UnassignDriver`/`UnassignVehicle` (the legacy
+`driver_preferred_vehicles` SQL verbatim: driver+vehicle tenant-existence
+checks, sequential best-effort closing of the conflicting active rows, the
+`dva-` UUID insert with `is_primary=1`, and history-preserving `unassigned_at`
+stamps). Tenant scoping, the one-active-per-driver/vehicle invariant (partial
+unique indexes), reassignment/unassign semantics and the handler's 400/303
+contract are unchanged; the handler keeps HTTP parsing/validation, the
+auth-derived actor identity and redirects. `internal/handlers/assignment.go` is
+now 77 lines / 0 SQL sites (was 152 / 9), handlers/ total 89 (was 98), caps
+lowered in the same PR. The legacy `internal/handlers/assignment_test.go` DB
+characterization cases moved with the logic to
+`internal/dispatch/application/assignment_test.go` (assertions unchanged) and
+were joined by focused cases pinning tenant isolation of reads and writes, the
+1:1 active uniqueness invariant, the `dva-`/`assigned_by` row shape and the
+not-found contract; new HTTP handler tests pin form validation, the
+session-derived `assigned_by`, tenant scoping and redirect targets.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 

@@ -319,7 +319,7 @@ func (h *TripHandlers) New(w http.ResponseWriter, r *http.Request) {
 	selectedDriverID := r.URL.Query().Get("driver_id")
 	selectedVehicleID := r.URL.Query().Get("vehicle_id")
 	if selectedDriverID != "" && selectedVehicleID == "" {
-		if a, _ := getActiveAssignmentByDriver(r.Context(), h.DB, selectedDriverID, string(shared.TenantIDFromContext(r.Context()))); a != nil {
+		if a, _ := dispatchapp.NewAssignmentService(h.DB).ActiveByDriver(r.Context(), shared.TenantIDFromContext(r.Context()), selectedDriverID); a != nil {
 			selectedVehicleID = a.VehicleID
 		}
 	}
