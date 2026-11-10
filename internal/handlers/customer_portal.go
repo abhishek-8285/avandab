@@ -12,11 +12,12 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	appdb "transport-app/internal/database"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	customerportal "transport-app/internal/customerportal"
+	appdb "transport-app/internal/database"
 	"transport-app/internal/shared"
 )
 
@@ -31,45 +32,7 @@ func NewCustomerPortalHandlers(app *App) *CustomerPortalHandlers {
 	return &CustomerPortalHandlers{App: app}
 }
 
-// customerBookingRow mirrors BookingResponseDTO fields used by booking_list_table.html.
-type customerBookingRow struct {
-	ID               string
-	BookingNumber    string
-	CustomerID       string
-	CustomerName     string
-	CustomerCompany  string
-	RouteID          string
-	RouteSource      string
-	RouteDestination string
-	PickupDate       time.Time
-	VehicleType      string
-	Passengers       int64
-	CargoWeight      *float64
-	Price            float64
-	Notes            string
-	Status           string
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
-}
-
-// customerInvoiceRow mirrors InvoiceResponseDTO fields used by invoice_list_table.html.
-type customerInvoiceRow struct {
-	ID              string
-	InvoiceNumber   string
-	BookingID       string
-	CustomerID      string
-	CustomerName    string
-	CustomerCompany string
-	TripID          string
-	TripNumber      string
-	Subtotal        float64
-	Tax             float64
-	Discount        float64
-	Total           float64
-	PaymentStatus   string
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-}
+type customerInvoiceRow = customerportal.InvoiceRow
 
 // parseTimeFlex parses DATETIME strings from SQLite (multiple formats).
 func parseTimeFlex(s string) time.Time {
@@ -115,88 +78,11 @@ func (h *CustomerPortalHandlers) ListMyBookings(w http.ResponseWriter, r *http.R
 		status = ""
 	}
 
-	// Build dynamic WHERE clauses; base always includes tenant + customer_users scoping.
-	// SELECT ... WHERE tenant_id=? AND customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=?)
-	baseWhere := "WHERE b.tenant_id = $1 AND b.customer_id IN (SELECT customer_id FROM customer_users WHERE user_id = $2)"
-	args := []interface{}{tenantStr, session.UserID}
-	if status != "" {
-		baseWhere += " AND b.status = ?"
-		args = append(args, status)
-	}
-	if search != "" {
-		baseWhere += " AND (lower(b.booking_number) LIKE '%' || lower(?) || '%' OR lower(c.name) LIKE '%' || lower(?) || '%' OR lower(rc.source) LIKE '%' || lower(?) || '%' OR lower(rc.destination) LIKE '%' || lower(?) || '%')"
-		args = append(args, search, search, search, search)
-	}
-
-	// Count query scoped via customer_users.
-	countSQL := "SELECT COUNT(*) FROM bookings b JOIN customers c ON c.id = b.customer_id JOIN routes rc ON rc.id = b.route_id " + baseWhere
-	var total int64
-	reboundCount, rerr := appdb.Rebind(countSQL)
-	if rerr != nil {
-		slog.Error("customer_portal count rebind failed", "error", rerr)
-		http.Error(w, "Failed to load", http.StatusInternalServerError)
-		return
-	}
-	err := h.DB.QueryRowContext(r.Context(), reboundCount, args...).Scan(&total)
+	bookings, total, err := customerportal.New(h.DB).Bookings(r.Context(), tenantStr, session.UserID, status, search, pp.Limit, pp.Offset)
 	if err != nil {
-		if strings.Contains(err.Error(), "no such table") {
-			// Graceful fallback when customer_users or other table not migrated yet.
-			slog.Warn("customer_portal ListMyBookings count failed (missing table)", "error", err)
-			total = 0
-		} else {
-			slog.Error("customer_portal ListMyBookings count query failed", "error", err)
-			http.Error(w, "Failed to load bookings", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	// Data query — scoped via same WHERE tenant_id=? AND customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=?)
-	dataSQL := "SELECT b.id, b.booking_number, b.customer_id, c.name, COALESCE(c.company,''), b.route_id, COALESCE(rc.source,''), COALESCE(rc.destination,''), b.pickup_date, b.vehicle_type, b.passengers, b.cargo_weight, b.price, COALESCE(b.notes,''), b.status, b.created_at, b.updated_at FROM bookings b JOIN customers c ON c.id = b.customer_id JOIN routes rc ON rc.id = b.route_id " + baseWhere + " ORDER BY b.created_at DESC LIMIT ? OFFSET ?"
-	dataArgs := append(append([]interface{}{}, args...), pp.Limit, pp.Offset)
-	reboundData, rerr := appdb.Rebind(dataSQL)
-	if rerr != nil {
-		slog.Error("customer_portal data rebind failed", "error", rerr)
-		http.Error(w, "Failed to load", http.StatusInternalServerError)
+		slog.Error("customer_portal ListMyBookings query failed", "error", err)
+		http.Error(w, "Failed to load bookings", http.StatusInternalServerError)
 		return
-	}
-	rows, err := h.DB.QueryContext(r.Context(), reboundData, dataArgs...)
-	if err != nil {
-		if strings.Contains(err.Error(), "no such table") {
-			slog.Warn("customer_portal ListMyBookings data failed (missing table)", "error", err)
-			rows = nil
-			err = nil
-		} else {
-			slog.Error("customer_portal ListMyBookings data query failed", "error", err)
-			http.Error(w, "Failed to load bookings", http.StatusInternalServerError)
-			return
-		}
-	}
-	var bookings []customerBookingRow
-	if rows != nil {
-		defer rows.Close()
-		for rows.Next() {
-			var br customerBookingRow
-			var pickupStr, createdStr, updatedStr string
-			var cargo sql.NullFloat64
-			var passengers int64
-			if err := rows.Scan(&br.ID, &br.BookingNumber, &br.CustomerID, &br.CustomerName, &br.CustomerCompany, &br.RouteID, &br.RouteSource, &br.RouteDestination, &pickupStr, &br.VehicleType, &passengers, &cargo, &br.Price, &br.Notes, &br.Status, &createdStr, &updatedStr); err != nil {
-				continue
-			}
-			br.Passengers = passengers
-			if cargo.Valid {
-				v := cargo.Float64
-				br.CargoWeight = &v
-			}
-			br.PickupDate = parseTimeFlex(pickupStr)
-			br.CreatedAt = parseTimeFlex(createdStr)
-			br.UpdatedAt = parseTimeFlex(updatedStr)
-			bookings = append(bookings, br)
-		}
-		if bookings == nil {
-			bookings = []customerBookingRow{}
-		}
-	} else {
-		bookings = []customerBookingRow{}
 	}
 
 	pd := newPaginationData(pp, total, "/customer/bookings")
@@ -242,77 +128,11 @@ func (h *CustomerPortalHandlers) ListMyInvoices(w http.ResponseWriter, r *http.R
 		status = ""
 	}
 
-	// Base WHERE with customer_users scoping: tenant_id=? AND customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=?)
-	baseWhere := "WHERE i.tenant_id = $1 AND i.customer_id IN (SELECT customer_id FROM customer_users WHERE user_id = $2)"
-	args := []interface{}{tenantStr, session.UserID}
-	if status != "" {
-		baseWhere += " AND i.payment_status = ?"
-		args = append(args, status)
-	}
-	if search != "" {
-		baseWhere += " AND (lower(i.invoice_number) LIKE '%' || lower(?) || '%' OR lower(c.name) LIKE '%' || lower(?) || '%')"
-		args = append(args, search, search)
-	}
-
-	countSQL := "SELECT COUNT(*) FROM invoices i JOIN customers c ON c.id = i.customer_id " + baseWhere
-	var total int64
-	reboundCount, rerr := appdb.Rebind(countSQL)
-	if rerr != nil {
-		slog.Error("customer_portal count rebind failed", "error", rerr)
-		http.Error(w, "Failed to load", http.StatusInternalServerError)
-		return
-	}
-	err := h.DB.QueryRowContext(r.Context(), reboundCount, args...).Scan(&total)
+	invoices, total, err := customerportal.New(h.DB).Invoices(r.Context(), tenantStr, session.UserID, status, search, pp.Limit, pp.Offset)
 	if err != nil {
-		if strings.Contains(err.Error(), "no such table") {
-			slog.Warn("customer_portal ListMyInvoices count missing table", "error", err)
-			total = 0
-		} else {
-			slog.Error("customer_portal ListMyInvoices count failed", "error", err)
-			http.Error(w, "Failed to load invoices", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	// Scoped SELECT ... WHERE tenant_id=? AND customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=?)
-	dataSQL := "SELECT i.id, i.invoice_number, i.booking_id, i.customer_id, COALESCE(c.name,''), COALESCE(c.company,''), COALESCE(i.trip_id,''), COALESCE(t.trip_number,''), i.subtotal, i.tax, COALESCE(i.discount,0), i.total, i.payment_status, i.created_at, i.updated_at FROM invoices i JOIN customers c ON c.id = i.customer_id LEFT JOIN trips t ON t.id = i.trip_id " + baseWhere + " ORDER BY i.created_at DESC LIMIT ? OFFSET ?"
-	dataArgs := append(append([]interface{}{}, args...), pp.Limit, pp.Offset)
-	reboundData, rerr := appdb.Rebind(dataSQL)
-	if rerr != nil {
-		slog.Error("customer_portal data rebind failed", "error", rerr)
-		http.Error(w, "Failed to load", http.StatusInternalServerError)
+		slog.Error("customer_portal ListMyInvoices query failed", "error", err)
+		http.Error(w, "Failed to load invoices", http.StatusInternalServerError)
 		return
-	}
-	rows, err := h.DB.QueryContext(r.Context(), reboundData, dataArgs...)
-	if err != nil {
-		if strings.Contains(err.Error(), "no such table") {
-			slog.Warn("customer_portal ListMyInvoices data missing table", "error", err)
-			rows = nil
-			err = nil
-		} else {
-			slog.Error("customer_portal ListMyInvoices data failed", "error", err)
-			http.Error(w, "Failed to load invoices", http.StatusInternalServerError)
-			return
-		}
-	}
-	var invoices []customerInvoiceRow
-	if rows != nil {
-		defer rows.Close()
-		for rows.Next() {
-			var ir customerInvoiceRow
-			var createdStr, updatedStr string
-			if err := rows.Scan(&ir.ID, &ir.InvoiceNumber, &ir.BookingID, &ir.CustomerID, &ir.CustomerName, &ir.CustomerCompany, &ir.TripID, &ir.TripNumber, &ir.Subtotal, &ir.Tax, &ir.Discount, &ir.Total, &ir.PaymentStatus, &createdStr, &updatedStr); err != nil {
-				continue
-			}
-			ir.CreatedAt = parseTimeFlex(createdStr)
-			ir.UpdatedAt = parseTimeFlex(updatedStr)
-			invoices = append(invoices, ir)
-		}
-		if invoices == nil {
-			invoices = []customerInvoiceRow{}
-		}
-	} else {
-		invoices = []customerInvoiceRow{}
 	}
 
 	pd := newPaginationData(pp, total, "/customer/invoices")
@@ -359,50 +179,20 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 	}
 	tenantStr := string(shared.MustTenantID(r.Context()))
 
-	// Scoped ownership check: trip must belong to a booking whose customer_id is in allowed set.
-	// SELECT ... WHERE tenant_id=? AND customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=?)
-	var tripNumber, status, vehicleID, arrivalTimeStr, departureTimeStr, vehicleReg, vehicleNum string
-	var bookingID sql.NullString
-	err := h.DB.QueryRowContext(r.Context(), `
-		SELECT t.trip_number, t.status, COALESCE(t.vehicle_id,''), COALESCE(CAST(t.arrival_time AS TEXT), ''), COALESCE(CAST(t.departure_time AS TEXT), ''), COALESCE(v.registration_number,''), COALESCE(v.vehicle_number,''), t.booking_id
-		FROM trips t
-		LEFT JOIN bookings b ON b.id = t.booking_id
-		LEFT JOIN vehicles v ON v.id = t.vehicle_id
-		WHERE t.id = $1 AND t.tenant_id = $2 AND (b.customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=$3) OR (t.booking_id IS NULL AND $4 = $5))
-	`, tripID, tenantStr, session.UserID, "", "").Scan(&tripNumber, &status, &vehicleID, &arrivalTimeStr, &departureTimeStr, &vehicleReg, &vehicleNum, &bookingID)
+	trip, err := customerportal.New(h.DB).Tracking(r.Context(), tenantStr, session.UserID, tripID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			// Scoped miss = not yours (or not existent): deny outright.
-			// Never fall back to an unscoped query here — that fail-open
-			// rendered other customers' trips (found 2026-09-12 walkthrough).
-			http.Error(w, "Trip not found or access denied", http.StatusNotFound)
-			return
-		}
-		if strings.Contains(err.Error(), "no such table") {
-			// Legacy DBs without migration 00073 (no customer_users table):
-			// tenant-only fallback, same as before.
-			err2 := h.DB.QueryRowContext(r.Context(), `
-				SELECT t.trip_number, t.status, COALESCE(t.vehicle_id,''), COALESCE(CAST(t.arrival_time AS TEXT), ''), COALESCE(CAST(t.departure_time AS TEXT), ''), COALESCE(v.registration_number,''), COALESCE(v.vehicle_number,''), t.booking_id
-				FROM trips t
-				LEFT JOIN vehicles v ON v.id = t.vehicle_id
-				WHERE t.id = $1 AND t.tenant_id = $2
-			`, tripID, tenantStr).Scan(&tripNumber, &status, &vehicleID, &arrivalTimeStr, &departureTimeStr, &vehicleReg, &vehicleNum, &bookingID)
-			if err2 != nil {
-				http.Error(w, "Trip not found", http.StatusNotFound)
-				return
-			}
-		} else {
-			slog.Error("customer_portal Tracking query failed", "error", err)
-			http.Error(w, "Trip not found", http.StatusNotFound)
-			return
-		}
+		slog.Error("customer_portal Tracking query failed", "error", err)
+		http.Error(w, "Trip not found", http.StatusNotFound)
+		return
 	}
-
-	// If strict scoping found no row but fallback would find, we already handled. If original scoped query found nothing and we didn't fallback, treat as 404.
-	if tripNumber == "" {
+	if trip == nil {
 		http.Error(w, "Trip not found or access denied", http.StatusNotFound)
 		return
 	}
+	tripNumber, status, vehicleID := trip.TripNumber, trip.Status, trip.VehicleID
+	arrivalTimeStr := trip.ArrivalTime
+	vehicleReg, vehicleNum := trip.VehicleReg, trip.VehicleNum
+	bookingID := sql.NullString{String: trip.BookingID, Valid: trip.BookingID != ""}
 
 	vehicleLabel := vehicleReg
 	if vehicleLabel == "" {
@@ -450,17 +240,13 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	// Query stops for multi-stop progression
 	type stopSummary struct {
 		ID           string `json:"id"`
 		StopSequence int    `json:"stop_sequence"`
 		StopType     string `json:"stop_type"`
 		LocationName string `json:"location_name"`
-		// Address mirrors the dispatcher struct: multistop_timeline.html
-		// evaluates $stop.Address even in customer mode (Go `and` is eager),
-		// so the field must exist or trips with stops 500.
-		Address string `json:"address"`
-		Status  string `json:"status"`
+		Address      string `json:"address"`
+		Status       string `json:"status"`
 	}
 	type customerProgression struct {
 		TotalStops        int     `json:"total_stops"`
@@ -468,43 +254,32 @@ func (h *CustomerPortalHandlers) Tracking(w http.ResponseWriter, r *http.Request
 		ProgressPercent   float64 `json:"progress_percent"`
 		AllStopsCompleted bool    `json:"all_stops_completed"`
 	}
-	var stopsList []stopSummary
-	var currentStop *stopSummary
-	var prog *customerProgression
+	stops := customerportal.New(h.DB).Stops(r.Context(), tripID)
+	stopsList := make([]stopSummary, 0, len(stops))
 	completedCount := 0
-
-	sRows, sErr := h.DB.QueryContext(r.Context(), `
-		SELECT id, stop_sequence, stop_type, COALESCE(location_name, ''), COALESCE(address, ''), status
-		FROM trip_stops
-		WHERE trip_id = $1
-		ORDER BY stop_sequence ASC
-	`, tripID)
-	if sErr == nil {
-		defer func() { _ = sRows.Close() }()
-		for sRows.Next() {
-			var st stopSummary
-			if err := sRows.Scan(&st.ID, &st.StopSequence, &st.StopType, &st.LocationName, &st.Address, &st.Status); err == nil {
-				if st.Status == "completed" {
-					completedCount++
-				} else if (st.Status != "skipped") && currentStop == nil {
-					stCopy := st
-					currentStop = &stCopy
-				}
-				stopsList = append(stopsList, st)
-			}
+	var currentStop *stopSummary
+	for _, st := range stops {
+		row := stopSummary{ID: st.ID, StopSequence: st.StopSequence, StopType: st.StopType, LocationName: st.LocationName, Address: st.Address, Status: st.Status}
+		if st.Status == "completed" {
+			completedCount++
+		} else if st.Status != "skipped" && currentStop == nil {
+			cp := row
+			currentStop = &cp
 		}
-		if len(stopsList) > 0 {
-			p := customerProgression{
-				TotalStops:        len(stopsList),
-				CompletedStops:    completedCount,
-				ProgressPercent:   float64(completedCount) / float64(len(stopsList)) * 100.0,
-				AllStopsCompleted: completedCount == len(stopsList),
-			}
-			if p.AllStopsCompleted {
-				p.ProgressPercent = 100.0
-			}
-			prog = &p
+		stopsList = append(stopsList, row)
+	}
+	var prog *customerProgression
+	if len(stopsList) > 0 {
+		p := customerProgression{
+			TotalStops:        len(stopsList),
+			CompletedStops:    completedCount,
+			ProgressPercent:   float64(completedCount) / float64(len(stopsList)) * 100.0,
+			AllStopsCompleted: completedCount == len(stopsList),
 		}
+		if p.AllStopsCompleted {
+			p.ProgressPercent = 100.0
+		}
+		prog = &p
 	}
 
 	// JSON response (Spec 21 §2.3: {"trip_number":"TRP-001","status":"in_transit","eta_min":...})
