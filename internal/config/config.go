@@ -213,6 +213,9 @@ type NotifyConfig struct {
 	EmailPoolEnabled   bool
 	EmailPoolStrategy  string
 	EmailProvidersJSON string
+	// ReportWebhookSecret signs scheduled-report webhook deliveries
+	// (HMAC-SHA256, X-Report-Signature). Optional: unsigned when empty.
+	ReportWebhookSecret string
 }
 
 // FCMConfig holds Firebase Cloud Messaging settings for driver push notifications.
@@ -660,6 +663,7 @@ func Load() *Config {
 		EmailPoolEnabled:    getEnvBool("EMAIL_POOL_ENABLED", true),
 		EmailPoolStrategy:   getEnv("EMAIL_POOL_STRATEGY", getEnv("EMAIL_PROVIDER_STRATEGY", "priority")),
 		EmailProvidersJSON:  os.Getenv("EMAIL_PROVIDERS_JSON"),
+		ReportWebhookSecret: getEnv("REPORT_WEBHOOK_SECRET", os.Getenv("REPORT_DELIVERY_WEBHOOK_SECRET")),
 	}
 	cfg.Comm = CommConfig{
 		OutboxWorker: getEnvBool("COMM_OUTBOX_WORKER", true),

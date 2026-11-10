@@ -325,3 +325,19 @@ func TestLoad_WorkerLeaderLockDefaultsByDriver(t *testing.T) {
 		}
 	})
 }
+
+// TestLoad_ReportWebhookSecret pins the report webhook signing secret env
+// (REPORT_WEBHOOK_SECRET with REPORT_DELIVERY_WEBHOOK_SECRET fallback).
+func TestLoad_ReportWebhookSecret(t *testing.T) {
+	t.Setenv("REPORT_WEBHOOK_SECRET", "whsec-primary")
+	t.Setenv("REPORT_DELIVERY_WEBHOOK_SECRET", "")
+	if got := config.Load().Notify.ReportWebhookSecret; got != "whsec-primary" {
+		t.Fatalf("ReportWebhookSecret = %q, want primary env value", got)
+	}
+
+	t.Setenv("REPORT_WEBHOOK_SECRET", "")
+	t.Setenv("REPORT_DELIVERY_WEBHOOK_SECRET", "whsec-fallback")
+	if got := config.Load().Notify.ReportWebhookSecret; got != "whsec-fallback" {
+		t.Fatalf("ReportWebhookSecret = %q, want fallback env value", got)
+	}
+}

@@ -521,7 +521,7 @@ func (s *Service) TriggerSchedule(ctx context.Context, tenantID, scheduleID stri
 		RowCount:    runRes.RowCount,
 	}
 
-	if s.delivery == nil || !s.delivery.Configured() {
+	if !deliveryReady(s.delivery, sched.Channel) {
 		errMsg := "delivery not configured"
 		_ = s.repo.UpdateScheduleRunStatus(ctx, tenantID, scheduleID, "PENDING_DELIVERY", errMsg, &now, nextRun)
 		return runRes, errors.New(errMsg)
@@ -535,6 +535,19 @@ func (s *Service) TriggerSchedule(ctx context.Context, tenantID, scheduleID stri
 	_ = s.repo.UpdateScheduleRunStatus(ctx, tenantID, scheduleID, "SUCCESS", "", &now, nextRun)
 
 	return runRes, nil
+}
+
+// deliveryReady reports whether the configured delivery can handle this
+// schedule's channel. Deliveries may implement ConfiguredFor to be honest per
+// channel (e.g. email unconfigured while webhook endpoints are ready).
+func deliveryReady(d ScheduleDelivery, channel string) bool {
+	if d == nil {
+		return false
+	}
+	if perChannel, ok := d.(interface{ ConfiguredFor(string) bool }); ok {
+		return perChannel.ConfiguredFor(channel)
+	}
+	return d.Configured()
 }
 
 // Executions History

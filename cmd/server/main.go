@@ -453,9 +453,12 @@ func main() {
 	})
 	notifSvc := notifications.NewServiceWithChannels(emailSender, smsSender, id.NewUUIDGenerator(), clock.NewRealClock())
 
-	// Scheduled report delivery rides the same email adapter: real sends when
-	// SMTP/pool is configured, honest PENDING_DELIVERY when it is not.
-	reportDelivery := reportbuilder.NewEmailDelivery(emailSender, logger)
+	// Scheduled report delivery: email rides the same adapter (real sends when
+	// SMTP/pool is configured), webhook posts signed JSON to schedule URLs.
+	// The router keeps readiness honest per channel.
+	reportEmailDelivery := reportbuilder.NewEmailDelivery(emailSender, logger)
+	reportWebhookDelivery := reportbuilder.NewWebhookDelivery(nil, cfg.Notify.ReportWebhookSecret, logger)
+	reportDelivery := reportbuilder.NewChannelRouter(reportEmailDelivery, reportWebhookDelivery)
 
 	var emailChannel alertchannels.Provider = stubProviders["email"]
 	if emailSender.Configured() {
