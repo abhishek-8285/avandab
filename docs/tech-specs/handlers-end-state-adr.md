@@ -117,6 +117,21 @@ service wired into `App`; `App.DB` must not be used by migrated domains.
 `invoices.go` + `invoices_consolidate.go` (GST/PDF/credit notes),
 `vehicles.go`, `drivers.go`, `maintenance*.go`.
 
+**Phase 2 progress (2026-11-10, first write increment - shares):** the
+share-link write paths moved to `internal/sharing` (`Create` - trip-tenant
+check + per-trip active cap + insert, `RecordView` - sliding expiry + view
+counter, `RecordPINFailure`, `RecordPINSuccess`, `Revoke`, `IsDriverOnTrip`),
+with sentinel errors (`ErrTripNotFound`, `ErrMaxActive`, `ErrLinkCreate`)
+preserving the handler's 404/409/500 statuses and messages;
+`internal/handlers/share.go` is now 826 lines / 0 SQL sites (was 870 / 8),
+handlers/ total 189 (was 197), caps lowered in the same PR. Existing share
+characterization tests (share_test.go: create/view/PIN/data/list/revoke/
+timeline) pass unchanged; new sharing write tests pin tenant scoping, the
+active cap and sentinel behavior. Note: the create-path failure precedence is
+unchanged for trip/cap/insert, but request parsing now runs before the
+tenant/cap checks (needed to bundle the checks with the INSERT in one
+use-case call); no status/JSON shape changed for valid requests.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 

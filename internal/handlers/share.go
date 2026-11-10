@@ -127,27 +127,15 @@ func (h *ShareHandlers) ShareMyTrip(w http.ResponseWriter, r *http.Request) {
 
 	// Same identity rule as GET /api/v1/drivers/me: trips.driver_id may carry
 	// the driver row id, the human driver code, or the auth user id directly.
-	var mine int
-	err := h.db.QueryRowContext(r.Context(), `
-		SELECT 1 FROM trips t
-		WHERE t.id = $1 AND t.tenant_id = $2 AND t.driver_id <> ''
-		  AND ( t.driver_id = $3
-		        OR EXISTS (
-		            SELECT 1 FROM drivers d
-		            WHERE d.tenant_id = $2
-		              AND (d.id = t.driver_id OR d.driver_id = t.driver_id)
-		              AND ( d.id = $3
-		                 OR d.email = (SELECT u.email FROM users u
-		                                WHERE u.id = $3 AND u.tenant_id = $2) ) ) )`,
-		chi.URLParam(r, "id"), tenantID, user.UserID).Scan(&mine)
-	if errors.Is(err, sql.ErrNoRows) {
-		http.Error(w, `{"error":"not your trip"}`, http.StatusForbidden)
-		return
-	}
+	onTrip, err := sharing.New(h.db).IsDriverOnTrip(r.Context(), tenantID, chi.URLParam(r, "id"), user.UserID)
 	if err != nil {
 		slog.ErrorContext(r.Context(), "share trip ownership lookup failed",
 			slog.String("trip_id", chi.URLParam(r, "id")), slog.Any("error", err))
 		http.Error(w, `{"error":"database error"}`, http.StatusInternalServerError)
+		return
+	}
+	if !onTrip {
+		http.Error(w, `{"error":"not your trip"}`, http.StatusForbidden)
 		return
 	}
 
@@ -168,16 +156,7 @@ func (h *ShareHandlers) CreateShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. Validate trip exists and belongs to tenant
-	var tripTenantID string
-	err := h.db.QueryRowContext(r.Context(),
-		`SELECT tenant_id FROM trips WHERE id = $1`, tripID).Scan(&tripTenantID)
-	if err != nil || tripTenantID != tenantID {
-		http.Error(w, `{"error":"trip not found"}`, http.StatusNotFound)
-		return
-	}
-
-	// 2. Check SHARE_LINK_MAX_ACTIVE cap per trip
+	// 1. Resolve share-link policy: per-trip active cap and TTL clamp.
 	maxActive := 20
 	defaultTTL := 24
 	maxTTL := 168
@@ -193,21 +172,7 @@ func (h *ShareHandlers) CreateShare(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var activeCount int
-	err = h.db.QueryRowContext(r.Context(),
-		`SELECT COUNT(*) FROM share_links
-		 WHERE trip_id = $1 AND revoked_at IS NULL AND expires_at > CURRENT_TIMESTAMP`,
-		tripID).Scan(&activeCount)
-	if err != nil {
-		http.Error(w, `{"error":"database error"}`, http.StatusInternalServerError)
-		return
-	}
-	if activeCount >= maxActive {
-		http.Error(w, `{"error":"maximum active share links reached for this trip"}`, http.StatusConflict)
-		return
-	}
-
-	// Parse request (JSON or Form)
+	// 2. Parse request (JSON or Form)
 	var req CreateShareRequest
 	if strings.Contains(r.Header.Get("Content-Type"), "application/json") {
 		_ = json.NewDecoder(r.Body).Decode(&req)
@@ -254,14 +219,19 @@ func (h *ShareHandlers) CreateShare(w http.ResponseWriter, r *http.Request) {
 		createdBy = user.UserID
 	}
 
-	// 6. INSERT share_links
-	_, err = h.db.ExecContext(r.Context(), `
-		INSERT INTO share_links (id, trip_id, token_hash, pin_hash, pin_salt, created_by, created_at, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		linkID, tripID, tokenHash, pinHash, pinSalt, createdBy, now, expiresAt,
-	)
-	if err != nil {
-		http.Error(w, `{"error":"failed to create share link"}`, http.StatusInternalServerError)
+	// 6. Persist: trip-tenant check + active-link cap + INSERT.
+	if _, err := sharing.New(h.db).Create(r.Context(), tenantID, tripID, linkID, tokenHash,
+		pinHash, pinSalt, createdBy, now, expiresAt, maxActive); err != nil {
+		switch {
+		case errors.Is(err, sharing.ErrTripNotFound):
+			http.Error(w, `{"error":"trip not found"}`, http.StatusNotFound)
+		case errors.Is(err, sharing.ErrMaxActive):
+			http.Error(w, `{"error":"maximum active share links reached for this trip"}`, http.StatusConflict)
+		case errors.Is(err, sharing.ErrLinkCreate):
+			http.Error(w, `{"error":"failed to create share link"}`, http.StatusInternalServerError)
+		default:
+			http.Error(w, `{"error":"database error"}`, http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -402,10 +372,7 @@ func (h *ShareHandlers) ViewShare(w http.ResponseWriter, r *http.Request) {
 		newExpiry = maxExpiry
 	}
 
-	if _, sErr := h.db.ExecContext(r.Context(), `
-		UPDATE share_links
-		SET expires_at = $1, view_count = view_count + 1, last_viewed_at = $2
-		WHERE id = $3`, newExpiry, now, id); sErr != nil {
+	if sErr := sharing.New(h.db).RecordView(r.Context(), id, newExpiry, now); sErr != nil {
 		slog.WarnContext(r.Context(), "share view counter update failed", slog.Any("error", sErr))
 	}
 
@@ -525,10 +492,7 @@ func (h *ShareHandlers) VerifyPIN(w http.ResponseWriter, r *http.Request) {
 			newExpiry = maxExpiry
 		}
 
-		if _, sErr := h.db.ExecContext(r.Context(), `
-			UPDATE share_links
-			SET failed_pin_attempts = 0, locked_until = NULL, expires_at = $1
-			WHERE id = $2`, newExpiry, id); sErr != nil {
+		if sErr := sharing.New(h.db).RecordPINSuccess(r.Context(), id, newExpiry); sErr != nil {
 			slog.WarnContext(r.Context(), "share PIN unlock counter reset failed", slog.Any("error", sErr))
 		}
 
@@ -559,10 +523,7 @@ func (h *ShareHandlers) VerifyPIN(w http.ResponseWriter, r *http.Request) {
 		newLock = &lockTime
 	}
 
-	if _, sErr := h.db.ExecContext(r.Context(), `
-		UPDATE share_links
-		SET failed_pin_attempts = $1, locked_until = $2
-		WHERE id = $3`, newAttempts, newLock, id); sErr != nil {
+	if sErr := sharing.New(h.db).RecordPINFailure(r.Context(), id, newAttempts, newLock); sErr != nil {
 		// Security-relevant counter: a lost write means brute-force lockout
 		// tracking silently resets.
 		slog.WarnContext(r.Context(), "share PIN failure counter update failed", slog.Any("error", sErr))
@@ -813,12 +774,7 @@ func (h *ShareHandlers) RevokeShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := h.db.ExecContext(r.Context(), `
-		UPDATE share_links
-		SET revoked_at = CURRENT_TIMESTAMP
-		WHERE id = $1 AND trip_id IN (SELECT id FROM trips WHERE tenant_id = $2)`,
-		id, tenantID)
-	if err != nil {
+	if _, err := sharing.New(h.db).Revoke(r.Context(), tenantID, id); err != nil {
 		http.Error(w, `{"error":"failed to revoke share link"}`, http.StatusInternalServerError)
 		return
 	}

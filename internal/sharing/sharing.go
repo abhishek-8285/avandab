@@ -1,13 +1,16 @@
 // Package sharing owns the public trip-share read models (token lookups,
-// telemetry snapshot/polyline, timeline link, admin list). HTTP handlers keep
-// the PIN cookie, ETA, rendering and writes; queries live here so
-// internal/handlers/ stays an adapter layer
-// (docs/tech-specs/handlers-end-state-adr.md, Phase 1).
+// telemetry snapshot/polyline, timeline link, admin list) and the share-link
+// write paths (create, sliding expiry/view counter, PIN lockout, revoke,
+// driver-trip ownership). HTTP handlers keep the PIN cookie, ETA and rendering
+// so internal/handlers/ stays an adapter layer
+// (docs/tech-specs/handlers-end-state-adr.md, Phases 1-2).
 package sharing
 
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"time"
 )
 
@@ -313,4 +316,144 @@ func (s *Service) List(ctx context.Context, tenantID string) ([]LinkItem, error)
 		out = append(out, item)
 	}
 	return out, rows.Err()
+}
+
+// Sentinel errors from the share write paths. The HTTP handler maps them to
+// the exact status codes/messages it returned before the Phase 2 extraction
+// (docs/tech-specs/handlers-end-state-adr.md).
+var (
+	// ErrTripNotFound means the trip does not exist or belongs to another tenant.
+	ErrTripNotFound = errors.New("sharing: trip not found for tenant")
+	// ErrMaxActive means the trip already holds the maximum number of live links.
+	ErrMaxActive = errors.New("sharing: maximum active share links reached")
+	// ErrLinkCreate means the share-link insert failed.
+	ErrLinkCreate = errors.New("sharing: share link insert failed")
+	// errNoDB guards writes attempted without a database handle.
+	errNoDB = errors.New("sharing: no database")
+)
+
+// Create stores a new share link after checking the trip belongs to tenantID
+// and the trip holds fewer than maxActive live links. It returns
+// ErrTripNotFound, ErrMaxActive, ErrLinkCreate (wrapped) or a storage error.
+//
+// Any trip-lookup failure maps to ErrTripNotFound: the pre-extraction handler
+// answered 404 for a missing row, a foreign tenant and a query error alike.
+func (s *Service) Create(ctx context.Context, tenantID, tripID, linkID, tokenHash string, pinHash, pinSalt *string, createdBy string, now, expiresAt time.Time, maxActive int) (bool, error) {
+	if s == nil || s.db == nil {
+		return false, errNoDB
+	}
+
+	var tripTenantID string
+	err := s.db.QueryRowContext(ctx,
+		`SELECT tenant_id FROM trips WHERE id = $1`, tripID).Scan(&tripTenantID)
+	if err != nil || tripTenantID != tenantID {
+		return false, ErrTripNotFound
+	}
+
+	var activeCount int
+	if err := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM share_links
+		WHERE trip_id = $1 AND revoked_at IS NULL AND expires_at > CURRENT_TIMESTAMP`,
+		tripID).Scan(&activeCount); err != nil {
+		return false, err
+	}
+	if activeCount >= maxActive {
+		return false, ErrMaxActive
+	}
+
+	if _, err := s.db.ExecContext(ctx, `
+		INSERT INTO share_links (id, trip_id, token_hash, pin_hash, pin_salt, created_by, created_at, expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		linkID, tripID, tokenHash, pinHash, pinSalt, createdBy, now, expiresAt,
+	); err != nil {
+		return false, fmt.Errorf("%w: %v", ErrLinkCreate, err)
+	}
+	return true, nil
+}
+
+// RecordView applies the sliding expiry and bumps the view counter for a
+// successful public page view.
+func (s *Service) RecordView(ctx context.Context, linkID string, newExpiry, now time.Time) error {
+	if s == nil || s.db == nil {
+		return errNoDB
+	}
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE share_links
+		SET expires_at = $1, view_count = view_count + 1, last_viewed_at = $2
+		WHERE id = $3`, newExpiry, now, linkID)
+	return err
+}
+
+// RecordPINFailure stores the failed-PIN counter and lockout deadline.
+func (s *Service) RecordPINFailure(ctx context.Context, linkID string, newAttempts int, lockedUntil *time.Time) error {
+	if s == nil || s.db == nil {
+		return errNoDB
+	}
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE share_links
+		SET failed_pin_attempts = $1, locked_until = $2
+		WHERE id = $3`, newAttempts, lockedUntil, linkID)
+	return err
+}
+
+// RecordPINSuccess clears the failed-PIN counter/lock and applies the sliding
+// expiry. newExpiry is part of the pre-extraction success update, so dropping
+// it would silently change the link lifetime.
+func (s *Service) RecordPINSuccess(ctx context.Context, linkID string, newExpiry time.Time) error {
+	if s == nil || s.db == nil {
+		return errNoDB
+	}
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE share_links
+		SET failed_pin_attempts = 0, locked_until = NULL, expires_at = $1
+		WHERE id = $2`, newExpiry, linkID)
+	return err
+}
+
+// Revoke marks a tenant-scoped share link revoked and reports whether a row matched.
+func (s *Service) Revoke(ctx context.Context, tenantID, shareID string) (bool, error) {
+	if s == nil || s.db == nil {
+		return false, errNoDB
+	}
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE share_links
+		SET revoked_at = CURRENT_TIMESTAMP
+		WHERE id = $1 AND trip_id IN (SELECT id FROM trips WHERE tenant_id = $2)`,
+		shareID, tenantID)
+	if err != nil {
+		return false, err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return affected > 0, nil
+}
+
+// IsDriverOnTrip reports whether userID is the driver assigned to the trip.
+// A missing/mismatched trip is (false, nil); storage failures are returned.
+func (s *Service) IsDriverOnTrip(ctx context.Context, tenantID, tripID, userID string) (bool, error) {
+	if s == nil || s.db == nil {
+		return false, errNoDB
+	}
+	var mine int
+	err := s.db.QueryRowContext(ctx, `
+		SELECT 1 FROM trips t
+		WHERE t.id = $1 AND t.tenant_id = $2 AND t.driver_id <> ''
+		  AND ( t.driver_id = $3
+		        OR EXISTS (
+		            SELECT 1 FROM drivers d
+		            WHERE d.tenant_id = $2
+		              AND (d.id = t.driver_id OR d.driver_id = t.driver_id)
+		              AND ( d.id = $3
+		                 OR d.email = (SELECT u.email FROM users u
+		                                WHERE u.id = $3 AND u.tenant_id = $2) ) ) )`,
+		tripID, tenantID, userID).Scan(&mine)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
