@@ -17,7 +17,7 @@ Measured baseline at head `41345ca` (2026-11-10):
 | `internal/handlers/invoices_consolidate.go` | 1,674 | 14 |
 | `internal/handlers/sto.go` | 1,287 | 0 |
 | `internal/handlers/invoices.go` | 1,259 | 21 |
-| `internal/handlers/zmotm_reports.go` | 961 (was 1,166) | 7 (was 9) |
+| `internal/handlers/zmotm_reports.go` | 476 (was 1,166) | 0 (was 9) |
 | `internal/handlers/reports.go` | 1,146 | 0 |
 | `internal/handlers/maintenance.go` | 1,103 | 3 |
 | `internal/handlers/auth.go` | 1,011 | 0 |
@@ -27,7 +27,7 @@ Measured baseline at head `41345ca` (2026-11-10):
 | `internal/handlers/drivers.go` | 812 | 22 |
 | `internal/handlers/customer_portal.go` | 811 | 16 |
 | `internal/agent/tools.go` | 1,186 | 1 |
-| **handlers/ package total** | — | **243** (was 245) |
+| **handlers/ package total** | — | **236** (was 245) |
 
 Why this matters:
 - The DDD boundaries in `docs/CONTRIBUTING.md` are real and proven by
@@ -92,12 +92,12 @@ service wired into `App`; `App.DB` must not be used by migrated domains.
 
 **Phase 0 — ratchet + guardrails (this ADR).**
 - `internal/architecture/ratchet_test.go` caps handler SQL sites at the
-  measured baseline (243 total, per-file caps), `agent/tools.go` SQL at 1,
+  measured baseline (236 total, per-file caps), `agent/tools.go` SQL at 1,
   and god-file line counts at current sizes. Caps may only be **lowered**.
 - Review rule: no new business logic or SQL in `handlers/` or
   `agent/tools.go`; new behavior goes to a slice UC first.
 
-**Phase 1 progress (2026-11-10):** vehicle-master + gate-register query paths moved to `internal/fleetreports` (`Service.VehicleMaster`/`GateRegister`); `zmotm_reports.go` is now 961 lines / 7 SQL sites (was 1,166 / 9) and the ratchet caps were lowered in the same PR. Characterization tests (zmotm_reports_test.go) pin the JSON/CSV behavior.
+**Phase 1 progress (2026-11-10):** the whole ZMOTM_MR read-path domain moved to `internal/fleetreports` (`Service.VehicleMaster`, `GateRegister`, `FuelKMPL`, `Breakdown`, `KMPLSummary`); `zmotm_reports.go` is now 476 lines / 0 SQL sites (was 1,166 / 9), handlers/ total 236 (was 245), and the ratchet caps were lowered in the same PR. Characterization tests (zmotm_reports_test.go, zmotm_kmpl_summary_test.go) pin the JSON/CSV behavior.
 
 **Phase 1 — read/query paths** (lowest risk): `reports.go`,
 `zmotm_reports.go`, `share.go`, `customer_portal.go`,

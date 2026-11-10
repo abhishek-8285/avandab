@@ -408,8 +408,8 @@ INSERT INTO fuel_issues (
 
 	assert.Equal(t, http.StatusOK, wAPI.Code)
 	var apiResp struct {
-		Records []FuelKMPLDTO `json:"records"`
-		Total   int64         `json:"total"`
+		Records []fleetreports.FuelKMPLRow `json:"records"`
+		Total   int64                      `json:"total"`
 	}
 	err = json.NewDecoder(wAPI.Body).Decode(&apiResp)
 	require.NoError(t, err)
@@ -508,8 +508,8 @@ INSERT INTO ops_alerts (
 
 	assert.Equal(t, http.StatusOK, wAPI.Code)
 	var apiResp struct {
-		Records []BreakdownDTO `json:"records"`
-		Total   int64          `json:"total"`
+		Records []fleetreports.BreakdownRow `json:"records"`
+		Total   int64                       `json:"total"`
 	}
 	err = json.NewDecoder(wAPI.Body).Decode(&apiResp)
 	require.NoError(t, err)

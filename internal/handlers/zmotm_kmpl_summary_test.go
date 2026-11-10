@@ -14,6 +14,8 @@ import (
 	"github.com/pressly/goose/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	fleetreports "transport-app/internal/fleetreports"
 )
 
 func seedKMPLSummaryFixtures(t *testing.T, app *App, month time.Time) {
@@ -67,16 +69,16 @@ func TestKMPLSummary_MathVarianceAndIsolation(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, w.Code)
 	var resp struct {
-		Records []KMPLSummaryDTO `json:"records"`
-		Total   int64            `json:"total"`
-		Month   string           `json:"month"`
+		Records []fleetreports.KMPLSummaryRow `json:"records"`
+		Total   int64                         `json:"total"`
+		Month   string                        `json:"month"`
 	}
 	require.NoError(t, json.NewDecoder(w.Body).Decode(&resp))
 	assert.Equal(t, "2026-09", resp.Month)
 	assert.Equal(t, int64(3), resp.Total, "norm + nonorm + single vehicles")
 	require.Len(t, resp.Records, 3)
 
-	byNo := map[string]KMPLSummaryDTO{}
+	byNo := map[string]fleetreports.KMPLSummaryRow{}
 	for _, rec := range resp.Records {
 		byNo[rec.VehicleNo] = rec
 	}
@@ -124,8 +126,8 @@ func TestKMPLSummary_MathVarianceAndIsolation(t *testing.T) {
 	r.ServeHTTP(wF, reqF)
 	require.Equal(t, http.StatusOK, wF.Code)
 	var respF struct {
-		Records []KMPLSummaryDTO `json:"records"`
-		Total   int64            `json:"total"`
+		Records []fleetreports.KMPLSummaryRow `json:"records"`
+		Total   int64                         `json:"total"`
 	}
 	require.NoError(t, json.NewDecoder(wF.Body).Decode(&respF))
 	assert.Equal(t, int64(1), respF.Total)
@@ -186,7 +188,7 @@ func TestFuelKMPL_PaginationCarryover(t *testing.T) {
 		r.ServeHTTP(wq, rq)
 		require.Equal(t, http.StatusOK, wq.Code)
 		var pr struct {
-			Records []FuelKMPLDTO `json:"records"`
+			Records []fleetreports.FuelKMPLRow `json:"records"`
 		}
 		require.NoError(t, json.NewDecoder(wq.Body).Decode(&pr))
 		require.Len(t, pr.Records, 1)
