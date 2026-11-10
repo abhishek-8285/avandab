@@ -549,6 +549,33 @@ isolation, the frozen no-duplicate-guard behavior, the lazy-table and
 missing-table fallbacks, insert-error wrapping, the brand resolution chain +
 logo quirk, and last-seen epoch ordering/no-rows/failure/parse formats.
 
+**Phase 2 progress (2026-11-10, seventeenth increment - maintenance domain
+complete):** the remaining raw SQL of the maintenance/tyre/inventory web
+surfaces moved into the existing `internal/maintenance` slice (extended, no
+new package): `VehicleLabels` (tenant vehicle-id -> display-label map for the
+job-card panel, registration -> vehicle-number -> id fallback),
+`VehicleOptions` (tenant vehicles ordered by vehicle_number for the tyre-mount
+and inventory issue/return dropdowns), `Facilities` (tenant facilities
+ordered by name for stock operations), `VehicleLabel` (single id-only vehicle
+label for the work-order detail page, best-effort like the legacy handler and
+tenant-trusted because it runs after the tenant-scoped work-order read) and
+`WriteOverrideAudit` (the `maintenance_override` audit_logs row with the
+legacy `fmt.Sprintf` payload bytes, action/table, actor id and
+`TenantOrPlatform` tenant fallback; failures stay best-effort at the call
+site). The handlers keep rendering, the map-shape adaptation used by the
+templates, every status code/message, and the untouched repo/worker/
+plan-scheduler lifecycle paths; `internal/handlers/maintenance.go` is now
+1,081 lines / 0 SQL sites (was 1,103 / 3), `maintenance_plans.go` 898 / 0
+(was 910 / 2) and `work_orders_web.go` 139 / 0 (was 141 / 1), handlers/ total
+30 (was 36), caps lowered in the same PR. Existing maintenance/tyre/
+inventory/work-order characterization tests (dashboard render, schedule
+creation/evaluation, record/resolution, override, RBAC, work-order web/API
+lifecycle + close, tyres/inventory lifecycle + RBAC) pass unchanged; new
+`internal/maintenance/web_queries_test.go` pins tenant isolation of both
+dropdowns and the label map, the registration/vehicle-number/id fallbacks,
+ordering, best-effort nil-DB/dead-table behavior, the id-only label quirk and
+the audit row shape/payload bytes + platform-tenant fallback.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 

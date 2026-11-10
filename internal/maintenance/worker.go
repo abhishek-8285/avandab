@@ -285,7 +285,9 @@ func (w *Worker) markVehicleDue(ctx context.Context, vehicleID, tenant, schedule
 				"due_date":     dueDate.Format("2006-01-02"),
 			},
 		}
-		w.bus.Publish(ctx, evt)
+		if err := w.bus.Publish(ctx, evt); err != nil {
+			w.logger.Warn("maintenance: event publish failed", "error", err)
+		}
 	}
 }
 
@@ -384,7 +386,9 @@ func (w *Worker) EvaluateResolution(ctx context.Context, vehicleID string) {
 					"cleared_at": time.Now().UTC().Format(time.RFC3339),
 				},
 			}
-			w.bus.Publish(ctx, evt)
+			if err := w.bus.Publish(ctx, evt); err != nil {
+				w.logger.Warn("maintenance: event publish failed", "error", err)
+			}
 		}
 	}
 }

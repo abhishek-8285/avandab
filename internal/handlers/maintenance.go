@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"database/sql"
-	"fmt"
 	"html/template"
 	"net/http"
 	"strconv"
@@ -96,17 +95,7 @@ func (h *MaintenanceHandlers) Index(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Registration numbers for the job-card panel (never raw UUIDs).
-	vehicleLabels := map[string]string{}
-	if rows, err := h.DB.QueryContext(r.Context(),
-		`SELECT id, COALESCE(NULLIF(registration_number,''), vehicle_number, id) FROM vehicles WHERE tenant_id = $1`, tenantID); err == nil {
-		defer func() { _ = rows.Close() }()
-		for rows.Next() {
-			var vid, label string
-			if rows.Scan(&vid, &label) == nil {
-				vehicleLabels[vid] = label
-			}
-		}
-	}
+	vehicleLabels := maintenance.VehicleLabels(r.Context(), h.DB, tenantID)
 
 	data := PageData{
 		Title: "Preventive Maintenance",
@@ -408,12 +397,8 @@ func (h *MaintenanceHandlers) OverrideBlock(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Audit log
-	_, _ = h.DB.ExecContext(r.Context(), `
-		INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, tenant_id, created_at)
-		VALUES ($1, $2, 'maintenance_override', 'vehicles', $3, $4, $5, CURRENT_TIMESTAMP)`,
-		uuid.NewString(), actorID, vehicleID, fmt.Sprintf(`{"reason":%q,"override_by":%q}`, reason, actorID), string(shared.TenantOrPlatform(r.Context())),
-	)
+	// Audit log (best-effort: the legacy code ignored the write error).
+	_ = maintenance.WriteOverrideAudit(r.Context(), h.DB, actorID, vehicleID, reason)
 
 	// safeRedirect provably returns only same-origin paths (covered by
 	// redirect_test.go), so an attacker-supplied Referer cannot bounce the
@@ -485,21 +470,14 @@ func (h *TyreHandlers) WebTyresDashboard(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Fetch vehicles for mounting dropdown
-	rows, err := h.DB.QueryContext(r.Context(), `SELECT id, vehicle_number, registration_number
-		FROM vehicles WHERE tenant_id = $1 ORDER BY vehicle_number ASC`, tenantID)
+	vehicleOptions := maintenance.VehicleOptions(r.Context(), h.DB, tenantID)
 	var allVehicles []map[string]string
-	if err == nil {
-		defer func() { _ = rows.Close() }()
-		for rows.Next() {
-			var id, vNum, regNum string
-			if err := rows.Scan(&id, &vNum, &regNum); err == nil {
-				allVehicles = append(allVehicles, map[string]string{
-					"ID":                 id,
-					"VehicleNumber":      vNum,
-					"RegistrationNumber": regNum,
-				})
-			}
-		}
+	for _, v := range vehicleOptions {
+		allVehicles = append(allVehicles, map[string]string{
+			"ID":                 v.ID,
+			"VehicleNumber":      v.VehicleNumber,
+			"RegistrationNumber": v.RegistrationNumber,
+		})
 	}
 
 	data := PageData{

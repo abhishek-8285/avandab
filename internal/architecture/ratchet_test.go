@@ -39,8 +39,8 @@ var handlerSQLCaps = map[string]int{
 	"kharcha.go":              3,
 	"kharcha_verify.go":       1,
 	"kpis.go":                 0,
-	"maintenance.go":          3,
-	"maintenance_plans.go":    2,
+	"maintenance.go":          0,
+	"maintenance_plans.go":    0,
 	"mqtt_credentials.go":     3,
 	"otp.go":                  1,
 	"outbox_batch.go":         1,
@@ -56,7 +56,7 @@ var handlerSQLCaps = map[string]int{
 	"tenants.go":              0,
 	"trips.go":                0,
 	"vehicles.go":             0,
-	"work_orders_web.go":      1,
+	"work_orders_web.go":      0,
 	"zmotm_reports.go":        0,
 }
 
@@ -69,11 +69,11 @@ var handlerLineCaps = map[string]int{
 	"invoices.go":             952,
 	"zmotm_reports.go":        476,
 	"reports.go":              1146,
-	"maintenance.go":          1103,
+	"maintenance.go":          1081,
 	"auth.go":                 1011,
 	"share.go":                826,
 	"vehicles.go":             770,
-	"maintenance_plans.go":    910,
+	"maintenance_plans.go":    898,
 	"drivers.go":              575,
 	"customer_portal.go":      477,
 	"assignment.go":           78,
@@ -84,6 +84,7 @@ var handlerLineCaps = map[string]int{
 	"sos.go":                  165,
 	"ewaybill.go":             371,
 	"console.go":              321,
+	"work_orders_web.go":      139,
 }
 
 func countSQL(text string) int {
@@ -125,8 +126,8 @@ func TestArchitectureRatchet_HandlersSQLAndGodFiles(t *testing.T) {
 				"%s grew to %d lines (cap %d): split at the adapter boundary and lower the cap (handlers-end-state ADR)", name, lineCount(text), capLines)
 		}
 	}
-	assert.LessOrEqual(t, totalSQL, 36,
-		"handlers/ raw SQL total grew to %d (cap 36): new SQL belongs in a domain repository", totalSQL)
+	assert.LessOrEqual(t, totalSQL, 30,
+		"handlers/ raw SQL total grew to %d (cap 30): new SQL belongs in a domain repository", totalSQL)
 
 	agentPath := filepath.Join("..", "agent", "tools.go")
 	agentData, err := os.ReadFile(agentPath)

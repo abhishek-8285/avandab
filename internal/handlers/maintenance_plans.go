@@ -274,37 +274,25 @@ func (h *InventoryHandlers) WebInventoryDashboard(w http.ResponseWriter, r *http
 	})
 
 	// Fetch facilities for stock operations
-	rowsF, err := h.DB.QueryContext(r.Context(), `SELECT id, name, facility_code FROM facilities WHERE tenant_id = $1 ORDER BY name ASC`, tenantID)
+	facilityOptions := maintenance.Facilities(r.Context(), h.DB, tenantID)
 	var facilities []map[string]string
-	if err == nil {
-		defer func() { _ = rowsF.Close() }()
-		for rowsF.Next() {
-			var id, name, code string
-			if err := rowsF.Scan(&id, &name, &code); err == nil {
-				facilities = append(facilities, map[string]string{
-					"ID":   id,
-					"Name": name,
-					"Code": code,
-				})
-			}
-		}
+	for _, f := range facilityOptions {
+		facilities = append(facilities, map[string]string{
+			"ID":   f.ID,
+			"Name": f.Name,
+			"Code": f.Code,
+		})
 	}
 
 	// Fetch vehicles for issue/return
-	rowsV, err := h.DB.QueryContext(r.Context(), `SELECT id, vehicle_number, registration_number FROM vehicles WHERE tenant_id = $1 ORDER BY vehicle_number ASC`, tenantID)
+	vehicleOptions := maintenance.VehicleOptions(r.Context(), h.DB, tenantID)
 	var vehicles []map[string]string
-	if err == nil {
-		defer func() { _ = rowsV.Close() }()
-		for rowsV.Next() {
-			var id, vNum, regNum string
-			if err := rowsV.Scan(&id, &vNum, &regNum); err == nil {
-				vehicles = append(vehicles, map[string]string{
-					"ID":                 id,
-					"VehicleNumber":      vNum,
-					"RegistrationNumber": regNum,
-				})
-			}
-		}
+	for _, v := range vehicleOptions {
+		vehicles = append(vehicles, map[string]string{
+			"ID":                 v.ID,
+			"VehicleNumber":      v.VehicleNumber,
+			"RegistrationNumber": v.RegistrationNumber,
+		})
 	}
 
 	data := PageData{
