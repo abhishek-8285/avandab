@@ -27,7 +27,7 @@ Measured baseline at head `41345ca` (2026-11-10):
 | `internal/handlers/drivers.go` | 812 | 22 |
 | `internal/handlers/customer_portal.go` | 811 | 16 |
 | `internal/agent/tools.go` | 1,186 | 1 |
-| **handlers/ package total** | — | **207** (was 245) |
+| **handlers/ package total** | — | **197** (was 245) |
 
 Why this matters:
 - The DDD boundaries in `docs/CONTRIBUTING.md` are real and proven by
@@ -92,10 +92,12 @@ service wired into `App`; `App.DB` must not be used by migrated domains.
 
 **Phase 0 — ratchet + guardrails (this ADR).**
 - `internal/architecture/ratchet_test.go` caps handler SQL sites at the
-  measured baseline (207 total, per-file caps), `agent/tools.go` SQL at 1,
+  measured baseline (197 total, per-file caps), `agent/tools.go` SQL at 1,
   and god-file line counts at current sizes. Caps may only be **lowered**.
 - Review rule: no new business logic or SQL in `handlers/` or
   `agent/tools.go`; new behavior goes to a slice UC first.
+
+**Phase 1 progress (2026-11-10, fifth domain - Phase 1 read paths complete):** the Command Center read paths (fleet strip, vehicle context panel) moved to `internal/controltower/application` (`ConsoleReadModel.Fleet`, `VehicleContext`); `internal/handlers/console.go` is now 362 lines / 5 SQL sites (was 591 / 15 - remaining are the inline e-way-bill extend action + audit write, Phase 2), handlers/ total 197 (was 245 at baseline, -48 SQL sites in Phase 1), caps lowered in the same PR. Console render tests + controltower application suites pass.
 
 **Phase 1 progress (2026-11-10, fourth domain):** the shipper-portal read paths moved to `internal/customerportal` (`Bookings`, `Invoices`, `Tracking`, `Stops`, all scoped via customer_users); `internal/handlers/customer_portal.go` is now 588 lines / 9 SQL sites (was 811 / 16 - remaining are feedback writes/validation reads, last-seen helper, brand lookup), handlers/ total 207, caps lowered in the same PR. Portal scoping tests (TestPortalInvoices_ScopedToOwnCustomer, TestLastSeenFix_*) pin behavior.
 
