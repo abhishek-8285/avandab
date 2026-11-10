@@ -122,6 +122,18 @@ as superuser (no `postgres` role) — DSN is
 `postgres://u0_a412@127.0.0.1:55432/<db>?sslmode=disable`. CI uses the standard
 `postgres` role inside the service container.
 
+## Rehearsal evidence (2026-11-10, PG 18.2 Termux local, port 55432, head v185)
+| Step | Result |
+|---|---|
+| empty-PG chain (two-phase: UpTo 72 -> resync -> Up) | v185, 180 goose version rows (177 migrations), 0 errors |
+| migrations 00184/00185 on PG | alert source + ' + bt + 'rule_payout_stuck' + bt + ' present; drivers.' + bt + 'deactivated_at' + bt + '/' + bt + 'kyc_purged_at' + bt + ' + ' + bt + 'idx_drivers_deactivated_at' + bt + ' created |
+| schema parity vs fresh sqlite v185 | 179/179 table-name sets identical (goose table excluded) |
+| seed parity | roles 9, permissions 144, alert_rules 18 (17 + rule_payout_stuck) on both engines |
+| ' + bt + 'go test -tags pg_integration ./internal/database/ ./internal/datamigrate/' + bt + ' | ' + bt + 'ok internal/database' + bt + ', ' + bt + 'ok internal/datamigrate' + bt + ' |
+| full down-migration (DownTo 0) | 0 public tables remaining |
+| re-up after down (two-phase) | v185 again, 0 errors |
+| server boot on PG v185 (port 18085) | ' + bt + 'Database migrated successfully' + bt + '; ' + bt + '/login' + bt + ', ' + bt + '/healthz' + bt + ', ' + bt + '/status' + bt + ', ' + bt + '/api/v1/health/status' + bt + ', ' + bt + '/pricing' + bt + ' all 200; no ERROR lines |
+
 ## Timescale decision
 Deferred. Cut over to plain PG first; revisit only on proven hypertable
 need (>5k-truck telemetry volume per ROADMAP trigger). No code changes for it now.
