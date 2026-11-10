@@ -64,6 +64,17 @@ func currentDefaultOverlay() TenantOverlay {
 }
 
 // SetTenantOverlay attaches a per-instance overlay (tests, alternate wiring).
+// GenerateInvoiceUseCase generates an invoice aggregate.
+type GenerateInvoiceUseCase struct {
+	uow   ports.UnitOfWork
+	idGen ports.IDGenerator
+	clock ports.Clock
+
+	// overlay optionally overrides billing.* per tenant; nil falls back to
+	// the process-wide default registered by SetDefaultTenantOverlay.
+	overlay TenantOverlay
+}
+
 func (uc *GenerateInvoiceUseCase) SetTenantOverlay(o TenantOverlay) { uc.overlay = o }
 
 // effectiveOverlay prefers the instance overlay over the process default.
@@ -105,17 +116,6 @@ type InvoiceLineItemInput struct {
 	Quantity    float64 // e.g. billable hours for detention
 	UnitPrice   float64 // e.g. rate per hour
 	RefID       *string // source row id (trip_detentions.id) for dedupe
-}
-
-// GenerateInvoiceUseCase generates an invoice aggregate.
-type GenerateInvoiceUseCase struct {
-	uow   ports.UnitOfWork
-	idGen ports.IDGenerator
-	clock ports.Clock
-
-	// overlay optionally overrides billing.* per tenant; nil falls back to
-	// the process-wide default registered by SetDefaultTenantOverlay.
-	overlay TenantOverlay
 }
 
 // NewGenerateInvoiceUseCase constructs a new GenerateInvoiceUseCase.

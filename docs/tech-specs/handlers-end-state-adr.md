@@ -175,6 +175,32 @@ complete/detention) pass unchanged; new
 the not-found sentinel, stop ordering, POD URL precedence, nullable timestamp
 parsing and the legacy best-effort companion lookups.
 
+**Phase 2 progress (2026-11-10, fourth increment - invoices):** the invoice
+money/operation paths moved from `internal/handlers/invoices.go` into
+`internal/invoice/application`: `InvoiceDocumentQueries` (view due date,
+PDF due-date/e-way-bill extras, tenant/bootstrap company profile with the
+legacy fallback chain, customer Bill-To, ordered line-item list, HSN master
+list/search), `LineItemService` (`AddLineItem`/`EditLineItem`/
+`DeleteLineItem` - fail-closed HSN GST resolution, the single paise-rounding
+site via `ComputeLineTax`, and insert/update/delete + invoice-header total
+recalculation in ONE transaction, every statement tenant-scoped) and
+`GenerateIRNUseCase` (invoice/tax-context/line reads, paid/partially-paid and
+duplicate-IRN guards, GSTN call delegated through an `IRNGenerator` seam and
+the IRN fields persisted). Legacy messages/statuses are preserved with typed
+stage errors mapped in the handler (`LineItemWriteError`, `IRNQueryError`,
+`IRNStoreError`, `ErrUnknownHSN`, `ErrIRNPaymentStatus`,
+`ErrIRNAlreadyGenerated`); PDF/GST money math and template composition stay
+in the handler and now compose from the application read models with the same
+float arithmetic. `internal/handlers/invoices.go` is now 952 lines / 0 SQL
+sites (was 1,259 / 21), handlers/ total 148 (was 169), caps lowered in the
+same PR. Existing handler characterization tests (line-item GST fail-closed,
+paise rounding, editor lock states, PDF seller block/3-tier titles, view
+notes/locked, immutability guards) pass unchanged; new
+`internal/invoice/application/invoice_write_use_cases_test.go` pins tenant
+isolation (cross-tenant reads/writes invisible), GST split math/rounding,
+in-transaction header recalculation, unknown-HSN fail-closed and the IRN
+duplicate/status guards.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 
