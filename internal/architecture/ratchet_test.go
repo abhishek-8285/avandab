@@ -41,7 +41,7 @@ var handlerSQLCaps = map[string]int{
 	"kpis.go":                 0,
 	"maintenance.go":          0,
 	"maintenance_plans.go":    0,
-	"mqtt_credentials.go":     3,
+	"mqtt_credentials.go":     0,
 	"otp.go":                  1,
 	"outbox_batch.go":         1,
 	"public_payment.go":       0,
@@ -51,7 +51,7 @@ var handlerSQLCaps = map[string]int{
 	"settings.go":             1,
 	"share.go":                0,
 	"sos.go":                  0,
-	"telemetry_devices.go":    2,
+	"telemetry_devices.go":    0,
 	"tenant_purge.go":         0,
 	"tenants.go":              0,
 	"trips.go":                0,
@@ -88,6 +88,8 @@ var handlerLineCaps = map[string]int{
 	"kharcha.go":              505,
 	"driver_money.go":         160,
 	"kharcha_verify.go":       61,
+	"mqtt_credentials.go":     135,
+	"telemetry_devices.go":    700,
 }
 
 func countSQL(text string) int {
@@ -129,8 +131,8 @@ func TestArchitectureRatchet_HandlersSQLAndGodFiles(t *testing.T) {
 				"%s grew to %d lines (cap %d): split at the adapter boundary and lower the cap (handlers-end-state ADR)", name, lineCount(text), capLines)
 		}
 	}
-	assert.LessOrEqual(t, totalSQL, 24,
-		"handlers/ raw SQL total grew to %d (cap 24): new SQL belongs in a domain repository", totalSQL)
+	assert.LessOrEqual(t, totalSQL, 19,
+		"handlers/ raw SQL total grew to %d (cap 19): new SQL belongs in a domain repository", totalSQL)
 
 	agentPath := filepath.Join("..", "agent", "tools.go")
 	agentData, err := os.ReadFile(agentPath)

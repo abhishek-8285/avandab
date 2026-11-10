@@ -606,6 +606,37 @@ e-POD coalesce/zero-guard matrix, settlement ordering/50-row cap/period
 mapping/nullable paid_at/driver isolation, and tenant-scoped OCR field reads
 with NULL/no-row semantics.
 
+**Phase 2 progress (2026-11-10, nineteenth increment - telemetry/devices
+domain complete):** the remaining raw SQL of the telemetry-device surfaces
+moved into their existing slices: `internal/mqttservice` got
+`CredentialStore` (`BrokerUsername` - the tenant-scoped users/drivers LEFT
+JOIN resolving the driver_id or falling back to the auth user id;
+`HashByUsername` - the stored mosquitto hash read where sql.ErrNoRows means
+"not provisioned yet"; `Upsert` - the legacy
+INSERT ... ON CONFLICT(username) rotation that also provisions a
+rotated-but-missing row and stamps rotated_at) and `internal/telemetry` got
+`FleetVehicles` (the EV-configuration modal's tenant vehicle list ordered by
+vehicle_number, best-effort) and `MarkVehicleElectric` (the best-effort
+`fuel_type='electric'` transition after a successful EV profile write).
+Secret hygiene is unchanged and now explicit in the store contract: only the
+PBKDF2 mosquitto hash reaches `driver_mqtt_credentials`; the plaintext
+minted by mqttservice.NewBrokerSecret is returned by the handler exactly once
+and is never logged or persisted. The handlers keep auth/tenant gating,
+wildcard-username validation (422), the provisioned-vs-rotated response shape,
+every status code/message and the EV profile/charging rendering.
+`internal/handlers/mqtt_credentials.go` is now 135 lines / 0 SQL sites (was
+162 / 3) and `telemetry_devices.go` 700 / 0 (was 707 / 2), handlers/ total 19
+(was 24), caps lowered in the same PR. Existing MQTT credential
+characterization tests (first call provisions then stops repeating the
+secret, rotate replaces the hash, auth-user fallback, wildcard rejection,
+tenant scoping, rotate-without-row provisioning) plus the telemetry-device
+RBAC/tenant guards and EV API suite pass unchanged; new
+`internal/mqttservice/credential_store_test.go` pins the tenant-scoped
+username resolution/fallbacks, upsert rotation + rotated_at stamp, hash-only
+secret hygiene and nil-DB behavior, and new
+`internal/telemetry/vehicle_fleet_test.go` pins tenant-scoped ordering,
+best-effort degradation and the tenant-scoped electric transition.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 

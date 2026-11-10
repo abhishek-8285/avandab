@@ -229,7 +229,7 @@ func (s *LiveStore) Live(ctx context.Context, tenantID string, tripID string, no
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []LiveVehicle
 	var stales []time.Duration
@@ -353,7 +353,7 @@ func (s *LiveStore) maintenanceDueSet(ctx context.Context, tenantID string) map[
 	if err != nil {
 		return nil
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	due := make(map[string]bool)
 	for rows.Next() {
 		var id string
@@ -385,7 +385,7 @@ func columnExists(ctx context.Context, db *sql.DB, table, column string) bool {
 	if err != nil {
 		return false
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var cid int
 		var name, ctype string

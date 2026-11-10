@@ -58,23 +58,7 @@ func (h *MQTTCredentialsHandlers) requireTenant(w http.ResponseWriter, r *http.R
 // once a driver row exists, otherwise the auth user id (the production case —
 // the drivers table is empty, and `driverId ?? id` in authStore).
 func (h *MQTTCredentialsHandlers) brokerUsername(ctx context.Context, tenantID, userID string) (string, error) {
-	var username sql.NullString
-	err := h.db.QueryRowContext(ctx, `
-		SELECT d.driver_id FROM users u
-		LEFT JOIN drivers d
-		  ON d.tenant_id = u.tenant_id
-		 AND d.email IS NOT NULL AND d.email = u.email
-		WHERE u.id = $1 AND u.tenant_id = $2`, userID, tenantID).Scan(&username)
-	if errors.Is(err, sql.ErrNoRows) {
-		return "", err
-	}
-	if err != nil {
-		return "", err
-	}
-	if username.Valid && username.String != "" {
-		return username.String, nil
-	}
-	return userID, nil
+	return mqttservice.NewCredentialStore(h.db).BrokerUsername(ctx, tenantID, userID)
 }
 
 // Get provisions the broker credential on first call and afterwards reports the
@@ -117,9 +101,8 @@ func (h *MQTTCredentialsHandlers) issue(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	var existing string
-	err = h.db.QueryRowContext(ctx,
-		`SELECT password_hash FROM driver_mqtt_credentials WHERE username = $1`, username).Scan(&existing)
+	store := mqttservice.NewCredentialStore(h.db)
+	_, err = store.HashByUsername(ctx, username)
 	if err == nil && !rotate {
 		writeJSON(w, http.StatusOK, mqttCredential{Username: username, Provisioned: false})
 		return
@@ -138,17 +121,7 @@ func (h *MQTTCredentialsHandlers) issue(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	// One upsert for both paths. A rotate against a driver with no stored row
-	// (row deleted, provisioning write lost, phone reinstalled against a fresh
-	// database) must still record the secret: the broker password file is built
-	// from this table, so an UPDATE-only rotate would hand the phone a plaintext
-	// that no table and no password file knows.
-	_, err = h.db.ExecContext(ctx, `
-		INSERT INTO driver_mqtt_credentials (driver_key, tenant_id, username, password_hash)
-		VALUES ($1, $2, $3, $4)
-		ON CONFLICT (username) DO UPDATE SET password_hash = excluded.password_hash,
-		                                        rotated_at = CURRENT_TIMESTAMP`,
-		username, tenantID, username, hash)
+	err = store.Upsert(ctx, tenantID, username, hash)
 	if err != nil {
 		slog.ErrorContext(ctx, "broker credential write failed",
 			slog.String("username", username), slog.Any("error", err))

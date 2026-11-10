@@ -606,22 +606,15 @@ func (h *EVHandlers) WebEVDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch all fleet vehicles for the configuration modal dropdown
-	rows, err := h.DB.QueryContext(r.Context(), `SELECT id, vehicle_number, registration_number, fuel_type
-		FROM vehicles WHERE tenant_id = $1 ORDER BY vehicle_number ASC`, tenantID)
+	vehicleOptions := telemetry.FleetVehicles(r.Context(), h.DB, tenantID)
 	var allVehicles []map[string]string
-	if err == nil {
-		defer func() { _ = rows.Close() }()
-		for rows.Next() {
-			var vID, vNum, regNum, fuel string
-			if err := rows.Scan(&vID, &vNum, &regNum, &fuel); err == nil {
-				allVehicles = append(allVehicles, map[string]string{
-					"ID":                 vID,
-					"VehicleNumber":      vNum,
-					"RegistrationNumber": regNum,
-					"FuelType":           fuel,
-				})
-			}
-		}
+	for _, v := range vehicleOptions {
+		allVehicles = append(allVehicles, map[string]string{
+			"ID":                 v.ID,
+			"VehicleNumber":      v.VehicleNumber,
+			"RegistrationNumber": v.RegistrationNumber,
+			"FuelType":           v.FuelType,
+		})
 	}
 
 	data := PageData{
@@ -699,8 +692,8 @@ func (h *EVHandlers) WebConfigureProfile(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Update fuel_type in vehicles table to 'electric' if not already
-	_, _ = h.DB.ExecContext(r.Context(), `UPDATE vehicles SET fuel_type = 'electric' WHERE tenant_id = $1 AND id = $2`, tenantID, vehicleID)
+	// Update fuel_type in vehicles table to 'electric' if not already.
+	_ = telemetry.MarkVehicleElectric(r.Context(), h.DB, tenantID, vehicleID)
 
 	http.Redirect(w, r, "/ev", http.StatusSeeOther)
 }

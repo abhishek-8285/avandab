@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"math"
 	"strconv"
 	"time"
@@ -557,10 +558,12 @@ func (ing *Ingestor) IngestBatch(ctx context.Context, frames []RawFrame) ([]Inge
 	// Step 12 (post-commit): Publish in-memory notifications
 	if ing.bus != nil {
 		for _, n := range notifications {
-			ing.bus.Publish(ctx, events.Event{
+			if err := ing.bus.Publish(ctx, events.Event{
 				Type:    n.eventType,
 				Payload: n.payload,
-			})
+			}); err != nil {
+				slog.Default().Warn("telemetry notification publish failed", "error", err)
+			}
 		}
 	}
 
