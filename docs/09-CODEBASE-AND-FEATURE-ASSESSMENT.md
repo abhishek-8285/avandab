@@ -47,7 +47,7 @@
 
 ### 3.1 Two architectures coexist (highest structural risk — grew)
 - `internal/handlers/` god-files grew: `trips.go` 2,034, `app.go` 1,764, `invoices_consolidate.go` 1,673, `invoices.go` 1,258; `internal/agent/tools.go` 1,185 keeps the pattern alive in a new directory.
-- **No written end-state for the handlers/agent god-files.** Roadmap A8 covers vehicle only.
+- **End-state now decided**: `docs/tech-specs/handlers-end-state-adr.md` (2026-11-10) sets the target boundary (handlers/ = HTTP+composition only, zero SQL/business rules; agent tools delegate to application services), a phased migration order, exit criteria, and a CI ratchet (`internal/architecture/ratchet_test.go`: 245 handler SQL sites, per-file caps, god-file line caps may only shrink). Score stays 6/10 until execution reduces those caps.
 
 ### 3.2 Production readiness gaps (external acceptance, not code)
 | Area | State | Proof / blocker |

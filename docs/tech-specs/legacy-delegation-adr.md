@@ -2,6 +2,8 @@
 
 Date: 2026-09-08. Status: accepted. Closes roadmap A8 (and doc-09 §6 item 2).
 
+> **Update 2026-11-10:** the freeze + opportunistic-delegation rules below remain in force, but the "two architectures coexist indefinitely" stance is superseded by `docs/tech-specs/handlers-end-state-adr.md` (explicit end-state, phased migration order, exit criteria, CI ratchet).
+
 ## Context
 - `internal/handlers/trips.go` (1,818), `app.go` (1,482), `invoices.go` (1,262),
   `invoices_consolidate.go` (1,065) predate the DDD boundaries in
