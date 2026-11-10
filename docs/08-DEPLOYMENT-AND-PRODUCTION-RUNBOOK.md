@@ -192,3 +192,24 @@ client-side publish confirmations.
 > **Upgrade note (fail-closed tenancy):** with `MULTI_TENANT_ENABLED=true`, a user whose `tenant_id` has no matching `tenants` row cannot log in — the resolver treats the org as inactive. The server now logs a WARN with the count at boot. Check with `SELECT COUNT(*) FROM users u LEFT JOIN tenants t ON t.id = u.tenant_id WHERE u.tenant_id <> '' AND t.id IS NULL;` and remediate before/after the upgrade by mapping the legacy ids (e.g. `UPDATE users SET tenant_id = '1' WHERE tenant_id LIKE 'ws\_%' ESCAPE '\';`) or deactivating those accounts. Never auto-map in code: only the operator knows the correct org.
 
 > **Mock honesty:** all four providers default to mock (`*_USE_MOCK=true`). Synthetic IDs carry a `MOCK-` prefix (`EWB-MOCK-`, `MOCK-`, `JE-MOCK-`, `EXT-MOCK-`) plus `(mock)` messages and warn logs — never real provider data. Exception: GSTN e-invoice IRNs are format-locked NIC hashes (persisted on invoices), so honesty there is warn logs + `mock_qr_` payloads. Pinned by `TestMockHonesty_SyntheticIDsCarryMockPrefix`. Set the flag to `false` with live creds for production.
+
+## 6. Backups & Encrypted Restore Drill
+
+`scripts/backup-db.sh` takes an online SQLite snapshot, gzips it, and (when
+`BACKUP_ENCRYPTION_PASSPHRASE` is set, >=16 chars) encrypts it with gpg
+symmetric AES-256, removing the plaintext gzip. Encrypted artifacts end in
+`.db.gz.gpg`; the passphrase is fed to gpg on fd 3 so it never appears in the
+process list. Without a passphrase the script warns loudly and writes plaintext
+gzip — set `REQUIRE_BACKUP_ENCRYPTION=1` in production to make that a hard
+failure instead.
+
+`scripts/restore-drill.sh` restores the latest artifact to a temp dir and
+verifies decrypt/gunzip, `PRAGMA integrity_check`, the goose head version, and
+non-empty `tenants`/`users`/`roles`/`permissions`. Encrypted artifacts without
+`BACKUP_ENCRYPTION_PASSPHRASE` fail the drill instead of silently skipping.
+`.github/workflows/restore-drill.yml` runs monthly with an ephemeral passphrase,
+asserts the artifact is encrypted-only, proves the no-passphrase refusal, then
+runs the drill. Production operators must keep the passphrase in the secret
+manager and run the drill against a real off-host (R2) artifact before relying
+on it.
+
