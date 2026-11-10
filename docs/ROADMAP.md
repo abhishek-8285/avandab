@@ -6,7 +6,7 @@
 
 **Stack** (`docs/01`): pure-Go binary, Chi router, SQLite WAL (`modernc.org/sqlite`), goose migrations, server-rendered HTML (`html/template`, HTMX islands on 13/162 templates, hand-rolled SSE/fetch for live surfaces; Datastar JS vendored but unloaded) + live map (OSM/Google gl=IN tiles, config-driven), in-memory event bus + transactional outbox, TCP `:5023` GPS ingest, MQTT `:1883`, Expo SDK 52 mobile app.
 
-**Migrations:** `db/migrations/` = 143 files, head `00149_identity_sequence_resync.sql`; `db/migrations_pg/` mirrors at 143. Next free slot **`00150`**. *(2026-09-11: verified on disk; index header matches.)* `00068–00072` confirmed ABSENT (RESERVED-UNBUILT still true).
+**Migrations:** `db/migrations/` = 179 files, head `00185_driver_kyc_retention.sql`; `db/migrations_pg/` mirrors at 179. Next free slot **`00186`**. *(2026-11-10: verified on disk; index header matches.)* `00068–00072` confirmed ABSENT (RESERVED-UNBUILT still true).
 
 **Recent direction:** tenant fail-closed hardening + `DefaultTenant` fallback removal (`e74c040`); vehicle compliance hard-block restore (`e9c23ad`); founder-signal tenant scoping; PG dual-engine parity + CI gate; per-tenant company profiles (`00125`); self-registration → `org_admin`.
 
@@ -31,7 +31,7 @@
 - **A9. EWB delivered-lifecycle staging proof** (`00127/00128`). Done 2026-09-11: `TestA9_TripDeliveryOnMigratedChain` migrates the real chain to head, publishes `TripDeliveredEvent`, asserts bill → `delivered` + `DELIVERED` audit row (00127/00128 CHECKs exercised end to end; constraint up/down pinned by migration tests, handler path by P4 test). No migration.
 - **A10. Mobile stub inventory** (`docs/04`). Done 2026-09-11: `docs/tech-specs/a10-mobile-stub-inventory.md` — 17 registered screens classified (4 stubs: OnboardingOverview/BookingSchedule/EarningsOverview mockup images + unregistered EarningsOverview; 13 wired with API binding per row). Every mobile-hit endpoint verified present in spec + on router. No migration.
 
-## Phase B — Feature gaps (SOP non-goals; each ≤1 migration; next free `00150+`)
+## Phase B — Feature gaps (SOP non-goals; each ≤1 migration; next free `00186+`)
 
 *(2026-09-10 re-slot: `00129`–`00134` were consumed by infra seams — GSTN/verify seam (`00130`), license NULL backfill (`00131`), vehicle expiry nullable (`00132`), `email_verified_at` (`00133`), `ts_unix` (`00134`) — so B1–B6 slots re-allocated to `00141`+.)*
 
