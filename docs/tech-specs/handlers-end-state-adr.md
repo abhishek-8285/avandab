@@ -27,7 +27,7 @@ Measured baseline at head `41345ca` (2026-11-10):
 | `internal/handlers/drivers.go` | 812 | 22 |
 | `internal/handlers/customer_portal.go` | 811 | 16 |
 | `internal/agent/tools.go` | 1,186 | 1 |
-| **handlers/ package total** | — | **236** (was 245) |
+| **handlers/ package total** | — | **222** (was 245) |
 
 Why this matters:
 - The DDD boundaries in `docs/CONTRIBUTING.md` are real and proven by
@@ -92,10 +92,12 @@ service wired into `App`; `App.DB` must not be used by migrated domains.
 
 **Phase 0 — ratchet + guardrails (this ADR).**
 - `internal/architecture/ratchet_test.go` caps handler SQL sites at the
-  measured baseline (236 total, per-file caps), `agent/tools.go` SQL at 1,
+  measured baseline (222 total, per-file caps), `agent/tools.go` SQL at 1,
   and god-file line counts at current sizes. Caps may only be **lowered**.
 - Review rule: no new business logic or SQL in `handlers/` or
   `agent/tools.go`; new behavior goes to a slice UC first.
+
+**Phase 1 progress (2026-11-10, second domain):** the dashboard KPI read paths moved to `internal/kpi` (`Service.Bookings`, `Trips`, `Vehicles`, `Drivers`, `Payments`, `Invoices`); `internal/handlers/kpis.go` is now 41 lines / 0 SQL sites (was 239 / 14), handlers/ total 222 (was 236), caps lowered in the same PR. Characterization tests exposed a real formatting bug (`trimFloat` cut trailing zeros from integer rupees, e.g. ₹300 rendered as ₹3), fixed and pinned. 
 
 **Phase 1 progress (2026-11-10):** the whole ZMOTM_MR read-path domain moved to `internal/fleetreports` (`Service.VehicleMaster`, `GateRegister`, `FuelKMPL`, `Breakdown`, `KMPLSummary`); `zmotm_reports.go` is now 476 lines / 0 SQL sites (was 1,166 / 9), handlers/ total 236 (was 245), and the ratchet caps were lowered in the same PR. Characterization tests (zmotm_reports_test.go, zmotm_kmpl_summary_test.go) pin the JSON/CSV behavior.
 
