@@ -178,3 +178,10 @@ type NotificationPreference struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
+
+// AlertRecipient is one person an escalation step can reach.
+type AlertRecipient struct {
+	UserID string
+	Email  string
+	Phone  string
+}

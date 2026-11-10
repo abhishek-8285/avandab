@@ -678,3 +678,31 @@ func (r *sqlAlertRepository) ReopenExpiredSnoozesForTenant(ctx context.Context, 
 	}
 	return res.RowsAffected()
 }
+
+// ListTenantUsersByRole returns active users of one tenant holding the named
+// role (roles.name). Used by the escalator to target escalation steps at the
+// real people responsible for a role instead of a fixed channel destination.
+func (r *sqlAlertRepository) ListTenantUsersByRole(ctx context.Context, tenantID, role string) ([]domain.AlertRecipient, error) {
+	if tenantID == "" || role == "" {
+		return nil, nil
+	}
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT u.id, u.email, COALESCE(u.phone, '')
+		FROM users u
+		JOIN roles r ON r.id = u.role_id
+		WHERE u.tenant_id = $1 AND r.name = $2 AND u.status = 'active'
+		ORDER BY u.id`, tenantID, role)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []domain.AlertRecipient
+	for rows.Next() {
+		var rec domain.AlertRecipient
+		if err := rows.Scan(&rec.UserID, &rec.Email, &rec.Phone); err != nil {
+			return nil, err
+		}
+		out = append(out, rec)
+	}
+	return out, rows.Err()
+}

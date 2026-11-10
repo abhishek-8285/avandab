@@ -394,3 +394,87 @@ func TestEngine_AvailabilitySLABreachRaisesPerTenantAlert(t *testing.T) {
 		assert.Equal(t, tenant, alert.TenantID)
 	}
 }
+
+func TestEscalation_ExplicitRecipientsEmail(t *testing.T) {
+	db := newAlertsTestDB(t)
+	repo := sqliterepo.NewAlertRepository(db)
+	emailMock := newMockProvider("email")
+	providers := map[string]channels.Provider{"email": emailMock}
+	engine := NewEngine(repo, providers, nil)
+	escalator := NewEscalator(repo, providers, nil)
+
+	clk := &mockClock{current: time.Date(2026, 8, 19, 14, 0, 0, 0, time.UTC)}
+	engine.SetClock(clk)
+	escalator.SetClock(clk)
+
+	_, err := db.Exec(`
+		UPDATE alert_rules
+		SET escalation_schedule = '[{"after_seconds":60,"target_role":"dispatcher","channel":"email","recipients":["ops@tenant42.test","cfo@tenant42.test"]}]',
+		    channel_routing = '{"in_app":true}'
+		WHERE id = 'rule_temp_breach'`)
+	require.NoError(t, err)
+
+	ctx := shared.ContextWithTenantID(context.Background(), "tenant-42")
+	ev := events.Event{Type: "AlertEvent", Payload: map[string]interface{}{
+		"source": "telemetry", "alert_type": "temp_breach", "severity": "critical",
+		"vehicle_id": "v-recip-1", "title": "Temp", "details": "hot",
+	}}
+	require.NoError(t, engine.ProcessEvent(ctx, ev))
+
+	clk.Advance(65 * time.Second)
+	require.NoError(t, escalator.Tick(ctx))
+
+	msgs := emailMock.Messages()
+	require.Len(t, msgs, 2, "one email per explicit recipient")
+	assert.Equal(t, "ops@tenant42.test", msgs[0].Email)
+	assert.Equal(t, "cfo@tenant42.test", msgs[1].Email)
+	assert.Contains(t, msgs[0].Title, "[Escalation Step 1]")
+}
+
+func TestEscalation_TargetRoleResolvesTenantUsers(t *testing.T) {
+	db := newAlertsTestDB(t)
+	repo := sqliterepo.NewAlertRepository(db)
+	emailMock := newMockProvider("email")
+	providers := map[string]channels.Provider{"email": emailMock}
+	engine := NewEngine(repo, providers, nil)
+	escalator := NewEscalator(repo, providers, nil)
+
+	clk := &mockClock{current: time.Date(2026, 8, 19, 14, 0, 0, 0, time.UTC)}
+	engine.SetClock(clk)
+	escalator.SetClock(clk)
+
+	_, err := db.Exec(`INSERT OR IGNORE INTO tenants (id, name, slug) VALUES ('tenant-43','Tenant 43','tenant-43')`)
+	require.NoError(t, err)
+	_, err = db.Exec(`
+		INSERT INTO users (id, email, password_hash, name, phone, role_id, status, tenant_id)
+		SELECT 'u-disp-1', 'disp1@t42.test', 'x', 'Disp One', '+919000000001', id, 'active', 'tenant-42' FROM roles WHERE name = 'dispatcher';
+		INSERT INTO users (id, email, password_hash, name, phone, role_id, status, tenant_id)
+		SELECT 'u-disp-2', 'disp2@t42.test', 'x', 'Disp Two', '+919000000002', id, 'active', 'tenant-42' FROM roles WHERE name = 'dispatcher';
+		INSERT INTO users (id, email, password_hash, name, phone, role_id, status, tenant_id)
+		SELECT 'u-disp-other', 'other@t43.test', 'x', 'Other Tenant', '+919000000003', id, 'active', 'tenant-43' FROM roles WHERE name = 'dispatcher'`)
+	require.NoError(t, err)
+
+	_, err = db.Exec(`
+		UPDATE alert_rules
+		SET escalation_schedule = '[{"after_seconds":60,"target_role":"dispatcher","channel":"email"}]',
+		    channel_routing = '{"in_app":true}'
+		WHERE id = 'rule_temp_breach'`)
+	require.NoError(t, err)
+
+	ctx := shared.ContextWithTenantID(context.Background(), "tenant-42")
+	ev := events.Event{Type: "AlertEvent", Payload: map[string]interface{}{
+		"source": "telemetry", "alert_type": "temp_breach", "severity": "critical",
+		"vehicle_id": "v-role-1", "title": "Temp", "details": "hot",
+	}}
+	require.NoError(t, engine.ProcessEvent(ctx, ev))
+
+	clk.Advance(65 * time.Second)
+	require.NoError(t, escalator.Tick(ctx))
+
+	msgs := emailMock.Messages()
+	require.Len(t, msgs, 2, "one email per active dispatcher in the alert tenant")
+	assert.ElementsMatch(t, []string{"disp1@t42.test", "disp2@t42.test"},
+		[]string{msgs[0].Email, msgs[1].Email})
+	assert.NotContains(t, []string{msgs[0].Email, msgs[1].Email}, "other@t43.test",
+		"cross-tenant user must never receive the escalation")
+}

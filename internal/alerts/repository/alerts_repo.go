@@ -21,6 +21,9 @@ type AlertRepository interface {
 	UpdateEscalation(ctx context.Context, alertID string, nextStep int, nextAt *time.Time, status string) error
 	ListUnflushedStormAlerts(ctx context.Context, windowCutoff time.Time) ([]domain.Alert, error)
 	UpdateMetadata(ctx context.Context, alertID string, metadata string) error
+	// ListTenantUsersByRole resolves the active users of one tenant holding a
+	// named role, for escalation recipient targeting.
+	ListTenantUsersByRole(ctx context.Context, tenantID, role string) ([]domain.AlertRecipient, error)
 	UnreadCount(ctx context.Context, userID string) (int, error)
 	Recent(ctx context.Context, userID string, limit int) ([]domain.Alert, error)
 	Ack(ctx context.Context, alertID string, userID string) error
