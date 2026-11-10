@@ -14,10 +14,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 
 	customerportal "transport-app/internal/customerportal"
-	appdb "transport-app/internal/database"
 	"transport-app/internal/shared"
 )
 
@@ -35,31 +33,9 @@ func NewCustomerPortalHandlers(app *App) *CustomerPortalHandlers {
 type customerInvoiceRow = customerportal.InvoiceRow
 
 // parseTimeFlex parses DATETIME strings from SQLite (multiple formats).
+// parseTimeFlex parses DATETIME strings from SQLite (multiple formats).
 func parseTimeFlex(s string) time.Time {
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return time.Time{}
-	}
-	formats := []string{
-		"2006-01-02 15:04:05",
-		"2006-01-02T15:04:05Z07:00",
-		time.RFC3339,
-		"2006-01-02 15:04:05.999999999-07:00",
-		"2006-01-02T15:04:05",
-		"2006-01-02",
-	}
-	for _, f := range formats {
-		if t, err := time.Parse(f, s); err == nil {
-			return t
-		}
-	}
-	// Fallback: try truncating to 19 chars (sqlite datetime)
-	if len(s) >= 19 {
-		if t, err := time.Parse("2006-01-02 15:04:05", s[:19]); err == nil {
-			return t
-		}
-	}
-	return time.Time{}
+	return customerportal.ParseTimeFlex(s)
 }
 
 // ListMyBookings handles GET /customer/bookings — scoped to customer_users.
@@ -412,74 +388,28 @@ func (h *CustomerPortalHandlers) Feedback(w http.ResponseWriter, r *http.Request
 	}
 	tripID := strings.TrimSpace(req.TripID)
 
-	// Resolve customer_id for this shipper via scoped query:
-	// SELECT ... WHERE tenant_id=? AND customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=?)
-	var customerID string
-	err := h.DB.QueryRowContext(r.Context(), `
-		SELECT b.customer_id
-		FROM trips t
-		JOIN bookings b ON b.id = t.booking_id
-		WHERE t.id = $1 AND t.tenant_id = $2 AND b.customer_id IN (SELECT customer_id FROM customer_users WHERE user_id=$3)
-	`, tripID, tenantStr, session.UserID).Scan(&customerID)
+	feedbackID, err := customerportal.NewFeedbackService(h.DB).Create(r.Context(), tenantStr, session.UserID, customerportal.FeedbackRequest{
+		TripID:  tripID,
+		Rating:  req.Rating,
+		Comment: req.Comment,
+	})
 	if err != nil {
-		if err == sql.ErrNoRows {
-			// Provide clearer error for access denied vs not found
-			// Check if trip exists at all for tenant (without scoping) to differentiate 403 vs 404
-			var exists int
-			_ = h.DB.QueryRowContext(r.Context(), `SELECT COUNT(*) FROM trips WHERE id = $1 AND tenant_id = $2`, tripID, tenantStr).Scan(&exists)
-			if exists == 0 {
-				http.Error(w, `{"error":"trip not found"}`, http.StatusNotFound)
-			} else {
-				http.Error(w, `{"error":"forbidden: trip not in your shipments"}`, http.StatusForbidden)
-			}
-			return
-		}
-		if strings.Contains(err.Error(), "no such table") {
-			// Fallback: try to derive customer_id without scope when tables missing
-			_ = h.DB.QueryRowContext(r.Context(), `
-				SELECT b.customer_id FROM trips t JOIN bookings b ON b.id = t.booking_id WHERE t.id = $1 AND t.tenant_id = $2
-			`, tripID, tenantStr).Scan(&customerID)
-			if customerID == "" {
-				http.Error(w, `{"error":"trip not found or customer not linked"}`, http.StatusNotFound)
-				return
-			}
-		} else {
+		var insErr *customerportal.FeedbackInsertError
+		switch {
+		case errors.Is(err, customerportal.ErrFeedbackTripNotFound):
+			http.Error(w, `{"error":"trip not found"}`, http.StatusNotFound)
+		case errors.Is(err, customerportal.ErrFeedbackForbidden):
+			http.Error(w, `{"error":"forbidden: trip not in your shipments"}`, http.StatusForbidden)
+		case errors.Is(err, customerportal.ErrFeedbackCustomerUnlinked):
+			http.Error(w, `{"error":"trip not found or customer not linked"}`, http.StatusNotFound)
+		case errors.As(err, &insErr):
+			slog.Error("customer_portal Feedback insert failed", "error", insErr.Err)
+			http.Error(w, fmt.Sprintf(`{"error":"failed to save feedback: %s"}`, insErr.Err.Error()), http.StatusInternalServerError)
+		default:
 			slog.Error("customer_portal Feedback customer lookup failed", "error", err)
 			http.Error(w, `{"error":"database error"}`, http.StatusInternalServerError)
-			return
 		}
-	}
-
-	feedbackID := uuid.NewString()
-	// Ensure trip_feedback table exists (lazy create if migration 00073 not yet applied)
-	_, insertErr := h.DB.ExecContext(r.Context(), `
-		INSERT INTO trip_feedback (id, tenant_id, trip_id, customer_id, rating, comment, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
-	`, feedbackID, tenantStr, tripID, customerID, req.Rating, req.Comment, time.Now().UTC().Format("2006-01-02 15:04:05"))
-	if insertErr != nil {
-		if strings.Contains(insertErr.Error(), "no such table") {
-			// Auto-create minimal table for dev/test when migration not applied
-			_, _ = h.DB.ExecContext(r.Context(), `
-				CREATE TABLE IF NOT EXISTS trip_feedback (
-					id TEXT PRIMARY KEY,
-					tenant_id TEXT NOT NULL DEFAULT '1',
-					trip_id TEXT NOT NULL REFERENCES trips(id),
-					customer_id TEXT NOT NULL,
-					rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
-					comment TEXT NOT NULL DEFAULT '',
-					created_at TEXT NOT NULL DEFAULT (CURRENT_TIMESTAMP)
-				)
-			`)
-			_, insertErr = h.DB.ExecContext(r.Context(), `
-				INSERT INTO trip_feedback (id, tenant_id, trip_id, customer_id, rating, comment, created_at)
-				VALUES ($1, $2, $3, $4, $5, $6, $7)
-			`, feedbackID, tenantStr, tripID, customerID, req.Rating, req.Comment, time.Now().UTC().Format("2006-01-02 15:04:05"))
-		}
-		if insertErr != nil {
-			slog.Error("customer_portal Feedback insert failed", "error", insertErr)
-			http.Error(w, fmt.Sprintf(`{"error":"failed to save feedback: %s"}`, insertErr.Error()), http.StatusInternalServerError)
-			return
-		}
+		return
 	}
 
 	if wantsJSON(r) || strings.Contains(r.Header.Get("Accept"), "application/json") || req.Comment != "" && strings.Contains(ct, "application/json") {
@@ -509,68 +439,29 @@ func (h *CustomerPortalHandlers) Feedback(w http.ResponseWriter, r *http.Request
 // Returns (nil, nil, "", nil) when the vehicle has never reported. A real
 // query failure is returned to the caller so it can be logged: a dead table
 // and an unreported vehicle must not look identical to the shipper.
+// lastSeenFix returns the newest telemetry fix recorded for a vehicle.
+//
+// Ordering uses ts_unix (migration 00134), not the `timestamp` text: that
+// column mixes RFC3339 and Go's time.String() layout — 'T' > ' ' — so
+// ORDER BY timestamp DESC sorts bytes and hands back an older fix. The SQL
+// lives in internal/customerportal (handlers-end-state ADR, Phase 2); this
+// thin wrapper keeps the characterization-test signature.
 func lastSeenFix(ctx context.Context, db *sql.DB, vehicleID string) (lat, lng *float64, ts string, err error) {
-	var sLat, sLng sql.NullFloat64
-	var sTs sql.NullString
-	err = db.QueryRowContext(ctx, `
-		SELECT latitude, longitude, timestamp
-		FROM telemetry_snapshots
-		WHERE vehicle_id = $1 AND latitude IS NOT NULL AND longitude IS NOT NULL
-		ORDER BY ts_unix DESC LIMIT 1`, vehicleID).Scan(&sLat, &sLng, &sTs)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil, "", nil
-	}
-	if err != nil {
-		return nil, nil, "", err
-	}
-	if sLat.Valid && sLng.Valid {
-		vLat, vLng := sLat.Float64, sLng.Float64
-		lat, lng = &vLat, &vLng
-	}
-	if sTs.Valid && sTs.String != "" {
-		if t := parseTimeFlex(sTs.String); !t.IsZero() {
-			ts = t.UTC().Format(time.RFC3339)
-		} else {
-			ts = sTs.String
-		}
-	}
-	return lat, lng, ts, nil
+	return customerportal.LastSeenFix(ctx, db, vehicleID)
 }
 
 // brandView is the customer-facing identity for white-labelled shipper pages.
-type brandView struct {
-	Name string
-	Logo string
-}
+type brandView = customerportal.Brand
 
 // tenantBrand resolves the transporter's own brand: tenant profile first,
 // platform company settings second, product default last. White-label means
-// the shipper must see the transporter, never the platform vendor.
+// the shipper must see the transporter, never the platform vendor. The SQL
+// lives in internal/customerportal (handlers-end-state ADR, Phase 2).
 func (a *App) tenantBrand(ctx context.Context) brandView {
-	b := brandView{Name: "Avandab"}
-	if a == nil || a.DB == nil {
-		return b
+	if a == nil {
+		return brandView{Name: "Avandab"}
 	}
-
-	var name, logo sql.NullString
-	if tid := string(shared.TenantIDFromContext(ctx)); tid != "" {
-		if q, err := appdb.Rebind(`SELECT company_name, logo_path FROM tenant_company_profiles WHERE tenant_id = ?`); err == nil {
-			_ = a.DB.QueryRowContext(ctx, q, tid).Scan(&name, &logo)
-		}
-	}
-	if !name.Valid || name.String == "" {
-		if q, err := appdb.Rebind(`SELECT company_name, logo_path FROM company_settings WHERE id = 1`); err == nil {
-			_ = a.DB.QueryRowContext(ctx, q).Scan(&name, &logo)
-		}
-	}
-
-	if name.Valid && name.String != "" {
-		b.Name = name.String
-	}
-	if logo.Valid && logo.String != "" {
-		b.Logo = logo.String
-	}
-	return b
+	return customerportal.TenantBrand(ctx, a.DB)
 }
 
 // withBrand injects the brand into an existing template Extra map.

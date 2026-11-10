@@ -518,6 +518,37 @@ audit-writer row mapping; new HTTP tests pin the validation status codes
 (0/25/negative/non-JSON -> 400), unknown/cross-tenant -> 404, the success
 JSON + DB/event/audit writes and the provider-enabled override.
 
+**Phase 2 progress (2026-11-10, sixteenth increment - shipper portal feedback,
+brand and last-seen):** the remaining raw-SQL surfaces of
+`internal/handlers/customer_portal.go` moved into the existing
+`internal/customerportal` slice (extended; Phase-1 read models already live
+there): `FeedbackService.Create` (customer_users-scoped trip ownership
+lookup with the legacy 404-vs-403 discrimination - trip absent in the tenant
+=> not-found, existing tenant trip not linked to the shipper => forbidden -
+the legacy "no such table" unscoped customer-derivation fallback, the uuid
+feedback insert with the legacy UTC timestamp format, the lazy
+`CREATE TABLE IF NOT EXISTS trip_feedback` dev/test fallback with retry, and
+the legacy `failed to save feedback: <err>` wrapping), `TenantBrand`
+(tenant_company_profiles first, global `company_settings` id=1 second,
+"Avandab" default last, preserving the shared-scan-buffer quirk where a
+tenant name suppresses the global logo) and `LastSeenFix` / `ParseTimeFlex`
+(newest telemetry fix ordered by `ts_unix` epoch, never the mixed-format
+`timestamp` text; nil result for an unreported vehicle; query failures
+surfaced for logging, never rendered as "no data"). The handler keeps
+JSON/form parsing, trip_id/rating/comment validation and its exact
+400/403/404/500 bodies, the ETA fallback, multi-stop/tracking rendering and
+thin `lastSeenFix`/`parseTimeFlex`/`tenantBrand` wrappers so the existing
+characterization tests (last-seen ordering/no-rows/failure, brand resolution,
+white-label rendering, portal invoice scoping, tracking JSON) keep their
+signatures; JSON/HTML shapes and the `withBrand` template injection are
+unchanged. `internal/handlers/customer_portal.go` is now 477 lines / 0 SQL
+sites (was 586 / 9), handlers/ total 36 (was 45), caps lowered in the same
+PR. Existing characterization tests pass unchanged; new
+`internal/customerportal` tests pin the feedback ownership matrix, tenant
+isolation, the frozen no-duplicate-guard behavior, the lazy-table and
+missing-table fallbacks, insert-error wrapping, the brand resolution chain +
+logo quirk, and last-seen epoch ordering/no-rows/failure/parse formats.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 
