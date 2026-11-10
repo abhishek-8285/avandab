@@ -425,6 +425,37 @@ pending->processing->completed/failed write lifecycle with timestamps,
 recent-jobs ordering/20-row cap/NULL completed_at omission, and the legacy
 NULL-vs-empty-string polling semantics.
 
+**Phase 2 progress (2026-11-10, thirteenth increment - driver SOS/emergency):**
+the driver SOS trigger surface moved from `internal/handlers/sos.go` into the
+new `internal/alerts/application` (`SOSService`: `DriverForUser` -
+id-or-user-email driver identity with the session-id fallback, no tenant
+filter by design so an emergency is never dropped; `DriverTenant` - the
+header-auth driver's own-org emergency attribution; `ActiveTrip` - newest
+active trip/vehicle for omitted payload fields; `NewSOSID` - the
+sos_<command_id>/sos_<uuid> id rule; and `Trigger` - the idempotent
+`outbox_events` insert (`ON CONFLICT DO NOTHING`, legacy payload map keys
+verbatim) that only on first delivery publishes the `driver.sos_triggered`
+event through the shared EventBus and appends the
+`driver_sos_triggered`/`safety` `audit_logs` row). The handler keeps HTTP
+session/header auth, JSON parsing, the triggered_at/occurred_at/now defaults,
+the reason default, the 201-created vs 200-idempotent status and the
+`SOSResponse` JSON. Legacy semantics preserved: the tenant comes from the
+request context or, for header-auth drivers, from the driver's own tenant
+(never another org); the outbox insert is keyed by aggregate id so duplicate
+command ids re-alert nobody, and insert failures still render as a duplicate
+acknowledgment (rowsAffected 0 => 200) with no publish/audit. The old
+`App.logAuditDirect` helper moved with the write into the service.
+`internal/handlers/sos.go` is now 165 lines / 0 SQL sites (was 221 / 5),
+handlers/ total 55 (was 60), caps lowered in the same PR. Existing
+end-to-end SOS characterization test (tenant/driver/vehicle/trip seed,
+header-auth trigger, outbox payload, alert-pipeline blocker alert + channel
+dispatch, 60s vehicle cooldown/occurrences dedup) passes unchanged; new
+`internal/alerts/application/sos_service_test.go` pins the identity rules
+(including the unresolvable-session fallback), own-org emergency tenant
+attribution, active-trip status/order selection, first-delivery-only
+publish+audit with command-id idempotency, the `TenantOrPlatform` audit
+fallback, nil-bus degradation and the insert-failure duplicate-ack path.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 
