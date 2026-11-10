@@ -367,6 +367,34 @@ legacy uppercase-PAID quirk, payment-history ordering/latest, the fallback
 line item and company defaults, and cross-invoice line-item/payment
 isolation.
 
+**Phase 2 progress (2026-11-10, eleventh increment - tenant data purge):** the
+destructive per-tenant operational purge moved from
+`internal/handlers/tenant_purge.go` into `internal/privacy/application`
+(`TenantPurgeService`: `Preview` dry-run counts and `Execute` in one
+transaction), keeping the legacy scope verbatim - the 18 global-predicate
+tables deleted through trip/driver/vehicle/parent joins and the 78 direct
+`tenant_id` tables deleted children-before-parents, with portable
+`appdb.Rebind`/`appdb.IsPostgres`, the sqlite-only
+`PRAGMA foreign_keys = ON`, table-existence probes, per-table deleted
+counts, the post-purge leftover check and rollback-on-failure. The
+fail-closed protected-table guard (tenants/users/roles/billing
+seeds/migration bookkeeping), empty-id and bootstrap-tenant guards, the
+unknown-tenant message, preview-vs-execute semantics and idempotent
+re-execute are preserved verbatim. The handler keeps the platform-only
+`tenants:manage` route gate, typed-confirm validation, HTTP 400/200 JSON
+shapes/messages and the `tenant.purge` audit write.
+`internal/handlers/tenant_purge.go` is now 56 lines / 0 SQL sites (was 287 /
+7), handlers/ total 67 (was 74), caps lowered in the same PR. Existing purge
+characterization test (preview counts/no delete, wrong confirm, bootstrap
+refusal, execute deletes ops and keeps users/tenant) and the tenants RBAC
+route-gate test pass unchanged; new
+`internal/privacy/application/tenant_purge_test.go` pins preview-vs-execute,
+tenant isolation of the purge and of the other tenant's identical chain,
+FK-safe ordering with foreign_keys ON (children including global-predicate
+rows deleted before their parent trip/driver/vehicle), protected
+users/tenants survival, the bootstrap/empty/unknown-tenant guards and
+idempotent re-execute.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 
