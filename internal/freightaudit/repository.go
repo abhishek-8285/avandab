@@ -7,6 +7,12 @@ import (
 	"strings"
 )
 
+// RecentTripRef is a lightweight trip option for the freight-audit create form.
+type RecentTripRef struct {
+	ID         string
+	TripNumber string
+}
+
 type Repository struct {
 	db *sql.DB
 }
@@ -677,6 +683,26 @@ func (r *Repository) GetSummary(ctx context.Context, tenantID string) (*AuditSum
 		return nil, err
 	}
 	return &s, nil
+}
+
+// RecentTripRefs lists the latest trips for the freight-audit create form's
+// trip dropdown. Legacy behavior: a query failure yields a nil list and every
+// per-row scan failure is skipped (best effort read model).
+func (r *Repository) RecentTripRefs(ctx context.Context, tenantID string, limit int) ([]RecentTripRef, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT id, trip_number FROM trips WHERE tenant_id = $1 ORDER BY created_at DESC LIMIT $2`, tenantID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var refs []RecentTripRef
+	for rows.Next() {
+		var ref RecentTripRef
+		if err := rows.Scan(&ref.ID, &ref.TripNumber); err == nil {
+			refs = append(refs, ref)
+		}
+	}
+	return refs, nil
 }
 
 func errorsIs(err, target error) bool {

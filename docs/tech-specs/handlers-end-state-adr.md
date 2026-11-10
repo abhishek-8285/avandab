@@ -201,6 +201,42 @@ isolation (cross-tenant reads/writes invisible), GST split math/rounding,
 in-transaction header recalculation, unknown-HSN fail-closed and the IRN
 duplicate/status guards.
 
+**Phase 2 progress (2026-11-10, fifth increment - consolidated invoices +
+statement of account):** the consolidated (monthly) freight invoicing and
+statement-of-account money paths moved from
+`internal/handlers/invoices_consolidate.go` into
+`internal/invoice/application`: `ConsolidateInvoicesUseCase`
+(one transaction: header insert, per-trip annexure freight/toll/detention lines
+with per-line paise rounding, header total reconciliation and the detention
+`attached` transition; the legacy 100% dynamic credit-policy due-date
+precedence with the company-config default fallback; supplier/customer state
+derivation with the 9/9/18 GST split; per-financial-year sequential invoice
+numbering through the existing sqlite repository with the legacy
+random-suffix fallback; typed `ConsolidationError` stages preserving the
+legacy log lines and 500 messages) and `CustomerBillingQueries`
+(unbilled delivered-trips read model with trip/date filters and live-invoice
+exclusion, company default payment terms, statement of account:
+invoices/payments/credit-debit-note ledger with aging buckets, WIP unbilled
+total, WhatsApp summary/URL and `CleanPhoneForWhatsApp`). The
+freight-audit dashboard's recent-trip dropdown query moved to its own slice
+(`internal/freightaudit`: `Service.RecentTripRefs`). The handler
+keeps HTTP/form-JSON parsing, validation, rendering and the legacy
+characterization-test seam; the payload types are re-exported as handler
+aliases so template and characterization-test references stay unchanged.
+`internal/handlers/invoices_consolidate.go` is now 919 lines / 0 SQL
+sites (was 1,674 / 14), handlers/ total 134 (was 148), caps lowered in the same
+PR. Existing consolidate/statement/credit-note/GST/freight-audit
+characterization tests pass unchanged; new
+`internal/invoice/application/customer_billing_use_cases_test.go` pins tenant
+isolation (cross-tenant reads invisible, no cross-tenant writes),
+intra/inter-state GST math and paise rounding, detention annexure
+hours/ref/attachment, due-date precedence, the transaction rollback on a failed
+annexure insert, the invoice-number fallback, and the statement aging/ledger
+(including credit/debit note rows). Note: credit/debit-note issuance, numbering
+and idempotency guards live in `internal/service/credit_note_service.go` +
+`internal/handlers/credit_notes.go` (not this file); this increment migrates
+only the statement read of notes.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 

@@ -515,6 +515,12 @@ func (s *Service) GetSummary(ctx context.Context, tenantID string) (*AuditSummar
 	return s.repo.GetSummary(ctx, tenantID)
 }
 
+// RecentTripRefs lists the latest trips for the audit-create form dropdown
+// (legacy hardcoded LIMIT 50).
+func (s *Service) RecentTripRefs(ctx context.Context, tenantID string) ([]RecentTripRef, error) {
+	return s.repo.RecentTripRefs(ctx, tenantID, 50)
+}
+
 func round2(val float64) float64 {
 	return math.Round(val*100) / 100
 }

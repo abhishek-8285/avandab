@@ -212,7 +212,7 @@ func (h *InvoiceHandlers) invoiceViewExtra(r *http.Request, invoiceID string, in
 	custPhone := ""
 	cust, errCust := h.Services.Customers.GetCustomer(r.Context(), domain.CustomerID(invoice.CustomerID))
 	if errCust == nil {
-		custPhone = cleanPhoneForWhatsApp(cust.Phone)
+		custPhone = invoiceapp.CleanPhoneForWhatsApp(cust.Phone)
 	}
 
 	dueDateStr := ""
