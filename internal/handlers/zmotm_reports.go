@@ -10,8 +10,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	db "transport-app/db/generated/sqlite"
 	appdb "transport-app/internal/database"
+	fleetreports "transport-app/internal/fleetreports"
 	"transport-app/internal/middleware"
 	"transport-app/internal/shared"
 )
@@ -35,97 +35,12 @@ var vehicleMasterHeaders = []string{
 	"Fleet Number", "Chassis No", "Engine SNo",
 }
 
-type VehicleMasterDTO struct {
-	VehicleNo     string   `json:"vehicle_no"`
-	Type          string   `json:"type"`
-	Category      string   `json:"category"`
-	Manufacturer  string   `json:"manufacturer"`
-	Model         string   `json:"model"`
-	PurchaseDate  string   `json:"purchase_date"`
-	PurchaseValue *float64 `json:"purchase_value"`
-	Currency      string   `json:"currency"`
-	FuelType      string   `json:"fuel_type"`
-	FleetNumber   string   `json:"fleet_number"`
-	ChassisNo     string   `json:"chassis_no"`
-	EngineSNo     string   `json:"engine_sno"`
-}
-
-func (h *ReportHandlers) loadVehicleMasterRows(r *http.Request, maxRows int, offset int) ([]VehicleMasterDTO, int64, error) {
+func (h *ReportHandlers) loadVehicleMasterRows(r *http.Request, maxRows int, offset int) ([]fleetreports.VehicleMasterRow, int64, error) {
 	tenantID := string(shared.TenantIDFromContext(r.Context()))
 	pp := parsePaginationParams(r)
 
 	if h.DB != nil {
-		q := db.New(h.DB)
-		rows, err := q.SearchVehicles(r.Context(), db.SearchVehiclesParams{
-			TenantID:      tenantID,
-			Search:        pp.Query,
-			StatusAll:     "",
-			Status:        pp.Status,
-			FleetClassAll: "",
-			FleetClass:    "",
-			OwnershipAll:  "",
-			Ownership:     "",
-			Limit:         int64(maxRows),
-			Offset:        int64(offset),
-		})
-		if err != nil {
-			return nil, 0, err
-		}
-
-		total, err := q.CountVehicles(r.Context(), db.CountVehiclesParams{
-			TenantID:      tenantID,
-			Search:        pp.Query,
-			StatusAll:     "",
-			Status:        pp.Status,
-			FleetClassAll: "",
-			FleetClass:    "",
-			OwnershipAll:  "",
-			Ownership:     "",
-		})
-		if err != nil {
-			return nil, 0, err
-		}
-
-		dtos := make([]VehicleMasterDTO, 0, len(rows))
-		for _, v := range rows {
-			ownership := v.Ownership
-			if ownership == "" {
-				ownership = "O"
-			}
-			fleetClass := v.FleetClass
-			if fleetClass == "" {
-				fleetClass = "CV"
-			}
-			curr := v.AcquisitionCurrency
-			if curr == "" {
-				curr = "INR"
-			}
-			purchDate := ""
-			if v.AcquisitionDate.Valid {
-				purchDate = v.AcquisitionDate.Time.Format("2006-01-02")
-			}
-			var purchVal *float64
-			if v.AcquisitionValue.Valid {
-				val := v.AcquisitionValue.Float64
-				purchVal = &val
-			}
-
-			dtos = append(dtos, VehicleMasterDTO{
-				VehicleNo:     v.RegistrationNumber,
-				Type:          ownership,
-				Category:      fleetClass,
-				Manufacturer:  v.Manufacturer.String,
-				Model:         v.Model.String,
-				PurchaseDate:  purchDate,
-				PurchaseValue: purchVal,
-				Currency:      curr,
-				FuelType:      v.FuelType,
-				FleetNumber:   v.FleetNumber.String,
-				ChassisNo:     v.ChassisNo.String,
-				EngineSNo:     v.EngineNumber.String,
-			})
-		}
-		return dtos, total, nil
+		return fleetreports.New(h.DB).VehicleMaster(r.Context(), tenantID, fleetreports.Filter{Query: pp.Query, Status: pp.Status}, maxRows, offset)
 	}
 
 	if h.Services != nil && h.Services.Vehicles != nil {
@@ -133,9 +48,9 @@ func (h *ReportHandlers) loadVehicleMasterRows(r *http.Request, maxRows int, off
 		if err != nil {
 			return nil, 0, err
 		}
-		dtos := make([]VehicleMasterDTO, 0, len(vehicles))
+		out := make([]fleetreports.VehicleMasterRow, 0, len(vehicles))
 		for _, v := range vehicles {
-			dtos = append(dtos, VehicleMasterDTO{
+			out = append(out, fleetreports.VehicleMasterRow{
 				VehicleNo:    v.RegistrationNumber,
 				Type:         "O",
 				Category:     "CV",
@@ -147,10 +62,10 @@ func (h *ReportHandlers) loadVehicleMasterRows(r *http.Request, maxRows int, off
 				FleetNumber:  v.VehicleNumber,
 			})
 		}
-		return dtos, total, nil
+		return out, total, nil
 	}
 
-	return []VehicleMasterDTO{}, 0, nil
+	return []fleetreports.VehicleMasterRow{}, 0, nil
 }
 
 func (h *ReportHandlers) ExportVehiclesCSV(w http.ResponseWriter, r *http.Request) {
@@ -223,130 +138,10 @@ var gateRegisterHeaders = []string{
 	"Distance KM", "Status",
 }
 
-type GateRegisterDTO struct {
-	TripNo       string   `json:"trip_no"`
-	VehicleNo    string   `json:"vehicle_no"`
-	Driver       string   `json:"driver"`
-	Route        string   `json:"route"`
-	GateFacility string   `json:"gate_facility"`
-	GateOutTime  string   `json:"gate_out_time"`
-	GateInTime   string   `json:"gate_in_time"`
-	StartReading *float64 `json:"start_reading"`
-	CloseReading *float64 `json:"close_reading"`
-	DistanceKM   float64  `json:"distance_km"`
-	Status       string   `json:"status"`
-}
-
-func (h *ReportHandlers) loadGateRegisterRows(r *http.Request, maxRows int, offset int) ([]GateRegisterDTO, int64, error) {
+func (h *ReportHandlers) loadGateRegisterRows(r *http.Request, maxRows int, offset int) ([]fleetreports.GateRegisterRow, int64, error) {
 	tenantID := string(shared.TenantIDFromContext(r.Context()))
 	pp := parsePaginationParams(r)
-
-	countSQL := `
-SELECT COUNT(*)
-FROM trips t
-WHERE t.tenant_id = ?
-  AND (? = '' OR t.trip_number LIKE ?)`
-
-	reboundCount, err := appdb.Rebind(countSQL)
-	if err != nil {
-		return nil, 0, err
-	}
-	qPattern := "%" + pp.Query + "%"
-	var total int64
-	if err := h.DB.QueryRowContext(r.Context(), reboundCount, tenantID, pp.Query, qPattern).Scan(&total); err != nil {
-		return nil, 0, err
-	}
-
-	querySQL := `
-SELECT t.trip_number, t.status,
-       t.start_odometer, t.close_odometer,
-       COALESCE(t.gate_facility_id, ''),
-       t.started_at, t.completed_at, t.departure_time, t.arrival_time,
-       COALESCE(v.registration_number, ''),
-       COALESCE(d.first_name, '') || ' ' || COALESCE(d.last_name, ''),
-       COALESCE(r.source, '') || ' -> ' || COALESCE(r.destination, ''),
-       COALESCE(r.distance, 0.0)
-FROM trips t
-LEFT JOIN vehicles v ON t.vehicle_id = v.id
-LEFT JOIN drivers d ON t.driver_id = d.id
-LEFT JOIN routes r ON t.route_id = r.id
-WHERE t.tenant_id = ?
-  AND (? = '' OR t.trip_number LIKE ?)
-ORDER BY t.departure_time DESC
-LIMIT ? OFFSET ?`
-
-	rebound, err := appdb.Rebind(querySQL)
-	if err != nil {
-		return nil, 0, err
-	}
-	rows, err := h.DB.QueryContext(r.Context(), rebound, tenantID, pp.Query, qPattern, maxRows, offset)
-	if err != nil {
-		return nil, 0, err
-	}
-	defer func() { _ = rows.Close() }()
-
-	var dtos []GateRegisterDTO
-	for rows.Next() {
-		var tripNo, status, gateFacility, vehNo, driver, routeStr string
-		var startOdo, closeOdo sql.NullFloat64
-		var startedAt, completedAt, depTime, arrTime sql.NullTime
-		var routeDist float64
-
-		if err := rows.Scan(
-			&tripNo, &status, &startOdo, &closeOdo, &gateFacility,
-			&startedAt, &completedAt, &depTime, &arrTime,
-			&vehNo, &driver, &routeStr, &routeDist,
-		); err != nil {
-			return nil, 0, err
-		}
-
-		gateOut := ""
-		if startedAt.Valid {
-			gateOut = startedAt.Time.Format("2006-01-02 15:04:05")
-		} else if depTime.Valid {
-			gateOut = depTime.Time.Format("2006-01-02 15:04:05")
-		}
-
-		gateIn := ""
-		if completedAt.Valid {
-			gateIn = completedAt.Time.Format("2006-01-02 15:04:05")
-		} else if arrTime.Valid {
-			gateIn = arrTime.Time.Format("2006-01-02 15:04:05")
-		}
-
-		var startVal, closeVal *float64
-		var dist float64
-		if startOdo.Valid {
-			v := startOdo.Float64
-			startVal = &v
-		}
-		if closeOdo.Valid {
-			v := closeOdo.Float64
-			closeVal = &v
-		}
-
-		if startVal != nil && closeVal != nil && *closeVal >= *startVal && *startVal > 0 {
-			dist = *closeVal - *startVal
-		} else if status == "completed" && routeDist > 0 {
-			dist = routeDist
-		}
-
-		dtos = append(dtos, GateRegisterDTO{
-			TripNo:       tripNo,
-			VehicleNo:    vehNo,
-			Driver:       driver,
-			Route:        routeStr,
-			GateFacility: gateFacility,
-			GateOutTime:  gateOut,
-			GateInTime:   gateIn,
-			StartReading: startVal,
-			CloseReading: closeVal,
-			DistanceKM:   dist,
-			Status:       status,
-		})
-	}
-
-	return dtos, total, nil
+	return fleetreports.New(h.DB).GateRegister(r.Context(), tenantID, fleetreports.Filter{Query: pp.Query, Status: pp.Status}, maxRows, offset)
 }
 
 func (h *ReportHandlers) ExportGateRegisterCSV(w http.ResponseWriter, r *http.Request) {
