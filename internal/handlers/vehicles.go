@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"html/template"
@@ -13,7 +11,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 
 	"transport-app/internal/domain"
 	"transport-app/internal/middleware"
@@ -34,6 +31,8 @@ type VehicleHandlers struct {
 	listUC        *vehicleapp.ListVehiclesUseCase
 	createPointUC *vehicleapp.CreateMeasuringPointUseCase
 	recordUC      *vehicleapp.RecordMeasurementUseCase
+	detailQ       *vehicleapp.VehicleDetailQueries
+	commands      *vehicleapp.VehicleCommandService
 }
 
 func (h *VehicleHandlers) init() {
@@ -48,6 +47,8 @@ func (h *VehicleHandlers) init() {
 		h.listUC = vehicleapp.NewListVehiclesUseCase(uowImpl)
 		h.createPointUC = vehicleapp.NewCreateMeasuringPointUseCase(uowImpl, idGenImpl)
 		h.recordUC = vehicleapp.NewRecordMeasurementUseCase(uowImpl, idGenImpl, clockImpl)
+		h.detailQ = vehicleapp.NewVehicleDetailQueries(h.DB)
+		h.commands = vehicleapp.NewVehicleCommandService(h.DB)
 	}
 }
 
@@ -289,9 +290,10 @@ func (h *VehicleHandlers) Create(w http.ResponseWriter, r *http.Request) {
 func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 	h.init()
 	id := chi.URLParam(r, "id")
+	tenantID := shared.TenantIDFromContext(r.Context())
 	vehicle, err := h.getUC.Execute(r.Context(), vehicleapp.GetVehicleQuery{
 		ID:       vehicleagg.VehicleID(id),
-		TenantID: shared.TenantIDFromContext(r.Context()),
+		TenantID: tenantID,
 	})
 	if err != nil {
 		http.Error(w, "Vehicle not found", http.StatusNotFound)
@@ -299,14 +301,34 @@ func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 	}
 	files, _ := h.Services.Files.GetFilesByEntity(r.Context(), "vehicle_insurance", id)
 
-	tenantID := string(shared.TenantIDFromContext(r.Context()))
-	var maintDue, maintOvBy, maintOvReason sql.NullString
-	var maintOvAt sql.NullTime
-	_ = h.DB.QueryRowContext(r.Context(), `
-		SELECT maintenance_due, maintenance_override_by, maintenance_override_at, maintenance_override_reason
-		FROM vehicles WHERE id = $1 AND tenant_id = $2`, id, tenantID).Scan(&maintDue, &maintOvBy, &maintOvAt, &maintOvReason)
+	detail := h.detailQ.Load(r.Context(), tenantID, id)
 
-	// Compliance doc-expiry strip: RC/permit/fitness/insurance/PUCC with days left.
+	extra := map[string]interface{}{
+		"Vehicle":                   vehicle,
+		"Files":                     files,
+		"MaintenanceDue":            detail.Maintenance.MaintenanceDue,
+		"MaintenanceOverrideBy":     detail.Maintenance.MaintenanceOverrideBy,
+		"MaintenanceOverrideReason": detail.Maintenance.MaintenanceOverrideReason,
+		"IsMaintenanceDue":          detail.Maintenance.IsMaintenanceDue,
+		"IsMaintenanceOverridden":   detail.Maintenance.IsMaintenanceOverridden,
+		"DocCards":                  vehicleDocCards(vehicle),
+		"LastPosition":              detail.LastPosition,
+		"RecentTrips":               detail.RecentTrips,
+		"OpenWorkOrders":            detail.OpenWorkOrders,
+		"MeasuringPoints":           detail.MeasuringPoints,
+		"RecentMeasurements":        detail.RecentMeasurements,
+		"RecentCommands":            detail.RecentCommands,
+		"AssignedDriver":            detail.AssignedDriver,
+		"AssignDrivers":             detail.AssignDrivers,
+	}
+
+	session, _ := h.getUserFromContext(r)
+	h.renderPage(w, r, "vehicle_view.html", PageData{Title: "View Vehicle", User: session, Extra: extra})
+}
+
+// vehicleDocCards builds the compliance doc-expiry strip (RC/permit/fitness/
+// insurance/PUCC with days left) rendered by vehicle_view.html.
+func vehicleDocCards(vehicle vehicleapp.VehicleResponseDTO) []map[string]interface{} {
 	type docStatus struct {
 		Name   string
 		Expiry time.Time
@@ -331,94 +353,7 @@ func (h *VehicleHandlers) View(w http.ResponseWriter, r *http.Request) {
 		}
 		docCards = append(docCards, card)
 	}
-
-	// Last known telemetry for this vehicle.
-	lastPos := map[string]interface{}{"Has": false}
-	var lat, lng, speed float64
-	var at sql.NullString
-	posTenantID := string(shared.MustTenantID(r.Context()))
-	if err := h.DB.QueryRowContext(r.Context(), `
-		SELECT latitude, longitude, speed, device_time
-		FROM vehicle_latest_position WHERE vehicle_id = $1 AND tenant_id = $2`, id, posTenantID).
-		Scan(&lat, &lng, &speed, &at); err == nil {
-		lastPos = map[string]interface{}{"Has": true, "Lat": lat, "Lng": lng, "Speed": speed, "At": at.String}
-	}
-
-	// Recent trips for this vehicle.
-	type recentTrip struct {
-		ID, TripNumber, Status string
-		CreatedAt              sql.NullTime
-	}
-	trips := []recentTrip{}
-	if rows, err := h.DB.QueryContext(r.Context(), `
-		SELECT id, trip_number, status, created_at FROM trips
-		WHERE vehicle_id = $1 AND tenant_id = $2 ORDER BY created_at DESC LIMIT 5`, id, tenantID); err == nil {
-		defer func() { _ = rows.Close() }()
-		for rows.Next() {
-			var t recentTrip
-			if rows.Scan(&t.ID, &t.TripNumber, &t.Status, &t.CreatedAt) == nil {
-				trips = append(trips, t)
-			}
-		}
-	}
-
-	// Open job cards for this vehicle (own org only; empty tenant matches nothing).
-	type openWorkOrder struct {
-		ID, Title, Status, Assignee string
-		CreatedAt                   sql.NullTime
-	}
-	workOrders := []openWorkOrder{}
-	if rows, err := h.DB.QueryContext(r.Context(), `
-		SELECT id, title, status, assignee, created_at FROM work_orders
-		WHERE vehicle_id = $1 AND tenant_id = $2 AND status NOT IN ('done','cancelled')
-		ORDER BY created_at DESC LIMIT 10`, id, string(shared.TenantIDFromContext(r.Context()))); err == nil {
-		defer func() { _ = rows.Close() }()
-		for rows.Next() {
-			var wo openWorkOrder
-			if rows.Scan(&wo.ID, &wo.Title, &wo.Status, &wo.Assignee, &wo.CreatedAt) == nil {
-				workOrders = append(workOrders, wo)
-			}
-		}
-	}
-
-	// Preferred driver (master assignment) for this vehicle.
-	var assignedDriver map[string]interface{}
-	if a, _ := getActiveAssignmentByVehicle(r.Context(), h.DB, id, tenantID); a != nil {
-		var fn, ln, phone, dvid string
-		_ = h.DB.QueryRowContext(r.Context(), `SELECT first_name, last_name, phone, driver_id FROM drivers WHERE id = $1 AND tenant_id = $2`, a.DriverID, tenantID).Scan(&fn, &ln, &phone, &dvid)
-		assignedDriver = map[string]interface{}{"ID": a.DriverID, "FirstName": fn, "LastName": ln, "Phone": phone, "DriverID": dvid, "IsPrimary": a.IsPrimary}
-	}
-	var assignDrivers []map[string]interface{}
-	if rows, err := h.DB.QueryContext(r.Context(), `SELECT id, first_name, last_name, driver_id FROM drivers WHERE tenant_id = $1 ORDER BY first_name LIMIT 100`, tenantID); err == nil {
-		defer func() { _ = rows.Close() }()
-		for rows.Next() {
-			var did, fn, ln, dvid string
-			if rows.Scan(&did, &fn, &ln, &dvid) == nil {
-				assignDrivers = append(assignDrivers, map[string]interface{}{"ID": did, "FirstName": fn, "LastName": ln, "DriverID": dvid})
-			}
-		}
-	}
-	extra := map[string]interface{}{
-		"Vehicle":                   vehicle,
-		"Files":                     files,
-		"MaintenanceDue":            maintDue.String,
-		"MaintenanceOverrideBy":     maintOvBy.String,
-		"MaintenanceOverrideReason": maintOvReason.String,
-		"IsMaintenanceDue":          maintDue.Valid && maintDue.String != "",
-		"IsMaintenanceOverridden":   maintOvBy.Valid && maintOvBy.String != "",
-		"DocCards":                  docCards,
-		"LastPosition":              lastPos,
-		"RecentTrips":               trips,
-		"OpenWorkOrders":            workOrders,
-		"MeasuringPoints":           h.measuringPoints(r.Context(), id),
-		"RecentMeasurements":        h.recentMeasurements(r.Context(), id),
-		"RecentCommands":            h.recentCommands(r.Context(), id),
-		"AssignedDriver":            assignedDriver,
-		"AssignDrivers":             assignDrivers,
-	}
-
-	session, _ := h.getUserFromContext(r)
-	h.renderPage(w, r, "vehicle_view.html", PageData{Title: "View Vehicle", User: session, Extra: extra})
+	return docCards
 }
 
 func (h *VehicleHandlers) Edit(w http.ResponseWriter, r *http.Request) {
@@ -433,20 +368,15 @@ func (h *VehicleHandlers) Edit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var maintDue, maintOvBy, maintOvReason sql.NullString
-	var maintOvAt sql.NullTime
-	tenantID := string(shared.TenantIDFromContext(r.Context()))
-	_ = h.DB.QueryRowContext(r.Context(), `
-		SELECT maintenance_due, maintenance_override_by, maintenance_override_at, maintenance_override_reason
-		FROM vehicles WHERE id = $1 AND tenant_id = $2`, id, tenantID).Scan(&maintDue, &maintOvBy, &maintOvAt, &maintOvReason)
+	maintenance := h.detailQ.Maintenance(r.Context(), shared.TenantIDFromContext(r.Context()), id)
 
 	extra := map[string]interface{}{
 		"Vehicle":                   vehicle,
-		"MaintenanceDue":            maintDue.String,
-		"MaintenanceOverrideBy":     maintOvBy.String,
-		"MaintenanceOverrideReason": maintOvReason.String,
-		"IsMaintenanceDue":          maintDue.Valid && maintDue.String != "",
-		"IsMaintenanceOverridden":   maintOvBy.Valid && maintOvBy.String != "",
+		"MaintenanceDue":            maintenance.MaintenanceDue,
+		"MaintenanceOverrideBy":     maintenance.MaintenanceOverrideBy,
+		"MaintenanceOverrideReason": maintenance.MaintenanceOverrideReason,
+		"IsMaintenanceDue":          maintenance.IsMaintenanceDue,
+		"IsMaintenanceOverridden":   maintenance.IsMaintenanceOverridden,
 	}
 
 	session, _ := h.getUserFromContext(r)
@@ -805,77 +735,6 @@ func (h *VehicleHandlers) RecordMeasurement(w http.ResponseWriter, r *http.Reque
 	http.Redirect(w, r, "/vehicles/"+vehicleID, http.StatusSeeOther)
 }
 
-// measuringPoints lists the SOP IK01 points registered on a vehicle.
-func (h *VehicleHandlers) measuringPoints(ctx context.Context, vehicleID string) []map[string]interface{} {
-	type point struct {
-		ID, Kind, MeasPosition, Unit, Description string
-		AnnualEstimate                            sql.NullFloat64
-	}
-	out := []map[string]interface{}{}
-	rows, err := h.DB.QueryContext(ctx, `
-		SELECT id, kind, meas_position, unit, description, annual_estimate
-		FROM vehicle_measuring_points
-		WHERE vehicle_id = $1 AND tenant_id = $2
-		ORDER BY created_at ASC`, vehicleID, string(shared.TenantIDFromContext(ctx)))
-	if err != nil {
-		return out
-	}
-	defer func() { _ = rows.Close() }()
-	for rows.Next() {
-		var p point
-		if rows.Scan(&p.ID, &p.Kind, &p.MeasPosition, &p.Unit, &p.Description, &p.AnnualEstimate) == nil {
-			m := map[string]interface{}{
-				"ID": p.ID, "Kind": p.Kind, "MeasPosition": p.MeasPosition,
-				"Unit": p.Unit, "Description": p.Description,
-			}
-			if p.AnnualEstimate.Valid {
-				m["AnnualEstimate"] = p.AnnualEstimate.Float64
-			}
-			out = append(out, m)
-		}
-	}
-	return out
-}
-
-// recentMeasurements lists the latest SOP IK11 documents across a vehicle's
-// points (counter story for KMPL-style follow-ups).
-func (h *VehicleHandlers) recentMeasurements(ctx context.Context, vehicleID string) []map[string]interface{} {
-	out := []map[string]interface{}{}
-	rows, err := h.DB.QueryContext(ctx, `
-		SELECT m.id, m.point_id, m.counter_reading, m.difference_reading,
-			m.measured_at, m.read_by, p.kind, p.meas_position, p.unit
-		FROM vehicle_measurements m
-		JOIN vehicle_measuring_points p ON p.id = m.point_id
-		WHERE p.vehicle_id = $1 AND m.tenant_id = $2
-		ORDER BY m.recorded_at DESC LIMIT 20`, vehicleID, string(shared.TenantIDFromContext(ctx)))
-	if err != nil {
-		return out
-	}
-	defer func() { _ = rows.Close() }()
-	for rows.Next() {
-		var docID, pointID, kind, pos, unit string
-		var counter float64
-		var diff sql.NullFloat64
-		var mAt sql.NullTime
-		var readBy sql.NullString
-		if rows.Scan(&docID, &pointID, &counter, &diff, &mAt, &readBy, &kind, &pos, &unit) == nil {
-			m := map[string]interface{}{
-				"ID": docID, "PointID": pointID, "Counter": counter,
-				"Kind": kind, "MeasPosition": pos, "Unit": unit,
-				"ReadBy": readBy.String,
-			}
-			if diff.Valid {
-				m["Difference"] = diff.Float64
-			}
-			if mAt.Valid {
-				m["MeasuredAt"] = mAt.Time
-			}
-			out = append(out, m)
-		}
-	}
-	return out
-}
-
 func (h *VehicleHandlers) SendCommand(w http.ResponseWriter, r *http.Request) {
 	h.init()
 	vehID := chi.URLParam(r, "id")
@@ -897,53 +756,14 @@ func (h *VehicleHandlers) SendCommand(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	cmdID := "cmd-" + uuid.NewString()
-	tenantID := string(shared.TenantIDFromContext(r.Context()))
-
-	_, err := h.DB.ExecContext(r.Context(), `
-		INSERT INTO vehicle_commands (id, tenant_id, vehicle_id, command_type, status, issued_by)
-		VALUES ($1, $2, $3, $4, 'acknowledged', $5)`,
-		cmdID, tenantID, vehID, cmdType, issuedBy)
-	if err != nil {
+	if err := h.commands.Send(r.Context(), vehicleapp.SendVehicleCommand{
+		TenantID:    shared.TenantIDFromContext(r.Context()),
+		VehicleID:   vehID,
+		CommandType: cmdType,
+		IssuedBy:    issuedBy,
+	}); err != nil {
 		h.failPage(w, r, err, http.StatusInternalServerError, "Command Failed")
 		return
 	}
-
-	// Update vehicle status in accordance with actuation
-	if cmdType == "E_STOP" {
-		_, _ = h.DB.ExecContext(r.Context(), `UPDATE vehicles SET status = 'blocked', blocked_reason = 'AV E-STOP Triggered' WHERE id = $1 AND tenant_id = $2`, vehID, tenantID)
-	} else if cmdType == "RESUME_MISSION" {
-		_, _ = h.DB.ExecContext(r.Context(), `UPDATE vehicles SET status = 'running', blocked_reason = NULL WHERE id = $1 AND tenant_id = $2`, vehID, tenantID)
-	} else if cmdType == "HOLD_POSITION" {
-		_, _ = h.DB.ExecContext(r.Context(), `UPDATE vehicles SET status = 'available' WHERE id = $1 AND tenant_id = $2`, vehID, tenantID)
-	}
-
 	http.Redirect(w, r, "/vehicles/"+vehID, http.StatusSeeOther)
-}
-
-func (h *VehicleHandlers) recentCommands(ctx context.Context, vehicleID string) []map[string]interface{} {
-	out := []map[string]interface{}{}
-	rows, err := h.DB.QueryContext(ctx, `
-		SELECT id, command_type, status, issued_by, created_at
-		FROM vehicle_commands
-		WHERE vehicle_id = $1 AND tenant_id = $2
-		ORDER BY created_at DESC LIMIT 5`, vehicleID, string(shared.TenantIDFromContext(ctx)))
-	if err != nil {
-		return out
-	}
-	defer func() { _ = rows.Close() }()
-	for rows.Next() {
-		var cID, cmd, status, issuedBy string
-		var at sql.NullTime
-		if rows.Scan(&cID, &cmd, &status, &issuedBy, &at) == nil {
-			m := map[string]interface{}{
-				"ID": cID, "CommandType": cmd, "Status": status, "IssuedBy": issuedBy,
-			}
-			if at.Valid {
-				m["CreatedAt"] = at.Time.Format("15:04:05 02-01-2006")
-			}
-			out = append(out, m)
-		}
-	}
-	return out
 }

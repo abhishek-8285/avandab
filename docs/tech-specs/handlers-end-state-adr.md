@@ -265,6 +265,29 @@ status+issues API) pass unchanged; new
 vehicle binding, verbatim expiry writes, issue insert/list semantics and the
 view read-model ordering/limits.
 
+**Phase 2 progress (2026-11-10, seventh increment - vehicles):** the fleet
+asset/status/telemetry surface moved from `internal/handlers/vehicles.go` into
+`internal/vehicle/application`: `VehicleDetailQueries` (view-page maintenance
+flags + override, latest telemetry frame, recent trips, open job cards, assigned
+preferred driver + driver-details + assignment dropdown, and the IK01
+measuring-point / IK11 measurement / AV command sections; every query
+tenant-scoped with the legacy ordering/limits and best-effort empty-section
+semantics) and `VehicleCommandService` (migration-00137 command insert with the
+legacy `cmd-` UUID id and `acknowledged` status, plus the E_STOP /
+HOLD_POSITION / RESUME_MISSION actuation status updates with the legacy
+best-effort error swallow and the command-type allow-list). The handler keeps
+HTTP parsing, session-derived operator identity, compliance doc-card rendering
+and the view/edit templates. `internal/handlers/vehicles.go` is now 769 lines /
+0 SQL sites (was 950 / 14), handlers/ total 98 (was 112), caps lowered in the
+same PR. Existing vehicle characterization tests (list, CRUD, view branches,
+SOP points + measurements, open job cards, status + AV commands) pass unchanged;
+new `internal/vehicle/application/vehicle_detail_read_test.go`,
+`vehicle_command_test.go` and `vehicle_registration_uniqueness_test.go` pin
+tenant isolation of every section (including the same vehicle id under two
+tenants), telemetry frame vehicle+tenant binding, the legacy map-key truthiness
+(NULL annual estimate/difference/created-at), the AV actuation transitions, and
+per-tenant plate uniqueness + fail-closed create validation.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 
