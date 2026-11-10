@@ -310,6 +310,32 @@ were joined by focused cases pinning tenant isolation of reads and writes, the
 not-found contract; new HTTP handler tests pin form validation, the
 session-derived `assigned_by`, tenant scoping and redirect targets.
 
+**Phase 2 progress (2026-11-10, ninth increment - platform tenant console):**
+the platform tenant-administration surface moved from
+`internal/handlers/tenants.go` into a new tenant slice,
+`internal/tenant/application` (no internal/tenant* domain package existed, so
+the handler's own domain got the extracted package): `TenantAdminQueries`
+(commercial subscription + plan pricing, per-tenant trip-quota meter, grouped
+per-tenant user counts and the provisioning slug/id conflict probe) and
+`TenantAdminService` (plan upsert with the legacy 30-day period and the
+COALESCE/NULLIF provider-subscription-link preservation, the 14-day trial
+extension, the entitlement-override upsert keyed by (tenant, type, key), and
+the suspended-tenant session purge). The super-admin RBAC gate
+(`tenants:manage`), the bootstrap-tenant suspension guard, form/slug/password
+validation, audit logging, JSON/HTML shapes and every status code stay in the
+handler; the legacy best-effort error swallows (plan/trial/override writes,
+session purge) are preserved verbatim. `internal/handlers/tenants.go` is now
+464 lines / 0 SQL sites (was 516 / 8), handlers/ total 81 (was 89), caps
+lowered in the same PR. Existing tenant characterization tests (create happy
+path / duplicate slug / disabled gate, bootstrap-suspend refusal,
+suspend/activate + session purge + audit, RBAC gate, list/fragment render, slug
+normalization) pass unchanged; new `internal/tenant/application/admin_test.go`
+pins per-tenant subscription/quota/count reads, the slug probe, plan upsert +
+provider-link preservation, trial extension scoping, override upsert/isolation,
+session-purge scoping and nil-store degradation, and new HTTP handler tests pin
+the plan/trial/override mutations (redirect, DB writes, audit) plus validation
+messages and the RBAC gate on those routes.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 
