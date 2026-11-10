@@ -4,8 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"log/slog"
+
 	"net/http"
 	"time"
 
@@ -21,7 +20,6 @@ import (
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 
-	"github.com/google/uuid"
 	"strings"
 	ctapp "transport-app/internal/controltower/application"
 	"transport-app/internal/controltower/domain"
@@ -217,14 +215,14 @@ func (h *ConsoleHandlers) ExtendEwayBill(w http.ResponseWriter, r *http.Request)
 	tenantID := string(shared.TenantIDFromContext(ctx))
 	ewbID := chi.URLParam(r, "id")
 
-	var tripID sql.NullString
-	var validUntil time.Time
-	err := h.db.QueryRowContext(ctx, `
-		SELECT e.trip_id, e.valid_until
-		FROM eway_bills e JOIN trips t ON e.trip_id = t.id
-		WHERE e.id = $1 AND t.tenant_id = $2`, ewbID, tenantID).
-		Scan(&tripID, &validUntil)
-	if err == sql.ErrNoRows {
+	uc := ctapp.NewExtendEwayBillUseCase(h.db, h.ewbClient, h.ewbExtend)
+	newExpiry, err := uc.Extend(ctx, ctapp.ExtendEwayBillCommand{
+		EWBID:    ewbID,
+		TenantID: tenantID,
+		ActorID:  contextUserID(r),
+		Hours:    body.ValidUptoHours,
+	})
+	if errors.Is(err, ctapp.ErrConsoleNotFound) {
 		httpx.Error(w, r, apperr.New(apperr.CodeNotFound))
 		return
 	}
@@ -232,38 +230,6 @@ func (h *ConsoleHandlers) ExtendEwayBill(w http.ResponseWriter, r *http.Request)
 		httpx.Error(w, r, err)
 		return
 	}
-
-	newExpiry := validUntil.Add(time.Duration(body.ValidUptoHours) * time.Hour)
-	if h.ewbExtend && h.ewbClient != nil {
-		var ewbNumber string
-		if nErr := h.db.QueryRowContext(ctx,
-			`SELECT ewb_number FROM eway_bills WHERE id = $1`, ewbID).Scan(&ewbNumber); nErr == nil {
-			if resp, extErr := h.ewbClient.Extend(ctx, ewbNumber, intEWB.ExtendRequest{
-				EwbNumber: ewbNumber,
-				Reason:    "console_inline_extend",
-			}); extErr == nil && !resp.ValidUpto.IsZero() {
-				newExpiry = resp.ValidUpto
-			}
-		}
-	}
-
-	if _, uErr := h.db.ExecContext(ctx,
-		`UPDATE eway_bills SET valid_until = $1 WHERE id = $2`,
-		newExpiry, ewbID); uErr != nil {
-		httpx.Error(w, r, uErr)
-		return
-	}
-	if _, eErr := h.db.ExecContext(ctx, `
-		INSERT INTO eway_bill_events (id, ewb_number, trip_id, event_type, payload, created_by)
-		SELECT $1, ewb_number, trip_id, 'EXTENDED', $2, $3 FROM eway_bills WHERE id = $4`,
-		uuid.NewString(), fmt.Sprintf(`{"hours":%d}`, body.ValidUptoHours), contextUserID(r), ewbID); eErr != nil {
-		slog.Warn("eway_bill_events insert failed", "ewb", ewbID, "error", eErr)
-	}
-
-	writeAuditLog(r, h.db, "ewaybill.extend", "eway_bills", ewbID, map[string]any{
-		"new_expiry":       newExpiry.UTC().Format(time.RFC3339),
-		"valid_upto_hours": body.ValidUptoHours,
-	})
 
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"ok":         true,
@@ -274,14 +240,7 @@ func (h *ConsoleHandlers) ExtendEwayBill(w http.ResponseWriter, r *http.Request)
 // writeAuditLog records one audit trail row for a console action; failures
 // are logged but never fail the action itself.
 func writeAuditLog(r *http.Request, db *sql.DB, action, table, recordID string, newValues any) {
-	blob, err := json.Marshal(newValues)
-	if err != nil {
-		return
-	}
-	_, _ = db.ExecContext(r.Context(), `
-		INSERT INTO audit_logs (id, user_id, action, table_name, record_id, new_values, tenant_id, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP)`,
-		uuid.NewString(), contextUserID(r), action, table, recordID, string(blob), string(shared.TenantOrPlatform(r.Context())))
+	_ = ctapp.WriteAuditLog(r.Context(), db, contextUserID(r), string(shared.TenantOrPlatform(r.Context())), action, table, recordID, newValues)
 }
 
 // WriteAuditLog exposes writeAuditLog for vertical-slice presentation packages.

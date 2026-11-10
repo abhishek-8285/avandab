@@ -488,6 +488,36 @@ window + ordering + NULL coalescing, candidate-trip eligibility/ordering/
 50-row window, chronological event history, nil-DB/missing-table degradation
 and the frozen global scope.
 
+**Phase 2 progress (2026-11-10, fifteenth increment - Command Center inline
+EWB extend):** the last raw-SQL surface of `internal/handlers/console.go`
+moved into the existing `internal/controltower/application` (the Phase-1
+Command Center slice, extended rather than duplicated):
+`ExtendEwayBillUseCase` (`Extend` - tenant-scoped `eway_bills JOIN trips`
+lookup with `ErrConsoleNotFound` for unknown/foreign ids, the local
+`valid_until + hours` shift, the `EWB_EXTEND_ENABLED` provider seam that
+consults the integration `Client.Extend` with reason
+`console_inline_extend` and lets a successful provider validity win while
+provider errors fall back to the local shift, the validity UPDATE, the
+best-effort `EXTENDED` `eway_bill_events` insert - error logged exactly as
+before - and the `audit_logs` write) plus `WriteAuditLog` (the legacy
+direct audit helper moved out of the handler; still exposed through
+`handlers.WriteAuditLog`/`writeAuditLog` as thin wrappers so the dispatch
+planner presentation keeps its `legacyhandlers.WriteAuditLog` calls). The
+handler keeps the JSON body decode/1 MB cap, the 1..24h validation and its
+exact 400 message, the 404/internal `httpx.Error` mapping, the nil-DB guard
+and the `{"ok":true,"new_expiry":...}` JSON. Tenant scoping, event/audit
+best-effort semantics, actor id and the `TenantOrPlatform` audit-tenant
+fallback are unchanged. `internal/handlers/console.go` is now 321 lines / 0
+SQL sites (was 362 / 5), handlers/ total 45 (was 50), caps lowered in the
+same PR. Existing console render characterization test passes unchanged; new
+`internal/controltower/application/ewaybill_extend_test.go` pins tenant
+isolation of the lookup (foreign/unknown id -> not-found with no write), the
+local-shift vs provider-enabled/error/nil-client seam matrix, the EXTENDED
+event + audit row fields, the audit tenant fallback and the exported
+audit-writer row mapping; new HTTP tests pin the validation status codes
+(0/25/negative/non-JSON -> 400), unknown/cross-tenant -> 404, the success
+JSON + DB/event/audit writes and the provider-enabled override.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 
