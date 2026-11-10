@@ -336,6 +336,37 @@ session-purge scoping and nil-store degradation, and new HTTP handler tests pin
 the plan/trial/override mutations (redirect, DB writes, audit) plus validation
 messages and the RBAC gate on those routes.
 
+**Phase 2 progress (2026-11-10, tenth increment - public invoice payment
+portal):** the login-free /pay/{invoiceId} read model moved from
+`internal/handlers/public_payment.go` into `internal/payment/application`:
+`PublicPaymentQueries.ResolvePublicInvoice` (invoice id-or-invoice_number
+lookup returning the canonical id + its tenant for the Razorpay order/verify
+use-cases) and `LoadPublicPay` (invoice + customer/booking/route/trip labels,
+line items with the legacy freight fallback row, company branding from
+`company_settings` then the invoice tenant name with the hardcoded carrier
+defaults, payment history newest-first with the latest settled payment, and
+the paid/outstanding state). The portal is public by design - the invoice
+id/number in the rate-limited link is the capability - so the legacy queries
+stay free of tenant filters and derive the tenant from the invoice row, while
+the internal tenant id is still blanked from the view and customer phone/email
+are masked in the read model (audit M2). Amount math (outstanding clamped at
+zero, paid detection by <=0.001 balance or case-insensitive payment_status),
+all JSON/template shapes, the Razorpay gateway use-cases and every
+400/404/500 status/message stay unchanged; the handler keeps HTTP, handler
+wiring, the ?paid=true success flag, format/lang negotiation and JSON/HTML
+rendering. There is no token-expiry/invoice-status gate in this legacy
+surface (pinned by test). `internal/handlers/public_payment.go` is now 305
+lines / 0 SQL sites (was 598 / 7), handlers/ total 74 (was 81), caps lowered
+in the same PR. Existing characterization tests (unpaid/paid HTML+JSON,
+not-found, server-side order + paid-invoice rejection, valid/fake signature
+settlement/idempotency, missing fields, PII masking) pass unchanged; new
+`internal/payment/application/public_payment_test.go` pins invoice
+id/number resolution, tenant derivation + branding override, masked PII,
+amount/outstanding/paid-state math including the overpayment clamp and the
+legacy uppercase-PAID quirk, payment-history ordering/latest, the fallback
+line item and company defaults, and cross-invoice line-item/payment
+isolation.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 

@@ -22,11 +22,12 @@ import (
 // PaymentHandlers handles payment management.
 type PaymentHandlers struct {
 	*App
-	recordUC *paymentapp.RecordPaymentUseCase
-	listUC   *paymentapp.ListPaymentsUseCase
-	getUC    *paymentapp.GetPaymentUseCase
-	orderUC  *paymentapp.CreateRazorpayOrderUseCase
-	verifyUC *paymentapp.VerifyRazorpayPaymentUseCase
+	recordUC  *paymentapp.RecordPaymentUseCase
+	listUC    *paymentapp.ListPaymentsUseCase
+	getUC     *paymentapp.GetPaymentUseCase
+	orderUC   *paymentapp.CreateRazorpayOrderUseCase
+	verifyUC  *paymentapp.VerifyRazorpayPaymentUseCase
+	publicPay *paymentapp.PublicPaymentQueries
 }
 
 func (h *PaymentHandlers) SetRazorpayUseCases(orderUC *paymentapp.CreateRazorpayOrderUseCase, verifyUC *paymentapp.VerifyRazorpayPaymentUseCase) {
@@ -64,6 +65,9 @@ func (h *PaymentHandlers) init() {
 		}
 		client := razorpay.NewRazorpayClient(keyID, keySecret)
 		h.verifyUC = paymentapp.NewVerifyRazorpayPaymentUseCase(uowImpl, h.recordUC, client, keySecret, clockImpl)
+	}
+	if h.publicPay == nil {
+		h.publicPay = paymentapp.NewPublicPaymentQueries(h.DB)
 	}
 }
 
