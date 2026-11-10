@@ -61,3 +61,37 @@ chained `r.With(...).Verb`, `r.Route` prefix + relative verbs, nested routes,
 New `/api/v1` routes ship with an `openapi.yaml` `paths:` entry in the same PR
 (B12 closure criterion per route). This audit re-runs by re-executing the
 extraction script above; target for B12-done is: router∖spec = ∅.
+
+
+## Re-run 2026-11-10 (automated, head v185)
+
+Method: `python3 scripts/openapi-parity.py` — regex extraction of
+`paths:`/method keys from `openapi.yaml` vs Go route registrations
+(method-call regex, `Route("prefix", func...)` prefix stack, and expansion of
+`Route("prefix", setupFunc)` closures). Params normalized to `{}`; scope
+is `/api/v1/*`. The script exits 1 if the spec documents a route the router
+does not register, and CI now runs it in `backend-build`.
+
+### Result
+- Spec: **207 paths / 236 path+method entries**. Router: **358 method registrations**.
+- **Dead spec entries: 0** (after fixing real drift found by this audit).
+- **Undocumented router routes: 122** (B12 backlog), top domains:
+  `integrations` 20, `tyres` 13, `video` 13, `inventory` 12, `rfq` 11,
+  `cold-chain` 10, `report-builder` 10, `freight-audit` 8, `ev` 7,
+  `loadboard` 4, `kharcha` 3, `sto` 3.
+
+### Drift fixed this run
+- Added `GET /api/v1/drivers/me/payouts` (masked account + rail state + payout
+  history; encrypted account number never returned) and
+  `POST /api/v1/drivers/me/payout-account/verify` (penny-drop start).
+- Payout webhook spec: `X-Razorpay-Signature` is now documented as required
+  (the handler rejects unsigned callbacks).
+- Found and fixed a real spec lie: the `/api/v1/errors/{fingerprint}` path
+  header was missing, so its `get:` block sat under
+  `/api/v1/support/tickets/{ticket}/status` (parser saw a dead GET). Path restored.
+
+### Known limitations of the audit
+- Routes mounted dynamically outside `RegisterRoutes`-style helpers are not seen.
+- Only `/api/v1/*` is in scope (legacy `/api/*` routes excluded).
+- Undocumented count is a backlog metric, not a failure; keep the rule "new
+  `/api/v1` route ships with a spec entry in the same PR" until B12 closes.

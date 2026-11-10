@@ -2330,7 +2330,92 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/v1/drivers/me/payout-account/verify:
+    post:
+      tags:
+        - Drivers
+      summary: Start penny-drop verification for my payout account
+      description: Bearer auth, self only. Starts provider fund-account validation (1 rupee penny-drop); the final verified/rejected result arrives via the payout webhook. Requires the payout rail to be configured.
+      responses:
+        '202':
+          description: Penny-drop verification started.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  account_id:
+                    type: string
+                  status:
+                    type: string
+                  reference:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: Payout rail disabled, no account on file, or provider failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /api/v1/drivers/me/payouts:
+    get:
+      tags:
+        - Settlements
+      summary: List my payouts and payout-account state
+      description: Bearer auth, self only. Returns the masked payout account, whether the payout rail is enabled, and recent payout instructions (status/UTR/failure reason). The encrypted account number is never returned.
+      responses:
+        '200':
+          description: Payout rail state.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rail_enabled:
+                    type: boolean
+                  account:
+                    type: object
+                    nullable: true
+                    properties:
+                      masked:
+                        type: string
+                      bank_name:
+                        type: string
+                      ifsc:
+                        type: string
+                      verification_status:
+                        type: string
+                        enum: [unverified, penny_drop_pending, verified, rejected]
+                  payouts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        amount:
+                          type: number
+                        currency:
+                          type: string
+                        status:
+                          type: string
+                          enum: [initiated, processing, paid, failed, reversed, cancelled]
+                        utr:
+                          type: string
+                        provider_payout_id:
+                          type: string
+                        failure_reason:
+                          type: string
+                        initiated_at:
+                          type: string
+                          format: date-time
+                        completed_at:
+                          type: string
+                          format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       tags:
         - Settlements
@@ -2931,6 +3016,25 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /api/v1/errors/{fingerprint}:
+    get:
+      tags: [Errors]
+      summary: Get one error report group
+      description: Requires `errors:read` permission. Powers the /ops/errors detail drawer.
+      parameters:
+        - name: fingerprint
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Full error group detail (message, stack trace, metadata, occurrence stats).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorReport' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/v1/support/tickets/{ticket}/status:
     post:
       tags: [Support]
@@ -2965,24 +3069,6 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
-    get:
-      tags: [Errors]
-      summary: Get one error report group
-      description: Requires `errors:read` permission. Powers the /ops/errors detail drawer.
-      parameters:
-        - name: fingerprint
-          in: path
-          required: true
-          schema: { type: string }
-      responses:
-        '200':
-          description: Full error group detail (message, stack trace, metadata, occurrence stats).
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ErrorReport' }
-        '404':
-          $ref: '#/components/responses/NotFound'
-
   /api/v1/esg/reports/brsr:
     get:
       tags:
@@ -9596,7 +9682,7 @@ paths:
             type: string
         - name: X-Razorpay-Signature
           in: header
-          required: false
+          required: true
           schema:
             type: string
       requestBody:
