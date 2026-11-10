@@ -395,6 +395,36 @@ rows deleted before their parent trip/driver/vehicle), protected
 users/tenants survival, the bootstrap/empty/unknown-tenant guards and
 idempotent re-execute.
 
+**Phase 2 progress (2026-11-10, twelfth increment - route optimization jobs):**
+the route-optimization job persistence/read surface moved from
+`internal/handlers/routes.go` into the new `internal/route/application`
+(`RouteOptimizationService`: `VehiclesForOptimization` - up to 50
+non-blocked tenant vehicles ordered by plate for the optimizer dropdown;
+`CreateJob` - the uuid-keyed pending `route_optimization_jobs` insert with
+input JSON, provider and creator; best-effort `MarkProcessing`/
+`MarkFailed`/`MarkCompleted` status+result+timestamp updates; `RecentJobs`
+- the tenant's 20 newest jobs with the legacy per-row scan tolerance; and
+`Job` - the tenant-scoped polling lookup whose unknown/foreign id surfaces
+`sql.ErrNoRows` for the handler 404). The handler keeps HTTP/JSON parsing,
+`optimizer.Validate` + max-50-shipments validation, provider/config
+selection (mock/osrm-public/osrm-selfhost + OSRM URL), the synchronous solve
+call, every JSON shape/status code (202/422/500/404) and the `writeJSON`
+helpers; route master-data CRUD still delegates to `h.Services.Routes`
+(unmoved, validation/uniqueness unchanged). Tenant scoping is preserved
+verbatim (every job statement filters tenant_id; a foreign-tenant job id
+reads as not-found) and the legacy best-effort status-update semantics
+(errors ignored) plus SQL NULL-vs-empty-string validity in the polling
+payload are unchanged. `internal/handlers/routes.go` is now 335 lines / 0
+SQL sites (was 383 / 7), handlers/ total 60 (was 67), caps lowered in the
+same PR. Existing route-optimize characterization tests
+(`TestRouteOptimize_MockProvider`, `TestRouteOptimize_Validation`) pass
+unchanged; new `internal/route/application/optimizer_jobs_test.go` pins
+tenant isolation of the vehicle lookup and job reads (foreign-tenant id ->
+not-found), blocked-vehicle exclusion + ordering/limit, the
+pending->processing->completed/failed write lifecycle with timestamps,
+recent-jobs ordering/20-row cap/NULL completed_at omission, and the legacy
+NULL-vs-empty-string polling semantics.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 
