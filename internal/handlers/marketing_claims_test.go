@@ -15,7 +15,9 @@ import (
 // inventedStatPattern catches fabricated marketing metrics ("95% fewer
 // claims", "3x faster", "100% coverage"). The public feature pages must
 // describe capabilities, never invented outcomes (AGENTS.md prime directive).
-var inventedStatPattern = regexp.MustCompile(`\b\d+(\.\d+)?\s*%|\b\d+x\b`)
+func inventedStatPattern() *regexp.Regexp {
+	return regexp.MustCompile(`\b\d+(\.\d+)?\s*%|\b\d+x\b`)
+}
 
 // TestFeatureRegistry_NoUnverifiableClaims is the truth ratchet for the
 // login-free /features/<slug> explainer pages.
@@ -42,7 +44,7 @@ func TestFeatureRegistry_NoUnverifiableClaims(t *testing.T) {
 		}
 		text := b.String()
 
-		assert.NotRegexp(t, inventedStatPattern, text, "%s: marketing copy must not carry invented stats", slug)
+		assert.NotRegexp(t, inventedStatPattern(), text, "%s: marketing copy must not carry invented stats", slug)
 		for _, phrase := range []string{
 			"guarantee", "zero gaps", "dispute-free", "pass 100%",
 			"SAP ", "Oracle", "ISO 27001", "SOC 2", "certified secure",
@@ -74,7 +76,7 @@ func TestHomeCopy_NoAbsoluteClaims(t *testing.T) {
 
 		for key, value := range copyMap {
 			if strings.HasPrefix(key, "home.") {
-				assert.NotRegexp(t, inventedStatPattern, value,
+				assert.NotRegexp(t, inventedStatPattern(), value,
 					"%s: home copy %s must not carry invented stats", lang, key)
 			}
 		}
