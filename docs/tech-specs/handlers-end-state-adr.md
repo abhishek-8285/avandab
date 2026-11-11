@@ -967,6 +967,38 @@ fields stay until those consumers migrate; legacy `PNLService`/
 `ExperimentsService`/`FounderSignalsService` code is retained for the same
 reason.
 
+**Phase 4 progress (2026-11-11, fourth increment - deletion unblock audit):**
+re-verified at `c1e03d8` whether the three founder-domain container fields can
+be deleted. They cannot yet - every remaining consumer needs the legacy
+write/admin API, so removal stops at the audit (per the zero-reference rule,
+tests count):
+- `Experiments`: `handlers/app.go` wires `svc.Experiments` into
+  `NewExperimentHandlers`, whose A/B admin surface calls
+  `CreateExperiment`, `ListExperiments`, `Start/Pause/Resume/Complete/
+  ArchiveExperiment`, `GetExperiment`, `GetExperimentResults`; three
+  `test/` files also exercise those legacy methods through
+  `NewTestServices(...).Experiments` (test/experiments_test.go 9 refs,
+  founder_signals_test.go 10, phase12_integration_test.go 13).
+- `FounderSignals`: `NewFounderHandlers` keeps the legacy
+  `*service.FounderSignalsService` for the write path
+  (`ListSignals`/`AcknowledgeSignal` with audit callback) and `app.go`
+  passes `svc.FounderSignals`; `NewServices` also wires it as a dependency
+  of `OpsAlerts`/`PNL` signal hooks. Migrating requires a slice-side
+  signals service with the acknowledge/emit write surface + audit adapter
+  first.
+- `PNL`: `NewPNLHandlers` (`GenerateDailySnapshot`, read/range DTOs),
+  `ConsoleHandlers` money strip (`GetMoneyStrip`) and the nightly
+  `cmd/server` cron (`services.PNL.GenerateDailySnapshot` +
+  `GetActiveTenantIDs`) all consume the legacy service; tests call
+  `GenerateDailySnapshot`/`GetLatest`. The slice `internal/pnl` currently
+  only computes live P&L for a trip, so the daily-snapshot generator + money
+  strip read model must be ported before the field can go.
+No fields/code were deleted this increment (nothing gained zero-reference
+proof); `Services.*` handler sites stay at **231** across **21 fields** and
+the container stays at 30 fields. Next increment must port these legacy APIs
+into `internal/experiments`/`internal/founder`/`internal/pnl`, migrate the
+admin/console/cron/test consumers, then delete the fields and service types.
+
 ### 5. Exit criteria per file/domain
 
 - zero raw SQL in the handler/tool file (ratchet cap 0),
