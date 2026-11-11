@@ -17,7 +17,7 @@
 | Build / vet / gofmt | exit 0 / exit 0 / clean (tracked Go) | `go build ./...`, `go vet ./...`, `gofmt -l` 2026-11-11 |
 | ADR ratchet — `internal/handlers/` raw SQL | **0** sites (was 245 at `41345ca`); asserted with `assert.Zero` + per-file line caps may only shrink | `internal/architecture/ratchet_test.go`; Phase 2 complete at `e3dd6fe` |
 | ADR ratchet — `internal/agent/tools.go` | **0** raw SQL, **0** `env.Services` refs, 1,027 lines (was 1,186 lines / 1 SQL site / legacy service container) | same ratchet; Phase 3 complete at `a20aabf` |
-| Legacy service container remaining live use | **241** `Services.*` call sites in `internal/handlers` (Phase 4 cleanup target; zero whole-service deletions yet — every legacy service still has live callers) | `grep` 2026-11-11 |
+| Legacy service container remaining live use | **241** `Services.*` call sites in `internal/handlers` across 24 fields; container **32 → 30 fields** after Phase 4 increment 2 (removed zero-reference `TenantConfigs` reader field + unreachable `Deviation` engine field, wiring deleted, behavior unchanged; no legacy service *type* deleted yet — every type still has live callers) | `grep` 2026-11-11 |
 | Security gate | **Partial locally** — golangci-lint 0 issues across all branch changes; `govulncheck` + `-race` are CI-only on this android/arm64 host | `golangci-lint --new-from-rev=origin` 2026-11-10 |
 | Migrations | **179 files each engine, head `00185`**, SQLite + PG mirrors | `ls db/migrations*/ *.sql` |
 | Schema | 179 tables / 283 indexes | regenerated `db/schema.sql` at head |

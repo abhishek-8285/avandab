@@ -924,6 +924,26 @@ with an `assert.Zero` ratchet at `e3dd6fe`, agent/tools.go 0 SQL + 0
 `Services.*` handler sites + capped-but-large god-files), overall held at
 8.5 because external acceptance remains the binding constraint.
 
+**Phase 4 progress (2026-11-11, second increment - first container deletions):**
+removed two zero-reference fields from the legacy `service.Services` container
+(32 -> 30 fields): `TenantConfigs *TenantConfigReader` (no non-test call
+sites; the reader itself stays because it is still referenced by the invoice
+overlay default and its own tests) and `Deviation *deviation.Engine`
+(unreachable - nothing outside the constructor assignment ever read the field;
+the engine type remains referenced by its package tests/consumers, so the
+engine code is retained per the zero-reference rule). Constructor wiring and
+field comments were removed; the invoice overlay still receives the reader
+through the existing local `tenantCfg` value and `baseService`, so behavior
+is unchanged. The container now exposes 30 fields; handler `Services.*` call
+sites stay at **241** (the removed fields had zero handler call sites) and
+handlers raw SQL stays zero. Test fixture: dropped the obsolete
+`require.NotNil(app.Services.TenantConfigs)` container-shape assertion in
+`dashboard_attention_test.go` (the covering behavior assertion - the per-tenant
+FASTag threshold override actually being honored - is unchanged and still
+runs). Next-increment candidates remain the live-handler fields: Events (1),
+FounderSignals (2), Experiments (4), PNL (4), Scorecard (4), Compliance (5),
+Notes (5).
+
 ### 5. Exit criteria per file/domain
 
 - zero raw SQL in the handler/tool file (ratchet cap 0),
