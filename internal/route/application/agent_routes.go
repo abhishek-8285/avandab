@@ -125,7 +125,7 @@ func (q *AgentRouteQueries) Quote(ctx context.Context, tenantID shared.TenantID,
 // gstRate mirrors legacy GetSettings: per-tenant profile rate for org tenants,
 // company_settings id=1 for the bootstrap/global tenant; absent row = 0%.
 func (q *AgentRouteQueries) gstRate(ctx context.Context, tenantID shared.TenantID) (float64, error) {
-	if tid := string(tenantID); tid != "" && tid != string(shared.DefaultTenant) {
+	if tid := string(tenantID); tid != "" && tid != string(shared.DefaultTenant) { //nolint:tenant-default // bootstrap tenant reads the global company_settings GST rate; identity branching only
 		var rate float64
 		err := q.db.QueryRowContext(ctx, `SELECT gst_rate FROM tenant_company_profiles WHERE tenant_id = ?`, tid).Scan(&rate)
 		if err == nil {
