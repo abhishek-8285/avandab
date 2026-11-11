@@ -834,6 +834,35 @@ and the approve/reject state machines with their settlement/audit side
 effects; a new agent regression test pins registry/RBAC tags, cross-tenant
 invisibility and the legacy model strings.
 
+**Phase 3 progress (2026-11-11, fourth increment - booking/trip tools):** the
+seven route/booking/customer/trip agent tools (`search_routes`, `get_quote`,
+`create_booking`, `search_customers`, `get_booking`, `list_trips`,
+`get_trip`) no longer use `env.Services.Routes/Customers/Bookings/Trips/
+Settings`. They delegate to new facades in their owning slices:
+`internal/route/application.AgentRouteQueries` (tenant-scoped route search
+with the legacy SearchRoutes LIKE/ordering; quote reuses the domain
+`Route.GetDistanceAndFare` bidirectional rule incl the reverse fare and reads
+the GST rate the way legacy GetSettings does - tenant_company_profiles for org
+tenants, company_settings id=1 for the bootstrap tenant),
+`internal/customer/application.AgentCustomerQueries` (tenant-scoped legacy
+SearchCustomers LIKE columns), `internal/booking/application.
+AgentBookingService` (create runs the clean CreateBookingUseCase -
+validation/numbering/tenant gate - and the read model is a tenant-scoped
+by-id/by-number join) and `internal/trip/application.AgentTripService` (list
+runs the clean ListTripsUseCase search/status rules; by-number detail is a
+tenant-scoped join). Tools keep schemas/descriptions, parsing + validation
+strings ("pickup_date must be 'YYYY-MM-DD HH:MM'"), RBAC tags
+(`routes:read`, `customers:read`, `bookings:create/read`,
+`trips:read`), approval-gate membership (create_booking stays in
+MutatingTools), exact JSON output shapes and model strings ("No routes found
+matching: ...", "No customers found matching: ...", "booking not found: ...",
+"trip not found: ...", "No trips found..."). `internal/agent/tools.go` is now
+1,060 lines / 0 SQL and its line cap was lowered 1126 -> 1061. Existing agent
+tests pass unchanged; new facade tests pin route search/quote math
+(forward/reverse/GST), customer/booking/trip tenant isolation and not-found
+mapping, and a new agent integration test exercises all seven tools end-to-end
+against the migrated DB, including cross-tenant invisibility.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 

@@ -159,6 +159,6 @@ func TestArchitectureRatchet_HandlersSQLAndGodFiles(t *testing.T) {
 	// and shrank by the removed repository plumbing.
 	assert.Zero(t, countSQL(agentText),
 		"agent/tools.go gained %d raw SQL call site(s): tools must delegate to application services (handlers-end-state ADR Phase 3)", countSQL(agentText))
-	assert.LessOrEqual(t, lineCount(agentText), 1126,
-		"agent/tools.go grew to %d lines (cap 1126): split tools per domain and lower the cap", lineCount(agentText))
+	assert.LessOrEqual(t, lineCount(agentText), 1061,
+		"agent/tools.go grew to %d lines (cap 1061): split tools per domain and lower the cap", lineCount(agentText))
 }
