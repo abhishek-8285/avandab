@@ -2,19 +2,16 @@ package handlers
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/json"
-	"fmt"
 	"log/slog"
-	"math/big"
 	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 
 	"transport-app/internal/apperr"
+	contactapp "transport-app/internal/contact/application"
 	"transport-app/internal/httpx"
 	"transport-app/internal/middleware"
 )
@@ -32,22 +29,10 @@ func (h *ContactHandlers) Routes(r chi.Router) {
 	r.Get("/status", h.StatusCheck)
 }
 
-// Ticket struct for data rendering
-type ContactTicket struct {
-	ID             string
-	TicketNumber   string
-	Name           string
-	Email          string
-	Phone          string
-	CompanyName    string
-	Subject        string
-	Category       string
-	Message        string
-	Status         string
-	AcknowledgedAt string
-	CreatedAt      string
-	UpdatedAt      string
-}
+// ContactTicket is the contact_submissions row rendered on the status page.
+// The type lives in internal/contact/application (handlers-end-state ADR,
+// Phase 2); the alias keeps template references unchanged.
+type ContactTicket = contactapp.Ticket
 
 // Consumer grievance SLAs (E-Commerce Amendment 2026, eff. 1 Jan 2027):
 // acknowledge within 48h, redress within 1 month. Acknowledgement is proven
@@ -76,15 +61,6 @@ func contactSLA(createdAt, acknowledgedAt, status string, now time.Time) (ackDue
 	default:
 		return ackDue, redressDue, "on-track"
 	}
-}
-
-func generateTicketNumber() string {
-	b := make([]byte, 8)
-	if _, err := rand.Read(b); err != nil {
-		n, _ := rand.Int(rand.Reader, big.NewInt(1<<62))
-		return fmt.Sprintf("AVN-%X", n.Int64())
-	}
-	return fmt.Sprintf("AVN-%X", b)
 }
 
 // Page renders the contact-us & ticket status page.
@@ -186,14 +162,15 @@ func (h *ContactHandlers) Submit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := uuid.New().String()
-	ticketNo := generateTicketNumber()
-
-	_, err := h.DB.ExecContext(r.Context(), `
-		INSERT INTO contact_submissions (id, ticket_number, name, email, phone, company_name, subject, category, message, status)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
-	`, id, ticketNo, name, email, phone, company, subject, category, message)
-
+	ticketNo, err := contactapp.NewService(h.DB).Submit(r.Context(), contactapp.SubmitInput{
+		Name:        name,
+		Email:       email,
+		Phone:       phone,
+		CompanyName: company,
+		Subject:     subject,
+		Category:    category,
+		Message:     message,
+	})
 	if err != nil {
 		http.Error(w, "Failed to submit inquiry: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -226,22 +203,11 @@ func (h *ContactHandlers) fetchTicketByNumber(ctx context.Context, ticketNo, ema
 		return nil, "Enter both your ticket number and the email address you used to submit it."
 	}
 
-	var t ContactTicket
-
-	err := h.DB.QueryRowContext(ctx, `
-		SELECT id, ticket_number, name, email, COALESCE(phone, ''), COALESCE(company_name, ''), subject, category, message, status, COALESCE(CAST(acknowledged_at AS TEXT), ''), created_at, updated_at
-		FROM contact_submissions
-		WHERE ticket_number = $1 AND email = $2
-		ORDER BY created_at DESC LIMIT 1
-	`, ticketNo, email).Scan(
-		&t.ID, &t.TicketNumber, &t.Name, &t.Email, &t.Phone, &t.CompanyName, &t.Subject, &t.Category, &t.Message, &t.Status, &t.AcknowledgedAt, &t.CreatedAt, &t.UpdatedAt,
-	)
-
+	ticket, err := contactapp.NewService(h.DB).FindForRequester(ctx, ticketNo, email)
 	if err != nil {
 		return nil, "No support ticket found for the ticket number and email provided."
 	}
-
-	return &t, ""
+	return ticket, ""
 }
 
 // UpdateStatus transitions a grievance ticket. Mounted behind users:manage
@@ -266,18 +232,12 @@ func (h *ContactHandlers) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 			WithDetail("status must be one of pending, in_progress, resolved, closed"))
 		return
 	}
-	res, err := h.DB.ExecContext(r.Context(), `
-		UPDATE contact_submissions
-		SET status = $1, updated_at = CURRENT_TIMESTAMP,
-		    acknowledged_at = COALESCE(acknowledged_at, CURRENT_TIMESTAMP)
-		WHERE ticket_number = $2
-	`, req.Status, ticketNo)
+	found, err := contactapp.NewService(h.DB).UpdateStatus(r.Context(), ticketNo, req.Status)
 	if err != nil {
 		httpx.Error(w, r, err)
 		return
 	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
+	if !found {
 		httpx.Error(w, r, apperr.New(apperr.CodeNotFound))
 		return
 	}
@@ -294,10 +254,6 @@ func (h *ContactHandlers) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 // ?status=. Same users:manage gate as UpdateStatus (see note above).
 func (h *ContactHandlers) ListTickets(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
-	query := `SELECT ticket_number, name, email, subject, category, status,
-		COALESCE(CAST(acknowledged_at AS TEXT), ''), created_at, updated_at
-		FROM contact_submissions`
-	var args []interface{}
 	if status != "" {
 		switch status {
 		case "pending", "in_progress", "resolved", "closed":
@@ -306,38 +262,9 @@ func (h *ContactHandlers) ListTickets(w http.ResponseWriter, r *http.Request) {
 				WithDetail("status must be one of pending, in_progress, resolved, closed"))
 			return
 		}
-		query += ` WHERE status = $1`
-		args = append(args, status)
 	}
-	query += ` ORDER BY created_at DESC LIMIT 100`
-	rows, err := h.DB.QueryContext(r.Context(), query, args...)
+	out, err := contactapp.NewService(h.DB).List(r.Context(), status)
 	if err != nil {
-		httpx.Error(w, r, err)
-		return
-	}
-	defer func() { _ = rows.Close() }()
-	type ticketRow struct {
-		TicketNumber   string `json:"ticket"`
-		Name           string `json:"name"`
-		Email          string `json:"email"`
-		Subject        string `json:"subject"`
-		Category       string `json:"category"`
-		Status         string `json:"status"`
-		AcknowledgedAt string `json:"acknowledged_at"`
-		CreatedAt      string `json:"created_at"`
-		UpdatedAt      string `json:"updated_at"`
-	}
-	out := make([]ticketRow, 0)
-	for rows.Next() {
-		var t ticketRow
-		if err := rows.Scan(&t.TicketNumber, &t.Name, &t.Email, &t.Subject,
-			&t.Category, &t.Status, &t.AcknowledgedAt, &t.CreatedAt, &t.UpdatedAt); err != nil {
-			httpx.Error(w, r, err)
-			return
-		}
-		out = append(out, t)
-	}
-	if err := rows.Err(); err != nil {
 		httpx.Error(w, r, err)
 		return
 	}

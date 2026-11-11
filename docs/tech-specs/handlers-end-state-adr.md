@@ -637,6 +637,39 @@ secret hygiene and nil-DB behavior, and new
 `internal/telemetry/vehicle_fleet_test.go` pins tenant-scoped ordering,
 best-effort degradation and the tenant-scoped electric transition.
 
+**Phase 2 progress (2026-11-11, twentieth increment - contact + compliance
+domains complete):** the remaining raw SQL of the public support/grievance
+inbox and the compliance dashboard moved into two new slices (no
+`internal/contact*`, `internal/crm` or `internal/compliance*` package
+existed; `service.ComplianceService`/`ComplianceRadarService` stay
+untouched): `internal/contact/application` (`Service.Submit` - uuid +
+AVN-XXXXXXXX public reference and the pending contact_submissions INSERT;
+`FindForRequester` - ticket number + submitter-email lookup with the legacy
+single not-found message; `UpdateStatus` - status write whose first touch
+stamps acknowledged_at exactly once via COALESCE, rows-affected drives the
+handler 404; `List` - newest-first cap-100 list with the handler-validated
+status filter) and `internal/compliance/application`
+(`DashboardQueries.Overview` - drivers/vehicles expiry aggregation, blocked
+flag/status rules with the legacy expanded default reasons and expiry-reason
+precedence, 7-day expiring-soon counters, and pending driver/vehicle document
+counts tenant-scoped through the owner entity). Tenant scoping is preserved
+exactly: the compliance dashboard scopes org callers while the bootstrap
+tenant ('1'/empty: single-tenant + platform views) keeps the legacy global
+aggregation; the contact inbox is company-global by design (no tenant_id) and
+remains so. The handlers keep form/JSON parsing, required-field and
+status-whitelist validation, the 48h-ack/1-month SLA derivation, safe
+redirects, HTTP/JSON/HTML shapes and every status code; the dashboard view
+models are re-exported as handler aliases so template coverage tests are
+unchanged. `internal/handlers/contact.go` is now 273 lines / 0 SQL sites (was
+346 / 4) and `compliance.go` 329 / 0 (was 465 / 4), handlers/ total 11 (was
+19), caps lowered in the same PR. Existing contact SLA/ack-once/list-filter
+and compliance tenant-isolation characterization tests pass unchanged; new
+`internal/contact/application/tickets_test.go` pins submission/lookup,
+first-touch acknowledgement, ordering/filter/cap and the global-inbox scope,
+and new `internal/compliance/application/dashboard_test.go` pins tenant
+isolation vs bootstrap-global, blocked/expired/expiring-soon rules, reason
+precedence/defaults and pending-document scoping.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 
