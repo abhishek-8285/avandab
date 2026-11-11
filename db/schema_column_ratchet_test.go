@@ -18,11 +18,16 @@ import (
 // Raising a cap is allowed only with a comment here saying why the new column
 // belongs in that aggregate rather than a table of its own.
 var maxColumns = map[string]int{
-	"Vehicle":               62,
-	"Trip":                  52,
-	"FreightAudit":          44,
-	"Alert":                 31,
-	"EwayBill":              30,
+	"Vehicle":      62,
+	"Trip":         52,
+	"FreightAudit": 44,
+	"Alert":        31,
+	"EwayBill":     30,
+	// 25 -> 27 (00185): deactivated_at is the KYC-retention clock and
+	// kyc_purged_at is the purge-idempotency stamp for KYC columns already on
+	// this row (the same worker clears aadhaar/pan in place), so a satellite
+	// table would only add a join around one UPDATE.
+	"Driver":                27,
 	"TripStop":              29,
 	"Tyre":                  28,
 	"TelemetryPosition":     26,
@@ -30,7 +35,6 @@ var maxColumns = map[string]int{
 	"DriverExpense":         26,
 	"Rfq":                   25,
 	"DriverSettlement":      25,
-	"Driver":                25,
 	"CustomerBookingDetail": 24,
 	"Customer":              23,
 	"VideoSafetyEvent":      22,
