@@ -1347,7 +1347,7 @@ func main() {
 			logger.Error("AGENT_REQUIRE_APPROVAL=true but the approval gate could not be built (RL store unavailable); mutating tools are disabled — the agent is read-only")
 		}
 
-		toolEnv := &agent.ToolEnv{Services: services, Dispatch: dispatchapp.NewService(assignDriver, assignVehicle)}
+		toolEnv := &agent.ToolEnv{DB: services.DB(), Dispatch: dispatchapp.NewService(assignDriver, assignVehicle), EWayBill: services.EWayBill}
 		toolsByName := make(map[string]*agent.RegisteredTool)
 		for _, t := range agent.RegisterTools(toolEnv) {
 			toolsByName[t.Name] = t

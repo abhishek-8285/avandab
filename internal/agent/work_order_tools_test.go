@@ -28,13 +28,14 @@ func newWOAgentEnv(t *testing.T) (*ToolEnv, map[string]*RegisteredTool) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	bus := events.NewInMemoryBus()
 	services := service.NewServices(store, cfg, logger, bus)
+	_ = services
 
 	_, err := db.Exec(`INSERT INTO vehicles
 		(id, registration_number, vehicle_number, vehicle_type, capacity, status, insurance_expiry, fitness_expiry, permit_expiry, tenant_id)
 		VALUES ('veh-wo','REG-WO','MH-01-WO','truck',15,'available',date('now','+1 year'),date('now','+1 year'),date('now','+1 year'),'1')`)
 	require.NoError(t, err)
 
-	env := &ToolEnv{Services: services, UserID: "agent-op", UserName: "Agent Op"}
+	env := &ToolEnv{DB: db, UserID: "agent-op", UserName: "Agent Op"}
 	byName := map[string]*RegisteredTool{}
 	for _, tl := range RegisterTools(env) {
 		byName[tl.Name] = tl

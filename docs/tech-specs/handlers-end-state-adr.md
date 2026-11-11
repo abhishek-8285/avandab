@@ -863,6 +863,40 @@ tests pass unchanged; new facade tests pin route search/quote math
 mapping, and a new agent integration test exercises all seven tools end-to-end
 against the migrated DB, including cross-tenant invisibility.
 
+**Phase 3 COMPLETE (2026-11-11, final tools increment):** the last six
+legacy-service tools moved onto owning application facades and the agent tool
+layer no longer reaches the legacy service container at all.
+`assign_driver`/`assign_vehicle` use the dispatch facade
+(`internal/dispatch/application`, with a new `NewAgentDispatcher(db)` for
+DB-only callers) so there is no `env.Services.Trips` fallback anymore;
+`list_available_drivers` delegates to
+`internal/driver/application.AgentDriverQueries.Available`;
+`list_available_vehicles` delegates to
+`internal/vehicle/application.AgentVehicleQueries.Available` (status filter
+plus the legacy maintenance-block rule: due date, unresolved critical DTC or
+in-process work order, lifted by an active override); `get_dashboard` uses
+the new `internal/dashboard/application.AgentDashboardQueries.Snapshot`
+(same eight card metrics and today-by-departure status math); and
+`extend_ewaybill` uses the injected `ToolEnv.EWayBill` (the e-way bill
+slice service) instead of the service container. `get_open_alerts` also
+switched to `ToolEnv.DB`. `ToolEnv` is now
+`{DB, Dispatch, EWayBill, UserID, UserName}` - `Services *service.Services`
+was removed from the tool layer; cmd/server wires
+`DB: services.DB(), EWayBill: services.EWayBill` alongside the injected
+dispatcher. Schemas/descriptions, parsing, validation strings, RBAC tags,
+approval-gate membership, exact JSON shapes and all model-facing strings are
+unchanged (including the "No drivers/vehicles available right now.",
+"No eway bill found..." / "extend failed..." / "eway bill service not
+available" strings). `internal/agent/tools.go` is now 1,027 lines / 0 raw SQL
+/ 0 `env.Services` references; its line cap was lowered 1061 -> 1028.
+Existing characterization tests pass unchanged; new facade tests pin driver
+and vehicle availability (tenant isolation + maintenance-block filter) and the
+dashboard snapshot math, and a new agent regression pins the final facade
+wiring, dashboard shape and the preserved model strings. **Phase 3 exit
+criterion is met:** tools are schema + argument mapping + delegate, handlers
+raw SQL remains zero, and no tool performs legacy service/repository data
+access.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 

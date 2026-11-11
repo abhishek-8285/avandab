@@ -57,6 +57,7 @@ func TestAgentTools_ListAvailableVehicles_ExcludesMaintenanceDue(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	bus := events.NewInMemoryBus()
 	services := service.NewServices(store, cfg, logger, bus)
+	_ = services
 
 	// Seed 2 vehicles: veh-avail (clean) and veh-maint (maintenance_due set)
 	_, err := db.Exec(`INSERT INTO vehicles
@@ -66,7 +67,7 @@ func TestAgentTools_ListAvailableVehicles_ExcludesMaintenanceDue(t *testing.T) {
 		('veh-maint', 'REG-MAINT', 'MH-01-MAINT', 'truck', 15, 'available', date('now','+1 year'), date('now','+1 year'), date('now','+1 year'), '2026-08-19', '1')`)
 	require.NoError(t, err)
 
-	env := &ToolEnv{Services: services}
+	env := &ToolEnv{DB: db}
 	tools := RegisterTools(env)
 
 	var listTool *RegisteredTool

@@ -172,7 +172,7 @@ func TestClient_Error(t *testing.T) {
 }
 
 func TestToolEnv_ToolsRegistered(t *testing.T) {
-	env := &ToolEnv{Services: nil, UserID: "usr-1", UserName: "test"}
+	env := &ToolEnv{DB: nil, UserID: "usr-1", UserName: "test"}
 	tools := RegisterTools(env)
 	if len(tools) < 10 {
 		t.Errorf("expected at least 10 tools, got %d", len(tools))

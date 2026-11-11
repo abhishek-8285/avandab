@@ -30,8 +30,9 @@ func newBookingTripToolEnv(t *testing.T) map[string]*RegisteredTool {
 	_, err = db.Exec(`INSERT INTO trips (id, tenant_id, trip_number, route_id, departure_time, status) VALUES ('trip-1','1','TR-1','route-1','2026-10-01 08:30:00','in_transit')`)
 	require.NoError(t, err)
 	services := service.NewServices(sqlite.NewRepository(db), &config.Config{}, slog.New(slog.NewTextHandler(io.Discard, nil)), events.NewInMemoryBus())
+	_ = services
 	byName := map[string]*RegisteredTool{}
-	for _, tl := range RegisterTools(&ToolEnv{Services: services, UserID: "agent-op"}) {
+	for _, tl := range RegisterTools(&ToolEnv{DB: db, UserID: "agent-op"}) {
 		byName[tl.Name] = tl
 	}
 	return byName

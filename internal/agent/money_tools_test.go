@@ -30,8 +30,9 @@ func newMoneyToolEnv(t *testing.T) (map[string]*RegisteredTool, *DBShim) {
 	store := sqlite.NewRepository(db)
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	services := service.NewServices(store, &config.Config{}, logger, events.NewInMemoryBus())
+	_ = services
 	byName := map[string]*RegisteredTool{}
-	for _, tl := range RegisterTools(&ToolEnv{Services: services, UserID: "agent-op"}) {
+	for _, tl := range RegisterTools(&ToolEnv{DB: db, UserID: "agent-op"}) {
 		byName[tl.Name] = tl
 	}
 	return byName, &DBShim{DB: db}
