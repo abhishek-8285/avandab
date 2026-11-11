@@ -3,16 +3,23 @@ package ewaybill
 // Read model behind the E-Way Bill list/detail pages, extracted from
 // internal/handlers/ewaybill.go (handlers-end-state ADR, Phase 2). The
 // lifecycle/validation/provider logic stays in EWayBillService; this file
-// only moves the four presentation queries.
+// only owns the four presentation queries.
 //
-// LEGACY SCOPE PRESERVED EXACTLY: these presentation reads are global -
-// eway_bills has no tenant_id column and the former handler never joined
-// trips.tenant_id, so the list/stats/candidate-trips/event-history views show
-// rows from every tenant to any authenticated operator with ewaybill:read.
-// This is frozen behavior for the migration (the handler characterization
-// tests rely on the page shapes); it is flagged for a follow-up security
-// increment rather than silently changed here. The EWB write lifecycle keeps
-// its own tenant gate inside EWayBillService (TestGeneratePartA_CrossTenantDenied).
+// TENANT SCOPING (security fix, 2026-11-11): these presentation reads are
+// tenant-scoped through the owning trip (`trips.tenant_id`). eway_bills has no
+// tenant_id column of its own, so every query joins its trip and filters on
+// the caller's tenant. The previous behavior - a global list/stats/events
+// view for any operator holding ewaybill:read - was a pre-existing
+// cross-tenant data exposure and is intentionally NOT preserved.
+//
+// Fail-closed contract: an empty tenant id returns empty results (zeroed
+// stats, nil lists) - there is no global fallback and no DefaultTenant
+// substitution. Orphan EWBs whose trip was deleted/unknown are invisible to
+// every tenant (inner join), and event history is only returned for an EWB
+// whose trip belongs to the calling tenant.
+//
+// The EWB write lifecycle keeps its own tenant gate inside EWayBillService
+// (TestGeneratePartA_CrossTenantDenied).
 
 import (
 	"context"
@@ -76,31 +83,33 @@ func NewEWayBillReadQueries(db *sql.DB) *EWayBillReadQueries {
 	return &EWayBillReadQueries{db: db}
 }
 
-// Stats aggregates the list-page counters. The legacy handler logged (and
-// rendered zeroed stats for) a failed query, so the error is returned for the
-// caller to log without failing the page.
-func (q *EWayBillReadQueries) Stats(ctx context.Context) (EWBStats, error) {
+// Stats aggregates the tenant's list-page counters. A failed query is
+// returned for the caller to log while the page renders zeroed stats; an
+// empty tenant fails closed with zeroed stats.
+func (q *EWayBillReadQueries) Stats(ctx context.Context, tenantID string) (EWBStats, error) {
 	var stats EWBStats
-	if q.db == nil {
+	if q.db == nil || tenantID == "" {
 		return stats, nil
 	}
 	err := q.db.QueryRowContext(ctx, `
 		SELECT COUNT(*),
-		       COALESCE(SUM(CASE WHEN status='active' AND (vehicle_number IS NOT NULL AND vehicle_number != '') THEN 1 ELSE 0 END), 0),
-		       COALESCE(SUM(CASE WHEN status='active' AND (vehicle_number IS NULL OR vehicle_number = '') THEN 1 ELSE 0 END), 0),
-		       COALESCE(SUM(CASE WHEN extension_count > 0 THEN 1 ELSE 0 END), 0),
-		       COALESCE(SUM(CASE WHEN status='cancelled' THEN 1 ELSE 0 END), 0),
-		       COALESCE(SUM(CASE WHEN status='expired' THEN 1 ELSE 0 END), 0)
-		FROM eway_bills
-	`).Scan(&stats.Total, &stats.Active, &stats.PartAOnly, &stats.Extended, &stats.Cancelled, &stats.Expired)
+		       COALESCE(SUM(CASE WHEN eb.status='active' AND (eb.vehicle_number IS NOT NULL AND eb.vehicle_number != '') THEN 1 ELSE 0 END), 0),
+		       COALESCE(SUM(CASE WHEN eb.status='active' AND (eb.vehicle_number IS NULL OR eb.vehicle_number = '') THEN 1 ELSE 0 END), 0),
+		       COALESCE(SUM(CASE WHEN eb.extension_count > 0 THEN 1 ELSE 0 END), 0),
+		       COALESCE(SUM(CASE WHEN eb.status='cancelled' THEN 1 ELSE 0 END), 0),
+		       COALESCE(SUM(CASE WHEN eb.status='expired' THEN 1 ELSE 0 END), 0)
+		FROM eway_bills eb
+		JOIN trips t ON t.id = eb.trip_id AND t.tenant_id = $1
+	`, tenantID).Scan(&stats.Total, &stats.Active, &stats.PartAOnly, &stats.Extended, &stats.Cancelled, &stats.Expired)
 	return stats, err
 }
 
-// Items returns the 100 newest EWB rows (legacy global ordering/limit). A
-// query error renders an empty table instead of failing the page, and per-row
-// scan failures are skipped - both preserved from the handler.
-func (q *EWayBillReadQueries) Items(ctx context.Context) []EWBListItem {
-	if q.db == nil {
+// Items returns the tenant's 100 newest EWB rows (orphan EWBs without a
+// tenant-owned trip are excluded by the inner join). A query error renders an
+// empty table instead of failing the page, and per-row scan failures are
+// skipped; an empty tenant fails closed with no rows.
+func (q *EWayBillReadQueries) Items(ctx context.Context, tenantID string) []EWBListItem {
+	if q.db == nil || tenantID == "" {
 		return nil
 	}
 	rows, err := q.db.QueryContext(ctx, `
@@ -108,9 +117,9 @@ func (q *EWayBillReadQueries) Items(ctx context.Context) []EWBListItem {
 		       COALESCE(e.vehicle_number, ''), COALESCE(e.from_place, ''), COALESCE(e.to_place, ''),
 		       e.goods_value, e.status, e.valid_until, e.extension_count, e.created_at
 		FROM eway_bills e
-		LEFT JOIN trips t ON e.trip_id = t.id
+		JOIN trips t ON t.id = e.trip_id AND t.tenant_id = $1
 		ORDER BY e.created_at DESC LIMIT 100
-	`)
+	`, tenantID)
 	if err != nil {
 		return nil
 	}
@@ -130,20 +139,20 @@ func (q *EWayBillReadQueries) Items(ctx context.Context) []EWBListItem {
 	return items
 }
 
-// CandidateTrips returns the 50 newest trips eligible for manual EWB creation
-// (legacy global scope: no tenant filter, preserved). Query errors render an
-// empty dropdown.
-func (q *EWayBillReadQueries) CandidateTrips(ctx context.Context) []TripOption {
-	if q.db == nil {
+// CandidateTrips returns the tenant's 50 newest trips eligible for manual EWB
+// creation. Query errors render an empty dropdown; an empty tenant fails
+// closed with no trips.
+func (q *EWayBillReadQueries) CandidateTrips(ctx context.Context, tenantID string) []TripOption {
+	if q.db == nil || tenantID == "" {
 		return nil
 	}
 	rows, err := q.db.QueryContext(ctx, `
 		SELECT t.id, t.trip_number, r.source, r.destination
 		FROM trips t
 		JOIN routes r ON t.route_id = r.id
-		WHERE t.status IN ('scheduled', 'assigned', 'started', 'reached_pickup', 'in_transit')
+		WHERE t.tenant_id = $1 AND t.status IN ('scheduled', 'assigned', 'started', 'reached_pickup', 'in_transit')
 		ORDER BY t.created_at DESC LIMIT 50
-	`)
+	`, tenantID)
 	if err != nil {
 		return nil
 	}
@@ -158,19 +167,23 @@ func (q *EWayBillReadQueries) CandidateTrips(ctx context.Context) []TripOption {
 	return trips
 }
 
-// Events returns the EWB lifecycle history in chronological order. Query
-// errors render an empty history; payload/creator NULLs default like the
-// legacy handler (COALESCE 'system' for the actor).
-func (q *EWayBillReadQueries) Events(ctx context.Context, ewbNumber string) []EWBEventRecord {
-	if q.db == nil {
+// Events returns the tenant's EWB lifecycle history in chronological order.
+// The event table has no tenant column, so ownership is proven through
+// eway_bills -> trips.tenant_id; events for an EWB outside the caller's
+// tenant (or whose trip is unknown) are invisible. Query errors render an
+// empty history; payload/creator NULLs default like the legacy handler.
+func (q *EWayBillReadQueries) Events(ctx context.Context, ewbNumber, tenantID string) []EWBEventRecord {
+	if q.db == nil || tenantID == "" {
 		return nil
 	}
 	rows, err := q.db.QueryContext(ctx, `
-		SELECT id, ewb_number, COALESCE(trip_id, ''), event_type, COALESCE(payload, ''), COALESCE(created_by, 'system'), created_at
-		FROM eway_bill_events
-		WHERE ewb_number = $1
-		ORDER BY created_at ASC
-	`, ewbNumber)
+		SELECT ev.id, ev.ewb_number, COALESCE(ev.trip_id, ''), ev.event_type, COALESCE(ev.payload, ''), COALESCE(ev.created_by, 'system'), ev.created_at
+		FROM eway_bill_events ev
+		JOIN eway_bills eb ON eb.ewb_number = ev.ewb_number
+		JOIN trips t ON t.id = eb.trip_id
+		WHERE ev.ewb_number = $1 AND t.tenant_id = $2
+		ORDER BY ev.created_at ASC
+	`, ewbNumber, tenantID)
 	if err != nil {
 		return nil
 	}

@@ -455,7 +455,7 @@ func (h *TripHandlers) View(w http.ResponseWriter, r *http.Request) {
 
 	var ewbRecord interface{}
 	if h.App != nil && h.App.EWayBill != nil && h.App.EWayBill.svc != nil {
-		if rec, err := h.App.EWayBill.svc.GetByTrip(r.Context(), id); err == nil {
+		if rec, err := h.App.EWayBill.svc.GetByTripForTenant(r.Context(), id, string(shared.TenantIDFromContext(r.Context()))); err == nil {
 			ewbRecord = rec
 		}
 	}

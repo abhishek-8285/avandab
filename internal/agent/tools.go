@@ -889,7 +889,7 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if svc == nil {
 					return "eway bill service not available", nil
 				}
-				rec, err := svc.GetByTrip(ctx, in.TripID)
+				rec, err := svc.GetByTripForTenant(ctx, in.TripID, string(shared.TenantIDFromContext(ctx)))
 				if err != nil {
 					return fmt.Sprintf("no eway bill found for trip %s", in.TripID), nil
 				}

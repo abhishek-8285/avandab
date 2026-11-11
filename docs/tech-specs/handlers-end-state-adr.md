@@ -710,6 +710,55 @@ dropdown scoping, tenant-name sync, phone-verified first-stamp, portal-link
 idempotency, board tenant/active-trip join, availability incident
 filter/de-dup and backhaul trip eligibility.
 
+**SECURITY FIX (2026-11-11) - E-Way Bill presentation reads are now
+tenant-scoped:** the `/ewaybill` list page and its presentation read model
+(`internal/ewaybill/read_queries.go`) previously ran global queries -
+`eway_bills` has no tenant_id column and the legacy handler never joined
+`trips.tenant_id` - so any operator holding `ewaybill:read` could see every
+tenant's EWB numbers, statuses, goods values, candidate trips and event
+history. That was a pre-existing cross-tenant data exposure, not frozen
+behavior worth preserving. `Stats`, `Items`, `CandidateTrips` and
+`Events` now take the caller's tenant (extracted in the handler exactly like
+the rest of the authenticated surface: `shared.TenantIDFromContext`) and
+scope through the owning trip: stats/list via an inner
+`JOIN trips ... AND t.tenant_id = $n`, candidate trips via
+`WHERE t.tenant_id = $n`, and event history via
+`eway_bill_events -> eway_bills -> trips.tenant_id`. The read model FAILS
+CLOSED: an empty or unknown tenant returns zeroed stats and empty lists -
+there is no global fallback and no DefaultTenant substitution. Orphan EWBs
+whose trip row is deleted/unknown are hidden from every tenant (inner join).
+No other handler behavior changed: same statuses, messages, JSON/HTML shapes,
+ordering, limits and best-effort degradation. Tests: the read-model suite was
+rewritten from the old global-scope expectations to tenant isolation (tenant A
+cannot see tenant B rows, orphan EWB invisible, empty tenant fails closed) and
+a handler-level regression test
+(`internal/handlers/ewaybill_read_isolation_test.go`) seeds two tenants and
+proves the rendered list only contains the caller's EWB rows and candidate
+trips. Follow-up (same fix, 2026-11-11): the detail record lookup is
+tenant-scoped too. New `EWayBillService.GetByNumberForTenant` /
+`GetByTripForTenant` join `trips` and filter `t.tenant_id`; they fail
+closed on an empty tenant, and unknown vs cross-tenant ids both return
+`ErrEWBNotFound` so the detail page 404 body is identical (no existence
+oracle). `handlers/ewaybill.go` Detail and GetForTrip, the trips-page EWB
+card (`handlers/trips.go`) and the agent `extend_ewaybill` tool use the
+scoped lookups (the trips-page card is also tenant-checked upstream; the
+scoped read is belt-and-braces). The write path is tenant-gated as well:
+`AttachPartB`, `Extend` and `Cancel` read the caller tenant from ctx and
+require the EWB to belong to that tenant before any provider call
+(cross-tenant => `ErrEWBNotFound`, no mutation); their post-write response
+reads use the scoped lookup. Trusted background callers carry no request
+tenant and keep the legacy by-number path, but now inject a tenant: the
+trip-event auto-generator derives the event/trip-row tenant into ctx before
+`AttachPartB`, and the expiry monitor injects each row's tenant before
+`Extend`/`Cancel`, so the gate applies there too. Base `GetByNumber`/
+`GetByTrip` remain for trusted internal callers/tests only; the inbound
+integration API (`internal/integration`) keeps using the integration client
+under `RequireAPIAuth` tenant middleware. No operator-facing unscoped read
+remains. Handler-level regressions now also prove tenant A detail requests for
+tenant B's EWB return the same 404 body as an unknown number (own record still
+renders with its events) and tenant A trip-card requests for tenant B's trip
+return the same 404 as an unknown trip.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 

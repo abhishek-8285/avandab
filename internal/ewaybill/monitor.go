@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"transport-app/internal/events"
+	"transport-app/internal/shared"
 )
 
 // Monitor periodically scans active E-Way Bills approaching expiration.
@@ -169,6 +170,10 @@ func (m *Monitor) processExpiringSoonEWBs(ctx context.Context) {
 	}
 
 	for _, it := range items {
+		itemCtx := ctx
+		if it.tenantID != "" {
+			itemCtx = shared.ContextWithTenantID(ctx, shared.TenantID(it.tenantID))
+		}
 		// Alert central alert engine if expiring soon. Orphan EWBs (trip
 		// deleted, tenant unknown) still get lifecycle handling below, but
 		// no cross-org alert is published for them.
@@ -193,7 +198,7 @@ func (m *Monitor) processExpiringSoonEWBs(ctx context.Context) {
 		switch it.tripStatus {
 		case "in_transit", "started", "reached_pickup":
 			// Try auto-extension if supported by geofence evidence
-			_, err := m.svc.Extend(ctx, it.ewbNumber, ExtendRequest{
+			_, err := m.svc.Extend(itemCtx, it.ewbNumber, ExtendRequest{
 				EwbNumber: it.ewbNumber,
 				Reason:    "auto_expiry_monitor_extension",
 			})
@@ -201,7 +206,7 @@ func (m *Monitor) processExpiringSoonEWBs(ctx context.Context) {
 				m.logger.Debug("auto extend skipped/denied", "ewb", it.ewbNumber, "reason", err)
 			}
 		case "completed", "cancelled", "delivered":
-			_, _ = m.svc.Cancel(ctx, it.ewbNumber, "trip_completed_or_cancelled")
+			_, _ = m.svc.Cancel(itemCtx, it.ewbNumber, "trip_completed_or_cancelled")
 		}
 	}
 }

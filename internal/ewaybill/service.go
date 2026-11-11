@@ -398,13 +398,24 @@ func (s *EWayBillService) GeneratePartA(ctx context.Context, req GeneratePartARe
 }
 
 // AttachPartB attaches vehicle info to an existing EWB.
+//
+// Tenant gate: when the caller context carries a tenant (all operator/API
+// paths do), the EWB must belong to a trip of that tenant or the call fails
+// closed with ErrEWBNotFound. Trusted background bus callers without a tenant
+// context keep the legacy by-number lookup.
 func (s *EWayBillService) AttachPartB(ctx context.Context, ewbNumber, vehicleNumber, transporterID string) (*EWayBillRecord, error) {
 	if ewbNumber == "" || vehicleNumber == "" {
 		return nil, errors.New("ewb_number and vehicle_number are required")
 	}
 
+	tenantID := string(shared.TenantIDFromContext(ctx))
 	var tripID sql.NullString
-	err := s.db.QueryRowContext(ctx, `SELECT trip_id FROM eway_bills WHERE ewb_number = $1`, ewbNumber).Scan(&tripID)
+	var err error
+	if tenantID != "" {
+		err = s.db.QueryRowContext(ctx, `SELECT e.trip_id FROM eway_bills e JOIN trips t ON t.id = e.trip_id WHERE e.ewb_number = $1 AND t.tenant_id = $2`, ewbNumber, tenantID).Scan(&tripID)
+	} else {
+		err = s.db.QueryRowContext(ctx, `SELECT trip_id FROM eway_bills WHERE ewb_number = $1`, ewbNumber).Scan(&tripID)
+	}
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrEWBNotFound
@@ -435,10 +446,18 @@ func (s *EWayBillService) AttachPartB(ctx context.Context, ewbNumber, vehicleNum
 
 	s.logEvent(ctx, ewbNumber, tripID.String, "PART_B_ADDED", string(partBBytes), "system")
 
+	if tenantID != "" {
+		return s.GetByNumberForTenant(ctx, ewbNumber, tenantID)
+	}
 	return s.GetByNumber(ctx, ewbNumber)
 }
 
 // Extend extends E-Way Bill validity when geofence evidence is verified.
+//
+// Tenant gate: when the caller context carries a tenant the EWB must belong
+// to a trip of that tenant (cross-tenant calls fail closed with
+// ErrEWBNotFound before any provider call); trusted background callers
+// without a tenant context keep the legacy by-number lookup.
 func (s *EWayBillService) Extend(ctx context.Context, ewbNumber string, req ExtendRequest) (*EWayBillRecord, error) {
 	var tripID sql.NullString
 	var status string
@@ -446,12 +465,23 @@ func (s *EWayBillService) Extend(ctx context.Context, ewbNumber string, req Exte
 	var validUntil time.Time
 	var vehicleID sql.NullString
 
-	err := s.db.QueryRowContext(ctx, `
-		SELECT e.trip_id, e.status, e.extension_count, e.valid_until, t.vehicle_id
-		FROM eway_bills e
-		LEFT JOIN trips t ON e.trip_id = t.id
-		WHERE e.ewb_number = $1
-	`, ewbNumber).Scan(&tripID, &status, &extCount, &validUntil, &vehicleID)
+	tenantID := string(shared.TenantIDFromContext(ctx))
+	var err error
+	if tenantID != "" {
+		err = s.db.QueryRowContext(ctx, `
+			SELECT e.trip_id, e.status, e.extension_count, e.valid_until, t.vehicle_id
+			FROM eway_bills e
+			LEFT JOIN trips t ON e.trip_id = t.id
+			WHERE e.ewb_number = $1 AND t.tenant_id = $2
+		`, ewbNumber, tenantID).Scan(&tripID, &status, &extCount, &validUntil, &vehicleID)
+	} else {
+		err = s.db.QueryRowContext(ctx, `
+			SELECT e.trip_id, e.status, e.extension_count, e.valid_until, t.vehicle_id
+			FROM eway_bills e
+			LEFT JOIN trips t ON e.trip_id = t.id
+			WHERE e.ewb_number = $1
+		`, ewbNumber).Scan(&tripID, &status, &extCount, &validUntil, &vehicleID)
+	}
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrEWBNotFound
@@ -508,13 +538,27 @@ func (s *EWayBillService) Extend(ctx context.Context, ewbNumber string, req Exte
 
 	s.logEvent(ctx, ewbNumber, tripID.String, "EXTENDED", string(extBytes), "system")
 
+	if tenantID != "" {
+		return s.GetByNumberForTenant(ctx, ewbNumber, tenantID)
+	}
 	return s.GetByNumber(ctx, ewbNumber)
 }
 
 // Cancel cancels an EWB.
+//
+// Tenant gate: when the caller context carries a tenant the EWB must belong
+// to a trip of that tenant (cross-tenant calls fail closed with
+// ErrEWBNotFound before any provider call); trusted background callers
+// without a tenant context keep the legacy by-number lookup.
 func (s *EWayBillService) Cancel(ctx context.Context, ewbNumber, reason string) (*EWayBillRecord, error) {
+	tenantID := string(shared.TenantIDFromContext(ctx))
 	var tripID sql.NullString
-	err := s.db.QueryRowContext(ctx, `SELECT trip_id FROM eway_bills WHERE ewb_number = $1`, ewbNumber).Scan(&tripID)
+	var err error
+	if tenantID != "" {
+		err = s.db.QueryRowContext(ctx, `SELECT e.trip_id FROM eway_bills e JOIN trips t ON t.id = e.trip_id WHERE e.ewb_number = $1 AND t.tenant_id = $2`, ewbNumber, tenantID).Scan(&tripID)
+	} else {
+		err = s.db.QueryRowContext(ctx, `SELECT trip_id FROM eway_bills WHERE ewb_number = $1`, ewbNumber).Scan(&tripID)
+	}
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrEWBNotFound
@@ -539,6 +583,9 @@ func (s *EWayBillService) Cancel(ctx context.Context, ewbNumber, reason string) 
 
 	s.logEvent(ctx, ewbNumber, tripID.String, "CANCELLED", fmt.Sprintf(`{"reason":%q}`, reason), "system")
 
+	if tenantID != "" {
+		return s.GetByNumberForTenant(ctx, ewbNumber, tenantID)
+	}
 	return s.GetByNumber(ctx, ewbNumber)
 }
 
@@ -552,12 +599,32 @@ func (s *EWayBillService) GetByNumber(ctx context.Context, ewbNumber string) (*E
 	return s.getByQuery(ctx, `SELECT id, trip_id, ewb_number, irn, status, generation_date, valid_until, vehicle_number, transporter_id, qr_code, from_place, from_state_code, to_place, to_state_code, goods_value, distance, doc_type, doc_no, doc_date, transporter_doc_no, extension_count, cancel_reason, cancelled_at, gen_mode, created_at FROM eway_bills WHERE ewb_number = $1 LIMIT 1`, ewbNumber)
 }
 
-func (s *EWayBillService) getByQuery(ctx context.Context, query string, arg string) (*EWayBillRecord, error) {
+// GetByTripForTenant returns the latest EWB record for a trip only when the
+// trip belongs to tenantID. Unknown ids and cross-tenant ids both return
+// ErrEWBNotFound (no existence oracle); an empty tenant fails closed.
+func (s *EWayBillService) GetByTripForTenant(ctx context.Context, tripID, tenantID string) (*EWayBillRecord, error) {
+	if tenantID == "" {
+		return nil, ErrEWBNotFound
+	}
+	return s.getByQuery(ctx, `SELECT e.id, e.trip_id, e.ewb_number, e.irn, e.status, e.generation_date, e.valid_until, e.vehicle_number, e.transporter_id, e.qr_code, e.from_place, e.from_state_code, e.to_place, e.to_state_code, e.goods_value, e.distance, e.doc_type, e.doc_no, e.doc_date, e.transporter_doc_no, e.extension_count, e.cancel_reason, e.cancelled_at, e.gen_mode, e.created_at FROM eway_bills e JOIN trips t ON t.id = e.trip_id WHERE e.trip_id = $1 AND t.tenant_id = $2 ORDER BY e.created_at DESC LIMIT 1`, tripID, tenantID)
+}
+
+// GetByNumberForTenant returns the EWB record only when its owning trip
+// belongs to tenantID. Unknown ids and cross-tenant ids both return
+// ErrEWBNotFound (no existence oracle); an empty tenant fails closed.
+func (s *EWayBillService) GetByNumberForTenant(ctx context.Context, ewbNumber, tenantID string) (*EWayBillRecord, error) {
+	if tenantID == "" {
+		return nil, ErrEWBNotFound
+	}
+	return s.getByQuery(ctx, `SELECT e.id, e.trip_id, e.ewb_number, e.irn, e.status, e.generation_date, e.valid_until, e.vehicle_number, e.transporter_id, e.qr_code, e.from_place, e.from_state_code, e.to_place, e.to_state_code, e.goods_value, e.distance, e.doc_type, e.doc_no, e.doc_date, e.transporter_doc_no, e.extension_count, e.cancel_reason, e.cancelled_at, e.gen_mode, e.created_at FROM eway_bills e JOIN trips t ON t.id = e.trip_id WHERE e.ewb_number = $1 AND t.tenant_id = $2 LIMIT 1`, ewbNumber, tenantID)
+}
+
+func (s *EWayBillService) getByQuery(ctx context.Context, query string, args ...any) (*EWayBillRecord, error) {
 	var rec EWayBillRecord
 	var tripID, irn, vehNum, transID, qrCode, fromP, fromS, toP, toS, docT, docN, docD, transDocN, cancelR, genMode sql.NullString
 	var cancelledAt sql.NullTime
 
-	err := s.db.QueryRowContext(ctx, query, arg).Scan(
+	err := s.db.QueryRowContext(ctx, query, args...).Scan(
 		&rec.ID, &tripID, &rec.EwbNumber, &irn, &rec.Status, &rec.GenerationDate, &rec.ValidUntil,
 		&vehNum, &transID, &qrCode, &fromP, &fromS, &toP, &toS, &rec.GoodsValue, &rec.Distance,
 		&docT, &docN, &docD, &transDocN, &rec.ExtensionCount, &cancelR, &cancelledAt, &genMode, &rec.CreatedAt,

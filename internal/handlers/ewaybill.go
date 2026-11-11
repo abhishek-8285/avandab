@@ -14,6 +14,7 @@ import (
 	"transport-app/internal/auth"
 	"transport-app/internal/ewaybill"
 	"transport-app/internal/middleware"
+	"transport-app/internal/shared"
 )
 
 // EWayBillHandlers handles E-Way Bill lifecycle HTTP requests.
@@ -89,7 +90,7 @@ func (h *EWayBillHandlers) GetForTrip(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	record, err := h.svc.GetByTrip(r.Context(), tripID)
+	record, err := h.svc.GetByTripForTenant(r.Context(), tripID, string(shared.TenantIDFromContext(r.Context())))
 	if err != nil && err != ewaybill.ErrEWBNotFound {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -253,20 +254,20 @@ type (
 
 func (h *EWayBillHandlers) List(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
-
-	// 1. Fetch stats (global legacy scope: the EWB read model documents why).
+	// Presentation reads are tenant-scoped via the owning trip (security fix).
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
 	reads := ewaybill.NewEWayBillReadQueries(h.DB)
-	stats, sErr := reads.Stats(r.Context())
+	stats, sErr := reads.Stats(r.Context(), tenantID)
 	if sErr != nil && sErr != sql.ErrNoRows {
 		// Zeroed stats on a failed query is a silent failure - surface it in logs.
 		slog.WarnContext(r.Context(), "EWB stats query failed", slog.Any("error", sErr))
 	}
 
 	// 2. Fetch list items
-	items := reads.Items(r.Context())
+	items := reads.Items(r.Context(), tenantID)
 
 	// 3. Fetch candidate trips for new modal
-	trips := reads.CandidateTrips(r.Context())
+	trips := reads.CandidateTrips(r.Context(), tenantID)
 
 	h.renderPage(w, r, "ewaybill_index.html", PageData{
 		Title: "E-Way Bills",
@@ -281,15 +282,14 @@ func (h *EWayBillHandlers) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *EWayBillHandlers) TableFragment(w http.ResponseWriter, r *http.Request) {
-	items := ewaybill.NewEWayBillReadQueries(h.DB).Items(r.Context())
-	h.renderFragment(w, r, "ewaybill_row.html", map[string]interface{}{
-		"EWayBills": items,
-	})
+	tenantID := string(shared.TenantIDFromContext(r.Context()))
+	items := ewaybill.NewEWayBillReadQueries(h.DB).Items(r.Context(), tenantID)
+	h.renderFragment(w, r, "ewaybill_row.html", map[string]interface{}{"EWayBills": items})
 }
 
 func (h *EWayBillHandlers) NewForm(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.getUserFromContext(r)
-	trips := ewaybill.NewEWayBillReadQueries(h.DB).CandidateTrips(r.Context())
+	trips := ewaybill.NewEWayBillReadQueries(h.DB).CandidateTrips(r.Context(), string(shared.TenantIDFromContext(r.Context())))
 
 	h.renderPage(w, r, "ewaybill_index.html", PageData{
 		Title: "Generate E-Way Bill",
@@ -336,7 +336,7 @@ func (h *EWayBillHandlers) Detail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	session, _ := h.getUserFromContext(r)
-	record, err := h.svc.GetByNumber(r.Context(), ewbNumber)
+	record, err := h.svc.GetByNumberForTenant(r.Context(), ewbNumber, string(shared.TenantIDFromContext(r.Context())))
 	if err != nil {
 		if err == ewaybill.ErrEWBNotFound {
 			http.Error(w, "E-Way Bill not found", http.StatusNotFound)
@@ -346,8 +346,8 @@ func (h *EWayBillHandlers) Detail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fetch event history in chronological order
-	events := ewaybill.NewEWayBillReadQueries(h.DB).Events(r.Context(), ewbNumber)
+	// Caller-tenant event history only (fail-closed for foreign EWBs).
+	events := ewaybill.NewEWayBillReadQueries(h.DB).Events(r.Context(), ewbNumber, string(shared.TenantIDFromContext(r.Context())))
 
 	if wantsJSON(r) {
 		w.Header().Set("Content-Type", "application/json")
