@@ -501,6 +501,8 @@ type Driver struct {
 	BankDetails           sql.NullString  `json:"bank_details"`
 	Score                 sql.NullFloat64 `json:"score"`
 	Tier                  sql.NullString  `json:"tier"`
+	DeactivatedAt         sql.NullTime    `json:"deactivated_at"`
+	KycPurgedAt           sql.NullTime    `json:"kyc_purged_at"`
 }
 
 type DriverAdvanceRequest struct {
