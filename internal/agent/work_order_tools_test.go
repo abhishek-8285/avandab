@@ -170,3 +170,37 @@ func TestWorkOrderTools_Gated(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, rl.ActionExecuted, action.Status)
 }
+
+// Tenant isolation for the work-order tools: a card created by tenant "1" is
+// invisible through every tool once another tenant asks (read or write).
+func TestWorkOrderTools_TenantIsolation(t *testing.T) {
+	_, byName := newWOAgentEnv(t)
+	ctxOwn := woAgentCtx()
+
+	res, err := byName["create_work_order"].Handler(ctxOwn, json.RawMessage(`{"vehicle_id":"veh-wo","title":"Tenant 1 job"}`))
+	require.NoError(t, err)
+	var created map[string]any
+	require.NoError(t, json.Unmarshal([]byte(res), &created))
+	id, _ := created["id"].(string)
+	require.NotEmpty(t, id)
+
+	otherCtx := shared.ContextWithTenantID(context.Background(), "2")
+	otherCtx = WithAgentUser(otherCtx, "agent-op", "Agent Op")
+
+	res, err = byName["list_work_orders"].Handler(otherCtx, json.RawMessage(`{}`))
+	require.NoError(t, err)
+	assert.Contains(t, res, "No job cards found")
+	assert.NotContains(t, res, "Tenant 1 job")
+
+	_, err = byName["get_work_order"].Handler(otherCtx, json.RawMessage(`{"id":`+q(id)+`}`))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "not found")
+
+	_, err = byName["transition_work_order"].Handler(otherCtx, json.RawMessage(`{"id":`+q(id)+`,"status":"in_progress"}`))
+	require.Error(t, err)
+
+	// The owning tenant still sees it.
+	res, err = byName["list_work_orders"].Handler(ctxOwn, json.RawMessage(`{}`))
+	require.NoError(t, err)
+	assert.Contains(t, res, "Tenant 1 job")
+}

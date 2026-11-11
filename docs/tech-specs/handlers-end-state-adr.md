@@ -782,6 +782,30 @@ handlers zero-SQL invariant is untouched). New
 open-only + severity filtering, ordering/limit, nullable entity fields, the
 JSON wire shape and error mapping.
 
+**Phase 3 progress (2026-11-11, second increment - work-order tools):** the
+four maintenance job-card tools (`list_work_orders`, `get_work_order`,
+`create_work_order`, `transition_work_order`) no longer touch the maintenance
+SQL repository: the `maintenanceRepo`/`maintsql` plumbing left `tools.go`
+and the tools delegate to the new `internal/maintenance.WorkOrderFacade`
+(`Create`/`List`/`Get`/`Transition`). The facade owns store wiring, tenant
+derivation from ctx, creation defaults (uuid, status open), the legacy
+assign-then-transition ordering and the done side effects
+(`CompleteWorkOrder` service-record write + due-flag resolution); a missing
+store fails closed with `maintenance.ErrStoreUnavailable` ("maintenance store
+unavailable" - the same model-facing string). Tools keep their JSON schemas,
+validation ("vehicle_id and title are required", "unknown job card status %q",
+"due_at must be RFC3339"), RBAC tags (`maintenance:read/create/update`),
+approval-gate wiring, exact JSON output shapes ("No job cards found",
+"job card %s not found", "Job card %s closed as done; service record written.",
+"Job card %s moved to %s.") and the `workOrderJSON` field set.
+`internal/agent/tools.go` is now 1,141 lines / 0 SQL (was 1,186); the line
+cap was lowered to 1141 in the same PR. Existing work-order characterization
+tests (lifecycle, RBAC tags, approval gating) pass unchanged; new
+`internal/maintenance/work_order_facade_test.go` pins tenant isolation,
+lifecycle transitions including the service-record side effect, not-found and
+store-unavailable mapping, and new `TestWorkOrderTools_TenantIsolation` pins
+cross-tenant invisibility through the tool layer.
+
 **Phase 3 — agent tools**: each `tools.go` tool maps to an application
 facade; remove inline SQL; approval gate stays where it is.
 

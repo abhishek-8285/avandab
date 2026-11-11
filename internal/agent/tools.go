@@ -7,15 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
-
 	alertsapp "transport-app/internal/alerts/application"
 	dispatchapp "transport-app/internal/dispatch/application"
 	"transport-app/internal/domain"
 	"transport-app/internal/ewaybill"
 	"transport-app/internal/maintenance"
 	maintdomain "transport-app/internal/maintenance/domain"
-	maintsql "transport-app/internal/maintenance/infrastructure/sql"
 	"transport-app/internal/service"
 	"transport-app/internal/shared"
 	tripagg "transport-app/internal/trip/domain/aggregate"
@@ -898,11 +895,11 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if in.Limit > 50 {
 					in.Limit = 50
 				}
-				repo, err := maintenanceRepo(env)
+				facade, err := workOrderFacade(env)
 				if err != nil {
 					return "", err
 				}
-				orders, err := repo.ListWorkOrders(ctx, string(shared.TenantIDFromContext(ctx)), in.Status, in.Limit)
+				orders, err := facade.List(ctx, in.Status, in.Limit)
 				if err != nil {
 					return "", err
 				}
@@ -942,11 +939,11 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if err := json.Unmarshal(args, &in); err != nil {
 					return "", err
 				}
-				repo, err := maintenanceRepo(env)
+				facade, err := workOrderFacade(env)
 				if err != nil {
 					return "", err
 				}
-				wo, err := repo.FindWorkOrder(ctx, string(shared.TenantIDFromContext(ctx)), in.ID)
+				wo, err := facade.Get(ctx, in.ID)
 				if err != nil {
 					return "", err
 				}
@@ -992,17 +989,14 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				if strings.TrimSpace(in.VehicleID) == "" || strings.TrimSpace(in.Title) == "" {
 					return "", fmt.Errorf("vehicle_id and title are required")
 				}
-				wo := maintdomain.WorkOrder{
-					ID:           uuid.NewString(),
-					TenantID:     string(shared.TenantIDFromContext(ctx)),
+				input := maintenance.CreateWorkOrderInput{
 					VehicleID:    strings.TrimSpace(in.VehicleID),
-					ScheduleID:   in.ScheduleID,
 					Title:        strings.TrimSpace(in.Title),
 					Description:  in.Description,
 					Assignee:     in.Assignee,
 					Vendor:       in.Vendor,
 					CostEstimate: in.CostEstimate,
-					Status:       maintdomain.WorkOrderOpen,
+					ScheduleID:   in.ScheduleID,
 				}
 				if in.DueAt != "" {
 					due, err := time.Parse(time.RFC3339, in.DueAt)
@@ -1010,13 +1004,14 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 						return "", fmt.Errorf("due_at must be RFC3339, got %q", in.DueAt)
 					}
 					dueUTC := due.UTC()
-					wo.DueAt = &dueUTC
+					input.DueAt = &dueUTC
 				}
-				repo, err := maintenanceRepo(env)
+				facade, err := workOrderFacade(env)
 				if err != nil {
 					return "", err
 				}
-				if err := repo.CreateWorkOrder(ctx, wo); err != nil {
+				wo, err := facade.Create(ctx, input)
+				if err != nil {
 					return "", err
 				}
 				return jsonString(map[string]any{
@@ -1057,32 +1052,22 @@ func RegisterTools(env *ToolEnv) []*RegisteredTool {
 				default:
 					return "", fmt.Errorf("unknown job card status %q", in.Status)
 				}
-				repo, err := maintenanceRepo(env)
+				facade, err := workOrderFacade(env)
 				if err != nil {
 					return "", err
 				}
-				tenant := string(shared.TenantIDFromContext(ctx))
-				if in.Assignee != "" || in.Vendor != "" {
-					if err := repo.AssignWorkOrder(ctx, tenant, in.ID, in.Assignee, in.Vendor); err != nil {
-						return "", err
-					}
+				actor := userIDFrom(ctx)
+				if actor == "" {
+					actor = env.UserID
 				}
-				if in.Status == maintdomain.WorkOrderDone {
-					actor := userIDFrom(ctx)
-					if actor == "" {
-						actor = env.UserID
-					}
-					done, err := repo.CompleteWorkOrder(ctx, tenant, in.ID, actor)
-					if err != nil {
-						return "", err
-					}
-					if db := env.Services.DB(); db != nil {
-						maintenance.NewWorker(db, nil, nil, 0, "").EvaluateResolution(ctx, done.VehicleID)
-					}
-					return fmt.Sprintf("Job card %s closed as done; service record written.", done.ID), nil
-				}
-				if err := repo.TransitionWorkOrder(ctx, tenant, in.ID, in.Status); err != nil {
+				result, err := facade.Transition(ctx, maintenance.TransitionWorkOrderInput{
+					ID: in.ID, Status: in.Status, Assignee: in.Assignee, Vendor: in.Vendor, Actor: actor,
+				})
+				if err != nil {
 					return "", err
+				}
+				if result.Completed {
+					return fmt.Sprintf("Job card %s closed as done; service record written.", result.ID), nil
 				}
 				return fmt.Sprintf("Job card %s moved to %s.", in.ID, in.Status), nil
 			},
@@ -1097,13 +1082,17 @@ func derefStr(s *string) string {
 	return *s
 }
 
-// maintenanceRepo binds the job-card repository to the service database.
-// Tools fail closed when the DB is unavailable.
-func maintenanceRepo(env *ToolEnv) (*maintsql.MaintenanceRepository, error) {
-	if env == nil || env.Services == nil || env.Services.DB() == nil {
-		return nil, fmt.Errorf("maintenance store unavailable")
+// workOrderFacade binds the maintenance application facade to the service DB.
+// Tools fail closed when the DB is unavailable (legacy model-facing string).
+func workOrderFacade(env *ToolEnv) (*maintenance.WorkOrderFacade, error) {
+	if env == nil || env.Services == nil {
+		return nil, maintenance.ErrStoreUnavailable
 	}
-	return maintsql.NewMaintenanceRepository(env.Services.DB()), nil
+	f := maintenance.NewWorkOrderFacade(env.Services.DB())
+	if f == nil {
+		return nil, maintenance.ErrStoreUnavailable
+	}
+	return f, nil
 }
 
 // workOrderJSON renders one job card for the assistant.
